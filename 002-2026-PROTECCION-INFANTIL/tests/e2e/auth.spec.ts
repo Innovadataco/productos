@@ -11,17 +11,21 @@
  * Por eso `auth.spec.ts` estaba en el allowlist del candado `registro-padre-enlace`; este rewrite lo
  * saca en el MISMO commit (ratchet de salida autoexigida).
  *
- * AHORA:
- *  (1) Registro caminado por la UID del ENLACE: `/registro` (solo correo) → aviso genérico → token
- *      PLANTADO por Prisma (sin consumir; la anti-enum NO lo devuelve) → `/registro/crear-clave/[token]`
- *      → contraseña → auto-login → y, por separado, login con la contraseña recién creada.
- *  (2) No-admin bloqueado del panel admin, con la cuenta creada por ENLACE (no por código).
+ * AHORA: un solo recorrido — el registro por ENLACE: `/registro` (solo correo) → aviso genérico → token
+ * PLANTADO por Prisma (sin consumir; la anti-enum NO lo devuelve) → `/registro/crear-clave/[token]` →
+ * contraseña → auto-login → y, por separado, login con la contraseña recién creada.
+ *
+ * NO vive acá un test de «no-admin no entra al panel»: esa cobertura YA existe en `admin-panel.spec.ts`
+ * (test «usuario no-admin no puede acceder al panel admin»). Duplicarla no da señal nueva, cuesta CI en
+ * cada corrida y CREA LA ILUSIÓN de dos protecciones independientes donde hay una —el día que una se
+ * rompa o se borre, alguien creería que la otra la cubre—. Si el encargo lo vuelve a pedir: ya está
+ * cubierto, no lo re-agregues.
  *
  * Las contraseñas son valores de PRUEBA del app bajo prueba (localhost), nunca credenciales reales.
  */
 import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/prisma";
-import { registrarPadre, plantarTokenRegistro, limpiarPadre, type PadreRegistrado } from "./fixtures/registrar-padre";
+import { plantarTokenRegistro, limpiarPadre, type PadreRegistrado } from "./fixtures/registrar-padre";
 
 const padresCreados: PadreRegistrado[] = [];
 
@@ -87,19 +91,5 @@ test.describe("Autenticación", () => {
         // Login OK = salió de /login (un padre sin camino aterriza en el onboarding, no en un panel; lo que
         // se afirma es la autenticación, no la pantalla de destino).
         await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 15_000 });
-    });
-
-    test("un usuario no-admin no puede acceder al panel admin", async ({ page }) => {
-        const email = `e2e-auth-denied-${Date.now()}@example.com`;
-        // Cuenta no-admin (PARENT) por ENLACE. `page.request` comparte las cookies del navegador, así la
-        // `page` queda AUTENTICADA como PARENT (no el fixture `request`, que es otro contexto).
-        const padre = await registrarPadre({ request: page.request, email, password: "TestPass123" });
-        padresCreados.push(padre);
-
-        await page.goto("/dashboard/admin");
-        // Un PARENT no aterriza NUNCA en el panel: la guardia de rol por página (`verifyAuth`, SPEC-571) y
-        // el gate de onboarding del middleware lo desvían. Se afirma la invariante robusta: NO queda en
-        // /dashboard/admin.
-        await expect(page).not.toHaveURL("/dashboard/admin");
     });
 });
