@@ -23,7 +23,7 @@ import { PLAZO_MAX_CONSULTA_DIAS_HABILES, PLAZO_MAX_RECLAMO_DIAS_HABILES, plazoM
 
 let contador = 0;
 
-type Tipo = "CONSULTA" | "RECTIFICACION" | "SUPRESION";
+type Tipo = "CONSULTA" | "RECTIFICACION" | "SUPRESION" | "REVOCACION";
 type Calidad = "TITULAR_CUENTA" | "REPRESENTANTE_LEGAL" | "TITULAR_MAYORIA_EDAD";
 type Origen = "APLICACION" | "CORREO" | "OTRO";
 
@@ -135,6 +135,9 @@ describe("SPEC-772 · techo legal del plazo (CHECK, 23514) — 10 ≠ 15 a prop�
         ["CONSULTA", 10],
         ["RECTIFICACION", 15],
         ["SUPRESION", 15],
+        // SPEC-798 · REVOCACION toma el techo del reclamo (15), heredado de SUPRESION.
+        ["REVOCACION", 1],
+        ["REVOCACION", 15],
     ] as const)("%s plazoDias %i → pasa", async (tipo, plazoDias) => {
         const id = nuevoId();
         await insertarSQL(id, { tipo, plazoDias });
@@ -149,7 +152,10 @@ describe("SPEC-772 · techo legal del plazo (CHECK, 23514) — 10 ≠ 15 a prop�
         ["CONSULTA", 30],
         ["RECTIFICACION", 16],
         ["SUPRESION", 16],
+        // SPEC-798 · REVOCACION por encima de su techo (16) y bajo el piso (0) → rechazo, igual que su hermana.
+        ["REVOCACION", 16],
         ["RECTIFICACION", 0],
+        ["REVOCACION", 0],
     ] as const)("%s plazoDias %i → rechazo (23514)", async (tipo, plazoDias) => {
         const detalle = await esperarRechazo(insertarSQL(nuevoId(), { tipo, plazoDias }));
         expect(detalle).toMatch(/23514|SolicitudHabeasData_plazo_techo_legal_check/);
@@ -214,6 +220,8 @@ describe("SPEC-772 · [NORMA] el techo legal en código coincide con el CHECK de
         expect(plazoMaximoLegalDiasHabiles("CONSULTA")).toBe(10);
         expect(plazoMaximoLegalDiasHabiles("RECTIFICACION")).toBe(15);
         expect(plazoMaximoLegalDiasHabiles("SUPRESION")).toBe(15);
+        // SPEC-798 · REVOCACION hereda el techo del reclamo (15). Si cambia, cambió la ley (o el abogado lo redefine aparte).
+        expect(plazoMaximoLegalDiasHabiles("REVOCACION")).toBe(15);
     });
 });
 

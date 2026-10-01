@@ -32,12 +32,15 @@ export function plazoMaximoLegalDiasHabiles(tipo: TipoSolicitudHabeasData): numb
             return PLAZO_MAX_CONSULTA_DIAS_HABILES;
         case "RECTIFICACION":
         case "SUPRESION":
+        // SPEC-798 · REVOCACION toma el techo del «reclamo» (art. 15) HEREDADO de SUPRESION: hoy una
+        // revocación se archivaría como SUPRESION, ya con techo 15. 798 tipifica, NO determina plazo nuevo.
+        case "REVOCACION":
             return PLAZO_MAX_RECLAMO_DIAS_HABILES;
         default: {
             const _exhaustivo: never = tipo;
             throw new Error(
                 `[plazos-legales] TipoSolicitudHabeasData sin techo legal fijado: ${String(_exhaustivo)}. ` +
-                    `Un derecho nuevo no hereda un plazo por omisión — fijalo acá y en el CHECK de la migración.`,
+                    "Un derecho nuevo no hereda un plazo por omisión — fijalo acá y en el CHECK de la migración.",
             );
         }
     }

@@ -2552,6 +2552,10 @@ enum TipoSolicitudHabeasData {
   CONSULTA // art. 14 · 10 días hábiles
   RECTIFICACION // art. 15 «reclamo» · 15 días hábiles
   SUPRESION // art. 15 «reclamo» · 15 días hábiles
+  // SPEC-798 · art. 15 «reclamo» · 15 días hábiles. Techo HEREDADO de SUPRESION (hoy una revocación se
+  // archiva como SUPRESION, ya con techo 15): 798 arregla la CLASIFICACIÓN, NO determina un plazo nuevo.
+  // Si el abogado define otro techo para la revocación (Dto 1377 art. 9), es un cambio APARTE con su motivo.
+  REVOCACION
 }
 
 enum CalidadPeticionario {
