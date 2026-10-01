@@ -234,10 +234,10 @@ async function main() {
     console.log("[Arch:check] (j) freemiumFechaFin se calcula SOLO en calcularFreemiumFechaFin (SPEC-795)…");
     const freemiumInline = buscarFreemiumInline();
     if (freemiumInline.length === 0) {
-        console.log("[Arch:check] (j) VERDE: cero cálculos inline de freemiumFechaFin fuera del productor único.");
+        console.log("[Arch:check] (j) VERDE: toda asignación de freemiumFechaFin viene del productor único.");
     } else {
         rojo = true;
-        console.error(`[Arch:check] (j) ROJO: ${freemiumInline.length} cálculos inline de freemiumFechaFin (usá calcularFreemiumFechaFin):`);
+        console.error(`[Arch:check] (j) ROJO: ${freemiumInline.length} asignación(es) de freemiumFechaFin fuera de calcularFreemiumFechaFin:`);
         for (const f of freemiumInline) console.error(`  - ${f.archivo}:${f.linea} ${f.texto}`);
     }
 
