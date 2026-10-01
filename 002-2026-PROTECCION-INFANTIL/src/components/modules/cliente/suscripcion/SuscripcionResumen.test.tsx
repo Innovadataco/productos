@@ -23,7 +23,7 @@ function vistaBase(overrides: Partial<VistaSuscripcion> = {}): VistaSuscripcion 
         monedaLocal: "COP",
         codigoReferidoPropio: "PI-COLEGIO-X1",
         referidosExitososEsteAnio: 2,
-        contratoPDFUrl: null,
+        contrato: null,
         contratoObligatorio: true,
         pagoPendiente: null,
         pagos: [],

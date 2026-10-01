@@ -8,6 +8,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // 3003: detector de typo de dominio (gmaail.com → gmail.com), puro.
     "src/lib/email-typo.test.ts",
     "scripts/arch/no-prisma-mocks.test.ts",
+    // SPEC-803: 00/01/06 fuera del gate byte-exacto del PR (representabilidad; post-merge regenera).
+    "scripts/arch/docs-globales-fuera-del-gate.candado.test.ts",
     // CEO 06-09: parseArgs de scripts/demo ABORTA ante flag desconocido (no traga banderas en un script destructivo).
     "scripts/demo/parseargs-estricto.candado.test.ts",
     // SPEC-287 (002-PI-187): fuente única de guardias + cookie firmada de vigencia + 4 ratchets estáticos.
@@ -482,6 +484,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-217 (002-PI-117): freemium 30 días (cálculos puros y servicio con dependencias mockeadas, sin BD).
     "src/lib/pagos/freemium-calculos.test.ts",
     "src/lib/pagos/freemium.service.test.ts",
+    // SPEC-805: round-trip de la vigencia del cupón — escritor y lector (esVigente) en el mismo espacio.
+    "src/lib/pagos/bono-vigencia-roundtrip.candado.test.ts",
     "src/lib/plataforma.test.ts",
     "src/lib/proxy.test.ts",
     "src/lib/queue.test.ts",
@@ -743,6 +747,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/boton-frontera.candado.test.ts",
     // SPEC-654: módulos de src/ sin importador de producción — ratchet, scan estático del grafo de imports.
     "scripts/arch/modulos-huerfanos.test.ts",
+    // SPEC-795 (PR 3): freemiumFechaFin se calcula en UN solo lugar — scan estático + control positivo del regex.
+    "scripts/arch/freemium-fecha-fin-chokepoint.test.ts",
     // SPEC-657 (I-389): cadencia del barrido de citas (validador de cron, fs-libre).
     "src/lib/profesional/cita/cron-barrido.test.ts",
     // SPEC-657 (I-389): candado de CABLEADO — el barrido de citas tiene quien lo llame + registrado en todos los sitios.
@@ -781,4 +787,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesional/reps/reps-enums-paridad.candado.test.ts",
     // SPEC-790 (T6): compuerta de código del registro manual REPS (espejo del CHECK + guardas, código de motivo). Sin base.
     "src/lib/profesional/reps/registro-manual-reps.candado.test.ts",
+    // SPEC-574 (I-354): clasificar es el complemento de corregir/confirmar (conducta pura); y el
+    // catálogo de categorías de la UI no se desincroniza del enum CategoriaConducta.
+    "src/components/modules/reporte-detalle/capacidades-reporte.candado.test.ts",
+    "src/components/modules/reporte-detalle/catalogo-categorias.candado.test.ts",
 ];

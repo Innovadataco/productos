@@ -54,7 +54,10 @@ export interface VistaSuscripcion {
     monedaLocal: string;
     codigoReferidoPropio: string;
     referidosExitososEsteAnio: number;
-    contratoPDFUrl: string | null;
+    // SPEC-796: el contrato firmado del colegio (registro durable ContratoColegio). `null` = sin
+    // contrato. NO lleva ruta ni archivoId: solo si existe y cuándo; «Ver contrato» va al endpoint
+    // guardado por el servidor, nunca a una URL pública (reemplaza el deprecado `contratoPDFUrl`).
+    contrato: { adjuntadoEn: string } | null;
     contratoObligatorio: boolean;
     pagoPendiente: PagoPendienteResumen | null;
     pagos: PagoHistorialItem[];
