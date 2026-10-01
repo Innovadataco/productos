@@ -206,6 +206,7 @@ export class PerfilProfesionalRepository {
         return this.db.perfilProfesional.findUnique({
             where: { usuarioId },
             select: {
+                id: true, // SPEC-790: para derivar `repsAlDia` del mismo perfil sin una segunda lectura.
                 estado: true,
                 verificaciones: {
                     where: { resultado: "APROBADO" },

@@ -132,7 +132,8 @@ describe("GET /api/me · habilitación del profesional (SPEC-690)", { timeout: 3
         const res = await GET();
         expect(res.status).toBe(200);
         const json = await res.json();
-        expect(json.profesional).toEqual({ estado: "ACTIVO", habilitado: true });
+        // SPEC-790: `repsAlDia` es eje aparte; sin fila REPS = SIN_VERIFICAR, cutover abierto → true.
+        expect(json.profesional).toEqual({ estado: "ACTIVO", habilitado: true, repsAlDia: true });
     });
 
     it("suspender con la MISMA sesión → la llamada siguiente da habilitado:false (server-side, no cookie)", async () => {
@@ -146,6 +147,7 @@ describe("GET /api/me · habilitación del profesional (SPEC-690)", { timeout: 3
         await prisma.perfilProfesional.update({ where: { id: perfil.id }, data: { estado: "SUSPENDIDO" } });
 
         const despues = await (await GET()).json();
-        expect(despues.profesional).toEqual({ estado: "SUSPENDIDO", habilitado: false });
+        // habilitado=false por el estado; repsAlDia sigue true (el REPS no mira el estado interno).
+        expect(despues.profesional).toEqual({ estado: "SUSPENDIDO", habilitado: false, repsAlDia: true });
     });
 });
