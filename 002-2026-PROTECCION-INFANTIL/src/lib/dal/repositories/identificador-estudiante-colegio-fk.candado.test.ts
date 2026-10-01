@@ -36,7 +36,13 @@ describe("SPEC-833 · FK compuesto IdentificadorAlumno(alumnoId,colegioId) → A
         alumnoId = alumno.id;
     });
 
-    /** INSERT CRUDO: evita la derivación de colegioId del repositorio, para medir el FK y no el código. */
+    /**
+     * INSERT CRUDO: evita la derivación de colegioId del repositorio, para medir el FK y no el código.
+     * SQL crudo ⇒ nombres de la BASE, NO de Prisma: tabla "IdentificadorAlumno" (@@map), y el enum va
+     * como VALOR 'ALUMNO' (@map) casteado al TIPO "EtiquetaRelacionAlumno" (@@map). Con los nombres del
+     * modelo (ESTUDIANTE / EtiquetaRelacionEstudiante) la base responde 42704 «type does not exist».
+     * NO "corregir" a los nombres de Prisma.
+     */
     function insertarCrudo(colegioId: string) {
         return prisma.$executeRaw`
             INSERT INTO "IdentificadorAlumno"
@@ -44,7 +50,7 @@ describe("SPEC-833 · FK compuesto IdentificadorAlumno(alumnoId,colegioId) → A
             VALUES (
                 ${`idfk-${Date.now()}-${Math.random().toString(36).slice(2)}`},
                 ${alumnoId}, ${colegioId}, 'telefono', ${`+57${Date.now()}`},
-                ${"ESTUDIANTE"}::"EtiquetaRelacionEstudiante", 'activo', NOW(), NOW()
+                ${"ALUMNO"}::"EtiquetaRelacionAlumno", 'activo', NOW(), NOW()
             )
         `;
     }
