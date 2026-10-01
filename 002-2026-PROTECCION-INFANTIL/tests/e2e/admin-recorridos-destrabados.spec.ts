@@ -27,6 +27,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import type { RolUsuario } from "@prisma/client";
 import { crearPadreOnboarded, limpiarPadreOnboarded, type PadreOnboarded } from "./fixtures/padre-onboarded";
+import { crearColegioOnboarded, limpiarColegioOnboarded, type ColegioOnboarded } from "./fixtures/colegio-onboarded";
 
 const CORRIDA = `e2e-406-${randomUUID().slice(0, 8)}`;
 const ADMIN_EMAIL = `${CORRIDA}-admin@proteccion.local`;
@@ -42,6 +43,7 @@ const sembrados = {
     tenants: new Set<string>(),
 };
 let padre: PadreOnboarded | undefined;
+let colegio: ColegioOnboarded | undefined;
 
 async function asegurarUsuario(email: string, rol: string, password: string, nombre: string): Promise<string> {
     const u = await prisma.usuario.upsert({
@@ -57,51 +59,6 @@ async function asegurarUsuario(email: string, rol: string, password: string, nom
     });
     sembrados.usuarios.add(u.id);
     return u.id;
-}
-
-async function crearColegioEfimero(rectorId: string): Promise<string> {
-    // Colegio mínimo con Tenant propio. El schema exige nit único global,
-    // representante legal, país/ciudad y tenant; usamos país/ciudad reales
-    // (el seed los tiene garantizados). El rector se une con
-    // `Usuario.colegioId` (@unique) — no hay `Colegio.rectorId` directo.
-    const tenant = await prisma.tenant.create({
-        data: { nombre: `Tenant E2E ${CORRIDA}`, estado: "activo" },
-    });
-    sembrados.tenants.add(tenant.id);
-
-    const pais = await prisma.pais.findFirst({ select: { id: true } });
-    const ciudad = await prisma.ciudad.findFirst({ select: { id: true } });
-    if (!pais || !ciudad) {
-        throw new Error("prod/pruebas debe tener País y Ciudad sembrados (corre `prisma db seed`)");
-    }
-
-    const c = await prisma.colegio.create({
-        data: {
-            nombre: `Colegio E2E ${CORRIDA}`,
-            nit: `E2E-${CORRIDA}`,
-            paisId: pais.id,
-            ciudadId: ciudad.id,
-            representanteLegalNombre: "Rector E2E 406",
-            representanteLegalIdentificacion: `E2E-${CORRIDA}`,
-            representanteLegalEmail: RECTOR_EMAIL,
-            // VIGENTE (SPEC-119/168): sin esto el login del rector rebota. estado activo +
-            // inicio en el PASADO + fin abierto (receta de la fixture contexto-cliente).
-            estado: "activo",
-            inicioServicio: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-            finServicio: null,
-            tipoPeriodo: "ANUAL",
-            tenantId: tenant.id,
-        },
-    });
-    sembrados.colegios.add(c.id);
-
-    // Enlazar el rector al colegio recién creado.
-    await prisma.usuario.update({
-        where: { id: rectorId },
-        data: { colegioId: c.id, tenantId: tenant.id },
-    });
-
-    return c.id;
 }
 
 async function login(page: Page, email: string, password: string) {
@@ -137,12 +94,20 @@ test.describe.serial("Recorridos destrabados por data (SPEC-406)", () => {
         } finally {
             await reqP.dispose();
         }
-        const rectorId = await asegurarUsuario(RECTOR_EMAIL, "SCHOOL_ADMIN", RECTOR_PASSWORD, "Rector E2E 406");
-        await crearColegioEfimero(rectorId);
+        // El rector va por el CAMINO REAL del colegio (builder): `/comite/casos` está detrás
+        // del consentimiento Y del camino del colegio (6 pasos); un rector efímero sin
+        // onboardear rebota (medido: consent → CAMINO_INCOMPLETO, página y API concuerdan).
+        const reqR = await playwrightRequest.newContext();
+        try {
+            colegio = await crearColegioOnboarded({ request: reqR, email: RECTOR_EMAIL, password: RECTOR_PASSWORD, corrida: CORRIDA });
+        } finally {
+            await reqR.dispose();
+        }
     });
 
     test.afterAll(async () => {
         if (padre) await limpiarPadreOnboarded(padre);
+        if (colegio) await limpiarColegioOnboarded(colegio);
         await limpiarSembrados();
     });
 
@@ -236,23 +201,22 @@ test.describe.serial("Recorridos destrabados por data (SPEC-406)", () => {
      * COMITE_CONVIVENCIA — usamos el rector para no depender de que exista
      * un COMITE_CONVIVENCIA con clave conocida.
      */
-    // SURGIÓ al arreglar D8 (estaba oculto detrás de él en el serial). DIAGNÓSTICO EN VIVO
-    // (API vs página con la MISMA sesión, pregunta del CEO para partir el árbol): el rector
-    // (SCHOOL_ADMIN = titular) loguea 200, pero AMBOS adaptadores rechazan IGUAL — primero
-    // `CONSENTIMIENTO_REQUERIDO` (no aceptó consentimiento), y tras aceptarlo, `CAMINO_INCOMPLETO`
-    // (`/camino/colegio/rector`). La página redirige y el API da 403 con el MISMO motivo en cada
-    // puerta → los dos adaptadores CONCUERDAN → NO es discrepancia de producto, es ARNÉS: el
-    // colegio no está onboardeado. El camino del colegio tiene 6 pasos (consentimiento + datos del
-    // rector + plan + profesores + cursos + estudiantes, `estado-colegio.ts`). Fix real = un builder
-    // `crearColegioOnboarded` (análogo a crearPadreOnboarded). A fixme hasta ese builder; el fixme
-    // DESAPARECE cuando exista. (Mi diagnóstico anterior —findSesionColegio null— era FALSO: es un
-    // findUnique por id, nunca null para un rector que existe.)
-    test.fixme("Comité de convivencia · rector alcanza la bandeja de casos", async ({ page }) => {
+    // El rector llega a `/comite/casos` SOLO con el colegio onboardeado (consentimiento + camino
+    // completo). Diagnóstico en vivo (API vs página, misma sesión): sin onboarding, AMBOS
+    // adaptadores rechazan IGUAL (consent → CAMINO_INCOMPLETO) → ARNÉS, no producto. Se resuelve
+    // onboardeando el colegio por `crearColegioOnboarded` (6 pasos derivados de `estado-colegio.ts`);
+    // por eso el fixme DESAPARECIÓ. Un rector REAL que completó su onboarding sí entra.
+    test("Comité de convivencia · rector alcanza la bandeja de casos", async ({ page }) => {
         await login(page, RECTOR_EMAIL, RECTOR_PASSWORD);
         await page.goto("/dashboard/colegio/comite/casos");
         await page.waitForLoadState("networkidle");
         const pathname = await urlFinalPathname(page);
         expect(pathname, "no debe rebotar a login").toContain("/dashboard/colegio/comite/casos");
-        await expect(page.locator("main"), "debe mostrar bandeja o casos del comité de convivencia").toContainText(/comité|casos|bandeja|convivencia/i);
+        // Afirmar el encabezado de la pantalla (la h1 «Casos del comité»), no `main` suelto:
+        // el layout anida dos <main> y `locator("main")` daría strict-mode violation.
+        await expect(
+            page.getByRole("heading", { name: /casos del comité/i }),
+            "debe mostrar la pantalla de casos del comité de convivencia",
+        ).toBeVisible();
     });
 });
