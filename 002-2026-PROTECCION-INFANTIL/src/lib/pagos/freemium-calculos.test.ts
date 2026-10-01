@@ -57,6 +57,26 @@ describe("calcularFechaFinTrasPagoFreemium", () => {
         const fin = calcularFechaFinTrasPagoFreemium({ freemiumFechaFin, ahora, duracionCubierta: DuracionPlan.MES_12 });
         expect(fin.toISOString()).toBe("2027-08-24T15:00:00.000Z");
     });
+
+    // SPEC-794 · frontera de fin de mes (RED-first): la suma de meses va en el calendario BOGOTÁ.
+    // `freemiumFechaFin` es fin-de-día Bogotá guardado como 04:59:59.999Z (día SIGUIENTE en UTC);
+    // sumar meses sobre el instante crudo recortaba al calendario equivocado y le quitaba un día
+    // al cliente. Casos deterministas que la versión vieja (addMonths directo) NO pasa.
+    it("fin de mes: +1 mes sobre fin-de-día 30-oct Bogotá da fin-de-día 30-nov, no 29-nov", () => {
+        // fin del día 30-oct-2026 Bogotá. +1 mes = fin del día 30-nov Bogotá (NO 29-nov).
+        const freemiumFechaFin = new Date("2026-10-31T04:59:59.999Z");
+        const ahora = new Date("2026-10-01T15:00:00.000Z");
+        const fin = calcularFechaFinTrasPagoFreemium({ freemiumFechaFin, ahora, duracionCubierta: DuracionPlan.MES_1 });
+        expect(fin.toISOString()).toBe("2026-12-01T04:59:59.999Z");
+    });
+
+    it("fin de mes con clamp fuerte: +1 mes sobre fin-de-día 30-ene da fin-de-día 28-feb (2026 no bisiesto)", () => {
+        // fin del día 30-ene-2026 Bogotá. +1 mes = fin del día 28-feb Bogotá (clamp real de febrero).
+        const freemiumFechaFin = new Date("2026-01-31T04:59:59.999Z");
+        const ahora = new Date("2026-01-01T15:00:00.000Z");
+        const fin = calcularFechaFinTrasPagoFreemium({ freemiumFechaFin, ahora, duracionCubierta: DuracionPlan.MES_1 });
+        expect(fin.toISOString()).toBe("2026-03-01T04:59:59.999Z");
+    });
 });
 
 describe("calcularDiasRestantesFreemium", () => {
