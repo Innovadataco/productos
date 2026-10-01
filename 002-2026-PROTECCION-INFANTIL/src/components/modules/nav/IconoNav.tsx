@@ -39,6 +39,25 @@ function ChartIcon({ className }: { className?: string }) {
         </svg>
     );
 }
+// SPEC-824 (cert Diseño): «Pedir ayuda» del padre = ENVIAR («escríbenos»), no una bandeja de entrada
+// (InboxIcon insinuaba un lugar donde ver respuestas que NO existe — eso es SPEC-823; la promesa no puede
+// volver por el dibujo). Avión de papel = enviar.
+function PaperAirplaneIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+        </svg>
+    );
+}
+// SPEC-824 (cert Diseño): la bandeja del operador RECIBE correspondencia entrante = sobre. DISTINTO del
+// InboxIcon de «Bandeja de reportes» (para no duplicar en la barra del operador, candado 744).
+function EnvelopeIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+        </svg>
+    );
+}
 function ScaleIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
@@ -280,6 +299,9 @@ export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     "/dashboard/admin/usuarios": UsuariosIcon,
     "/dashboard/admin/verificacion/incidentes": AlertasIcon,
     "/dashboard/admin/spam": ShieldExclamationIcon,
+    // SPEC-824 (cert Diseño): bandeja de peticiones de soporte — correspondencia ENTRANTE (sobre), distinto
+    // del InboxIcon de «Bandeja de reportes» para no duplicar en la barra del operador (candado 744).
+    "/dashboard/admin/soporte/peticiones": EnvelopeIcon,
     "/dashboard/admin/sesiones": SesionesIcon, // SPEC-750/T014 · video-camera (Diseño e2243f6)
     "/dashboard/admin/comite": ScaleIcon,
     "/dashboard/admin/estadisticas": ChartIcon,
@@ -321,6 +343,10 @@ export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     "/dashboard/padre/hijos": UsuariosIcon,
     "/dashboard/padre/circulo-confianza": VigiloIcon,
     "/dashboard/padre/perfil": PerfilIcon,
+    // SPEC-824 (cert Diseño): «Pedir ayuda» = ENVIAR («escríbenos»), avión de papel. NO InboxIcon: una bandeja
+    // de entrada prometería un lugar donde ver respuestas que no existe (SPEC-823). Distinto del AyudaIcon del
+    // grupo «Ayuda profesional» (regla de íconos, SPEC-744).
+    "/dashboard/padre/soporte": PaperAirplaneIcon,
     // NOTA (cert Diseño 12f862a): las hojas PROMOVIDAS a pestaña móvil (padre /reportar,
     // /profesionales) NO se registran acá — HEREDAN la iconKey de su grupo en navMovilParaRol.
     // Registrarlas por href las pintaría en el LATERAL como hijas desparejas de su grupo.

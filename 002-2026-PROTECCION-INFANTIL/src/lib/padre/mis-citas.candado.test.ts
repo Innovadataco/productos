@@ -30,8 +30,19 @@ describe("SPEC-545 · «Mis citas» en el menú y su pantalla", () => {
         expect(fs.existsSync(page), `falta la pantalla ${item!.href}/page.tsx`).toBe(true);
     });
 
-    it("(2) el nav del padre tiene 6 entradas y «Mis citas» va tras «Encontrar psicólogo» (SPEC-607)", () => {
-        expect(PADRE_NAV_ITEMS.length).toBe(6);
+    it("(2) el nav del padre son ESTAS entradas (lista, no conteo) y «Mis citas» va tras «Encontrar psicólogo» (SPEC-607/824)", () => {
+        // SPEC-824 (contrato-RETIRADO del conteo pelado): «Pedir ayuda» entró como 7ª entrada. En vez de subir
+        // 6→7 —un número que se sube y deja de proteger—, se afirma la LISTA de etiquetas top-level en orden:
+        // así una entrada nueva (de más o fuera de lugar) aparece en el diff del candado y hay que justificarla.
+        expect(PADRE_NAV_ITEMS.map((i) => i.label)).toEqual([
+            "Inicio",
+            "A quién protejo",
+            "A quién vigilo",
+            "Reportar",
+            "Ayuda profesional",
+            "Mi perfil",
+            "Pedir ayuda",
+        ]);
         const ayuda = PADRE_NAV_ITEMS.find((i) => i.label === "Ayuda profesional");
         expect(ayuda?.children, "«Ayuda profesional» debe ser un grupo con hijos").toBeTruthy();
         const labels = ayuda!.children!.map((i) => i.label);

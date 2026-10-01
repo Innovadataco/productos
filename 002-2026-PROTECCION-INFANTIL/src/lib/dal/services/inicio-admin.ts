@@ -43,6 +43,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { logger } from "@/lib/logger";
+import { listarBandejaPeticiones } from "@/lib/soporte/bandeja-peticiones.service";
 
 export type PrioridadSenal = "alta" | "media";
 
@@ -606,6 +607,31 @@ function mensajeInfra(senal: string, detalle: string | null): string {
 }
 
 /**
+ * SPEC-824 · peticiones de soporte con TÉRMINO LEGAL (habeas data / reversión de pago) ABIERTAS.
+ *
+ * A diferencia de las otras colas, aparece con lo PENDIENTE, no solo con lo por-vencer (decisión del CEO):
+ * con la bandeja recién nacida, una obligación legal sin atender es lo que importa, y la invariante que se
+ * vigila es DE ESTADO. La tarjeta PERSISTE mientras el estado dure (contracara del correo fire-once, que se
+ * entierra si el admin no lo ve). Escala a `alta` si alguna ya venció. REUSA `listarBandejaPeticiones` (MISMA
+ * fuente que la bandeja → el tablero y la bandeja nunca discrepan). No descuenta sembrados: las peticiones no
+ * se siembran (son acciones reales del padre); si algún día se siembran, hay que agregar el descuento acá.
+ */
+async function senalPeticionesSoporteLegales(): Promise<SenalAlarma | null> {
+    const { legales } = await listarBandejaPeticiones();
+    if (legales.length === 0) return null;
+    const vencidas = legales.filter((p) => p.incumplida).length;
+    return {
+        id: "peticiones_soporte_legales",
+        prioridad: vencidas > 0 ? "alta" : "media",
+        texto:
+            vencidas > 0
+                ? `${vencidas} petición(es) de soporte con término de ley VENCIDAS sin resolver.`
+                : `${legales.length} petición(es) de soporte con término de ley esperan atención.`,
+        ruta: "/dashboard/admin/soporte/peticiones",
+    };
+}
+
+/**
  * Agrega todo. Cada señal se calcula independiente y en paralelo.
  *
  * ## I-294 · una señal que truena NO desaparece
@@ -650,6 +676,9 @@ export async function calcularEstadoInicio(opciones: OpcionesInicio = {}): Promi
         { id: "revision_manual_saturada", etiqueta: "cola de revisión manual", ejecutar: () => senalRevisionManual(incluirSembrados) },
         { id: "vigencias_por_vencer", etiqueta: "vigencias por vencer", ejecutar: () => senalVigenciasPorVencer(incluirSembrados) },
         { id: "comite_vencido", etiqueta: "casos vencidos del comité", ejecutar: () => senalComiteVencido(incluirSembrados) },
+        // SPEC-824: obligaciones de soporte con término legal sin atender. Aparece con lo PENDIENTE (no solo
+        // por-vencer): la bandeja recién nacida necesita que lo legal no se entierre.
+        { id: "peticiones_soporte_legales", etiqueta: "peticiones de soporte", ejecutar: senalPeticionesSoporteLegales },
     ];
 
     const [settled, sembradosDistintos] = await Promise.all([

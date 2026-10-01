@@ -53,7 +53,7 @@ export const CLAVES_POR_ROL: Record<string, string[]> = {
     // expediente_revelar_original añadido para que el operador valide spam o dudas de contexto.
     // SPEC-750/T014: `sesiones_operador` — la cola de sesiones (citas confirmadas asignadas) con
     // su pantalla `/dashboard/admin/sesiones`, ítem de nav e ícono (video-camera). Los tres juntos.
-    OPERADOR: ["bandeja_reportes", "expediente_revelar_original", "revision_spam", "sesiones_operador"],  // SPEC-452 (I-317): revisar spam es un resultado de clasificación del operador.
+    OPERADOR: ["bandeja_reportes", "expediente_revelar_original", "revision_spam", "sesiones_operador", "soporte_peticiones"],  // SPEC-452 (I-317): revisar spam es un resultado de clasificación del operador. SPEC-824: la bandeja de peticiones de soporte (operador/admin).
     // SPEC-408 (A-75 · brief §9): el Verificador tiene perfil equivalente al
     // Operador — un SOLO módulo cubre solicitudes por revisar + incidentes
     // de citas (Jelkin: un rol, una persona, un trabajo — lección I-278).

@@ -25,6 +25,8 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     // como aterrizaje que redirige a Inicio o Bandeja según módulo.
     { href: "/dashboard/admin/bandeja", label: "Bandeja de reportes", labelCorto: "Bandeja", modulo: "bandeja_reportes" },
     { href: "/dashboard/admin/spam", label: "Revisión de spam", modulo: "revision_spam" },
+    // SPEC-824: bandeja de peticiones de soporte (PQR + habeas data). Etiqueta PENDIENTE de Diseño.
+    { href: "/dashboard/admin/soporte/peticiones", label: "Peticiones de soporte", labelCorto: "Peticiones", modulo: "soporte_peticiones" },
     // SPEC-750/T014: la cola de sesiones del operador. iconKey = href (default) → SesionesIcon
     // (video-camera) en ICONOS_NAV.
     { href: "/dashboard/admin/sesiones", label: "Sesiones", labelCorto: "Sesiones", modulo: "sesiones_operador" },
@@ -128,6 +130,7 @@ export interface PadreNavItem {
 // SPEC-607 (diseño final aprobado · design/expediente-final-mockup.html): menú
 // definitivo del padre — 6 entradas, dos con submódulos colapsables (chevron en
 // escritorio; la barra móvil aplana los hijos para acceso directo, I-38).
+// SPEC-824: +1 entrada «Soporte» (la Puerta de Soporte) — 7 en total. Etiqueta pendiente de Diseño.
 //
 // Salen del menú (las rutas SIGUEN existiendo):
 //  - «Mis reportes» (/mis-reportes): el expediente es el módulo único; el listado
@@ -164,6 +167,11 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
     // SPEC-607: ítem ÚNICO de cuenta — una sola página con tres acordeones
     // (Información general · Notificaciones · Suscripción).
     { href: "/dashboard/padre/perfil", label: "Mi perfil" },
+    // SPEC-824: la Puerta de Soporte (PQR + «Mis datos personales»). Entra en el menú con la bandeja del
+    // operador en el MISMO deploy (una puerta que nadie encuentra es el mismo defecto que no tener puerta).
+    // Etiqueta de Diseño: «Pedir ayuda» — verbo paraguas; la especificidad la da el selector de 819. NO
+    // «Soporte» (jerga) ni «Mis solicitudes» (prometería una lista de estado que no existe — eso es SPEC-823).
+    { href: "/dashboard/padre/soporte", label: "Pedir ayuda" },
 ];
 
 /**
