@@ -32,13 +32,10 @@ import { idsPerfilesProfesionalesSembrados } from "../demo-exclusion";
 import { FranjaDisponibleRepository } from "./franja-disponible";
 import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profesionales/vigencia";
 import { leerRangoEtario } from "@/lib/profesional/catalogos-lectura";
-import { getParametroSistemaValor } from "@/lib/parametros";
-import { repsElegible, type ConfigReps, type EstadoReps, type HechoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
+import { type ConfigReps, type EstadoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
 import { clasificarAvisoReps, zonaAdminReps, type ClasificacionAvisoReps, type ZonaAdminReps } from "@/lib/profesional/reps/aviso-estado-reps";
-
-// SPEC-790 · parámetros del gate REPS (parametrizables; sembrados en el seed, fail-safe por defecto).
-const PARAM_REPS_VENTANA = "reps.ventana_verificacion_dias";
-const PARAM_REPS_EXIGIR = "reps.exigir_reps_verificado";
+// SPEC-825: la elegibilidad REPS por lote + su config viva viven en UN módulo compartido (sin ciclo con franja).
+import { idsRepsElegiblesLote, configRepsVivo } from "@/lib/profesional/reps/elegibilidad-reps-lote";
 
 /**
  * SPEC-790 (T6) · Fila de la pantalla admin de carga manual REPS: el profesional `ACTIVO` + su estado REPS
@@ -483,13 +480,8 @@ export class PerfilProfesionalRepository {
 
     /** SPEC-790 · Config del gate REPS (parametrizable, fail-safe): ventana 365 d + cutover ABIERTO por defecto. */
     private async configReps(): Promise<ConfigReps> {
-        const ventana = parseInt((await getParametroSistemaValor(PARAM_REPS_VENTANA)) ?? "", 10);
-        const exigir = (await getParametroSistemaValor(PARAM_REPS_EXIGIR))?.trim().toLowerCase();
-        return {
-            ventanaVerificacionDias: Number.isFinite(ventana) && ventana > 0 ? ventana : 365,
-            // Ships `false` (cutover ABIERTO): hoy SIN_VERIFICAR es el universo; exigir vaciaría el directorio.
-            exigirRepsVerificado: exigir === "true" || exigir === "1",
-        };
+        // SPEC-825: fuente única — delega en el módulo de elegibilidad REPS por lote.
+        return configRepsVivo();
     }
 
     /**
@@ -501,30 +493,9 @@ export class PerfilProfesionalRepository {
      * la fila-prueba sobrevive a la baja del profesional, así que no asumimos que borrarlo la quita.
      */
     private async idsRepsElegibles(perfilIds: string[], ahora: Date, modalidad: ModalidadReps | null): Promise<Set<string>> {
-        if (perfilIds.length === 0) return new Set();
-        const config = await this.configReps();
-        const filas = await this.db.verificacionReps.findMany({
-            where: { profesionalId: { in: perfilIds } },
-            orderBy: { verificadoEn: "desc" },
-            select: { profesionalId: true, resultado: true, verificadoEn: true, vigenteHasta: true, modalidades: true },
-        });
-        const ultima = new Map<string, HechoReps>();
-        for (const f of filas) {
-            // Primera que aparece por profesional = la más reciente (orden desc).
-            if (!ultima.has(f.profesionalId)) {
-                ultima.set(f.profesionalId, {
-                    resultado: f.resultado,
-                    verificadoEn: f.verificadoEn,
-                    vigenteHasta: f.vigenteHasta,
-                    modalidades: f.modalidades,
-                });
-            }
-        }
-        const elegibles = new Set<string>();
-        for (const id of perfilIds) {
-            if (repsElegible(ultima.get(id) ?? null, modalidad, config, ahora).elegible) elegibles.add(id);
-        }
-        return elegibles;
+        // SPEC-825: fuente única — delega en `idsRepsElegiblesLote`. El último-por-grupo + `repsElegible` ya NO
+        // vive acá (lo comparten el directorio y las franjas sin ciclo). No reimplementar.
+        return idsRepsElegiblesLote(this.db, perfilIds, modalidad, ahora);
     }
 
     /**
