@@ -214,6 +214,9 @@ jobs:
           cache: npm
           cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
       - run: npm ci
+      # SPEC-821 (I-441): `prisma generate` va INMEDIATAMENTE tras `npm ci`, antes de todo script que
+      # importe el cliente (indices:check). Candado: prisma-generate-antes-del-cliente.candado.
+      - run: npx prisma generate
       - name: Generar .env.test (dummy, solo CI)
         run: |
           cat > .env.test <<'ENV_EOF'
@@ -261,7 +264,6 @@ jobs:
       - run: node scripts/ensure-pgboss.mjs
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
-      - run: npx prisma generate
       # 002-PI-068: tests con base de datos y singleFork (mutex TestMutex).
       # Mega-lote: shard N/4. Umbrales de cobertura en 0 aquí (se evalúan al mergear
       # los 6 blobs en test-integration-coverage); blob = resultados + cobertura.
@@ -440,6 +442,9 @@ jobs:
           cache: npm
           cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
       - run: npm ci
+      # SPEC-821 (I-441): `prisma generate` va INMEDIATAMENTE tras `npm ci`, antes de todo script que
+      # importe el cliente (indices:check). Candado: prisma-generate-antes-del-cliente.candado.
+      - run: npx prisma generate
       - name: Generar .env.test (dummy, solo CI)
         run: |
           cat > .env.test <<'ENV_EOF'
@@ -460,7 +465,6 @@ jobs:
       - run: node scripts/ensure-pgboss.mjs
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
-      - run: npx prisma generate
       # SPEC-133 (Q-1): journeys por rol como paso propio.
       - run: npm run test:journeys
         env:
@@ -502,6 +506,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-next-
       - run: npm ci
+      # SPEC-821 (I-441): `prisma generate` va INMEDIATAMENTE tras `npm ci`, antes de todo script que
+      # importe el cliente (indices:check). Candado: prisma-generate-antes-del-cliente.candado.
+      - run: npx prisma generate
       - name: Generar .env.test (dummy, solo CI)
         run: |
           cat > .env.test <<'ENV_EOF'
@@ -522,7 +529,6 @@ jobs:
       - run: node scripts/ensure-pgboss.mjs
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
-      - run: npx prisma generate
       # Placeholders SOLO de build.
       - run: npm run build
         env:

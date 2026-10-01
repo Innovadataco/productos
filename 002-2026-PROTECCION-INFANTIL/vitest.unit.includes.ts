@@ -136,6 +136,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-800: la versión de Node del repo (.nvmrc/engines) coincide con la de TODOS los
     // workflows (barrido). Corre acá para BLOQUEAR en CI (pi-gate exige test-unit).
     "scripts/ci/node-version-paridad.candado.test.ts",
+    // SPEC-821 (I-441): `prisma generate` va antes de todo paso de ci.yml que ejecute un script que
+    // importe el cliente Prisma (indices:check). Enumerador que PARSEA el ci.yml real + camina imports;
+    // control positivo adentro. Corre acá para BLOQUEAR (pi-gate exige test-unit).
+    "scripts/ci/prisma-generate-antes-del-cliente.candado.test.ts",
     // SPEC-281 (002-PI-180): algoritmo LPT de reparto de shards por peso.
     "scripts/ci/reparto-shards.test.mjs",
     // SPEC-450 (I-282): el margen contra el techo de 45 min — 6 shards, aviso
