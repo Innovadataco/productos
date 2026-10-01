@@ -6,8 +6,16 @@ import { estaHabilitado } from "./vigencia";
 export interface HabilitacionProfesional {
     /** Estado del perfil — para el menú por estado (SPEC-691, Dev 2). */
     estado: EstadoPerfilProfesional;
-    /** «Habilitado AHORA» para operar: estado ACTIVO + verificación aprobada vigente. */
+    /** «Habilitado AHORA» para operar («puede usar el área profesional»): ACTIVO + verificación interna vigente.
+     *  SPEC-790: el REPS NO lo toca — para no encerrar al profesional fuera de su propio panel. */
     habilitado: boolean;
+    /**
+     * SPEC-790 · «Al día en el REPS» — la mitad REPS de «ofrecible» (puede ofrecerse a las familias).
+     * SEPARADO de `habilitado`: un profesional puede estar `habilitado` (sigue entrando) y `repsAlDia=false`
+     * (fuera de la oferta). El aviso «seguís entrando pero estás fuera de la oferta» es `habilitado ∧ ¬repsAlDia`.
+     * NO lo mira ninguna compuerta operativa (eso cerraría el acceso); es señal para la superficie del profesional.
+     */
+    repsAlDia: boolean;
 }
 
 /**
@@ -26,9 +34,13 @@ export async function obtenerHabilitacionProfesional(
     usuarioId: string,
     ahora: Date = new Date(),
 ): Promise<HabilitacionProfesional | null> {
-    const perfil = await new PerfilProfesionalRepository().habilitacionPorUsuarioId(usuarioId);
+    const repo = new PerfilProfesionalRepository();
+    const perfil = await repo.habilitacionPorUsuarioId(usuarioId);
     if (!perfil) return null;
-    return { estado: perfil.estado, habilitado: estaHabilitado(perfil, perfil.verificaciones, ahora) };
+    // `habilitado` (área profesional) y `repsAlDia` (oferta a las familias) son EJES SEPARADOS: se computan
+    // aparte y ninguna compuerta operativa mira el segundo.
+    const repsAlDia = await repo.repsAlDia(perfil.id, ahora);
+    return { estado: perfil.estado, habilitado: estaHabilitado(perfil, perfil.verificaciones, ahora), repsAlDia };
 }
 
 /**

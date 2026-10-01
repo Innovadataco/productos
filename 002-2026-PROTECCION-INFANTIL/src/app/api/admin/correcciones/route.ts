@@ -6,22 +6,17 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { auditCorreccion, logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
-import { anonimizarTexto } from "@/lib/ai/anonimizador";
-import { generarEmbedding } from "@/lib/ai/embedder";
-import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
+import { derivarDatasetDeCorreccion } from "@/lib/ai/derivar-dataset-correccion";
+import { enSegundoPlano } from "@/lib/tareas-fondo";
 import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
-import { publishDatasetEmbeddingBackfill } from "@/lib/queue";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { CorreccionAdminRepository } from "@/lib/dal/repositories/correccion-admin";
 import { ClasificacionIARepository } from "@/lib/dal/repositories/clasificacion-ia";
-import { DatasetEntrenamientoRepository } from "@/lib/dal/repositories/dataset-entrenamiento";
-import { ParametroRepository } from "@/lib/dal/repositories/parametro";
-import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
 import { detectarYRegistrarMatch } from "@/lib/dal/services/evento-match";
 import { agregarPatronPorReporte } from "@/lib/colegio/patrones";
 import { z } from "zod";
@@ -214,62 +209,30 @@ export async function POST(request: Request) {
             userAgent,
         });
 
-        // SPEC-702 (I-422 · p1): la copia para entrenar la IA se guarda SOLO anonimizada.
-        // Un relato en claro NUNCA entra al dataset. Por eso:
-        //  · si el texto de TRABAJO ya divergió del original, ya viene anonimizado del flujo de
-        //    procesamiento (S-C · D-116/D-117: el original/evidencia está sellado desde el alta,
-        //    así que «ya anonimizado» se infiere de esa divergencia, no de textoOriginal!=null);
-        //  · si no, se anonimiza SIEMPRE antes de guardar — no solo cuando `contienePii`;
-        //  · si la anonimización FALLA, NO se guarda la copia. Se perdió el ejemplo antes que
-        //    guardar el relato crudo. Se retiró la copia con textoAnonimizado=false y su backfill:
-        //    un reintento futuro se hará desde el SOBRE del reporte, nunca desde una copia en claro.
-        // La lectura del original es fail-loud (fuera del try de IA).
+        // SPEC-702 (I-422 · p1): la copia para entrenar la IA se guarda SOLO anonimizada; un relato en
+        // claro NUNCA entra al dataset. «Ya anonimizado» se infiere de que el texto de TRABAJO divergió
+        // del original (S-C · D-116/D-117: el original/evidencia está sellado desde el alta). La lectura
+        // del original es fail-loud y va DENTRO de la petición (bajo el actor); solo se pasa su resultado
+        // al trabajo de fondo — el texto nunca viaja por cola ni se persiste crudo.
         const textoOriginalPlano = await conActor(actorDesdeRequest(user, request), () =>
             descifrarCampoReporte(reporteRow.contenidoId, "textoOriginal")
         );
-        const yaAnonimizado = reporte.texto !== textoOriginalPlano;
-        let textoDataset: string | null = null;
-        try {
-            if (yaAnonimizado) {
-                textoDataset = reporte.texto;
-            } else {
-                const paramModelo = await new ParametroRepository().findByClave("reportes.classification_model");
-                const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || MODELO_ANONIMIZACION_DEFAULT;
-                const resultado = await anonimizarTexto(modelo, reporte.texto);
-                textoDataset = resultado.textoAnonimizado;
-            }
-        } catch (err) {
-            logger.error("[CORRECCION] Falló la anonimización del dataset; NO se guarda la copia (nunca un relato en claro). Reintento futuro desde el sobre del reporte:", err);
-            textoDataset = null;
-        }
 
-        // Solo se persiste si quedó anonimizada. textoAnonimizado es SIEMPRE true: no existe la
-        // fila cruda. Si no hay copia, tampoco hay embedding que generar.
-        if (textoDataset !== null) {
-            const datasetRegistro = await new DatasetEntrenamientoRepository().crear({
-                texto: textoDataset,
-                clasificacionCorrecta: categoriaCorregida,
-                fuente: "correccion_admin",
+        // SPEC-807: la derivación del dataset (anonimizar + persistir + embedding) toca Ollama, que es
+        // REMOTO y puede COLGARSE hasta el timeout. Es best-effort y corre FUERA de la petición: si se
+        // awaitara, el bloqueo haría que el cliente aborte la corrección (uno de los productores del
+        // ECONNRESET, SPEC-810). Se lanza en segundo plano con su propio .catch; su fallo es INVISIBLE
+        // para esta respuesta. (Observación del TRABAJO = deuda declarada en derivar-dataset-correccion.ts.)
+        enSegundoPlano(
+            derivarDatasetDeCorreccion({
+                textoTrabajo: reporte.texto,
+                textoOriginalPlano,
+                categoriaCorregida: categoriaCorregida as import("@prisma/client").CategoriaConducta,
                 correccionId: correccion.id,
-                textoAnonimizado: true,
-            });
-
-            // Generar embedding para RAG (F5). Si falla, no bloquear la corrección.
-            try {
-                const paramEmbedding = await new ParametroRepository().findByClave("reportes.embedding_model");
-                const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
-                const vector = await generarEmbedding(modeloEmbedding, datasetRegistro.texto);
-                // E-8 (D3): la raw de inserción vive en el adaptador EmbeddingRepository.
-                await new EmbeddingRepository().insertDatasetEmbedding(datasetRegistro.id, modeloEmbedding, vector);
-            } catch (embedErr) {
-                logger.error("[CORRECCION] Fallo embedding para dataset, encolando backfill:", embedErr);
-                try {
-                    await publishDatasetEmbeddingBackfill(datasetRegistro.id);
-                } catch (queueErr) {
-                    logger.error("[CORRECCION] No se pudo encolar backfill de embedding:", queueErr);
-                }
-            }
-        }
+            }).catch((err) =>
+                logger.error("[CORRECCION] Derivación de dataset en segundo plano falló (best-effort):", err)
+            )
+        );
 
         return NextResponse.json({
             reporteId,

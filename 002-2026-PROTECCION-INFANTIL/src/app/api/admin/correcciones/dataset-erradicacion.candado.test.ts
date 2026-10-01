@@ -22,6 +22,7 @@ import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
+import { esperarTareasFondo } from "@/lib/tareas-fondo";
 import {
     crearUsuario,
     crearTokenUsuario,
@@ -85,6 +86,8 @@ async function corregirReporte(sufijo: string, adminToken: string) {
         categoriaCorregida: "SOLICITUD_ENCUENTRO",
     }, adminToken);
     expect((await POST(req)).status).toBe(200);
+    // SPEC-807: la derivación del dataset corre en segundo plano; se espera su asentamiento.
+    await esperarTareasFondo();
 
     const dataset = await prisma.datasetEntrenamiento.findFirst({
         where: { correccion: { clasificacion: { reporteId: reporte.id } } },

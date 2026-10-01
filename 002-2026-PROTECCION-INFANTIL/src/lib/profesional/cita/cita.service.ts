@@ -22,6 +22,7 @@ import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { asignarOperadorACita } from "@/lib/operadores/asignador-citas";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
+import { modalidadRepsRequerida } from "@/lib/profesional/reps/modalidad-cita-a-reps";
 import { getParametroSistemaValor } from "@/lib/parametros";
 
 const HORAS_48_MS = 48 * 60 * 60 * 1000;
@@ -78,8 +79,22 @@ export async function crearSolicitudCita(input: CrearCitaInput) {
     // SPEC-655: el visor es el PADRE de la sesión (input.padreUsuarioId sale de
     // verifyAuth("PARENT") en la ruta) — un padre demo puede agendar con un pro demo;
     // un padre real no puede agendar con un fantasma (obtenerPublicoPorId → null).
-    const pro = await new PerfilProfesionalRepository().obtenerPublicoPorId(input.profesionalId, input.padreUsuarioId);
+    const perfilRepo = new PerfilProfesionalRepository();
+    const pro = await perfilRepo.obtenerPublicoPorId(input.profesionalId, input.padreUsuarioId);
     if (!pro) {
+        throw new AppError(
+            "Este profesional no está disponible o no acepta nuevas citas",
+            ERROR_CODES.VALIDATION_ERROR,
+            400
+        );
+    }
+
+    // SPEC-790 (T4b): el directorio gatea por vigencia REPS (modalidad=null); al RESERVAR, el REPS debe
+    // cubrir la MODALIDAD CONCRETA de la cita (la de la franja) — una habilitación presencial no atiende
+    // una cita de telemedicina. El mapeo cita→REPS vive en `modalidadRepsRequerida`; un valor sin mapeo
+    // NIEGA (fail-closed) y queda registrado. Reutiliza el mensaje de «no disponible» (sin copy nueva).
+    const modalidadReps = modalidadRepsRequerida(franja.modalidad);
+    if (modalidadReps === null || !(await perfilRepo.esRepsElegibleParaModalidad(input.profesionalId, modalidadReps))) {
         throw new AppError(
             "Este profesional no está disponible o no acepta nuevas citas",
             ERROR_CODES.VALIDATION_ERROR,

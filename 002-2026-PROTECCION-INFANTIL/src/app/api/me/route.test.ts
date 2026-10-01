@@ -65,6 +65,9 @@ describe("GET /api/me · sesión huérfana (SPEC-603)", { timeout: 30_000 }, () 
         const json = await res.json();
         expect(json.id).toBe(padre.id);
         expect(json.email).toBe("sano-me@example.com");
+        // SPEC-690-A / SPEC-790: `profesional` (y por ende `repsAlDia`) SOLO existe para rol PROFESIONAL.
+        // Un no-profesional NUNCA recibe el bloque — repsAlDia no se sirve a nadie más que al propio profesional.
+        expect(json.profesional, "un PARENT no debe recibir el bloque profesional ni repsAlDia").toBeUndefined();
         expect(cookiesExpiradas(res)).toHaveLength(0);
     });
 
@@ -132,7 +135,8 @@ describe("GET /api/me · habilitación del profesional (SPEC-690)", { timeout: 3
         const res = await GET();
         expect(res.status).toBe(200);
         const json = await res.json();
-        expect(json.profesional).toEqual({ estado: "ACTIVO", habilitado: true });
+        // SPEC-790: `repsAlDia` es eje aparte; sin fila REPS = SIN_VERIFICAR, cutover abierto → true.
+        expect(json.profesional).toEqual({ estado: "ACTIVO", habilitado: true, repsAlDia: true });
     });
 
     it("suspender con la MISMA sesión → la llamada siguiente da habilitado:false (server-side, no cookie)", async () => {
@@ -146,6 +150,7 @@ describe("GET /api/me · habilitación del profesional (SPEC-690)", { timeout: 3
         await prisma.perfilProfesional.update({ where: { id: perfil.id }, data: { estado: "SUSPENDIDO" } });
 
         const despues = await (await GET()).json();
-        expect(despues.profesional).toEqual({ estado: "SUSPENDIDO", habilitado: false });
+        // habilitado=false por el estado; repsAlDia sigue true (el REPS no mira el estado interno).
+        expect(despues.profesional).toEqual({ estado: "SUSPENDIDO", habilitado: false, repsAlDia: true });
     });
 });
