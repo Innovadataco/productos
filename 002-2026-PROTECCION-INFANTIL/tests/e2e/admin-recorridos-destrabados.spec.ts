@@ -236,12 +236,17 @@ test.describe.serial("Recorridos destrabados por data (SPEC-406)", () => {
      * COMITE_CONVIVENCIA — usamos el rector para no depender de que exista
      * un COMITE_CONVIVENCIA con clave conocida.
      */
-    // SURGIÓ al arreglar D8 (estaba oculto detrás de él en el serial). El rector loguea bien,
-    // pero `/dashboard/colegio/comite/casos` lo rebota a /login: la página hace
-    // `findSesionColegio(rector)` y devuelve null para el rector efímero (línea 28 de la page),
-    // así que la vigencia del colegio —ya corregida acá— ni se evalúa. Es una brecha de DATOS
-    // de sesión del rector (probable: usar la fixture `contexto-cliente`), separada del triaje
-    // del padre. A fixme hasta armar ese contexto; no se fuerza a verde.
+    // SURGIÓ al arreglar D8 (estaba oculto detrás de él en el serial). DIAGNÓSTICO EN VIVO
+    // (API vs página con la MISMA sesión, pregunta del CEO para partir el árbol): el rector
+    // (SCHOOL_ADMIN = titular) loguea 200, pero AMBOS adaptadores rechazan IGUAL — primero
+    // `CONSENTIMIENTO_REQUERIDO` (no aceptó consentimiento), y tras aceptarlo, `CAMINO_INCOMPLETO`
+    // (`/camino/colegio/rector`). La página redirige y el API da 403 con el MISMO motivo en cada
+    // puerta → los dos adaptadores CONCUERDAN → NO es discrepancia de producto, es ARNÉS: el
+    // colegio no está onboardeado. El camino del colegio tiene 6 pasos (consentimiento + datos del
+    // rector + plan + profesores + cursos + estudiantes, `estado-colegio.ts`). Fix real = un builder
+    // `crearColegioOnboarded` (análogo a crearPadreOnboarded). A fixme hasta ese builder; el fixme
+    // DESAPARECE cuando exista. (Mi diagnóstico anterior —findSesionColegio null— era FALSO: es un
+    // findUnique por id, nunca null para un rector que existe.)
     test.fixme("Comité de convivencia · rector alcanza la bandeja de casos", async ({ page }) => {
         await login(page, RECTOR_EMAIL, RECTOR_PASSWORD);
         await page.goto("/dashboard/colegio/comite/casos");
