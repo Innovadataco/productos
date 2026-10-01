@@ -1,28 +1,28 @@
 import Link from "next/link";
 
 /**
- * SPEC-751 T010 · §2 de la forma (FORMA-SPEC751-T010, d485493) · renglón informativo en el flujo de
- * pedir cita. HEADS-UP, NO muro: informa que «escuchar al menor es parte de cuidarlo» y acompaña a ese
- * paso; NUNCA dice «no puedes pedir la cita hasta…» (sería mentira con el gate apagado, y sigue siendo
- * un acompañamiento —no un bloqueo— cuando Jelkin lo encienda). Honesto en los dos estados.
+ * SPEC-751 T010 · §2 de la forma (FORMA-SPEC751-T010 v1.1, 9ced530) · renglón informativo en el flujo
+ * de pedir cita. HEADS-UP, NO muro: informa que «escuchar al menor es parte de cuidarlo» y acompaña a
+ * ese paso; NUNCA dice «no puedes pedir la cita hasta…». Honesto con el gate apagado y al encenderlo.
  *
- * Hallazgo (Dev 2): la cita NO es por-hijo — no hay selector de hijo en `SolicitarCitaPanel` (la forma
- * lo asumió con checkout atrasado, I-440). Por eso el renglón se enmarca por «tu hijo/tus hijos», SIN
- * nombre, y solo aparece cuando el titular tiene audiencia(s) pendiente(s). «¿Qué es esto?» lleva a la
- * pantalla §1 (`/audiencia-menor`). Voz tú (padre).
+ * GENÉRICO, sin nombre (hallazgo Dev 2 #852 + v1.1 de Diseño): la cita NO es por-hijo (el POST no lleva
+ * `hijoId`), así que en este punto el sistema no sabe de cuál hijo se trata — ni nombre ni GÉNERO. Por
+ * eso el copy es plural inclusivo «tus hijos» (verdad general del servicio, honesta para 1 o N), nunca
+ * «tu hijo» (masculino, fallaría con una hija). Solo aparece cuando hay audiencia(s) pendiente(s).
+ * «¿Qué es esto?» lleva a la pantalla §1 (`/audiencia-menor`), que SÍ nombra al hijo. Voz tú (padre).
+ *
+ * Tono calmo, NEUTRO y SUBORDINADO a la línea de emergencia del panel: superficie neutra, sin color de
+ * alarma (D-120 reserva el rojo a la criticidad de un menor; esto no lo es), para que no compita con la
+ * afordancia de emergencia.
  */
 export function RenglonAudienciaCita({ count }: { count: number }) {
     if (count <= 0) return null;
-    const plural = count > 1;
     return (
-        <p className="mt-2 rounded-xl bg-ambar/10 p-3 text-xs text-body" role="note">
-            <span className="font-semibold">
-                {plural
-                    ? "Escuchar a tus hijos es parte de cuidarlos aquí:"
-                    : "Escuchar a tu hijo es parte de cuidarlo aquí:"}
+        <p className="mt-2 rounded-xl bg-tinta/[0.03] p-3 text-xs text-body/80" role="note">
+            <span className="font-semibold text-body">
+                Escuchar a tus hijos, según su edad, es parte de cuidarlos aquí
             </span>{" "}
-            la ley pide que, según su edad, {plural ? "sepan y estén" : "sepa y esté"} de acuerdo. Te vamos a acompañar
-            en ese paso.{" "}
+            — es su derecho. Te acompañamos en ese paso.{" "}
             <Link href="/audiencia-menor" className="font-semibold text-accent underline">
                 ¿Qué es esto?
             </Link>
