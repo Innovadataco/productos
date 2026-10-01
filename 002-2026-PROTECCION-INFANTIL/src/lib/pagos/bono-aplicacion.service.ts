@@ -6,13 +6,10 @@
  * un evento stub (el motor de notificaciones se implementará en SPEC-217).
  */
 import type { BonoPromocional, Suscripcion, TipoTitular } from "@prisma/client";
-import { toZonedTime } from "date-fns-tz";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { calcularDescuentoBono } from "./pagos-calculos.service";
-
-const ZONA_BOGOTA = "America/Bogota";
 
 export interface AplicarBonoInput {
     suscripcionId: string;
@@ -43,11 +40,14 @@ export async function emitirEventoBonoAplicado(payload: {
     console.warn(`[BONO-EVENTO-STUB] bono.aplicado: ${JSON.stringify(payload)}`);
 }
 
-function ahoraBogota(): Date {
-    return toZonedTime(new Date(), ZONA_BOGOTA);
-}
-
-function esVigente(bono: BonoPromocional, ahora: Date): boolean {
+/**
+ * SPEC-805: la vigencia de un bono (`vigenciaInicio`/`vigenciaFin`) vive en espacio de INSTANTE
+ * REAL — los escritores admin (`bonos/route.ts`) y el handler (`crear-bono.ts`, `fromZonedTime`)
+ * guardan instantes reales, y cupones también tras este cambio. Por eso el lector compara contra
+ * `new Date()` (instante real), no contra un pseudo-instante Bogotá 5h corrido: los DOS extremos de
+ * la comparación en el MISMO espacio. Exportada para el candado de round-trip del par cupón↔esVigente.
+ */
+export function esVigente(bono: BonoPromocional, ahora: Date): boolean {
     return bono.vigenciaInicio <= ahora && bono.vigenciaFin >= ahora;
 }
 
@@ -121,7 +121,7 @@ export async function aplicarBonoPromocional(
         throw new AppError("El bono no está activo", ERROR_CODES.VALIDATION_ERROR, 400);
     }
 
-    const ahora = ahoraBogota();
+    const ahora = new Date();
     if (!esVigente(bono, ahora)) {
         throw new AppError("El bono no está vigente", ERROR_CODES.VALIDATION_ERROR, 400);
     }
