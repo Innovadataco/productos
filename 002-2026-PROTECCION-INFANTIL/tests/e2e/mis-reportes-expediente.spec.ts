@@ -119,38 +119,41 @@ test.describe("SPEC-340 · Mis reportes y el expediente", () => {
         expect(padre.id).toBeTruthy();
     });
 
-    test("el expediente nace del botón y muestra la historia + informes", async ({ page }) => {
+    test("el expediente se abre desde el botón y muestra la historia + informes", async ({ page }) => {
         const email = emailUnico();
         const { hijoId } = await crearPadreCompleto(email);
         await login(page, email);
         const r1 = await reportar(page, `+5730066${Date.now() % 100000}`, hijoId);
 
-        // Crear por API (el botón llama esto mismo) y abrir la ventana.
+        // SPEC-604: el expediente YA nació con el PRIMER reporte del padre (en POST /api/reportes, misma
+        // tx) — ya no nace en este botón. Por eso este POST es IDEMPOTENTE: devuelve 200 (ya existe) en
+        // vez de 201 (creado). Se aceptan ambos: el contrato es «existe el expediente de esta cadena»,
+        // no el código de estado (antes exigía 201 y rompía con el cambio de SPEC-604).
         const resExp = await page.request.post("/api/padre/expedientes", { data: { reportePrincipalId: r1 } });
-        expect(resExp.status()).toBe(201);
+        expect([200, 201]).toContain(resExp.status());
         const { expedienteId } = await resExp.json();
 
         await page.goto(`/dashboard/padre/expedientes/${expedienteId}`);
-        await expect(page.getByText(/hecho documentado/)).toBeVisible();
-        await expect(page.getByText(/siempre abierto/)).toBeVisible();
-        await expect(page.getByRole("button", { name: /Reproducir la historia/i })).toBeVisible();
-        await expect(page.getByText(/La historia, en orden/)).toBeVisible();
-        await expect(page.getByRole("button", { name: /Generar informe/i })).toBeVisible();
+        // SPEC-605 (pantalla madre del expediente, ExpedienteMadreClient): la página se rediseñó en 5
+        // bloques. El copy viejo («hecho documentado», «siempre abierto», «La historia, en orden»,
+        // «Reproducir la historia», «Generar informe») y el listado «Informe #N» se RETIRARON. Se afirman
+        // anclas robustas del rediseño: el bloque de la línea de tiempo (por id) y el botón de descarga.
+        await expect(page.locator("#bloque-timeline")).toBeVisible();
+        // El informe es un enlace <a> al endpoint PDF (SPEC-738, descarga directa), no un botón: se
+        // ancla por el HREF (robusto al copy), no por el rótulo.
+        await expect(page.locator('a[href$="/pdf"]')).toBeVisible();
 
-        // Prohibidos (brief §1): sin cerrar/resuelto/puntaje.
+        // Prohibidos (brief §1 · presunción de inocencia): sin cerrar/resuelto/puntaje.
         const cuerpo = (await page.textContent("body")) ?? "";
         expect(cuerpo).not.toMatch(/\bresuelto\b/i);
         expect(cuerpo).not.toMatch(/caso terminado/i);
 
-        // El PDF con sello: se genera y queda registrado.
+        // El PDF con sello se genera y queda REGISTRADO (InformePadre.numeroSecuencial=1) — ésa es la
+        // prueba de conducta, no un listado «Informe #1» en pantalla (retirado en el rediseño SPEC-605).
         const resPdf = await page.request.get(`/api/padre/expedientes/${expedienteId}/pdf`);
         expect(resPdf.status()).toBe(200);
         const registro = await prisma.informePadre.findFirst({ where: { expedienteId } });
         expect(registro?.numeroSecuencial).toBe(1);
-
-        // Y en la recarga, el historial lo lista.
-        await page.reload();
-        await expect(page.getByText(/Informe #1/)).toBeVisible();
     });
 
     test("390px: sin desborde horizontal en Mis reportes ni en el expediente", async ({ page }) => {
