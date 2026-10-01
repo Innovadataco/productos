@@ -34,7 +34,7 @@ import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profes
 import { leerRangoEtario } from "@/lib/profesional/catalogos-lectura";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { repsElegible, type ConfigReps, type EstadoReps, type HechoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
-import { clasificarAvisoReps, zonaAdminReps, type ClasificacionAvisoReps, type ZonaAdminReps } from "@/lib/profesional/reps/aviso-estado-reps";
+import { clasificarAvisoReps, clasificarAvisoRepsConModalidad, zonaAdminReps, type ClasificacionAvisoReps, type AvisoRepsConModalidad, type ZonaAdminReps } from "@/lib/profesional/reps/aviso-estado-reps";
 
 // SPEC-790 · parámetros del gate REPS (parametrizables; sembrados en el seed, fail-safe por defecto).
 const PARAM_REPS_VENTANA = "reps.ventana_verificacion_dias";
@@ -556,19 +556,34 @@ export class PerfilProfesionalRepository {
     }
 
     /**
-     * SPEC-813 · Clasificación REPS del profesional para las SUPERFICIES (aviso al profesional + alarma de
-     * admin). `¬repsAlDia` funde cuatro causas; esto devuelve CUÁL — `CADUCADO` (aviso al profesional),
-     * `REVISION_ADMIN` (alarma de admin), `AL_DIA`/`SIN_VERIFICAR` (ni aviso ni alarma). Misma ÚLTIMA fila y
-     * misma config que `repsAlDia`; el aviso se muestra con `=== "CADUCADO"`.
+     * SPEC-813 + SPEC-836 pieza 2 · Clasificación REPS del profesional para SU panel (aviso al profesional).
+     * `¬repsAlDia` funde cuatro causas; esto devuelve CUÁL — `CADUCADO` (aviso al profesional), `REVISION_ADMIN`
+     * (alarma de admin, no se muestra acá), `AL_DIA`/`SIN_VERIFICAR` (ni aviso ni alarma). SPEC-836: además,
+     * sobre un REPS vigente, detecta el HUECO DE MODALIDAD —una modalidad que el profesional OFRECE
+     * (`atiendeVirtual`/`atiendePresencial`) y su REPS no cubre— y devuelve `MODALIDAD_NO_CUBIERTA` + la lista.
+     * Por eso lee también las banderas de oferta del perfil, no solo la última fila REPS. La pantalla de carga
+     * del admin NO usa esto: usa `clasificarAvisoReps` (vigencia-only), porque el hueco de modalidad lo arregla
+     * el profesional, no el admin.
      */
-    async clasificarReps(profesionalId: string, ahora: Date = new Date()): Promise<ClasificacionAvisoReps> {
+    async clasificarReps(profesionalId: string, ahora: Date = new Date()): Promise<AvisoRepsConModalidad> {
         const config = await this.configReps();
-        const fila = await this.db.verificacionReps.findFirst({
-            where: { profesionalId },
-            orderBy: { verificadoEn: "desc" },
-            select: { resultado: true, verificadoEn: true, vigenteHasta: true, modalidades: true },
-        });
-        return clasificarAvisoReps(fila, config, ahora);
+        const [fila, perfil] = await Promise.all([
+            this.db.verificacionReps.findFirst({
+                where: { profesionalId },
+                orderBy: { verificadoEn: "desc" },
+                select: { resultado: true, verificadoEn: true, vigenteHasta: true, modalidades: true },
+            }),
+            this.db.perfilProfesional.findUnique({
+                where: { id: profesionalId },
+                select: { atiendeVirtual: true, atiendePresencial: true },
+            }),
+        ]);
+        return clasificarAvisoRepsConModalidad(
+            fila,
+            { virtual: perfil?.atiendeVirtual ?? false, presencial: perfil?.atiendePresencial ?? false },
+            config,
+            ahora,
+        );
     }
 
     /**

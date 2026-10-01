@@ -30,6 +30,7 @@
  * profundidad (fail-closed), pero la base no lo produce.
  */
 import type { HechoReps, ConfigReps } from "./reps-elegibilidad";
+import { modalidadCitaAReps } from "./modalidad-cita-a-reps";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -39,7 +40,17 @@ const esFecha = (d: Date | null | undefined): d is Date => d instanceof Date && 
  * Las categorías del aviso. Cerrado a propósito (como `ESTADOS_REPS`): el candado y el `switch`
  * exhaustivo cazan un valor nuevo en vez de confiar en una lista escrita a mano.
  */
-export const CLASIFICACIONES_AVISO_REPS = ["AL_DIA", "SIN_VERIFICAR", "CADUCADO", "REVISION_ADMIN"] as const;
+// SPEC-836 pieza 2: `MODALIDAD_NO_CUBIERTA` es el QUINTO valor — el aviso que 813 NO daba. Lo produce SOLO
+// `clasificarAvisoRepsConModalidad` (abajo), nunca `clasificarAvisoReps` (vigencia-only): una superficie que
+// conoce las modalidades que el profesional OFRECE puede detectar que su REPS, aun vigente, no cubre una de
+// ellas. CADUCADO/REVISION_ADMIN tienen prioridad (si la inscripción entera está mal no es «hueco de modalidad»).
+export const CLASIFICACIONES_AVISO_REPS = [
+    "AL_DIA",
+    "SIN_VERIFICAR",
+    "CADUCADO",
+    "REVISION_ADMIN",
+    "MODALIDAD_NO_CUBIERTA",
+] as const;
 export type ClasificacionAvisoReps = (typeof CLASIFICACIONES_AVISO_REPS)[number];
 
 /**
@@ -119,4 +130,53 @@ export function zonaAdminReps(hecho: HechoReps | null, config: ConfigReps, now: 
     // AL_DIA). El resto —5 NO_ENCONTRADA, 8 VIGENTE sin fecha, y el fail-closed de reloj inválido— es REVISAR.
     if (hecho && hecho.resultado === "VIGENTE" && esFecha(hecho.vigenteHasta)) return "RE_VERIFICAR";
     return "REVISAR";
+}
+
+/** Eje de la OFERTA del profesional (lo que ANUNCIA que atiende), espejo de `ModalidadCita`. El copy habla
+ * en este eje (virtual/presencial), no en el del REPS (telemedicina/presencial). */
+export type ModalidadOferta = "VIRTUAL" | "PRESENCIAL";
+
+export interface AvisoRepsConModalidad {
+    readonly clasificacion: ClasificacionAvisoReps;
+    /** OFRECIDAS y no cubiertas por el REPS. No vacío SOLO cuando `clasificacion === "MODALIDAD_NO_CUBIERTA"`. */
+    readonly modalidadesNoCubiertas: readonly ModalidadOferta[];
+}
+
+/**
+ * SPEC-836 pieza 2 · La modalidad del aviso. `clasificarAvisoReps` es vigencia-only (decisión 3 de 813: la
+ * cobertura por modalidad se exigía SOLO en la reserva, no en un banner). Pero 825 (oculta franjas), 834
+ * (rechaza publicar) y 814 (manda citas a la cola) YA actúan sobre el hueco de modalidad mientras 813 decía
+ * AL_DIA —«todo en orden»—: le decíamos que estaba al día y actuábamos como si no. Esta función REFINA AL_DIA:
+ * si la vigencia está al día pero el REPS no cubre una modalidad que el profesional OFRECE, el aviso lo dice.
+ *
+ * Refina SOLO AL_DIA: si la inscripción entera está mal (CADUCADO / REVISION_ADMIN) o no hay verificación
+ * (SIN_VERIFICAR), ESO manda — mezclar el hueco de modalidad con una causa de vigencia repetiría el colapso
+ * que 836 existe para deshacer. Devuelve la LISTA de modalidades OFRECIDAS no cubiertas (puede haber DOS: el
+ * que ofrece virtual y presencial con un REPS que no cubre ninguna), para que el copy las nombre y el
+ * profesional no arregle la mitad. Mapeo oferta→REPS por la FUENTE ÚNICA (`modalidadCitaAReps`:
+ * VIRTUAL→TELEMEDICINA, PRESENCIAL→PRESENCIAL); un valor sin mapeo cuenta como hueco (fail-closed). PURA.
+ */
+export function clasificarAvisoRepsConModalidad(
+    hecho: HechoReps | null,
+    ofrece: { readonly virtual: boolean; readonly presencial: boolean },
+    config: ConfigReps,
+    now: Date,
+): AvisoRepsConModalidad {
+    const base = clasificarAvisoReps(hecho, config, now);
+    // El hueco de modalidad es un REFINAMIENTO de «vigencia al día»: cualquier otra clasificación manda.
+    if (base !== "AL_DIA" || !hecho) return { clasificacion: base, modalidadesNoCubiertas: [] };
+
+    // Una modalidad OFRECIDA está EN FALTA si su eje REPS no está entre las que el REPS cubre. Fail-closed:
+    // un valor sin mapeo (no debería ocurrir con VIRTUAL/PRESENCIAL) se trata como hueco, no se cuela.
+    const enFalta = (oferta: ModalidadOferta): boolean => {
+        const m = modalidadCitaAReps(oferta);
+        return !m.mapea || !hecho.modalidades.includes(m.reps);
+    };
+    const modalidadesNoCubiertas: ModalidadOferta[] = [];
+    if (ofrece.virtual && enFalta("VIRTUAL")) modalidadesNoCubiertas.push("VIRTUAL");
+    if (ofrece.presencial && enFalta("PRESENCIAL")) modalidadesNoCubiertas.push("PRESENCIAL");
+
+    return modalidadesNoCubiertas.length > 0
+        ? { clasificacion: "MODALIDAD_NO_CUBIERTA", modalidadesNoCubiertas }
+        : { clasificacion: "AL_DIA", modalidadesNoCubiertas: [] };
 }

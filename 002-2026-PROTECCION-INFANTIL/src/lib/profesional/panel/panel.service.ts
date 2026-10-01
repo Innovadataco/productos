@@ -32,7 +32,7 @@ import { desglosarTarifa, obtenerPorcentajeServicio, type DesgloseTarifa } from 
 import { estadoEfectivoDeCita } from "../cita/estado-efectivo";
 import { citasPendientesEncuesta } from "@/lib/dal/services/encuesta-cita";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
-import type { ClasificacionAvisoReps } from "@/lib/profesional/reps/aviso-estado-reps";
+import type { ClasificacionAvisoReps, ModalidadOferta } from "@/lib/profesional/reps/aviso-estado-reps";
 
 /** Estados que esperan una respuesta del profesional dentro de las 48 h. */
 const ESPERAN_RESPUESTA: EstadoSolicitudCita[] = ["SIN_CONFIRMAR", "PAGADA_PENDIENTE"];
@@ -129,8 +129,12 @@ export interface PanelProfesionalDto {
     /**
      * SPEC-813 · clasificación REPS del profesional. El banner «fuera de la oferta» se muestra SOLO con
      * `"CADUCADO"` (estados 4 VENCIDA / 6 vigencia pasada). Los estados de admin (5/7/8) NO llegan acá.
+     * SPEC-836 pieza 2: puede ser además `"MODALIDAD_NO_CUBIERTA"` (REPS vigente que no cubre una modalidad
+     * que el profesional ofrece) → dispara su propio banner con `modalidadesRepsNoCubiertas`.
      */
     avisoReps: ClasificacionAvisoReps;
+    /** SPEC-836 pieza 2: modalidades OFRECIDAS que el REPS no cubre. No vacío SOLO con `MODALIDAD_NO_CUBIERTA`. */
+    modalidadesRepsNoCubiertas: readonly ModalidadOferta[];
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -193,7 +197,10 @@ export async function panelDelProfesional(
     const sesionesPorRegistrar = (await citasPendientesEncuesta(usuarioId, "PROFESIONAL", ahora)).length;
 
     // SPEC-813: clasificación REPS para el banner «fuera de la oferta» (solo CADUCADO lo dispara).
-    const avisoReps = await new PerfilProfesionalRepository().clasificarReps(perfil.id, ahora);
+    // SPEC-836 pieza 2: clasificarReps es ahora modality-aware; devuelve la clasificación + las modalidades
+    // ofrecidas que el REPS no cubre (para el banner del hueco de modalidad).
+    const { clasificacion: avisoReps, modalidadesNoCubiertas: modalidadesRepsNoCubiertas } =
+        await new PerfilProfesionalRepository().clasificarReps(perfil.id, ahora);
 
     return {
         nombreVisible: perfil.nombreVisible,
@@ -247,6 +254,7 @@ export async function panelDelProfesional(
             })),
         sesionesPorRegistrar,
         avisoReps,
+        modalidadesRepsNoCubiertas,
     };
 }
 

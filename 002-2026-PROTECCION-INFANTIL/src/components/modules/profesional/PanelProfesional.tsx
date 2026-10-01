@@ -2,6 +2,7 @@ import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { fechaCorta, fechaHora } from "@/lib/format/fecha";
 import type { PanelProfesionalDto } from "@/lib/profesional/panel/panel.service";
+import type { ModalidadOferta } from "@/lib/profesional/reps/aviso-estado-reps";
 import { SolicitudAcciones } from "./SolicitudAcciones";
 
 /**
@@ -38,6 +39,13 @@ export function PanelProfesional({ data }: { data: PanelProfesionalDto }) {
                 (entra y lo ve); ámbar, cero rubí; no promete reasignación ni notificación. Los estados de
                 admin (5/7/8) NO llegan acá — van a `verificacion-profesionales`. */}
             {data.avisoReps === "CADUCADO" && <AvisoRepsCaducado />}
+
+            {/* SPEC-836 pieza 2: banner del HUECO DE MODALIDAD — el REPS está vigente pero no cubre una
+                modalidad que el profesional OFRECE. 813 decía AL_DIA mientras 825/834/814 ya actuaban sobre
+                él. Aquí SÍ es su acción (actualizar su inscripción o dejar de ofrecer esa modalidad). */}
+            {data.avisoReps === "MODALIDAD_NO_CUBIERTA" && (
+                <AvisoRepsModalidadNoCubierta modalidades={data.modalidadesRepsNoCubiertas} />
+            )}
 
             {/* SPEC-610 (I-372): la ENTRADA VISIBLE al canje del pase. Antes
                 `/canjear-acceso` no estaba enlazada desde ningún lado (solo en
@@ -165,6 +173,53 @@ export function AvisoRepsCaducado() {
                 className="mt-3 inline-flex min-h-11 items-center justify-center rounded-2xl border border-ambar/40 px-5 py-2.5 text-sm font-semibold transition hover:bg-ambar/10"
             >
                 Ver qué significa y cómo renovar
+            </Link>
+        </section>
+    );
+}
+
+/**
+ * SPEC-836 pieza 2 · banner del HUECO DE MODALIDAD. El REPS está VIGENTE pero no cubre una (o ambas) de las
+ * modalidades que el profesional OFRECE; 813 le decía AL_DIA mientras 825/834/814 ya actuaban. A diferencia
+ * del CADUCADO (vigencia) y de la alarma de admin (estado 7, nuestra), aquí la acción es SUYA: actualizar su
+ * inscripción para cubrir esa modalidad, o dejar de ofrecerla. Nombra la(s) modalidad(es) para que no adivine.
+ *
+ * ⚠️ COPY PROVISIONAL — PENDIENTE de forma de Diseño (FORMA-SPEC836 pieza 2, pedida por el CEO; soporta
+ * singular y plural). No es copy final; cuando Diseño la emita se re-transcribe. El candado afirma el GATE del
+ * banner y la aparición de la(s) modalidad(es), no la copy verbatim.
+ */
+export function AvisoRepsModalidadNoCubierta({ modalidades }: { modalidades: readonly ModalidadOferta[] }) {
+    const palabra = (m: ModalidadOferta) => (m === "VIRTUAL" ? "virtual" : "presencial");
+    const lista =
+        modalidades.length === 2
+            ? `${palabra(modalidades[0]!)} y ${palabra(modalidades[1]!)}`
+            : palabra(modalidades[0] ?? "VIRTUAL");
+    const plural = modalidades.length > 1;
+    return (
+        <section
+            aria-label="Cobertura de modalidad en su inscripción en el registro de salud"
+            className="rounded-2xl border border-ambar/30 bg-ambar/10 p-5 text-estado-ambar"
+        >
+            <h2 className="text-base font-semibold">
+                Su inscripción no cubre {plural ? "las modalidades" : "la modalidad"} {lista} que usted ofrece.
+            </h2>
+            <div className="mt-2 space-y-2 text-sm">
+                <p>
+                    Su inscripción en el registro de salud está vigente, pero no cubre{" "}
+                    {plural ? "esas modalidades" : "esa modalidad"}. Mientras no{" "}
+                    {plural ? "las cubra" : "la cubra"}, no ofrecemos esas franjas a las familias ni recibe citas
+                    en {plural ? "esas modalidades" : "esa modalidad"}.
+                </p>
+                <p>
+                    Puede actualizar su inscripción para cubrir {plural ? "esas modalidades" : "esa modalidad"}, o
+                    dejar de ofrecer{plural ? "las" : "la"} en su perfil.
+                </p>
+            </div>
+            <Link
+                href="/dashboard/profesional/mi-perfil"
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-2xl border border-ambar/40 px-5 py-2.5 text-sm font-semibold transition hover:bg-ambar/10"
+            >
+                Ver qué significa y cómo resolverlo
             </Link>
         </section>
     );
