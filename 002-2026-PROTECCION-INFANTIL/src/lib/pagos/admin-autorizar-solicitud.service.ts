@@ -6,7 +6,7 @@
  * el evento `suscripcion.activada`.
  */
 import { addMonths } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { AccionAudit, EstadoSuscripcion, MetodoPagoManual, TipoTitular, type Suscripcion } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
@@ -19,10 +19,6 @@ import type { DbClient } from "@/lib/dal/unit-of-work";
 import { entregarCuponesRecompensa } from "./entregar-cupones-recompensa.service";
 
 const ZONA_BOGOTA = "America/Bogota";
-
-function ahoraBogota(): Date {
-    return toZonedTime(new Date(), ZONA_BOGOTA);
-}
 
 function normalizarFechaPagoReal(valor?: Date | string | undefined): Date | null {
     if (!valor) return null;
@@ -140,10 +136,18 @@ export async function autorizarSolicitudPendiente(
         }
 
         const plan = suscripcionPrev.planActual;
-        const ahora = ahoraBogota();
+        // SPEC-795: `ahora` es el instante REAL. Antes era `ahoraBogota()` = `toZonedTime(new Date())`,
+        // un PSEUDO-INSTANTE corrido 5h — se usaba de base del addMonths (expiraba 5h antes) y como
+        // `autorizadoEn` (timestamp de auditoría 5h desfasado). Ambos quieren el instante real.
+        const ahora = new Date();
         const fechaPagoReal = normalizarFechaPagoReal(input.fechaPagoReal);
         const fechaInicio = fechaPagoReal ?? ahora;
-        const fechaFin = addMonths(fechaInicio, mesesDeDuracion(plan.duracion));
+        // SPEC-795 · FR-003: la suma de meses va en el día calendario Bogotá y CLAMPA (addMonths),
+        // nunca recorta sobre el instante UTC crudo. Método del hermano freemium.
+        const fechaFin = fromZonedTime(
+            addMonths(toZonedTime(fechaInicio, ZONA_BOGOTA), mesesDeDuracion(plan.duracion)),
+            ZONA_BOGOTA,
+        );
 
         const estadoAnterior = {
             estado: suscripcionPrev.estado,

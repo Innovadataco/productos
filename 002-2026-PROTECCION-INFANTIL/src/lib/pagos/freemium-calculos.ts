@@ -49,7 +49,14 @@ export function calcularFechaFinTrasPagoFreemium(input: {
     duracionCubierta: DuracionPlan;
 }): Date {
     const base = input.freemiumFechaFin.getTime() > input.ahora.getTime() ? input.freemiumFechaFin : input.ahora;
-    return addMonths(base, mesesDeDuracion(input.duracionCubierta));
+    // SPEC-794 · FR-003: la suma de meses es en el día calendario Bogotá, NO sobre el instante UTC
+    // crudo. `freemiumFechaFin` es fin-de-día Bogotá guardado como 04:59:59.999Z — o sea el día
+    // SIGUIENTE en UTC. Sumar meses sobre el instante crudo (addMonths directo) recorta sobre el
+    // calendario equivocado cerca de fin de mes (un día que en UTC es 31 y en Bogotá es 30) y le
+    // resta un día de servicio al cliente que pagó. Convertir a Bogotá primero (como el hermano
+    // `calcularFreemiumFechaFin`) hace que el clamp caiga en el calendario correcto.
+    const basePared = toZonedTime(base, ZONA_BOGOTA);
+    return fromZonedTime(addMonths(basePared, mesesDeDuracion(input.duracionCubierta)), ZONA_BOGOTA);
 }
 
 /**
