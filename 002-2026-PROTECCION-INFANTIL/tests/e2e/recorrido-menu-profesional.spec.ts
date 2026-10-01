@@ -158,13 +158,24 @@ test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437
      * (A · CONTRATO DE DISEÑO) FORMA-CONTRATO-BARRA-LATERAL-PROFESIONAL v1.0: el discriminador
      * es el ESTADO `habilitado`, NO el módulo. Un VERIFICADO (habilitado) ve «Mi perfil» (su
      * autoedición), «Calendario» (aunque NO tenga franjas), «Casos» e «Inicio» — y NUNCA
-     * «Mi ficha» (esa es la del portero, misma superficie `profesional_ficha` pero otra cara).
+     * «Mi ficha» (la entrada del PORTERO, excluyente por estado con «Mi perfil» — ver (B)).
      *
-     * `test.fail`: HOY falla porque la barra se pinta por MÓDULO (comparten `profesional_ficha`
-     * → pinta la fija «Mi ficha»; `profesional_calendario` no pinta) en vez de por estado
-     * (`menu-por-estado`, SPEC-691). Esa COSTURA (dos mecanismos de pintado) la radica el CEO
-     * para un Dev; cuando el pintor honre el estado, este test PASA → unexpected-pass → se quita
-     * el `test.fail`. El candado afirma el CONTRATO; su rojo de hoy ES el hallazgo, no un bug del test.
+     * `test.fail`: HOY (A) falla, y la causa es la VENTANA DE CARGA — no «dos pintores» ni «pintado
+     * por módulo» (ambas hipótesis se midieron y se DESCARTARON: SPEC-744 ya unificó el menú en UNA
+     * fuente, `entradasProfesional`). El menú se deriva de `user.profesional.habilitado`, que llega
+     * del `fetch("/api/me")` del CLIENTE (AuthContext); en el SSR y en la ventana previa a esa
+     * respuesta `profesional===undefined` → `entradasProfesional` lo trata como «no habilitado» y
+     * pinta el PORTERO. (A) lee el STRING del SSR (`request.get().text()`), que nunca corre ese fetch
+     * → siempre ve ese primer pintado. Medido (BD aislada, navegador real): /api/me da `habilitado:true`
+     * y la barra SE CORRIGE a «Mi perfil» al resolver → defecto de DISPLAY (un display que no sabe no
+     * debe afirmar), radicado en **SPEC-802**.
+     *
+     * CRITERIO DE SALIDA (autoexigido) + su CANDADO: SPEC-802 resuelve `habilitado` EN EL SERVIDOR y
+     * lo pasa como prop → el SSR ya trae el menú del verificado. SOLO un fix server-side hace que (A)
+     * —que lee el SSR— pase → `unexpected-pass` → el MISMO PR de SPEC-802 quita este `test.fail`. Si
+     * ese PR lo retira y (A) NO dio unexpected-pass, el fix NO fue server-side (un «cargando»
+     * client-side DISIMULA la ventana pero deja el SSR en portero) → PARAR. El rojo de hoy ES el
+     * hallazgo, no un bug del test.
      */
     test.fail("(A · contrato) el VERIFICADO ve «Mi perfil»+«Calendario»+«Casos»+«Inicio», NUNCA «Mi ficha»", async () => {
         const request = await ctx();
