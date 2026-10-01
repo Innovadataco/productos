@@ -385,6 +385,79 @@ export async function reasignarPorPadre(input: ReasignarInput) {
     return nueva;
 }
 
+export interface ReubicarInput {
+    adminId: string;
+    solicitudId: string;
+    nuevoProfesionalId: string;
+    nuevaFranjaId: string;
+}
+
+/**
+ * SPEC-832 (T7 de 790) · REUBICACIÓN por el ADMIN de una cita CONFIRMADA cuyo profesional quedó sin poder
+ * atenderla. [NORMA] Res. 3100 art. 19 (continuidad) / 8.5. NO cancela — mueve.
+ *
+ * FILA NUEVA con historial (no swap in-place): la cita origen queda REUBICADA (terminal, con la prueba
+ * durable reubicadaEn/Por/EnId), y la familia obtiene una cita nueva con B. Se reusa `crearSolicitudCita`
+ * para la fila nueva —NO se reimplementa—, y con eso la reubicación HEREDA exactamente el gate de la
+ * reserva: `obtenerPublicoPorId` (B ofrecible) + **REPS POR MODALIDAD** (`esRepsElegibleParaModalidad`, la
+ * corrección 2 de Datos) + la franja de B libre y SUYA (invariante a). Así nunca se propone un destino que
+ * la reserva rechazaría. No agrega un consumidor nuevo del par REPS: pasa por el existente.
+ *
+ * Estado de la fila nueva = PAGADA_PENDIENTE (hereda el pago; veredicto CEO 832): B puede RECHAZAR —si lo
+ * hace, el sistema libera la franja y el padre reasigna gratis, un camino ya diseñado—; dejarla CONFIRMADA
+ * lo atraparía tras el 409 de `rechazarPorProfesional` (una familia impuesta sin salida) y castigaría a los
+ * pocos que publican. Reubicar garantiza que OFRECIMOS continuidad, no que la cita ocurra (art. 19).
+ *
+ * Orden deliberado: primero la fila nueva (si B ya no calza, se corta SIN tocar el origen), luego —en una
+ * transacción— origen→REUBICADA + liberar la franja de A. El peor caso de una falla intermedia es una cita
+ * pendiente de más (recuperable), nunca una cita REUBICADA sin destino.
+ */
+export async function reubicarCitaPorAdmin(input: ReubicarInput) {
+    const repo = new SolicitudCitaRepository();
+    const original = await repo.findById(input.solicitudId);
+    if (!original) throw new AppError("Cita no encontrada", ERROR_CODES.NOT_FOUND, 404);
+    // Solo una cita CONFIRMADA se reubica (la que quedó sin quién la atienda). Guarda TOCTOU vs la cola.
+    if (original.estado !== "CONFIRMADA") {
+        throw new AppError("Solo se puede reubicar una cita confirmada", ERROR_CODES.VALIDATION_ERROR, 400);
+    }
+    if (input.nuevoProfesionalId === original.profesionalId) {
+        throw new AppError("Elija OTRO profesional para reubicar", ERROR_CODES.VALIDATION_ERROR, 400);
+    }
+
+    // Fila nueva con B. `crearSolicitudCita` valida B ofrecible + REPS por modalidad + franja libre/suya, toma
+    // la franja y hereda el pago (→ PAGADA_PENDIENTE, reloj de 48 h). El visor es el padre de la cita.
+    const nueva = await crearSolicitudCita({
+        padreUsuarioId: original.padreUsuarioId,
+        profesionalId: input.nuevoProfesionalId,
+        franjaId: input.nuevaFranjaId,
+        presentacion: original.presentacion,
+        urgencia: original.urgencia,
+        expedienteCompartidoId: original.expedienteCompartidoId,
+        porcentajeServicio: original.porcentajeServicio,
+        pagoHeredadoDeId: original.id,
+        solicitudPreviaId: original.id,
+    });
+
+    // Origen → REUBICADA + prueba durable, y se libera SU franja (la de A): invariante b (tomada ↔ solicitud
+    // ACTIVA; la REUBICADA es terminal). En una transacción: a mitad, el calendario mentiría.
+    await withUnitOfWork(async (tx) => {
+        await new SolicitudCitaRepository(tx).marcarReubicada(original.id, nueva.id, input.adminId);
+        await new FranjaDisponibleRepository(tx).liberar(original.franjaId);
+    });
+
+    await logAudit({
+        accion: "CITA_PROFESIONAL_REUBICADA",
+        tipoRecurso: "SolicitudCita",
+        recursoId: nueva.id,
+        usuarioId: input.adminId,
+        valorAnterior: JSON.stringify({ origen: original.id, desde: original.profesionalId }),
+        valorNuevo: JSON.stringify({ hacia: input.nuevoProfesionalId, reubicadaPor: input.adminId }),
+        ipAddress: "admin",
+        userAgent: "cita/reubicar",
+    });
+    return nueva;
+}
+
 /**
  * Después de vencer una solicitud del profesional, evaluamos suspensión y alarma.
  * SPEC-692: el umbral de suspensión vive en el parámetro sembrado

@@ -309,6 +309,18 @@ export class SolicitudCitaRepository {
         return this.db.solicitudCita.update({ where: { id }, data: { estado: "REPROGRAMADA" } });
     }
 
+    /**
+     * SPEC-832 · La cita ORIGEN movida por el admin queda REUBICADA (terminal, NO cancelada) + la PRUEBA
+     * durable del art. 19: a qué cita fue (`reubicadaEnId`), quién la movió (`reubicadaPorId`, string sin FK:
+     * sobrevive al borrado de la cuenta del admin) y cuándo (`reubicadaEn`).
+     */
+    marcarReubicada(id: string, reubicadaEnId: string, reubicadaPorId: string, ahora: Date = new Date()) {
+        return this.db.solicitudCita.update({
+            where: { id },
+            data: { estado: "REUBICADA", reubicadaEnId, reubicadaPorId, reubicadaEn: ahora },
+        });
+    }
+
     marcarNoAsistioProfesional(id: string) {
         return this.db.solicitudCita.update({ where: { id }, data: { estado: "NO_ASISTIO_PROFESIONAL" } });
     }
