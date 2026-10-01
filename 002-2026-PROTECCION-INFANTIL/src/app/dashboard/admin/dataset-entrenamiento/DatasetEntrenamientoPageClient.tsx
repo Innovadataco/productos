@@ -125,20 +125,19 @@ export default function DatasetEntrenamientoPageClient() {
                 </p>
             </div>
 
-            {/* SPEC-812 (pieza 4): se RETIRARON dos tarjetas que mostraban un solo hecho dos veces y
-                fingían vigilancia de cobertura:
-                · «Pendientes de anonimizar» (Math.max(0, total - anonimizados)): estructuralmente 0 —
-                  toda fila de DatasetEntrenamiento se persiste con textoAnonimizado=true
-                  (correcciones/route.ts, resolver-spam): nunca existe la fila cruda, así que
-                  total === anonimizados SIEMPRE.
+            {/* SPEC-812 (pieza 4): el encabezado queda en UNA sola tarjeta — etiqueta de Diseño
+                (FORMA-DATASET-ENTRENAMIENTO-ESTADO-VACIO-2026-10-01 §2, voz «usted»). Se retiraron dos
+                que mostraban un solo hecho dos veces:
+                · «Pendientes de anonimizar» (Math.max(0, total - anonimizados)): 0 estructural — toda fila
+                  se persiste con textoAnonimizado=true (correcciones/route.ts, resolver-spam): nunca
+                  existe la fila cruda, así que total === anonimizados SIEMPRE.
                 · «Anonimizados»: por lo mismo nunca difiere de «Total» — dos etiquetas, un número.
-                El conteo REAL de trabajo pendiente NO es de filas de dataset sino de CORRECCIONES sin
-                dataset derivado (estado 1), que vive sobre CorreccionAdmin y llega con SPEC-812
-                piezas 1-2 (sobre SPEC-807/#802). La presentación de lo que queda (Total + ese conteo
-                real) la define Diseño; acá solo se quita lo que mentía. */}
+                El conteo REAL de pendientes (correcciones SIN dataset derivado, estado 1) vive sobre
+                CorreccionAdmin y llega con SPEC-812 piezas 1-2 (sobre SPEC-807/#802); su copy lo da Diseño
+                aparte. La etiqueta de esta tarjeta es la de la forma, no inventada. */}
             <div className="grid grid-cols-1">
                 <div className="glass rounded-2xl p-4">
-                    <p className="text-xs font-medium text-subtle uppercase tracking-wide">Total registros</p>
+                    <p className="text-xs font-medium text-subtle uppercase tracking-wide">Registros en el dataset</p>
                     <p className="mt-1 text-2xl font-bold text-body">{total}</p>
                 </div>
             </div>
@@ -170,7 +169,7 @@ export default function DatasetEntrenamientoPageClient() {
                         ) : items.length === 0 ? (
                             <tr>
                                 <td colSpan={5} className="px-4 py-8 text-center text-subtle">
-                                        No hay registros anonimizados en el dataset todavía. Los registros pendientes se procesan en segundo plano.
+                                        No hay registros en el dataset todavía. Aparecen cuando se corrige la clasificación de un reporte.
                                 </td>
                             </tr>
                         ) : (
