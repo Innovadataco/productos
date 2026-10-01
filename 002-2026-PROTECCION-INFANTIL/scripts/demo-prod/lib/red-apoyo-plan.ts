@@ -2,7 +2,7 @@
  * SPEC-676 · Plan PURO (sin BD) del poblador de la Red de Apoyo.
  *
  * Vive separado del script `poblar-red-apoyo.ts` (que toca Prisma) para que el
- * candado pruebe la LÓGICA sin base: la distribución de los 9 estados, la
+ * candado pruebe la LÓGICA sin base: la distribución de los 10 estados, la
  * visibilidad del profesional (SPEC-449) y el invariante franja↔estado — sin el
  * tax de BD ni el riesgo de correr un poblador de prod en un test.
  *
@@ -55,8 +55,8 @@ export const FRANJAS_LIBRES_MAX = 12;
 /** Ventana histórica de citas (meses). Parametrizable; Datos recomienda 24. */
 export const VENTANA_MESES = 24;
 
-// ── Distribución de los 9 estados (Datos) ───────────────────────────────────
-// Record sobre EstadoSolicitudCita → TS obliga a listar los 9 (candado #2 los recorre).
+// ── Distribución de los 10 estados (Datos) ──────────────────────────────────
+// Record sobre EstadoSolicitudCita → TS obliga a listar los 10 (candado #2 los recorre).
 export const OBJETIVO_ESTADOS: Record<EstadoSolicitudCita, number> = {
     CUMPLIDA: 600,
     CONFIRMADA: 130, // futuras (pipeline «agendar»)
@@ -67,6 +67,11 @@ export const OBJETIVO_ESTADOS: Record<EstadoSolicitudCita, number> = {
     NO_ASISTIO_PROFESIONAL: 22,
     REEMBOLSADA: 30, // SOLO de la población silencio-del-profesional, nunca del padre (D-137)
     REPROGRAMADA: 80, // cada una es una CADENA largo-1: original REPROGRAMADA → hija CUMPLIDA
+    // SPEC-814 (art. 19) · evento del lado del PROFESIONAL (dejó de estar disponible): poco frecuente,
+    // por eso volumen chico en la banda de los otros eventos de profesional (NO_ASISTIO_PROFESIONAL 22,
+    // REEMBOLSADA 30). Cada una es una CADENA como REPROGRAMADA: original REUBICADA (terminal) → hija
+    // CUMPLIDA con OTRO profesional que HEREDA el pago (schema SolicitudCita.reubicada*).
+    REUBICADA: 24,
 };
 
 /**
@@ -149,7 +154,7 @@ export function bucketActividad(idx: number): "alta" | "media" | "baja" {
 
 /**
  * Lista determinista de estados (uno por cita DIRECTA, sin contar las hijas de
- * reprogramación) que respeta EXACTAMENTE los objetivos. Garantiza que los 9
+ * reprogramación) que respeta EXACTAMENTE los objetivos. Garantiza que los 10
  * estados estén representados (candado #2). El REPROGRAMADA cuenta la cadena
  * (la fila original); su hija CUMPLIDA la agrega el seeder aparte.
  */

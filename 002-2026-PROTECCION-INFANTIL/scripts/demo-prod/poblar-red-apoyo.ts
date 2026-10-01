@@ -5,7 +5,7 @@
  *
  * v5 dejó la Red de Apoyo vacía a propósito (orden del 03-09, levantada por
  * Jelkin el 11-09). Este script la puebla con MOVIMIENTO real: profesionales
- * visibles y reservables + citas repartidas en los NUEVE estados de
+ * visibles y reservables + citas repartidas en los DIEZ estados de
  * `SolicitudCita`, para que se puedan probar agenda, citas, vencimientos,
  * reembolsos y encuestas, y para que la analítica de BI signifique algo.
  *
@@ -20,6 +20,10 @@
  *  · REPROGRAMADA es CADENA largo-1: fila nueva que hereda el pago
  *    (`pagoHeredadoDeId`), original → REPROGRAMADA + franja liberada. Largo-2 no
  *    lo produce el producto → no se siembra.
+ *  · REUBICADA (SPEC-814, art. 19) es CADENA como REPROGRAMADA pero con OTRO
+ *    profesional y franja OCUPADA (NO libera: el profesional dejó de estar
+ *    disponible, la franja no vuelve al pool): original REUBICADA → hija CUMPLIDA
+ *    que hereda el pago; la original prueba la continuidad (reubicadaEnId/En/PorId).
  *  · Reembolso (D-137): sólo de la población de silencio del profesional, NUNCA
  *    del no-asistió del padre. `montoTotal` ES el monto devuelto (reembolso total).
  *  · Montos del PARÁMETRO del admin (no constante): primera cita = precio estándar,
@@ -533,6 +537,106 @@ async function sembrarReprogramacion(opts: {
     });
 }
 
+/**
+ * SPEC-814 · actor de la reubicación demo (`reubicadaPorId`). En prod lo pone el OPERADOR/ADMIN que
+ * hace el escalamiento manual; el demo NO siembra operadores, así que usa un SENTINEL ESTABLE: el
+ * rastro del art. 19 es DURABLE (String sin FK) y a propósito NO resuelve a una cuenta — igual que en
+ * prod, donde la cuenta del actor puede haberse borrado y la cita no (schema SolicitudCita.reubicadaPorId,
+ * «las cuentas se borran, las citas no»). Derivado de CORRIDA_RED y ESTABLE entre corridas (no rota):
+ * cualquier consumidor (BI) lee siempre el mismo rastro.
+ */
+const REUBICADA_POR_DEMO = `demo:${CORRIDA_RED}:operador-reubicacion`;
+
+/**
+ * Reubicación largo-1 (SPEC-814 · [NORMA] Ley 1581 art. 19): el profesional ORIGINAL dejó de estar
+ * disponible, su cita confirmada queda REUBICADA (terminal) y la atención CONTINÚA en una fila NUEVA
+ * con OTRO profesional que HEREDA el pago (sin re-cobro). A diferencia de REPROGRAMADA: (a) la franja
+ * original NO se libera (`franjaTomadaPara("REUBICADA")` = true — el profesional ya no está), y (b) la
+ * hija es con un profesional DISTINTO. La original cierra la prueba de continuidad del art. 19:
+ * `reubicadaEnId` → la hija, `reubicadaEn`, `reubicadaPorId` (actor durable).
+ */
+async function sembrarReubicacion(opts: {
+    profOrigen: ProfSembrado;
+    profDestino: ProfSembrado;
+    padreUsuarioId: string;
+    esPrimeraDelPadre: boolean;
+    precioEstandar: number;
+    pct: number;
+}): Promise<void> {
+    const { profOrigen, profDestino, padreUsuarioId, esPrimeraDelPadre, precioEstandar, pct } = opts;
+    const modalidadOrig = profOrigen.modalidades[entero(0, profOrigen.modalidades.length - 1)]!;
+    const modalidadDest = profDestino.modalidades[entero(0, profDestino.modalidades.length - 1)]!;
+    const creadoEn = fechaEnVentana();
+    const m = montos(esPrimeraDelPadre, profOrigen.tarifa, precioEstandar, pct);
+
+    await prisma.$transaction(async (tx) => {
+        // Original: franja OCUPADA (REUBICADA no libera), estado REUBICADA (terminal).
+        const horaOrig = franjaBogota(new Date(creadoEn.getTime() + 2 * MS_DIA), 50, entero(HORA_FRANJA_MIN, HORA_FRANJA_MAX));
+        const franjaOrig = await tx.franjaDisponible.create({
+            data: {
+                profesionalId: profOrigen.perfilId,
+                inicio: horaOrig.inicio,
+                fin: horaOrig.fin,
+                modalidad: modalidadOrig,
+                tomada: franjaTomadaPara("REUBICADA"),
+            },
+        });
+        await marcar(tx, "FranjaDisponible", franjaOrig.id, "cita REUBICADA (ocupada)");
+        const original = await tx.solicitudCita.create({
+            data: {
+                padreUsuarioId,
+                profesionalId: profOrigen.perfilId,
+                franjaId: franjaOrig.id,
+                presentacion: "Solicitud DEMO reubicada (poblador SPEC-676/814).",
+                urgencia: "SIN_APURO",
+                estado: "REUBICADA",
+                venceEn: new Date(creadoEn.getTime() + 72 * 60 * 60 * 1000),
+                pagoAprobadoEn: new Date(creadoEn.getTime() + 6 * 60 * 60 * 1000),
+                ...m,
+                creadoEn,
+            },
+        });
+        await marcar(tx, "SolicitudCita", original.id, "REUBICADA");
+
+        // Hija: profesional DISTINTO, franja NUEVA tomada, HEREDA el pago del original (sin re-cobro), CUMPLIDA.
+        const creadoHija = new Date(creadoEn.getTime() + 3 * MS_DIA);
+        const horaHija = franjaBogota(new Date(creadoHija.getTime() + 2 * MS_DIA), 50, entero(HORA_FRANJA_MIN, HORA_FRANJA_MAX));
+        const franjaHija = await tx.franjaDisponible.create({
+            data: {
+                profesionalId: profDestino.perfilId,
+                inicio: horaHija.inicio,
+                fin: horaHija.fin,
+                modalidad: modalidadDest,
+                tomada: true,
+            },
+        });
+        await marcar(tx, "FranjaDisponible", franjaHija.id, "cita hija de reubicación (otro profesional)");
+        const hija = await tx.solicitudCita.create({
+            data: {
+                padreUsuarioId,
+                profesionalId: profDestino.perfilId,
+                franjaId: franjaHija.id,
+                presentacion: "Solicitud DEMO (hija de reubicación, otro profesional, hereda pago).",
+                urgencia: "SIN_APURO",
+                estado: "CUMPLIDA",
+                venceEn: new Date(creadoHija.getTime() + 72 * 60 * 60 * 1000),
+                pagoAprobadoEn: new Date(creadoHija.getTime() + 6 * 60 * 60 * 1000),
+                pagoHeredadoDeId: original.id,
+                solicitudPreviaId: original.id,
+                ...m, // hereda los montos del original (no re-cobra)
+                creadoEn: creadoHija,
+            },
+        });
+        await marcar(tx, "SolicitudCita", hija.id, "hija reubicación (CUMPLIDA, otro profesional)");
+
+        // Cierra la prueba de continuidad del art. 19: la original APUNTA a la hija + actor/momento durables.
+        await tx.solicitudCita.update({
+            where: { id: original.id },
+            data: { reubicadaEnId: hija.id, reubicadaEn: creadoHija, reubicadaPorId: REUBICADA_POR_DEMO },
+        });
+    });
+}
+
 interface Resumen {
     profesionales: number;
     franjasLibres: number;
@@ -587,6 +691,14 @@ async function main(): Promise<void> {
         for (let k = 0; k < peso(p.bucket); k++) bolsa.push(i);
     });
     const elegirProf = () => profs[bolsa[entero(0, bolsa.length - 1)]!]!;
+    // Para REUBICACIÓN: la hija va con OTRO profesional (el original dejó de estar disponible).
+    const elegirProfDistinto = (excluir: ProfSembrado): ProfSembrado => {
+        for (let i = 0; i < 20; i++) {
+            const c = elegirProf();
+            if (c.perfilId !== excluir.perfilId) return c;
+        }
+        return profs.find((p) => p.perfilId !== excluir.perfilId) ?? excluir;
+    };
 
     // 3) Padres demo (pool propio → purga independiente). ~1 padre cada 3 citas.
     const plan = construirPlanEstados();
@@ -625,6 +737,13 @@ async function main(): Promise<void> {
             await sembrarReprogramacion({ prof, padreUsuarioId, esPrimeraDelPadre, precioEstandar, pct: porcentajeServicio });
             resumen.porEstado.REPROGRAMADA = (resumen.porEstado.REPROGRAMADA ?? 0) + 1;
             resumen.porEstado.CUMPLIDA = (resumen.porEstado.CUMPLIDA ?? 0) + 1; // la hija
+            continue;
+        }
+        if (estado === "REUBICADA") {
+            const profDestino = elegirProfDistinto(prof);
+            await sembrarReubicacion({ profOrigen: prof, profDestino, padreUsuarioId, esPrimeraDelPadre, precioEstandar, pct: porcentajeServicio });
+            resumen.porEstado.REUBICADA = (resumen.porEstado.REUBICADA ?? 0) + 1;
+            resumen.porEstado.CUMPLIDA = (resumen.porEstado.CUMPLIDA ?? 0) + 1; // la hija (otro profesional)
             continue;
         }
         // Encuesta sólo en la PRIMERA cita CUMPLIDA del padre.
