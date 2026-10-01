@@ -26,7 +26,7 @@ const VIGENTE_AL_DIA: HechoReps = {
     resultado: "VIGENTE",
     verificadoEn: new Date(NOW.getTime() - 10 * DIA),
     vigenteHasta: new Date(NOW.getTime() + 200 * DIA),
-    modalidades: ["VIRTUAL", "PRESENCIAL"],
+    modalidades: ["TELEMEDICINA", "PRESENCIAL"],
 };
 
 describe("SPEC-790 · repsElegible (motor puro)", () => {
@@ -40,52 +40,52 @@ describe("SPEC-790 · repsElegible (motor puro)", () => {
     });
 
     it("VIGENTE dentro de los dos relojes y con la modalidad requerida → elegible", () => {
-        const r = repsElegible(VIGENTE_AL_DIA, "VIRTUAL", EXIGE, NOW);
+        const r = repsElegible(VIGENTE_AL_DIA, "TELEMEDICINA", EXIGE, NOW);
         expect(r.elegible).toBe(true);
         expect(r.estado).toBe("VIGENTE");
     });
 
     it("C-2 · reloj de la AUTORIDAD: vigenteHasta pasado → NO; mover la fecha al futuro rehabilita", () => {
         const vencido: HechoReps = { ...VIGENTE_AL_DIA, vigenteHasta: new Date(NOW.getTime() - 1 * DIA) };
-        expect(repsElegible(vencido, "VIRTUAL", EXIGE, NOW).elegible).toBe(false);
-        expect(repsElegible({ ...vencido, vigenteHasta: new Date(NOW.getTime() + 1 * DIA) }, "VIRTUAL", EXIGE, NOW).elegible).toBe(true);
+        expect(repsElegible(vencido, "TELEMEDICINA", EXIGE, NOW).elegible).toBe(false);
+        expect(repsElegible({ ...vencido, vigenteHasta: new Date(NOW.getTime() + 1 * DIA) }, "TELEMEDICINA", EXIGE, NOW).elegible).toBe(true);
     });
 
     it("C-2 · NUESTRO reloj: verificado más allá de la ventana → NO aunque la autoridad siga vigente; ensanchar la ventana rehabilita", () => {
         const viejo: HechoReps = { ...VIGENTE_AL_DIA, verificadoEn: new Date(NOW.getTime() - 400 * DIA) };
-        expect(repsElegible(viejo, "VIRTUAL", EXIGE, NOW).elegible).toBe(false);
-        expect(repsElegible(viejo, "VIRTUAL", { ...EXIGE, ventanaVerificacionDias: 401 }, NOW).elegible).toBe(true);
+        expect(repsElegible(viejo, "TELEMEDICINA", EXIGE, NOW).elegible).toBe(false);
+        expect(repsElegible(viejo, "TELEMEDICINA", { ...EXIGE, ventanaVerificacionDias: 401 }, NOW).elegible).toBe(true);
     });
 
     it("C-2 · VIGENTE sin fecha de vigencia (null) → NO elegible (nunca «vigente para siempre»)", () => {
-        expect(repsElegible({ ...VIGENTE_AL_DIA, vigenteHasta: null }, "VIRTUAL", EXIGE, NOW).elegible).toBe(false);
+        expect(repsElegible({ ...VIGENTE_AL_DIA, vigenteHasta: null }, "TELEMEDICINA", EXIGE, NOW).elegible).toBe(false);
     });
 
     it("D-5 · modalidad: VIGENTE al día pero el REPS no cubre la requerida → NO; agregarla rehabilita", () => {
         const soloPresencial: HechoReps = { ...VIGENTE_AL_DIA, modalidades: ["PRESENCIAL"] };
-        expect(repsElegible(soloPresencial, "VIRTUAL", EXIGE, NOW).elegible).toBe(false);
-        expect(repsElegible({ ...soloPresencial, modalidades: ["PRESENCIAL", "VIRTUAL"] }, "VIRTUAL", EXIGE, NOW).elegible).toBe(true);
+        expect(repsElegible(soloPresencial, "TELEMEDICINA", EXIGE, NOW).elegible).toBe(false);
+        expect(repsElegible({ ...soloPresencial, modalidades: ["PRESENCIAL", "TELEMEDICINA"] }, "TELEMEDICINA", EXIGE, NOW).elegible).toBe(true);
     });
 
     it("D-7 · VENCIDA y NO_ENCONTRADA cierran SIEMPRE — incluso con el cutover abierto", () => {
         for (const resultado of ["VENCIDA", "NO_ENCONTRADA"] as const) {
             const h: HechoReps = { ...VIGENTE_AL_DIA, resultado };
-            expect(repsElegible(h, "VIRTUAL", CUTOVER, NOW).elegible, `${resultado} no puede abrir ni con exigir=false`).toBe(false);
-            expect(repsElegible(h, "VIRTUAL", EXIGE, NOW).elegible).toBe(false);
+            expect(repsElegible(h, "TELEMEDICINA", CUTOVER, NOW).elegible, `${resultado} no puede abrir ni con exigir=false`).toBe(false);
+            expect(repsElegible(h, "TELEMEDICINA", EXIGE, NOW).elegible).toBe(false);
         }
     });
 
     it("D-7 · SIN_VERIFICAR lo rige exigirRepsVerificado (abre con false, cierra con true); `null` se comporta igual", () => {
         const sinVerif: HechoReps = { ...VIGENTE_AL_DIA, resultado: "SIN_VERIFICAR" };
-        expect(repsElegible(sinVerif, "VIRTUAL", CUTOVER, NOW).elegible).toBe(true);
-        expect(repsElegible(sinVerif, "VIRTUAL", EXIGE, NOW).elegible).toBe(false);
-        expect(repsElegible(null, "VIRTUAL", CUTOVER, NOW).elegible).toBe(true);
-        expect(repsElegible(null, "VIRTUAL", EXIGE, NOW).elegible).toBe(false);
+        expect(repsElegible(sinVerif, "TELEMEDICINA", CUTOVER, NOW).elegible).toBe(true);
+        expect(repsElegible(sinVerif, "TELEMEDICINA", EXIGE, NOW).elegible).toBe(false);
+        expect(repsElegible(null, "TELEMEDICINA", CUTOVER, NOW).elegible).toBe(true);
+        expect(repsElegible(null, "TELEMEDICINA", EXIGE, NOW).elegible).toBe(false);
     });
 
     it("D-7 · un SIN_VERIFICAR abierto NO se confunde con VIGENTE: distinto estado y motivo (la alarma queda legible)", () => {
-        const abierto = repsElegible(null, "VIRTUAL", CUTOVER, NOW);
-        const alDia = repsElegible(VIGENTE_AL_DIA, "VIRTUAL", CUTOVER, NOW);
+        const abierto = repsElegible(null, "TELEMEDICINA", CUTOVER, NOW);
+        const alDia = repsElegible(VIGENTE_AL_DIA, "TELEMEDICINA", CUTOVER, NOW);
         expect(abierto.elegible).toBe(true);
         expect(alDia.elegible).toBe(true);
         expect(abierto.estado).toBe("SIN_VERIFICAR");
@@ -94,6 +94,6 @@ describe("SPEC-790 · repsElegible (motor puro)", () => {
     });
 
     it("fail-closed · now inválido → NO elegible (no abrir ante la duda)", () => {
-        expect(repsElegible(VIGENTE_AL_DIA, "VIRTUAL", CUTOVER, new Date(NaN)).elegible).toBe(false);
+        expect(repsElegible(VIGENTE_AL_DIA, "TELEMEDICINA", CUTOVER, new Date(NaN)).elegible).toBe(false);
     });
 });

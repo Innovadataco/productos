@@ -20,7 +20,7 @@
  * solo lo importan este adaptador y los candados): se quita de la allowlist cuando el gate/worker lo
  * importen (salida autoexigida).
  */
-import type { EstadoReps, ModalidadServicio } from "./reps-elegibilidad";
+import type { EstadoReps, ModalidadReps } from "./reps-elegibilidad";
 
 /** Con qué se consulta al REPS un profesional. Documento + registro; lo preciso lo fija el formato del Estado. */
 export interface IdentidadProfesionalReps {
@@ -36,7 +36,7 @@ export interface IdentidadProfesionalReps {
 export interface ResultadoConsultaReps {
     readonly resultado: EstadoReps;
     readonly vigenteHasta: Date | null;
-    readonly modalidades: readonly ModalidadServicio[];
+    readonly modalidades: readonly ModalidadReps[];
 }
 
 /** Una fila del dataset en bloque: a quién corresponde + su resultado crudo. */

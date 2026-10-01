@@ -24,9 +24,14 @@
 export const ESTADOS_REPS = ["VIGENTE", "VENCIDA", "NO_ENCONTRADA", "SIN_VERIFICAR"] as const;
 export type EstadoReps = (typeof ESTADOS_REPS)[number];
 
-/** Modalidad del servicio. Telemedicina = VIRTUAL (Res. 3100 art. 8.5). */
-export const MODALIDADES_SERVICIO = ["VIRTUAL", "PRESENCIAL"] as const;
-export type ModalidadServicio = (typeof MODALIDADES_SERVICIO)[number];
+/**
+ * Modalidad que HABILITA el REPS — categoría de la AUTORIDAD, no el formato de la cita (espejo del enum
+ * PROPIO `ModalidadReps` del schema de Datos; NO es `ModalidadCita`). TELEMEDICINA corresponde al VIRTUAL
+ * de la cita; el motor evalúa «¿`modalidadRequerida` está en lo que el REPS habilita?». El mapeo
+ * cita→REPS (VIRTUAL→TELEMEDICINA, PRESENCIAL→PRESENCIAL) vive en el gate (T4), no aquí.
+ */
+export const MODALIDADES_REPS = ["PRESENCIAL", "TELEMEDICINA"] as const;
+export type ModalidadReps = (typeof MODALIDADES_REPS)[number];
 
 /** El HECHO de la última verificación REPS (shape del contrato de Datos; sin Prisma, para el candado). */
 export interface HechoReps {
@@ -36,7 +41,7 @@ export interface HechoReps {
     /** Fecha de la AUTORIDAD (Res. 3100 art. 10). `null` = el REPS no dio vigencia (p. ej. no encontrado). */
     readonly vigenteHasta: Date | null;
     /** Las modalidades que el REPS reconoce para el servicio. Lista: la pregunta es si INCLUYE la requerida. */
-    readonly modalidades: readonly ModalidadServicio[];
+    readonly modalidades: readonly ModalidadReps[];
 }
 
 export interface ConfigReps {
@@ -71,7 +76,7 @@ function decidirSinVerificar(config: ConfigReps): Elegibilidad {
  */
 export function repsElegible(
     hecho: HechoReps | null,
-    modalidadRequerida: ModalidadServicio,
+    modalidadRequerida: ModalidadReps,
     config: ConfigReps,
     now: Date,
 ): Elegibilidad {
