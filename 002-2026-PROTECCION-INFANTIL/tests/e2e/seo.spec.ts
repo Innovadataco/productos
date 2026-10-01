@@ -5,8 +5,12 @@ test.describe("SEO y metadatos", () => {
         await page.goto("/");
         await expect(page).toHaveTitle(/Protección Infantil/);
 
+        // La descripción es COPY de Diseño (renombró «identificadores» → «cuentas» de riesgo, igual
+        // que el dashboard público). El contrato SEO es que EXISTA una descripción con contenido útil,
+        // NO una frase concreta: se exige ≥30 chars, robusto al copy (antes exigía la frase retirada
+        // «identificadores de riesgo» y por eso se rompía con cada ajuste de redacción).
         const description = page.locator('meta[name="description"]');
-        await expect(description).toHaveAttribute("content", /identificadores de riesgo/);
+        await expect(description).toHaveAttribute("content", /.{30,}/);
 
         const canonical = page.locator('link[rel="canonical"]');
         await expect(canonical).toHaveAttribute("href", /.+/);

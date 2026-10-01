@@ -9,7 +9,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { addDays } from "date-fns";
-import { toZonedTime, formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 import { AccionAudit, OrigenBono, TipoBono } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
@@ -24,12 +24,21 @@ const PREFIJO_CUPON = "CUP";
 const LONGITUD_CODIGO = 6;
 const MAX_INTENTOS_POR_CODIGO = 10;
 
-function ahoraBogota(): Date {
-    return toZonedTime(new Date(), ZONA_BOGOTA);
-}
-
 function formatoFechaBogota(fecha: Date): string {
     return formatInTimeZone(fecha, ZONA_BOGOTA, "yyyy-MM-dd");
+}
+
+/**
+ * SPEC-805: ventana de vigencia del cupón desde un INSTANTE REAL — productor único de la vigencia del
+ * cupón, el MISMO espacio en que `esVigente` (bono-aplicacion) la lee. Pura (sin `now` adentro) para
+ * que el candado de round-trip componga el escritor REAL con el lector REAL. Antes la base era un
+ * pseudo-instante Bogotá 5h corrido: contra los bonos de admin (instante real) el lector fallaba 5h.
+ */
+export function calcularVentanaVigenciaCupon(
+    base: Date,
+    vigenciaDias: number
+): { vigenciaInicio: Date; vigenciaFin: Date } {
+    return { vigenciaInicio: base, vigenciaFin: addDays(base, vigenciaDias) };
 }
 
 function generarCodigoAleatorio(): string {
@@ -119,8 +128,10 @@ export async function entregarCuponesRecompensa(
         }
 
         const params = await obtenerParametrosRecompensa();
-        const ahora = ahoraBogota();
-        const vigenciaFin = addDays(ahora, params.vigenciaDias);
+        // SPEC-805: base REAL (new Date()). El par escritura↔lectura (esVigente) vive en el mismo
+        // espacio; mover solo este lado rompería el par (cupón no-vigente al crearse / expira 5h antes).
+        const ahora = new Date();
+        const { vigenciaInicio, vigenciaFin } = calcularVentanaVigenciaCupon(ahora, params.vigenciaDias);
         const topeMaxCOP = params.topeMaxCOP;
 
         const codigos: string[] = [];
@@ -138,7 +149,7 @@ export async function entregarCuponesRecompensa(
                     nombre: codigo,
                     tipo: TipoBono.DESCUENTO_PCT,
                     valor: params.porcentajeDescuento,
-                    vigenciaInicio: ahora,
+                    vigenciaInicio,
                     vigenciaFin,
                     usosMaximosTotales: 1,
                     usosMaximosPorCliente: 1,

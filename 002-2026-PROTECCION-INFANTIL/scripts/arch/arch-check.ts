@@ -31,6 +31,7 @@ import { ejecutarAsercionBBis } from "./asercion-menu-no-redirige-a-otro-item";
 import { buscarInfractores } from "./no-prisma-mocks";
 import { buscarInfractores as buscarAliasWorker } from "./no-worker-alias";
 import { buscarInfractores as buscarReporteCreate } from "./no-reporte-create-directo";
+import { buscarInfractores as buscarFreemiumInline } from "./freemium-fecha-fin-chokepoint";
 import {
     buscarInfractores as buscarGetMuta,
     entradasObsoletas as getMutaObsoletas,
@@ -65,18 +66,19 @@ async function verificarDrift(): Promise<string[]> {
             continue;
         }
 
-        // SPEC-487 (D-109): los artefactos de tabla append-por-spec/ruta
-        // (`toleraOrdenDeFilas`: 02-roles, 03-pantallas) ya NO se comparan con lo
-        // commiteado —el PR no los toca; el barrido post-merge los regenera—.
-        // Basta con que el generador corra limpio: REPRESENTABILIDAD. Con esto
-        // dos PR que agregan rutas/roles no chocan en el generado (kill de la
-        // clase union server-side). El contenido lo siguen vigilando las
-        // aserciones B/B-bis (menú honesto) y rutas-app.test; el orden/unicidad
-        // de las filas, el `--check` del barrido sobre main.
-        if (artefacto.toleraOrdenDeFilas) continue;
+        // El gate del PR verifica SOLO REPRESENTABILIDAD (el generador corre sin error, ya
+        // comprobado arriba) para los artefactos que salieron de la comparación byte-exacta:
+        //  · SPEC-487: tablas append-por-spec/ruta (`toleraOrdenDeFilas`: 02-roles, 03-pantallas)
+        //    —dos PR que agregan rutas/roles no chocan en el generado—.
+        //  · SPEC-803: fotos del estado GLOBAL (`fueraDelGatePorPR`: 00-INDICE, 01-modelo-datos,
+        //    06-stack) —una foto global dentro de un cambio local no compone; dos PR de schema en
+        //    paralelo dejaban `main` rojo—.
+        // En ambos casos el drift real lo caza el barrido post-merge sobre `main`
+        // (generados-post-merge), que los regenera y abre el PR del operador si cambian. El gate NO
+        // se quita: el generador SIGUE corriendo acá (si no puede representar la fuente, es rojo).
+        if (artefacto.toleraOrdenDeFilas || artefacto.fueraDelGatePorPR) continue;
 
-        // Los byte-exactos (00-INDICE, 01-modelo-datos, 06-stack) NO son
-        // append-por-spec → siguen comparándose byte a byte contra lo commiteado.
+        // Un artefacto SIN marca se compara byte a byte contra lo commiteado (default estricto).
         const destino = path.join(RUTA_DOCS_ARCH, artefacto.archivo);
         const commiteado = fs.existsSync(destino) ? fs.readFileSync(destino, "utf-8") : null;
         if (commiteado === null) {
@@ -141,7 +143,7 @@ async function main() {
     console.log("[Arch:check] (a) Drift de artefactos…");
     const drift = await verificarDrift();
     if (drift.length === 0) {
-        console.log("[Arch:check] (a) VERDE: byte-exactos idénticos a lo commiteado; tablas append-por-spec representables (SPEC-487: el barrido post-merge las regenera).");
+        console.log("[Arch:check] (a) VERDE: todos los generadores representan la fuente; los sacados del gate byte-exacto (02/03 append-por-spec · 00/01/06 foto global, SPEC-487/803) los mantiene al día el barrido post-merge sobre main.");
     } else {
         rojo = true;
         console.error(`[Arch:check] (a) ROJO: ${drift.length} artefactos con drift:`);
@@ -230,11 +232,21 @@ async function main() {
 
     if (chequearModulosHuerfanos()) rojo = true;
 
+    console.log("[Arch:check] (j) freemiumFechaFin se calcula SOLO en calcularFreemiumFechaFin (SPEC-795)…");
+    const freemiumInline = buscarFreemiumInline();
+    if (freemiumInline.length === 0) {
+        console.log("[Arch:check] (j) VERDE: toda asignación de freemiumFechaFin viene del productor único.");
+    } else {
+        rojo = true;
+        console.error(`[Arch:check] (j) ROJO: ${freemiumInline.length} asignación(es) de freemiumFechaFin fuera de calcularFreemiumFechaFin:`);
+        for (const f of freemiumInline) console.error(`  - ${f.archivo}:${f.linea} ${f.texto}`);
+    }
+
     if (rojo) {
         console.error("[Arch:check] ROJO: la línea base no está al día o hay un desalineo real. Ver entradas arriba.");
         process.exitCode = 1;
     } else {
-        console.log("[Arch:check] VERDE: línea base al día, huérfanos declarados, puerta ≡ predicado, menú honesto, worker sin alias.");
+        console.log("[Arch:check] VERDE: línea base al día, huérfanos declarados, puerta ≡ predicado, menú honesto, worker sin alias, freemium en un solo cálculo.");
     }
 }
 

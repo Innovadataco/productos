@@ -6,8 +6,6 @@
  */
 import { EstadoSuscripcion, OrigenSuscripcion, TipoTitular } from "@prisma/client";
 import type { Suscripcion } from "@prisma/client";
-import { addDays } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -16,9 +14,8 @@ import { programar } from "@/lib/notificaciones/motor";
 import { generarCodigoReferidoUnico } from "./referido.service";
 import { anioBogota } from "./renovacion-calculos";
 import { obtenerDuracionFreemiumDias } from "./parametros-pagos";
+import { calcularFreemiumFechaFin } from "./freemium-calculos";
 import type { UsuarioTitular } from "./suscripcion-vista.service";
-
-const ZONA_BOGOTA = "America/Bogota";
 
 export interface ActivarFreemiumInput {
     usuario: UsuarioTitular & { email?: string | undefined; nombre?: string | null };
@@ -30,10 +27,6 @@ export interface ActivarFreemiumInput {
 export interface ActivarFreemiumResultado {
     suscripcion: Suscripcion;
     freemiumFechaFin: Date;
-}
-
-function ahoraBogota(): Date {
-    return toZonedTime(new Date(), ZONA_BOGOTA);
 }
 
 async function emitirEventoActivada(
@@ -101,8 +94,13 @@ export async function activarFreemium(input: ActivarFreemiumInput): Promise<Acti
     }
 
     const duracionDias = await obtenerDuracionFreemiumDias();
-    const ahora = ahoraBogota();
-    const freemiumFechaFin = addDays(ahora, duracionDias);
+    // SPEC-795 (PR 3): `freemiumFechaFin` se calcula SOLO en `calcularFreemiumFechaFin` (día
+    // calendario Bogotá, fin-de-día). Antes se sumaba inline con addDays sobre `ahoraBogota()` (un
+    // pseudo-instante 5h corrido) → el periodo de prueba terminaba 5h antes (defecto medido en prod,
+    // 8 filas reales). `ahora` es el instante REAL (lo convierte el helper). `fechaInicio` también
+    // pasa a instante real. El candado freemium-fecha-fin-chokepoint prohíbe volver al cálculo inline.
+    const ahora = new Date();
+    const freemiumFechaFin = calcularFreemiumFechaFin(ahora, duracionDias);
     const codigoReferidoPropio = await generarCodigoReferidoUnico(TipoTitular.PADRE);
 
     const suscripcion = await repo.crearSuscripcion({
@@ -204,8 +202,13 @@ export async function activarFreemiumColegio(
     }
 
     const duracionDias = await obtenerDuracionFreemiumDias();
-    const ahora = ahoraBogota();
-    const freemiumFechaFin = addDays(ahora, duracionDias);
+    // SPEC-795 (PR 3): `freemiumFechaFin` se calcula SOLO en `calcularFreemiumFechaFin` (día
+    // calendario Bogotá, fin-de-día). Antes se sumaba inline con addDays sobre `ahoraBogota()` (un
+    // pseudo-instante 5h corrido) → el periodo de prueba terminaba 5h antes (defecto medido en prod,
+    // 8 filas reales). `ahora` es el instante REAL (lo convierte el helper). `fechaInicio` también
+    // pasa a instante real. El candado freemium-fecha-fin-chokepoint prohíbe volver al cálculo inline.
+    const ahora = new Date();
+    const freemiumFechaFin = calcularFreemiumFechaFin(ahora, duracionDias);
     const codigoReferidoPropio = await generarCodigoReferidoUnico(TipoTitular.COLEGIO);
 
     const suscripcion = await repo.crearSuscripcion({

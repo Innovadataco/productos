@@ -396,16 +396,11 @@ export class PagosRepository {
         return this.db.bonoPromocional.findUnique({ where: { id } });
     }
 
-    listarBonosActivos(ahora: Date = new Date()) {
-        return this.db.bonoPromocional.findMany({
-            where: {
-                activo: true,
-                vigenciaInicio: { lte: ahora },
-                vigenciaFin: { gte: ahora },
-            },
-            orderBy: { createdAt: "desc" },
-        });
-    }
+    // SPEC-805: se eliminó `listarBonosActivos(ahora = new Date())` — lector de `vigencia*` SIN
+    // llamador de producción que, encima, leía en espacio de instante REAL mientras el lector VIVO
+    // (`esVigente` en bono-aplicacion.service) leía en pseudo-instante: una segunda verdad sobre el
+    // mismo campo, esperando a que alguien la cablee (peor que código muerto). D-138: se borra, no se
+    // aparca. La vigencia de un bono se evalúa en `esVigente`, contra un instante real.
 
     /**
      * SPEC-212: listado paginado de bonos con filtro por activo/inactivo.

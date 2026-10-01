@@ -173,7 +173,6 @@ describe("PagosRepository", () => {
         });
 
         expect((await repo.obtenerBonoPromocionalPorId(bono.id))?.nombre).toBe("BONO-TEST");
-        expect(await repo.listarBonosActivos()).toHaveLength(1);
         expect(await repo.listarBonosAplicados(suscripcion.id)).toHaveLength(1);
         expect(aplicado.descuentoUSD).toBe(1.5);
     });
