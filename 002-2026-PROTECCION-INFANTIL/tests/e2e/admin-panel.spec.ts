@@ -151,19 +151,16 @@ test.describe("Panel de administración", () => {
     });
 
     /**
-     * SPEC-807 (ALTA): la anonimización se ABORTA cuando Ollama está AUSENTE bajo la carga del suite —
-     * y «Ollama ausente» es un estado REAL de producción (Ollama remoto en una Mac que puede dormir /
-     * reiniciarse / perder el túnel), no un artefacto del entorno de prueba. Medido: la API funciona
-     * SOLA (PATCH directo → 200, estado CLASIFICADO) y el test pasa solo y en par; en el SUITE completo
-     * el PATCH /anonimizar no recibe respuesta (waitForResponse 30s) y el server escupe
-     * `uncaughtException: Error: aborted`, la transacción NO commitea (el reporte queda
-     * REQUIRE_ANONIMIZACION). No es arnés: el rojo ES el defecto. Se usa `fixme` (no `test.fail`) porque
-     * el waitForResponse gastaría 30 s por corrida y la cola de CI es el cuello de botella.
-     * CRITERIO DE SALIDA: cuando SPEC-807 haga robusto el camino sin-Ollama (las pruebas DEBEN pasar con
-     * Ollama ausente, sin stub — decisión CEO), quitar el `fixme`; el cuerpo robusto ya afirma el EFECTO
-     * (la fila sale del filtro + la BD queda CLASIFICADO) y debe quedar verde.
+     * SPEC-807 (CERRADO · se retiró el `fixme` — SPEC-820): la anonimización se ABORTABA cuando Ollama
+     * estaba AUSENTE bajo la carga del suite — y «Ollama ausente» es un estado REAL de producción (Ollama
+     * remoto en una Mac que puede dormir / reiniciarse / perder el túnel), no un artefacto del entorno.
+     * SPEC-807 (#802) hizo robusto el camino sin-Ollama: el best-effort del dataset NO bloquea la
+     * petición y distingue transporte de rechazo, así que el PATCH /anonimizar ya no queda sin respuesta
+     * ni escupe `Error: aborted`. CRITERIO DE SALIDA CUMPLIDO (las pruebas DEBEN pasar con Ollama ausente,
+     * sin stub — decisión CEO): se quita el `fixme`. El cuerpo afirma el EFECTO (la fila sale del filtro +
+     * la BD queda CLASIFICADO) y debe quedar verde.
      */
-    test.fixme("admin puede anonimizar manualmente un reporte con PII", async ({ page }) => {
+    test("admin puede anonimizar manualmente un reporte con PII", async ({ page }) => {
         const { reporte } = await crearReporteAdmin("REQUIERE_ANONIMIZACION", "OFRECIMIENTO_REGALOS", { contienePii: true });
 
         await loginAdmin(page);
