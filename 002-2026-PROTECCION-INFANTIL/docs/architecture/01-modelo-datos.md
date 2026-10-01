@@ -1466,6 +1466,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | solicitudes | SolicitudCita | lista, relación |
 | documentos | DocumentoProfesional | lista, relación |
 | diasBloqueados | DiaBloqueado | lista, relación |
+| verificacionesReps | VerificacionReps | lista, relación |
 
 #### `PreferenciaAlertaColegio`
 
@@ -1825,6 +1826,23 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | revisadoPor | Usuario | relación |
 | documentosRevisados | VerificacionDocumento | lista, relación |
 | aceptacionAutorizacion | AceptacionAutorizacionProfesional | opcional, relación (FK) |
+
+#### `VerificacionReps`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| profesionalId | String | — |
+| verificadoEn | DateTime | — |
+| fuente | FuenteVerificacionReps | — |
+| resultado | EstadoReps | — |
+| vigenteHasta | DateTime | opcional |
+| modalidades | ModalidadReps | lista |
+| verificadoPorId | String | opcional |
+| verificadoPorSnapshot | String | opcional |
+| creadoEn | DateTime | — |
+| profesional | PerfilProfesional | relación (FK) |
+| verificadoPor | Usuario | opcional, relación |
 
 #### `WorkerLog`
 
@@ -2395,6 +2413,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ciudadPerfil | Ciudad | opcional, relación |
 | perfilProfesional | PerfilProfesional | opcional, relación |
 | verificacionesProfesionalRevisadas | VerificacionProfesional | lista, relación |
+| verificacionesRepsRealizadas | VerificacionReps | lista, relación |
 | revisionesRenovacionHechas | RevisionRenovacion | lista, relación |
 | aceptacionesAutorizacionProfesional | AceptacionAutorizacionProfesional | lista, relación |
 | solicitudesCitaComoPadre | SolicitudCita | lista, relación |
@@ -2493,6 +2512,7 @@ erDiagram
     PerfilProfesional ||--o{ FranjaDisponible : "profesional"
     PerfilProfesional ||--o{ SolicitudCita : "profesional"
     PerfilProfesional ||--o{ VerificacionProfesional : "perfilProfesional"
+    PerfilProfesional ||--o{ VerificacionReps : "profesional"
     Plan ||--o{ Suscripcion : "planActual"
     Plataforma ||--o{ AlertaSuscripcion : "plataforma"
     Plataforma ||--o{ Apelacion : "plataforma"
