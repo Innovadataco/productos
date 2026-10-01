@@ -1202,10 +1202,21 @@ model Pago {
   motivoRechazo         String?
   autorizadoPorAdminId  String?
   codigoReferidoUsado   String?
-  // SPEC-212 (002-PI-112): campos aditivos de reembolso.
+  // SPEC-212 (002-PI-112): campos aditivos de reembolso. Son el RESULTADO (qué se devolvió y cuándo),
+  // NO «cuándo reclamó el padre» — hechos distintos; por eso SPEC-788 no los reusa (ver abajo).
   montoReembolsoUSD     Float?
   motivoReembolso       String?
   referenciaReembolso   String?
+  // SPEC-788: ANCLA LEGAL de la reversión (Dto 1074/2015). `reembolsoSolicitadoEn` = cuándo RECLAMÓ el
+  // padre; es la PRUEBA y el ancla del término de 15 días hábiles. Vive en Pago —no en la PQR de 752,
+  // que cuelga de usuarioId en Cascade y se borra con la cuenta— porque el registro comercial tiene
+  // retención propia que sobrevive al borrado; si el padre borra su cuenta, seguimos debiendo la
+  // reversión y probando cuándo la pidió. INMUTABLE una vez fijado (trigger de la migración: NULL→valor
+  // se permite, valor→otro o valor→NULL lanza). `reembolsoVenceEn` = sumarDiasHabilesColombia(+15): se
+  // GUARDA, no se deriva al leer (el estado no puede mentir sobre el reloj). CHECK de coherencia en la
+  // migración (Prisma es ciego al CHECK). La PQR de 752 DERIVA su urgencia de acá por el enlace; no copia.
+  reembolsoSolicitadoEn DateTime?    @db.Timestamptz(6)
+  reembolsoVenceEn      DateTime?    @db.Timestamptz(6)
   // SPEC-211 (002-PI-111): notas opcionales del cliente al reportar la renovación.
   notasCliente          String?
   createdAt             DateTime     @default(now()) @db.Timestamptz(6)
