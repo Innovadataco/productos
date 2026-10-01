@@ -2664,7 +2664,11 @@ model SolicitudHabeasData {
   // solicitud puede nacer por CORREO (sin PQR). Lado dueño del FK = PeticionServicio (ver allá).
   peticionServicio PeticionServicio?
 
-  @@index([estado, venceEn]) // el worker que vence/recoge por plazo
+  // SPEC-824: índice por (estado, venceEn). El worker que vence/recoge por plazo NO EXISTE (fuera de alcance
+  // de 824 y sin radicar). La atención de las peticiones hoy es la BANDEJA del operador (SPEC-824), que las
+  // ordena por vencimiento leyendo desde PeticionServicio. Este índice queda RESERVADO para ese worker futuro
+  // — el comentario ya no promete un mecanismo ausente (el texto viejo sostuvo el hueco que destapó 824).
+  @@index([estado, venceEn])
   @@index([peticionarioUsuarioId])
 }
 

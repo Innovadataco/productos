@@ -28,6 +28,9 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // sensibles (círculo de confianza de padres, cursos/alumnos de colegios).
     // Módulo propio — NO reusar padres/colegios_gestion. Default: solo ADMIN.
     { clave: "soporte_lectura", nombre: "Soporte: lectura de datos sensibles", categoria: "admin", esCritico: true, orden: 26 },
+    // SPEC-824: la BANDEJA de peticiones de soporte (PQR + habeas data). Módulo propio — una obligación con
+    // término legal (habeas data) no puede quedar sin quién la vea. Default grant: ADMIN + OPERADOR.
+    { clave: "soporte_peticiones", nombre: "Peticiones de soporte", categoria: "admin", esCritico: true, orden: 28 },
     { clave: "bandeja_reportes", nombre: "Bandeja de reportes", categoria: "operador", esCritico: true, orden: 30 },
     { clave: "expediente_revelar_original", nombre: "Revelar texto original", categoria: "operador", esCritico: true, orden: 31 },
     // SPEC-140 (F2/N-4): generar denuncia formal (PDF por plantilla) y exportar el

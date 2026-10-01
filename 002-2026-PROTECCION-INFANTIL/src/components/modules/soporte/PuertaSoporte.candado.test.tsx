@@ -16,19 +16,21 @@ import { MOTIVOS_SOPORTE, COPY_PUERTA_SOPORTE } from "@/lib/soporte/motivos-sopo
 
 const SIN_PLAZO = /d[ií]as|plazo|24\s*h|h[áa]biles|\bfecha\b|\bsemana/i;
 const okEnviar = () => Promise.resolve({ numeroSeguimiento: "PQR-2026-ABC123" });
+// SPEC-819: la puerta ahora recibe `hijos` (para el sujeto de habeas data). Estos tests de 752 no entran
+// por «Mis datos personales», así que la lista no importa acá: []. El candado de 819 cubre la pregunta.
 
 afterEach(() => cleanup());
 
 describe("SPEC-752 · PuertaSoporte (render)", () => {
     it("muestra los 5 motivos de la FORMA", () => {
-        render(<PuertaSoporte onEnviar={okEnviar} />);
+        render(<PuertaSoporte onEnviar={okEnviar} hijos={[]} />);
         for (const m of MOTIVOS_SOPORTE) {
             expect(screen.getByText(m.titulo), `falta el motivo "${m.titulo}"`).toBeTruthy();
         }
     });
 
     it("CERO texto libre: ningún textarea y todo input es radio (5 radios)", () => {
-        const { container } = render(<PuertaSoporte onEnviar={okEnviar} />);
+        const { container } = render(<PuertaSoporte onEnviar={okEnviar} hijos={[]} />);
         expect(container.querySelectorAll("textarea").length, "hay un textarea (texto libre)").toBe(0);
         const inputs = Array.from(container.querySelectorAll("input"));
         expect(inputs.length).toBe(MOTIVOS_SOPORTE.length);
@@ -38,19 +40,19 @@ describe("SPEC-752 · PuertaSoporte (render)", () => {
     });
 
     it("CERO plazo en la selección (control positivo: el título SÍ está)", () => {
-        const { container } = render(<PuertaSoporte onEnviar={okEnviar} />);
+        const { container } = render(<PuertaSoporte onEnviar={okEnviar} hijos={[]} />);
         expect(screen.getByText(COPY_PUERTA_SOPORTE.titulo)).toBeTruthy(); // positivo
         expect(SIN_PLAZO.test(container.textContent ?? ""), "la selección menciona un plazo").toBe(false);
     });
 
     it("al enviar: confirmación con «te responde por aquí» + el número devuelto, y SIN plazo", async () => {
         const onEnviar = vi.fn(okEnviar);
-        const { container } = render(<PuertaSoporte onEnviar={onEnviar} />);
+        const { container } = render(<PuertaSoporte onEnviar={onEnviar} hijos={[]} />);
         fireEvent.click(container.querySelector('input[value="PAGO_O_COBRO"]')!);
         fireEvent.click(screen.getByRole("button", { name: COPY_PUERTA_SOPORTE.enviar }));
 
         await waitFor(() => expect(screen.getByText(/te responde por aquí/)).toBeTruthy());
-        expect(onEnviar).toHaveBeenCalledWith("PAGO_O_COBRO");
+        expect(onEnviar).toHaveBeenCalledWith({ motivo: "PAGO_O_COBRO" });
         expect(screen.getByText("PQR-2026-ABC123"), "no muestra el número de seguimiento").toBeTruthy();
         expect(SIN_PLAZO.test(container.textContent ?? ""), "la confirmación menciona un plazo").toBe(false);
         // Ya no hay puerta de entrada de texto: la confirmación tampoco abre campo.
@@ -59,7 +61,7 @@ describe("SPEC-752 · PuertaSoporte (render)", () => {
 
     it("no envía sin selección (el botón arranca deshabilitado)", () => {
         const onEnviar = vi.fn(okEnviar);
-        render(<PuertaSoporte onEnviar={onEnviar} />);
+        render(<PuertaSoporte onEnviar={onEnviar} hijos={[]} />);
         const boton = screen.getByRole("button", { name: COPY_PUERTA_SOPORTE.enviar }) as HTMLButtonElement;
         expect(boton.disabled, "el botón Enviar debería arrancar deshabilitado").toBe(true);
         fireEvent.click(boton);
