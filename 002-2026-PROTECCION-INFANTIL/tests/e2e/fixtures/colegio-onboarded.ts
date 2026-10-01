@@ -109,9 +109,13 @@ export async function crearColegioOnboarded(opts: OpcionesColegioOnboarded): Pro
     expect(plan.status(), `freemium colegio body=${await plan.text().catch(() => "")}`).toBeLessThan(300);
     if (hasta === "plan") return finalizar(ctx, hasta);
 
-    // (4) Paso 3 · un profesor activo. Identidad COMPLETA obligatoria (SPEC-320/442): documento
-    // (`tipoDocumento`/`numeroDocumento`, clave viva del catálogo CC), año de nacimiento (18-80),
-    // sexo (M/F/OTRO), email y teléfono.
+    // (4) Paso 3 · un profesor activo. Identidad COMPLETA obligatoria (SPEC-320/442): documento,
+    // año de nacimiento (18-80), sexo (M/F/OTRO), email y teléfono.
+    // ⚠️ CAMPOS DEL DOCUMENTO: el PROFESOR usa `tipoDocumento` / `numeroDocumento`. El ESTUDIANTE
+    //    usa `documentoTipo` / `documentoNumero` (ver paso 5) — el MISMO concepto con DOS
+    //    convenciones, a propósito (decisión CEO 30-09: no se normalizan hoy, romperían dos
+    //    contratos). NO copies esta forma al alumno. Si algún día normalizás una, la otra EXISTE y
+    //    hay que cambiarla también (ya nos pasó corregir media de un par y dejar la otra mintiendo).
     const docProfe = `2${(Date.now() % 1_000_000_000).toString().padStart(9, "0")}`;
     const profesor = await request.post("/api/colegio/profesores", {
         data: {
@@ -129,8 +133,10 @@ export async function crearColegioOnboarded(opts: OpcionesColegioOnboarded): Pro
     if (hasta === "profesores") return finalizar(ctx, hasta);
 
     // (5) Paso 4 · cursos: los 11 sembrados por el completar YA cumplen. Paso 5 · un estudiante
-    // activo en uno de esos cursos. OJO: el estudiante usa `documentoTipo`/`documentoNumero`
-    // (nombre de campo distinto al profesor), también obligatorio (SPEC-320 §2.2-bis).
+    // activo en uno de esos cursos. Documento también obligatorio (SPEC-320 §2.2-bis).
+    // ⚠️ CAMPOS DEL DOCUMENTO: el ESTUDIANTE usa `documentoTipo` / `documentoNumero` — DISTINTO del
+    //    PROFESOR (`tipoDocumento` / `numeroDocumento`, ver paso 4). Difieren a propósito (decisión
+    //    CEO 30-09). NO copies la forma del profesor acá. Si normalizás una, la otra existe arriba.
     const curso = await prisma.curso.findFirst({ where: { colegioId: rector.colegioId, estado: "activo" }, select: { id: true } });
     if (!curso) throw new Error("[fixture] el completar no sembró cursos activos (SPEC-344)");
     const docAlumno = `3${(Date.now() % 1_000_000_000).toString().padStart(9, "0")}`;
