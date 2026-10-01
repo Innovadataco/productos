@@ -27,6 +27,14 @@ import * as path from "node:path";
  *  3. una ANOTACIÓN DE TIPO (`Date | null`, `string | null`) o un predicado/selector/orden de Prisma
  *     (`{ lt: … }`, `{ not: null }`, `true`, `"asc"`): no son VALORES computados del campo.
  *
+ * ROJO POR DISEÑO — asignar el campo desde una VARIABLE, aunque el productor la haya computado:
+ *   `const fin = calcularFreemiumFechaFin(…); … data: { freemiumFechaFin: fin }`  → ROJO.
+ * NO es falso positivo: el SITIO de asignación debe EXHIBIR la procedencia del valor (si no, la forma
+ * de dos líneas vuelve por la ventana). Dos vías verdes: llamar al productor EN el sitio
+ * (`freemiumFechaFin: calcularFreemiumFechaFin(…)`), o nombrar la variable `freemiumFechaFin` y pasarla
+ * por shorthand (`{ freemiumFechaFin }`, sin `:`, que ni matchea). Si ves este rojo el candado NO está
+ * roto: mové la procedencia al sitio de asignación, no aflojes la forma (2).
+ *
  * Por qué por FORMA del lado derecho y no «sin `:`»: el campo aparece como CLAVE con `:` en tipos,
  * cláusulas Prisma y serializaciones —todas legítimas—, así que «la lectura no lleva `:`» no alcanza.
  * NO es allowlist growable de funciones prohibidas: lo AUTORIZADO está cerrado; una forma nueva no
