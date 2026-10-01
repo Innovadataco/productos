@@ -1,5 +1,6 @@
 /**
  * SPEC-448 (Calidad) · Recorrido de la verificación CON documentos a la vista.
+ * SPEC-822 (Calidad) · El revisor de (A)(B)(C) es el VERIFICADOR TITULAR, no ADMIN prestado.
  *
  * ORIGEN. SPEC-436 (I-303 · I-304) ya está en main pero su criterio de cierre
  * no lo puede verificar nadie todavía: «un verificador abre los documentos de
@@ -23,13 +24,30 @@
  *       DEBE ser ≥ 1. Sin auditoría, para la Ley 1918/2018 · 2375/2024 §5,
  *       la lectura no se puede demostrar.
  *
- *   (D) Candado del hueco de fondo: en producción hay CERO usuarios
- *       `VERIFICADOR` (verificado por el CEO en BD). Hasta que SPEC-435
- *       traiga la creación de verificadores, este recorrido usa ADMIN
- *       — que también pasa el guard (`ROLES_QUE_REVISAN = {VERIFICADOR, ADMIN}`).
- *       Este candado con `test.fail` afirma que cuando SPEC-435 despliegue,
- *       exista al menos un `VERIFICADOR` activo en producción y sea quien
- *       hace este recorrido de verdad.
+ *   (D) CONTROL DE ROL (SPEC-822 — «el criterio de 822 aplicado a 822»).
+ *       (A)(B)(C) las camina un VERIFICADOR, pero ADMIN también pasa el guard
+ *       (`ROLES_QUE_REVISAN = {VERIFICADOR, ADMIN}`): verdearían con CUALQUIERA
+ *       de los dos → por sí solas prueban el GUARD, no el ROL. El discriminador:
+ *       el VERIFICADOR está CONFINADO a su módulo (`admin_verificacion_profesionales`)
+ *       y recibe 403 en un módulo que solo el ADMIN tiene (`/api/admin/colegios`,
+ *       `colegios_gestion` — ya probado por `recorrido-alta-verificador`); el ADMIN
+ *       NO está confinado (no-403). (A)(B)(C) y (D) comparten la MISMA cuenta de
+ *       revisor: si alguien la cambiara por ADMIN, (D) vería 200 donde exige 403 y
+ *       el recorrido CAERÍA. Eso es lo que lo vuelve una prueba del rol.
+ *
+ * CÓMO ENTRA EL VERIFICADOR (SPEC-822 · veredicto del CEO). NO por una cuenta
+ * persistente con clave estable: #816 sembró una, pero NADA del arnés e2e la
+ * siembra (el seeder es manual, `globalSetup` solo guarda la BD `_test`, y
+ * `.env.test` no trae `E2E_VERIFICADOR_*`) — cablear una cuenta COMPARTIDA al
+ * arnés SERÍA I-439 por construcción. #816 quedó reclasificada como fixture de
+ * ENTORNO (verificación manual contra el entorno de larga vida + el invariante
+ * «≥1 verificador activo» del post-deploy, que hoy da 0). Acá el recorrido es
+ * AUTOCONTENIDO: un admin EFÍMERO crea el verificador por el ENDPOINT real
+ * (`POST /api/admin/verificadores` — crear un interno ES una acción de admin,
+ * patrón que el CEO fijó para operador/comité), el server DEVUELVE la temporal
+ * (Calidad nunca escribe ni lee una credencial) y el verificador la cambia por
+ * `/api/auth/cambiar-password`. Cero estado compartido entre corridas — lo
+ * OPUESTO a I-439.
  *
  * REGLA QUE DEFINE ESTE SPEC (aviso del CEO 04-09 13:10, reforzada 16:23):
  *   «Caminá la pantalla real, no siembres alrededor. El profesional carga
@@ -41,7 +59,7 @@
  *   (Resend caído) → `POST /completar` → `PUT /api/profesional/perfil` con
  *   `ciudadId` válido → `POST /api/profesional/documentos` con archivo PDF
  *   mínimo válido (número mágico `%PDF-`). En ninguna parte se crea
- *   `PerfilProfesional`, `Usuario` ni `documento` por Prisma directo.
+ *   `PerfilProfesional`, `Usuario`, `documento` ni el VERIFICADOR por Prisma directo.
  *
  * AISLAMIENTO. Corrida por `randomUUID`, prefijo `e2e-448-`. Limpieza
  * FK-safe en `afterAll`. Cero mutación de rol real ni parámetros globales.
@@ -54,16 +72,30 @@ import { hashPassword } from "@/lib/auth";
 import type { RolUsuario } from "@prisma/client";
 
 const CORRIDA = `e2e-448-${randomUUID().slice(0, 8)}`;
+// Clave LOCAL y efímera del admin aprovisionador (patrón operadores: el ADMIN de
+// prueba se siembra por Prisma y se borra en la corrida). NO es una credencial
+// persistente. La del VERIFICADOR NO se escribe acá: la DEVUELVE el endpoint del alta.
 const PASSWORD = "Verif448!Secure";
 
 const EMAIL_PROF = `${CORRIDA}-prof@proteccion.local`;
 const EMAIL_ADMIN = `${CORRIDA}-admin@proteccion.local`;
+const EMAIL_VERIF = `${CORRIDA}-verif@proteccion.local`;
+
+// Módulo que SOLO el admin tiene (`colegios_gestion`); el VERIFICADOR recibe 403.
+// Es el discriminador de rol del candado (D).
+const MODULO_SOLO_ADMIN = "/api/admin/colegios";
 
 const sembrados = {
     usuarios: new Set<string>(),
     perfiles: new Set<string>(),
     tokens: new Set<string>(),
 };
+
+// Revisor del recorrido (SPEC-822): el VERIFICADOR titular. Se llena en beforeAll
+// con la cuenta que crea el PROPIO recorrido y la clave que el server devuelve
+// (luego cambiada por el verificador). (A)(B)(C) y (D) entran con ESTAS variables.
+let verificadorEmail = "";
+let verificadorPassword = "";
 
 async function ctx(): Promise<APIRequestContext> {
     return playwrightRequest.newContext();
@@ -82,7 +114,7 @@ async function fabricarEnlace(email: string, rol: RolUsuario): Promise<string> {
 async function asegurarAdmin(): Promise<void> {
     const u = await prisma.usuario.upsert({
         where: { email: EMAIL_ADMIN },
-        update: { rol: "ADMIN" as RolUsuario, estado: "activo" },
+        update: { rol: "ADMIN" as RolUsuario, estado: "activo", debeCambiarPassword: false },
         create: {
             email: EMAIL_ADMIN,
             nombre: `Admin E2E ${CORRIDA}`,
@@ -94,8 +126,8 @@ async function asegurarAdmin(): Promise<void> {
     sembrados.usuarios.add(u.id);
 }
 
-async function login(request: APIRequestContext, email: string) {
-    const res = await request.post("/api/auth/login", { data: { email, password: PASSWORD } });
+async function login(request: APIRequestContext, email: string, password: string) {
+    const res = await request.post("/api/auth/login", { data: { email, password } });
     expect(res.status(), `login ${email}`).toBe(200);
 }
 
@@ -103,6 +135,65 @@ async function aceptarConsentimiento(request: APIRequestContext) {
     await request.post("/api/consentimiento/aceptar", {
         data: { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: false },
     });
+}
+
+/**
+ * SPEC-822: aprovisiona el VERIFICADOR TITULAR por el camino REAL. El alta la hace
+ * un ADMIN efímero por el ENDPOINT (`POST /api/admin/verificadores`, patrón de
+ * `recorrido-alta-verificador`): crear un interno ES una acción de admin. El server
+ * DEVUELVE la temporal (Calidad no la escribe) y el verificador la cambia por una
+ * nueva (viene con `debeCambiarPassword=true`). Deja email + clave ya cambiada y
+ * el consentimiento aceptado por el endpoint real (nunca forjado). Idempotencia del
+ * admin: `asegurarAdmin` ya lo dejó listo antes de llamar a esta función.
+ */
+async function aprovisionarVerificador(): Promise<{ email: string; password: string }> {
+    let passwordTemporal = "";
+    const reqAdmin = await ctx();
+    try {
+        await login(reqAdmin, EMAIL_ADMIN, PASSWORD);
+        await aceptarConsentimiento(reqAdmin);
+        await login(reqAdmin, EMAIL_ADMIN, PASSWORD);
+        const alta = await reqAdmin.post("/api/admin/verificadores", {
+            data: { email: EMAIL_VERIF, nombre: `Verif E2E ${CORRIDA}` },
+        });
+        const altaBody = await alta.text().catch(() => "");
+        expect(
+            [200, 201].includes(alta.status()),
+            `alta de VERIFICADOR debe devolver 200/201. status=${alta.status()} body=${altaBody.slice(0, 220)}`,
+        ).toBe(true);
+        const json = JSON.parse(altaBody) as { verificador?: { id?: string }; passwordTemporal?: string };
+        expect(
+            typeof json.passwordTemporal === "string" && json.passwordTemporal.length > 0,
+            `el server DEVUELVE la temporal (Calidad no la escribe). body=${altaBody.slice(0, 220)}`,
+        ).toBe(true);
+        passwordTemporal = json.passwordTemporal!;
+    } finally {
+        await reqAdmin.dispose();
+    }
+
+    // El verificador entra con la temporal, la cambia y acepta el consentimiento por
+    // el endpoint real. La clave nueva se arma local (no es la de ninguna cuenta real).
+    const passwordNueva = `Verif448-Nueva!${CORRIDA.slice(-4)}`;
+    const reqVerif = await ctx();
+    try {
+        await login(reqVerif, EMAIL_VERIF, passwordTemporal);
+        const cambio = await reqVerif.post("/api/auth/cambiar-password", {
+            data: { passwordActual: passwordTemporal, passwordNueva },
+        });
+        expect(
+            cambio.status(),
+            `cambiar-password del verificador debe cerrar 200. body=${(await cambio.text().catch(() => "")).slice(0, 220)}`,
+        ).toBe(200);
+        await login(reqVerif, EMAIL_VERIF, passwordNueva);
+        await aceptarConsentimiento(reqVerif);
+    } finally {
+        await reqVerif.dispose();
+    }
+
+    const creado = await prisma.usuario.findUnique({ where: { email: EMAIL_VERIF }, select: { id: true, rol: true } });
+    expect(creado?.rol, "la cuenta creada por el endpoint es VERIFICADOR").toBe("VERIFICADOR");
+    sembrados.usuarios.add(creado!.id);
+    return { email: EMAIL_VERIF, password: passwordNueva };
 }
 
 /**
@@ -116,7 +207,7 @@ function pdfMinimo(etiqueta: string): Buffer {
 
 async function limpiarSembrados() {
     const usuariosCreados = await prisma.usuario.findMany({
-        where: { email: { in: [EMAIL_PROF, EMAIL_ADMIN] } },
+        where: { email: { in: [EMAIL_PROF, EMAIL_ADMIN, EMAIL_VERIF] } },
         select: { id: true },
     });
     const usuarioIds = usuariosCreados.map((u) => u.id);
@@ -137,6 +228,9 @@ async function limpiarSembrados() {
     }
     if (usuarioIds.length > 0) {
         await prisma.auditLog.deleteMany({ where: { usuarioId: { in: usuarioIds } } });
+        // El verificador y el admin aceptaron consentimiento por el endpoint real;
+        // se borra la fila para no dejar rastro de la corrida (FK-safe, no bloquea).
+        await prisma.auditConsentimiento.deleteMany({ where: { usuarioId: { in: usuarioIds } } }).catch(() => undefined);
         await prisma.usuario.deleteMany({ where: { id: { in: usuarioIds } } });
     }
     sembrados.usuarios.clear();
@@ -146,15 +240,19 @@ async function limpiarSembrados() {
 
 /**
  * Estado compartido entre tests (describe.serial): el profesional se crea y
- * su perfil se levanta una vez; los tres candados (A/B/C) operan sobre él.
+ * su perfil se levanta una vez; los candados (A/B/C) operan sobre él, y el
+ * revisor (VERIFICADOR) se aprovisiona en beforeAll.
  */
 let perfilProfesionalId = "";
 let requisitoConDocumento = "";
 let requisitoSinDocumento = "";
 
-test.describe.serial("Verificación con documentos a la vista (SPEC-448)", () => {
+test.describe.serial("Verificación con documentos a la vista — revisor VERIFICADOR titular (SPEC-448 · SPEC-822)", () => {
     test.beforeAll(async () => {
         await asegurarAdmin();
+        const verif = await aprovisionarVerificador();
+        verificadorEmail = verif.email;
+        verificadorPassword = verif.password;
 
         const request = await ctx();
         try {
@@ -173,7 +271,7 @@ test.describe.serial("Verificación con documentos a la vista (SPEC-448)", () =>
             });
             expect(completar.status(), `completar profesional body=${await completar.text().catch(() => "")}`).toBe(201);
             await aceptarConsentimiento(request);
-            await login(request, EMAIL_PROF);
+            await login(request, EMAIL_PROF, PASSWORD);
 
             // (2) el profesional completa su ficha (PUT que la pantalla dispara)
             const ciudad = await prisma.ciudad.findFirst({ select: { id: true } });
@@ -233,9 +331,9 @@ test.describe.serial("Verificación con documentos a la vista (SPEC-448)", () =>
     test("(A) marcar CUMPLE sin documento cargado devuelve 400 (guardia servidor)", async () => {
         const request = await ctx();
         try {
-            await login(request, EMAIL_ADMIN);
-            await aceptarConsentimiento(request);
-            await login(request, EMAIL_ADMIN);
+            // Revisor TITULAR: el VERIFICADOR (SPEC-822), no ADMIN. Ya aceptó el
+            // consentimiento en beforeAll, así que basta con iniciar sesión.
+            await login(request, verificadorEmail, verificadorPassword);
 
             // Marca TODOS los requisitos en CUMPLE — pero solo `requisitoConDocumento`
             // tiene archivo cargado. El servidor debe rechazar por
@@ -267,9 +365,9 @@ test.describe.serial("Verificación con documentos a la vista (SPEC-448)", () =>
     test("(B) abrir el documento responde el archivo, no HTML (reproducción negativa de I-303)", async () => {
         const request = await ctx();
         try {
-            await login(request, EMAIL_ADMIN);
+            await login(request, verificadorEmail, verificadorPassword);
             const res = await request.get(`/api/admin/verificacion-profesionales/${perfilProfesionalId}/documentos/${requisitoConDocumento}`);
-            expect(res.status(), "abrir documento como ADMIN").toBe(200);
+            expect(res.status(), "abrir documento como VERIFICADOR").toBe(200);
             const ct = res.headers()["content-type"] ?? "";
             expect(
                 ct.startsWith("application/pdf"),
@@ -289,7 +387,7 @@ test.describe.serial("Verificación con documentos a la vista (SPEC-448)", () =>
     test("(C) cada apertura deja fila en AuditLog (Ley 1918/2018 · 2375/2024 §5)", async () => {
         const request = await ctx();
         try {
-            await login(request, EMAIL_ADMIN);
+            await login(request, verificadorEmail, verificadorPassword);
             const antes = await prisma.auditLog.count({
                 where: {
                     accion: "PROFESIONAL_AUTORIZACION_ACCESO",
@@ -310,22 +408,41 @@ test.describe.serial("Verificación con documentos a la vista (SPEC-448)", () =>
         }
     });
 
-    // (D) — PARTIDO POR VEREDICTO DEL CEO (SPEC-820); ninguna mitad es «des-aparcar como estaba»:
-    //
-    //  · La aserción vieja «count(VERIFICADOR activo) ≥ 1» SALIÓ de este e2e: es una PRECONDICIÓN del
-    //    ENTORNO (prod con cero verificadores = documentos que nadie verifica), no conducta del producto.
-    //    Vive ahora en el checklist de post-deploy del CEO, donde sí es un invariante real.
-    //
-    //  · El hueco que QUEDA es que ESTE recorrido camine COMO el rol TITULAR: hoy (A)(B)(C) entran como
-    //    ADMIN —rol adyacente que pasa `ROLES_QUE_REVISAN`—, no como VERIFICADOR. SPEC-435 YA entró (la
-    //    CREACIÓN del verificador funciona y la cubre, viva, `recorrido-alta-verificador.spec`); lo que
-    //    falta es una CUENTA verificador SEMBRADA de forma PERSISTENTE y con credencial ESTABLE, porque el
-    //    recorrido INICIA SESIÓN (`login` → POST /api/auth/login). Una cuenta carga credencial: la siembra
-    //    DATOS (carril de cuentas/modelo), no Calidad, y va al sembrador PERSISTENTE, no al purgable (en el
-    //    purgable la limpieza se la come — lección de la fixture de login marcada en la corrida del estado).
-    //    Radicación del CEO (hallazgo SPEC-820), NO SPEC-435 (que ya está cumplido — esa razón vieja mentía).
-    //
-    //  DES-APARCAR cuando esa cuenta exista: reemplazar `EMAIL_ADMIN` por el verificador sembrado en el
-    //  núcleo de (A)(B)(C), probando el rol TITULAR end-to-end.
-    test.fixme("(D) el recorrido lo camina un VERIFICADOR real, no ADMIN — espera la cuenta persistente de Datos (radicación CEO · SPEC-820)", async () => {});
+    // (D) CONTROL DE ROL (SPEC-822) — des-aparcada del `test.fixme` que esperaba una
+    // cuenta persistente de Datos; ahora entra con el VERIFICADOR que el PROPIO
+    // recorrido crea. Prueba que el revisor de (A)(B)(C) es el VERIFICADOR, no ADMIN:
+    // si fuera ADMIN, este candado vería 200 donde exige 403 y el recorrido CAERÍA.
+    test("(D) control de rol — el revisor es el VERIFICADOR, no ADMIN prestado (SPEC-822)", async () => {
+        // El VERIFICADOR está CONFINADO a su módulo: un módulo de ADMIN le da 403.
+        // Es la MISMA cuenta que camina (A)(B)(C); cambiarla por ADMIN rompería esto.
+        const reqVerif = await ctx();
+        try {
+            await login(reqVerif, verificadorEmail, verificadorPassword);
+            const res = await reqVerif.get(MODULO_SOLO_ADMIN);
+            expect(
+                res.status(),
+                `SPEC-822: el VERIFICADOR está confinado a su módulo → ${MODULO_SOLO_ADMIN} debe dar 403. ` +
+                    "Si diera 200, el revisor de (A)(B)(C) sería ADMIN y el recorrido probaría el guard, no el rol. " +
+                    `status=${res.status()} body=${(await res.text().catch(() => "")).slice(0, 180)}`,
+            ).toBe(403);
+        } finally {
+            await reqVerif.dispose();
+        }
+
+        // Remoción del discriminador (control positivo): el MISMO sondeo como ADMIN
+        // NO está confinado. Prueba que el 403 de arriba es del ROL (no un 403
+        // universal del endpoint) y que (A)(B)(C) caerían si se entrara como ADMIN.
+        const reqAdmin = await ctx();
+        try {
+            await login(reqAdmin, EMAIL_ADMIN, PASSWORD);
+            const res = await reqAdmin.get(MODULO_SOLO_ADMIN);
+            expect(
+                res.status(),
+                `control positivo: el ADMIN NO está confinado en ${MODULO_SOLO_ADMIN} (debe dar 200, no 403). ` +
+                    `status=${res.status()} body=${(await res.text().catch(() => "")).slice(0, 180)}`,
+            ).toBe(200);
+        } finally {
+            await reqAdmin.dispose();
+        }
+    });
 });
