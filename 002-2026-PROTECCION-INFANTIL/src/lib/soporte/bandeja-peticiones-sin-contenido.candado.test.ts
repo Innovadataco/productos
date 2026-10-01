@@ -28,7 +28,7 @@ describe("SPEC-824 · 🔒 bandeja sin contenido/sujeto del titular", { timeout:
         await crearPeticionServicio({
             usuarioId: padre.id,
             motivo: "DATOS_PERSONALES",
-            habeasData: { tipo: "SUPRESION", sujeto: { calidad: "REPRESENTANTE_LEGAL", hijoId: hijo.id } },
+            habeasData: { tipo: "SUPRESION", sujeto: { calidad: "REPRESENTANTE_LEGAL", hijoId: hijo.id }, clasesSolicitadas: ["RELATO_CITA"] },
         });
 
         const bandeja = await listarBandejaPeticiones();

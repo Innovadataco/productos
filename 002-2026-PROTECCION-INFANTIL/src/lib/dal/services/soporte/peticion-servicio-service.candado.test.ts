@@ -38,7 +38,7 @@ describe("SPEC-819 · servicio de la Puerta de Soporte", { timeout: 30_000 }, ()
         const { numeroSeguimiento } = await crearPeticionServicio({
             usuarioId: padre.id,
             motivo: "DATOS_PERSONALES",
-            habeasData: { tipo: "CONSULTA", sujeto: { calidad: "TITULAR_CUENTA" } },
+            habeasData: { tipo: "CONSULTA", sujeto: { calidad: "TITULAR_CUENTA" }, clasesSolicitadas: [] },
         });
 
         // Se lee el REGISTRO LEGAL por el enlace — verificar solo la PQR no probaría la obligación.
@@ -66,7 +66,7 @@ describe("SPEC-819 · servicio de la Puerta de Soporte", { timeout: 30_000 }, ()
         const { numeroSeguimiento } = await crearPeticionServicio({
             usuarioId: padre.id,
             motivo: "DATOS_PERSONALES",
-            habeasData: { tipo, sujeto: { calidad: "TITULAR_CUENTA" } },
+            habeasData: { tipo, sujeto: { calidad: "TITULAR_CUENTA" }, clasesSolicitadas: tipo === "CONSULTA" ? [] : ["RELATO_CITA"] },
         });
         const pqr = await prisma.peticionServicio.findUnique({ where: { id: numeroSeguimiento }, include: { solicitudHabeasData: true } });
         expect(pqr?.solicitudHabeasData?.tipo).toBe(tipo);
@@ -79,7 +79,7 @@ describe("SPEC-819 · servicio de la Puerta de Soporte", { timeout: 30_000 }, ()
         const { numeroSeguimiento } = await crearPeticionServicio({
             usuarioId: padre.id,
             motivo: "DATOS_PERSONALES",
-            habeasData: { tipo: "RECTIFICACION", sujeto: { calidad: "REPRESENTANTE_LEGAL", hijoId: hijo.id } },
+            habeasData: { tipo: "RECTIFICACION", sujeto: { calidad: "REPRESENTANTE_LEGAL", hijoId: hijo.id }, clasesSolicitadas: ["RELATO_CITA"] },
         });
         const pqr = await prisma.peticionServicio.findUnique({ where: { id: numeroSeguimiento }, include: { solicitudHabeasData: true } });
         expect(pqr?.solicitudHabeasData?.calidad).toBe("REPRESENTANTE_LEGAL");
@@ -94,7 +94,7 @@ describe("SPEC-819 · servicio de la Puerta de Soporte", { timeout: 30_000 }, ()
             crearPeticionServicio({
                 usuarioId: padre.id,
                 motivo: "DATOS_PERSONALES",
-                habeasData: { tipo: "SUPRESION", sujeto: { calidad: "REPRESENTANTE_LEGAL", hijoId: hijoAjeno.id } },
+                habeasData: { tipo: "SUPRESION", sujeto: { calidad: "REPRESENTANTE_LEGAL", hijoId: hijoAjeno.id }, clasesSolicitadas: ["RELATO_CITA"] },
             }),
         ).rejects.toThrow(/no encontramos ese hijo/i);
         expect(await prisma.solicitudHabeasData.count(), "un rechazo NO deja constancia").toBe(0);
@@ -114,7 +114,7 @@ describe("SPEC-819 · servicio de la Puerta de Soporte", { timeout: 30_000 }, ()
         const padre = await nuevoPadre();
         await expect(crearPeticionServicio({ usuarioId: padre.id, motivo: "DATOS_PERSONALES" })).rejects.toThrow(/detalle de la solicitud de datos/i);
         await expect(
-            crearPeticionServicio({ usuarioId: padre.id, motivo: "CITA", habeasData: { tipo: "CONSULTA", sujeto: { calidad: "TITULAR_CUENTA" } } }),
+            crearPeticionServicio({ usuarioId: padre.id, motivo: "CITA", habeasData: { tipo: "CONSULTA", sujeto: { calidad: "TITULAR_CUENTA" }, clasesSolicitadas: [] } }),
         ).rejects.toThrow(/no aplica/i);
         expect(await prisma.peticionServicio.count(), "ningún rechazo creó filas").toBe(0);
     });
