@@ -4,7 +4,7 @@
  * cuando el padre solicita la cita, y se libera si la solicitud expira sin pago
  * o si el profesional rechaza.
  */
-import type { FranjaDisponible, Prisma } from "@prisma/client";
+import type { FranjaDisponible, ModalidadCita, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
@@ -83,6 +83,37 @@ export class FranjaDisponibleRepository {
                 fin: { gt: inicio },
             },
             select: { id: true, inicio: true, fin: true },
+        });
+    }
+
+    /**
+     * SPEC-814 · El CUELLO de la reubicación: profesionales (≠ `excluirProfesionalId`) con
+     * una franja LIBRE (`tomada=false`) de la MISMA `modalidad` que SOLAPA `[inicio, fin)`.
+     * Medido en prod: la mediana de candidatos por cita es CERO (65% en cero) — un profesional
+     * «disponible en general» no sirve si no publicó un turno que pise esa hora.
+     *
+     * Solape medio-abierto `F.inicio < C.fin ∧ F.fin > C.inicio` — el MISMO predicado que
+     * `existeSolapada`/`ventanasSolapan`, comparado en UTC (como se guarda). `distinct` por
+     * profesional: la candidatura es por PERSONA, no por turno; el turno concreto a tomar se
+     * elige al reubicar. Es un pre-filtro por el CUELLO —la habilitación la decide después la
+     * fuente única (`obtenerPublicoPorId`)—; no enumera estado/vigencia acá a propósito.
+     */
+    profesionalesConFranjaLibreSolapando(
+        inicio: Date,
+        fin: Date,
+        modalidad: ModalidadCita,
+        excluirProfesionalId: string,
+    ): Promise<{ profesionalId: string }[]> {
+        return this.db.franjaDisponible.findMany({
+            where: {
+                tomada: false,
+                modalidad,
+                inicio: { lt: fin },
+                fin: { gt: inicio },
+                profesionalId: { not: excluirProfesionalId },
+            },
+            select: { profesionalId: true },
+            distinct: ["profesionalId"],
         });
     }
 
