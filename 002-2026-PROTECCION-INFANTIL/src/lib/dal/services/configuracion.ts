@@ -126,6 +126,42 @@ export class ConfiguracionService {
      * el parámetro es secreto y registra auditoría (como la ruta original).
      */
     async actualizar(clave: string, body: ParametroPatchInput, usuarioId: string): Promise<ParametroDto> {
+        // Camino HTTP: SIEMPRE con actor no-nulo (la ruta pasa user.id). El tipo `usuarioId: string`
+        // es la compuerta — una ruta que olvide el actor NO compila (ver configuracion-corrector.candado).
+        return this.aplicar(clave, body, usuarioId, body.motivo);
+    }
+
+    /**
+     * SPEC-812 (pieza 3) · Cambio de un parámetro por un CORRECTOR operativo: un script SIN sesión
+     * (lo corre el CEO desde el contenedor), no la API. El actor queda NULL a propósito —no hay un
+     * Usuario que haya hecho el cambio, y un Usuario fabricado para satisfacer el FK es una mentira
+     * con forma de dato— y la responsabilidad del HECHO se registra por `motivo` (OBLIGATORIO, no
+     * vacío) en el AuditLog. Las rutas HTTP NO usan esto: siguen por `actualizar()`, que exige actor
+     * string. Aflojar para el script no afloja la API: es un método distinto (imposibilidad
+     * estructural), no un tipo relajado compartido que una ruta futura pueda pasar en null en silencio.
+     */
+    async actualizarComoCorrectorOperativo(clave: string, body: ParametroPatchInput, motivo: string): Promise<ParametroDto> {
+        const motivoLimpio = motivo?.trim();
+        if (!motivoLimpio) {
+            // Sin actor, el motivo es el ÚNICO rastro de responsabilidad: un motivo vacío cambiaría
+            // «actor fabricado» por «rastro vacío» — el mismo agujero con otra forma.
+            throw new AppError(
+                "Un corrector operativo debe registrar un motivo no vacío (es el único rastro: el actor va en null).",
+                ERROR_CODES.VALIDATION_ERROR,
+                400
+            );
+        }
+        return this.aplicar(clave, body, null, motivoLimpio);
+    }
+
+    /** Implementación única de crear/actualizar + cifrado + auditoría. `actor` es string para el
+     *  camino HTTP y null SOLO para el corrector operativo (que exige `motivo` no vacío). */
+    private async aplicar(
+        clave: string,
+        body: ParametroPatchInput,
+        actor: string | null,
+        motivo: string | undefined
+    ): Promise<ParametroDto> {
         const existing = await this.parametros.findByClave(clave);
         const isNew = !existing;
 
@@ -159,10 +195,10 @@ export class ConfiguracionService {
                     : defaults?.descripcion !== undefined
                         ? { descripcion: defaults.descripcion }
                         : {}),
-                actualizadoPorId: usuarioId,
+                actualizadoPorId: actor,
             });
         } else {
-            param = await this.parametros.actualizar(clave, { valor: valorParaGuardar, actualizadoPorId: usuarioId });
+            param = await this.parametros.actualizar(clave, { valor: valorParaGuardar, actualizadoPorId: actor });
         }
 
         await logAudit({
@@ -170,10 +206,12 @@ export class ConfiguracionService {
             tipoRecurso: "parametro",
             recursoId: param.id,
             parametroId: param.id,
-            usuarioId,
+            // actor null (corrector) → logAudit escribe usuarioId = NULL en la fila (camino verificado,
+            // no solo columna nullable). La API siempre pasa un id real.
+            usuarioId: actor ?? undefined,
             valorAnterior: isNew ? undefined : existing?.valor,
             valorNuevo: valorParaGuardar,
-            metadatos: { motivo: body.motivo, esSecreto, nuevo: isNew },
+            metadatos: { motivo, esSecreto, nuevo: isNew, corrector: actor === null },
         });
 
         return sanitizar(param);
