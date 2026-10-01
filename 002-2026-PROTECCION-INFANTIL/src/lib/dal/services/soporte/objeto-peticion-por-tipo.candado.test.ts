@@ -115,6 +115,21 @@ describe("SPEC-827 · objeto de la petición por tipo", { timeout: 30_000 }, () 
         expect(await prisma.solicitudHabeasData.count()).toBe(0);
     });
 
+    it("CHECK · el filo del {NULL}: un RECTIFICACION con `{NULL}` (cardinality=1, CERO objeto real) lo RECHAZA la base", async () => {
+        // El cliente tipado no deja construir `[null]`; sólo un write CRUDO lo intenta. `cardinality` solo daría
+        // 1 (lo dejaría pasar) — el CHECK cuenta no-nulos con `array_remove`, así que el {NULL} también es imposible.
+        const id = `827null-${Date.now()}`;
+        const ahora = new Date().toISOString();
+        const vence = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
+        await expect(
+            prisma.$executeRawUnsafe(
+                `INSERT INTO "SolicitudHabeasData" ("id","tipo","estado","calidad","plazoDias","recibidoEn","venceEn","origen","clasesSolicitadas")
+                 VALUES ('${id}','RECTIFICACION','RECIBIDA','TITULAR_CUENTA',15,'${ahora}'::timestamptz,'${vence}'::timestamptz,'APLICACION', ARRAY[NULL]::"ClaseDatoTitular"[])`,
+            ),
+        ).rejects.toThrow();
+        expect(await prisma.solicitudHabeasData.count(), "el {NULL} no es objeto real: la base lo rechaza").toBe(0);
+    });
+
     it("CONTROL POSITIVO · un insert CRUDO de RECTIFICACION CON objeto SÍ entra (el CHECK no bloquea lo válido)", async () => {
         await prisma.solicitudHabeasData.create({ data: filaCruda("RECTIFICACION", ["PERFIL"]) });
         expect(await prisma.solicitudHabeasData.count()).toBe(1);
