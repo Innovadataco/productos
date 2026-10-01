@@ -303,9 +303,11 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
         cita.venceEn,
         cita.profesional.nombreVisible,
         ahora,
-        // SPEC-792 C4: el enlace nunca publicado al pasar la hora es un sub-estado honesto; C2: pedir otra
-        // cita hereda el pago sólo si el servicio no se entregó. El estado del enlace lo deriva el DTO.
-        { enlaceNuncaPublicado: cita.enlace?.estado === "PASADA_SIN_PUBLICAR", citaId: cita.id },
+        // SPEC-792 C4 (RIESGO): se pasa el ESTADO del enlace CRUDO (puede venir `undefined`); la decisión
+        // y su default seguro viven en `derivarVistaFranjaPasada`, no en este encadenamiento opcional —
+        // así un `enlace` ausente nunca colapsa en silencio hacia el copy que acusa al padre. C2: pedir
+        // otra cita hereda el pago sólo si el servicio no consta entregado.
+        { enlace: cita.enlace, citaId: cita.id },
     );
     const estado = vistaPasada ?? ESTADO_LEGIBLE[cita.estado];
     const confirmadaViva = cita.estado === "CONFIRMADA" && !vistaPasada;

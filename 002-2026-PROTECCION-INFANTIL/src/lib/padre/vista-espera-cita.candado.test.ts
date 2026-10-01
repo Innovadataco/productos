@@ -22,8 +22,9 @@ const PROF = "Dra. Juez";
 const PALABRAS_PROHIBIDAS = ["aparecerá", "atrasada", "operador", "Cita confirmada"];
 
 describe("SPEC-749 FR-2 · derivarVistaFranjaPasada", () => {
-    it("SPEC-792 C2 · CONFIRMADA-pasada → «Esta cita ya pasó» SIN [Pedir otra cita] (la encuesta es el primer camino)", () => {
-        const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA);
+    it("SPEC-792 C2 · CONFIRMADA-pasada + enlace PROBADAMENTE publicado → «Esta cita ya pasó» SIN [Pedir otra cita] (la encuesta es el primer camino)", () => {
+        // C2 exige prueba POSITIVA de publicación (estado "PASADA"); es el único caso que afirma «ya pasó».
+        const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA, { enlace: { estado: "PASADA" } });
         expect(v).not.toBeNull();
         expect(v!.titulo).toBe("Esta cita ya pasó");
         expect(v!.detalle).toContain(PROF);
@@ -38,7 +39,7 @@ describe("SPEC-749 FR-2 · derivarVistaFranjaPasada", () => {
 
     it("SPEC-792 C4 · CONFIRMADA-pasada + enlace NUNCA publicado → «no dependió de ti»; pedir otra cita HEREDA el pago", () => {
         const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA, {
-            enlaceNuncaPublicado: true,
+            enlace: { estado: "PASADA_SIN_PUBLICAR" },
             citaId: "cita-123",
         })!;
         expect(v.titulo).toBe("El acceso a tu reunión no llegó a estar disponible.");
@@ -55,14 +56,46 @@ describe("SPEC-749 FR-2 · derivarVistaFranjaPasada", () => {
         expect(v.acciones?.escribenos).toBe(true);
     });
 
-    it("SPEC-792 C4 · control NEGATIVO: enlace SÍ publicado (sin el flag) → «ya pasó» normal, no el copy de C4", () => {
-        const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA)!;
+    it("SPEC-792 C4 · control NEGATIVO: enlace SÍ publicado (estado PASADA) → «ya pasó» normal, no el copy de C4", () => {
+        const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA, { enlace: { estado: "PASADA" } })!;
         expect(v.titulo).toBe("Esta cita ya pasó");
         expect(v.titulo).not.toContain("no llegó a estar disponible");
     });
 
-    it("CONFIRMADA-pasada: ni promesa de mecanismo ni culpa de operador (conducta, verbatim)", () => {
-        const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA)!;
+    it("SPEC-792 C4 · RIESGO · tercer caso: CONFIRMADA-pasada SIN estado de enlace (undefined) → «no dependió de ti», NO el copy que acusa", () => {
+        // El bloque `enlace` ausente es el caso que el encadenamiento opcional colapsaba en silencio hacia
+        // «Esta cita ya pasó». Sin prueba de que el acceso estuvo, el default debe ser el que NO acusa (C4).
+        const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA, { citaId: "cita-x" })!;
+        expect(v.titulo).toBe("El acceso a tu reunión no llegó a estar disponible.");
+        expect(v.titulo, "ausente no puede caer en el copy que acusa").not.toBe("Esta cita ya pasó");
+        // El servicio no consta entregado → hereda el pago (no se cobra de nuevo por lo que no probamos).
+        expect(v.acciones?.heredarDeCitaId).toBe("cita-x");
+    });
+
+    it("SPEC-792 C4 · RIESGO · enlace INDETERMINADO (reloj no confiable) → «no dependió de ti» (no sabemos ⇒ no acusa)", () => {
+        const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA, { enlace: { estado: "INDETERMINADO" } })!;
+        expect(v.titulo).toBe("El acceso a tu reunión no llegó a estar disponible.");
+    });
+
+    it("SPEC-792 C4 · RIESGO · enlace de cita VIVA (SIN_PUBLICAR / PUBLICADO) → NINGÚN copy de pasada (no es una cita pasada)", () => {
+        // `SIN_PUBLICAR`/`PUBLICADO` son estados de una cita viva (el reloj autoritativo aún no la da por
+        // pasada). Prueba POSITIVA para AMBOS copys: ninguno por descarte. No se afirma «ya pasó» ni «no
+        // dependió de ti» → null (manda el estado crudo). Cierra la trampa que señaló el CEO sobre `!== PASADA`.
+        for (const estado of ["SIN_PUBLICAR", "PUBLICADO"] as const) {
+            const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA, { enlace: { estado } });
+            expect(v, `enlace ${estado} (cita viva) no debe producir vista de pasada`).toBeNull();
+        }
+    });
+
+    it("SPEC-792 C4 · RIESGO · cita NO-confirmada con enlace SIN_PUBLICAR → la rama CONFIRMADA no la alcanza (ni C2 ni C4)", () => {
+        // El enlace SIN_PUBLICAR de `enlace-derivado:54` nace de una cita que nunca se confirmó. El gate del
+        // estado de la SOLICITUD la excluye del copy de CONFIRMADA: un estado terminal cae a null, nunca a C2/C4.
+        const v = derivarVistaFranjaPasada("CUMPLIDA", INICIO, FIN, AHORA, PROF, AHORA, { enlace: { estado: "SIN_PUBLICAR" } });
+        expect(v).toBeNull();
+    });
+
+    it("CONFIRMADA-pasada (enlace publicado): ni promesa de mecanismo ni culpa de operador (conducta, verbatim)", () => {
+        const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA, { enlace: { estado: "PASADA" } })!;
         const texto = `${v.titulo} ${v.detalle}`.toLowerCase();
         for (const prohibida of PALABRAS_PROHIBIDAS) {
             expect(texto, `no debe aparecer «${prohibida}»`).not.toContain(prohibida.toLowerCase());
@@ -99,8 +132,9 @@ describe("SPEC-749 FR-2 · derivarVistaFranjaPasada", () => {
     });
 
     // ── FR-4: dato ausente/basura falla CONSERVADOR (se trata como PASADA, dice la verdad) ──
-    it("CONFIRMADA + franja ausente/basura → se trata como pasada (fallo conservador, FR-4)", () => {
-        const v = derivarVistaFranjaPasada("CONFIRMADA", null, "no-es-fecha", AHORA, PROF, AHORA);
+    it("CONFIRMADA + franja ausente/basura (enlace publicado) → se trata como pasada (fallo conservador, FR-4)", () => {
+        // Enlace PASADA para aislar la FRANJA: lo que se prueba es que el dato de franja basura cae a pasada.
+        const v = derivarVistaFranjaPasada("CONFIRMADA", null, "no-es-fecha", AHORA, PROF, AHORA, { enlace: { estado: "PASADA" } });
         expect(v!.titulo).toBe("Esta cita ya pasó");
     });
 
