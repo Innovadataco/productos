@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearColegioConAdmin, crearUsuario } from "@/lib/reporte-test-utils";
 import { crearSuscripcionCliente, extenderVigenciaDesdeFreemium } from "./freemium.service";
+import { calcularFechaFinTrasPagoFreemium } from "./freemium-calculos";
 import { anioBogota } from "./renovacion-calculos";
 
 let consecutivo = 0;
@@ -155,9 +156,17 @@ describe("freemium.service (integración)", () => {
         expect(despues?.esFreemium).toBe(false);
         // La marca de histórico sobrevive a la conversión (FR-004).
         expect(despues?.freemiumFechaFin?.toISOString()).toBe(freemiumFechaFin?.toISOString());
-        // FR-005: fechaFin = freemiumFechaFin + 1 mes.
-        const esperado = new Date(freemiumFechaFin as Date);
-        esperado.setMonth(esperado.getMonth() + 1);
+        // FR-005: fechaFin = freemiumFechaFin + 1 mes, en calendario BOGOTÁ (SPEC-794). El oráculo
+        // NO usa `setMonth` nativo: ése acertaba por AZAR (desbordaba al día correcto cerca de fin
+        // de mes). La corrección de la aritmética de meses la fijan los tests UNITARIOS de
+        // freemium-calculos (casos de frontera); aquí se verifica el CABLEADO —que el service
+        // persiste lo que el cálculo devuelve—. Base = freemiumFechaFin (freemium vigente ⇒ gana al
+        // `ahora`, cualquiera anterior sirve).
+        const esperado = calcularFechaFinTrasPagoFreemium({
+            freemiumFechaFin: freemiumFechaFin as Date,
+            ahora: new Date(0),
+            duracionCubierta: DuracionPlan.MES_1,
+        });
         expect(despues?.fechaFin.toISOString()).toBe(esperado.toISOString());
         expect(despues?.estado).toBe(EstadoSuscripcion.ACTIVA);
 

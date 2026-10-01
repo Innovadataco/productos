@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **123** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **124** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -506,7 +506,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (75)
+### Otros (sin regla de dominio) (76)
 
 #### `AceptacionAutorizacionProfesional`
 
@@ -1466,6 +1466,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | solicitudes | SolicitudCita | lista, relación |
 | documentos | DocumentoProfesional | lista, relación |
 | diasBloqueados | DiaBloqueado | lista, relación |
+| verificacionesReps | VerificacionReps | lista, relación |
 
 #### `PreferenciaAlertaColegio`
 
@@ -1690,6 +1691,26 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | encuestasSesion | EncuestaCita | lista, relación |
 | incidentesContradiccion | IncidenteContradiccionEncuesta | lista, relación |
 
+#### `SolicitudHabeasData`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| tipo | TipoSolicitudHabeasData | — |
+| estado | EstadoSolicitudHabeasData | — |
+| calidad | CalidadPeticionario | — |
+| peticionarioUsuarioId | String | opcional |
+| sujetoDelDato | String | opcional |
+| plazoDias | Int | — |
+| creadoEn | DateTime | — |
+| recibidoEn | DateTime | — |
+| origen | OrigenSolicitudHabeasData | — |
+| venceEn | DateTime | — |
+| resueltaEn | DateTime | opcional |
+| resultado | ResultadoSolicitudHabeasData | opcional |
+| clasesDatoAfectadas | ClaseDatoTitular | lista |
+| peticionario | Usuario | opcional, relación |
+
 #### `Suscripcion`
 
 | Campo | Tipo | Atributos |
@@ -1805,6 +1826,23 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | revisadoPor | Usuario | relación |
 | documentosRevisados | VerificacionDocumento | lista, relación |
 | aceptacionAutorizacion | AceptacionAutorizacionProfesional | opcional, relación (FK) |
+
+#### `VerificacionReps`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| profesionalId | String | — |
+| verificadoEn | DateTime | — |
+| fuente | FuenteVerificacionReps | — |
+| resultado | EstadoReps | — |
+| vigenteHasta | DateTime | opcional |
+| modalidades | ModalidadReps | lista |
+| verificadoPorId | String | opcional |
+| verificadoPorSnapshot | String | opcional |
+| creadoEn | DateTime | — |
+| profesional | PerfilProfesional | relación (FK) |
+| verificadoPor | Usuario | opcional, relación |
 
 #### `WorkerLog`
 
@@ -2322,6 +2360,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | contactosConfianza | ContactoConfianza | lista, relación |
 | hijosPropios | Hijo | lista, relación |
 | audienciasMenorDeclaradas | AudienciaMenor | lista, relación |
+| solicitudesHabeasData | SolicitudHabeasData | lista, relación |
 | lecturasTexto | LecturaReporte | lista, relación |
 | codigosAccesoSolicitados | CodigoAccesoContenido | lista, relación |
 | codigosAccesoCanjeados | CodigoAccesoContenido | lista, relación |
@@ -2374,6 +2413,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ciudadPerfil | Ciudad | opcional, relación |
 | perfilProfesional | PerfilProfesional | opcional, relación |
 | verificacionesProfesionalRevisadas | VerificacionProfesional | lista, relación |
+| verificacionesRepsRealizadas | VerificacionReps | lista, relación |
 | revisionesRenovacionHechas | RevisionRenovacion | lista, relación |
 | aceptacionesAutorizacionProfesional | AceptacionAutorizacionProfesional | lista, relación |
 | solicitudesCitaComoPadre | SolicitudCita | lista, relación |
@@ -2472,6 +2512,7 @@ erDiagram
     PerfilProfesional ||--o{ FranjaDisponible : "profesional"
     PerfilProfesional ||--o{ SolicitudCita : "profesional"
     PerfilProfesional ||--o{ VerificacionProfesional : "perfilProfesional"
+    PerfilProfesional ||--o{ VerificacionReps : "profesional"
     Plan ||--o{ Suscripcion : "planActual"
     Plataforma ||--o{ AlertaSuscripcion : "plataforma"
     Plataforma ||--o{ Apelacion : "plataforma"

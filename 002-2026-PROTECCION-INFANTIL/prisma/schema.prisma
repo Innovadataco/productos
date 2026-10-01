@@ -716,6 +716,7 @@ model Usuario {
   // SPEC-339: los menores de este padre (ficha propia, no compartida).
   hijosPropios                     Hijo[]                          @relation("HijosDelPadre")
   audienciasMenorDeclaradas        AudienciaMenor[] // SPEC-781: audiencias que este representante declaró (SetNull al borrar)
+  solicitudesHabeasData            SolicitudHabeasData[]           @relation("SolicitudesHabeasData") // SPEC-772: peticiones donde figura como peticionario (SetNull al borrar)
   // SPEC-584 (Fase 2/3): lecturas de textos que este usuario hizo (o canjeó) y
   // códigos temporales de acceso externo que solicitó o canjeó.
   lecturasTexto                    LecturaReporte[]
@@ -794,6 +795,8 @@ model Usuario {
   // SPEC-388 (A-75 · L1a): back-refs de la Red de Profesionales.
   perfilProfesional                PerfilProfesional?
   verificacionesProfesionalRevisadas VerificacionProfesional[]     @relation("VerificacionesRevisadasPor")
+  // SPEC-790: verificaciones REPS que este admin registró a mano (el snapshot durable vive en la fila del hecho).
+  verificacionesRepsRealizadas     VerificacionReps[]              @relation("VerificacionesRepsRealizadas")
   // SPEC-693 (I-416): re-revisiones de renovación de documentos que hizo este verificador.
   revisionesRenovacionHechas       RevisionRenovacion[]            @relation("RevisionesRenovacionHechas")
   // SPEC-686 (I-420): aceptaciones de la autorización del profesional (en pantalla).
@@ -2473,6 +2476,119 @@ model AccesoDocumentoApelacion {
   @@index([usuarioId])
 }
 
+// ─── SPEC-772 · Habeas Data REGISTRADO y VENCEABLE (Ley 1581 arts. 14-15) ───────────────────────
+// Espejo de Apelacion (SPEC-110): registrada + venceable, plazo en días hábiles (SPEC-768), estado
+// en enum, venceEn calculado al crear. Diferencia de SUJETO: la apelación es sobre el identificador
+// reportado; ésta, sobre los datos del PROPIO titular. El estado EFECTIVO (EN_TERMINO/VENCIDA/
+// RESUELTA_A_TIEMPO/RESUELTA_TARDE) se DERIVA aparte (estadoEfectivoSolicitud, Dev-1 en SPEC-772
+// parte 1) — acá va el `estado` de workflow persistido. Servicio/endpoint/puerta: Dev-1 (no acá).
+enum TipoSolicitudHabeasData {
+  CONSULTA // art. 14 · 10 días hábiles
+  RECTIFICACION // art. 15 «reclamo» · 15 días hábiles
+  SUPRESION // art. 15 «reclamo» · 15 días hábiles
+}
+
+enum CalidadPeticionario {
+  TITULAR_CUENTA // el dueño de la cuenta pide sobre SUS propios datos
+  REPRESENTANTE_LEGAL // representante del menor (Dto 1377 art. 12); el sujeto NO es el peticionario
+  TITULAR_MAYORIA_EDAD // ex-menor, titular pleno; puede no tener cuenta ([NEEDS CLARIFICATION], caso 3)
+}
+
+enum EstadoSolicitudHabeasData {
+  RECIBIDA
+  EN_REVISION
+  RESUELTA
+}
+
+enum OrigenSolicitudHabeasData {
+  APLICACION // el titular la radicó él mismo en la app (auto-radicada)
+  CORREO // llegó por correo entrante; un operador la transcribió (el rastro estaba en un buzón externo)
+  OTRO // otro canal (teléfono, presencial…); transcrita por un operador
+}
+
+/// SPEC-772 · Disposición de la resolución — DESPOJADA (qué se hizo, sin contenido). Conjunto cerrado:
+/// la BD no admite narrativa libre acá (ver comentario en resultado). Ampliar la ley/proceso = ampliar el enum.
+enum ResultadoSolicitudHabeasData {
+  ATENDIDA_COMPLETA // se cumplió por entero
+  ATENDIDA_PARCIAL // se cumplió en parte (p.ej. se suprimió lo no-evidencia; el contenido de reporte queda por imprescriptibilidad · [ABOGADO])
+  RECHAZADA // no procede (identidad no verificada, fuera de alcance legal)
+}
+
+/// SPEC-772 · CLASE de dato del titular sobre la que recae una resolución — la CLASE, nunca el contenido.
+/// Espejo de la matriz de datos del titular del spec. Enum cerrado: un operador no puede teclear un nombre.
+enum ClaseDatoTitular {
+  PERFIL // nombre, contacto, documento del titular
+  HIJOS // datos de los hijos vinculados
+  IDENTIFICADORES_CIRCULO // contactos de confianza / círculo
+  RELATO_CITA // el texto libre de SolicitudCita.presentacion
+  CONTENIDO_REPORTE // el texto del reporte (evidencia)
+  OTRO
+}
+
+/// SPEC-772 · Registro REGISTRADO y VENCEABLE de una petición de habeas data (Ley 1581, arts. 14-15),
+/// espejo de ApelacionIdentificador. ESTA FILA ES EL ÚNICO RASTRO DURABLE de la petición: hoy no hay otro
+/// (AuditConsentimiento es inmutable y de ACEPTACIÓN; AuditLog solo registra efectos de acciones; el correo
+/// entrante vive en un buzón externo). Por eso recibidoEn es INMUTABLE (la prueba del término) y el HECHO
+/// (tipo/recibidoEn/venceEn/resultado) sobrevive aunque se borre la cuenta del peticionario (FK SetNull).
+model SolicitudHabeasData {
+  id      String                    @id @default(cuid())
+  tipo    TipoSolicitudHabeasData
+  estado  EstadoSolicitudHabeasData @default(RECIBIDA)
+  calidad CalidadPeticionario
+  /// NULLABLE A PROPÓSITO — NO ponerle NOT NULL: el caso 3 (ex-menor mayor de edad, titular pleno de
+  /// datos que otro registró sobre él) puede NO tener cuenta. El modelo debe ADMITIR peticionario ≠
+  /// dueño de la cuenta que contiene el dato; atar la petición al usuarioId de la cuenta lo haría
+  /// imposible (FR-6). Va SetNull: al borrar la cuenta se vacía el enlace, pero el HECHO sobrevive en
+  /// esta misma fila (rastro durable = el registro, no el FK del actor — ver el doc del modelo, arriba).
+  peticionarioUsuarioId String?
+  /// De quién es el dato. Descriptor (no FK): puede ser un Usuario, un Alumno (menor) o un ex-menor
+  /// sin cuenta — por eso String y no FK a Usuario. REGLA (CHECK eje_sujeto): null SOLO para
+  /// TITULAR_CUENTA (el sujeto ES quien pide, no se nombra aparte); REPRESENTANTE_LEGAL y
+  /// TITULAR_MAYORIA_EDAD lo exigen NOT NULL (piden sobre OTRO / sobre su yo-menor histórico).
+  /// El CHECK NO toca peticionarioUsuarioId: así el SetNull del FK no lo puede volver inconstruible.
+  /// SIN integridad referencial A PROPÓSITO: el sujeto puede ser Usuario, Alumno (menor) o ex-menor sin
+  /// cuenta, que no comparten tabla — no hay FK posible. CONSECUENCIA ACEPTADA (decisión, no descuido):
+  /// resolver si dos peticiones hablan del MISMO menor es un paso HUMANO del operador; «¿ya hubo
+  /// peticiones sobre este menor?» NO se responde por consulta automática. Si algún día se necesita, se
+  /// introduce una clave de sujeto; hoy no la hay.
+  sujetoDelDato String?
+  /// Plazo OPERACIONAL en días hábiles. El máximo LEGAL (10 consulta / 15 reclamo) es CONSTANTE [NORMA]
+  /// (src/lib/habeas-data/plazos-legales.ts), NO parametrizable; el operacional puede ser menor pero
+  /// JAMÁS mayor — lo clava por arriba el CHECK de la migración (imposibilidad estructural, no comentario).
+  plazoDias  Int
+  /// Cuándo la TECLEAMOS (auditoría de captura). NO ancla el plazo legal — eso es recibidoEn.
+  creadoEn   DateTime  @default(now()) @db.Timestamptz(6)
+  /// Cuándo el TITULAR reclamó (recepción real). El término de ley corre DESDE AQUÍ, no desde creadoEn:
+  /// una petición llega por correo y se carga días después; anclar en creadoEn arrancaría el reloj tarde
+  /// y calcularía un vencimiento POSTERIOR al real (la dirección que INCUMPLE). NOT NULL, sin default: el
+  /// operador fija la fecha REAL de recepción. INMUTABLE una vez fijada — es la PRUEBA de que atendimos en
+  /// término, y la carga de demostrarlo es NUESTRA; un trigger de la migración prohíbe cambiarla.
+  recibidoEn DateTime  @db.Timestamptz(6)
+  /// Por dónde entró: distingue una petición auto-radicada de una transcrita por un operador (cambia qué
+  /// evidencia respalda la fila). NOT NULL, sin default — hay que declarar el canal, no asumirlo.
+  origen     OrigenSolicitudHabeasData
+  /// NOT NULL (como Apelacion.plazoRespuestaEn y el incidente de 753): el estado no puede mentir sobre el
+  /// reloj. = sumarDiasHabilesColombia(recibidoEn, plazoDias) — desde recibidoEn, NUNCA creadoEn; lo calcula
+  /// el servicio. El CHECK vence_gt_recibido exige venceEn > recibidoEn (imposibilidad estructural).
+  venceEn    DateTime  @db.Timestamptz(6)
+  resueltaEn DateTime? @db.Timestamptz(6)
+  /// DESPOJADO a propósito: NO es narrativa libre, es un conjunto CERRADO (enum). Esta fila es la
+  /// CONSTANCIA del trámite y tiene que sobrevivir al borrado PRECISAMENTE porque está despojada. Si
+  /// cargara el contenido eliminado (una supresión escribiendo «se borró el reporte de X sobre Y»),
+  /// volvería a ser dato del titular en la fila que existe para probar que se borró. Leer esta fila NO
+  /// puede revelar qué se eliminó — es estructural (enum), no estilo. `clasesDatoAfectadas` dice sobre
+  /// qué CLASE recayó; el detalle del acto vive en el AuditLog, no acá. El candado lo prueba.
+  resultado           ResultadoSolicitudHabeasData?
+  /// Sobre qué CLASE(S) de dato recayó la resolución — la CLASE, nunca el contenido. Enum cerrado: un
+  /// operador no puede teclear un nombre ni un texto. Vacío mientras no se haya resuelto.
+  clasesDatoAfectadas ClaseDatoTitular[]
+
+  peticionario Usuario? @relation("SolicitudesHabeasData", fields: [peticionarioUsuarioId], references: [id], onDelete: SetNull)
+
+  @@index([estado, venceEn]) // el worker que vence/recoge por plazo
+  @@index([peticionarioUsuarioId])
+}
+
 model ContactoConfianza {
   id            String   @id @default(cuid())
   usuarioId     String
@@ -3861,11 +3977,73 @@ model PerfilProfesional {
   solicitudes    SolicitudCita[]
   documentos     DocumentoProfesional[]
   diasBloqueados DiaBloqueado[]
+  // SPEC-790: historial append-only de verificaciones REPS. El estado vigente se DERIVA de la última.
+  verificacionesReps VerificacionReps[]
 
   // L3 filtra el directorio abierto por estado ACTIVO + ciudad; el índice
   // compuesto sirve al listado. La búsqueda por especialidad no lo necesita
   // (usa `has` sobre el array).
   @@index([estado, ciudadId])
+}
+
+/// SPEC-790 · Cómo supimos el estado REPS (fuente del dato). NOT NULL sin default: hay que declararla.
+enum FuenteVerificacionReps {
+  API // consulta automática al REPS
+  ARCHIVO // cruce/carga de un archivo oficial
+  MANUAL_ADMIN // un admin lo verificó y cargó a mano
+}
+
+/// SPEC-790 · Resultado de un chequeo REPS. Conjunto CERRADO (la base rechaza narrativa). El ESTADO del
+/// profesional NO se cachea en una columna: se DERIVA de la ÚLTIMA fila de VerificacionReps (una columna
+/// cacheada deriva contra la realidad, ya nos mordió en la BD viva).
+enum EstadoReps {
+  VIGENTE // habilitación vigente — EXIGE vigenteHasta (CHECK de la migración)
+  VENCIDA // estuvo habilitado y venció
+  NO_ENCONTRADA // el REPS no lo tiene
+  SIN_VERIFICAR // no se pudo verificar (fuente caída, etc.)
+}
+
+/// SPEC-790 · Modalidad que HABILITA el REPS (categoría de la AUTORIDAD, no el formato de la cita). El
+/// motor evalúa «¿incluye TELEMEDICINA?». TELEMEDICINA corresponde al VIRTUAL de ModalidadCita; se
+/// mantiene enum PROPIO porque es la dimensión de la autoridad, no la del producto. Ampliar = ADD VALUE.
+enum ModalidadReps {
+  PRESENCIAL
+  TELEMEDICINA
+}
+
+/// SPEC-790 · Registro APPEND-ONLY del HECHO de verificar el REPS de un profesional: UNA fila por chequeo.
+/// NO hay columna de estado mutable en el profesional: el estado vigente se DERIVA de la ÚLTIMA fila
+/// (orden por verificadoEn desc). La fila es PRUEBA de que verificamos — sobrevive a la baja del
+/// profesional (FK Restrict; PerfilProfesional no se borra, se gestiona por estado) y el rastro del actor
+/// vive en el SNAPSHOT, no solo en el FK (SetNull se vacía al borrar la cuenta; lección #727).
+model VerificacionReps {
+  id            String                 @id @default(cuid())
+  profesionalId String
+  /// Cuándo verificamos NOSOTROS (no la fecha de la autoridad). NOT NULL, sin default, INMUTABLE por
+  /// trigger (igual que recibidoEn de SolicitudHabeasData): es la prueba del chequeo y no se reescribe.
+  verificadoEn  DateTime               @db.Timestamptz(6)
+  fuente        FuenteVerificacionReps
+  resultado     EstadoReps
+  /// Fecha de la AUTORIDAD (hasta cuándo vale la habilitación). NULLABLE A PROPÓSITO: el REPS puede NO
+  /// darla, y para VENCIDA/NO_ENCONTRADA/SIN_VERIFICAR no aplica. Para VIGENTE es OBLIGATORIA — sin ella
+  /// la compuerta quedaría abierta para siempre: lo vuelve INCONSTRUIBLE el CHECK de la migración.
+  vigenteHasta  DateTime?              @db.Timestamptz(6)
+  /// Modalidades que la autoridad habilita (lista). El motor evalúa `TELEMEDICINA IN modalidades`.
+  modalidades   ModalidadReps[]
+  /// El actor que registró el chequeo. FK nullable (API/archivo no tienen humano) + SetNull: se vacía al
+  /// borrar la cuenta. El rastro DURABLE no vive acá sino en verificadoPorSnapshot.
+  verificadoPorId       String?
+  /// Snapshot durable de quién verificó (email del admin, o «API»/«sistema»): es el registro de
+  /// responsabilidad — sobrevive al borrado de la cuenta, a diferencia del FK.
+  verificadoPorSnapshot String?
+  creadoEn      DateTime               @default(now()) @db.Timestamptz(6)
+
+  profesional   PerfilProfesional @relation(fields: [profesionalId], references: [id], onDelete: Restrict)
+  verificadoPor Usuario?          @relation("VerificacionesRepsRealizadas", fields: [verificadoPorId], references: [id], onDelete: SetNull)
+
+  // Consulta CALIENTE: «última verificación de este profesional», que corre en CADA compuerta (directorio,
+  // crear cita, reasignar, reprogramar, reubicación §4). Compuesto, NO parcial (no dejar al planner).
+  @@index([profesionalId, verificadoEn(sort: Desc)])
 }
 
 // SPEC-436 (I-304) · los documentos que el profesional carga para que el
