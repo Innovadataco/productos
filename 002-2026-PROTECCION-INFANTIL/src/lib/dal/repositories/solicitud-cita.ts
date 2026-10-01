@@ -57,6 +57,25 @@ export class SolicitudCitaRepository {
     }
 
     /**
+     * SPEC-832 · lo MÍNIMO para calcular a QUIÉN se reubica ESTA cita: la ventana y modalidad de su franja,
+     * y del profesional que SALE (A) sus `especialidades` (el área del calce se deriva de A — la cita nunca
+     * capturó el área que requería) y su `ciudadId` (pesa solo en PRESENCIAL). NO trae el relato
+     * (`presentacion`) ni la PII de la familia: minimización (FORMA §3) — el matcher no los necesita.
+     */
+    findParaReubicacion(id: string) {
+        return this.db.solicitudCita.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                estado: true,
+                profesionalId: true,
+                franja: { select: { inicio: true, fin: true, modalidad: true } },
+                profesional: { select: { especialidades: true, ciudadId: true } },
+            },
+        });
+    }
+
+    /**
      * SPEC-814 · Insumo de la COLA de reubicación: TODAS las citas CONFIRMADA con lo MÍNIMO para
      * decidir si quedaron huérfanas (el `usuarioId` del profesional, para preguntarle a la fuente
      * única si sigue habilitado) y para pintarlas (franja, nombre + especialidades de A —la base
@@ -288,6 +307,18 @@ export class SolicitudCitaRepository {
 
     marcarReprogramadaOriginal(id: string) {
         return this.db.solicitudCita.update({ where: { id }, data: { estado: "REPROGRAMADA" } });
+    }
+
+    /**
+     * SPEC-832 · La cita ORIGEN movida por el admin queda REUBICADA (terminal, NO cancelada) + la PRUEBA
+     * durable del art. 19: a qué cita fue (`reubicadaEnId`), quién la movió (`reubicadaPorId`, string sin FK:
+     * sobrevive al borrado de la cuenta del admin) y cuándo (`reubicadaEn`).
+     */
+    marcarReubicada(id: string, reubicadaEnId: string, reubicadaPorId: string, ahora: Date = new Date()) {
+        return this.db.solicitudCita.update({
+            where: { id },
+            data: { estado: "REUBICADA", reubicadaEnId, reubicadaPorId, reubicadaEn: ahora },
+        });
     }
 
     marcarNoAsistioProfesional(id: string) {
