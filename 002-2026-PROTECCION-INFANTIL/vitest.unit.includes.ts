@@ -809,4 +809,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // catálogo de categorías de la UI no se desincroniza del enum CategoriaConducta.
     "src/components/modules/reporte-detalle/capacidades-reporte.candado.test.ts",
     "src/components/modules/reporte-detalle/catalogo-categorias.candado.test.ts",
+    // SPEC-817: resolución de DATABASE_URL por worktree — CI-safety (respeta el del entorno, deriva no se
+    // dispara ahí), injectiva (dos worktrees → dos bases), explota sin caer al compartido, y el nombre pasa la
+    // guardia SPEC-770 (sufijo `_test`). PURO, sin base — por eso NO dispara el globalSetup de integración.
+    "src/lib/test-db-url.candado.test.ts",
+    // SPEC-817 (pieza 2): comparación pura carpeta↔aplicadas y el mensaje que DICE «esquema desactualizado».
+    "src/lib/test-esquema.candado.test.ts",
 ];

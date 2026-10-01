@@ -1,3 +1,7 @@
+// SPEC-817 · resuelve DATABASE_URL (respeta el del entorno / deriva por worktree) ANTES de que el bloque
+// `webServer.env` de abajo lea `process.env.DATABASE_URL`. En CI el valor ya viene del entorno → se respeta y
+// la derivación no se dispara; en local se deriva la base del worktree.
+import "./src/lib/test-db-url";
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({

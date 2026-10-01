@@ -13,6 +13,10 @@ export default defineConfig({
         name: "integration",
         environment: "jsdom",
         globals: true,
+        // SPEC-817: una vez por corrida, provisiona la base POR WORKTREE (crea+migra en local; en CI respeta
+        // la del entorno sin tocarla) y VERIFICA que el esquema esté al día (pieza 2). El `TRUNCATE` reset
+        // de la suite queda intacto: esto cambia el DESTINO, no la disciplina.
+        globalSetup: ["./src/lib/test-globalsetup.ts"],
         setupFiles: ["./src/lib/test-setup.ts"],
         include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
         exclude: [
