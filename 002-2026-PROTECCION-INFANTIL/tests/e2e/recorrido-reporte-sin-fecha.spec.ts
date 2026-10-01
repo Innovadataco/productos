@@ -38,6 +38,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 
 const CORRIDA = `e2e-438-${randomUUID().slice(0, 8)}`;
 
@@ -113,6 +114,9 @@ test.describe.serial("SPEC-438 · el reporte anónimo exige fecha y marca la apr
                 texto: "Un usuario contactó a mi hijo de madrugada; no recuerdo la hora exacta, elijo la franja.",
                 fechaIncidente: FECHA_INCIDENTE,
                 horaAproximada: true,
+                // Coherencia SPEC-644 (route.ts): franja presente ⟺ horaAproximada=true.
+                // Sin `franja`, el server rechaza 400. El texto dice «de madrugada».
+                franja: "madrugada",
                 ciudad: "Bogotá",
                 pais: "Colombia",
                 paisId,
@@ -133,7 +137,10 @@ test.describe.serial("SPEC-438 · el reporte anónimo exige fecha y marca la apr
             select: { id: true, horaAproximada: true, fechaIncidente: true, identificador: true },
         });
         expect(fila, "la fila existe en base").not.toBeNull();
-        expect(fila!.identificador, "identificador de la corrida").toBe(identificador);
+        // El pipeline NORMALIZA el identificador al guardar (reporte-creation.ts →
+        // `normalizarIdentificador`); se afirma el valor NORMALIZADO con la misma fuente,
+        // no el crudo enviado (que trae mayúsculas).
+        expect(fila!.identificador, "identificador de la corrida (normalizado)").toBe(normalizarIdentificador(identificador));
         expect(fila!.horaAproximada, "la franja quedó marcada como aproximada").toBe(true);
         expect(fila!.fechaIncidente, "la fecha del incidente quedó guardada").toEqual(new Date(FECHA_INCIDENTE));
     });
