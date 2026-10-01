@@ -47,13 +47,15 @@ import type { ClasificacionAvisoReps } from "@/lib/profesional/reps/aviso-estado
  *    única salida: no puede resolver nada por su cuenta.
  *  · `REGISTRO_NO_VIGENTE` — su inscripción REPS CADUCÓ de verdad (813 se lo AVISÓ). Acción del
  *    PROFESIONAL (renovar); puede resolverse sin reubicar.
- *  · `REVISION_INTERNA`    — la acción es NUESTRA, no suya, y 813 NO se lo bannereó. Cubre todo lo que
- *    la clasificación de 813 (`clasificarReps`, vigencia-only) NO llevó al banner CADUCADO: el estado 7
- *    (nuestra re-verificación envejeció → re-verificar), el hueco de modalidad (AL_DIA: vigente pero no
- *    cubre ESTA modalidad, cuyo aviso es la pieza 2 de Dev-3, aún sin banner) y SIN_VERIFICAR. El
- *    operador NO debe esperar a que el profesional actúe —no fue avisado y, en varios casos, no hay nada
- *    que él deba hacer—. El pliegue es DERIVADO de 813: cuando la pieza 2 le dé banner al hueco de
- *    modalidad, ese caso saldrá SOLO de acá y caerá en `REGISTRO_NO_VIGENTE`, sin tocar este código.
+ *  · `REVISION_INTERNA`    — la acción es NUESTRA, no suya. Cubre todo lo que la clasificación REPS NO
+ *    lleva al banner CADUCADO: el estado 7 (nuestra re-verificación envejeció → re-verificar) y
+ *    SIN_VERIFICAR. El operador NO debe esperar a que el profesional actúe —en varios casos no hay nada
+ *    que él deba hacer—.
+ *    SPEC-836 pieza 2 (este PR): el hueco de modalidad pasó a tener banner (`clasificarReps` ahora
+ *    devuelve `MODALIDAD_NO_CUBIERTA`). El split de abajo clava en CADUCADO, así que HOY ese caso sigue
+ *    cayendo en `REVISION_INTERNA` —conducta idéntica a la previa (antes AL_DIA, mismo destino) y fijada
+ *    por candado—. El #829 lo anticipó como `REGISTRO_NO_VIGENTE` «sin tocar este código»: la predicción
+ *    quedó FALSIFICADA (requiere tocar el split y el candado). Flipearlo es decisión del CEO.
  */
 export type MotivoReubicacion = "PANEL_BLOQUEADO" | "REGISTRO_NO_VIGENTE" | "REVISION_INTERNA";
 
@@ -126,16 +128,21 @@ export async function citasPorReubicar(
         if (habilitado && repsOk) continue;
 
         // Motivo: `PANEL_BLOQUEADO` manda sobre lo REPS (si A no puede ni entrar a su panel, que su REPS
-        // esté o no vigente es irrelevante). En la rama REPS, el PORQUÉ —de quién es la acción— lo decide
-        // la MISMA fuente que el banner de 813 (`clasificarReps`, vigencia-only): solo CADUCADO fue avisado
-        // al profesional y es acción suya; todo lo demás que 813 no bannereó es nuestro/interno.
+        // esté o no vigente es irrelevante). En la rama REPS, el PORQUÉ —de quién es la acción— clava en
+        // CADUCADO: solo ese fue avisado al profesional como acción suya; todo lo demás es nuestro/interno.
         let motivoCodigo: MotivoReubicacion;
         if (!habilitado) {
             motivoCodigo = "PANEL_BLOQUEADO";
         } else {
             let clase = clasePorProfesional.get(profesionalId);
             if (clase === undefined) {
-                clase = await perfilRepo.clasificarReps(profesionalId, ahora);
+                // SPEC-836 pieza 2: `clasificarReps` pasó a modality-aware (devuelve objeto); tomamos
+                // `.clasificacion`, igual que panel.service (barrido de callers del cambio de contrato). El
+                // split clava en CADUCADO, que el clasificador devuelve IGUAL (MODALIDAD_NO_CUBIERTA solo
+                // REFINA AL_DIA) → conducta preservada. Flipear el hueco de modalidad (ya con banner) a
+                // acción del profesional es decisión del CEO; ver [[MotivoReubicacion]].
+                const { clasificacion } = await perfilRepo.clasificarReps(profesionalId, ahora);
+                clase = clasificacion;
                 clasePorProfesional.set(profesionalId, clase);
             }
             motivoCodigo = clase === "CADUCADO" ? "REGISTRO_NO_VIGENTE" : "REVISION_INTERNA";

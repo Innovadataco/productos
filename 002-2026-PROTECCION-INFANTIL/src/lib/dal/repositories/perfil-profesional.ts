@@ -33,7 +33,8 @@ import { FranjaDisponibleRepository } from "./franja-disponible";
 import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profesionales/vigencia";
 import { leerRangoEtario } from "@/lib/profesional/catalogos-lectura";
 import { type ConfigReps, type Elegibilidad, type EstadoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
-import { clasificarAvisoReps, zonaAdminReps, type ClasificacionAvisoReps, type ZonaAdminReps } from "@/lib/profesional/reps/aviso-estado-reps";
+// SPEC-836 pieza 2: + clasificarAvisoRepsConModalidad / AvisoRepsConModalidad para el aviso del hueco de modalidad.
+import { clasificarAvisoReps, clasificarAvisoRepsConModalidad, zonaAdminReps, type ClasificacionAvisoReps, type AvisoRepsConModalidad, type ZonaAdminReps } from "@/lib/profesional/reps/aviso-estado-reps";
 // SPEC-825: la elegibilidad REPS por lote + su config viva viven en UN módulo compartido (sin ciclo con franja).
 import { idsRepsElegiblesLote, evaluarRepsLote, configRepsVivo } from "@/lib/profesional/reps/elegibilidad-reps-lote";
 
@@ -527,19 +528,48 @@ export class PerfilProfesionalRepository {
     }
 
     /**
-     * SPEC-813 · Clasificación REPS del profesional para las SUPERFICIES (aviso al profesional + alarma de
-     * admin). `¬repsAlDia` funde cuatro causas; esto devuelve CUÁL — `CADUCADO` (aviso al profesional),
-     * `REVISION_ADMIN` (alarma de admin), `AL_DIA`/`SIN_VERIFICAR` (ni aviso ni alarma). Misma ÚLTIMA fila y
-     * misma config que `repsAlDia`; el aviso se muestra con `=== "CADUCADO"`.
+     * SPEC-813 + SPEC-836 pieza 2 · Clasificación REPS del profesional para SU panel (aviso al profesional).
+     * `¬repsAlDia` funde cuatro causas; esto devuelve CUÁL — `CADUCADO` (aviso al profesional), `REVISION_ADMIN`
+     * (alarma de admin, no se muestra acá), `AL_DIA`/`SIN_VERIFICAR` (ni aviso ni alarma). SPEC-836: además,
+     * sobre un REPS vigente, detecta el HUECO DE MODALIDAD —una modalidad que el profesional OFRECE
+     * (`atiendeVirtual`/`atiendePresencial`) y su REPS no cubre— y devuelve `MODALIDAD_NO_CUBIERTA` + la lista.
+     * Por eso lee también las banderas de oferta del perfil, no solo la última fila REPS. La pantalla de carga
+     * del admin NO usa esto: usa `clasificarAvisoReps` (vigencia-only), porque el hueco de modalidad lo arregla
+     * el profesional, no el admin.
+     *
+     * SPEC-836 (expansión del CEO): REVISION_ADMIN ahora TAMBIÉN tiene banner al profesional («re-verificando,
+     * nada que hacer»). Pero REVISION_ADMIN funde estados 5/7/8 y esa copy —«su inscripción sigue al día»— solo
+     * es cierta en el 7 (nuestro re-chequeo envejeció, autoridad vigente). Para el 5 (NO_ENCONTRADA) MENTIRÍA.
+     * Por eso devuelve `esReVerificacion` (= zona RE_VERIFICAR, el estado 7): el panel solo muestra ese banner
+     * cuando es cierto. El 5/8 quedan sin banner al profesional (como hoy, admin-only). Ver nota al CEO.
      */
-    async clasificarReps(profesionalId: string, ahora: Date = new Date()): Promise<ClasificacionAvisoReps> {
+    async clasificarReps(
+        profesionalId: string,
+        ahora: Date = new Date(),
+    ): Promise<AvisoRepsConModalidad & { esReVerificacion: boolean }> {
         const config = await this.configReps();
-        const fila = await this.db.verificacionReps.findFirst({
-            where: { profesionalId },
-            orderBy: { verificadoEn: "desc" },
-            select: { resultado: true, verificadoEn: true, vigenteHasta: true, modalidades: true },
-        });
-        return clasificarAvisoReps(fila, config, ahora);
+        const [fila, perfil] = await Promise.all([
+            this.db.verificacionReps.findFirst({
+                where: { profesionalId },
+                orderBy: { verificadoEn: "desc" },
+                select: { resultado: true, verificadoEn: true, vigenteHasta: true, modalidades: true },
+            }),
+            this.db.perfilProfesional.findUnique({
+                where: { id: profesionalId },
+                select: { atiendeVirtual: true, atiendePresencial: true },
+            }),
+        ]);
+        const aviso = clasificarAvisoRepsConModalidad(
+            fila,
+            { virtual: perfil?.atiendeVirtual ?? false, presencial: perfil?.atiendePresencial ?? false },
+            config,
+            ahora,
+        );
+        // El banner «re-verificando» (estado 7) solo es honesto en la zona RE_VERIFICAR: la autoridad sigue
+        // vigente y es NUESTRO chequeo el que envejeció. El 5 (NO_ENCONTRADA) también es REVISION_ADMIN pero
+        // su inscripción NO está «al día» → no mostrarle esa copy.
+        const esReVerificacion = zonaAdminReps(fila, config, ahora) === "RE_VERIFICAR";
+        return { ...aviso, esReVerificacion };
     }
 
     /**

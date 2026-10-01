@@ -12,6 +12,8 @@ export default defineConfig({
         name: "journeys",
         environment: "jsdom",
         globals: true,
+        // SPEC-817: misma provisión/verificación de base por worktree que integration (journeys también usa BD).
+        globalSetup: ["./src/lib/test-globalsetup.ts"],
         setupFiles: ["./src/lib/test-setup.ts"],
         include: ["src/lib/e2e/journeys/**/*.test.ts", "src/lib/e2e/journeys/**/*.test.tsx"],
         exclude: ["node_modules", ".next"],

@@ -4,7 +4,7 @@
  * cuando el padre solicita la cita, y se libera si la solicitud expira sin pago
  * o si el profesional rechaza.
  */
-import type { FranjaDisponible, Prisma } from "@prisma/client";
+import type { FranjaDisponible, ModalidadCita, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 // SPEC-825: la elegibilidad REPS vive en un módulo compartido (sin ciclo con perfil-profesional). El mapeo
@@ -27,6 +27,17 @@ function whereFranjaOfrecible(desde: Date): Prisma.FranjaDisponibleWhereInput {
             { modalidad: "PRESENCIAL", profesional: { atiendePresencial: true } },
         ],
     };
+}
+
+/**
+ * SPEC-832 · El predicado de SOLAPE `[inicio, fin)` como where-fragment ÚNICO (medio-abierto:
+ * `inicio < fin' ∧ fin > inicio'`) — el MISMO que `ventanasSolapan` resuelve en JS. Lo comparten
+ * `existeSolapada` (publicar) y `profesionalesConFranjaLibreSolapando` (reubicar) para no duplicar el
+ * predicado en dos consultas. Va como objeto propio (para combinar en un `AND` sin pisar otra cláusula
+ * sobre `inicio`, p. ej. la cota de futuro de `whereFranjaOfrecible`).
+ */
+function whereSolapa(inicio: Date, fin: Date): Prisma.FranjaDisponibleWhereInput {
+    return { inicio: { lt: fin }, fin: { gt: inicio } };
 }
 
 export class FranjaDisponibleRepository {
@@ -148,11 +159,44 @@ export class FranjaDisponibleRepository {
             where: {
                 profesionalId,
                 ...(excluirId ? { id: { not: excluirId } } : {}),
-                inicio: { lt: fin },
-                fin: { gt: inicio },
+                ...whereSolapa(inicio, fin),
             },
             select: { id: true, inicio: true, fin: true },
         });
+    }
+
+    /**
+     * SPEC-832 (T7 de 790) · EL CUELLO de la reubicación: profesionales (≠ `excluirProfesionalId`) con una
+     * franja OFRECIBLE que SOLAPA `[inicio, fin)`. «Ofrecible» = la MISMA definición de dos etapas que usa el
+     * padre: `whereFranjaOfrecible` (libre · FUTURA · modalidad que el perfil atiende) ∩ `filtrarRepsElegibles`
+     * (REPS al día POR MODALIDAD, vía `idsRepsElegiblesLote`, la fuente única). No reimplementa el criterio: un
+     * destino que la reserva rechazaría no puede proponerse acá. La cota de futuro (`inicio >= ahora`) viene de
+     * `whereFranjaOfrecible` — antes este método la omitía (hallazgo de Datos: sobre una cita pasada devolvía
+     * franjas pasadas). El solape usa el fragmento compartido `whereSolapa`. `distinct` por profesional: la
+     * candidatura es por PERSONA; el turno concreto a tomar se elige al reubicar.
+     */
+    async profesionalesConFranjaLibreSolapando(
+        inicio: Date,
+        fin: Date,
+        modalidad: ModalidadCita,
+        excluirProfesionalId: string,
+        ahora: Date = new Date(),
+    ): Promise<{ profesionalId: string }[]> {
+        const franjas = await this.db.franjaDisponible.findMany({
+            where: {
+                AND: [
+                    whereFranjaOfrecible(ahora), // libre + inicio>=ahora + modalidad-flag del perfil
+                    whereSolapa(inicio, fin), // inicio<fin ∧ fin>inicio (combina con la cota de futuro sin pisarla)
+                    { modalidad, profesionalId: { not: excluirProfesionalId } },
+                ],
+            },
+            select: { profesionalId: true, modalidad: true },
+            distinct: ["profesionalId"],
+        });
+        // La mitad REPS de «ofrecible», POR MODALIDAD concreta de la franja (nunca `null`): el mismo cinturón
+        // que el picker del padre, para no quedar fuera del criterio único.
+        const elegibles = await this.filtrarRepsElegibles(franjas, ahora);
+        return elegibles.map((f) => ({ profesionalId: f.profesionalId }));
     }
 
     marcarTomadaSiLibre(id: string) {

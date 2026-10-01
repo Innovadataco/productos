@@ -1,4 +1,7 @@
 // @ts-nocheck
+// SPEC-817 · PRIMERO de todo: resuelve DATABASE_URL (respeta el del entorno / deriva por worktree / explota)
+// ANTES de que `./prisma` construya el cliente leyendo esa variable. El orden de este import es la mecánica.
+import "./test-db-url";
 import { TextEncoder as NodeTextEncoder, TextDecoder as NodeTextDecoder } from "util";
 import { webcrypto } from "node:crypto";
 import { cleanup } from "@testing-library/react";
@@ -21,7 +24,9 @@ process.env.JWT_SECRET = "test-secret-key-32-chars-long-12345678";
 process.env.RESEND_API_KEY = "re_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 process.env.RESEND_WEBHOOK_SECRET = "dGVzdHNlY3JldA==";
 process.env.ENCRYPTION_KEY = "test-encryption-32-chars-key!!";
-process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
+// SPEC-817 · DATABASE_URL YA quedó resuelto por `./test-db-url` (import de arriba): base por worktree en local,
+// el del entorno en CI. Se quitó el fallback a `…/proteccion_infantil_test` — un default compartido
+// reconectaría a todos a I-439 con cara de robustez.
 process.env.WORKER_SECRET = "worker-secret-test";
 // S-D · KEK de test para la capa DEK-por-denuncia (ContenidoReporte/LlaveReporte). Se siembra
 // GLOBAL una vez para que cualquier fixture que cree un Reporte vía `crearReporteConTexto`
