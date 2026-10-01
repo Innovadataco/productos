@@ -288,6 +288,17 @@ export function RevisionIcon({ className }: { className?: string }) {
     );
 }
 
+// SPEC-832 · «Reubicaciones» — reasignar una cita de un profesional a otro. Heroicons outline
+// `arrows-right-left` (el gesto de traspaso). PROVISIONAL: a confirmar/certificar por Diseño
+// (FORMA-SPEC744-ICONOS); se registra uno REAL para no caer al fallback «casa» (candado 744 cláusula 3).
+export function ReubicarIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+        </svg>
+    );
+}
+
 export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     // Admin + profesional (SPEC-437: misma barra).
     "/dashboard/admin": InboxIcon,
@@ -308,6 +319,7 @@ export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     "/dashboard/admin/analisis/recomendaciones": LightBulbIcon,
     "/dashboard/admin/ia": BrainIcon,
     "/dashboard/admin/operadores": UsersIcon,
+    "/dashboard/admin/reubicaciones": ReubicarIcon, // SPEC-832 · provisional, a certificar por Diseño
     "/dashboard/admin/padres": UserCircleIcon,
     // SPEC-744 FASE 2 (Diseño e2243f6): los 4 que caían al fallback InboxIcon.
     "/dashboard/admin/verificadores": VerificadorIcon,
