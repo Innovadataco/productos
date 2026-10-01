@@ -277,8 +277,14 @@ export async function POST(request: Request) {
 
         if (!resultado.ok) {
             if (resultado.tipo === "duplicado") {
-                // SPEC-323 (AD-1): padre autenticado recibe oferta de vinculación;
-                // anónimo y otros usuarios siguen con 429 (candado 26 — solo la respuesta cambia).
+                // SPEC-323 (AD-1) · SPEC-808: el dedup con 429 DUPLICATE_REPORT es AUTENTICADO-ONLY
+                // —presupone identidad: el bloque de dedup de ReporteCreationService está guardado por
+                // `if (usuarioId)` (reporte-creation.ts). Por eso el ANÓNIMO NUNCA llega acá: un
+                // "duplicado" anónimo es indistinguible de dos personas reportando la misma cuenta
+                // —la señal que el producto existe para recoger—, así que su caso lo maneja el
+                // rate-limit SOFT (POSIBLE_SPAM → 201), no este 429. El PARENT recibe la oferta de
+                // vinculación (200); un autenticado NO-PARENT recibe el 429. La DETECCIÓN no cambia,
+                // solo la respuesta.
                 if (user?.rol === "PARENT") {
                     return NextResponse.json(
                         { oferta: true, reporteExistenteId: resultado.reporteExistenteId, identificador },
@@ -286,7 +292,7 @@ export async function POST(request: Request) {
                     );
                 }
                 return NextResponse.json(
-                    { error: { message: "Ya reportaste este identificador recientemente", code: "DUPLICATE_REPORT", reporteExistenteId: resultado.reporteExistenteId } },
+                    { error: { message: "Ya tienes un reporte sobre esta cuenta", code: "DUPLICATE_REPORT", reporteExistenteId: resultado.reporteExistenteId } },
                     { status: 429 }
                 );
             }
