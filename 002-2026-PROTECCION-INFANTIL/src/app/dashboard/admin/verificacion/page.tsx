@@ -28,6 +28,12 @@ export default async function VerificacionPage() {
                     >
                         Ver incidentes de citas →
                     </Link>
+                    <Link
+                        href="/dashboard/admin/verificacion/reps"
+                        className="rounded-full bg-tinta/5 px-4 py-1.5 font-medium text-body transition hover:bg-tinta/10"
+                    >
+                        Habilitación (REPS) →
+                    </Link>
                 </div>
             </header>
             <VerificacionColasClient />

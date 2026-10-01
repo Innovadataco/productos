@@ -779,6 +779,20 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/acento-relleno-sin-pino-crudo.candado.test.ts",
     // I-409 (SPEC-662): foco neutro en toda la app — ningún focusable declara su foco con acento crudo (focus:ring/border-<color>).
     "src/app/foco-neutro-sin-acento-crudo.candado.test.ts",
+    // SPEC-790: motor puro de elegibilidad REPS — C-1 falso amigo (EstadoReps ≠ EstadoPerfilProfesional),
+    // C-2 dos relojes (autoridad + nuestro), D-5 modalidad, D-7 cutover. Sin base.
+    "src/lib/profesional/reps/reps-elegibilidad.candado.test.ts",
+    // SPEC-790: el stub del adaptador REPS NUNCA fabrica un VIGENTE (anti degradación silenciosa). Sin base.
+    "src/lib/profesional/reps/reps-adaptador-nunca-vigente.candado.test.ts",
+    // SPEC-790: traducción cita→REPS en un solo lugar, exhaustiva; no-mapeo niega y registra. Sin base.
+    "src/lib/profesional/reps/modalidad-cita-a-reps.candado.test.ts",
+    // SPEC-790 (D-8): toda asignación de profesional a cita pasa por el chokepoint (crearSolicitudCita→obtenerPublicoPorId);
+    // el test de REPS se convirtió de it.fails a it al cablear T4. Scan estático, sin base.
+    "src/lib/profesional/cita/reps-gate-booking-sweep.candado.test.ts",
+    // SPEC-790 (T4): paridad mirror↔enum Prisma (ESTADOS_REPS/MODALIDADES_REPS ≡ EstadoReps/ModalidadReps). Sin base.
+    "src/lib/profesional/reps/reps-enums-paridad.candado.test.ts",
+    // SPEC-790 (T6): compuerta de código del registro manual REPS (espejo del CHECK + guardas, código de motivo). Sin base.
+    "src/lib/profesional/reps/registro-manual-reps.candado.test.ts",
     // SPEC-574 (I-354): clasificar es el complemento de corregir/confirmar (conducta pura); y el
     // catálogo de categorías de la UI no se desincroniza del enum CategoriaConducta.
     "src/components/modules/reporte-detalle/capacidades-reporte.candado.test.ts",

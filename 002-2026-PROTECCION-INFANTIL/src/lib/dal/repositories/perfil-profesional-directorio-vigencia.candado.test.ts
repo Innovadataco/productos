@@ -15,8 +15,12 @@
  * plazo fijo; se siembra el `venceEn` a mano para forzar la divergencia que la ley
  * traería si cambiara el plazo — y para que el candado la vigile desde ya.)
  *
- * Cubre las TRES lecturas del directorio (SPEC-656 · conteo ≡ lista): `listarActivos`,
- * `contarActivos` y `obtenerPublicoPorId`.
+ * Cubre las CUATRO lecturas del directorio (SPEC-656 · conteo ≡ lista): `listarActivos`,
+ * `contarActivos`, `obtenerPublicoPorId` y —desde SPEC-790— `facetas`. `facetas` es el 4º
+ * consumidor: hasta 790 escribía el `where` a mano sin vigencia y poblaba los filtros con la
+ * ciudad/especialidad de un profesional cuya ÚLTIMA verificación venció (opción de filtro
+ * muerta). Ahora pasa por el MISMO predicado y filtro autoritativo que la lista; este candado
+ * lo vigila con el control positivo de la DIVERGENTE (faceta propia que NO debe aparecer).
  */
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
@@ -55,6 +59,7 @@ describe("SPEC-690-B · el directorio del padre === estaHabilitado (vigencia aut
         nombre: string,
         estado: EstadoPerfilProfesional,
         aprobaciones: Array<{ revisadoEn: Date; venceEn: Date }>,
+        overrides: { ciudadId?: string; especialidad?: string } = {},
     ): Promise<CasoSembrado> {
         const usuario = await crearUsuario("PROFESIONAL");
         const perfil = await prisma.perfilProfesional.create({
@@ -62,8 +67,8 @@ describe("SPEC-690-B · el directorio del padre === estaHabilitado (vigencia aut
                 usuarioId: usuario.id,
                 nombreVisible: nombre,
                 tituloProfesional: "Psicología",
-                especialidades: ["infantil"],
-                ciudadId,
+                especialidades: [overrides.especialidad ?? "infantil"],
+                ciudadId: overrides.ciudadId ?? ciudadId,
                 atiendeVirtual: true,
                 aniosExperiencia: 5,
                 presentacion: "Perfil de prueba SPEC-690-B.",
@@ -161,5 +166,42 @@ describe("SPEC-690-B · el directorio del padre === estaHabilitado (vigencia aut
                 `obtenerPublicoPorId(${caso.nombre}) debe ${esperadosHabilitados.has(caso.perfilId) ? "encontrarlo" : "dar null"}`,
             ).toBe(esperadosHabilitados.has(caso.perfilId));
         }
+    });
+
+    it("facetas deriva SOLO de habilitados — la faceta de la divergente (última vencida) NO puebla los filtros", async () => {
+        // SPEC-790: `facetas` es el 4º consumidor. Control positivo: una DIVERGENTE con faceta
+        // PROPIA (ciudad+especialidad únicas) cuya ÚLTIMA verificación venció — el SQL grueso la
+        // dejaría pasar, el filtro autoritativo no. Si `facetas` leyera a mano, su faceta saldría
+        // en el dropdown y el padre elegiría un filtro muerto.
+        const repo = new PerfilProfesionalRepository();
+        const { paisId } = await prisma.ciudad.findUniqueOrThrow({ where: { id: ciudadId }, select: { paisId: true } });
+        const suf = Math.random().toString(36).slice(2, 9);
+        const ciudadHab = await prisma.ciudad.create({ data: { nombre: `HabCiudad-${suf}`, nombreNormalizado: `habciudad-${suf}`, paisId } });
+        const ciudadDiv = await prisma.ciudad.create({ data: { nombre: `DivCiudad-${suf}`, nombreNormalizado: `divciudad-${suf}`, paisId } });
+
+        await sembrar("HabFaceta", "ACTIVO", [{ revisadoEn: REVISADO_NUEVO, venceEn: FUTURO }], {
+            ciudadId: ciudadHab.id,
+            especialidad: "ESP_HABILITADA",
+        });
+        // DIVERGENTE: la MÁS RECIENTE venció; una vieja con venceEn futuro → autoritativo NO habilitada.
+        await sembrar(
+            "DivFaceta",
+            "ACTIVO",
+            [
+                { revisadoEn: REVISADO_VIEJO, venceEn: FUTURO },
+                { revisadoEn: REVISADO_NUEVO, venceEn: PASADO },
+            ],
+            { ciudadId: ciudadDiv.id, especialidad: "ESP_DIVERGENTE" },
+        );
+
+        const f = await repo.facetas(null, AHORA);
+        expect(f.especialidades, "la especialidad de un habilitado SÍ puebla el filtro").toContain("ESP_HABILITADA");
+        expect(
+            f.especialidades,
+            "la especialidad de la divergente (última verificación vencida) NO puede poblar el filtro",
+        ).not.toContain("ESP_DIVERGENTE");
+        const idsCiudad = f.ciudades.map((c) => c.id);
+        expect(idsCiudad).toContain(ciudadHab.id);
+        expect(idsCiudad, "la ciudad de la divergente NO puede poblar el filtro").not.toContain(ciudadDiv.id);
     });
 });
