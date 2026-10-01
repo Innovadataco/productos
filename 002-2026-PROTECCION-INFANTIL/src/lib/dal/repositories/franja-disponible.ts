@@ -7,6 +7,10 @@
 import type { FranjaDisponible, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
+// SPEC-825: la elegibilidad REPS vive en un módulo compartido (sin ciclo con perfil-profesional). El mapeo
+// modalidad-de-cita→eje-REPS (VIRTUAL→TELEMEDICINA, PRESENCIAL→PRESENCIAL) es su propia fuente única.
+import { idsRepsElegiblesLote } from "@/lib/profesional/reps/elegibilidad-reps-lote";
+import { modalidadRepsRequerida } from "@/lib/profesional/reps/modalidad-cita-a-reps";
 
 /**
  * SPEC-818 · ÚNICA definición de «franja OFRECIBLE»: libre, futura, y cuya modalidad el perfil VIGENTE
@@ -39,30 +43,60 @@ export class FranjaDisponibleRepository {
         return this.db.franjaDisponible.findUnique({ where: { id } });
     }
 
-    // SPEC-818 · CHOKEPOINT: el padre solo ve lo OFRECIBLE. Si el profesional apagó la modalidad DESPUÉS de
-    // publicar la franja, esa franja deja de ofrecerse — nada aguas abajo puede reservar lo incumplible.
-    listarLibresDeProfesional(profesionalId: string, desde: Date) {
-        return this.db.franjaDisponible.findMany({
+    /**
+     * SPEC-825 · la pieza que cierra la costura: candidatos por banderas (`whereFranjaOfrecible`) →
+     * intersección con el REPS-elegible POR MODALIDAD. El picker y el chip la COMPARTEN — ninguno decide
+     * ofrecible por su cuenta. Dos consultas por LOTE (no N+1): el set elegible por cada eje REPS.
+     *
+     * ⚠️ Siempre con la modalidad CONCRETA de la franja (nunca `null`): `null` = «elegible para ALGUNA
+     * modalidad», correcto para el DIRECTORIO pero el BUG a nivel de franja (un REPS-solo-PRESENCIAL se colaría
+     * con su franja virtual). El mapeo franja→eje-REPS es `modalidadRepsRequerida` (fuente única); sin mapeo →
+     * fail-closed (se excluye).
+     */
+    private async filtrarRepsElegibles<T extends { profesionalId: string; modalidad: string }>(
+        franjas: T[],
+        ahora: Date,
+    ): Promise<T[]> {
+        if (franjas.length === 0) return franjas;
+        const perfilIds = [...new Set(franjas.map((f) => f.profesionalId))];
+        const [elegiblesTelemedicina, elegiblesPresencial] = await Promise.all([
+            idsRepsElegiblesLote(this.db, perfilIds, "TELEMEDICINA", ahora),
+            idsRepsElegiblesLote(this.db, perfilIds, "PRESENCIAL", ahora),
+        ]);
+        return franjas.filter((f) => {
+            const reps = modalidadRepsRequerida(f.modalidad);
+            if (reps === null) return false; // modalidad sin mapeo al eje REPS → no se ofrece (fail-closed)
+            return (reps === "TELEMEDICINA" ? elegiblesTelemedicina : elegiblesPresencial).has(f.profesionalId);
+        });
+    }
+
+    // SPEC-818 · CHOKEPOINT: el padre solo ve lo OFRECIBLE. SPEC-825: «ofrecible» = banderas ∧ REPS-por-modalidad
+    // (la reserva exige lo mismo; antes el display miraba solo banderas y dejaba un callejón sin salida).
+    async listarLibresDeProfesional(profesionalId: string, desde: Date) {
+        const candidatas = await this.db.franjaDisponible.findMany({
             where: { profesionalId, ...whereFranjaOfrecible(desde) },
             orderBy: { inicio: "asc" },
             take: 60,
         });
+        return this.filtrarRepsElegibles(candidatas, desde);
     }
 
     /**
      * SPEC-818 · ¿cuáles de `perfilIds` tienen ≥1 franja OFRECIBLE? MISMA definición que
      * `listarLibresDeProfesional` (el chip del directorio pregunta «¿devuelve ≥1?», no reimplementa el
-     * criterio). Una sola consulta para todo el lote (sin N+1). El chip no puede decir «tiene horarios»
-     * mientras la pantalla de reserva no muestra nada: comparten `whereFranjaOfrecible`.
+     * criterio): ambos pasan por `whereFranjaOfrecible` + `filtrarRepsElegibles`. El chip no puede decir «tiene
+     * horarios» mientras la pantalla de reserva muestra nada. SPEC-825: se trae la `modalidad` para poder
+     * aplicar el REPS por modalidad.
      */
     async idsConHorariosDisponibles(perfilIds: string[], desde: Date): Promise<Set<string>> {
         if (perfilIds.length === 0) return new Set();
-        const filas = await this.db.franjaDisponible.findMany({
+        const candidatas = await this.db.franjaDisponible.findMany({
             where: { profesionalId: { in: perfilIds }, ...whereFranjaOfrecible(desde) },
-            select: { profesionalId: true },
-            distinct: ["profesionalId"],
+            select: { profesionalId: true, modalidad: true },
+            distinct: ["profesionalId", "modalidad"],
         });
-        return new Set(filas.map((f) => f.profesionalId));
+        const elegibles = await this.filtrarRepsElegibles(candidatas, desde);
+        return new Set(elegibles.map((f) => f.profesionalId));
     }
 
     listarDeProfesional(profesionalId: string) {

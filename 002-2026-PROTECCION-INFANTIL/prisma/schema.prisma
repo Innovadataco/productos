@@ -1613,6 +1613,12 @@ model Estudiante {
   acudientes      AcudienteEstudiante[]
   observaciones   EstudianteObservacion[]
 
+  // SPEC-833 (D-121) · destino del PRIMER FK COMPUESTO del esquema: ata el `colegioId`
+  // denormalizado de IdentificadorAlumno al del alumno. `id` ya es único (PK); este índice
+  // compuesto existe SOLO para que el FK pueda referenciarlo. Imposibilidad estructural, no
+  // disciplina de código (el barrido midió: cero escritores divergen hoy, pero nada en la base
+  // lo impedía; el próximo escritor no tiene por qué saberlo).
+  @@unique([id, colegioId])
   @@index([cursoId, estado])
   @@index([colegioId, estado])
   @@map("Alumno")
@@ -1746,7 +1752,12 @@ model IdentificadorEstudiante {
   createdAt        DateTime                   @default(now())
   updatedAt        DateTime                   @updatedAt
 
-  estudiante Estudiante      @relation(fields: [estudianteId], references: [id])
+  // SPEC-833 · FK COMPUESTO: `colegioId` se ata al del alumno (references [id, colegioId]).
+  // La base RECHAZA un IdentificadorAlumno cuyo colegioId no case con Alumno.colegioId — la
+  // fuga cross-tenant de un menor pasa de «nada lo impide» a imposible. `colegioId` queda
+  // compartido entre esta relación y la de `colegio` (misma columna en dos FK: a Alumno por el
+  // compuesto, a Colegio por el simple) — ambas lo restringen, de forma coherente.
+  estudiante Estudiante      @relation(fields: [estudianteId, colegioId], references: [id, colegioId])
   colegio    Colegio         @relation(fields: [colegioId], references: [id])
   plataforma Plataforma?     @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]

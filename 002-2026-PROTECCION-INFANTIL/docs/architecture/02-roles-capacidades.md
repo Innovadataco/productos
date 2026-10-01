@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 8 roles (7 autenticados + anónimo) × 597 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4776 combinaciones.
+Inventario: 8 roles (7 autenticados + anónimo) × 599 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4792 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -209,6 +209,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/reubicaciones` | api | permitir | permite | sí |
 | `/api/admin/servicios/[nombre]/restart` | api | permitir | permite | sí |
 | `/api/admin/servicios/[nombre]/start` | api | permitir | permite | sí |
 | `/api/admin/servicios/[nombre]/stop` | api | permitir | permite | sí |
@@ -530,6 +531,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/sin-suscripcion` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
 | `/dashboard/admin/profesionales/gestion` | página | permitir | permite | sí |
+| `/dashboard/admin/reubicaciones` | página | permitir | permite | sí |
 | `/dashboard/admin/sesiones` | página | permitir | permite | sí |
 | `/dashboard/admin/soporte/peticiones` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
@@ -811,6 +813,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/reubicaciones` | api | permitir | permite | sí |
 | `/api/admin/servicios/[nombre]/restart` | api | permitir | permite | sí |
 | `/api/admin/servicios/[nombre]/start` | api | permitir | permite | sí |
 | `/api/admin/servicios/[nombre]/stop` | api | permitir | permite | sí |
@@ -1132,6 +1135,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/sin-suscripcion` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
 | `/dashboard/admin/profesionales/gestion` | página | permitir | permite | sí |
+| `/dashboard/admin/reubicaciones` | página | permitir | permite | sí |
 | `/dashboard/admin/sesiones` | página | permitir | permite | sí |
 | `/dashboard/admin/soporte/peticiones` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
@@ -1413,6 +1417,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/reubicaciones` | api | permitir | permite | sí |
 | `/api/admin/servicios/[nombre]/restart` | api | permitir | permite | sí |
 | `/api/admin/servicios/[nombre]/start` | api | permitir | permite | sí |
 | `/api/admin/servicios/[nombre]/stop` | api | permitir | permite | sí |
@@ -1734,6 +1739,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/sin-suscripcion` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
 | `/dashboard/admin/profesionales/gestion` | página | permitir | permite | sí |
+| `/dashboard/admin/reubicaciones` | página | permitir | permite | sí |
 | `/dashboard/admin/sesiones` | página | permitir | permite | sí |
 | `/dashboard/admin/soporte/peticiones` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
@@ -2015,6 +2021,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reubicaciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/restart` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/start` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/stop` | api | HTTP 403 | no permite | sí |
@@ -2336,6 +2343,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/profesionales/gestion` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/reubicaciones` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/sesiones` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/soporte/peticiones` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -2617,6 +2625,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reubicaciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/restart` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/start` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/stop` | api | HTTP 403 | no permite | sí |
@@ -2938,6 +2947,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/profesionales/gestion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/reubicaciones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/sesiones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/soporte/peticiones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -3219,6 +3229,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reubicaciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/restart` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/start` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/stop` | api | HTTP 403 | no permite | sí |
@@ -3540,6 +3551,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/profesionales/gestion` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/reubicaciones` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/sesiones` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/soporte/peticiones` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/ | no permite | sí |
@@ -3821,6 +3833,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reubicaciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/restart` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/start` | api | HTTP 403 | no permite | sí |
 | `/api/admin/servicios/[nombre]/stop` | api | HTTP 403 | no permite | sí |
@@ -4142,6 +4155,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/dashboard/admin/profesionales/gestion` | página | redirigir→/dashboard/profesional | no permite | sí |
+| `/dashboard/admin/reubicaciones` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/dashboard/admin/sesiones` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/dashboard/admin/soporte/peticiones` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/profesional | no permite | sí |
@@ -4423,6 +4437,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reubicaciones` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/servicios/[nombre]/restart` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/servicios/[nombre]/start` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/servicios/[nombre]/stop` | api | HTTP 401 | permite | **NO** |
@@ -4744,6 +4759,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/profesionales/gestion` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/reubicaciones` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/sesiones` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/soporte/peticiones` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/login | no permite | sí |
@@ -5025,6 +5041,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/reportes/[id]/revelar-original` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/transiciones` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | HTTP 401 | permite |
+| `/api/admin/reubicaciones` | HTTP 401 | permite |
 | `/api/admin/servicios/[nombre]/restart` | HTTP 401 | permite |
 | `/api/admin/servicios/[nombre]/start` | HTTP 401 | permite |
 | `/api/admin/servicios/[nombre]/stop` | HTTP 401 | permite |

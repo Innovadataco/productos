@@ -1,7 +1,7 @@
 /**
  * SPEC-813 · Clasificación del estado REPS para el AVISO al profesional y la alarma de ADMIN.
  *
- * `¬repsAlDia` (la negación de `repsElegible(..., modalidad=null)`) **funde CUATRO causas distintas**
+ * `¬repsAlDia` (la negación de `repsElegible` con `modalidad=null`) **funde CUATRO causas distintas**
  * —medido en la tabla de readiness de SPEC-813—: no es un estado, es la ausencia de varias cosas a la
  * vez. El aviso al profesional SOLO debe salir cuando su habilitación REPS **caducó de verdad**. Las
  * causas que son NUESTRAS (nuestro re-chequeo venció) o de otra naturaleza (no se lo encontró, borde sin
