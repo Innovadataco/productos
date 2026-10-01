@@ -199,6 +199,30 @@ export class FranjaDisponibleRepository {
         return elegibles.map((f) => ({ profesionalId: f.profesionalId }));
     }
 
+    /**
+     * SPEC-832 (pieza 2) · Los TURNOS concretos de UN candidato B que el admin puede elegir al reubicar:
+     * las franjas OFRECIBLES de B (mismo criterio de dos etapas + REPS por modalidad) que SOLAPAN la ventana
+     * de la cita. El matcher da PERSONAS; esto da los turnos de una persona para el segundo paso del picker.
+     * Mismo filtro que `profesionalesConFranjaLibreSolapando` — no reimplementa el criterio.
+     */
+    async franjasOfreciblesSolapando(
+        profesionalId: string,
+        inicio: Date,
+        fin: Date,
+        modalidad: ModalidadCita,
+        ahora: Date = new Date(),
+    ): Promise<{ id: string; inicio: Date; fin: Date }[]> {
+        const franjas = await this.db.franjaDisponible.findMany({
+            where: {
+                AND: [whereFranjaOfrecible(ahora), whereSolapa(inicio, fin), { modalidad, profesionalId }],
+            },
+            select: { id: true, profesionalId: true, modalidad: true, inicio: true, fin: true },
+            orderBy: { inicio: "asc" },
+        });
+        const elegibles = await this.filtrarRepsElegibles(franjas, ahora);
+        return elegibles.map((f) => ({ id: f.id, inicio: f.inicio, fin: f.fin }));
+    }
+
     marcarTomadaSiLibre(id: string) {
         return this.db.franjaDisponible.updateMany({
             where: { id, tomada: false },
