@@ -30,20 +30,17 @@ import { randomBytes, randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
-import { PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
 import type { RolUsuario } from "@prisma/client";
+import { crearProfesionalVisible, limpiarProfesionalVisible, type ProfesionalVisible } from "./fixtures/profesional-visible";
 
 const CORRIDA = `e2e-437-${randomUUID().slice(0, 8)}`;
 const PASSWORD = "Menu437!Secure";
 const EMAIL_PROF = `${CORRIDA}-prof@proteccion.local`;
-
-/**
- * Los ítems de la barra lateral vienen de la FUENTE ÚNICA
- * `PROFESIONAL_NAV_ITEMS` (`src/lib/nav-items.ts`), que SPEC-437 (#359)
- * construyó. Importarla en vez de hardcodear evita que el spec se
- * desincronice: si Dev agrega/quita un ítem, el candado lo prueba solo.
- */
-const ITEMS_LATERAL = PROFESIONAL_NAV_ITEMS;
+// SPEC-691 (posterior a SPEC-437): `/dashboard/profesional` exige profesional
+// HABILITADO; un no-habilitado es redirigido al onboarding. La barra solo existe
+// para quien llega al panel → el titular habilita a EMAIL_PROF por el flujo real,
+// y EMAIL_BORRADOR queda en BORRADOR para el candado INVERSO (conducta: redirige).
+const EMAIL_BORRADOR = `${CORRIDA}-borrador@proteccion.local`;
 
 /** Ítems que NUNCA deben aparecer — son de otros roles (I-299 reforzada). */
 const ITEMS_AJENOS = [
@@ -58,6 +55,7 @@ const ITEMS_AJENOS = [
 ] as const;
 
 const sembrados = { usuarios: new Set<string>(), tokens: new Set<string>() };
+let profesional: ProfesionalVisible | undefined;
 
 async function ctx(): Promise<APIRequestContext> {
     return playwrightRequest.newContext();
@@ -78,15 +76,11 @@ async function login(request: APIRequestContext, email: string) {
     expect(res.status(), `login ${email}`).toBe(200);
 }
 
-async function aceptarConsentimiento(request: APIRequestContext) {
-    await request.post("/api/consentimiento/aceptar", {
-        data: { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: false },
-    });
-}
-
+/** Limpia el profesional BORRADOR del candado inverso (el HABILITADO lo limpia su
+ *  propio fixture, `limpiarProfesionalVisible`). FK-safe: perfil → auditoría → usuario. */
 async function limpiarSembrados() {
     const usuariosCreados = await prisma.usuario.findMany({
-        where: { email: EMAIL_PROF },
+        where: { email: EMAIL_BORRADOR },
         select: { id: true },
     });
     const ids = usuariosCreados.map((u) => u.id);
@@ -104,12 +98,18 @@ async function limpiarSembrados() {
     sembrados.tokens.clear();
 }
 
-/** Extrae el HTML del panel del profesional, con sesión ya iniciada. */
+/** Extrae el HTML del panel del profesional, con sesión ya iniciada.
+ *  Lección de método: un 200 tras seguir el redirect NO dice en qué pantalla estoy
+ *  («no encontré el elemento» y «estoy en otra pantalla» se ven igual). Antes de
+ *  buscar la barra, afirmo que NO me redirigió al onboarding — si no, un BORRADOR
+ *  pasaría el status y fallaría el contenido, ocultando la causa. */
 async function htmlPanel(request: APIRequestContext, userAgent: string): Promise<string> {
     const res = await request.get("/dashboard/profesional", {
         headers: { "user-agent": userAgent },
     });
     expect(res.status(), `GET /dashboard/profesional con UA=${userAgent}`).toBe(200);
+    expect(res.url(), "el habilitado debe quedar EN el panel, no redirigido al onboarding")
+        .not.toContain("/perfil-profesional/completar");
     return res.text();
 }
 
@@ -118,87 +118,93 @@ const UA_DESKTOP = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/
 
 test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437 candado)", () => {
     test.beforeAll(async () => {
-        // Registro por la pantalla (patrón SPEC-448 · fabricarEnlace).
-        const request = await ctx();
+        // (1) Profesional HABILITADO por el flujo real (builder reutilizable) → su panel
+        // renderiza la barra. Un `estado=ACTIVO` a mano no basta ni evita el redirect:
+        // la compuerta SPEC-691 exige verificación vigente, que el builder produce.
+        const reqProf = await ctx();
         try {
-            const solicitar = await request.post("/api/auth/registro-profesional/solicitar", {
-                data: { email: EMAIL_PROF },
+            profesional = await crearProfesionalVisible({
+                request: reqProf,
+                email: EMAIL_PROF,
+                password: PASSWORD,
+                corrida: CORRIDA,
+                conFranja: false,
             });
-            expect(solicitar.status(), "SPEC-391: solicitar 202").toBe(202);
-            const tokensCreados = await prisma.tokenRegistro.count({ where: { email: EMAIL_PROF } });
-            expect(tokensCreados, "el POST solicitar debe crear al menos un TokenRegistro real").toBeGreaterThanOrEqual(1);
+        } finally {
+            await reqProf.dispose();
+        }
 
-            const token = await fabricarEnlace(EMAIL_PROF, "PROFESIONAL" as RolUsuario);
-            const completar = await request.post("/api/auth/registro-profesional/completar", {
+        // (2) Profesional en BORRADOR (solo registro) para el candado INVERSO.
+        const reqB = await ctx();
+        try {
+            const solicitar = await reqB.post("/api/auth/registro-profesional/solicitar", { data: { email: EMAIL_BORRADOR } });
+            expect(solicitar.status(), "solicitar BORRADOR 202").toBe(202);
+            const token = await fabricarEnlace(EMAIL_BORRADOR, "PROFESIONAL" as RolUsuario);
+            const completar = await reqB.post("/api/auth/registro-profesional/completar", {
                 data: { token, password: PASSWORD, passwordConfirmacion: PASSWORD },
             });
-            expect(completar.status(), `completar body=${await completar.text().catch(() => "")}`).toBe(201);
-            await aceptarConsentimiento(request);
+            expect(completar.status(), `completar BORRADOR body=${await completar.text().catch(() => "")}`).toBe(201);
         } finally {
-            await request.dispose();
+            await reqB.dispose();
         }
     });
 
     test.afterAll(async () => {
+        if (profesional) await limpiarProfesionalVisible(profesional);
         await limpiarSembrados();
     });
 
-    test("(A) la barra lateral pinta los 6 ítems concedibles del profesional", async () => {
-
+    /**
+     * (A · CONTRATO DE DISEÑO) FORMA-CONTRATO-BARRA-LATERAL-PROFESIONAL v1.0: el discriminador
+     * es el ESTADO `habilitado`, NO el módulo. Un VERIFICADO (habilitado) ve «Mi perfil» (su
+     * autoedición), «Calendario» (aunque NO tenga franjas), «Casos» e «Inicio» — y NUNCA
+     * «Mi ficha» (la entrada del PORTERO, excluyente por estado con «Mi perfil» — ver (B)).
+     *
+     * `test.fail`: HOY (A) falla, y la causa es la VENTANA DE CARGA — no «dos pintores» ni «pintado
+     * por módulo» (ambas hipótesis se midieron y se DESCARTARON: SPEC-744 ya unificó el menú en UNA
+     * fuente, `entradasProfesional`). El menú se deriva de `user.profesional.habilitado`, que llega
+     * del `fetch("/api/me")` del CLIENTE (AuthContext); en el SSR y en la ventana previa a esa
+     * respuesta `profesional===undefined` → `entradasProfesional` lo trata como «no habilitado» y
+     * pinta el PORTERO. (A) lee el STRING del SSR (`request.get().text()`), que nunca corre ese fetch
+     * → siempre ve ese primer pintado. Medido (BD aislada, navegador real): /api/me da `habilitado:true`
+     * y la barra SE CORRIGE a «Mi perfil» al resolver → defecto de DISPLAY (un display que no sabe no
+     * debe afirmar), radicado en **SPEC-802**.
+     *
+     * CRITERIO DE SALIDA (autoexigido) + su CANDADO: SPEC-802 resuelve `habilitado` EN EL SERVIDOR y
+     * lo pasa como prop → el SSR ya trae el menú del verificado. SOLO un fix server-side hace que (A)
+     * —que lee el SSR— pase → `unexpected-pass` → el MISMO PR de SPEC-802 quita este `test.fail`. Si
+     * ese PR lo retira y (A) NO dio unexpected-pass, el fix NO fue server-side (un «cargando»
+     * client-side DISIMULA la ventana pero deja el SSR en portero) → PARAR. El rojo de hoy ES el
+     * hallazgo, no un bug del test.
+     */
+    test.fail("(A · contrato) el VERIFICADO ve «Mi perfil»+«Calendario»+«Casos»+«Inicio», NUNCA «Mi ficha»", async () => {
         const request = await ctx();
         try {
             await login(request, EMAIL_PROF);
             const html = await htmlPanel(request, UA_DESKTOP);
-            // Cada label del menú debe aparecer en el HTML del panel.
-            for (const item of ITEMS_LATERAL) {
-                expect(
-                    html.includes(item.label),
-                    `barra lateral debe pintar '${item.label}' (href esperado ${item.href}). HTML sin ese label significa que #359 aún no lo cablea.`,
-                ).toBe(true);
+            for (const label of ["Inicio", "Casos", "Calendario", "Mi perfil"]) {
+                expect(html.includes(label), `el verificado debe ver '${label}' por estado habilitado (contrato Diseño)`).toBe(true);
             }
-            // Y ningún href debe apuntar a una pantalla inexistente: cada
-            // href del menú debe tener page.tsx real que responda distinto de 404.
-            for (const item of ITEMS_LATERAL) {
-                const res = await request.get(item.href, { maxRedirects: 0 });
-                expect(
-                    res.status() !== 404,
-                    `href '${item.href}' del ítem '${item.label}' NO puede ser 404 — sería un enlace a pantalla inexistente. status=${res.status()}`,
-                ).toBe(true);
-            }
+            expect(html.includes("Mi ficha"), "el verificado NO ve «Mi ficha» (es la cara del portero)").toBe(false);
         } finally {
             await request.dispose();
         }
     });
 
-    test("(B) el menú móvil da los mismos accesos y permite volver al panel", async () => {
-
+    /**
+     * (B · CONTRATO) «Mi ficha» y «Mi perfil» son estado-EXCLUSIVAS (Diseño): en ningún estado
+     * se ven las dos a la vez. La costura pinta la que NO toca por estado (lo vigila (A)); que
+     * se vean las DOS sería un defecto peor y distinto — este candado lo cierra.
+     */
+    test("(B · contrato) nunca «Mi ficha» y «Mi perfil» a la vez (excluyentes por estado)", async () => {
         const request = await ctx();
         try {
             await login(request, EMAIL_PROF);
-            const html = await htmlPanel(request, UA_MOBILE);
-            // El HTML server-side es el mismo bajo desktop y móvil (Next.js);
-            // las diferencias se dan por CSS media queries. El candado es
-            // ESTRUCTURAL: en el HTML aparecen los 6 ítems Y hay marcadores
-            // del componente móvil (típicamente hamburger + drawer + link al
-            // panel para volver).
-            for (const item of ITEMS_LATERAL) {
-                expect(
-                    html.includes(item.label),
-                    `menú móvil debe listar '${item.label}' (mismo que desktop). HTML sin ese label = móvil no lo cablea.`,
-                ).toBe(true);
-            }
-            // Marcador del retorno al panel — un link a `/dashboard/profesional`
-            // o un botón con label "Panel" / "Volver al panel" / similar debe
-            // existir en el HTML móvil (hueco que Dev 02 cazó: sin él, el
-            // psicólogo queda encerrado en la subruta).
-            const marcadorRetorno =
-                html.includes("Volver al panel") ||
-                html.includes("Panel") ||
-                /href="\/dashboard\/profesional"[^/]/i.test(html);
+            const html = await htmlPanel(request, UA_DESKTOP);
             expect(
-                marcadorRetorno,
-                "menú móvil debe tener un retorno al panel (label 'Panel'/'Volver al panel' o link a /dashboard/profesional). Sin él, el psicólogo queda encerrado.",
-            ).toBe(true);
+                html.includes("Mi ficha") && html.includes("Mi perfil"),
+                "«Mi ficha» y «Mi perfil» son caras excluyentes por estado — nunca juntas",
+            ).toBe(false);
         } finally {
             await request.dispose();
         }
@@ -220,6 +226,43 @@ test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437
                     htmlMobile.includes(ajeno),
                     `móvil: '${ajeno}' NO puede aparecer en el menú del profesional (es de otro rol).`,
                 ).toBe(false);
+            }
+        } finally {
+            await request.dispose();
+        }
+    });
+
+    /**
+     * (D · INVERSO) Candado de CONDUCTA de la compuerta SPEC-691 — hoy nadie lo vigila.
+     * Un profesional en BORRADOR (no habilitado) NO debe ver la barra: `/dashboard/profesional`
+     * lo REDIRIGE a completar su ficha. Afirma la REDIRECCIÓN (dónde aterriza), no la mera
+     * ausencia de un label — si alguien quita la compuerta, el BORRADOR se quedaría en el
+     * panel y este candado cae. Control positivo: sin el redirect, `res.url()` sería el panel.
+     */
+    test("(D · inverso + compuerta de servidor) el BORRADOR es redirigido; la compuerta vive en el servidor", async () => {
+        const request = await ctx();
+        try {
+            await login(request, EMAIL_BORRADOR);
+            const res = await request.get("/dashboard/profesional", { headers: { "user-agent": UA_DESKTOP } });
+            expect(res.status(), "GET /dashboard/profesional (BORRADOR)").toBe(200);
+            // CONDUCTA: aterriza en el onboarding, no en el panel.
+            expect(
+                res.url(),
+                "un profesional NO habilitado debe ser redirigido a /perfil-profesional/completar (compuerta SPEC-691)",
+            ).toContain("/perfil-profesional/completar");
+            // Nada operativo para el portero (contrato Diseño): ni Casos, ni Calendario, ni Mi perfil.
+            const html = await res.text();
+            for (const op of ["Casos", "Calendario", "Mi perfil"]) {
+                expect(html.includes(op), `el portero NO ve '${op}' (nada operativo, contrato Diseño)`).toBe(false);
+            }
+            // La compuerta es del SERVIDOR, no del menú (dev-esconder-menu-no-cierra-pantalla):
+            // navegar DIRECTO a una pantalla operativa también lo bloquea — no se queda en ella.
+            for (const ruta of ["/dashboard/profesional/calendario", "/dashboard/profesional/mi-perfil"]) {
+                const r = await request.get(ruta, { headers: { "user-agent": UA_DESKTOP } });
+                expect(
+                    r.url(),
+                    `el portero que navega directo a ${ruta} debe ser bloqueado por el servidor (no quedarse en la pantalla)`,
+                ).not.toContain(ruta);
             }
         } finally {
             await request.dispose();
