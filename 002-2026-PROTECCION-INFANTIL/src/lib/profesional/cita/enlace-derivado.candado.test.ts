@@ -51,6 +51,17 @@ describe("SPEC-778 · C-visible — la url real sale solo en PUBLICADO (cruzar e
         expect(r.url).toBeUndefined();
     });
 
+    it("SPEC-792 C4 · pasada la hora + enlace NUNCA publicado → PASADA_SIN_PUBLICAR (el acceso no llegó)", () => {
+        const r = derivarEnlaceParaCita(base({ enlaceReunion: null, enlacePublicadoEn: null }), DESPUES);
+        expect(r.estado).toBe("PASADA_SIN_PUBLICAR");
+        expect(r.url).toBeUndefined();
+    });
+
+    it("SPEC-792 C4 · control positivo: pasada + enlace SÍ publicado → PASADA (no el sub-estado)", () => {
+        // `base()` tiene enlaceReunion + enlacePublicadoEn: el acceso SÍ estuvo → «ya pasó» normal.
+        expect(derivarEnlaceParaCita(base(), DESPUES).estado).toBe("PASADA");
+    });
+
     it("estado NO CONFIRMADA → sin url (no hay reunión viva)", () => {
         const r = derivarEnlaceParaCita(base({ estado: "CUMPLIDA" }), ANTES);
         expect(r.url).toBeUndefined();
