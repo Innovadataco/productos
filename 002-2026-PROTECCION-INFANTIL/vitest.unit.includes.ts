@@ -332,6 +332,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/analisis/anomalias/alertas.test.ts",
     // SPEC-766: Plan.creadoEn declarada legacy pero CANDADA contra uso (escaneo estático, sin BD).
     "src/lib/pagos/plan-creadoen-no-uso.candado.test.ts",
+    // SPEC-791: el modelo de planes NO PUEDE representar «citas incluidas» (morfología sobre el schema;
+    // protege el argumento de ingreso: suscripción = plataforma, la cita se paga aparte).
+    "src/lib/pagos/plan-sin-citas-incluidas.candado.test.ts",
     // SPEC-220: card presentacional del score de valor (sin BD).
     "src/components/modules/pagos/ScoreClienteCard.test.tsx",
     // SPEC-355: la tarjeta freemium del colegio en el selector de planes.
