@@ -1,7 +1,8 @@
 /**
- * Fixture de Calidad · RESTABLECE las credenciales de login de los 3 roles que hoy dan 401 en prod:
- * COLEGIO (SCHOOL_ADMIN), OPERADOR y COMITE_VALIDACION. Calidad no puede crear cuentas (prohibido),
- * y hoy solo camina 2 de 7 roles porque estas 3 rebotan en el login.
+ * Fixture de Calidad · RESTABLECE las credenciales de login de los 4 roles que hoy dan 401 en prod
+ * (o que no se pueden ejercer): COLEGIO (SCHOOL_ADMIN), OPERADOR, COMITE_VALIDACION y VERIFICADOR.
+ * Calidad no puede crear cuentas (prohibido), y hoy varios recorridos no entran con el rol que
+ * nombran porque la cuenta rebota en el login.
  *
  * CAUSA RAÍZ (por rol):
  *  - OPERADOR / COMITE_VALIDACION: NO existía ningún sembrador e2e para ellos → las cuentas que
@@ -9,6 +10,11 @@
  *  - COLEGIO: `seed-e2e-multi-tenant.ts` (SPEC-288) REGENERA una clave aleatoria en cada corrida
  *    → cualquier re-siembra desincroniza la clave que Calidad tiene guardada → 401. Este sembrador
  *    da una cuenta de colegio con clave ESTABLE (del entorno), independiente de esa rotación.
+ *  - VERIFICADOR (SPEC-822): no existía NINGUNA cuenta de verificador CON LOGIN (las demo de
+ *    `seed-e2e-profesionales-por-estado` son «sin acceso» — firman verificaciones, no inician sesión).
+ *    Sin una cuenta con la que entrar, el recorrido `recorrido-verificacion-documentos` iniciaba sesión
+ *    como ADMIN (rol adyacente que pasa el guard): probaba el GUARD, no el ROL. Cuenta ACTIVA, clave
+ *    ESTABLE del entorno, en la corrida persistente (misma disciplina que las otras tres).
  *
  * DISCIPLINA (encargo del CEO):
  *  - IDEMPOTENTE + ATÓMICO: upsert por email; correr N veces deja el mismo estado (una transacción).
@@ -45,10 +51,10 @@ interface DefinicionRol {
     // `E2E_COMITE_CONVIVENCIA_*` que Calidad respeta y no camina; un nombre ambiguo sería un
     // foot-gun (llenar la variable equivocada escribiría sobre datos reales). Calza con el nombre
     // que Calidad ya usa en su .env.e2e → cero divergencia.
-    clave: "COLEGIO" | "OPERADOR" | "COMITE_VALIDACION";
+    clave: "COLEGIO" | "OPERADOR" | "COMITE_VALIDACION" | "VERIFICADOR";
     rol: RolUsuario;
     nombre: string;
-    /** SCHOOL_ADMIN necesita un colegio/tenant; OPERADOR/COMITE son de plataforma (sin tenant). */
+    /** SCHOOL_ADMIN necesita un colegio/tenant; OPERADOR/COMITE/VERIFICADOR son de plataforma (sin tenant). */
     requiereColegio: boolean;
 }
 
@@ -56,6 +62,9 @@ export const DEFINICIONES_ROL: readonly DefinicionRol[] = [
     { clave: "COLEGIO", rol: "SCHOOL_ADMIN", nombre: "Colegio Calidad (E2E · login)", requiereColegio: true },
     { clave: "OPERADOR", rol: "OPERADOR", nombre: "Operador Calidad (E2E)", requiereColegio: false },
     { clave: "COMITE_VALIDACION", rol: "COMITE_VALIDACION", nombre: "Comité-Validación Calidad (E2E)", requiereColegio: false },
+    // SPEC-822 · VERIFICADOR con LOGIN (activo). No-titular del dato (esTitularDelDato=false) → NO firma
+    // consentimiento (igual que OPERADOR/COMITE). Plataforma: sin colegio/tenant.
+    { clave: "VERIFICADOR", rol: "VERIFICADOR", nombre: "Verificador Calidad (E2E · login)", requiereColegio: false },
 ];
 
 export interface CredencialRol extends DefinicionRol {

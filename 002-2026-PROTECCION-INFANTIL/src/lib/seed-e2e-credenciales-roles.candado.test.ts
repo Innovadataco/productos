@@ -1,7 +1,7 @@
 /**
- * CANDADO del restablecimiento de credenciales e2e (colegio/operador/comité) — el arreglo del 401.
+ * CANDADO del restablecimiento de credenciales e2e (colegio/operador/comité/verificador) — el arreglo del 401.
  *
- * Prueba, contra la BD, lo que corre el CEO en prod: las 3 cuentas quedan CON LOGIN POSIBLE
+ * Prueba, contra la BD, lo que corre el CEO en prod: las 4 cuentas quedan CON LOGIN POSIBLE
  * (existe + rol correcto + estado activo + `verifyPassword(clave_entorno, hash)` = true → no 401),
  * en la corrida PERSISTENTE, idempotente (2ª corrida no duplica ni re-hashea), y con las guardas de
  * entorno (falta variable / cuenta intocable) que abortan sin escribir.
@@ -32,6 +32,7 @@ const CREDS: CredencialRol[] = [
     { clave: "COLEGIO", rol: "SCHOOL_ADMIN", nombre: "Colegio Calidad (E2E · login)", requiereColegio: true, email: "calidad+e2ecolegio@innovadataco.com", secreto: "ClaveColegio2026!" },
     { clave: "OPERADOR", rol: "OPERADOR", nombre: "Operador Calidad (E2E)", requiereColegio: false, email: "calidad+e2eoperador@innovadataco.com", secreto: "ClaveOperador2026!" },
     { clave: "COMITE_VALIDACION", rol: "COMITE_VALIDACION", nombre: "Comité-Validación Calidad (E2E)", requiereColegio: false, email: "calidad+e2ecomite@innovadataco.com", secreto: "ClaveComite2026!" },
+    { clave: "VERIFICADOR", rol: "VERIFICADOR", nombre: "Verificador Calidad (E2E · login)", requiereColegio: false, email: "calidad+e2everificador@innovadataco.com", secreto: "ClaveVerificador2026!" },
 ];
 
 async function sembrarBase(): Promise<{ paisId: string; ciudadId: string }> {
@@ -71,7 +72,7 @@ async function correr(base: { paisId: string; ciudadId: string }) {
     return r;
 }
 
-describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 401", () => {
+describe("credenciales e2e de roles (colegio/operador/comité/verificador) · arreglo del 401", () => {
     let base: { paisId: string; ciudadId: string };
     beforeEach(async () => {
         await resetDatabase();
@@ -84,7 +85,7 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
         await crearPlanBasicoColegio();
     });
 
-    it("las 3 cuentas quedan con LOGIN POSIBLE (rol + activo + clave del entorno verifica)", async () => {
+    it("las 4 cuentas quedan con LOGIN POSIBLE (rol + activo + clave del entorno verifica)", async () => {
         await correr(base);
         for (const cred of CREDS) {
             const u = await prisma.usuario.findUniqueOrThrow({
@@ -132,6 +133,8 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
             E2E_OPERADOR_PASSWORD: "x",
             E2E_COMITE_VALIDACION_EMAIL: "c@ejemplo.local",
             E2E_COMITE_VALIDACION_PASSWORD: "x",
+            E2E_VERIFICADOR_EMAIL: "v@ejemplo.local",
+            E2E_VERIFICADOR_PASSWORD: "x",
         };
         expect(() => leerCredencialesRoles(envIntocable), "cuenta intocable").toThrow(/intocable/i);
     });
@@ -142,6 +145,7 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
     const COLEGIO = CREDS[0].email; // SCHOOL_ADMIN (titular)
     const OPERADOR = CREDS[1].email;
     const COMITE = CREDS[2].email;
+    const VERIFICADOR = CREDS[3].email; // SPEC-822 · no-titular, como OPERADOR/COMITE
 
     it("SPEC-757: el SCHOOL_ADMIN (titular) queda con firma CONVENIO_INSTITUCIONAL DERIVADA y cruza la puerta", async () => {
         await correr(base);
@@ -161,9 +165,9 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
         expect(await svc.versionEstaActual(sa.id)).toBe(true);
     });
 
-    it("SPEC-757: OPERADOR y COMITE_VALIDACION (no titulares) NO reciben firma", async () => {
+    it("SPEC-757/822: OPERADOR, COMITE_VALIDACION y VERIFICADOR (no titulares) NO reciben firma", async () => {
         await correr(base);
-        for (const email of [OPERADOR, COMITE]) {
+        for (const email of [OPERADOR, COMITE, VERIFICADOR]) {
             const u = await prisma.usuario.findUniqueOrThrow({ where: { email }, select: { id: true, consentimientoVersion: true } });
             expect(await prisma.auditConsentimiento.count({ where: { usuarioId: u.id } }), `${email} no debe tener firma`).toBe(0);
             expect(u.consentimientoVersion, `${email} no debe quedar con versión de consentimiento`).toBeNull();
@@ -258,9 +262,9 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
         expect(await prisma.curso.count({ where: { colegioId } }), "cursos no se duplican (11 grados)").toBe(11);
     });
 
-    it("SPEC-761: OPERADOR y COMITE (sin colegio) no reciben nada del camino", async () => {
+    it("SPEC-761/822: OPERADOR, COMITE y VERIFICADOR (sin colegio) no reciben nada del camino", async () => {
         await correr(base);
-        for (const email of [OPERADOR, COMITE]) {
+        for (const email of [OPERADOR, COMITE, VERIFICADOR]) {
             const u = await prisma.usuario.findUniqueOrThrow({ where: { email }, select: { colegioId: true } });
             expect(u.colegioId, `${email} no tiene colegio`).toBeNull();
         }
