@@ -19,7 +19,7 @@
  * que DEVUELVE el registro — nunca uno inventado.
  */
 import { useState } from "react";
-import type { MotivoPeticionServicio, TipoSolicitudHabeasData } from "@prisma/client";
+import type { MotivoPeticionServicio, TipoSolicitudHabeasData, ClaseDatoTitular } from "@prisma/client";
 import { Button } from "@/components/ui/Button";
 import {
     MOTIVOS_SOPORTE,
@@ -28,9 +28,14 @@ import {
     tituloDeMotivo,
     TIPOS_HABEAS_DATA,
     SUJETOS_HABEAS_DATA,
+    CLASES_DATO_HABEAS,
     COPY_SUPRESION_LIMITE,
     COPY_HABEAS_PREGUNTA,
 } from "@/lib/soporte/motivos-soporte";
+import { COPY_CORRECCION_RELATO } from "@/lib/profesional/cita/copy-correccion-relato";
+
+/** SPEC-827 · RECTIFICACION/SUPRESION exigen el OBJETO (≥1 clase); CONSULTA no lleva. */
+const TIPOS_CON_OBJETO: readonly TipoSolicitudHabeasData[] = ["RECTIFICACION", "SUPRESION"];
 
 /** Calidad del peticionario que la puerta del padre puede registrar (2 de las 3 del enum). */
 type CalidadPuerta = "TITULAR_CUENTA" | "REPRESENTANTE_LEGAL";
@@ -42,6 +47,8 @@ export type EnvioSoporte =
           motivo: "DATOS_PERSONALES";
           tipo: TipoSolicitudHabeasData;
           sujeto: { calidad: "TITULAR_CUENTA" } | { calidad: "REPRESENTANTE_LEGAL"; hijoId: string };
+          /** SPEC-827 · el OBJETO: clases sobre las que recae. Vacío para CONSULTA, ≥1 para RECTIFICACION/SUPRESION. */
+          clasesSolicitadas: ClaseDatoTitular[];
       };
 
 export interface HijoOpcion {
@@ -62,6 +69,8 @@ export function PuertaSoporte({ onEnviar, hijos }: PuertaSoporteProps) {
     const [tipoSel, setTipoSel] = useState<TipoSolicitudHabeasData | null>(null);
     const [calidadSel, setCalidadSel] = useState<CalidadPuerta | null>(null);
     const [hijoIdSel, setHijoIdSel] = useState<string | null>(null);
+    // SPEC-827 · EJE C: el OBJETO. Multi-select (puede recaer sobre más de una clase). Nada pre-elegido.
+    const [clasesSel, setClasesSel] = useState<ClaseDatoTitular[]>([]);
     const [enviando, setEnviando] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [resultado, setResultado] = useState<{ numeroSeguimiento: string; tituloMotivo: string } | null>(null);
@@ -74,7 +83,20 @@ export function PuertaSoporte({ onEnviar, hijos }: PuertaSoporteProps) {
         setTipoSel(null);
         setCalidadSel(null);
         setHijoIdSel(null);
+        setClasesSel([]);
     }
+
+    function elegirTipo(t: TipoSolicitudHabeasData) {
+        setTipoSel(t);
+        // Cambiar de tipo limpia el OBJETO: CONSULTA no lleva, y no se arrastra una elección vieja entre tipos.
+        setClasesSel([]);
+    }
+
+    function alternarClase(c: ClaseDatoTitular) {
+        setClasesSel((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
+    }
+
+    const requiereObjeto = tipoSel !== null && TIPOS_CON_OBJETO.includes(tipoSel);
 
     function elegirCalidad(c: CalidadPuerta) {
         setCalidadSel(c);
@@ -83,10 +105,12 @@ export function PuertaSoporte({ onEnviar, hijos }: PuertaSoporteProps) {
         setHijoIdSel(c === "REPRESENTANTE_LEGAL" && hijos.length === 1 ? hijos[0].id : null);
     }
 
-    // ¿Están los dos ejes resueltos? (sujeto «de mi hijo» exige un hijo concreto).
+    // ¿Están los ejes resueltos? sujeto «de mi hijo» exige un hijo; y SPEC-827: RECTIFICACION/SUPRESION
+    // exigen ≥1 clase (el objeto) — sin él la petición no es accionable y el plazo corre igual.
     const habeasCompleto =
         tipoSel !== null &&
-        (calidadSel === "TITULAR_CUENTA" || (calidadSel === "REPRESENTANTE_LEGAL" && hijoIdSel !== null));
+        (calidadSel === "TITULAR_CUENTA" || (calidadSel === "REPRESENTANTE_LEGAL" && hijoIdSel !== null)) &&
+        (!requiereObjeto || clasesSel.length > 0);
     const puedeEnviar = seleccion !== null && (!esDatos || habeasCompleto);
 
     function construirEnvio(): EnvioSoporte | null {
@@ -95,11 +119,19 @@ export function PuertaSoporte({ onEnviar, hijos }: PuertaSoporteProps) {
             return { motivo: seleccion };
         }
         if (tipoSel === null || calidadSel === null) return null;
+        // SPEC-827 · el objeto viaja solo para los tipos que lo llevan; CONSULTA va con [] (el CHECK/ruta lo exigen).
+        const clasesSolicitadas = requiereObjeto ? clasesSel : [];
+        if (requiereObjeto && clasesSolicitadas.length === 0) return null;
         if (calidadSel === "REPRESENTANTE_LEGAL") {
             if (hijoIdSel === null) return null;
-            return { motivo: "DATOS_PERSONALES", tipo: tipoSel, sujeto: { calidad: "REPRESENTANTE_LEGAL", hijoId: hijoIdSel } };
+            return {
+                motivo: "DATOS_PERSONALES",
+                tipo: tipoSel,
+                sujeto: { calidad: "REPRESENTANTE_LEGAL", hijoId: hijoIdSel },
+                clasesSolicitadas,
+            };
         }
-        return { motivo: "DATOS_PERSONALES", tipo: tipoSel, sujeto: { calidad: "TITULAR_CUENTA" } };
+        return { motivo: "DATOS_PERSONALES", tipo: tipoSel, sujeto: { calidad: "TITULAR_CUENTA" }, clasesSolicitadas };
     }
 
     async function enviar() {
@@ -176,7 +208,7 @@ export function PuertaSoporte({ onEnviar, hijos }: PuertaSoporteProps) {
                                             name="habeas-tipo"
                                             value={t.valor}
                                             checked={tipoSel === t.valor}
-                                            onChange={() => setTipoSel(t.valor)}
+                                            onChange={() => elegirTipo(t.valor)}
                                             className="mt-0.5"
                                         />
                                         <span>
@@ -246,6 +278,46 @@ export function PuertaSoporte({ onEnviar, hijos }: PuertaSoporteProps) {
                             </div>
                         )}
                     </fieldset>
+
+                    {/* SPEC-827 · EJE C · ¿sobre QUÉ dato recae? El OBJETO: clases CERRADAS (nunca texto libre),
+                        ≥1. Solo RECTIFICACION/SUPRESION (CONSULTA no lleva). Multi-select — el derecho es general,
+                        se ofrecen las SEIS clases. Los límites del relato aparecen al elegirlo en una corrección. */}
+                    {requiereObjeto && (
+                        <fieldset>
+                            <legend className="text-sm font-semibold text-body">{COPY_HABEAS_PREGUNTA.ejeCTitulo}</legend>
+                            <p className="mt-1 text-xs text-muted">{COPY_HABEAS_PREGUNTA.ejeCAyuda}</p>
+                            <div className="mt-2 grid gap-2">
+                                {CLASES_DATO_HABEAS.map((c) => (
+                                    <div key={c.valor}>
+                                        <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radio-card)] bg-tinta/5 p-3 transition hover:bg-tinta/10">
+                                            <input
+                                                type="checkbox"
+                                                name="habeas-clase"
+                                                value={c.valor}
+                                                checked={clasesSel.includes(c.valor)}
+                                                onChange={() => alternarClase(c.valor)}
+                                                className="mt-0.5"
+                                            />
+                                            <span>
+                                                <span className="block text-sm font-medium text-body">{c.etiqueta}</span>
+                                                {c.ayuda && <span className="block text-xs text-muted">{c.ayuda}</span>}
+                                            </span>
+                                        </label>
+                                        {/* SPEC-780/827 · los dos límites de corregir el relato, FIJOS al elegir esa clase
+                                            en una RECTIFICACION (no aplican a SUPRESION ni a otras clases). §3 no se cablea. */}
+                                        {c.valor === "RELATO_CITA" &&
+                                            tipoSel === "RECTIFICACION" &&
+                                            clasesSel.includes("RELATO_CITA") && (
+                                            <div className="mt-1 space-y-1 px-3 text-xs text-muted">
+                                                <p>{COPY_CORRECCION_RELATO.limiteVersiones}</p>
+                                                <p>{COPY_CORRECCION_RELATO.limiteProfesional}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </fieldset>
+                    )}
                 </div>
             )}
 
