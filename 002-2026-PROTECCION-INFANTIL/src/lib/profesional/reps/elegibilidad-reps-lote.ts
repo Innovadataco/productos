@@ -7,12 +7,13 @@
  * módulo no importa ninguno de los dos → sin ciclo.
  *
  * 🔒 ÚNICO lugar donde se computa elegibilidad REPS (candado SPEC-825): la ÚLTIMA `VerificacionReps` por
- * profesional + `repsElegible(hecho, modalidad, config, ahora)`. Nadie más reimplementa esto —
- * `perfil-profesional.idsRepsElegibles` DELEGA aquí. Mover el código sin este candado crearía DOS fuentes.
+ * profesional + `repsElegible(hecho, modalidad, config, ahora)`. `repsElegible` se llama en UNA sola función
+ * acá —`evaluarRepsLote`—; `idsRepsElegiblesLote` (el Set de elegibles) y `perfil-profesional.idsRepsElegibles`
+ * DELEGAN. Mover el código sin este candado crearía DOS fuentes.
  */
 import type { DbClient } from "@/lib/dal/unit-of-work";
 import { getParametroSistemaValor } from "@/lib/parametros";
-import { repsElegible, type ConfigReps, type HechoReps, type ModalidadReps } from "./reps-elegibilidad";
+import { repsElegible, type ConfigReps, type Elegibilidad, type HechoReps, type ModalidadReps } from "./reps-elegibilidad";
 
 const PARAM_REPS_VENTANA = "reps.ventana_verificacion_dias";
 const PARAM_REPS_EXIGIR = "reps.exigir_reps_verificado";
@@ -36,14 +37,21 @@ export async function configRepsVivo(): Promise<ConfigReps> {
  * CONCRETA: `null` a nivel de franja es exactamente el bug de SPEC-825 (un REPS-solo-PRESENCIAL se colaría con
  * su franja VIRTUAL). Una sola consulta para todo el lote (no N+1).
  */
-export async function idsRepsElegiblesLote(
+/**
+ * SPEC-835 · La elegibilidad REPS COMPLETA (con `razon` estable) por profesional, para `modalidad`. Es la
+ * fuente ÚNICA que computa `repsElegible`; `idsRepsElegiblesLote` DERIVA su Set de acá. El lote de franjas la
+ * usa para bucketar la omisión por la razón de inelegibilidad sin reimplementar la decisión. Toda entrada de
+ * `perfilIds` trae resultado (sin fila → `repsElegible(null)`). Una sola consulta (no N+1).
+ */
+export async function evaluarRepsLote(
     db: DbClient,
     perfilIds: string[],
     modalidad: ModalidadReps | null,
     ahora: Date,
     config?: ConfigReps,
-): Promise<Set<string>> {
-    if (perfilIds.length === 0) return new Set();
+): Promise<Map<string, Elegibilidad>> {
+    const resultado = new Map<string, Elegibilidad>();
+    if (perfilIds.length === 0) return resultado;
     const cfg = config ?? (await configRepsVivo());
     const filas = await db.verificacionReps.findMany({
         where: { profesionalId: { in: perfilIds } },
@@ -62,9 +70,19 @@ export async function idsRepsElegiblesLote(
             });
         }
     }
+    for (const id of perfilIds) resultado.set(id, repsElegible(ultima.get(id) ?? null, modalidad, cfg, ahora));
+    return resultado;
+}
+
+export async function idsRepsElegiblesLote(
+    db: DbClient,
+    perfilIds: string[],
+    modalidad: ModalidadReps | null,
+    ahora: Date,
+    config?: ConfigReps,
+): Promise<Set<string>> {
+    const evaluaciones = await evaluarRepsLote(db, perfilIds, modalidad, ahora, config);
     const elegibles = new Set<string>();
-    for (const id of perfilIds) {
-        if (repsElegible(ultima.get(id) ?? null, modalidad, cfg, ahora).elegible) elegibles.add(id);
-    }
+    for (const [id, e] of evaluaciones) if (e.elegible) elegibles.add(id);
     return elegibles;
 }

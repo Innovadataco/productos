@@ -20,6 +20,7 @@ import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profe
 import { DiaBloqueadoRepository } from "@/lib/dal/repositories/dia-bloqueado";
 import { diaBogota } from "@/lib/fechas/formato-bogota";
 import { modalidadRepsRequerida } from "@/lib/profesional/reps/modalidad-cita-a-reps";
+import type { RazonReps } from "@/lib/profesional/reps/reps-elegibilidad";
 
 export interface FranjaLoteInput {
     inicio: string; // ISO UTC
@@ -27,11 +28,49 @@ export interface FranjaLoteInput {
     modalidad: "VIRTUAL" | "PRESENCIAL";
 }
 
-export type MotivoOmision = "rango" | "modalidad" | "vigencia" | "bloqueado" | "solape" | "reps";
+/**
+ * Los motivos por los que una franja del lote NO se publica. Runtime-enumerable (no un type suelto):
+ * así el candado del resumen (SPEC-835) y el `Record` de copy cazan un motivo NUEVO sin línea en vez de
+ * confiar en una lista escrita a mano (mismo patrón que `ESTADOS_REPS`). `reps` entró con 825; el conjunto
+ * quedó FINAL (FORMA-SPEC835 v1.2). `vigencia` = NUESTRA verificación del PERFIL (venceEnVigente), NO el
+ * REPS; `reps` = cobertura REPS de la modalidad (fundido `¬esRepsElegibleParaModalidad`).
+ */
+export const MOTIVOS_OMISION = ["rango", "modalidad", "vigencia", "bloqueado", "solape", "reps"] as const;
+export type MotivoOmision = (typeof MOTIVOS_OMISION)[number];
+
+/**
+ * SPEC-835 · El motivo `reps` fusiona causas con ACCIONES OPUESTAS (`¬esRepsElegibleParaModalidad` funde
+ * VENCIDA/modalidad/envejecida/…). El resumen del lote lo parte en DOS buckets POR ACCIÓN, derivados de la
+ * `razon` ESTABLE de `repsElegible` (la MISMA función que omite — no se reimplementa, no se lee el motivo-string):
+ *  · `NUESTRA`     — no cargamos/encontramos su verificación, o la nuestra envejeció → «es nuestro, sin trámite».
+ *  · `PROFESIONAL` — su registro venció o no cubre la modalidad que ofrece → «renueve/actualice» (acción suya).
+ * Orden = el de la FORMA (NUESTRA antes que PROFESIONAL). Runtime-enumerable + `Record` exhaustivo: una razón
+ * o un bucket nuevo rompe el build, no cae en silencio.
+ */
+export const BUCKETS_OMISION_REPS = ["NUESTRA", "PROFESIONAL"] as const;
+export type BucketOmisionReps = (typeof BUCKETS_OMISION_REPS)[number];
+
+const BUCKET_POR_RAZON: Record<RazonReps, BucketOmisionReps> = {
+    VENCIDA: "PROFESIONAL", // el registro caducó → él renueva (como CADUCADO)
+    VIGENCIA_PASADA: "PROFESIONAL", // la vigencia de la autoridad ya pasó → él renueva
+    MODALIDAD_NO_CUBIERTA: "PROFESIONAL", // ofrece una modalidad que su REPS no cubre → él actualiza o deja de ofrecerla
+    SIN_VERIFICAR: "NUESTRA", // aún no cargamos su verificación (muerde al cerrar el cutover) → nuestro
+    NO_ENCONTRADA: "NUESTRA", // no lo encontramos en el registro → revisión nuestra
+    SIN_FECHA_VIGENCIA: "NUESTRA", // borde fail-closed (VIGENTE sin fecha) → revisión nuestra
+    NUESTRA_VERIFICACION_VIEJA: "NUESTRA", // nuestro re-chequeo envejeció → re-verificamos nosotros
+    RELOJ_INVALIDO: "NUESTRA", // condición interna → nuestro
+    AL_DIA: "NUESTRA", // elegible: NO se omite. Defensivo (el Record exige todas las razones); nunca llega acá.
+};
+
+/** SPEC-835 · Bucket de ACCIÓN de una omisión `reps`, derivado de la razón estable de `repsElegible`. */
+export function bucketDeRazon(razon: RazonReps): BucketOmisionReps {
+    return BUCKET_POR_RAZON[razon];
+}
 
 export interface ResultadoLote {
     creadas: number;
-    omitidas: { inicio: string; motivo: MotivoOmision }[];
+    /** `bucketReps` se setea SOLO cuando `motivo === "reps"` (el bucket de acción; ver [[bucketDeRazon]]). */
+    omitidas: { inicio: string; motivo: MotivoOmision; bucketReps?: BucketOmisionReps }[];
 }
 
 export async function materializarFranjas(
@@ -55,8 +94,10 @@ export async function materializarFranjas(
         // reemplaza — la validez REPS caduca por tiempo, así que la LECTURA también filtra siempre. Se evalúa
         // una vez por eje antes del lote (no N consultas).
         const ahoraReps = new Date();
-        const repsCubreVirtual = await perfilRepo.esRepsElegibleParaModalidad(perfilId, "TELEMEDICINA", ahoraReps);
-        const repsCubrePresencial = await perfilRepo.esRepsElegibleParaModalidad(perfilId, "PRESENCIAL", ahoraReps);
+        // SPEC-835: evaluamos la ELEGIBILIDAD COMPLETA (con `razon`) por eje, no solo el booleano — la razón
+        // bucketiza la omisión `reps` por acción (profesional / nuestra) sin reimplementar la decisión.
+        const repsVirtual = await perfilRepo.evaluarRepsParaModalidad(perfilId, "TELEMEDICINA", ahoraReps);
+        const repsPresencial = await perfilRepo.evaluarRepsParaModalidad(perfilId, "PRESENCIAL", ahoraReps);
         const repo = new FranjaDisponibleRepository(tx);
         const diasRepo = new DiaBloqueadoRepository(tx);
         const omitidas: ResultadoLote["omitidas"] = [];
@@ -81,9 +122,11 @@ export async function materializarFranjas(
             // SPEC-825 · el REPS debe cubrir la modalidad de la franja (telemedicina↔virtual, presencial↔presencial).
             // Sin cobertura no se crea: la reserva la rechazaría igual, y el display (pieza 1) no la ofrecería.
             const repsReps = modalidadRepsRequerida(e.modalidad);
-            const repsCubre = repsReps === "TELEMEDICINA" ? repsCubreVirtual : repsReps === "PRESENCIAL" ? repsCubrePresencial : false;
-            if (!repsCubre) {
-                omitidas.push({ inicio: e.inicio, motivo: "reps" });
+            const repsEval = repsReps === "TELEMEDICINA" ? repsVirtual : repsReps === "PRESENCIAL" ? repsPresencial : null;
+            if (!repsEval || !repsEval.elegible) {
+                // SPEC-835: la omisión `reps` lleva su bucket de ACCIÓN (derivado de la razón estable). Sin eje
+                // mapeable (no debería pasar con VIRTUAL/PRESENCIAL) → NUESTRA, fail-safe sin culpar al profesional.
+                omitidas.push({ inicio: e.inicio, motivo: "reps", bucketReps: repsEval ? bucketDeRazon(repsEval.razon) : "NUESTRA" });
                 continue;
             }
             if (fin.getTime() > venceEn.getTime()) {

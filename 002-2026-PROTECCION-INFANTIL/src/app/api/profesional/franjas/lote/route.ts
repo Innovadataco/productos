@@ -12,6 +12,7 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { errorToResponse } from "@/lib/api-handler";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { materializarFranjas } from "@/lib/profesional/calendario/franjas.service";
+import { resumirOmisionesLote } from "@/lib/profesional/calendario/resumen-omisiones";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const loteSchema = z.object({
@@ -36,7 +37,8 @@ export async function POST(request: Request) {
         if (!perfil) throw new AppError("Perfil profesional no existe", ERROR_CODES.NOT_FOUND, 404);
         const body = loteSchema.parse(await request.json());
         const resultado = await materializarFranjas(perfil.id, body.franjas);
-        return NextResponse.json({ data: resultado });
+        // SPEC-835 (I-440): el resumen POR MOTIVO viaja con la respuesta; la pantalla lo muestra bajo el calendario.
+        return NextResponse.json({ data: { ...resultado, resumen: resumirOmisionesLote(resultado) } });
     } catch (error) {
         return errorToResponse(error, "[PROFESIONAL/FRANJAS/LOTE/POST]");
     }

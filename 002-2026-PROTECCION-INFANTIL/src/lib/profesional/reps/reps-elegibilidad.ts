@@ -51,12 +51,33 @@ export interface ConfigReps {
     readonly exigirRepsVerificado: boolean;
 }
 
+/**
+ * SPEC-835 · La RAZÓN estable de la decisión — más fina que `estado` (un `VIGENTE` inelegible se parte en
+ * CUATRO: vigencia pasada, sin fecha, nuestra verificación vieja, modalidad no cubierta). El resumen de
+ * omisiones del lote la usa para bucketar por ACCIÓN (del profesional / nuestra) SIN reimplementar la
+ * decisión ni leer el `motivo` string (que envejece). Cerrado: un valor nuevo rompe el `switch` del bucket.
+ */
+export const RAZONES_REPS = [
+    "AL_DIA", // elegible: vigente + (modalidad cubierta o no pedida)
+    "SIN_VERIFICAR", // sin fila / resultado SIN_VERIFICAR (elegible si el cutover está abierto)
+    "VENCIDA", // resultado VENCIDA
+    "NO_ENCONTRADA", // no se encontró al profesional en el REPS
+    "SIN_FECHA_VIGENCIA", // VIGENTE sin `vigenteHasta` (estado 8, borde fail-closed)
+    "VIGENCIA_PASADA", // VIGENTE con `vigenteHasta` ya pasado (estado 6)
+    "NUESTRA_VERIFICACION_VIEJA", // VIGENTE pero NUESTRA ventana de re-chequeo venció (estado 7)
+    "MODALIDAD_NO_CUBIERTA", // VIGENTE y al día, pero el REPS no cubre la modalidad pedida
+    "RELOJ_INVALIDO", // `now` inválido (condición interna, no un estado del profesional)
+] as const;
+export type RazonReps = (typeof RAZONES_REPS)[number];
+
 export interface Elegibilidad {
     readonly elegible: boolean;
     /** Motivo legible — para el operador/admin y para distinguir SIN_VERIFICAR de VIGENTE (nunca en silencio). */
     readonly motivo: string;
     /** El estado REPS que gobernó la decisión (para pintar la alarma del cutover sin re-derivar). */
     readonly estado: EstadoReps;
+    /** SPEC-835 · razón ESTABLE (más fina que `estado`) para bucketar la omisión del lote sin reimplementar. */
+    readonly razon: RazonReps;
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -66,8 +87,8 @@ const esFecha = (d: Date | null | undefined): d is Date => d instanceof Date && 
 /** Cutover de `SIN_VERIFICAR`: abre sii NO se exige el REPS verificado. Nunca igual a VIGENTE: lleva su motivo. */
 function decidirSinVerificar(config: ConfigReps): Elegibilidad {
     return config.exigirRepsVerificado
-        ? { elegible: false, motivo: "Falta verificar la inscripción en el REPS", estado: "SIN_VERIFICAR" }
-        : { elegible: true, motivo: "REPS sin verificar — cutover abierto (alarma en admin)", estado: "SIN_VERIFICAR" };
+        ? { elegible: false, motivo: "Falta verificar la inscripción en el REPS", estado: "SIN_VERIFICAR", razon: "SIN_VERIFICAR" }
+        : { elegible: true, motivo: "REPS sin verificar — cutover abierto (alarma en admin)", estado: "SIN_VERIFICAR", razon: "SIN_VERIFICAR" };
 }
 
 /**
@@ -82,34 +103,34 @@ export function repsElegible(
     config: ConfigReps,
     now: Date,
 ): Elegibilidad {
-    if (!esFecha(now)) return { elegible: false, motivo: "No se pudo evaluar el REPS (reloj inválido)", estado: "SIN_VERIFICAR" };
+    if (!esFecha(now)) return { elegible: false, motivo: "No se pudo evaluar el REPS (reloj inválido)", estado: "SIN_VERIFICAR", razon: "RELOJ_INVALIDO" };
     if (!hecho) return decidirSinVerificar(config);
 
     switch (hecho.resultado) {
         case "SIN_VERIFICAR":
             return decidirSinVerificar(config);
         case "VENCIDA":
-            return { elegible: false, motivo: "La inscripción en el REPS está vencida", estado: "VENCIDA" };
+            return { elegible: false, motivo: "La inscripción en el REPS está vencida", estado: "VENCIDA", razon: "VENCIDA" };
         case "NO_ENCONTRADA":
-            return { elegible: false, motivo: "No se encontró al profesional en el REPS", estado: "NO_ENCONTRADA" };
+            return { elegible: false, motivo: "No se encontró al profesional en el REPS", estado: "NO_ENCONTRADA", razon: "NO_ENCONTRADA" };
         case "VIGENTE": {
             // Reloj (a) de la AUTORIDAD: sin fecha de vigencia NO es «vigente para siempre» — cierra.
             if (!esFecha(hecho.vigenteHasta)) {
-                return { elegible: false, motivo: "El REPS no entregó fecha de vigencia", estado: "VIGENTE" };
+                return { elegible: false, motivo: "El REPS no entregó fecha de vigencia", estado: "VIGENTE", razon: "SIN_FECHA_VIGENCIA" };
             }
             if (hecho.vigenteHasta.getTime() <= now.getTime()) {
-                return { elegible: false, motivo: "La vigencia del REPS ya pasó", estado: "VIGENTE" };
+                return { elegible: false, motivo: "La vigencia del REPS ya pasó", estado: "VIGENTE", razon: "VIGENCIA_PASADA" };
             }
             // Reloj (b) NUESTRO: la verificación no puede haber envejecido más allá de la ventana.
             const limiteNuestro = (esFecha(hecho.verificadoEn) ? hecho.verificadoEn.getTime() : -Infinity) + config.ventanaVerificacionDias * DIA_MS;
             if (limiteNuestro <= now.getTime()) {
-                return { elegible: false, motivo: "Nuestra verificación del REPS envejeció — toca re-verificar", estado: "VIGENTE" };
+                return { elegible: false, motivo: "Nuestra verificación del REPS envejeció — toca re-verificar", estado: "VIGENTE", razon: "NUESTRA_VERIFICACION_VIEJA" };
             }
             // Modalidad (D-5): con una modalidad pedida, el REPS debe INCLUIRLA; `null` la salta (directorio).
             if (modalidadRequerida !== null && !hecho.modalidades.includes(modalidadRequerida)) {
-                return { elegible: false, motivo: `El REPS no cubre la modalidad ${modalidadRequerida.toLowerCase()}`, estado: "VIGENTE" };
+                return { elegible: false, motivo: `El REPS no cubre la modalidad ${modalidadRequerida.toLowerCase()}`, estado: "VIGENTE", razon: "MODALIDAD_NO_CUBIERTA" };
             }
-            return { elegible: true, motivo: "REPS al día", estado: "VIGENTE" };
+            return { elegible: true, motivo: "REPS al día", estado: "VIGENTE", razon: "AL_DIA" };
         }
     }
 }

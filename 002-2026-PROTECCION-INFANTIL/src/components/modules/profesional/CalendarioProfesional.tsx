@@ -29,6 +29,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { instanteDesdeHoraBogota } from "@/lib/fechas/formato-bogota";
 import type { BloqueCalendario, CalendarioProfesionalDto } from "@/lib/profesional/calendario/calendario.service";
+// SPEC-835 · solo el TIPO (type-only, se borra en compilación) → el cliente no importa `franjas.service` (Prisma).
+import type { ResumenOmisionesLote } from "@/lib/profesional/calendario/resumen-omisiones";
 import { BANDA_CREABLE, DOW, H0, H1, PXH, SNAP, addDias, diaSemana, fmt, lunesDe, nombreMes, numMes, snap, ventanaAdaptativa, type Modalidad, type Repeticion } from "@/components/modules/calendario/fechas";
 import { BellIcon, RejillaCalendario } from "@/components/modules/calendario/Rejilla";
 import { BloqueFranja, OverlayDiaProfesional } from "./calendario/Rejilla";
@@ -68,6 +70,7 @@ export function CalendarioProfesional({ datos }: Props) {
     const [buzon, setBuzon] = useState(false);
     const [enviando, setEnviando] = useState(false);
     const [aviso, setAviso] = useState<string | null>(null);
+    const [resumenLote, setResumenLote] = useState<ResumenOmisionesLote | null>(null); // SPEC-835: resumen POR MOTIVO del último lote
     const avisoTimer = useRef<number | undefined>(undefined);
 
     const modalidadFija: Modalidad = datos.atiendeVirtual ? "VIRTUAL" : "PRESENCIAL";
@@ -150,7 +153,7 @@ export function CalendarioProfesional({ datos }: Props) {
         return salida.length ? salida : [fecha];
     }
 
-    async function publicarLote(franjas: { inicio: string; fin: string; modalidad: Modalidad }[], exito: (creadas: number, omitidas: number) => string) {
+    async function publicarLote(franjas: { inicio: string; fin: string; modalidad: Modalidad }[], exito: (creadas: number) => string) {
         const res = await fetch("/api/profesional/franjas/lote", {
             method: "POST",
             credentials: "include",
@@ -161,13 +164,17 @@ export function CalendarioProfesional({ datos }: Props) {
             toast(await mensajeError(res, "No se pudieron publicar las horas."));
             return;
         }
-        const { data } = (await res.json()) as { data: { creadas: number; omitidas: unknown[] } };
-        toast(exito(data.creadas, data.omitidas.length));
+        // SPEC-835 (I-440): el servidor arma el resumen POR MOTIVO; acá se MUESTRA bajo el calendario (una
+        // línea por motivo, `reps` partido por acción), no un «N no cupieron» colapsado. Vacío si no hubo omisiones.
+        const { data } = (await res.json()) as { data: { creadas: number; omitidas: unknown[]; resumen: ResumenOmisionesLote } };
+        setResumenLote(data.resumen.omitidas > 0 ? data.resumen : null);
+        toast(exito(data.creadas));
         router.refresh();
     }
 
     async function publicar(fecha: string, minInicio: number, minFin: number, modalidad: Modalidad, rep: Repeticion) {
         const dias = diasParaRepetir(fecha, minFin, rep);
+        setResumenLote(null); // SPEC-835: una publicación nueva limpia el resumen del lote anterior
         setEnviando(true);
         try {
             if (dias.length === 1) {
@@ -186,10 +193,8 @@ export function CalendarioProfesional({ datos }: Props) {
             } else {
                 await publicarLote(
                     dias.map((d) => ({ inicio: instanteISO(d, minInicio), fin: instanteISO(d, minFin), modalidad })),
-                    (creadas, omitidas) =>
-                        creadas > 0
-                            ? `Publicó ${creadas} ${creadas === 1 ? "hora" : "horas"}${omitidas ? ` · ${omitidas} no cupieron (vigencia o cruce)` : ""}.`
-                            : "Ninguna cupo (vigencia o cruce con otra que ya publicó).",
+                    (creadas) =>
+                        creadas > 0 ? `Publicó ${creadas} ${creadas === 1 ? "hora" : "horas"}.` : "No se publicó ninguna hora.",
                 );
             }
             setCrear(null);
@@ -222,11 +227,12 @@ export function CalendarioProfesional({ datos }: Props) {
             return;
         }
         const dest = addDias(ancla, 1);
+        setResumenLote(null); // SPEC-835: limpia el resumen anterior antes de copiar
         setEnviando(true);
         try {
             await publicarLote(
                 libres.map((b) => ({ inicio: instanteISO(dest, b.minInicio), fin: instanteISO(dest, b.minFin), modalidad: b.modalidad })),
-                (creadas) => (creadas ? `Copió ${creadas} ${creadas === 1 ? "hora" : "horas"} a ${DOW[diaSemana(dest)]}.` : "Nada que copiar (o no cupo por la vigencia o un cruce)."),
+                (creadas) => (creadas ? `Copió ${creadas} ${creadas === 1 ? "hora" : "horas"} a ${DOW[diaSemana(dest)]}.` : "No se copió ninguna hora."),
             );
         } finally {
             setEnviando(false);
@@ -455,6 +461,20 @@ export function CalendarioProfesional({ datos }: Props) {
 
                 {panel && <PanelBloque panel={panel} enviando={enviando} onCerrar={() => setPanel(null)} onResponder={responder} />}
             </RejillaCalendario>
+
+            {resumenLote && (
+                <div role="status" className="mt-3 rounded-xl border border-estado-ambar/30 bg-estado-ambar/5 p-3">
+                    <div className="flex items-start gap-2">
+                        <p className="flex-1 text-sm font-semibold text-body">{resumenLote.encabezado}</p>
+                        <button aria-label="Cerrar el resumen de publicación" className="rounded-lg px-2 leading-none text-muted hover:text-body" onClick={() => setResumenLote(null)}>×</button>
+                    </div>
+                    <ul className="mt-2 space-y-1">
+                        {resumenLote.lineas.map((l) => (
+                            <li key={`${l.motivo}-${l.bucket ?? ""}`} className="text-sm text-body">{l.texto}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             {aviso && <p role="status" className="mt-3 rounded-lg bg-tinta/90 px-4 py-2 text-sm text-page">{aviso}</p>}
         </div>

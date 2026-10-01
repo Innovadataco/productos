@@ -32,10 +32,10 @@ import { idsPerfilesProfesionalesSembrados } from "../demo-exclusion";
 import { FranjaDisponibleRepository } from "./franja-disponible";
 import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profesionales/vigencia";
 import { leerRangoEtario } from "@/lib/profesional/catalogos-lectura";
-import { type ConfigReps, type EstadoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
+import { type ConfigReps, type Elegibilidad, type EstadoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
 import { clasificarAvisoReps, zonaAdminReps, type ClasificacionAvisoReps, type ZonaAdminReps } from "@/lib/profesional/reps/aviso-estado-reps";
 // SPEC-825: la elegibilidad REPS por lote + su config viva viven en UN módulo compartido (sin ciclo con franja).
-import { idsRepsElegiblesLote, configRepsVivo } from "@/lib/profesional/reps/elegibilidad-reps-lote";
+import { idsRepsElegiblesLote, evaluarRepsLote, configRepsVivo } from "@/lib/profesional/reps/elegibilidad-reps-lote";
 
 /**
  * SPEC-790 (T6) · Fila de la pantalla admin de carga manual REPS: el profesional `ACTIVO` + su estado REPS
@@ -549,6 +549,18 @@ export class PerfilProfesionalRepository {
      */
     async esRepsElegibleParaModalidad(profesionalId: string, modalidad: ModalidadReps, ahora: Date = new Date()): Promise<boolean> {
         return (await this.idsRepsElegibles([profesionalId], ahora, modalidad)).has(profesionalId);
+    }
+
+    /**
+     * SPEC-835 · La elegibilidad REPS COMPLETA (con `razon` estable) para ESTA modalidad — además del booleano,
+     * la RAZÓN de inelegibilidad, para que el resumen del lote bucketee la omisión `reps` por acción
+     * (profesional / nuestra) sin reimplementar la decisión. Delega en `evaluarRepsLote` (fuente única).
+     */
+    async evaluarRepsParaModalidad(profesionalId: string, modalidad: ModalidadReps, ahora: Date = new Date()): Promise<Elegibilidad> {
+        const e = (await evaluarRepsLote(this.db, [profesionalId], modalidad, ahora)).get(profesionalId);
+        // `evaluarRepsLote` siembra una entrada por cada id pedido (sin fila → `repsElegible(null)`); el `??`
+        // es defensa en profundidad, no un camino esperado.
+        return e ?? { elegible: false, motivo: "Sin evaluación REPS", estado: "SIN_VERIFICAR", razon: "RELOJ_INVALIDO" };
     }
 
     /**
