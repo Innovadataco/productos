@@ -496,6 +496,7 @@
 | [813](813-aviso-estado-reps/spec.md) | SPEC-813 · Aviso de habilitación REPS al profesional — y `¬repsAlDia` funde CUATRO causas | 🟡 DESARROLLO |
 | [815](815-emision-sin-pii/spec.md) | SPEC-815 · Antes de EMITIR hay que ser seguro: ni identificador, ni correo, ni error crudo a stdout | 🟡 DESARROLLO |
 | [826](826-borrar-huerfanos-654/spec.md) | SPEC-826 · Borrar los 10 huérfanos viejos de SPEC-654 (deuda con dueño, no limpieza) | 🟡 DESARROLLO |
+| [834](834-gate-reps-franja-unitaria/spec.md) | SPEC-834 · La segunda puerta de creación de franja — gate REPS × modalidad (unitaria) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
