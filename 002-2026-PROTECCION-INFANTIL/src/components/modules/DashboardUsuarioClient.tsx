@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { MisReportesList } from "@/components/modules/MisReportesList";
+import { TarjetaEncuestaPendiente } from "@/components/modules/encuesta/TarjetaEncuestaPendiente";
 import { ConsultaEnriquecidaClient } from "@/components/modules/ConsultaEnriquecidaClient";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -94,6 +95,11 @@ export function DashboardUsuarioClient() {
             </div>
 
             <div className="space-y-8">
+                {/* SPEC-784: invitación a contar cómo fue la cita. DEBAJO del encabezado de reporte y
+                    ENCIMA de «Mis reportes» — nunca tapa la vía de reporte (invariante del punto de
+                    entrada; el orden lo fija el candado tarjeta-encuesta-orden). */}
+                <TarjetaEncuestaPendiente />
+
                 <section>
                     <h2 className="text-lg font-semibold text-body mb-3">Mis reportes</h2>
                     {isLoading ? (
