@@ -3,6 +3,7 @@ import { verifyToken } from "@/lib/auth";
 import { NavLateral } from "@/components/modules/nav/NavLateral";
 import { BarraInferior } from "@/components/modules/nav/BarraInferior";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
+import { obtenerHabilitacionProfesional } from "@/lib/profesionales/habilitacion";
 
 /**
  * SPEC-437 (A-75) · el área de trabajo del profesional, con barra lateral.
@@ -21,11 +22,19 @@ export default async function ProfesionalLayout({ children }: { children: React.
     const rol = (payload?.rol as string | undefined) ?? "PROFESIONAL";
     const permitidos = await modulosPermitidosParaRol(rol);
 
+    // SPEC-802: `habilitado` se resuelve EN EL SERVIDOR (la MISMA fuente que GET /api/me) y se pasa como
+    // prop a la nav. Así el SSR ya pinta el menú correcto por estado y la barra no AFIRMA «portero»
+    // durante la ventana del `fetch` del cliente (el defecto medido). La compuerta de ruta la hace el
+    // middleware y sigue fail-closed: esto es solo el display.
+    const userId = payload?.sub as string | undefined;
+    const habilitacion = userId ? await obtenerHabilitacionProfesional(userId) : null;
+    const profesionalInicial = { habilitado: habilitacion?.habilitado ?? false };
+
     return (
         // SPEC-460: el profesional comparte el acento cielo del padre (theme-profesional).
         <div className="theme-profesional flex min-h-screen">
-            <NavLateral rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
-            <BarraInferior rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
+            <NavLateral rol="PROFESIONAL" modulosPermitidos={[...permitidos]} profesionalInicial={profesionalInicial} />
+            <BarraInferior rol="PROFESIONAL" modulosPermitidos={[...permitidos]} profesionalInicial={profesionalInicial} />
             <main className="flex-1 overflow-auto pb-16 sm:pb-0">{children}</main>
         </div>
     );

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { navMovilParaRol, type NavEntry } from "@/lib/nav/para-rol";
-import { useAuth } from "@/lib/contexts/AuthContext";
+import type { EstadoProfesionalSesion } from "@/lib/profesional/menu-por-estado";
 import { IconoNav, InicioIcon } from "@/components/modules/nav/IconoNav";
 import { HojaMas } from "@/components/modules/nav/HojaMas";
 import type { RolLateral } from "@/components/modules/nav/NavLateral";
@@ -19,10 +19,19 @@ import type { RolLateral } from "@/components/modules/nav/NavLateral";
  * «Más» abre `HojaMas` con el resto. Activo en cielo + barra-indicador arriba (no sólo color,
  * WCAG 1.4.1) + aria-current; safe-area inferior (notch).
  */
-export function BarraInferior({ rol, modulosPermitidos }: { rol: RolLateral; modulosPermitidos: string[] }) {
+export function BarraInferior({
+    rol,
+    modulosPermitidos,
+    profesionalInicial,
+}: {
+    rol: RolLateral;
+    modulosPermitidos: string[];
+    profesionalInicial?: EstadoProfesionalSesion;
+}) {
     const pathname = usePathname();
-    const { user } = useAuth();
-    const { principales, resto } = navMovilParaRol(rol, { modulosPermitidos, profesional: user?.profesional, pathname });
+    // SPEC-802: el `habilitado` del profesional lo resuelve el SERVIDOR (layout) y llega por prop,
+    // no de `user?.profesional` del cliente (la carrera que afirmaría «portero» en el primer pintado).
+    const { principales, resto } = navMovilParaRol(rol, { modulosPermitidos, profesional: profesionalInicial, pathname });
     const [masAbierto, setMasAbierto] = useState(false);
 
     const raiz = principales[0]?.href;
