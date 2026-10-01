@@ -2,21 +2,15 @@
  * SPEC-242 (002-PI-145): helper puro de vigencia para layouts de dashboard.
  * No introduce middleware.ts global; se consume desde Server Components de layout.
  */
-import { toZonedTime } from "date-fns-tz";
 import { EstadoSuscripcion } from "@prisma/client";
 import type { Suscripcion, RolUsuario } from "@prisma/client";
 
-export const ZONA_BOGOTA = "America/Bogota";
-
 export type EstadoVigenciaEfectivo = EstadoSuscripcion | "SIN_SUSCRIPCION";
 
-/**
- * Devuelve la hora actual en timezone Bogotá. Punto único de obtención de "ahora"
- * para todas las decisiones de vigencia de este SPEC.
- */
-export function ahoraBogota(): Date {
-    return toZonedTime(new Date(), ZONA_BOGOTA);
-}
+// SPEC-795 (PR 3): se eliminó `ahoraBogota()` (y la constante `ZONA_BOGOTA` que solo él usaba) —
+// era un export SIN llamador de producción (solo lo importaba su propio test), superficie sin dueño
+// ni testigo (D-138: se borra, no se aparca). Su verdadero defecto, de haberse usado, era el
+// pseudo-instante corrido 5h. El "ahora" de las decisiones de vigencia vive en vigencia.service.ts.
 
 /**
  * Resuelve el estado efectivo de vigencia a partir de la suscripción almacenada.
