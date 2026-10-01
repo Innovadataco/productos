@@ -25,12 +25,12 @@
 - [x] **T1** · Modelo `VerificacionReps` + enums + migración — **CARRIL DE DATOS, HECHO** (#781, `7bb97d902`; candado 10/10 BD fresca). Rebaso cuando entre a main.
 - [x] **T2** · `repsElegible` (pura) + candado C-1/C-2/D-5/D-7 (dos relojes, cutover, modalidad; control positivo). `d2d97d7bf` · eje de modalidad corregido a `ModalidadReps` `b5792c24d`.
 - [x] **T3** · Adaptador `consultarReps`/`ingestarDatasetReps` (interfaz + stub NUNCA-VIGENTE) + candado (D-2). `ec853e6bd`. hueco-funcional.
-- [~] **T4** · Compuerta REPS en las 4 lecturas + creación de cita. **Espera rebasar el modelo a esta rama.** Adelantado lo puro/estático:
+- [x] **T4** · Gate REPS en las 4 lecturas (hereda el booking por el chokepoint `obtenerPublicoPorId`). `1dce2a5f5` (sobre el merge `f8a1077cc`).
   - [x] Traducción cita→REPS (`modalidad-cita-a-reps.ts`), fail-closed + registrado. `6b7dac828`.
-  - [x] Barrido D-8 de booking (`reps-gate-booking-sweep.candado.test.ts`, árbol, no lista): toda asignación pasa por `crearSolicitudCita`→`obtenerPublicoPorId` (único creador + único selector, mutation-control). El test que exige REPS en la selección central es `it.fails` HOY (rojo antes) → **al cablear el post-filtro, convertir `it.fails`→`it`** (vitest lo fuerza: si pasa como `it.fails` da «expected to fail but passed»).
-  - [ ] Post-filtro Node `idsRepsElegibles(perfilIds, modalidadRequerida, now, config, db)` (análogo a `idsConVigenciaAutoritativa`): última fila por profesional (`orderBy verificadoEn desc`), map→`HechoReps`, `repsElegible`. En el carril del builder para que lo hereden las 4 lecturas.
-  - [ ] **CUIDADO (medido por el CEO): hoy SIN_VERIFICAR es el universo** (51 colegios TODOS sembrados, 0 REPS). Un pre-filtro SQL grueso `some(VIGENTE)` VACIARÍA el directorio al arrancar → el gate es cutover-aware: con `EXIGIR_REPS_VERIFICADO=false`, SIN_VERIFICAR PASA. Ships `false`.
-  - [ ] Candado de PARIDAD mirror↔enum Prisma (`ESTADOS_REPS`/`MODALIDADES_REPS` ≡ `EstadoReps`/`ModalidadReps`), o importar el type y soltar el mirror.
+  - [x] Barrido D-8 de booking + `it.fails`→`it` al cablear (vitest lo exigió). `6b7dac828`→`1dce2a5f5`.
+  - [x] Post-filtro Node `idsHabilitadosVigenciaYReps`→`idsRepsElegibles` (última fila por profesional, map→`HechoReps`, `repsElegible`); reemplaza la llamada directa a `idsConVigenciaAutoritativa` en las 4 lecturas. NO cláusula SQL (vaciaría el directorio).
+  - [x] Cutover-aware: `SIN_VERIFICAR` PASA con `reps.exigir_reps_verificado=false` (sembrado); `VENCIDA`/`NO_ENCONTRADA` cierran siempre. `ventana=365` param. Candado de conducta (gate) + paridad mirror↔enum Prisma.
+  - [ ] **T4b (follow-up, hoy LATENTE)**: la modalidad concreta al RESERVAR (D-5). El directorio usa `modalidad=null` (vigencia manda); crearSolicitudCita aún NO exige que el REPS cubra la modalidad de la cita. Sin filas VIGENTE con modalidad restringida (universo SIN_VERIFICAR) no muerde; entra cuando T6 permita cargar VIGENTE con modalidades. Usa `modalidadRepsRequerida` (ya hecho) en crearSolicitudCita.
 - [ ] **T6 · Superficie de verificación MANUAL_ADMIN** (NUEVO · decisión CEO 30-09 21:1x). **Por qué entró:**
   con solo el stub (siempre `SIN_VERIFICAR`), ningún profesional llega a «caducada» (necesita
   `VENCIDA`/`NO_ENCONTRADA`) NI puede re-habilitarse (necesita una `VIGENTE` fresca) → 790 entregaría motor +
