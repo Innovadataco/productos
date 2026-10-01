@@ -452,6 +452,38 @@
 | [605](605-pantalla-expediente/spec.md) | SPEC-605 · Pantalla madre del EXPEDIENTE (5 bloques) + lista por urgencia | 🟢 IMPLEMENTADO |
 | [606](606-revelar-codigo/spec.md) | SPEC-606 · Revelar texto con CÓDIGO por correo (step-up sin contraseña) | 🟢 IMPLEMENTADO |
 | [607](607-menu-perfil-hijos/spec.md) | SPEC-607 · Menú definitivo del padre + «Mi perfil» unificado + hijos sin documento | 🟢 IMPLEMENTADO |
+| [656](656-directorio-vacio-estructural/spec.md) | SPEC-656 · «Encontrar psicólogo» sin psicólogos: separar el vacío estructural del vacío por filtro | 🟡 DESARROLLO |
+| [659](659-fantasma-marca-neutra/spec.md) | SPEC-659 / I-403 · El acento del padre por superficie — relleno CIELO, marca TINTA NEUTRA | 🟡 DESARROLLO |
+| [660](660-a-quien-protejo-dos-procesos/spec.md) | SPEC-660 · «A quién protejo» — dos procesos (configurar y enterarse) | 🟡 DESARROLLO |
+| [690](690-compuerta-verificacion-profesional/spec.md) | SPEC-690 (I-414) · La compuerta de verificación del profesional | 🟡 DESARROLLO |
+| [698](698-reset-no-reactiva-cuenta/spec.md) | SPEC-698 (I-423) · «Olvidé mi contraseña» nunca reactiva una cuenta desactivada | 🟡 DESARROLLO |
+| [701](701-lectura-deja-fila/spec.md) | SPEC-701 (I-421) · Toda lectura del relato por el personal deja rastro, nombra el reporte y sobrevive al borrado | 🟡 DESARROLLO |
+| [707](707-docs-aprobados-y-motivo/spec.md) | SPEC-707 · Devolución de documentos: se bloquean los aprobados y se le dice al profesional por qué le devolvieron el suyo | 🟡 DESARROLLO |
+| [711](711-compuerta-rol-padre/spec.md) | SPEC-711 · Un profesional entra a las pantallas del padre — compuerta por rol | 🟡 DESARROLLO |
+| [714](714-calendario-profesional/spec.md) | SPEC-714 · El calendario del profesional, nivel dios (mockup aprobado por Jelkin) | 🟡 DESARROLLO |
+| [719](719-voz-preteritos-usted/spec.md) | SPEC-719 · El candado de voz no cazaba los pretéritos («subiste», «enviaste») | 🟡 DESARROLLO |
+| [720](720-voz-colegio-interno-lib/spec.md) | SPEC-720 · Barrido de voz colegio/interno: los candados no veían los pretéritos ni `lib/` | 🟡 DESARROLLO |
+| [721](721-plataforma-obligatoria/spec.md) | SPEC-721 · La cuenta del hijo sin plataforma no se puede vigilar | 🟡 DESARROLLO |
+| [730](730-calendario-padre/spec.md) | SPEC-730 · El padre elige y ve sus citas en el MISMO calendario visual del profesional | 🟡 DESARROLLO |
+| [732](732-calendario-citaciones-unificado/spec.md) | SPEC-732 · Unificar «Calendario» y «Citaciones» del profesional en una sola pantalla | 🟡 DESARROLLO |
+| [749](749-cablear-estado-efectivo/spec.md) | SPEC-749 · La cita dice la verdad después de la hora — cablear el estado efectivo | 🟡 DESARROLLO |
+| [750](750-enlace-operador-sesion/spec.md) | SPEC-750 · El operador convoca la reunión (enlace por cita + cola + límites + registro del hecho) | 🟡 DESARROLLO |
+| [751](751-consentimiento-version-oir-menor/spec.md) | Feature Specification: Consentimiento por versión + «oír al menor» per-menor | 🟡 DESARROLLO |
+| [753](753-encuestas-servicio-cruce/spec.md) | SPEC-753 · Encuestas de servicio de la sesión + cruce de contradicciones | 🟡 DESARROLLO |
+| [754](754-cerrar-contacto-mutuo/spec.md) | SPEC-754 · Cerrar el contacto mutuo (padre ↔ profesional) | 🟡 DESARROLLO |
+| [767](767-guardian-historial-esquema/spec.md) | SPEC-767 · Guardián de HISTORIAL ≠ ESQUEMA | 🟡 DESARROLLO |
+| [771](771-ventana-adaptativa-calendario/spec.md) | SPEC-771 · La rejilla no puede esconder una cita que el sistema permite crear | 🟡 DESARROLLO |
+| [772](772-habeas-data-registrado/spec.md) | SPEC-772 · Habeas data registrado y venceable | 🟡 DESARROLLO |
+| [774](774-suite-ci-en-main/spec.md) | SPEC-774 · La suite de CI nunca corre sobre `main` | 🟡 DESARROLLO |
+| [778](778-ver-enlace-cita/spec.md) | Feature Specification: El padre (y el profesional) ven el enlace de la reunión | 🔵 PLANEADO |
+| [779](779-operador-dos-trabajos-dos-cupos/spec.md) | SPEC-779 · El operador tiene DOS trabajos y DOS cupos | 🟡 DESARROLLO |
+| [780](780-corregir-relato-cita/spec.md) | SPEC-780 · Corregir el relato de la cita (rectificación · habeas data) | 🟡 DESARROLLO |
+| [784](784-encuesta-cita-tipada/spec.md) | SPEC-784 · Rescatar las pantallas de la encuesta (#341) sobre el modelo tipado de 753 | 🟡 DESARROLLO |
+| [787](787-bandeja-incidentes-verificador/spec.md) | SPEC-787 · Bandeja del verificador · «Reportes que no coinciden» | 🟡 DESARROLLO |
+| [789](789-e2e-condicionado-en-pr/spec.md) | SPEC-789 · `test-e2e` condicionado en pull_request (drenar la cola de CI) | 🟢 IMPLEMENTADO |
+| [791](791-plan-no-incluye-citas/spec.md) | SPEC-791 · Ningún plan puede incluir citas | 🟢 IMPLEMENTADO |
+| [793](793-allowlist-proveedor-enlace/spec.md) | SPEC-793 · ¿En qué sala ocurre la sesión de un menor? — allowlist de proveedores del enlace | 🟢 IMPLEMENTADO |
+| [794](794-freemium-mes-bogota/spec.md) | SPEC-794 · Freemium: la suma de meses de vigencia va en calendario Bogotá | 🟡 DESARROLLO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
