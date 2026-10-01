@@ -55,10 +55,19 @@ export function ProfesionalTarjeta({
     precioPrimeraCitaCOP: number;
 }) {
     const modal = modalidadesTexto(p.atiendeVirtual, p.atiendePresencial);
+    // SPEC-830 (FORMA §6 P2) · REALCE de la minoría reservable: peso visual (anillo pino) que el ojo capta
+    // al scrollear, derivado ÚNICA Y EXCLUSIVAMENTE de `tieneHorariosDisponibles` (nunca calificación,
+    // antigüedad ni pago — candado H-4 ext. afirmación 2). Es peso AÑADIDO al que SÍ tiene: la tarjeta sin
+    // horarios NO se atenúa (afirmación 3), conserva su forma y solo NO lleva el anillo. `data-destacado`
+    // expone la MISMA condición para el candado (conducta, no palabra); ambos salen de `destacado`.
+    const destacado = p.tieneHorariosDisponibles;
     return (
         <Link
             href={`${hrefBase}/${p.id}${queryString}`}
-            className="glass rounded-2xl p-5 flex flex-col gap-3 hover:shadow-lg transition"
+            data-destacado={destacado ? "true" : "false"}
+            className={`glass rounded-2xl p-5 flex flex-col gap-3 hover:shadow-lg transition${
+                destacado ? " ring-2 ring-pino/40 shadow-md" : ""
+            }`}
             aria-label={`Ver perfil de ${p.nombreVisible}`}
         >
             <div className="flex items-center gap-3">
