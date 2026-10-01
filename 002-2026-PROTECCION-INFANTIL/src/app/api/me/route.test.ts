@@ -65,6 +65,9 @@ describe("GET /api/me · sesión huérfana (SPEC-603)", { timeout: 30_000 }, () 
         const json = await res.json();
         expect(json.id).toBe(padre.id);
         expect(json.email).toBe("sano-me@example.com");
+        // SPEC-690-A / SPEC-790: `profesional` (y por ende `repsAlDia`) SOLO existe para rol PROFESIONAL.
+        // Un no-profesional NUNCA recibe el bloque — repsAlDia no se sirve a nadie más que al propio profesional.
+        expect(json.profesional, "un PARENT no debe recibir el bloque profesional ni repsAlDia").toBeUndefined();
         expect(cookiesExpiradas(res)).toHaveLength(0);
     });
 
