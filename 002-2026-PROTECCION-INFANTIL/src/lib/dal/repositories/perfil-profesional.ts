@@ -487,27 +487,45 @@ export class PerfilProfesionalRepository {
 
     /**
      * Facetas para los filtros del padre — deriva ciudades y especialidades
-     * de los perfiles ACTIVO. Sin catálogo cerrado (especialidades es text[]);
-     * derivarlas evita dropdowns desincronizados con la data real.
+     * de los perfiles del directorio. Sin catálogo cerrado (especialidades es
+     * text[]); derivarlas evita dropdowns desincronizados con la data real.
      *
      * Devuelve ciudades ORDENADAS por nombre y especialidades ÚNICAS,
      * ORDENADAS alfabéticamente. Ambas listas pueden venir vacías (sin
-     * perfiles ACTIVO todavía) — la UI debe soportarlo sin romperse.
+     * perfiles en el directorio todavía) — la UI debe soportarlo sin romperse.
+     *
+     * SPEC-790 · Es el CUARTO consumidor del directorio y debe usar el MISMO
+     * predicado que `listarActivos` — ni uno de más. Antes escribía un `where`
+     * a mano (`estado: "ACTIVO"` + exclusión) que se SALTABA `vigenciaVigente` y
+     * el filtro autoritativo: poblaba una ciudad/especialidad cuyo único
+     * profesional estaba VENCIDO, el padre elegía el filtro y la lista salía
+     * vacía (opción de filtro muerta). Ahora pasa por `whereDirectorioPublico`
+     * (estado ∧ vigencia ∧ exclusión ∧ —cuando entre 790— REPS al día) y por el
+     * MISMO filtro autoritativo `idsConVigenciaAutoritativa` que la lista, para
+     * que un gate nuevo en el builder lo herede SIN que nadie se acuerde de
+     * `facetas`. Candado estructural: `perfil-profesional-activo-solo-en-builder`
+     * (el literal `"ACTIVO"` es PROPIEDAD del builder). Vigencia de las facetas:
+     * `perfil-profesional-directorio-vigencia` (cubre las CUATRO lecturas).
      */
-    async facetas(viewerUsuarioId: string | null): Promise<{ ciudades: Array<{ id: string; nombre: string }>; especialidades: string[] }> {
-        // SPEC-655: las facetas tampoco derivan de sembrados para un visor real — no
-        // pueblan los filtros con la ciudad/especialidad de un profesional que no
-        // existe. Exclusión CONDICIONADA al visor, igual que la lista.
+    async facetas(
+        viewerUsuarioId: string | null,
+        ahora: Date = new Date(),
+    ): Promise<{ ciudades: Array<{ id: string; nombre: string }>; especialidades: string[] }> {
         const rows = await this.db.perfilProfesional.findMany({
-            where: { estado: "ACTIVO", ...(await this.exclusionSembradosPara(viewerUsuarioId)) },
+            where: await this.whereDirectorioPublico(ahora, viewerUsuarioId),
             select: {
+                id: true,
                 especialidades: true,
                 ciudad: { select: { id: true, nombre: true } },
             },
         });
+        // SPEC-690-B: la palabra final de la vigencia es `idsConVigenciaAutoritativa`,
+        // igual que la lista; las facetas se derivan SOLO de los habilitados de verdad.
+        const vigentes = await this.idsConVigenciaAutoritativa(rows.map((r) => r.id), ahora);
         const ciudadesMap = new Map<string, { id: string; nombre: string }>();
         const especialidadesSet = new Set<string>();
         for (const r of rows) {
+            if (!vigentes.has(r.id)) continue;
             if (r.ciudad) ciudadesMap.set(r.ciudad.id, { id: r.ciudad.id, nombre: r.ciudad.nombre });
             for (const e of r.especialidades) especialidadesSet.add(e);
         }
