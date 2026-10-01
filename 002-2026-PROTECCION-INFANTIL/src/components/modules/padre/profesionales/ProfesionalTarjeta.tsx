@@ -138,6 +138,12 @@ export function ProfesionalTarjeta({
                 {modal && <li>💻 {modal}</li>}
                 <li>🎓 {p.aniosExperiencia} años de experiencia</li>
                 {p.emiteFactura && <li>🧾 Emite factura</li>}
+                {/* SPEC-816 (FORMA §2): se MUESTRA el rango declarado (el padre elige); NO filtra. Vacío =
+                    «sin indicar» (defensivo), NUNCA mudo —que se leería «atiende a todos»— ni «todas las edades». */}
+                <li>
+                    🎂 Edades que atiende:{" "}
+                    {p.rangoEtario.length > 0 ? p.rangoEtario.join(", ") : "sin indicar"}
+                </li>
             </ul>
 
             {/* "Nuevo en la red" (candado del brief: sin varias calificaciones,

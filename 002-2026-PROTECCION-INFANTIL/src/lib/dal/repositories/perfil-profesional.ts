@@ -30,6 +30,7 @@ import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 import { idsPerfilesProfesionalesSembrados } from "../demo-exclusion";
 import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profesionales/vigencia";
+import { leerRangoEtario } from "@/lib/profesional/catalogos-lectura";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { repsElegible, type ConfigReps, type EstadoReps, type HechoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
 
@@ -80,6 +81,17 @@ export interface PerfilPublicoDTO {
     fotoUrl: string | null;
     tituloProfesional: string;
     especialidades: string[];
+    /**
+     * SPEC-816: el RANGO ETARIO que el profesional DECLARÓ atender (claves del catálogo, p. ej. «6-12»;
+     * MÚLTIPLE). Se MUESTRA en el directorio para que el padre —que sabe la edad de su hijo— elija. NO es un
+     * filtro: la cita no está ligada al menor (minimización SPEC-750, [NORMA] Ley 1581), así que el sistema
+     * no filtra por edad; muestra la declaración. Sale de la MISMA fuente que el profesional escribe
+     * (`PerfilProfesional.rangoEtario`), sin segundo camino de lectura: son las BANDAS por su NOMBRE
+     * («Niñez (6–11)», …), resueltas de las CLAVES del perfil contra el catálogo (`leerRangoEtario`) — el
+     * catálogo solo aporta la etiqueta; QUÉ bandas lo decide el campo. Vacío = el profesional no declaró
+     * (defensivo: `rangoEtario` es requerido para salir de BORRADOR; 63 de 64 lo declararon).
+     */
+    rangoEtario: string[];
     ciudadId: string;
     atiendeVirtual: boolean;
     atiendePresencial: boolean;
@@ -105,6 +117,7 @@ const SELECT_TARJETA_PUBLICA = {
     fotoUrl: true,
     tituloProfesional: true,
     especialidades: true,
+    rangoEtario: true, // SPEC-816: se MUESTRA en el directorio (el padre elige) — NO filtra; misma fuente.
     ciudadId: true,
     atiendeVirtual: true,
     atiendePresencial: true,
@@ -125,13 +138,20 @@ const SELECT_TARJETA_PUBLICA = {
  * del schema `ciudadId String`); el fallback cae al `ciudadId` que sí es
  * obligatorio, y no expone contacto.
  */
-function toPublicoDTO(row: Prisma.PerfilProfesionalGetPayload<{ select: typeof SELECT_TARJETA_PUBLICA }>): PerfilPublicoDTO {
+function toPublicoDTO(
+    row: Prisma.PerfilProfesionalGetPayload<{ select: typeof SELECT_TARJETA_PUBLICA }>,
+    rangoNombrePorClave: ReadonlyMap<string, string>,
+): PerfilPublicoDTO {
     return {
         id: row.id,
         nombreVisible: row.nombreVisible,
         fotoUrl: row.fotoUrl,
         tituloProfesional: row.tituloProfesional,
         especialidades: row.especialidades,
+        // SPEC-816: BANDAS por NOMBRE, resueltas de las CLAVES del perfil contra el catálogo. El catálogo
+        // solo aporta la etiqueta; QUÉ bandas lo decide el campo (fuente única). Una clave sin etiqueta
+        // (catálogo editado) se descarta, nunca se muestra cruda.
+        rangoEtario: row.rangoEtario.map((c) => rangoNombrePorClave.get(c)).filter((n): n is string => n !== undefined),
         ciudadId: row.ciudadId,
         atiendeVirtual: row.atiendeVirtual,
         atiendePresencial: row.atiendePresencial,
@@ -436,6 +456,13 @@ export class PerfilProfesionalRepository {
         return vigentes;
     }
 
+    /** SPEC-816: mapa clave→nombre del catálogo de rangos etarios, para mostrar las bandas declaradas por su
+     *  NOMBRE sin un segundo almacenamiento (el catálogo solo da la etiqueta; el campo decide QUÉ bandas). */
+    private async mapaRangoEtario(): Promise<ReadonlyMap<string, string>> {
+        const ops = await leerRangoEtario();
+        return new Map(ops.map((o): [string, string] => [o.clave, o.nombre]));
+    }
+
     /** SPEC-790 · Config del gate REPS (parametrizable, fail-safe): ventana 365 d + cutover ABIERTO por defecto. */
     private async configReps(): Promise<ConfigReps> {
         const ventana = parseInt((await getParametroSistemaValor(PARAM_REPS_VENTANA)) ?? "", 10);
@@ -584,7 +611,8 @@ export class PerfilProfesionalRepository {
         // SPEC-690-B: la palabra final es `verificacionVigente` (autoritativa) sobre
         // el pre-filtro grueso del SQL. Mismo término que la compuerta.
         const vigentes = await this.idsOfrecibles(rows.map((r) => r.id), ahora);
-        return rows.filter((r) => vigentes.has(r.id)).map(toPublicoDTO);
+        const rangoMap = await this.mapaRangoEtario();
+        return rows.filter((r) => vigentes.has(r.id)).map((r) => toPublicoDTO(r, rangoMap));
     }
 
     /**
@@ -631,7 +659,7 @@ export class PerfilProfesionalRepository {
         // SPEC-690-B: mismo filtro autoritativo que la lista — un profesional cuya
         // ÚLTIMA verificación venció no se abre por id (ni deja crear cita contra él).
         const vigentes = await this.idsOfrecibles([row.id], ahora);
-        return vigentes.has(row.id) ? toPublicoDTO(row) : null;
+        return vigentes.has(row.id) ? toPublicoDTO(row, await this.mapaRangoEtario()) : null;
     }
 
     /**
