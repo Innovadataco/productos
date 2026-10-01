@@ -1141,6 +1141,11 @@ model Suscripcion {
   usuarioId            String?
   estado               EstadoSuscripcion
   planActualId         String
+  /// @deprecated SPEC-796 — NO reusar. El contrato firmado durable vive en `ContratoColegio`
+  /// (archivoId OPACO + sha256, NUNCA una URL). Esta columna tiene CERO escritores; conserva
+  /// lectores de UI (`ContratoCard`/`suscripcion-vista.service`) que migran a `ContratoColegio`.
+  /// Su RETIRO (DROP) es follow-up gated: rewire de esos lectores + chequeo de que no esté en la
+  /// lista de columnas de la publicación `bi_replica` ni en catálogo de prod (radio de un DROP).
   contratoPDFUrl       String?
   fechaInicio          DateTime          @db.Timestamptz(6)
   fechaFin             DateTime          @db.Timestamptz(6)
@@ -1177,6 +1182,8 @@ model Suscripcion {
   referidosUsados       CodigoReferidoUso[] @relation("Referida")
   // SPEC-220 (002-PI-121): snapshots mensuales del score de valor.
   scoreClientes         ScoreCliente[]
+  // SPEC-796: contratos firmados del colegio (registro durable, append-only).
+  contratos             ContratoColegio[]
 
   @@index([estado, fechaFin])
   @@index([tipoTitular, estado])
@@ -1380,11 +1387,64 @@ model Colegio {
   notificacionesInApp       NotificacionInApp[]
   // SPEC-210 (002-PI-110): módulo de pagos.
   suscripciones             Suscripcion[]
+  // SPEC-796: contratos firmados del colegio (registro durable que SOBREVIVE a su baja).
+  contratos                 ContratoColegio[]
 
   @@index([paisId])
   @@index([departamentoId])
   @@index([ciudadId])
   @@index([estado])
+}
+
+/// SPEC-796 · Registro DURABLE del contrato firmado de un colegio (append-only).
+/// El PDF/imagen firmado vive CIFRADO fuera de la web (mismo patrón que
+/// `autorizacion-storage.ts`/`apelacion-storage.ts`: AES-256-GCM, archivo `<archivoId>.enc`).
+/// Acá se guardan el `archivoId` OPACO y el `sha256` del claro — NUNCA una URL (una columna
+/// «Url» que guarda un id opaco es una etiqueta que miente; por eso NO se recicla
+/// `Suscripcion.contratoPDFUrl`, que queda deprecado).
+///
+/// INVARIANTES (SPEC-796, decididas por el CEO):
+///  · SOBREVIVE al borrado OPERATIVO del colegio/suscripción. `colegioId`/`suscripcionId` son
+///    FK ON DELETE SET NULL, y la identidad del colegio queda además en `colegioSnapshot`
+///    durable: la prueba de la relación comercial no muere con la cuenta (Decreto 1377 art. 10,
+///    deber de conservar). `borrar-colegio.ts`/`borrar-padre.ts` NO lo listan en sus deleteMany;
+///    al borrar el colegio/suscripción, el FK nulea el enlace y la fila sobrevive.
+///  · SÍ lo borra la purga DEMO: va en `ORDEN_BORRADO` (se borra por MARCA, no con el colegio),
+///    ANTES de Colegio/Suscripcion para que la pertenencia demo se determine con el colegio vivo.
+///  · El HECHO es append-only: `archivoId`, `sha256`, `adjuntadoEn`, `adjuntadoPorSnapshot`,
+///    `colegioSnapshot` y `creadoEn` son INMUTABLES por trigger (Prisma es ciego al trigger).
+///    Una corrección adjunta una fila NUEVA; la vigente es la de `adjuntadoEn` más reciente.
+///    El trigger NO toca `colegioId`/`suscripcionId` para no chocar con el SET NULL del borrado.
+///  · El actor va como SNAPSHOT (String), NO como FK: una FK SetNull se vacía al borrar la cuenta
+///    y dejaría de ser registro de responsabilidad (lección #727, igual que `verificadoPorSnapshot`).
+/// El plazo de retención NO vive acá: es el parámetro `contrato.colegio.retencion_dias`, sembrado
+/// SIN número y marcado para definición legal (ningún código debe asumir un default — I-434).
+model ContratoColegio {
+  id                   String       @id @default(cuid())
+
+  // Partes — FK SET NULL para SOBREVIVIR al hard-delete operativo (el padre nulea, no cascadea).
+  colegioId            String?
+  colegio              Colegio?     @relation(fields: [colegioId], references: [id], onDelete: SetNull)
+  suscripcionId        String?
+  suscripcion          Suscripcion? @relation(fields: [suscripcionId], references: [id], onDelete: SetNull)
+
+  // Identidad DURABLE del colegio al adjuntar (id · nombre · NIT): tras el SET NULL la prueba
+  // sigue siendo atribuible sin depender de una fila que ya no existe.
+  colegioSnapshot      String
+
+  // El archivo cifrado (patrón storage): id OPACO (uuid) + hash del claro para verificar integridad.
+  archivoId            String
+  sha256               String
+
+  // El HECHO (append-only): quién adjuntó y cuándo.
+  adjuntadoEn          DateTime     @db.Timestamptz(6)
+  adjuntadoPorSnapshot String
+
+  creadoEn             DateTime     @default(now()) @db.Timestamptz(6)
+
+  @@index([colegioId, adjuntadoEn(sort: Desc)])
+  @@index([suscripcionId])
+  @@map("contrato_colegio")
 }
 
 // SPEC-169 (Fase G): onboarding "Activa tu protección" — fila única por colegio.
