@@ -45,6 +45,11 @@ export function badgeDeCita(estado: EstadoSolicitudCita): BadgeCita {
             return { label: "Reembolsada", clases: NEUTRO };
         case "REPROGRAMADA":
             return { label: "Reprogramada", clases: NEUTRO };
+        // SPEC-814: etiqueta de Diseño (slot A, verbatim; NEUTRO === "bg-tinta/10 text-muted"). Neutro
+        // porque un estado de cita es proceso, no alarma. El padre se entera por este texto (no hay
+        // canal de aviso), por eso dice la continuidad sin afirmar que le avisamos.
+        case "REUBICADA":
+            return { label: "Continúa con otro profesional", clases: NEUTRO };
     }
 }
 
