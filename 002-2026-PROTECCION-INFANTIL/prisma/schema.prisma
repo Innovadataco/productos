@@ -403,6 +403,12 @@ enum AccionAudit {
   // escrito en la MISMA transacción que la fila por el service de SPEC-751 (ver comentario de
   // AudienciaMenor). Solo metadatos: hijoId + versión, NUNCA PII.
   AUDIENCIA_MENOR_DECLARADA
+  // SPEC-814 · [NORMA] art. 19: HECHO de la reubicación de una cita (rastro de AUDITORÍA). OJO: AuditLog
+  // SÍ se replica a bi_replica, SolicitudCita NO — por eso el QUIÉN CONSULTABLE y durable del art. 19 NO
+  // va en el payload de este hecho (mandaría la identidad del actor a BI): vive en
+  // SolicitudCita.reubicadaPorId (operacional, no replicado), que sobrevive al borrado de la cuenta. Son
+  // dos preguntas distintas: «qué pasó en el sistema» (este hecho) y «quién movió ESTA cita» (el campo).
+  CITA_PROFESIONAL_REUBICADA
 }
 
 enum TipoPeriodoServicio {
@@ -4068,6 +4074,12 @@ enum EstadoSolicitudCita {
   // que HEREDA el pago, no una transición. La solicitud original queda como
   // REPROGRAMADA (terminal) y el rastro del primer intento se conserva.
   REPROGRAMADA
+  // SPEC-814 · [NORMA] Ley 1581 art. 19 (reubicación/T7): HERMANA de REPROGRAMADA —
+  // misma mecánica (fila nueva que HEREDA el pago vía solicitudPreviaId/pagoHeredadoDeId),
+  // distinto motivo. La cita original movida queda REUBICADA: estado TERMINAL que NO es
+  // CANCELADA (la forma prohíbe cancelar y el art. 19 exige continuidad DEMOSTRABLE). La
+  // prueba vive en los campos reubicada* de SolicitudCita (destino + actor durable + momento).
+  REUBICADA
 }
 
 model PerfilProfesional {
@@ -4464,6 +4476,23 @@ model SolicitudCita {
   // de cero (sin herencia). Se auto-referencian.
   solicitudPreviaId      String?
   pagoHeredadoDeId       String?
+  // SPEC-814 · [NORMA] Ley 1581 art. 19 (reubicación/T7). La reubicación de una cita confirmada es
+  // una FILA NUEVA que HEREDA el pago (reusa solicitudPreviaId/pagoHeredadoDeId → la original); la
+  // original queda en estado REUBICADA (terminal, NO CANCELADA). Estos campos son la prueba de la
+  // continuidad DEMOSTRABLE que exige el art. 19:
+  //  · reubicadaEnId  → la cita NUEVA. Es FK self (abajo), como solicitudPreviaId: las citas no se
+  //    borran, así que acá un FK es seguro.
+  //  · reubicadaEn    → cuándo se reubicó.
+  //  · reubicadaPorId → QUIÉN reubicó. String DURABLE, a propósito SIN @relation/FK. CONTRASTE con
+  //    enlaceOperadorId (más abajo, SetNull): aquel NO es registro de responsabilidad y se vacía al
+  //    borrar la cuenta; ESTE es la prueba del art. 19 y NO puede borrarse con la cuenta del actor.
+  //    La asimetría que lo justifica: las cuentas de usuario se borran, las citas no. NO lo conviertas
+  //    en FK «para normalizar» (SetNull borraría la prueba; Restrict trabaría la baja de la cuenta).
+  //    En prod el 65% de las citas confirmadas no tiene a quién reubicar (continuidad por escalamiento
+  //    manual): el rastro de las que SÍ se reubican es la única evidencia de que el mecanismo funciona.
+  reubicadaEnId          String?
+  reubicadaEn            DateTime?           @db.Timestamptz(6)
+  reubicadaPorId         String?
   // Denormalizado en pesos colombianos al momento de la solicitud (la tarifa
   // del profesional o el porcentaje pueden cambiar después; la cita se cobra
   // con el número que vio el padre cuando aceptó).
@@ -4500,6 +4529,10 @@ model SolicitudCita {
   reprogramaciones     SolicitudCita[]        @relation("SolicitudReprogramada")
   pagoHeredadoDe       SolicitudCita?         @relation("PagoHeredado", fields: [pagoHeredadoDeId], references: [id])
   pagosQueHereda       SolicitudCita[]        @relation("PagoHeredado")
+  // SPEC-814: enlace FORWARD de la cita original → la cita nueva donde se reubicó (self, SetNull como
+  // las demás auto-referencias). El actor (reubicadaPorId) NO es relación: es durable sin FK (ver arriba).
+  reubicadaEnCita        SolicitudCita?       @relation("CitaReubicada", fields: [reubicadaEnId], references: [id])
+  reubicacionesRecibidas SolicitudCita[]      @relation("CitaReubicada")
   // SPEC-758: el operador (rol OPERADOR) que tomó/creó el enlace de esta cita.
   // Opcional → onDelete SetNull: dar de baja la cuenta del operador NO borra la cita, solo
   // suelta la referencia (Restrict trabaría la baja; Cascade borraría la cita — catastrófico).
