@@ -8,6 +8,23 @@ import type { FranjaDisponible, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
+/**
+ * SPEC-818 · ÚNICA definición de «franja OFRECIBLE»: libre, futura, y cuya modalidad el perfil VIGENTE
+ * atiende (cruzada por la RELACIÓN → se lee el flag al consultar, no uno cacheado al crear). La consulta del
+ * padre (`listarLibresDeProfesional`) y el chip del directorio (`idsConHorariosDisponibles`) la COMPARTEN:
+ * una sola fuente, no pueden divergir. Apagar el flag OCULTA (no borra); re-encenderlo DEVUELVE la franja.
+ */
+function whereFranjaOfrecible(desde: Date): Prisma.FranjaDisponibleWhereInput {
+    return {
+        tomada: false,
+        inicio: { gte: desde },
+        OR: [
+            { modalidad: "VIRTUAL", profesional: { atiendeVirtual: true } },
+            { modalidad: "PRESENCIAL", profesional: { atiendePresencial: true } },
+        ],
+    };
+}
+
 export class FranjaDisponibleRepository {
     private readonly db: DbClient;
     constructor(tx?: Prisma.TransactionClient) {
@@ -22,12 +39,30 @@ export class FranjaDisponibleRepository {
         return this.db.franjaDisponible.findUnique({ where: { id } });
     }
 
+    // SPEC-818 · CHOKEPOINT: el padre solo ve lo OFRECIBLE. Si el profesional apagó la modalidad DESPUÉS de
+    // publicar la franja, esa franja deja de ofrecerse — nada aguas abajo puede reservar lo incumplible.
     listarLibresDeProfesional(profesionalId: string, desde: Date) {
         return this.db.franjaDisponible.findMany({
-            where: { profesionalId, tomada: false, inicio: { gte: desde } },
+            where: { profesionalId, ...whereFranjaOfrecible(desde) },
             orderBy: { inicio: "asc" },
             take: 60,
         });
+    }
+
+    /**
+     * SPEC-818 · ¿cuáles de `perfilIds` tienen ≥1 franja OFRECIBLE? MISMA definición que
+     * `listarLibresDeProfesional` (el chip del directorio pregunta «¿devuelve ≥1?», no reimplementa el
+     * criterio). Una sola consulta para todo el lote (sin N+1). El chip no puede decir «tiene horarios»
+     * mientras la pantalla de reserva no muestra nada: comparten `whereFranjaOfrecible`.
+     */
+    async idsConHorariosDisponibles(perfilIds: string[], desde: Date): Promise<Set<string>> {
+        if (perfilIds.length === 0) return new Set();
+        const filas = await this.db.franjaDisponible.findMany({
+            where: { profesionalId: { in: perfilIds }, ...whereFranjaOfrecible(desde) },
+            select: { profesionalId: true },
+            distinct: ["profesionalId"],
+        });
+        return new Set(filas.map((f) => f.profesionalId));
     }
 
     listarDeProfesional(profesionalId: string) {

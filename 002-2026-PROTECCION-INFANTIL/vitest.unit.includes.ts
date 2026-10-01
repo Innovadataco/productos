@@ -220,6 +220,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/TextoSensible.test.tsx",
     // SPEC-392 (L3): tarjeta del directorio (tarifa por delante, "Nuevo en la red").
     "src/components/modules/padre/profesionales/ProfesionalTarjeta.test.tsx",
+    // SPEC-818: chip de disponibilidad (sin atenuar/rubí/promesa) + vacío del panel con salida.
+    "src/components/modules/padre/profesionales/disponibilidad-tarjeta-y-vacio.candado.test.tsx",
     // SPEC-392 (L3 · H-4): baraja determinística por semilla.
     "src/lib/padre/directorio-shuffle.test.ts",
     // SPEC-392 (L3 · H-2 · veredicto CEO 13:30): candado de TIPO — la intersección

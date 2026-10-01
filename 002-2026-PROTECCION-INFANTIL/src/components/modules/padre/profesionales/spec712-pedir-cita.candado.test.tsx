@@ -120,10 +120,19 @@ describe("SPEC-712 + SPEC-729 · pantalla del padre para pedir cita", () => {
         expect(screen.queryByRole("button", { name: "Solo esta semana" })).toBeNull();
     });
 
-    it("§3/SPEC-730 sin franjas libres: lo dice honesto, sin rejilla", async () => {
+    it("§3/SPEC-730 sin franjas libres: lo dice honesto, sin rejilla (y con salida)", async () => {
+        // SPEC-818 (contrato-RETIRADO): el copy del vacío pasó de «no tiene franjas libres» a la §2 de Diseño
+        // («no tiene horarios disponibles»). El candado viejo solo afirmaba el string. Acá se preservan las DOS
+        // invariantes que protegía el nombre («lo dice honesto, sin rejilla») y se agrega la salida que 818 sumó:
         mockFetch({ franjas: [] });
-        render(<SolicitarCitaPanel {...PROPS} />);
-        expect(await screen.findByText(/no tiene franjas libres en este momento/)).toBeTruthy();
+        const { container } = render(<SolicitarCitaPanel {...PROPS} />);
+        // (a) se le DICE honesto que no hay (copy §2 de Diseño, SPEC-818).
+        expect(await screen.findByText(/no tiene horarios disponibles en este momento/)).toBeTruthy();
+        // (b) NO se pinta rejilla — el bloque seleccionable de franja (único `aria-pressed`, RejillaElegirFranja)
+        //     no existe cuando no hay franjas.
+        expect(container.querySelector("[aria-pressed]"), "sin franjas no se pinta rejilla").toBeNull();
+        // (c) lo que 818 AGREGA: una salida, el padre no queda varado.
+        expect(screen.getByText(/elegir otro profesional/i)).toBeTruthy();
     });
 
     it("§3 el toggle binario inerte «Sin apuro» se retiró", () => {
