@@ -529,6 +529,11 @@ export class PerfilProfesionalRepository {
      */
     async listarParaCargaReps(): Promise<RepsCargaItem[]> {
         const profesionales = await this.db.perfilProfesional.findMany({
+            // ACTIVO-NO-DIRECTORIO (T6): esta lista NO es el directorio público. El estado NO decide el gate acá
+            // (la pantalla es solo-lectura). DEBE incluir a los de REPS VENCIDO —son justo los que el admin abre
+            // para cargarles la verificación—; pasar por `whereDirectorioPublico` (suma vigencia+exclusión+REPS)
+            // los filtraría y haría la pantalla circular: no podría arreglarse un REPS vencido desde la pantalla
+            // que lo arregla. Por eso el predicado va a mano acá, fuera del builder, declarado.
             where: { estado: "ACTIVO" },
             select: { id: true, nombreVisible: true, tituloProfesional: true },
             orderBy: { nombreVisible: "asc" },
