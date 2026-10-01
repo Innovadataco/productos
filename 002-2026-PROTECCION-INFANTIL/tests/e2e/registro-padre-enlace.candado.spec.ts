@@ -86,17 +86,14 @@ test.describe("SPEC-809 · candados del registro de padre por enlace", () => {
     });
 
     // DEUDA DECLARADA (salida autoexigida): archivos del MISMO defecto (registran un usuario por CÓDIGO
-    // con devCode) que quedan FUERA del alcance nombrado de SPEC-809 (reportes + password-reset). Se
-    // declaran acá para que el candado quede VERDE en lo cerrado y SIGA cazando cualquier archivo NUEVO.
-    // Cuando su unidad los arregle y dejen de leer el dev-field, el ratchet de abajo EXIGE quitarlos.
-    const ALLOWLIST_PENDIENTES = new Map<string, string>([
-        // auth.spec registra por la UI del flujo código→enlace, que es JUSTO lo que la unidad de auth va a
-        // reescribir: arreglarlo antes sería escribirlo dos veces (la 2ª contra una pantalla que aún no
-        // existe). Queda pendiente CON razón escrita para que el próximo no lo lea como olvido.
-        // (padre-reporta-autenticado.spec.ts se arregló en SPEC-809 — mismo patrón que reportes :82 — y
-        // por eso SALIÓ del allowlist; el ratchet de abajo lo exige.)
-        ["tests/e2e/auth.spec.ts", "va con el rewrite de auth código→enlace, no antes"],
-    ]);
+    // con devCode) que quedan FUERA del alcance de un lote. Se declaran acá para que el candado quede
+    // VERDE en lo cerrado y SIGA cazando cualquier archivo NUEVO. Cuando su unidad los arregle y dejen de
+    // leer el dev-field, el ratchet de abajo EXIGE quitarlos (si no, la lista miente sobre la deuda viva).
+    //
+    // VACÍO a propósito: `auth.spec.ts` —el último pendiente— se reescribió al flujo de ENLACE (registro
+    // por la UI, sin `devCode`) y SALIÓ de esta lista en el MISMO commit, como el ratchet lo exige. La
+    // maquinaria se queda para cazar al próximo archivo que nazca leyendo el camino de error.
+    const ALLOWLIST_PENDIENTES = new Map<string, string>([]);
 
     test("(C) imposibilidad estructural: el arnés NO depende de devCode/devToken (camino de error)", () => {
         const raizE2e = join(process.cwd(), "tests", "e2e");
