@@ -73,7 +73,7 @@ export type PayloadAnalisis = PayloadPadre | PayloadColegio;
 
 /**
  * SPEC-431 (I-247 b) · America/Bogota = UTC-5 fijo, sin horario de verano.
- * Mismo criterio que `lectura-capa1.ts` — no se calcula franja sobre UTC.
+ * La franja NO se calcula sobre UTC (ver `franjaDe` abajo).
  */
 const OFFSET_BOGOTA_MS = 5 * 60 * 60 * 1000;
 

@@ -15,8 +15,6 @@
  * ATENDIDO/TRANQUILO=pino, nunca rubí. Este candado cubre embudo/cobertura/KPI.
  */
 import React from "react";
-import * as fs from "node:fs";
-import * as path from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
@@ -27,8 +25,6 @@ vi.mock("next/link", () => ({
 import { colorPorPorcentaje } from "@/components/modules/colegio/AnillosCobertura";
 import { EmbudoEstado } from "@/components/modules/colegio/home/EmbudoEstado";
 import { ResumenCirculo } from "@/components/modules/padre/ResumenCirculo";
-
-const SRC = path.resolve(__dirname, "..", "..", "..", ".."); // .../src
 
 describe("SPEC-551 · color por valor en el inicio (rubi solo para criticidad real)", () => {
     it("B · gauge de cobertura: el mapeo NUNCA es rubi (baja/total0 = ámbar, 100% = pino)", () => {
@@ -67,9 +63,7 @@ describe("SPEC-551 · color por valor en el inicio (rubi solo para criticidad re
         expect(clasif.outerHTML).not.toContain("rubi");
     });
 
-    it("contraprueba: SemaforoItem CONSERVA rubi para la criticidad real (no se barre de más)", () => {
-        const src = fs.readFileSync(path.join(SRC, "components/modules/padre/SemaforoItem.tsx"), "utf-8");
-        // El estado ROJO (alerta prioritaria / expediente rojo) sigue en rubi.
-        expect(src).toMatch(/ROJO:\s*\{[\s\S]*?clase:\s*"bg-rubi/);
-    });
+    // SPEC-826: la contraprueba de SemaforoItem se retira — el componente era huérfano (SPEC-654, 0
+    // importadores de producción) y se borró; su rubí no llegaba a ninguna pantalla. La criticidad ROJA
+    // viva la cubren los componentes vivos (sus propios candados), no este muerto.
 });

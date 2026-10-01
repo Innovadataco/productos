@@ -284,7 +284,8 @@ export async function POST(request: Request) {
                 // —la señal que el producto existe para recoger—, así que su caso lo maneja el
                 // rate-limit SOFT (POSIBLE_SPAM → 201), no este 429. El PARENT recibe la oferta de
                 // vinculación (200); un autenticado NO-PARENT recibe el 429. La DETECCIÓN no cambia,
-                // solo la respuesta.
+                // solo la respuesta. NO es un olvido: no restaurar un bloqueo al anónimo acá —
+                // suprimiría el dato principal (la señal de arriba). (guarda recuperada de SPEC-808, rama varada)
                 if (user?.rol === "PARENT") {
                     return NextResponse.json(
                         { oferta: true, reporteExistenteId: resultado.reporteExistenteId, identificador },
