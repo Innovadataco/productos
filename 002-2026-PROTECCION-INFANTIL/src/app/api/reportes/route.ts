@@ -277,8 +277,13 @@ export async function POST(request: Request) {
 
         if (!resultado.ok) {
             if (resultado.tipo === "duplicado") {
-                // SPEC-323 (AD-1): padre autenticado recibe oferta de vinculación;
-                // anónimo y otros usuarios siguen con 429 (candado 26 — solo la respuesta cambia).
+                // SPEC-323 (AD-1): el padre autenticado recibe la OFERTA de vinculación (200).
+                // SPEC-808 · este 429 de duplicado SOLO alcanza a un AUTENTICADO no-PARENT: el dedup que
+                // marca `duplicado` es autenticado-only (reporte-creation.ts · `if (usuarioId)`). El ANÓNIMO
+                // NO llega acá a propósito — un duplicado anónimo es indistinguible de dos personas distintas
+                // reportando el mismo identificador, que es LA SEÑAL que el producto existe para recoger; y el
+                // mensaje presupone identidad («Ya reportaste»), que un anónimo no tiene. NO es un olvido: no
+                // restaurar un bloqueo al anónimo acá — suprimiría el dato principal.
                 if (user?.rol === "PARENT") {
                     return NextResponse.json(
                         { oferta: true, reporteExistenteId: resultado.reporteExistenteId, identificador },
