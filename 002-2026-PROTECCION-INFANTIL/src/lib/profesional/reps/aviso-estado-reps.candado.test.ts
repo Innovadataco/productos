@@ -17,6 +17,7 @@
 import { describe, it, expect } from "vitest";
 import {
     clasificarAvisoReps,
+    clasificarAvisoRepsConModalidad,
     debeMostrarAvisoCaducadoReps,
     requiereRevisionAdminReps,
     zonaAdminReps,
@@ -193,5 +194,66 @@ describe("SPEC-813 §5-bis · zonaAdminReps — el 5 grave NO comparte zona con 
             const enAdmin = clasificarAvisoReps(h, EXIGE, NOW) === "REVISION_ADMIN";
             expect(zonaAdminReps(h, EXIGE, NOW) !== null).toBe(enAdmin);
         }
+    });
+});
+
+describe("SPEC-836 pieza 2 · clasificarAvisoRepsConModalidad — el aviso del HUECO DE MODALIDAD", () => {
+    const OFRECE_AMBAS = { virtual: true, presencial: true } as const;
+    const SOLO_PRESENCIAL: HechoReps = { ...VIGENTE_AL_DIA, modalidades: ["PRESENCIAL"] };
+    const CUBRE_NADA: HechoReps = { ...VIGENTE_AL_DIA, modalidades: [] };
+
+    it("hueco SIMPLE: vigente que cubre presencial, ofrece ambas → MODALIDAD_NO_CUBIERTA + [VIRTUAL]", () => {
+        const r = clasificarAvisoRepsConModalidad(SOLO_PRESENCIAL, OFRECE_AMBAS, CUTOVER, NOW);
+        expect(r.clasificacion).toBe("MODALIDAD_NO_CUBIERTA");
+        expect(r.modalidadesNoCubiertas).toEqual(["VIRTUAL"]); // telemedicina sin cubrir = la virtual que ofrece
+    });
+
+    it("hueco DOBLE: vigente que no cubre ninguna, ofrece ambas → nombra LAS DOS (no arregla la mitad)", () => {
+        const r = clasificarAvisoRepsConModalidad(CUBRE_NADA, OFRECE_AMBAS, CUTOVER, NOW);
+        expect(r.clasificacion).toBe("MODALIDAD_NO_CUBIERTA");
+        expect(r.modalidadesNoCubiertas).toEqual(["VIRTUAL", "PRESENCIAL"]);
+    });
+
+    it("CONTROL POSITIVO · cubre ambas y ofrece ambas → AL_DIA, sin huecos", () => {
+        const r = clasificarAvisoRepsConModalidad(VIGENTE_AL_DIA, OFRECE_AMBAS, CUTOVER, NOW);
+        expect(r.clasificacion).toBe("AL_DIA");
+        expect(r.modalidadesNoCubiertas).toEqual([]);
+    });
+
+    it("no es hueco lo que NO se ofrece: cubre presencial, ofrece SOLO presencial → AL_DIA", () => {
+        const r = clasificarAvisoRepsConModalidad(SOLO_PRESENCIAL, { virtual: false, presencial: true }, CUTOVER, NOW);
+        expect(r.clasificacion).toBe("AL_DIA");
+        expect(r.modalidadesNoCubiertas).toEqual([]);
+    });
+
+    it("PRIORIDAD · CADUCADO manda sobre el hueco (la inscripción entera está mal, no es un hueco de modalidad)", () => {
+        const r = clasificarAvisoRepsConModalidad(ESTADO_4_VENCIDA, OFRECE_AMBAS, CUTOVER, NOW);
+        expect(r.clasificacion).toBe("CADUCADO");
+        expect(r.modalidadesNoCubiertas).toEqual([]);
+    });
+
+    it("PRIORIDAD · estado 7 (NUESTRO re-chequeo viejo) manda → REVISION_ADMIN, no hueco (no es su culpa)", () => {
+        const r = clasificarAvisoRepsConModalidad(ESTADO_7_RECHEQUEO_VIEJO, OFRECE_AMBAS, CUTOVER, NOW);
+        expect(r.clasificacion).toBe("REVISION_ADMIN");
+        expect(r.modalidadesNoCubiertas).toEqual([]);
+    });
+
+    it("SIN_VERIFICAR no computa hueco (no hay inscripción que pueda cubrir una modalidad)", () => {
+        const r = clasificarAvisoRepsConModalidad(ESTADO_2_SIN_VERIFICAR, OFRECE_AMBAS, CUTOVER, NOW);
+        expect(r.clasificacion).toBe("SIN_VERIFICAR");
+        expect(r.modalidadesNoCubiertas).toEqual([]);
+    });
+
+    it("🚨 LA RAÍZ: las TRES situaciones persona-facing dan TRES avisos DISTINTOS (deshace el colapso)", () => {
+        const caducado = clasificarAvisoRepsConModalidad(ESTADO_4_VENCIDA, OFRECE_AMBAS, CUTOVER, NOW).clasificacion;
+        const estado7 = clasificarAvisoRepsConModalidad(ESTADO_7_RECHEQUEO_VIEJO, OFRECE_AMBAS, CUTOVER, NOW).clasificacion;
+        const hueco = clasificarAvisoRepsConModalidad(SOLO_PRESENCIAL, OFRECE_AMBAS, CUTOVER, NOW).clasificacion;
+        expect([caducado, estado7, hueco]).toEqual(["CADUCADO", "REVISION_ADMIN", "MODALIDAD_NO_CUBIERTA"]);
+        expect(new Set([caducado, estado7, hueco]).size).toBe(3);
+        // El CUARTO caso (hueco doble) nombra AMBAS.
+        expect(clasificarAvisoRepsConModalidad(CUBRE_NADA, OFRECE_AMBAS, CUTOVER, NOW).modalidadesNoCubiertas).toEqual([
+            "VIRTUAL",
+            "PRESENCIAL",
+        ]);
     });
 });
