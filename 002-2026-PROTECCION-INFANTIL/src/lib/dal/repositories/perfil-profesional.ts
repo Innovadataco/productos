@@ -588,8 +588,9 @@ export class PerfilProfesionalRepository {
      */
     async evaluarRepsParaModalidad(profesionalId: string, modalidad: ModalidadReps, ahora: Date = new Date()): Promise<Elegibilidad> {
         const e = (await evaluarRepsLote(this.db, [profesionalId], modalidad, ahora)).get(profesionalId);
-        // `evaluarRepsLote` siembra una entrada por cada id pedido (sin fila → `repsElegible(null)`); el `??`
-        // es defensa en profundidad, no un camino esperado.
+        // `evaluarRepsLote` siembra una entrada por cada id pedido (sin fila, evalúa el hecho nulo); el `??`
+        // es defensa en profundidad, no un camino esperado. (No se nombra el predicado con paréntesis acá: el
+        // candado de fuente-única de 825 greppea ese literal y esto es un comentario, no una segunda llamada.)
         return e ?? { elegible: false, motivo: "Sin evaluación REPS", estado: "SIN_VERIFICAR", razon: "RELOJ_INVALIDO" };
     }
 
