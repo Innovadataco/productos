@@ -29,4 +29,12 @@ export const COPY_MOTIVO_REUBICACION: Record<MotivoReubicacion, CopyMotivoReubic
         titulo: "Inscripción en el registro no vigente",
         detalle: "El profesional sigue operando y puede renovar (ya se le avisó) → puede resolverse sin reubicar.",
     },
+    // SPEC-836 · PLACEHOLDER · el copy lo emite Diseño (lo pidió el CEO; cubre DOS marcos: «nuestra
+    // verificación envejeció» y «el registro no cubre esta modalidad y aún no se le avisó»). La página NO
+    // está en el menú (no es alcanzable) hasta que 832 la cierre; se reemplaza al llegar la forma. El
+    // candado exige que este motivo NUNCA contenga «avis…» (813 no lo bannerea) ni lea igual que los otros.
+    REVISION_INTERNA: {
+        titulo: "[Motivo pendiente de Diseño]",
+        detalle: "[Texto pendiente de Diseño]",
+    },
 };

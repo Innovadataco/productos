@@ -30,7 +30,9 @@ let bogotaId: string;
 async function seedPro(opts: {
     estado?: EstadoPerfilProfesional;
     internaVigente?: boolean; // verificación INTERNA (Ley 2375) — define `habilitado`. default true
-    repsModalidades?: ("PRESENCIAL" | "TELEMEDICINA")[]; // fila REPS VIGENTE que cubre estas; omitir = sin fila (SIN_VERIFICAR)
+    repsModalidades?: ("PRESENCIAL" | "TELEMEDICINA")[]; // fila REPS que cubre estas; omitir = sin fila (SIN_VERIFICAR)
+    repsVencida?: boolean; // fila REPS VENCIDA → 813 clasifica CADUCADO (aviso al profesional)
+    repsVerificadoHaceDias?: number; // antigüedad de NUESTRA verificación (grande → estado 7: re-chequeo envejeció)
     especialidades?: string[];
     nombre?: string;
 }) {
@@ -63,15 +65,15 @@ async function seedPro(opts: {
             venceEn: opts.internaVigente === false ? new Date(Date.now() - DIA) : new Date(Date.now() + 90 * DIA),
         },
     });
-    if (opts.repsModalidades) {
+    if (opts.repsModalidades || opts.repsVencida) {
         await prisma.verificacionReps.create({
             data: {
                 profesionalId: perfil.id,
-                verificadoEn: new Date(Date.now() - 2 * DIA),
+                verificadoEn: new Date(Date.now() - (opts.repsVerificadoHaceDias ?? 2) * DIA),
                 fuente: "MANUAL_ADMIN",
-                resultado: "VIGENTE",
-                vigenteHasta: new Date(Date.now() + 180 * DIA),
-                modalidades: opts.repsModalidades,
+                resultado: opts.repsVencida ? "VENCIDA" : "VIGENTE",
+                vigenteHasta: opts.repsVencida ? null : new Date(Date.now() + 180 * DIA),
+                modalidades: opts.repsModalidades ?? [],
             },
         });
     }
@@ -135,13 +137,41 @@ describe("SPEC-814 · cola de reubicación · trigger de dos términos + motivo 
         expect(fila.deQuienSale.motivoCodigo).toBe("PANEL_BLOQUEADO");
     });
 
-    it("REPS: habilitado pero el REPS NO cubre la modalidad de la cita entra, con motivo REGISTRO_NO_VIGENTE", async () => {
-        // REPS cubre solo PRESENCIAL; la cita es VIRTUAL (→ TELEMEDICINA) → no elegible para esa modalidad.
+    it("REPS CADUCÓ de verdad (fila VENCIDA) → REGISTRO_NO_VIGENTE (813 avisó; acción del profesional)", async () => {
+        const pro = await seedPro({ estado: "ACTIVO", internaVigente: true, repsVencida: true });
+        const cita = await seedCita(pro.id);
+        const [fila] = await citasPorReubicar();
+        expect(fila.citaRef).toBe(cita.id.slice(0, 8));
+        expect(fila.deQuienSale.motivoCodigo).toBe("REGISTRO_NO_VIGENTE");
+    });
+
+    it("ESTADO 7 (re-verificación NUESTRA envejecida, autoridad vigente) → REVISION_INTERNA, no REGISTRO_NO_VIGENTE", async () => {
+        // ventana determinista; verificadoEn muy atrás → nuestro re-chequeo venció aunque la autoridad siga vigente.
+        await prisma.parametroSistema.upsert({
+            where: { clave: "reps.ventana_verificacion_dias" },
+            update: { valor: "365" },
+            create: { clave: "reps.ventana_verificacion_dias", valor: "365", tipo: "INTEGER", categoria: "SYSTEM" },
+        });
+        const pro = await seedPro({
+            estado: "ACTIVO",
+            internaVigente: true,
+            repsModalidades: ["TELEMEDICINA"], // cubre la modalidad de la cita…
+            repsVerificadoHaceDias: 400, // …pero NUESTRO re-chequeo envejeció (estado 7)
+        });
+        const cita = await seedCita(pro.id, { modalidad: "VIRTUAL" });
+        const [fila] = await citasPorReubicar();
+        expect(fila.citaRef).toBe(cita.id.slice(0, 8));
+        expect(fila.deQuienSale.motivoCodigo).toBe("REVISION_INTERNA");
+    });
+
+    it("HUECO DE MODALIDAD (REPS vigente pero no cubre esta modalidad; 813 = AL_DIA, sin banner) → REVISION_INTERNA", async () => {
+        // REPS cubre solo PRESENCIAL; la cita es VIRTUAL (→ TELEMEDICINA). Vigencia-only (813) dice AL_DIA
+        // → no fue avisado → es nuestro/interno hasta que la pieza 2 de Dev-3 le dé banner.
         const pro = await seedPro({ estado: "ACTIVO", internaVigente: true, repsModalidades: ["PRESENCIAL"] });
         const cita = await seedCita(pro.id, { modalidad: "VIRTUAL" });
         const [fila] = await citasPorReubicar();
         expect(fila.citaRef).toBe(cita.id.slice(0, 8));
-        expect(fila.deQuienSale.motivoCodigo).toBe("REGISTRO_NO_VIGENTE");
+        expect(fila.deQuienSale.motivoCodigo).toBe("REVISION_INTERNA");
     });
 
     it("CONTROL POSITIVO: habilitado + REPS que CUBRE la modalidad → NO entra", async () => {

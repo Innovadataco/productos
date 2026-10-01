@@ -36,12 +36,26 @@ import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { obtenerHabilitacionProfesional } from "@/lib/profesionales/habilitacion";
 import { modalidadRepsRequerida } from "@/lib/profesional/reps/modalidad-cita-a-reps";
+import type { ClasificacionAvisoReps } from "@/lib/profesional/reps/aviso-estado-reps";
 
 /**
  * Por qué la cita quedó huérfana — el dato que al operador le CAMBIA la acción (no es copy; es el
  * discriminador. La copy visible la resuelve la pantalla contra la forma de Diseño).
+ *
+ * SPEC-836 · Tres motivos, con la ACCIÓN que le piden al operador:
+ *  · `PANEL_BLOQUEADO`     — el profesional NO puede entrar a su panel (¬habilitado). Reubicar es la
+ *    única salida: no puede resolver nada por su cuenta.
+ *  · `REGISTRO_NO_VIGENTE` — su inscripción REPS CADUCÓ de verdad (813 se lo AVISÓ). Acción del
+ *    PROFESIONAL (renovar); puede resolverse sin reubicar.
+ *  · `REVISION_INTERNA`    — la acción es NUESTRA, no suya, y 813 NO se lo bannereó. Cubre todo lo que
+ *    la clasificación de 813 (`clasificarReps`, vigencia-only) NO llevó al banner CADUCADO: el estado 7
+ *    (nuestra re-verificación envejeció → re-verificar), el hueco de modalidad (AL_DIA: vigente pero no
+ *    cubre ESTA modalidad, cuyo aviso es la pieza 2 de Dev-3, aún sin banner) y SIN_VERIFICAR. El
+ *    operador NO debe esperar a que el profesional actúe —no fue avisado y, en varios casos, no hay nada
+ *    que él deba hacer—. El pliegue es DERIVADO de 813: cuando la pieza 2 le dé banner al hueco de
+ *    modalidad, ese caso saldrá SOLO de acá y caerá en `REGISTRO_NO_VIGENTE`, sin tocar este código.
  */
-export type MotivoReubicacion = "PANEL_BLOQUEADO" | "REGISTRO_NO_VIGENTE";
+export type MotivoReubicacion = "PANEL_BLOQUEADO" | "REGISTRO_NO_VIGENTE" | "REVISION_INTERNA";
 
 export interface CitaPorReubicar {
     /** Referencia corta (8 car.) — como el `citaRef` del operador. Nunca PII. */
@@ -78,6 +92,7 @@ export async function citasPorReubicar(
     // Una consulta por profesional DISTINTO (varias citas lo comparten); el REPS además por modalidad.
     const habilitadoPorUsuario = new Map<string, boolean>();
     const repsOkPorProModalidad = new Map<string, boolean>();
+    const clasePorProfesional = new Map<string, ClasificacionAvisoReps>();
     const salida: CitaPorReubicar[] = [];
 
     for (const c of citas) {
@@ -110,9 +125,21 @@ export async function citasPorReubicar(
         // Ninguno de los dos disparó → A sigue pudiendo atenderla → NO es huérfana.
         if (habilitado && repsOk) continue;
 
-        // `PANEL_BLOQUEADO` manda sobre `REGISTRO_NO_VIGENTE`: si A no puede ni entrar a su panel,
-        // que su REPS esté o no vigente es irrelevante —no puede renovar nada—.
-        const motivoCodigo: MotivoReubicacion = !habilitado ? "PANEL_BLOQUEADO" : "REGISTRO_NO_VIGENTE";
+        // Motivo: `PANEL_BLOQUEADO` manda sobre lo REPS (si A no puede ni entrar a su panel, que su REPS
+        // esté o no vigente es irrelevante). En la rama REPS, el PORQUÉ —de quién es la acción— lo decide
+        // la MISMA fuente que el banner de 813 (`clasificarReps`, vigencia-only): solo CADUCADO fue avisado
+        // al profesional y es acción suya; todo lo demás que 813 no bannereó es nuestro/interno.
+        let motivoCodigo: MotivoReubicacion;
+        if (!habilitado) {
+            motivoCodigo = "PANEL_BLOQUEADO";
+        } else {
+            let clase = clasePorProfesional.get(profesionalId);
+            if (clase === undefined) {
+                clase = await perfilRepo.clasificarReps(profesionalId, ahora);
+                clasePorProfesional.set(profesionalId, clase);
+            }
+            motivoCodigo = clase === "CADUCADO" ? "REGISTRO_NO_VIGENTE" : "REVISION_INTERNA";
+        }
 
         salida.push({
             citaRef: c.id.slice(0, 8),
