@@ -35,6 +35,8 @@ function item(over: Partial<RepsCargaItem> = {}): RepsCargaItem {
         vigenteHasta: null,
         modalidades: [],
         verificadoEn: null,
+        avisoReps: "SIN_VERIFICAR", // SPEC-813: clasificación para la alarma de admin.
+        zonaAdmin: null,
         ...over,
     };
 }

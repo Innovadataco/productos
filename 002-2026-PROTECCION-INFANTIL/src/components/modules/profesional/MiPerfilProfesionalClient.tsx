@@ -31,6 +31,7 @@ import { Alerta } from "@/components/ui/Alerta";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { DocumentosRequisitos } from "@/components/modules/profesional/DocumentosRequisitos";
 import { EstadoVerificacionProfesionalClient } from "@/components/modules/verificacion/EstadoVerificacionProfesionalClient";
+import { InfoHabilitacionReps } from "@/components/modules/profesional/InfoHabilitacionReps";
 import { conPuntosDeMiles, tarifaDesdeTexto } from "@/lib/profesional/formato-tarifa";
 import type { PerfilProfesionalPropioDto } from "@/lib/profesional/dto";
 import type { OpcionCatalogo, GrupoAreas } from "@/lib/profesional/catalogos";
@@ -562,6 +563,10 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
             <div className="mt-6">
                 <EstadoVerificacionProfesionalClient vista={vista} habilitado={true} />
             </div>
+
+            {/* 4-bis · SPEC-813 · qué significa la habilitación REPS y cómo se renueva (destino del enlace del
+                banner «fuera de la oferta»). Extraído a su propio componente — max-lines. */}
+            <InfoHabilitacionReps />
 
             {/* 5 · SPEC-686 · el registro de la autorización aceptada + el derecho a releerla. */}
             {autorizacion?.version && (

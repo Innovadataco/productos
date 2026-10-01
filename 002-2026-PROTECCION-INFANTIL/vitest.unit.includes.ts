@@ -796,6 +796,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesional/reps/reps-enums-paridad.candado.test.ts",
     // SPEC-790 (T6): compuerta de código del registro manual REPS (espejo del CHECK + guardas, código de motivo). Sin base.
     "src/lib/profesional/reps/registro-manual-reps.candado.test.ts",
+    // SPEC-813: clasificación del estado REPS para el aviso — CADUCADO(4,6) dispara al profesional; 5/7/8 a admin;
+    // discrimina por HECHO+relojes (no por motivo); atado por conducta a repsElegible. Sin base.
+    "src/lib/profesional/reps/aviso-estado-reps.candado.test.ts",
     // SPEC-574 (I-354): clasificar es el complemento de corregir/confirmar (conducta pura); y el
     // catálogo de categorías de la UI no se desincroniza del enum CategoriaConducta.
     "src/components/modules/reporte-detalle/capacidades-reporte.candado.test.ts",
