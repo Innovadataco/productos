@@ -56,18 +56,23 @@ jobs:
           cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
       - run: npm ci
 
-      # Regenera los 3 generados append-por-spec desde la fuente de main.
-      # (Los byte-exactos 00/01/06 los mantiene al día el PR vía arch:check, no acá.)
+      # Regenera los generados desde la fuente de main: los append-por-spec (02/03) y
+      # SPEC-803 también los antes-byte-exactos (00/01/06). El gate del PR ya NO los compara
+      # byte a byte (solo REPRESENTABILIDAD); acá se mantienen al día sobre main y se detecta
+      # su drift — así un PR de schema en ráfaga no deja `main` rojo ni obliga a rebasar a todos.
       - name: Regenerar índice + tablas de arquitectura
         run: |
           npx tsx scripts/specs/generar-readme.ts
           npx tsx scripts/arch/generar-roles-capacidades.ts
           npx tsx scripts/arch/generar-pantallas.ts
+          npx tsx scripts/arch/generar-indice.ts
+          npx tsx scripts/arch/generar-modelo-datos.ts
+          npx tsx scripts/arch/generar-stack.ts
 
       - name: ¿Hubo drift?
         id: diff
         run: |
-          ARCHIVOS="specs/README.md docs/architecture/02-roles-capacidades.md docs/architecture/03-pantallas.md"
+          ARCHIVOS="specs/README.md docs/architecture/00-INDICE.md docs/architecture/01-modelo-datos.md docs/architecture/02-roles-capacidades.md docs/architecture/03-pantallas.md docs/architecture/06-stack.md"
           if git diff --quiet -- $ARCHIVOS; then
             echo "cambio=no" >> "$GITHUB_OUTPUT"
             echo "Los generados ya reflejan main (idempotente). Nada que abrir."
