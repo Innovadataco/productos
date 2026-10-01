@@ -161,7 +161,7 @@ export function CargaVerificacionRepsClient({ profesionalesIniciales }: { profes
                         <div className="glass rounded-2xl border border-cielo/20 p-5">
                             <p className="font-semibold text-body">Todavía no hay verificaciones de habilitación cargadas.</p>
                             <p className="cuerpo text-subtle mt-1">
-                                Cargue la primera para que los profesionales puedan quedar habilitados.
+                                Cargue la primera para que los profesionales puedan aparecer en la oferta a las familias.
                             </p>
                         </div>
                     )}

@@ -107,6 +107,8 @@ describe("SPEC-790 (T6) · FORMA de la carga manual REPS", () => {
         // Todos SIN_VERIFICAR (verificadoEn null) → el mensaje de entrada aparece.
         render(<CargaVerificacionRepsClient profesionalesIniciales={[item(), item({ id: "p2", nombreVisible: "Dr. Dos" })]} />);
         expect(screen.getByText(/Todavía no hay verificaciones de habilitación cargadas/i)).toBeTruthy();
+        // v1.3 · el efecto se enmarca como la OFERTA, no como «habilitado» (falso amigo, §7).
+        expect(screen.getByText(/aparecer en la oferta a las familias/i)).toBeTruthy();
         expect(screen.getAllByText(/Sin verificar/i).length).toBeGreaterThan(0);
         // Control negativo (monta DE NUEVO: `useState` no re-lee props en rerender): con una verificación
         // cargada, el mensaje de vacío desaparece.
@@ -117,6 +119,19 @@ describe("SPEC-790 (T6) · FORMA de la carga manual REPS", () => {
             />,
         );
         expect(screen.queryByText(/Todavía no hay verificaciones de habilitación cargadas/i)).toBeNull();
+    });
+
+    it("v1.3 · FALSO AMIGO: la copy de la pantalla mueve la OFERTA, nunca «habilita» por la carga (candado del radicado 790)", () => {
+        // El radicado de 790 exige que `habilitado` (onboarding interno) y el REPS NO se confundan: ningún
+        // camino donde uno se lea como el otro. Esta es la pantalla más visible del mecanismo. La carga de
+        // REPS mueve la OFERTA / el directorio; NUNCA «habilita». «habilitación» (el nombre del REPS) es
+        // admisible; «habilitado/a» (el efecto de onboarding) NO puede aparecer como resultado de la carga.
+        render(<CargaVerificacionRepsClient profesionalesIniciales={[item()]} />);
+        expect(screen.getByText(/aparecer en la oferta a las familias/i)).toBeTruthy();
+        abrirModal();
+        elegir(/está vigente/i); // surface §2/§3 (donde vivía el rótulo de modalidades)
+        const visible = document.body.textContent ?? "";
+        expect(visible, "la carga no «habilita»: nada de «habilitado(s)/habilitada(s)» en la copy").not.toMatch(/habilitad[oa]s?/i);
     });
 
     it("D-120 · cero rubí en la superficie (el rojo se reserva a la criticidad de protección del menor)", () => {
