@@ -31,11 +31,28 @@ import type { DbClient } from "../unit-of-work";
 import { idsPerfilesProfesionalesSembrados } from "../demo-exclusion";
 import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profesionales/vigencia";
 import { getParametroSistemaValor } from "@/lib/parametros";
-import { repsElegible, type ConfigReps, type HechoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
+import { repsElegible, type ConfigReps, type EstadoReps, type HechoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
 
 // SPEC-790 · parámetros del gate REPS (parametrizables; sembrados en el seed, fail-safe por defecto).
 const PARAM_REPS_VENTANA = "reps.ventana_verificacion_dias";
 const PARAM_REPS_EXIGIR = "reps.exigir_reps_verificado";
+
+/**
+ * SPEC-790 (T6) · Fila de la pantalla admin de carga manual REPS: el profesional `ACTIVO` + su estado REPS
+ * DERIVADO de la última fila (sin fila → `SIN_VERIFICAR`). Es solo-lectura; el estado NO decide el gate acá.
+ */
+export interface RepsCargaItem {
+    id: string;
+    nombreVisible: string;
+    tituloProfesional: string;
+    estadoReps: EstadoReps;
+    /** De la última fila: ISO, o null (no aplica salvo VIGENTE). */
+    vigenteHasta: string | null;
+    /** Modalidades que cubrió la última carga (vacío si no VIGENTE o sin fila). */
+    modalidades: ModalidadReps[];
+    /** Cuándo se registró la última verificación (ISO), o null si nunca. */
+    verificadoEn: string | null;
+}
 
 /** L1b (SPEC-391): perfil completo + ciudad para la vista propia del profesional.
  *  SPEC-434 (I-302): agregamos `paisId` — la pantalla de completar necesita
@@ -500,6 +517,43 @@ export class PerfilProfesionalRepository {
      */
     async esRepsElegibleParaModalidad(profesionalId: string, modalidad: ModalidadReps, ahora: Date = new Date()): Promise<boolean> {
         return (await this.idsRepsElegibles([profesionalId], ahora, modalidad)).has(profesionalId);
+    }
+
+    /**
+     * SPEC-790 (T6) · Lista para la PANTALLA de carga manual REPS (admin): los profesionales `ACTIVO` con el
+     * estado REPS DERIVADO de su ÚLTIMA fila (orden `verificadoEn` desc; SIN fila → `SIN_VERIFICAR`, el default
+     * de hoy — el caso NORMAL mientras nadie cargó nada). NO cachea el estado en una columna (se deriva, igual
+     * que el gate). Es SOLO-LECTURA para la pantalla: el estado NO decide el gate acá (lo decide el directorio);
+     * se MUESTRA para que el admin sepa a quién le falta. Trae `vigenteHasta`/`modalidades`/`verificadoEn` de la
+     * última fila para el detalle, sin una segunda lectura. Mismo patrón «última fila» que `idsRepsElegibles`.
+     */
+    async listarParaCargaReps(): Promise<RepsCargaItem[]> {
+        const profesionales = await this.db.perfilProfesional.findMany({
+            where: { estado: "ACTIVO" },
+            select: { id: true, nombreVisible: true, tituloProfesional: true },
+            orderBy: { nombreVisible: "asc" },
+        });
+        if (profesionales.length === 0) return [];
+        const filas = await this.db.verificacionReps.findMany({
+            where: { profesionalId: { in: profesionales.map((p) => p.id) } },
+            orderBy: { verificadoEn: "desc" },
+            select: { profesionalId: true, resultado: true, vigenteHasta: true, modalidades: true, verificadoEn: true },
+        });
+        const ultima = new Map<string, (typeof filas)[number]>();
+        // Primera que aparece por profesional = la más reciente (orden desc), igual que `idsRepsElegibles`.
+        for (const f of filas) if (!ultima.has(f.profesionalId)) ultima.set(f.profesionalId, f);
+        return profesionales.map((p) => {
+            const u = ultima.get(p.id);
+            return {
+                id: p.id,
+                nombreVisible: p.nombreVisible,
+                tituloProfesional: p.tituloProfesional,
+                estadoReps: u?.resultado ?? "SIN_VERIFICAR",
+                vigenteHasta: u?.vigenteHasta?.toISOString() ?? null,
+                modalidades: u?.modalidades ?? [],
+                verificadoEn: u?.verificadoEn?.toISOString() ?? null,
+            };
+        });
     }
 
     /**
