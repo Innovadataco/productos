@@ -34,7 +34,7 @@ function req(destino?: string) {
 
 async function cookieFirmada(pasoCamino: "permiso" | "datos" | "hijos" | "plan" | null) {
     return firmarSesionEstado(
-        { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino },
+        { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino },
         SECRETO,
     );
 }

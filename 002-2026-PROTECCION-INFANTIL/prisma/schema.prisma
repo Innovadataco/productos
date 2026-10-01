@@ -397,6 +397,12 @@ enum AccionAudit {
   // contradicción detectada). NUNCA contenido; solo metadatos (dec 17/23).
   ENCUESTA_CITA_RESPONDIDA
   ENCUESTA_CITA_CONTRADICCION
+  // SPEC-751: HECHO de la declaración de audiencia del menor (Decreto 1377/2013 art. 12).
+  // Rastro DURABLE de responsabilidad (quién declaró y cuándo): AudienciaMenor.declaradoPor es
+  // SetNull —se vacía al borrar la cuenta—, así que el QUIÉN perdurable vive acá (append-only),
+  // escrito en la MISMA transacción que la fila por el service de SPEC-751 (ver comentario de
+  // AudienciaMenor). Solo metadatos: hijoId + versión, NUNCA PII.
+  AUDIENCIA_MENOR_DECLARADA
 }
 
 enum TipoPeriodoServicio {

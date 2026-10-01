@@ -258,6 +258,47 @@ async function seedConsentimiento() {
             },
         });
     }
+
+    // SPEC-751 (FR-008 · D-4) · política de RE-OÍR al menor cuando cambia la versión del
+    // consentimiento. Se SIEMBRA porque un parametrizable sin sembrar es un `undefined`
+    // esperando. Default `true` (conservador: re-oír en cada versión). La decisión legal es
+    // [ABOGADO]; por eso el `update` va VACÍO: si ya existe (una decisión tomada), NO se
+    // clobbea en un re-seed — a diferencia de los de arriba, que el seed sí resetea a canónico.
+    await prisma.parametroSistema.upsert({
+        where: { clave: "audiencia_menor.reoir_en_cambio_de_version" },
+        update: {},
+        create: {
+            clave: "audiencia_menor.reoir_en_cambio_de_version",
+            valor: "true",
+            tipo: TipoParametro.BOOLEAN,
+            categoria: CategoriaParametro.LEGAL,
+            esPublico: false,
+            esSecreto: false,
+            descripcion:
+                "SPEC-751 · ¿re-oír a cada menor (art. 12) cuando cambia la versión del consentimiento? Default true (conservador). Decisión final [ABOGADO].",
+        },
+    });
+
+    // SPEC-751 · interruptor de ENFORCEMENT del gate de audiencia. Nace APAGADO: el service, el
+    // endpoint y los candados ya funcionan, pero el middleware NO detiene hasta que exista la
+    // pantalla de declaración (T010) y su texto [ABOGADO]. Encenderlo antes rebotaría a TODO padre
+    // existente (sin filas de AudienciaMenor) a un muro que no puede completar. `update:{}` para no
+    // apagar una activación ya decidida en un re-seed.
+    await prisma.parametroSistema.upsert({
+        where: { clave: "audiencia_menor.gate_activo" },
+        update: {},
+        create: {
+            clave: "audiencia_menor.gate_activo",
+            valor: "false",
+            tipo: TipoParametro.BOOLEAN,
+            categoria: CategoriaParametro.LEGAL,
+            esPublico: false,
+            esSecreto: false,
+            descripcion:
+                "SPEC-751 · ¿el middleware DETIENE la navegación del padre con audiencia pendiente? Default false. Encender SOLO con la pantalla de declaración y su texto [ABOGADO] listos.",
+        },
+    });
+
     console.log("[SEED] Parámetros de consentimiento (SPEC-241) listos");
 
     const evento = "consentimiento.aceptado";

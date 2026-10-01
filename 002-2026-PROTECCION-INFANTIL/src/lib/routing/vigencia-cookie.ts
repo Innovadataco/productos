@@ -27,6 +27,11 @@ export interface SesionEstadoPayload {
     vigencia: EstadoVigenciaEfectivo;
     requiereConsentimiento: boolean;
     debeCambiarPassword: boolean;
+    // SPEC-751: ¿hay un menor ACTIVO pendiente de audiencia (Decreto 1377/2013 art. 12)?
+    // Solo el eje per-menor; el eje de cuenta (241) lo lleva `requiereConsentimiento`. El
+    // middleware lo lee en Edge sin tocar Prisma. Se embebe SOLO para PARENT (defensa en
+    // profundidad: para no-titulares la marca ni existe).
+    audienciaPendiente: boolean;
     // SPEC-339 (A-67) + SPEC-344 (A-69): paso pendiente del camino guiado.
     // Acepta valores del padre (`PasoPendiente`) o del colegio
     // (`PasoPendienteColegio`). `null` = camino terminado, o el usuario
@@ -121,6 +126,10 @@ export async function leerSesionEstado(
     if (typeof payload.vigencia !== "string") return null;
     if (typeof payload.requiereConsentimiento !== "boolean") return null;
     if (typeof payload.debeCambiarPassword !== "boolean") return null;
+    // SPEC-751: estricto como los demás flags. Una cookie vieja sin el campo se descarta y se
+    // re-sella en el rebote con el valor real — NO default a false (un gate que falla ABIERTO
+    // dejaría pasar a un titular con audiencia pendiente hasta el refresh).
+    if (typeof payload.audienciaPendiente !== "boolean") return null;
     // SPEC-339 (validación estricta) + SPEC-344 (extensión colegio): el
     // campo acepta un paso del padre O del colegio. Cookies emitidas antes
     // del despliegue del colegio siguen validando (valores del padre); una

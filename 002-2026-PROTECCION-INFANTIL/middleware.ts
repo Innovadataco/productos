@@ -23,12 +23,14 @@ import {
     esRutaSesion,
     esPantallaAuth,
     esExentaConsentimiento,
+    esExentaAudiencia,
     esExentaCambiarPassword,
     esExentaCamino,
     esExentaVigencia,
     tieneVigencia,
     destinoVigencia,
 } from "@/lib/routing/guardias";
+import { audienciaGateDetiene } from "@/lib/consentimiento/audiencia-gate";
 import {
     NOMBRE_COOKIE as NOMBRE_COOKIE_SESION,
     leerSesionEstado,
@@ -245,6 +247,26 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                 );
             }
             return aplicarCspSiCorresponde(request, redirect(request, GUARDIAS_ACCESO.consentimiento.destino));
+        }
+        // Paso 4b (SPEC-751): audiencia del menor (Decreto 1377/2013 art. 12). Corre DESPUÉS de
+        // consentimiento (241 manda primero) y ANTES del camino. Solo PARENT (único rol con menores);
+        // el flag `audienciaPendiente` lo trae la cookie firmada (Node lo calculó, Edge no toca Prisma).
+        // INVARIANTE DE PRODUCTO: `audienciaGateDetiene` CORTOCIRCUITA en SUPERFICIES_PROTECCION — la
+        // vía de reporte NUNCA se tapa (candado proteccion-siempre-abierta la vigila). Dos adaptadores
+        // (SPEC-329): API → JSON 403, pantalla → 302.
+        if (
+            sesion.rol === "PARENT" &&
+            estado.audienciaPendiente &&
+            !esExentaAudiencia(pathname) &&
+            audienciaGateDetiene(pathname, !estado.audienciaPendiente)
+        ) {
+            if (pathname.startsWith("/api/")) {
+                return NextResponse.json(
+                    { error: { message: "Debes registrar la audiencia del menor para continuar.", code: "AUDIENCIA_MENOR_REQUERIDA", redirectTo: GUARDIAS_ACCESO.audiencia.destino } },
+                    { status: 403 }
+                );
+            }
+            return aplicarCspSiCorresponde(request, redirect(request, GUARDIAS_ACCESO.audiencia.destino));
         }
         // Paso 5: cambio-de-password obligatorio.
         if (estado.debeCambiarPassword && !esExentaCambiarPassword(pathname)) {

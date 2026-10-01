@@ -11,12 +11,14 @@
  *   2. NINGUNA compuerta EXISTENTE del padre (consentimiento → camino → vigencia) tapa las
  *      superficies de protección (cada una exenta o pública).
  *   3. Los canales oficiales (141 / CAI / Te Protejo) viven en una superficie PÚBLICA (`/reportar`).
+ *   4. La compuerta de AUDIENCIA del menor (SPEC-751, `audienciaGateDetiene`) nunca detiene la vía
+ *      de reporte — con control positivo (gate cerrado SÍ detiene lo operativo, NUNCA la protección).
  *
- * PROCEDENCIA (SPEC-751 → PR propio): esta pieza se SACÓ de SPEC-751 porque arregla un defecto
- * VIVO (padre con consentimiento pendiente rebotado de la vía de reporte) y Dev-1 la necesita como
- * fuente única para su compuerta (SPEC-784). La MITAD de audiencia —`audienciaGateDetiene` y su
- * aserción «la compuerta de audiencia nunca detiene la vía de reporte»— se QUEDA en SPEC-751 (con
- * la tabla). Al rebasar 751 sobre este main, esa mitad debe RE-AGREGARSE, no perderse.
+ * PROCEDENCIA (SPEC-751 → PR propio): los invariantes 1–3 se SACARON a un PR propio (#764) porque
+ * arreglan un defecto VIVO (padre con consentimiento pendiente rebotado de la vía de reporte) y
+ * Dev-1 los necesita como fuente única (SPEC-784). El invariante 4 —la MITAD de audiencia— se quedó
+ * en SPEC-751 (con la tabla `AudienciaMenor`). RE-AGREGADO acá al rebasar 751 sobre el main que ya
+ * trae 1–3: el candado vuelve a vigilar las CUATRO cosas, no tres.
  *
  * Estructural, con control positivo (gate cerrado → reporte accesible); cae si una compuerta los tapa.
  * Unit puro (sin BD).
@@ -31,6 +33,7 @@ import {
     esRutaPublica,
     matcheaRuta,
 } from "./guardias";
+import { audienciaGateDetiene } from "@/lib/consentimiento/audiencia-gate";
 
 /** ¿`ruta` está exenta de un guardián? En sus `exentas`, o por ser pública (universal). */
 const exentaEn = (ruta: string, exentas: readonly string[]): boolean =>
@@ -52,6 +55,7 @@ describe("INVARIANTE · ninguna compuerta EXISTENTE tapa la vía de reporte", ()
     // (consentimiento → camino → vigencia). Cada uno debe eximir TODA superficie de protección.
     const guardianesDelPadre: Array<[string, readonly string[]]> = [
         ["consentimiento", GUARDIAS_ACCESO.consentimiento.exentas],
+        ["audiencia", GUARDIAS_ACCESO.audiencia.exentas],
         ["camino", GUARDIAS_ACCESO.camino.exentas],
         ["vigencia.PARENT", GUARDIAS_ACCESO.vigencia.PARENT.exentas],
     ];
@@ -63,6 +67,21 @@ describe("INVARIANTE · ninguna compuerta EXISTENTE tapa la vía de reporte", ()
             });
         }
     }
+});
+
+describe("INVARIANTE · la compuerta de AUDIENCIA (SPEC-751) nunca detiene la vía de reporte", () => {
+    it("gate CERRADO (titular NO al día) → NO detiene ninguna superficie de protección", () => {
+        for (const r of SUPERFICIES_PROTECCION) {
+            expect(audienciaGateDetiene(r, false), `la audiencia tapó la vía de reporte ${r}`).toBe(false);
+        }
+    });
+    it("gate CERRADO → SÍ detiene la continuación OPERATIVA (control: el gate sí actúa)", () => {
+        expect(audienciaGateDetiene("/dashboard/padre/profesionales", false)).toBe(true);
+        expect(audienciaGateDetiene("/dashboard/padre", false)).toBe(true);
+    });
+    it("gate ABIERTO (titular al día) → no detiene nada", () => {
+        expect(audienciaGateDetiene("/dashboard/padre", true)).toBe(false);
+    });
 });
 
 describe("INVARIANTE · los canales oficiales de emergencia viven en una superficie pública", () => {

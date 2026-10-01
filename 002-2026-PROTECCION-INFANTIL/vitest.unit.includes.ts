@@ -112,6 +112,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-755: el auditor de consentimientos clasifica «firma sospechosa» derivando de
     // esTitularDelDato (fuente única), no de una lista a mano; control positivo en las dos direcciones.
     "scripts/lib/consentimiento-clasificacion.candado.test.ts",
+    // SPEC-751: reglas PURAS de la puerta de audiencia del menor (art. 12): per-menor, sensible
+    // a la política de re-oír por versión, y NO debilita la puerta de cuenta (regresión 241). Sin BD.
+    "src/lib/consentimiento/audiencia-gate.candado.test.ts",
     // SPEC-685: las claves de catálogo que siembran las dos semillas son reales y mapean a etiquetas no vacías (PURO).
     "scripts/lib/perfil-catalogo-seed.candado.test.ts",
     // SPEC-671 (I-397): los avisos de coincidencia sobreviven al motor caído (cableado del worker).
