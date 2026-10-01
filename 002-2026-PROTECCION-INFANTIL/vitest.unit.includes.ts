@@ -755,4 +755,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesional/reps/reps-elegibilidad.candado.test.ts",
     // SPEC-790: el stub del adaptador REPS NUNCA fabrica un VIGENTE (anti degradación silenciosa). Sin base.
     "src/lib/profesional/reps/reps-adaptador-nunca-vigente.candado.test.ts",
+    // SPEC-790: traducción cita→REPS en un solo lugar, exhaustiva; no-mapeo niega y registra. Sin base.
+    "src/lib/profesional/reps/modalidad-cita-a-reps.candado.test.ts",
 ];
