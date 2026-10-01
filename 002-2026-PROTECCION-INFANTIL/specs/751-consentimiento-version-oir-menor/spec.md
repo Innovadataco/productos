@@ -3,7 +3,7 @@
 **Feature Branch**: `work/pi-SPEC-751-consentimiento-version-oir-menor`
 **SPEC**: 751
 **Created**: 2026-09-29
-**Status**: PLANEADO
+**Status**: DESARROLLO
 **Input**: Cola A-79 (§6 fila 3) · encargo CEO 29-09 · anclajes SPEC-241 (mecanismo de consentimiento) + `src/app/consentimiento/page.tsx` · Decreto 1377/2013 art. 12 · Ley 1581/2012 art. 7
 
 Impacto en arquitectura: **aditivo, per-menor, FUENTE ÚNICA.** Crea la tabla inmutable nueva `AudienciaMenor` (registro probatorio por acto de audiencia: `hijoId`, `usuarioId` del representante, `version`, `declaradoEn`, `ip`, `userAgent`, y el texto de declaración) con FK `hijoId`/`usuarioId` `onDelete: Cascade` e índices `(hijoId, version)` y `(version)`. **NO denormaliza en `Hijo`** (veredicto CEO · D-6): la puerta consulta `AudienciaMenor` directamente, así el estado «oído» NO puede divergir por construcción — un derivado sin mecanismo que lo sostenga es un segundo origen de verdad. Extiende el predicado de la puerta de consentimiento con una dimensión per-menor (el titular queda «al día» solo si su consentimiento de cuenta está vigente **y** cada menor ACTIVO tiene una fila de `AudienciaMenor` con la versión vigente). NO toca el motor, el proxy ni la navegación. `AudienciaMenor` **es PII** (cuelga de un menor · D-8): su retención queda atada a la del menor y entra en el alcance de lo NO eliminable de SPEC-772. El TEXTO de la declaración de audiencia es **[ABOGADO]** (ver `[NEEDS CLARIFICATION]`).
@@ -107,3 +107,22 @@ Decreto 1377/2013 art. 12: el representante legal autoriza el tratamiento de dat
 - El «tope de menores» y el estado activo/inactivo del menor ya existen (SPEC-339/361/363); esta SPEC se apoya en ellos, no los redefine.
 - La ubicación exacta de la UI (paso del camino guiado de SPEC-339 vs. modal per-menor) se fija en `plan.md`; el §4 fija el CONTRATO de datos y de puerta, no la pantalla.
 - El texto legal y la política de re-audiencia por versión vuelven de Jelkin/abogado antes de implementar FR-007/FR-008.
+
+---
+
+## Implementación — el CONTINENTE (2026-09-30, Dev 2)
+
+Construido y verificado (BD aislada); el texto de la declaración sigue **[ABOGADO]**.
+
+**Qué quedó cableado:**
+- `src/lib/dal/services/audiencia-menor.ts` — service: `declararAudienciaMenor` (INSERT inmutable en `AudienciaMenor` + `AuditLog` en la MISMA tx; idempotente por `@@unique(hijoId, versión)`), `menoresPendientesDeAudienciaDelTitular`, `hayAudienciaPendiente`, `titularAlDiaDeAudiencia`. Lee `AudienciaMenor` como FUENTE ÚNICA (D-6, sin denormalizar). Cablea el predicado puro `audiencia-gate.ts` → se quitó su entrada de `modulos-huerfanos-allowlist.json`.
+- `POST /api/audiencia-menor/declarar` — el titular declara haber oído a UN menor (403/404 si ajeno; PII).
+- Cookie firmada: `audienciaPendiente` nuevo en `SesionEstadoPayload` (validación estricta) + cálculo en `buildSesionEstadoValue` (Node; Edge no toca Prisma).
+- `middleware.ts` Paso 4b — gate de audiencia (después de consentimiento, antes de camino). Dos adaptadores (API 403 / página 302). `GUARDIAS_ACCESO.audiencia` integrado en la invariante CRUZADA (sin bucles de redirect) y en `proteccion-siempre-abierta.candado`.
+- `AccionAudit.AUDIENCIA_MENOR_DECLARADA` (enum + migración aditiva) — rastro durable de responsabilidad (`declaradoPor` es SetNull).
+
+**Candados:** `proteccion-siempre-abierta` (mitad de audiencia RE-AGREGADA al rebasar; 4 invariantes), `audiencia-gate.candado` (puro), `audiencia-menor.candado` (conducta, dato real: per-menor · versión · cuenta-manda · solo-activos · idempotente+AuditLog sin PII · propiedad).
+
+**EL GATE NACE APAGADO** (`audiencia_menor.gate_activo`, default `false`). Encenderlo ANTES de que exista la pantalla de declaración (T010) y su texto **[ABOGADO]** rebotaría a TODO padre existente (sin filas de `AudienciaMenor`) a un muro que no puede completar. El cómputo y los candados funcionan igual; solo el enforcement del middleware espera.
+
+**Para ACTIVAR (cuando [ABOGADO] + Diseño entreguen):** construir la pantalla `/audiencia-menor` (T010, lista los menores pendientes + declara contra el texto legal) → poner `audiencia_menor.gate_activo = true`.

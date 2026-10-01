@@ -148,6 +148,35 @@ export const GUARDIAS_ACCESO = {
     } as const,
 
     /**
+     * Guardián de AUDIENCIA del menor (SPEC-751 · Decreto 1377/2013 art. 12).
+     * Corre DESPUÉS de consentimiento y ANTES de camino/vigencia (orden en `middleware.ts`).
+     * `destino` es el muro de declaración; la mitad estructural de la regla —NUNCA tapar la vía de
+     * reporte— la impone `audienciaGateDetiene` (cortocircuito en `SUPERFICIES_PROTECCION`), y el
+     * candado `proteccion-siempre-abierta` la vigila. `exentas` = lo que el padre DEBE alcanzar
+     * aunque falte una audiencia: declararla, salir, y las superficies de protección. El destino de
+     * consentimiento (guardián anterior) va exento acá por la invariante CRUZADA.
+     */
+    audiencia: {
+        destino: "/audiencia-menor",
+        exentas: [
+            "/audiencia-menor",
+            "/api/audiencia-menor",
+            "/consentimiento",
+            "/api/consentimiento",
+            "/login",
+            "/api/auth/logout",
+            "/api/sesion/al-dia",
+            "/api/session/ping",
+            "/api/vigencia/refresh",
+            // Regla dura de Jelkin: proteger a un menor está por encima de cualquier formalidad.
+            "/reportar",
+            "/dashboard/padre/reportar",
+            "/mis-reportes",
+            "/api/reportes",
+        ],
+    } as const,
+
+    /**
      * Guardián de cambio-de-password obligatorio.
      * Los usuarios con `debeCambiarPassword=true` van al muro.
      */
@@ -227,6 +256,9 @@ export const GUARDIAS_ACCESO = {
             "/dashboard/padre/reportar",
             "/mis-reportes",
             "/api/reportes",
+            // SPEC-751: el muro de audiencia corre ANTES que el camino; su destino debe quedar
+            // exento acá o un padre con audiencia pendiente Y camino pendiente rebotaría sin fin.
+            "/audiencia-menor",
         ],
         // SPEC-344 (A-69 · C1): exentas del camino guiado del colegio.
         exentasColegio: [
@@ -336,6 +368,10 @@ export const GUARDIAS_ACCESO = {
                 // (L4), no a *conocer* a quién existe.
                 "/dashboard/padre/profesionales",
                 "/api/padre/profesionales",
+                // SPEC-751: el muro de audiencia corre ANTES que vigencia; su destino debe quedar
+                // exento acá (invariante cruzada) o un padre sin plan Y con audiencia pendiente
+                // rebotaría sin fin entre los dos guardianes.
+                "/audiencia-menor",
             ],
         },
         SCHOOL_ADMIN: {
@@ -395,6 +431,12 @@ export const GUARDIAS_ACCESO = {
             `[GUARDIAS_ACCESO] Invariante rota: consentimiento.destino "${GUARDIAS_ACCESO.consentimiento.destino}" NO está en exentas.`,
         );
     }
+    // audiencia.destino ∈ audiencia.exentas (SPEC-751)
+    if (!GUARDIAS_ACCESO.audiencia.exentas.some((r) => r === GUARDIAS_ACCESO.audiencia.destino)) {
+        throw new Error(
+            `[GUARDIAS_ACCESO] Invariante rota: audiencia.destino "${GUARDIAS_ACCESO.audiencia.destino}" NO está en exentas.`,
+        );
+    }
     // cambiarPassword.destino ∈ cambiarPassword.exentas
     if (!GUARDIAS_ACCESO.cambiarPassword.exentas.some((r) => r === GUARDIAS_ACCESO.cambiarPassword.destino)) {
         throw new Error(
@@ -423,7 +465,7 @@ export const GUARDIAS_ACCESO = {
     // que corren después de él, en el orden real de `middleware.ts`.
     // Historial de esta familia de defectos: I-25 → I-111 → I-141 → SPEC-339.
     {
-        const ORDEN_GUARDIANES = ["consentimiento", "camino", "vigencia"] as const;
+        const ORDEN_GUARDIANES = ["consentimiento", "audiencia", "camino", "vigencia"] as const;
 
         // Destinos que produce cada guardián, por rol. El camino no tiene un
         // destino fijo: produce uno por paso — PARENT usa `/camino/**` (Paso 1
@@ -435,6 +477,7 @@ export const GUARDIAS_ACCESO = {
         };
         const destinosDe: Record<(typeof ORDEN_GUARDIANES)[number], string[]> = {
             consentimiento: [GUARDIAS_ACCESO.consentimiento.destino],
+            audiencia: [GUARDIAS_ACCESO.audiencia.destino],
             camino: [
                 ...destinosPorRolCamino.PARENT,
                 ...destinosPorRolCamino.SCHOOL_ADMIN,
@@ -451,6 +494,7 @@ export const GUARDIAS_ACCESO = {
             rolCamino?: "PARENT" | "SCHOOL_ADMIN",
         ): readonly string[] => {
             if (guardian === "consentimiento") return GUARDIAS_ACCESO.consentimiento.exentas;
+            if (guardian === "audiencia") return GUARDIAS_ACCESO.audiencia.exentas;
             if (guardian === "camino") {
                 return rolCamino === "SCHOOL_ADMIN"
                     ? GUARDIAS_ACCESO.camino.exentasColegio
@@ -555,6 +599,14 @@ export function esPantallaAuth(pathname: string): boolean {
 
 export function esExentaConsentimiento(pathname: string): boolean {
     return GUARDIAS_ACCESO.consentimiento.exentas.some((r) => matcheaRuta(pathname, r));
+}
+
+/**
+ * SPEC-751 · rutas que el guardián de AUDIENCIA del menor NUNCA tapa: el muro y su API (para
+ * declarar), el consentimiento (guardián anterior), las salidas, y las superficies de protección.
+ */
+export function esExentaAudiencia(pathname: string): boolean {
+    return GUARDIAS_ACCESO.audiencia.exentas.some((r) => matcheaRuta(pathname, r));
 }
 
 /**

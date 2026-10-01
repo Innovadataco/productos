@@ -15,14 +15,16 @@
 - [x] T012a Candados PUROS: C-per-menor-no-global · C-versión (política) · **C-no-romper-cuenta (regresión SPEC-241)** — la cuenta manda y no se debilita. (`audiencia-gate.candado.test.ts`.)
 - [x] T012b Tope MEDIDO: `padre.hijos.maximo` default **5**, sobre menores ACTIVOS (SPEC-339/363) → la consulta del gate es barata (confirma no-denormalizar).
 
-## Fase implementación — ESPERA (tabla Datos/765 + texto [ABOGADO])
-- [ ] T006 D-121 en `schema.prisma` (Datos): tabla + orden de borrado + candado de inserción si hay restricción cruda.
-- [ ] T007 `AudienciaMenorService`: `declarar` = INSERT inmutable en tx + consulta `menoresPendientes` (cablea el predicado puro a Prisma). Repos DAL, sin `@/lib/prisma`.
-- [ ] T009 `POST /api/audiencia-menor/declarar` (auth, 403 no-titular, idempotente por versión, AuditLog).
-- [ ] T010 UI: el MURO de «registraste un hijo nuevo» (copy `da2986f`) + el paso de declaración ([ABOGADO]). D-9: la vía de PROTECCIÓN (reportar/pedir ayuda por otro hijo) NO se cierra.
-- [ ] T012c Candado de conducta de la puerta (fuente única, per-menor con dato real) + candado estructural «`Hijo` sin campo de audiencia» (D-6) — cuando exista la tabla/servicio.
-- [ ] T013 Gates + migración verificada.
-- [ ] T014 Índice de specs (`specs/README.md`) + cierre.
+## Fase implementación — EL CONTINENTE (2026-09-30, Dev 2)
+- [x] T006 D-121 `AudienciaMenor` — **Datos**, ya en `main` (SPEC-781 · `df4b10085`).
+- [x] T007 `AudienciaMenorService` (`src/lib/dal/services/audiencia-menor.ts`): `declararAudienciaMenor` = INSERT inmutable + `AuditLog` en la misma tx, idempotente por `@@unique`; + `menoresPendientesDeAudienciaDelTitular` / `hayAudienciaPendiente` / `titularAlDiaDeAudiencia`. Cablea el predicado puro a Prisma (fuente única).
+- [x] T007b `AccionAudit.AUDIENCIA_MENOR_DECLARADA` (enum + migración aditiva) — rastro durable (`declaradoPor` SetNull).
+- [x] T009 `POST /api/audiencia-menor/declarar` (auth PARENT, 404 no-dueño, idempotente, AuditLog).
+- [x] T010a **Cableado del gate** (middleware Paso 4b + cookie `audienciaPendiente` + `GUARDIAS_ACCESO.audiencia` en la invariante cruzada). Dos adaptadores (API 403 / 302). **APAGADO** por `audiencia_menor.gate_activo` (default false).
+- [ ] T010b UI: pantalla `/audiencia-menor` (lista pendientes + declara) + texto **[ABOGADO]**. Al entregarse → `gate_activo = true`. D-9: la vía de PROTECCIÓN NO se cierra (candado).
+- [x] T012c Candado de conducta (`audiencia-menor.candado.test.ts`, dato real: per-menor · versión · cuenta-manda · solo-activos · idempotente+AuditLog sin PII · propiedad) + mitad de audiencia RE-AGREGADA en `proteccion-siempre-abierta`.
+- [x] T013 Gates: tsc 0 · arch:check VERDE · unit routing/candados verdes · candado de conducta 6/6 (BD aislada) · migración aplica limpio.
+- [ ] T014 Índice de specs (`specs/README.md`, lo regenera el barrido post-merge) + cierre al activar.
 
 ## Notas
 - «Versión nueva» NO se construye (D-1): ya existe en SPEC-241. El eje NUEVO es per-menor.

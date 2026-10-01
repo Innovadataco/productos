@@ -149,7 +149,7 @@ describe("SPEC-572 · loop-cap: con el re-sello roto, no hay bucle", () => {
         // loop-cap disparara con la cookie presente, rompería toda navegación tras un rebote exitoso.
         const token = await jwt("PARENT");
         const estado = await firmarSesionEstado(
-            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino: null },
+            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino: null },
             JWT_SECRET_TEST,
         );
         const url = new URL("http://localhost:5005/dashboard/padre");

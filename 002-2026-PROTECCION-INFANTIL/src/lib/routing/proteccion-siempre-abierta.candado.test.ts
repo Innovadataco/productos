@@ -55,6 +55,7 @@ describe("INVARIANTE · ninguna compuerta EXISTENTE tapa la vía de reporte", ()
     // (consentimiento → camino → vigencia). Cada uno debe eximir TODA superficie de protección.
     const guardianesDelPadre: Array<[string, readonly string[]]> = [
         ["consentimiento", GUARDIAS_ACCESO.consentimiento.exentas],
+        ["audiencia", GUARDIAS_ACCESO.audiencia.exentas],
         ["camino", GUARDIAS_ACCESO.camino.exentas],
         ["vigencia.PARENT", GUARDIAS_ACCESO.vigencia.PARENT.exentas],
     ];
