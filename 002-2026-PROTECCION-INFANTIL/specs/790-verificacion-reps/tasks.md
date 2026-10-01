@@ -31,11 +31,28 @@
   - [ ] Post-filtro Node `idsRepsElegibles(perfilIds, modalidadRequerida, now, config, db)` (análogo a `idsConVigenciaAutoritativa`): última fila por profesional (`orderBy verificadoEn desc`), map→`HechoReps`, `repsElegible`. En el carril del builder para que lo hereden las 4 lecturas.
   - [ ] **CUIDADO (medido por el CEO): hoy SIN_VERIFICAR es el universo** (51 colegios TODOS sembrados, 0 REPS). Un pre-filtro SQL grueso `some(VIGENTE)` VACIARÍA el directorio al arrancar → el gate es cutover-aware: con `EXIGIR_REPS_VERIFICADO=false`, SIN_VERIFICAR PASA. Ships `false`.
   - [ ] Candado de PARIDAD mirror↔enum Prisma (`ESTADOS_REPS`/`MODALIDADES_REPS` ≡ `EstadoReps`/`ModalidadReps`), o importar el type y soltar el mirror.
-- [ ] **T5** · Recorredor periódico idempotente + candado C-4 (hecho con fecha).
-- [ ] **T6** · INACTIVO → reubicar (reasignar las confirmadas a un habilitado; el asignador con el eje de
-  HABILITACIÓN, no carga/hora) + sube al admin a QUIÉN; candado C-3. (Retroactividad: solo registrar la
-  causal, no modelarla como resuelta — D-6.)
-- [ ] **T7** · Gate: `tsc` · `lint` · candados · `arch:check` · `specs-discipline`.
+- [ ] **T6 · Superficie de verificación MANUAL_ADMIN** (NUEVO · decisión CEO 30-09 21:1x). **Por qué entró:**
+  con solo el stub (siempre `SIN_VERIFICAR`), ningún profesional llega a «caducada» (necesita
+  `VENCIDA`/`NO_ENCONTRADA`) NI puede re-habilitarse (necesita una `VIGENTE` fresca) → 790 entregaría motor +
+  compuerta + aviso + pantalla admin y **ninguna forma de producir el dato**: no es `hueco-funcional`, es una
+  SPEC que no funciona. Es la ÚNICA fuente que no depende del formato del dataset (que Estrategia no fijó).
+  Un formulario de admin que registra una verificación con `resultado` + `vigenteHasta` + `modalidades`
+  (`fuente=MANUAL_ADMIN`). DOS condiciones DURAS:
+  - **(1) Actor durable:** quién cargó la verificación va al SNAPSHOT (`verificadoPorSnapshot`), no solo al FK
+    (SetNull se vacía). Datos ya lo modeló así — respetarlo. Es la pantalla que ENCIENDE la compuerta de todo
+    el producto: el registro del hecho pesa más que la comodidad.
+  - **(2) Sin atajos · compuerta de código ANTES del CHECK:** nada de «marcar vigente» sin `vigenteHasta` —
+    el CHECK `VIGENTE⟹vigenteHasta NOT NULL` lo rechaza y el usuario recibiría el error CRUDO de la base.
+    Validar en el servicio antes de insertar (Prisma es ciego al CHECK). Modalidades = `ModalidadReps` directo
+    (el admin elige el eje de la autoridad; NO pasa por el mapeo cita→REPS).
+  - Espera el modelo en mi rama (escribe `VerificacionReps`). ¿FORMA de Diseño para el visual, o form funcional? — pregunto al CEO al llegar.
+- [ ] **T7** · INACTIVO → reubicar (reasignar las confirmadas a un habilitado; el eje es HABILITACIÓN —
+  REPS al día + ACTIVO—, no carga/hora) + sube al admin a QUIÉN; empty-state («sin candidatos») de PRIMERA
+  CLASE (es el caso normal hoy); candado C-3. (Retroactividad: solo registrar la causal — D-6.) Reusa el
+  chokepoint + el mapeo de ejes (contraste de formas, 30-09).
+- [ ] **T5** · Recorredor periódico idempotente + candado C-4 (hecho con fecha). **FUTURO** — depende del
+  formato del dataset del Estado (Estrategia). La carga MANUAL (T6) es lo que vuelve ejercitable el presente.
+- [ ] **T8** · Gate: `tsc` · `lint` · candados · `arch:check` · `specs-discipline`.
 
 ## Condición del INGESTOR real (T5 · no construir ahora, dejar escrito — pedido del CEO)
 Hoy el no-mapeo de modalidad (cita→REPS) se registra con un `warn` ruidoso. **Un warn en logs nadie lo
@@ -46,4 +63,7 @@ para el gate (entrada puntual), no para la ingesta en bloque.
 
 ## Fuera de alcance
 A vs B (Jelkin+abogado, Paso 0) · consentimiento de sesión (P-3) · historia clínica (P-2) · empaquetado
-de planes (791) · las SUPERFICIES (aviso al profesional = Diseño; vista de la familia = Estrategia).
+de planes (791) · el **aviso al profesional** (copy/forma = Diseño; FORMA-SPEC790 ya radicada) · la **vista
+de la familia** (Estrategia, decisión de Jelkin sin tomar). **DENTRO (nuevo 30-09):** la superficie de
+verificación MANUAL_ADMIN (T6) y la pantalla admin de reubicación (T7) — su FORMA la da Diseño
+(FORMA-SPEC790 reubicar ya radicada); el MECANISMO + la compuerta de datos los construyo yo.

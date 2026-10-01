@@ -1,10 +1,11 @@
 # SPEC-790 · Verificar el REPS del profesional, con revisión periódica (MOTOR)
 
-> **Status**: `DESARROLLO` · **§4 aprobado (veredicto CEO 30-09: D-1..D-8).** Modelo = carril de Datos; el
-> motor se construye en paralelo. T1-T7 en curso.
+> **Status**: `DESARROLLO` · **§4 aprobado (veredicto CEO 30-09: D-1..D-9).** Modelo = carril de Datos; el
+> motor se construye en paralelo. T1-T8 en curso.
 > **Rama**: `work/pi-SPEC-790-verificacion-reps` (base `main`). **Radicado**: `RADICADO-SPEC-790-2026-09-29.md`.
-> **Solo el MOTOR.** Superficies FUERA (aviso al profesional = Diseño; vista de la familia = pregunta
-> legal de Estrategia). Sirve en la Opción A y no estorba en B.
+> **Motor + las superficies de ADMIN que lo alimentan y lo operan** (verificación MANUAL_ADMIN · reubicación —
+> ambas con FORMA de Diseño ya radicada; yo hago el mecanismo + la compuerta de datos, D-9). FUERA: el aviso
+> al profesional (copy/forma = Diseño) y la vista de la familia (pregunta legal de Estrategia). Opción A.
 
 ## 1 · Por qué
 
@@ -80,6 +81,7 @@ SIN_VERIFICAR }` — **cuatro** valores (los tres últimos NO son lo mismo; el m
 | C-4 | **FR-1** · el hecho lleva fecha | no se puede registrar una verificación sin `verificadoEn` + `resultado` |
 | C-5 | **FR-3/D-7** · cutover | `VENCIDA`/`NO_ENCONTRADA` cierran siempre; `SIN_VERIFICAR` abre sii `EXIGIR_REPS_VERIFICADO=false`; `SIN_VERIFICAR` nunca == `VIGENTE`; el stub nunca devuelve `VIGENTE` |
 | C-6 | **D-8** · compuerta derivada del ÁRBOL | toda ruta/consulta que reserva o reubica un profesional pasa por la elegibilidad REPS (barrido del árbol, no lista a mano) |
+| C-7 | **D-9** · MANUAL_ADMIN sin atajos | registrar `VIGENTE` sin `vigenteHasta` lo RECHAZA el servicio ANTES del insert (compuerta de código antes del CHECK de la base; el admin no ve el error crudo). Control positivo: el intento devuelve error de validación propio, no P2010/23514. Y el actor queda en `verificadoPorSnapshot`, no solo en el FK |
 
 **NO reconciliar:** si un test existente se pone rojo, es hallazgo.
 
@@ -113,6 +115,17 @@ SIN_VERIFICAR }` — **cuatro** valores (los tres últimos NO son lo mismo; el m
   ninguna lectura lo compone a mano (control positivo por mutación). (b) CONDUCTA —
   `perfil-profesional-directorio-vigencia` cubre las CUATRO lecturas. El barrido del árbol de **rutas** de
   booking (reasignar/reprogramar/reubicación) se cierra en T4/T7, cuando `repsAlDia` entra al builder.
+- **D-9 · [CEO · 30-09 21:1x] La superficie de verificación MANUAL_ADMIN ENTRA en 790.** Hallazgo del contraste
+  de formas (Dev-1): con solo el stub (siempre `SIN_VERIFICAR`), **ningún profesional llega a «caducada» ni
+  puede re-habilitarse** — el aviso necesita `VENCIDA`/`NO_ENCONTRADA` y la vuelta necesita una `VIGENTE`
+  fresca, y el stub no produce ninguna. Entregar motor + compuerta + aviso + pantalla admin **sin forma de
+  producir el dato NO es un `hueco-funcional`: es una SPEC que no funciona** (faltaría la ENTRADA del sistema).
+  El modelo ya soporta `fuente=MANUAL_ADMIN`; es la única fuente que no depende del formato del REPS (que
+  Estrategia no fijó). Es T6. Dos condiciones duras: **(1)** el actor va al SNAPSHOT durable
+  (`verificadoPorSnapshot`), no al FK que se vacía — es la pantalla que enciende la compuerta de todo el
+  producto; **(2)** sin atajos: la compuerta de código valida `vigenteHasta` ANTES de insertar (Prisma es
+  ciego al CHECK `VIGENTE⟹vigenteHasta NOT NULL`; sin validar, el admin recibe el error crudo de la base). El
+  ingestor periódico del dataset (T5) sigue siendo el futuro; la carga manual vuelve ejercitable el presente.
 - **D-3 · Punto de la compuerta: el builder `whereDirectorioPublico`** (dueño ÚNICO del predicado del
   directorio — campos obligatorios al final, un `extra` del llamador no los sobreescribe), NO
   `asignarOperadorACita` (eso es el OPERADOR, D-6a). Las puertas de cita NUEVA se apoyan en él:
