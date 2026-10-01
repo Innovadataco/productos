@@ -17,6 +17,7 @@ import { dirname, resolve } from "node:path";
 
 const AQUI = dirname(fileURLToPath(import.meta.url)); // …/src/app/api/reportes
 const ROUTE = resolve(AQUI, "route.ts");
+const WIZARD = resolve(AQUI, "../../../components/modules/ReporteWizard.tsx");
 
 describe("SPEC-808 · el mensaje de reporte duplicado", () => {
     const src = readFileSync(ROUTE, "utf8");
@@ -40,5 +41,27 @@ describe("SPEC-808 · el mensaje de reporte duplicado", () => {
     it("no quedó la referencia vencida al «candado 26» atada a este 429", () => {
         // El candado 26 real es del comité (comite-candado26.spec-384.test.ts), no del 429 del anónimo.
         expect(src).not.toContain("candado 26");
+    });
+});
+
+describe("SPEC-808 · la tarjeta que ve el padre (ReporteWizard)", () => {
+    const wiz = readFileSync(WIZARD, "utf8");
+
+    it("NO acusa: ni «Ya reportaste… recientemente» ni «agregar otro evento» / «Cancelar» (el callejón)", () => {
+        expect(wiz).not.toContain("Ya reportaste este identificador recientemente");
+        expect(wiz).not.toContain("agregar otro evento");
+    });
+
+    it("enuncia el estado: «Ya tienes un reporte sobre esta cuenta»", () => {
+        expect(wiz).toContain("Ya tienes un reporte sobre esta cuenta");
+    });
+
+    it("ofrece las TRES salidas verificadas, no un callejón", () => {
+        expect(wiz).toContain("Sumar algo nuevo a este reporte");
+        expect(wiz).toContain("Ver mi reporte");
+        expect(wiz).toMatch(/>\s*Listo\s*</);
+        // «Ver mi reporte» va al detalle propio; «Listo» a la lista (no de vuelta al wizard).
+        expect(wiz).toContain("/dashboard/mis-reportes/");
+        expect(wiz).toContain('href="/mis-reportes"');
     });
 });
