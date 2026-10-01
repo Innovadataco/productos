@@ -8,6 +8,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // 3003: detector de typo de dominio (gmaail.com → gmail.com), puro.
     "src/lib/email-typo.test.ts",
     "scripts/arch/no-prisma-mocks.test.ts",
+    // SPEC-803: 00/01/06 fuera del gate byte-exacto del PR (representabilidad; post-merge regenera).
+    "scripts/arch/docs-globales-fuera-del-gate.candado.test.ts",
     // CEO 06-09: parseArgs de scripts/demo ABORTA ante flag desconocido (no traga banderas en un script destructivo).
     "scripts/demo/parseargs-estricto.candado.test.ts",
     // SPEC-287 (002-PI-187): fuente única de guardias + cookie firmada de vigencia + 4 ratchets estáticos.

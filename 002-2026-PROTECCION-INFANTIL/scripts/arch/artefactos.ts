@@ -19,6 +19,21 @@ export interface ArtefactoLineaBase {
      * `lib/comparar-tolerando-orden.ts`.
      */
     toleraOrdenDeFilas?: boolean;
+    /**
+     * SPEC-803: este artefacto es una FOTO del estado GLOBAL (índice, modelo de datos, stack).
+     * Verificarlo byte a byte en cada PR obliga a cargar esa foto dentro de un cambio local, y las
+     * fotos no componen: dos PR de schema en paralelo dejan `main` rojo y fuerzan un rebase por Dev.
+     *
+     * Con esta marca, el gate del PR verifica SOLO REPRESENTABILIDAD (que el generador corra sin
+     * error sobre la fuente), NO `committed == regen`. El barrido post-merge (generados-post-merge)
+     * los regenera sobre `main` y abre el PR del operador si driftearon. Mismo tratamiento que
+     * `toleraOrdenDeFilas` da a 02/03, por otra razón: aquéllos por orden de filas; éstos por ser
+     * una foto global que debe estar al día EVENTUALMENTE (tras el merge), no en cada PR.
+     *
+     * El aparato NO se quita: el generador SIGUE corriendo en el PR (representabilidad) y el drift
+     * real lo caza el post-merge sobre `main`.
+     */
+    fueraDelGatePorPR?: boolean;
 }
 
 export const ARTEFACTOS: ArtefactoLineaBase[] = [
@@ -27,12 +42,14 @@ export const ARTEFACTOS: ArtefactoLineaBase[] = [
         titulo: "Índice de la línea base",
         fuentes: ["scripts/arch/artefactos.ts"],
         generador: "scripts/arch/generar-indice.ts",
+        fueraDelGatePorPR: true,
     },
     {
         archivo: "01-modelo-datos.md",
         titulo: "Modelo de datos (Prisma)",
         fuentes: ["prisma/schema.prisma", "scripts/arch/excepciones.json"],
         generador: "scripts/arch/generar-modelo-datos.ts",
+        fueraDelGatePorPR: true,
     },
     {
         archivo: "02-roles-capacidades.md",
@@ -60,6 +77,7 @@ export const ARTEFACTOS: ArtefactoLineaBase[] = [
         titulo: "Stack, contenedores y puertos",
         fuentes: ["package.json", "Dockerfile", "docker-compose.prod.yml", "docker-compose.yml"],
         generador: "scripts/arch/generar-stack.ts",
+        fueraDelGatePorPR: true,
     },
 ];
 
