@@ -16,6 +16,7 @@
  * Integración (BD de test, truncada por resetDatabase). NO toca prod.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
@@ -49,19 +50,28 @@ function nuevoId(): string {
  *  a 10 días, venceEn > recibidoEn. Cada test tuerce SOLO el campo que quiere probar. */
 function insertarSQL(id: string, o: Opts = {}) {
     const vence = o.venceEn === undefined ? VENCE_BASE : o.venceEn;
+    const tipo = o.tipo ?? "CONSULTA";
+    // SPEC-827 · el baseline respeta el CHECK `objeto_por_tipo`: CONSULTA va con objeto vacío,
+    // RECTIFICACION/SUPRESION con ≥1 clase (el requisito que agregó 827). Va como fragmento SQL (literal de
+    // enum), no como param, para castear a "ClaseDatoTitular"[].
+    const clasesSolicitadas =
+        tipo === "CONSULTA"
+            ? Prisma.raw("ARRAY[]::\"ClaseDatoTitular\"[]")
+            : Prisma.raw("ARRAY['PERFIL']::\"ClaseDatoTitular\"[]");
     return prisma.$executeRaw`
         INSERT INTO "SolicitudHabeasData"
-            (id, tipo, calidad, "peticionarioUsuarioId", "sujetoDelDato", "plazoDias", "recibidoEn", origen, "venceEn")
+            (id, tipo, calidad, "peticionarioUsuarioId", "sujetoDelDato", "plazoDias", "recibidoEn", origen, "venceEn", "clasesSolicitadas")
         VALUES (
             ${id},
-            ${o.tipo ?? "CONSULTA"}::"TipoSolicitudHabeasData",
+            ${tipo}::"TipoSolicitudHabeasData",
             ${o.calidad ?? "TITULAR_CUENTA"}::"CalidadPeticionario",
             ${o.peticionarioUsuarioId ?? null},
             ${o.sujetoDelDato ?? null},
             ${o.plazoDias ?? 10},
             ${o.recibidoEn ?? RECIBIDO_BASE},
             ${o.origen ?? "APLICACION"}::"OrigenSolicitudHabeasData",
-            ${vence}
+            ${vence},
+            ${clasesSolicitadas}
         )
     `;
 }
@@ -250,8 +260,8 @@ describe("SPEC-772 · resultado DESPOJADO — la constancia no puede contener lo
         // La constancia solo puede decir: qué se hizo (enum) + sobre qué CLASE (enum). Nada del contenido.
         await prisma.$executeRaw`
             INSERT INTO "SolicitudHabeasData"
-                (id, tipo, calidad, "sujetoDelDato", "plazoDias", "recibidoEn", origen, "venceEn", estado, "resueltaEn", resultado, "clasesDatoAfectadas")
-            VALUES (${id}, 'SUPRESION'::"TipoSolicitudHabeasData", 'REPRESENTANTE_LEGAL'::"CalidadPeticionario", ${"alumno:menor-anon"}, 15, ${RECIBIDO_BASE}, 'CORREO'::"OrigenSolicitudHabeasData", ${VENCE_BASE}, 'RESUELTA'::"EstadoSolicitudHabeasData", ${VENCE_BASE}, 'ATENDIDA_COMPLETA'::"ResultadoSolicitudHabeasData", ARRAY['CONTENIDO_REPORTE']::"ClaseDatoTitular"[])
+                (id, tipo, calidad, "sujetoDelDato", "plazoDias", "recibidoEn", origen, "venceEn", estado, "resueltaEn", resultado, "clasesSolicitadas", "clasesDatoAfectadas")
+            VALUES (${id}, 'SUPRESION'::"TipoSolicitudHabeasData", 'REPRESENTANTE_LEGAL'::"CalidadPeticionario", ${"alumno:menor-anon"}, 15, ${RECIBIDO_BASE}, 'CORREO'::"OrigenSolicitudHabeasData", ${VENCE_BASE}, 'RESUELTA'::"EstadoSolicitudHabeasData", ${VENCE_BASE}, 'ATENDIDA_COMPLETA'::"ResultadoSolicitudHabeasData", ARRAY['CONTENIDO_REPORTE']::"ClaseDatoTitular"[], ARRAY['CONTENIDO_REPORTE']::"ClaseDatoTitular"[])
         `;
         const row = await prisma.solicitudHabeasData.findUnique({ where: { id } });
         expect(row?.resultado, "control positivo: la disposición despojada SÍ se guarda").toBe("ATENDIDA_COMPLETA");
