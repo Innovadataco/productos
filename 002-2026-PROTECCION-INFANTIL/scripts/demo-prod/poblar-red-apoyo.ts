@@ -5,7 +5,7 @@
  *
  * v5 dejó la Red de Apoyo vacía a propósito (orden del 03-09, levantada por
  * Jelkin el 11-09). Este script la puebla con MOVIMIENTO real: profesionales
- * visibles y reservables + citas repartidas en los NUEVE estados de
+ * visibles y reservables + citas repartidas en los DIEZ estados de
  * `SolicitudCita`, para que se puedan probar agenda, citas, vencimientos,
  * reembolsos y encuestas, y para que la analítica de BI signifique algo.
  *
@@ -20,6 +20,10 @@
  *  · REPROGRAMADA es CADENA largo-1: fila nueva que hereda el pago
  *    (`pagoHeredadoDeId`), original → REPROGRAMADA + franja liberada. Largo-2 no
  *    lo produce el producto → no se siembra.
+ *  · REUBICADA (SPEC-814, art. 19) es CADENA como REPROGRAMADA pero con OTRO
+ *    profesional y franja OCUPADA (NO libera: el profesional dejó de estar
+ *    disponible, la franja no vuelve al pool): original REUBICADA → hija CUMPLIDA
+ *    que hereda el pago; la original prueba la continuidad (reubicadaEnId/En/PorId).
  *  · Reembolso (D-137): sólo de la población de silencio del profesional, NUNCA
  *    del no-asistió del padre. `montoTotal` ES el monto devuelto (reembolso total).
  *  · Montos del PARÁMETRO del admin (no constante): primera cita = precio estándar,
@@ -36,7 +40,6 @@
 import type {
     Prisma,
     EstadoSolicitudCita,
-    ModalidadCita,
     OperadorConvoco,
     InicioSesion,
     EnlaceFunciono,
@@ -86,6 +89,7 @@ import {
 // SPEC-773 · hora de franja EN ZONA DE BOGOTÁ (fuente única; ver el módulo). Reemplaza el
 // `setHours` (que en el contenedor UTC caía 4–9am Bogotá) y el «conservá la hora de la corrida».
 import { franjaBogota, HORA_FRANJA_MIN, HORA_FRANJA_MAX } from "./lib/franja-hora-bogota";
+import { crearSembradoresDeCadena, type ProfSembrado } from "./lib/sembrar-cadenas";
 
 const CONFIRM = process.argv.includes("--confirm");
 
@@ -175,13 +179,6 @@ async function cargarBase() {
     return { ciudades, porcentajeServicio, precioEstandar };
 }
 
-interface ProfSembrado {
-    perfilId: string;
-    modalidades: ModalidadCita[];
-    tarifa: number;
-    bucket: "alta" | "media" | "baja";
-}
-
 function montos(esPrimera: boolean, tarifa: number, precioEstandar: number, pct: number) {
     const montoConsulta = esPrimera ? precioEstandar : tarifa;
     const montoServicio = Math.round((montoConsulta * pct) / 100);
@@ -193,6 +190,11 @@ function pagoAprobadoPara(estado: EstadoSolicitudCita, creadoEn: Date): Date | n
     if (estado === "SIN_CONFIRMAR") return null;
     return new Date(creadoEn.getTime() + HORAS_PAGO_APROBADO * 60 * 60 * 1000);
 }
+
+// Sembradores de CADENA (REPROGRAMADA · REUBICADA), extraídos a ./lib/sembrar-cadenas por max-lines.
+// Inyectan los helpers con estado de corrida (entero/fechaEnVentana/marcar/montos) para no romper la
+// reproducibilidad del rng sembrado ni duplicarlos.
+const { sembrarReprogramacion, sembrarReubicacion } = crearSembradoresDeCadena({ entero, fechaEnVentana, marcar, montos });
 
 async function sembrarProfesional(
     idx: number,
@@ -457,82 +459,6 @@ async function sembrarCita(opts: {
     });
 }
 
-/** Reprograma largo-1: la hija hereda el pago del original; el original queda REPROGRAMADA. */
-async function sembrarReprogramacion(opts: {
-    prof: ProfSembrado;
-    padreUsuarioId: string;
-    esPrimeraDelPadre: boolean;
-    precioEstandar: number;
-    pct: number;
-}): Promise<void> {
-    const { prof, padreUsuarioId, esPrimeraDelPadre, precioEstandar, pct } = opts;
-    const modalidad = prof.modalidades[entero(0, prof.modalidades.length - 1)]!;
-    const creadoEn = fechaEnVentana();
-    const m = montos(esPrimeraDelPadre, prof.tarifa, precioEstandar, pct);
-
-    await prisma.$transaction(async (tx) => {
-        // Original: franja LIBERADA (REPROGRAMADA la libera), estado REPROGRAMADA.
-        // Día = creadoEn+2; hora en zona de Bogotá (7am–7pm), no la del contenedor.
-        const horaOrig = franjaBogota(new Date(creadoEn.getTime() + 2 * MS_DIA), 50, entero(HORA_FRANJA_MIN, HORA_FRANJA_MAX));
-        const franjaOrig = await tx.franjaDisponible.create({
-            data: {
-                profesionalId: prof.perfilId,
-                inicio: horaOrig.inicio,
-                fin: horaOrig.fin,
-                modalidad,
-                tomada: false,
-            },
-        });
-        await marcar(tx, "FranjaDisponible", franjaOrig.id, "cita REPROGRAMADA (liberada)");
-        const original = await tx.solicitudCita.create({
-            data: {
-                padreUsuarioId,
-                profesionalId: prof.perfilId,
-                franjaId: franjaOrig.id,
-                presentacion: "Solicitud DEMO reprogramada (poblador SPEC-676).",
-                urgencia: "SIN_APURO",
-                estado: "REPROGRAMADA",
-                venceEn: new Date(creadoEn.getTime() + 72 * 60 * 60 * 1000),
-                pagoAprobadoEn: new Date(creadoEn.getTime() + 6 * 60 * 60 * 1000),
-                ...m,
-                creadoEn,
-            },
-        });
-        await marcar(tx, "SolicitudCita", original.id, "REPROGRAMADA");
-
-        // Hija: franja NUEVA tomada, hereda el pago del original (sin cobro nuevo), CUMPLIDA.
-        const creadoHija = new Date(creadoEn.getTime() + 3 * MS_DIA);
-        const horaHija = franjaBogota(new Date(creadoHija.getTime() + 2 * MS_DIA), 50, entero(HORA_FRANJA_MIN, HORA_FRANJA_MAX));
-        const franjaHija = await tx.franjaDisponible.create({
-            data: {
-                profesionalId: prof.perfilId,
-                inicio: horaHija.inicio,
-                fin: horaHija.fin,
-                modalidad,
-                tomada: true,
-            },
-        });
-        await marcar(tx, "FranjaDisponible", franjaHija.id, "cita hija de reprogramación");
-        const hija = await tx.solicitudCita.create({
-            data: {
-                padreUsuarioId,
-                profesionalId: prof.perfilId,
-                franjaId: franjaHija.id,
-                presentacion: "Solicitud DEMO (hija de reprogramación, hereda pago).",
-                urgencia: "SIN_APURO",
-                estado: "CUMPLIDA",
-                venceEn: new Date(creadoHija.getTime() + 72 * 60 * 60 * 1000),
-                pagoAprobadoEn: new Date(creadoHija.getTime() + 6 * 60 * 60 * 1000),
-                pagoHeredadoDeId: original.id,
-                solicitudPreviaId: original.id,
-                ...m, // hereda los montos del original (no re-cobra)
-                creadoEn: creadoHija,
-            },
-        });
-        await marcar(tx, "SolicitudCita", hija.id, "hija reprogramación (CUMPLIDA)");
-    });
-}
-
 interface Resumen {
     profesionales: number;
     franjasLibres: number;
@@ -587,6 +513,14 @@ async function main(): Promise<void> {
         for (let k = 0; k < peso(p.bucket); k++) bolsa.push(i);
     });
     const elegirProf = () => profs[bolsa[entero(0, bolsa.length - 1)]!]!;
+    // Para REUBICACIÓN: la hija va con OTRO profesional (el original dejó de estar disponible).
+    const elegirProfDistinto = (excluir: ProfSembrado): ProfSembrado => {
+        for (let i = 0; i < 20; i++) {
+            const c = elegirProf();
+            if (c.perfilId !== excluir.perfilId) return c;
+        }
+        return profs.find((p) => p.perfilId !== excluir.perfilId) ?? excluir;
+    };
 
     // 3) Padres demo (pool propio → purga independiente). ~1 padre cada 3 citas.
     const plan = construirPlanEstados();
@@ -625,6 +559,13 @@ async function main(): Promise<void> {
             await sembrarReprogramacion({ prof, padreUsuarioId, esPrimeraDelPadre, precioEstandar, pct: porcentajeServicio });
             resumen.porEstado.REPROGRAMADA = (resumen.porEstado.REPROGRAMADA ?? 0) + 1;
             resumen.porEstado.CUMPLIDA = (resumen.porEstado.CUMPLIDA ?? 0) + 1; // la hija
+            continue;
+        }
+        if (estado === "REUBICADA") {
+            const profDestino = elegirProfDistinto(prof);
+            await sembrarReubicacion({ profOrigen: prof, profDestino, padreUsuarioId, esPrimeraDelPadre, precioEstandar, pct: porcentajeServicio });
+            resumen.porEstado.REUBICADA = (resumen.porEstado.REUBICADA ?? 0) + 1;
+            resumen.porEstado.CUMPLIDA = (resumen.porEstado.CUMPLIDA ?? 0) + 1; // la hija (otro profesional)
             continue;
         }
         // Encuesta sólo en la PRIMERA cita CUMPLIDA del padre.

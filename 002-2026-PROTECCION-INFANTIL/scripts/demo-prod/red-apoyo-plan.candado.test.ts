@@ -5,7 +5,7 @@
  *  1. VISIBILIDAD (primero): cada profesional sembrado APARECE en el directorio
  *     del padre — perfil ACTIVO + verificación APROBADO vigente (SPEC-449) + ≥1
  *     modalidad (I-398). Diez invisibles serían peor que ninguno.
- *  2. LOS NUEVE ESTADOS representados (recorriendo el enum de Prisma, no una lista
+ *  2. LOS DIEZ ESTADOS representados (recorriendo el enum de Prisma, no una lista
  *     a mano: un estado nuevo que el plan no cubra → rojo). Con la asimetría de
  *     D-137 (padre-no-asistió ≫ profesional-no-asistió; REEMBOLSADA > 0).
  *  3. INVARIANTE franja↔estado: sólo REPROGRAMADA y VENCIDA_SIN_RESPUESTA liberan
@@ -86,14 +86,14 @@ describe("SPEC-676 · candado 1 · cada profesional sembrado APARECE en el direc
     });
 });
 
-describe("SPEC-676 · candado 2 · los NUEVE estados representados", () => {
+describe("SPEC-676 · candado 2 · los DIEZ estados representados", () => {
     it("cada valor del enum EstadoSolicitudCita tiene objetivo > 0", () => {
         for (const estado of Object.values(EstadoSolicitudCita)) {
             expect(OBJETIVO_ESTADOS[estado], `estado ${estado} sin objetivo (>0)`).toBeGreaterThan(0);
         }
     });
 
-    it("el plan concreto contiene los 9 estados", () => {
+    it("el plan concreto contiene los 10 estados", () => {
         const plan = construirPlanEstados();
         const presentes = new Set(plan);
         for (const estado of Object.values(EstadoSolicitudCita)) {
@@ -112,7 +112,7 @@ describe("SPEC-676 · candado 2 · los NUEVE estados representados", () => {
 });
 
 describe("SPEC-676 · candado 3 · invariante franja↔estado (solo 2 estados liberan)", () => {
-    it("REPROGRAMADA y VENCIDA_SIN_RESPUESTA liberan la franja; los otros 7 la ocupan", () => {
+    it("REPROGRAMADA y VENCIDA_SIN_RESPUESTA liberan la franja; los otros 8 la ocupan", () => {
         const liberados = new Set<string>(ESTADOS_FRANJA_LIBERADA);
         expect(liberados).toEqual(new Set(["REPROGRAMADA", "VENCIDA_SIN_RESPUESTA"]));
         for (const estado of Object.values(EstadoSolicitudCita)) {

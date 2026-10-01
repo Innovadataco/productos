@@ -36,6 +36,7 @@ const VEREDICTO_POR_ESTADO = {
     VENCIDA_SIN_RESPUESTA: false, // murió sin sesión que reportar
     REEMBOLSADA: false, // idem
     REPROGRAMADA: false, // terminal; la nueva fila (cita) llevará su propia encuesta
+    REUBICADA: false, // SPEC-814: terminal (hermana de REPROGRAMADA); la cita nueva lleva su propia encuesta
 } as const satisfies Record<EstadoEfectivoCita, boolean>;
 
 describe("SPEC-784 · C-1 · la derivación de «encuesta pendiente»", () => {
