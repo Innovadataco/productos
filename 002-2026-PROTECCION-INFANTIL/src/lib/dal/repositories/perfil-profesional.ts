@@ -29,6 +29,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 import { idsPerfilesProfesionalesSembrados } from "../demo-exclusion";
+import { FranjaDisponibleRepository } from "./franja-disponible";
 import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profesionales/vigencia";
 import { leerRangoEtario } from "@/lib/profesional/catalogos-lectura";
 import { getParametroSistemaValor } from "@/lib/parametros";
@@ -114,6 +115,14 @@ export interface PerfilPublicoDTO {
      * `null` si la ciudad no lo tiene cargado: la pantalla NO inventa uno.
      */
     ciudad: { id: string; nombre: string; pais: string | null };
+    /**
+     * SPEC-818 · ¿tiene ≥1 franja OFRECIBLE (libre, futura, modalidad que el perfil VIGENTE atiende)? Para el
+     * chip del directorio. NO es columna del perfil: se DERIVA de `FranjaDisponibleRepository`
+     * (`idsConHorariosDisponibles`, MISMA definición que la consulta del padre) — por eso NO va en el SELECT
+     * ni rompe la regla de «tres cambios» (esa es para columnas del perfil). Un profesional sin horarios
+     * SIGUE en el directorio: cambia el chip, la tarjeta no se atenúa.
+     */
+    tieneHorariosDisponibles: boolean;
 }
 
 const SELECT_TARJETA_PUBLICA = {
@@ -146,6 +155,7 @@ const SELECT_TARJETA_PUBLICA = {
 function toPublicoDTO(
     row: Prisma.PerfilProfesionalGetPayload<{ select: typeof SELECT_TARJETA_PUBLICA }>,
     rangoNombrePorClave: ReadonlyMap<string, string>,
+    tieneHorarios: boolean,
 ): PerfilPublicoDTO {
     return {
         id: row.id,
@@ -172,6 +182,9 @@ function toPublicoDTO(
         ciudad: row.ciudad
             ? { id: row.ciudad.id, nombre: row.ciudad.nombre, pais: row.ciudad.pais?.nombre ?? null }
             : { id: row.ciudadId, nombre: "", pais: null },
+        // SPEC-818 · señal derivada (no columna del perfil): la calcula el repo con la MISMA definición de
+        // ofrecible que la consulta del padre, y se pasa acá para que el chip del directorio no la reimplemente.
+        tieneHorariosDisponibles: tieneHorarios,
     };
 }
 
@@ -635,8 +648,11 @@ export class PerfilProfesionalRepository {
         // SPEC-690-B: la palabra final es `verificacionVigente` (autoritativa) sobre
         // el pre-filtro grueso del SQL. Mismo término que la compuerta.
         const vigentes = await this.idsOfrecibles(rows.map((r) => r.id), ahora);
+        const visibles = rows.filter((r) => vigentes.has(r.id));
         const rangoMap = await this.mapaRangoEtario();
-        return rows.filter((r) => vigentes.has(r.id)).map((r) => toPublicoDTO(r, rangoMap));
+        // SPEC-818: la señal del chip sale de la MISMA definición de ofrecible (una consulta para el lote).
+        const conHorarios = await new FranjaDisponibleRepository().idsConHorariosDisponibles(visibles.map((r) => r.id), ahora);
+        return visibles.map((r) => toPublicoDTO(r, rangoMap, conHorarios.has(r.id)));
     }
 
     /**
@@ -683,7 +699,10 @@ export class PerfilProfesionalRepository {
         // SPEC-690-B: mismo filtro autoritativo que la lista — un profesional cuya
         // ÚLTIMA verificación venció no se abre por id (ni deja crear cita contra él).
         const vigentes = await this.idsOfrecibles([row.id], ahora);
-        return vigentes.has(row.id) ? toPublicoDTO(row, await this.mapaRangoEtario()) : null;
+        if (!vigentes.has(row.id)) return null;
+        // SPEC-818: señal del chip por la MISMA definición de ofrecible que la consulta del padre.
+        const conHorarios = await new FranjaDisponibleRepository().idsConHorariosDisponibles([row.id], ahora);
+        return toPublicoDTO(row, await this.mapaRangoEtario(), conHorarios.has(row.id));
     }
 
     /**

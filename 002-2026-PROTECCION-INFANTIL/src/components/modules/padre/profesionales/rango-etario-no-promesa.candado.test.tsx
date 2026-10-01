@@ -40,6 +40,7 @@ function dto(over: Partial<PerfilPublicoDTO> = {}): PerfilPublicoDTO {
         duracionMinutos: 45,
         emiteFactura: false,
         ciudad: { id: "c1", nombre: "Bogotá", pais: "Colombia" },
+        tieneHorariosDisponibles: true, // SPEC-818: campo nuevo del DTO (no lo ejercita este test)
         ...over,
     };
 }

@@ -147,8 +147,20 @@ export function ProfesionalTarjeta({
             </ul>
 
             {/* "Nuevo en la red" (candado del brief: sin varias calificaciones,
-                las estrellas hunden a alguien injustamente). En L3 SIEMPRE. */}
-            <div className="mt-auto pt-2 border-t border-cielo/20 dark:border-cielo/40">
+                las estrellas hunden a alguien injustamente). En L3 SIEMPRE.
+                SPEC-818 (FORMA): hermano el chip de disponibilidad — «Con horarios» (pino) o «Sin horarios
+                ahora» (neutro, NUNCA rubí). La tarjeta sin horarios NO se atenúa ni degrada: solo cambia el
+                chip (atenuarla se leería «este no sirve»). «ahora» = presente, sin prometer cuándo. */}
+            <div className="mt-auto pt-2 border-t border-cielo/20 dark:border-cielo/40 flex flex-wrap items-center gap-2">
+                {p.tieneHorariosDisponibles ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-pino/10 px-3 py-1 text-xs font-medium text-estado-pino">
+                        🗓️ Con horarios disponibles
+                    </span>
+                ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-tinta/10 px-3 py-1 text-xs font-medium text-muted">
+                        Sin horarios disponibles ahora
+                    </span>
+                )}
                 <span className="inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-ambar dark:text-ambar">
                     ✨ Nuevo en la red
                 </span>

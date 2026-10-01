@@ -89,6 +89,18 @@ export async function crearSolicitudCita(input: CrearCitaInput) {
         );
     }
 
+    // SPEC-818 · CINTURÓN de la carrera listar↔reservar. La consulta ya oculta las franjas cuya modalidad el
+    // perfil dejó de atender, pero entre que el padre VE el turno y lo RESERVA el flag pudo apagarse. Se
+    // re-valida contra el flag VIGENTE del perfil (`pro`): si ya no atiende esa modalidad, se rechaza con el
+    // mensaje de «no disponible» (sin copy nueva). NO reemplaza el arreglo de la consulta (ese evita que el
+    // padre lo vea siquiera); es el cierre de la ventana de carrera.
+    if (
+        (franja.modalidad === "VIRTUAL" && !pro.atiendeVirtual) ||
+        (franja.modalidad === "PRESENCIAL" && !pro.atiendePresencial)
+    ) {
+        throw new AppError("Esta franja ya no está disponible", ERROR_CODES.CONFLICT, 409);
+    }
+
     // SPEC-790 (T4b): el directorio gatea por vigencia REPS (modalidad=null); al RESERVAR, el REPS debe
     // cubrir la MODALIDAD CONCRETA de la cita (la de la franja) — una habilitación presencial no atiende
     // una cita de telemedicina. El mapeo cita→REPS vive en `modalidadRepsRequerida`; un valor sin mapeo

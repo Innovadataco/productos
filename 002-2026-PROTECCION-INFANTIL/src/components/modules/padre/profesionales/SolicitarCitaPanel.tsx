@@ -309,8 +309,14 @@ export function SolicitarCitaPanel({
                 {!franjas && !cargaError && (
                     <p className="mt-1 text-xs text-subtle animate-pulse">Cargando…</p>
                 )}
+                {/* SPEC-818 (FORMA §2): el vacío dice el límite Y da la salida (no deja al padre varado).
+                    «Sigue en el directorio» = válido y presente (no inactivo, no «no sirve»); «no ha abierto
+                    horarios» = el hueco es solo el horario; sin prometer CUÁNDO (no hay canal); voz tú. */}
                 {franjas && franjas.length === 0 && (
-                    <p className="mt-1 text-xs text-subtle">Este profesional no tiene franjas libres en este momento.</p>
+                    <div className="mt-1 space-y-1 text-xs text-subtle">
+                        <p className="text-body">Este profesional no tiene horarios disponibles en este momento.</p>
+                        <p>Sigue en el directorio, pero no ha abierto horarios para agendar. Puedes elegir otro profesional con horarios disponibles desde el directorio.</p>
+                    </div>
                 )}
                 {franjas && franjas.length > 0 && (
                     <div className="mt-2">
