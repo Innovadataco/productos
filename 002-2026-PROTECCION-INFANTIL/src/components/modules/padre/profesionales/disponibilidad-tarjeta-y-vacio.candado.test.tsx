@@ -38,13 +38,21 @@ describe("SPEC-818 · chip de disponibilidad + vacío con salida", () => {
     });
 
     it("sin horarios → chip neutro «Sin horarios disponibles ahora», NUNCA rubí, y la tarjeta NO se atenúa", () => {
-        // La tarjeta sin horarios es idéntica salvo el chip: el root NO cambia (atenuarla se leería «no sirve»).
+        // SPEC-830: la con-horarios ahora lleva un REALCE (peso añadido a la minoría reservable). La invariante
+        // de 818 se CONSERVA: la sin-horarios NO se atenúa — es la base EXACTA, y la con-horarios es esa misma
+        // base + el realce. Nada se le QUITA a la sin-horarios (no-destacado ≠ deficiente).
+        const REALCE_830 = " ring-2 ring-pino/40 shadow-md";
         const { container: conH } = render(card(dto({ tieneHorariosDisponibles: true })));
         const rootConHorarios = conH.querySelector("a")!.className;
         cleanup();
         const { container: sinH } = render(card(dto({ tieneHorariosDisponibles: false })));
+        const rootSinHorarios = sinH.querySelector("a")!.className;
         expect(screen.getByText(/Sin horarios disponibles ahora/i)).toBeTruthy();
-        expect(sinH.querySelector("a")!.className, "la tarjeta sin horarios NO se atenúa: mismo root").toBe(rootConHorarios);
+        expect(rootConHorarios, "la con-horarios añade el realce 830").toContain(REALCE_830);
+        expect(rootSinHorarios, "la sin-horarios es la base SIN realce (no se atenúa, no se degrada)").toBe(
+            rootConHorarios.replace(REALCE_830, ""),
+        );
+        expect(rootSinHorarios, "la sin-horarios NO se atenúa (sin opacity/grayscale)").not.toMatch(/opacity-|grayscale|saturate-0/);
         expect(sinH.innerHTML, "sin horarios NO es criticidad: cero rubí").not.toMatch(/\brubi\b/);
         expect(sinH.innerHTML, "sin horarios NO es alarma: cero ámbar-alarma en el chip").not.toMatch(/estado-ambar/);
         // La tarjeta conserva el resto (no degradada): nombre + «Nuevo en la red».

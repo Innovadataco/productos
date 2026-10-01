@@ -132,6 +132,11 @@ export function DirectorioProfesionales({
     // Sale del conteo SIN filtrar (`hayVerificados`). Ver `clasificarVacioDirectorio`.
     const vacio = items === null ? null : clasificarVacioDirectorio(items.length, hayVerificados);
     const estructural = vacio === "estructural";
+    // SPEC-830 (FORMA §6 P1) · nombra la escasez ARRIBA, DERIVADA de la misma señal del chip (818, ya
+    // REPS-aware por 825): {N} = profesionales con `tieneHorariosDisponibles`. No se hardcodea «pocos»
+    // (envejecería al mejorar la oferta). == la cantidad de tarjetas destacadas (candado H-4 ext.
+    // afirmación 4): misma fuente, por eso no pueden divergir.
+    const conHorarios = (items ?? []).filter((p) => p.tieneHorariosDisponibles).length;
 
     return (
         <div className="mx-auto max-w-5xl p-4 space-y-5">
@@ -204,19 +209,46 @@ export function DirectorioProfesionales({
             ) : vacio === "por-filtro" ? (
                 <VacioPorFiltro onQuitarFiltros={quitarFiltros} />
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {items.map((p) => (
-                        <ProfesionalTarjeta
-                            key={p.id}
-                            p={p}
-                            hrefBase={hrefPerfil}
-                            queryString={queryPerfil}
-                            precioPrimeraCitaCOP={precioPrimeraCitaCOP}
-                        />
-                    ))}
+                <div className="space-y-4">
+                    <EncabezadoEscasez n={conHorarios} />
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {items.map((p) => (
+                            <ProfesionalTarjeta
+                                key={p.id}
+                                p={p}
+                                hrefBase={hrefPerfil}
+                                queryString={queryPerfil}
+                                precioPrimeraCitaCOP={precioPrimeraCitaCOP}
+                            />
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
+    );
+}
+
+/**
+ * SPEC-830 (FORMA §6 P1) · nombra la escasez ARRIBA de la grilla para que el muro de «sin horarios» se lea
+ * como escasez de HOY y no como producto averiado: honestidad en AGREGADO, no solo por tarjeta (42 «no hay»
+ * juntas afirman algo que ninguna dijo). El número es DERIVADO (nunca «pocos» hardcodeado — envejecería al
+ * mejorar la oferta). `n=0` es el caso DOMINANTE (79% sin horarios) y se dice sin drama. No promete CUÁNDO.
+ * El cierre «los verás destacados» ata P1↔P2 (concuerda en número).
+ */
+function EncabezadoEscasez({ n }: { n: number }) {
+    if (n === 0) {
+        return (
+            <p className="text-sm text-body">
+                Ahora mismo <b className="font-semibold">ningún profesional</b> tiene horarios abiertos para agendar.
+            </p>
+        );
+    }
+    return (
+        <p className="text-sm text-body">
+            Ahora mismo hay <b className="font-semibold">{n}</b> {n === 1 ? "profesional" : "profesionales"} con horarios
+            para agendar
+            <span className="text-muted"> — {n === 1 ? "lo verás destacado" : "los verás destacados"}.</span>
+        </p>
     );
 }
 

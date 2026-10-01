@@ -64,6 +64,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import type { RolUsuario } from "@prisma/client";
+import { leerRangoEtario } from "@/lib/profesional/catalogos-lectura";
 
 const CORRIDA = `e2e-441-${randomUUID().slice(0, 8)}`;
 const PASSWORD = "Precio441!Secure";
@@ -455,6 +456,48 @@ test.describe.serial("Directorio del padre · tarjeta y ficha coherentes + H-2 (
                 crudoFicha.includes(EMAIL_PROF),
                 `H-2 ficha: el email real del profesional (${EMAIL_PROF}) NO puede aparecer en el JSON del detalle. JSON=${crudoFicha.slice(0, 400)}`,
             ).toBe(false);
+        } finally {
+            await request.dispose();
+        }
+    });
+
+    test("(D) la TARJETA y la FICHA muestran el RANGO ETARIO declarado por el profesional (SPEC-816)", async () => {
+        // El profesional declaró `rangoEtario: ["12-17"]` en el setup (PUT perfil real). SPEC-816: ese rango
+        // se MUESTRA en el directorio (listado + detalle) — 63/64 profesionales lo declararon y el producto lo
+        // descartaba. Se resuelve contra el MISMO catálogo que usa el DTO (fuente única, `leerRangoEtario`),
+        // no una etiqueta quemada: la prueba sigue al catálogo si cambia la etiqueta de la banda.
+        const ops = await leerRangoEtario();
+        const esperados = ["12-17"]
+            .map((c) => ops.find((o) => o.clave === c)?.nombre)
+            .filter((n): n is string => Boolean(n));
+        expect(esperados.length, "el catálogo resuelve la clave declarada «12-17» a su nombre").toBe(1);
+
+        const request = await ctx();
+        try {
+            await login(request, EMAIL_PADRE);
+            await aceptarConsentimiento(request);
+            await login(request, EMAIL_PADRE);
+
+            const seed = randomUUID();
+            const lista = await request.get(
+                `/api/padre/profesionales?ciudadId=${encodeURIComponent(ciudadIdReal)}&seed=${encodeURIComponent(seed)}`,
+            );
+            expect(lista.status(), `GET directorio body=${(await lista.text().catch(() => "")).slice(0, 200)}`).toBe(200);
+            const items: Array<Record<string, unknown>> = ((await lista.json())?.items as Array<Record<string, unknown>>) ?? [];
+            const tarjeta = items.find((it) => it["id"] === perfilProfesionalId);
+            expect(tarjeta, "el profesional declarante debe aparecer en el directorio").toBeTruthy();
+            expect(
+                tarjeta!["rangoEtario"],
+                "la TARJETA del directorio muestra el rango etario DECLARADO (resuelto por el catálogo, fuente única)",
+            ).toEqual(esperados);
+
+            const detalle = await request.get(`/api/padre/profesionales/${perfilProfesionalId}`);
+            expect(detalle.status(), "GET ficha").toBe(200);
+            const ficha = (await detalle.json()) as Record<string, unknown>;
+            expect(
+                ficha["rangoEtario"],
+                "la FICHA muestra el MISMO rango etario declarado",
+            ).toEqual(esperados);
         } finally {
             await request.dispose();
         }
