@@ -45,20 +45,20 @@
  *
  * REGLAS DURAS. Corrida por `randomUUID`, prefijo `e2e-440-`. Cero mutación de
  * rol real: el padre y el profesional son EFÍMEROS, creados por este spec. El
- * padre se registra por el endpoint real (`/api/auth/registro/*`) y firma el
- * consentimiento por `POST /api/consentimiento/aceptar` (nunca se forja
- * `audit_consentimientos`). El profesional se levanta por su flujo real
+ * padre se onboardea por el CAMINO REAL con el builder reutilizable
+ * `fixtures/padre-onboarded.ts` (registro → consentimiento → datos → hijo →
+ * freemium, todo por endpoints, en orden; nunca se forja `audit_consentimientos`
+ * ni se arma el estado por Prisma directo). El profesional se levanta por su flujo real
  * (`/api/auth/registro-profesional/*` + `PUT /api/profesional/perfil`, patrón de
  * `recorrido-verificacion-documentos.spec.ts`); su `estado = ACTIVO` y su franja
  * son andamiaje del actor de apoyo (siembra Prisma sobre el perfil propio del
  * spec, no sobre datos reales). Limpieza FK-safe en `afterAll`.
  */
 import { test, expect, request as playwrightRequest, type APIRequestContext } from "@playwright/test";
-import { randomBytes, randomUUID } from "node:crypto";
-import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
-import type { RolUsuario } from "@prisma/client";
+import { crearPadreOnboarded, limpiarPadreOnboarded, type PadreOnboarded } from "./fixtures/padre-onboarded";
+import { crearProfesionalVisible, limpiarProfesionalVisible, type ProfesionalVisible } from "./fixtures/profesional-visible";
 
 const CORRIDA = `e2e-440-${randomUUID().slice(0, 8)}`;
 const PASSWORD = "Pres440!Secure";
@@ -75,25 +75,8 @@ const TEL_PADRE = "+57 300 555 4433";
 // busca en las URLs.
 const PRESENTACION = `soy Jelkin Zair Carrillo Franco padre de un menor; mi documento es ${DOC_PADRE} y mi telefono ${TEL_PADRE}, necesito apoyo esta semana`;
 
-const sembrados = {
-    tokens: new Set<string>(),
-};
-
 async function ctx(): Promise<APIRequestContext> {
     return playwrightRequest.newContext();
-}
-
-/** Fabrica un enlace de registro real (hash bcrypt, como la ruta) y devuelve el
- *  token en claro. Resend está caído en el entorno de pruebas, así que el correo
- *  no llega: se fabrica el token que el correo habría llevado. */
-async function fabricarEnlace(email: string, rol: RolUsuario): Promise<string> {
-    const token = randomBytes(24).toString("hex");
-    const tokenHash = await bcrypt.hash(token, 12);
-    const registro = await prisma.tokenRegistro.create({
-        data: { email, tokenHash, rol, expiraEn: new Date(Date.now() + 3_600_000) },
-    });
-    sembrados.tokens.add(registro.id);
-    return token;
 }
 
 async function login(request: APIRequestContext, email: string) {
@@ -101,209 +84,56 @@ async function login(request: APIRequestContext, email: string) {
     expect(res.status(), `login ${email}`).toBe(200);
 }
 
-async function aceptarConsentimiento(request: APIRequestContext) {
-    const res = await request.post("/api/consentimiento/aceptar", {
-        data: { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: false },
-    });
-    expect(res.status(), "aceptar consentimiento").toBeLessThan(300);
-}
-
-/** Levanta el profesional de apoyo por su flujo real y lo deja ACTIVO con una
- *  franja libre para que el padre pueda agendar. Devuelve `{ perfilId, franjaId }`. */
-async function sembrarProfesionalActivoConFranja(): Promise<{ perfilId: string; franjaId: string }> {
-    const request = await ctx();
-    try {
-        const solicitar = await request.post("/api/auth/registro-profesional/solicitar", {
-            data: { email: EMAIL_PROF },
-        });
-        expect(solicitar.status(), "solicitar profesional responde 202").toBe(202);
-
-        const token = await fabricarEnlace(EMAIL_PROF, "PROFESIONAL" as RolUsuario);
-        const completar = await request.post("/api/auth/registro-profesional/completar", {
-            data: { token, password: PASSWORD, passwordConfirmacion: PASSWORD },
-        });
-        expect(completar.status(), `completar profesional body=${await completar.text().catch(() => "")}`).toBe(201);
-        await aceptarConsentimiento(request);
-        await login(request, EMAIL_PROF);
-
-        const ciudad = await prisma.ciudad.findFirst({ select: { id: true } });
-        expect(ciudad, "prod debe tener al menos una Ciudad sembrada").not.toBeNull();
-        const putPerfil = await request.put("/api/profesional/perfil", {
-            data: {
-                nombreVisible: `Psi E2E ${CORRIDA}`,
-                profesion: "psicologo",
-                areasAtencion: ["ansiedad"],
-                rangoEtario: ["12-17"],
-                ciudadId: ciudad!.id,
-                atiendeVirtual: true,
-                atiendePresencial: false,
-                aniosExperiencia: 5,
-                presentacion: "Presentación pública del profesional (no es la del padre).",
-                tarifaConsultaCOP: 120_000,
-                duracionMinutos: 60,
-                emiteFactura: false,
-            },
-        });
-        expect(putPerfil.status(), `PUT perfil body=${await putPerfil.text().catch(() => "")}`).toBeLessThan(300);
-
-        const perfil = await prisma.perfilProfesional.findFirst({
-            where: { usuario: { email: EMAIL_PROF } },
-            select: { id: true },
-        });
-        expect(perfil, "el PUT perfil debe haber creado el PerfilProfesional").not.toBeNull();
-
-        // Andamiaje del actor de apoyo: el perfil propio del spec pasa a ACTIVO y
-        // recibe una franja libre. No es un dato real ni un rol real — es el
-        // profesional efímero que este spec creó hace tres líneas.
-        await prisma.perfilProfesional.update({
-            where: { id: perfil!.id },
-            data: { estado: "ACTIVO" },
-        });
-        const inicio = new Date(Date.now() + 24 * 60 * 60 * 1000);
-        const franja = await prisma.franjaDisponible.create({
-            data: {
-                profesionalId: perfil!.id,
-                inicio,
-                fin: new Date(inicio.getTime() + 60 * 60 * 1000),
-                modalidad: "VIRTUAL",
-                tomada: false,
-            },
-            select: { id: true },
-        });
-
-        return { perfilId: perfil!.id, franjaId: franja.id };
-    } finally {
-        await request.dispose();
-    }
-}
-
-/** Registra al padre por el endpoint real, siembra sus datos personales, un hijo
- *  activo y una suscripción ACTIVA (camino guiado completo). Devuelve su id. */
-async function sembrarPadreConCaminoCompleto(): Promise<string> {
-    const request = await ctx();
-    try {
-        // (1) el padre se registra por la pantalla (endpoint real).
-        const solicitar = await request.post("/api/auth/registro/solicitar", {
-            data: { email: EMAIL_PADRE },
-        });
-        expect(solicitar.status(), "solicitar registro padre").toBeLessThan(300);
-
-        const token = await fabricarEnlace(EMAIL_PADRE, "PARENT" as RolUsuario);
-        const completar = await request.post("/api/auth/registro/completar", {
-            data: { token, password: PASSWORD, passwordConfirmacion: PASSWORD },
-        });
-        expect(completar.status(), `completar padre body=${await completar.text().catch(() => "")}`).toBe(201);
-    } finally {
-        await request.dispose();
-    }
-
-    const padre = await prisma.usuario.findUnique({ where: { email: EMAIL_PADRE }, select: { id: true } });
-    expect(padre, "el completar debe haber creado el Usuario padre").not.toBeNull();
-
-    // (2) datos personales del padre — sembrados por Prisma (Paso 2 del camino).
-    const pais = await prisma.pais.findFirst({ select: { id: true } });
-    const ciudad = await prisma.ciudad.findFirst({ select: { id: true } });
-    await prisma.usuario.update({
-        where: { id: padre!.id },
-        data: {
-            nombre: "Jelkin",
-            apellidos: "Carrillo Franco",
-            documentoTipo: "CC",
-            documentoNumero: DOC_PADRE,
-            telefono: TEL_PADRE,
-            paisId: pais?.id ?? null,
-            ciudadId: ciudad?.id ?? null,
-        },
-    });
-
-    // (3) consentimiento por el endpoint real (nunca se forja audit_consentimientos).
-    const rc = await ctx();
-    try {
-        await login(rc, EMAIL_PADRE);
-        await aceptarConsentimiento(rc);
-    } finally {
-        await rc.dispose();
-    }
-
-    // (4) un hijo activo (Paso 3 del camino).
-    await prisma.hijo.create({
-        data: {
-            usuarioId: padre!.id,
-            nombre: "Menor",
-            apellidos: "Carrillo",
-            estado: "activo",
-        },
-    });
-
-    // (5) suscripción ACTIVA (Paso 4 del camino) — sembrada por Prisma.
-    const plan = await prisma.plan.findFirst({ where: { tipoTitular: "PADRE" }, select: { id: true } })
-        ?? (await prisma.plan.findFirst({ select: { id: true } }));
-    expect(plan, "prod debe tener al menos un Plan sembrado").not.toBeNull();
-    const ahora = new Date();
-    await prisma.suscripcion.create({
-        data: {
-            tipoTitular: "PADRE",
-            usuarioId: padre!.id,
-            estado: "ACTIVA",
-            planActualId: plan!.id,
-            fechaInicio: ahora,
-            fechaFin: new Date(ahora.getTime() + 365 * 24 * 60 * 60 * 1000),
-            codigoReferidoPropio: `${CORRIDA}-REF`,
-        },
-    });
-
-    return padre!.id;
-}
-
-async function limpiarSembrados() {
-    const usuarios = await prisma.usuario.findMany({
-        where: { email: { in: [EMAIL_PADRE, EMAIL_PROF] } },
-        select: { id: true },
-    });
-    const usuarioIds = usuarios.map((u) => u.id);
-
-    if (usuarioIds.length > 0) {
-        const perfiles = await prisma.perfilProfesional.findMany({
-            where: { usuarioId: { in: usuarioIds } },
-            select: { id: true },
-        });
-        const perfilIds = perfiles.map((p) => p.id);
-
-        // Orden FK-safe: solicitudes → franjas → documentos/verificaciones →
-        // perfil; y suscripciones antes del usuario.
-        await prisma.solicitudCita.deleteMany({ where: { padreUsuarioId: { in: usuarioIds } } });
-        if (perfilIds.length > 0) {
-            await prisma.solicitudCita.deleteMany({ where: { profesionalId: { in: perfilIds } } });
-            await prisma.franjaDisponible.deleteMany({ where: { profesionalId: { in: perfilIds } } });
-            await prisma.documentoProfesional.deleteMany({ where: { perfilProfesionalId: { in: perfilIds } } });
-            await prisma.verificacionProfesional.deleteMany({ where: { perfilProfesionalId: { in: perfilIds } } });
-            await prisma.perfilProfesional.deleteMany({ where: { id: { in: perfilIds } } });
-        }
-        await prisma.suscripcion.deleteMany({ where: { usuarioId: { in: usuarioIds } } });
-        await prisma.auditLog.deleteMany({ where: { usuarioId: { in: usuarioIds } } });
-        // Hijo cae por cascade al borrar el usuario.
-        await prisma.usuario.deleteMany({ where: { id: { in: usuarioIds } } });
-    }
-    if (sembrados.tokens.size > 0) {
-        await prisma.tokenRegistro.deleteMany({ where: { id: { in: [...sembrados.tokens] } } });
-    }
-    sembrados.tokens.clear();
-}
-
 let perfilProfesionalId = "";
 let franjaId = "";
 let padreUsuarioId = "";
+let profesional: ProfesionalVisible | undefined;
+let padre: PadreOnboarded | undefined;
 
 test.describe.serial("La presentación del padre no viaja en la URL (SPEC-440)", () => {
     test.beforeAll(async () => {
-        const profesional = await sembrarProfesionalActivoConFranja();
+        // Profesional VISIBLE por su flujo REAL (builder reutilizable): registro →
+        // perfil → documentos → autorización → un admin efímero aprueba → ACTIVO +
+        // verificación vigente + franja. Un `estado=ACTIVO` puesto a mano NO basta:
+        // la ficha del padre exige además verificación vigente (SPEC-690-B) → 404.
+        const reqProf = await ctx();
+        try {
+            profesional = await crearProfesionalVisible({
+                request: reqProf,
+                email: EMAIL_PROF,
+                password: PASSWORD,
+                corrida: CORRIDA,
+            });
+        } finally {
+            await reqProf.dispose();
+        }
         perfilProfesionalId = profesional.perfilId;
-        franjaId = profesional.franjaId;
-        padreUsuarioId = await sembrarPadreConCaminoCompleto();
+        franjaId = profesional.franjaId ?? "";
+
+        // Padre onboardeado por el CAMINO REAL (builder reutilizable): registro →
+        // login → consentimiento → datos → hijo → freemium, todo por endpoints, en
+        // orden — cada paso re-sella la sesión, cero estado armado por Prisma directo.
+        // El documento = DOC_PADRE, para que el candado cubra también una fuga del
+        // perfil, no solo de la presentación (el body del POST de la cita).
+        const reqOnboard = await ctx();
+        try {
+            padre = await crearPadreOnboarded({
+                request: reqOnboard,
+                email: EMAIL_PADRE,
+                password: PASSWORD,
+                documentoNumero: DOC_PADRE,
+            });
+            padreUsuarioId = padre.usuarioId;
+        } finally {
+            await reqOnboard.dispose();
+        }
     });
 
     test.afterAll(async () => {
-        await limpiarSembrados();
+        // Orden FK-safe entre fixtures: el profesional borra las solicitudes por
+        // `profesionalId` (cubre la cita agendada), luego el padre borra lo suyo.
+        if (profesional) await limpiarProfesionalVisible(profesional);
+        if (padre) await limpiarPadreOnboarded(padre);
     });
 
     test("barrido de URLs: la presentación y los datos personales nunca están en una URL del flujo", async () => {

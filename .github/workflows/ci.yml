@@ -648,9 +648,15 @@ jobs:
       # `.env.test` es un archivo VERSIONADO (plantilla de test, placeholders seguros).
       # Solo AGREGAMOS credenciales E2E dummy: BD fresca de CI, cuentas efímeras, cero
       # secretos reales. Los seeders crean estas cuentas y los specs entran con las mismas.
+      # SEED_ADMIN_* bootstrapea el admin inicial en `prisma/seed.ts`, y ESE admin es quien
+      # siembra el catálogo de planes (`seedPlanesPagos`, incl. el plan FREEMIUM de PADRE que
+      # el onboarding del padre activa). Sin él la BD de CI queda con 0 planes y todo recorrido
+      # que agende cita o active freemium falla. Dummy: BD fresca y efímera, se descarta al final.
       - name: Agregar credenciales E2E dummy (solo CI)
         run: |
           cat >> .env.test <<'ENV_EOF'
+          SEED_ADMIN_EMAIL=admin-e2e@ci.local
+          SEED_ADMIN_PASSWORD=CiDummyAdmin2026!
           E2E_PADRE_EMAIL=padre-e2e@ci.local
           E2E_PADRE_PASSWORD=CiDummyPadre2026!
           E2E_PADRE2_EMAIL=padre2-e2e@ci.local
