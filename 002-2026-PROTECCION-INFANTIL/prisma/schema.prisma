@@ -4176,6 +4176,12 @@ model VerificacionReps {
   vigenteHasta  DateTime?              @db.Timestamptz(6)
   /// Modalidades que la autoridad habilita (lista). El motor evalúa `TELEMEDICINA IN modalidades`.
   modalidades   ModalidadReps[]
+  /// SPEC-801 · Modalidades que llegaron del REPS y NO supimos traducir a ModalidadReps. Son valores CRUDOS
+  /// de la AUTORIDAD (string tal como vino), NO interpretación nuestra. La compuerta sigue NEGANDO ante una
+  /// no mapeada (fail-closed) y el motor deja su `warn`; esta columna NO reemplaza el log — lo hace
+  /// DESCUBRIBLE después: «¿qué modalidades sin traducir llegaron y a cuántos profesionales afectaron?»
+  /// (consulta en `modalidades-reps-no-mapeadas.ts`). GIN para poder agrupar/filtrar por el valor crudo.
+  modalidadesNoMapeadas String[]
   /// El actor que registró el chequeo. FK nullable (API/archivo no tienen humano) + SetNull: se vacía al
   /// borrar la cuenta. El rastro DURABLE no vive acá sino en verificadoPorSnapshot.
   verificadoPorId       String?
@@ -4190,6 +4196,8 @@ model VerificacionReps {
   // Consulta CALIENTE: «última verificación de este profesional», que corre en CADA compuerta (directorio,
   // crear cita, reasignar, reprogramar, reubicación §4). Compuesto, NO parcial (no dejar al planner).
   @@index([profesionalId, verificadoEn(sort: Desc)])
+  // SPEC-801 · GIN sobre la lista cruda: la consulta de descubrimiento agrupa/filtra por valor sin mapear.
+  @@index([modalidadesNoMapeadas], type: Gin)
 }
 
 // SPEC-436 (I-304) · los documentos que el profesional carga para que el
