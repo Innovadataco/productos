@@ -111,7 +111,13 @@ const esTest = (r: string) => /\.(test|spec)\.tsx?$/.test(r);
 
 // Raíces que el framework/runtime alcanza SIN que nadie las importe.
 const RE_NEXT = /\/(page|layout|route|loading|error|not-found|template|default|global-error|sitemap|robots|manifest|opengraph-image|twitter-image|icon|apple-icon)\.(ts|tsx)$/;
-const SETUP_VITEST = new Set(["src/lib/test-setup.ts", "src/lib/test-setup-unit.ts"]); // `setupFiles` de vitest.config*.ts
+// `setupFiles` y `globalSetup` de vitest.config*.ts: los alcanza el runner por RUTA en la config, sin que
+// nadie los importe (SPEC-817 agregó el globalSetup de base-por-worktree).
+const SETUP_VITEST = new Set([
+    "src/lib/test-setup.ts",
+    "src/lib/test-setup-unit.ts",
+    "src/lib/test-globalsetup.ts",
+]);
 function esRaiz(r: string): boolean {
     return (
         RE_NEXT.test(r) ||

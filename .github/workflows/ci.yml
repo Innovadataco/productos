@@ -661,6 +661,9 @@ jobs:
       - name: Agregar credenciales E2E dummy (solo CI)
         run: |
           cat >> .env.test <<'ENV_EOF'
+          # SPEC-817: este job APPENDEA al .env.test versionado (los otros 5 lo SOBRESCRIBEN). Como 817 sacó
+          # DATABASE_URL del archivo versionado, se provee acá — MISMA base `_test`, cero cambio de conducta.
+          DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
           SEED_ADMIN_EMAIL=admin-e2e@ci.local
           SEED_ADMIN_PASSWORD=CiDummyAdmin2026!
           E2E_PADRE_EMAIL=padre-e2e@ci.local
