@@ -4464,6 +4464,37 @@ async function seedParametrosPrimeraCita() {
         },
     });
     console.log("[SEED] parámetro profesional.cita.max_consecutivas_suspender listo (apagado: 0)");
+
+    // ── SPEC-790: parámetros del gate REPS (parametrizables, idempotentes) ──
+    await prisma.parametroSistema.upsert({
+        where: { clave: "reps.ventana_verificacion_dias" },
+        update: {},
+        create: {
+            clave: "reps.ventana_verificacion_dias",
+            valor: "365",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion:
+                "SPEC-790: días que confiamos en NUESTRA última verificación REPS antes de exigir re-verificar (nuestro reloj; el otro es el vigenteHasta de la autoridad). Default 365 (renovación anual). Bajarlo aprieta sin desplegar.",
+        },
+    });
+    await prisma.parametroSistema.upsert({
+        where: { clave: "reps.exigir_reps_verificado" },
+        update: {},
+        create: {
+            clave: "reps.exigir_reps_verificado",
+            valor: "false",
+            tipo: TipoParametro.BOOLEAN,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion:
+                "SPEC-790 (CUTOVER): si es true, un profesional SIN verificación REPS NO aparece en el directorio. Sembrado FALSE a propósito: hoy nadie tiene REPS verificado (SIN_VERIFICAR es el universo) y encenderlo vaciaría el directorio. Jelkin lo pone en true cuando haya masa verificada. VENCIDA/NO_ENCONTRADA cierran SIEMPRE, independiente de este flag.",
+        },
+    });
+    console.log("[SEED] parámetros REPS listos (ventana=365, exigir_reps_verificado=false)");
 }
 
 // ── SPEC-657 (I-389): cadencia del barrido de citas (worker-citas) ──

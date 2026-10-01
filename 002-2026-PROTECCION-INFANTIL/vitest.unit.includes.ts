@@ -767,6 +767,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-790: traducción cita→REPS en un solo lugar, exhaustiva; no-mapeo niega y registra. Sin base.
     "src/lib/profesional/reps/modalidad-cita-a-reps.candado.test.ts",
     // SPEC-790 (D-8): toda asignación de profesional a cita pasa por el chokepoint (crearSolicitudCita→obtenerPublicoPorId);
-    // el test de REPS es it.fails hasta T4 (rojo antes, verde al cablear). Scan estático, sin base.
+    // el test de REPS se convirtió de it.fails a it al cablear T4. Scan estático, sin base.
     "src/lib/profesional/cita/reps-gate-booking-sweep.candado.test.ts",
+    // SPEC-790 (T4): paridad mirror↔enum Prisma (ESTADOS_REPS/MODALIDADES_REPS ≡ EstadoReps/ModalidadReps). Sin base.
+    "src/lib/profesional/reps/reps-enums-paridad.candado.test.ts",
 ];

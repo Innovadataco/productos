@@ -67,6 +67,15 @@ describe("SPEC-790 · repsElegible (motor puro)", () => {
         expect(repsElegible({ ...soloPresencial, modalidades: ["PRESENCIAL", "TELEMEDICINA"] }, "TELEMEDICINA", EXIGE, NOW).elegible).toBe(true);
     });
 
+    it("modalidad `null` (directorio): salta SOLO el reloj de modalidad, nunca los de vigencia", () => {
+        const soloPresencial: HechoReps = { ...VIGENTE_AL_DIA, modalidades: ["PRESENCIAL"] };
+        // null hace elegible al VIGENTE al día aunque no cubra una modalidad puntual (la vigencia manda)...
+        expect(repsElegible(soloPresencial, null, EXIGE, NOW).elegible).toBe(true);
+        // ...pero NO rescata una vigencia vencida ni un VENCIDA (null no es «pasá igual»).
+        expect(repsElegible({ ...VIGENTE_AL_DIA, vigenteHasta: new Date(NOW.getTime() - 1 * DIA) }, null, EXIGE, NOW).elegible).toBe(false);
+        expect(repsElegible({ ...VIGENTE_AL_DIA, resultado: "VENCIDA" }, null, EXIGE, NOW).elegible).toBe(false);
+    });
+
     it("D-7 · VENCIDA y NO_ENCONTRADA cierran SIEMPRE — incluso con el cutover abierto", () => {
         for (const resultado of ["VENCIDA", "NO_ENCONTRADA"] as const) {
             const h: HechoReps = { ...VIGENTE_AL_DIA, resultado };

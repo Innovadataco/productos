@@ -30,6 +30,12 @@ import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 import { idsPerfilesProfesionalesSembrados } from "../demo-exclusion";
 import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profesionales/vigencia";
+import { getParametroSistemaValor } from "@/lib/parametros";
+import { repsElegible, type ConfigReps, type HechoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
+
+// SPEC-790 · parámetros del gate REPS (parametrizables; sembrados en el seed, fail-safe por defecto).
+const PARAM_REPS_VENTANA = "reps.ventana_verificacion_dias";
+const PARAM_REPS_EXIGIR = "reps.exigir_reps_verificado";
 
 /** L1b (SPEC-391): perfil completo + ciudad para la vista propia del profesional.
  *  SPEC-434 (I-302): agregamos `paisId` — la pantalla de completar necesita
@@ -412,6 +418,67 @@ export class PerfilProfesionalRepository {
         return vigentes;
     }
 
+    /** SPEC-790 · Config del gate REPS (parametrizable, fail-safe): ventana 365 d + cutover ABIERTO por defecto. */
+    private async configReps(): Promise<ConfigReps> {
+        const ventana = parseInt((await getParametroSistemaValor(PARAM_REPS_VENTANA)) ?? "", 10);
+        const exigir = (await getParametroSistemaValor(PARAM_REPS_EXIGIR))?.trim().toLowerCase();
+        return {
+            ventanaVerificacionDias: Number.isFinite(ventana) && ventana > 0 ? ventana : 365,
+            // Ships `false` (cutover ABIERTO): hoy SIN_VERIFICAR es el universo; exigir vaciaría el directorio.
+            exigirRepsVerificado: exigir === "true" || exigir === "1",
+        };
+    }
+
+    /**
+     * SPEC-790 · REPS-elegibles entre `perfilIds`. Deriva el estado de la ÚLTIMA fila de `VerificacionReps`
+     * (orden `verificadoEn` desc; SIN fila → SIN_VERIFICAR) y aplica `repsElegible` (dos relojes + cutover).
+     * `modalidad=null` en el directorio: la vigencia es la compuerta; la modalidad se exige al RESERVAR.
+     * NO es una cláusula SQL: con SIN_VERIFICAR como universo y el cutover abierto, un `some(VIGENTE)`
+     * vaciaría el directorio — acá SIN_VERIFICAR PASA mientras el parámetro no exija el REPS. FK RESTRICT:
+     * la fila-prueba sobrevive a la baja del profesional, así que no asumimos que borrarlo la quita.
+     */
+    private async idsRepsElegibles(perfilIds: string[], ahora: Date, modalidad: ModalidadReps | null): Promise<Set<string>> {
+        if (perfilIds.length === 0) return new Set();
+        const config = await this.configReps();
+        const filas = await this.db.verificacionReps.findMany({
+            where: { profesionalId: { in: perfilIds } },
+            orderBy: { verificadoEn: "desc" },
+            select: { profesionalId: true, resultado: true, verificadoEn: true, vigenteHasta: true, modalidades: true },
+        });
+        const ultima = new Map<string, HechoReps>();
+        for (const f of filas) {
+            // Primera que aparece por profesional = la más reciente (orden desc).
+            if (!ultima.has(f.profesionalId)) {
+                ultima.set(f.profesionalId, {
+                    resultado: f.resultado,
+                    verificadoEn: f.verificadoEn,
+                    vigenteHasta: f.vigenteHasta,
+                    modalidades: f.modalidades,
+                });
+            }
+        }
+        const elegibles = new Set<string>();
+        for (const id of perfilIds) {
+            if (repsElegible(ultima.get(id) ?? null, modalidad, config, ahora).elegible) elegibles.add(id);
+        }
+        return elegibles;
+    }
+
+    /**
+     * SPEC-790 (D-3/D-8) · La habilitación COMPLETA del directorio: vigencia autoritativa (SPEC-690) **∧**
+     * REPS al día (SPEC-790). Las CUATRO lecturas públicas pasan por acá —reemplaza la llamada directa a
+     * `idsConVigenciaAutoritativa`— para que el gate REPS lo hereden sin enterarse. El REPS se evalúa SOLO
+     * sobre los que ya pasaron la vigencia interna (no gastamos la consulta REPS en los ya excluidos).
+     */
+    private async idsHabilitadosVigenciaYReps(perfilIds: string[], ahora: Date): Promise<Set<string>> {
+        const vigentes = await this.idsConVigenciaAutoritativa(perfilIds, ahora);
+        if (vigentes.size === 0) return vigentes;
+        const repsOk = await this.idsRepsElegibles([...vigentes], ahora, null);
+        const out = new Set<string>();
+        for (const id of vigentes) if (repsOk.has(id)) out.add(id);
+        return out;
+    }
+
     /**
      * Lista PÚBLICA (para el directorio del padre). Solo `estado = ACTIVO`.
      * Sin orden en BD: el orden lo pone Node con una semilla por sesión
@@ -434,7 +501,7 @@ export class PerfilProfesionalRepository {
         });
         // SPEC-690-B: la palabra final es `verificacionVigente` (autoritativa) sobre
         // el pre-filtro grueso del SQL. Mismo término que la compuerta.
-        const vigentes = await this.idsConVigenciaAutoritativa(rows.map((r) => r.id), ahora);
+        const vigentes = await this.idsHabilitadosVigenciaYReps(rows.map((r) => r.id), ahora);
         return rows.filter((r) => vigentes.has(r.id)).map(toPublicoDTO);
     }
 
@@ -456,7 +523,7 @@ export class PerfilProfesionalRepository {
             where: await this.whereDirectorioPublico(ahora, viewerUsuarioId),
             select: { id: true },
         });
-        const vigentes = await this.idsConVigenciaAutoritativa(candidatos.map((c) => c.id), ahora);
+        const vigentes = await this.idsHabilitadosVigenciaYReps(candidatos.map((c) => c.id), ahora);
         return candidatos.filter((c) => vigentes.has(c.id)).length;
     }
 
@@ -481,7 +548,7 @@ export class PerfilProfesionalRepository {
         if (!row) return null;
         // SPEC-690-B: mismo filtro autoritativo que la lista — un profesional cuya
         // ÚLTIMA verificación venció no se abre por id (ni deja crear cita contra él).
-        const vigentes = await this.idsConVigenciaAutoritativa([row.id], ahora);
+        const vigentes = await this.idsHabilitadosVigenciaYReps([row.id], ahora);
         return vigentes.has(row.id) ? toPublicoDTO(row) : null;
     }
 
@@ -521,7 +588,7 @@ export class PerfilProfesionalRepository {
         });
         // SPEC-690-B: la palabra final de la vigencia es `idsConVigenciaAutoritativa`,
         // igual que la lista; las facetas se derivan SOLO de los habilitados de verdad.
-        const vigentes = await this.idsConVigenciaAutoritativa(rows.map((r) => r.id), ahora);
+        const vigentes = await this.idsHabilitadosVigenciaYReps(rows.map((r) => r.id), ahora);
         const ciudadesMap = new Map<string, { id: string; nombre: string }>();
         const especialidadesSet = new Set<string>();
         for (const r of rows) {

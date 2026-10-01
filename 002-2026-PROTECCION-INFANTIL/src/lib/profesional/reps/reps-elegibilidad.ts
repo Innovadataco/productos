@@ -71,12 +71,14 @@ function decidirSinVerificar(config: ConfigReps): Elegibilidad {
 }
 
 /**
- * ¿Este profesional es REPS-elegible para recibir citas de `modalidadRequerida`? PURA, fail-closed.
- * `now` inyectado (sin reloj de pared). `now` inválido → NO elegible (conservador: no abrir ante la duda).
+ * ¿Este profesional es REPS-elegible? PURA, fail-closed. `now` inyectado (sin reloj de pared); `now`
+ * inválido → NO elegible (conservador). `modalidadRequerida`: una modalidad concreta (al RESERVAR) debe
+ * estar cubierta por el REPS (D-5); `null` (lectura del DIRECTORIO, sin modalidad única) salta ese reloj
+ * — la vigencia es la compuerta y la modalidad se exige en el punto de reserva, donde se conoce.
  */
 export function repsElegible(
     hecho: HechoReps | null,
-    modalidadRequerida: ModalidadReps,
+    modalidadRequerida: ModalidadReps | null,
     config: ConfigReps,
     now: Date,
 ): Elegibilidad {
@@ -103,8 +105,8 @@ export function repsElegible(
             if (limiteNuestro <= now.getTime()) {
                 return { elegible: false, motivo: "Nuestra verificación del REPS envejeció — toca re-verificar", estado: "VIGENTE" };
             }
-            // Modalidad (D-5): no basta con tener modalidades; debe INCLUIR la del servicio.
-            if (!hecho.modalidades.includes(modalidadRequerida)) {
+            // Modalidad (D-5): con una modalidad pedida, el REPS debe INCLUIRLA; `null` la salta (directorio).
+            if (modalidadRequerida !== null && !hecho.modalidades.includes(modalidadRequerida)) {
                 return { elegible: false, motivo: `El REPS no cubre la modalidad ${modalidadRequerida.toLowerCase()}`, estado: "VIGENTE" };
             }
             return { elegible: true, motivo: "REPS al día", estado: "VIGENTE" };

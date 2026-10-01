@@ -13,10 +13,10 @@
  * ÚNICO creador y el ÚNICO selector; cualquier ruta nueva que quiera asignar un profesional tiene que
  * pasar por ahí o se delata.
  *
- * RED-BEFORE / GREEN-AFTER (control de no-vacuidad, estilo `facetas`): HOY la selección central NO exige
- * REPS, así que el test de T4 está como `it.fails` — PASA porque FALLA. Cuando el post-filtro REPS entre a
- * `obtenerPublicoPorId`, ese test empezará a pasar → vitest reporta «expected to fail but passed» → ROJO →
- * hay que convertirlo en `it`. Salida autoexigida: el candado se pone verde SOLO al cablear el gate.
+ * RED-BEFORE / GREEN-AFTER (estilo `facetas`): hasta T4 el test de abajo fue `it.fails` —pasaba porque
+ * fallaba, confirmando que HOY nada exige REPS—. Al cablear el gate (obtenerPublicoPorId →
+ * `idsHabilitadosVigenciaYReps` → `idsRepsElegibles`), el test empezó a pasar y se CONVIRTIÓ en `it`
+ * (vitest cantó «expected to fail but passed» y lo exigió). Ahora vigila que el gate NO se quite.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -91,11 +91,13 @@ describe("SPEC-790 (D-8) · chokepoint de asignación de profesional a cita", ()
         expect(cuerpo, "hoy la selección pasa por el builder (whereDirectorioPublico)").toContain("whereDirectorioPublico");
     });
 
-    // RED-BEFORE → `it` en T4. HOY obtenerPublicoPorId NO exige REPS: el `expect` de abajo FALLA, así que
-    // `it.fails` PASA (verde). Al cablear el post-filtro REPS en T4, el `expect` pasará → `it.fails` dará
-    // «expected to fail but passed» → ROJO → convertir a `it` (el candado se pone verde solo al cablear).
-    it.fails("T4 · la selección central (obtenerPublicoPorId) exige la elegibilidad REPS — HOY no (rojo antes)", () => {
+    // T4 CABLEADO (era `it.fails` hasta el gate): la selección central pasa por el gate REPS. Si alguien lo
+    // quita de obtenerPublicoPorId, este test cae — vuelve a ser la costura que 790 cerró.
+    it("T4 · la selección central (obtenerPublicoPorId) exige la elegibilidad REPS", () => {
         const cuerpo = cuerpoDeFuncion(sinComentarios(REPO_PERFIL), "obtenerPublicoPorId");
-        expect(cuerpo, "obtenerPublicoPorId debe aplicar la elegibilidad REPS (idsRepsElegibles/repsElegible)").toMatch(/reps/i);
+        expect(
+            cuerpo,
+            "obtenerPublicoPorId debe aplicar el gate REPS (idsHabilitadosVigenciaYReps → idsRepsElegibles)",
+        ).toMatch(/idsHabilitadosVigenciaYReps|idsRepsElegibles|repsElegible/);
     });
 });
