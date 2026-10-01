@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 8 roles (7 autenticados + anónimo) × 588 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4704 combinaciones.
+Inventario: 8 roles (7 autenticados + anónimo) × 594 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4752 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -164,6 +164,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cita/pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/citas-vencidas` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato/pdf` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
 | `/api/admin/pagos/mora` | api | permitir | permite | sí |
 | `/api/admin/pagos/parametros` | api | permitir | permite | sí |
@@ -226,10 +228,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/renovacion` | api | permitir | permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/reps` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion/[id]/resolver` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/renovaciones` | api | permitir | permite | sí |
+| `/api/admin/verificacion-profesionales/reps` | api | permitir | permite | sí |
 | `/api/admin/verificadores` | api | permitir | permite | sí |
 | `/api/admin/verificadores/[id]/estado` | api | permitir | permite | sí |
 | `/api/admin/verificadores/[id]/reenviar-email` | api | permitir | permite | sí |
@@ -313,6 +317,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | permitir | permite | sí |
 | `/api/colegio/configuracion/escudo` | api | permitir | permite | sí |
+| `/api/colegio/contrato/pdf` | api | permitir | permite | sí |
 | `/api/colegio/cursos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
@@ -538,6 +543,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/verificacion/documento-nuevo/[id]/[clave]` | página | permitir | permite | sí |
 | `/dashboard/admin/verificacion/incidentes` | página | permitir | permite | sí |
 | `/dashboard/admin/verificacion/reportes-no-coinciden` | página | permitir | permite | sí |
+| `/dashboard/admin/verificacion/reps` | página | permitir | permite | sí |
 | `/dashboard/admin/verificadores` | página | permitir | permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -757,6 +763,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cita/pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/citas-vencidas` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato/pdf` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
 | `/api/admin/pagos/mora` | api | permitir | permite | sí |
 | `/api/admin/pagos/parametros` | api | permitir | permite | sí |
@@ -819,10 +827,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/renovacion` | api | permitir | permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/reps` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion/[id]/resolver` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/renovaciones` | api | permitir | permite | sí |
+| `/api/admin/verificacion-profesionales/reps` | api | permitir | permite | sí |
 | `/api/admin/verificadores` | api | permitir | permite | sí |
 | `/api/admin/verificadores/[id]/estado` | api | permitir | permite | sí |
 | `/api/admin/verificadores/[id]/reenviar-email` | api | permitir | permite | sí |
@@ -906,6 +916,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | permitir | permite | sí |
 | `/api/colegio/configuracion/escudo` | api | permitir | permite | sí |
+| `/api/colegio/contrato/pdf` | api | permitir | permite | sí |
 | `/api/colegio/cursos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
@@ -1131,6 +1142,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/verificacion/documento-nuevo/[id]/[clave]` | página | permitir | permite | sí |
 | `/dashboard/admin/verificacion/incidentes` | página | permitir | permite | sí |
 | `/dashboard/admin/verificacion/reportes-no-coinciden` | página | permitir | permite | sí |
+| `/dashboard/admin/verificacion/reps` | página | permitir | permite | sí |
 | `/dashboard/admin/verificadores` | página | permitir | permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -1350,6 +1362,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cita/pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/citas-vencidas` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato/pdf` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
 | `/api/admin/pagos/mora` | api | permitir | permite | sí |
 | `/api/admin/pagos/parametros` | api | permitir | permite | sí |
@@ -1412,10 +1426,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/renovacion` | api | permitir | permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/reps` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion/[id]/resolver` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/renovaciones` | api | permitir | permite | sí |
+| `/api/admin/verificacion-profesionales/reps` | api | permitir | permite | sí |
 | `/api/admin/verificadores` | api | permitir | permite | sí |
 | `/api/admin/verificadores/[id]/estado` | api | permitir | permite | sí |
 | `/api/admin/verificadores/[id]/reenviar-email` | api | permitir | permite | sí |
@@ -1499,6 +1515,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | permitir | permite | sí |
 | `/api/colegio/configuracion/escudo` | api | permitir | permite | sí |
+| `/api/colegio/contrato/pdf` | api | permitir | permite | sí |
 | `/api/colegio/cursos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
@@ -1724,6 +1741,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/verificacion/documento-nuevo/[id]/[clave]` | página | permitir | permite | sí |
 | `/dashboard/admin/verificacion/incidentes` | página | permitir | permite | sí |
 | `/dashboard/admin/verificacion/reportes-no-coinciden` | página | permitir | permite | sí |
+| `/dashboard/admin/verificacion/reps` | página | permitir | permite | sí |
 | `/dashboard/admin/verificadores` | página | permitir | permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/admin/comite | no permite | sí |
@@ -1943,6 +1961,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cita/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/citas-vencidas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/parametros` | api | HTTP 403 | no permite | sí |
@@ -2005,10 +2025,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/renovacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/reps` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion/[id]/resolver` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/renovaciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/reps` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores/[id]/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
@@ -2092,6 +2114,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | permitir | permite | sí |
 | `/api/colegio/configuracion/escudo` | api | permitir | permite | sí |
+| `/api/colegio/contrato/pdf` | api | permitir | permite | sí |
 | `/api/colegio/cursos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
@@ -2317,6 +2340,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/verificacion/documento-nuevo/[id]/[clave]` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/verificacion/incidentes` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/verificacion/reportes-no-coinciden` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/verificacion/reps` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/verificadores` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -2536,6 +2560,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cita/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/citas-vencidas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/parametros` | api | HTTP 403 | no permite | sí |
@@ -2598,10 +2624,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/renovacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/reps` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion/[id]/resolver` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/renovaciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/reps` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores/[id]/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
@@ -2685,6 +2713,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/configuracion/escudo` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/contrato/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/cursos` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/cursos/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | HTTP 403 | no permite | sí |
@@ -2910,6 +2939,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/verificacion/documento-nuevo/[id]/[clave]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/verificacion/incidentes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/verificacion/reportes-no-coinciden` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/verificacion/reps` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/verificadores` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -3129,6 +3159,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cita/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/citas-vencidas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/parametros` | api | HTTP 403 | no permite | sí |
@@ -3191,10 +3223,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/renovacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/reps` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion/[id]/resolver` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/renovaciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/reps` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores/[id]/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
@@ -3278,6 +3312,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/configuracion/escudo` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/contrato/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/cursos` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/cursos/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | HTTP 403 | no permite | sí |
@@ -3503,6 +3538,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/verificacion/documento-nuevo/[id]/[clave]` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/verificacion/incidentes` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/verificacion/reportes-no-coinciden` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/verificacion/reps` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/verificadores` | página | redirigir→/ | no permite | sí |
 | `/dashboard/apelaciones` | página | permitir | permite | sí |
 | `/dashboard/circulo-confianza` | página | permitir | permite | sí |
@@ -3722,6 +3758,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cita/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/citas-vencidas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/contrato/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/parametros` | api | HTTP 403 | no permite | sí |
@@ -3784,10 +3822,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/renovacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/reps` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion/[id]/resolver` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/renovaciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/reps` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores/[id]/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificadores/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
@@ -3871,6 +3911,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/configuracion/escudo` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/contrato/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/cursos` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/cursos/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | HTTP 403 | no permite | sí |
@@ -4096,6 +4137,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/verificacion/documento-nuevo/[id]/[clave]` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/dashboard/admin/verificacion/incidentes` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/dashboard/admin/verificacion/reportes-no-coinciden` | página | redirigir→/dashboard/profesional | no permite | sí |
+| `/dashboard/admin/verificacion/reps` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/dashboard/admin/verificadores` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/profesional | no permite | sí |
@@ -4315,6 +4357,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cita/pendientes` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/citas-vencidas` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/cliente/[id]/contrato` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/cliente/[id]/contrato/pdf` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/mora` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/parametros` | api | HTTP 401 | permite | **NO** |
@@ -4377,10 +4421,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificacion-profesionales/[id]/renovacion` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/verificacion-profesionales/[id]/reps` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificacion-profesionales/incidentes` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion/[id]/resolver` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificacion-profesionales/renovaciones` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/verificacion-profesionales/reps` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificadores` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificadores/[id]/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificadores/[id]/reenviar-email` | api | HTTP 401 | permite | **NO** |
@@ -4464,6 +4510,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/confianza/protocolo/pdf` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/configuracion/escudo` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/contrato/pdf` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/[id]/alumnos` | api | HTTP 401 | permite | **NO** |
@@ -4689,6 +4736,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/verificacion/documento-nuevo/[id]/[clave]` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/verificacion/incidentes` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/verificacion/reportes-no-coinciden` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/verificacion/reps` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/verificadores` | página | redirigir→/login | no permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/circulo-confianza` | página | redirigir→/login | permite | **NO** |
@@ -4908,6 +4956,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/pagos/cita/pendientes` | HTTP 401 | permite |
 | `/api/admin/pagos/citas-vencidas` | HTTP 401 | permite |
 | `/api/admin/pagos/cliente/[id]` | HTTP 401 | permite |
+| `/api/admin/pagos/cliente/[id]/contrato` | HTTP 401 | permite |
+| `/api/admin/pagos/cliente/[id]/contrato/pdf` | HTTP 401 | permite |
 | `/api/admin/pagos/cliente/[id]/extender` | HTTP 401 | permite |
 | `/api/admin/pagos/mora` | HTTP 401 | permite |
 | `/api/admin/pagos/parametros` | HTTP 401 | permite |
@@ -4970,10 +5020,12 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/verificacion-profesionales/[id]/decidir` | HTTP 401 | permite |
 | `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | HTTP 401 | permite |
 | `/api/admin/verificacion-profesionales/[id]/renovacion` | HTTP 401 | permite |
+| `/api/admin/verificacion-profesionales/[id]/reps` | HTTP 401 | permite |
 | `/api/admin/verificacion-profesionales/incidentes` | HTTP 401 | permite |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion` | HTTP 401 | permite |
 | `/api/admin/verificacion-profesionales/incidentes-contradiccion/[id]/resolver` | HTTP 401 | permite |
 | `/api/admin/verificacion-profesionales/renovaciones` | HTTP 401 | permite |
+| `/api/admin/verificacion-profesionales/reps` | HTTP 401 | permite |
 | `/api/admin/verificadores` | HTTP 401 | permite |
 | `/api/admin/verificadores/[id]/estado` | HTTP 401 | permite |
 | `/api/admin/verificadores/[id]/reenviar-email` | HTTP 401 | permite |
@@ -5037,6 +5089,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/confianza/documentos` | HTTP 401 | permite |
 | `/api/colegio/confianza/protocolo/pdf` | HTTP 401 | permite |
 | `/api/colegio/configuracion/escudo` | HTTP 401 | permite |
+| `/api/colegio/contrato/pdf` | HTTP 401 | permite |
 | `/api/colegio/cursos` | HTTP 401 | permite |
 | `/api/colegio/cursos/[id]` | HTTP 401 | permite |
 | `/api/colegio/cursos/[id]/alumnos` | HTTP 401 | permite |
