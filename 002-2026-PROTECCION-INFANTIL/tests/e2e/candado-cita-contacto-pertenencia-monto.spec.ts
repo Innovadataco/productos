@@ -49,6 +49,10 @@ const PADRE_2_EMAIL = `${CORRIDA}-padre2@proteccion.local`;
 
 let perfilProfesionalId = "";
 let franjaId = "";
+// SPEC-828 · dos franjas VIRTUALES creadas en el setup MIENTRAS el pro es SIN_VERIFICAR (creación
+// legítima, permitida pre Y post-825); el REPS se estrecha/ensancha DESPUÉS, en cada test.
+let franjaVirtualRechazoId = "";
+let franjaVirtualOkId = "";
 let solicitudId = "";
 let precioParametroCOP = 0;
 let profesional: ProfesionalVisible | undefined;
@@ -162,6 +166,15 @@ test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", (
         perfilProfesionalId = profesional.perfilId;
         franjaId = profesional.franjaId ?? "";
 
+        // SPEC-828 pieza 2 · las franjas de los candados (4)/(5) se crean AHORA, con el pro SIN_VERIFICAR:
+        // la creación es LEGÍTIMA (cutover abierto; permitida pre Y post-825). El REPS se estrecha/ensancha
+        // en cada test — así el escenario es el TEMPORAL que la compuerta de creación NO cubre sola: una
+        // franja creada válidamente deja de ser reservable cuando el REPS CADUCA/se estrecha, no cuando
+        // «nunca debió existir». Si se plantara el REPS antes de crear la franja, post-825 la creación misma
+        // sería rechazada y el test fallaría en el SETUP, por una razón ajena al contrato que afirma.
+        franjaVirtualRechazoId = await crearFranjaVirtual(8);
+        franjaVirtualOkId = await crearFranjaVirtual(9);
+
         // Precio estándar del parámetro (público) — referencia del candado (3).
         const ctxPub = await contexto();
         const res = await ctxPub.get("/api/publico/profesionales/precio-primera-cita");
@@ -175,7 +188,12 @@ test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", (
     test.afterAll(async () => {
         // SPEC-828: las VerificacionReps plantadas tienen FK Restrict al perfil → se borran ANTES de que
         // limpiarProfesionalVisible borre el perfil (si no, ese delete falla en silencio y deja basura).
-        if (profesional) await prisma.verificacionReps.deleteMany({ where: { profesionalId: profesional.perfilId } }).catch(() => undefined);
+        if (profesional)
+            await prisma.verificacionReps
+                .deleteMany({ where: { profesionalId: profesional.perfilId } })
+                // No tira en teardown, pero DEJA RASTRO: si este borrado empieza a fallar, el delete del
+                // perfil (limpiarProfesionalVisible, FK Restrict) fallará en silencio y dejará huérfanos.
+                .catch((e) => console.warn("[SPEC-828] limpieza de VerificacionReps falló:", e));
         // El profesional borra las solicitudes por `profesionalId` (cubre la cita);
         // luego cada padre borra lo suyo FK-safe.
         if (profesional) await limpiarProfesionalVisible(profesional);
@@ -251,8 +269,10 @@ test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", (
         // El pro atiende VIRTUAL (franja → TELEMEDICINA en el REPS). Se le planta un REPS VIGENTE que cubre
         // SOLO PRESENCIAL → sigue VISIBLE (el directorio usa modalidad=null y la vigencia pasa) pero la
         // reserva de una franja virtual cae por `esRepsElegibleParaModalidad(TELEMEDICINA)`.
+        // La franja virtual YA existe (creada en el setup con el pro SIN_VERIFICAR). AHORA se estrecha el
+        // REPS a solo-PRESENCIAL: la franja —legítima— deja de ser reservable por su modalidad.
         await plantarReps(perfilProfesionalId, { resultado: "VIGENTE", verificadoEn: hace(10), vigenteHasta: enDias(120), modalidades: ["PRESENCIAL"] });
-        const franjaVirtual = await crearFranjaVirtual(8);
+        const franjaVirtual = franjaVirtualRechazoId;
 
         const ctx = await contexto();
         try {
@@ -281,8 +301,9 @@ test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", (
         // Remoción del discriminador: una verificación más reciente que SÍ cubre TELEMEDICINA (la «última
         // fila» manda). Nada más cambia; que ahora PASE prueba que lo que negaba la reserva era la
         // cobertura de modalidad del REPS, no la visibilidad del pro ni el camino del padre.
+        // La franja virtual YA existe (setup). Con el REPS cubriendo TELEMEDICINA, la MISMA reserva directa pasa.
         await plantarReps(perfilProfesionalId, { resultado: "VIGENTE", verificadoEn: new Date(), vigenteHasta: enDias(120), modalidades: ["PRESENCIAL", "TELEMEDICINA"] });
-        const franjaVirtual = await crearFranjaVirtual(9);
+        const franjaVirtual = franjaVirtualOkId;
 
         const ctx = await contexto();
         try {
