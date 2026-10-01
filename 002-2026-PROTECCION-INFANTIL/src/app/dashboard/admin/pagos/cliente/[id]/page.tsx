@@ -6,6 +6,8 @@ import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { AnalisisRepository } from "@/lib/dal/repositories/analisis-repository";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 import { ScoreClienteCard } from "@/components/modules/pagos/ScoreClienteCard";
+import { AdjuntarContratoColegio } from "@/components/modules/admin/pagos/AdjuntarContratoColegio";
+import { contratoColegioVista } from "@/lib/colegio/contrato-colegio.service";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -22,6 +24,9 @@ export default async function ClientePage({ params }: PageProps) {
 
     // SPEC-220: score de valor del cliente (solo visible bajo la puerta de arriba).
     const score = await new AnalisisRepository().obtenerScoreCliente(id);
+
+    // SPEC-796: el contrato firmado SOLO aplica a suscripciones de colegio.
+    const contratoColegio = suscripcion.colegioId ? await contratoColegioVista(suscripcion.colegioId) : null;
 
     const titular = suscripcion.colegio
         ? { tipo: "COLEGIO", nombre: suscripcion.colegio.nombre, email: suscripcion.usuario?.email ?? "—" }
@@ -71,6 +76,10 @@ export default async function ClientePage({ params }: PageProps) {
             </div>
 
             <ScoreClienteCard actual={score.actual} historico={score.historico} />
+
+            {suscripcion.colegioId && (
+                <AdjuntarContratoColegio suscripcionId={id} contratoInicial={contratoColegio} />
+            )}
 
             <div>
                 <h3 className="mb-3 text-lg font-semibold text-body">Pagos</h3>
