@@ -55,7 +55,6 @@ export default function DatasetEntrenamientoPageClient() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [total, setTotal] = useState(0);
-    const [anonimizados, setAnonimizados] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
     const page = Math.max(1, Number(searchParams.get("page") || "1"));
@@ -89,7 +88,6 @@ export default function DatasetEntrenamientoPageClient() {
             const json = await res.json();
             setItems(json.items || []);
             setTotal(json.total || 0);
-            setAnonimizados(json.anonimizados || 0);
             setTotalPages(json.totalPages || 0);
             setError("");
         } catch {
@@ -127,22 +125,21 @@ export default function DatasetEntrenamientoPageClient() {
                 </p>
             </div>
 
-            {/* SPEC-812 (pieza 4): se RETIRA la tarjeta ámbar «Pendientes de anonimizar»
-                (Math.max(0, total - anonimizados)). Era estructuralmente 0: toda fila de
-                DatasetEntrenamiento se persiste con textoAnonimizado=true (correcciones/route.ts,
-                resolver-spam) — nunca existe la fila cruda, así que total === anonimizados SIEMPRE.
-                El número sostenía el hueco: hacía creer que la cobertura del trabajo estaba vigilada.
+            {/* SPEC-812 (pieza 4): se RETIRARON dos tarjetas que mostraban un solo hecho dos veces y
+                fingían vigilancia de cobertura:
+                · «Pendientes de anonimizar» (Math.max(0, total - anonimizados)): estructuralmente 0 —
+                  toda fila de DatasetEntrenamiento se persiste con textoAnonimizado=true
+                  (correcciones/route.ts, resolver-spam): nunca existe la fila cruda, así que
+                  total === anonimizados SIEMPRE.
+                · «Anonimizados»: por lo mismo nunca difiere de «Total» — dos etiquetas, un número.
                 El conteo REAL de trabajo pendiente NO es de filas de dataset sino de CORRECCIONES sin
                 dataset derivado (estado 1), que vive sobre CorreccionAdmin y llega con SPEC-812
-                piezas 1-2 (sobre SPEC-807/#802). Hasta entonces la pantalla no finge vigilancia. */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                piezas 1-2 (sobre SPEC-807/#802). La presentación de lo que queda (Total + ese conteo
+                real) la define Diseño; acá solo se quita lo que mentía. */}
+            <div className="grid grid-cols-1">
                 <div className="glass rounded-2xl p-4">
                     <p className="text-xs font-medium text-subtle uppercase tracking-wide">Total registros</p>
                     <p className="mt-1 text-2xl font-bold text-body">{total}</p>
-                </div>
-                <div className="glass rounded-2xl p-4">
-                    <p className="text-xs font-medium text-subtle uppercase tracking-wide">Anonimizados</p>
-                    <p className="mt-1 text-2xl font-bold text-pino">{anonimizados}</p>
                 </div>
             </div>
 

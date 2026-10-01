@@ -36,16 +36,18 @@ export async function GET(request: Request) {
         // métricas de cobertura, pero el listado filtra los no anonimizados.
         // E-8: las consultas viven en el repo; la ruta no toca prisma.
         const repo = new DatasetEntrenamientoRepository();
-        const [items, total, anonimizados] = await Promise.all([
+        const [items, total] = await Promise.all([
             repo.listarAnonimizadosPaginados({ skip, take: pageSize }),
             repo.contarTodos(),
-            repo.contarAnonimizados(),
         ]);
 
+        // SPEC-812 (pieza 4): ya no se devuelve `anonimizados`. En prod toda fila se persiste
+        // anonimizada (textoAnonimizado=true), así que nunca difiere de `total` — la pantalla
+        // mostraba el mismo hecho dos veces. El método repo.contarAnonimizados() se conserva
+        // (consulta DAL legítima, con su test del filtro), pero la ruta ya no lo computa.
         return NextResponse.json({
             items,
             total,
-            anonimizados,
             page,
             pageSize,
             totalPages: Math.ceil(total / pageSize),
