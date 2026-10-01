@@ -23,11 +23,19 @@ function validarUrlOllama(valor: string, origen: string): string {
 
 /**
  * Timeout por defecto para las llamadas de generación a Ollama (ms).
- * 120 s: generoso frente a la latencia real de modelos grandes en CPU para no
- * introducir abortos espurios; acota la espera si un modelo queda colgado.
- * Configurable con el parámetro de sistema `ia.ollama.timeout_ms` (ADR_004).
+ *
+ * SPEC-807: bajado de 120 s a 60 s, y el número NO es a ojo. Nuestra propia vigilancia ya declara que
+ * 60 s es una FALLA de Ollama: `monitoreo.ollama.smoke.timeout_ms = 60000`. Esperar 120 s en el camino
+ * de la petición es el DOBLE de lo que nuestro monitor acepta antes de dar la dependencia por caída —
+ * sostener una llamada colgada 120 s solo retiene recursos (conexiones) más allá de cuando ya la
+ * consideramos muerta. Cuando el trabajo que la usa corre FUERA de la petición (SPEC-807), puede tardar
+ * lo que necesite sin bloquear a nadie; lo que NO puede es quedar colgado para siempre.
+ *
+ * NOTA (carril del CEO): el valor VIVO en producción es el parámetro `ia.ollama.timeout_ms = 120000`,
+ * que tiene prioridad sobre este default. Bajar este default solo cambia entornos sin el parámetro
+ * (tests / nuevos); para que prod use 60 s hay que bajar ese parámetro (y la semilla), que es del CEO/Datos.
  */
-const DEFAULT_OLLAMA_TIMEOUT_MS = 120_000;
+const DEFAULT_OLLAMA_TIMEOUT_MS = 60_000;
 
 /**
  * Resuelve el timeout (ms) para los fetch de generación a Ollama. El parámetro

@@ -13,6 +13,7 @@ import { descifrarCampo, MARCADOR_TEXTO_PURGADO } from "@/lib/reporte-texto-cont
 import "../mock-headers";
 import { jar, limpiarJar } from "../mock-headers";
 import { prisma } from "@/lib/prisma";
+import { esperarTareasFondo } from "@/lib/tareas-fondo";
 import { sembrarBase, datosCiclo, sembrarBancoCiclo } from "../seed-ciclo";
 import { entrarComo, verificarHashBcrypt, verificarAuditLog, salirYExigirSesionMuerta, HOME_POR_ROL } from "../helpers";
 
@@ -309,7 +310,8 @@ describe(`SPEC-114 · admin (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         const transicion = await prisma.transicionReporte.findFirst({ where: { reporteId: reporte.id, estadoNuevo: "CORREGIDO" } });
         expect(transicion, "§9: la transición debe quedar registrada").toBeTruthy();
 
-        // §9: la corrección alimenta el dataset RAG
+        // §9: la corrección alimenta el dataset RAG. SPEC-807: la derivación corre en segundo plano.
+        await esperarTareasFondo();
         const dataset = await prisma.datasetEntrenamiento.findFirst({ where: { correccionId: correccion!.id } });
         expect(dataset, "§9: la corrección alimenta el dataset de entrenamiento").toBeTruthy();
         expect(dataset!.clasificacionCorrecta).toBe("EXTORSION");

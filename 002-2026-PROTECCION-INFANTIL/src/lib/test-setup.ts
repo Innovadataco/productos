@@ -3,6 +3,7 @@ import { TextEncoder as NodeTextEncoder, TextDecoder as NodeTextDecoder } from "
 import { webcrypto } from "node:crypto";
 import { cleanup } from "@testing-library/react";
 import { prisma } from "./prisma";
+import { esperarTareasFondo } from "./tareas-fondo";
 
 // Wrapper que garantiza que encode() devuelva una Uint8Array pura,
 // evitando problemas con jose/webapi en entornos de test.
@@ -209,6 +210,11 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+    // SPEC-807: drenar las tareas BEST-EFFORT en segundo plano ANTES de limpiar mocks/prisma y de que
+    // el próximo test resetee la BD. Sin esto, una derivación fire-and-forget lanzada por un test podría
+    // escribir DESPUÉS del reset del siguiente y contaminarlo. Se drena acá, con los mocks aún en pie.
+    await esperarTareasFondo();
+
     // Restaurar estado global de JS antes de soltar el lock de BD. Un test que
     // deje fake timers, mocks o globals stubs (fetch, etc.) contamina a los
     // siguientes del MISMO archivo (los archivos ya no comparten fork, SPEC-174).
