@@ -37,11 +37,14 @@ export function ProfesionalPerfil({
     // (POST /citas/[id]/reasignar) — hereda el pago, no cobra de nuevo.
     heredarDeSolicitudId,
     hrefVolver,
+    audienciasPendientes,
 }: {
     p: PerfilPublicoDTO;
     precioEstandarPrimeraCitaCOP: number;
     expedienteIdSugerido?: string | undefined;
     heredarDeSolicitudId?: string | undefined;
+    /** SPEC-751 T010 (§2): nº de audiencias «oír al menor» pendientes del titular (heads-up en la cita). */
+    audienciasPendientes?: number | undefined;
     /**
      * SPEC-441 · a dónde vuelve el padre. Se entraba a una ficha y **no había
      * salida hacia el directorio**: para seguir comparando había que usar el
@@ -169,6 +172,7 @@ export function ProfesionalPerfil({
                 duracionMinutos={p.duracionMinutos}
                 {...(expedienteIdSugerido !== undefined ? { expedienteIdSugerido } : {})}
                 {...(heredarDeSolicitudId !== undefined ? { heredarDeSolicitudId } : {})}
+                {...(audienciasPendientes !== undefined ? { audienciasPendientes } : {})}
             />
 
             <CanalesOficiales />

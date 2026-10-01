@@ -32,6 +32,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { RejillaElegirFranja } from "@/components/modules/padre/citas/RejillaElegirFranja";
+import { RenglonAudienciaCita } from "@/components/modules/padre/profesionales/RenglonAudienciaCita";
 
 interface Franja {
     id: string;
@@ -56,6 +57,13 @@ interface Props {
      * en la solicitud original y el service la propaga) y no vuelve a cobrar.
      */
     heredarDeSolicitudId?: string | undefined;
+    /**
+     * SPEC-751 T010 (§2): nº de hijos del titular con audiencia «oír al menor» pendiente. Cuando ≥1,
+     * el panel muestra un renglón HEADS-UP (no muro) que acompaña a ese paso y enlaza a
+     * `/audiencia-menor`. La cita NO es por-hijo (no hay selector de hijo), así que el renglón se
+     * enmarca por «tu hijo/tus hijos», sin nombre. Lo computa el server (perfil del profesional).
+     */
+    audienciasPendientes?: number | undefined;
 }
 
 const CURRENCY_COP = new Intl.NumberFormat("es-CO", {
@@ -86,6 +94,7 @@ export function SolicitarCitaPanel({
     duracionMinutos,
     expedienteIdSugerido,
     heredarDeSolicitudId,
+    audienciasPendientes,
 }: Props) {
     const esReasignacion = Boolean(heredarDeSolicitudId);
     const router = useRouter();
@@ -217,6 +226,10 @@ export function SolicitarCitaPanel({
                 </a>
                 .
             </p>
+
+            {/* SPEC-751 T010 (§2): heads-up «oír al menor» — informativo, NO muro. Solo si hay
+                audiencia(s) pendiente(s); enlaza a /audiencia-menor. Nunca bloquea la cita. */}
+            <RenglonAudienciaCita count={audienciasPendientes ?? 0} />
 
             {/* Precio estándar por delante — el que se paga (§4). La tarifa
                 del profesional es informativa (aplica desde la 2ª cita).
