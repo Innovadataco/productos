@@ -36,6 +36,11 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/admin/estadisticas", label: "Estadísticas", labelCorto: "Cifras", modulo: "estadisticas" },
     { href: "/dashboard/admin/ia", label: "Centro de Control IA", modulo: "centro_control_ia" },
     { href: "/dashboard/admin/operadores", label: "Operadores", modulo: "operadores" },
+    // SPEC-832 (T7 de 790): la cola de reubicación de citas (profesional inhabilitado → art. 19). MISMO
+    // módulo `operadores` que la página gatea en servidor (verificarAccesoPagina), para que el ítem aparezca
+    // EXACTAMENTE cuando la página deja entrar (candado de menú honesto). Label PROVISIONAL (a confirmar por
+    // Diseño, como la etiqueta de 824); ícono provisional ReubicarIcon (candado 744).
+    { href: "/dashboard/admin/reubicaciones", label: "Reubicaciones", modulo: "operadores" },
     // SPEC-435 (Jelkin vivo 04-09): cuentas VERIFICADOR con su user y pass —
     // molde exacto del operador, sin colegio ni vigencia.
     { href: "/dashboard/admin/verificadores", label: "Verificadores", modulo: "verificadores_admin" },
