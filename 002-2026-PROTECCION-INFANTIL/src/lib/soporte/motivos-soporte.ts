@@ -10,7 +10,7 @@
  * SIN plazo en la UI (el término legal lo cuenta el backend por motivo; ver
  * `plazo-peticion.ts`). El copy dice el QUÉ pasa después, nunca el CUÁNDO.
  */
-import { MotivoPeticionServicio } from "@prisma/client";
+import { MotivoPeticionServicio, type TipoSolicitudHabeasData, type CalidadPeticionario } from "@prisma/client";
 
 export interface MotivoSoporte {
     /** Clave del enum MotivoPeticionServicio (lo que se persiste). */
@@ -52,3 +52,56 @@ export function confirmacionSoporte(tituloMotivo: string): string {
 export function tituloDeMotivo(valor: string): string {
     return MOTIVOS_SOPORTE.find((m) => m.valor === valor)?.titulo ?? "tu solicitud";
 }
+
+/**
+ * SPEC-819 (FORMA-SPEC819, Diseño f9545ca) · la PREGUNTA de habeas data cuando el padre entra por
+ * «Mis datos personales». Decisión del CEO: el sistema NO infiere el tipo (inferir = elegirle el plazo
+ * legal; elegir mal = incumplir con cara de acierto) — se PREGUNTA en DOS ejes: QUÉ (tipo) y DE QUIÉN
+ * (sujeto, obligatorio por el CHECK del registro). Copy VERBATIM de la FORMA: voz tú, cero lenguaje de
+ * abogado («habeas data/titular/tratamiento/consulta/rectificación/supresión» NUNCA en lo que ve el
+ * padre — eso vive en el `valor`, que no se renderiza), cero plazo. Mapea 1:1 a los tres tipos; no hay
+ * cuarto (REVOCACION no existe en el enum).
+ */
+
+/** EJE A — ¿Qué quieres hacer? [NORMA] discriminador de TIPO. */
+export interface OpcionTipoHabeasData {
+    /** Enum TipoSolicitudHabeasData — se PERSISTE, NO se muestra. */
+    readonly valor: TipoSolicitudHabeasData;
+    /** Lo que ve el padre (tú). */
+    readonly titulo: string;
+    /** Aclaración en primera persona (voz del padre). */
+    readonly aclaracion: string;
+}
+export const TIPOS_HABEAS_DATA: readonly OpcionTipoHabeasData[] = [
+    { valor: "CONSULTA", titulo: "Ver qué datos tienen", aclaracion: "Quiero ver qué información personal tienen guardada." },
+    { valor: "RECTIFICACION", titulo: "Corregir un dato equivocado", aclaracion: "Hay un dato que está mal o desactualizado y quiero que lo corrijan." },
+    { valor: "SUPRESION", titulo: "Pedir que borren los datos", aclaracion: "Quiero pedir que eliminen la información personal." },
+];
+
+/**
+ * [NORMA] verdad de la promesa: FIJO bajo «Pedir que borren los datos». Quitarlo/suavizarlo reintroduce
+ * el falso borrado (Dec. 1377 art. 10): si la pregunta promete el borrado, una negativa legítima deja al
+ * padre engañado. El verbo es «pedir», no un hecho consumado.
+ */
+export const COPY_SUPRESION_LIMITE =
+    "No siempre se puede borrar todo: hay datos que la ley obliga a conservar. Revisaremos tu solicitud y te diremos qué procede.";
+
+/** EJE B — ¿De quién son los datos? [NORMA] discriminador de SUJETO. La puerta del padre cubre 2 de las 3
+ *  calidades (TITULAR_MAYORIA_EDAD —ex-menor sin cuenta— no es alcanzable desde acá, y es correcto). */
+export interface OpcionSujetoHabeasData {
+    readonly calidad: Extract<CalidadPeticionario, "TITULAR_CUENTA" | "REPRESENTANTE_LEGAL">;
+    readonly titulo: string;
+}
+export const SUJETOS_HABEAS_DATA: readonly OpcionSujetoHabeasData[] = [
+    { calidad: "TITULAR_CUENTA", titulo: "Míos" },
+    { calidad: "REPRESENTANTE_LEGAL", titulo: "De mi hijo" },
+];
+
+/** Copy de apoyo de la pregunta (redacción libre NEUTRAL; el plazo NUNCA va acá). */
+export const COPY_HABEAS_PREGUNTA = {
+    ejeATitulo: "¿Qué quieres hacer?",
+    ejeBTitulo: "¿De quién son los datos?",
+    elegirHijo: "¿De cuál?",
+    /** Borde (FORMA §2): el padre sin hijos registrados. La SALIDA accionable queda PENDIENTE de Diseño. */
+    sinHijos: "No tienes un hijo registrado en tu cuenta.",
+} as const;
