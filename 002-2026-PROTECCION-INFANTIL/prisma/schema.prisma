@@ -1242,6 +1242,9 @@ model Pago {
   suscripcion    Suscripcion    @relation(fields: [suscripcionId], references: [id])
   autorizadoPor  Usuario?       @relation(fields: [autorizadoPorAdminId], references: [id], name: "PagosAutorizados")
   bonosAplicados BonoAplicado[]
+  // SPEC-752: la PQR de reversión que reclamó este pago, si la hubo (1:1 por @unique del lado de la PQR).
+  // El Pago sobrevive al borrado de esa PQR (es la prueba durable); la bandeja deriva su urgencia de acá.
+  peticionServicio PeticionServicio?
 
   @@index([suscripcionId, createdAt])
   @@index([estado, fechaReporte])
@@ -2651,9 +2654,14 @@ model SolicitudHabeasData {
   clasesDatoAfectadas ClaseDatoTitular[]
 
   peticionario Usuario? @relation("SolicitudesHabeasData", fields: [peticionarioUsuarioId], references: [id], onDelete: SetNull)
+  // SPEC-752 · la PQR (puerta in-app) que disparó esta solicitud, si entró por la app. Opcional: una
+  // solicitud puede nacer por CORREO (sin PQR). Lado dueño del FK = PeticionServicio (ver allá).
+  peticionServicio PeticionServicio?
 
   @@index([estado, venceEn]) // el worker que vence/recoge por plazo
   @@index([peticionarioUsuarioId])
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SPEC-752 · Puerta de PQR / petición-queja del SERVICIO. ARTEFACTO para D-121 de
 // Datos (Datos implementa migración; Dev construye el service). NO es habeas data
@@ -2702,9 +2710,25 @@ model PeticionServicio {
   // relato (HECHO-only). Opcional: la puerta también entra por queja general (sin
   // cita). SetNull: si la cita se borra, la petición sobrevive y suelta el contexto.
   solicitudId String?
+  // SPEC-752/772 · ENLACE al caso legal de habeas data (solo motivo DATOS_PERSONALES). @unique = 1:1:
+  // una PQR dispara UNA SolicitudHabeasData y una solicitud la dispara UNA PQR. Del lado de la PQR a
+  // propósito: el Cascade de usuarioId borra ESTA fila SIN huérfanar la SolicitudHabeasData, que
+  // sobrevive como PRUEBA (su peticionario es SetNull). La bandeja DERIVA la urgencia legal del
+  // `venceEn` de la solicitud enlazada — NO guarda copia (dos relojes del mismo hecho = dos verdades).
+  // SetNull acá: si alguna vez se borrara la solicitud, la PQR suelta el enlace y sobrevive.
+  solicitudHabeasDataId String? @unique
+  // SPEC-752/788 · ENLACE al PAGO del reclamo de reversión (solo motivo PAGO_O_COBRO). @unique: UNA
+  // reversión por pago — espeja el ancla INMUTABLE reembolsoSolicitadoEn (un solo reclamo por pago; un
+  // segundo intento choca 23505 y el service apunta al existente). Identifica CUÁL pago: por la cuenta
+  // no se sabe de qué pago habla el reclamo — por eso el enlace existe y no alcanza con navegar relaciones.
+  // SetNull del lado de la PQR: el Cascade de usuarioId borra la PQR SIN tocar el Pago, que sobrevive como
+  // PRUEBA (retención comercial, SPEC-788). La bandeja DERIVA la urgencia de Pago.reembolsoVenceEn — no copia.
+  pagoId String? @unique
 
-  usuario   Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  solicitud SolicitudCita? @relation(fields: [solicitudId], references: [id], onDelete: SetNull)
+  usuario             Usuario              @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  solicitud           SolicitudCita?       @relation(fields: [solicitudId], references: [id], onDelete: SetNull)
+  solicitudHabeasData SolicitudHabeasData? @relation(fields: [solicitudHabeasDataId], references: [id], onDelete: SetNull)
+  pago                Pago?                @relation(fields: [pagoId], references: [id], onDelete: SetNull)
 
   @@index([resueltoEn, venceEn]) // «por vencer / vencidas sin resolver» rangea sobre el plazo
   @@index([usuarioId, creadoEn(sort: Desc)])
