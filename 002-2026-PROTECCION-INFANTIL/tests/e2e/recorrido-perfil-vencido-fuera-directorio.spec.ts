@@ -37,13 +37,19 @@
  *
  * AISLAMIENTO. Corrida por `randomUUID`, prefijo `e2e-449-`. Limpieza FK-safe
  * en `afterAll`. Cero mutación de rol real ni parámetros globales.
+ *
+ * SPEC-828 (extensión) · la mitad REPS de la compuerta del directorio (SPEC-790). 449/690 cubre la
+ * vigencia INTERNA; acá se cubre la REPS, que es OTRA noción de «vigente». Sobre el MISMO perfil ACTIVO
+ * (vigencia interna OK), se planta una verificación REPS caducada → sale del directorio, y una vigente →
+ * reaparece (control positivo). Así la exclusión queda atribuida al REPS, no a la vigencia interna — el
+ * discriminador que el radicado exige no confundir.
  */
 import { test, expect, request as playwrightRequest, type APIRequestContext } from "@playwright/test";
 import { randomBytes, randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
-import type { RolUsuario } from "@prisma/client";
+import type { RolUsuario, EstadoReps, ModalidadReps } from "@prisma/client";
 import { crearPadreOnboarded, limpiarPadreOnboarded, type PadreOnboarded } from "./fixtures/padre-onboarded";
 
 const CORRIDA = `e2e-449-${randomUUID().slice(0, 8)}`;
@@ -145,6 +151,8 @@ async function limpiarSembrados() {
         const perfilIds = perfiles.map((p) => p.id);
         if (perfilIds.length > 0) {
             await prisma.documentoProfesional.deleteMany({ where: { perfilProfesionalId: { in: perfilIds } } });
+            // SPEC-828: las VerificacionReps plantadas tienen FK Restrict al perfil → se borran ANTES del perfil.
+            await prisma.verificacionReps.deleteMany({ where: { profesionalId: { in: perfilIds } } });
             await prisma.verificacionProfesional.deleteMany({ where: { perfilProfesionalId: { in: perfilIds } } });
             await prisma.perfilProfesional.deleteMany({ where: { id: { in: perfilIds } } });
         }
@@ -168,6 +176,36 @@ async function limpiarSembrados() {
 let perfilProfesionalId = "";
 let padre: PadreOnboarded | undefined;
 const semillaDirectorio = `seed-449-${randomUUID().slice(0, 8)}`;
+
+const DIA = 24 * 60 * 60 * 1000;
+const hace = (dias: number) => new Date(Date.now() - dias * DIA);
+const enDias = (dias: number) => new Date(Date.now() + dias * DIA);
+
+/**
+ * SPEC-828 · planta una VerificacionReps (BD *_test) para el perfil ACTIVO. Excepción documentada
+ * (como el estado VENCIDO del 449): no hay endpoint real que registre una verificación REPS ya
+ * CADUCADA —la carga manual del admin registra una vigente—, así que se planta por Prisma. `resultado`
+ * VIGENTE EXIGE `vigenteHasta` (CHECK de la migración); el motor la cierra si esa fecha ya pasó.
+ */
+async function plantarReps(datos: {
+    resultado: EstadoReps;
+    verificadoEn: Date;
+    vigenteHasta: Date | null;
+    modalidades?: ModalidadReps[];
+}) {
+    await prisma.verificacionReps.create({
+        data: {
+            profesionalId: perfilProfesionalId,
+            verificadoEn: datos.verificadoEn,
+            fuente: "MANUAL_ADMIN",
+            resultado: datos.resultado,
+            vigenteHasta: datos.vigenteHasta,
+            modalidades: datos.modalidades ?? ["TELEMEDICINA"],
+            modalidadesNoMapeadas: [],
+            verificadoPorSnapshot: `e2e SPEC-828 (${CORRIDA})`,
+        },
+    });
+}
 
 test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
     test.beforeAll(async () => {
@@ -332,6 +370,60 @@ test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
             expect(
                 items.some((it) => it.id === perfilProfesionalId),
                 `el perfil recién aprobado debe aparecer en el listado. ids=${items.map((i) => i.id).join(",")}`,
+            ).toBe(true);
+        } finally {
+            await request.dispose();
+        }
+    });
+
+    // ── SPEC-828 · la mitad REPS de la compuerta (790), ENTRE «aparece» (prevuelo) y «vencido interno» (A) ──
+    // El prevuelo ya probó que el perfil ACTIVO (vigencia INTERNA 690 OK) APARECE con REPS SIN_VERIFICAR.
+    // Acá se mueve SOLO la habilitación REPS (790) y se mira la MISMA pantalla del padre. La vigencia
+    // interna NO se toca hasta (A), así que una exclusión en este bloque solo puede ser del REPS — es el
+    // discriminador que el radicado exige no confundir.
+
+    test("(SPEC-828) con REPS CADUCADO y vigencia interna OK, el perfil SALE del directorio", async () => {
+        const activo = await prisma.perfilProfesional.findUnique({
+            where: { id: perfilProfesionalId },
+            select: { estado: true },
+        });
+        expect(activo?.estado, "pre-condición: el perfil sigue ACTIVO — la vigencia INTERNA no se tocó").toBe("ACTIVO");
+
+        // REPS VIGENTE cuya vigencia de la AUTORIDAD ya pasó = «caducado». `repsElegible` lo cierra por el
+        // reloj de la autoridad (vigenteHasta <= now) aunque nuestro chequeo sea reciente y el cutover esté
+        // abierto. Es la OTRA vigencia, no la interna.
+        await plantarReps({ resultado: "VIGENTE", verificadoEn: hace(10), vigenteHasta: hace(1) });
+
+        const request = await ctx();
+        try {
+            await login(request, EMAIL_PADRE);
+            const res = await request.get(`/api/padre/profesionales?seed=${encodeURIComponent(semillaDirectorio)}`);
+            expect(res.status(), `listado body=${await res.text().catch(() => "")}`).toBe(200);
+            const items: Array<{ id: string }> = (await res.json())?.items ?? [];
+            expect(
+                items.every((it) => it.id !== perfilProfesionalId),
+                `REPS caducado: el perfil NO debe aparecer (compuerta 790), aunque su vigencia interna siga OK. ids=${items.map((i) => i.id).join(",")}`,
+            ).toBe(true);
+        } finally {
+            await request.dispose();
+        }
+    });
+
+    test("(SPEC-828) control positivo — con REPS VIGENTE el MISMO perfil REAPARECE (la exclusión era del REPS)", async () => {
+        // Remoción del discriminador: una verificación MÁS RECIENTE, VIGENTE y con vigencia futura. La
+        // «última fila» (orden verificadoEn desc) manda. Nada de la vigencia interna cambió entre este test
+        // y el anterior; que reaparezca prueba que lo que lo sacaba era el REPS, no la vigencia interna.
+        await plantarReps({ resultado: "VIGENTE", verificadoEn: new Date(), vigenteHasta: enDias(120), modalidades: ["TELEMEDICINA"] });
+
+        const request = await ctx();
+        try {
+            await login(request, EMAIL_PADRE);
+            const res = await request.get(`/api/padre/profesionales?seed=${encodeURIComponent(semillaDirectorio)}`);
+            expect(res.status(), `listado body=${await res.text().catch(() => "")}`).toBe(200);
+            const items: Array<{ id: string }> = (await res.json())?.items ?? [];
+            expect(
+                items.some((it) => it.id === perfilProfesionalId),
+                `REPS vigente: el perfil DEBE reaparecer (control positivo). ids=${items.map((i) => i.id).join(",")}`,
             ).toBe(true);
         } finally {
             await request.dispose();
