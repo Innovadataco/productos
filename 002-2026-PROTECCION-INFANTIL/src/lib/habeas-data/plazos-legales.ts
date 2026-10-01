@@ -20,7 +20,25 @@ export const PLAZO_MAX_CONSULTA_DIAS_HABILES = 10;
 export const PLAZO_MAX_RECLAMO_DIAS_HABILES = 15;
 
 /** El techo LEGAL en días hábiles según el tipo de solicitud. Un plazo operacional nunca puede
- *  superarlo (lo enforce la base; esto es la fuente para fijar el default por debajo del techo). */
+ *  superarlo (lo enforce la base; esto es la fuente para fijar el default por debajo del techo).
+ *
+ *  SPEC-798 · EXHAUSTIVA a propósito (no un ternario): un derecho NUEVO no puede heredar un plazo por
+ *  el `else`. Si se agrega un valor a `TipoSolicitudHabeasData` y no se le fija techo acá, el
+ *  `const _exhaustivo: never = tipo` del default NO COMPILA — alguien tiene que decidir el plazo, no
+ *  la omisión. (Era el patrón de I-434: un plazo legal decidido por el `else` de un ternario.) */
 export function plazoMaximoLegalDiasHabiles(tipo: TipoSolicitudHabeasData): number {
-    return tipo === "CONSULTA" ? PLAZO_MAX_CONSULTA_DIAS_HABILES : PLAZO_MAX_RECLAMO_DIAS_HABILES;
+    switch (tipo) {
+        case "CONSULTA":
+            return PLAZO_MAX_CONSULTA_DIAS_HABILES;
+        case "RECTIFICACION":
+        case "SUPRESION":
+            return PLAZO_MAX_RECLAMO_DIAS_HABILES;
+        default: {
+            const _exhaustivo: never = tipo;
+            throw new Error(
+                `[plazos-legales] TipoSolicitudHabeasData sin techo legal fijado: ${String(_exhaustivo)}. ` +
+                    `Un derecho nuevo no hereda un plazo por omisión — fijalo acá y en el CHECK de la migración.`,
+            );
+        }
+    }
 }
