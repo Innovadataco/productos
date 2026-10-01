@@ -181,7 +181,12 @@ function AccionFranjaPasada({ acciones }: { acciones: AccionesEspera | undefined
         <section className="rounded-2xl border border-tinta/15 bg-tinta/5 p-4 sm:p-5 space-y-3">
             {acciones.pedirOtraCita && (
                 <Link
-                    href="/dashboard/padre/profesionales"
+                    // SPEC-792 C4: si el servicio no se entregó, hereda el pago (no paga de nuevo por una falla nuestra).
+                    href={
+                        acciones.heredarDeCitaId
+                            ? `/dashboard/padre/profesionales?heredarDe=${encodeURIComponent(acciones.heredarDeCitaId)}`
+                            : "/dashboard/padre/profesionales"
+                    }
                     className="inline-flex items-center gap-2 rounded-full bg-cielo px-4 py-2 text-sm font-semibold text-acento-ink transition hover:bg-cielo/90"
                 >
                     Pedir otra cita
@@ -298,6 +303,9 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
         cita.venceEn,
         cita.profesional.nombreVisible,
         ahora,
+        // SPEC-792 C4: el enlace nunca publicado al pasar la hora es un sub-estado honesto; C2: pedir otra
+        // cita hereda el pago sólo si el servicio no se entregó. El estado del enlace lo deriva el DTO.
+        { enlaceNuncaPublicado: cita.enlace?.estado === "PASADA_SIN_PUBLICAR", citaId: cita.id },
     );
     const estado = vistaPasada ?? ESTADO_LEGIBLE[cita.estado];
     const confirmadaViva = cita.estado === "CONFIRMADA" && !vistaPasada;

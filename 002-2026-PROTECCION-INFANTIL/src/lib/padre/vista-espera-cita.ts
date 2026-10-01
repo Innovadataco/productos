@@ -34,6 +34,12 @@ export interface AccionesEspera {
     pedirOtraCita?: boolean;
     escribenos?: boolean;
     revisarPago?: boolean;
+    /**
+     * SPEC-792 C4 · cuando el servicio NO se entregó (el acceso nunca se publicó), «pedir otra cita»
+     * HEREDA el pago (`?heredarDe={citaId}`) — el padre no paga de nuevo por una falla nuestra. Sin él,
+     * «pedir otra cita» es una cita nueva paga (la cita se consumió). La presencia decide el destino.
+     */
+    heredarDeCitaId?: string;
 }
 
 export interface VistaEspera {
@@ -54,20 +60,36 @@ export function derivarVistaFranjaPasada(
     venceEn: EntradaTiempo,
     nombreProfesional: string,
     ahora: EntradaTiempo,
+    // SPEC-792 · señales derivadas que refinan el «ya pasó» de una CONFIRMADA:
+    //  · `enlaceNuncaPublicado` (C4) → el acceso jamás llegó (falla nuestra, no del padre).
+    //  · `citaId` → para que «pedir otra cita» herede el pago cuando el servicio no se entregó.
+    opts: { enlaceNuncaPublicado?: boolean; citaId?: string } = {},
 ): VistaEspera | null {
     const franjaYaPaso = estadoEfectivoDeCita("CONFIRMADA", franjaInicio, franjaFin, ahora) === "PASADA";
     if (!franjaYaPaso) return null;
 
     if (estado === "CONFIRMADA") {
-        // FORMA-CITA-CONFIRMADA-HORA-PASADA-INTERIM §1: factual, sin promesa, sin culpa,
-        // sin «Cita confirmada» a secas. Tono TINTA neutro (pasado/cerrado) — el verde
-        // era parte de la mentira (SPEC-730: estado final neutro = tinta). Salida real:
-        // el padre pagó → «pedir otra cita» (seguir) o «escríbenos» (algo salió mal).
+        // SPEC-792 C4: el enlace NUNCA se publicó al pasar la hora → el padre esperó siguiendo nuestra
+        // instrucción y el acceso jamás llegó. Lo reconocemos SIN culpar al operador («no alcanzó a
+        // publicarse» es un hecho) y SIN prometer qué habría pasado; «Esto no dependió de ti». El pago
+        // se HEREDA (servicio no entregado). Copy verbatim de Diseño (FORMA-SPEC792 C4).
+        if (opts.enlaceNuncaPublicado) {
+            return {
+                titulo: "El acceso a tu reunión no llegó a estar disponible.",
+                detalle: `La hora de tu cita con ${nombreProfesional} ya pasó y el enlace para entrar no alcanzó a publicarse. Esto no dependió de ti. No perdiste tu cupo: puedes pedir otra cita, y si quieres que revisemos qué pasó, escríbenos.`,
+                tono: "gris",
+                acciones: { pedirOtraCita: true, escribenos: true, ...(opts.citaId ? { heredarDeCitaId: opts.citaId } : {}) },
+            };
+        }
+        // SPEC-792 C2 (la grave): «ya pasó» NO eclipsa la encuesta. La tarjeta de la encuesta va ARRIBA
+        // (su copy ya existe) y es el PRIMER camino: «Cuéntanos qué pasó». Acá NO se ofrece [Pedir otra
+        // cita] en paralelo —era una vía de escape del motor de contradicciones: reprogramar sin responder
+        // nunca—; reprogramar se llega DESPUÉS, por el desenlace «no» de la encuesta. Queda [Escríbenos].
         return {
             titulo: "Esta cita ya pasó",
-            detalle: `La hora que tenías con ${nombreProfesional} ya pasó. Si quieres continuar, puedes pedir otra cita; y si algo no salió como esperabas, escríbenos.`,
+            detalle: `La hora que tenías con ${nombreProfesional} ya pasó. Si algo no salió como esperabas, escríbenos.`,
             tono: "gris",
-            acciones: { pedirOtraCita: true, escribenos: true },
+            acciones: { escribenos: true },
         };
     }
 

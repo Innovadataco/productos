@@ -22,14 +22,43 @@ const PROF = "Dra. Juez";
 const PALABRAS_PROHIBIDAS = ["aparecerá", "atrasada", "operador", "Cita confirmada"];
 
 describe("SPEC-749 FR-2 · derivarVistaFranjaPasada", () => {
-    it("CONFIRMADA + franja pasada → «Esta cita ya pasó», tinta neutro, dos salidas", () => {
+    it("SPEC-792 C2 · CONFIRMADA-pasada → «Esta cita ya pasó» SIN [Pedir otra cita] (la encuesta es el primer camino)", () => {
         const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA);
         expect(v).not.toBeNull();
         expect(v!.titulo).toBe("Esta cita ya pasó");
         expect(v!.detalle).toContain(PROF);
         expect(v!.detalle).toContain("ya pasó");
         expect(v!.tono).toBe("gris"); // tinta neutro, NO verde
-        expect(v!.acciones).toEqual({ pedirOtraCita: true, escribenos: true });
+        // SPEC-792 C2: NO se ofrece [Pedir otra cita] en paralelo —era la vía de escape del motor de
+        // contradicciones (reprogramar sin responder nunca)—; la tarjeta de la encuesta (arriba) es el
+        // primer camino y reprogramar va DESPUÉS, por el desenlace de la encuesta. Queda [Escríbenos].
+        expect(v!.acciones).toEqual({ escribenos: true });
+        expect(v!.acciones?.pedirOtraCita, "C2: pedir otra cita no puede ser una oferta paralela acá").toBeFalsy();
+    });
+
+    it("SPEC-792 C4 · CONFIRMADA-pasada + enlace NUNCA publicado → «no dependió de ti»; pedir otra cita HEREDA el pago", () => {
+        const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA, {
+            enlaceNuncaPublicado: true,
+            citaId: "cita-123",
+        })!;
+        expect(v.titulo).toBe("El acceso a tu reunión no llegó a estar disponible.");
+        expect(v.detalle).toContain("no alcanzó a publicarse");
+        expect(v.detalle).toContain("Esto no dependió de ti");
+        // Límites: no culpa al operador, no inventa causa técnica, no dice que el profesional faltó.
+        const texto = `${v.titulo} ${v.detalle}`.toLowerCase();
+        for (const p of ["operador", "técnic", "falló", "no se conectó"]) {
+            expect(texto, `C4 no debe nombrar «${p}»`).not.toContain(p);
+        }
+        // El servicio NO se entregó → pedir otra cita hereda el pago (control positivo del heredarDe).
+        expect(v.acciones?.pedirOtraCita).toBe(true);
+        expect(v.acciones?.heredarDeCitaId).toBe("cita-123");
+        expect(v.acciones?.escribenos).toBe(true);
+    });
+
+    it("SPEC-792 C4 · control NEGATIVO: enlace SÍ publicado (sin el flag) → «ya pasó» normal, no el copy de C4", () => {
+        const v = derivarVistaFranjaPasada("CONFIRMADA", INICIO, FIN, AHORA, PROF, AHORA)!;
+        expect(v.titulo).toBe("Esta cita ya pasó");
+        expect(v.titulo).not.toContain("no llegó a estar disponible");
     });
 
     it("CONFIRMADA-pasada: ni promesa de mecanismo ni culpa de operador (conducta, verbatim)", () => {

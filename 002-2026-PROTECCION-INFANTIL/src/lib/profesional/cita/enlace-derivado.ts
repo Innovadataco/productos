@@ -24,8 +24,13 @@
 import type { EstadoSolicitudCita } from "@prisma/client";
 import { estadoEfectivoDeCita, relojUtilizable, type EntradaTiempo } from "./estado-efectivo";
 
-/** Los estados que ve el usuario. PASADA = la vista «ya pasó» (FR-2) toma el relevo. */
-export type EstadoEnlaceCita = "SIN_PUBLICAR" | "PUBLICADO" | "PASADA" | "INDETERMINADO";
+/**
+ * Los estados que ve el usuario. PASADA = la vista «ya pasó» (FR-2) toma el relevo.
+ * SPEC-792 C4: `PASADA_SIN_PUBLICAR` distingue el sub-caso en que el enlace NUNCA se publicó al pasar
+ * la hora — el padre esperó siguiendo nuestra instrucción y el acceso jamás llegó. Es una falla NUESTRA,
+ * no suya; la pantalla lo reconoce sin culpar al operador (no se expone `enlacePublicadoEn`, solo el estado).
+ */
+export type EstadoEnlaceCita = "SIN_PUBLICAR" | "PUBLICADO" | "PASADA" | "PASADA_SIN_PUBLICAR" | "INDETERMINADO";
 
 export interface EnlaceParaCita {
     estado: EstadoEnlaceCita;
@@ -54,7 +59,12 @@ export function derivarEnlaceParaCita(cita: CitaParaEnlace, now: EntradaTiempo):
     // Condición 1: la fase temporal viene de la fuente única (746). Para CONFIRMADA es
     // PROXIMA / EN_CURSO / PASADA.
     const fase = estadoEfectivoDeCita("CONFIRMADA", cita.franjaInicio, cita.franjaFin, now);
-    if (fase === "PASADA") return { estado: "PASADA" };
+    if (fase === "PASADA") {
+        // SPEC-792 C4: ¿el acceso llegó a estar disponible antes de pasar la hora? Si NUNCA se publicó,
+        // es un sub-estado honesto: la falla fue nuestra, no del padre. Si sí se publicó, «ya pasó» normal.
+        const seHabiaPublicado = cita.enlacePublicadoEn != null && cita.enlaceReunion != null;
+        return { estado: seHabiaPublicado ? "PASADA" : "PASADA_SIN_PUBLICAR" };
+    }
 
     // Viva (PROXIMA/EN_CURSO): el ESTADO lo decide la PUBLICACIÓN (hecho de datos). Exigimos
     // AMBOS —marca de publicación y url— para no pintar nunca «PUBLICADO» sin enlace real.
