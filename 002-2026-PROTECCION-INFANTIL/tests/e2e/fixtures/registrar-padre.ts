@@ -50,6 +50,25 @@ export interface OpcionesRegistrarPadre {
 }
 
 /**
+ * Planta un token de registro VÁLIDO por Prisma (puerta SOLO de pruebas que simula «llegó el correo»):
+ * genera el valor EN CLARO, guarda solo el hash y crea la fila `tokenRegistro`. Devuelve el claro — para
+ * `registro/completar` (helper de abajo) o para abrir `/registro/crear-clave/[token]` por la UI SIN
+ * consumirlo acá — y el id de la fila para la limpieza. NUNCA se agrega un endpoint/flag/campo de
+ * producto que devuelva el token: eso es exactamente lo que SPEC-338 existe para impedir.
+ */
+export async function plantarTokenRegistro(
+    email: string,
+    rol: RolUsuario = "PARENT" as RolUsuario,
+): Promise<{ token: string; registroId: string }> {
+    const token = randomBytes(24).toString("hex");
+    const tokenHash = await bcrypt.hash(token, 12);
+    const registro = await prisma.tokenRegistro.create({
+        data: { email, tokenHash, rol, expiraEn: new Date(Date.now() + 3_600_000) },
+    });
+    return { token, registroId: registro.id };
+}
+
+/**
  * Registra un PADRE por el flujo de ENLACE y (por defecto) lo deja logueado. Devuelve el id,
  * el email y el rastro para la limpieza FK-safe.
  */
@@ -60,12 +79,9 @@ export async function registrarPadre(opts: OpcionesRegistrarPadre): Promise<Padr
     const solicitar = await request.post("/api/auth/registro/solicitar", { data: { email } });
     expect(solicitar.status(), `solicitar padre body=${await solicitar.text().catch(() => "")}`).toBe(202);
 
-    // (1) Token PLANTADO por Prisma (puerta solo-pruebas; simula «llegó el correo»).
-    const token = randomBytes(24).toString("hex");
-    const tokenHash = await bcrypt.hash(token, 12);
-    const registro = await prisma.tokenRegistro.create({
-        data: { email, tokenHash, rol: "PARENT" as RolUsuario, expiraEn: new Date(Date.now() + 3_600_000) },
-    });
+    // (1) Token PLANTADO por Prisma (puerta solo-pruebas; simula «llegó el correo»). Fuente única con la
+    //     UI de crear-clave (DRY): el mismo plantado que consume `/registro/crear-clave/[token]`.
+    const { token, registroId } = await plantarTokenRegistro(email);
 
     // (2) Completar con el token plantado + la contraseña de prueba.
     const completar = await request.post("/api/auth/registro/completar", {
@@ -82,7 +98,7 @@ export async function registrarPadre(opts: OpcionesRegistrarPadre): Promise<Padr
         expect(res.status(), `login padre body=${await res.text().catch(() => "")}`).toBe(200);
     }
 
-    return { usuarioId: padre.id, email, _limpieza: { usuarios: [padre.id], tokensRegistro: [registro.id], tokensRecuperacion: [] } };
+    return { usuarioId: padre.id, email, _limpieza: { usuarios: [padre.id], tokensRegistro: [registroId], tokensRecuperacion: [] } };
 }
 
 /**
