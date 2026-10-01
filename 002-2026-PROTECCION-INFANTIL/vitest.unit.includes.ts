@@ -477,6 +477,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-217 (002-PI-117): freemium 30 días (cálculos puros y servicio con dependencias mockeadas, sin BD).
     "src/lib/pagos/freemium-calculos.test.ts",
     "src/lib/pagos/freemium.service.test.ts",
+    // SPEC-805: round-trip de la vigencia del cupón — escritor y lector (esVigente) en el mismo espacio.
+    "src/lib/pagos/bono-vigencia-roundtrip.candado.test.ts",
     "src/lib/plataforma.test.ts",
     "src/lib/proxy.test.ts",
     "src/lib/queue.test.ts",
