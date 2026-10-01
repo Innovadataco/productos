@@ -56,6 +56,37 @@ export class SolicitudCitaRepository {
         return this.db.solicitudCita.findUnique({ where: { id } });
     }
 
+    /**
+     * SPEC-814 · Insumo de la COLA de reubicación: TODAS las citas CONFIRMADA con lo MÍNIMO para
+     * decidir si quedaron huérfanas (el `usuarioId` del profesional, para preguntarle a la fuente
+     * única si sigue habilitado) y para pintarlas (franja, nombre + especialidades de A —la base
+     * del calce §1-bis—, y ciudad solo para las presenciales). El servicio filtra a las de un
+     * profesional NO habilitado.
+     *
+     * Minimización por PROYECCIÓN (FORMA §3, como el DTO del operador): NO trae `presentacion`
+     * (el relato) ni nada de `padreUsuario` (la PII de la familia) — no es un `omit` de render,
+     * es que el dato no sale de la base.
+     */
+    listarConfirmadasParaReubicacion() {
+        return this.db.solicitudCita.findMany({
+            where: { estado: "CONFIRMADA" },
+            orderBy: { franja: { inicio: "asc" } },
+            select: {
+                id: true,
+                franja: { select: { inicio: true, fin: true, modalidad: true } },
+                profesional: {
+                    select: {
+                        id: true, // SPEC-814: para el chequeo REPS por-modalidad (esRepsElegibleParaModalidad).
+                        usuarioId: true,
+                        nombreVisible: true,
+                        especialidades: true,
+                        ciudad: { select: { nombre: true } },
+                    },
+                },
+            },
+        });
+    }
+
     findParaPadre(id: string, padreUsuarioId: string) {
         return this.db.solicitudCita.findFirst({
             where: { id, padreUsuarioId },
