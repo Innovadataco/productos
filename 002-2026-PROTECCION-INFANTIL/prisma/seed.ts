@@ -2512,13 +2512,20 @@ async function main() {
             esPublico: false,
             descripcion: "Minutos máximos que una simulación puede estar EN_PROGRESO antes de marcarse FALLIDA",
         },
+        // SPEC-812 (pieza 3): valor de arranque 60000 (antes 120000). ⚠️ Esta semilla SOLO afecta
+        // entornos NUEVOS: el loop de `defaults` (más abajo) hace upsert con `update: {}` (anti-I-100),
+        // así que re-sembrar NO pisa una fila existente. El valor VIVO de un entorno YA existente NO se
+        // sigue de acá — bajarlo requiere el carril de corrección (corrector por el servicio de
+        // configuración, con auditoría), nunca un re-seed ni un UPDATE a mano sobre la base viva.
+        // Causa raíz I-100 (→ I-105 · SPEC-207): un `update:{}` dejó un parámetro viejo sin actualizar
+        // y el arreglo se dio por hecho mientras prod seguía en el valor anterior.
         {
             clave: "ia.ollama.timeout_ms",
-            valor: "120000",
+            valor: "60000",
             tipo: TipoParametro.INTEGER,
             categoria: CategoriaParametro.SYSTEM,
             esPublico: false,
-            descripcion: "Timeout en ms para las llamadas de generación a Ollama (/api/generate); default 120000 si el parámetro falta o es inválido",
+            descripcion: "Timeout en ms para las llamadas de generación a Ollama (/api/generate); si el parámetro falta o es inválido, el código aplica su propio default",
         },
         {
             clave: "worker.retry_delay_segundos",
