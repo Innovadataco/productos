@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { descifrarCampo } from "@/lib/reporte-texto-contenido";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 
 const PII_NOMBRE = "Juan Pérez E2E";
 const PII_TELEFONO = "+573001234567";
@@ -24,6 +25,10 @@ async function seedAdmin() {
 }
 
 async function seedReporteAnonimizado(identificador: string) {
+    // SPEC-377/806: producción normaliza el identificador en la escritura; el factory de bajo nivel NO,
+    // y la consulta normaliza en la LECTURA. Sin normalizar acá, un valor con mayúsculas se guarda crudo
+    // y la consulta no lo encuentra (tieneReportes=false). Se normaliza como lo haría producción.
+    const identificadorNormalizado = normalizarIdentificador(identificador);
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
     if (!plataforma) throw new Error("Plataforma whatsapp no encontrada");
 
@@ -33,7 +38,7 @@ async function seedReporteAnonimizado(identificador: string) {
     // `textoOriginal` = crudo EN PLANO (el factory lo cifra con la DEK; ya no se pre-cifra acá).
     const reporte = await crearReporteFixture(prisma, {
         data: {
-            identificador,
+            identificador: identificadorNormalizado,
             plataformaId: plataforma.id,
             texto: TEXTO_ANONIMIZADO,
             textoOriginal: TEXTO_CRUDO,
@@ -60,7 +65,7 @@ async function seedReporteAnonimizado(identificador: string) {
 
     await prisma.identificadorReportado.create({
         data: {
-            identificador,
+            identificador: identificadorNormalizado,
             plataformaId: plataforma.id,
             totalReportes: 1,
             reportesAutenticados: 1,
