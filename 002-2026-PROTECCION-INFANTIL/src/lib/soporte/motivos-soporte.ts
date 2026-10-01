@@ -10,7 +10,7 @@
  * SIN plazo en la UI (el término legal lo cuenta el backend por motivo; ver
  * `plazo-peticion.ts`). El copy dice el QUÉ pasa después, nunca el CUÁNDO.
  */
-import { MotivoPeticionServicio, type TipoSolicitudHabeasData, type CalidadPeticionario } from "@prisma/client";
+import { MotivoPeticionServicio, type TipoSolicitudHabeasData, type CalidadPeticionario, type ClaseDatoTitular } from "@prisma/client";
 
 export interface MotivoSoporte {
     /** Clave del enum MotivoPeticionServicio (lo que se persiste). */
@@ -97,10 +97,37 @@ export const SUJETOS_HABEAS_DATA: readonly OpcionSujetoHabeasData[] = [
     { calidad: "REPRESENTANTE_LEGAL", titulo: "De mi hijo" },
 ];
 
+/**
+ * SPEC-827 · EJE C — ¿sobre QUÉ dato recae? El OBJETO de la petición: una o más CLASES cerradas. Solo para
+ * RECTIFICACION/SUPRESION (CONSULTA no lleva objeto). Las etiquetas + ayudas son copy VERBATIM de Diseño
+ * (FORMA-SPEC827, b87771e, voz tú · lenguaje de familia: NUNCA «identificador/nick/alias», «PII», «titular»,
+ * «clase de dato»; «cuenta» para el círculo). RELATO_CITA ya tenía su copy (COPY_CORRECCION_RELATO / 780): su
+ * etiqueta viene de aquí y sus LÍMITES se muestran aparte cuando se elige en una RECTIFICACION.
+ * Orden = el del enum. Las SEIS clases tienen etiqueta → ninguna cae sin casilla (el derecho queda entero).
+ */
+export interface OpcionClaseDatoHabeas {
+    readonly valor: ClaseDatoTitular;
+    readonly etiqueta: string;
+    /** Una línea de ayuda (qué incluye). Opcional: RELATO_CITA la explica en COPY_CORRECCION_RELATO. */
+    readonly ayuda?: string;
+}
+export const CLASES_DATO_HABEAS: readonly OpcionClaseDatoHabeas[] = [
+    { valor: "PERFIL", etiqueta: "Mis datos de cuenta", ayuda: "Tu nombre, tu correo y tu contacto." },
+    { valor: "HIJOS", etiqueta: "Los datos de mis hijos", ayuda: "Lo que registraste de cada hijo." },
+    { valor: "IDENTIFICADORES_CIRCULO", etiqueta: "Las cuentas que vigilo", ayuda: "Tu círculo de confianza — a quién le sigues la pista." },
+    { valor: "RELATO_CITA", etiqueta: "Lo que le conté al profesional en una cita" },
+    { valor: "CONTENIDO_REPORTE", etiqueta: "Lo que escribí en mis reportes", ayuda: "El texto de los reportes que enviaste." },
+    { valor: "OTRO", etiqueta: "Otra cosa", ayuda: "Algo sobre tus datos que no está en la lista." },
+];
+
 /** Copy de apoyo de la pregunta (redacción libre NEUTRAL; el plazo NUNCA va acá). */
 export const COPY_HABEAS_PREGUNTA = {
     ejeATitulo: "¿Qué quieres hacer?",
     ejeBTitulo: "¿De quién son los datos?",
+    // SPEC-827 · título del eje C. Las OPCIONES son verbatim de Diseño (b87771e); este encabezado mantiene el
+    // patrón de los ejes A/B (voz tú, familia). Se puede elegir más de una.
+    ejeCTitulo: "¿Sobre qué datos?",
+    ejeCAyuda: "Puedes elegir más de uno.",
     elegirHijo: "¿De cuál?",
     /** Borde (FORMA §2): el padre sin hijos registrados. La SALIDA accionable queda PENDIENTE de Diseño. */
     sinHijos: "No tienes un hijo registrado en tu cuenta.",

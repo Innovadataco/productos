@@ -14,6 +14,16 @@ describe("SPEC-780 · copy del límite de corregir el relato", () => {
         expect(COPY_CORRECCION_RELATO.limiteVersiones).toMatch(/no borra/i); // negación explícita
     });
 
+    it("REFRESH v1.2: habla por EFECTO, NO enumera un solo disparador (no se queda corto cuando crece el mecanismo)", () => {
+        // «por ejemplo» = la lista queda ABIERTA (reprogramar/reasignar/reubicar y lo que venga). El defecto
+        // original era cerrar en «si antes reprogramaste» (un solo camino) → afirmar algo que dejó de ser cierto.
+        expect(COPY_CORRECCION_RELATO.limiteVersiones).toMatch(/por ejemplo/i);
+        expect(
+            COPY_CORRECCION_RELATO.limiteVersiones,
+            "no cierra la lista a un único disparador",
+        ).not.toMatch(/si antes reprogramaste/i);
+    });
+
     it("límite 2: dice que el profesional ya leyó y que la corrección queda anotada (rastro)", () => {
         expect(COPY_CORRECCION_RELATO.limiteProfesional).toMatch(/ya ley[óo]/i);
         expect(COPY_CORRECCION_RELATO.limiteProfesional).toMatch(/anotad|no reemplaza en silencio/i);
