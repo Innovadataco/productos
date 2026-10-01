@@ -44,6 +44,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import type { RolUsuario } from "@prisma/client";
+import { crearPadreOnboarded, limpiarPadreOnboarded, type PadreOnboarded } from "./fixtures/padre-onboarded";
 
 const CORRIDA = `e2e-449-${randomUUID().slice(0, 8)}`;
 const PASSWORD = "Vencido449!Secure";
@@ -87,33 +88,18 @@ async function asegurarAdmin(): Promise<void> {
     sembrados.usuarios.add(u.id);
 }
 
-async function asegurarPadre(): Promise<string> {
-    // Padre con consentimiento firmado directo en BD para poder consultar el
-    // directorio sin pasear por el modal humano — el consentimiento tiene su
-    // propio spec de componente (SPEC-339).
-    const version = await prisma.parametroSistema.findUnique({
-        where: { clave: "consentimiento.version_actual" },
-    });
-    const u = await prisma.usuario.upsert({
-        where: { email: EMAIL_PADRE },
-        update: {
-            rol: "PARENT" as RolUsuario,
-            estado: "activo",
-            consentimientoAceptadoEn: new Date(),
-            consentimientoVersion: version?.valor ?? "1.0",
-        },
-        create: {
-            email: EMAIL_PADRE,
-            nombre: `Padre E2E ${CORRIDA}`,
-            passwordHash: await hashPassword(PASSWORD),
-            rol: "PARENT" as RolUsuario,
-            estado: "activo",
-            consentimientoAceptadoEn: new Date(),
-            consentimientoVersion: version?.valor ?? "1.0",
-        },
-    });
-    sembrados.usuarios.add(u.id);
-    return u.id;
+/** El padre onboardeado por el CAMINO REAL (builder): el directorio
+ *  `/api/padre/profesionales` está detrás del guardián de camino (403
+ *  CAMINO_INCOMPLETO hasta completarlo), así que un padre con el consentimiento
+ *  puesto a mano pero sin datos/hijo/plan no llega a listar. Cada login re-sella
+ *  la sesión con el camino completo. Se limpia con `limpiarPadreOnboarded`. */
+async function asegurarPadre(): Promise<void> {
+    const req = await ctx();
+    try {
+        padre = await crearPadreOnboarded({ request: req, email: EMAIL_PADRE, password: PASSWORD });
+    } finally {
+        await req.dispose();
+    }
 }
 
 async function login(request: APIRequestContext, email: string) {
@@ -144,8 +130,10 @@ const CAMPOS_CONTACTO_PROHIBIDOS = [
 ] as const;
 
 async function limpiarSembrados() {
+    // El PADRE lo limpia su propio fixture (tiene suscripción + hijo → FK). Acá solo
+    // el profesional y el admin.
     const usuariosCreados = await prisma.usuario.findMany({
-        where: { email: { in: [EMAIL_PROF, EMAIL_ADMIN, EMAIL_PADRE] } },
+        where: { email: { in: [EMAIL_PROF, EMAIL_ADMIN] } },
         select: { id: true },
     });
     const usuarioIds = usuariosCreados.map((u) => u.id);
@@ -178,6 +166,7 @@ async function limpiarSembrados() {
  * su perfil queda ACTIVO una vez; los dos candados (A/B) operan sobre él.
  */
 let perfilProfesionalId = "";
+let padre: PadreOnboarded | undefined;
 const semillaDirectorio = `seed-449-${randomUUID().slice(0, 8)}`;
 
 test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
@@ -317,6 +306,7 @@ test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
     });
 
     test.afterAll(async () => {
+        if (padre) await limpiarPadreOnboarded(padre);
         await limpiarSembrados();
     });
 
