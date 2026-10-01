@@ -52,7 +52,12 @@ const PISO = 507;
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
 
-const RAIZ_SRC = path.resolve(__dirname, "..", "src");
+// SPEC-804: la raíz escaneada y el piso son overridables por entorno SOLO para que el candado del
+// guard corra contra un árbol TEMPORAL (fuera de `src/`) — sin env, el valor es el real (CI idéntico).
+// Así el test no planta un directorio dentro de `src/`, que chocaba con los walkers que caminan `src/`.
+const RAIZ_SRC = process.env.TOKENS_CHECK_SRC
+    ? path.resolve(process.env.TOKENS_CHECK_SRC)
+    : path.resolve(__dirname, "..", "src");
 
 function* recorrer(directorio: string): Generator<string> {
     for (const entrada of fs.readdirSync(directorio, { withFileTypes: true })) {
@@ -102,14 +107,18 @@ if (process.argv.includes("--tension")) {
     process.exit(0);
 }
 
-console.log(`[Tokens:check] Color crudo en src/** productivo: ${total} ocurrencias en ${archivos} archivos (piso: ${PISO}).`);
+// SPEC-804: piso efectivo del guard. Sin env es el `PISO` real; `--tension` (arriba) usa SIEMPRE el
+// literal `PISO` para re-apretar la constante, así el override no contamina la tensión.
+const pisoEfectivo = process.env.TOKENS_CHECK_PISO ? Number(process.env.TOKENS_CHECK_PISO) : PISO;
+
+console.log(`[Tokens:check] Color crudo en src/** productivo: ${total} ocurrencias en ${archivos} archivos (piso: ${pisoEfectivo}).`);
 
 // SPEC-466: el guard es `<=` — solo falla si el conteo SUBE del piso. Un PR que
 // BAJA crudos pasa sin tocar la constante PISO (la aprieta el barrido `--tension`,
 // no el PR). Así dos muebles paralelos mergean sin serializar en esta línea.
-if (total > PISO) {
+if (total > pisoEfectivo) {
     console.error(
-        `[Tokens:check] ROJO: el conteo SUBIÓ del piso (${total} > ${PISO}). ` +
+        `[Tokens:check] ROJO: el conteo SUBIÓ del piso (${total} > ${pisoEfectivo}). ` +
             "En código nuevo el color crudo está prohibido (SPEC-157, FR-007): usa tokens " +
             "(pino/cielo/ambar/rubi/papel/tinta y la capa semántica). NO subas el PISO para " +
             "que pase: quita el crudo. Si migraste pantallas y el conteo BAJÓ, NO hace falta " +

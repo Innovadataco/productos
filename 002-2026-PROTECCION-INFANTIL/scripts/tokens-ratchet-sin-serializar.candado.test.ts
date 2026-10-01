@@ -109,17 +109,23 @@ describe("SPEC-466 · el piso ya no serializa (merge real, estilo 432)", () => {
 });
 
 describe("SPEC-466 · el guard real (conducta)", () => {
-    const TMP_DIR = path.join(RAIZ, "src", "__spec466_tmp__");
+    // SPEC-804: el fixture del caso rojo vive FUERA de `src/` (tmpdir del sistema). Antes plantaba
+    // `src/__spec466_tmp__` y chocaba (TOCTOU) con los walkers que caminan `src/` en paralelo —
+    // `ENOENT: scandir`, con la víctima rotando entre corridas. El guard lo escanea por
+    // `TOKENS_CHECK_SRC` y mide contra un piso chico por `TOKENS_CHECK_PISO`; sin env, corre real.
+    let tmp: string | null = null;
     afterEach(() => {
-        fs.rmSync(TMP_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        if (tmp) fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        tmp = null;
     });
 
-    function correrGuard(): { code: number; salida: string } {
+    function correrGuard(env?: Record<string, string>): { code: number; salida: string } {
         try {
             const salida = execFileSync("npx", ["tsx", "scripts/tokens-check.ts"], {
                 cwd: RAIZ,
                 encoding: "utf-8",
                 stdio: ["ignore", "pipe", "pipe"],
+                env: { ...process.env, ...env },
             });
             return { code: 0, salida };
         } catch (err) {
@@ -128,26 +134,28 @@ describe("SPEC-466 · el guard real (conducta)", () => {
         }
     }
 
-    it("verde en el estado actual (el conteo no sube del piso)", () => {
+    function sembrarArbolTemporal(): string {
+        tmp = fs.mkdtempSync(path.join(os.tmpdir(), "spec804-"));
+        const srcTmp = path.join(tmp, "src");
+        fs.mkdirSync(srcTmp, { recursive: true });
+        // 3 ocurrencias de color crudo (text/bg/border) — FUERA de `src/` del repo.
+        fs.writeFileSync(path.join(srcTmp, "Regresion.tsx"), 'export const X = "text-red-100 bg-red-200 border-red-300";\n');
+        return srcTmp;
+    }
+
+    it("verde en el estado actual (el conteo real no sube del piso real)", () => {
         expect(correrGuard().code).toBe(0);
     });
 
-    it("rojo si el conteo SUPERA el piso (contraprueba de regresión, robusta a holgura)", () => {
-        fs.mkdirSync(TMP_DIR, { recursive: true });
-        // SPEC-476: el ratchet BAJA crudos sin apretar el PISO (regla de SPEC-466), así
-        // que en main puede existir holgura (conteo < piso) y un solo crudo nuevo NO
-        // necesariamente cruza el piso. Para probar el contrato REAL del guard
-        // (`total > PISO` ⇒ rojo) medimos el estado y sembramos los crudos que falten
-        // para superar el piso, sea cual sea la holgura. Sigue muriendo si el guard se
-        // rompe: con el conteo por encima del piso, código 0 marca el test en rojo.
-        const base = correrGuard().salida;
-        const conteo = Number(base.match(/(\d+) ocurrencias/)?.[1] ?? "0");
-        const piso = Number(base.match(/piso: (\d+)/)?.[1] ?? "0");
-        const faltan = Math.max(1, piso - conteo + 1);
-        const crudos = Array.from({ length: faltan }, (_, i) => `text-red-${((i % 3) + 1) * 100}`).join(" ");
-        fs.writeFileSync(path.join(TMP_DIR, "Regresion.tsx"), `export const X = "${crudos}";\n`);
-        const r = correrGuard();
-        expect(r.code, "superar el piso DEBE poner el guard en rojo").toBe(1);
+    it("rojo si el conteo SUPERA el piso — contra un árbol TEMPORAL, sin tocar `src/` (SPEC-804)", () => {
+        const srcTmp = sembrarArbolTemporal();
+        const r = correrGuard({ TOKENS_CHECK_SRC: srcTmp, TOKENS_CHECK_PISO: "2" });
+        expect(r.code, "3 crudos sobre un piso de 2 DEBE poner el guard en rojo").toBe(1);
         expect(r.salida).toMatch(/SUBIÓ/);
+    });
+
+    it("control positivo del override: el MISMO árbol con piso holgado pasa VERDE (el rojo no es falso)", () => {
+        const srcTmp = sembrarArbolTemporal();
+        expect(correrGuard({ TOKENS_CHECK_SRC: srcTmp, TOKENS_CHECK_PISO: "50" }).code).toBe(0);
     });
 });
