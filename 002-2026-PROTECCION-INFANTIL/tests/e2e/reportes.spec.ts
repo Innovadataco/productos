@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 
 async function registrarUsuario(
     request: APIRequestContext,
@@ -46,20 +47,35 @@ async function obtenerColombiaBogota(request: APIRequestContext) {
 
 test.describe("Flujo de reportes comunitarios", () => {
     test("usuario anónimo crea un reporte desde el wizard y recibe número de seguimiento", async ({ page, request }) => {
-        const { paisId, ciudadId } = await obtenerColombiaBogota(request);
+        // Solo paisId: la ciudad se elige por el combobox de búsqueda (abajo), no por id.
+        const { paisId } = await obtenerColombiaBogota(request);
         const identificador = `+57300E2E${Date.now()}`;
 
         await page.goto("/reportar");
-        await page.getByLabel("Número, nick o usuario").fill(identificador);
+        // Paso 1: identificador (rótulo renombrado identificador→cuenta) + plataforma.
+        await page.getByLabel("La cuenta (número o usuario)").fill(identificador);
         await expect(page.getByLabel("Plataforma").locator("option[value='whatsapp']")).toBeAttached();
         await page.getByLabel("Plataforma").selectOption("whatsapp");
         await page.getByRole("button", { name: "Siguiente" }).click();
 
+        // Paso 2: país (select) + ciudad (combobox de búsqueda CiudadSearchSelect, SPEC-115, ya no un
+        // <select>) + fecha (control custom día + hora 1-12 + a.m./p.m., FechaHoraIncidente, A-74, ya no
+        // un input datetime). El endpoint de búsqueda responde (medido): se escribe y se elige del listbox.
         await page.getByLabel("País").selectOption(paisId);
-        await page.getByLabel("Ciudad").selectOption(ciudadId);
-        await page.getByLabel("Fecha del incidente").fill("2026-07-10");
-        await page.getByRole("button", { name: "Siguiente" }).click();
+        const ciudad = page.getByRole("combobox", { name: "Ciudad" });
+        await expect(ciudad).toBeEnabled();
+        await ciudad.fill("Bogotá");
+        // Se elige la opción DENTRO del listbox «Resultados de ciudades»: sin acotar, un `option` suelto
+        // «Bogotá…» también casa con la opción «Bogotá D.C.» del <select> de Departamento (antes en el
+        // DOM) y el click caía ahí (no estable) → timeout. Acotado al listbox, toma la ciudad real.
+        await page.getByRole("listbox", { name: "Resultados de ciudades" }).getByRole("option", { name: /Bogotá/i }).first().click();
+        await page.getByLabel("Día del incidente").fill("2026-07-10");
+        await page.getByLabel("Hora del incidente").selectOption("10");
+        await page.getByLabel("a.m. o p.m.").selectOption("am");
 
+        // La descripción vive en el MISMO paso que país/ciudad/fecha (ReporteStepDetalle agrupa todo
+        // «Detalles del incidente»); el «Siguiente» queda DESHABILITADO hasta ≥20 chars. Por eso se
+        // llena ANTES del único «Siguiente» (antes eran dos pasos y dos «Siguiente»).
         const descripcion = "Este usuario contactó a mi hija ofreciéndole regalos de forma insistente.";
         await page.getByPlaceholder("Describe la conducta observada").fill(descripcion);
         await page.getByRole("button", { name: "Siguiente" }).click();
@@ -67,7 +83,9 @@ test.describe("Flujo de reportes comunitarios", () => {
         await page.getByRole("checkbox").check();
         await page.getByRole("button", { name: "Enviar reporte" }).click();
 
-        await expect(page.getByText("Reporte recibido")).toBeVisible();
+        // Confirmación: el encabezado cambió de copy («Hemos recibido tu reporte»); se afirma la SEÑAL
+        // robusta de éxito —el número RPT y el enlace a seguimiento (por rol)— no la frase.
+        await expect(page.getByRole("link", { name: /Ver estado del reporte/i })).toBeVisible();
         await expect(page.getByText(/RPT-[A-Z0-9]+/)).toBeVisible();
 
         const numero = await page.locator("code").textContent();
@@ -75,7 +93,9 @@ test.describe("Flujo de reportes comunitarios", () => {
 
         await page.goto(`/seguimiento?numero=${numero}`);
         await expect(page.getByText(/Recibido|En procesamiento|Procesado|En revisión/)).toBeVisible();
-        await expect(page.getByText(identificador)).toBeVisible();
+        // La escritura NORMALIZA el identificador (lowercase); el seguimiento muestra esa forma. Se afirma
+        // la NORMALIZADA, no la cruda tecleada.
+        await expect(page.getByText(normalizarIdentificador(identificador))).toBeVisible();
     });
 
     // SPEC-323 (T008/US1): el 2º reporte del padre recibe oferta, no bloqueo (candado 26).
@@ -120,8 +140,16 @@ test.describe("Flujo de reportes comunitarios", () => {
         expect(segundoJson.identificador).toBe(identificador);
     });
 
-    // SPEC-323 (T008/US1 · regresión anónimo): el anónimo sigue bloqueado con 429.
-    test("usuario anónimo sigue recibiendo 429 al reportar el mismo identificador dos veces", async ({ request }) => {
+    // Contrato VIGENTE (medido · SPEC-808 reescribe el comentario del producto): el anónimo NO se
+    // bloquea al reportar el mismo identificador dos veces. El dedup DUPLICATE_REPORT es
+    // AUTENTICADO-ONLY a propósito (reporte-creation.ts: `if (usuarioId)`): para un anónimo no hay
+    // «vos», así que dos reportes del mismo identificador son indistinguibles de DOS personas distintas
+    // reportando la misma cuenta — justo la señal que el producto existe para recoger. Bloquearlo
+    // suprimiría el dato. Antes este test exigía 429 DUPLICATE_REPORT (contrato RETIRADO).
+    // NOTA (nivel-mal): el 2º reporte queda marcado soft POSIBLE_SPAM/REVISION_MANUAL
+    // (report_identificador soft), pero ese marcado lo apaga DISABLE_RATE_LIMIT en e2e → esa mitad se
+    // cubre en unit/integración (donde se controla el límite soft), no en este recorrido.
+    test("usuario anónimo NO es bloqueado al reportar el mismo identificador dos veces (son señal, no duplicado)", async ({ request }) => {
         const { paisId, ciudadId } = await obtenerColombiaBogota(request);
         const identificador = `+57300ANON${Date.now()}`;
 
@@ -139,10 +167,8 @@ test.describe("Flujo de reportes comunitarios", () => {
         const primer = await request.post("/api/reportes", { data: body });
         expect(primer.status()).toBe(201);
 
-        // El anónimo sigue con el comportamiento anterior.
+        // El 2º reporte anónimo del MISMO identificador ENTRA (201), no se bloquea.
         const segundo = await request.post("/api/reportes", { data: body });
-        expect(segundo.status()).toBe(429);
-        const json = await segundo.json();
-        expect(json.error.code).toBe("DUPLICATE_REPORT");
+        expect(segundo.status()).toBe(201);
     });
 });
