@@ -6,7 +6,6 @@
 import { EstadoSuscripcion, OrigenSuscripcion, TipoTitular } from "@prisma/client";
 import type { RolUsuario, Suscripcion } from "@prisma/client";
 import { addDays } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
@@ -16,8 +15,6 @@ import { generarCodigoReferidoUnico } from "./referido.service";
 import { calcularTotales, type DesglosePago } from "./calculo-totales.service";
 import { anioBogota } from "./renovacion-calculos";
 import type { UsuarioTitular } from "./suscripcion-vista.service";
-
-const ZONA_BOGOTA = "America/Bogota";
 
 export interface SolicitarPlanInput {
     usuario: UsuarioTitular & { email?: string | undefined; nombre?: string | null };
@@ -35,10 +32,6 @@ function rolATipoTitular(rol: RolUsuario): "COLEGIO" | "PADRE" {
     if (rol === "SCHOOL_ADMIN") return "COLEGIO";
     if (rol === "PARENT") return "PADRE";
     throw new AppError("Rol no puede solicitar suscripción", ERROR_CODES.FORBIDDEN, 403);
-}
-
-function ahoraBogota(): Date {
-    return toZonedTime(new Date(), ZONA_BOGOTA);
 }
 
 function emitirEventoSolicitada(
@@ -126,7 +119,12 @@ export async function solicitarPlan(input: SolicitarPlanInput): Promise<Solicita
 
     const desglose = await calcularTotales(plan, tipoTitular, input.codigoBono, input.usuario.id);
 
-    const ahora = ahoraBogota();
+    // SPEC-805: instante REAL (antes `ahoraBogota()` = pseudo-instante Bogotá 5h corrido). `fechaInicio`
+    // de la solicitud se MUESTRA en EsperandoAutorizacion mientras está PENDIENTE —cerca de medianoche el
+    // pseudo pintaba la fecha equivocada— y al autorizar se reescribe con instante real (admin-autorizar /
+    // admin-activacion). Forward-only: las filas ya creadas son carril de Datos. `fechaFin` es placeholder
+    // hasta la autorización. No hay par escritura↔lectura que romper (el lector es un display que formatea).
+    const ahora = new Date();
     const fechaFinPlaceholder = addDays(ahora, 1);
     const codigoReferidoPropio = await generarCodigoReferidoUnico(tipoTitular);
 
