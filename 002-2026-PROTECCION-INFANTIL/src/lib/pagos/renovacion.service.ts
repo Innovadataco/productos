@@ -9,7 +9,7 @@
  */
 import type { DuracionPlan, MetodoPago, Plan, Suscripcion } from "@prisma/client";
 import { EstadoPago, EstadoSuscripcion } from "@prisma/client";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { PagosClienteRepository } from "@/lib/dal/repositories/pagos-cliente-repository";
@@ -233,7 +233,7 @@ export async function registrarRenovacion(input: RenovacionInput): Promise<Renov
         });
     } catch (error) {
         console.error(
-            `[PAGOS/RENOVACION] Error creando pago: ${error instanceof Error ? error.message : "desconocido"} — comprobante huérfano en ${guardado.ruta}`
+            `[PAGOS/RENOVACION] Error creando pago: ${safeErrorMessage(error)} — comprobante huérfano en ${guardado.ruta}`
         );
         throw new AppError("No se pudo registrar la renovación", ERROR_CODES.INTERNAL_ERROR, 500);
     }

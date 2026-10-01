@@ -118,7 +118,8 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
             identificadoresAcudiente.length === 0 &&
             identificadoresIntegrante.length === 0
         ) {
-            logger.info(`[COLEGIO] Notificación omitida: sin identificadores activos para ${reporte.identificador}`);
+            // SPEC-815: se registra por `reporte.id` (interno), NUNCA el identificador reportado (PII).
+            logger.info(`[COLEGIO] Notificación omitida: sin identificadores activos (reporte=${reporte.id})`);
             return;
         }
 

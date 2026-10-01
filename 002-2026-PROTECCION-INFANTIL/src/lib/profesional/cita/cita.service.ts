@@ -14,7 +14,7 @@
  *    motivo se usa `REPROGRAMADA`).
  *  · Contador «3 consecutivas vencidas → SUSPENDIDO» + alarma por tasa >1/3.
  */
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
@@ -235,7 +235,7 @@ export async function confirmarPorProfesional(solicitudId: string, profesionalUs
             logger.warn(`[cita/confirmar] cita ${solicitudId} confirmada SIN operador asignado (T014 pendiente: aún NO visible al admin): ${r.razon}`);
         }
     } catch (e) {
-        logger.warn(`[cita/confirmar] error asignando operador a ${solicitudId}: ${String(e)}`);
+        logger.warn(`[cita/confirmar] error asignando operador a ${solicitudId}: ${safeErrorMessage(e)}`);
     }
     return actualizado;
 }

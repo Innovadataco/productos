@@ -12,6 +12,7 @@
  * toda la persistencia pasa por `MonitoreoRepository`.
  */
 import { MonitoreoRepository } from "../dal/repositories/monitoreo.ts";
+import { safeErrorMessage } from "../errors.ts";
 import { getParametroSistema } from "../parametros.ts";
 import { logAudit } from "../audit.ts";
 import { enviarAlertaInfra } from "../email.ts";
@@ -119,7 +120,7 @@ export async function notificarIncidente(incidente: IncidenteInfra): Promise<boo
             destinatarios,
         });
     } catch (error) {
-        logger.error(`[Monitoreo] Error enviando alerta de infraestructura (senal=${incidente.senal}): ${error instanceof Error ? error.message : error}`);
+        logger.error(`[Monitoreo] Error enviando alerta de infraestructura (senal=${incidente.senal}): ${safeErrorMessage(error)}`);
         return false;
     }
 

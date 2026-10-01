@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { getParametroSistema } from "@/lib/parametros";
 import { logger } from "@/lib/logger";
+import { maskEmail } from "@/lib/mask-email";
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const emailFrom = process.env.EMAIL_FROM;
@@ -51,7 +52,7 @@ export async function notificarSpamConfirmado(reporte: {
             return;
         }
         logger.info(
-            `[EMAIL] Notificación spam confirmado enviada a ${usuario.email} (reporte=${reporte.id}, resendId=${result.data?.id ?? "n/a"})`
+            `[EMAIL] Notificación spam confirmado enviada a ${maskEmail(usuario.email)} (reporte=${reporte.id}, resendId=${result.data?.id ?? "n/a"})`
         );
     } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);

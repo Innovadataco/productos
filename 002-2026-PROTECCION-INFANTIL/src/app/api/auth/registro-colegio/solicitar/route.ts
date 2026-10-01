@@ -16,7 +16,7 @@
  */
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { registroColegioSolicitarSchema } from "@/lib/validators";
 import { sugerirDominioCorreo } from "@/lib/email-typo";
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
             await enviarEnlaceRegistroColegio(email, resultado.token, nombreColegio);
         } catch (err) {
             logger.error(
-                `[REGISTRO-COL] Envío del enlace: fallido — ${maskEmail(email)}: ${err instanceof Error ? err.message : String(err)}`,
+                `[REGISTRO-COL] Envío del enlace: fallido — ${maskEmail(email)}: ${safeErrorMessage(err)}`,
             );
         }
 

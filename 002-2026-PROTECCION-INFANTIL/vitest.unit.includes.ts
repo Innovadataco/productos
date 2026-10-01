@@ -8,6 +8,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // 3003: detector de typo de dominio (gmaail.com → gmail.com), puro.
     "src/lib/email-typo.test.ts",
     "scripts/arch/no-prisma-mocks.test.ts",
+    // SPEC-815: ni identificador reportado, ni correo completo, ni error crudo salen a stdout (corre con
+    // LOG_LEVEL=debug, el más permisivo; lee la fuente, no la salida). Sin base.
+    "src/lib/emision-sin-pii-815.candado.test.ts",
     // SPEC-803: 00/01/06 fuera del gate byte-exacto del PR (representabilidad; post-merge regenera).
     "scripts/arch/docs-globales-fuera-del-gate.candado.test.ts",
     // SPEC-808: el mensaje de reporte duplicado no acusa ni afirma la conducta vieja del anónimo.

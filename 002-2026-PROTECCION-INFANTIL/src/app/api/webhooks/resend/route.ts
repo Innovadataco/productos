@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeErrorMessage } from "@/lib/errors";
 import { recibirWebhook, WebhookResendError } from "@/lib/notificaciones/webhook-resend";
 import { logger } from "@/lib/logger";
 
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
         return NextResponse.json(resultado, { status: 200 });
     } catch (error) {
         if (error instanceof WebhookResendError) {
-            logger.warn(`[WebhookResend] Rechazado: ${error.message} (${error.statusCode})`);
+            logger.warn(`[WebhookResend] Rechazado: ${safeErrorMessage(error)} (${error.statusCode})`);
             return NextResponse.json({ error: error.message }, { status: error.statusCode });
         }
 

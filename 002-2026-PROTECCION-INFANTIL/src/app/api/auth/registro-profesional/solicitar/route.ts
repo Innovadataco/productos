@@ -12,7 +12,7 @@
  */
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { ERROR_CODES } from "@/lib/errors";
+import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { registroSolicitarSchema } from "@/lib/validators";
 import { sugerirDominioCorreo } from "@/lib/email-typo";
@@ -86,12 +86,12 @@ export async function POST(request: Request) {
                 await enviarEmailCuentaExistente(email);
             }
         } catch (err) {
-            logger.error(`[REGISTRO_PROFESIONAL] Error al enviar correo a ${maskEmail(email)}: ${String(err)}`);
+            logger.error(`[REGISTRO_PROFESIONAL] Error al enviar correo a ${maskEmail(email)}: ${safeErrorMessage(err)}`);
         }
 
         return NextResponse.json({ message: MENSAJE_EXITO }, { status: 202 });
     } catch (err) {
-        logger.error(`[REGISTRO_PROFESIONAL] Error inesperado: ${String(err)}`);
+        logger.error(`[REGISTRO_PROFESIONAL] Error inesperado: ${safeErrorMessage(err)}`);
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

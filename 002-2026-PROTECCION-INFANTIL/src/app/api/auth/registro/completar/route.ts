@@ -9,7 +9,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { createToken, setSessionCookie } from "@/lib/auth";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { registroCompletarSchema } from "@/lib/validators";
 import { enviarBienvenidaPadre } from "@/lib/email";
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         try {
             await enviarBienvenidaPadre(user.email);
         } catch (err) {
-            logger.error(`[REGISTRO] Bienvenida: envío fallido — ${err instanceof Error ? err.message : String(err)}`);
+            logger.error(`[REGISTRO] Bienvenida: envío fallido — ${safeErrorMessage(err)}`);
         }
 
         return res;
