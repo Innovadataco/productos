@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearTokenUsuario, crearRequestAutenticado } from "@/lib/reporte-test-utils";
 import * as email from "@/lib/email";
+import { revelarCredencial } from "@/lib/seguridad/credencial";
 
 let mockToken: string | undefined;
 // SPEC-296 (002-PI-197): post-migración al motor, se mockean los wrappers
@@ -51,10 +52,14 @@ describe("POST /api/admin/operadores/[id]/reenviar-email", () => {
         expect(data.emailEnviado).toBe(true);
         expect(data.operador.debeCambiarPassword).toBe(true);
         expect(enviarOperadorMock).toHaveBeenCalledOnce();
-        const [emailArg, passwordArg] = enviarOperadorMock.mock.calls[0];
+        const [emailArg, credArg] = enviarOperadorMock.mock.calls[0];
         expect(emailArg).toBe("op@example.com");
-        expect(typeof passwordArg).toBe("string");
-        expect(passwordArg.length).toBeGreaterThan(0);
+        // SPEC-783: el 2.º arg YA NO es un String suelto — es una `Credencial` opaca.
+        // No aflojamos a «llamada con algo»: la credencial revelada es una temporal REAL
+        // (hex de 12) recién generada por regenerarPassword. El cuerpo renderizado se
+        // afirma end-to-end en reenviar-cuerpo.test.ts.
+        expect(typeof credArg, "la credencial ya no viaja como String suelto").not.toBe("string");
+        expect(revelarCredencial(credArg)).toMatch(/^[0-9a-f]{12}$/);
 
         const audit = await prisma.auditLog.findFirst({
             where: { accion: "OPERADOR_EMAIL_REENVIADO", recursoId: operador.id },
@@ -84,10 +89,11 @@ describe("POST /api/admin/operadores/[id]/reenviar-email", () => {
         expect(data.mensaje).toContain("comité de validación");
         expect(enviarComiteMock).toHaveBeenCalledOnce();
         expect(enviarOperadorMock).not.toHaveBeenCalled();
-        const [emailArg, passwordArg] = enviarComiteMock.mock.calls[0];
+        const [emailArg, credArg] = enviarComiteMock.mock.calls[0];
         expect(emailArg).toBe("comite@example.com");
-        expect(typeof passwordArg).toBe("string");
-        expect(passwordArg.length).toBeGreaterThan(0);
+        // SPEC-783: opaca, no String; revelada = temporal REAL (hex de 12).
+        expect(typeof credArg, "la credencial ya no viaja como String suelto").not.toBe("string");
+        expect(revelarCredencial(credArg)).toMatch(/^[0-9a-f]{12}$/);
 
         const audit = await prisma.auditLog.findFirst({
             where: { accion: "COMITE_EMAIL_REENVIADO", recursoId: comite.id },

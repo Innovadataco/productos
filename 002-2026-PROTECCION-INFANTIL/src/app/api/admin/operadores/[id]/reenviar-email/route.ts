@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revelarCredencial } from "@/lib/seguridad/credencial";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -65,7 +66,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             // Único fallback: si ni siquiera se pudo encolar, devolvemos la
             // temporal para que el admin no quede atascado (copia manual).
             emailEnviado,
-            passwordTemporal: emailEnviado ? undefined : password,
+            passwordTemporal: emailEnviado ? undefined : revelarCredencial(password),
             mensaje: emailEnviado
                 ? `Email de bienvenida reenviado al ${esComite ? "comité de validación" : "operador"}.`
                 : "No se pudo reenviar el email. Copie la contraseña temporal mostrada arriba.",

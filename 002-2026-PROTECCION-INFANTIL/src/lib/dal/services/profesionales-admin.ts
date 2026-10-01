@@ -24,6 +24,7 @@
  */
 import type { Prisma, EstadoPerfilProfesional } from "@prisma/client";
 import { randomBytes } from "crypto";
+import { credencial, type Credencial } from "@/lib/seguridad/credencial";
 import { hashPassword } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -31,8 +32,8 @@ import { UsuarioRepository } from "../repositories/usuario";
 import { TokenRegistroRepository } from "../repositories/token-registro";
 import { PerfilProfesionalRepository } from "../repositories/perfil-profesional";
 
-function tempPassword() {
-    return randomBytes(6).toString("hex");
+function tempPassword(): Credencial {
+    return credencial(randomBytes(6).toString("hex"));
 }
 
 export interface InfoClienteDto {
@@ -142,7 +143,7 @@ export class ProfesionalesAdminService {
     async restablecerPassword(
         profesional: { id: string; debeCambiarPassword: boolean },
         admin: { id: string } & InfoClienteDto,
-    ): Promise<{ password: string }> {
+    ): Promise<{ password: Credencial }> {
         const password = tempPassword();
         const passwordHash = await hashPassword(password);
         await this.usuarios.actualizar(profesional.id, { passwordHash, debeCambiarPassword: true });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revelarOpcional } from "@/lib/seguridad/credencial";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             operador,
-            passwordTemporal: password,
+            passwordTemporal: revelarOpcional(password),
             emailEnviado,
             mensaje: emailEnviado
                 ? `${rolTexto.charAt(0).toUpperCase() + rolTexto.slice(1)} creado. Se envió la contraseña temporal por email.`

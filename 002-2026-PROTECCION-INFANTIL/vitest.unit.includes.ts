@@ -36,6 +36,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-765: el registro de columnas sensibles es un ESPEJO VERIFICADO de las 5 fuentes (cruce +
     // FAIL-LOUD del acoplamiento cross-producto con el whitelist de 006). Sin BD.
     "src/lib/seguridad/registro-columnas-sensibles.candado.test.ts",
+    // SPEC-783: la Credencial opaca no filtra su texto en claro salvo por `revelarCredencial`
+    // (falla-cerrado: una credencial suelta persiste como `{}`, no en claro). Unit puro.
+    "src/lib/seguridad/credencial.candado.test.ts",
     // SPEC-463 (D-107): el colegio habla de usted; el padre conserva «tú».
     "src/app/dashboard/colegio/voz-usted.candado.test.ts",
     // SPEC-514: candado de clase — el área interna (admin/operador/comité/verificador) sin voseo.

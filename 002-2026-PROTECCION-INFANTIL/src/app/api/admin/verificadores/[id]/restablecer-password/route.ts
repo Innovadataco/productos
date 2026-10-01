@@ -7,6 +7,7 @@
  * `credencial-siempre-visible.candado.test.ts` (SPEC-421) barre esta ruta.
  */
 import { NextResponse } from "next/server";
+import { revelarCredencial } from "@/lib/seguridad/credencial";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -48,7 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         // SPEC-435 · contrato Jelkin: passwordTemporal SIEMPRE en la respuesta.
         return NextResponse.json({
-            passwordTemporal: password,
+            passwordTemporal: revelarCredencial(password),
             mensaje: "Contraseña temporal regenerada. Muéstrela una vez al verificador.",
         });
     } catch (error) {

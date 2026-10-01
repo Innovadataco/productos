@@ -5,7 +5,8 @@
  */
 import { prisma } from "../../prisma";
 import type { DbClient } from "../unit-of-work";
-import type { CanalNotificacion, EstadoNotificacion, Prisma } from "@prisma/client";
+import type { CanalNotificacion, EstadoNotificacion } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export type NotificacionCreateInput = {
     evento: string;
@@ -147,15 +148,24 @@ export class NotificacionRepository {
         });
     }
 
-    marcarEnviada(id: string, proveedorId?: string | null) {
-        return this.db.notificacion.update({
-            where: { id },
-            data: {
-                estado: "ENVIADA",
-                sentAt: new Date(),
-                ...(proveedorId !== undefined ? { proveedorId: proveedorId ?? null } : {}),
-            },
-        });
+    // SPEC-783: estado TERMINAL → la credencial NO puede sobrevivir. Se borra el sub-objeto
+    // `_sensibles` de `variables` en la MISMA escritura (atómico), INCONDICIONAL — sin lista de
+    // nombres: se va todo `_sensibles`. La falla INTERMEDIA (`marcarFallida`) NO lo toca: el
+    // reintento aún necesita render­izar la credencial.
+    //
+    // LÍMITE CONOCIDO (decisión CEO, NO ahora): la credencial vive en `_sensibles` desde el alta
+    // hasta este envío exitoso (la ventana de reintentos). Cerrarla del todo exigiría renderizar
+    // AL CREAR y guardar el cuerpo ya renderizado en vez de las variables — cambio mayor, fuera
+    // del alcance de SPEC-783. Queda escrito acá, al lado de la limpieza, no como deuda sin dueño.
+    async marcarEnviada(id: string, proveedorId?: string | null) {
+        const setProveedor =
+            proveedorId !== undefined ? Prisma.sql`, "proveedorId" = ${proveedorId ?? null}` : Prisma.empty;
+        await this.db.$executeRaw(Prisma.sql`
+            UPDATE notificaciones
+            SET estado = 'ENVIADA', "sentAt" = ${new Date()}, variables = variables - '_sensibles'${setProveedor}
+            WHERE id = ${id}
+        `);
+        return this.db.notificacion.findUnique({ where: { id } });
     }
 
     /**
@@ -210,15 +220,15 @@ export class NotificacionRepository {
      * (superó `maxIntentos`). Antes vivía inline en el worker vía prisma
      * directo; ahora reside en el DAL (Q-3).
      */
-    marcarFallidaDefinitiva(id: string, intentos: number, error: string) {
-        return this.db.notificacion.update({
-            where: { id },
-            data: {
-                estado: "FALLIDA",
-                intentos,
-                ultimoError: error,
-            },
-        });
+    // SPEC-783: el OTRO estado terminal. Igual que `marcarEnviada`, borra `_sensibles` en la
+    // misma escritura (atómico, incondicional). Ver la nota del límite conocido en `marcarEnviada`.
+    async marcarFallidaDefinitiva(id: string, intentos: number, error: string) {
+        await this.db.$executeRaw(Prisma.sql`
+            UPDATE notificaciones
+            SET estado = 'FALLIDA', intentos = ${intentos}, "ultimoError" = ${error}, variables = variables - '_sensibles'
+            WHERE id = ${id}
+        `);
+        return this.db.notificacion.findUnique({ where: { id } });
     }
 
     async marcarBounce(id: string, bouncedAt?: Date) {

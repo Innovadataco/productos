@@ -8,6 +8,7 @@ import type { Prisma, RolUsuario } from "@prisma/client";
 import { getParametroSistema } from "./parametros";
 import { SessionLogService } from "./dal/services/session-log";
 import { sessionCookieAttributes } from "./auth/session-cookie-attrs";
+import { revelarCredencial, type Credencial } from "./seguridad/credencial";
 
 const LEGACY_COOKIE_NAME = "token";
 const HOST_COOKIE_NAME = "__Host-token";
@@ -76,8 +77,12 @@ export function isSecureRequest(request: Request): boolean {
     }
 }
 
-export async function hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 12);
+// SPEC-783: acepta también una `Credencial` opaca (contraseña temporal). Hashear es un uso
+// legítimo del texto plano, así que revelamos acá adentro — así los servicios que generan la
+// temporal no tienen que revelarla para hashear (una revelación menos suelta por servicio).
+export async function hashPassword(password: string | Credencial): Promise<string> {
+    const plano = typeof password === "string" ? password : revelarCredencial(password);
+    return bcrypt.hash(plano, 12);
 }
 
 export async function verifyPassword(

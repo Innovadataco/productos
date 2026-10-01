@@ -12,6 +12,8 @@
  *    crean N filas — respetando el patrón de fanout.
  */
 import { describe, it, expect, beforeAll } from "vitest";
+import { credencial } from "./seguridad/credencial";
+import { renderizarPlantilla } from "./notificaciones/renderer";
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 import { prisma } from "./prisma";
@@ -115,17 +117,35 @@ describe("email.migracion (SPEC-296 · cierra I-152)", () => {
 
     it("enviarEmailBienvenidaOperador crea fila con email + tempPassword + urlLogin", async () => {
         const email = `op-${Date.now()}@test.local`;
-        await enviarEmailBienvenidaOperador(email, "temp-pass-1234");
+        await enviarEmailBienvenidaOperador(email, credencial("temp-pass-1234"));
         const notif = await prisma.notificacion.findFirst({
             where: { evento: "usuario.bienvenida.operador", destinatarioEmail: email },
             orderBy: { createdAt: "desc" },
         });
         expect(notif).not.toBeNull();
         expect(notif?.plantillaClave).toBe("usuario.bienvenida.operador.email");
-        const vars = notif?.variables as { email?: string; tempPassword?: string; urlLogin?: string };
+        // SPEC-783: la credencial NO va suelta en `variables` — va bajo `_sensibles`, para que
+        // el estado terminal la borre. `email`/`urlLogin` sí van sueltas (no sensibles).
+        const vars = notif?.variables as {
+            email?: string;
+            urlLogin?: string;
+            tempPassword?: string;
+            _sensibles?: { tempPassword?: string };
+        };
         expect(vars?.email).toBe(email);
-        expect(vars?.tempPassword).toBe("temp-pass-1234");
         expect(vars?.urlLogin).toContain("/login");
+        expect(vars?.tempPassword, "la credencial no puede ir suelta en variables").toBeUndefined();
+        expect(vars?._sensibles?.tempPassword).toBe("temp-pass-1234");
+        // SPEC-783 · END-TO-END: sembrada una credencial REAL, pasada por la creación, el CUERPO
+        // RENDERIZADO del correo contiene ESE valor (el flatten de `_sensibles` resuelve
+        // `{{tempPassword}}`). No que se llamó a la función: que el valor LLEGA. Si el opaco saliera
+        // sin resolver, acá vendría "[object Object]"/vacío y el operador no podría entrar.
+        const { cuerpo } = renderizarPlantilla(
+            "Tu contraseña temporal es {{tempPassword}}.",
+            null,
+            (notif!.variables ?? {}) as Record<string, unknown>,
+        );
+        expect(cuerpo).toContain("temp-pass-1234");
     });
 
     it("enviarAlertasSuscriptores crea N filas cuando hay N suscriptores", async () => {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revelarCredencial } from "@/lib/seguridad/credencial";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -65,7 +66,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 estado: operador.estado,
                 debeCambiarPassword: true,
             },
-            passwordTemporal: password,
+            passwordTemporal: revelarCredencial(password),
             mensaje: esComite
                 ? "Contraseña temporal regenerada. Muéstrela una vez al comité de validación."
                 : "Contraseña temporal regenerada. Muéstrela una vez al operador.",

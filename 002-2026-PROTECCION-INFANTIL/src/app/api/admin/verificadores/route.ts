@@ -11,6 +11,7 @@
  * VERIFICADOR ya tiene sembrado (`admin_verificacion_profesionales`).
  */
 import { NextResponse } from "next/server";
+import { revelarCredencial } from "@/lib/seguridad/credencial";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
             verificador,
             // SPEC-435 · contrato Jelkin: la contraseña temporal SIEMPRE viaja en la respuesta
             // del alta. El correo es cortesía; si falla, el admin la lee en pantalla.
-            passwordTemporal: password,
+            passwordTemporal: revelarCredencial(password),
             emailEnviado,
             mensaje: emailEnviado
                 ? "Verificador creado. Se envió la contraseña temporal por email."
