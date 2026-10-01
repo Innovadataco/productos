@@ -49,24 +49,34 @@ export class LecturaReporteRepository {
      * spec). Conserva lecturas cuyo lector fue anonimizado (usuarioId null por SetNull, SPEC-701):
      * el `rol` instantánea sobrevive, así que el acceso sigue contando.
      */
-    rastroDeAccesosDelTitular(titularId: string, limite = 100) {
-        return this.db.lecturaReporte.findMany({
-            where: {
-                AND: [
-                    {
-                        OR: [
-                            { reporte: { usuarioId: titularId } },
-                            { evento: { expediente: { padreUsuarioId: titularId } } },
-                        ],
-                    },
-                    // Excluir SOLO el autoacceso del titular, conservando las filas con lector
-                    // anonimizado (usuarioId null): `NOT usuarioId=titular` a secas las tiraría.
-                    { OR: [{ usuarioId: null }, { usuarioId: { not: titularId } }] },
-                ],
-            },
-            orderBy: { creadoEn: "desc" },
-            take: limite,
-            select: { creadoEn: true, campo: true, tipoActor: true, rol: true },
-        });
+    async rastroDeAccesosDelTitular(titularId: string, limite = 100) {
+        // UN solo `where` para la página y el conteo: si el filtro cambia, cambia para ambos. Una
+        // consulta hermana desalineada del conteo mentiría sobre el truncamiento (SPEC-805 · costura).
+        const where: Prisma.LecturaReporteWhereInput = {
+            AND: [
+                {
+                    OR: [
+                        { reporte: { usuarioId: titularId } },
+                        { evento: { expediente: { padreUsuarioId: titularId } } },
+                    ],
+                },
+                // Excluir SOLO el autoacceso del titular, conservando las filas con lector
+                // anonimizado (usuarioId null): `NOT usuarioId=titular` a secas las tiraría.
+                { OR: [{ usuarioId: null }, { usuarioId: { not: titularId } }] },
+            ],
+        };
+        // `total` cuenta TODOS los accesos (sin recorte), para que la superficie pueda rotular la
+        // parcialidad por VOLUMEN (SPEC-785 · hallazgo CEO): devolver `limite` de `total` sin decirlo
+        // es la misma falsa tranquilidad que el recorte por ALCANCE que el docblock ya declara.
+        const [filas, total] = await Promise.all([
+            this.db.lecturaReporte.findMany({
+                where,
+                orderBy: { creadoEn: "desc" },
+                take: limite,
+                select: { creadoEn: true, campo: true, tipoActor: true, rol: true },
+            }),
+            this.db.lecturaReporte.count({ where }),
+        ]);
+        return { filas, total };
     }
 }

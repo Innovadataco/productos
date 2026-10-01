@@ -8,6 +8,8 @@
  *    los de lectores ya anonimizados (usuarioId null); solo se excluye el autoacceso del titular.
  *  · Sin CRUDOS: el DTO no lleva identidad del lector, ni hash, ni ip, ni ids — solo rol/calidad/
  *    campo/momento (lista blanca por construcción).
+ *  · VOLUMEN (hallazgo CEO): con más accesos que el tope, el retorno trae `total` SIN recorte y
+ *    `truncado=true`. La parcialidad por cantidad queda declarada, no presentada como completa.
  */
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
@@ -65,11 +67,11 @@ describe("SPEC-785 · rastro de accesos del titular (filtro por titular + sin cr
         });
 
         const rastroA = await rastroDeAccesosDelTitular(padreA.id);
-        expect(rastroA).toHaveLength(1);
-        expect(rastroA[0]).toEqual({ momento: expect.any(String), rol: "OPERADOR", tipoActor: "PLATAFORMA", campo: "textoOriginal" });
+        expect(rastroA.accesos).toHaveLength(1);
+        expect(rastroA.accesos[0]).toEqual({ momento: expect.any(String), rol: "OPERADOR", tipoActor: "PLATAFORMA", campo: "textoOriginal" });
         // Control positivo: la familia B SÍ ve su propio acceso (el filtro no es vacuo).
         const rastroB = await rastroDeAccesosDelTitular(padreB.id);
-        expect(rastroB.map((r) => r.campo)).toEqual(["texto"]);
+        expect(rastroB.accesos.map((r) => r.campo)).toEqual(["texto"]);
     });
 
     it("C-fuga (vía expediente): el acceso al evento del expediente del padre aparece en SU rastro y no en el de otro", async () => {
@@ -86,8 +88,8 @@ describe("SPEC-785 · rastro de accesos del titular (filtro por titular + sin cr
             data: { eventoId: evento.id, contenidoId: contenido.contenidoId, campo: "textoOriginal", tipoActor: "EXTERNO", rol: "PROFESIONAL", usuarioId: null, hashContenido: HASH },
         });
 
-        expect(await rastroDeAccesosDelTitular(padreA.id)).toHaveLength(1);
-        expect(await rastroDeAccesosDelTitular(padreB.id)).toHaveLength(0);
+        expect((await rastroDeAccesosDelTitular(padreA.id)).accesos).toHaveLength(1);
+        expect((await rastroDeAccesosDelTitular(padreB.id)).accesos).toHaveLength(0);
     });
 
     it("C-autoacceso: el acceso del propio titular NO aparece; el de lector anonimizado (usuarioId null) SÍ", async () => {
@@ -102,8 +104,8 @@ describe("SPEC-785 · rastro de accesos del titular (filtro por titular + sin cr
         });
 
         const rastroA = await rastroDeAccesosDelTitular(padreA.id);
-        expect(rastroA).toHaveLength(1); // solo el anonimizado; el autoacceso queda fuera
-        expect(rastroA[0].rol).toBe("COMITE_VALIDACION");
+        expect(rastroA.accesos).toHaveLength(1); // solo el anonimizado; el autoacceso queda fuera
+        expect(rastroA.accesos[0].rol).toBe("COMITE_VALIDACION");
     });
 
     it("C-sin-crudos: el DTO no trae identidad/hash/ids — solo momento/rol/tipoActor/campo", async () => {
@@ -116,12 +118,38 @@ describe("SPEC-785 · rastro de accesos del titular (filtro por titular + sin cr
         });
 
         const rastroA = await rastroDeAccesosDelTitular(padreA.id);
-        expect(rastroA).toHaveLength(1);
-        expect(Object.keys(rastroA[0]).sort()).toEqual(["campo", "momento", "rol", "tipoActor"]);
+        expect(rastroA.accesos).toHaveLength(1);
+        expect(Object.keys(rastroA.accesos[0]).sort()).toEqual(["campo", "momento", "rol", "tipoActor"]);
         const serial = JSON.stringify(rastroA);
         expect(serial, "se filtró el id del lector").not.toContain(lector.id);
         expect(serial, "se filtró el correo del lector").not.toContain(EMAIL_LECTOR);
         expect(serial, "se filtró el hash del contenido").not.toContain(HASH);
         expect(serial, "se filtró el id del contenido").not.toContain(repA.contenidoId);
+    });
+
+    it("C-truncamiento (VOLUMEN): con más accesos que el tope, trae la marca; total y truncado reflejan el recorte", async () => {
+        const plat = await plataformaId();
+        const padreA = await crearUsuario("PARENT");
+        const lector = await crearUsuario("OPERADOR", EMAIL_LECTOR);
+        const repA = await reporteDe(padreA.id, plat);
+        // Dato plantado: 5 accesos de terceros al dato del titular.
+        for (let i = 0; i < 5; i++) {
+            await prisma.lecturaReporte.create({
+                data: { reporteId: repA.id, contenidoId: repA.contenidoId, campo: "texto", tipoActor: "PLATAFORMA", rol: "OPERADOR", usuarioId: lector.id, hashContenido: HASH },
+            });
+        }
+
+        // Tope por DEBAJO del total → la página se recorta pero el retorno DECLARA la parcialidad.
+        const recortado = await rastroDeAccesosDelTitular(padreA.id, 3);
+        expect(recortado.accesos).toHaveLength(3); // la página respeta el tope
+        expect(recortado.total).toBe(5); // el total NO se recorta
+        expect(recortado.limite).toBe(3);
+        expect(recortado.truncado).toBe(true); // la marca: hay más de lo devuelto
+
+        // Control: tope por ENCIMA del total → sin recorte, la marca es false y total == devueltos.
+        const completo = await rastroDeAccesosDelTitular(padreA.id, 100);
+        expect(completo.accesos).toHaveLength(5);
+        expect(completo.total).toBe(5);
+        expect(completo.truncado).toBe(false);
     });
 });

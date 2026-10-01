@@ -30,22 +30,25 @@ Consultar el rastro NO se auto-registra: el motor es consulta pura (no escribe),
 
 ## LÍMITES DECLARADOS (cosas que el usuario podría asumir y NO están)
 
-Dos límites de la misma naturaleza; **se declaran, no se resuelven acá** — cada uno con condición de salida a la superficie (SPEC-772 p2):
+Tres límites de la misma naturaleza; **se declaran, no se resuelven acá** — cada uno con condición de salida a la superficie (SPEC-772 p2):
 
 - **L-1 · ALCANCE (círculo de confianza).** El rastro cubre accesos al TEXTO del reporte/expediente (`LecturaReporte`). NO cubre el acceso del admin al **círculo de confianza** (vive solo en `AuditLog`, y ese eje se lee por SQL crudo). **Salida:** cuando SPEC-772 p2 arme la superficie, O se suma ese acceso como fuente secundaria, O el texto de la pantalla dice EXPLÍCITAMENTE qué cubre y qué no. **Condición dura:** el rastro NUNCA se presenta como «todos los accesos». Un rastro parcial ROTULADO como parcial es honesto y útil; uno parcial presentado como completo es falsa tranquilidad — peor que no tener la función.
-- **L-2 · AUTOACCESO / SUPLANTACIÓN.** Se excluye el acceso del propio titular (FR-004): su actividad es otra función (seguridad de cuenta, no habeas data). **Consecuencia:** si alguien SUPLANTA al padre y entra con su cuenta, ese acceso NO aparece (se registra como acceso del titular). Alguien podría esperar que un «rastro de accesos» revelara justamente eso. **No se cambia el alcance** (la actividad propia es otra función); se declara para no dar falsa expectativa. **Salida:** si «mi actividad de cuenta» se construye, es una vista aparte de seguridad, no este rastro.
+- **L-2 · VOLUMEN (truncamiento por cantidad).** La consulta devuelve a lo sumo `limite` accesos (100 por defecto), más recientes primero. **La misma condición dura de L-1, en la otra dimensión:** devolver 100 de 300 sin decirlo es falsa tranquilidad. **Resuelto en el contrato, no diferido:** el retorno SIEMPRE trae `total` (conteo sin recorte), `limite` y `truncado`, para que la superficie PUEDA rotular la parcialidad por cantidad. **Por qué acá y no en 772 p2:** si el DTO no puede expresar el truncamiento, la vista se construye sobre un contrato que lo asume y agregarlo después obliga a volver al motor — dos líneas ahora contra un rehacer después.
+- **L-3 · AUTOACCESO / SUPLANTACIÓN.** Se excluye el acceso del propio titular (FR-004): su actividad es otra función (seguridad de cuenta, no habeas data). **Consecuencia:** si alguien SUPLANTA al padre y entra con su cuenta, ese acceso NO aparece (se registra como acceso del titular). Alguien podría esperar que un «rastro de accesos» revelara justamente eso. **No se cambia el alcance** (la actividad propia es otra función); se declara para no dar falsa expectativa. **Salida:** si «mi actividad de cuenta» se construye, es una vista aparte de seguridad, no este rastro.
 
 ## Candados (conducta, dato REAL plantado)
 
 - **C-fuga-otra-familia**: se siembra un acceso al reporte de OTRA familia y se afirma que NO aparece en el rastro del titular. Control positivo: el propio SÍ aparece. (Filtro en las dos direcciones — vía reporte y vía expediente.)
 - **C-sin-crudos**: el DTO NO trae identidad del lector (nombre/email/usuarioId), ni hash, ni ip/ua, ni ids — solo momento/rol/tipoActor/campo (lista blanca por construcción).
 - **C-autoacceso**: un acceso del propio titular NO aparece; un acceso con lector anonimizado (usuarioId null) SÍ aparece (no se pierde por el filtro de autoacceso).
+- **C-truncamiento**: con más accesos plantados que el tope, la página respeta `limite`, `total` trae el conteo SIN recorte y `truncado=true`; control negativo: con el tope por encima del total, `truncado=false` y `total == accesos.length`.
 
 ## Success Criteria *(mandatory)*
 
 - **SC-001**: El rastro del titular A nunca incluye un acceso al dato de la familia B (verificado por candado).
 - **SC-002**: El rastro incluye TODOS los accesos de terceros al texto del titular (reporte y expediente), incluidos los de lectores ya anonimizados.
 - **SC-003**: Ningún campo de identidad/contenido/operativo sale en el DTO.
+- **SC-004**: Si hay más accesos que el tope, el retorno los declara (`total` sin recorte + `truncado`), nunca presenta la página recortada como completa (verificado por candado).
 
 ## Assumptions
 
