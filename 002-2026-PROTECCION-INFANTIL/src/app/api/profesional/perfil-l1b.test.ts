@@ -183,8 +183,10 @@ describe("SPEC-391 · registro del profesional (L1b)", { timeout: 30_000 }, () =
         const put = await PUT_PERFIL(
             reqJson("http://localhost:5005/api/profesional/perfil", {
                 nombreVisible: "Dra. Test",
-                tituloProfesional: "Psicóloga",
-                especialidades: ["Ansiedad"],
+                // SPEC-786: `tituloProfesional`/`especialidades` son SALIDA derivada; el PUT las
+                // RECHAZA (400). El dialecto nuevo manda `profesion`/`areasAtencion`.
+                profesion: "psicologo",
+                areasAtencion: ["ansiedad"],
                 ciudadId: ciudad,
                 atiendeVirtual: true,
                 aniosExperiencia: 5,
@@ -260,7 +262,9 @@ describe("SPEC-391 · registro del profesional (L1b)", { timeout: 30_000 }, () =
         const ciudad = await ciudadId();
         await PUT_PERFIL(
             reqJson("http://localhost:5005/api/profesional/perfil", {
-                nombreVisible: "Test", tituloProfesional: "Test", especialidades: ["X"],
+                // SPEC-786: dialecto nuevo (el PUT rechaza `tituloProfesional`/`especialidades`).
+                // Este PUT es precondición: crea el BORRADOR sobre el que la subida del PDF opera.
+                nombreVisible: "Test", profesion: "psicologo", areasAtencion: ["ansiedad"],
                 ciudadId: ciudad, atiendeVirtual: true, aniosExperiencia: 0,
                 presentacion: "presentacion de prueba con longitud suficiente",
                 duracionMinutos: 30,
