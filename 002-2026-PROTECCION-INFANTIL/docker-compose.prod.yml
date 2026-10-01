@@ -71,7 +71,7 @@ services:
     restart: always
     env_file: .env.production
     # Supervisor: levanta UN worker-reportes (advisory lock en Postgres).
-    command: node scripts/worker-supervisor.mjs
+    command: node --import tsx scripts/worker-supervisor.mjs
     environment:
       WORKER_RUN_DIR: /app/run
       # En la red interna de Docker la app es `app:3000` (no localhost:5005).

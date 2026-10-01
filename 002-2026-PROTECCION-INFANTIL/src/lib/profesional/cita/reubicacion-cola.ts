@@ -60,7 +60,9 @@ import type { ClasificacionAvisoReps } from "@/lib/profesional/reps/aviso-estado
 export type MotivoReubicacion = "PANEL_BLOQUEADO" | "REGISTRO_NO_VIGENTE" | "REVISION_INTERNA";
 
 export interface CitaPorReubicar {
-    /** Referencia corta (8 car.) — como el `citaRef` del operador. Nunca PII. */
+    /** id completo de la cita — para las ACCIONES del admin (reubicar). No es PII. */
+    citaId: string;
+    /** Referencia corta (8 car.) — como el `citaRef` del operador, para MOSTRAR. Nunca PII. */
     citaRef: string;
     deQuienSale: {
         nombre: string;
@@ -149,6 +151,7 @@ export async function citasPorReubicar(
         }
 
         salida.push({
+            citaId: c.id,
             citaRef: c.id.slice(0, 8),
             deQuienSale: {
                 nombre: c.profesional.nombreVisible,

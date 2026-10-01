@@ -33,8 +33,13 @@ export const COPY_MOTIVO_REUBICACION: Record<MotivoReubicacion, CopyMotivoReubic
     // verificación envejeció» y «el registro no cubre esta modalidad y aún no se le avisó»). La página NO
     // está en el menú (no es alcanzable) hasta que 832 la cierre; se reemplaza al llegar la forma. El
     // candado exige que este motivo NUNCA contenga «avis…» (813 no lo bannerea) ni lea igual que los otros.
+    // SPEC-836 · Copy de Diseño (FORMA v1.6 §1-ter, commit b87771e). ⚠️ FALSO AMIGO (mordió en 835): es
+    // NUESTRA verificación del PERFIL (`VerificacionProfesional`, interna), NO la inscripción en el registro
+    // (REPS) — son dos documentos. Este copy NUNCA dice «REPS»/«registro». Acción NUESTRA (re-verificar),
+    // con matiz de capacidad (puede demorar) → el operador lo pesa contra la cercanía de la cita.
     REVISION_INTERNA: {
-        titulo: "[Motivo pendiente de Diseño]",
-        detalle: "[Texto pendiente de Diseño]",
+        titulo: "Nuestra verificación del perfil está pendiente",
+        detalle:
+            "Es un chequeo nuestro del perfil — no depende del profesional. Puede resolverse sin reubicar cuando lo completemos; con la capacidad actual puede demorar, así que péselo contra la cercanía de la cita.",
     },
 };

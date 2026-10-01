@@ -546,7 +546,7 @@ export class PerfilProfesionalRepository {
     async clasificarReps(
         profesionalId: string,
         ahora: Date = new Date(),
-    ): Promise<AvisoRepsConModalidad & { esReVerificacion: boolean }> {
+    ): Promise<AvisoRepsConModalidad & { esReVerificacion: boolean; esNoConfirmada: boolean }> {
         const config = await this.configReps();
         const [fila, perfil] = await Promise.all([
             this.db.verificacionReps.findFirst({
@@ -569,7 +569,11 @@ export class PerfilProfesionalRepository {
         // vigente y es NUESTRO chequeo el que envejeció. El 5 (NO_ENCONTRADA) también es REVISION_ADMIN pero
         // su inscripción NO está «al día» → no mostrarle esa copy.
         const esReVerificacion = zonaAdminReps(fila, config, ahora) === "RE_VERIFICAR";
-        return { ...aviso, esReVerificacion };
+        // SPEC-836 (4ª variante) · estado 5: el REPS NO confirmó la inscripción (no la encontró). Es ambiguo
+        // (no inscrito / laguna nuestra) → su propio banner, que bifurca sin asignar causa. Específicamente
+        // NO_ENCONTRADA (no la zona REVISAR entera: el estado 8 es inconstruible y no lleva copy).
+        const esNoConfirmada = fila?.resultado === "NO_ENCONTRADA";
+        return { ...aviso, esReVerificacion, esNoConfirmada };
     }
 
     /**

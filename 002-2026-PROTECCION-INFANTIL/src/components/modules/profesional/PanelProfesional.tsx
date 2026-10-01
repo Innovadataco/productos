@@ -44,6 +44,11 @@ export function PanelProfesional({ data }: { data: PanelProfesionalDto }) {
                 `esReVerificacionReps`. El 5 (NO_ENCONTRADA) y el 8 quedan admin-only (como antes). */}
             {data.avisoReps === "REVISION_ADMIN" && data.esReVerificacionReps && <AvisoRepsRevisionAdmin />}
 
+            {/* SPEC-836 (4ª variante): estado 5 (NO_ENCONTRADA). REVISION_ADMIN funde 5/7/8; el 7 muestra
+                re-verificación («sigue al día»), el 5 NO (ahí no aparece en el registro). El 5 bifurca sin
+                asignar causa. Excluyente con el de arriba; el 8 es inconstruible → sin banner. */}
+            {data.avisoReps === "REVISION_ADMIN" && data.esNoConfirmadaReps && <AvisoRepsNoConfirmada />}
+
             {/* SPEC-836 pieza 2: banner del HUECO DE MODALIDAD — el REPS está vigente pero no cubre una
                 modalidad que el profesional OFRECE. 813 decía AL_DIA mientras 825/834/814 ya actuaban sobre
                 él. Aquí SÍ es su acción (actualizar su inscripción o dejar de ofrecer esa modalidad). */}
@@ -243,6 +248,34 @@ export function AvisoRepsRevisionAdmin() {
             <p className="mt-2 text-sm">
                 Mientras lo completamos, su oferta a las familias queda en pausa; vuelve por sí sola cuando
                 terminemos.
+            </p>
+        </section>
+    );
+}
+
+/**
+ * SPEC-836 (4ª variante) · estado 5 (NO_ENCONTRADA): el REPS NO confirmó su inscripción. v4.1 lo mandaba al
+ * admin; 836 le da voz porque 825 le oculta las franjas igual que en el 7, pero la copy del 7 («sigue al día»)
+ * MENTIRÍA acá (no aparece en el registro) — por eso banner propio.
+ *
+ * Copy VERBATIM de Diseño (FORMA-SPEC790 v4.5, commit 2f88930, voz usted). El 5 es AMBIGUO (no inscrito / laguna
+ * nuestra) y no se resuelve desde afuera: la copy NO asigna la causa — BIFURCA por lo que ÉL sabe. Tres PARÁ del
+ * CEO respetados: SIN «escríbanos» (el profesional no tiene canal de soporte), SIN «lo estamos revisando» (0
+ * verificadores activos = falso-conducta), sin enlace. «es algo de nuestro lado» ubica la responsabilidad sin
+ * afirmar una revisión que no ocurre.
+ */
+export function AvisoRepsNoConfirmada() {
+    return (
+        <section
+            aria-label="Estado de su inscripción en el registro de salud"
+            className="rounded-2xl border border-ambar/30 bg-ambar/10 p-5 text-estado-ambar"
+        >
+            <h2 className="text-base font-semibold">
+                No pudimos confirmar su inscripción en el registro, así que su oferta a las familias está en pausa.
+            </h2>
+            <p className="mt-2 text-sm">
+                Si todavía no completó su inscripción en el registro, complétela y vuelve a la oferta. Si ya está
+                inscrito y vigente, es algo de nuestro lado y no tiene que hacer nada.
             </p>
         </section>
     );
