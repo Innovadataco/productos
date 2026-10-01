@@ -26,6 +26,7 @@ const BASE: PerfilPublicoDTO = {
     fotoUrl: null,
     tituloProfesional: "Psicóloga clínica",
     especialidades: ["Ansiedad"],
+    rangoEtario: [], // SPEC-816: campo nuevo del DTO (no lo ejercita este test)
     ciudadId: "c1",
     ciudad: { id: "c1", nombre: "Bogotá", pais: "Colombia" },
     atiendeVirtual: true,

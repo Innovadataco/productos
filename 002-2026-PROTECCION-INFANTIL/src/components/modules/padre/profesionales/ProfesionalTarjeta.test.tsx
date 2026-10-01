@@ -15,6 +15,7 @@ const perfil: PerfilPublicoDTO = {
     fotoUrl: null,
     tituloProfesional: "Psicóloga clínica",
     especialidades: ["Ansiedad", "Adolescencia"],
+    rangoEtario: [], // SPEC-816: campo nuevo del DTO (no lo ejercita este test)
     ciudadId: "ciudad-bog",
     ciudad: { id: "ciudad-bog", nombre: "Bogotá", pais: "Colombia" },
     atiendeVirtual: true,

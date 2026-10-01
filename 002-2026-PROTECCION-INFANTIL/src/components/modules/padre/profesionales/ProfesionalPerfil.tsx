@@ -142,6 +142,24 @@ export function ProfesionalPerfil({
                 </div>
             </section>
 
+            {/* SPEC-816 (FORMA §3/§4): se MUESTRA el rango que el profesional DECLARÓ; el padre elige. El
+                sistema NO filtra por edad (la cita no se liga al menor — minimización SPEC-750, [NORMA]); por
+                eso la ayuda pone la elección en el padre SIN una palabra de filtrado. Vacío = «no indicó»
+                (defensivo: rangoEtario es requerido para salir de BORRADOR), NUNCA mudo ni «atiende a todos». */}
+            <section>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-subtle mb-2">Edades que atiende</h2>
+                {p.rangoEtario.length > 0 ? (
+                    <>
+                        <p className="text-sm text-body">{p.rangoEtario.join(", ")}</p>
+                        <p className="text-xs text-muted mt-1">
+                            <span className="font-medium">Tú conoces la edad de tu hijo:</span> revisa que esté entre las edades que este profesional atiende.
+                        </p>
+                    </>
+                ) : (
+                    <p className="text-sm text-muted">Este profesional no indicó las edades que atiende.</p>
+                )}
+            </section>
+
             {/* SPEC-428 (L4): reserva viva — franjas, presentación, urgencia,
                 pago y decisión de compartir expediente en un solo panel. */}
             <SolicitarCitaPanel
