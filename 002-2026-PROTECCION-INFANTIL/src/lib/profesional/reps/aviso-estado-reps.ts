@@ -100,3 +100,23 @@ export function debeMostrarAvisoCaducadoReps(hecho: HechoReps | null, config: Co
 export function requiereRevisionAdminReps(hecho: HechoReps | null, config: ConfigReps, now: Date): boolean {
     return clasificarAvisoReps(hecho, config, now) === "REVISION_ADMIN";
 }
+
+/**
+ * SPEC-813 (§5-bis) · Dentro de la alarma de admin, la ZONA por TIPO DE TRABAJO (lo que de verdad separa
+ * los estados, para que el goteo rutinario del 7 no sepulte al 5 raro-y-grave):
+ *  · `REVISAR` — hay algo MAL en el registro, un humano lo investiga: **5 NO_ENCONTRADA** y **8 sin fecha**.
+ *  · `RE_VERIFICAR` — rutina/higiene NUESTRA: **7**, la re-verificación que cumplió la ventana (la autoridad
+ *    probablemente lo sigue dando por vigente). Es la cola que CRECE.
+ * `null` si el estado NO va a la alarma de admin (CADUCADO / AL_DIA / SIN_VERIFICAR).
+ */
+export const ZONAS_ADMIN_REPS = ["REVISAR", "RE_VERIFICAR"] as const;
+export type ZonaAdminReps = (typeof ZONAS_ADMIN_REPS)[number];
+
+export function zonaAdminReps(hecho: HechoReps | null, config: ConfigReps, now: Date): ZonaAdminReps | null {
+    if (clasificarAvisoReps(hecho, config, now) !== "REVISION_ADMIN") return null;
+    // Dentro de REVISION_ADMIN: un VIGENTE con fecha de autoridad VÁLIDA sólo llega acá por el 7 (nuestro
+    // re-chequeo venció; si la fecha hubiera pasado sería CADUCADO, si no hubiera vencido la ventana sería
+    // AL_DIA). El resto —5 NO_ENCONTRADA, 8 VIGENTE sin fecha, y el fail-closed de reloj inválido— es REVISAR.
+    if (hecho && hecho.resultado === "VIGENTE" && esFecha(hecho.vigenteHasta)) return "RE_VERIFICAR";
+    return "REVISAR";
+}

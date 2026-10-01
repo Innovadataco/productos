@@ -33,6 +33,7 @@ import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profes
 import { leerRangoEtario } from "@/lib/profesional/catalogos-lectura";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { repsElegible, type ConfigReps, type EstadoReps, type HechoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
+import { clasificarAvisoReps, zonaAdminReps, type ClasificacionAvisoReps, type ZonaAdminReps } from "@/lib/profesional/reps/aviso-estado-reps";
 
 // SPEC-790 · parámetros del gate REPS (parametrizables; sembrados en el seed, fail-safe por defecto).
 const PARAM_REPS_VENTANA = "reps.ventana_verificacion_dias";
@@ -53,6 +54,10 @@ export interface RepsCargaItem {
     modalidades: ModalidadReps[];
     /** Cuándo se registró la última verificación (ISO), o null si nunca. */
     verificadoEn: string | null;
+    /** SPEC-813 · clasificación para la alarma de admin: `REVISION_ADMIN` = estados 5/7/8 (van a admin). */
+    avisoReps: ClasificacionAvisoReps;
+    /** SPEC-813 §5-bis · zona de la alarma de admin: `REVISAR` (5+8) · `RE_VERIFICAR` (7) · `null` (no va a admin). */
+    zonaAdmin: ZonaAdminReps | null;
 }
 
 /** L1b (SPEC-391): perfil completo + ciudad para la vista propia del profesional.
@@ -538,6 +543,22 @@ export class PerfilProfesionalRepository {
     }
 
     /**
+     * SPEC-813 · Clasificación REPS del profesional para las SUPERFICIES (aviso al profesional + alarma de
+     * admin). `¬repsAlDia` funde cuatro causas; esto devuelve CUÁL — `CADUCADO` (aviso al profesional),
+     * `REVISION_ADMIN` (alarma de admin), `AL_DIA`/`SIN_VERIFICAR` (ni aviso ni alarma). Misma ÚLTIMA fila y
+     * misma config que `repsAlDia`; el aviso se muestra con `=== "CADUCADO"`.
+     */
+    async clasificarReps(profesionalId: string, ahora: Date = new Date()): Promise<ClasificacionAvisoReps> {
+        const config = await this.configReps();
+        const fila = await this.db.verificacionReps.findFirst({
+            where: { profesionalId },
+            orderBy: { verificadoEn: "desc" },
+            select: { resultado: true, verificadoEn: true, vigenteHasta: true, modalidades: true },
+        });
+        return clasificarAvisoReps(fila, config, ahora);
+    }
+
+    /**
      * SPEC-790 (T4b) · ¿el profesional es REPS-elegible para ESTA modalidad, al RESERVAR? El directorio usa
      * vigencia-only (modalidad=null); el booking exige que el REPS cubra la modalidad CONCRETA de la cita —
      * una habilitación presencial no atiende una cita de telemedicina. Lo llama `crearSolicitudCita`.
@@ -554,7 +575,8 @@ export class PerfilProfesionalRepository {
      * se MUESTRA para que el admin sepa a quién le falta. Trae `vigenteHasta`/`modalidades`/`verificadoEn` de la
      * última fila para el detalle, sin una segunda lectura. Mismo patrón «última fila» que `idsRepsElegibles`.
      */
-    async listarParaCargaReps(): Promise<RepsCargaItem[]> {
+    async listarParaCargaReps(ahora: Date = new Date()): Promise<RepsCargaItem[]> {
+        const config = await this.configReps(); // SPEC-813: para clasificar cada profesional (dos relojes + cutover).
         const profesionales = await this.db.perfilProfesional.findMany({
             // ACTIVO-NO-DIRECTORIO (T6): esta lista NO es el directorio público. El estado NO decide el gate acá
             // (la pantalla es solo-lectura). DEBE incluir a los de REPS VENCIDO —son justo los que el admin abre
@@ -584,6 +606,8 @@ export class PerfilProfesionalRepository {
                 vigenteHasta: u?.vigenteHasta?.toISOString() ?? null,
                 modalidades: u?.modalidades ?? [],
                 verificadoEn: u?.verificadoEn?.toISOString() ?? null,
+                avisoReps: clasificarAvisoReps(u ?? null, config, ahora),
+                zonaAdmin: zonaAdminReps(u ?? null, config, ahora),
             };
         });
     }

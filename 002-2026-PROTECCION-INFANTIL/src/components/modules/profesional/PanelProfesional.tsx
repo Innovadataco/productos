@@ -34,6 +34,11 @@ export function PanelProfesional({ data }: { data: PanelProfesionalDto }) {
                 </p>
             </header>
 
+            {/* SPEC-813: banner «fuera de la oferta» cuando el REPS CADUCÓ (estados 4/6). Conserva el acceso
+                (entra y lo ve); ámbar, cero rubí; no promete reasignación ni notificación. Los estados de
+                admin (5/7/8) NO llegan acá — van a `verificacion-profesionales`. */}
+            {data.avisoReps === "CADUCADO" && <AvisoRepsCaducado />}
+
             {/* SPEC-610 (I-372): la ENTRADA VISIBLE al canje del pase. Antes
                 `/canjear-acceso` no estaba enlazada desde ningún lado (solo en
                 proxy.ts) y el profesional tenía que adivinar la URL — la función
@@ -125,6 +130,43 @@ function Avatar({ nombre }: { nombre: string }) {
         >
             {iniciales || "?"}
         </div>
+    );
+}
+
+/**
+ * SPEC-813 (FORMA-SPEC790-AVISO v4.1) · Banner que ve el profesional cuando su inscripción REPS CADUCÓ
+ * (estados 4 VENCIDA / 6 vigencia pasada). Conserva el ACCESO, pierde la OFERTA: «sigue teniendo su
+ * espacio, pero por ahora no lo estamos ofreciendo», nunca «perdió el acceso». Ámbar, cero rubí; voz usted.
+ * NO promete reasignación de citas (no existe; es T7) ni notificación («el sistema le avisa»). NO predica
+ * «habilitado» del profesional — la OFERTA es el eje visible. Lleva a su perfil/estado (la explicación +
+ * cómo renovar); no es un callejón porque conserva el acceso.
+ */
+export function AvisoRepsCaducado() {
+    return (
+        <section
+            aria-label="Estado de su inscripción en el registro de salud"
+            className="rounded-2xl border border-ambar/30 bg-ambar/10 p-5 text-estado-ambar"
+        >
+            <h2 className="text-base font-semibold">Sigue teniendo su espacio aquí — por ahora no lo estamos ofreciendo a las familias.</h2>
+            <div className="mt-2 space-y-2 text-sm">
+                <p>
+                    Su inscripción en el registro de salud figura como <strong>no vigente</strong> (lo verificamos contra el
+                    registro oficial). Suele deberse a una <strong>renovación pendiente</strong> — no es una sanción ni un juicio
+                    sobre su trabajo, y <strong>no pierde su cuenta ni su acceso a esta área.</strong>
+                </p>
+                <p>Mientras su inscripción no esté vigente, no aparece en la oferta a las familias ni recibe citas nuevas.</p>
+                <p>
+                    Cuando su inscripción vuelva a estar vigente, vuelve a la oferta por sí solo — no tiene que inscribirse de
+                    nuevo ni pedir un reingreso.
+                </p>
+            </div>
+            <Link
+                href="/dashboard/profesional/mi-perfil"
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-2xl border border-ambar/40 px-5 py-2.5 text-sm font-semibold transition hover:bg-ambar/10"
+            >
+                Ver qué significa y cómo renovar
+            </Link>
+        </section>
     );
 }
 

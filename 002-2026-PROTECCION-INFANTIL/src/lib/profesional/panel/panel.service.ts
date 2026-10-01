@@ -31,6 +31,8 @@ import { saludoDelPanel } from "./saludo";
 import { desglosarTarifa, obtenerPorcentajeServicio, type DesgloseTarifa } from "../cita/comision";
 import { estadoEfectivoDeCita } from "../cita/estado-efectivo";
 import { citasPendientesEncuesta } from "@/lib/dal/services/encuesta-cita";
+import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
+import type { ClasificacionAvisoReps } from "@/lib/profesional/reps/aviso-estado-reps";
 
 /** Estados que esperan una respuesta del profesional dentro de las 48 h. */
 const ESPERAN_RESPUESTA: EstadoSolicitudCita[] = ["SIN_CONFIRMAR", "PAGADA_PENDIENTE"];
@@ -124,6 +126,11 @@ export interface PanelProfesionalDto {
     expedientesCompartidos: ExpedienteCompartidoDto[];
     /** SPEC-784 · nº de citas del profesional con su encuesta de servicio pendiente (fuente única). */
     sesionesPorRegistrar: number;
+    /**
+     * SPEC-813 · clasificación REPS del profesional. El banner «fuera de la oferta» se muestra SOLO con
+     * `"CADUCADO"` (estados 4 VENCIDA / 6 vigencia pasada). Los estados de admin (5/7/8) NO llegan acá.
+     */
+    avisoReps: ClasificacionAvisoReps;
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -185,6 +192,9 @@ export async function panelDelProfesional(
     // compartido de `listarPorProfesional`, que otros caminos comparten (misma razón que el saludo).
     const sesionesPorRegistrar = (await citasPendientesEncuesta(usuarioId, "PROFESIONAL", ahora)).length;
 
+    // SPEC-813: clasificación REPS para el banner «fuera de la oferta» (solo CADUCADO lo dispara).
+    const avisoReps = await new PerfilProfesionalRepository().clasificarReps(perfil.id, ahora);
+
     return {
         nombreVisible: perfil.nombreVisible,
         saludo: saludoDelPanel(cuenta?.nombre, perfil.nombreVisible),
@@ -236,6 +246,7 @@ export async function panelDelProfesional(
                 padreNombre: s.padreUsuario.nombre ?? "Una familia",
             })),
         sesionesPorRegistrar,
+        avisoReps,
     };
 }
 

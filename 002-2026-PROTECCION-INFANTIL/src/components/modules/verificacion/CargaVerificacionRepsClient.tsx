@@ -148,6 +148,14 @@ export function CargaVerificacionRepsClient({ profesionalesIniciales }: { profes
     // §5 · el estado VACÍO de primera clase: HOY nadie tiene verificación cargada (es el caso NORMAL).
     const ningunaVerificacion = !sinProfesionales && profesionales.every((p) => p.verificadoEn === null);
 
+    // SPEC-813 §5-bis · la ALARMA de admin, dos ZONAS por tipo de trabajo (el 5 grave no comparte forma con
+    // el 7 rutinario, para que su goteo no lo sepulte). «Revisar»: algo MAL en el registro (5 arriba y
+    // prominente, 8 debajo). «Re-verificar»: rutina NUESTRA (7), callada y creciente.
+    const zonaRevisar = profesionales
+        .filter((p) => p.zonaAdmin === "REVISAR")
+        .sort((a, b) => Number(b.estadoReps === "NO_ENCONTRADA") - Number(a.estadoReps === "NO_ENCONTRADA"));
+    const zonaReVerificar = profesionales.filter((p) => p.zonaAdmin === "RE_VERIFICAR");
+
     return (
         <div className="space-y-5 anim-entrada">
             {sinProfesionales ? (
@@ -164,6 +172,64 @@ export function CargaVerificacionRepsClient({ profesionalesIniciales }: { profes
                                 Cargue la primera para que los profesionales puedan aparecer en la oferta a las familias.
                             </p>
                         </div>
+                    )}
+
+                    {/* SPEC-813 §5-bis · Zona «Revisar»: algo MAL en el registro — un humano lo investiga.
+                        Prominente (ámbar firme) + conteo; el 5 (No encontrada) primero por ser el grave. */}
+                    {zonaRevisar.length > 0 && (
+                        <section aria-label="Revisar" className="rounded-2xl border border-ambar/30 bg-ambar/10 p-5">
+                            <h2 className="text-base font-semibold text-estado-ambar">
+                                Revisar — hay algo que revisar en el registro ({zonaRevisar.length})
+                            </h2>
+                            <ul className="mt-3 space-y-3">
+                                {zonaRevisar.map((p) => (
+                                    <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ambar/20 p-3">
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-body truncate">{p.nombreVisible}</p>
+                                            {p.estadoReps === "NO_ENCONTRADA" ? (
+                                                <p className="cuerpo text-sm text-estado-ambar">
+                                                    No encontramos su inscripción en el registro oficial. La buscamos y no aparece —
+                                                    revísela a mano (puede ser un dato mal cargado o que no esté inscrito). No es un
+                                                    trámite vencido del profesional; no se le pide «renovar».
+                                                </p>
+                                            ) : (
+                                                <p className="cuerpo text-sm text-estado-ambar">
+                                                    Su inscripción no tiene fecha de vigencia. Dato incompleto; revisar y completar.
+                                                </p>
+                                            )}
+                                        </div>
+                                        <Button type="button" variant="outline" onClick={() => abrir(p)}>
+                                            Cargar verificación
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </section>
+                    )}
+
+                    {/* SPEC-813 §5-bis · Zona «Re-verificar»: rutina/higiene NUESTRA (7) — callada (tinta/muted),
+                        porque el profesional probablemente está al día y es nuestra desactualización. */}
+                    {zonaReVerificar.length > 0 && (
+                        <section aria-label="Re-verificar" className="rounded-2xl border border-tinta/15 p-5">
+                            <h2 className="text-base font-semibold text-body">Re-verificar — rutina nuestra ({zonaReVerificar.length})</h2>
+                            <ul className="mt-3 space-y-3">
+                                {zonaReVerificar.map((p) => (
+                                    <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-tinta/10 p-3">
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-body truncate">{p.nombreVisible}</p>
+                                            <p className="cuerpo text-sm text-subtle">
+                                                Nuestra verificación cumplió 365 días. Su inscripción puede seguir vigente ante la
+                                                autoridad — lo que caducó es nuestra re-verificación, no su habilitación. La acción es
+                                                nuestra: vuelvan a verificarla. Al profesional no se le pide nada.
+                                            </p>
+                                        </div>
+                                        <Button type="button" variant="outline" onClick={() => abrir(p)}>
+                                            Re-verificar
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </section>
                     )}
 
                     <ul className="space-y-3">

@@ -19,6 +19,7 @@ import {
     clasificarAvisoReps,
     debeMostrarAvisoCaducadoReps,
     requiereRevisionAdminReps,
+    zonaAdminReps,
     CLASIFICACIONES_AVISO_REPS,
     type ClasificacionAvisoReps,
 } from "./aviso-estado-reps";
@@ -167,5 +168,30 @@ describe("SPEC-813 · exhaustividad y fail-closed", () => {
     it("fail-closed · now inválido → REVISION_ADMIN (nunca CADUCADO ni AL_DIA: no afirmar caducado ante la duda)", () => {
         expect(clasificarAvisoReps(VIGENTE_AL_DIA, EXIGE, new Date(NaN))).toBe("REVISION_ADMIN");
         expect(debeMostrarAvisoCaducadoReps(VIGENTE_AL_DIA, EXIGE, new Date(NaN))).toBe(false);
+    });
+});
+
+describe("SPEC-813 §5-bis · zonaAdminReps — el 5 grave NO comparte zona con el 7 rutinario", () => {
+    it("5 (NO_ENCONTRADA) → REVISAR; 8 (VIGENTE sin fecha) → REVISAR; 7 (re-chequeo viejo) → RE_VERIFICAR", () => {
+        expect(zonaAdminReps(ESTADO_5_NO_ENCONTRADA, EXIGE, NOW)).toBe("REVISAR");
+        expect(zonaAdminReps(ESTADO_8_VIGENTE_SIN_FECHA, EXIGE, NOW)).toBe("REVISAR");
+        expect(zonaAdminReps(ESTADO_7_RECHEQUEO_VIEJO, EXIGE, NOW)).toBe("RE_VERIFICAR");
+        // EL PUNTO: 5 y 7 caen en zonas DISTINTAS (el goteo del 7 no sepulta al 5).
+        expect(zonaAdminReps(ESTADO_5_NO_ENCONTRADA, EXIGE, NOW)).not.toBe(zonaAdminReps(ESTADO_7_RECHEQUEO_VIEJO, EXIGE, NOW));
+    });
+    it("los estados que NO van a admin (1,2,3,4,6) → null (no aparecen en ninguna zona de admin)", () => {
+        for (const h of [ESTADO_1_SIN_FILA, ESTADO_2_SIN_VERIFICAR, ESTADO_3_AL_DIA, ESTADO_4_VENCIDA, ESTADO_6_VIGENCIA_PASADA]) {
+            expect(zonaAdminReps(h, EXIGE, NOW)).toBeNull();
+        }
+    });
+    it("atado a la clasificación: zona no-null ⟺ REVISION_ADMIN", () => {
+        const TODOS = [
+            ESTADO_1_SIN_FILA, ESTADO_2_SIN_VERIFICAR, ESTADO_3_AL_DIA, ESTADO_4_VENCIDA,
+            ESTADO_5_NO_ENCONTRADA, ESTADO_6_VIGENCIA_PASADA, ESTADO_7_RECHEQUEO_VIEJO, ESTADO_8_VIGENTE_SIN_FECHA,
+        ];
+        for (const h of TODOS) {
+            const enAdmin = clasificarAvisoReps(h, EXIGE, NOW) === "REVISION_ADMIN";
+            expect(zonaAdminReps(h, EXIGE, NOW) !== null).toBe(enAdmin);
+        }
     });
 });
