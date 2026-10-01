@@ -10,7 +10,7 @@
 // SPEC-574 (I-357): el rótulo de categoría DERIVA del mapa canónico `CATEGORIAS_LABELS` — este era el
 // tercer mapa paralelo de rótulos y, peor, en un correo A UN PADRE sobre un menor de su círculo tenía
 // «Happy slapping»/«Stalking» en inglés crudo. Una sola fuente: si un rótulo cambia, cambia acá también.
-import { CATEGORIAS_LABELS } from "@/lib/labels";
+import { CATEGORIAS_LABELS } from "../../labels";
 
 export interface RenderEmailReporteCirculoInput {
     nombreContacto: string;
