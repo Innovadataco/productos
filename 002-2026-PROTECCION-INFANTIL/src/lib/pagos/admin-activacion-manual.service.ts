@@ -5,7 +5,7 @@
  * un pago manual capturado en el panel administrativo.
  */
 import { addMonths } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import {
     AccionAudit,
     EstadoSuscripcion,
@@ -28,10 +28,6 @@ import type { DbClient } from "@/lib/dal/unit-of-work";
 import { entregarCuponesRecompensa } from "./entregar-cupones-recompensa.service";
 
 const ZONA_BOGOTA = "America/Bogota";
-
-function ahoraBogota(): Date {
-    return toZonedTime(new Date(), ZONA_BOGOTA);
-}
 
 function normalizarFechaPagoReal(valor?: Date | string | undefined): Date | null {
     if (!valor) return null;
@@ -170,10 +166,17 @@ export async function activarSuscripcionManual(input: ActivarSuscripcionManualIn
             throw new AppError("Ya existe una suscripción vigente para este titular", ERROR_CODES.CONFLICT, 409);
         }
 
-        const ahora = ahoraBogota();
+        // SPEC-795: `ahora` es el instante REAL (antes `ahoraBogota()` = pseudo-instante 5h corrido,
+        // usado de base del addMonths y como `autorizadoEn`). Ambos quieren el instante real.
+        const ahora = new Date();
         const fechaPagoReal = normalizarFechaPagoReal(input.fechaPagoReal);
         const fechaInicio = fechaPagoReal ?? ahora;
-        const fechaFin = addMonths(fechaInicio, mesesDeDuracion(plan.duracion));
+        // SPEC-795 · FR-003: suma de meses en día calendario Bogotá, CLAMPA (addMonths), no recorta
+        // sobre el instante UTC crudo. Método del hermano freemium.
+        const fechaFin = fromZonedTime(
+            addMonths(toZonedTime(fechaInicio, ZONA_BOGOTA), mesesDeDuracion(plan.duracion)),
+            ZONA_BOGOTA,
+        );
 
         const codigoReferidoPropio = await generarCodigoReferidoUnico(
             input.target.tipoTitular,
