@@ -750,4 +750,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/acento-relleno-sin-pino-crudo.candado.test.ts",
     // I-409 (SPEC-662): foco neutro en toda la app — ningún focusable declara su foco con acento crudo (focus:ring/border-<color>).
     "src/app/foco-neutro-sin-acento-crudo.candado.test.ts",
+    // SPEC-790: motor puro de elegibilidad REPS — C-1 falso amigo (EstadoReps ≠ EstadoPerfilProfesional),
+    // C-2 dos relojes (autoridad + nuestro), D-5 modalidad, D-7 cutover. Sin base.
+    "src/lib/profesional/reps/reps-elegibilidad.candado.test.ts",
 ];
