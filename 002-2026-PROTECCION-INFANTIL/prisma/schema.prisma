@@ -1729,6 +1729,9 @@ model IdentificadorProfesor {
   // único PARCIAL crudo (WHERE estado='activo', NULLS NOT DISTINCT) en la migración B
   // — misma red dura de BD que estudiante (dos profesores del colegio con el mismo
   // identificador = bug I-213). Reemplaza el viejo @@unique por-profesor.
+  // SPEC-837 PR2 · destino del FK compuesto de AlertaColegio→IdentificadorProfesor: ata el colegioId de la
+  // alerta al de su profesor. `id` ya es único (PK) → este índice compuesto no puede fallar por duplicados.
+  @@unique([id, colegioId])
   @@index([colegioId, estado])
   @@index([profesorId, estado])
   @@index([valor])
@@ -1788,6 +1791,9 @@ model IdentificadorEstudiante {
   // (WHERE estado='activo', NULLS NOT DISTINCT) en la migración — Prisma no
   // expresa NULLS NOT DISTINCT ni índices parciales en @@unique. Estudiante y
   // profesor: unicidad por (colegioId,tipo,valor,plataformaId). Ver migración B.
+  // SPEC-837 PR2 · destino del FK compuesto de AlertaColegio→IdentificadorEstudiante (tabla IdentificadorAlumno):
+  // ata el colegioId de la alerta al del alumno. `id` ya es único (PK) → no puede fallar por duplicados.
+  @@unique([id, colegioId])
   @@index([estudianteId, estado])
   @@index([colegioId, estado])
   @@map("IdentificadorAlumno")
@@ -1818,8 +1824,11 @@ model AlertaColegio {
 
   colegio                 Colegio                  @relation(fields: [colegioId], references: [id])
   reporte                 Reporte                  @relation(fields: [reporteId], references: [id])
-  identificadorEstudiante IdentificadorEstudiante? @relation(fields: [identificadorEstudianteId], references: [id])
-  identificadorProfesor   IdentificadorProfesor?   @relation(fields: [identificadorProfesorId], references: [id])
+  // SPEC-837 PR2 · FK COMPUESTO: el colegioId de la alerta se ata al del identificador (estudiante/profesor).
+  // La base RECHAZA una alerta cuyo estudiante/profesor sea de OTRO colegio. colegioId queda compartido entre
+  // estas dos relaciones y la de `colegio` — invariante: una alerta vive en UN colegio y su sujeto también.
+  identificadorEstudiante IdentificadorEstudiante? @relation(fields: [identificadorEstudianteId, colegioId], references: [id, colegioId])
+  identificadorProfesor   IdentificadorProfesor?   @relation(fields: [identificadorProfesorId, colegioId], references: [id, colegioId])
   identificadorAcudiente  IdentificadorAcudiente?  @relation(fields: [identificadorAcudienteId], references: [id])
   // SPEC-380 (PR B): 4ª relación al identificador del integrante del comité.
   identificadorIntegranteComite IdentificadorIntegranteComite? @relation(fields: [identificadorIntegranteComiteId], references: [id])
