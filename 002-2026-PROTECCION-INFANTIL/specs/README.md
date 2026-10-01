@@ -479,11 +479,23 @@
 | [779](779-operador-dos-trabajos-dos-cupos/spec.md) | SPEC-779 · El operador tiene DOS trabajos y DOS cupos | 🟡 DESARROLLO |
 | [780](780-corregir-relato-cita/spec.md) | SPEC-780 · Corregir el relato de la cita (rectificación · habeas data) | 🟡 DESARROLLO |
 | [784](784-encuesta-cita-tipada/spec.md) | SPEC-784 · Rescatar las pantallas de la encuesta (#341) sobre el modelo tipado de 753 | 🟡 DESARROLLO |
+| [785](785-rastro-de-accesos-titular/spec.md) | Feature Specification: El titular ve quién accedió a sus datos (MOTOR) | 🟢 IMPLEMENTADO |
 | [787](787-bandeja-incidentes-verificador/spec.md) | SPEC-787 · Bandeja del verificador · «Reportes que no coinciden» | 🟡 DESARROLLO |
 | [789](789-e2e-condicionado-en-pr/spec.md) | SPEC-789 · `test-e2e` condicionado en pull_request (drenar la cola de CI) | 🟢 IMPLEMENTADO |
+| [790](790-verificacion-reps/spec.md) | SPEC-790 · Verificar el REPS del profesional, con revisión periódica (MOTOR) | 🟡 DESARROLLO |
 | [791](791-plan-no-incluye-citas/spec.md) | SPEC-791 · Ningún plan puede incluir citas | 🟢 IMPLEMENTADO |
+| [792](792-costuras-recorrido-cita/spec.md) | SPEC-792 · Las cuatro costuras del recorrido de la cita | 🟢 IMPLEMENTADO |
 | [793](793-allowlist-proveedor-enlace/spec.md) | SPEC-793 · ¿En qué sala ocurre la sesión de un menor? — allowlist de proveedores del enlace | 🟢 IMPLEMENTADO |
 | [794](794-freemium-mes-bogota/spec.md) | SPEC-794 · Freemium: la suma de meses de vigencia va en calendario Bogotá | 🟡 DESARROLLO |
+| [795](795-addmonths-zona-bogota/spec.md) | SPEC-795 · Sumar meses sobre el instante crudo — la CLASE | 🟡 DESARROLLO |
+| [796](796-contrato-colegio/spec.md) | SPEC-796 · El contrato firmado del colegio: adjuntar · ver · registrar | 🟡 DESARROLLO |
+| [800](800-pin-node-version/spec.md) | SPEC-800 · Fijar la versión de Node (local ↔ CI) con candado de paridad | 🟡 DESARROLLO |
+| [803](803-docs-generados-fuera-del-gate/spec.md) | SPEC-803 · Los docs generados globales (00/01/06) salen del gate byte-exacto del PR | 🟡 DESARROLLO |
+| [804](804-temporal-fuera-de-src/spec.md) | SPEC-804 · Un candado escribía dentro de `src/` y chocaba con los que lo caminan | 🟡 DESARROLLO |
+| [808](808-reporte-duplicado-mensaje/spec.md) | SPEC-808 · Reporte duplicado: de «acusación + callejón» a «ya lo tienes» (string del API + comentario) | 🟡 DESARROLLO |
+| [813](813-aviso-estado-reps/spec.md) | SPEC-813 · Aviso de habilitación REPS al profesional — y `¬repsAlDia` funde CUATRO causas | 🟡 DESARROLLO |
+| [815](815-emision-sin-pii/spec.md) | SPEC-815 · Antes de EMITIR hay que ser seguro: ni identificador, ni correo, ni error crudo a stdout | 🟡 DESARROLLO |
+| [826](826-borrar-huerfanos-654/spec.md) | SPEC-826 · Borrar los 10 huérfanos viejos de SPEC-654 (deuda con dueño, no limpieza) | 🟡 DESARROLLO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
