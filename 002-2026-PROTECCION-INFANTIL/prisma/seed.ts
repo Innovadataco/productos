@@ -213,6 +213,28 @@ async function seedParametrosSenalComunitaria() {
 // del Motor Notif. Idempotente (patrón I-100): upsert de parámetros y plantillas;
 // reglas con upsertNotificacionRegla por clave canónica (SPEC-247). Las rutas apuntan a los documentos legales
 // copiados en public/legal/; ODIN no redacta contenido legal.
+// SPEC-796 · El plazo de retención del contrato firmado del colegio es LEGAL y NO está decidido
+// (Decreto 1377 art. 10). Se siembra SIN número y MARCADO para definición jurídica: ningún código
+// debe asumir un default (I-434 — un `else` de ternario con un plazo legal inventa un plazo que
+// nadie decidió). El consumidor que lo lea DEBE fallar fuerte ante el marcador, no caer a un número.
+// `update: {}` a propósito: si el abogado ya fijó un valor, re-sembrar NO lo pisa.
+async function seedContratoColegio() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "contrato.colegio.retencion_dias" },
+        update: {},
+        create: {
+            clave: "contrato.colegio.retencion_dias",
+            valor: "[ABOGADO] pendiente de definicion legal (Decreto 1377 art. 10); SIN default (I-434)",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.LEGAL,
+            esPublico: false,
+            esSecreto: false,
+            descripcion: "Plazo de retencion del contrato firmado del colegio tras su baja. PENDIENTE de definicion legal (Decreto 1377 art. 10). SIN default: ningun codigo asume un plazo (I-434, SPEC-796).",
+        },
+    });
+    console.log("[SEED] Parametro de retencion del contrato de colegio (SPEC-796) listo — marcado, sin numero");
+}
+
 async function seedConsentimiento() {
     const parametros = [
         {
@@ -4381,6 +4403,9 @@ async function main() {
     // ── Parámetros del módulo Padre (SPEC-230) ─────────────────────────────
     await seedParametrosPadre();
     await seedCatalogosProfesional();
+
+    // ── SPEC-796: parámetro de retención del contrato del colegio (marcado, SIN número) ──
+    await seedContratoColegio();
 
     // ── Parámetros y evento de consentimiento informado (SPEC-241) ─────────
     await seedConsentimiento();

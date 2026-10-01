@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **125** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **126** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -245,6 +245,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | onboarding | OnboardingColegio | opcional, relación |
 | notificacionesInApp | NotificacionInApp | lista, relación |
 | suscripciones | Suscripcion | lista, relación |
+| contratos | ContratoColegio | lista, relación |
 
 #### `Curso`
 
@@ -506,7 +507,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (77)
+### Otros (sin regla de dominio) (78)
 
 #### `AceptacionAutorizacionProfesional`
 
@@ -760,6 +761,22 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reporte | Reporte | opcional, relación |
 | evento | EventoExpediente | opcional, relación |
 | llave | LlaveReporte | opcional, relación |
+
+#### `ContratoColegio`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | opcional |
+| colegio | Colegio | opcional, relación (FK) |
+| suscripcionId | String | opcional |
+| suscripcion | Suscripcion | opcional, relación (FK) |
+| colegioSnapshot | String | — |
+| archivoId | String | — |
+| sha256 | String | — |
+| adjuntadoEn | DateTime | — |
+| adjuntadoPorSnapshot | String | — |
+| creadoEn | DateTime | — |
 
 #### `DemoMarcado`
 
@@ -1753,6 +1770,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | referidosCodigoPropio | CodigoReferidoUso | lista, relación |
 | referidosUsados | CodigoReferidoUso | lista, relación |
 | scoreClientes | ScoreCliente | lista, relación |
+| contratos | ContratoColegio | lista, relación |
 
 #### `TasaCambio`
 
@@ -2440,6 +2458,7 @@ erDiagram
     Colegio ||--o{ AlertaColegio : "colegio"
     Colegio ||--o{ AuditLog : "colegio (opcional)"
     Colegio ||--o{ CargaRosterSesion : "colegio"
+    Colegio ||--o{ ContratoColegio : "colegio (opcional)"
     Colegio ||--o{ Curso : "colegio"
     Colegio ||--o{ CursoMateria : "colegio"
     Colegio ||--o{ Estudiante : "colegio"
@@ -2551,6 +2570,7 @@ erDiagram
     Suscripcion ||--o{ BonoAplicado : "suscripcion"
     Suscripcion ||--o{ CodigoReferidoUso : "referida"
     Suscripcion ||--o{ CodigoReferidoUso : "referidor"
+    Suscripcion ||--o{ ContratoColegio : "suscripcion (opcional)"
     Suscripcion ||--o{ Pago : "suscripcion"
     Suscripcion ||--o{ ScoreCliente : "suscripcion"
     Tenant ||--o{ Colegio : "tenant"
