@@ -17,6 +17,7 @@ import {
     calcularDiasRestantesBogota,
 } from "./renovacion-calculos";
 import { calcularDiasRestantesFreemium } from "./freemium-calculos";
+import { contratoColegioVista } from "@/lib/colegio/contrato-colegio.service";
 import {
     esContratoObligatorio,
     obtenerDescuentoAnualDefaultPct,
@@ -97,7 +98,7 @@ export async function obtenerVistaSuscripcion(usuario: UsuarioTitular): Promise<
     const clienteRepo = new PagosClienteRepository();
     const anio = anioBogota();
 
-    const [totales, pagoPendiente, pagos, referidosExitosos, planes, limites, descuentoAnualDefault, descuentoReferidoPct, contratoObligatorio] =
+    const [totales, pagoPendiente, pagos, referidosExitosos, planes, limites, descuentoAnualDefault, descuentoReferidoPct, contratoObligatorio, contratoVista] =
         await Promise.all([
             clienteRepo.sumarPagosAutorizados(suscripcion.id),
             clienteRepo.obtenerPagoPendiente(suscripcion.id),
@@ -108,6 +109,9 @@ export async function obtenerVistaSuscripcion(usuario: UsuarioTitular): Promise<
             obtenerDescuentoAnualDefaultPct(),
             obtenerDescuentoReferidoPct(),
             esContratoObligatorio(suscripcion.tipoTitular),
+            // SPEC-796: el contrato firmado del colegio sale del registro durable (ContratoColegio),
+            // NO de `contratoPDFUrl` (deprecado). Solo para colegios; el padre no tiene contrato.
+            suscripcion.colegioId ? contratoColegioVista(suscripcion.colegioId) : Promise.resolve(null),
         ]);
 
     const opcionesRenovacion: OpcionRenovacion[] = [];
@@ -152,7 +156,7 @@ export async function obtenerVistaSuscripcion(usuario: UsuarioTitular): Promise<
         monedaLocal: suscripcion.monedaLocal,
         codigoReferidoPropio: suscripcion.codigoReferidoPropio,
         referidosExitososEsteAnio: referidosExitosos,
-        contratoPDFUrl: suscripcion.contratoPDFUrl,
+        contrato: contratoVista,
         contratoObligatorio,
         pagoPendiente: pagoPendiente
             ? {

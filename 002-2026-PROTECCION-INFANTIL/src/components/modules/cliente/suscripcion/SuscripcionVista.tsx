@@ -83,7 +83,7 @@ export function SuscripcionVista({
 
             {/* 6. Contrato firmado (colegio siempre; padre según configuración) */}
             {mostrarContrato && (
-                <ContratoCard contratoPDFUrl={vista.contratoPDFUrl} contratoObligatorio={vista.contratoObligatorio} />
+                <ContratoCard contrato={vista.contrato} contratoObligatorio={vista.contratoObligatorio} />
             )}
 
             {/* 7. Cancelar suscripción */}
