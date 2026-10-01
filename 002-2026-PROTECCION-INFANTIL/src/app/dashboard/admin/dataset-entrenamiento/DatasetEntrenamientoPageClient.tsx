@@ -127,7 +127,15 @@ export default function DatasetEntrenamientoPageClient() {
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* SPEC-812 (pieza 4): se RETIRA la tarjeta ámbar «Pendientes de anonimizar»
+                (Math.max(0, total - anonimizados)). Era estructuralmente 0: toda fila de
+                DatasetEntrenamiento se persiste con textoAnonimizado=true (correcciones/route.ts,
+                resolver-spam) — nunca existe la fila cruda, así que total === anonimizados SIEMPRE.
+                El número sostenía el hueco: hacía creer que la cobertura del trabajo estaba vigilada.
+                El conteo REAL de trabajo pendiente NO es de filas de dataset sino de CORRECCIONES sin
+                dataset derivado (estado 1), que vive sobre CorreccionAdmin y llega con SPEC-812
+                piezas 1-2 (sobre SPEC-807/#802). Hasta entonces la pantalla no finge vigilancia. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="glass rounded-2xl p-4">
                     <p className="text-xs font-medium text-subtle uppercase tracking-wide">Total registros</p>
                     <p className="mt-1 text-2xl font-bold text-body">{total}</p>
@@ -135,10 +143,6 @@ export default function DatasetEntrenamientoPageClient() {
                 <div className="glass rounded-2xl p-4">
                     <p className="text-xs font-medium text-subtle uppercase tracking-wide">Anonimizados</p>
                     <p className="mt-1 text-2xl font-bold text-pino">{anonimizados}</p>
-                </div>
-                <div className="glass rounded-2xl p-4">
-                    <p className="text-xs font-medium text-subtle uppercase tracking-wide">Pendientes de anonimizar</p>
-                    <p className="mt-1 text-2xl font-bold text-estado-ambar">{Math.max(0, total - anonimizados)}</p>
                 </div>
             </div>
 
