@@ -98,6 +98,13 @@ const ESTADO_LEGIBLE: Record<CitaParaPadreDto["estado"], VistaEspera> = {
         detalle: "Esta solicitud fue reprogramada. Busca abajo el enlace a la nueva cita.",
         tono: "gris",
     },
+    // SPEC-814: copy de Diseño (slot B, verbatim). Nombra el HECHO (la cita se movió) sin prometer que
+    // avisamos ni que la nueva esté confirmada; apunta a «Mis citas» (pantalla real), no a «Próximas».
+    REUBICADA: {
+        titulo: "Tu cita continúa con otro profesional",
+        detalle: "El profesional anterior dejó de estar disponible. Para no interrumpir la atención, pasamos tu cita a otro profesional: aparece como una cita nueva en tu lista de Mis citas.",
+        tono: "gris",
+    },
 };
 
 function formatearFranja(inicioISO: string, finISO: string): string {
