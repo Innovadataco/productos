@@ -37,7 +37,7 @@ async function jwtParaRol(rol: string, sub = "usuario-loop"): Promise<string> {
 async function requestConSesionSinVigencia(pathname: string, rol: string): Promise<NextRequest> {
     const token = await jwtParaRol(rol);
     const sesionEstadoCookie = await firmarSesionEstado(
-        { vigencia: "SIN_SUSCRIPCION", requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino: null },
+        { vigencia: "SIN_SUSCRIPCION", requiereConsentimiento: false, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino: null },
         JWT_SECRET_TEST,
     );
     return new NextRequest(`http://localhost:5005${pathname}`, {
@@ -84,7 +84,7 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
     it("(e) PARENT con vigencia ACTIVA en /dashboard/padre → next() (comportamiento transparente)", async () => {
         const token = await jwtParaRol("PARENT");
         const cookie = await firmarSesionEstado(
-            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino: null },
+            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino: null },
             JWT_SECRET_TEST,
         );
         const req = new NextRequest("http://localhost:5005/dashboard/padre", {
@@ -98,7 +98,7 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
     it("(f) usuario con debeCambiarPassword=true en /dashboard/padre → redirect a /cambiar-password", async () => {
         const token = await jwtParaRol("PARENT");
         const cookie = await firmarSesionEstado(
-            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: true, pasoCamino: null },
+            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: true, audienciaPendiente: false, pasoCamino: null },
             JWT_SECRET_TEST,
         );
         const req = new NextRequest("http://localhost:5005/dashboard/padre", {
@@ -112,7 +112,7 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
     it("(g) usuario con requiereConsentimiento=true en /dashboard/padre → redirect a /consentimiento", async () => {
         const token = await jwtParaRol("PARENT");
         const cookie = await firmarSesionEstado(
-            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, pasoCamino: null },
+            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino: null },
             JWT_SECRET_TEST,
         );
         const req = new NextRequest("http://localhost:5005/dashboard/padre", {
@@ -131,7 +131,7 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
     it("(g-416-parent) PARENT sin consentimiento → sigue bloqueado (candado no aflojado, I-211)", async () => {
         const token = await jwtParaRol("PARENT");
         const cookie = await firmarSesionEstado(
-            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, pasoCamino: null },
+            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino: null },
             JWT_SECRET_TEST,
         );
         const req = new NextRequest("http://localhost:5005/dashboard/padre", {
@@ -145,7 +145,7 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
     it("(g-416-school) SCHOOL_ADMIN sin consentimiento → sigue bloqueado", async () => {
         const token = await jwtParaRol("SCHOOL_ADMIN");
         const cookie = await firmarSesionEstado(
-            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, pasoCamino: null },
+            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino: null },
             JWT_SECRET_TEST,
         );
         const req = new NextRequest("http://localhost:5005/dashboard/colegio", {
@@ -160,7 +160,7 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
         it(`(g-416-exento) ${rol} con requiereConsentimiento=true → next() (no titular del dato)`, async () => {
             const token = await jwtParaRol(rol);
             const cookie = await firmarSesionEstado(
-                { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, pasoCamino: null },
+                { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino: null },
                 JWT_SECRET_TEST,
             );
             const rutaProbada = rol === "SCHOOL_ADMIN" || rol === "COMITE_CONVIVENCIA"
@@ -181,7 +181,7 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
     it("(g-416-api) VERIFICADOR sin consentimiento sobre /api/admin/verificacion-profesionales → NO 403 CONSENTIMIENTO_REQUERIDO", async () => {
         const token = await jwtParaRol("VERIFICADOR");
         const cookie = await firmarSesionEstado(
-            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, pasoCamino: null },
+            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino: null },
             JWT_SECRET_TEST,
         );
         const req = new NextRequest("http://localhost:5005/api/admin/verificacion-profesionales", {
@@ -320,7 +320,7 @@ describe("SPEC-339 · guardián del camino", () => {
     ) {
         const token = await jwtParaRol(rol);
         const cookie = await firmarSesionEstado(
-            { vigencia: "SIN_SUSCRIPCION", requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino },
+            { vigencia: "SIN_SUSCRIPCION", requiereConsentimiento: false, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino },
             JWT_SECRET_TEST,
         );
         return new NextRequest(`http://localhost:5005${pathname}`, {
@@ -346,7 +346,7 @@ describe("SPEC-339 · guardián del camino", () => {
     it("padre con camino terminado (null) → next(), sin redirect del camino", async () => {
         const token = await jwtParaRol("PARENT");
         const cookie = await firmarSesionEstado(
-            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino: null },
+            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino: null },
             JWT_SECRET_TEST,
         );
         const req = new NextRequest("http://localhost:5005/dashboard/padre", {
@@ -482,7 +482,7 @@ describe("SPEC-344 · guardián del camino del colegio", () => {
     async function reqRectorConPaso(pathname: string, pasoCamino: PasoColegioTest) {
         const token = await jwtParaRol("SCHOOL_ADMIN");
         const cookie = await firmarSesionEstado(
-            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino },
+            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino },
             JWT_SECRET_TEST,
         );
         return new NextRequest(`http://localhost:5005${pathname}`, {
@@ -621,7 +621,7 @@ describe("SPEC-344 · guardián del camino del colegio", () => {
     ) {
         const token = await jwtParaRol("SCHOOL_ADMIN");
         const cookie = await firmarSesionEstado(
-            { vigencia, requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino },
+            { vigencia, requiereConsentimiento: false, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino },
             JWT_SECRET_TEST,
         );
         return new NextRequest(`http://localhost:5005${pathname}`, {

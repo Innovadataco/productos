@@ -14,6 +14,8 @@ const ESTADO_LIMPIO = {
     vigencia: "ACTIVA" as const,
     requiereConsentimiento: false,
     debeCambiarPassword: false,
+    // SPEC-751: sin menores pendientes de audiencia.
+    audienciaPendiente: false,
     // SPEC-339: camino terminado (o usuario que no es padre).
     pasoCamino: null,
 };
@@ -30,7 +32,7 @@ describe("firmarSesionEstado + leerSesionEstado — round trip", () => {
 
     it("SIN_SUSCRIPCION + requiere consentimiento + debe cambiar password", async () => {
         const cookie = await firmarSesionEstado(
-            { vigencia: "SIN_SUSCRIPCION", requiereConsentimiento: true, debeCambiarPassword: true, pasoCamino: null },
+            { vigencia: "SIN_SUSCRIPCION", requiereConsentimiento: true, debeCambiarPassword: true, audienciaPendiente: false, pasoCamino: null },
             SECRETO,
         );
         const payload = await leerSesionEstado(cookie, SECRETO);
@@ -60,7 +62,7 @@ describe("leerSesionEstado — rechazos", () => {
 
     it("payload manipulado con firma vieja → null", async () => {
         const cookie = await firmarSesionEstado(
-            { vigencia: "SIN_SUSCRIPCION", requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino: null },
+            { vigencia: "SIN_SUSCRIPCION", requiereConsentimiento: false, debeCambiarPassword: false, audienciaPendiente: false, pasoCamino: null },
             SECRETO,
         );
         const [, sig] = cookie.split(".");

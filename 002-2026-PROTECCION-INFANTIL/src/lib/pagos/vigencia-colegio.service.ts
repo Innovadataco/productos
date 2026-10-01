@@ -12,8 +12,11 @@
  * ← Suscripción) queda para otra spec del brief A-69.
  */
 import type { DuracionPlan, PrismaClient } from "@prisma/client";
-import { addDays } from "date-fns";
+import { addDays, addMonths } from "date-fns";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { calcularFinServicio } from "@/lib/colegio/periodo";
+
+const ZONA_BOGOTA = "America/Bogota";
 import { obtenerDuracionFreemiumDias } from "./parametros-pagos";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 
@@ -49,9 +52,13 @@ export function calcularFinDesdeDuracionPlan(inicio: Date, duracion: DuracionPla
             break;
         }
     }
-    const fin = new Date(inicio.getTime());
-    fin.setMonth(fin.getMonth() + MESES_POR_DURACION[duracion]);
-    return fin;
+    // SPEC-795: MES_2/MES_3 (sin equivalente en calcularFinServicio) sumaban meses con el
+    // `Date.setMonth` nativo, que DESBORDA (31-dic + 2 meses → 3-mar en vez de 28-feb) y regala
+    // días. Se CLAMPA en el calendario Bogotá (addMonths), igual que la rama de calcularFinServicio.
+    return fromZonedTime(
+        addMonths(toZonedTime(inicio, ZONA_BOGOTA), MESES_POR_DURACION[duracion]),
+        ZONA_BOGOTA,
+    );
 }
 
 /**

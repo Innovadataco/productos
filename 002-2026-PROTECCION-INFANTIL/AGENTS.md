@@ -24,7 +24,7 @@ Definidas en `.specify/memory/constitution.md`; tienen prioridad absoluta:
 - App: puerto `5005`. Acceso remoto (Tailscale) requiere levantar con `-H 0.0.0.0`.
 - Postgres (Docker): contenedor `002-2026-proteccion-infantil-db-1`, puerto `5433`, user `proteccion`, BD `proteccion_infantil` (imagen `pgvector/pgvector:pg16`, ver `docker-compose.yml`).
 - Ollama: clasificación con `ornith:9b` (default), embeddings con `nomic-embed-text`.
-- Runtime: Node.js >= 22.
+- Runtime: Node.js **22** — fijado en `.nvmrc` (raíz del repo) y en `engines.node` de este `package.json`, alineado al CI. Activalo con `nvm use` (o `nvm install`) desde el repo; un major distinto hace que un verde local NO prediga el del CI (SPEC-800). El candado `scripts/ci/node-version-paridad.candado.test.ts` exige que `.nvmrc`/`engines` coincidan con los `node-version:` de los workflows.
 - Variables de entorno requeridas (ver `.env.example` / README): `DATABASE_URL`, `JWT_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `ENCRYPTION_KEY`, `WORKER_SECRET`, `NEXT_PUBLIC_APP_URL`. Secrets solo por variables de entorno, nunca en código.
 
 ## Stack técnico
