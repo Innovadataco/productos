@@ -142,6 +142,12 @@ export interface PanelProfesionalDto {
      * fusiona el 5 (NO_ENCONTRADA), donde «sigue al día» sería falso.
      */
     esReVerificacionReps: boolean;
+    /**
+     * SPEC-836 (4ª variante): true en el estado 5 (NO_ENCONTRADA) — el REPS no confirmó la inscripción. Dispara
+     * su propio banner (bifurca sin asignar causa) con `avisoReps === "REVISION_ADMIN" && esNoConfirmadaReps`.
+     * Excluyente con `esReVerificacionReps` (el 7): cada estado de REVISION_ADMIN muestra su propia variante.
+     */
+    esNoConfirmadaReps: boolean;
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -210,6 +216,7 @@ export async function panelDelProfesional(
         clasificacion: avisoReps,
         modalidadesNoCubiertas: modalidadesRepsNoCubiertas,
         esReVerificacion: esReVerificacionReps,
+        esNoConfirmada: esNoConfirmadaReps,
     } = await new PerfilProfesionalRepository().clasificarReps(perfil.id, ahora);
 
     return {
@@ -266,6 +273,7 @@ export async function panelDelProfesional(
         avisoReps,
         modalidadesRepsNoCubiertas,
         esReVerificacionReps,
+        esNoConfirmadaReps,
     };
 }
 

@@ -147,4 +147,25 @@ describe("SPEC-790 (T4) · el directorio aplica el gate REPS (última fila + cut
         // y el directorio (vigencia-only) sí lo lista — la modalidad se exige al RESERVAR, no al listar.
         expect(await enDirectorio(id), "en el directorio aparece (vigencia manda; la modalidad es del booking)").toBe(true);
     });
+
+    // SPEC-836 (4ª variante) · clasificarReps separa los dos estados de REVISION_ADMIN para el PANEL del
+    // profesional: el 7 (re-chequeo nuestro) y el 5 (NO_ENCONTRADA) muestran banners DISTINTOS. Control
+    // positivo por EXCLUSIÓN del discriminador: cada uno enciende SU signal y apaga el del otro.
+    it("discriminador del panel: estado 5 (NO_ENCONTRADA) → esNoConfirmada, NO esReVerificacion", async () => {
+        const id = await profHabilitadoInterno("NoEnc5");
+        await reps(id, "NO_ENCONTRADA");
+        const r = await repo.clasificarReps(id, AHORA);
+        expect(r.clasificacion).toBe("REVISION_ADMIN");
+        expect(r.esNoConfirmada, "el 5 enciende su propio banner").toBe(true);
+        expect(r.esReVerificacion, "el 5 NO es el banner del 7 («sigue al día» mentiría)").toBe(false);
+    });
+
+    it("discriminador del panel: estado 7 (re-chequeo viejo, vigente) → esReVerificacion, NO esNoConfirmada", async () => {
+        const id = await profHabilitadoInterno("ReVerif7");
+        await reps(id, "VIGENTE", { verificadoEn: new Date(AHORA.getTime() - 400 * DIA) }); // ventana nuestra vencida
+        const r = await repo.clasificarReps(id, AHORA);
+        expect(r.clasificacion).toBe("REVISION_ADMIN");
+        expect(r.esReVerificacion, "el 7 es el banner de re-verificación").toBe(true);
+        expect(r.esNoConfirmada, "el 7 NO es el banner del 5 (su inscripción SÍ está en el registro)").toBe(false);
+    });
 });
