@@ -114,8 +114,8 @@ test.describe("SPEC-809 · candados del registro de padre por enlace", () => {
         const nuevos = culpables.filter((f) => !ALLOWLIST_PENDIENTES.has(f));
         expect(
             nuevos,
-            `Archivo(s) del arnés que LEEN devCode/devToken (solo llega si el correo FALLA → el verde mide ` +
-                `un mailer roto). Registrá/recuperá por el flujo de ENLACE (registrarPadre / plantarTokenRecuperacion), ` +
+            "Archivo(s) del arnés que LEEN devCode/devToken (solo llega si el correo FALLA → el verde mide " +
+                "un mailer roto). Registrá/recuperá por el flujo de ENLACE (registrarPadre / plantarTokenRecuperacion), " +
                 `nunca por el dev-field. Nuevos: ${nuevos.join(", ")}.`,
         ).toEqual([]);
 
