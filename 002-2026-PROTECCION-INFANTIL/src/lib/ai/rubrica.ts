@@ -1,4 +1,5 @@
 import { llamarOllamaStructured, type OllamaMetrics } from "./ollama-client";
+import { safeErrorMessage } from "../errors";
 import { getParametroSistema } from "@/lib/parametros";
 import { obtenerSeveridades } from "@/lib/scoring";
 import { logger } from "@/lib/logger";
@@ -324,7 +325,7 @@ export async function clasificarConRubrica(
         plausibles = embudo.data.categoriasPlausibles.filter((c) => categoriasPosibles.includes(c));
     } catch (err) {
         embudoFallback = true;
-        logger.warn(`[RUBRICA] Embudo falló (${err instanceof Error ? err.message : String(err)}); rúbrica completa sobre todas las categorías.`);
+        logger.warn(`[RUBRICA] Embudo falló (${safeErrorMessage(err)}); rúbrica completa sobre todas las categorías.`);
         plausibles = categoriasPosibles;
     }
 
@@ -363,7 +364,7 @@ export async function clasificarConRubrica(
                 }
                 votosModelos.push({ modelo, categorias, metrics: voto.metrics, fallback: false });
             } catch (err) {
-                logger.error(`[RUBRICA] Voto falló en ${modelo}: ${err instanceof Error ? err.message : String(err)}`);
+                logger.error(`[RUBRICA] Voto falló en ${modelo}: ${safeErrorMessage(err)}`);
                 votosModelos.push({
                     modelo,
                     categorias: {},

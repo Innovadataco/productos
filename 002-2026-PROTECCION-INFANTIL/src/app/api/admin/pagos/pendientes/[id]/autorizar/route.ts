@@ -3,7 +3,7 @@ import { EstadoPago, EstadoSuscripcion } from "@prisma/client";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
@@ -57,7 +57,7 @@ async function autorizarPago(id: string, request: Request, admin: { id: string }
         await procesarRecompensasPagoAutorizado(id, admin.id);
     } catch (err) {
         console.error(
-            `[Referidos] Hook pago.autorizado: error — pago ${id}: ${err instanceof Error ? err.message : "desconocido"}`
+            `[Referidos] Hook pago.autorizado: error — pago ${id}: ${safeErrorMessage(err)}`
         );
     }
 
@@ -73,7 +73,7 @@ async function autorizarPago(id: string, request: Request, admin: { id: string }
         });
     } catch (err) {
         console.error(
-            `[Freemium] Hook pago.autorizado: error — pago ${id}: ${err instanceof Error ? err.message : "desconocido"}`
+            `[Freemium] Hook pago.autorizado: error — pago ${id}: ${safeErrorMessage(err)}`
         );
     }
 

@@ -13,7 +13,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { createToken, setSessionCookie } from "@/lib/auth";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { registroColegioCompletarSchema } from "@/lib/validators";
 import { RegistroEnlaceService } from "@/lib/dal/services/registro-enlace";
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
             await tokensRepo.marcarUsado(tokenActivo.id);
         } catch (err) {
             logger.error(
-                `[REGISTRO-COL] Falla marcando token usado tras crear cuenta — email=${emailLower}: ${err instanceof Error ? err.message : String(err)}`,
+                `[REGISTRO-COL] Falla marcando token usado tras crear cuenta — email=${emailLower}: ${safeErrorMessage(err)}`,
             );
         }
 
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
             await enviarBienvenidaRector(usuarioCreado.email, nombreColegio);
         } catch (err) {
             logger.error(
-                `[REGISTRO-COL] Bienvenida: envío fallido — ${err instanceof Error ? err.message : String(err)}`,
+                `[REGISTRO-COL] Bienvenida: envío fallido — ${safeErrorMessage(err)}`,
             );
         }
 

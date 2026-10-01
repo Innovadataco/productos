@@ -26,6 +26,8 @@ import { AnalisisRepository, type RangoPeriodo } from "@/lib/dal/repositories/an
 import { NotificacionReglaRepository } from "@/lib/dal/repositories/notificacion-regla";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { logAudit } from "@/lib/audit";
+import { maskEmail } from "@/lib/mask-email";
+import { safeErrorMessage } from "@/lib/errors";
 import { logger } from "../logger";
 import { ZONA_BOGOTA } from "./periodos";
 import { ventanaSemanaAnteriorBogota, type VentanaSemanal } from "./semana";
@@ -117,7 +119,7 @@ async function resolverDestinatarios(emailsParam: string): Promise<DestinatarioD
     }
     const { validos, invalidos } = parsearDestinatariosEmails(emailsParam);
     for (const invalido of invalidos) {
-        console.warn(`[Analisis/Digest] Correo mal formado en analisis.digest.destinatarios_emails (omitido): ${invalido}`);
+        console.warn(`[Analisis/Digest] Correo mal formado en analisis.digest.destinatarios_emails (omitido): ${maskEmail(invalido)}`);
     }
     const destinatarios: DestinatarioDigest[] = [];
     for (const email of validos) {
@@ -355,7 +357,7 @@ export async function generarDigestParaDestinatario(
         }
         return await resultadoConCeroProgramadas(digest.id, periodo);
     } catch (err) {
-        console.error(`[Analisis/Digest] Fallo con destinatario ${destinatario.email}:`, err);
+        console.error(`[Analisis/Digest] Fallo con destinatario ${maskEmail(destinatario.email)}: ${safeErrorMessage(err)}`);
         // El motivo (≤500 chars) va a auditoría; el modelo no tiene motivoFallo.
         if (digestId) await repo.marcarDigestFallido(digestId).catch(() => undefined);
         await auditar("ANALISIS_DIGEST_FALLIDO", {

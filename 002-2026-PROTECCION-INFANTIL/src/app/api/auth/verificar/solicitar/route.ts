@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { enviarCodigoVerificacion, enviarEmailCuentaExistente } from "@/lib/email";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { verificarSolicitarSchema } from "@/lib/validators";
 import { logger } from "@/lib/logger";
@@ -66,7 +66,7 @@ async function ejecutarVerificacion(email: string): Promise<{ code: string | nul
         return { code: resultado.code, enviado: true };
     } catch (err) {
         const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
-        logger.error(`[VERIFICAR] Envío de email de verificación: fallido — ${masked}: ${err instanceof Error ? err.message : String(err)}`);
+        logger.error(`[VERIFICAR] Envío de email de verificación: fallido — ${masked}: ${safeErrorMessage(err)}`);
         return { code: resultado.code, enviado: false };
     }
 }
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
         // PROD: cierre de enumeración por CONSTRUCCIÓN. Se despacha el trabajo caso-dependiente SIN await
         // y se responde YA con el cuerpo constante: tiempo y cuerpo idénticos para existente / nuevo.
         void ejecutarVerificacion(email).catch((err) => {
-            logger.error(`[VERIFICAR] Proceso de verificación (async): ${err instanceof Error ? err.message : String(err)}`);
+            logger.error(`[VERIFICAR] Proceso de verificación (async): ${safeErrorMessage(err)}`);
         });
         return NextResponse.json(CUERPO_EXITO, { status: 202 });
     } catch (error) {

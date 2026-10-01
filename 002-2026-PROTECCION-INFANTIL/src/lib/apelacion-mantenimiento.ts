@@ -3,6 +3,8 @@ import { diaCalendarioBogota } from "./fechas/formato-bogota";
 import { prisma } from "./prisma";
 import { logAudit } from "./audit";
 import { logger } from "./logger";
+import { maskEmail } from "./mask-email";
+import { safeErrorMessage } from "./errors";
 import { getAvisoPrevioDias, getRetencionDocumentoDias, diasHabilesTranscurridos } from "./apelaciones";
 import { eliminarDocumentoCifrado } from "./apelacion-storage";
 import { enviarAvisoPlazoApelaciones } from "./email";
@@ -90,8 +92,7 @@ export async function procesarAvisosPlazo(ahora: Date = new Date()): Promise<num
             await enviarAvisoPlazoApelaciones(miembro.email, enAviso);
             enviados++;
         } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            logger.warn(`[Apelaciones] Aviso de plazo: fallo de email a ${miembro.email} — ${msg}`);
+            logger.warn(`[Apelaciones] Aviso de plazo: fallo de email a ${maskEmail(miembro.email)} — ${safeErrorMessage(err)}`);
         }
     }
 

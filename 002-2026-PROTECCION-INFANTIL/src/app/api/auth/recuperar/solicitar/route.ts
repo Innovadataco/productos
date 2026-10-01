@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { enviarTokenRecuperacion } from "@/lib/email";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { recuperarSolicitarSchema } from "@/lib/validators";
@@ -54,7 +54,7 @@ async function ejecutarRecuperacion(email: string): Promise<{ token: string | nu
         return { token: resultado.token, enviado: true };
     } catch (err) {
         const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
-        logger.error(`[RECUPERAR] Envío de email de recuperación: fallido — ${masked}: ${err instanceof Error ? err.message : String(err)}`);
+        logger.error(`[RECUPERAR] Envío de email de recuperación: fallido — ${masked}: ${safeErrorMessage(err)}`);
         return { token: resultado.token, enviado: false };
     }
 }
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
         // (fire-and-forget sobre el servidor Node persistente) y se responde YA con el cuerpo constante.
         // El tiempo medido y el cuerpo son idénticos para existente / inexistente / solo-Google.
         void ejecutarRecuperacion(email).catch((err) => {
-            logger.error(`[RECUPERAR] Proceso de recuperación (async): ${err instanceof Error ? err.message : String(err)}`);
+            logger.error(`[RECUPERAR] Proceso de recuperación (async): ${safeErrorMessage(err)}`);
         });
         return NextResponse.json(CUERPO_EXITO, { status: 200 });
     } catch (error) {

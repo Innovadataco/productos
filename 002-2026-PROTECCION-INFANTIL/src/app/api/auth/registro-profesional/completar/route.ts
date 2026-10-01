@@ -13,7 +13,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { createToken, setSessionCookie } from "@/lib/auth";
-import { ERROR_CODES } from "@/lib/errors";
+import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { registroCompletarSchema } from "@/lib/validators";
 import { enviarBienvenidaProfesional } from "@/lib/email";
@@ -70,12 +70,12 @@ export async function POST(request: Request) {
         try {
             await enviarBienvenidaProfesional(resultado.user.email);
         } catch (err) {
-            logger.error(`[REGISTRO_PROFESIONAL_COMPLETAR] bienvenida no enviada: ${String(err)}`);
+            logger.error(`[REGISTRO_PROFESIONAL_COMPLETAR] bienvenida no enviada: ${safeErrorMessage(err)}`);
         }
 
         return respuesta;
     } catch (err) {
-        logger.error(`[REGISTRO_PROFESIONAL_COMPLETAR] Error inesperado: ${String(err)}`);
+        logger.error(`[REGISTRO_PROFESIONAL_COMPLETAR] Error inesperado: ${safeErrorMessage(err)}`);
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

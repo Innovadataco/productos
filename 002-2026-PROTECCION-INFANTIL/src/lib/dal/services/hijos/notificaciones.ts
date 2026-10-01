@@ -24,6 +24,7 @@ import { getParametroSistemaValor } from "../../../parametros";
 import { enviarAlertaHijoReporte } from "../../../email";
 import type { EstadoReporte } from "@prisma/client";
 import { logger } from "../../../logger";
+import { maskEmail } from "../../../mask-email";
 import { ESTADOS_VISIBLES } from "../circulo-confianza/tipos";
 
 /**
@@ -106,7 +107,7 @@ export async function notificarHijosSiCorresponde(reporteId: string) {
                 continue;
             }
 
-            logger.info(`[HIJOS] Enviando aviso a ${padre.email} (hijo ${hijo.id})`);
+            logger.info(`[HIJOS] Enviando aviso a ${maskEmail(padre.email)} (hijo ${hijo.id})`);
             await enviarAlertaHijoReporte({
                 destinatario: { usuarioId: padre.id, email: padre.email },
                 reporteId: reporte.id,

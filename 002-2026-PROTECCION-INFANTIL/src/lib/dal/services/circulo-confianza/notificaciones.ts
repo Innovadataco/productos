@@ -9,6 +9,7 @@ import { getParametroSistemaValor } from "@/lib/parametros";
 import { enviarAlertaCirculoConfianzaEnriquecida } from "@/lib/email";
 import type { EstadoReporte, CanalNotificacion } from "@prisma/client";
 import { logger } from "@/lib/logger";
+import { maskEmail } from "@/lib/mask-email";
 import { ESTADOS_VISIBLES } from "./tipos";
 
 async function obtenerNombrePlataforma(
@@ -115,7 +116,8 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
         });
 
         if (contactos.length === 0) {
-            logger.info(`[CIRCULO] Notificación omitida: sin contactos activos para ${reporte.identificador}`);
+            // SPEC-815: se registra por `reporte.id` (interno), NUNCA el identificador reportado (PII).
+            logger.info(`[CIRCULO] Notificación omitida: sin contactos activos (reporte=${reporte.id})`);
             return;
         }
 
@@ -182,7 +184,7 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             const canales: CanalNotificacion[] = emailPermitido ? ["IN_APP", "EMAIL"] : ["IN_APP"];
 
             logger.info(
-                `[CIRCULO] Enviando alerta a ${usuario.email} (${reporte.identificador}) canales=${canales.join("+")}`
+                `[CIRCULO] Enviando alerta a ${maskEmail(usuario.email)} (reporte=${reporte.id}) canales=${canales.join("+")}`
             );
             await enviarAlertaCirculoConfianzaEnriquecida({
                 destinatario: { usuarioId: usuario.id, email: usuario.email },
