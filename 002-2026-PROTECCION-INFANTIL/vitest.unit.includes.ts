@@ -771,4 +771,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/acento-relleno-sin-pino-crudo.candado.test.ts",
     // I-409 (SPEC-662): foco neutro en toda la app — ningún focusable declara su foco con acento crudo (focus:ring/border-<color>).
     "src/app/foco-neutro-sin-acento-crudo.candado.test.ts",
+    // SPEC-574 (I-354): clasificar es el complemento de corregir/confirmar (conducta pura); y el
+    // catálogo de categorías de la UI no se desincroniza del enum CategoriaConducta.
+    "src/components/modules/reporte-detalle/capacidades-reporte.candado.test.ts",
+    "src/components/modules/reporte-detalle/catalogo-categorias.candado.test.ts",
 ];
