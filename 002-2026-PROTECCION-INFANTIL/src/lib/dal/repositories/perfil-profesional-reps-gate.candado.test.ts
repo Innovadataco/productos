@@ -124,4 +124,16 @@ describe("SPEC-790 (T4) · el directorio aplica el gate REPS (última fila + cut
         await reps(id, "VENCIDA");
         expect(await repo.obtenerPublicoPorId(id, null, AHORA)).toBeNull();
     });
+
+    it("T4b · esRepsElegibleParaModalidad: un VIGENTE presencial-only atiende PRESENCIAL, NO TELEMEDICINA", async () => {
+        const id = await profHabilitadoInterno("SoloPresencial");
+        await reps(id, "VIGENTE", { modalidades: ["PRESENCIAL"] });
+        expect(await repo.esRepsElegibleParaModalidad(id, "PRESENCIAL", AHORA)).toBe(true);
+        expect(
+            await repo.esRepsElegibleParaModalidad(id, "TELEMEDICINA", AHORA),
+            "una habilitación presencial no atiende una cita de telemedicina (T4b)",
+        ).toBe(false);
+        // y el directorio (vigencia-only) sí lo lista — la modalidad se exige al RESERVAR, no al listar.
+        expect(await enDirectorio(id), "en el directorio aparece (vigencia manda; la modalidad es del booking)").toBe(true);
+    });
 });

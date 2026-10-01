@@ -480,6 +480,15 @@ export class PerfilProfesionalRepository {
     }
 
     /**
+     * SPEC-790 (T4b) · ¿el profesional es REPS-elegible para ESTA modalidad, al RESERVAR? El directorio usa
+     * vigencia-only (modalidad=null); el booking exige que el REPS cubra la modalidad CONCRETA de la cita —
+     * una habilitación presencial no atiende una cita de telemedicina. Lo llama `crearSolicitudCita`.
+     */
+    async esRepsElegibleParaModalidad(profesionalId: string, modalidad: ModalidadReps, ahora: Date = new Date()): Promise<boolean> {
+        return (await this.idsRepsElegibles([profesionalId], ahora, modalidad)).has(profesionalId);
+    }
+
+    /**
      * Lista PÚBLICA (para el directorio del padre). Solo `estado = ACTIVO`.
      * Sin orden en BD: el orden lo pone Node con una semilla por sesión
      * (candado H-4 · «da turno a todos» sin marear al padre al filtrar).

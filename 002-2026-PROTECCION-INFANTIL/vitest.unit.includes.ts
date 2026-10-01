@@ -771,4 +771,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesional/cita/reps-gate-booking-sweep.candado.test.ts",
     // SPEC-790 (T4): paridad mirror↔enum Prisma (ESTADOS_REPS/MODALIDADES_REPS ≡ EstadoReps/ModalidadReps). Sin base.
     "src/lib/profesional/reps/reps-enums-paridad.candado.test.ts",
+    // SPEC-790 (T6): compuerta de código del registro manual REPS (espejo del CHECK + guardas, código de motivo). Sin base.
+    "src/lib/profesional/reps/registro-manual-reps.candado.test.ts",
 ];
