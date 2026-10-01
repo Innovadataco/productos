@@ -22,7 +22,7 @@ const SRC = path.resolve(__dirname, "..");
 const EXENTOS_SPEC_233 = new Set([
     "components/modules/padre/IdentificadorBusquedaClient.tsx",
     "components/modules/admin/IdentificadorAdminClient.tsx",
-    "components/modules/padre/ExpedienteDetalleClient.tsx",
+    // SPEC-826: ExpedienteDetalleClient.tsx borrado (huérfano SPEC-654). Sale de la lista (SOLO ENCOGE).
 ]);
 
 function esExentoSpec233(archivo: string): boolean {

@@ -133,7 +133,8 @@ function primarioEnMap(rel: string, src: string): string[] {
  * Al migrar uno, se BORRA su línea de acá (la base se achica sola).
  */
 const BASE: string[] = [
-    "components/modules/padre/AgregarEventoForm.tsx :: Cancelar",
+    // SPEC-826: AgregarEventoForm.tsx borrado (huérfano en cascada al borrar ExpedienteDetalleClient, su
+    // único importador — subárbol muerto de #555). Su deuda sale de BASE con el archivo (la base se achica).
     "components/modules/padre/AutoSuggestExpediente.tsx :: Ya se resolvió",
     "components/modules/padre/FormularioAltaHijo.tsx :: ✕",
     // SPEC-660 (Fase D): mismos dos `<button>` crudos (siguen siendo deuda de la

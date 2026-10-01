@@ -46,8 +46,10 @@ const CRUDO_ESTADO =
 const CLAVE = [
     // SPEC-636: RegistroColegioForm.tsx borrado (flujo OTP viejo de SPEC-320,
     // superado por SPEC-344, sin montar). Sale de CLAVE con el archivo.
-    "LoginForm.tsx", "RegistroForm.tsx",
-    "RecuperarForm.tsx", "RestablecerForm.tsx", "VerificacionForm.tsx",
+    // SPEC-826: RegistroForm.tsx y VerificacionForm.tsx borrados (huérfanos SPEC-654, residuo del
+    // rediseño de alta). Salen de CLAVE con el archivo (mismo patrón que RegistroColegioForm en SPEC-636).
+    "LoginForm.tsx",
+    "RecuperarForm.tsx", "RestablecerForm.tsx",
     "ReporteStepDetalle.tsx", "ConfirmacionReporte.tsx", "ReporteBloqueoRol.tsx",
 ];
 

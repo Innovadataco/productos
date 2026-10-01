@@ -95,11 +95,6 @@ const BARRIDO: Barrido[] = [
         ausentes: ["Busca un número, nick o usuario", "para este identificador."],
     },
     {
-        archivo: "components/modules/LandingFeatures.tsx",
-        presentes: ["Verifica si una cuenta fue reportada antes de interactuar."],
-        ausentes: ["número, nick o usuario"],
-    },
-    {
         archivo: "components/modules/ConsultaForm.tsx",
         presentes: ["Ingresa la cuenta que quieres consultar.", "La cuenta (número o usuario)"],
         ausentes: ["Número, nick o usuario", "Ingresa el número, nick o usuario"],
