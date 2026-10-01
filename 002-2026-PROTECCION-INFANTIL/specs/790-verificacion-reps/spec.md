@@ -26,8 +26,12 @@ una vez no alcanza — un verificado hoy puede estar inactivo en un año y le se
    se exigen, pero son cosas separadas (candado del falso amigo).
 4. **La revisión PERIÓDICA:** un recorredor que, con el **dataset en bloque** (sin consultas una-a-una),
    re-verifica y registra un nuevo HECHO; idempotente; marca los que envejecieron.
-5. **INACTIVO (decisión del CEO, no se re-abre):** sin citas nuevas; **las confirmadas NO se cancelan
-   solas** (castigaría a la familia por un trámite del profesional) → sube al admin como decisión.
+5. **INACTIVO → sin citas nuevas Y el caso se REUBICA** (contrato corregido, `cabe682`). Res. 3100 art. 19
+   exige CONTINUIDAD: el caso se reubica a otro **habilitado**; art. 8.5: una sesión confirmada que caería
+   DESPUÉS de la inactivación sería **no habilitada** — así que «no cancelar a secas» choca con «no prestar
+   sin habilitación». La tercera salida (más humana que cancelar o dejar): **las confirmadas se REASIGNAN**
+   a un habilitado; la familia conserva su servicio. Lo que sube al admin es **a QUIÉN se reubica**, no
+   «cancelar o no».
 
 ## 3 · Modelo (propuesta — D-1)
 
@@ -48,8 +52,11 @@ fuente: String (dataset-bloque | consulta-individual), creadoEn }`. FK `onDelete
   `estado=ACTIVO`. Un profesional ACTIVO con REPS no-al-día NO es reservable.
 - **FR-4 · Revisión periódica.** Recorredor idempotente que re-verifica contra el dataset en bloque y
   registra el HECHO; marca/idempotencia como los otros avisos (`*EnviadoEn`).
-- **FR-5 · INACTIVO no cancela citas confirmadas.** Quedar inactivo corta citas NUEVAS; las CONFIRMADAS
-  siguen; la decisión de cancelar sube al admin.
+- **FR-5 · INACTIVO → citas nuevas cortadas + el caso se REUBICA.** Las confirmadas NO se cancelan a secas
+  NI se dejan en el profesional inactivo (una sesión posterior sería no habilitada, art. 8.5): se
+  **REASIGNAN** a otro profesional **habilitado** (continuidad, art. 19). Lo que sube al admin es **a QUIÉN**
+  se reubica. La reubicación **reusa el patrón del asignador** (operadores/citas) **PERO con la dimensión de
+  HABILITACIÓN VIGENTE** (no carga/hora) — si el eje no cabe en el asignador actual, se pide, no se fuerza.
 - **FR-6 · Falso amigo imposible.** `EstadoReps` y `EstadoPerfilProfesional` son enums distintos; ningún
   camino lee uno como el otro; el gate de REPS y el de `estado` son llamadas separadas.
 
@@ -59,7 +66,7 @@ fuente: String (dataset-bloque | consulta-individual), creadoEn }`. FK `onDelete
 |---|---|---|
 | C-1 | **FR-6** · el falso amigo no vuelve | `EstadoReps` ≠ `EstadoPerfilProfesional` (enums distintos); un perfil ACTIVO + REPS INACTIVA → NO reservable; ACTIVO + REPS VIGENTE+al-día → reservable |
 | C-2 | **FR-2** · caducidad | verificación envejecida (fuera de ventana) → NO al día → sin citas; dentro de ventana → al día |
-| C-3 | **FR-5** · las confirmadas NO se cancelan | al pasar a INACTIVA, una cita CONFIRMADA sigue CONFIRMADA (probado explícito — el caso que más duele al revés) |
+| C-3 | **FR-5** · las confirmadas se REUBICAN (ni canceladas ni dejadas en el inactivo) | al pasar a INACTIVA, una cita CONFIRMADA se REASIGNA a un profesional habilitado — nunca cancelada a secas (art. 19) ni servida por el inactivo (art. 8.5). Control positivo: el destino está habilitado; control negativo: no queda en el inactivo |
 | C-4 | **FR-1** · el hecho lleva fecha | no se puede registrar una verificación sin `verificadoEn` + `estadoReps` |
 
 **NO reconciliar:** si un test existente se pone rojo, es hallazgo.
@@ -85,6 +92,15 @@ fuente: String (dataset-bloque | consulta-individual), creadoEn }`. FK `onDelete
   (incluye telemedicina). El motor compara contra lo que el profesional ofrece (`atiendeVirtual` /
   `atiendePresencial`). → Confirmar que la correspondencia de modalidad es parte del «al día» (no solo la
   vigencia).
+- **D-6 · [contrato corregido `cabe682`] REUBICACIÓN de las confirmadas.** Dos piezas que PIDO antes de
+  implementar: (a) **La dimensión del asignador.** La reubicación reusa el patrón de los asignadores
+  (operadores/citas), pero su filtro es **HABILITACIÓN VIGENTE** (REPS al día + `estado=ACTIVO`), no carga
+  ni hora. **¿El asignador actual admite ese eje, o hay que agregarlo?** Lo mido en la implementación y, si
+  falta, lo pido — no fuerzo un asignador sin la dimensión nueva (ya nos pasó dos veces). (b)
+  **Retroactividad: NO la modelo como resuelta.** «Lo previo es válido hacia adelante salvo que la causal
+  sea *nunca cumplió*» — esa distinción la decide el abogado por la causal REAL. El motor **registra la
+  causal/el hecho** y NO decide por sí mismo si lo pasado fue inválido (no un booleano «era válido»). →
+  Confirmar que el motor solo registra la causal y deja la retroactividad para el abogado.
 
 ---
 > **Impacto en arquitectura:** modelo de datos NUEVO (`VerificacionReps` + `EstadoReps`) + migración

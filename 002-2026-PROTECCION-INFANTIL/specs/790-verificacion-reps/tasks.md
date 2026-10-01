@@ -13,7 +13,9 @@
 - [ ] **T3** · Adaptador `consultarReps`/`ingestarDatasetReps` (interfaz + stub) (D-2).
 - [ ] **T4** · Compuerta en directorio + creación de cita (`estado` y `repsAlDia` separados) + candado C-1 (falso amigo).
 - [ ] **T5** · Recorredor periódico idempotente + candado C-4 (hecho con fecha).
-- [ ] **T6** · INACTIVO no cancela confirmadas + candado C-3.
+- [ ] **T6** · INACTIVO → reubicar (reasignar las confirmadas a un habilitado; el asignador con el eje de
+  HABILITACIÓN, no carga/hora) + sube al admin a QUIÉN; candado C-3. (Retroactividad: solo registrar la
+  causal, no modelarla como resuelta — D-6.)
 - [ ] **T7** · Gate: `tsc` · `lint` · candados · `arch:check` · `specs-discipline`.
 
 ## Fuera de alcance
