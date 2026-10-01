@@ -13,52 +13,32 @@
  *    padre va OBLIGATORIAMENTE atado a una ficha activa de «A quién protego»
  *    (se crea por API y se elige en el wizard).
  */
-import { test, expect, type APIRequestContext } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/prisma";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
+import { crearPadreOnboarded, limpiarPadreOnboarded, type PadreOnboarded } from "./fixtures/padre-onboarded";
 
-async function registrarPadre(
-    request: APIRequestContext,
-    email: string,
-    password: string,
-    nombre: string,
-): Promise<void> {
-    const solicitar = await request.post("/api/auth/verificar/solicitar", { data: { email } });
-    expect(solicitar.status()).toBe(202);
-    const { devCode } = await solicitar.json();
-
-    const validar = await request.post("/api/auth/verificar/validar", {
-        data: { email, codigo: devCode },
-    });
-    expect(validar.status()).toBe(200);
-    const { token } = await validar.json();
-
-    const completar = await request.post("/api/auth/verificar/completar", {
-        data: { token, password, nombre },
-    });
-    expect(completar.status()).toBe(201);
-
-    const login = await request.post("/api/auth/login", { data: { email, password } });
-    expect(login.status()).toBe(200);
-}
+const padresCreados: PadreOnboarded[] = [];
 
 test.describe("SPEC-295 · padre autenticado puede reportar (I-146)", () => {
+    test.afterAll(async () => {
+        for (const p of padresCreados) await limpiarPadreOnboarded(p);
+        padresCreados.length = 0;
+    });
+
     test("PARENT logueado → /dashboard/padre/reportar → envía → BD origenRol=PARENT", async ({
         page,
         request,
     }) => {
         const email = `padre-spec295-${Date.now()}@example.com`;
-        const password = "TestPass123";
-        await registrarPadre(request, email, password, "Padre SPEC-295");
-
-        // Aceptar consentimiento vía API para evitar el guardián.
-        await request.post("/api/consentimiento/aceptar").catch(() => undefined);
-
-        // SPEC-591: sin ficha activa el wizard no deja avanzar (paso «¿A quién
-        // va dirigido?» vacío). Se crea la ficha por API como haría el padre.
-        const ficha = await request.post("/api/padre/hijos", {
-            data: { nombre: "Valeria", apellidos: "Pérez" },
-        });
-        expect(ficha.status()).toBe(201);
+        // SPEC-809: el padre se crea por el flujo de ENLACE (crearPadreOnboarded), NO por el código con
+        // devCode (que solo llega si el correo FALLA al salir). crearPadreOnboarded hace registro por
+        // enlace + consentimiento + datos + hijo + freemium: el wizard de reporte deja avanzar y el paso
+        // «¿A quién va dirigido?» ya tiene la ficha del onboarding («Menor E2E»).
+        // Se usa `page.request` (NO el fixture `request`): comparte las cookies del navegador, así la
+        // `page` queda AUTENTICADA y /dashboard/padre/reportar no rebota a login.
+        const padre = await crearPadreOnboarded({ request: page.request, email, password: "TestPass123" });
+        padresCreados.push(padre);
 
         // Ir a la página real del padre.
         const respuesta = await page.goto("/dashboard/padre/reportar", { waitUntil: "commit" });
@@ -67,8 +47,8 @@ test.describe("SPEC-295 · padre autenticado puede reportar (I-146)", () => {
         // Formulario real (no PlaceholderPadre).
         await expect(page.getByText("Reportar una situación")).toBeVisible();
 
-        // Paso 1 (SPEC-591): elegir la ficha del menor protegido.
-        await page.getByRole("option", { name: /Valeria/ }).click();
+        // Paso 1 (SPEC-591): elegir la ficha del menor protegido (la que creó crearPadreOnboarded).
+        await page.getByRole("option", { name: /Menor E2E/ }).click();
         await page.getByRole("button", { name: /Siguiente/i }).click();
 
         // Paso 2: identificador único + plataforma (WhatsApp por default).
@@ -85,7 +65,9 @@ test.describe("SPEC-295 · padre autenticado puede reportar (I-146)", () => {
         await page.getByLabel("País").selectOption(colombia.id);
 
         await page.getByLabel("Ciudad").fill("Bogotá");
-        const opcionBogota = page.getByRole("option", { name: /Bogotá/ });
+        // Se acota al listbox «Resultados de ciudades»: sin acotar, un `option` suelto «Bogotá…» también
+        // casa con la opción «Bogotá D.C.» del <select> de Departamento (strict-mode violation).
+        const opcionBogota = page.getByRole("listbox", { name: "Resultados de ciudades" }).getByRole("option", { name: /Bogotá/i });
         await expect(opcionBogota).toBeVisible();
         await opcionBogota.click();
 
@@ -106,13 +88,16 @@ test.describe("SPEC-295 · padre autenticado puede reportar (I-146)", () => {
         await page.getByRole("checkbox").check();
         await page.getByRole("button", { name: /Enviar reporte/i }).click();
 
-        // Redirect a /dashboard/padre/mis-reportes (SPEC-295 FR-002).
-        await page.waitForURL(/\/dashboard\/padre\/mis-reportes/, { timeout: 10_000 });
-        expect(page.url()).toContain("/dashboard/padre/mis-reportes");
+        // Tras enviar, el padre aterriza en /mis-reportes (antes /dashboard/padre/mis-reportes; la ruta
+        // se acortó). Se afirma el pathname exacto.
+        await page.waitForURL(/\/mis-reportes/, { timeout: 10_000 });
+        expect(new URL(page.url()).pathname).toBe("/mis-reportes");
 
         // Verificar en BD: usuarioId != null, origenRol = 'PARENT' y atado a la ficha.
+        // La escritura NORMALIZA el identificador (lowercase); se consulta por la forma normalizada, no
+        // por el valor crudo tecleado (si no, findFirst no lo encuentra).
         const reporte = await prisma.reporte.findFirst({
-            where: { identificador },
+            where: { identificador: normalizarIdentificador(identificador) },
             orderBy: { creadoEn: "desc" },
         });
         expect(reporte, "reporte debe existir en BD").not.toBeNull();
