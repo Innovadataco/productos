@@ -19,6 +19,11 @@ const mocks = vi.hoisted(() => ({
     // no de la derivación (cada uno tiene su propio test de integración).
     derivarPasoPendiente: vi.fn(),
     derivarPasoPendienteColegio: vi.fn(),
+    // SPEC-751: el eje de audiencia también se mockea — este test es del emisor, no del cálculo
+    // de audiencia (que tiene su propio candado con BD). Sin mock, `gateAudienciaActivo` pegaría
+    // a Prisma y el carril `test-unit` (SIN BD en CI) tronaría con PrismaClientInitializationError.
+    gateAudienciaActivo: vi.fn(),
+    hayAudienciaPendiente: vi.fn(),
 }));
 
 vi.mock("@/lib/dal/repositories/pagos-repository", () => ({
@@ -36,6 +41,11 @@ vi.mock("@/lib/dal/repositories/usuario", () => ({
 
 vi.mock("@/lib/consentimiento/guard", () => ({
     requiereConsentimientoActual: mocks.requiereConsentimiento,
+}));
+
+vi.mock("@/lib/dal/services/audiencia-menor", () => ({
+    gateAudienciaActivo: mocks.gateAudienciaActivo,
+    hayAudienciaPendiente: mocks.hayAudienciaPendiente,
 }));
 
 vi.mock("@/lib/colegio/vigencia", () => ({
@@ -84,6 +94,10 @@ function setup({
     });
     mocks.derivarPasoPendiente.mockResolvedValue(null);
     mocks.derivarPasoPendienteColegio.mockResolvedValue(null);
+    // SPEC-751: gate de audiencia APAGADO por defecto (igual que producción). Con él en false, el
+    // emisor ni consulta `hayAudienciaPendiente`; aun así se mockea en false por si se enciende.
+    mocks.gateAudienciaActivo.mockResolvedValue(false);
+    mocks.hayAudienciaPendiente.mockResolvedValue(false);
 }
 
 describe("buildSesionEstadoValue — derivación de vigencia por rol (SPEC-331)", () => {
