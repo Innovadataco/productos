@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger";
 import { anonimizarTexto } from "./anonimizador";
-import { AnonimizacionTransporteError } from "./anonimizacion-errores";
+import { AnonimizacionTransporteError, AnonimizacionRechazadaError } from "./anonimizacion-errores";
+import { CorreccionAdminRepository } from "@/lib/dal/repositories/correccion-admin";
 import { generarEmbedding } from "./embedder";
 import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
 import { publishDatasetEmbeddingBackfill } from "@/lib/queue";
@@ -51,15 +52,27 @@ export async function derivarDatasetDeCorreccion(p: DerivarDatasetParams): Promi
             textoDataset = resultado.textoAnonimizado;
         }
     } catch (err) {
-        // SPEC-807: DISTINGUIR los dos fallos (no fundirlos) — de eso depende si tiene sentido reintentar.
+        // SPEC-807/812: DISTINGUIR los fallos — de eso depende si tiene sentido reintentar Y si se marca.
         if (err instanceof AnonimizacionTransporteError) {
-            // TRANSPORTE: no se anonimizó nada (Ollama caído/timeout). No hay copia que negar; el trabajo
-            // no ocurrió y es REINTENTABLE. SPEC-812 pondrá la marca/reintento; acá solo queda distinguible.
+            // TRANSPORTE (Ollama caído/timeout): no se anonimizó nada. El trabajo NO ocurrió y es
+            // REINTENTABLE → queda SIN marca (estado 1). La consulta de pendientes lo encontrará (con
+            // holgura por edad, para no contar el que está EN VUELO).
             logger.error("[CORRECCION] Anonimización del dataset NO se ejecutó (transporte Ollama); pendiente, reintentable:", err);
-        } else {
-            // RECHAZO deliberado (o error inesperado): la anonimización se negó (resultado inusable). La
-            // negativa ES el resultado — no se guarda copia y no se reintenta. Nunca un relato en claro.
+        } else if (err instanceof AnonimizacionRechazadaError) {
+            // RECHAZO deliberado (resultado inusable): la negativa ES el resultado — no se guarda copia y
+            // NO se reintenta. SPEC-812: marca el ESTADO 2 para que la consulta de pendientes NO lo cuente
+            // como trabajo por hacer. NO es una falla (ver schema). Best-effort: si la marca falla, la
+            // corrección se verá como pendiente (falsa alarma acotada), nunca una fuga de privacidad.
             logger.error("[CORRECCION] Anonimización del dataset RECHAZADA (resultado inusable); NO se guarda la copia:", err);
+            try {
+                await new CorreccionAdminRepository().marcarDatasetOmitido(p.correccionId);
+            } catch (marcaErr) {
+                logger.error("[CORRECCION] No se pudo marcar datasetOmitidoEn (quedará como pendiente):", marcaErr);
+            }
+        } else {
+            // INESPERADO (ni transporte ni rechazo tipado): NO se marca. Tratarlo como reintentable es
+            // conservador; marcarlo como "omitido a propósito" MENTIRÍA sobre si hay que reintentar.
+            logger.error("[CORRECCION] Anonimización del dataset: error inesperado; sin marca (pendiente, conservador):", err);
         }
         textoDataset = null;
     }
