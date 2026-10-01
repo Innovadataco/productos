@@ -2980,6 +2980,17 @@ model CorreccionAdmin {
   motivo             String?           @db.Text
   confirmada         Boolean           @default(false)
   creadoEn           DateTime          @default(now())
+  // SPEC-812 (pieza 1) · marca del ESTADO 2: la derivación del dataset CORRIÓ y se NEGÓ a guardar copia
+  // A PROPÓSITO (AnonimizacionRechazadaError: el texto anonimizado quedó inusable; 807 jamás guarda un
+  // relato en claro). Se setea SOLO en ese rechazo TIPADO — NUNCA en un fallo de TRANSPORTE (Ollama
+  // caído/timeout, reintentable, queda SIN marca) ni en un error inesperado (conservador: sin marca).
+  // NO ES UNA FALLA: es la conducta de privacidad correcta. NO la "arregles" reintentando — reintentar
+  // re-corre la anonimización (que vuelve a rechazar) y erosiona el candado de 807. Los TRES estados:
+  //   1 (pendiente REAL, reintentable) = sin fila de dataset Y datasetOmitidoEn IS NULL (y más vieja que
+  //     la holgura por edad, porque el trabajo recién creado está EN VUELO) · consulta: correcciones-sin-dataset.ts
+  //   2 (omitido a propósito, terminal)  = datasetOmitidoEn presente
+  //   3 (derivado)                        = datasetRegistros no vacía
+  datasetOmitidoEn   DateTime?         @db.Timestamptz(6)
 
   clasificacion    ClasificacionIA        @relation(fields: [clasificacionId], references: [id], onDelete: Cascade)
   admin            Usuario                @relation(fields: [adminId], references: [id])

@@ -32,6 +32,19 @@ export class CorreccionAdminRepository {
     }
 
     /**
+     * SPEC-812 (pieza 1): marca el ESTADO 2 — la derivación del dataset CORRIÓ y se negó a guardar copia
+     * A PROPÓSITO (AnonimizacionRechazadaError; 807 nunca guarda un relato en claro). Se llama SOLO desde
+     * ese rechazo tipado, nunca en un fallo de transporte (reintentable, sin marca). NO es una falla:
+     * ver el comentario de `datasetOmitidoEn` en el schema. Idempotente.
+     */
+    marcarDatasetOmitido(correccionId: string) {
+        return this.db.correccionAdmin.update({
+            where: { id: correccionId },
+            data: { datasetOmitidoEn: new Date() },
+        });
+    }
+
+    /**
      * SPEC-557: borra la fila de confirmación/corrección de una clasificación.
      * Al deshacer una CONFIRMACIÓN se elimina esta fila para LIBERAR el slot
      * `@unique(clasificacionId)` — así el deshacer NO gasta la «única corrección»:
