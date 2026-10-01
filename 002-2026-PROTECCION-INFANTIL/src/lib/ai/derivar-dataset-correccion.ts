@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import { anonimizarTexto } from "./anonimizador";
+import { AnonimizacionTransporteError } from "./anonimizacion-errores";
 import { generarEmbedding } from "./embedder";
 import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
 import { publishDatasetEmbeddingBackfill } from "@/lib/queue";
@@ -50,7 +51,16 @@ export async function derivarDatasetDeCorreccion(p: DerivarDatasetParams): Promi
             textoDataset = resultado.textoAnonimizado;
         }
     } catch (err) {
-        logger.error("[CORRECCION] Falló la anonimización del dataset; NO se guarda la copia (nunca un relato en claro). Reintento futuro desde el sobre del reporte:", err);
+        // SPEC-807: DISTINGUIR los dos fallos (no fundirlos) — de eso depende si tiene sentido reintentar.
+        if (err instanceof AnonimizacionTransporteError) {
+            // TRANSPORTE: no se anonimizó nada (Ollama caído/timeout). No hay copia que negar; el trabajo
+            // no ocurrió y es REINTENTABLE. SPEC-812 pondrá la marca/reintento; acá solo queda distinguible.
+            logger.error("[CORRECCION] Anonimización del dataset NO se ejecutó (transporte Ollama); pendiente, reintentable:", err);
+        } else {
+            // RECHAZO deliberado (o error inesperado): la anonimización se negó (resultado inusable). La
+            // negativa ES el resultado — no se guarda copia y no se reintenta. Nunca un relato en claro.
+            logger.error("[CORRECCION] Anonimización del dataset RECHAZADA (resultado inusable); NO se guarda la copia:", err);
+        }
         textoDataset = null;
     }
 

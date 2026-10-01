@@ -1,5 +1,6 @@
 import { llamarOllamaStructured, type OllamaMetrics } from "./ollama-client";
 import { anonimizacionResponseSchema, type AnonimizacionResponse } from "./schemas";
+import { AnonimizacionRechazadaError, AnonimizacionTransporteError } from "./anonimizacion-errores";
 
 export interface AnonimizacionResult {
     textoAnonimizado: string;
@@ -88,12 +89,23 @@ export async function anonimizarTexto(
 ): Promise<AnonimizacionResult> {
     const preAnonimizado = reemplazarFragmentosObligatorios(texto, piiDetectada);
 
-    const { data, metrics } = await llamarOllamaStructured<AnonimizacionResponse>(
-        modelo,
-        `Texto del reporte: "${preAnonimizado.texto}"\n\nFragmentos de PII ya detectados que deben quedar reemplazados: ${JSON.stringify(preAnonimizado.reemplazados)}`,
-        anonimizacionResponseSchema,
-        SYSTEM_PROMPT
-    );
+    let data: AnonimizacionResponse;
+    let metrics: OllamaMetrics;
+    try {
+        ({ data, metrics } = await llamarOllamaStructured<AnonimizacionResponse>(
+            modelo,
+            `Texto del reporte: "${preAnonimizado.texto}"\n\nFragmentos de PII ya detectados que deben quedar reemplazados: ${JSON.stringify(preAnonimizado.reemplazados)}`,
+            anonimizacionResponseSchema,
+            SYSTEM_PROMPT
+        ));
+    } catch (err) {
+        // SPEC-807 · TRANSPORTE: Ollama caído/timeout/HTTP/respuesta inválida. No se anonimizó nada; el
+        // trabajo no ocurrió (reintentable). Distinto del RECHAZO deliberado de más abajo.
+        throw new AnonimizacionTransporteError(
+            "No se pudo anonimizar: Ollama inalcanzable o sin respuesta válida",
+            err,
+        );
+    }
 
     let textoAnonimizado = String(data.texto_anonimizado || preAnonimizado.texto).trim();
     const piiLLM = Array.isArray(data.pii_detectada) ? data.pii_detectada.map(String) : [];
@@ -103,7 +115,9 @@ export async function anonimizarTexto(
     textoAnonimizado = sanity.texto;
 
     if (textoAnonimizado.length < 20) {
-        throw new Error("Texto anonimizado demasiado corto");
+        // SPEC-807 · RECHAZO deliberado: la anonimización corrió y su resultado es inusable. La negativa
+        // ES el resultado — no hay copia que guardar y no se reintenta (con modelo determinista, igual).
+        throw new AnonimizacionRechazadaError("Texto anonimizado demasiado corto");
     }
 
     const piiFinal = Array.from(new Set([...preAnonimizado.reemplazados, ...piiLLM]));
