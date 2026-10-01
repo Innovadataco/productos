@@ -564,8 +564,17 @@ export class PerfilProfesionalRepository {
      * Por eso lee también las banderas de oferta del perfil, no solo la última fila REPS. La pantalla de carga
      * del admin NO usa esto: usa `clasificarAvisoReps` (vigencia-only), porque el hueco de modalidad lo arregla
      * el profesional, no el admin.
+     *
+     * SPEC-836 (expansión del CEO): REVISION_ADMIN ahora TAMBIÉN tiene banner al profesional («re-verificando,
+     * nada que hacer»). Pero REVISION_ADMIN funde estados 5/7/8 y esa copy —«su inscripción sigue al día»— solo
+     * es cierta en el 7 (nuestro re-chequeo envejeció, autoridad vigente). Para el 5 (NO_ENCONTRADA) MENTIRÍA.
+     * Por eso devuelve `esReVerificacion` (= zona RE_VERIFICAR, el estado 7): el panel solo muestra ese banner
+     * cuando es cierto. El 5/8 quedan sin banner al profesional (como hoy, admin-only). Ver nota al CEO.
      */
-    async clasificarReps(profesionalId: string, ahora: Date = new Date()): Promise<AvisoRepsConModalidad> {
+    async clasificarReps(
+        profesionalId: string,
+        ahora: Date = new Date(),
+    ): Promise<AvisoRepsConModalidad & { esReVerificacion: boolean }> {
         const config = await this.configReps();
         const [fila, perfil] = await Promise.all([
             this.db.verificacionReps.findFirst({
@@ -578,12 +587,17 @@ export class PerfilProfesionalRepository {
                 select: { atiendeVirtual: true, atiendePresencial: true },
             }),
         ]);
-        return clasificarAvisoRepsConModalidad(
+        const aviso = clasificarAvisoRepsConModalidad(
             fila,
             { virtual: perfil?.atiendeVirtual ?? false, presencial: perfil?.atiendePresencial ?? false },
             config,
             ahora,
         );
+        // El banner «re-verificando» (estado 7) solo es honesto en la zona RE_VERIFICAR: la autoridad sigue
+        // vigente y es NUESTRO chequeo el que envejeció. El 5 (NO_ENCONTRADA) también es REVISION_ADMIN pero
+        // su inscripción NO está «al día» → no mostrarle esa copy.
+        const esReVerificacion = zonaAdminReps(fila, config, ahora) === "RE_VERIFICAR";
+        return { ...aviso, esReVerificacion };
     }
 
     /**

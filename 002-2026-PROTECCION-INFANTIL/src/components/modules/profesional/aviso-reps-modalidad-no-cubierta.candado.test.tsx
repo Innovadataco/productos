@@ -12,7 +12,7 @@
  *  · tiene SALIDA (enlace a su perfil), nunca un callejón.
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, cleanup } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -37,10 +37,20 @@ describe("SPEC-836 pieza 2 · banner REPS hueco de modalidad (profesional)", () 
         expect(t).toContain("presencial");
     });
 
-    it("tiene SALIDA: enlace al perfil (cómo resolverlo), no es un callejón", () => {
+    it("tiene las DOS SALIDAS en prosa (actualice su inscripción / deje de ofrecer), nunca sin salida", () => {
         render(<AvisoRepsModalidadNoCubierta modalidades={["VIRTUAL"]} />);
-        const enlace = screen.getByRole("link");
-        expect(enlace.getAttribute("href")).toBe("/dashboard/profesional/mi-perfil");
+        const t = (document.body.textContent ?? "").toLowerCase();
+        expect(t).toContain("actualice su inscripción");
+        expect(t).toContain("deje de ofrecer");
+    });
+
+    it("no culpa: sujeto «su inscripción», nunca inhabilitado/sancionado/suspendido/perdió el acceso", () => {
+        render(<AvisoRepsModalidadNoCubierta modalidades={["VIRTUAL"]} />);
+        const t = (document.body.textContent ?? "").toLowerCase();
+        expect(t).toContain("su inscripción");
+        for (const prohibida of ["inhabilitad", "sancionad", "suspendid", "perdió el acceso", "perdió su acceso"]) {
+            expect(t, `no debe decir «${prohibida}»`).not.toContain(prohibida);
+        }
     });
 
     it("GATE del panel: el banner se muestra con `avisoReps === \"MODALIDAD_NO_CUBIERTA\"`", () => {

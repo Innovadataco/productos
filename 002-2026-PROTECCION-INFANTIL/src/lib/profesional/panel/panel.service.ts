@@ -135,6 +135,13 @@ export interface PanelProfesionalDto {
     avisoReps: ClasificacionAvisoReps;
     /** SPEC-836 pieza 2: modalidades OFRECIDAS que el REPS no cubre. No vacío SOLO con `MODALIDAD_NO_CUBIERTA`. */
     modalidadesRepsNoCubiertas: readonly ModalidadOferta[];
+    /**
+     * SPEC-836 pieza 2: true SOLO en el estado 7 (nuestro re-chequeo envejeció, autoridad vigente = zona
+     * RE_VERIFICAR). El banner «re-verificando, su inscripción sigue al día» se muestra con
+     * `avisoReps === "REVISION_ADMIN" && esReVerificacionReps` — NO con REVISION_ADMIN a secas, porque ese
+     * fusiona el 5 (NO_ENCONTRADA), donde «sigue al día» sería falso.
+     */
+    esReVerificacionReps: boolean;
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -199,8 +206,11 @@ export async function panelDelProfesional(
     // SPEC-813: clasificación REPS para el banner «fuera de la oferta» (solo CADUCADO lo dispara).
     // SPEC-836 pieza 2: clasificarReps es ahora modality-aware; devuelve la clasificación + las modalidades
     // ofrecidas que el REPS no cubre (para el banner del hueco de modalidad).
-    const { clasificacion: avisoReps, modalidadesNoCubiertas: modalidadesRepsNoCubiertas } =
-        await new PerfilProfesionalRepository().clasificarReps(perfil.id, ahora);
+    const {
+        clasificacion: avisoReps,
+        modalidadesNoCubiertas: modalidadesRepsNoCubiertas,
+        esReVerificacion: esReVerificacionReps,
+    } = await new PerfilProfesionalRepository().clasificarReps(perfil.id, ahora);
 
     return {
         nombreVisible: perfil.nombreVisible,
@@ -255,6 +265,7 @@ export async function panelDelProfesional(
         sesionesPorRegistrar,
         avisoReps,
         modalidadesRepsNoCubiertas,
+        esReVerificacionReps,
     };
 }
 

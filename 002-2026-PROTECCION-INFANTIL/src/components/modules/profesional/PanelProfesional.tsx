@@ -36,9 +36,13 @@ export function PanelProfesional({ data }: { data: PanelProfesionalDto }) {
             </header>
 
             {/* SPEC-813: banner «fuera de la oferta» cuando el REPS CADUCÓ (estados 4/6). Conserva el acceso
-                (entra y lo ve); ámbar, cero rubí; no promete reasignación ni notificación. Los estados de
-                admin (5/7/8) NO llegan acá — van a `verificacion-profesionales`. */}
+                (entra y lo ve); ámbar, cero rubí; no promete reasignación ni notificación. */}
             {data.avisoReps === "CADUCADO" && <AvisoRepsCaducado />}
+
+            {/* SPEC-836 pieza 2: banner de RE-VERIFICACIÓN NUESTRA (estado 7). REVISION_ADMIN funde 5/7/8; la
+                copy «su inscripción sigue al día» SOLO es cierta en el 7 (zona RE_VERIFICAR) → se gatea con
+                `esReVerificacionReps`. El 5 (NO_ENCONTRADA) y el 8 quedan admin-only (como antes). */}
+            {data.avisoReps === "REVISION_ADMIN" && data.esReVerificacionReps && <AvisoRepsRevisionAdmin />}
 
             {/* SPEC-836 pieza 2: banner del HUECO DE MODALIDAD — el REPS está vigente pero no cubre una
                 modalidad que el profesional OFRECE. 813 decía AL_DIA mientras 825/834/814 ya actuaban sobre
@@ -180,47 +184,66 @@ export function AvisoRepsCaducado() {
 
 /**
  * SPEC-836 pieza 2 · banner del HUECO DE MODALIDAD. El REPS está VIGENTE pero no cubre una (o ambas) de las
- * modalidades que el profesional OFRECE; 813 le decía AL_DIA mientras 825/834/814 ya actuaban. A diferencia
- * del CADUCADO (vigencia) y de la alarma de admin (estado 7, nuestra), aquí la acción es SUYA: actualizar su
- * inscripción para cubrir esa modalidad, o dejar de ofrecerla. Nombra la(s) modalidad(es) para que no adivine.
+ * modalidades que el profesional OFRECE; 813 le decía AL_DIA mientras 825/834/814 ya actuaban. Acción SUYA
+ * (actualizar la cobertura o dejar de ofrecer esa modalidad) → por eso va a SU panel, no al admin (que no
+ * puede arreglarla). Nombra la(s) modalidad(es) —el hueco doble nombra las dos— para que no arregle la mitad.
  *
- * ⚠️ COPY PROVISIONAL — PENDIENTE de forma de Diseño (FORMA-SPEC836 pieza 2, pedida por el CEO; soporta
- * singular y plural). No es copy final; cuando Diseño la emita se re-transcribe. El candado afirma el GATE del
- * banner y la aparición de la(s) modalidad(es), no la copy verbatim.
+ * Copy VERBATIM de Diseño (FORMA-SPEC836, v1.0, commit c02e7e4 en Gestión), voz usted. Dos cadenas: singular
+ * (una modalidad) y plural (las dos nombradas), NO un «(s)» que partiría el mensaje. El token {modalidad} se
+ * interpola como «virtuales»/«presenciales» (concuerda con «citas»). Sin enlace: la forma describe las dos
+ * salidas en prosa y no especifica uno (a diferencia de CADUCADO). No se reescribe; si Diseño reemite, se
+ * re-transcribe.
  */
 export function AvisoRepsModalidadNoCubierta({ modalidades }: { modalidades: readonly ModalidadOferta[] }) {
-    const palabra = (m: ModalidadOferta) => (m === "VIRTUAL" ? "virtual" : "presencial");
-    const lista =
-        modalidades.length === 2
-            ? `${palabra(modalidades[0]!)} y ${palabra(modalidades[1]!)}`
-            : palabra(modalidades[0] ?? "VIRTUAL");
+    const palabra = (m: ModalidadOferta) => (m === "VIRTUAL" ? "virtuales" : "presenciales");
     const plural = modalidades.length > 1;
+    const lista = plural
+        ? `${palabra(modalidades[0]!)} y ${palabra(modalidades[1]!)}`
+        : palabra(modalidades[0] ?? "VIRTUAL");
     return (
         <section
             aria-label="Cobertura de modalidad en su inscripción en el registro de salud"
             className="rounded-2xl border border-ambar/30 bg-ambar/10 p-5 text-estado-ambar"
         >
             <h2 className="text-base font-semibold">
-                Su inscripción no cubre {plural ? "las modalidades" : "la modalidad"} {lista} que usted ofrece.
+                Ofrece citas {lista}, pero su inscripción en el registro no cubre{" "}
+                {plural ? "esas modalidades" : "esa modalidad"} — las familias no pueden{" "}
+                {plural ? "reservarlas" : "reservarla"}.
             </h2>
-            <div className="mt-2 space-y-2 text-sm">
-                <p>
-                    Su inscripción en el registro de salud está vigente, pero no cubre{" "}
-                    {plural ? "esas modalidades" : "esa modalidad"}. Mientras no{" "}
-                    {plural ? "las cubra" : "la cubra"}, no ofrecemos esas franjas a las familias ni recibe citas
-                    en {plural ? "esas modalidades" : "esa modalidad"}.
-                </p>
-                <p>
-                    Puede actualizar su inscripción para cubrir {plural ? "esas modalidades" : "esa modalidad"}, o
-                    dejar de ofrecer{plural ? "las" : "la"} en su perfil.
-                </p>
-            </div>
-            <Link
-                href="/dashboard/profesional/mi-perfil"
-                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-2xl border border-ambar/40 px-5 py-2.5 text-sm font-semibold transition hover:bg-ambar/10"
-            >
-                Ver qué significa y cómo resolverlo
-            </Link>
+            <p className="mt-2 text-sm">
+                Actualice su inscripción para que cubra {lista}, o deje de ofrecer{" "}
+                {plural ? "esas modalidades" : "esa modalidad"}.
+            </p>
+        </section>
+    );
+}
+
+/**
+ * SPEC-836 pieza 2 · banner de RE-VERIFICACIÓN NUESTRA (estado 7: nuestro re-chequeo envejeció, la autoridad
+ * sigue dando la inscripción por vigente). v4.1 enrutaba este estado SOLO al admin («sería un callejón»); el
+ * CEO revirtió esa decisión (FORMA-SPEC790 v4.2/v4.3) porque 825 (oculta franjas) y 814 (cola) volvieron el
+ * silencio PORTANTE: el profesional ve que nadie le reserva y se inventa la explicación. A diferencia de
+ * CADUCADO (suya: renueve) y del hueco de modalidad (suya: actualice/deje), aquí NO hay nada que él haga.
+ *
+ * Copy VERBATIM de Diseño (FORMA-SPEC790 v4.3, commit 45e1623, voz usted). DOS oraciones, ambas obligatorias:
+ * la 1.ª tranquiliza (es nuestro, nada que hacer); la 2.ª explica el SÍNTOMA que él observa (su oferta en
+ * pausa) — sin ella el banner tranquiliza pero no conecta con lo que ve. Sin plazo (ata al evento, no al
+ * reloj: la re-verificación es carga manual). Sin enlace: no hay acción suya.
+ */
+export function AvisoRepsRevisionAdmin() {
+    return (
+        <section
+            aria-label="Estado de la verificación de su inscripción en el registro de salud"
+            className="rounded-2xl border border-ambar/30 bg-ambar/10 p-5 text-estado-ambar"
+        >
+            <h2 className="text-base font-semibold">
+                Estamos re-verificando su inscripción — es un chequeo nuestro y su inscripción sigue al día, así
+                que no hay nada que usted deba hacer.
+            </h2>
+            <p className="mt-2 text-sm">
+                Mientras lo completamos, su oferta a las familias queda en pausa; vuelve por sí sola cuando
+                terminemos.
+            </p>
         </section>
     );
 }
