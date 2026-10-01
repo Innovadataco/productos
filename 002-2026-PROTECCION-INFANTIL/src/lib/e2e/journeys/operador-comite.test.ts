@@ -6,6 +6,11 @@
  * SPEC-133 (fase 4): anonimización (PATCH del admin + validación del operador
  * asignado, los DOS caminos reales de salida de REQUIERE_ANONIMIZACION) →
  * apelaciones del comité (bandeja → tomar → resolver ACEPTADA con ocultamiento).
+ * SPEC-831 (cobertura NEGATIVA): los it del operador y del comité, además del happy-path
+ * (reusado como control positivo), afirman que la compuerta CIERRA para quien no es dueño —
+ * distinguiendo el 403 por-CASO (tiene el módulo, el caso no es suyo) del 403 por-PERMISO (no
+ * tiene el módulo), por su MENSAJE y sobre el MISMO sujeto del positivo. Si los dos mensajes
+ * fueran iguales, es hallazgo de producto, no del test.
  */
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
@@ -102,10 +107,13 @@ describe(`SPEC-114 · operador y comité (ciclo ${CICLO})`, { timeout: 30_000 },
         rmSync(storageDirApelaciones, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     });
 
-    it("el operador ve su bandeja y confirma un caso (con §9)", async () => {
+    it("el operador confirma SU caso (§9) y la compuerta CIERRA para el caso/módulo ajeno (SPEC-831)", async () => {
         const admin = await entrarComo("ADMIN", `e2e-c${CICLO}-admin-oc@test.local`, "ClaveE2E-2026");
         const operador = await crearUsuarioInterno(admin.token, `e2e-c${CICLO}-op1@test.local`, "Operador E2E", "OPERADOR");
         const caso = await crearCasoRevision(operador.id, "conf");
+        // SPEC-831: un SEGUNDO operador con su propio caso — insumo del 403 por-CASO de más abajo.
+        const otroOperador = await crearUsuarioInterno(admin.token, `e2e-c${CICLO}-op1-otro@test.local`, "Otro Operador E2E", "OPERADOR");
+        const casoAjeno = await crearCasoRevision(otroOperador.id, "ajeno");
         const sesion = await sesionDe(operador, "OPERADOR");
 
         // Bandeja del operador: el caso asignado aparece
@@ -133,10 +141,36 @@ describe(`SPEC-114 · operador y comité (ciclo ${CICLO})`, { timeout: 30_000 },
         expect(correccion?.confirmada, "§9: la confirmación debe persistirse").toBe(true);
         await verificarAuditLog("CASO_CONFIRMADO", caso.id);
 
+        // ── SPEC-831 · la compuerta CIERRA para quien no es el dueño ──────────────────────
+        // Anclado al positivo de ARRIBA: es el MISMO operador que acaba de confirmar su caso
+        // (si alguien le quitara el módulo al rol, ESE 200 se cae y el rojo aparece acá). Hay
+        // DOS 403 que se ven iguales y significan cosas distintas, y el producto debe distinguirlos:
+        //   · por-CASO    → tiene el módulo y el rol, pero el caso no es suyo (puedeGestionarReporte).
+        //   · por-PERMISO → ni siquiera tiene el módulo del comité (assertModulo).
+        // Afirmamos el MENSAJE (método de SPEC-574), sostenido en el positivo: como el positivo ya
+        // probó que módulo y rol pasan, el 403 del caso ajeno SOLO puede ser el por-CASO.
+        const resCasoAjeno = await confirmarPOST(
+            new Request(`http://localhost:5005/api/admin/reportes-revision/${casoAjeno.id}/confirmar`, { method: "POST" }),
+            { params: Promise.resolve({ id: casoAjeno.id }) }
+        );
+        expect(resCasoAjeno.status, "SPEC-831: el operador sobre un caso AJENO → 403").toBe(403);
+        const msgCaso = ((await resCasoAjeno.json()) as { error?: { message?: string } })?.error?.message ?? "";
+        expect(msgCaso, `SPEC-831: el 403 por-CASO afirma el caso. msg="${msgCaso}"`).toContain("gestionar este caso");
+
+        const { GET: pendientesComiteGET } = await import("@/app/api/admin/comite/pendientes/route");
+        const resSinModulo = await pendientesComiteGET(new Request("http://localhost:5005/api/admin/comite/pendientes"));
+        expect(resSinModulo.status, "SPEC-831: el operador pega un módulo del COMITÉ que no tiene → 403").toBe(403);
+        const msgPermiso = ((await resSinModulo.json()) as { error?: { message?: string } })?.error?.message ?? "";
+        expect(msgPermiso, `SPEC-831: el 403 por-PERMISO afirma el módulo. msg="${msgPermiso}"`).toContain("Sin acceso al módulo");
+
+        // EL CORAZÓN DE 831: los dos 403 NO pueden verse iguales. Si lo son, es hallazgo de
+        // PRODUCTO (no del test): el operador no distingue «no te toca» de «no podés».
+        expect(msgCaso, "SPEC-831: por-CASO y por-PERMISO deben ser mensajes DISTINTOS").not.toBe(msgPermiso);
+
         await salirYExigirSesionMuerta(sesion, HOME_POR_ROL.OPERADOR);
     });
 
-    it("el operador escala y el comité asigna y resuelve (con §9)", async () => {
+    it("el comité resuelve SU solicitud (§9) y la compuerta CIERRA para la solicitud/módulo ajeno (SPEC-831)", async () => {
         const admin = await entrarComo("ADMIN", `e2e-c${CICLO}-admin-oc2@test.local`, "ClaveE2E-2026");
         const operador = await crearUsuarioInterno(admin.token, `e2e-c${CICLO}-op2@test.local`, "Operador E2E", "OPERADOR");
         const comite = await crearUsuarioInterno(admin.token, `e2e-c${CICLO}-comite@test.local`, "Comité E2E", "COMITE_VALIDACION");
@@ -198,6 +232,67 @@ describe(`SPEC-114 · operador y comité (ciclo ${CICLO})`, { timeout: 30_000 },
         expect(solicitud!.estado, "§9: la solicitud queda resuelta").toBe("RESUELTA");
         const transicion = await prisma.transicionReporte.findFirst({ where: { reporteId: caso.id, estadoNuevo: "CORREGIDO" } });
         expect(transicion, "§9: la transición del comité debe quedar registrada").toBeTruthy();
+
+        // ── SPEC-831 · la compuerta del COMITÉ CIERRA para lo ajeno ───────────────────────
+        // Anclado al positivo de ARRIBA: es el MISMO comité que acaba de resolver SU solicitud.
+        // Dos 403 que deben significar cosas distintas:
+        //   · por-CASO    → tiene el módulo y el rol, pero la solicitud es de OTRO comité
+        //                   (ComiteBandejaService.resolver: comiteId !== user.id).
+        //   · por-PERMISO → ni siquiera tiene el módulo del operador (assertModulo bandeja_reportes).
+        const otroComite = await crearUsuarioInterno(admin.token, `e2e-c${CICLO}-comite-otro@test.local`, "Otro Comité E2E", "COMITE_VALIDACION");
+        const casoAjeno = await crearCasoRevision(operador.id, "esca-ajeno");
+
+        // El operador escala el segundo caso; OTRO comité se lo queda.
+        await sesionDe(operador, "OPERADOR");
+        const resEscalarAjeno = await escalarPOST(
+            new Request(`http://localhost:5005/api/admin/reportes/${casoAjeno.id}/escalar`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ motivo: "Segundo caso para la cobertura negativa del comité (SPEC-831)" }),
+            }),
+            { params: Promise.resolve({ id: casoAjeno.id }) }
+        );
+        expect(resEscalarAjeno.status, "SPEC-831: el operador escala el segundo caso").toBe(201);
+        const { solicitudId: solicitudAjenaId } = (await resEscalarAjeno.json()) as { solicitudId: string };
+
+        await sesionDe(otroComite, "COMITE_VALIDACION");
+        const resAsignarOtro = await asignarPOST(
+            new Request(`http://localhost:5005/api/admin/comite/${solicitudAjenaId}/asignar`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
+            }),
+            { params: Promise.resolve({ id: solicitudAjenaId }) }
+        );
+        expect(resAsignarOtro.status, "SPEC-831: el OTRO comité se asigna la solicitud ajena").toBe(200);
+
+        // El SUJETO (el comité del positivo) intenta resolver la solicitud AJENA → 403 por-CASO.
+        await sesionDe(comite, "COMITE_VALIDACION");
+        const resCasoAjeno = await resolverPOST(
+            new Request(`http://localhost:5005/api/admin/comite/${solicitudAjenaId}/resolver`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ categoria: "EXTORSION", resolucion: "Intento del comité sobre una solicitud ajena (SPEC-831)" }),
+            }),
+            { params: Promise.resolve({ id: solicitudAjenaId }) }
+        );
+        expect(resCasoAjeno.status, "SPEC-831: el comité sobre una solicitud AJENA → 403").toBe(403);
+        const msgCasoComite = ((await resCasoAjeno.json()) as { error?: { message?: string } })?.error?.message ?? "";
+        expect(msgCasoComite, `SPEC-831: el 403 por-CASO afirma la asignación. msg="${msgCasoComite}"`).toContain("miembro del comité asignado");
+
+        // por-PERMISO: el MISMO comité pega un módulo de OPERADOR (bandeja_reportes) que NO tiene.
+        // assertModulo corre ANTES de cualquier chequeo de caso, así que el estado de `caso` no influye.
+        const { POST: confirmarComoComite } = await import("@/app/api/admin/reportes-revision/[id]/confirmar/route");
+        const resSinModuloComite = await confirmarComoComite(
+            new Request(`http://localhost:5005/api/admin/reportes-revision/${caso.id}/confirmar`, { method: "POST" }),
+            { params: Promise.resolve({ id: caso.id }) }
+        );
+        expect(resSinModuloComite.status, "SPEC-831: el comité pega un módulo del OPERADOR que no tiene → 403").toBe(403);
+        const msgPermisoComite = ((await resSinModuloComite.json()) as { error?: { message?: string } })?.error?.message ?? "";
+        expect(msgPermisoComite, `SPEC-831: el 403 por-PERMISO afirma el módulo. msg="${msgPermisoComite}"`).toContain("Sin acceso al módulo");
+
+        // EL CORAZÓN DE 831: distintos o es hallazgo de PRODUCTO (no del test).
+        expect(msgCasoComite, "SPEC-831: por-CASO y por-PERMISO del comité deben ser mensajes DISTINTOS").not.toBe(msgPermisoComite);
     });
 
     it("anonimización: el admin reescribe el texto (PATCH) y el operador asignado valida otro caso (§9 en BD)", async () => {
