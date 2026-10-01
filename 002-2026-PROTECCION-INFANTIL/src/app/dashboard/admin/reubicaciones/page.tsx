@@ -40,31 +40,31 @@ function franjaLegible(inicio: Date, fin: Date): string {
 
 function TarjetaCita({ fila }: { fila: CitaPorReubicar }) {
     const motivo = COPY_MOTIVO_REUBICACION[fila.deQuienSale.motivoCodigo];
+    // Caja de atención ÁMBAR del Sistema de Diseño (token `ambar` + texto `text-estado-ambar`, el
+    // único ámbar AA como texto); nunca crudo de Tailwind (candado SPEC-483).
     return (
-        <li className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+        <li className="rounded-xl border border-ambar/30 bg-ambar/10 p-4 text-estado-ambar">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="font-semibold text-amber-950">{fila.deQuienSale.nombre}</p>
-                <span className="font-mono text-xs text-amber-700">{fila.citaRef}</span>
+                <p className="font-semibold">{fila.deQuienSale.nombre}</p>
+                <span className="font-mono text-xs">{fila.citaRef}</span>
             </div>
-            <p className="mt-1 text-sm font-medium text-amber-900">{motivo.titulo}</p>
-            <p className="text-sm text-amber-800">{motivo.detalle}</p>
+            <p className="mt-1 text-sm font-medium">{motivo.titulo}</p>
+            <p className="text-sm">{motivo.detalle}</p>
             {fila.deQuienSale.especialidades.length > 0 ? (
-                <p className="mt-1 text-sm text-amber-900">
-                    Especialidades: {fila.deQuienSale.especialidades.join(" · ")}
-                </p>
+                <p className="mt-1 text-sm">Especialidades: {fila.deQuienSale.especialidades.join(" · ")}</p>
             ) : null}
-            <dl className="mt-3 grid grid-cols-1 gap-1 text-sm text-amber-950 sm:grid-cols-2">
+            <dl className="mt-3 grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
                 <div>
-                    <dt className="inline text-amber-700">Franja: </dt>
+                    <dt className="inline font-medium">Franja: </dt>
                     <dd className="inline">{franjaLegible(fila.cita.inicio, fila.cita.fin)}</dd>
                 </div>
                 <div>
-                    <dt className="inline text-amber-700">Modalidad: </dt>
+                    <dt className="inline font-medium">Modalidad: </dt>
                     <dd className="inline">{fila.cita.modalidad === "VIRTUAL" ? "Virtual" : "Presencial"}</dd>
                 </div>
                 {fila.cita.ciudad ? (
                     <div>
-                        <dt className="inline text-amber-700">Ciudad: </dt>
+                        <dt className="inline font-medium">Ciudad: </dt>
                         <dd className="inline">{fila.cita.ciudad}</dd>
                     </div>
                 ) : null}
@@ -85,10 +85,10 @@ export default async function ReubicacionesPage() {
 
     return (
         <section className="mx-auto max-w-3xl">
-            {/* Título de la FORMA v1.4 §2.1. */}
-            <h1 className="text-xl font-semibold text-amber-950">Citas en espera de reubicación</h1>
+            {/* Título de la FORMA §2.1. Sin color crudo: hereda la tinta por defecto del tema admin. */}
+            <h1 className="text-xl font-semibold">Citas en espera de reubicación</h1>
             {cola.length === 0 ? (
-                <p className="mt-4 text-sm text-amber-800">No hay citas en espera de reubicación.</p>
+                <p className="mt-4 text-sm">No hay citas en espera de reubicación.</p>
             ) : (
                 <ul className="mt-4 space-y-3">
                     {cola.map((fila) => (
