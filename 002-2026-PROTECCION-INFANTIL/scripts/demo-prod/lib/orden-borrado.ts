@@ -41,6 +41,10 @@ export const ORDEN_BORRADO: string[] = [
     // para que la purga los borre por marca; hoja antes que padre: IdentificadorHijo → Hijo.
     "IdentificadorHijo",
     "Hijo",
+    // SPEC-796 · Datos: el contrato firmado del colegio se borra por MARCA (no se va con el colegio,
+    // que lo nulea por SET NULL). Va ANTES de Suscripcion/Colegio/Tenant para que, con el colegio
+    // todavía vivo, la pertenencia demo sea determinable y no queden contratos demo huérfanos.
+    "ContratoColegio",
     // SPEC-722 · la suscripción ACTIVA del padre demo (para que /camino/plan no dispare). Cuelga del
     // Usuario (usuarioId SetNull) y de un Plan de referencia (que NO se marca ni se borra); se borra
     // por marca antes que el Usuario. Sin Pago/Bono/Referido demo → deleteMany directo, sin cascada.

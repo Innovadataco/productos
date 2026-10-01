@@ -93,6 +93,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/lint/ratchets.test.ts",
     // SPEC-284 (002-PI-184 · I-130): compuerta de IDs de advisory lock únicos.
     "scripts/locks-check.test.ts",
+    // SPEC-804: ningún test escribe dentro de `src/` (la carrera TOCTOU con los walkers). Barrido.
+    "scripts/ningun-test-escribe-en-src.candado.test.ts",
     // SPEC-466: el piso de tokens:check dejó de serializar merges (guard <= +
     // barrido --tension). Merge real estilo 432 + conducta del guard.
     "scripts/tokens-ratchet-sin-serializar.candado.test.ts",
@@ -112,6 +114,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-755: el auditor de consentimientos clasifica «firma sospechosa» derivando de
     // esTitularDelDato (fuente única), no de una lista a mano; control positivo en las dos direcciones.
     "scripts/lib/consentimiento-clasificacion.candado.test.ts",
+    // SPEC-751: reglas PURAS de la puerta de audiencia del menor (art. 12): per-menor, sensible
+    // a la política de re-oír por versión, y NO debilita la puerta de cuenta (regresión 241). Sin BD.
+    "src/lib/consentimiento/audiencia-gate.candado.test.ts",
     // SPEC-685: las claves de catálogo que siembran las dos semillas son reales y mapean a etiquetas no vacías (PURO).
     "scripts/lib/perfil-catalogo-seed.candado.test.ts",
     // SPEC-671 (I-397): los avisos de coincidencia sobreviven al motor caído (cableado del worker).
@@ -121,6 +126,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-774: meta-aserción sobre el propio ci.yml — el trigger de push incluye `main` y la rama
     // fantasma no queda en posición funcional (trigger ni gate de duraciones). Lee el ci.yml real.
     "scripts/ci/trigger-push-main.candado.test.ts",
+    // SPEC-800: la versión de Node del repo (.nvmrc/engines) coincide con la de TODOS los
+    // workflows (barrido). Corre acá para BLOQUEAR en CI (pi-gate exige test-unit).
+    "scripts/ci/node-version-paridad.candado.test.ts",
     // SPEC-281 (002-PI-180): algoritmo LPT de reparto de shards por peso.
     "scripts/ci/reparto-shards.test.mjs",
     // SPEC-450 (I-282): el margen contra el techo de 45 min — 6 shards, aviso

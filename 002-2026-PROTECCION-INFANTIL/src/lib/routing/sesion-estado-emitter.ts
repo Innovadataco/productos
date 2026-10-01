@@ -1,6 +1,7 @@
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
+import { hayAudienciaPendiente, gateAudienciaActivo } from "@/lib/dal/services/audiencia-menor";
 import { esTitularDelDato } from "@/lib/routing/roles-titulares";
 import { resolverEstadoVigencia } from "@/lib/pagos/vigencia-middleware";
 import type { EstadoVigenciaEfectivo } from "@/lib/pagos/vigencia-middleware";
@@ -37,6 +38,18 @@ export async function buildSesionEstadoValue(userId: string): Promise<string> {
     // la marca en la cookie para no titulares, así si mañana alguien olvida el
     // filtro del middleware, el flag ni siquiera está.
     const requiereConsentimiento = esTitularDelDato(rol) ? requiereConsentimientoRaw : false;
+
+    // SPEC-751: eje per-menor de la audiencia (Decreto 1377/2013 art. 12). Solo el PARENT tiene
+    // menores, así que solo para él se calcula y embebe (defensa en profundidad, igual que el
+    // consentimiento). El eje de cuenta (241) ya va en `requiereConsentimiento`.
+    // El gate nace APAGADO (gateAudienciaActivo, default OFF): se enciende cuando exista la pantalla
+    // de declaración y su texto [ABOGADO] — antes, rebotaría a TODO padre existente a un muro que no
+    // puede completar. Mientras esté OFF, ni siquiera se consulta la BD (short-circuit barato).
+    const audienciaPendiente =
+        rol === "PARENT" && (await gateAudienciaActivo())
+            ? await hayAudienciaPendiente(userId)
+            : false;
+
     let vigencia: EstadoVigenciaEfectivo;
 
     if (rol === "SCHOOL_ADMIN" || rol === "COMITE_CONVIVENCIA") {
@@ -62,7 +75,7 @@ export async function buildSesionEstadoValue(userId: string): Promise<string> {
                 : null;
 
     return firmarSesionEstado(
-        { vigencia, requiereConsentimiento, debeCambiarPassword, pasoCamino },
+        { vigencia, requiereConsentimiento, debeCambiarPassword, audienciaPendiente, pasoCamino },
         requireEnv("JWT_SECRET", 32),
     );
 }

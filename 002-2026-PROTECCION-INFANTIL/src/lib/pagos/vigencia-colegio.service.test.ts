@@ -55,9 +55,23 @@ describe("vigencia-colegio.service (puente D2)", () => {
         expect(dias).toBeLessThan(371);
     });
 
-    it("calcularFinDesdeDuracionPlan: MES_2/MES_3 caen a meses aditivos", () => {
-        const inicio = new Date("2026-01-15T10:00:00Z");
-        expect(calcularFinDesdeDuracionPlan(inicio, "MES_2").getUTCMonth()).toBe(2); // marzo
-        expect(calcularFinDesdeDuracionPlan(inicio, "MES_3").getUTCMonth()).toBe(3); // abril
+    it("calcularFinDesdeDuracionPlan: MES_2/MES_3 (mitad de mes) suman meses exactos", () => {
+        // Oráculo LITERAL completo (no `getUTCMonth`, no una llamada a la función): 10:00Z = 05:00
+        // Bogotá, mismo día en ambas zonas, mitad de mes → sin clamp ni efecto de zona.
+        const inicio = new Date("2026-01-15T10:00:00.000Z");
+        expect(calcularFinDesdeDuracionPlan(inicio, "MES_2").toISOString()).toBe("2026-03-15T10:00:00.000Z");
+        expect(calcularFinDesdeDuracionPlan(inicio, "MES_3").toISOString()).toBe("2026-04-15T10:00:00.000Z");
+    });
+
+    // SPEC-795 · frontera de fin de mes para MES_2/MES_3 (la rama de calcularFinDesdeDuracionPlan que
+    // NO pasa por calcularFinServicio). CLAMPA, no desborda. Esperado LITERAL; control positivo:
+    // con el `Date.setMonth` nativo anterior serían 03-mar / 02-mar y el test caería.
+    it("calcularFinDesdeDuracionPlan: MES_2 31-dic → 28-feb (no 03-mar)", () => {
+        expect(calcularFinDesdeDuracionPlan(new Date("2026-12-31T15:00:00.000Z"), "MES_2").toISOString())
+            .toBe("2027-02-28T15:00:00.000Z");
+    });
+    it("calcularFinDesdeDuracionPlan: MES_3 30-nov → 28-feb (no 02-mar)", () => {
+        expect(calcularFinDesdeDuracionPlan(new Date("2025-11-30T15:00:00.000Z"), "MES_3").toISOString())
+            .toBe("2026-02-28T15:00:00.000Z");
     });
 });
