@@ -164,9 +164,10 @@ describe("SPEC-814 · cola de reubicación · trigger de dos términos + motivo 
         expect(fila.deQuienSale.motivoCodigo).toBe("REVISION_INTERNA");
     });
 
-    it("HUECO DE MODALIDAD (REPS vigente pero no cubre esta modalidad; 813 = AL_DIA, sin banner) → REVISION_INTERNA", async () => {
-        // REPS cubre solo PRESENCIAL; la cita es VIRTUAL (→ TELEMEDICINA). Vigencia-only (813) dice AL_DIA
-        // → no fue avisado → es nuestro/interno hasta que la pieza 2 de Dev-3 le dé banner.
+    it("HUECO DE MODALIDAD (REPS vigente, no cubre esta modalidad → MODALIDAD_NO_CUBIERTA) → REVISION_INTERNA", async () => {
+        // REPS cubre solo PRESENCIAL; la cita es VIRTUAL (→ TELEMEDICINA). SPEC-836 pieza 2: el split de la
+        // cola clava en CADUCADO, así que el hueco de modalidad sigue cayendo en REVISION_INTERNA (conducta
+        // preservada). Flipearlo a REGISTRO_NO_VIGENTE ahora que tiene banner es decisión del CEO (pendiente).
         const pro = await seedPro({ estado: "ACTIVO", internaVigente: true, repsModalidades: ["PRESENCIAL"] });
         const cita = await seedCita(pro.id, { modalidad: "VIRTUAL" });
         const [fila] = await citasPorReubicar();
