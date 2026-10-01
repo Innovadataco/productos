@@ -17,7 +17,7 @@ import { obtenerHijoDePadre } from "@/lib/dal/services/hijos";
 import { venceEnPeticionServicio } from "@/lib/soporte/plazo-peticion";
 import { plazoMaximoLegalDiasHabiles } from "@/lib/habeas-data/plazos-legales";
 import { sumarDiasHabilesColombia } from "@/lib/fechas/dias-habiles-colombia";
-import type { MotivoPeticionServicio, TipoSolicitudHabeasData } from "@prisma/client";
+import type { ClaseDatoTitular, MotivoPeticionServicio, TipoSolicitudHabeasData } from "@prisma/client";
 
 /**
  * Sujeto del dato, discriminado por `calidad`. La puerta del padre cubre 2 de las 3 calidades del enum:
@@ -27,10 +27,16 @@ export type SujetoHabeasData =
     | { calidad: "TITULAR_CUENTA" }
     | { calidad: "REPRESENTANTE_LEGAL"; hijoId: string };
 
-/** Detalle que SOLO viaja con `DATOS_PERSONALES` (los dos ejes de la forma, ya resueltos). */
+/** Detalle que SOLO viaja con `DATOS_PERSONALES` (los ejes de la forma, ya resueltos). */
 export interface DetalleHabeasData {
     tipo: TipoSolicitudHabeasData;
     sujeto: SujetoHabeasData;
+    /**
+     * SPEC-827 · El OBJETO: sobre qué CLASE(S) de dato recae. Enum CERRADO. `CONSULTA` viaja con `[]` (no lleva
+     * objeto); `RECTIFICACION`/`SUPRESION` exigen ≥1 (una petición sin objeto no es accionable y el plazo corre
+     * igual). Lo clava el CHECK `objeto_por_tipo` en la BD; acá se corta antes para dar un error limpio.
+     */
+    clasesSolicitadas: ClaseDatoTitular[];
 }
 
 export interface CrearPeticionInput {
@@ -57,6 +63,20 @@ export async function crearPeticionServicio(input: CrearPeticionInput): Promise<
         throw new AppError("El detalle de datos personales no aplica a este motivo", ERROR_CODES.VALIDATION_ERROR, 400);
     }
 
+    // SPEC-827 · OBJETO POR TIPO (code-gate antes del CHECK `objeto_por_tipo`, para dar un error limpio y no el
+    // crudo de la base): CONSULTA no lleva objeto; RECTIFICACION/SUPRESION exigen ≥1 clase — sin objeto la
+    // petición no es accionable y el plazo legal corre igual. El enum cerrado lo valida la ruta (Zod) + el tipo.
+    if (input.habeasData) {
+        const { tipo, clasesSolicitadas } = input.habeasData;
+        const requiereObjeto = tipo === "RECTIFICACION" || tipo === "SUPRESION";
+        if (requiereObjeto && clasesSolicitadas.length === 0) {
+            throw new AppError("Falta indicar sobre qué datos recae la solicitud", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        if (!requiereObjeto && clasesSolicitadas.length > 0) {
+            throw new AppError("Una consulta no lleva un objeto de datos", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+    }
+
     // Sujeto del dato: null para «míos» (el sujeto ES quien pide — el CHECK eje_sujeto lo permite); el hijo
     // elegido para «de mi hijo». VERIFICACIÓN de propiedad: un padre solo radica sobre SU hijo — si el hijo
     // no es de esta cuenta, se rechaza (no se puede pedir habeas data sobre el hijo de otro).
@@ -75,7 +95,7 @@ export async function crearPeticionServicio(input: CrearPeticionInput): Promise<
         let solicitudHabeasDataId: string | undefined;
 
         if (input.habeasData) {
-            const { tipo, sujeto } = input.habeasData;
+            const { tipo, sujeto, clasesSolicitadas } = input.habeasData;
             // Default = el techo legal del tipo (10 consulta / 15 reclamo). Es el máximo permitido por el
             // CHECK; el operador puede PROMETER menos, nunca más. recibidoEn = ahora (auto-radicada: el reloj
             // legal arranca en la recepción real, que acá es el envío por la app).
@@ -85,6 +105,8 @@ export async function crearPeticionServicio(input: CrearPeticionInput): Promise<
                     tipo,
                     calidad: sujeto.calidad,
                     sujetoDelDato,
+                    // SPEC-827 · el OBJETO que pide el titular (vacío para CONSULTA, ≥1 para RECTIFICACION/SUPRESION).
+                    clasesSolicitadas,
                     plazoDias,
                     recibidoEn: ahora,
                     venceEn: sumarDiasHabilesColombia(ahora, plazoDias),
