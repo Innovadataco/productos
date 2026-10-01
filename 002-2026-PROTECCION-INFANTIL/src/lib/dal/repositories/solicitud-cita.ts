@@ -57,6 +57,25 @@ export class SolicitudCitaRepository {
     }
 
     /**
+     * SPEC-832 · lo MÍNIMO para calcular a QUIÉN se reubica ESTA cita: la ventana y modalidad de su franja,
+     * y del profesional que SALE (A) sus `especialidades` (el área del calce se deriva de A — la cita nunca
+     * capturó el área que requería) y su `ciudadId` (pesa solo en PRESENCIAL). NO trae el relato
+     * (`presentacion`) ni la PII de la familia: minimización (FORMA §3) — el matcher no los necesita.
+     */
+    findParaReubicacion(id: string) {
+        return this.db.solicitudCita.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                estado: true,
+                profesionalId: true,
+                franja: { select: { inicio: true, fin: true, modalidad: true } },
+                profesional: { select: { especialidades: true, ciudadId: true } },
+            },
+        });
+    }
+
+    /**
      * SPEC-814 · Insumo de la COLA de reubicación: TODAS las citas CONFIRMADA con lo MÍNIMO para
      * decidir si quedaron huérfanas (el `usuarioId` del profesional, para preguntarle a la fuente
      * única si sigue habilitado) y para pintarlas (franja, nombre + especialidades de A —la base
