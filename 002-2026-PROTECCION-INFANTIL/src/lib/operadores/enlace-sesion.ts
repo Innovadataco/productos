@@ -17,7 +17,7 @@ import { logAudit } from "@/lib/audit";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
-import { validarEnlaceReunion } from "./enlace-validacion";
+import { validarEnlaceReunion, type ProveedorEnlace } from "./enlace-validacion";
 import { metadatosHecho } from "./hecho-sesion-tipos";
 
 // La regla pura de validación (https/no-HTML) vive en `enlace-validacion.ts` para que el
@@ -53,8 +53,11 @@ export async function registrarHechoSesion(
  */
 export async function publicarEnlaceSesion(
     params: { citaId: string; operadorId: string; enlaceRaw: string },
+    // SPEC-793: allowlist de proveedores inyectable (default = la lista de código). El endpoint la pasa
+    // por default; el test de servidor inyecta entradas de PRUEBA para probar el mecanismo, no la lista real.
+    proveedores?: readonly ProveedorEnlace[],
 ): Promise<{ ok: true }> {
-    const validacion = validarEnlaceReunion(params.enlaceRaw);
+    const validacion = validarEnlaceReunion(params.enlaceRaw, proveedores);
     if (!validacion.ok) throw new AppError(validacion.razon, ERROR_CODES.VALIDATION_ERROR, 400);
 
     return withUnitOfWork(async (tx) => {

@@ -4,18 +4,27 @@
  * `estadoEfectivoDeCita` (746) en `enlace-derivado.ts`, con su propio candado.)
  */
 import { describe, it, expect } from "vitest";
-import { validarEnlaceReunion } from "./enlace-validacion";
+import { validarEnlaceReunion, type ProveedorEnlace } from "./enlace-validacion";
+
+// SPEC-793: `validarEnlaceReunion` ahora exige que el host sea de un proveedor APROBADO. Estos casos
+// prueban la regla de FORMATO (https/no-HTML/recorte) independiente del contenido de la allowlist real,
+// inyectando un proveedor de PRUEBA que aprueba `meet.example.com`. (Antes de 793 se aceptaba cualquier
+// https — ese era exactamente el agujero que 793 cierra; la cobertura de la allowlist vive en
+// `enlace-proveedor-aprobado.candado.test.ts`.)
+const PROVEEDOR_TEST: readonly ProveedorEnlace[] = [
+    { nombre: "Test", dominios: ["meet.example.com"], porque: "fixture de formato", aprobado: true },
+];
 
 describe("validarEnlaceReunion · solo https, jamás HTML", () => {
-    it("acepta un https válido", () => {
-        expect(validarEnlaceReunion("https://meet.example.com/abc-def")).toEqual({
+    it("acepta un https válido de un proveedor aprobado", () => {
+        expect(validarEnlaceReunion("https://meet.example.com/abc-def", PROVEEDOR_TEST)).toEqual({
             ok: true,
             url: "https://meet.example.com/abc-def",
         });
     });
 
     it("recorta espacios", () => {
-        const r = validarEnlaceReunion("  https://meet.example.com/x  ");
+        const r = validarEnlaceReunion("  https://meet.example.com/x  ", PROVEEDOR_TEST);
         expect(r).toEqual({ ok: true, url: "https://meet.example.com/x" });
     });
 
