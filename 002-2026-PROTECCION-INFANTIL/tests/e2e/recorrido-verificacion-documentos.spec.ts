@@ -310,30 +310,22 @@ test.describe.serial("Verificación con documentos a la vista (SPEC-448)", () =>
         }
     });
 
-    test("(D) en producción existe al menos un VERIFICADOR activo — I-nueva · SPEC-435", async () => {
-        // TEST.FAIL a propósito citando SPEC-435.
-        //
-        // Aviso del CEO 04-09 16:23: «en producción hay CERO usuarios
-        // VERIFICADOR (verificado por mí en BD). Hasta que entre SPEC-435
-        // usá ADMIN y dejá `test.fail` citando 435 en el punto donde debería
-        // ser un verificador de verdad.»
-        //
-        // El endpoint `POST /admin/verificacion-profesionales/[id]/decidir` y
-        // el GET del documento aceptan tanto VERIFICADOR como ADMIN (guardia
-        // `ROLES_QUE_REVISAN`); los candados (A)(B)(C) pasan con ADMIN. Este
-        // candado (D) afirma la mitad estructural que falta: cuando SPEC-435
-        // despliegue, debe existir al menos un `VERIFICADOR` real y activo
-        // en producción — sin él, todo el recorrido queda apoyado en un
-        // rol adyacente y no se puede demostrar que el proceso funcione con
-        // el rol titular.
-        test.fail(true, "SPEC-435 (Dev 01) trae la creación de VERIFICADOR desde el panel del admin. Este candado se quita cuando esa spec despliegue.");
-
-        const verificadores = await prisma.usuario.count({
-            where: { rol: "VERIFICADOR" as RolUsuario, estado: "activo" },
-        });
-        expect(
-            verificadores,
-            "prod debe tener al menos un VERIFICADOR real y activo cuando SPEC-435 despliegue",
-        ).toBeGreaterThanOrEqual(1);
-    });
+    // (D) — PARTIDO POR VEREDICTO DEL CEO (SPEC-820); ninguna mitad es «des-aparcar como estaba»:
+    //
+    //  · La aserción vieja «count(VERIFICADOR activo) ≥ 1» SALIÓ de este e2e: es una PRECONDICIÓN del
+    //    ENTORNO (prod con cero verificadores = documentos que nadie verifica), no conducta del producto.
+    //    Vive ahora en el checklist de post-deploy del CEO, donde sí es un invariante real.
+    //
+    //  · El hueco que QUEDA es que ESTE recorrido camine COMO el rol TITULAR: hoy (A)(B)(C) entran como
+    //    ADMIN —rol adyacente que pasa `ROLES_QUE_REVISAN`—, no como VERIFICADOR. SPEC-435 YA entró (la
+    //    CREACIÓN del verificador funciona y la cubre, viva, `recorrido-alta-verificador.spec`); lo que
+    //    falta es una CUENTA verificador SEMBRADA de forma PERSISTENTE y con credencial ESTABLE, porque el
+    //    recorrido INICIA SESIÓN (`login` → POST /api/auth/login). Una cuenta carga credencial: la siembra
+    //    DATOS (carril de cuentas/modelo), no Calidad, y va al sembrador PERSISTENTE, no al purgable (en el
+    //    purgable la limpieza se la come — lección de la fixture de login marcada en la corrida del estado).
+    //    Radicación del CEO (hallazgo SPEC-820), NO SPEC-435 (que ya está cumplido — esa razón vieja mentía).
+    //
+    //  DES-APARCAR cuando esa cuenta exista: reemplazar `EMAIL_ADMIN` por el verificador sembrado en el
+    //  núcleo de (A)(B)(C), probando el rol TITULAR end-to-end.
+    test.fixme("(D) el recorrido lo camina un VERIFICADOR real, no ADMIN — espera la cuenta persistente de Datos (radicación CEO · SPEC-820)", async () => {});
 });
