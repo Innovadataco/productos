@@ -134,8 +134,13 @@ describe("ComiteSubNav (módulo de BD ∧ predicado del proxy, spec 086 + D-41/S
     });
 });
 
-describe("NavLateral (filtrada por módulo, spec 086)", () => {
-    const todosLosModulos = [
+describe("NavLateral (filtrada por módulo, spec 086 · SPEC-857 menú de 2 niveles)", () => {
+    // SPEC-857: el menú admin es de 2 niveles. Un MÓDULO (grupo) rinde su ENCABEZADO (botón con
+    // label) SIEMPRE que se muestra; sus hojas solo están en el DOM si el grupo está EXPANDIDO
+    // (admin: colapsado por defecto, abierto si la ruta activa cae dentro — pathname mock
+    // /dashboard/admin/comite ⇒ el grupo «Comité de Convivencia» nace abierto). Por eso se asierta
+    // por los LABELS de GRUPO (robustos al colapso), sin debilitar el menú honesto ni el no-fuga.
+    const modulosAmplios = [
         "bandeja_reportes",
         "revision_spam",
         "comite_bandeja",
@@ -144,43 +149,53 @@ describe("NavLateral (filtrada por módulo, spec 086)", () => {
         "operadores",
         "colegios_gestion",
         "anti_abuso",
-        "apelaciones",
         "dataset_entrenamiento",
         "configuracion_sistema",
     ];
 
-    it("con todos los módulos ve todas las secciones", () => {
-        render(<NavLateral rol="ADMIN" modulosPermitidos={todosLosModulos} />);
-        expect(screen.getByText("Bandeja de reportes")).toBeTruthy();
-        expect(screen.getByText("Revisión de spam")).toBeTruthy();
-        expect(screen.getByText("Comité")).toBeTruthy();
+    it("con módulos de varias secciones ve sus grupos + los dos encabezados de sección", () => {
+        render(<NavLateral rol="ADMIN" modulosPermitidos={modulosAmplios} />);
+        // Encabezados de GRUPO (en el DOM aunque el grupo esté colapsado).
+        expect(screen.getByText("Reportes")).toBeTruthy();
+        expect(screen.getByText("Comité de Convivencia")).toBeTruthy(); // SPEC-857: antes «Comité»
+        expect(screen.getByText("Motor IA")).toBeTruthy();
+        expect(screen.getByText("Operadores")).toBeTruthy();
+        expect(screen.getByText("Estadísticas")).toBeTruthy();
         expect(screen.getByText("Configuración")).toBeTruthy();
+        // Encabezados de SECCIÓN no navegables (SPEC-857).
+        expect(screen.getByText("Citas y profesionales")).toBeTruthy();
+        expect(screen.getByText("Directorio")).toBeTruthy();
+        // El grupo activo por la ruta mock (/dashboard/admin/comite) nace EXPANDIDO → su hijo en el DOM.
+        expect(screen.getByText("Bandeja")).toBeTruthy(); // hijo de «Comité de Convivencia»
     });
 
-    it("sin módulos permitidos no ve secciones", () => {
+    it("sin módulos permitidos no ve grupos ni encabezados", () => {
         render(<NavLateral rol="SCHOOL_ADMIN" modulosPermitidos={[]} />);
-        expect(screen.queryByText("Bandeja de reportes")).toBeNull();
+        expect(screen.queryByText("Reportes")).toBeNull();
         expect(screen.queryByText("Configuración")).toBeNull();
+        expect(screen.queryByText("Citas y profesionales")).toBeNull();
     });
 
-    it("con solo bandeja y spam ve solo esas dos", () => {
+    it("con solo bandeja y spam ve SOLO el grupo «Reportes» (menú honesto · no-fuga)", () => {
         render(<NavLateral rol="OPERADOR" modulosPermitidos={["bandeja_reportes", "revision_spam"]} />);
-        expect(screen.getByText("Bandeja de reportes")).toBeTruthy();
-        expect(screen.getByText("Revisión de spam")).toBeTruthy();
-        expect(screen.queryByText("Comité")).toBeNull();
+        // Las dos hojas caen bajo el módulo «Reportes» → se ve ese grupo (colapsado por la ruta mock).
+        expect(screen.getByText("Reportes")).toBeTruthy();
+        // NO-FUGA: ningún otro grupo ni encabezado de sección (sus módulos no están concedidos).
+        expect(screen.queryByText("Comité de Convivencia")).toBeNull();
         expect(screen.queryByText("Estadísticas")).toBeNull(); // SPEC-744: era «Dashboard»
-        expect(screen.queryByText("Centro de Control IA")).toBeNull();
+        expect(screen.queryByText("Motor IA")).toBeNull();
         expect(screen.queryByText("Operadores")).toBeNull();
-        expect(screen.queryByText("Anti-abuso")).toBeNull();
-        expect(screen.queryByText("Apelaciones")).toBeNull();
-        expect(screen.queryByText("Dataset")).toBeNull();
         expect(screen.queryByText("Configuración")).toBeNull();
+        expect(screen.queryByText("Citas y profesionales")).toBeNull();
+        expect(screen.queryByText("Directorio")).toBeNull();
     });
 
-    it("con solo comite_bandeja solo ve 'Comité'", () => {
+    it("con solo comite_bandeja ve SOLO el grupo «Comité de Convivencia» (abierto por su ruta activa)", () => {
         render(<NavLateral rol="COMITE_VALIDACION" modulosPermitidos={["comite_bandeja"]} />);
-        expect(screen.getByText("Comité")).toBeTruthy();
-        expect(screen.queryByText("Bandeja de reportes")).toBeNull();
+        expect(screen.getByText("Comité de Convivencia")).toBeTruthy();
+        expect(screen.getByText("Bandeja")).toBeTruthy(); // hijo visible (grupo expandido por la ruta mock)
+        // NO-FUGA.
+        expect(screen.queryByText("Reportes")).toBeNull();
         expect(screen.queryByText("Configuración")).toBeNull();
     });
 });
