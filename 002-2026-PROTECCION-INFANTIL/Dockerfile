@@ -31,6 +31,10 @@ ENV RESEND_API_KEY=build-placeholder \
     ANTI_ABUSO_SALT=build-placeholder-salt-min-32-chars \
     ENABLE_HTTPS_HEADERS=true \
     APP_BUILD_SHA=$APP_BUILD_SHA
+# SPEC-856: heap fijo para `next build`. Un deploy falló por OOM («JavaScript heap out of memory»)
+# y pasó al reintentar: sin este límite, bajo presión de swap el auto-sizing de Node se queda corto.
+# El VPS tiene ~5 GB libres; 4096 MiB deja margen. Solo afecta el stage builder (no llega al runner).
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npx prisma generate && npm run build
 
 FROM node:22-alpine AS prod-deps
