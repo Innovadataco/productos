@@ -125,6 +125,29 @@ describe("navParaRol · roles internos (compuerta por módulo ∧ proxy)", () =>
         // ADMIN puede con todas las rutas admin (proxy no le niega ninguna): sale todo.
         expect(salida).toEqual(ADMIN_NAV_ITEMS.map((i) => i.href));
     });
+
+    // SPEC-857 · CANDADO (control positivo del inverso): un grupo NO esconde un hijo que el rol SÍ
+    // alcanza por el módulo del PROPIO hijo. La compuerta del contenedor es por HIJOS, no por el
+    // módulo representativo del grupo. Muere por mutación: si alguien reintroduce
+    // `permitidos.has(grupo.modulo)` en la condición del grupo, conceder solo el módulo del hijo
+    // divergente dejaría el ítem fuera del menú aunque la página abra (costura entre dos candados /
+    // gate con alcance corto). Alcance: SOLO hijos de grupos de nav (no «toda página alcanzable está
+    // en el menú» — hay drill-downs fuera de menú a propósito).
+    it("un grupo pinta un hijo divergente aunque el rol NO tenga el módulo representativo del grupo", () => {
+        // Operadores: grupo=`operadores`, pero «Auditoría» la gatea `audit_logs`. Con SOLO audit_logs
+        // (sin operadores) el grupo debe verse con «Auditoría» dentro.
+        const soloAudit = navParaRol("ADMIN", { modulosPermitidos: ["audit_logs"] });
+        const operadores = soloAudit.find((e) => e.label === "Operadores");
+        expect(operadores, "el grupo Operadores debe verse con solo audit_logs (hijo divergente)").toBeTruthy();
+        expect(operadores?.children?.map((c) => c.href)).toEqual(["/dashboard/admin/operadores/auditoria"]);
+        // Mismo patrón en otro grupo de módulos mixtos: Estadísticas con SOLO pagos_admin pinta
+        // «Dinero vs valor» (gate del hijo = pagos_admin ≠ estadisticas del grupo).
+        const soloPagos = navParaRol("ADMIN", { modulosPermitidos: ["pagos_admin"] });
+        const estad = soloPagos.find((e) => e.label === "Estadísticas");
+        expect(estad?.children?.map((c) => c.href)).toContain("/dashboard/admin/estadisticas/dinero-vs-valor");
+        // CONTROL del no-fuga: sin NINGÚN módulo, ningún grupo aparece (el gate por hijos no abre de más).
+        expect(navParaRol("ADMIN", { modulosPermitidos: [] })).toEqual([]);
+    });
 });
 
 describe("navParaRol · colegio (grupos con hijos)", () => {

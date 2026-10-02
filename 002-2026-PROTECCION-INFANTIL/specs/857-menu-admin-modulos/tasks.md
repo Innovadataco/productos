@@ -28,6 +28,7 @@
 - [x] T015 `nav-iconos.candado`: excluir encabezados de hojas/barra.
 - [x] T016 `nav-lateral.candado`: Comité subruta (hijo «Gestión») + Pagos ámbar (hijo activo).
 - [x] T017 `nav/para-rol.test.ts`: estructura 2 niveles + default móvil dedupe + principal `/operacion`.
+- [x] T017b `nav/para-rol.test.ts`: CANDADO inverso (revisión adversarial CEO) — un grupo pinta un hijo divergente aunque el rol no tenga el módulo representativo del grupo (gate por hijos; muere por mutación).
 
 ## Fase 7 · Gate
 - [x] T018 `tsc`, `lint`, candados nav (unit + integración), `arch:check` verdes.
