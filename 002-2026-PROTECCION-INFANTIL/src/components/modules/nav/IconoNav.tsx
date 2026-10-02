@@ -65,13 +65,6 @@ function ScaleIcon({ className }: { className?: string }) {
         </svg>
     );
 }
-function LightBulbIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
-        </svg>
-    );
-}
 function BrainIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
@@ -106,29 +99,6 @@ function BuildingIcon({ className }: { className?: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 2.25h15A2.25 2.25 0 0 1 21.75 4.5v15A2.25 2.25 0 0 1 19.5 21.75h-15A2.25 2.25 0 0 1 2.25 19.5v-15A2.25 2.25 0 0 1 4.5 2.25Z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Zm4.5-9h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Zm4.5-9h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 21.75V18" />
-        </svg>
-    );
-}
-function ShieldIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
-        </svg>
-    );
-}
-function ShieldExclamationIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 16h.01" />
-        </svg>
-    );
-}
-function DatabaseIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
         </svg>
     );
 }
@@ -273,13 +243,6 @@ export function ProfesionalIcon({ className }: { className?: string }) {
         </svg>
     );
 }
-export function ReglasIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
-        </svg>
-    );
-}
 export function RevisionIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
@@ -302,35 +265,23 @@ export function ReubicarIcon({ className }: { className?: string }) {
 export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     // Admin + profesional (SPEC-437: misma barra).
     "/dashboard/admin": InboxIcon,
-    // SPEC-744 · FASE 1 (cert Diseño 5cb032f §5-ter) reusó componentes existentes. FASE 2
-    // (e2243f6) registra los 4 propios → `PENDIENTES_FASE_2` queda VACÍO y la cláusula (3) del
-    // candado pasa a regla dura «ninguna hoja top-level cae al fallback».
+    // SPEC-857: el menú del admin pasó a MÓDULOS de 2 niveles. Las hojas que ahora cuelgan de un
+    // grupo van SIN ícono (texto) —la clave semántica sube al grupo (sección iconKey, abajo)—, así
+    // que acá quedan sólo las HOJAS TOP-LEVEL sueltas + el aterrizaje. Se retiraron las entradas de
+    // las ex-raíces/hijos (comité/estadísticas/ia/operadores/verificación/pagos/configuración/
+    // usuarios/bandeja/spam/anti-abuso/reglas/sugerencias/dataset/incidentes); los componentes que
+    // quedaron sin uso (Shield · ShieldExclamation · LightBulb · Database · Reglas) se borraron
+    // (zero íconos nuevos; candado nav-iconos cláusula 2: hijos all-or-none, aquí todos sin ícono).
     "/dashboard/admin/inicio": InicioIcon,
-    "/dashboard/admin/bandeja": InboxIcon,
-    "/dashboard/admin/usuarios": UsuariosIcon,
-    "/dashboard/admin/verificacion/incidentes": AlertasIcon,
-    "/dashboard/admin/spam": ShieldExclamationIcon,
-    // SPEC-824 (cert Diseño): bandeja de peticiones de soporte — correspondencia ENTRANTE (sobre), distinto
+    // SPEC-824 (cert Diseño): peticiones de soporte — correspondencia ENTRANTE (sobre), distinto
     // del InboxIcon de «Bandeja de reportes» para no duplicar en la barra del operador (candado 744).
     "/dashboard/admin/soporte/peticiones": EnvelopeIcon,
     "/dashboard/admin/sesiones": SesionesIcon, // SPEC-750/T014 · video-camera (Diseño e2243f6)
-    "/dashboard/admin/comite": ScaleIcon,
-    "/dashboard/admin/estadisticas": ChartIcon,
-    "/dashboard/admin/analisis/recomendaciones": LightBulbIcon,
-    "/dashboard/admin/ia": BrainIcon,
-    "/dashboard/admin/operadores": UsersIcon,
     "/dashboard/admin/reubicaciones": ReubicarIcon, // SPEC-832 · provisional, a certificar por Diseño
     "/dashboard/admin/padres": UserCircleIcon,
-    // SPEC-744 FASE 2 (Diseño e2243f6): los 4 que caían al fallback InboxIcon.
-    "/dashboard/admin/verificadores": VerificadorIcon,
+    "/dashboard/admin/verificadores": VerificadorIcon, // SPEC-744 FASE 2 (Diseño e2243f6)
     "/dashboard/admin/profesionales/gestion": ProfesionalIcon,
-    "/dashboard/admin/analisis/reglas": ReglasIcon,
-    "/dashboard/admin/verificacion": RevisionIcon,
-    "/dashboard/admin/pagos": CurrencyDollarIcon,
     "/dashboard/admin/colegios": BuildingIcon,
-    "/dashboard/admin/anti-abuso": ShieldIcon,
-    "/dashboard/admin/dataset-entrenamiento": DatabaseIcon,
-    "/dashboard/admin/configuracion": CogIcon,
     "/dashboard/profesional": InboxIcon,
     "/dashboard/profesional/citaciones": UsersIcon,
     "/dashboard/profesional/casos": ScaleIcon,
@@ -363,9 +314,19 @@ export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     // /profesionales) NO se registran acá — HEREDAN la iconKey de su grupo en navMovilParaRol.
     // Registrarlas por href las pintaría en el LATERAL como hijas desparejas de su grupo.
     // iconKey SEMÁNTICA de los grupos (href `#` colisiona; se siembran en nav-items).
-    usuarios: UsuariosIcon,
+    usuarios: UsuariosIcon, // colegio «Usuarios» + (SPEC-857) módulo «Usuarios» del admin
     "reportar-grupo": ReportarIcon,
     "ayuda-profesional": AyudaIcon,
+    // SPEC-857: claves semánticas de los MÓDULOS del admin (href "#"). Reutilizan componentes YA
+    // existentes (zero íconos nuevos): el ícono de la ex-raíz sube al grupo; los hijos van sin ícono.
+    reportes: ReportarIcon,
+    "comite-convivencia": ScaleIcon,
+    "operadores-grupo": UsersIcon,
+    "verificacion-grupo": RevisionIcon,
+    "motor-ia": BrainIcon,
+    "pagos-grupo": CurrencyDollarIcon,
+    "estadisticas-grupo": ChartIcon,
+    "configuracion-grupo": CogIcon,
 };
 
 /**

@@ -103,24 +103,24 @@ describe("navParaRol · PROFESIONAL (compuerta por estado)", () => {
 });
 
 describe("navParaRol · roles internos (compuerta por módulo ∧ proxy)", () => {
-    it("ADMIN: solo los ítems cuyo módulo está concedido, en orden de la lista", () => {
+    it("ADMIN: solo los ítems cuyo módulo está concedido; las hojas se agrupan en su MÓDULO (SPEC-857)", () => {
         const dos = navParaRol("ADMIN", { modulosPermitidos: ["inicio_admin", "bandeja_reportes"] });
-        expect(dos.map((e) => e.href)).toEqual([
-            "/dashboard/admin/inicio",
-            "/dashboard/admin/bandeja",
-        ]);
+        // «Inicio» (hoja suelta) + el MÓDULO «Reportes» (grupo href "#") con su único hijo concedido.
+        expect(dos.map((e) => e.href)).toEqual(["/dashboard/admin/inicio", "#"]);
+        const reportes = dos.find((e) => e.label === "Reportes");
+        expect(reportes?.children?.map((c) => c.href)).toEqual(["/dashboard/admin/bandeja"]);
+        // SPEC-857: ningún ENCABEZADO huérfano — las secciones de abajo no tienen ítems visibles.
+        expect(dos.some((e) => e.esEncabezado)).toBe(false);
         // Sin módulos, nada.
         expect(navParaRol("ADMIN", { modulosPermitidos: [] })).toEqual([]);
-        // Un módulo no concedido no aparece.
+        // Un módulo no concedido no muestra su grupo (Configuración es un MÓDULO).
         expect(
-            navParaRol("ADMIN", { modulosPermitidos: ["inicio_admin"] }).some(
-                (e) => e.href === "/dashboard/admin/configuracion",
-            ),
+            navParaRol("ADMIN", { modulosPermitidos: ["inicio_admin"] }).some((e) => e.label === "Configuración"),
         ).toBe(false);
     });
 
     it("ADMIN con TODOS los módulos: la lista completa alcanzable (paridad con ADMIN_NAV_ITEMS)", () => {
-        const todos = [...new Set(ADMIN_NAV_ITEMS.map((i) => i.modulo))];
+        const todos = MODS_ADMIN; // SPEC-857: incluye los módulos de los HIJOS (modsDe aplana los grupos)
         const salida = navParaRol("ADMIN", { modulosPermitidos: todos }).map((e) => e.href);
         // ADMIN puede con todas las rutas admin (proxy no le niega ninguna): sale todo.
         expect(salida).toEqual(ADMIN_NAV_ITEMS.map((i) => i.href));
@@ -141,7 +141,7 @@ describe("navParaRol · colegio (grupos con hijos)", () => {
     });
 
     it("COMITE_CONVIVENCIA: usa su lista reducida, no la del rector", () => {
-        const modulos = [...new Set(COMITE_COLEGIO_NAV_ITEMS.map((i) => i.modulo))];
+        const modulos = MODS_COMITE_COLEGIO;
         const salida = navParaRol("COMITE_CONVIVENCIA", { modulosPermitidos: modulos }).map((e) => e.href);
         // Todos sus ítems son de COMITE_COLEGIO_NAV_ITEMS (subconjunto), ninguno del rector-only.
         for (const href of salida) {
@@ -154,8 +154,8 @@ describe("navParaRol · colegio (grupos con hijos)", () => {
 describe("navParaRol · higiene del contrato", () => {
     it("nunca fuga el campo `modulo`; expone iconKey (por defecto href) + labelCorto? + children", () => {
         const muestras = [
-            ...navParaRol("ADMIN", { modulosPermitidos: [...new Set(ADMIN_NAV_ITEMS.map((i) => i.modulo))] }),
-            ...navParaRol("SCHOOL_ADMIN", { modulosPermitidos: [...new Set(COLEGIO_NAV_ITEMS.map((i) => i.modulo))] }),
+            ...navParaRol("ADMIN", { modulosPermitidos: MODS_ADMIN }),
+            ...navParaRol("SCHOOL_ADMIN", { modulosPermitidos: MODS_COLEGIO }),
             ...navParaRol("PARENT"),
             ...navParaRol(null),
         ];
@@ -239,16 +239,19 @@ describe("navMovilParaRol · barra móvil {principales≤4, resto}, DATA de la f
         expect(principales.map((e) => e.href)).toEqual([
             "/dashboard/admin/inicio",
             "/dashboard/admin/bandeja",
-            "/dashboard/admin/estadisticas",
+            "/dashboard/admin/estadisticas/operacion", // SPEC-857: el principal «Estadísticas» → /operacion
         ]); // «Comité» cayó por falta de módulo; los otros 3 siguen, en orden
     });
 
-    it("sin config (OPERADOR/COMITE_VALIDACION): primeros ≤4 de la nav gateada", () => {
+    it("sin config (OPERADOR/COMITE_VALIDACION): SPEC-857 primera hoja de cada ícono distinto (≤4, íconos únicos)", () => {
         const ctx = { modulosPermitidos: ["bandeja_reportes", "revision_spam"] };
-        const full = aplanar(navParaRol("OPERADOR", ctx));
         const { principales, resto } = navMovilParaRol("OPERADOR", ctx);
-        expect(principales).toEqual(full.slice(0, 4));
-        expect(resto).toEqual(full.slice(4));
+        // «Bandeja» y «Revisión de spam» cuelgan del MISMO módulo «Reportes» → MISMO ícono; el default
+        // toma solo la primera (una pestaña por sección, candado nav-iconos (1): sin íconos duplicados).
+        expect(principales.map((e) => e.href)).toEqual(["/dashboard/admin/bandeja"]);
+        // La hoja no promovida (spam) sigue alcanzable en el grupo «Reportes» del «Más».
+        const reportes = resto.find((e) => e.label === "Reportes");
+        expect(reportes?.children?.map((c) => c.href)).toContain("/dashboard/admin/spam");
     });
 
     it("labelCorto (mock, Diseño) propaga a los principales; el no sembrado no lo lleva (fallback a label)", () => {
@@ -257,10 +260,11 @@ describe("navMovilParaRol · barra móvil {principales≤4, resto}, DATA de la f
         expect(padre.find((e) => e.href === "/dashboard/padre/profesionales")?.labelCorto).toBe("Psicólogos");
         // «Inicio» del padre no tiene labelCorto → la barra usa el label completo (labelCorto ?? label).
         expect(padre.find((e) => e.href === "/dashboard/padre")?.labelCorto).toBeUndefined();
-        // Admin: «Bandeja de reportes»→«Bandeja», «Estadísticas»→«Cifras».
+        // Admin: «Bandeja de reportes»→«Bandeja» (hoja del módulo «Reportes», conserva su labelCorto).
         const admin = navMovilParaRol("ADMIN", ctxDe("ADMIN")).principales;
         expect(admin.find((e) => e.href === "/dashboard/admin/bandeja")?.labelCorto).toBe("Bandeja");
-        expect(admin.find((e) => e.href === "/dashboard/admin/estadisticas")?.labelCorto).toBe("Cifras");
+        // SPEC-857: el principal «Estadísticas» pasó a /operacion (hoja sin labelCorto) → usa su label.
+        expect(admin.find((e) => e.href === "/dashboard/admin/estadisticas/operacion")?.labelCorto).toBeUndefined();
     });
 });
 

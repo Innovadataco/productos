@@ -99,12 +99,13 @@ export async function generarRolesCapacidades(): Promise<string> {
     for (const nav of arraysNav()) {
         if (nav.filtroModulo !== "seed") continue;
         for (const item of nav.items) {
+            const clave = item.modulo ?? "";
             const roles = Object.entries(grants)
-                .filter(([, modulos]) => modulos.includes(item.modulo))
+                .filter(([, modulos]) => modulos.includes(clave))
                 .map(([rol]) => rol)
                 .sort()
                 .join(", ");
-            filasModulo.push({ modulo: item.modulo, href: item.href, roles: roles || "—" });
+            filasModulo.push({ modulo: clave, href: item.href, roles: roles || "—" });
         }
     }
     filasModulo.sort((a, b) => a.modulo.localeCompare(b.modulo) || a.href.localeCompare(b.href));

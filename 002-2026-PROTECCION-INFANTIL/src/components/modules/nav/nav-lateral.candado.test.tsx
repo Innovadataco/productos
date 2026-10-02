@@ -94,9 +94,13 @@ describe("SPEC-744 · NavLateral: estado activo por ruta (aria-current)", () => 
         const { container } = montar("ADMIN", { modulos: ADMIN_MODULOS, pathname: "/dashboard/admin" });
         expect(container.querySelector('[aria-current="page"]')).toBeNull();
         cleanup();
-        const r = montar("ADMIN", { modulos: ADMIN_MODULOS, pathname: "/dashboard/admin/comite/gestion" });
+        // SPEC-857: «Comité» pasó a MÓDULO; /comite/gestion es su hijo «Gestión» (gate `comite`). La
+        // subruta marca al HIJO activo, anidado bajo el grupo «Comité de Convivencia» (que nace abierto
+        // por abrir-en-activo). Antes era una hoja top-level «Comité»; hoy el activo es «Gestión».
+        const r = montar("ADMIN", { modulos: [...ADMIN_MODULOS, "comite"], pathname: "/dashboard/admin/comite/gestion" });
         const activo = r.container.querySelector('[aria-current="page"]');
-        expect(activo?.textContent).toContain("Comité"); // subruta anida en «Comité»
+        expect(activo?.textContent).toContain("Gestión"); // el hijo activo del módulo Comité
+        expect(screen.getByText("Comité de Convivencia")).toBeTruthy(); // el grupo que lo contiene
     });
 });
 
@@ -161,10 +165,12 @@ describe("SPEC-744 · NavLateral: tokens del sistema y ámbar de Pagos", () => {
         expect(activo?.className).toContain("bg-cielo");
     });
 
-    it("SPEC-212: la entrada Pagos activa va en ámbar (token), no en el acento cielo del admin", () => {
-        const { container } = montar("ADMIN", { modulos: ["pagos_admin"], pathname: "/dashboard/admin/pagos" });
+    it("SPEC-212/857: el hijo activo de Pagos va en ámbar (token), no en el acento cielo del admin", () => {
+        // SPEC-857: Pagos pasó a MÓDULO; su hijo activo (p.ej. «Pendientes») hereda el ámbar. El grupo
+        // nace abierto por abrir-en-activo, así que el hijo activo se renderiza con aria-current.
+        const { container } = montar("ADMIN", { modulos: ["pagos_admin"], pathname: "/dashboard/admin/pagos/pendientes" });
         const activo = container.querySelector('[aria-current="page"]');
-        expect(activo?.textContent).toContain("Pagos");
+        expect(activo?.textContent).toContain("Pendientes");
         expect(activo?.className).toContain("bg-ambar");
         expect(activo?.className).not.toContain("accent-gradient");
     });

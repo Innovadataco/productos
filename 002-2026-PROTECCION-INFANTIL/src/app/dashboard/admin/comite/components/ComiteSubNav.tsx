@@ -15,7 +15,7 @@ export function ComiteSubNav({ rol, modulosPermitidos }: { rol: string; modulosP
     const pathname = usePathname();
     const permitidos = new Set(modulosPermitidos);
     const visibleTabs = COMITE_NAV_TABS.filter(
-        (tab) => permitidos.has(tab.modulo) && esDestinoPermitidoPorRol(rol, tab.href)
+        (tab) => tab.modulo !== undefined && permitidos.has(tab.modulo) && esDestinoPermitidoPorRol(rol, tab.href)
     );
     return (
         <nav className="mb-6 flex min-h-[52px] flex-wrap items-start gap-2 border-b border-tinta/10 pb-3">

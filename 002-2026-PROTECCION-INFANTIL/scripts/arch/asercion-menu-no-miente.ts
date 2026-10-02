@@ -71,7 +71,7 @@ export async function ejecutarAsercionB(): Promise<ResultadoAsercionB> {
             const veredictoArea = await veredictoProxy(rol, nav.area);
             if (!veredictoPermite(veredictoArea)) continue; // el menú del área no se pinta para este rol
             for (const item of nav.items) {
-                if (nav.filtroModulo === "seed" && !modulosDelRol.has(item.modulo)) continue; // módulo no concedido: no se pinta
+                if (nav.filtroModulo === "seed" && !modulosDelRol.has(item.modulo ?? "")) continue; // módulo no concedido (o encabezado sin módulo): no se pinta
                 if (!predicadoPermite(rol, item.href)) continue; // D-41: el predicado tiene la última palabra
                 evaluados++;
                 const veredicto = await veredictoProxy(rol, item.href);

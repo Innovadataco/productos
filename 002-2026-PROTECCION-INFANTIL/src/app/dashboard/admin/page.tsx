@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { SinModulosAsignados } from "@/components/modules/SinAccesoModulo";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
-import { ADMIN_NAV_ITEMS } from "@/lib/nav-items";
+import { ADMIN_NAV_ITEMS, aplanarNavItems } from "@/lib/nav-items";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 import { verificarAccesoPagina } from "@/lib/permisos-modulos";
 
@@ -36,8 +36,11 @@ export default async function AdminAterrizajePage() {
     }
 
     const permitidos = await modulosPermitidosParaRol(rol);
-    const primero = ADMIN_NAV_ITEMS.find(
-        (item) => permitidos.has(item.modulo) && esDestinoPermitidoPorRol(rol, item.href),
+    // SPEC-857: el menú es de 2 niveles; el primer destino real es una HOJA (no el contenedor "#"
+    // de un módulo ni un encabezado de sección). `aplanarNavItems` desciende a los hijos y descarta
+    // encabezados, así el redirect nunca cae en "#".
+    const primero = aplanarNavItems(ADMIN_NAV_ITEMS).find(
+        (item) => item.modulo !== undefined && permitidos.has(item.modulo) && esDestinoPermitidoPorRol(rol, item.href),
     );
     if (primero) redirect(primero.href);
     return <SinModulosAsignados />;

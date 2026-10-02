@@ -65,8 +65,9 @@ const ROLES = Object.values(RolUsuario) as string[];
 // fallback». La lista solo encoge; ya no puede crecer sin registrar el ícono.
 const PENDIENTES_FASE_2 = new Set<string>();
 
-/** Hoja = ítem del árbol SIN hijos (los grupos van por la cláusula (2)). */
-const hojasTopLevel = (tree: NavEntry[]): NavEntry[] => tree.filter((i) => !(i.children && i.children.length > 0));
+/** Hoja = ítem del árbol SIN hijos (los grupos van por la cláusula (2)). SPEC-857: los ENCABEZADOS
+ *  de sección NO son destinos (no llevan ícono ni href navegable) → se excluyen de las hojas. */
+const hojasTopLevel = (tree: NavEntry[]): NavEntry[] => tree.filter((i) => !i.esEncabezado && !(i.children && i.children.length > 0));
 const gruposDe = (tree: NavEntry[]): NavEntry[] => tree.filter((i) => i.children && i.children.length > 0);
 
 /**
@@ -77,6 +78,7 @@ const gruposDe = (tree: NavEntry[]): NavEntry[] => tree.filter((i) => i.children
 function iconKeyEsperadaEnBarra(tree: NavEntry[]): Map<string, string> {
     const m = new Map<string, string>();
     for (const item of tree) {
+        if (item.esEncabezado) continue; // SPEC-857: separador, no destino de barra
         if (item.children && item.children.length > 0) {
             for (const h of item.children) m.set(h.href, item.iconKey); // hereda del grupo
         } else {
