@@ -63,8 +63,11 @@ function SesionCard({ bloque }: { bloque: BloqueSesionOperador }) {
                 body: JSON.stringify({ enlace }),
             });
             if (!res.ok) {
-                const cuerpo = (await res.json().catch(() => null)) as { error?: string } | null;
-                throw new Error(cuerpo?.error ?? "No se pudo publicar el enlace.");
+                // SPEC-854: el endpoint serializa AppError como `{error:{message,code}}` (errors.ts
+                // toJSON). Leer `error.message` (string); `error` es un OBJETO — pintarlo directo daba
+                // «[object Object]» en la pantalla del operador.
+                const cuerpo = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+                throw new Error(cuerpo?.error?.message ?? "No se pudo publicar el enlace.");
             }
             setEnlace("");
             router.refresh();

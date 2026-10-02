@@ -163,13 +163,9 @@ describe("SPEC-750 · C-c · la URL del enlace nunca entra al registro del hecho
         const cita = await crearCitaConfirmada({ profesionalId: prof.id, inicio: V(10), fin: V(10, 50), enlaceOperadorId: operador.id });
 
         const URL_SECRETA = "https://video.example/sala-SECRETA-xyz-123";
-        // SPEC-793: publicar exige ahora un proveedor de la allowlist. Este candado prueba la invariante
-        // de 750 (la URL no entra a AuditLog), NO la allowlist — así que inyecta un proveedor de PRUEBA
-        // que aprueba `video.example`. (La allowlist tiene su propio candado, content-independent.)
-        await publicarEnlaceSesion(
-            { citaId: cita.id, operadorId: operador.id, enlaceRaw: URL_SECRETA },
-            [{ nombre: "Test", dominios: ["video.example"], porque: "fixture 750", aprobado: true }],
-        );
+        // SPEC-854: la allowlist de proveedores (SPEC-793) se quitó — publicar solo exige https/no-HTML.
+        // Este candado prueba la invariante de 750 (la URL no entra a AuditLog); cualquier https válido sirve.
+        await publicarEnlaceSesion({ citaId: cita.id, operadorId: operador.id, enlaceRaw: URL_SECRETA });
 
         // Control positivo: la URL SÍ quedó en la cita → prueba que el enlace EXISTE en el
         // sistema (el scan de abajo no es vacío). Las columnas `enlace*` NO se replican a

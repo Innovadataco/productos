@@ -1,31 +1,29 @@
 /**
- * SPEC-750 · unit de la regla PURA del enlace: validación (https/no-HTML). Sin BD.
- * (SPEC-778 eliminó `enlaceVisibleParaCita` y su test: la visibilidad se deriva de
- * `estadoEfectivoDeCita` (746) en `enlace-derivado.ts`, con su propio candado.)
+ * SPEC-750 + SPEC-854 · unit de la regla PURA del enlace: validación https/no-HTML. Sin BD.
+ * (SPEC-778 eliminó `enlaceVisibleParaCita`; SPEC-854 quitó la allowlist de proveedores (SPEC-793):
+ * ahora CUALQUIER https válido pasa — ya no se inyecta un proveedor de prueba.)
  */
 import { describe, it, expect } from "vitest";
-import { validarEnlaceReunion, type ProveedorEnlace } from "./enlace-validacion";
+import { validarEnlaceReunion } from "./enlace-validacion";
 
-// SPEC-793: `validarEnlaceReunion` ahora exige que el host sea de un proveedor APROBADO. Estos casos
-// prueban la regla de FORMATO (https/no-HTML/recorte) independiente del contenido de la allowlist real,
-// inyectando un proveedor de PRUEBA que aprueba `meet.example.com`. (Antes de 793 se aceptaba cualquier
-// https — ese era exactamente el agujero que 793 cierra; la cobertura de la allowlist vive en
-// `enlace-proveedor-aprobado.candado.test.ts`.)
-const PROVEEDOR_TEST: readonly ProveedorEnlace[] = [
-    { nombre: "Test", dominios: ["meet.example.com"], porque: "fixture de formato", aprobado: true },
-];
-
-describe("validarEnlaceReunion · solo https, jamás HTML", () => {
-    it("acepta un https válido de un proveedor aprobado", () => {
-        expect(validarEnlaceReunion("https://meet.example.com/abc-def", PROVEEDOR_TEST)).toEqual({
-            ok: true,
-            url: "https://meet.example.com/abc-def",
-        });
+describe("validarEnlaceReunion · solo https, jamás HTML (sin allowlist de proveedor)", () => {
+    it("acepta CUALQUIER https válido — Meet, Zoom, Teams, Jitsi, el que sea (SPEC-854)", () => {
+        for (const url of [
+            "https://meet.google.com/abc-def",
+            "https://zoom.us/j/123456789",
+            "https://teams.microsoft.com/l/meetup-join/xyz",
+            "https://meet.jit.si/SalaDePrueba",
+            "https://cualquier-proveedor.example/sala-abc",
+        ]) {
+            expect(validarEnlaceReunion(url)).toEqual({ ok: true, url });
+        }
     });
 
     it("recorta espacios", () => {
-        const r = validarEnlaceReunion("  https://meet.example.com/x  ", PROVEEDOR_TEST);
-        expect(r).toEqual({ ok: true, url: "https://meet.example.com/x" });
+        expect(validarEnlaceReunion("  https://meet.example.com/x  ")).toEqual({
+            ok: true,
+            url: "https://meet.example.com/x",
+        });
     });
 
     it("rechaza http:// (no https)", () => {
@@ -34,7 +32,7 @@ describe("validarEnlaceReunion · solo https, jamás HTML", () => {
 
     it("rechaza otros protocolos (javascript:, data:)", () => {
         expect(validarEnlaceReunion("javascript:alert(1)").ok).toBe(false);
-        expect(validarEnlaceReunion("data:text/html,<b>x</b>").ok).toBe(false);
+        expect(validarEnlaceReunion("data:text/html,x").ok).toBe(false);
     });
 
     it("rechaza marcado HTML (< o >)", () => {
