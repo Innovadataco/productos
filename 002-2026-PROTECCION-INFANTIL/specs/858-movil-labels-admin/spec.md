@@ -36,7 +36,11 @@ Resultado: **«Inicio · Bandeja · Comité · Cifras · Más»** (intención de
 
 - Diseño puede ajustar «Cifras»↔«Estadísticas» (es forma); re-certifica el móvil.
 
+## Reorden de sección (Diseño, decisión CEO)
+
+En la sección «Citas y profesionales», el MÓDULO «Verificación» pasa a ÚLTIMO, pegado a «Verificadores». Orden final: **Sesiones · Operadores · Reubicaciones · Profesionales · Verificadores · Verificación** (antes Verificación iba tras Reubicaciones). Solo reordena nodos de `ADMIN_NAV_ITEMS`; no toca gates ni labels.
+
 ## Implementación
 
-- `src/lib/nav-items.ts`: `labelCorto` en los 2 hijos.
+- `src/lib/nav-items.ts`: `labelCorto` en los 2 hijos + reorden del módulo «Verificación» al final de su sección.
 - `src/lib/nav/para-rol.test.ts`: candado de etiquetas distinguibles + actualización de la aserción de labelCorto del principal de Estadísticas (antes undefined, ahora «Cifras»).

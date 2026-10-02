@@ -106,9 +106,15 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     },
     // SPEC-832 (T7 de 790): la cola de reubicación de citas. Módulo `operadores` (el que gatea la página).
     { href: "/dashboard/admin/reubicaciones", label: "Reubicaciones", modulo: "operadores" },
+    // SPEC-421 (A-75): gestión de cuentas de profesionales (externo, no interno).
+    { href: "/dashboard/admin/profesionales/gestion", label: "Profesionales", modulo: "profesionales_admin" },
+    // SPEC-435: cuentas VERIFICADOR (molde del operador, sin colegio ni vigencia).
+    { href: "/dashboard/admin/verificadores", label: "Verificadores", modulo: "verificadores_admin" },
     {
         // SPEC-408 (A-75 · brief §9): las colas del Verificador — todas gateadas por el mismo
         // módulo `admin_verificacion_profesionales`, así que el grupo las pinta juntas.
+        // SPEC-858 (Diseño, decisión CEO): el MÓDULO «Verificación» va ÚLTIMO de la sección «Citas
+        // y profesionales», pegado a «Verificadores» (reordenado tras Profesionales/Verificadores).
         href: "#",
         label: "Verificación",
         iconKey: "verificacion-grupo",
@@ -119,10 +125,6 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
             { href: "/dashboard/admin/verificacion/reportes-no-coinciden", label: "Reportes que no coinciden", modulo: "admin_verificacion_profesionales" },
         ],
     },
-    // SPEC-421 (A-75): gestión de cuentas de profesionales (externo, no interno).
-    { href: "/dashboard/admin/profesionales/gestion", label: "Profesionales", modulo: "profesionales_admin" },
-    // SPEC-435: cuentas VERIFICADOR (molde del operador, sin colegio ni vigencia).
-    { href: "/dashboard/admin/verificadores", label: "Verificadores", modulo: "verificadores_admin" },
     {
         href: "#",
         label: "Motor IA",
