@@ -154,11 +154,11 @@ footer code { font-family: "IBM Plex Mono", monospace; }
   <div class="bar">
     <h1>Modelo de datos &middot; Protecci&oacute;n Infantil</h1>
     <div class="info">
-      <span><b>111</b> tablas</span>
-      <span><b>47</b> tipos</span>
-      <span><b>228</b> relaciones</span>
+      <span><b>126</b> tablas</span>
+      <span><b>65</b> tipos</span>
+      <span><b>268</b> relaciones</span>
       <span>Fuente <b>prisma/schema.prisma</b></span>
-      <span>Prod <b>9fb46126</b></span>
+      <span>Prod <b>82d4e92d</b></span>
     </div>
   </div>
 
@@ -180,24 +180,24 @@ footer code { font-family: "IBM Plex Mono", monospace; }
 
   <!-- Dominios -->
   <div class="panel">
-    <div class="ph"><h2>Dominios</h2><span class="meta">las 111 tablas &middot; 11 dominios</span></div>
+    <div class="ph"><h2>Dominios</h2><span class="meta">las 126 tablas &middot; 11 dominios</span></div>
     <div class="dom-grid" id="dominios"></div>
   </div>
 
   <!-- Recomendaciones -->
   <div class="panel">
-    <div class="ph"><h2>Recomendaciones de la auditor&iacute;a (Datos)</h2><span class="meta">priorizadas</span></div>
+    <div class="ph"><h2>Recomendaciones de la auditor&iacute;a (Datos)</h2><span class="meta">priorizadas &middot; auditor&iacute;a del 05-09, pendiente de re-verificar contra el esquema actual</span></div>
     <div class="scroll">
       <table>
         <thead><tr><th class="c">Prio</th><th>Tabla / patr&oacute;n</th><th>Qu&eacute;</th><th class="c">Carril</th></tr></thead>
         <tbody id="reco"></tbody>
       </table>
     </div>
-    <div class="reco-foot">Todo es <b>an&aacute;lisis</b>; los cambios van por migraci&oacute;n/carril de cada producto, <b>nunca a mano</b>, y hoy el despliegue est&aacute; <b>congelado</b>.</div>
+    <div class="reco-foot">Todo es <b>an&aacute;lisis</b>; los cambios van por migraci&oacute;n/carril de cada producto, <b>nunca a mano</b>,  y el despliegue corre normalmente (&uacute;ltimo: <b>82d4e92d</b> &middot; 01-10-2026).</div>
   </div>
 
   <footer>
-    Instant&aacute;nea del esquema sobre producci&oacute;n <code>9fb46126</code> &middot; 05-09-2026 &middot; Mantenido por el CEO.
+    Instant&aacute;nea del esquema sobre producci&oacute;n <code>82d4e92d</code> &middot; 01-10-2026 &middot; Mantenido por el CEO.
   </footer>
 
 </div>
@@ -209,15 +209,15 @@ footer code { font-family: "IBM Plex Mono", monospace; }
 
   // ---------- Dominios (contenido estático del modelo) ----------
   var DOMINIOS = [
-    { ic: "👤", nombre: "Usuarios y acceso", tablas: ["Usuario","PerfilOperador","IntegranteComite","IdentificadorIntegranteComite","CodigoVerificacion","TokenRecuperacion","TokenRegistro","SesionLog","AuditConsentimiento","ModuloPermisible","PermisoModulo"] },
+    { ic: "👤", nombre: "Usuarios y acceso", tablas: ["Usuario","PerfilOperador","IntegranteComite","IdentificadorIntegranteComite","CodigoVerificacion","TokenRecuperacion","TokenRegistro","SesionLog","AuditConsentimiento","ModuloPermisible","PermisoModulo","CodigoStepUp"] },
     { ic: "🏫", nombre: "Colegios y estudiantes", tablas: ["Tenant","Colegio","OnboardingColegio","Curso","Profesor","Materia","CursoMateria","Estudiante","AcudienteEstudiante","IdentificadorAcudiente","IdentificadorProfesor","EstudianteObservacion","IdentificadorEstudiante","CargaRosterSesion"] },
     { ic: "🚨", nombre: "Alertas de colegio", tablas: ["AlertaColegio","PatronInstitucional","PreferenciaAlertaColegio","RegistroAvisoColegio","NotificacionInApp"] },
-    { ic: "📣", nombre: "Reportes y matching", tablas: ["Reporte","SolicitudComite","TransicionReporte","ReintentoReporte","PasoProcesamiento","FuenteReporte","IdentificadorReportado","EventoMatch","Plataforma","SeguimientoCaso","NotaSeguimiento"] },
+    { ic: "📣", nombre: "Reportes y matching", tablas: ["Reporte","SolicitudComite","TransicionReporte","ReintentoReporte","PasoProcesamiento","FuenteReporte","IdentificadorReportado","EventoMatch","Plataforma","SeguimientoCaso","NotaSeguimiento","ContenidoReporte","LecturaReporte","LlaveReporte"] },
     { ic: "🧠", nombre: "Análisis / IA", tablas: ["ClasificacionIA","CorreccionAdmin","DatasetEntrenamiento","EmbeddingDataset","EmbeddingReporte","SimulacionRun","SimulacionReporte","SimulacionAbusoRun","ClasificacionRubricaVoto","DerivaMotorSnapshot","RateLimit","BlockList"] },
-    { ic: "📂", nombre: "Expediente y comité", tablas: ["Expediente","EventoExpediente","InformePadre","InformeConsolidado","PatronExpediente","GuiaAccionCategoria","AclaracionExpediente","AnalisisExpediente","InformeCaso","Apelacion","DocumentoApelacion","AccesoDocumentoApelacion","SenalComunitariaCache"] },
-    { ic: "👪", nombre: "Familia / círculo", tablas: ["ContactoConfianza","Hijo","HijoPadre","IdentificadorHijo","IdentificadorHijoDesvinculado","IdentificadorContacto","AlertaSuscripcion","ContactoEmergencia"] },
-    { ic: "🧑‍⚕️", nombre: "Profesional y citas", tablas: ["PerfilProfesional","DocumentoProfesional","VerificacionProfesional","FranjaDisponible","SolicitudCita","EncuestaPrimeraCita"] },
-    { ic: "💳", nombre: "Pagos y suscripción", tablas: ["Plan","Subscription","BillingCycle","Suscripcion","Pago","BonoPromocional","BonoAplicado","CodigoReferidoUso","TasaCambio","ScoreCliente"] },
+    { ic: "📂", nombre: "Expediente y comité", tablas: ["Expediente","EventoExpediente","InformePadre","InformeConsolidado","PatronExpediente","GuiaAccionCategoria","AclaracionExpediente","AnalisisExpediente","InformeCaso","Apelacion","DocumentoApelacion","AccesoDocumentoApelacion","SenalComunitariaCache","CodigoAccesoContenido"] },
+    { ic: "👪", nombre: "Familia / círculo", tablas: ["ContactoConfianza","Hijo","HijoPadre","IdentificadorHijo","IdentificadorHijoDesvinculado","IdentificadorContacto","AlertaSuscripcion","ContactoEmergencia","AudienciaMenor","PeticionServicio","SolicitudHabeasData"] },
+    { ic: "🧑‍⚕️", nombre: "Profesional y citas", tablas: ["PerfilProfesional","DocumentoProfesional","VerificacionProfesional","FranjaDisponible","SolicitudCita","EncuestaPrimeraCita","AceptacionAutorizacionProfesional","DiaBloqueado","EncuestaCita","IncidenteContradiccionEncuesta","RevisionRenovacion","VerificacionDocumento"] },
+    { ic: "💳", nombre: "Pagos y suscripción", tablas: ["Plan","Subscription","BillingCycle","Suscripcion","Pago","BonoPromocional","BonoAplicado","CodigoReferidoUso","TasaCambio","ScoreCliente","ContratoColegio"] },
     { ic: "🔔", nombre: "Avisos y recomendaciones", tablas: ["Notificacion","NotificacionPlantilla","NotificacionRegla","NotificacionPreferencia","NotificacionContactoBloqueado","DigestSemanal","ReglaRecomendacion","Recomendacion","ReglaRecomendacionHistorial","EjecucionAccion","Anomalia"] },
     { ic: "⚙️", nombre: "Sistema, geografía y auditoría", tablas: ["ParametroSistema","AuditLog","HealthProbe","IncidenteInfra","WorkerLog","DemoMarcado","TipoDocumento","Pais","Departamento","Ciudad"] }
   ];
