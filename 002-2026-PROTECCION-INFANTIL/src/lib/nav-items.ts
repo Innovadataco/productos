@@ -72,7 +72,11 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
         iconKey: "comite-convivencia",
         modulo: "comite_bandeja",
         children: [
-            { href: "/dashboard/admin/comite", label: "Bandeja", modulo: "comite_bandeja" },
+            // SPEC-858: `labelCorto` SOLO para la barra móvil. Al promover este hijo a principal
+            // (PRINCIPALES_MOVIL.ADMIN), sin labelCorto mostraba «Bandeja» y colisionaba con la hoja
+            // «Bandeja de reportes» (Reportes→Bandeja). En móvil representa al grupo → «Comité». El
+            // escritorio sigue mostrando «Bandeja» (usa `label` dentro del grupo «Comité de Convivencia»).
+            { href: "/dashboard/admin/comite", label: "Bandeja", labelCorto: "Comité", modulo: "comite_bandeja" },
             { href: "/dashboard/admin/comite/apelaciones", label: "Apelaciones", modulo: "comite_bandeja" },
             // SPEC-235: aprobación de guías de acción por el comité. «Guías por aprobar» desambigua
             // de «Guías de acción» (Configuración), que es la parametrización (artefacto §3).
@@ -182,7 +186,10 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
         children: [
             { href: "/dashboard/admin/estadisticas/dinero-vs-valor", label: "Dinero vs valor", modulo: "pagos_admin" },
             { href: "/dashboard/admin/estadisticas/motor", label: "Motor", modulo: "estadisticas" },
-            { href: "/dashboard/admin/estadisticas/operacion", label: "Operación", modulo: "estadisticas" },
+            // SPEC-858: `labelCorto` SOLO para la barra móvil. Es el principal «Estadísticas»
+            // (PRINCIPALES_MOVIL.ADMIN → /operacion); en móvil muestra «Cifras» (el rótulo corto
+            // histórico de Estadísticas), no «Operación». El escritorio sigue mostrando «Operación».
+            { href: "/dashboard/admin/estadisticas/operacion", label: "Operación", labelCorto: "Cifras", modulo: "estadisticas" },
             // Su página la gatea `estadisticas_salud_motor` (sale de SIN_PANTALLA_PROPIA: ya es hoja).
             { href: "/dashboard/admin/estadisticas/salud-motor", label: "Salud del motor", modulo: "estadisticas_salud_motor" },
         ],
