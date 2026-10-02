@@ -6,7 +6,10 @@
 export interface NavItem {
     href: string;
     label: string;
-    modulo: string;
+    // SPEC-857: opcional porque los ENCABEZADOS de sección (`encabezado: true`) no cuelgan de
+    // un módulo —son separadores visuales, no destinos gateables—. Toda HOJA o GRUPO real
+    // sigue llevando `modulo` (el test estructural `nav-items.test.ts` lo exige para los no-encabezado).
+    modulo?: string;
     /** Hijos para nodos expandibles (p. ej. "Usuarios" del menú del colegio). */
     children?: NavItem[];
     // SPEC-744 (contrato con Dev 1): clave de ícono y rótulo corto viven en la DATA (fuente
@@ -15,59 +18,188 @@ export interface NavItem {
     // es para la barra móvil (1 palabra); si falta, se usa `label`.
     iconKey?: string;
     labelCorto?: string;
+    // SPEC-857: encabezado de sección NO navegable ni gateable (separador visual del menú de 2
+    // niveles). No tiene `modulo` ni hijos; el resolver lo deja pasar sólo si su sección tiene
+    // al menos un ítem visible (encabezado huérfano = menú honesto) y la barra móvil lo omite.
+    encabezado?: boolean;
+}
+
+// SPEC-857 (Diseño ec4910a · v2.2, aprob. Jelkin): el menú del admin se reorganiza en MÓDULOS
+// de 2 niveles — grupos colapsables (href "#" + iconKey, como «Usuarios» del colegio) y dos
+// ENCABEZADOS de sección no navegables. Reglas que sostienen el candado de menú honesto (SPEC-086):
+//   · cada HOJA conserva SU módulo real —el que la PÁGINA gatea en servidor (verificado página por
+//     página)— para que el ítem aparezca EXACTAMENTE cuando la página deja entrar. No hay pantallas
+//     inventadas (I-299): las 48 rutas existen.
+//   · un GRUPO pinta si el admin tiene permiso en ≥1 hijo (lo decide el resolver por HIJOS, no por el
+//     módulo del grupo). El `modulo` del grupo es REPRESENTATIVO (primer hijo) —sólo para que el test
+//     estructural lo valide contra el catálogo—, NO una compuerta.
+//   · los íconos: la clave semántica sube al GRUPO (zero íconos nuevos); los hijos van sin ícono
+//     (texto), igual que el patrón «Usuarios» del colegio.
+// Los 3 drops (decisión CEO sobre choques): Pagos «Resumen»/«Analítica» y Estadísticas «Clasificación»
+// NO entran (label que miente / vista duplicada / tab de Operación). Conteos: Pagos = 9, Estadísticas = 4.
+/**
+ * SPEC-857: aplana un árbol de NavItem a sus HOJAS reales — desciende a los hijos de cada grupo
+ * (href "#") y DESCARTA los encabezados de sección. Las hojas conservan su `modulo`. Lo usan las
+ * superficies/generadores que necesitan destinos navegables (no el contenedor "#"): el redirect de
+ * `/dashboard/admin` al primer módulo accesible y las fuentes del arch (roles-capacidades, aserción
+ * «el menú no miente»).
+ */
+export function aplanarNavItems(items: NavItem[]): NavItem[] {
+    return items.flatMap((it) =>
+        it.encabezado ? [] : it.children && it.children.length > 0 ? aplanarNavItems(it.children) : [it],
+    );
 }
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [
     // SPEC-378: Inicio del administrador — alarma de la casa (primero del nav).
     // Cuando el admin lo tiene, `/dashboard/admin` (raíz) redirige acá.
     { href: "/dashboard/admin/inicio", label: "Inicio", modulo: "inicio_admin" },
-    // SPEC-404 (I-290): URL propia para la bandeja. `/dashboard/admin` quedó
-    // como aterrizaje que redirige a Inicio o Bandeja según módulo.
-    { href: "/dashboard/admin/bandeja", label: "Bandeja de reportes", labelCorto: "Bandeja", modulo: "bandeja_reportes" },
-    { href: "/dashboard/admin/spam", label: "Revisión de spam", modulo: "revision_spam" },
-    // SPEC-824: bandeja de peticiones de soporte (PQR + habeas data). Etiqueta PENDIENTE de Diseño.
-    { href: "/dashboard/admin/soporte/peticiones", label: "Peticiones de soporte", labelCorto: "Peticiones", modulo: "soporte_peticiones" },
-    // SPEC-750/T014: la cola de sesiones del operador. iconKey = href (default) → SesionesIcon
-    // (video-camera) en ICONOS_NAV.
+    {
+        href: "#",
+        label: "Reportes",
+        iconKey: "reportes", // sube ReportarIcon al grupo (hijos sin ícono)
+        modulo: "bandeja_reportes", // representativo (primer hijo); la compuerta es por hijos
+        children: [
+            // SPEC-404 (I-290): URL propia para la bandeja.
+            { href: "/dashboard/admin/bandeja", label: "Bandeja de reportes", labelCorto: "Bandeja", modulo: "bandeja_reportes" },
+            { href: "/dashboard/admin/spam", label: "Revisión de spam", modulo: "revision_spam" },
+            { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", modulo: "anti_abuso" },
+        ],
+    },
+    {
+        href: "#",
+        label: "Comité de Convivencia",
+        iconKey: "comite-convivencia",
+        modulo: "comite_bandeja",
+        children: [
+            { href: "/dashboard/admin/comite", label: "Bandeja", modulo: "comite_bandeja" },
+            { href: "/dashboard/admin/comite/apelaciones", label: "Apelaciones", modulo: "comite_bandeja" },
+            // SPEC-235: aprobación de guías de acción por el comité. «Guías por aprobar» desambigua
+            // de «Guías de acción» (Configuración), que es la parametrización (artefacto §3).
+            { href: "/dashboard/admin/comite/guias-pendientes", label: "Guías por aprobar", modulo: "comite_guias_accion" },
+            { href: "/dashboard/admin/comite/gestion", label: "Gestión", modulo: "comite" },
+            // SPEC-496: `comite_auditoria` es solo-ADMIN a propósito (separación de funciones).
+            { href: "/dashboard/admin/comite/auditoria", label: "Auditoría", modulo: "comite_auditoria" },
+        ],
+    },
+    // ── Sección: el flujo de citas y la red de profesionales ──────────────────────────────
+    { href: "#", label: "Citas y profesionales", encabezado: true },
+    // SPEC-750/T014: la cola de sesiones del operador.
     { href: "/dashboard/admin/sesiones", label: "Sesiones", labelCorto: "Sesiones", modulo: "sesiones_operador" },
-    { href: "/dashboard/admin/comite", label: "Comité", modulo: "comite_bandeja" },
-    // SPEC-744 (Diseño, aprob. Jelkin): «Estadísticas» —no «Dashboard» (techie)— casa con
-    // el rótulo del colegio y no reaviva la ambigüedad de «Dashboard» que 742 limpió.
-    { href: "/dashboard/admin/estadisticas", label: "Estadísticas", labelCorto: "Cifras", modulo: "estadisticas" },
-    { href: "/dashboard/admin/ia", label: "Centro de Control IA", modulo: "centro_control_ia" },
-    { href: "/dashboard/admin/operadores", label: "Operadores", modulo: "operadores" },
-    // SPEC-832 (T7 de 790): la cola de reubicación de citas (profesional inhabilitado → art. 19). MISMO
-    // módulo `operadores` que la página gatea en servidor (verificarAccesoPagina), para que el ítem aparezca
-    // EXACTAMENTE cuando la página deja entrar (candado de menú honesto). Label PROVISIONAL (a confirmar por
-    // Diseño, como la etiqueta de 824); ícono provisional ReubicarIcon (candado 744).
+    {
+        href: "#",
+        label: "Operadores",
+        iconKey: "operadores-grupo",
+        modulo: "operadores",
+        children: [
+            { href: "/dashboard/admin/operadores/asignar", label: "Asignar", modulo: "operadores" },
+            // La auditoría de operadores la gatea `audit_logs` en servidor (no `operadores`): la hoja
+            // lleva SU módulo real (menú honesto). Por eso `audit_logs` sale de SIN_PANTALLA_PROPIA.
+            { href: "/dashboard/admin/operadores/auditoria", label: "Auditoría", modulo: "audit_logs" },
+            { href: "/dashboard/admin/operadores/gestion", label: "Gestión", modulo: "operadores" },
+            { href: "/dashboard/admin/operadores/modelo", label: "Modelo", modulo: "operadores" },
+        ],
+    },
+    // SPEC-832 (T7 de 790): la cola de reubicación de citas. Módulo `operadores` (el que gatea la página).
     { href: "/dashboard/admin/reubicaciones", label: "Reubicaciones", modulo: "operadores" },
-    // SPEC-435 (Jelkin vivo 04-09): cuentas VERIFICADOR con su user y pass —
-    // molde exacto del operador, sin colegio ni vigencia.
-    { href: "/dashboard/admin/verificadores", label: "Verificadores", modulo: "verificadores_admin" },
-    { href: "/dashboard/admin/usuarios", label: "Usuarios", modulo: "usuarios_admin" },
-    { href: "/dashboard/admin/padres", label: "Padres", modulo: "padres" },
-    // SPEC-421 (A-75): gestión de cuentas de profesionales (mismo perfil que
-    // padres: externo, no interno). Sin crear (padre y psicólogo se registran
-    // solos) — el admin restablece contraseña y reenvía enlace de registro.
+    {
+        // SPEC-408 (A-75 · brief §9): las colas del Verificador — todas gateadas por el mismo
+        // módulo `admin_verificacion_profesionales`, así que el grupo las pinta juntas.
+        href: "#",
+        label: "Verificación",
+        iconKey: "verificacion-grupo",
+        modulo: "admin_verificacion_profesionales",
+        children: [
+            { href: "/dashboard/admin/verificacion", label: "Solicitudes", modulo: "admin_verificacion_profesionales" },
+            { href: "/dashboard/admin/verificacion/incidentes", label: "Incidentes de citas", modulo: "admin_verificacion_profesionales" },
+            { href: "/dashboard/admin/verificacion/reportes-no-coinciden", label: "Reportes que no coinciden", modulo: "admin_verificacion_profesionales" },
+        ],
+    },
+    // SPEC-421 (A-75): gestión de cuentas de profesionales (externo, no interno).
     { href: "/dashboard/admin/profesionales/gestion", label: "Profesionales", modulo: "profesionales_admin" },
-    // SPEC-212 (002-PI-112): panel administrativo de pagos (color ámbar en la barra lateral, NavLateral).
-    { href: "/dashboard/admin/pagos", label: "Pagos", modulo: "pagos_admin" },
+    // SPEC-435: cuentas VERIFICADOR (molde del operador, sin colegio ni vigencia).
+    { href: "/dashboard/admin/verificadores", label: "Verificadores", modulo: "verificadores_admin" },
+    {
+        href: "#",
+        label: "Motor IA",
+        iconKey: "motor-ia",
+        modulo: "centro_control_ia",
+        children: [
+            { href: "/dashboard/admin/ia", label: "Centro de Control IA", modulo: "centro_control_ia" },
+            // SPEC-224: panel de reglas configurables del motor (solo ADMIN).
+            { href: "/dashboard/admin/analisis/reglas", label: "Reglas", modulo: "analisis_admin" },
+            // SPEC-227: historial de sugerencias del motor de reglas (solo ADMIN).
+            { href: "/dashboard/admin/analisis/recomendaciones", label: "Sugerencias", modulo: "analisis_recomendaciones" },
+            { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", modulo: "dataset_entrenamiento" },
+        ],
+    },
+    {
+        // SPEC-212 (002-PI-112): el módulo de pagos va en ámbar (acción de dinero) en NavLateral.
+        // Los 3 choques CEO: «Resumen» NO (no mapear a /pendientes: label que miente); «Analítica» NO
+        // (misma vista que Estadísticas «Dinero vs valor»; sin href propio). 9 hojas, todas `pagos_admin`.
+        href: "#",
+        label: "Pagos",
+        iconKey: "pagos-grupo",
+        modulo: "pagos_admin",
+        children: [
+            { href: "/dashboard/admin/pagos/pendientes", label: "Pendientes", modulo: "pagos_admin" },
+            { href: "/dashboard/admin/pagos/mora", label: "Mora", modulo: "pagos_admin" },
+            { href: "/dashboard/admin/pagos/reembolsos", label: "Reembolsos", modulo: "pagos_admin" },
+            { href: "/dashboard/admin/pagos/bonos", label: "Bonos", modulo: "pagos_admin" },
+            { href: "/dashboard/admin/pagos/planes", label: "Planes", modulo: "pagos_admin" },
+            { href: "/dashboard/admin/pagos/vencimientos", label: "Vencimientos", modulo: "pagos_admin" },
+            { href: "/dashboard/admin/pagos/sin-suscripcion", label: "Sin suscripción", modulo: "pagos_admin" },
+            { href: "/dashboard/admin/pagos/citas-por-aprobar", label: "Citas por aprobar", modulo: "pagos_admin" },
+            { href: "/dashboard/admin/pagos/citas-vencidas", label: "Citas vencidas", modulo: "pagos_admin" },
+        ],
+    },
+    // ── Sección: el directorio de cuentas y entidades ─────────────────────────────────────
+    { href: "#", label: "Directorio", encabezado: true },
+    {
+        href: "#",
+        label: "Usuarios",
+        iconKey: "usuarios", // clave ya registrada en ICONOS_NAV (UsuariosIcon)
+        modulo: "usuarios_admin",
+        children: [
+            { href: "/dashboard/admin/usuarios", label: "Todas las cuentas", modulo: "usuarios_admin" },
+            { href: "/dashboard/admin/usuarios/admins", label: "Administradores", modulo: "usuarios_admin" },
+            // «Cuentas de operador» desambigua del MÓDULO «Operadores» (gestión del flujo), artefacto §3.
+            { href: "/dashboard/admin/usuarios/operadores", label: "Cuentas de operador", modulo: "usuarios_admin" },
+            { href: "/dashboard/admin/usuarios/rectores", label: "Rectores", modulo: "usuarios_admin" },
+            { href: "/dashboard/admin/usuarios/comite-convivencia", label: "Cuentas del comité de convivencia", modulo: "usuarios_admin" },
+            { href: "/dashboard/admin/usuarios/comite-validacion", label: "Cuentas del comité de validación", modulo: "usuarios_admin" },
+        ],
+    },
+    { href: "/dashboard/admin/padres", label: "Padres", modulo: "padres" },
     { href: "/dashboard/admin/colegios", label: "Colegios", modulo: "colegios_gestion" },
-    // SPEC-227 (002-PI-128): historial de sugerencias del motor de reglas (solo ADMIN).
-    { href: "/dashboard/admin/analisis/recomendaciones", label: "Sugerencias", modulo: "analisis_recomendaciones" },
-    // SPEC-224 (002-PI-125): panel de reglas configurables del motor (solo ADMIN).
-    { href: "/dashboard/admin/analisis/reglas", label: "Análisis · Reglas", modulo: "analisis_admin" },
-    { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", modulo: "anti_abuso" },
-    // SPEC-180: la página Monitoreo worker se retiró del menú (redundante con el
-    // tablero operativo de SPEC-171, que cubre worker + BD + 4 señales más).
-    // La ruta redirige a /dashboard/admin/estadisticas/operacion.
-    { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", modulo: "dataset_entrenamiento" },
-    { href: "/dashboard/admin/configuracion", label: "Configuración", modulo: "configuracion_sistema" },
-    // SPEC-408 (A-75 · brief §9): dos colas del Verificador — solicitudes por
-    // revisar (raíz) e incidentes de citas. Ambas están gateadas por el mismo
-    // módulo `admin_verificacion_profesionales`, así que el nav las pinta juntas.
-    { href: "/dashboard/admin/verificacion", label: "Verificación", modulo: "admin_verificacion_profesionales" },
-    { href: "/dashboard/admin/verificacion/incidentes", label: "Incidentes de citas", modulo: "admin_verificacion_profesionales" },
+    {
+        // SPEC-744 (aprob. Jelkin): «Estadísticas» —no «Dashboard» (techie)—. 4 hojas (choque CEO:
+        // «Clasificación» NO, es un tab-query de Operación). «Dinero vs valor» la gatea `pagos_admin`.
+        href: "#",
+        label: "Estadísticas",
+        iconKey: "estadisticas-grupo",
+        modulo: "estadisticas",
+        children: [
+            { href: "/dashboard/admin/estadisticas/dinero-vs-valor", label: "Dinero vs valor", modulo: "pagos_admin" },
+            { href: "/dashboard/admin/estadisticas/motor", label: "Motor", modulo: "estadisticas" },
+            { href: "/dashboard/admin/estadisticas/operacion", label: "Operación", modulo: "estadisticas" },
+            // Su página la gatea `estadisticas_salud_motor` (sale de SIN_PANTALLA_PROPIA: ya es hoja).
+            { href: "/dashboard/admin/estadisticas/salud-motor", label: "Salud del motor", modulo: "estadisticas_salud_motor" },
+        ],
+    },
+    // SPEC-824: bandeja de peticiones de soporte (PQR + habeas data).
+    { href: "/dashboard/admin/soporte/peticiones", label: "Soporte", labelCorto: "Soporte", modulo: "soporte_peticiones" },
+    {
+        href: "#",
+        label: "Configuración",
+        iconKey: "configuracion-grupo",
+        modulo: "configuracion_sistema",
+        children: [
+            { href: "/dashboard/admin/configuracion", label: "General", modulo: "configuracion_sistema" },
+            // «Guías de acción» = la parametrización (distinta de «Guías por aprobar» del Comité, §3).
+            { href: "/dashboard/admin/configuracion/guias-accion", label: "Guías de acción", modulo: "guias_accion_admin" },
+        ],
+    },
 ];
 
 export const COMITE_NAV_TABS: NavItem[] = [
@@ -269,9 +401,14 @@ export const PRINCIPALES_MOVIL: Record<string, string[]> = {
     ],
     ADMIN: [
         "/dashboard/admin/inicio", // Inicio
-        "/dashboard/admin/bandeja", // Bandeja de reportes
-        "/dashboard/admin/comite", // Comité (SALTA «Revisión de spam», que va 3º en la lista)
-        "/dashboard/admin/estadisticas", // Estadísticas
+        "/dashboard/admin/bandeja", // «Bandeja de reportes» (hoja del módulo «Reportes»)
+        "/dashboard/admin/comite", // «Bandeja» del módulo «Comité de Convivencia»
+        // SPEC-857: la raíz /dashboard/admin/estadisticas dejó de ser destino del menú (Estadísticas
+        // pasó a MÓDULO de 4 hojas). El principal móvil «Estadísticas» apunta a su aterrizaje operativo
+        // /operacion —mismo gate `estadisticas` que la vieja hoja; SPEC-180 ya redirige ahí—. Default
+        // CONFESADO a CEO PI (el radicado pedía este set intacto, pero el drop de la raíz lo invalidó):
+        // alternativas = bajar a 3 principales, o apuntar a otra hoja de Estadísticas.
+        "/dashboard/admin/estadisticas/operacion",
     ],
     COMITE_CONVIVENCIA: [
         "/dashboard/colegio/comite", // Inicio

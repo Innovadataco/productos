@@ -76,7 +76,7 @@ describe("SPEC-437 · misma mecánica que el operador: módulo por ítem", () =>
     it("cada ítem cuelga de un módulo del catálogo, no de una condición quemada", () => {
         for (const item of PROFESIONAL_NAV_ITEMS) {
             expect(item.modulo, `«${item.label}» no declara módulo`).toBeTruthy();
-            expect(claves.has(item.modulo), `módulo "${item.modulo}" no está en el catálogo`).toBe(true);
+            expect(claves.has(item.modulo ?? ""), `módulo "${item.modulo}" no está en el catálogo`).toBe(true);
         }
     });
 

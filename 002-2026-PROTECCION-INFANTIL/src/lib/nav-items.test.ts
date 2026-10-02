@@ -12,7 +12,7 @@ import { CATALOGO_MODULOS } from "./permisos-catalogo";
 
 const CLAVES_CATALOGO = new Set(CATALOGO_MODULOS.map((m) => m.clave));
 
-// Módulos sin ítem de menú propio (contenedores, tabs IA, audit_logs) — research.md §3.3
+// Módulos sin ítem de menú propio (contenedores, tabs IA) — research.md §3.3
 const SIN_PANTALLA_PROPIA = new Set([
     // NOTA (SPEC-437 · T013): `comite` salió de acá — tenía ítem de menú
     // (`/dashboard/admin/comite/gestion`, ADMIN_NAV_ITEMS) desde spec 086, así que
@@ -23,7 +23,9 @@ const SIN_PANTALLA_PROPIA = new Set([
     "ia_simulaciones",
     "ia_configuracion",
     "configuracion_permisos",
-    "audit_logs",
+    // SPEC-857: `audit_logs` SALIÓ de acá — ahora es hoja de menú (Operadores → «Auditoría»,
+    // /dashboard/admin/operadores/auditoria, que la página gatea con `audit_logs`). El guard
+    // «no tiene justificaciones superfluas» de abajo exige quitarla al volverse pantalla.
     // Permiso de acción (spec 096): revelar texto original dentro del expediente, sin pantalla propia
     "expediente_revelar_original",
     // SPEC-140 (F2): generar la denuncia formal es una acción dentro del expediente
@@ -47,15 +49,13 @@ const SIN_PANTALLA_PROPIA = new Set([
     // SPEC-206 (002-PI-120): sesiones activas es un sub-tab dentro de
     // `/dashboard/admin/estadisticas/operacion`; no tiene ítem de menú lateral propio.
     "sesiones_admin",
-    // SPEC-235 (002-PI-135): guías de acción parametrizables es un sub-tab dentro de
-    // `/dashboard/admin/configuracion`; no tiene ítem de menú lateral propio.
-    "guias_accion_admin",
+    // SPEC-857: `guias_accion_admin` SALIÓ de acá — ahora es hoja de menú (Configuración →
+    // «Guías de acción», /dashboard/admin/configuracion/guias-accion). Era sub-tab (SPEC-235).
     // SPEC-202/203: el panel de notificaciones es un tab dentro de
     // `/dashboard/admin/configuracion`; no tiene ítem de menú lateral propio.
     "configuracion_notificaciones",
-    // SPEC-202: salud del motor de notificaciones es una sub-página del área
-    // Estadísticas (sub-nav); no tiene ítem de menú lateral propio.
-    "estadisticas_salud_motor",
+    // SPEC-857: `estadisticas_salud_motor` SALIÓ de acá — ahora es hoja de menú (Estadísticas →
+    // «Salud del motor», /dashboard/admin/estadisticas/salud-motor). Era sub-página (SPEC-202).
     // SPEC-291 (002-PI-191): administración del sistema (start/stop/restart de
     // servicios docker) es un módulo de acción endpoint-only; no tiene ítem de
     // menú lateral propio en este SPEC — el tablero de servicios lo agrega D-83.
@@ -78,7 +78,13 @@ function aplanar(items: NavItem[]): NavItem[] {
 // SPEC-437 (A-75): el menú del profesional entra a esta verificación. Antes no
 // estaba porque `PROFESIONAL_NAV_ITEMS` no tenía módulos —ni consumidores—; hoy
 // cuelga de módulos concedibles como el del operador y se audita igual.
-const TODOS_LOS_ITEMS = aplanar([...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS, ...PROFESIONAL_NAV_ITEMS]);
+// SPEC-857: los ENCABEZADOS de sección (`encabezado: true`, sin `modulo`) son separadores
+// visuales, no destinos — se excluyen de la verificación menú↔catálogo (no cuelgan de un módulo).
+// El predicado estrecha `modulo` a `string`: una hoja/grupo real SIN módulo quedaría fuera y
+// test 3 («todo módulo visible tiene ítem») lo delataría por el módulo descubierto.
+const TODOS_LOS_ITEMS = aplanar([...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS, ...PROFESIONAL_NAV_ITEMS]).filter(
+    (i): i is NavItem & { modulo: string } => !i.encabezado && i.modulo !== undefined,
+);
 
 describe("estructura menú ↔ catálogo", () => {
     it("todo ítem de menú referencia un módulo existente en el catálogo", () => {

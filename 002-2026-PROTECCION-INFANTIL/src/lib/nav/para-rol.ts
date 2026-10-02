@@ -43,6 +43,9 @@ export interface NavEntry {
     /** Rótulo corto para la barra móvil (1 palabra); si falta, la superficie usa `label`. */
     labelCorto?: string;
     children?: NavEntry[];
+    /** SPEC-857: encabezado de sección NO navegable (separador del menú de 2 niveles). La lateral
+     *  lo pinta como rótulo sin enlace; la barra móvil lo omite (no es un destino). */
+    esEncabezado?: boolean;
 }
 
 /** El contexto de la sesión que la compuerta necesita; cada rol usa lo suyo. */
@@ -66,6 +69,8 @@ const RUTA_ACEPTACION_AUTORIZACION = "/perfil-profesional/autorizacion";
 function desnudar(item: NavItem | PadreNavItem): NavEntry {
     const base: NavEntry = { href: item.href, label: item.label, iconKey: item.iconKey ?? item.href };
     if (item.labelCorto) base.labelCorto = item.labelCorto;
+    // SPEC-857: sólo NavItem tiene `encabezado`; PadreNavItem no → se guarda con el `in`.
+    if ("encabezado" in item && item.encabezado) base.esEncabezado = true;
     if (item.children && item.children.length > 0) {
         base.children = item.children.map(desnudar);
     }
@@ -80,19 +85,45 @@ function desnudar(item: NavItem | PadreNavItem): NavEntry {
  * SPEC-744); ahora vive UNA sola vez acá y la consumen NavLateral / BarraInferior.
  */
 function porModuloYProxy(items: NavItem[], rol: string, permitidos: Set<string>): NavEntry[] {
-    const salida: NavEntry[] = [];
-    for (const item of items) {
+    // 1ª pasada: gatea cada ítem. Un ENCABEZADO (SPEC-857) queda como marcador; se resuelve en la 2ª.
+    type Gated = { enc: NavItem } | { entry: NavEntry } | null;
+    const tieneModulo = (m: string | undefined): m is string => m !== undefined && permitidos.has(m);
+    const gated: Gated[] = items.map((item) => {
+        if (item.encabezado) return { enc: item };
         if (item.children && item.children.length > 0) {
-            const hijos = item.children.filter(
-                (h) => permitidos.has(h.modulo) && esDestinoPermitidoPorRol(rol, h.href),
-            );
-            if (!permitidos.has(item.modulo) || hijos.length === 0) continue;
-            // `desnudar` da href/label/iconKey/labelCorto del padre; se le sustituyen los
-            // hijos por los YA filtrados (no todos los del catálogo).
-            salida.push({ ...desnudar(item), children: hijos.map(desnudar) });
-        } else if (permitidos.has(item.modulo) && esDestinoPermitidoPorRol(rol, item.href)) {
-            salida.push(desnudar(item));
+            const hijos = item.children.filter((h) => tieneModulo(h.modulo) && esDestinoPermitidoPorRol(rol, h.href));
+            // SPEC-857: el grupo se muestra si le queda ≥1 hijo visible — la compuerta es por HIJOS,
+            // NO por el módulo del grupo (ese es representativo). Menú honesto (SPEC-086): el grupo
+            // aparece exactamente cuando hay al menos una pantalla a la que el rol puede entrar. (Antes
+            // la compuerta exigía además el módulo del grupo; con grupos de módulos mixtos eso escondía
+            // el grupo aunque hubiera hijos accesibles.)
+            if (hijos.length === 0) return null;
+            // `desnudar` da href/label/iconKey del padre; se le sustituyen los hijos YA filtrados.
+            return { entry: { ...desnudar(item), children: hijos.map(desnudar) } };
         }
+        if (tieneModulo(item.modulo) && esDestinoPermitidoPorRol(rol, item.href)) {
+            return { entry: desnudar(item) };
+        }
+        return null;
+    });
+    // 2ª pasada: emite; un ENCABEZADO sólo si su sección (hasta el próximo encabezado) tiene ≥1 ítem
+    // visible — un encabezado huérfano mentiría sobre una sección vacía (menú honesto, también para
+    // los separadores). Los internos con un subconjunto de módulos no ven secciones vacías con rótulo.
+    const salida: NavEntry[] = [];
+    for (let i = 0; i < gated.length; i++) {
+        const g = gated[i];
+        if (!g) continue;
+        if ("enc" in g) {
+            let hayItem = false;
+            for (let j = i + 1; j < gated.length; j++) {
+                const sig = gated[j];
+                if (sig && "enc" in sig) break; // llegó el próximo encabezado sin ítems entre medio
+                if (sig && "entry" in sig) { hayItem = true; break; }
+            }
+            if (hayItem) salida.push(desnudar(g.enc));
+            continue;
+        }
+        salida.push(g.entry);
     }
     return salida;
 }
@@ -146,10 +177,13 @@ export function aplanar(items: NavEntry[]): NavEntry[] {
     // ICONOS_NAV), y registrarlo ahí duplicaría el ícono en el LATERAL (el hijo saldría con
     // ícono junto al del encabezado de su grupo, desparejo con su hermano). Las hojas top-level
     // pasan tal cual.
+    // SPEC-857: los encabezados de sección son separadores de la lateral; la barra móvil no los lleva.
     return items.flatMap((item) =>
-        item.children && item.children.length > 0
-            ? item.children.map((hijo) => ({ ...hijo, iconKey: item.iconKey }))
-            : [item],
+        item.esEncabezado
+            ? []
+            : item.children && item.children.length > 0
+                ? item.children.map((hijo) => ({ ...hijo, iconKey: item.iconKey }))
+                : [item],
     );
 }
 
@@ -185,8 +219,20 @@ export function navMovilParaRol(rol: string | null | undefined, ctx: CtxNav = {}
 
     let principales: NavEntry[];
     if (!orden) {
-        // Sin curaduría: las primeras ≤4 hojas en orden de la lista (FORMA §3, familia admin).
-        principales = plano.slice(0, 4);
+        // SPEC-857: con el menú agrupado (módulos del admin), varias hojas comparten el ÍCONO de su
+        // grupo. El default de los roles internos sin curaduría (OPERADOR/COMITE_VALIDACION/VERIFICADOR)
+        // toma la PRIMERA hoja de cada ícono distinto → ≤4 pestañas de íconos ÚNICOS (una por sección),
+        // como exige el candado nav-iconos (1: sin íconos duplicados en la barra). Antes, con la lista
+        // plana, las primeras 4 ya eran de íconos distintos; el agrupamiento lo volvió necesario. El
+        // resto de hojas de una sección sigue alcanzable por «Más». (FORMA §3, adaptado al agrupamiento.)
+        principales = [];
+        const iconosVistos = new Set<string>();
+        for (const e of plano) {
+            if (iconosVistos.has(e.iconKey)) continue;
+            iconosVistos.add(e.iconKey);
+            principales.push(e);
+            if (principales.length === 4) break;
+        }
     } else {
         const porHref = new Map(plano.map((e) => [e.href, e]));
         principales = [];
@@ -203,6 +249,7 @@ export function navMovilParaRol(rol: string | null | undefined, ctx: CtxNav = {}
     // ellos; si no, se omite. Las hojas sueltas van como ítem. NO se aplana.
     const resto: NavEntry[] = [];
     for (const item of tree) {
+        if (item.esEncabezado) continue; // SPEC-857: separador de la lateral; el «Más» no lo pinta
         if (item.children && item.children.length > 0) {
             const hijos = item.children.filter((h) => !enPrincipales.has(h.href));
             if (hijos.length > 0) resto.push({ ...item, children: hijos });

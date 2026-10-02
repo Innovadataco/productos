@@ -15,6 +15,7 @@ import {
     COLEGIO_NAV_ITEMS,
     COMITE_NAV_TABS,
     IA_TABS,
+    aplanarNavItems,
     type NavItem,
 } from "../../../src/lib/nav-items";
 import { CATALOGO_MODULOS } from "../../../src/lib/permisos-catalogo";
@@ -148,7 +149,11 @@ export interface NavArray {
  */
 export function arraysNav(): NavArray[] {
     return [
-        { nombre: "ADMIN_NAV_ITEMS", area: "/dashboard/admin", items: ADMIN_NAV_ITEMS, filtroModulo: "seed" },
+        // SPEC-857: ADMIN_NAV_ITEMS es de 2 niveles (módulos href "#" + encabezados). Para la aserción
+        // y el generador se APLANA a sus HOJAS reales (los destinos navegables con su módulo): el
+        // contenedor "#" y los encabezados no son destinos. COLEGIO conserva su forma (su grupo
+        // «Usuarios» ya se trataba así): su aplanado queda como deuda aparte si hiciera falta.
+        { nombre: "ADMIN_NAV_ITEMS", area: "/dashboard/admin", items: aplanarNavItems(ADMIN_NAV_ITEMS), filtroModulo: "seed" },
         { nombre: "COMITE_NAV_TABS", area: "/dashboard/admin/comite", items: COMITE_NAV_TABS, filtroModulo: "seed" },
         { nombre: "COLEGIO_NAV_ITEMS", area: "/dashboard/colegio", items: COLEGIO_NAV_ITEMS, filtroModulo: "seed" },
         ...subnavsFijos(),

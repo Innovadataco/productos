@@ -18,8 +18,10 @@ import { IconoNav, tieneIcono, InboxIcon, InicioIcon, type IconoNavComponente } 
  *
  * Presentación por familia (color/título/pie): admin (cielo + ámbar en Pagos + pie
  * «Cambiar contraseña»), colegio (pino), padre (cielo). Íconos: `IconoNav` (fuente única,
- * SPEC-744). Movimiento del chevron sólo bajo `motion-safe`. Grupos NACEN EXPANDIDOS
- * (FORMA §4); si la ruta activa cae dentro, el encabezado se marca.
+ * SPEC-744). Movimiento del chevron sólo bajo `motion-safe`. Grupos: colegio/padre NACEN
+ * EXPANDIDOS (FORMA §4); SPEC-857: los MÓDULOS del admin nacen COLAPSADOS salvo que la ruta
+ * activa caiga dentro (abrir-en-activo). Dos ENCABEZADOS de sección (admin) son separadores no
+ * navegables. Si la ruta activa cae en un grupo, su encabezado se marca.
  */
 export type RolLateral =
     | "ADMIN"
@@ -116,8 +118,24 @@ export function NavLateral({
     // SSR afirme «portero» antes de saber. Así el primer pintado ya es el correcto. El activo es presentación.
     const items = navParaRol(rol, { modulosPermitidos, profesional: profesionalInicial, pathname });
     const raiz = items[0]?.href;
-    const esActivo = (href: string) =>
-        href !== "#" && (pathname === href || (href !== raiz && (pathname?.startsWith(href + "/") ?? false)));
+    // SPEC-857: con hojas ANIDADAS en módulos, un href puede ser PREFIJO de su hermano (p.ej. «Bandeja»
+    // /comite y «Gestión» /comite/gestion). Un `startsWith` marcaría a los dos. El activo es un solo
+    // ganador: el href MÁS LARGO (el más específico) que sea el pathname o su prefijo. La raíz (items[0])
+    // sólo activa por coincidencia EXACTA (no por prefijo), como antes.
+    const hrefActivo = (() => {
+        const candidatos: string[] = [];
+        const juntar = (its: NavEntry[]) => {
+            for (const it of its) {
+                if (it.children && it.children.length > 0) juntar(it.children);
+                else if (!it.esEncabezado) candidatos.push(it.href);
+            }
+        };
+        juntar(items);
+        return candidatos
+            .filter((h) => h !== "#" && (pathname === h || (h !== raiz && (pathname?.startsWith(h + "/") ?? false))))
+            .sort((a, b) => b.length - a.length)[0];
+    })();
+    const esActivo = (href: string) => href !== "#" && href === hrefActivo;
 
     const familia = familiaDeRol(rol);
     const tema = TEMAS[familia];
@@ -136,8 +154,11 @@ export function NavLateral({
             </div>
             <ul className="flex-1 space-y-1 p-3">
                 {items.map((item) =>
-                    item.children && item.children.length > 0 ? (
-                        <GrupoLateral key={item.label} grupo={item} tema={tema} esActivo={esActivo} />
+                    item.esEncabezado ? (
+                        // SPEC-857: encabezado de sección NO navegable (separador del menú de 2 niveles).
+                        <EncabezadoLateral key={`enc-${item.label}`} label={item.label} />
+                    ) : item.children && item.children.length > 0 ? (
+                        <GrupoLateral key={item.label} grupo={item} tema={tema} familia={familia} esActivo={esActivo} />
                     ) : (
                         <EnlaceLateral key={item.href} item={item} tema={tema} active={esActivo(item.href)} />
                     ),
@@ -158,9 +179,21 @@ export function NavLateral({
     );
 }
 
+/** SPEC-857: encabezado de sección NO navegable (separador del menú admin de 2 niveles). Rótulo
+ *  tenue, sin enlace ni botón. Sólo aparece en la familia admin (las otras no tienen secciones). */
+function EncabezadoLateral({ label }: { label: string }) {
+    return (
+        <li className="select-none px-4 pb-1 pt-5 text-[0.7rem] font-semibold uppercase tracking-wide text-subtle first:pt-2">
+            {label}
+        </li>
+    );
+}
+
 function EnlaceLateral({ item, tema, active }: { item: NavEntry; tema: TemaLateral; active: boolean }) {
-    // SPEC-212: la entrada de Pagos va en ámbar (acción de dinero), no en el acento del rol.
-    const esPagos = item.href === "/dashboard/admin/pagos";
+    // SPEC-212: la entrada de Pagos va en ámbar (acción de dinero), no en el acento del rol. SPEC-857:
+    // Pagos pasó a MÓDULO; el ámbar de sus hijos lo aplica GrupoLateral. Acá queda por si una hoja
+    // suelta de pagos volviera al top-level (startsWith cubre /pagos y /pagos/*).
+    const esPagos = item.href.startsWith("/dashboard/admin/pagos");
     return (
         <li>
             <Link
@@ -175,21 +208,35 @@ function EnlaceLateral({ item, tema, active }: { item: NavEntry; tema: TemaLater
     );
 }
 
-/** Grupo colapsable (padre «Reportar»/«Ayuda profesional», colegio «Usuarios»). Nace EXPANDIDO. */
+/**
+ * Grupo colapsable (admin: módulos SPEC-857; padre «Reportar»/«Ayuda profesional»; colegio «Usuarios»).
+ * SPEC-744: en colegio/padre NACE EXPANDIDO (FORMA §4). SPEC-857: en la familia ADMIN nace COLAPSADO
+ * salvo que la ruta activa caiga dentro (abrir-en-activo) — con ~9 módulos, abrir todo saturaría la barra.
+ */
 function GrupoLateral({
     grupo,
     tema,
+    familia,
     esActivo,
 }: {
     grupo: NavEntry;
     tema: TemaLateral;
+    familia: Familia;
     esActivo: (href: string) => boolean;
 }) {
     const panelId = useId();
-    const [colapsado, setColapsado] = useState(false);
-    const expandido = !colapsado;
     const hijos = grupo.children ?? [];
     const conActivo = hijos.some((h) => esActivo(h.href));
+    // SPEC-857: estado inicial POR FAMILIA. Admin: colapsado salvo activo dentro. Resto: expandido.
+    const [colapsado, setColapsado] = useState(familia === "admin" && !conActivo);
+    const expandido = !colapsado;
+    // SPEC-212/857: el módulo «Pagos» va en ámbar (acción de dinero): encabezado e hijos.
+    const esGrupoPagos = hijos.some((h) => h.href.startsWith("/dashboard/admin/pagos/"));
+    const claseBoton = esGrupoPagos
+        ? conActivo
+            ? "text-ambar"
+            : "text-ambar hover:bg-ambar/10 hover:text-ambar"
+        : tema.grupo(conActivo);
 
     return (
         <li>
@@ -198,7 +245,7 @@ function GrupoLateral({
                 aria-expanded={expandido}
                 aria-controls={panelId}
                 onClick={() => setColapsado((c) => !c)}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${tema.grupo(conActivo)}`}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${claseBoton}`}
             >
                 <IconoNav clave={grupo.iconKey} className="h-4 w-4" fallback={tema.fallback} />
                 <span className="flex-1 text-left">{grupo.label}</span>
@@ -208,12 +255,13 @@ function GrupoLateral({
                 <ul id={panelId} className={`ml-5 space-y-1 border-l ${tema.borde} pl-3`}>
                     {hijos.map((hijo) => {
                         const active = esActivo(hijo.href);
+                        const esPagosHijo = hijo.href.startsWith("/dashboard/admin/pagos/");
                         return (
                             <li key={hijo.href}>
                                 <Link
                                     href={hijo.href}
                                     aria-current={active ? "page" : undefined}
-                                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${tema.enlace(active, false)}`}
+                                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${tema.enlace(active, esPagosHijo)}`}
                                 >
                                     {tieneIcono(hijo.iconKey) && <IconoNav clave={hijo.iconKey} className="h-4 w-4" />}
                                     {hijo.label}
