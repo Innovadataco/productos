@@ -20,13 +20,14 @@ Los `AGENTS.md` los lee toda sesión de IA que trabaje el repo. Mandaban un cicl
   - «Protocolo de señales (ZEUS ↔ ODIN)» → «(Dev ↔ CEO)», con las seis señales del canal y el test binario de la Nota.
 - `AGENTS.md` (raíz del repo, compartido por todos los productos):
   - «Lider · ZEUS» → «Responsable · CEO»; «Uso por ODIN» → «Flujo de trabajo»; metodología «PM2 + Spec Kit / dos agentes ZEUS·ODIN» → flujo vigente + roles del modelo de 7; «Reporte a ZEUS» → «Reporte al CEO».
+- `specs/README.md` → sección «Convención de archivos por spec» (plegada por VEREDICTO del CEO, 03-10 04:05): la obligación de `spec.md`+`plan.md`+`cierre.md` por spec cerrada pasa a **notas OPCIONALES de la feature**. Solo esa sección narrativa; la tabla autogenerada (marcadores `SPEC-413:BEGIN/END`) NO se toca.
 
 Las menciones a ZEUS/ODIN/Spec-Kit que quedan son **explicativas** («era el nombre viejo», «quedó atrás»): no reescriben el histórico, enrutan al lector (misma regla que `CLAUDE.md` en gestión).
 
 ## Fuera de alcance (hallazgos para el CEO)
 
-- `specs/README.md` → «Convención de archivos por spec» aún obliga `spec.md`+`plan.md`+`cierre.md` por spec cerrada: residuo ceremonial que contradice este cambio. No tocado (fuera del radicado).
-- `.specify/` sigue en disco (legacy). No se borra: el radicado es docs de AGENTS.md, no limpieza de archivos.
+- `.specify/` sigue en disco (legacy). No se borra: el radicado es docs de AGENTS.md/README, no limpieza de archivos.
+- El índice `specs/README.md` conserva menciones históricas a ZEUS/ACTA-VALIDACION en su prólogo y en estados de specs viejas — es registro histórico del índice (lo regenera el barrido post-merge), no se reescribe acá.
 
 ## Verificación
 

@@ -804,6 +804,6 @@
 
 ## Convención de archivos por spec
 
-Cada spec cerrada debe contener al menos: `spec.md` (alcance), `plan.md` (plan) y `reporte-cierre.md`/`cierre.md` (evidencia de cierre, en la carpeta de la spec o en `docs/cierre-NNN.md`).
+Las notas de una spec (`spec.md`, `plan.md`, `reporte-cierre.md`/`cierre.md`, en la carpeta `specs/NNN-slug/` o el cierre en `docs/cierre-NNN.md`) son **OPCIONALES**: `specs/NNN-slug/` es un **home de notas de la feature, sin set de artefactos obligatorio** (flujo vigente, SPEC-860 — ya no hay ceremonia Spec-Kit). Documentá lo que ayude y lo que el diff no muestre.
 
 - **SPEC-496** · [`496-profesional-modulo-gatea`](496-profesional-modulo-gatea/) — el módulo `profesional_*` GATEA endpoints y páginas (antes solo-NAV: revocarlo escondía el menú pero no cortaba el acceso). Candado de CLASE contra futuros solo-NAV. + módulo fantasma `admin_verificacion_incidentes` borrado + decisión `comite_auditoria` documentada.
