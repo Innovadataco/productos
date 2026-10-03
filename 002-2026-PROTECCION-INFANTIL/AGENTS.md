@@ -10,7 +10,7 @@ Trabajas dentro de esta carpeta (`002-2026-PROTECCION-INFANTIL`), repo `Innovada
 
 ## Restricciones de producto (no negociables)
 
-Definidas en `.specify/memory/constitution.md`; tienen prioridad absoluta:
+Invariantes del producto con **prioridad absoluta**. Las fija el negocio (Jelkin/CEO) y su fuente canónica vive en el repo de gestión (`01-PROYECTOS/001-2026-PROTECCION_INFANTIL/REGISTROS/DECISIONES.md`):
 
 - **Solo texto**: prohibido subir, almacenar o procesar fotos, video, audio o cualquier multimedia. Los reportes son texto + identificador + metadatos contextuales.
 - **Presunción de inocencia**: la consulta pública usa lenguaje descriptivo/estadístico ("N reportes registrados"), nunca veredictos ("número peligroso").
@@ -73,8 +73,7 @@ src/lib/            # Servicios: auth, proxy, queue, prisma, rate-limit, errors,
 prisma/             # schema.prisma, migrations/ (aditivas), seed.ts
 scripts/            # workers, dev-restart.sh, evals de clasificador, auditorías
 tests/e2e/          # Playwright
-specs/              # Specs Spec-Kit (NNN-nombre/), una por feature
-.specify/           # Config y memoria de Spec-Kit (constitution.md, feature.json)
+specs/              # Notas de feature por SPEC (NNN-slug/), OPCIONAL y sin ceremonial
 docs/               # architecture/ (línea base generada), cierres, evidencia
 ```
 
@@ -107,32 +106,37 @@ docs/               # architecture/ (línea base generada), cierres, evidencia
 - Cookies `httpOnly`, `secure` en HTTPS, `SameSite`; JWT de 24 h.
 - Audit logs y logs de aplicación nunca incluyen texto completo de reportes.
 
-## Metodología: Spec-Kit (Spec-Driven Development)
+## Metodología (flujo vigente)
 
-Flujo obligatorio por feature: **specify → clarify → plan → tasks → analyze → implement → validate → close**. Si no hay slash commands nativos, lee y ejecuta como instrucciones los archivos `.clinerules/workflows/speckit-*.md`. Respeta `.specify/memory/constitution.md`.
+El Spec-Driven ceremonial (Spec-Kit: `specify → clarify → plan → tasks → analyze → …`, set obligatorio de artefactos, `constitution.md`, `.specify/`) **quedó atrás**. El flujo real es:
 
-Cada spec vive en `specs/NNN-nombre/` con el MISMO set y formato que `specs/001-multi-role-auth-config/`: `spec.md` (User Stories con Priority + Acceptance Scenarios + Edge Cases; Functional Requirements "FR-XXX: El sistema DEBE..."; Success Criteria; Assumptions; sección Implementación al cerrar), `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `contracts/` (si hay endpoints), `checklists/requirements.md`, `tasks.md` (fases + `TNNN [P]` con ruta de archivo, orden por dependencias, TDD donde aplique). La feature activa se indica en `.specify/feature.json`.
+1. **Radicado del CEO** con el número de SPEC que él asigna (nunca lo eliges tú) y el slug.
+2. **Rama `work/pi-SPEC-<N>-<slug>`** desde `origin/main` fresco (A-47), en un worktree bajo `.worktrees/`.
+3. **Implementás** dejando un **candado que muere con el defecto** (una prueba que falla sin tu cambio y pasa con él).
+4. **Push único** al terminar (D-54) → **PR** con **CI verde** + **revisión adversarial**.
+5. **Certificación** antes de cerrar: **Diseño certifica el render**, **Calidad camina el recorrido**. Verde en CI ≠ funciona.
 
-### Valores canónicos de Status (encabezado de cada spec)
+`specs/NNN-slug/` es un **home OPCIONAL de notas** de la feature (`spec.md`/`plan.md`/`tasks.md` si ayudan) — **sin set de artefactos obligatorio, sin checklist ceremonial, sin `.specify/`**. Documentá lo que el diff no muestra.
 
-`PLANEADO` → `DESARROLLO` → `IMPLEMENTADO` → `PENDIENTE DE PRUEBA` → `FINALIZADO` → `CERRADA`.
+El detalle del flujo y de los roles (CEO · Dev · Datos · Calidad · Diseño · Estrategia, bajo Jelkin) vive en el repo de gestión: `01-PROYECTOS/001-2026-PROTECCION_INFANTIL/CLAUDE.md` y `EQUIPO/PROMPT-DESARROLLO.md`.
 
-## Reglas de cierre (las 5, ninguna se salta)
+## Reglas de cierre (las 5 de oro, ninguna se salta)
 
-1. Spec-Kit completo (todos los artefactos + checklist validado).
-2. commit + push a `work/pi-SPEC-<NNN>-<slug>` (la rama de la spec): un commit por User Story + uno de docs, con evidencia (git log + archivos tocados).
-3. Deploy limpio con `./scripts/dev-restart.sh`.
-4. Probar con el `quickstart.md`.
-5. Documentar: `cierre.md` (en `specs/NNN/` o histórico en `docs/cierre-NNN.md`) + sección Implementación en `spec.md` + deuda técnica.
+1. **SPEC numerada por el CEO** + radicado leído entero + **candado que muere con el defecto**.
+2. **Subir a GitHub** en la rama de la spec (`work/pi-SPEC-<N>-<slug>`): push único al final (D-54), staging acotado a tu producto (nunca `git add -A`).
+3. **Siempre pruebas**, con el payload REAL del componente (no uno inventado).
+4. **Siempre desplegable** — que compile NO basta: `./scripts/dev-restart.sh` y **verificación en vivo** del recorrido que tocaste (verde en CI ≠ funciona).
+5. **Siempre documentar** lo que el diff no muestra (desviación, hallazgo preexistente, deuda, riesgo asumido); notas opcionales en `specs/NNN-slug/`.
 
-## Protocolo de señales (ZEUS ↔ ODIN)
+## Protocolo de señales (Dev ↔ CEO)
 
-Estándar de comunicación fijado en ACTA_ARQ_06. Fuente: Metodología Operativa §6 R3 (v2.1) — repo `Metodologias` → `Desarrollo de software/METODOLOGIA-OPERATIVA-FABRICA-SOFTWARE-v1.0.md`. Esto es un resumen operativo; el texto canónico vive allá.
+Las sesiones no comparten memoria: lo que no queda escrito (commit, PR, `tasks.md`, gestión) se pierde. Hablás **directo con el CEO** por mensaje entre sesiones — ya no hay «Fábrica» intermediaria ni nomenclatura ZEUS/ODIN. Cada señal es UNA línea, un verbo de acción; tope 6 líneas. Canónico en gestión: `EQUIPO/PROMPT-DESARROLLO.md` (§0 Modelo de comunicación) y `CLAUDE.md`.
 
-- **Vocabulario del ciclo:** `RADICADA → REVISADA → REALIZADO → REVISO → CUMPLE/NO CUMPLE`. Cada señal es UNA línea, un verbo de acción.
-- **Al recibir un instructivo (OBLIGATORIO):** `002-PI-XXX · REVISADA · arranco` — el CEO nunca se queda sin saber si ODIN arrancó. Si algo bloquea: `002-PI-XXX · REVISADA · dudas: <…> → PARA`.
-- **Al cerrar:** `002-PI-XXX · REALIZADO · <hash> · <media línea>`, más `Nota:` SOLO si hay algo que el diff no muestra (desviación, hallazgo preexistente, riesgo asumido).
-- **Cuándo va Nota — test binario:** antes de escribir una Nota, pregúntate *"¿cambiaría el veredicto de ZEUS si no la lee?"*. No → no hay Nota.
+- **Al recibir el radicado (OBLIGATORIO):** `Dev <N> · SPEC-<N> · REVISADA · arranco`. Si algo bloquea: `… · dudas: <…> → PARÁ`.
+- **En la compuerta §4** (salvo que el radicado indique flujo autónomo): `SPEC-<N> · spec+plan LISTO · PARÁ · commit <hash>` y esperás el APRUEBO del CEO.
+- **Al cerrar:** `SPEC-<N> · REALIZADO · <hash> · CI verde · PR #NN`, más `Nota:` SOLO si hay algo que el diff no muestra.
+- **Señales del canal (orden de Jelkin):** `ACCIÓN · VEREDICTO · PARÁ · DATO · RIESGO · REPORTA`. La hora se LEE, nunca se calcula: `TZ=America/Bogota date +"%d-%m-%Y %H:%M"`.
+- **Cuándo va Nota — test binario:** *"¿cambiaría el veredicto del CEO si no la lee?"*. No → no hay Nota.
 
   | SÍ Nota (cambia el veredicto) | NO Nota (el diff ya lo dice) |
   |---|---|

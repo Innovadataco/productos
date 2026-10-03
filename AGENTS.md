@@ -16,14 +16,14 @@ Reglas especificas para operar el repo `Innovadataco/productos`.
 3. Los secrets se manejan via variables de entorno, nunca en el codigo.
 4. Preferir modelos locales para revision de codigo sensible.
 
-## Lider
+## Responsable
 
-- ZEUS — Lider de Fabrica de Software
+- **CEO** — sesión de IA que radica, revisa, mergea y despliega, bajo decisión de negocio de **Jelkin** (dueño). «ZEUS» era el nombre viejo del CEO.
 
-## Uso por ODIN
+## Flujo de trabajo
 
-- ODIN puede consultar y revisar PRs siguiendo `innovadataco-zeus-software-factory`.
-- No mergear sin ACTA-VALIDACION.
+- Cada frente trabaja su SPEC en una rama `work/<producto>-SPEC-<N>-<slug>` y abre PR; **el merge y el deploy los hace el CEO** tras CI verde + revisión adversarial.
+- «ODIN» era el nombre viejo de Desarrollo; «ACTA-VALIDACION» era ceremonia de la metodología anterior, hoy retirada.
 
 ## Ramas (INQUEBRANTABLE)
 
@@ -40,14 +40,14 @@ global se lleva el trabajo de otro y arruina la trazabilidad del commit.
 
 ## Metodología y estándares (fábrica IDC)
 
-- **Metodología oficial:** PM2 (gestión) + Spec Kit (desarrollo). Documento canónico en el repo `Metodologias` → `Desarrollo de software/METODOLOGIA-OPERATIVA-FABRICA-SOFTWARE-v1.0.md`.
-- **Modelo de dos agentes:** ZEUS diseña/revisa (constitución, brief, compuerta); ODIN redacta spec/plan e implementa/prueba/despliega.
-- **5 reglas de oro:** aplicar Spec Kit · subir a GitHub · pruebas · validar despliegue · documentar.
-- **Índice de specs:** mantener `002-2026-PROTECCION-INFANTIL/specs/README.md` actualizado con cada spec nueva o cerrada.
+- **Flujo vigente:** **radicado del CEO** (con el número de SPEC que él asigna) → **rama `work/<producto>-SPEC-<N>-<slug>`** desde `main` fresco → **PR con CI verde + revisión adversarial**; el CEO mergea y despliega. La metodología ceremonial (Spec Kit / Spec-Driven con set obligatorio de artefactos, `constitution.md`, `.specify/`) **quedó atrás**; `specs/NNN/` es home OPCIONAL de notas. La gestión (PM2) vive en el repo `Gestion-de-proyectos`.
+- **Roles (sesiones de IA, bajo Jelkin):** CEO (radica/revisa/mergea/despliega) · Dev (implementa) · Datos (modelo de datos) · Calidad (recorre) · Diseño (la forma) · Estrategia (lo comercial). «ZEUS/ODIN» eran los nombres viejos de CEO/Dev.
+- **5 reglas de oro:** SPEC numerada por el CEO + candado que muere con el defecto · subir a GitHub · pruebas · validar despliegue · documentar.
+- **Índice de specs (opcional):** si usás `002-2026-PROTECCION-INFANTIL/specs/`, mantené su `README.md` al día.
 
-## Reporte a ZEUS (handoff post-commit)
+## Reporte al CEO (handoff post-commit)
 
-Al terminar, ODIN NO pega reportes largos. Reporta compacto (ZEUS lee el diff del repo):
+Al terminar, Desarrollo NO pega reportes largos. Reporta compacto (el CEO lee el diff del repo):
 
 ```
 commit <hash> — <qué hizo, 1 línea>
