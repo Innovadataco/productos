@@ -286,8 +286,9 @@ describe("navMovilParaRol · barra móvil {principales≤4, resto}, DATA de la f
         // Admin: «Bandeja de reportes»→«Bandeja» (hoja del módulo «Reportes», conserva su labelCorto).
         const admin = navMovilParaRol("ADMIN", ctxDe("ADMIN")).principales;
         expect(admin.find((e) => e.href === "/dashboard/admin/bandeja")?.labelCorto).toBe("Bandeja");
-        // SPEC-857: el principal «Estadísticas» pasó a /operacion (hoja sin labelCorto) → usa su label.
-        expect(admin.find((e) => e.href === "/dashboard/admin/estadisticas/operacion")?.labelCorto).toBeUndefined();
+        // SPEC-858: el principal «Estadísticas» (/operacion) lleva labelCorto «Cifras» para la barra
+        // móvil (el escritorio sigue mostrando «Operación» por `label`).
+        expect(admin.find((e) => e.href === "/dashboard/admin/estadisticas/operacion")?.labelCorto).toBe("Cifras");
     });
 });
 
@@ -310,5 +311,28 @@ describe("iconKey semántica en los grupos «#» (SPEC-744, ícono distinto del 
         expect(padre.find((e) => e.label === "Ayuda profesional")?.iconKey).toBe("ayuda-profesional");
         const colegio = navParaRol("SCHOOL_ADMIN", { modulosPermitidos: MODS_COLEGIO });
         expect(colegio.find((e) => e.label === "Usuarios")?.iconKey).toBe("usuarios");
+    });
+});
+
+// SPEC-858: al promover un HIJO de grupo a principal móvil, `aplanar` hereda el ÍCONO del grupo pero
+// conserva el LABEL del hijo → dos principales podían mostrar la misma etiqueta (ADMIN: Reportes→
+// «Bandeja» y Comité→«Bandeja»). El fix da `labelCorto` a esos hijos (solo afecta la barra móvil).
+describe("SPEC-858 · barra móvil: la etiqueta MOSTRADA de los principales es distinguible por rol", () => {
+    // Todos los roles que pintan barra inferior (RolLateral): curados (PRINCIPALES_MOVIL) + internos
+    // sin curaduría (default por ícono). La etiqueta mostrada es `labelCorto ?? label`.
+    const ROLES_CON_BARRA = ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "PROFESIONAL", "SCHOOL_ADMIN", "COMITE_CONVIVENCIA", "PARENT"];
+
+    it("ningún rol repite la etiqueta mostrada entre sus principales", () => {
+        for (const rol of ROLES_CON_BARRA) {
+            const { principales } = navMovilParaRol(rol, ctxDe(rol));
+            const etiquetas = principales.map((e) => e.labelCorto ?? e.label);
+            expect(new Set(etiquetas).size, `${rol}: etiqueta repetida en la barra móvil → ${etiquetas.join(" · ")}`).toBe(etiquetas.length);
+        }
+    });
+
+    it("CONTROL POSITIVO · ADMIN muestra «Inicio · Bandeja · Comité · Cifras» (muere por mutación si se quita el labelCorto)", () => {
+        const { principales } = navMovilParaRol("ADMIN", ctxDe("ADMIN"));
+        // Sin el labelCorto de SPEC-858 esto sería [Inicio, Bandeja, Bandeja, Operación].
+        expect(principales.map((e) => e.labelCorto ?? e.label)).toEqual(["Inicio", "Bandeja", "Comité", "Cifras"]);
     });
 });
