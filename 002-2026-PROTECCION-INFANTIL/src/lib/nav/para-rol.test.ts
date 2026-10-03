@@ -105,12 +105,14 @@ describe("navParaRol · PROFESIONAL (compuerta por estado)", () => {
 describe("navParaRol · roles internos (compuerta por módulo ∧ proxy)", () => {
     it("ADMIN: solo los ítems cuyo módulo está concedido; las hojas se agrupan en su MÓDULO (SPEC-857)", () => {
         const dos = navParaRol("ADMIN", { modulosPermitidos: ["inicio_admin", "bandeja_reportes"] });
-        // «Inicio» (hoja suelta) + el MÓDULO «Reportes» (grupo href "#") con su único hijo concedido.
-        expect(dos.map((e) => e.href)).toEqual(["/dashboard/admin/inicio", "#"]);
+        // SPEC-859: «Inicio» (sin encabezado) + el encabezado «Moderación» (su sección tiene Reportes)
+        // + el MÓDULO «Reportes» con su único hijo concedido.
+        expect(dos.map((e) => e.href)).toEqual(["/dashboard/admin/inicio", "#", "#"]);
         const reportes = dos.find((e) => e.label === "Reportes");
         expect(reportes?.children?.map((c) => c.href)).toEqual(["/dashboard/admin/bandeja"]);
-        // SPEC-857: ningún ENCABEZADO huérfano — las secciones de abajo no tienen ítems visibles.
-        expect(dos.some((e) => e.esEncabezado)).toBe(false);
+        // SPEC-859: solo aparece el encabezado cuya sección tiene ítems visibles; los otros 4
+        // (Citas y profesionales · Motor y pagos · Directorio · Sistema) quedan suprimidos (huérfanos).
+        expect(dos.filter((e) => e.esEncabezado).map((e) => e.label)).toEqual(["Moderación"]);
         // Sin módulos, nada.
         expect(navParaRol("ADMIN", { modulosPermitidos: [] })).toEqual([]);
         // Un módulo no concedido no muestra su grupo (Configuración es un MÓDULO).
@@ -334,5 +336,31 @@ describe("SPEC-858 · barra móvil: la etiqueta MOSTRADA de los principales es d
         const { principales } = navMovilParaRol("ADMIN", ctxDe("ADMIN"));
         // Sin el labelCorto de SPEC-858 esto sería [Inicio, Bandeja, Bandeja, Operación].
         expect(principales.map((e) => e.labelCorto ?? e.label)).toEqual(["Inicio", "Bandeja", "Comité", "Cifras"]);
+    });
+});
+
+// SPEC-859 · CANDADO: cada módulo/hoja cuelga del ENCABEZADO de sección correcto (control positivo del
+// artefacto f616d03). Un encabezado sangra hasta el próximo; si alguien reordena un módulo a otra
+// sección, o renombra/quita un encabezado, la membresía cambia y esto se pone rojo. Es ESTRUCTURA
+// (quién va bajo qué rótulo), complementa el orden-derived de «paridad con ADMIN_NAV_ITEMS».
+describe("SPEC-859 · esquema de encabezados: cada módulo bajo su sección correcta", () => {
+    it("ADMIN con todos los módulos: la membresía sección→ítems es la del esquema (5 encabezados)", () => {
+        const nav = navParaRol("ADMIN", { modulosPermitidos: MODS_ADMIN });
+        const secciones: Record<string, string[]> = {};
+        let actual = "(sin encabezado)";
+        for (const e of nav) {
+            if (e.esEncabezado) { actual = e.label; secciones[actual] = []; continue; }
+            (secciones[actual] ??= []).push(e.label);
+        }
+        expect(secciones["(sin encabezado)"]).toEqual(["Inicio"]); // la casa, al tope, sin rótulo arriba
+        expect(secciones["Moderación"]).toEqual(["Reportes", "Comité de Convivencia", "Soporte"]);
+        expect(secciones["Citas y profesionales"]).toEqual(["Sesiones", "Operadores", "Reubicaciones", "Profesionales", "Verificadores", "Verificación"]);
+        expect(secciones["Motor y pagos"]).toEqual(["Motor IA", "Pagos"]);
+        expect(secciones["Directorio"]).toEqual(["Usuarios", "Padres", "Colegios"]);
+        expect(secciones["Sistema"]).toEqual(["Estadísticas", "Configuración"]);
+        // Exactamente 5 encabezados, todos no-navegables (href "#", sin módulo).
+        const encabezados = nav.filter((e) => e.esEncabezado);
+        expect(encabezados.map((e) => e.label)).toEqual(["Moderación", "Citas y profesionales", "Motor y pagos", "Directorio", "Sistema"]);
+        expect(encabezados.every((e) => e.href === "#")).toBe(true);
     });
 });

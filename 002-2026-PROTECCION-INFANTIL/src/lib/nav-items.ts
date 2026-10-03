@@ -54,6 +54,10 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     // SPEC-378: Inicio del administrador — alarma de la casa (primero del nav).
     // Cuando el admin lo tiene, `/dashboard/admin` (raíz) redirige acá.
     { href: "/dashboard/admin/inicio", label: "Inicio", modulo: "inicio_admin" },
+    // ── Sección: bandejas de revisión (SPEC-859 · Diseño f616d03) ─────────────────────────
+    // Encabezado NUEVO. Inicio queda SIN encabezado (es el tope; nada lo cubre). «Moderación»
+    // cubre hasta «Citas y profesionales»: Reportes · Comité de Convivencia · Soporte (bandejas).
+    { href: "#", label: "Moderación", encabezado: true },
     {
         href: "#",
         label: "Reportes",
@@ -86,6 +90,9 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
             { href: "/dashboard/admin/comite/auditoria", label: "Auditoría", modulo: "comite_auditoria" },
         ],
     },
+    // SPEC-859 (Diseño f616d03 v1.1): «Soporte» vive en «Moderación» — es una bandeja de peticiones
+    // (PQR/habeas data), va con las otras bandejas de revisión; antes estaba en la cola («Sistema»).
+    { href: "/dashboard/admin/soporte/peticiones", label: "Soporte", labelCorto: "Soporte", modulo: "soporte_peticiones" },
     // ── Sección: el flujo de citas y la red de profesionales ──────────────────────────────
     { href: "#", label: "Citas y profesionales", encabezado: true },
     // SPEC-750/T014: la cola de sesiones del operador.
@@ -125,6 +132,10 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
             { href: "/dashboard/admin/verificacion/reportes-no-coinciden", label: "Reportes que no coinciden", modulo: "admin_verificacion_profesionales" },
         ],
     },
+    // ── Sección: el cerebro y la caja (SPEC-859 · Diseño f616d03) ─────────────────────────
+    // Encabezado NUEVO: saca Motor IA y Pagos de debajo de «Citas y profesionales» (la sangría del
+    // rótulo los cubría). Rótulo literal que nombra ambos (grupo marcado por Diseño como imperfecto).
+    { href: "#", label: "Motor y pagos", encabezado: true },
     {
         href: "#",
         label: "Motor IA",
@@ -178,6 +189,10 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     },
     { href: "/dashboard/admin/padres", label: "Padres", modulo: "padres" },
     { href: "/dashboard/admin/colegios", label: "Colegios", modulo: "colegios_gestion" },
+    // ── Sección: métricas y ajustes (SPEC-859 · Diseño f616d03) ───────────────────────────
+    // Encabezado NUEVO: saca Estadísticas/Configuración de debajo de «Directorio». Soporte YA NO
+    // está en esta sección (subió a «Moderación» con las otras bandejas, v1.1).
+    { href: "#", label: "Sistema", encabezado: true },
     {
         // SPEC-744 (aprob. Jelkin): «Estadísticas» —no «Dashboard» (techie)—. 4 hojas (choque CEO:
         // «Clasificación» NO, es un tab-query de Operación). «Dinero vs valor» la gatea `pagos_admin`.
@@ -196,8 +211,6 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
             { href: "/dashboard/admin/estadisticas/salud-motor", label: "Salud del motor", modulo: "estadisticas_salud_motor" },
         ],
     },
-    // SPEC-824: bandeja de peticiones de soporte (PQR + habeas data).
-    { href: "/dashboard/admin/soporte/peticiones", label: "Soporte", labelCorto: "Soporte", modulo: "soporte_peticiones" },
     {
         href: "#",
         label: "Configuración",
