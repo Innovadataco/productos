@@ -3,6 +3,13 @@
 > Estado: IMPLEMENTADO (pendiente CI verde + revisión del CEO). Rama `work/pi-SPEC-863-discriminador-reporte-simulacro`.
 > Radicado: CEO → Datos, 03-10-2026. Carril **Datos** + D-121 + toca BI (hermano parqueado).
 
+**Impacto en arquitectura:** NO toca el schema (reusa los modelos vivos `DemoMarcado` /
+`SimulacionReporte`; sin columna publicada ni migración). Añade un predicado canónico en el DAL
+(`demo-exclusion.ts`, espejo de BI 006 e `inicio-admin`) y un guard/merge por consumidor; introduce
+el wrapper `recalcularYGuardarScoreSiReporteReal` como chokepoint del write-side del agregado público.
+Respeta la frontera DAL (Q-3) y el único punto de escritura de Reporte (`crearReporteConTexto`,
+arch:check (g)). Sin rutas paralelas (D-72).
+
 ## Problema (I-400)
 
 `Reporte` no tenía forma de distinguir un reporte de PRUEBA de uno real **a nivel de columna**, así que un
