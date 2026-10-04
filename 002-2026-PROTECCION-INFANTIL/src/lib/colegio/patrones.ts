@@ -54,7 +54,13 @@ export function periodoAnteriorTrimestre(periodo: string): string {
  * del vínculo más antiguo). Idempotente por el marcador de la alerta.
  */
 export async function agregarPatronPorReporte(reporteId: string): Promise<void> {
-    const reporte = await new ReporteRepository().findParaPatron(reporteId);
+    const reportes = new ReporteRepository();
+    // SPEC-863 (I-400): un reporte de PRUEBA (simulacro/demo) NO infla los patrones
+    // institucionales del rector.
+    if (await reportes.esNoReal(reporteId)) {
+        return;
+    }
+    const reporte = await reportes.findParaPatron(reporteId);
     if (!reporte || !esReporteAprobado(reporte, reporte.clasificacion?.categoria)) {
         return;
     }

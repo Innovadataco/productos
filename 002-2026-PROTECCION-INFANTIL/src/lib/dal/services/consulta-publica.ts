@@ -178,8 +178,9 @@ export class ConsultaPublicaService {
         const minRatio = parseFloat(paramRatio?.valor || "0.5");
         const actividadAltaMin = parseInt(paramActividad?.valor || "5", 10);
 
+        // SPEC-863 (I-400): la consulta PÚBLICA nunca cuenta reportes de prueba (simulacro/demo).
         const reportes = await this.reportes.findAprobadosPorIdentificador(
-            whereReporteAprobado({ identificador })
+            { ...whereReporteAprobado({ identificador }), ...(await this.reportes.whereExcluirNoReales()) }
         );
 
         if (reportes.length === 0) {
@@ -304,8 +305,9 @@ export class ConsultaPublicaService {
         // que la lectura empate con la forma canónica del write.
         identificador = normalizarIdentificador(identificador);
 
+        // SPEC-863 (I-400): el detalle PÚBLICO nunca muestra reportes de prueba (simulacro/demo).
         const reportes = await this.reportes.findVisiblesPorIdentificador(
-            whereReporteEnEstados(ESTADOS_VISIBLES, { identificador })
+            { ...whereReporteEnEstados(ESTADOS_VISIBLES, { identificador }), ...(await this.reportes.whereExcluirNoReales()) }
         );
 
         if (reportes.length === 0) {

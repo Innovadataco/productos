@@ -8,6 +8,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { OrdenBandeja } from "@/lib/validators";
 import type { DbClient } from "../unit-of-work";
+import { esReporteNoReal, whereExcluirReportesNoReales, idsReportesNoReales } from "../demo-exclusion";
 
 const INCLUDE_CON_DETALLE = {
     plataforma: { select: { nombre: true, clave: true } },
@@ -166,6 +167,14 @@ export class ReporteRepository {
     constructor(tx?: Prisma.TransactionClient) {
         this.db = tx ?? prisma;
     }
+
+    // SPEC-863 (I-400): exclusión de reportes de PRUEBA (simulacro/demo). Predicado único en
+    // `demo-exclusion.ts` (demo_marcado entidad="Reporte" ∪ simulacion_reportes). `esNoReal` = guard
+    // de consumidores; `whereExcluirNoReales` = WHERE `{id:{notIn}}` para mergear donde el where NO
+    // fija `id`; `idsNoReales` = ids para componer a mano un `id` que ya trae `not`/`in`.
+    esNoReal(reporteId: string): Promise<boolean> { return esReporteNoReal(this.db, reporteId); }
+    whereExcluirNoReales(): Promise<Prisma.ReporteWhereInput> { return whereExcluirReportesNoReales(this.db); }
+    idsNoReales(): Promise<string[]> { return idsReportesNoReales(this.db); }
 
     findByIdConDetalle(id: string): Promise<ReporteConDetalle | null> {
         return this.db.reporte.findUnique({ where: { id }, include: INCLUDE_CON_DETALLE });

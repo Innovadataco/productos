@@ -243,8 +243,15 @@ export class ReporteQueryService {
         identificador: string,
         plataformaId: string
     ): Promise<OtroReporteDto[]> {
+        // SPEC-863 (I-400): el seguimiento PÚBLICO no muestra «otros reportes» de prueba. El where
+        // YA fija `id: { not: reporteId }`, así que se COMPONE el filtro (not + notIn) en vez de
+        // pisarlo con un spread ciego (habría roto el contrato de excluir el reporte actual).
         const filas = await this.reportesSeguimiento.findOtrosPorIdentificador(
-            whereReporteAprobado({ identificador, plataformaId, id: { not: reporteId } })
+            whereReporteAprobado({
+                identificador,
+                plataformaId,
+                id: { not: reporteId, notIn: await this.reportes.idsNoReales() },
+            })
         );
         return filas.map((r) => ({
             id: r.id,

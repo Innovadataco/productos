@@ -26,6 +26,9 @@ import type { EstadoReporte } from "@prisma/client";
 import { logger } from "../../../logger";
 import { maskEmail } from "../../../mask-email";
 import { ESTADOS_VISIBLES } from "../circulo-confianza/tipos";
+// SPEC-863 (I-400): predicado canónico «reporte de prueba». Import RELATIVO (este módulo
+// entra a la cadena de los workers, I-88/SPEC-197: la allowlist del ratchet solo se encoge).
+import { esReporteNoReal } from "../../demo-exclusion";
 
 /**
  * Evalúa si un reporte debe avisar a los padres cuyos HIJOS tienen ese
@@ -34,6 +37,9 @@ import { ESTADOS_VISIBLES } from "../circulo-confianza/tipos";
  */
 export async function notificarHijosSiCorresponde(reporteId: string) {
     try {
+        // SPEC-863 (I-400): un reporte de PRUEBA (simulacro/demo) NO avisa a un padre real.
+        if (await esReporteNoReal(prisma, reporteId)) return;
+
         const reporte = await prisma.reporte.findUnique({
             where: { id: reporteId },
             select: {

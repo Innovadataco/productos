@@ -101,6 +101,12 @@ export class EstadisticasService {
 
     /** GET /api/estadisticas-publicas — agregados públicos (sin score, I-29). */
     async publicas() {
+        // SPEC-863 (I-400): la API pública (`/api/estadisticas-publicas`) nunca cuenta reportes de
+        // prueba (simulacro/demo). Se merge en cada where sobre Reporte. `countIdentificadores` lee
+        // el agregado `IdentificadorReportado`, que ya queda limpio porque el simulacro no lo
+        // incrementa (write-side); `contarIdentificadoresConMatch` lee EventoMatch, que nunca se
+        // crea para un simulacro (match guardado) — ambos no necesitan filtro aquí.
+        const sinPrueba = await this.reportes.whereExcluirNoReales();
         const [
             totalReportes,
             identificadoresUnicos,
@@ -112,21 +118,22 @@ export class EstadisticasService {
             categoriasRaw,
             sinUbicacion,
         ] = await Promise.all([
-            this.reportes.countWhere(whereReporteAprobado()),
+            this.reportes.countWhere({ ...whereReporteAprobado(), ...sinPrueba }),
             this.stats.countIdentificadores(),
-            this.reportes.countWhere(whereReporteAprobado({ esAnonimo: false })),
-            this.reportes.countWhere(whereReporteAprobado({ esAnonimo: true })),
-            this.stats.groupByPlataformaId(whereReporteAprobado()),
-            this.stats.groupByPais(whereReporteAprobado()),
-            this.stats.groupByCiudadId(whereReporteAprobado({ ciudadId: { not: null } }), 50),
-            this.stats.findCategoriasAprobadas(CATEGORIAS_NO_APROBADAS, whereReporteEnEstados(ESTADOS_APROBADOS)),
+            this.reportes.countWhere({ ...whereReporteAprobado({ esAnonimo: false }), ...sinPrueba }),
+            this.reportes.countWhere({ ...whereReporteAprobado({ esAnonimo: true }), ...sinPrueba }),
+            this.stats.groupByPlataformaId({ ...whereReporteAprobado(), ...sinPrueba }),
+            this.stats.groupByPais({ ...whereReporteAprobado(), ...sinPrueba }),
+            this.stats.groupByCiudadId({ ...whereReporteAprobado({ ciudadId: { not: null } }), ...sinPrueba }, 50),
+            this.stats.findCategoriasAprobadas(CATEGORIAS_NO_APROBADAS, { ...whereReporteEnEstados(ESTADOS_APROBADOS), ...sinPrueba }),
             // SPEC-115 (degradación honesta del mapa): reportes aprobados que el mapa
             // NO puede pintar porque su ciudad carece de coordenadas (o no hay ciudad).
-            this.reportes.countWhere(
-                whereReporteAprobado({
+            this.reportes.countWhere({
+                ...whereReporteAprobado({
                     OR: [{ ciudadId: null }, { ciudadRel: { lat: null } }, { ciudadRel: { lng: null } }],
-                })
-            ),
+                }),
+                ...sinPrueba,
+            }),
         ]);
 
         const plataformaIds = porPlataforma.map((p) => p.plataformaId).filter((id): id is string => !!id);
@@ -198,6 +205,9 @@ export class EstadisticasService {
         const treintaDiasAtras = new Date(hoy);
         treintaDiasAtras.setDate(treintaDiasAtras.getDate() - 30);
 
+        // SPEC-863 (I-400): el panel ADMIN no cuenta reportes de prueba (simulacro/demo).
+        const sinPrueba = await this.reportes.whereExcluirNoReales();
+
         const [
             totalReportes,
             reportesHoy,
@@ -214,20 +224,20 @@ export class EstadisticasService {
             confirmacionesPorCategoria,
             correccionesPorCategoria,
         ] = await Promise.all([
-            this.reportes.countWhere(whereReporteVigente()),
-            this.reportes.countWhere(whereReporteVigente({ creadoEn: { gte: hoy, lt: hoySig } })),
-            this.reportes.countWhere(whereReporteEnEstados(["REVISION_MANUAL", "PROCESANDO"])),
-            this.reportes.countWhere(whereReporteEnEstado("REQUIERE_ANONIMIZACION")),
-            this.reportes.countWhere(whereReporteVigente({ esAnonimo: true })),
-            this.reportes.countWhere(whereReporteVigente({ esAnonimo: false })),
-            this.stats.groupByEstado(whereReporteVigente()),
-            this.stats.groupByCategoriaClasificacion(whereReporteVigente()),
-            this.stats.groupByPlataformaIdContandoId(whereReporteVigente({ plataformaId: { not: "" } })),
-            this.stats.groupByCiudad(whereReporteVigente({ ciudad: { not: "" } }), 10),
-            this.stats.groupByCreadoEn(whereReporteVigente({ creadoEn: { gte: treintaDiasAtras } })),
+            this.reportes.countWhere({ ...whereReporteVigente(), ...sinPrueba }),
+            this.reportes.countWhere({ ...whereReporteVigente({ creadoEn: { gte: hoy, lt: hoySig } }), ...sinPrueba }),
+            this.reportes.countWhere({ ...whereReporteEnEstados(["REVISION_MANUAL", "PROCESANDO"]), ...sinPrueba }),
+            this.reportes.countWhere({ ...whereReporteEnEstado("REQUIERE_ANONIMIZACION"), ...sinPrueba }),
+            this.reportes.countWhere({ ...whereReporteVigente({ esAnonimo: true }), ...sinPrueba }),
+            this.reportes.countWhere({ ...whereReporteVigente({ esAnonimo: false }), ...sinPrueba }),
+            this.stats.groupByEstado({ ...whereReporteVigente(), ...sinPrueba }),
+            this.stats.groupByCategoriaClasificacion({ ...whereReporteVigente(), ...sinPrueba }),
+            this.stats.groupByPlataformaIdContandoId({ ...whereReporteVigente({ plataformaId: { not: "" } }), ...sinPrueba }),
+            this.stats.groupByCiudad({ ...whereReporteVigente({ ciudad: { not: "" } }), ...sinPrueba }, 10),
+            this.stats.groupByCreadoEn({ ...whereReporteVigente({ creadoEn: { gte: treintaDiasAtras } }), ...sinPrueba }),
             getWorkerMetrics(),
-            this.correcciones.groupByCategoriaOriginal(true, whereReporteVigente()),
-            this.correcciones.groupByCategoriaOriginal(false, whereReporteVigente()),
+            this.correcciones.groupByCategoriaOriginal(true, { ...whereReporteVigente(), ...sinPrueba }),
+            this.correcciones.groupByCategoriaOriginal(false, { ...whereReporteVigente(), ...sinPrueba }),
         ]);
 
         const plataformaIds = porPlataforma

@@ -26,7 +26,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
-import { recalcularYGuardarScore } from "@/lib/scoring";
+import { recalcularYGuardarScoreSiReporteReal } from "@/lib/scoring";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { esAdminRol } from "@/lib/operadores/permisos";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
@@ -128,14 +128,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         // aprobado— y DESPUÉS visibilidad, que LEE ese conteo. Al revés (como en el
         // confirm) leería el agregado viejo y podría dejar el reporte visible, que
         // es justo lo que este endpoint existe para impedir.
-        const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
+        // SPEC-863 (I-400): un simulacro no mueve el agregado público (scoreResult=null).
+        const scoreResult = await recalcularYGuardarScoreSiReporteReal(id, reporte.identificador, reporte.plataformaId);
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
 
         return NextResponse.json({
             reporteId: id,
             estado: "REVISION_MANUAL",
-            score: scoreResult.score,
-            nivelRiesgo: scoreResult.nivelRiesgo,
+            score: scoreResult?.score ?? null,
+            nivelRiesgo: scoreResult?.nivelRiesgo ?? null,
         });
     } catch (error) {
         if (error instanceof AppError) {

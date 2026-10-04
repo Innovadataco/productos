@@ -4,6 +4,7 @@ import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { registrarPaso } from "@/lib/expediente/pasos";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { recalcularYGuardarScore } from "@/lib/scoring";
+import { esReporteNoReal } from "@/lib/dal/demo-exclusion";
 import { enviarAlertaRevision, enviarAlertaScoreCritico, enviarAlertasSuscriptores } from "@/lib/email";
 import { asignarOperadorAReporte } from "@/lib/operadores/asignador";
 import { ESTADOS_FINALES } from "./errors";
@@ -97,7 +98,11 @@ export async function finalizarReporte({
             where: { id: reporteId },
             select: { identificador: true, plataformaId: true },
         });
-        if (reporte) {
+        // SPEC-863 (I-400): un reporte de PRUEBA (simulacro/demo) NO toca el agregado público
+        // (`IdentificadorReportado`: visibilidad, score, contadores) ni dispara alertas de score
+        // o a suscriptores. Se salta el bloque entero; el orden visibilidad→recalcular se conserva
+        // intacto para los reportes reales.
+        if (reporte && !(await esReporteNoReal(prisma, reporteId))) {
             await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
             const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
 

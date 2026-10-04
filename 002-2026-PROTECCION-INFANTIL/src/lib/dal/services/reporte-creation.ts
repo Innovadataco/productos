@@ -57,6 +57,10 @@ export interface CrearReporteInput {
     // SPEC-591 (decisión CEO 06-09): ficha «A quién protego» a la que va
     // dirigido. Solo el padre autenticado la trae; el anónimo siempre null.
     hijoId?: string | null;
+    // SPEC-863 (I-400): el reporte viene del SIMULADOR DE ABUSOS. Marca `demo_marcado`
+    // (misma tx) y NO incrementa el agregado público `IdentificadorReportado`: un simulacro
+    // no mueve el total/score/visibilidad de un identificador REAL.
+    marcaSimulacro?: { origen: string };
 }
 
 export interface ReporteCreadoDto {
@@ -168,15 +172,23 @@ export class ReporteCreationService {
                 keywordsDetectadas: input.keywordsDetectadas,
                 hijoId: input.hijoId ?? null,
             },
+            // SPEC-863 (I-400): marca el simulacro en la MISMA tx que el reporte.
+            ...(input.marcaSimulacro ? { marcaSimulacro: input.marcaSimulacro } : {}),
         });
 
-        // Agregación del identificador (SPEC-110: un reporte nuevo levanta el
-        // ocultamiento por comité; el repositorio encapsula el upsert exacto).
-        await this.identificadores.upsertIncrementoReporte({
-            identificador,
-            plataformaId: input.plataformaId,
-            esAnonimo: input.esAnonimo,
-        });
+        // SPEC-863 (I-400) · WRITE-SIDE no negociable: un SIMULACRO NO toca el agregado
+        // público. `upsertIncrementoReporte` sube `IdentificadorReportado.totalReportes` y
+        // DES-oculta (ocultoPorComiteEn=null) — eso movería el total/visibilidad de un
+        // identificador REAL. Para el simulacro se OMITE: el agregado público queda intacto.
+        if (!input.marcaSimulacro) {
+            // Agregación del identificador (SPEC-110: un reporte nuevo levanta el
+            // ocultamiento por comité; el repositorio encapsula el upsert exacto).
+            await this.identificadores.upsertIncrementoReporte({
+                identificador,
+                plataformaId: input.plataformaId,
+                esAnonimo: input.esAnonimo,
+            });
+        }
 
         if (vinculacionInfo) {
             return {

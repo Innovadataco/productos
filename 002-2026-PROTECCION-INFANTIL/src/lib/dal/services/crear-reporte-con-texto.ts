@@ -1,5 +1,6 @@
 import { type OrigenEvidencia, type Prisma, type Reporte } from "@prisma/client";
 import { sellarTextoNuevo } from "@/lib/reporte-texto-contenido";
+import { marcarReporteSimulacro } from "@/lib/dal/demo-exclusion";
 
 /**
  * S-D (D-116/D-117) · ÚNICA vía de escritura de un `Reporte`.
@@ -23,11 +24,24 @@ export async function crearReporteConTexto(
         origenEvidencia?: OrigenEvidencia;
         /** Resto de columnas del Reporte (sin `contenidoId`: lo pone el factory). */
         reporte: Omit<Prisma.ReporteUncheckedCreateInput, "contenidoId">;
+        /**
+         * SPEC-863 (I-400): marca el reporte como SIMULACRO (no real) en `demo_marcado`
+         * dentro de ESTA MISMA tx. El simulador de abusos lo pasa; así un reporte de prueba
+         * NUNCA existe sin su marca (atomicidad — el candado de control positivo lo exige).
+         * El poblador demo marca por su cuenta (no pasa esto). Atomicidad garantizada igual
+         * que el sellado del texto: el llamador debe pasar un `tx` real (lo hace la ruta).
+         */
+        marcaSimulacro?: { origen: string };
     }
 ): Promise<Reporte> {
-    // `args` calza con la firma de `sellarTextoNuevo` (los opcionales coinciden; la
-    // propiedad extra `reporte` se tolera al pasar una variable, no un literal).
+    // `args` calza con la firma de `sellarTextoNuevo` (los opcionales coinciden; las
+    // propiedades extra `reporte`/`marcaSimulacro` se toleran al pasar una variable, no un literal).
     const { contenidoId } = await sellarTextoNuevo(tx, args);
-    // eslint-disable-next-line no-restricted-syntax -- ÚNICA vía autorizada (S-D · arch:check).
-    return tx.reporte.create({ data: { ...args.reporte, contenidoId } });
+    // ÚNICA vía autorizada de `tx.reporte.create` (S-D · D-116); lo verifica arch:check (g).
+    const reporte = await tx.reporte.create({ data: { ...args.reporte, contenidoId } });
+    // SPEC-863: la marca de simulacro viaja en la MISMA tx que el reporte (nunca uno sin la otra).
+    if (args.marcaSimulacro) {
+        await marcarReporteSimulacro(tx, reporte.id, args.marcaSimulacro.origen);
+    }
+    return reporte;
 }

@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
-import { recalcularYGuardarScore } from "@/lib/scoring";
+import { recalcularYGuardarScoreSiReporteReal } from "@/lib/scoring";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
@@ -116,7 +116,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         });
 
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
-        const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
+        // SPEC-863 (I-400): un simulacro no mueve el agregado público (scoreResult=null).
+        const scoreResult = await recalcularYGuardarScoreSiReporteReal(id, reporte.identificador, reporte.plataformaId);
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
@@ -134,8 +135,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             reporteId: id,
             categoria,
             estado: "CLASIFICADO",
-            score: scoreResult.score,
-            nivelRiesgo: scoreResult.nivelRiesgo,
+            score: scoreResult?.score ?? null,
+            nivelRiesgo: scoreResult?.nivelRiesgo ?? null,
         });
     } catch (error) {
         if (error instanceof AppError) {
