@@ -29,6 +29,21 @@
  *
  * Vigilancia por CONDUCTA, no por texto ([[dev-candado-conducta-no-palabras]]).
  * Escanea la FUENTE en disco; corre en CI (vive en src/).
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * SPEC-861 · I-413 · SEGUNDA invariante, MISMA derivación del árbol.
+ *
+ * El candado de I-411 solo mira las rutas de sesión que TIENEN llamador cliente
+ * (itera `callers`). Una ruta que instala sesión y NO la alcanza NADIE es
+ * invisible para él — y ese es justo el hueco: `verificar/completar` instalaba
+ * sesión con cero llamadores (la superó `registro/completar`, SPEC-339), así que
+ * era una puerta de entrada de sesiones alcanzable por HTTP que nadie caminaba,
+ * nadie probaba y nadie notaba si cambiaba de conducta.
+ *
+ * El segundo `describe` cierra ese hueco con la invariante de I-413: TODA ruta que
+ * instale sesión tiene al menos un llamador EN EL PRODUCTO (no basta su test).
+ * Deriva las rutas con las MISMAS funciones del árbol (no una lista a mano), para
+ * que no haya dos definiciones de «qué es una ruta de sesión» que se desincronicen.
  */
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
@@ -174,6 +189,49 @@ describe("I-411 · toda ruta que instala cookie de sesión refresca el AuthConte
                     "panel (I-411). Use navegación DURA: window.location.assign(destino) — remonta " +
                     "AuthProvider con la cookie ya puesta — o refresque el contexto (useAuth/checkSession).",
             ).toBe(true);
+        });
+    }
+});
+
+describe("I-413 · ninguna ruta que instale sesión queda sin llamador en el producto", () => {
+    const fuentes = fuentesDeSrc(); // sin tests: un test NO cuenta como llamador del producto
+
+    // (1) DERIVAR del árbol las rutas que instalan sesión — mismas funciones que I-411.
+    const rutasCookie = fuentes
+        .filter((f) => /\/route\.tsx?$/.test(f.ruta) && LLAMA_SET_COOKIE.test(f.texto))
+        .map((f) => urlDeRoute(f.ruta))
+        .filter((u): u is string => !!u);
+
+    // (2) Un «llamador» es cualquier fuente del PRODUCTO (cliente o servidor) que
+    // referencia la URL por literal, excluyendo los route.ts (un endpoint no es su
+    // propio llamador). Amplio a propósito: no exijo que sea CLIENTE —basta que algo
+    // del producto la invoque—; lo que NO vale es que su único uso sea un test.
+    const esRoute = (f: Fuente) => /\/route\.tsx?$/.test(f.ruta);
+    function llamadoresDe(url: string): string[] {
+        return fuentes.filter((f) => !esRoute(f) && invoca(f.texto, url)).map((f) => f.ruta);
+    }
+
+    it("CONTROL POSITIVO · el detector distingue ruta VIVA de ruta MUERTA (no está pegado en verde)", () => {
+        // DESCUBRE rutas de sesión (si diera 0, el escaneo se rompió).
+        expect(rutasCookie.length).toBeGreaterThan(0);
+        // HALLA el llamador de una viva conocida (el alta de /activar vive en ActivarForm).
+        expect(llamadoresDe("/api/auth/activar").length).toBeGreaterThan(0);
+        // y devuelve CERO para una ruta que nadie invoca — es lo que le permite CAZAR
+        // a la muerta (verificar/completar daba exactamente 0 antes de SPEC-861). Sin
+        // esta mitad negativa, un barrido que «siempre encuentra algo» pasaría ciego.
+        expect(llamadoresDe("/api/auth/__ruta_que_nadie_invoca__/completar").length).toBe(0);
+    });
+
+    // (3) LA INVARIANTE, una aserción por ruta de sesión descubierta.
+    for (const r of rutasCookie) {
+        it(`«${r}» instala sesión y la invoca al menos una fuente del producto`, () => {
+            expect(
+                llamadoresDe(r).length,
+                `${r} llama setSessionCookie (instala sesión) pero NINGUNA fuente del producto la ` +
+                    "invoca: ruta muerta alcanzable por HTTP — superficie de ataque sin dueño que nadie " +
+                    "camina ni prueba (I-413). Si no la alcanza nadie, se CABLEA o se BORRA; no se deja " +
+                    "abierta «por si acaso».",
+            ).toBeGreaterThan(0);
         });
     }
 });

@@ -20,7 +20,7 @@ vi.mock("@/lib/email", () => ({
 }));
 
 // `setSessionCookie` usa cookies() de next/headers, que fuera de un request de
-// Next lanza — mismo mock que el test de verificar/completar.
+// Next lanza — por eso se mockea.
 vi.mock("next/headers", () => ({
     cookies: async () => ({
         get: () => undefined,
