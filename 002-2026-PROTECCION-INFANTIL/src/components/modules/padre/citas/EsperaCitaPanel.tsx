@@ -14,7 +14,7 @@
  * los candados afirmen su AUSENCIA.
  */
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CitaParaPadreDto } from "@/lib/profesional/cita/dto";
 import type { ExpedienteParaCompartirDto } from "@/lib/dal/services/expediente-detalle/types";
 import { badgeDeCitaEfectivo } from "@/lib/padre/citas-listado";
@@ -182,8 +182,19 @@ function useCountdown(hastaISO: string | null): { horas: number; minutos: number
  * botón muerto ni un texto inerte — un «escríbenos» sin dónde es la misma promesa-sin-mecanismo
  * que se está arreglando). No promete devolución. El destino definitivo será la PQR de SPEC-752.
  */
-function AccionFranjaPasada({ acciones }: { acciones: AccionesEspera | undefined }) {
+function AccionFranjaPasada({
+    acciones,
+    ocultarEscribenos = false,
+}: {
+    acciones: AccionesEspera | undefined;
+    // SPEC-864 §2.1: en CONFIRMADA-pasada el `mailto` genérico de «algo salió mal» lo SUSTITUYE el
+    // disparador estructurado «El profesional no cumplió» (atado a esta cita). Se esconde aquí para
+    // no dejar DOS canales para lo mismo; `revisarPago` (PAGADA_PENDIENTE) no es CONFIRMADA y no se toca.
+    ocultarEscribenos?: boolean;
+}) {
     if (!acciones) return null;
+    // Si lo único que traía esta caja era el `escribenos` y lo esconde 864, no pintamos la caja vacía.
+    if (ocultarEscribenos && !acciones.pedirOtraCita && !acciones.revisarPago) return null;
     return (
         <section className="rounded-2xl border border-tinta/15 bg-tinta/5 p-4 sm:p-5 space-y-3">
             {acciones.pedirOtraCita && (
@@ -199,7 +210,7 @@ function AccionFranjaPasada({ acciones }: { acciones: AccionesEspera | undefined
                     Pedir otra cita
                 </Link>
             )}
-            {acciones.escribenos && (
+            {acciones.escribenos && !ocultarEscribenos && (
                 <p className="cuerpo text-body">
                     ¿Algo no salió como esperabas?{" "}
                     <a className="underline underline-offset-2 hover:text-body" href={`mailto:${CORREO_SOPORTE}`}>Escríbenos</a>.
@@ -210,6 +221,108 @@ function AccionFranjaPasada({ acciones }: { acciones: AccionesEspera | undefined
                     <a className="underline underline-offset-2 hover:text-body" href={`mailto:${CORREO_SOPORTE}`}>Escríbenos</a> para revisar tu pago.
                 </p>
             )}
+        </section>
+    );
+}
+
+/**
+ * SPEC-864 (FORMA-SPEC864 §2.2-2.4) · «El profesional no cumplió» — el reclamo estructurado del padre
+ * sobre una cita CONFIRMADA cuya hora YA PASÓ. Reusa la puerta de PQR (SPEC-752): crea un
+ * `PeticionServicio` motivo CITA atado a `solicitudId` = esta cita. NO cambia el estado de la cita
+ * (es una ANOTACIÓN, no un dictamen, §2.4). Sin texto libre (§2.3): el padre solo confirma.
+ *
+ * Tres vistas excluyentes:
+ *  · ya hay PQR abierta sobre esta cita (`cita.peticionCitaAbierta`) → MARCADOR «ya nos avisaste»
+ *    en tinta neutra (proceso, sin alarma) y el disparador NO se muestra (§2.5.5: no se radica dos veces).
+ *  · sin PQR y sin confirmar → el disparador (botón Fantasma `outline`, cero rubí · §2.2).
+ *  · confirmando → el paso de confirmación (copy verbatim §2.3; sin prometer reembolso/plazo · §2.5.2).
+ *
+ * PROHIBIDO en todo el copy de acá: reembolso/devolución/plazo (D-140 · I-393); el desenlace lo
+ * decide el admin, la UI no lo adelanta.
+ */
+function ReporteNoCumplio({
+    cita,
+    onReportado,
+}: {
+    cita: CitaParaPadreDto;
+    onReportado: () => void | Promise<void>;
+}) {
+    const [confirmando, setConfirmando] = useState(false);
+    const [enviando, setEnviando] = useState(false);
+    const [fallo, setFallo] = useState(false);
+
+    // MARCADOR (§2.4): la PQR abierta la deriva el DTO de `solicitudId` (no es copia de estado de cita).
+    // Mientras exista, el disparador desaparece (§2.5.5). Tinta neutra: proceso cerrado, sin color de alarma.
+    if (cita.peticionCitaAbierta) {
+        return (
+            <section className="rounded-2xl border border-tinta/10 bg-tinta/5 p-4 sm:p-5 space-y-1 text-subtle">
+                <p className="cuerpo text-body">
+                    <strong>Ya nos avisaste que el profesional no cumplió.</strong> Lo estamos revisando.
+                </p>
+                <p className="etiqueta">
+                    N.º de seguimiento:{" "}
+                    <code className="rounded bg-tinta/10 px-2 py-0.5 font-mono text-body">
+                        {cita.peticionCitaAbierta.numeroSeguimiento}
+                    </code>
+                </p>
+            </section>
+        );
+    }
+
+    async function enviar() {
+        setEnviando(true);
+        setFallo(false);
+        try {
+            const r = await fetch("/api/padre/soporte/peticiones", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                // §2.6: motivo CITA + solicitudId = esta cita. SIN texto libre (§2.3).
+                body: JSON.stringify({ motivo: "CITA", solicitudId: cita.id }),
+            });
+            if (!r.ok) throw new Error(String(r.status));
+            // Refresca desde la ENTIDAD persistida (el GET del detalle ya trae `peticionCitaAbierta`):
+            // una sola fuente de verdad para el marcador, no un estado local paralelo que pueda divergir.
+            await onReportado();
+        } catch {
+            setFallo(true);
+            setEnviando(false);
+        }
+    }
+
+    if (!confirmando) {
+        // DISPARADOR (§2.2): botón Fantasma (`outline`), nunca Primario ni rubí. Etiqueta honesta, voz «tú».
+        return (
+            <section className="rounded-2xl border border-tinta/15 bg-tinta/5 p-4 sm:p-5">
+                <Button variant="outline" onClick={() => setConfirmando(true)}>
+                    El profesional no cumplió
+                </Button>
+            </section>
+        );
+    }
+
+    // PASO DE CONFIRMACIÓN (§2.3) · copy verbatim de Diseño. Sin texto libre: el padre solo confirma.
+    return (
+        <section className="rounded-2xl border border-tinta/15 bg-tinta/5 p-4 sm:p-5 space-y-3">
+            <div className="space-y-1">
+                <p className="cuerpo font-semibold text-body">Nos cuentas que el profesional no cumplió</p>
+                <p className="cuerpo text-subtle">
+                    Vamos a revisar qué pasó con esta cita. No tienes que escribir nada: con avisarnos basta.
+                </p>
+            </div>
+            {fallo && (
+                <p className="cuerpo text-ambar" role="alert">
+                    No pudimos registrar tu aviso. Intenta de nuevo.
+                </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+                <Button onClick={enviar} disabled={enviando}>
+                    {enviando ? "Avisando…" : "Avisar a nuestro equipo"}
+                </Button>
+                <Button variant="secondary" onClick={() => setConfirmando(false)} disabled={enviando}>
+                    Volver
+                </Button>
+            </div>
         </section>
     );
 }
@@ -318,22 +431,35 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
     );
     const estado = vistaPasada ?? ESTADO_LEGIBLE[cita.estado];
     const confirmadaViva = cita.estado === "CONFIRMADA" && !vistaPasada;
+    // SPEC-864 §2.1/§2.7: el reclamo «no cumplió» vive SOLO en una cita CONFIRMADA cuya hora ya pasó.
+    const confirmadaPasada = cita.estado === "CONFIRMADA" && vistaPasada != null;
     const countdown = useCountdown(cita.estado === "PAGADA_PENDIENTE" ? cita.venceEn : null);
 
-    // Refresca al foco (el motor confirma asíncrono; volver a la pestaña
-    // trae el estado nuevo sin recargar la página entera).
+    // Trae el detalle VIVO desde el endpoint (la entidad persistida, no lo que mandamos): el motor
+    // confirma asíncrono y el reporte de 864 abre una PQR; releer deja el panel —estado, enlace,
+    // `peticionCitaAbierta`— en una sola fuente de verdad. Reusado por el refresco al foco y por 864.
+    const refrescarCita = useCallback(async (): Promise<void> => {
+        setRefrescando(true);
+        try {
+            const r = await fetch(`/api/padre/citas/${cita.id}`, { credentials: "include" });
+            if (!r.ok) return;
+            const j = (await r.json()) as { data: CitaParaPadreDto } | null;
+            if (j?.data) setCita(j.data);
+        } catch {
+            // Un fallo de red no rompe la pantalla: se mantiene el último estado conocido.
+        } finally {
+            setRefrescando(false);
+        }
+    }, [cita.id]);
+
+    // Refresca al foco (volver a la pestaña trae el estado nuevo sin recargar la página entera).
     useEffect(() => {
         function alRegresar() {
-            setRefrescando(true);
-            fetch(`/api/padre/citas/${cita.id}`, { credentials: "include" })
-                .then((r) => (r.ok ? r.json() : null))
-                .then((j: { data: CitaParaPadreDto } | null) => j?.data && setCita(j.data))
-                .catch(() => null)
-                .finally(() => setRefrescando(false));
+            void refrescarCita();
         }
         window.addEventListener("focus", alRegresar);
         return () => window.removeEventListener("focus", alRegresar);
-    }, [cita.id]);
+    }, [refrescarCita]);
 
     const puedeElegirOtro = cita.estado === "VENCIDA_SIN_RESPUESTA" || cita.estado === "NO_ASISTIO_PROFESIONAL";
 
@@ -484,8 +610,15 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 </section>
             )}
 
-            {/* SPEC-749 FR-2 · la SALIDA cuando la hora ya pasó (CONFIRMADA/PAGADA_PENDIENTE/SIN_CONFIRMAR). */}
-            <AccionFranjaPasada acciones={estado.acciones} />
+            {/* SPEC-749 FR-2 · la SALIDA cuando la hora ya pasó (CONFIRMADA/PAGADA_PENDIENTE/SIN_CONFIRMAR).
+                SPEC-864 §2.1: en CONFIRMADA-pasada el `mailto` genérico lo sustituye el disparador de abajo,
+                así que aquí se esconde (sin dejar «Pedir otra cita», que sí se queda). */}
+            <AccionFranjaPasada acciones={estado.acciones} ocultarEscribenos={confirmadaPasada} />
+
+            {/* SPEC-864 · «El profesional no cumplió»: disparador / confirmación / marcador. Debajo de
+                «Pedir otra cita» (§2.2: la continuidad manda, el reclamo es la alternativa). Solo
+                CONFIRMADA-pasada (§2.7); al reportar, refresca la cita para que aparezca el marcador. */}
+            {confirmadaPasada && <ReporteNoCumplio cita={cita} onReportado={refrescarCita} />}
 
             {/* SPEC-731 §3 · el pie vuelve a la LISTA DE CITAS (donde el padre estaba),
                 no a «mi expediente» — que ni es un expediente ni es de donde venía. */}

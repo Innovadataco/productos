@@ -36,6 +36,9 @@ const bodySchema = z
         tipo: z.enum(TIPOS_HABEAS).optional(),
         sujeto: sujetoSchema.optional(),
         clasesSolicitadas: z.array(z.enum(CLASES_DATO)).optional(),
+        // SPEC-864: ata la petición a una cita concreta (solo motivo CITA). El servicio
+        // verifica propiedad de la cita y no radica dos veces.
+        solicitudId: z.string().min(1).optional(),
     })
     .superRefine((v, ctx) => {
         if (v.motivo === "DATOS_PERSONALES") {
@@ -52,6 +55,10 @@ const bodySchema = z
             }
         } else if (v.tipo || v.sujeto || (v.clasesSolicitadas && v.clasesSolicitadas.length > 0)) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["motivo"], message: "El detalle de datos personales no aplica a este motivo" });
+        }
+        // SPEC-864: `solicitudId` solo se ata a una petición de CITA.
+        if (v.solicitudId && v.motivo !== "CITA") {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["solicitudId"], message: "Solo una petición de una cita se ata a una cita" });
         }
     });
 
@@ -74,7 +81,7 @@ export async function POST(request: Request) {
                         clasesSolicitadas: body.clasesSolicitadas ?? [],
                     },
                 }
-                : { usuarioId: user.id, motivo: body.motivo },
+                : { usuarioId: user.id, motivo: body.motivo, ...(body.solicitudId ? { solicitudId: body.solicitudId } : {}) },
         );
 
         return NextResponse.json({ numeroSeguimiento }, { status: 201 });

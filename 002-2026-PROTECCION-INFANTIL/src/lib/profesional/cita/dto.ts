@@ -131,6 +131,17 @@ export interface CitaParaPadreDto {
      * profesional en la sesión). `null` = la cita no quedó atada a un caso.
      */
     expedienteCompartidoId: string | null;
+    /**
+     * SPEC-864 · Si el padre YA reportó «el profesional no cumplió» sobre ESTA cita y la PQR
+     * sigue ABIERTA, su número de seguimiento; si no, `null`. Es el PROPIO rastro del padre (su
+     * PQR), no dato de terceros — por eso puede salir. La pantalla lo usa para mostrar «ya nos
+     * avisaste» y ESCONDER el disparador (no se radica dos veces, FORMA §2.5).
+     *
+     * OPT-IN: solo lo puebla el loader del DETALLE de la cita (que sí consulta la PQR abierta);
+     * las demás consultas no lo traen y queda `undefined` (la pantalla lo trata igual que `null`).
+     * No ensancha ninguna consulta por defecto.
+     */
+    peticionCitaAbierta?: { numeroSeguimiento: string } | null;
 }
 
 type PerfilConCiudadYUsuario = PerfilProfesional & {
@@ -145,9 +156,19 @@ type SolicitudConRelaciones = SolicitudCita & {
     franja: FranjaMin;
 };
 
+/**
+ * SPEC-864 · Datos EXTRA que solo el loader del detalle resuelve y pasa aparte (no viven en la
+ * `SolicitudCita`). Hoy: la PQR abierta del padre sobre esta cita. Opcional a propósito — los 7
+ * llamadores que no lo pasan dejan el campo `undefined`, equivalente a «no hay».
+ */
+export interface OpcionesCitaParaPadre {
+    peticionCitaAbierta?: { numeroSeguimiento: string } | null;
+}
+
 export function toCitaParaPadre(
     solicitud: SolicitudConRelaciones,
-    now: Date = new Date()
+    now: Date = new Date(),
+    opts?: OpcionesCitaParaPadre
 ): CitaParaPadreDto {
     const base: CitaParaPadreDto = {
         id: solicitud.id,
@@ -171,6 +192,8 @@ export function toCitaParaPadre(
         solicitudPreviaId: solicitud.solicitudPreviaId,
         pagoHeredadoDeId: solicitud.pagoHeredadoDeId,
         expedienteCompartidoId: solicitud.expedienteCompartidoId,
+        // SPEC-864: el loader del detalle lo resuelve; el resto deja `undefined` (= sin reporte).
+        peticionCitaAbierta: opts?.peticionCitaAbierta ?? null,
     };
     // SPEC-449: el estado del PERFIL entra en la decisión. `solicitud.profesional`
     // ya es un `PerfilProfesional` completo, así que el dato está a mano y no

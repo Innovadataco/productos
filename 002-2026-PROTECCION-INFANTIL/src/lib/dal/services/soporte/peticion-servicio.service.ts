@@ -45,6 +45,31 @@ export interface CrearPeticionInput {
     motivo: MotivoPeticionServicio;
     /** Presente SII `motivo === "DATOS_PERSONALES"` (el servicio lo exige y lo rechaza si sobra). */
     habeasData?: DetalleHabeasData;
+    /**
+     * SPEC-864: ATA la petición a una cita concreta (su `solicitudId`), para que el padre
+     * reporte «el profesional no cumplió» desde el detalle de ESA cita y la operación vea de
+     * cuál habla. Solo válido con `motivo === "CITA"`. El servicio verifica propiedad de la
+     * cita y NO radica dos veces (si ya hay una petición ABIERTA de esa cita, devuelve ESA).
+     */
+    solicitudId?: string;
+}
+
+/**
+ * SPEC-864 · La PQR ABIERTA (sin resolver) del padre sobre ESTA cita, si existe. Misma clave que el
+ * dedup de `crearPeticionServicio` (motivo CITA + `resueltoEn: null` + propiedad por `usuarioId`), para
+ * que «lo que esconde el disparador» y «lo que impide el doble-radicado» sean el MISMO hecho — no dos
+ * criterios que puedan divergir. Devuelve solo el número de seguimiento (el id de la PQR): es el rastro
+ * del propio padre, no dato de terceros. `null` = no hay reporte abierto sobre esta cita.
+ */
+export async function peticionDeCitaAbierta(
+    solicitudId: string,
+    usuarioId: string
+): Promise<{ numeroSeguimiento: string } | null> {
+    const abierta = await prisma.peticionServicio.findFirst({
+        where: { solicitudId, usuarioId, motivo: "CITA", resueltoEn: null },
+        select: { id: true },
+    });
+    return abierta ? { numeroSeguimiento: abierta.id } : null;
 }
 
 /**
@@ -89,6 +114,29 @@ export async function crearPeticionServicio(input: CrearPeticionInput): Promise<
         sujetoDelDato = hijo.id;
     }
 
+    // SPEC-864: petición ATADA a una cita (motivo CITA). Propiedad + no-doble-radicado.
+    let solicitudIdAtada: string | undefined;
+    if (input.solicitudId) {
+        if (input.motivo !== "CITA") {
+            throw new AppError("Solo una petición de una cita se ata a una cita", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        // Propiedad: el padre solo radica sobre SU cita (no sobre la de otro).
+        const cita = await prisma.solicitudCita.findFirst({
+            where: { id: input.solicitudId, padreUsuarioId: input.usuarioId },
+            select: { id: true },
+        });
+        if (!cita) {
+            throw new AppError("No encontramos esa cita en tu cuenta", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        // Invariante FORMA §2.5: NO se radica dos veces por la misma cita. Si ya hay una
+        // petición ABIERTA de esta cita, se devuelve ESA (idempotente), no se crea otra. Mismo
+        // criterio EXACTO que lee la pantalla (`peticionDeCitaAbierta`): una sola definición de
+        // «hay reporte abierto» para que esconder-el-disparador y no-doble-radicar no diverjan.
+        const abierta = await peticionDeCitaAbierta(input.solicitudId, input.usuarioId);
+        if (abierta) return abierta;
+        solicitudIdAtada = input.solicitudId;
+    }
+
     const ahora = new Date();
 
     const pqr = await prisma.$transaction(async (tx) => {
@@ -124,6 +172,7 @@ export async function crearPeticionServicio(input: CrearPeticionInput): Promise<
                 // Término INTERNO de la PQR (distinto del legal; la bandeja deriva el legal por el enlace).
                 venceEn: venceEnPeticionServicio(input.motivo, ahora),
                 ...(solicitudHabeasDataId ? { solicitudHabeasDataId } : {}),
+                ...(solicitudIdAtada ? { solicitudId: solicitudIdAtada } : {}),
             },
         });
     });
