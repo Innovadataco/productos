@@ -26,13 +26,25 @@ import { SolicitarCitaPanel } from "@/components/modules/padre/profesionales/Sol
 import { RejillaMisCitas } from "./RejillaMisCitas";
 import { EsperaCitaPanel } from "./EsperaCitaPanel";
 
+// SPEC-866: este test sembraba las citas con `Date.now() + N días` y la rejilla
+// (`useCalendarioNav`) abre en la vista SEMANA (lunes–domingo) de HOY. Cuando HOY
+// caía DOMINGO, una cita a +1 día aterrizaba el LUNES de la semana SIGUIENTE → fuera
+// de `diasVisibles` → la rejilla no la pintaba y el enlace/ícono del bloque daban
+// `null`. Reventó el 2026-10-04 (domingo); no es regresión de UI (el enlace+ícono se
+// pintan bien para citas EN la semana visible). Se fija el reloj a un MIÉRCOLES
+// mediodía (Bogotá) para que +1/+2 días caigan SIEMPRE en la misma semana visible y
+// el test sea determinista. Se fake SOLO `Date` —no `setTimeout`/`setInterval`— para
+// no colgar el `findBy*` de Testing Library ni el tick de 60 s de `RejillaMisCitas`.
 beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-06-17T12:00:00-05:00")); // miércoles, Bogotá (UTC-5)
     leerBorrador.mockReset();
     leerBorrador.mockReturnValue({ presentacion: "Un relato suficientemente largo para el mínimo.", urgencia: "SIN_APURO" });
 });
 afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    vi.useRealTimers();
 });
 
 function franja(id: string, dias: number, modalidad: "VIRTUAL" | "PRESENCIAL") {
