@@ -496,7 +496,12 @@
 | [813](813-aviso-estado-reps/spec.md) | SPEC-813 · Aviso de habilitación REPS al profesional — y `¬repsAlDia` funde CUATRO causas | 🟡 DESARROLLO |
 | [815](815-emision-sin-pii/spec.md) | SPEC-815 · Antes de EMITIR hay que ser seguro: ni identificador, ni correo, ni error crudo a stdout | 🟡 DESARROLLO |
 | [826](826-borrar-huerfanos-654/spec.md) | SPEC-826 · Borrar los 10 huérfanos viejos de SPEC-654 (deuda con dueño, no limpieza) | 🟡 DESARROLLO |
+| [827](827-objeto-peticion-habeas-data/spec.md) | SPEC-827 · El OBJETO de la petición de habeas data, por tipo | 🟢 IMPLEMENTADO |
 | [834](834-gate-reps-franja-unitaria/spec.md) | SPEC-834 · La segunda puerta de creación de franja — gate REPS × modalidad (unitaria) | 🟢 IMPLEMENTADO |
+| [857](857-menu-admin-modulos/spec.md) | SPEC-857 · Menú del administrador en módulos de 2 niveles | 🟢 IMPLEMENTADO |
+| [858](858-movil-labels-admin/spec.md) | SPEC-858 · Etiquetas de la barra móvil del admin (follow-up de 857) | 🟢 IMPLEMENTADO |
+| [859](859-encabezados-menu/spec.md) | SPEC-859 · Esquema completo de encabezados del menú admin | 🟢 IMPLEMENTADO |
+| [863](863-discriminador-reporte-simulacro/spec.md) | SPEC-863 · Discriminador de reportes de simulacro (I-400) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
