@@ -131,7 +131,7 @@
       "id": "worker",
       "type": "backend",
       "label": "pi-worker",
-      "sublabel": "pg-boss (único)",
+      "sublabel": "supervisor + 11 workers",
       "pos": [
         500,
         330
@@ -303,7 +303,7 @@
       "title": "Datos",
       "items": [
         "pgvector: embeddings HNSW + dedup semántica",
-        "Cola pg-boss en la misma BD; worker único (advisory lock)",
+        "Colas pg-boss en la misma BD; supervisor (pi-worker) + 11 workers dedicados, instancia única por advisory lock",
         "Texto cifrado: ContenidoReporte + LlaveReporte (bi_replica sin acceso)"
       ]
     }
