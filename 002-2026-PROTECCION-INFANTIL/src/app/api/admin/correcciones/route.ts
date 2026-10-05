@@ -10,7 +10,7 @@ import { derivarDatasetDeCorreccion } from "@/lib/ai/derivar-dataset-correccion"
 import { enSegundoPlano } from "@/lib/tareas-fondo";
 import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
-import { recalcularYGuardarScore } from "@/lib/scoring";
+import { recalcularYGuardarScoreSiReporteReal } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
@@ -175,7 +175,8 @@ export async function POST(request: Request) {
 
         // SPEC-131 (O-2): la corrección puede mover la categoría hacia/desde SPAM/OTRO
         // y cambiar la aprobación — el escritor único recalcula contadores y visibilidad.
-        await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
+        // SPEC-863 (I-400): un simulacro no mueve el agregado público ni su visibilidad.
+        await recalcularYGuardarScoreSiReporteReal(reporteId, reporte.identificador, reporte.plataformaId);
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
 
         // SPEC-139/142 (ZEUS D-1): el paso a APROBADO por corrección humana dispara

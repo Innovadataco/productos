@@ -5,6 +5,7 @@
  * plataforma, categoría, total reportes, link al expediente).
  */
 import { prisma } from "@/lib/prisma";
+import { esReporteNoReal } from "@/lib/dal/demo-exclusion";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { enviarAlertaCirculoConfianzaEnriquecida } from "@/lib/email";
 import type { EstadoReporte, CanalNotificacion } from "@prisma/client";
@@ -58,6 +59,9 @@ async function contarReportesVisibles(identificador: string): Promise<number> {
  */
 export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
     try {
+        // SPEC-863 (I-400): un reporte de PRUEBA (simulacro/demo) NO avisa al círculo de un usuario real.
+        if (await esReporteNoReal(prisma, reporteId)) return;
+
         const reporte = await prisma.reporte.findUnique({
             where: { id: reporteId },
             select: {

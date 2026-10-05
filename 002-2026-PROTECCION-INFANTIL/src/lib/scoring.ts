@@ -2,6 +2,10 @@ import { prisma } from "./prisma";
 import { getParametroSistema } from "./parametros";
 import type { Prisma, CategoriaConducta, EstadoReporte } from "@prisma/client";
 import { whereReporteAprobado } from "./reporte-aprobado";
+// SPEC-863 (I-400): el score es el AGREGADO PÚBLICO de un identificador. Un reporte de prueba
+// NO debe moverlo ni crearlo. `calcularScore` excluye simulacro del cómputo; el wrapper evita
+// recalcular a partir de un reporte de prueba (write-side no negociable).
+import { esReporteNoReal, whereExcluirReportesNoReales } from "./dal/demo-exclusion";
 
 export type NivelRiesgo = "BAJO" | "MEDIO" | "ALTO" | "CRITICO";
 
@@ -243,6 +247,10 @@ export async function calcularScore(
     if (plataformaId) {
         where.plataformaId = plataformaId;
     }
+    // SPEC-863 (I-400): excluir reportes de PRUEBA (simulacro/demo) del cómputo — un simulacro
+    // que comparta identificador con reportes reales NO puede inflar el score de ese id real.
+    // `whereReporteAprobado` no fija `id`, así que el merge es seguro (solo añade id.notIn).
+    Object.assign(where, await whereExcluirReportesNoReales(db));
 
     const reportes = await db.reporte.findMany({
         where,
@@ -359,6 +367,24 @@ export async function recalcularYGuardarScore(
     });
 
     return resultado;
+}
+
+/**
+ * SPEC-863 (I-400) · WRITE-SIDE no negociable. Recalcula y persiste el agregado público SOLO si
+ * el reporte DISPARADOR es REAL. Si es un simulacro (prueba), NO toca `IdentificadorReportado`
+ * (ni score, ni `reportesAprobados`, ni `esVisiblePublicamente`, ni crea una fila huérfana para
+ * un identificador que solo existe en la prueba). `calcularScore` ya excluye los simulacro del
+ * cómputo; esto además evita el upsert disparado POR un simulacro. Devuelve null si se omitió.
+ */
+export async function recalcularYGuardarScoreSiReporteReal(
+    reporteId: string,
+    identificador: string,
+    plataformaId: string,
+    tx?: Prisma.TransactionClient
+): Promise<ScoreResult | null> {
+    const db = tx ?? prisma;
+    if (await esReporteNoReal(db, reporteId)) return null;
+    return recalcularYGuardarScore(identificador, plataformaId, tx);
 }
 
 /**

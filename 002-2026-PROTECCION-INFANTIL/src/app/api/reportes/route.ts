@@ -247,6 +247,10 @@ export async function POST(request: Request) {
                 reportePrevioId,
                 // SPEC-591: vínculo a la ficha del menor (null para el anónimo).
                 hijoId,
+                // SPEC-863 (I-400): el secreto de simulación (el mismo que salta el anti-abuso,
+                // SPEC-192) identifica al SIMULADOR DE ABUSOS → marca `demo_marcado` en la tx y
+                // no incrementa el agregado público. `exactOptionalPropertyTypes`: spread condicional.
+                ...(bypassFingerprint ? { marcaSimulacro: { origen: "simulador-abuso" } } : {}),
             });
 
             // SPEC-340: vinculación aceptada → el nuevo reporte entra a la CADENA.

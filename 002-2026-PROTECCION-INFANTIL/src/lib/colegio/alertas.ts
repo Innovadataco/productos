@@ -59,7 +59,14 @@ async function colegioEstaVigente(colegioId: string): Promise<boolean> {
  */
 export async function notificarColegioSiCorresponde(reporteId: string) {
     try {
-        const reporte = await new ReporteRepository().findEstadoParaNotificacion(reporteId);
+        const reportes = new ReporteRepository();
+        // SPEC-863 (I-400): un reporte de PRUEBA (simulacro/demo) NO crea alertas de colegio
+        // reales (que alimentan patrones, series y PDF del rector).
+        if (await reportes.esNoReal(reporteId)) {
+            logger.info(`[COLEGIO] Notificación omitida: reporte ${reporteId} es simulacro (prueba)`);
+            return;
+        }
+        const reporte = await reportes.findEstadoParaNotificacion(reporteId);
         if (!reporte || reporte.eliminado) {
             logger.info(`[COLEGIO] Notificación omitida: reporte ${reporteId} no existe o está eliminado`);
             return;

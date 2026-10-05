@@ -44,6 +44,11 @@ function claveFuente(r: FilaFuente): string | null {
 
 export async function detectarYRegistrarMatch(reporteId: string): Promise<ResultadoDeteccionMatch> {
     const reportes = new ReporteRepository();
+    // SPEC-863 (I-400): un reporte de PRUEBA (simulacro/demo) NO registra EventoMatch ni dispara
+    // los avisos de corroboración — no debe contar como «fuente distinta» contra un id real.
+    if (await reportes.esNoReal(reporteId)) {
+        return { registrado: false, motivo: "simulacro" };
+    }
     const reporte = await reportes.findParaMatch(reporteId);
 
     // FR-001: la puerta es el predicado único D-08 (aprobado), nada más.

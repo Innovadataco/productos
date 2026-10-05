@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "./prisma";
+import { idsReportesNoReales } from "./dal/demo-exclusion";
 import { getParametroSistemaValor, type ParametroClient } from "./parametros";
 import {
     esDiaHabilColombia,
@@ -96,8 +97,9 @@ export async function contarReportesAsociados(
     client?: ParametroClient
 ): Promise<number> {
     const db = client ?? prisma;
+    // SPEC-863 (I-400): el conteo que ve el APELANTE (titular) no incluye reportes de prueba.
     return db.reporte.count({
-        where: { identificador, plataformaId, eliminado: false },
+        where: { identificador, plataformaId, eliminado: false, id: { notIn: await idsReportesNoReales(db) } },
     });
 }
 

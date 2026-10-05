@@ -11,7 +11,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
-import { recalcularYGuardarScore } from "@/lib/scoring";
+import { recalcularYGuardarScoreSiReporteReal } from "@/lib/scoring";
 import { SolicitudComiteRepository } from "../repositories/solicitud-comite";
 import { ReporteRepository } from "../repositories/reporte";
 import { UsuarioRepository } from "../repositories/usuario";
@@ -286,7 +286,8 @@ export class ComiteBandejaService {
         }, this.tx);
 
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
-        const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
+        // SPEC-863 (I-400): un simulacro no mueve el agregado público (scoreResult=null).
+        const scoreResult = await recalcularYGuardarScoreSiReporteReal(reporte.id, reporte.identificador, reporte.plataformaId);
 
         // SPEC-139/142 (ZEUS D-1): la resolución del comité pasa el reporte a
         // APROBADO (CORREGIDO) — dispara match y agregación de patrones.
@@ -317,8 +318,8 @@ export class ComiteBandejaService {
                 estado: estadoNuevo,
                 categoria,
             },
-            score: scoreResult.score,
-            nivelRiesgo: scoreResult.nivelRiesgo,
+            score: scoreResult?.score ?? null,
+            nivelRiesgo: scoreResult?.nivelRiesgo ?? null,
         };
     }
 }

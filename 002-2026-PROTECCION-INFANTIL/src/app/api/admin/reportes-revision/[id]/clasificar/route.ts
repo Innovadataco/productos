@@ -27,7 +27,7 @@ import { logger } from "@/lib/logger";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
-import { recalcularYGuardarScore } from "@/lib/scoring";
+import { recalcularYGuardarScoreSiReporteReal } from "@/lib/scoring";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { ClasificacionIARepository } from "@/lib/dal/repositories/clasificacion-ia";
@@ -163,7 +163,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         });
 
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
-        const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
+        // SPEC-863 (I-400): un simulacro no mueve el agregado público (scoreResult=null).
+        const scoreResult = await recalcularYGuardarScoreSiReporteReal(id, reporte.identificador, reporte.plataformaId);
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
@@ -182,8 +183,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             categoria,
             estado: "CLASIFICADO",
             origen: "manual",
-            score: scoreResult.score,
-            nivelRiesgo: scoreResult.nivelRiesgo,
+            score: scoreResult?.score ?? null,
+            nivelRiesgo: scoreResult?.nivelRiesgo ?? null,
         });
     } catch (error) {
         if (error instanceof AppError) {

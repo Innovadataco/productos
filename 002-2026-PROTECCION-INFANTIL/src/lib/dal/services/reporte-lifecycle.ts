@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { generarEmbedding } from "@/lib/ai/embedder";
-import { recalcularYGuardarScore } from "@/lib/scoring";
+import { recalcularYGuardarScoreSiReporteReal } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
@@ -146,7 +146,8 @@ export async function darDeBajaReporte(params: {
         }
 
         // 4. Recalcular score + visibilidad (dentro de la transacción).
-        const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId, tx);
+        // SPEC-863 (I-400): un simulacro no mueve el agregado público al darlo de baja (null).
+        const scoreResult = await recalcularYGuardarScoreSiReporteReal(reporteId, reporte.identificador, reporte.plataformaId, tx);
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId, tx);
 
         // 5. AuditLog atómico.
@@ -263,8 +264,8 @@ export async function reactivarReporte(params: {
             VALUES (${embeddingId}, ${reporteId}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
         `;
 
-        // 3. Recalcular score + visibilidad.
-        await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId, tx);
+        // 3. Recalcular score + visibilidad. SPEC-863: un simulacro no mueve el agregado público.
+        await recalcularYGuardarScoreSiReporteReal(reporteId, reporte.identificador, reporte.plataformaId, tx);
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId, tx);
 
         // 4. AuditLog.
