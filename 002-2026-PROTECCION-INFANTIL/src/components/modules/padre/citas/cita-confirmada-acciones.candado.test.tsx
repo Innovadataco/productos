@@ -122,14 +122,23 @@ describe("SPEC-749 FR-2 · CONFIRMADA con la hora ya pasada dice la verdad (rend
         // SPEC-792 C2 supersede la aserción INTERINA de 749 FR-2 («mundo sin encuesta»): el escape
         // «Pedir otra cita» se CERRÓ — la encuesta es el primer camino (tarjeta en EsperaCitaPanel cuando
         // hay encuesta pendiente; lo cubre el candado espera-cita-encuesta-primero, que la verifica EVIDENTE
-        // y ALCANZABLE ahí mismo). Queda «Escríbenos» con destino REAL (mailto), como SOPORTE — no un
-        // «Volver» circular inerte. Los invariantes de 749 (ya pasó · sin .ics · sin mentira) siguen intactos.
+        // y ALCANZABLE ahí mismo). Los invariantes de 749 (ya pasó · sin .ics · sin mentira) siguen intactos.
         expect(
             screen.queryByRole("link", { name: /Pedir otra cita/ }),
             "SPEC-792 C2: la pasada ya no reabre el escape; el camino es la encuesta",
         ).toBeNull();
-        const escribenos = screen.getByRole("link", { name: /Escríbenos/ });
-        expect(escribenos.getAttribute("href")).toMatch(/^mailto:.+@.+/);
+        // SPEC-864 §2.1: en CONFIRMADA-pasada el `mailto` genérico «Escríbenos» lo SUSTITUYE el disparador
+        // estructurado «El profesional no cumplió» (atado a esta cita, puerta de PQR). El canal de soporte
+        // sigue siendo REAL —no un callejón—, solo que ahora estructurado. El recorrido propio de 864
+        // (disparador → confirmación → marcador) lo cubre reporte-no-cumplio.candado.test.tsx.
+        expect(
+            screen.queryByRole("link", { name: /Escríbenos/ }),
+            "SPEC-864: el mailto genérico de CONFIRMADA-pasada fue sustituido por el disparador estructurado",
+        ).toBeNull();
+        expect(
+            screen.getByRole("button", { name: /El profesional no cumplió/ }),
+            "SPEC-864: CONFIRMADA-pasada ofrece el reclamo estructurado (canal real, no callejón)",
+        ).toBeTruthy();
         const txt = container.textContent ?? "";
         // Frases medidas por Calidad que NO deben quedar (verbatim).
         expect(txt).not.toContain("El día y la hora quedan como acordado abajo");
