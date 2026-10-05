@@ -9,7 +9,7 @@
 
 ### D1: Stack heredado del proyecto 001
 
-**Decision**: Replicar exactamente el stack probado en producción del proyecto 001-2026-INNOVADATACO.
+**Decision**: Replicar exactamente el stack probado en producción de un proyecto interno previo.
 
 **Rationale**: La constitución del proyecto (§2.1) establece el stack como no negociable. Next.js App Router + Prisma + PostgreSQL + JWT manual ha sido validado en producción. No hay justificación para introducir variación en la fase fundacional.
 

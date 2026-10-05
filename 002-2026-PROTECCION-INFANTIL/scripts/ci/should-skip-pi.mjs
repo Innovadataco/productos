@@ -13,7 +13,7 @@
  * la trata como éxito para required checks.
  *
  * Convivencia en el monorepo:
- *   NNN-YYYY-… (000-…, 004-…, 006-…, 007-PIWEB, …)  → productos hermanos
+ *   NNN-YYYY-… (006-BI, 007-PIWEB)                   → productos hermanos
  *   .github/workflows/{ci,verificar-base-pr}.yml     → workflows compartidos
  *   .github/workflows/bi*.yml                        → CI propio de BI (Kimi)
  *   AGENTS.md, README.md, .gitignore                 → docs raíz

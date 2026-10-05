@@ -36,11 +36,9 @@ describe("afectaAPI · qué archivo dispara la suite de PI (SPEC-374)", () => {
         expect(afectaAPI(".github/workflows/bi-006.yml")).toBe(false);
     });
 
-    it("otros productos hermanos (BI, PIWEB, SICOV, SARLAFT) NO disparan", () => {
+    it("otros productos hermanos (BI, PIWEB) NO disparan", () => {
         expect(afectaAPI("006-2026-BI-INTELIGENCIA-NEGOCIO/src/app/page.tsx")).toBe(false);
         expect(afectaAPI("007-2026-PIWEB/index.html")).toBe(false);
-        expect(afectaAPI("003-2026-SICOV-OTPC/src/x.ts")).toBe(false);
-        expect(afectaAPI("004-2026-SARLAFT/x.md")).toBe(false);
     });
 
     it("docs raíz (AGENTS.md, README.md, .gitignore) NO disparan", () => {
@@ -105,10 +103,10 @@ describe("deberSaltar · decisión sobre la lista completa (SPEC-374)", () => {
         ])).toBe(false);
     });
 
-    it("(h) PR entero de otro proyecto (SARLAFT doc + código) → skip=true", () => {
+    it("(h) PR entero de otro producto hermano (PIWEB doc + código) → skip=true", () => {
         expect(deberSaltar([
-            "004-2026-SARLAFT/README.md",
-            "004-2026-SARLAFT/src/main.py",
+            "007-2026-PIWEB/README.md",
+            "007-2026-PIWEB/index.html",
         ])).toBe(true);
     });
 

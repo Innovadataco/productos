@@ -1,6 +1,6 @@
 # Workflows de CI — patrón sentinel multi-producto
 
-Este directorio contiene los workflows de GitHub Actions del monorepo `Innovadataco/productos`. Un workflow por producto (`ci.yml` para PI, `bi.yml` para BI, futuros `ci-000.yml`, `ci-001.yml`, `ci-003.yml`) más el candado transversal `verificar-base-pr.yml`.
+Este directorio contiene los workflows de GitHub Actions del monorepo `Innovadataco/productos`. Un workflow por producto (`ci.yml` para PI, `bi.yml`/`bi-006.yml` para BI) más el candado transversal `verificar-base-pr.yml`.
 
 ## El problema que resuelve este patrón
 
@@ -21,7 +21,7 @@ Cada `<producto>.yml` DEBE cumplir tres cosas:
 
 ## Plantilla YAML — copiar y pegar
 
-Reemplazá `<slug>` (ej. `pi`, `bi`, `mod`, `idc`, `sicov`, `sarlaft`) y `<todos los jobs del workflow>`:
+Reemplazá `<slug>` (ej. `pi`, `bi`) y `<todos los jobs del workflow>`:
 
 ```yaml
   # Sentinel multi-producto (SPEC-299 / BRIEF A-49). Ver .github/workflows/README.md.
@@ -78,13 +78,10 @@ Cuando el producto merge por primera vez el sentinel a `main`:
 
 | Producto                        | Carpeta                              | Workflow      | Nombre del sentinel |
 |---------------------------------|--------------------------------------|---------------|---------------------|
-| 000 · MODELOS                   | `000-2026-MODELOS/`                  | `ci-000.yml` (por crear) | `mod-gate`   |
-| 001 · INNOVADATACO              | `001-2026-INNOVADATACO/`             | `ci-001.yml` (por crear) | `idc-gate`   |
 | 002 · PROTECCIÓN INFANTIL       | `002-2026-PROTECCION-INFANTIL/`      | `ci.yml`      | `pi-gate`           |
-| 003 · SICOV-OTPC                | `003-2026-SICOV-OTPC/`               | `ci-003.yml` (por crear) | `sicov-gate` |
-| 005 · BI (RETIRADO 2026-09-03)  | `005-2026-BI-INTELIGENCIA-NEGOCIO/` eliminada | `bi.yml` (sentinel trivial) | `bi-gate` |
-| 006 · BI v2                     | `006-2026-BI-INTELIGENCIA-NEGOCIO/`  | `bi-006.yml`  | checks `bi-006`     |
-| SARLAFT (futuro)                | por definir                          | `ci-sarlaft.yml` (por crear) | `sarlaft-gate` |
+| 006 · BI                        | `006-2026-BI-INTELIGENCIA-NEGOCIO/`  | `bi-006.yml`  | checks `bi-006`     |
+
+> Productos retirados del monorepo (D-141, SPEC-867): 000-MODELOS, 001-INNOVADATACO, 003-SICOV-OTPC, 004-SARLAFT, 008-PGN-SIMULACRO. BI 005 se consolidó en 006.
 
 ## Traza
 
