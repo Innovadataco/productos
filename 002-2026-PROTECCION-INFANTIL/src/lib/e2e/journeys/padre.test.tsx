@@ -97,43 +97,28 @@ describe(`SPEC-114 · padre (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
     it("registro público → login real → entra a su home", async () => {
         const datos = datosCiclo(CICLO);
         const email = `e2e-c${CICLO}-padre-reg@test.local`;
-        // Flujo público real de alta de padres: solicitar código → completar con el código
-        const { POST: solicitarPOST } = await import("@/app/api/auth/verificar/solicitar/route");
-        const resSol = await solicitarPOST(
-            new Request("http://localhost:5005/api/auth/verificar/solicitar", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
-            })
-        );
-        expect(resSol.status, "solicitar el código de verificación debe funcionar").toBeLessThan(300);
+        // Alta REAL del padre (SPEC-339): deja su correo → recibe un ENLACE → crea
+        // su clave → la cuenta nace con la sesión iniciada. Es la ruta VIVA del padre
+        // (`registro/completar`), NO el código muerto de `verificar/completar` (I-413:
+        // esa ruta instalaba sesión y no la alcanzaba ningún usuario; el journey la
+        // ejercía dando verde sobre código muerto).
+        // El token del enlace NO se expone por la ruta `registro/solicitar`
+        // (anti-enumeración, SPEC-338): se acuña con el MISMO servicio que usa esa
+        // ruta pública real — igual patrón que registro/completar/route.test.ts.
+        const { RegistroEnlaceService } = await import("@/lib/dal/services/registro-enlace");
+        const enlace = await new RegistroEnlaceService().solicitarEnlace(email);
+        if (!enlace.ok || enlace.tipo !== "ok") throw new Error("no se pudo crear el enlace de registro del padre");
+        const token = enlace.token;
 
-        // Sin Resend en el entorno de test, la ruta expone devCode para continuar el flujo
-        const { devCode } = (await resSol.json()) as { devCode?: string };
-        expect(devCode, "sin email configurado debe exponerse devCode").toBeTruthy();
-
-        // validar el código → devuelve el JWT de verificación
-        const { POST: validarPOST } = await import("@/app/api/auth/verificar/validar/route");
-        const resVal = await validarPOST(
-            new Request("http://localhost:5005/api/auth/verificar/validar", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, codigo: devCode }),
-            })
-        );
-        expect(resVal.status, "validar el código debe funcionar").toBeLessThan(300);
-        const { token: tokenVerificacion } = (await resVal.json()) as { token: string };
-        expect(tokenVerificacion).toBeTruthy();
-
-        const { POST: completarPOST } = await import("@/app/api/auth/verificar/completar/route");
+        const { POST: completarPOST } = await import("@/app/api/auth/registro/completar/route");
         const resComp = await completarPOST(
-            new Request("http://localhost:5005/api/auth/verificar/completar", {
+            new Request("http://localhost:5005/api/auth/registro/completar", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token: tokenVerificacion, password: "ClaveE2E-2026", nombre: "Padre E2E" }),
+                body: JSON.stringify({ token, password: "ClaveE2E-2026", passwordConfirmacion: "ClaveE2E-2026" }),
             })
         );
-        expect(resComp.status, "completar el registro con el código debe funcionar").toBeLessThan(300);
+        expect(resComp.status, "completar el registro por la ruta VIVA (registro/completar) debe funcionar").toBeLessThan(300);
 
         const sesion = await entrarComo("PARENT", email, "ClaveE2E-2026");
         expect(sesion.rol).toBe("PARENT");

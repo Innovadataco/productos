@@ -247,21 +247,10 @@ export const verificarValidarSchema = z.object({
 });
 export type VerificarValidarInput = z.infer<typeof verificarValidarSchema>;
 
-export const verificarCompletarSchema = z.object({
-    token: z.string({ error: "Token y contraseña requeridos" }).min(1, "Token y contraseña requeridos"),
-    password: z.string({ error: "Token y contraseña requeridos" })
-        .min(1, "Token y contraseña requeridos")
-        .refine((val) => val.length >= 8 && /[a-zA-Z]/.test(val) && /[0-9]/.test(val), {
-            message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número",
-        }),
-    nombre: z.string({ error: "Token y contraseña requeridos" }).optional(),
-    // SPEC-240 (002-PI-143): registro público de colegio (paso 2 de verificación).
-    nombreColegio: z.string().min(2, "Nombre del colegio: mínimo 2 caracteres").max(150).optional(),
-    // SPEC-320 (§2.2-bis): NIT del colegio, obligatorio en el registro de colegio.
-    nit: z.string().min(1, "Falta el NIT del colegio").max(50).optional(),
-    rol: z.enum(["PARENT", "SCHOOL_ADMIN"]).optional(),
-});
-export type VerificarCompletarInput = z.infer<typeof verificarCompletarSchema>;
+// SPEC-861 (I-413): `verificarCompletarSchema` vivía acá para la ruta
+// `verificar/completar`, que instalaba sesión y no la alcanzaba ningún llamador
+// (el padre va por `registro/completar` SPEC-339; el colegio por
+// `registro-colegio/completar`). Ruta y schema eliminados.
 
 // SPEC-339 (A-67 §2.3): documento del padre (adulto — distinto del set del
 // menor, que incluye RC/TI).
