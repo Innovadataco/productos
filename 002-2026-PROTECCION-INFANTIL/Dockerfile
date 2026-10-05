@@ -1,8 +1,15 @@
 # syntax=docker/dockerfile:1
 # Spec 097 (US3): imagen de producción de PI — app Next.js standalone + worker pg-boss.
 # La misma imagen sirve para app (CMD por defecto) y worker (command override en compose).
-
-FROM node:22-alpine AS deps
+#
+# SPEC-868 (I-445): el tag `node:22-alpine` es MÓVIL — bumpeó a 22.23.3 y cambió la
+# resolución ESM nativa, dejando a pi-worker en crash-loop post-deploy. Se PINEA por
+# DIGEST (inmutable) en las 4 etapas para que un bump del tag no vuelva a mover el
+# runtime bajo nuestros pies. Para actualizar node a propósito: resolver el nuevo
+# digest con `docker buildx imagetools inspect node:22-alpine`, reemplazarlo en las 4
+# etapas, y actualizar el `node-version` del job `worker-smoke` en ci.yml (sync).
+# Pin actual: node 22.23.3-alpine.
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS deps
 WORKDIR /app
 # OpenSSL 3 para que Prisma detecte y descargue el engine linux-musl-openssl-3.0.x
 RUN apk add --no-cache openssl
@@ -12,7 +19,7 @@ COPY prisma ./prisma
 # stages y entre builds. Compartido con `prod-deps` (mismo lock hash).
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
 
-FROM node:22-alpine AS builder
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN apk add --no-cache openssl
@@ -37,7 +44,7 @@ ENV RESEND_API_KEY=build-placeholder \
 ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npx prisma generate && npm run build
 
-FROM node:22-alpine AS prod-deps
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS prod-deps
 WORKDIR /app
 # Deps de PRODUCCIÓN solamente (SPEC-107, B3-e: la imagen no lleva devDependencies).
 # tsx y prisma CLI son dependencies de runtime (worker con --import tsx; migrate/seed).
@@ -49,7 +56,7 @@ COPY prisma ./prisma
 # `builder` se copia al runner por layer; ver runner abajo).
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --omit=dev
 
-FROM node:22-alpine AS runner
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runner
 WORKDIR /app
 # Se repite el ARG/ENV en runtime: el panel admin lee APP_BUILD_SHA en servidor
 # por request (layout dinámico), y el ENV del stage builder no llega al runner.
