@@ -3,9 +3,28 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * Disciplina Spec-Kit (spec 087-US5): corre en el gate (`npm run test`).
- * Falla si: Status fuera del catálogo canónico, spec CERRADA (>021) sin cierre,
- * número de carpeta duplicado, o índice specs/README.md inconsistente con las carpetas.
+ * Disciplina de specs (spec 087 · reconciliada por SPEC-865 con el modelo RATIFICADO
+ * en SPEC-860: `specs/NNN/` es un HOME OPCIONAL de notas, sin ceremonia Spec-Kit).
+ *
+ * YA NO se exige el ceremonial: Status, `plan.md`, `tasks.md` ni «Impacto en
+ * arquitectura:». Una carpeta de notas puede traer solo `spec.md` (o lo que ayude).
+ * Lo que queda es HIGIENE/FORMA, que solo valida SI la carpeta existe y nunca exige
+ * artefactos:
+ *   - Si una spec DECLARA Status, debe ser del catálogo canónico (forma, no obligación).
+ *   - Si una spec se declara CERRADA, debe tener su cierre (consistencia opt-in).
+ *   - Números de carpeta no duplicados.
+ *   - Representabilidad (SPEC-487): ninguna carpeta `specs/NNN` a medio crear (sin spec.md).
+ *
+ * Corre en el gate (`npm run test`, job `test-unit`): un PR de CÓDIGO la ejerce
+ * siempre, así que ya NO hace falta quitar las notas opcionales de `specs/` en cada
+ * PR (el workaround de SPEC-861/866). Con el ceremonial retirado, una nota opcional
+ * ya no la rompe.
+ *
+ * PENDIENTE (SPEC-865 Part 2, companion): que corra TAMBIÉN en PRs docs-only — hoy
+ * `should-skip-pi.mjs` salta los cambios bajo `specs/`, así que una violación de la
+ * HIGIENE residual (número duplicado, carpeta a medio crear) quedaría latente hasta
+ * el primer PR de código. El cambio a `should-skip-pi.mjs` quedó bloqueado por el
+ * guard de CI de la sesión; se aplica cuando el permiso lo habilite.
  */
 
 const SPECS_DIR = path.resolve(__dirname, "../../specs");
@@ -17,43 +36,6 @@ const STATUS_CANONICOS = new Set([
     "FINALIZADO",
     "CERRADA",
 ]);
-
-/**
- * SPEC-107 (cola 025, B3): specs históricas incompletas (sin plan.md y/o tasks.md) a la
- * fecha de activación de esta regla. La lista SOLO PUEDE ENCOGER, NUNCA CRECER:
- * toda spec nueva o fuera de esta lista DEBE tener plan.md y tasks.md o el gate falla.
- * Para sacar una spec de la lista hay que completar sus artefactos (backfill), no borrarla.
- */
-const DEUDA_HEREDADA = new Set([
-    "009-dashboard-publico",
-    "011-centro-control-ia",
-    "012-baja-reportes",
-    "013-admin-motor-ia",
-    "014-laboratorio-ia",
-    "015-anti-abuso",
-    "017-documentacion",
-    "018-operadores-casos",
-    "022-expediente-transiciones",
-    "023-estados-usuario-sla",
-    "024-comite-validacion",
-    "025-anonimizacion-reforzada",
-    "026-pipeline-spam-prioridad",
-    "027-motor-encolamiento",
-    "028-redisenio-home",
-    "029-redisenio-consulta-panel-usuario",
-    "030-circulo-confianza-multiples-identificadores",
-    "031-mejoras-ui-agrupacion-categorias",
-    "088-pendientes-afinamiento",
-]);
-
-/**
- * SPEC-126 (US3, FR-008): toda spec NUEVA (numeración >= 126) DEBE declarar su
- * "Impacto en arquitectura:" en spec.md. Las históricas (< 126) quedan fuera por
- * número; esta lista es para excepciones explícitas dentro de las nuevas y, como
- * DEUDA_HEREDADA, SOLO PUEDE ENCOGER (hoy está vacía y el tope duro es 0).
- */
-const SIN_IMPACTO_HEREDADO = new Set<string>([]);
-const DESDE_SPEC_IMPACTO = 126;
 
 function carpetasSpecs(): string[] {
     return fs
@@ -71,19 +53,21 @@ function statusDe(specPath: string): string | null {
 
 const carpetas = carpetasSpecs().filter((d) => fs.existsSync(path.join(SPECS_DIR, d, "spec.md")));
 
-describe("disciplina Spec-Kit (spec 087)", () => {
-    it("toda spec declara Status del catálogo canónico", () => {
+describe("disciplina de specs (spec 087 · sin ceremonia, SPEC-865)", () => {
+    // FORMA (no obligación): una nota puede no declarar Status; pero si lo declara,
+    // debe ser del catálogo canónico (un Status inventado sí es un error de forma).
+    it("si una spec DECLARA Status, es del catálogo canónico (no se exige declararlo)", () => {
         const violaciones: string[] = [];
         for (const carpeta of carpetas) {
             const status = statusDe(path.join(SPECS_DIR, carpeta, "spec.md"));
-            if (!status || !STATUS_CANONICOS.has(status)) {
-                violaciones.push(`${carpeta}: "${status ?? "sin Status"}"`);
+            if (status !== null && !STATUS_CANONICOS.has(status)) {
+                violaciones.push(`${carpeta}: "${status}"`);
             }
         }
         expect(violaciones, violaciones.join("; ")).toEqual([]);
     });
 
-    it("specs CERRADA tienen cierre (carpeta o docs/) — SIN exenciones (auditoría §3.2a)", () => {
+    it("specs CERRADA tienen cierre (carpeta o docs/) — consistencia opt-in", () => {
         const violaciones: string[] = [];
         for (const carpeta of carpetas) {
             const num = parseInt(carpeta.split("-")[0], 10);
@@ -110,60 +94,12 @@ describe("disciplina Spec-Kit (spec 087)", () => {
         expect(duplicados.map(([n, v]) => `${n}: ${v.join(" vs ")}`)).toEqual([]);
     });
 
-    it("toda spec tiene plan.md y tasks.md (salvo DEUDA_HEREDADA, que solo encoge)", () => {
-        const violaciones: string[] = [];
-        for (const carpeta of carpetas) {
-            if (DEUDA_HEREDADA.has(carpeta)) continue;
-            const archivos = fs.readdirSync(path.join(SPECS_DIR, carpeta));
-            const faltan = ["plan.md", "tasks.md"].filter((f) => !archivos.includes(f));
-            if (faltan.length > 0) {
-                violaciones.push(`${carpeta}: falta ${faltan.join(" y ")}`);
-            }
-        }
-        expect(violaciones, violaciones.join("; ")).toEqual([]);
-    });
-
-    it("DEUDA_HEREDADA no crece (tope duro: añadir una entrada pone la suite en rojo)", () => {
-        // Auditoría §3.2b: la lista SOLO PUEDE ENCOGER. Tope duro en el valor actual (19);
-        // al sanear una spec (completar sus artefactos) se baja el tope a mano en el mismo commit.
-        expect(DEUDA_HEREDADA.size).toBeLessThanOrEqual(19);
-        // Consistencia: toda carpeta de la lista sigue existiendo (si se sana una spec, hay
-        // que sacarla de la lista, no borrar la carpeta).
-        const inexistentes = [...DEUDA_HEREDADA].filter((c) => !carpetas.includes(c));
-        expect(inexistentes, inexistentes.join("; ")).toEqual([]);
-    });
-
-    it("toda spec nueva (>= 126) declara 'Impacto en arquitectura:' (SPEC-126, FR-008)", () => {
-        const violaciones: string[] = [];
-        for (const carpeta of carpetas) {
-            const num = parseInt(carpeta.split("-")[0], 10);
-            if (Number.isNaN(num) || num < DESDE_SPEC_IMPACTO) continue;
-            if (SIN_IMPACTO_HEREDADO.has(carpeta)) continue;
-            const contenido = fs.readFileSync(path.join(SPECS_DIR, carpeta, "spec.md"), "utf-8");
-            if (!contenido.includes("Impacto en arquitectura:")) {
-                violaciones.push(`${carpeta}: falta la línea "Impacto en arquitectura:"`);
-            }
-        }
-        expect(violaciones, violaciones.join("; ")).toEqual([]);
-    });
-
-    it("SIN_IMPACTO_HEREDADO no crece (tope duro 0: eximir una spec nueva pone la suite en rojo)", () => {
-        expect(SIN_IMPACTO_HEREDADO.size).toBeLessThanOrEqual(0);
-        const inexistentes = [...SIN_IMPACTO_HEREDADO].filter((c) => !carpetas.includes(c));
-        expect(inexistentes, inexistentes.join("; ")).toEqual([]);
-    });
-
     // SPEC-487 (D-109): el índice specs/README.md ya NO se compara con las carpetas
     // en el PR —eso obligaba a cada PR a editar el índice (clase de conflicto union)—;
     // lo regenera el barrido post-merge. Acá se vigila la REPRESENTABILIDAD de la
-    // fuente: ninguna carpeta de spec a medio crear (sin spec.md). Que el índice
-    // committeado esté al día lo garantiza el barrido, no el PR.
+    // fuente: ninguna carpeta de spec a medio crear (sin spec.md).
     it("ninguna carpeta specs/NNN queda a medio crear (sin spec.md) — representabilidad (SPEC-487)", () => {
-        const sinSpec = fs
-            .readdirSync(SPECS_DIR, { withFileTypes: true })
-            .filter((e) => e.isDirectory())
-            .map((e) => e.name)
-            .filter((c) => !fs.existsSync(path.join(SPECS_DIR, c, "spec.md")));
+        const sinSpec = carpetasSpecs().filter((c) => !fs.existsSync(path.join(SPECS_DIR, c, "spec.md")));
         expect(sinSpec, sinSpec.join("; ")).toEqual([]);
     });
 });
