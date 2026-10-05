@@ -1367,8 +1367,9 @@ async function seedEventosEmailMigrados() {
         // le quita al padre el opt-out (motor: transaccionales no se apagan). Va
         // en AMBOS canales (acá el correo, abajo la campanita IN_APP): media
         // obligatoriedad no es obligatoriedad. Deroga el «NO obligatoria» de
-        // SPEC-339; el interruptor `notificacionesHijos` deja de tener efecto
-        // (su retiro de la pantalla es de I-395, no de acá).
+        // SPEC-339; el interruptor `notificacionesHijos` ya NO tiene efecto: su
+        // gate (`notificarHijosSiCorresponde`) fue RETIRADO en SPEC-862 / I-395 y el
+        // campo quedó inerte (se conserva la columna por aditividad de migraciones).
         { evento: "padre.hijo.reporte", plantillaClave: "padre.hijo.reporte.email", rol: "PARENT", obligatoria: true },
         { evento: "padre.circulo_confianza.reporte_enriquecido", plantillaClave: "padre.circulo_confianza.reporte_enriquecido.email", rol: "PARENT", obligatoria: false },
         // SPEC-590: correo de seguridad al cambiar el email del perfil. Obligatoria.
