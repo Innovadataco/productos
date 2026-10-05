@@ -2668,6 +2668,18 @@ model SolicitudHabeasData {
   /// peticiones sobre este menor?» NO se responde por consulta automática. Si algún día se necesita, se
   /// introduce una clave de sujeto; hoy no la hay.
   sujetoDelDato String?
+  /// SPEC-827 · El OBJETO que el TITULAR PIDE: sobre qué CLASE(S) de dato recae su RECTIFICACION/SUPRESION.
+  /// Enum CERRADO, nunca texto libre — la fila es la CONSTANCIA y debe sobrevivir a la supresión: si fuera
+  /// narrativa, LEERLA revelaría qué se pidió borrar. DISTINTO de `clasesDatoAfectadas` (abajo), que es sobre
+  /// qué recayó la RESOLUCIÓN del operador: «sobre qué pidió ÉL» vs «sobre qué recayó lo que HICIMOS» — la
+  /// fila prueba la diferencia, y reusar uno para el otro la borraría. CONSULTA no lleva objeto (queda vacío,
+  /// «qué datos tienen sobre mí» no lo necesita); RECTIFICACION/SUPRESION exigen ≥1 clase — una petición sin
+  /// objeto no es accionable y el plazo corre igual. Lo clava el CHECK `objeto_por_tipo` (NOT VALID: indulta
+  /// las filas previas a 827; el service/ruta cortan antes del error crudo de la base). Enum completo: el
+  /// derecho es general; nuestro copy de UI es parcial (solo RELATO_CITA por ahora), y eso no recorta el derecho.
+  /// `@default([])`: la columna se AGREGA a una tabla ya poblada → las filas previas quedan en `{}` (no NULL),
+  /// y Prisma genera el DEFAULT con el CAST explícito que un array de enum exige (trap (a) de D-121).
+  clasesSolicitadas ClaseDatoTitular[] @default([])
   /// Plazo OPERACIONAL en días hábiles. El máximo LEGAL (10 consulta / 15 reclamo) es CONSTANTE [NORMA]
   /// (src/lib/habeas-data/plazos-legales.ts), NO parametrizable; el operacional puede ser menor pero
   /// JAMÁS mayor — lo clava por arriba el CHECK de la migración (imposibilidad estructural, no comentario).

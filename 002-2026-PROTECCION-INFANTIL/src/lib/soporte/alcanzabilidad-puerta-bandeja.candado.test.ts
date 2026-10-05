@@ -35,7 +35,7 @@ describe("SPEC-824 · 🚨 alcanzabilidad puerta ⟹ bandeja", { timeout: 30_000
         await crearPeticionServicio({
             usuarioId: padre.id,
             motivo: "DATOS_PERSONALES",
-            habeasData: { tipo: "CONSULTA", sujeto: { calidad: "TITULAR_CUENTA" } },
+            habeasData: { tipo: "CONSULTA", sujeto: { calidad: "TITULAR_CUENTA" }, clasesSolicitadas: [] },
         });
         await crearPeticionServicio({ usuarioId: padre.id, motivo: "CITA" });
 

@@ -59,8 +59,14 @@ describe("SPEC-819 · PuertaSoporte · la pregunta de habeas data", () => {
         expect(LENGUAJE_ABOGADO.test(container.textContent ?? ""), "cero lenguaje de abogado visible").toBe(false);
 
         fireEvent.click(enviarBtn());
+        // SPEC-827: CONSULTA no lleva objeto → viaja con `clasesSolicitadas: []`.
         await waitFor(() =>
-            expect(onEnviar).toHaveBeenCalledWith({ motivo: "DATOS_PERSONALES", tipo: "CONSULTA", sujeto: { calidad: "TITULAR_CUENTA" } }),
+            expect(onEnviar).toHaveBeenCalledWith({
+                motivo: "DATOS_PERSONALES",
+                tipo: "CONSULTA",
+                sujeto: { calidad: "TITULAR_CUENTA" },
+                clasesSolicitadas: [],
+            }),
         );
     });
 
@@ -77,6 +83,9 @@ describe("SPEC-819 · PuertaSoporte · la pregunta de habeas data", () => {
         expect(container.querySelector('input[name="habeas-hijo"][type="radio"]'), "el hijo se elige de una lista, no se escribe").toBeTruthy();
 
         fireEvent.click(q(container, 'input[name="habeas-hijo"][value="h-beto"]')!);
+        // SPEC-827: RECTIFICACION ahora exige el OBJETO (≥1 clase) — con hijo pero sin objeto, aún no envía.
+        expect(enviarBtn().disabled, "RECTIFICACION sin objeto no se envía").toBe(true);
+        fireEvent.click(q(container, 'input[name="habeas-clase"][value="RELATO_CITA"]')!);
         expect(enviarBtn().disabled).toBe(false);
         fireEvent.click(enviarBtn());
         await waitFor(() =>
@@ -84,6 +93,7 @@ describe("SPEC-819 · PuertaSoporte · la pregunta de habeas data", () => {
                 motivo: "DATOS_PERSONALES",
                 tipo: "RECTIFICACION",
                 sujeto: { calidad: "REPRESENTANTE_LEGAL", hijoId: "h-beto" },
+                clasesSolicitadas: ["RELATO_CITA"],
             }),
         );
     });
@@ -110,8 +120,10 @@ describe("SPEC-819 · PuertaSoporte · la pregunta de habeas data", () => {
         fireEvent.click(q(container, 'input[value="DATOS_PERSONALES"]')!);
         fireEvent.click(q(container, 'input[name="habeas-tipo"][value="SUPRESION"]')!);
         fireEvent.click(q(container, 'input[name="habeas-sujeto"][value="REPRESENTANTE_LEGAL"]')!);
-        // El único hijo queda nombrado y confirmado → habilita sin un paso extra.
+        // El único hijo queda nombrado y confirmado. SPEC-827: SUPRESION exige el OBJETO → aún falta la clase.
         expect((q(container, 'input[name="habeas-hijo"][value="h-uni"]') as HTMLInputElement).checked).toBe(true);
+        expect(enviarBtn().disabled, "SUPRESION sin objeto no se envía").toBe(true);
+        fireEvent.click(q(container, 'input[name="habeas-clase"][value="PERFIL"]')!);
         expect(enviarBtn().disabled).toBe(false);
         fireEvent.click(enviarBtn());
         await waitFor(() =>
@@ -119,7 +131,66 @@ describe("SPEC-819 · PuertaSoporte · la pregunta de habeas data", () => {
                 motivo: "DATOS_PERSONALES",
                 tipo: "SUPRESION",
                 sujeto: { calidad: "REPRESENTANTE_LEGAL", hijoId: "h-uni" },
+                clasesSolicitadas: ["PERFIL"],
             }),
         );
+    });
+});
+
+describe("SPEC-827 · PuertaSoporte · el objeto de la petición (eje C)", () => {
+    it("CONSULTA no muestra el paso del objeto (no lo necesita)", () => {
+        const { container } = render(<PuertaSoporte onEnviar={okEnviar} hijos={HIJOS} />);
+        fireEvent.click(q(container, 'input[value="DATOS_PERSONALES"]')!);
+        fireEvent.click(q(container, 'input[name="habeas-tipo"][value="CONSULTA"]')!);
+        expect(container.querySelectorAll('input[name="habeas-clase"]').length, "CONSULTA no lleva objeto").toBe(0);
+    });
+
+    it("RECTIFICACION y SUPRESION ofrecen las SEIS clases (el derecho es general, sin hueco)", () => {
+        const { container } = render(<PuertaSoporte onEnviar={okEnviar} hijos={HIJOS} />);
+        fireEvent.click(q(container, 'input[value="DATOS_PERSONALES"]')!);
+        for (const tipo of ["RECTIFICACION", "SUPRESION"] as const) {
+            fireEvent.click(q(container, `input[name="habeas-tipo"][value="${tipo}"]`)!);
+            expect(container.querySelectorAll('input[name="habeas-clase"]').length, `${tipo} ofrece las 6 clases`).toBe(6);
+            for (const v of ["PERFIL", "HIJOS", "IDENTIFICADORES_CIRCULO", "RELATO_CITA", "CONTENIDO_REPORTE", "OTRO"]) {
+                expect(q(container, `input[name="habeas-clase"][value="${v}"]`), `falta la clase ${v}`).toBeTruthy();
+            }
+        }
+    });
+
+    it("multi-select: la petición puede recaer sobre MÁS de una clase (las nombra todas, no una)", async () => {
+        const onEnviar = vi.fn(okEnviar);
+        const { container } = render(<PuertaSoporte onEnviar={onEnviar} hijos={HIJOS} />);
+        fireEvent.click(q(container, 'input[value="DATOS_PERSONALES"]')!);
+        fireEvent.click(q(container, 'input[name="habeas-tipo"][value="SUPRESION"]')!);
+        fireEvent.click(q(container, 'input[name="habeas-sujeto"][value="TITULAR_CUENTA"]')!);
+        fireEvent.click(q(container, 'input[name="habeas-clase"][value="PERFIL"]')!);
+        fireEvent.click(q(container, 'input[name="habeas-clase"][value="CONTENIDO_REPORTE"]')!);
+        fireEvent.click(enviarBtn());
+        await waitFor(() =>
+            expect(onEnviar).toHaveBeenCalledWith(
+                expect.objectContaining({ clasesSolicitadas: ["PERFIL", "CONTENIDO_REPORTE"] }),
+            ),
+        );
+    });
+
+    it("los límites del relato aparecen al elegirlo en una RECTIFICACION, NO en una SUPRESION", () => {
+        const { container } = render(<PuertaSoporte onEnviar={okEnviar} hijos={HIJOS} />);
+        fireEvent.click(q(container, 'input[value="DATOS_PERSONALES"]')!);
+        fireEvent.click(q(container, 'input[name="habeas-tipo"][value="RECTIFICACION"]')!);
+        fireEvent.click(q(container, 'input[name="habeas-clase"][value="RELATO_CITA"]')!);
+        expect(/no borra/i.test(container.textContent ?? ""), "RECTIFICACION del relato muestra sus límites").toBe(true);
+        // Cambiar a SUPRESION: los límites de CORRECCIÓN del relato no aplican (y cambiar de tipo limpia la selección).
+        fireEvent.click(q(container, 'input[name="habeas-tipo"][value="SUPRESION"]')!);
+        fireEvent.click(q(container, 'input[name="habeas-clase"][value="RELATO_CITA"]')!);
+        expect(/no borra/i.test(container.textContent ?? ""), "los límites de corrección no aplican a SUPRESION").toBe(false);
+    });
+
+    it("las etiquetas de clase: sin plazo ni jerga (lenguaje de familia — «cuenta», no «identificador»)", () => {
+        const { container } = render(<PuertaSoporte onEnviar={okEnviar} hijos={HIJOS} />);
+        fireEvent.click(q(container, 'input[value="DATOS_PERSONALES"]')!);
+        fireEvent.click(q(container, 'input[name="habeas-tipo"][value="SUPRESION"]')!);
+        const txt = container.textContent ?? "";
+        expect(SIN_PLAZO.test(txt), "el objeto no menciona plazo").toBe(false);
+        expect(/identificador|\bnick\b|\balias\b|\bPII\b/i.test(txt), "lenguaje de familia, no jerga").toBe(false);
     });
 });
