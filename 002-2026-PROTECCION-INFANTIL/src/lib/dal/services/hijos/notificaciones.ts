@@ -10,10 +10,12 @@
  * el mismo patrón del círculo (SPEC-135/308: trigger del worker, estados
  * visibles, apagador global, enfriamiento por usuario, correo por el motor) con
  * DOS diferencias deliberadas:
- *   1. Interruptor y enfriamiento PROPIOS (`notificacionesHijos`,
- *      `ultimaNotificacionHijosEn`): reusar los del círculo haría que un aviso
- *      sobre un contacto vigilado silenciara 24h el aviso sobre el hijo, y que
- *      apagar el círculo apagara también al hijo.
+ *   1. Enfriamiento PROPIO (`ultimaNotificacionHijosEn`): reusar el del círculo
+ *      haría que un aviso sobre un contacto vigilado silenciara 24h el aviso
+ *      sobre el hijo. (El interruptor `notificacionesHijos` fue RETIRADO en
+ *      SPEC-862 / I-395: el aviso del hijo es OBLIGATORIO y NO se puede silenciar
+ *      —SPEC-683 / I-401, decisión de Jelkin—. El enfriamiento NO es un silencio:
+ *      es anti-spam, no un opt-out.)
  *   2. Presentación propia: al padre no se le habla igual de «Carlos · tío» que
  *      de su hijo.
  */
@@ -84,7 +86,6 @@ export async function notificarHijosSiCorresponde(reporteId: string) {
                     select: {
                         id: true,
                         email: true,
-                        notificacionesHijos: true,
                         ultimaNotificacionHijosEn: true,
                     },
                 },
@@ -101,10 +102,10 @@ export async function notificarHijosSiCorresponde(reporteId: string) {
         for (const hijo of hijos) {
             const padre = hijo.usuario;
             if (avisados.has(padre.id)) continue;
-            if (!padre.notificacionesHijos) {
-                logger.info(`[HIJOS] Aviso omitido: el padre ${padre.id} apagó los avisos de hijos`);
-                continue;
-            }
+            // SPEC-862 / I-395: el gate `if (!padre.notificacionesHijos) continue` fue
+            // RETIRADO. El aviso del hijo es OBLIGATORIO (SPEC-683 / I-401): no hay opt-out
+            // por estructura — el servicio ni siquiera lee el campo. El único salto que
+            // queda es el enfriamiento anti-spam de abajo (no es un silencio).
             if (
                 padre.ultimaNotificacionHijosEn &&
                 ahora.getTime() - padre.ultimaNotificacionHijosEn.getTime() < cooldownMs

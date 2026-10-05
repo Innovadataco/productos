@@ -131,12 +131,17 @@ describe("notificarHijosSiCorresponde (SPEC-339)", { timeout: 60_000 }, () => {
         expect(enviarMock).not.toHaveBeenCalled();
     });
 
-    it("el interruptor del padre manda: notificacionesHijos=false no avisa", async () => {
+    // SPEC-862 / I-395 · CANDADO de conducta: el aviso del hijo es OBLIGATORIO
+    // (SPEC-683 / I-401, decisión de Jelkin: el aviso más grave NO se puede silenciar).
+    // El gate `if (!padre.notificacionesHijos) continue` fue RETIRADO; el campo quedó
+    // inerte. Si alguien lo reintroduce, este test cae (el aviso dejaría de salir con
+    // el campo en false). Control positivo: se pone false y el aviso IGUAL sale.
+    it("OBLIGATORIO: notificacionesHijos=false NO silencia el aviso del hijo (SPEC-683)", async () => {
         const { padre } = await padreConHijo("SinAvisos");
         await prisma.usuario.update({ where: { id: padre.id }, data: { notificacionesHijos: false } });
         const reporte = await crearReporte("SinAvisos");
         await notificarHijosSiCorresponde(reporte.id);
-        expect(enviarMock).not.toHaveBeenCalled();
+        expect(enviarMock).toHaveBeenCalledOnce();
     });
 
     // La razón de las columnas propias, probada en las dos direcciones.
