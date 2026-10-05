@@ -35,7 +35,7 @@ Ante la duda sobre qué rama usar: **consultá el `AGENTS.md` del producto y det
 ## Staging (INQUEBRANTABLE, todos los frentes)
 
 Prohibido `git add -A` y `git add .`. Cada frente stagea SOLO rutas de su producto:
-`git add 001-2026-INNOVADATACO/...`. Varios frentes trabajan en la misma rama: un staging
+`git add 002-2026-PROTECCION-INFANTIL/...`. Varios frentes trabajan en la misma rama: un staging
 global se lleva el trabajo de otro y arruina la trazabilidad del commit.
 
 ## Metodología y estándares (fábrica IDC)

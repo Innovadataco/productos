@@ -47,7 +47,7 @@
 **Decision**: Embeddings `nomic-embed-text` vía Ollama + pgvector en PostgreSQL
 
 **Rationale**:
-- Patrón probado y validado en proyecto 001-2026-INNOVADATACO
+- Patrón probado y validado en un proyecto interno previo
 - `nomic-embed-text` genera vectores de 768 dimensiones, optimizado para textos cortos en español
 - pgvector permite búsqueda por similitud coseno directamente en PostgreSQL
 - No requiere servicio de vector DB adicional (Pinecone, Weaviate, etc.)

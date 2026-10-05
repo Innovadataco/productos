@@ -15,7 +15,6 @@ La rama **NO EXISTE** (local ni remoto) — el trigger apunta a un fantasma, por
 | **2** | **`ci.yml` (PI)** — líneas **12** y **378** | **FUNCIONALES.** L12 `push.branches: [feature/001-scaffolding]` = el defecto (push nunca corre en `main`). **L378** `if: github.ref == 'refs/heads/feature/001-scaffolding'` gatea el paso «Actualizar test-durations.json» (SPEC-281): apunta al MISMO fantasma → **las duraciones nunca se actualizan** y el sharding por peso degrada en silencio. **Segunda vez que la rama engaña.** | **ARREGLAR** (ambas → `main`) |
 | 2 | `ci.yml` (PI) — líneas 30, 376 | Comentarios que nombran la rama obsoleta. | Texto en archivo funcional → **actualizar con el arreglo** |
 | ~438 | PI `.md`: **423** en `specs/*/{spec,plan,tasks,cierre}.md` + **15** en `docs/cierre-*.md`, `docs/historico/*`, `IMPLEMENTATION-REPORT.md` | Metadata HISTÓRICA («Feature Branch: feature/001-scaffolding» de specs cerradas meses atrás). | **TEXTO MUERTO — no se reescribe** (histórico, decisión de proyecto) |
-| 4 | `000-2026-MODELOS`×2 + `003-2026-SICOV-OTPC`×2 (`AGENTS.md`, `constitution.md`) | Convención de base de **OTROS productos** del monorepo. | **NO ES MÍO** (otro producto; su barrido, si aplica, es aparte) |
 | ~459 | Otros productos (`.md/.yml/.ts`) | — | **NO ES MÍO** |
 
 - **PI propio:** `002/AGENTS.md` y `002/README.md` tienen **CERO** referencias — PI ya usa `main` + `work/pi-SPEC-*`. La deuda viva es **solo** `ci.yml` (2 funcionales + 2 comentarios).
