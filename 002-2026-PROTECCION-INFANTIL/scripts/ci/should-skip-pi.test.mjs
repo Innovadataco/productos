@@ -1,15 +1,17 @@
 /**
  * SPEC-374 · La decisión de correr la suite de PI queda fijada por tests.
+ * SPEC-865 P2 · specs/ pasa de doc-only (skip) a DISPARAR la suite (ver abajo).
  *
- * Los 9 casos cubren:
+ * Los casos cubren:
  *   (a) PR de otro producto → skip=true (el caso del radicado y de idc-67/PIWEB)
  *   (b) PR de PI → skip=false (no relajamos nada)
  *   (c) raíz compartida (workflow del monorepo) → skip=false
- *   (d,e) doc-only dentro de PI → skip=true
+ *   (d,e) doc-only SIN gate dentro de PI (docs/, *.md) → skip=true
  *   (f) 007-PIWEB → skip=true (el caso concreto del CEO)
  *   (g) mixto BI+PI → skip=false
  *   (h) otro proyecto entero → skip=true
  *   (i) workflow ajeno (bi.yml) → skip=true
+ *   (j) solo notas en specs/ → skip=false (SPEC-865 P2: corre specs-discipline)
  */
 import { describe, it, expect } from "vitest";
 import { afectaAPI, deberSaltar } from "./should-skip-pi.mjs";
@@ -20,10 +22,18 @@ describe("afectaAPI · qué archivo dispara la suite de PI (SPEC-374)", () => {
         expect(afectaAPI("002-2026-PROTECCION-INFANTIL/src/app/api/y/route.ts")).toBe(true);
     });
 
-    it("doc-only en PI (docs/, specs/, *.md) NO dispara", () => {
+    it("doc-only SIN gate (docs/, *.md) NO dispara", () => {
         expect(afectaAPI("002-2026-PROTECCION-INFANTIL/docs/architecture.md")).toBe(false);
-        expect(afectaAPI("002-2026-PROTECCION-INFANTIL/specs/374-x/spec.md")).toBe(false);
         expect(afectaAPI("002-2026-PROTECCION-INFANTIL/README.md")).toBe(false);
+    });
+
+    // SPEC-865 P2 (candado que muere con el defecto): specs/ SÍ dispara — la disciplina de
+    // notas (specs-discipline.test.ts, en test-unit) debe correr ANTES del merge, no quedar
+    // latente hasta el primer PR de código. Va aunque la nota sea `.md` (el caso que el
+    // catch-all de *.md volvería a saltar si specs/ no fuera explícito y primero).
+    it("specs/ SÍ dispara (SPEC-865 P2), aunque la nota sea .md", () => {
+        expect(afectaAPI("002-2026-PROTECCION-INFANTIL/specs/374-x/spec.md")).toBe(true);
+        expect(afectaAPI("002-2026-PROTECCION-INFANTIL/specs/900-nueva/tasks.md")).toBe(true);
     });
 
     it("los 2 workflows compartidos del monorepo disparan", () => {
@@ -116,6 +126,20 @@ describe("deberSaltar · decisión sobre la lista completa (SPEC-374)", () => {
         expect(deberSaltar([
             ".github/workflows/bi.yml",
         ])).toBe(true);
+    });
+
+    it("(j) PR solo de notas en specs/ → skip=false (SPEC-865 P2: corre specs-discipline)", () => {
+        // Antes de P2 esto saltaba, y una violación de higiene (número duplicado, carpeta a
+        // medio crear) quedaba latente hasta el primer PR de código. Ahora la suite corre y
+        // el gate la caza en el PR de la nota.
+        expect(deberSaltar([
+            "002-2026-PROTECCION-INFANTIL/specs/865-reconciliar-disciplina/spec.md",
+        ])).toBe(false);
+        // Control: una nota de specs/ MEZCLADA con doc-only sigue disparando (specs/ manda).
+        expect(deberSaltar([
+            "002-2026-PROTECCION-INFANTIL/README.md",
+            "002-2026-PROTECCION-INFANTIL/specs/900-x/spec.md",
+        ])).toBe(false);
     });
 
     it("lista vacía → skip=true (por definición: no hay nada que validar)", () => {

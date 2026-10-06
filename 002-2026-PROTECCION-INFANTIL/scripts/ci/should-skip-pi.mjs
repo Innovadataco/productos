@@ -19,8 +19,17 @@
  *   AGENTS.md, README.md, .gitignore                 → docs raíz
  *
  * La suite corre SI Y SOLO SI algún archivo cambiado:
- *   (a) vive bajo `002-2026-PROTECCION-INFANTIL/` y NO es doc-only (docs/, specs/, *.md), o
- *   (b) es uno de los workflows compartidos que también podrían afectar a PI.
+ *   (a) vive bajo `002-2026-PROTECCION-INFANTIL/` y NO es doc-only (docs/ o *.md), o
+ *   (b) vive bajo `002-2026-PROTECCION-INFANTIL/specs/` (SPEC-865 P2, ver abajo), o
+ *   (c) es uno de los workflows compartidos que también podrían afectar a PI.
+ *
+ * SPEC-865 P2 — specs/ SÍ corre la suite (antes era doc-only). El gate de higiene
+ * de notas (`src/lib/specs-discipline.test.ts`, job `test-unit`) valida número único,
+ * carpeta representable y Status canónico. Si un PR que SOLO toca `specs/` saltara la
+ * suite, esa violación quedaría LATENTE hasta el primer PR de código (fue el workaround
+ * de SPEC-861/866: quitar las notas opcionales en cada PR). Corriendo la suite en los
+ * PRs de specs, la disciplina se valida ANTES del merge. El costo (la suite completa
+ * sobre un PR de solo-notas) es de PI y no bloquea a otros productos.
  *
  * Cambios en `.gitignore` raíz, AGENTS.md, README.md, workflows de otros
  * productos, o cualquier `NNN-YYYY-…` fuera de PI **no** disparan la suite.
@@ -37,10 +46,15 @@ const WORKFLOWS_COMPARTIDOS = new Set([
 /** true si el archivo, tomado solo, ya obliga a correr la suite de PI. */
 export function afectaAPI(path) {
     if (path.startsWith(CARPETA_PI)) {
-        // Doc-only dentro de PI (docs/, specs/, o cualquier *.md como README):
-        // no toca código, la suite no tiene qué validar.
         const dentro = path.slice(CARPETA_PI.length);
-        if (dentro.startsWith("docs/") || dentro.startsWith("specs/")) return false;
+        // SPEC-865 P2: specs/ SÍ dispara la suite — el gate de disciplina de notas
+        // (specs-discipline.test.ts, en test-unit) debe correr ANTES del merge. Va PRIMERO,
+        // antes del descarte de *.md: una nota es `.md` y si no, el catch-all de abajo la
+        // volvería a saltar. (docs/ sigue siendo doc-only; no tiene gate propio.)
+        if (dentro.startsWith("specs/")) return true;
+        // Doc-only dentro de PI (docs/ o cualquier *.md como README): no toca código ni
+        // tiene un gate que validar, la suite no tiene qué hacer.
+        if (dentro.startsWith("docs/")) return false;
         if (path.endsWith(".md")) return false;
         return true;
     }
