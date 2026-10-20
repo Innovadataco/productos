@@ -623,8 +623,8 @@ jobs:
       - run: npm run render:foco:check
       # SPEC-677 (I-404) · el rótulo del botón «Deshacer» contrasta ≥4.5 sobre el relleno cielo, medido por render en los dos temas.
       - run: npm run render:deshacer:check
-      # SPEC-873 (I-406) · el acento del PADRE como TEXTO (.theme-padre .text-accent) resuelve a cielo-700 y contrasta ≥4.5 sobre papel, medido por render en los dos temas.
-      - run: npm run render:texto-padre:check
+      # SPEC-873 (I-406) + SPEC-876 · el acento como TEXTO (.text-accent) de CADA tema de rol contrasta ≥4.5 sobre papel en los 2 temas (padre+profesional resuelven a cielo-700). Render estructural, auto-descubre los temas.
+      - run: npm run render:texto-roles:check
 
   # ───────────────────────────────────────────────────────────────────────────
   # SPEC-775 (G2 · cableado por Calidad): la suite e2e (`tests/e2e/**`, Playwright)

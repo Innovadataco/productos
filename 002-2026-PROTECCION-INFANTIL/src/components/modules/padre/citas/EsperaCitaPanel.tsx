@@ -255,7 +255,7 @@ function ReporteNoCumplio({
     // Mientras exista, el disparador desaparece (§2.5.5). Tinta neutra: proceso cerrado, sin color de alarma.
     if (cita.peticionCitaAbierta) {
         return (
-            <section className="rounded-2xl border border-tinta/10 bg-tinta/5 p-4 sm:p-5 space-y-1 text-subtle">
+            <section className="rounded-2xl border border-tinta/10 bg-tinta/5 p-4 sm:p-5 space-y-1 text-muted">
                 <p className="cuerpo text-body">
                     <strong>Ya nos avisaste que el profesional no cumplió.</strong> Lo estamos revisando.
                 </p>
@@ -561,7 +561,7 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 // Rama DEFENSIVA (condición 2 del CEO): el reloj del servidor siempre es válido, así
                 // que en la práctica no se alcanza; si se alcanzara, NO se afirma que la hora pasó ni
                 // que el operador no actuó — solo se pide recargar. Sin enlace (fail-closed).
-                <section className="rounded-2xl border border-tinta/10 bg-tinta/5 p-4 sm:p-5 text-subtle">
+                <section className="rounded-2xl border border-tinta/10 bg-tinta/5 p-4 sm:p-5 text-muted">
                     <p className="etiqueta">Acceso a la reunión</p>
                     <p className="cuerpo mt-1 text-body">
                         No pudimos verificar el estado de tu reunión en este momento. Recarga la pantalla.
