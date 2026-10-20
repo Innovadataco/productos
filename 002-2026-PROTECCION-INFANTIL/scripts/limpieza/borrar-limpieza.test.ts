@@ -18,7 +18,12 @@ interface FakeModels {
     solicitudComite: { count: AnyFn; deleteMany: AnyFn };
     correccionAdmin: { count: AnyFn; deleteMany: AnyFn };
     eventoMatch: { count: AnyFn; deleteMany: AnyFn };
-    identificadorReportado: { findMany: AnyFn; delete: AnyFn };
+    identificadorReportado: { findMany: AnyFn; delete: AnyFn; findUnique: AnyFn; update: AnyFn; upsert: AnyFn };
+    // SPEC-870: recalcularYGuardarScore lee ParametroSistema (scoring params) por el tx inyectado.
+    parametroSistema: { findUnique: AnyFn };
+    // SPEC-870: calcularScore excluye simulacro (SPEC-863) → lee demo_marcado + simulacion_reportes.
+    demoMarcado: { findMany: AnyFn };
+    simulacionReporte: { findMany: AnyFn };
     expediente: { findMany: AnyFn; updateMany: AnyFn; deleteMany: AnyFn };
     aclaracionExpediente: { deleteMany: AnyFn };
     informeConsolidado: { deleteMany: AnyFn };
@@ -64,9 +69,12 @@ function makeModel(extra: Record<string, AnyFn> = {}) {
         findMany: vi.fn().mockResolvedValue([]),
         findUnique: vi.fn().mockResolvedValue(null),
         updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        update: vi.fn().mockResolvedValue({}),
         deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
         delete: vi.fn().mockResolvedValue({}),
         create: vi.fn().mockResolvedValue({}),
+        // SPEC-870: borrarReporte recalcula el agregado propio (recalcularYGuardarScore → upsert).
+        upsert: vi.fn().mockResolvedValue({}),
         ...extra,
     };
 }
@@ -79,6 +87,9 @@ function makeFakeClient(): { client: PrismaClient; tx: FakeModels } {
         correccionAdmin: makeModel(),
         eventoMatch: makeModel(),
         identificadorReportado: makeModel(),
+        parametroSistema: makeModel(), // SPEC-870: scoring params (null → defaults) en el recalc
+        demoMarcado: makeModel(), // SPEC-870: exclusión simulacro (SPEC-863) en calcularScore
+        simulacionReporte: makeModel(),
         expediente: makeModel(),
         aclaracionExpediente: makeModel(),
         informeConsolidado: makeModel(),
@@ -134,7 +145,8 @@ describe("borrarReporte — A-65 · EventoExpediente.reporteId", () => {
         client = f.client;
         tx = f.tx;
 
-        tx.reporte.findUnique.mockResolvedValue({ id: "r1", numeroSeguimiento: "NS-001" });
+        // SPEC-870: identificador+plataformaId para el recálculo del agregado propio.
+        tx.reporte.findUnique.mockResolvedValue({ id: "r1", numeroSeguimiento: "NS-001", identificador: "+573001112233", plataformaId: "plat1" });
         tx.identificadorReportado.findMany.mockResolvedValue([]);
         tx.eventoExpediente.count.mockResolvedValue(1);
         tx.eventoExpediente.updateMany.mockResolvedValue({ count: 1 });

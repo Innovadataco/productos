@@ -15,6 +15,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
 import { parseArgs, requerirMotivo, registrarAuditoria, log } from "./_common";
+import { borrarReporte } from "./borrar-reporte";
 
 export interface ResultadoBorrarSimulacion {
     simulacionId: string;
@@ -55,21 +56,27 @@ export async function borrarSimulacion(
         };
     }
 
-    return client.$transaction(async (tx) => {
-        const runDel = await tx.simulacionRun.delete({ where: { id: simulacionId } });
-        const reps = await tx.reporte.deleteMany({ where: { id: { in: reporteIds } } });
+    // SPEC-870 (I-446): la corrida se borra PRIMERO — su cascade quita las filas `SimulacionReporte`
+    // y libera los reportes — y luego cada reporte pasa por el chokepoint `borrarReporte`, que limpia
+    // el `IdentificadorReportado` huérfano en la misma tx (un `reporte.deleteMany` crudo dejaba el
+    // agregado público colgado). Ya NO es un solo $transaction: cada `borrarReporte` abre la suya.
+    const runDel = await client.simulacionRun.delete({ where: { id: simulacionId } });
+    let reportesDerivados = 0;
+    for (const id of reporteIds) {
+        await borrarReporte(id, motivo, { confirm: true });
+        reportesDerivados += 1;
+    }
 
-        const detalle = {
-            simulacionRun: runDel ? 1 : 0,
-            simulacionReporte: casos.length,
-            reportesDerivados: reps.count,
-        };
-        const total = Object.values(detalle).reduce((a, b) => a + b, 0);
+    const detalle = {
+        simulacionRun: runDel ? 1 : 0,
+        simulacionReporte: casos.length,
+        reportesDerivados,
+    };
+    const total = Object.values(detalle).reduce((a, b) => a + b, 0);
 
-        await registrarAuditoria(tx, "simulacion", motivo, total, [simulacionId]);
-        log("borrar-simulacion", `REALIZADO simulacion=${simulacionId} filas=${total}`);
-        return { simulacionId, filasBorradas: total, detalle, dryRun: false };
-    });
+    await registrarAuditoria(client, "simulacion", motivo, total, [simulacionId]);
+    log("borrar-simulacion", `REALIZADO simulacion=${simulacionId} filas=${total}`);
+    return { simulacionId, filasBorradas: total, detalle, dryRun: false };
 }
 
 async function main(): Promise<void> {

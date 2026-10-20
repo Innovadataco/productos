@@ -17,6 +17,8 @@
  */
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
+import { recalcularYGuardarScore } from "../../src/lib/scoring";
+import { actualizarVisibilidadPublica } from "../../src/lib/visibility";
 import { parseArgs, requerirMotivo, registrarAuditoria, log } from "./_common";
 
 export interface ResultadoBorrarReporte {
@@ -42,16 +44,12 @@ export async function borrarReporte(
 
     const reporte = await client.reporte.findUnique({
         where: { id: reporteId },
-        select: { id: true, numeroSeguimiento: true },
+        // SPEC-870 (I-446): identificador+plataformaId para recalcular el agregado PROPIO tras borrar.
+        select: { id: true, numeroSeguimiento: true, identificador: true, plataformaId: true },
     });
     if (!reporte) {
         throw new Error(`[borrar-reporte] Reporte no encontrado: ${reporteId}`);
     }
-
-    const identificadores = await client.identificadorReportado.findMany({
-        where: { eventosMatch: { some: { reporteNuevoId: reporteId } } },
-        select: { id: true, identificador: true, plataformaId: true },
-    });
 
     const eventosExpedienteCount = await client.eventoExpediente.count({ where: { reporteId } });
 
@@ -70,7 +68,7 @@ export async function borrarReporte(
         log("borrar-reporte", `  · CorreccionAdmin: ${conteoDetalle.correcciones}`);
         log("borrar-reporte", `  · EventoMatch: ${conteoDetalle.eventosMatch}`);
         log("borrar-reporte", `  · EventoExpediente desvinculados (reporteId→null): ${conteoDetalle.eventosExpedienteDesvinculados}`);
-        log("borrar-reporte", `  · Identificadores candidatos a huérfano: ${identificadores.length}`);
+        log("borrar-reporte", `  · Agregado propio ${reporte.identificador}@${reporte.plataformaId}: se RECALCULA tras borrar (0+oculto si era el último)`);
         log("borrar-reporte", "  · Reporte + cascade (ClasificacionIA, EmbeddingReporte, TransicionReporte, ReintentoReporte, AlertaColegio, SolicitudComite)");
         return { reporteId, filasBorradas: 0, detalle: conteoDetalle, dryRun: true };
     }
@@ -97,14 +95,21 @@ export async function borrarReporte(
         const em = await tx.eventoMatch.deleteMany({ where: { reporteNuevoId: reporteId } });
         const rep = await tx.reporte.delete({ where: { id: reporteId } });
 
-        let huerfanos = 0;
-        for (const ident of identificadores) {
-            const otros = await tx.eventoMatch.count({ where: { identificadorId: ident.id } });
-            if (otros === 0) {
-                await tx.identificadorReportado.delete({ where: { id: ident.id } });
-                huerfanos += 1;
-            }
-        }
+        // SPEC-870 (I-446): recalcular el agregado público PROPIO del reporte borrado. Antes se
+        // limpiaban SOLO los agregados ligados por `eventoMatch` — nunca el del identificador propio
+        // (lo crea `upsertIncrementoReporte` al alta), así que un reporte SIN match dejaba su score
+        // público colgado y visible. Reúso del MISMO escritor que el corrector (no divergen dos
+        // caminos): con el reporte ya borrado, `calcularScore` cuenta los que QUEDAN vivos — 0 → score
+        // 0 + `esVisiblePublicamente=false`; si quedan otros, computa el score restante (no los pisa a 0).
+        await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId, tx);
+        await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId, tx);
+        const agregadoDespues = await tx.identificadorReportado.findUnique({
+            where: { identificador_plataformaId: { identificador: reporte.identificador, plataformaId: reporte.plataformaId } },
+            select: { reportesAprobados: true },
+        });
+        // Informativo (NO suma a filasBorradas: es un recálculo, no un borrado): 1 si el agregado quedó
+        // sin reportes aprobados tras el borrado (huérfano saneado a 0+oculto).
+        const huerfanos = agregadoDespues && agregadoDespues.reportesAprobados === 0 ? 1 : 0;
 
         const detalle = {
             solicitudesComite: sc.count,
@@ -114,8 +119,9 @@ export async function borrarReporte(
             reporte: rep ? 1 : 0,
             eventosExpedienteDesvinculados: evDesv.count,
         };
-        // eventosExpedienteDesvinculados son actualizaciones (no borrados), no se suman a total.
-        const total = detalle.solicitudesComite + detalle.correcciones + detalle.eventosMatch + detalle.identificadoresHuerfanos + detalle.reporte;
+        // eventosExpedienteDesvinculados (updates) e identificadoresHuerfanos (recálculo, SPEC-870, NO
+        // borra la fila) NO se suman a total: solo cuentan las filas realmente BORRADAS.
+        const total = detalle.solicitudesComite + detalle.correcciones + detalle.eventosMatch + detalle.reporte;
 
         await registrarAuditoria(tx, "reporte", motivo, total, [reporteId]);
         log("borrar-reporte", `REALIZADO reporte=${reporteId} filas=${total}`);
