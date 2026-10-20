@@ -27,7 +27,11 @@ describe("SPEC-874 (I-415) · GET /api/plataformas sin precondición: 200 siempr
     beforeEach(async () => resetDatabase());
     afterAll(async () => prisma.$disconnect());
 
-    it("catálogo VACÍO → 200 con lista vacía (es un 200, no un error): la UI lo trata como estado neutro, sin reintento", async () => {
+    it("catálogo SIN ACTIVAS → 200 con lista vacía (es un 200, no un error): la UI lo trata como estado neutro, sin reintento", async () => {
+        // `resetDatabase()` PRESERVA la tabla Plataforma (catálogo estático) y `asegurarPlataformas()` la
+        // re-siembra con 8 activas tras cada reset — así que «vacío» para este endpoint = sin plataformas
+        // ACTIVAS (filtra `esActiva:true`). Lo forzamos poniendo todas inactivas; sin esto el 200 trae las 8.
+        await prisma.plataforma.updateMany({ data: { esActiva: false } });
         const { status, claves } = await llamar();
         expect(status, "nunca 4xx: no hay precondición que resolver").toBe(200);
         expect(claves).toEqual([]);
