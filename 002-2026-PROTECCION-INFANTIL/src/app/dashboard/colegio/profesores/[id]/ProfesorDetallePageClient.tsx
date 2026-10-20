@@ -36,6 +36,18 @@ type Mensaje = { type: "success" | "error"; text: string } | null;
 
 const IDENTIFICADOR_VACIO = { valor: "", plataformaId: "" };
 
+/**
+ * SPEC-874 (I-415) · El AVISO bajo el selector de plataformas, derivado FUERA del render (mantiene la
+ * complejidad del componente y hace la lógica testeable). El ERROR tiene su propia caja ámbar aparte; acá
+ * solo el aviso neutro de «cargando» vs «cargado-vacío» (200 con lista vacía): no son el mismo estado.
+ */
+function hintCargaPlataformas(errorPlataformas: boolean, plataformasCargadas: boolean, cantidad: number): string | null {
+    if (errorPlataformas) return null; // el error va en su caja ámbar, no en el aviso neutro
+    if (!plataformasCargadas) return "Cargando plataformas… el guardado se habilita cuando estén disponibles.";
+    if (cantidad === 0) return "No hay plataformas disponibles en este momento."; // 200 vacío → neutro, sin reintento
+    return null;
+}
+
 export default function ProfesorDetallePageClient({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const [profesorId, setProfesorId] = useState<string | null>(null);
@@ -43,6 +55,9 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
     const [identificadores, setIdentificadores] = useState<Identificador[]>([]);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [errorPlataformas, setErrorPlataformas] = useState(false);
+    // SPEC-874 (I-415): distingue «cargando» (aún no respondió) de «cargado-vacío» (200 con lista vacía).
+    // `plataformas.length === 0` servía para las DOS cosas → un 200 vacío diría «Cargando…» para siempre.
+    const [plataformasCargadas, setPlataformasCargadas] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [message, setMessage] = useState<Mensaje>(null);
@@ -68,6 +83,7 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
             const lista = (data as { plataformas?: unknown }).plataformas;
             setPlataformas(Array.isArray(lista) ? (lista as Plataforma[]) : []);
             setErrorPlataformas(false);
+            setPlataformasCargadas(true); // SPEC-874: la llamada RESPONDIÓ (200) — ya no es «cargando», aunque venga vacía
         } catch {
             setErrorPlataformas(true);
         }
@@ -170,6 +186,8 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
             setMessage({ type: "error", text: "Error de red cambiando estado" });
         }
     }
+
+    const hintPlataformas = hintCargaPlataformas(errorPlataformas, plataformasCargadas, plataformas.length);
 
     return (
         <div className="min-h-screen bg-page">
@@ -295,9 +313,13 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
                         onChange={(e) => setNuevo({ ...nuevo, valor: e.target.value })}
                         placeholder="Ej. +573001234567, correo@dominio.com o nick"
                     />
+                    {/* SPEC-874 (I-415): falla TRANSITORIA (el endpoint no tiene precondición ni auth → su
+                        única falla es de red/500). Va en ÁMBAR operativo, NUNCA rubí (D-120: el rubí se reserva
+                        a la criticidad de protección de un menor). Voz «usted» (colegio). «Reintentar» SE QUEDA:
+                        acá reintentar es la acción correcta; el «suele ser temporal» nombra la causa probable. */}
                     {errorPlataformas && (
-                        <div className="flex items-center justify-between gap-3 rounded-xl bg-rubi/10 p-3 text-sm text-estado-rubi dark:bg-rubi/20">
-                            <span>No se pudieron cargar las plataformas — reintenta</span>
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-ambar/10 p-3 text-sm text-estado-ambar dark:bg-ambar/20">
+                            <span>No pudimos cargar las plataformas. Suele ser temporal.</span>
                             <Button variant="outline" className="px-3 py-1.5 text-xs" onClick={cargarPlataformas}>
                                 Reintentar
                             </Button>
@@ -309,9 +331,10 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
                         value={nuevo.plataformaId}
                         onChange={(e) => setNuevo({ ...nuevo, plataformaId: e.target.value })}
                     />
-                    {plataformas.length === 0 && !errorPlataformas && (
-                        <p className="text-xs text-muted">Cargando plataformas… el guardado se habilita cuando estén disponibles.</p>
-                    )}
+                    {/* SPEC-874 (I-415) §2: «cargando» (aún no respondió) ≠ «cargado-vacío» (200 vacío → NEUTRO,
+                        sin reintentar: la salida es de operación, sembrar el catálogo). La decisión vive en
+                        `hintCargaPlataformas` (fuera del render); el error tiene su propia caja ámbar arriba. */}
+                    {hintPlataformas && <p className="text-xs text-muted">{hintPlataformas}</p>}
                     <div className="flex items-center gap-3">
                         <Button onClick={guardar} isLoading={saving} disabled={plataformas.length === 0}>
                             Guardar
