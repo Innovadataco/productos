@@ -65,6 +65,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/text-subtle-sobre-tinte.candado.test.ts",
     // SPEC-879: token accent crudo (text-cielo/text-ambar) como texto + subtle sobre tinte, en las 2 superficies de cita.
     "src/components/modules/padre/citas/contraste-crudo-sobre-tinte.candado.test.ts",
+    // SPEC-880: text-cielo/text-ambar crudos como TEXTO no vuelven (CLASE A, codebase-wide, allowlist auditada).
+    "src/components/contraste-token-crudo-como-texto.candado.test.ts",
     // SPEC-529: tuteo interno (admin/comité validación/verificador) → usted, por clase.
     "src/components/modules/tuteo-interno.candado.test.ts",
     // SPEC-501 (CEO · Jelkin): padre + público hablan de «tú» (sin voseo); BFS del

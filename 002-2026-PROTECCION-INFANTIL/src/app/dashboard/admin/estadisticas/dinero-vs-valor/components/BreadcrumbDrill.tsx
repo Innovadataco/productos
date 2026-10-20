@@ -17,7 +17,7 @@ export function BreadcrumbDrill({
             <button
                 type="button"
                 onClick={() => onNavegar("todos")}
-                className={`font-medium ${niveles.length === 0 ? "text-body" : "text-cielo underline hover:text-primary-700"}`}
+                className={`font-medium ${niveles.length === 0 ? "text-body" : "text-estado-cielo underline hover:text-primary-700"}`}
             >
                 Todos
             </button>
@@ -32,7 +32,7 @@ export function BreadcrumbDrill({
                             <button
                                 type="button"
                                 onClick={() => onNavegar(nivel.nivel === "pais" ? "pais" : "ciudad")}
-                                className="font-medium text-cielo underline hover:text-primary-700"
+                                className="font-medium text-estado-cielo underline hover:text-primary-700"
                             >
                                 {nivel.etiqueta}
                             </button>

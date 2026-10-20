@@ -53,7 +53,7 @@ function EstadoCelda({ estado }: { estado: EstadoPeticionServicio }) {
         <span
             className={
                 vencida
-                    ? "inline-flex rounded-full bg-ambar/15 px-3 py-1 text-xs font-semibold text-ambar"
+                    ? "inline-flex rounded-full bg-ambar/15 px-3 py-1 text-xs font-semibold text-estado-ambar"
                     : "text-xs text-muted"
             }
         >

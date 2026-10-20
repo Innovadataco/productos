@@ -271,7 +271,7 @@ export function CirculoConfianzaClient() {
             </header>
 
             {error && (
-                <p role="alert" className="mt-4 rounded-xl bg-ambar/10 px-4 py-3 text-sm text-ambar">
+                <p role="alert" className="mt-4 rounded-xl bg-ambar/10 px-4 py-3 text-sm text-estado-ambar">
                     {error}
                 </p>
             )}

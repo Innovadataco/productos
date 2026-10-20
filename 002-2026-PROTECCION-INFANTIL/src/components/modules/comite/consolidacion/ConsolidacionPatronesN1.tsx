@@ -9,7 +9,7 @@ import type { PatronDto } from "./tipos";
 
 const SEVERIDAD_BADGE: Record<string, string> = {
     ALTA: "bg-rubi/10 text-rubi",
-    MEDIA: "bg-ambar/10 text-ambar",
+    MEDIA: "bg-ambar/10 text-estado-ambar",
     BAJA: "bg-pino/10 text-pino",
 };
 

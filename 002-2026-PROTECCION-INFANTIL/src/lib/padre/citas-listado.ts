@@ -29,7 +29,7 @@ export function badgeDeCita(estado: EstadoSolicitudCita): BadgeCita {
     const NEUTRO = CLASES_ESTADO_NEUTRO;
     switch (estado) {
         case "CONFIRMADA":
-            return { label: "Confirmada", clases: "bg-cielo/10 text-cielo" };
+            return { label: "Confirmada", clases: "bg-cielo/10 text-estado-cielo" };
         case "SIN_CONFIRMAR":
         case "PAGADA_PENDIENTE":
             return { label: "Esperando al profesional", clases: "bg-ambar/10 text-estado-ambar" };

@@ -61,7 +61,7 @@ export function DetallePersona({ detalle, guardando, onCerrar, onCambiarDato }: 
                     <span
                         aria-hidden="true"
                         className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-bold ${
-                            tono === "ambar" ? "bg-ambar/15 text-ambar ring-2 ring-ambar" : "bg-pino/15 text-pino"
+                            tono === "ambar" ? "bg-ambar/15 text-estado-ambar ring-2 ring-ambar" : "bg-pino/15 text-pino"
                         }`}
                     >
                         {iniciales(nombre)}
@@ -190,7 +190,7 @@ export function DetallePersona({ detalle, guardando, onCerrar, onCambiarDato }: 
                                         ? "bg-tinta/10 text-muted"
                                         : i.estado === "sinReportes"
                                             ? "bg-pino/12 text-pino"
-                                            : "bg-ambar/15 text-ambar"
+                                            : "bg-ambar/15 text-estado-ambar"
                                 }`}
                             >
                                 {!i.activo ? "En pausa" : i.estado === "sinReportes" ? "Sin reportes" : `${i.totalReportes}`}

@@ -32,7 +32,7 @@ export function WidgetPadresPagantesColegiosCaidos({
                                 Rector: {item.rectorNombre} ·{" "}
                                 <a
                                     href={`mailto:${item.rectorEmail}`}
-                                    className="font-medium text-estado-ambar underline hover:text-ambar dark:text-ambar"
+                                    className="font-medium text-estado-ambar underline hover:text-estado-ambar dark:text-ambar"
                                 >
                                     {item.rectorEmail}
                                 </a>

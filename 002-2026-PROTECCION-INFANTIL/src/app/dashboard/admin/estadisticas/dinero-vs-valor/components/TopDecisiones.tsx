@@ -65,7 +65,7 @@ export function TopDecisiones({
                                     {rec.contacto.telefono && (
                                         <a
                                             href={`tel:${rec.contacto.telefono}`}
-                                            className="font-medium text-cielo underline hover:text-primary-700"
+                                            className="font-medium text-estado-cielo underline hover:text-primary-700"
                                         >
                                             Llamar
                                         </a>
@@ -73,7 +73,7 @@ export function TopDecisiones({
                                     {rec.contacto.email && (
                                         <a
                                             href={`mailto:${rec.contacto.email}`}
-                                            className="font-medium text-cielo underline hover:text-primary-700"
+                                            className="font-medium text-estado-cielo underline hover:text-primary-700"
                                         >
                                             Escribir
                                         </a>

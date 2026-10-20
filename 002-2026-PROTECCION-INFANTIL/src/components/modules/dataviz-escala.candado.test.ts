@@ -22,7 +22,7 @@ describe("SPEC-537 · AdminDashboard · salud del motor: umbral→token (rubí =
     });
     it("tramo ATENCIÓN [0.7, 0.9) → ámbar (NO rubí)", () => {
         for (const v of [0.7, 0.8, 0.89, 0.8999]) {
-            expect(precisionColorClass(v), `precisión ${v}`).toBe("bg-ambar/10 text-ambar");
+            expect(precisionColorClass(v), `precisión ${v}`).toBe("bg-ambar/10 text-estado-ambar");
         }
     });
     it("tramo SANO [0.9, 1] → pino", () => {

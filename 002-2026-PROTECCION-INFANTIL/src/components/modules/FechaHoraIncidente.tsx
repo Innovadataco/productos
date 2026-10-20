@@ -264,7 +264,7 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
                 </div>
             )}
             {error && (
-                <p role="alert" className="text-sm text-ambar">
+                <p role="alert" className="text-sm text-estado-ambar">
                     {error}
                 </p>
             )}

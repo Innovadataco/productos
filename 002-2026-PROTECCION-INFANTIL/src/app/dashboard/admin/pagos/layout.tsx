@@ -42,7 +42,7 @@ export default async function PagosLayout({ children }: { children: React.ReactN
                         <Link
                             key={tab.href}
                             href={tab.href}
-                            className="inline-flex shrink-0 items-center border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted transition hover:border-ambar/30 hover:text-ambar dark:hover:border-ambar/50 dark:hover:text-ambar"
+                            className="inline-flex shrink-0 items-center border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted transition hover:border-ambar/30 hover:text-estado-ambar dark:hover:border-ambar/50 dark:hover:text-estado-ambar"
                         >
                             {tab.label}
                         </Link>

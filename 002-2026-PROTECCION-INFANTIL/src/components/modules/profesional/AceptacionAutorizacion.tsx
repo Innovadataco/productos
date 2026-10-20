@@ -178,7 +178,7 @@ export function AceptacionAutorizacion({
                         <span className="text-xs font-medium text-muted">
                                     Baje hasta el final del texto para poder aceptar
                         </span>
-                        <svg className="h-5 w-5 animate-bounce text-cielo motion-reduce:animate-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="h-5 w-5 animate-bounce text-estado-cielo motion-reduce:animate-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 5v14M5 12l7 7 7-7" />
                         </svg>
                     </div>

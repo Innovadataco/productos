@@ -230,7 +230,7 @@ export function DerivaProdBloque() {
             {datos?.sinBaseline && (
                 <div
                     role="status"
-                    className="rounded-xl border border-ambar/40 bg-ambar/10 p-4 text-sm text-ambar"
+                    className="rounded-xl border border-ambar/40 bg-ambar/10 p-4 text-sm text-estado-ambar"
                 >
                     <p>
                         Sin baseline del banco — corre una simulación.{" "}
@@ -245,7 +245,7 @@ export function DerivaProdBloque() {
             {!datos?.sinBaseline && datos?.baseline?.baselineVieja && datos.baseline.baselineFecha && (
                 <div
                     role="status"
-                    className="rounded-xl border border-ambar/40 bg-ambar/10 p-4 text-sm text-ambar"
+                    className="rounded-xl border border-ambar/40 bg-ambar/10 p-4 text-sm text-estado-ambar"
                 >
                     <p>
                         Baseline desactualizada ({formatearFecha(datos.baseline.baselineFecha)}) — corre Simulación de

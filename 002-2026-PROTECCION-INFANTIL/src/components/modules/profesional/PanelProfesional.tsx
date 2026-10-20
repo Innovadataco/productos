@@ -95,7 +95,7 @@ function Bloque({
                 {cuenta && (
                     <span
                         className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                            calma ? "bg-tinta/5 text-subtle" : "bg-ambar/15 text-ambar"
+                            calma ? "bg-tinta/5 text-subtle" : "bg-ambar/15 text-estado-ambar"
                         }`}
                     >
                         {cuenta}
@@ -155,13 +155,13 @@ export function Solicitudes({ data }: { data: PanelProfesionalDto }) {
                                     {s.reservaPagada && <span className="text-pino"> · reserva pagada</span>}
                                 </p>
                                 {s.compartioExpediente && (
-                                    <p className="mt-1 text-xs text-cielo">
+                                    <p className="mt-1 text-xs text-estado-cielo">
                                         Le compartió el expediente de su hijo
                                     </p>
                                 )}
                                 <SolicitudAcciones estado={s.estado} solicitudId={s.id} />
                                 {s.venceEnRespuesta ? (
-                                    <p className="mt-2 text-xs text-ambar">
+                                    <p className="mt-2 text-xs text-estado-ambar">
                                         Plazo hasta el {fechaHora(s.venceEnRespuesta)}. Vencido, se abre
                                         el contacto directo y se devuelve la reserva.
                                     </p>

@@ -37,7 +37,7 @@ const COLORES = {
 
 const COLORES_FONDO = {
     pino: "text-pino",
-    ambar: "text-ambar",
+    ambar: "text-estado-ambar",
     rubi: "text-rubi",
 };
 

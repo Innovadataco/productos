@@ -69,7 +69,7 @@ export function AdjuntarContratoColegio({
                             href={`${endpoint}/pdf`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm font-semibold text-cielo hover:underline"
+                            className="text-sm font-semibold text-estado-cielo hover:underline"
                         >
                             Ver contrato
                         </a>
@@ -106,7 +106,7 @@ export function AdjuntarContratoColegio({
                         )}
                     </div>
                     {error && (
-                        <div className="rounded-xl bg-ambar/10 px-4 py-2 text-sm text-ambar">
+                        <div className="rounded-xl bg-ambar/10 px-4 py-2 text-sm text-estado-ambar">
                             {error} <button type="button" onClick={subir} className="font-semibold underline">Reintentar</button>
                         </div>
                     )}

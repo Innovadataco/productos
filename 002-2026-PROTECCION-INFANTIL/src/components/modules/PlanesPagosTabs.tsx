@@ -23,7 +23,7 @@ export function PlanesPagosTabs() {
                         onClick={() => setActive(tab.id)}
                         className={`px-4 py-2 text-sm font-medium transition ${
                             active === tab.id
-                                ? "border-b-2 border-ambar text-ambar"
+                                ? "border-b-2 border-ambar text-estado-ambar"
                                 : "text-muted hover:text-body"
                         }`}
                         type="button"

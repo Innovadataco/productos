@@ -77,7 +77,7 @@ function PipelineDiagram() {
                             onClick={() => setSelected(selected === step.id ? null : step.id)}
                             className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
                                 selected === step.id
-                                    ? "border-cielo bg-cielo/10 text-cielo"
+                                    ? "border-cielo bg-cielo/10 text-estado-cielo"
                                     : "border-tinta/10 bg-papel/70 text-body hover:border-cielo/50"
                             }`}
                         >

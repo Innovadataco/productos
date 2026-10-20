@@ -80,8 +80,8 @@ const ETIQUETA_ESTADO: Record<string, string> = Object.fromEntries(
 );
 
 const CLASES_BADGE_ESTADO: Record<string, string> = {
-    PENDIENTE: "bg-ambar/15 text-ambar",
-    APLICADA: "bg-pino/15 text-pino",
+    PENDIENTE: "bg-ambar/15 text-estado-ambar",
+    APLICADA: "bg-pino/15 text-estado-pino",
     IGNORADA: "bg-rubi/15 text-rubi",
     EXPIRADA: "bg-tinta/10 text-muted",
 };
@@ -392,7 +392,7 @@ export function HistorialRecomendaciones({ reglas }: { reglas: ReglaFiltro[] }) 
                                             {ETIQUETA_ESTADO[item.estado] ?? item.estado}
                                         </span>
                                         {item.ejecutadaAutomatica && (
-                                            <span className="ml-1 rounded-full bg-cielo/15 px-2 py-0.5 text-xs font-semibold text-cielo">
+                                            <span className="ml-1 rounded-full bg-cielo/15 px-2 py-0.5 text-xs font-semibold text-estado-cielo">
                                             ejecutada sola
                                             </span>
                                         )}

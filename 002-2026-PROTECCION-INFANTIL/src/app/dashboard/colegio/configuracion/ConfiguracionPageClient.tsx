@@ -217,7 +217,7 @@ export default function ConfiguracionPageClient() {
                     </div>
 
                     {aviso && (
-                        <p className="rounded-xl border border-ambar/40 bg-ambar/10 px-4 py-3 text-sm text-ambar" role="alert">
+                        <p className="rounded-xl border border-ambar/40 bg-ambar/10 px-4 py-3 text-sm text-estado-ambar" role="alert">
                             {aviso}
                         </p>
                     )}

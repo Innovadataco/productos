@@ -55,7 +55,7 @@ export function AvisoRecargar({ variante = "chunk", onReintentar }: Props) {
                         <button
                             type="button"
                             onClick={onReintentar}
-                            className="rounded-xl border border-cielo/40 px-4 py-2 text-sm font-semibold text-cielo transition hover:bg-cielo/10 dark:border-cielo/30"
+                            className="rounded-xl border border-cielo/40 px-4 py-2 text-sm font-semibold text-estado-cielo transition hover:bg-cielo/10 dark:border-cielo/30"
                         >
                             Reintentar
                         </button>

@@ -59,7 +59,7 @@ export function SuscripcionResumen({ vista }: { vista: VistaSuscripcion }) {
             </dl>
 
             {vista.esFreemium && (
-                <p className="mt-4 rounded-xl bg-cielo/10 px-4 py-2 text-xs font-medium text-cielo">
+                <p className="mt-4 rounded-xl bg-cielo/10 px-4 py-2 text-xs font-medium text-estado-cielo">
                     {/* SPEC-217 (002-PI-117): días restantes del periodo gratuito (SC-002). */}
                     Estás en el periodo gratuito de bienvenida.
                     {vista.diasRestantesFreemium !== null &&

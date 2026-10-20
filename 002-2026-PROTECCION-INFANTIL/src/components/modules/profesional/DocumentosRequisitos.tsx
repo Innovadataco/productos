@@ -114,7 +114,7 @@ export function DocumentosRequisitos() {
 
     if (error && docs === null) {
         return (
-            <p role="alert" className="text-sm text-ambar">
+            <p role="alert" className="text-sm text-estado-ambar">
                 No pudimos cargar la lista de documentos: {error}
             </p>
         );
@@ -209,7 +209,7 @@ export function DocumentosRequisitos() {
                 </div>
             ))}
             {error && (
-                <p role="alert" className="text-sm text-ambar">
+                <p role="alert" className="text-sm text-estado-ambar">
                     {error}
                 </p>
             )}

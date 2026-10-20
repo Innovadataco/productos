@@ -50,10 +50,10 @@ export function TarjetaPersona({ contacto, onVerDetalle, onAgregarDato, onPausar
                         aria-hidden="true"
                         className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-bold ${
                             enAtencion
-                                ? "bg-ambar/15 text-ambar ring-2 ring-ambar"
+                                ? "bg-ambar/15 text-estado-ambar ring-2 ring-ambar"
                                 : enPausa
                                     ? "bg-tinta/10 text-muted"
-                                    : "bg-pino/15 text-pino"
+                                    : "bg-pino/15 text-estado-pino"
                         }`}
                     >
                         {iniciales(nombre)}
@@ -66,7 +66,7 @@ export function TarjetaPersona({ contacto, onVerDetalle, onAgregarDato, onPausar
                 <span
                     className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
                         enAtencion
-                            ? "bg-ambar/15 text-ambar"
+                            ? "bg-ambar/15 text-estado-ambar"
                             : enPausa
                                 ? "bg-tinta/10 text-muted"
                                 : "bg-pino/12 text-pino"
