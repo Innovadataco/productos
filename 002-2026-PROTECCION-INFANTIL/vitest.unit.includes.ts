@@ -603,6 +603,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/demo-prod/red-apoyo-plan.candado.test.ts",
     // SPEC-676 / I-405: el poblador NUNCA invoca a purgar-demo.ts (conducta del llamador).
     "scripts/demo-prod/poblar-red-apoyo.candado.test.ts",
+    // SPEC-883 / I-407: el resumen del poblador cuadra con lo sembrado (franjas libres).
+    "scripts/demo-prod/poblar-red-apoyo-resumen.candado.test.ts",
     // SPEC-773: la hora de una franja sembrada cae en la ventana de Bogotá (7am–7pm), no en UTC.
     "scripts/demo-prod/franja-hora-bogota.candado.test.ts",
     // SPEC-516: la siembra de desbloqueo de Calidad es purgable (IdentificadorReportado
