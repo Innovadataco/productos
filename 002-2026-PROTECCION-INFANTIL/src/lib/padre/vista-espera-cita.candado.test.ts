@@ -32,8 +32,12 @@ describe("SPEC-749 FR-2 · derivarVistaFranjaPasada", () => {
         expect(v!.tono).toBe("gris"); // tinta neutro, NO verde
         // SPEC-792 C2: NO se ofrece [Pedir otra cita] en paralelo —era la vía de escape del motor de
         // contradicciones (reprogramar sin responder nunca)—; la tarjeta de la encuesta (arriba) es el
-        // primer camino y reprogramar va DESPUÉS, por el desenlace de la encuesta. Queda [Escríbenos].
-        expect(v!.acciones).toEqual({ escribenos: true });
+        // primer camino y reprogramar va DESPUÉS, por el desenlace de la encuesta.
+        // SPEC-875: el copy ya NO dice «escríbenos» (apunta al botón «El profesional no cumplió» de 864);
+        // la bandera `escribenos` se retiró (el `mailto` estaba oculto en CONFIRMADA-pasada desde 864).
+        expect(v!.acciones).toEqual({});
+        expect(v!.detalle, "C2 ya no dice «escríbenos» (reencuadre SPEC-875)").not.toMatch(/escr[ií]benos/i);
+        expect(v!.detalle, "C2 apunta al botón de abajo").toContain("avísanos aquí abajo");
         expect(v!.acciones?.pedirOtraCita, "C2: pedir otra cita no puede ser una oferta paralela acá").toBeFalsy();
     });
 
@@ -53,7 +57,10 @@ describe("SPEC-749 FR-2 · derivarVistaFranjaPasada", () => {
         // El servicio NO se entregó → pedir otra cita hereda el pago (control positivo del heredarDe).
         expect(v.acciones?.pedirOtraCita).toBe(true);
         expect(v.acciones?.heredarDeCitaId).toBe("cita-123");
-        expect(v.acciones?.escribenos).toBe(true);
+        // SPEC-875: la cola «escríbenos» pasó a «avísanos aquí abajo»; la bandera `escribenos` se retiró.
+        expect(v.acciones?.escribenos, "C4 ya no ofrece escríbenos (864 lo reemplaza por el botón)").toBeFalsy();
+        expect(v.detalle, "C4 ya no dice «escríbenos»").not.toMatch(/escr[ií]benos/i);
+        expect(v.detalle).toContain("avísanos aquí abajo");
     });
 
     it("SPEC-792 C4 · control NEGATIVO: enlace SÍ publicado (estado PASADA) → «ya pasó» normal, no el copy de C4", () => {
@@ -110,6 +117,9 @@ describe("SPEC-749 FR-2 · derivarVistaFranjaPasada", () => {
         const v = derivarVistaFranjaPasada("PAGADA_PENDIENTE", INICIO, FIN, AHORA + HORA, PROF, AHORA);
         expect(v!.detalle).toContain("Todavía puede responder");
         expect(v!.tono).toBe("espera");
+        // SPEC-875 (control positivo): el reencuadre de «escríbenos» es SOLO de CONFIRMADA-pasada. PAGADA_PENDIENTE
+        // NO se toca: conserva `revisarPago` (que el panel pinta como «Escríbenos para revisar tu pago» — su
+        // escríbenos sigue vivo y correcto). (SIN_CONFIRMAR usa `pedirOtraCita` y nunca tuvo escríbenos.)
         expect(v!.acciones).toEqual({ revisarPago: true });
     });
 
