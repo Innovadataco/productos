@@ -20,11 +20,10 @@ import path from "node:path";
  * PR (el workaround de SPEC-861/866). Con el ceremonial retirado, una nota opcional
  * ya no la rompe.
  *
- * PENDIENTE (SPEC-865 Part 2, companion): que corra TAMBIÉN en PRs docs-only — hoy
- * `should-skip-pi.mjs` salta los cambios bajo `specs/`, así que una violación de la
- * HIGIENE residual (número duplicado, carpeta a medio crear) quedaría latente hasta
- * el primer PR de código. El cambio a `should-skip-pi.mjs` quedó bloqueado por el
- * guard de CI de la sesión; se aplica cuando el permiso lo habilite.
+ * SPEC-865 Part 2 (companion, APLICADO): este gate corre TAMBIÉN en PRs que SOLO tocan
+ * `specs/`. `should-skip-pi.mjs` ya NO salta los cambios bajo `specs/` (su caso (j) lo fija),
+ * así que una violación de la HIGIENE residual (número duplicado, carpeta a medio crear) se
+ * caza en el PR de la nota, no latente hasta el primer PR de código.
  */
 
 const SPECS_DIR = path.resolve(__dirname, "../../specs");
