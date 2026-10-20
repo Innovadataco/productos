@@ -255,7 +255,7 @@ curl -X POST http://localhost:5005/api/reportes \
 ## 6. Notas importantes
 
 - **Caché pública**: `/api/config/parametros/publicos` tiene TTL de 60 segundos. Para pruebas de parámetros públicos, espera ese tiempo o reinicia el servidor.
-- **Tests unitarios**: el entorno de test usa una base de datos separada (`proteccion_infantil_test`) y `src/lib/test-setup.ts` la configura. No ejecutes tests contra producción.
+- **Tests**: el entorno de test usa una base de datos **por worktree** (`proteccion_infantil_<disc>_test`), que el arnés `src/lib/test-db-url.ts` DERIVA en local; en CI respeta el `DATABASE_URL` que provee el workflow (SPEC-817 / I-439). No ejecutes tests contra producción.
 - **Parámetros críticos**: `security.*` y `system.*` no pueden eliminarse desde el panel admin por la regla del `DELETE`.
 - **Variables de entorno**: algunos comportamientos como `DISABLE_RATE_LIMIT=true` o `COOKIE_SECURE=false` anulan o afectan el comportamiento de parámetros relacionados.
 
