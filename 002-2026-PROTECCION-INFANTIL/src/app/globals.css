@@ -490,6 +490,15 @@
    sobre cielo daba 2.37:1 en claro). El acento (cielo) NO cambia. */
 .theme-padre { --accent-rgb: var(--cielo-rgb); --pi-accent-ink-rgb: var(--pi-ink-oscuro-rgb); }
 
+/* SPEC-873 (I-406) · el acento del padre COMO TEXTO era `--accent-rgb` = cielo CRUDO → 2.37:1 en
+   claro (ilegible como enlace). `--accent-rgb` NO cambia (es también relleno de botones/chips, donde
+   cielo crudo es correcto): el arreglo va SOLO en el camino de TEXTO, que resuelve a la variante
+   legible mode-aware `--cielo-700-rgb` (#2c5f99 claro / #9cc9f5 oscuro → 5.76 / 11.40), la MISMA que
+   ya usa `text-estado-cielo`. Ni cielo crudo (ilegible) ni tinta neutra (perdería el «esto es enlace»).
+   Vigilado por `scripts/render/acento-texto-padre.render.ts` (render en los 2 temas; regex no computa
+   la cascada — la lección de I-392/I-404). */
+.theme-padre .text-accent { color: rgb(var(--cielo-700-rgb)); }
+
 .theme-padre .text-gradient,
 .theme-padre.text-gradient {
     background-clip: text;
