@@ -32,6 +32,18 @@ import { idsPerfilesProfesionalesSembrados } from "../demo-exclusion";
 import { FranjaDisponibleRepository } from "./franja-disponible";
 import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profesionales/vigencia";
 import { leerRangoEtario } from "@/lib/profesional/catalogos-lectura";
+import { getParametroSistemaValor } from "@/lib/parametros";
+
+/**
+ * SPEC-872 (I-444) · «Nuevo en la red» por RECENCY. El badge era INCONDICIONAL (mentía: un
+ * profesional viejo seguía diciendo «Nuevo»). Ahora es nuevo quien apareció hace poco. ANCLA: el
+ * perfil NO tiene fecha de aprobación/visibilidad, solo `creadoEn` — se usa como PROXY (gap conocido:
+ * un perfil aprobado mucho después de registrarse sub-mostraría «Nuevo»; aceptable para un badge,
+ * reportado al CEO). Umbral parametrizable `directorio.profesional.dias_nuevo` (default 30).
+ */
+const CLAVE_DIAS_NUEVO = "directorio.profesional.dias_nuevo";
+const DIAS_NUEVO_DEFAULT = 30;
+const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
 /** L1b (SPEC-391): perfil completo + ciudad para la vista propia del profesional.
  *  SPEC-434 (I-302): agregamos `paisId` — la pantalla de completar necesita
@@ -95,6 +107,14 @@ export interface PerfilPublicoDTO {
      * SIGUE en el directorio: cambia el chip, la tarjeta no se atenúa.
      */
     tieneHorariosDisponibles: boolean;
+    /**
+     * SPEC-872 (I-444) · ¿mostrar el sello «Nuevo en la red»? RECENCY: el perfil se volvió visible
+     * hace menos de N días (`directorio.profesional.dias_nuevo`, default 30). Señal DERIVADA (no columna):
+     * la calcula el repo desde `creadoEn` (proxy del alta en el directorio) vs el umbral — por eso NO va
+     * en el SELECT como campo del DTO ni rompe la regla de «tres cambios». El badge era INCONDICIONAL
+     * (mentía); ahora el componente lo pinta SOLO si `esNuevo`.
+     */
+    esNuevo: boolean;
 }
 
 const SELECT_TARJETA_PUBLICA = {
@@ -112,6 +132,9 @@ const SELECT_TARJETA_PUBLICA = {
     tarifaConsultaCOP: true,
     duracionMinutos: true,
     emiteFactura: true,
+    // SPEC-872: `creadoEn` viaja para DERIVAR `esNuevo` (recency); NO se expone en el DTO (igual que
+    // la franja deriva `tieneHorariosDisponibles`). La decisión de badge vive fuera de `toPublicoDTO`.
+    creadoEn: true,
     // SPEC-441: el país viaja para poder decir «ciudad, país» y no una ciudad suelta.
     ciudad: { select: { id: true, nombre: true, pais: { select: { nombre: true } } } },
 } satisfies Prisma.PerfilProfesionalSelect;
@@ -128,6 +151,7 @@ function toPublicoDTO(
     row: Prisma.PerfilProfesionalGetPayload<{ select: typeof SELECT_TARJETA_PUBLICA }>,
     rangoNombrePorClave: ReadonlyMap<string, string>,
     tieneHorarios: boolean,
+    esNuevo: boolean,
 ): PerfilPublicoDTO {
     return {
         id: row.id,
@@ -157,6 +181,8 @@ function toPublicoDTO(
         // SPEC-818 · señal derivada (no columna del perfil): la calcula el repo con la MISMA definición de
         // ofrecible que la consulta del padre, y se pasa acá para que el chip del directorio no la reimplemente.
         tieneHorariosDisponibles: tieneHorarios,
+        // SPEC-872 · señal derivada (recency): también la calcula el repo (creadoEn vs umbral) y se pasa acá.
+        esNuevo,
     };
 }
 
@@ -464,6 +490,16 @@ export class PerfilProfesionalRepository {
     }
 
     /**
+     * SPEC-872 · Umbral de días del badge «Nuevo en la red», desde ParametroSistema
+     * (`directorio.profesional.dias_nuevo`). Default 30; guarda contra ausente / no-numérico / ≤0.
+     */
+    private async diasParaBadgeNuevo(): Promise<number> {
+        const raw = await getParametroSistemaValor(CLAVE_DIAS_NUEVO, this.db);
+        const n = Number.parseInt(raw ?? String(DIAS_NUEVO_DEFAULT), 10);
+        return Number.isFinite(n) && n > 0 ? n : DIAS_NUEVO_DEFAULT;
+    }
+
+    /**
      * Lista PÚBLICA (para el directorio del padre). Solo `estado = ACTIVO`.
      * Sin orden en BD: el orden lo pone Node con una semilla por sesión
      * (candado H-4 · «da turno a todos» sin marear al padre al filtrar).
@@ -490,7 +526,9 @@ export class PerfilProfesionalRepository {
         const rangoMap = await this.mapaRangoEtario();
         // SPEC-818: la señal del chip sale de la MISMA definición de ofrecible (una consulta para el lote).
         const conHorarios = await new FranjaDisponibleRepository().idsConHorariosDisponibles(visibles.map((r) => r.id), ahora);
-        return visibles.map((r) => toPublicoDTO(r, rangoMap, conHorarios.has(r.id)));
+        // SPEC-872: `esNuevo` por recency (creadoEn vs ahora−N). El umbral se lee UNA vez para el lote.
+        const cutoffNuevo = new Date(ahora.getTime() - (await this.diasParaBadgeNuevo()) * MS_POR_DIA);
+        return visibles.map((r) => toPublicoDTO(r, rangoMap, conHorarios.has(r.id), r.creadoEn >= cutoffNuevo));
     }
 
     /**
@@ -540,7 +578,9 @@ export class PerfilProfesionalRepository {
         if (!vigentes.has(row.id)) return null;
         // SPEC-818: señal del chip por la MISMA definición de ofrecible que la consulta del padre.
         const conHorarios = await new FranjaDisponibleRepository().idsConHorariosDisponibles([row.id], ahora);
-        return toPublicoDTO(row, await this.mapaRangoEtario(), conHorarios.has(row.id));
+        // SPEC-872: misma recency que la lista (creadoEn vs ahora−N).
+        const cutoffNuevo = new Date(ahora.getTime() - (await this.diasParaBadgeNuevo()) * MS_POR_DIA);
+        return toPublicoDTO(row, await this.mapaRangoEtario(), conHorarios.has(row.id), row.creadoEn >= cutoffNuevo);
     }
 
     /**

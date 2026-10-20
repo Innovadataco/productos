@@ -41,6 +41,7 @@ function dto(over: Partial<PerfilPublicoDTO> = {}): PerfilPublicoDTO {
         emiteFactura: false,
         ciudad: { id: "c1", nombre: "Bogotá", pais: "Colombia" },
         tieneHorariosDisponibles: true, // SPEC-818: campo nuevo del DTO (no lo ejercita este test)
+        esNuevo: true, // SPEC-872: campo nuevo del DTO (no lo ejercita este test)
         ...over,
     };
 }
