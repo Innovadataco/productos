@@ -18,6 +18,7 @@ import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
+import { normalizarNombreGeografico } from "@/lib/normalizar";
 import { GET } from "./route";
 
 let mockToken: string | undefined;
@@ -30,8 +31,12 @@ vi.mock("next/headers", () => ({
 /** Profesional SEMBRADO (ACTIVO + APROBADO vigente + demo_marcado) con una franja libre futura. */
 async function seedDemoProConFranja(): Promise<string> {
     const pais = await prisma.pais.upsert({ where: { codigo: "CO" }, update: {}, create: { codigo: "CO", nombre: "Colombia" } });
+    // SPEC-884: nombreNormalizado derivado del nombre (único por llamada). El catálogo geográfico
+    // sobrevive al resetDatabase, así que un norm fijo chocaría contra el unique parcial
+    // (paisId, departamentoId, nombreNormalizado) en la 2ª siembra.
+    const nombreCiudad = `Ciudad681-${Math.random().toString(36).slice(2, 9)}`;
     const ciudad = await prisma.ciudad.create({
-        data: { nombre: `Ciudad681-${Math.random().toString(36).slice(2, 9)}`, nombreNormalizado: "c681", paisId: pais.id },
+        data: { nombre: nombreCiudad, nombreNormalizado: normalizarNombreGeografico(nombreCiudad), paisId: pais.id },
     });
     const usuario = await crearUsuario("PROFESIONAL", `pro.681.${Date.now()}.${Math.random()}@ejemplo.local`);
     const perfil = await prisma.perfilProfesional.create({

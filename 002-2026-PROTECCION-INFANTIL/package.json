@@ -31,6 +31,8 @@
     "historial:check": "tsx scripts/verify-historial-esquema.ts",
     "reglas:check": "tsx scripts/verify-reglas-notificacion.ts",
     "db:verify:hnsw": "npm run indices:check",
+    "geo:detectar-duplicados": "tsx scripts/geo/detectar-ciudades-duplicadas.ts",
+    "geo:normalizar-dedup": "tsx scripts/geo/normalizar-y-dedup-ciudades.ts",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "a11y:audit": "node scripts/a11y_audit.js",
