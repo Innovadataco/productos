@@ -166,6 +166,12 @@ async function seedParametrosPadre() {
         // documento legal versionado (hash+fecha, como el consentimiento), este valor apuntará a
         // su versión+huella. Borrador actual: GUION-OPERADOR-SESION v0.1.
         { clave: "operador.guion.version", valor: "v0.1-2026-09-29", tipo: TipoParametro.STRING, descripcion: "Versión del protocolo/guion del operador registrada en el HECHO de la sesión (SPEC-750)" },
+        // SPEC-882 (I-373): ventanas de seguridad del PASE del expediente, antes HARDCODED en codigo-acceso.ts.
+        // Parametrizadas para que el admin/Calidad las ajusten sin desplegar; el servicio las lee en runtime
+        // con fallback al default si faltan. (El seed propaga el default en cada deploy, como el resto de este
+        // bloque.)
+        { clave: "pase.vigencia_codigo_minutos", valor: "30", tipo: TipoParametro.INTEGER, descripcion: "SPEC-882: minutos de vigencia del pase (código) del expediente antes de canjearlo (default 30)" },
+        { clave: "pase.vigencia_sesion_minutos", valor: "15", tipo: TipoParametro.INTEGER, descripcion: "SPEC-882: minutos de vigencia de la sesión de visualización tras canjear el pase (default 15)" },
     ];
 
     for (const p of parametrosPadre) {
