@@ -148,6 +148,10 @@ describe("SPEC-749 FR-2 · CONFIRMADA con la hora ya pasada dice la verdad (rend
         expect(low).not.toContain("aparecerá");
         expect(low).not.toContain("atrasada");
         expect(low).not.toContain("operador");
+        // SPEC-875: la PANTALLA de CONFIRMADA-pasada ya NO dice «escríbenos» (quedaba huérfano: el mailto
+        // está oculto desde 864). Apunta al botón de abajo: «avísanos aquí abajo».
+        expect(low, "CONFIRMADA-pasada no dice «escríbenos» (reencuadre SPEC-875)").not.toContain("escríbenos");
+        expect(txt, "apunta al reclamo estructurado de abajo").toContain("avísanos aquí abajo");
     });
 
     it("SPEC-792 C4 (RIESGO · tercer caso): CONFIRMADA-pasada SIN estado de enlace (ausente) → «no dependió de ti», NO el copy que acusa", () => {

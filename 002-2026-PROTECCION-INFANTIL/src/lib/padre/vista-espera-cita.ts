@@ -86,12 +86,14 @@ export function derivarVistaFranjaPasada(
             // C2 (la grave): el enlace se publicó y la hora pasó (prueba positiva). «ya pasó» NO eclipsa la
             // encuesta (tarjeta arriba, PRIMER camino: «Cuéntanos qué pasó»). NO se ofrece [Pedir otra cita]
             // en paralelo —era la vía de escape del motor de contradicciones (reprogramar sin responder
-            // nunca)—; reprogramar se llega DESPUÉS por el desenlace «no» de la encuesta. Queda [Escríbenos].
+            // nunca)—; reprogramar se llega DESPUÉS por el desenlace «no» de la encuesta.
+            // SPEC-875: el copy ya NO dice «escríbenos» (el `mailto` quedó oculto por SPEC-864); apunta al
+            // botón estructurado de abajo («El profesional no cumplió»). `escribenos` se retira (bandera muerta).
             return {
                 titulo: "Esta cita ya pasó",
-                detalle: `La hora que tenías con ${nombreProfesional} ya pasó. Si algo no salió como esperabas, escríbenos.`,
+                detalle: `La hora que tenías con ${nombreProfesional} ya pasó. Si el profesional no cumplió, avísanos aquí abajo.`,
                 tono: "gris",
-                acciones: { escribenos: true },
+                acciones: {},
             };
         }
         if (enlaceEstado === "PASADA_SIN_PUBLICAR" || enlaceEstado === undefined || enlaceEstado === "INDETERMINADO") {
@@ -100,10 +102,12 @@ export function derivarVistaFranjaPasada(
             // `INDETERMINADO` = reloj no confiable) — no acusamos de algo que no consta. El pago se HEREDA
             // (servicio no consta entregado). Copy verbatim de Diseño (FORMA-SPEC792 C4).
             return {
+                // SPEC-875: la cola «escríbenos» pasa a «avísanos aquí abajo» (el botón estructurado de 864);
+                // el `mailto` ya estaba oculto en CONFIRMADA-pasada, la bandera `escribenos` se retira.
                 titulo: "El acceso a tu reunión no llegó a estar disponible.",
-                detalle: `La hora de tu cita con ${nombreProfesional} ya pasó y el enlace para entrar no alcanzó a publicarse. Esto no dependió de ti. No perdiste tu cupo: puedes pedir otra cita, y si quieres que revisemos qué pasó, escríbenos.`,
+                detalle: `La hora de tu cita con ${nombreProfesional} ya pasó y el enlace para entrar no alcanzó a publicarse. Esto no dependió de ti. No perdiste tu cupo: puedes pedir otra cita, y si quieres que revisemos qué pasó, avísanos aquí abajo.`,
                 tono: "gris",
-                acciones: { pedirOtraCita: true, escribenos: true, ...(opts.citaId ? { heredarDeCitaId: opts.citaId } : {}) },
+                acciones: { pedirOtraCita: true, ...(opts.citaId ? { heredarDeCitaId: opts.citaId } : {}) },
             };
         }
         // `SIN_PUBLICAR`/`PUBLICADO`: una cita VIVA (no pasada según el reloj autoritativo). No es «pasada»

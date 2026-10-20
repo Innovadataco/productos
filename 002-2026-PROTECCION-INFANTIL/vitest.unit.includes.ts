@@ -424,6 +424,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/encuesta/encuesta-cierre.candado.test.tsx",
     // SPEC-792 C2: «ya pasó» no eclipsa la encuesta — primer camino = encuesta, sin [Pedir otra cita] paralelo.
     "src/components/modules/padre/citas/espera-cita-encuesta-primero.candado.test.tsx",
+    "src/components/modules/padre/citas/cita-confirmada-acciones.candado.test.tsx",
     // SPEC-784: la tarjeta de encuesta NUNCA precede a la vía de reporte en el panel del padre
     // (invariante «nunca sobre el reporte» derivada del árbol de render, control positivo por mutación).
     "src/components/modules/encuesta/tarjeta-encuesta-orden.candado.test.tsx",
