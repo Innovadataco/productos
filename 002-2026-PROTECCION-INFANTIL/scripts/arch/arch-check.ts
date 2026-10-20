@@ -31,6 +31,7 @@ import { ejecutarAsercionBBis } from "./asercion-menu-no-redirige-a-otro-item";
 import { buscarInfractores } from "./no-prisma-mocks";
 import { buscarInfractores as buscarAliasWorker } from "./no-worker-alias";
 import { buscarInfractores as buscarReporteCreate } from "./no-reporte-create-directo";
+import { buscarInfractores as buscarReporteDelete } from "./no-reporte-delete-directo";
 import { buscarInfractores as buscarFreemiumInline } from "./freemium-fecha-fin-chokepoint";
 import {
     buscarInfractores as buscarGetMuta,
@@ -242,11 +243,21 @@ async function main() {
         for (const f of freemiumInline) console.error(`  - ${f.archivo}:${f.linea} ${f.texto}`);
     }
 
+    console.log("[Arch:check] (k) reporte.delete directo SOLO en el chokepoint borrarReporte (SPEC-870 · I-446)…");
+    const reporteDelete = buscarReporteDelete();
+    if (reporteDelete.length === 0) {
+        console.log("[Arch:check] (k) VERDE: cero reporte.delete directo fuera de borrarReporte.");
+    } else {
+        rojo = true;
+        console.error(`[Arch:check] (k) ROJO: ${reporteDelete.length} usos de reporte.delete fuera de borrarReporte (dejan el agregado público huérfano; usá borrarReporte):`);
+        for (const f of reporteDelete) console.error(`  - ${f.archivo}:${f.linea} ${f.texto}`);
+    }
+
     if (rojo) {
         console.error("[Arch:check] ROJO: la línea base no está al día o hay un desalineo real. Ver entradas arriba.");
         process.exitCode = 1;
     } else {
-        console.log("[Arch:check] VERDE: línea base al día, huérfanos declarados, puerta ≡ predicado, menú honesto, worker sin alias, freemium en un solo cálculo.");
+        console.log("[Arch:check] VERDE: línea base al día, huérfanos declarados, puerta ≡ predicado, menú honesto, worker sin alias, freemium en un solo cálculo, reporte.delete en un solo chokepoint.");
     }
 }
 

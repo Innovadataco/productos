@@ -23,6 +23,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { descifrarCampo } from "@/lib/reporte-texto-contenido";
+import { borrarReporte } from "./limpieza/borrar-reporte";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
 const WORKER_SECRET = process.env.WORKER_SECRET || "worker-secret-local";
@@ -195,21 +196,11 @@ async function cleanup(reporteId: string): Promise<void> {
         await prisma.correccionAdmin.delete({ where: { id: correccionId } });
     }
 
-    // Limpiar en orden inverso a las FK.
-    await prisma.clasificacionIA.deleteMany({ where: { reporteId } });
-    await prisma.embeddingReporte.deleteMany({ where: { reporteId } });
-
-    // Limpiar IdentificadorReportado si este fue el único reporte.
-    const identificador = await prisma.identificadorReportado.findUnique({
-        where: { identificador_plataformaId: { identificador: reporte.identificador, plataformaId: reporte.plataformaId } },
-    });
-    if (identificador && identificador.totalReportes <= 1) {
-        await prisma.identificadorReportado.delete({
-            where: { id: identificador.id },
-        });
-    }
-
-    await prisma.reporte.delete({ where: { id: reporteId } });
+    // SPEC-870 (I-446): el reporte + su cascade (ClasificacionIA, EmbeddingReporte) + el RECÁLCULO
+    // del agregado público propio pasan por el chokepoint único `borrarReporte` (antes este smoke
+    // borraba el agregado a mano con una heurística `totalReportes<=1`; ahora recalcula, consistente
+    // con el corrector). La correción+dataset se limpian ARRIBA primero (FK que el chokepoint no cubre).
+    await borrarReporte(reporteId, "smoke-e2e cleanup", { confirm: true });
 
     // Limpiar entradas de rate limit generadas por el test.
     await prisma.rateLimit.deleteMany({
