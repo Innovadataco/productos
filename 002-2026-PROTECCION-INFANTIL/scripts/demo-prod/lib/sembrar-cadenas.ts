@@ -24,6 +24,8 @@ export interface ProfSembrado {
     modalidades: ModalidadCita[];
     tarifa: number;
     bucket: "alta" | "media" | "baja";
+    /** SPEC-883 (I-407): nº de franjas libres futuras sembradas para este profesional (para que el resumen cuadre). */
+    franjasLibres: number;
 }
 
 /** Helpers con ESTADO de la corrida que el poblador inyecta (ver cabecera). */

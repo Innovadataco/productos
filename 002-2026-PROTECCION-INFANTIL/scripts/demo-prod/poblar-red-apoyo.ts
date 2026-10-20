@@ -275,7 +275,7 @@ async function sembrarProfesional(
             });
             await marcar(tx, "FranjaDisponible", franja.id, "libre futura");
         }
-        return { perfilId: perfil.id, modalidades, tarifa, bucket };
+        return { perfilId: perfil.id, modalidades, tarifa, bucket, franjasLibres: libres };
     });
 }
 
@@ -504,6 +504,7 @@ async function main(): Promise<void> {
         const p = await sembrarProfesional(i, verificadorDemoId, ciudadId, passwordHash, combos);
         profs.push(p);
         resumen.profesionales++;
+        resumen.franjasLibres += p.franjasLibres; // SPEC-883 (I-407): el resumen cuadra con lo sembrado.
     }
 
     // 2) Reparto de citas a profesionales, sesgado por bucket (que el ranking tenga forma).
