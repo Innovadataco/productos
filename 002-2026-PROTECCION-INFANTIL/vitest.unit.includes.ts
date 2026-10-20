@@ -38,6 +38,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/roles-titulares.test.ts",
     // SPEC-423 (I-298): la credencial de respaldo se muestra SIEMPRE en admin.
     "src/app/api/admin/credencial-siempre-visible.candado.test.ts",
+    // SPEC-878 (I-426 · D-138): las 3 rutas admin de pagos muertas quedan borradas (control positivo por remoción, fs).
+    "src/app/api/admin/pagos/rutas-muertas-borradas.candado.test.ts",
     // SPEC-672 (I-399): el camino de autenticación lee el Usuario con select explícito (nunca todos los escalares).
     "src/lib/auth-select-explicito.candado.test.ts",
     // SPEC-765: el registro de columnas sensibles es un ESPEJO VERIFICADO de las 5 fuentes (cruce +
