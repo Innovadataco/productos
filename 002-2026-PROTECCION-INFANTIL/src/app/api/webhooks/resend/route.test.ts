@@ -142,6 +142,27 @@ describe("POST /api/webhooks/resend (SPEC-202)", () => {
         expect(actualizada?.clickedAt).not.toBeNull();
     });
 
+    // SPEC-871 (I-402) · CONTROL POSITIVO del lado CÓDIGO. En prod, 420/420 avisos quedan en ENVIADA
+    // con deliveredAt NULL. El diagnóstico (código vs config) concluyó que el camino de CÓDIGO está sano:
+    // el envío EMAIL guarda el proveedorId real de Resend y el webhook lo matchea. El defecto REAL de
+    // I-402 es de CONFIG (el webhook de retorno de Resend no llega a prod o no pasa la firma), que
+    // resuelve ops (Jelkin/CEO). Este candado NO cierra I-402: blinda que, cuando el evento LLEGA y pasa
+    // firma, el handler SÍ puebla deliveredAt — así una regresión del handler no quedaría tapada por el
+    // hueco de config. (El caso email.bounced → bouncedAt ya estaba cubierto por el test de abajo.)
+    it("procesa email.delivered y puebla deliveredAt sin mover el estado (SPEC-871 · I-402)", async () => {
+        const notif = await crearNotificacion("r-delivered");
+        expect(notif.deliveredAt, "control: nace sin entrega registrada").toBeNull();
+
+        const res = await POST(crearRequest("email.delivered", "r-delivered"));
+        expect(res.status).toBe(200);
+
+        const actualizada = await prisma.notificacion.findUnique({ where: { id: notif.id } });
+        expect(actualizada?.deliveredAt, "la entrega puebla deliveredAt").not.toBeNull();
+        // La entrega se registra por TIMESTAMP, no cambiando el estado: ENVIADA se conserva (por eso en
+        // prod «420/420 ENVIADA» es lo ESPERADO incluso con entregas; el síntoma de I-402 es el 0 en deliveredAt).
+        expect(actualizada?.estado, "la entrega no mueve el estado").toBe("ENVIADA");
+    });
+
     it("procesa email.bounced, marca bounce y registra contacto bloqueado", async () => {
         const notif = await crearNotificacion("r-bounced");
         const req = crearRequest("email.bounced", "r-bounced");
