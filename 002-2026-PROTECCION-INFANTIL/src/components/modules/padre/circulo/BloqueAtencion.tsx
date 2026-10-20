@@ -43,7 +43,7 @@ export function BloqueAtencion({ personas }: { personas: Contacto[] }) {
                 </svg>
             </span>
             <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-ambar">Necesita tu atención</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-estado-ambar">Necesita tu atención</p>
                 <p className="mt-0.5 text-lg font-semibold text-body">{titulo}</p>
                 {/* SPEC-718: una línea POR PERSONA (hasta MAX_LINEAS) — la cuenta del título no puede
                     prometer más personas que líneas mostradas (candado). */}

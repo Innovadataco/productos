@@ -36,9 +36,9 @@ const DURACION_LABEL: Record<string, string> = {
 
 const ACENTOS: Record<ColorRolSelector, { titulo: string; boton: string; badge: string }> = {
     cielo: {
-        titulo: "text-cielo",
+        titulo: "text-estado-cielo",
         boton: "bg-cielo text-white hover:brightness-110",
-        badge: "bg-cielo/10 text-cielo",
+        badge: "bg-cielo/10 text-estado-cielo",
     },
     pino: {
         titulo: "text-pino",

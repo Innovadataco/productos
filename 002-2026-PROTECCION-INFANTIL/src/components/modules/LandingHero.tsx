@@ -132,7 +132,7 @@ export function LandingHero({
 
                 <div className="mt-10 grid gap-4 sm:grid-cols-[1fr_1.25fr]">
                     <div className="flex flex-col items-start rounded-3xl bg-white p-6 text-left shadow-xl shadow-tinta/10 sm:p-8">
-                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cielo/10 text-cielo">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cielo/10 text-estado-cielo">
                             <FlagIcon className="h-6 w-6" />
                         </div>
                         <span className="text-xl font-bold text-body sm:text-2xl">Crear un reporte</span>
@@ -147,7 +147,7 @@ export function LandingHero({
                             </Link>
                             <Link
                                 href="/login?redirect=/reportar"
-                                className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-cielo/30 bg-cielo/5 px-5 py-3 text-sm font-bold text-cielo transition hover:bg-cielo/10"
+                                className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-cielo/30 bg-cielo/5 px-5 py-3 text-sm font-bold text-estado-cielo transition hover:bg-cielo/10"
                             >
                                 <UserIcon className="h-5 w-5" aria-hidden="true" />
                                 Reportar con mi cuenta

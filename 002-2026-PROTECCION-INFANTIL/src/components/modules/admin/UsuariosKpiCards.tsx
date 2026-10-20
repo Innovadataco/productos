@@ -52,7 +52,7 @@ export function UsuariosKpiCards({ kpi, alertas }: UsuariosKpiCardsProps) {
                             className={`rounded-xl border px-4 py-3 text-sm ${
                                 alerta.severidad === "danger"
                                     ? "border-rubi/30 bg-rubi/10 text-rubi dark:border-rubi/40 dark:bg-rubi/20"
-                                    : "border-ambar/30 bg-ambar/10 text-ambar dark:border-ambar/40 dark:bg-ambar/20"
+                                    : "border-ambar/30 bg-ambar/10 text-estado-ambar dark:border-ambar/40 dark:bg-ambar/20"
                             }`}
                             role="alert"
                         >

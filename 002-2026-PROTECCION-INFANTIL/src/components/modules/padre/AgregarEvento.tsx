@@ -80,7 +80,7 @@ export function AgregarEvento({ reporteId, identificador, plataforma, onListo, o
                     onChange={(e) => setFechaHora(e.target.value)}
                 />
             </label>
-            {error && <p className="mt-2 text-sm text-ambar">{error}</p>}
+            {error && <p className="mt-2 text-sm text-estado-ambar">{error}</p>}
             <div className="mt-3 flex gap-2">
                 <Button onClick={enviar} isLoading={enviando} className="flex-1">
                     Guardar el evento

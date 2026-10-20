@@ -99,6 +99,31 @@ async function main(): Promise<void> {
                     }
                 }
             }
+            // SPEC-880: los tokens de ESTADO como texto (el fix del barrido codebase-wide) contrastan ≥ 4.5
+            // sobre papel en los DOS temas (estado-cielo 5.76/11.40 · estado-ambar 5.11/10.72 · estado-pino
+            // 8.98/…). Son utilidades mode-aware, independientes del tema de rol: se miden una vez por modo.
+            {
+                const htmlE = `<!doctype html><html class="${dark ? "dark" : ""}"><head><style>${CSS}</style></head><body><span id="ec" class="text-estado-cielo"></span><span id="ea" class="text-estado-ambar"></span><span id="ep" class="text-estado-pino"></span><span id="pp" style="background: rgb(var(--papel-rgb))"></span></body></html>`;
+                await page.setContent(htmlE);
+                const re = await page.evaluate(() => ({
+                    ec: getComputedStyle(document.getElementById("ec")!).color,
+                    ea: getComputedStyle(document.getElementById("ea")!).color,
+                    ep: getComputedStyle(document.getElementById("ep")!).color,
+                    pp: getComputedStyle(document.getElementById("pp")!).backgroundColor,
+                }));
+                const pp = parse(re.pp);
+                for (const [nombre, val] of [["estado-cielo", re.ec], ["estado-ambar", re.ea], ["estado-pino", re.ep]] as const) {
+                    const col = parse(val);
+                    if (!col || !pp) {
+                        fallos.push(`${nombre}/${modo}: no pude medir (color=${val} papel=${re.pp}).`);
+                        continue;
+                    }
+                    const c = contraste(col, pp);
+                    if (c < 4.5) {
+                        fallos.push(`${nombre}/${modo}: ${fmt(col)} da ${c.toFixed(2)} < 4.5 sobre papel ${fmt(pp)} — el fix del barrido SPEC-880 no es legible.`);
+                    }
+                }
+            }
             // (3) control positivo (claro): el valor del BUG (cielo crudo) es ilegible — el candado no es vacuo.
             if (!dark) {
                 const html = `<!doctype html><html><head><style>${CSS}</style></head><body><div class="theme-padre"><span id="cielocrudo" style="color: rgb(var(--cielo-rgb))"></span><span id="papel" style="background: rgb(var(--papel-rgb))"></span></div></body></html>`;
@@ -123,7 +148,7 @@ async function main(): Promise<void> {
         console.error("[render:check] SPEC-876 · acento como TEXTO por rol FALLA:\n  " + fallos.join("\n  "));
         process.exit(1);
     }
-    console.log(`[render:check] VERDE: .text-accent de los ${TEMAS.length} temas (${TEMAS.join(", ")}) contrasta ≥ 4.5 sobre papel en los 2 temas; padre+profesional resuelven a --cielo-700-rgb (y el cielo crudo da < 4.5 en claro — control positivo).`);
+    console.log(`[render:check] VERDE: .text-accent de los ${TEMAS.length} temas (${TEMAS.join(", ")}) contrasta ≥ 4.5 sobre papel en los 2 temas; padre+profesional resuelven a --cielo-700-rgb (cielo crudo < 4.5 en claro — control positivo); y los tokens de estado del barrido SPEC-880 (estado-cielo/ambar/pino como texto) ≥ 4.5 sobre papel en los 2 temas.`);
 }
 
 void main();

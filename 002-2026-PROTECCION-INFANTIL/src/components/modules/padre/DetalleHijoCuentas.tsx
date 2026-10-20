@@ -40,7 +40,7 @@ function DetalleCuentaReportada({ nombre, cuenta, onVolver }: { nombre: string; 
             </Button>
 
             <header className="space-y-1">
-                <p className="text-xs font-bold uppercase tracking-widest text-ambar">Reportaron esta cuenta</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-estado-ambar">Reportaron esta cuenta</p>
                 <h3 className="text-lg font-semibold text-body">La cuenta de {nombre}</h3>
                 <p className="text-sm text-muted">
                     <span className="rounded-full bg-tinta/[0.06] px-2 py-0.5 font-medium text-body">

@@ -317,7 +317,7 @@ export function TextoSensible({ reporteId, retapadoMinutos = 10 }: TextoSensible
                         />
                     ))}
                 </div>
-                {error && <p className="text-sm text-ambar">{error}</p>}
+                {error && <p className="text-sm text-estado-ambar">{error}</p>}
                 <div className="flex flex-wrap items-center gap-2">
                     <Button onClick={confirmarCodigo} isLoading={enviando} disabled={!completo} className="flex-1">
                         Confirmar
@@ -352,7 +352,7 @@ export function TextoSensible({ reporteId, retapadoMinutos = 10 }: TextoSensible
                 {estado === "cargando" ? "Un momento…" : "👁 Revelar texto · se ocultó por tu seguridad"}
             </button>
             <p className="mt-1 text-xs text-muted">Solo tú puedes revelarlo, con un código que llega a tu correo.</p>
-            {error && <p className="mt-1 text-sm text-ambar">{error}</p>}
+            {error && <p className="mt-1 text-sm text-estado-ambar">{error}</p>}
         </div>
     );
 }

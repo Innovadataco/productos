@@ -59,7 +59,7 @@ const NIVEL_LABELS: Record<NivelRiesgo, string> = {
 
 const NIVEL_COLORS: Record<NivelRiesgo, string> = {
     BAJO: "bg-pino/10 text-pino",
-    MEDIO: "bg-ambar/10 text-ambar",
+    MEDIO: "bg-ambar/10 text-estado-ambar",
     ALTO: "bg-rubi/10 text-rubi",
     CRITICO: "bg-rubi/20 text-rubi ring-1 ring-rubi/40",
 };

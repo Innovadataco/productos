@@ -65,7 +65,7 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
                     <h1 className="text-2xl font-bold text-body">Centro de Control IA</h1>
                     <p className="text-sm text-muted">Explore, pruebe y ajuste el pipeline de clasificación sin afectar datos reales.</p>
                 </div>
-                <span className="self-start rounded-full bg-cielo/10 px-3 py-1 text-xs font-medium text-cielo">
+                <span className="self-start rounded-full bg-cielo/10 px-3 py-1 text-xs font-medium text-estado-cielo">
                     Solo admins
                 </span>
             </div>
@@ -80,7 +80,7 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
                                 href={`/dashboard/admin/ia?tab=${tab.key}`}
                                 className={`inline-flex items-center border-b-2 px-1 py-3 text-sm font-medium transition ${
                                     isActive
-                                        ? "border-cielo text-cielo"
+                                        ? "border-cielo text-estado-cielo"
                                         : "border-transparent text-muted hover:border-tinta/10 hover:text-body"
                                 }`}
                             >

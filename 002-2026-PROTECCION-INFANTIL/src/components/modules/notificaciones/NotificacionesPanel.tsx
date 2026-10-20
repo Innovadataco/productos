@@ -29,7 +29,7 @@ export function NotificacionesPanel() {
                             onClick={() => setTab(t.key)}
                             className={`inline-flex items-center border-b-2 px-1 py-3 text-sm font-medium transition ${
                                 tab === t.key
-                                    ? "border-ambar text-ambar"
+                                    ? "border-ambar text-estado-ambar"
                                     : "border-transparent text-muted hover:border-tinta/30 hover:text-body dark:hover:border-tinta/30"
                             }`}
                         >

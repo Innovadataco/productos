@@ -13,6 +13,6 @@
  */
 export function precisionColorClass(value: number): string {
     if (value < 0.7) return "bg-rubi/10 text-rubi";
-    if (value < 0.9) return "bg-ambar/10 text-ambar";
+    if (value < 0.9) return "bg-ambar/10 text-estado-ambar";
     return "bg-pino/10 text-pino";
 }

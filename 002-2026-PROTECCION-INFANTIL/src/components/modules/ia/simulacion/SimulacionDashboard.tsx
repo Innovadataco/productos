@@ -166,7 +166,7 @@ export function SimulacionDashboard({ id, onBack, onRefresh }: SimulacionDashboa
                             onClick={() => setActiveTab(t.key as typeof activeTab)}
                             className={`inline-flex items-center border-b-2 px-1 py-2 text-sm font-medium transition ${
                                 activeTab === t.key
-                                    ? "border-cielo text-cielo"
+                                    ? "border-cielo text-estado-cielo"
                                     : "border-transparent text-muted hover:border-tinta/10 hover:text-body"
                             }`}
                         >

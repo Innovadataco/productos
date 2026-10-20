@@ -251,7 +251,7 @@ export function MisHijos({
                     cuentas (su Roblox, un teléfono, un correo), te avisamos.
                 </p>
                 {maximoActivos !== undefined && activos >= maximoActivos && (
-                    <p className="mt-2 rounded-xl border border-ambar/40 bg-ambar/10 px-3 py-2 text-sm text-ambar" role="status">
+                    <p className="mt-2 rounded-xl border border-ambar/40 bg-ambar/10 px-3 py-2 text-sm text-estado-ambar" role="status">
                         Tienes {activos} de {maximoActivos} menores activos. Si quieres registrar otro,
                         primero inactiva uno.
                     </p>

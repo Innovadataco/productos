@@ -28,14 +28,14 @@ export function ContratoCard({
                         href="/api/colegio/contrato/pdf"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-cielo hover:underline"
+                        className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-estado-cielo hover:underline"
                     >
                         Ver contrato (PDF)
                     </a>
                     <p className="mt-2 text-xs text-subtle">Registrado el {FMT_FECHA.format(new Date(contrato.adjuntadoEn))}.</p>
                 </div>
             ) : contratoObligatorio ? (
-                <p className="mt-3 rounded-xl bg-ambar/10 px-4 py-2 text-sm font-medium text-ambar">
+                <p className="mt-3 rounded-xl bg-ambar/10 px-4 py-2 text-sm font-medium text-estado-ambar">
                     Aún no hay un contrato firmado registrado. El equipo se pondrá en contacto para completarlo.
                 </p>
             ) : (

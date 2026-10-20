@@ -138,7 +138,7 @@ export function EditorGuiaModal({ guia, onClose, onSave }: EditorGuiaModalProps)
                         <button
                             type="button"
                             onClick={() => setPasos([...pasos, { orden: pasos.length + 1, tipo: "ACCION", titulo: "", descripcion: "" }])}
-                            className="mt-2 text-sm text-cielo hover:text-cielo/80"
+                            className="mt-2 text-sm text-estado-cielo hover:text-estado-cielo/80"
                         >
                             + Añadir paso
                         </button>
@@ -217,7 +217,7 @@ export function EditorGuiaModal({ guia, onClose, onSave }: EditorGuiaModalProps)
                         <button
                             type="button"
                             onClick={() => setBotones([...botones, { tipo: "url", texto: "", valor: "", estilo: "secundario" }])}
-                            className="mt-2 text-sm text-cielo hover:text-cielo/80"
+                            className="mt-2 text-sm text-estado-cielo hover:text-estado-cielo/80"
                         >
                             + Añadir botón
                         </button>
@@ -258,7 +258,7 @@ export function PreviewGuiaModal({ guia, onClose }: PreviewGuiaModalProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-papel p-6 shadow-xl">
                 <div className="mb-4 flex items-center justify-between">
-                    <span className="rounded-full bg-cielo/10 px-3 py-1 text-xs font-semibold text-cielo">{guia.categoriaBadgeTexto}</span>
+                    <span className="rounded-full bg-cielo/10 px-3 py-1 text-xs font-semibold text-estado-cielo">{guia.categoriaBadgeTexto}</span>
                     <button type="button" onClick={onClose} className="text-2xl text-muted hover:text-body">×</button>
                 </div>
                 <h2 className="text-2xl font-bold text-body">{guia.tituloEmocional}</h2>
@@ -267,7 +267,7 @@ export function PreviewGuiaModal({ guia, onClose }: PreviewGuiaModalProps) {
                 <div className="mt-6 space-y-4">
                     {pasos.map((p) => (
                         <div key={p.orden} className="flex gap-3">
-                            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-cielo/10 text-xs font-bold text-cielo">{p.orden}</span>
+                            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-cielo/10 text-xs font-bold text-estado-cielo">{p.orden}</span>
                             <div>
                                 <p className="font-semibold text-body">{p.titulo}</p>
                                 <p className="text-sm text-muted">{p.descripcion}</p>

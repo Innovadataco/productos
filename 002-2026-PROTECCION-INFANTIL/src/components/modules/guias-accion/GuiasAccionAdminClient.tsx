@@ -134,7 +134,7 @@ export default function GuiasAccionAdminClient() {
                         onClick={() => setTab("ambar")}
                         className={`inline-flex items-center border-b-2 px-1 py-3 text-sm font-medium transition ${
                             tab === "ambar"
-                                ? "border-cielo text-cielo dark:border-cielo dark:text-cielo"
+                                ? "border-cielo text-estado-cielo dark:border-cielo dark:text-cielo"
                                 : "border-transparent text-muted hover:border-tinta/15 hover:text-body"
                         }`}
                     >
@@ -145,7 +145,7 @@ export default function GuiasAccionAdminClient() {
                         onClick={() => setTab("cielo")}
                         className={`inline-flex items-center border-b-2 px-1 py-3 text-sm font-medium transition ${
                             tab === "cielo"
-                                ? "border-cielo text-cielo dark:border-cielo dark:text-cielo"
+                                ? "border-cielo text-estado-cielo dark:border-cielo dark:text-cielo"
                                 : "border-transparent text-muted hover:border-tinta/15 hover:text-body"
                         }`}
                     >
@@ -224,7 +224,7 @@ export default function GuiasAccionAdminClient() {
                                                     <button
                                                         type="button"
                                                         onClick={() => { setPreview(g); setEditando(null); }}
-                                                        className="rounded-md bg-cielo/10 px-2 py-1 text-xs font-medium text-cielo hover:bg-cielo/20"
+                                                        className="rounded-md bg-cielo/10 px-2 py-1 text-xs font-medium text-estado-cielo hover:bg-cielo/20"
                                                     >
                                                         Preview
                                                     </button>

@@ -221,7 +221,7 @@ export function PanelAgregar({
             </div>
 
             {error && (
-                <p role="alert" className="rounded-xl bg-ambar/10 px-3 py-2 text-sm text-ambar">
+                <p role="alert" className="rounded-xl bg-ambar/10 px-3 py-2 text-sm text-estado-ambar">
                     {error}
                 </p>
             )}

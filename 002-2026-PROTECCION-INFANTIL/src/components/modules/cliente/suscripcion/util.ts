@@ -20,7 +20,7 @@ export const ACENTOS: Record<ColorRol, Acento> = {
         boton: "bg-pino text-white hover:brightness-110",
     },
     cielo: {
-        texto: "text-cielo",
+        texto: "text-estado-cielo",
         fondoSuave: "bg-cielo/10",
         borde: "border-cielo/30",
         boton: "bg-cielo text-white hover:brightness-110",
@@ -34,16 +34,16 @@ export interface EstadoMeta {
 
 export const ESTADO_SUSCRIPCION: Record<string, EstadoMeta> = {
     ACTIVA: { label: "Activa", clases: "bg-pino/10 text-pino" },
-    EN_GRACIA: { label: "En periodo de gracia", clases: "bg-ambar/10 text-ambar" },
+    EN_GRACIA: { label: "En periodo de gracia", clases: "bg-ambar/10 text-estado-ambar" },
     SUSPENDIDA: { label: "Suspendida", clases: "bg-rubi/10 text-rubi" },
     CANCELADA: { label: "Cancelada", clases: "bg-tinta/10 text-muted" },
 };
 
 export const ESTADO_PAGO: Record<string, EstadoMeta> = {
-    PENDIENTE_AUTORIZACION: { label: "Pendiente de autorización", clases: "bg-ambar/10 text-ambar" },
+    PENDIENTE_AUTORIZACION: { label: "Pendiente de autorización", clases: "bg-ambar/10 text-estado-ambar" },
     AUTORIZADO: { label: "Autorizado", clases: "bg-pino/10 text-pino" },
     RECHAZADO: { label: "Rechazado", clases: "bg-rubi/10 text-rubi" },
-    REEMBOLSADO: { label: "Reembolsado", clases: "bg-cielo/10 text-cielo" },
+    REEMBOLSADO: { label: "Reembolsado", clases: "bg-cielo/10 text-estado-cielo" },
 };
 
 export const DURACION_LABEL: Record<string, string> = {

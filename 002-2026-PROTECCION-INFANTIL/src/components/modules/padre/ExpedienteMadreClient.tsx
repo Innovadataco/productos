@@ -109,7 +109,7 @@ const DOT_NIVEL: Record<Exclude<NivelItem, null>, string> = {
 
 const CHIP_NIVEL: Record<Exclude<NivelItem, null>, string> = {
     alta: "border-rubi/40 bg-rubi/10 text-rubi",
-    media: "border-ambar/40 bg-ambar/10 text-ambar",
+    media: "border-ambar/40 bg-ambar/10 text-estado-ambar",
     baja: "border-pino/40 bg-pino/10 text-pino",
 };
 
@@ -192,7 +192,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                             {hijo.edad !== null ? ` · ${hijo.edad} años` : ""}
                         </span>
                     )}
-                    <span className="font-mono text-sm font-bold text-cielo">{expediente.codigo}</span>
+                    <span className="font-mono text-sm font-bold text-estado-cielo">{expediente.codigo}</span>
                     <h1 className="text-base font-bold text-body">{expediente.identificador}</h1>
                     <span className="text-xs text-muted">
                         {expediente.plataforma} · abierto el {fechaCorta(expediente.fechaApertura)}
@@ -201,7 +201,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                         <span
                             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-extrabold uppercase tracking-wide ${
                                 estadoUI.estadoReportes === "EN_PROCESO"
-                                    ? "border-ambar/40 bg-ambar/10 text-ambar"
+                                    ? "border-ambar/40 bg-ambar/10 text-estado-ambar"
                                     : "border-pino/40 bg-pino/10 text-pino"
                             }`}
                         >
@@ -219,7 +219,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                         ? ` · ${estadoUI.procesando} ${estadoUI.procesando === 1 ? "evento tuyo sigue" : "eventos tuyos siguen"} en clasificación`
                         : ""}
                 </p>
-                {errorConsulta && <p className="text-sm text-ambar">{errorConsulta}</p>}
+                {errorConsulta && <p className="text-sm text-estado-ambar">{errorConsulta}</p>}
 
                 {/* Semáforo grande */}
                 <div className={`flex items-start gap-3 rounded-xl border p-4 ${clasesSemaforo.caja}`} role="status">
@@ -283,9 +283,9 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                     ))}
                 </ol>
                 <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-cielo/35 bg-cielo/10 p-3 text-xs text-body">
-                    <LockIcon className="mt-0.5 h-4 w-4 flex-none text-cielo" />
+                    <LockIcon className="mt-0.5 h-4 w-4 flex-none text-estado-cielo" />
                     <p>
-                        <b className="text-cielo">Privacidad:</b> los eventos de otras familias se ven solo como
+                        <b className="text-estado-cielo">Privacidad:</b> los eventos de otras familias se ven solo como
                         metadatos (fecha aproximada, ciudad, clasificación). Sus textos nunca se comparten; tú
                         decides si revelar los tuyos.
                     </p>
@@ -326,7 +326,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                 <div className="rounded-xl border border-cielo/30 bg-cielo/10 p-4">
                     {analisis ? (
                         <>
-                            <h3 className="text-sm font-bold text-cielo">
+                            <h3 className="text-sm font-bold text-estado-cielo">
                                 Clasificación dominante: {analisis.clasificacionDominante}
                             </h3>
                             <p className="mt-1 text-xs text-body">
@@ -368,7 +368,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
 
                     {analisis?.queSignifica && (
                         <div className="mt-3 rounded-lg border border-cielo/25 bg-superficie-1 p-3 text-xs text-body">
-                            <b className="text-cielo">¿Qué significa?</b> {analisis.queSignifica}
+                            <b className="text-estado-cielo">¿Qué significa?</b> {analisis.queSignifica}
                         </div>
                     )}
 
@@ -448,7 +448,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                     </div>
                 )}
                 <div className="mt-4 rounded-xl border border-cielo/30 bg-cielo/10 p-3.5 text-xs text-body">
-                    <b className="text-cielo">Si un menor está en riesgo ahora:</b> Línea 141 del ICBF · CAI Virtual
+                    <b className="text-estado-cielo">Si un menor está en riesgo ahora:</b> Línea 141 del ICBF · CAI Virtual
                     de la Policía · Te Protejo. Este expediente es una señal comunitaria de prevención, no un canal
                     oficial de denuncia.
                 </div>

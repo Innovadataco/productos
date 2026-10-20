@@ -30,7 +30,7 @@ export function ConfiguracionTabs() {
                             onClick={() => setTab(t.key)}
                             className={`inline-flex items-center border-b-2 px-1 py-3 text-sm font-medium transition ${
                                 tab === t.key
-                                    ? "border-ambar text-ambar dark:border-ambar dark:text-ambar"
+                                    ? "border-ambar text-estado-ambar dark:border-ambar dark:text-ambar"
                                     : "border-transparent text-muted hover:border-slate-300 hover:text-body dark:hover:border-slate-600"
                             }`}
                         >

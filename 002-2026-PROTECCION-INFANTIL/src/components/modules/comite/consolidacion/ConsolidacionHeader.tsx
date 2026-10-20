@@ -16,10 +16,10 @@ export function ConsolidacionHeader({ detalle }: { detalle: DetalleConsolidacion
         <header className="glass rounded-2xl p-6 space-y-3">
             <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-xl font-bold text-body font-mono">{expediente.identificadorPrincipal}</h2>
-                <span className="rounded-full bg-ambar/10 px-2.5 py-0.5 text-xs font-medium text-ambar">
+                <span className="rounded-full bg-ambar/10 px-2.5 py-0.5 text-xs font-medium text-estado-ambar">
                     {expediente.estado}
                 </span>
-                <span className="rounded-full bg-cielo/10 px-2.5 py-0.5 text-xs font-medium text-cielo">
+                <span className="rounded-full bg-cielo/10 px-2.5 py-0.5 text-xs font-medium text-estado-cielo">
                     Informe: {informe.estadoAprobacion}
                 </span>
             </div>

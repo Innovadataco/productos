@@ -87,10 +87,10 @@ export function ProfesionalPerfil({
             {/* TARIFA por delante — SPEC-428: la 1ª cita es el precio ESTÁNDAR
                 del admin; la tarifa del profesional aplica desde la 2ª cita. */}
             <div className="glass rounded-2xl p-5 bg-cielo/10 dark:bg-cielo/10">
-                <p className="text-xs uppercase tracking-wide text-cielo dark:text-cielo">
+                <p className="text-xs uppercase tracking-wide text-estado-cielo dark:text-cielo">
                     Costo de la primera cita
                 </p>
-                <p className="mt-1 text-3xl font-bold text-cielo dark:text-cielo">
+                <p className="mt-1 text-3xl font-bold text-estado-cielo dark:text-cielo">
                     {CURRENCY_COP.format(precioEstandarPrimeraCitaCOP)}
                 </p>
                 <p className="mt-1 text-sm text-muted">
@@ -108,7 +108,7 @@ export function ProfesionalPerfil({
                     </span>
                     .
                 </p>
-                <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-ambar dark:text-ambar">
+                <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-estado-ambar dark:text-ambar">
                     Nuevo en la red
                 </p>
             </div>
@@ -132,7 +132,7 @@ export function ProfesionalPerfil({
                     ) : (
                         <ul className="flex flex-wrap gap-2">
                             {p.especialidades.map((e) => (
-                                <li key={e} className="rounded-full bg-cielo/15 dark:bg-cielo/20 px-3 py-1 text-xs text-cielo dark:text-cielo">
+                                <li key={e} className="rounded-full bg-cielo/15 dark:bg-cielo/20 px-3 py-1 text-xs text-estado-cielo dark:text-cielo">
                                     {e}
                                 </li>
                             ))}

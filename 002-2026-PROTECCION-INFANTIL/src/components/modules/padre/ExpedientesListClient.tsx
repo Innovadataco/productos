@@ -41,7 +41,7 @@ const BARRA_URGENCIA: Record<UrgenciaExpediente, string> = {
 
 const SEMAFORO_LISTA: Record<UrgenciaExpediente, { label: string; clases: string; dot: string }> = {
     alta: { label: "Alerta prioritaria", clases: "border-rubi/40 bg-rubi/10 text-rubi", dot: "bg-rubi" },
-    media: { label: "Requiere atención", clases: "border-ambar/40 bg-ambar/10 text-ambar", dot: "bg-ambar" },
+    media: { label: "Requiere atención", clases: "border-ambar/40 bg-ambar/10 text-estado-ambar", dot: "bg-ambar" },
     baja: { label: "Sin novedades", clases: "border-pino/40 bg-pino/10 text-pino", dot: "bg-pino" },
     sin_clasificar: {
         label: "Sin clasificar",
@@ -52,7 +52,7 @@ const SEMAFORO_LISTA: Record<UrgenciaExpediente, { label: string; clases: string
 
 const CHIP_URGENCIA: Record<Exclude<UrgenciaExpediente, "sin_clasificar">, string> = {
     alta: "border-rubi/40 bg-rubi/10 text-rubi",
-    media: "border-ambar/40 bg-ambar/10 text-ambar",
+    media: "border-ambar/40 bg-ambar/10 text-estado-ambar",
     baja: "border-pino/40 bg-pino/10 text-pino",
 };
 
@@ -145,7 +145,7 @@ function TarjetaExpediente({ exp }: { exp: ExpedienteListaItemSerializable }) {
                         {primerNombre}
                     </span>
                 )}
-                <span className="font-mono text-[13px] font-bold text-cielo">{exp.codigo}</span>
+                <span className="font-mono text-[13px] font-bold text-estado-cielo">{exp.codigo}</span>
                 <b className="text-sm text-body">{exp.identificador}</b>
                 <span className="text-xs text-muted">{exp.plataforma}</span>
                 {exp.cerrado ? (

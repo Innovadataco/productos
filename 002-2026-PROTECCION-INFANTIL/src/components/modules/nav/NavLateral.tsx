@@ -55,7 +55,7 @@ const TEMAS: Record<Familia, TemaLateral> = {
                     ? "bg-ambar text-white shadow-lg shadow-ambar/25 dark:bg-ambar dark:shadow-ambar/20"
                     : "accent-gradient text-white shadow-lg shadow-cielo/25 dark:shadow-cielo/20"
                 : esPagos
-                    ? "text-ambar hover:bg-ambar/10 dark:text-ambar dark:hover:bg-ambar/20 hover:text-ambar"
+                    ? "text-estado-ambar hover:bg-ambar/10 dark:text-ambar dark:hover:bg-ambar/20 hover:text-estado-ambar"
                     : "text-muted hover:bg-tinta/5 hover:text-body",
         grupo: (conActivo) => (conActivo ? "text-body" : "text-muted hover:bg-tinta/5 hover:text-body"),
     },
@@ -74,8 +74,8 @@ const TEMAS: Record<Familia, TemaLateral> = {
         fallback: InicioIcon,
         footer: false,
         enlace: (active) =>
-            active ? "bg-cielo text-acento-ink shadow-lg shadow-cielo/25" : "text-muted hover:bg-cielo/10 hover:text-cielo",
-        grupo: (conActivo) => (conActivo ? "text-cielo" : "text-muted hover:bg-cielo/10 hover:text-cielo"),
+            active ? "bg-cielo text-acento-ink shadow-lg shadow-cielo/25" : "text-muted hover:bg-cielo/10 hover:text-estado-cielo",
+        grupo: (conActivo) => (conActivo ? "text-estado-cielo" : "text-muted hover:bg-cielo/10 hover:text-estado-cielo"),
     },
 };
 
@@ -234,8 +234,8 @@ function GrupoLateral({
     const esGrupoPagos = hijos.some((h) => h.href.startsWith("/dashboard/admin/pagos/"));
     const claseBoton = esGrupoPagos
         ? conActivo
-            ? "text-ambar"
-            : "text-ambar hover:bg-ambar/10 hover:text-ambar"
+            ? "text-estado-ambar"
+            : "text-estado-ambar hover:bg-ambar/10 hover:text-estado-ambar"
         : tema.grupo(conActivo);
 
     return (

@@ -176,7 +176,7 @@ export default function PasoCursosColegio() {
                                             type="button"
                                             onClick={() => inactivar(c.id)}
                                             disabled={cambiando === c.id}
-                                            className="rounded-md border border-tinta/20 px-2 py-1 text-xs text-muted hover:border-ambar hover:text-ambar"
+                                            className="rounded-md border border-tinta/20 px-2 py-1 text-xs text-muted hover:border-ambar hover:text-estado-ambar"
                                         >
                                             Quitar
                                         </button>

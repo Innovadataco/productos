@@ -62,9 +62,9 @@ function estadoBadge(estado: Solicitud["estado"]) {
     const base = "rounded-full px-2.5 py-0.5 text-xs font-medium";
     switch (estado) {
         case "PENDIENTE":
-            return `${base} bg-ambar/10 text-ambar`;
+            return `${base} bg-ambar/10 text-estado-ambar`;
         case "ASIGNADA":
-            return `${base} bg-cielo/10 text-cielo`;
+            return `${base} bg-cielo/10 text-estado-cielo`;
         case "RESUELTA":
             return `${base} bg-pino/10 text-pino`;
         default:
@@ -77,14 +77,14 @@ function TipoBadge({ tipo }: { tipo: TipoFiltro }) {
     const base = "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium";
     if (tipo === "CONSOLIDACION_EXPEDIENTE") {
         return (
-            <span className={`${base} bg-ambar/10 text-ambar`} data-testid="badge-consolidacion">
+            <span className={`${base} bg-ambar/10 text-estado-ambar`} data-testid="badge-consolidacion">
                 <Layers className="h-3 w-3" aria-hidden />
                 Consolidación
             </span>
         );
     }
     return (
-        <span className={`${base} bg-cielo/10 text-cielo`} data-testid="badge-revision">
+        <span className={`${base} bg-cielo/10 text-estado-cielo`} data-testid="badge-revision">
             <FileText className="h-3 w-3" aria-hidden />
             Revisión
         </span>
@@ -422,7 +422,7 @@ function FilaConsolidacion({ item }: { item: ItemConsolidacion }) {
             </td>
             <td className="px-4 py-3 font-mono text-xs text-body">{item.identificadorPrincipal}</td>
             <td className="px-4 py-3">
-                <span className="rounded-full bg-ambar/10 px-2.5 py-0.5 text-xs font-medium text-ambar">
+                <span className="rounded-full bg-ambar/10 px-2.5 py-0.5 text-xs font-medium text-estado-ambar">
                     {item.estadoAprobacion}
                 </span>
             </td>

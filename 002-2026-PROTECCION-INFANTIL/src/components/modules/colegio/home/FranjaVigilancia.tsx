@@ -53,7 +53,7 @@ export function FranjaVigilancia({ ultimaSenal, motor, reportesSemana, deltaSema
                 <div className="sm:max-w-xs">
                     <dt className="microetiqueta">Estado del sistema</dt>
                     <dd className="mt-0.5 text-sm">
-                        <span className={`font-medium ${motor.motorVivo ? "text-body" : "text-ambar"}`}>
+                        <span className={`font-medium ${motor.motorVivo ? "text-body" : "text-estado-ambar"}`}>
                             {motor.motorVivo ? "Clasificación activa" : "Clasificación en pausa"}
                         </span>
                         <span className="mt-0.5 block text-xs text-muted">

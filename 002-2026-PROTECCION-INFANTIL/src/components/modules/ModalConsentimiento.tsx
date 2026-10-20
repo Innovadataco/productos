@@ -215,7 +215,7 @@ export function ModalConsentimiento({
                             >
                                 <span className="text-xs font-medium text-muted">Sigue bajando para poder aceptar</span>
                                 <svg
-                                    className="h-5 w-5 animate-bounce text-cielo motion-reduce:animate-none"
+                                    className="h-5 w-5 animate-bounce text-estado-cielo motion-reduce:animate-none"
                                     viewBox="0 0 24 24"
                                     fill="none"
                                     stroke="currentColor"

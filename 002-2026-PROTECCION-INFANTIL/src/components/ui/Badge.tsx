@@ -15,11 +15,11 @@ interface BadgeProps {
 // la variante `dark:`. La conducta no cambia: cada variante muestra el MISMO
 // estado que antes, y el estado se lee por texto (children) además del color.
 const variantClasses: Record<BadgeVariant, string> = {
-    default: "bg-cielo/10 text-cielo",
+    default: "bg-cielo/10 text-estado-cielo",
     success: "bg-pino/10 text-pino",
-    warning: "bg-ambar/10 text-ambar",
+    warning: "bg-ambar/10 text-estado-ambar",
     danger: "bg-rubi/10 text-rubi",
-    info: "bg-cielo/10 text-cielo",
+    info: "bg-cielo/10 text-estado-cielo",
     neutral: "bg-tinta/10 text-muted",
 };
 

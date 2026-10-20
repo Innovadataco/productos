@@ -22,7 +22,7 @@ export const LABELS_SCORE: Record<ScoreGravedad, string> = {
 
 export const COLORES_SCORE: Record<ScoreGravedad, string> = {
     VERDE: "bg-pino/10 text-pino border-pino/30",
-    AMARILLO: "bg-ambar/10 text-ambar border-ambar/30",
+    AMARILLO: "bg-ambar/10 text-estado-ambar border-ambar/30",
     ROJO: "bg-rubi/10 text-rubi border-rubi/30",
 };
 

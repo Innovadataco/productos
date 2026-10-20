@@ -177,7 +177,7 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
         <div className="space-y-6">
             <GlassCard className="border-l-4 border-l-cielo p-4">
                 <p className="text-sm font-medium text-body">
-                    Motor activo: <span className="text-cielo">RÚBRICA</span>
+                    Motor activo: <span className="text-estado-cielo">RÚBRICA</span>
                 </p>
                 <p className="text-xs text-muted">
                     El sandbox ejecuta el mismo motor multi-modelo que producción.
@@ -202,7 +202,7 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
                         <button
                             type="button"
                             onClick={() => setTexto(EXAMPLE_TEXT)}
-                            className="text-xs text-cielo hover:underline"
+                            className="text-xs text-estado-cielo hover:underline"
                         >
                             Cargar ejemplo
                         </button>
@@ -216,7 +216,7 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
                         <button
                             type="button"
                             onClick={resetToBase}
-                            className="text-xs text-cielo hover:underline"
+                            className="text-xs text-estado-cielo hover:underline"
                         >
                             Restaurar configuración actual
                         </button>

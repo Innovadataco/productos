@@ -197,7 +197,7 @@ export function DirectorioProfesionales({
             )}
 
             {error && (
-                <div className="rounded-xl bg-ambar/10 dark:bg-ambar/10 p-4 text-sm text-ambar dark:text-ambar">
+                <div className="rounded-xl bg-ambar/10 dark:bg-ambar/10 p-4 text-sm text-estado-ambar dark:text-ambar">
                     {error}
                 </div>
             )}

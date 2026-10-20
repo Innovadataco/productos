@@ -123,7 +123,7 @@ export function SolicitudAcciones({
                 </Button>
             </div>
             {error && (
-                <p role="alert" className="mt-2 text-xs text-ambar">
+                <p role="alert" className="mt-2 text-xs text-estado-ambar">
                     {error}
                 </p>
             )}

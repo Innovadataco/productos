@@ -222,7 +222,7 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                                                 Ver documento
                                             </a>
                                         ) : (
-                                            <p className="mt-2 text-xs text-ambar">
+                                            <p className="mt-2 text-xs text-estado-ambar">
                                                 Sin documento — no se puede marcar «cumple».
                                             </p>
                                         )}

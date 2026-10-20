@@ -234,7 +234,7 @@ export function CategoriaGruposEditor() {
                                     {grupo.categorias.map((cat) => (
                                         <span
                                             key={cat}
-                                            className="inline-flex items-center gap-1 rounded-full bg-cielo/10 px-2 py-1 text-[10px] font-medium text-cielo"
+                                            className="inline-flex items-center gap-1 rounded-full bg-cielo/10 px-2 py-1 text-[10px] font-medium text-estado-cielo"
                                         >
                                             {CATEGORIA_LABELS[cat] || cat}
                                             <Tooltip content={`Quitar ${CATEGORIA_LABELS[cat] || cat}`}>

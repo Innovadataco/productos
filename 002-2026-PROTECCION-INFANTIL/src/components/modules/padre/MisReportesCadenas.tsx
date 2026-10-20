@@ -98,7 +98,7 @@ export function MisReportesCadenas() {
         void cargar();
     }, [cargar]);
 
-    if (error) return <p className="text-sm text-ambar">{error}</p>;
+    if (error) return <p className="text-sm text-estado-ambar">{error}</p>;
     if (cadenas === null) return <Cargando texto="Cargando tus reportes…" />;
     if (cadenas.length === 0) {
         return (

@@ -142,7 +142,7 @@ export default function GuiasPendientesClient() {
                                     <button
                                         type="button"
                                         onClick={() => setPreview(g)}
-                                        className="rounded-md bg-cielo/10 px-3 py-1.5 text-xs font-medium text-cielo hover:bg-cielo/20"
+                                        className="rounded-md bg-cielo/10 px-3 py-1.5 text-xs font-medium text-estado-cielo hover:bg-cielo/20"
                                     >
                                         Ver guía
                                     </button>
@@ -227,7 +227,7 @@ function PreviewGuiaModal({ guia, onClose }: { guia: Guia; onClose: () => void }
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-papel p-6 shadow-xl">
                 <div className="mb-4 flex items-center justify-between">
-                    <span className="rounded-full bg-cielo/10 px-3 py-1 text-xs font-semibold text-cielo">{guia.categoriaBadgeTexto}</span>
+                    <span className="rounded-full bg-cielo/10 px-3 py-1 text-xs font-semibold text-estado-cielo">{guia.categoriaBadgeTexto}</span>
                     <button type="button" onClick={onClose} className="text-2xl text-muted hover:text-body">×</button>
                 </div>
                 <h2 className="text-2xl font-bold text-body">{guia.tituloEmocional}</h2>
@@ -236,7 +236,7 @@ function PreviewGuiaModal({ guia, onClose }: { guia: Guia; onClose: () => void }
                 <div className="mt-6 space-y-4">
                     {pasos.map((p) => (
                         <div key={p.orden} className="flex gap-3">
-                            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-cielo/10 text-xs font-bold text-cielo">{p.orden}</span>
+                            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-cielo/10 text-xs font-bold text-estado-cielo">{p.orden}</span>
                             <div>
                                 <p className="font-semibold text-body">{p.titulo}</p>
                                 <p className="text-sm text-muted">{p.descripcion}</p>
