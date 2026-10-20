@@ -3,6 +3,9 @@ import {
     authRegisterSchema,
     recuperarSolicitarSchema,
     restablecerPasswordSchema,
+    crearReporteSchema,
+    textoReporteTieneMultimedia,
+    MENSAJE_SOLO_TEXTO,
 } from "./validators";
 
 describe("authRegisterSchema", () => {
@@ -154,5 +157,81 @@ describe("restablecerPasswordSchema", () => {
             extra: "campo no permitido",
         });
         expect(result.success).toBe(false);
+    });
+});
+
+// SPEC-893 · CANDADO del invariante SOLO-TEXTO. Muere con el defecto: sin el `.refine`
+// de `crearReporteSchema.texto`, los casos de multimedia pasarían (success true) y estos
+// `toBe(false)` se pondrían rojos (control positivo).
+describe("crearReporteSchema · invariante SOLO-TEXTO (SPEC-893)", () => {
+    const base = {
+        identificador: "+573001112233",
+        plataforma: "whatsapp",
+        texto: "Vi a un adulto pidiendo fotos a un menor por WhatsApp al 3001112233.",
+        fechaIncidente: new Date().toISOString(),
+        ciudad: "Bogotá",
+        pais: "Colombia",
+    };
+    const parseTexto = (texto: string) => crearReporteSchema.safeParse({ ...base, texto });
+
+    it("ACEPTA prosa legítima que cita un teléfono y un nick (no hay falso positivo)", () => {
+        expect(parseTexto("El usuario @juan_123 le escribió al 3001234567 pidiendo fotos a mi hija.").success).toBe(true);
+    });
+
+    it("ACEPTA prosa que DESCRIBE multimedia sin embeberla", () => {
+        expect(parseTexto("Me dijeron que le mandó una foto por WhatsApp; yo no la vi.").success).toBe(true);
+    });
+
+    it("RECHAZA un data:-URI base64 (imagen embebida) con el mensaje neutral", () => {
+        const r = parseTexto("Mire esto: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAoNUEVAAAAASUVORK5CYII=");
+        expect(r.success).toBe(false);
+        if (!r.success) {
+            expect(r.error.issues.some((i) => i.message === MENSAJE_SOLO_TEXTO)).toBe(true);
+        }
+    });
+
+    it("RECHAZA un blob base64 crudo largo (≥200 chars, sin prefijo data:)", () => {
+        const blob = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAoNUEVA".repeat(6); // 240 chars contiguos, alfabeto base64
+        expect(parseTexto(`adjunto ${blob}`).success).toBe(false);
+    });
+
+    it("RECHAZA un enlace a imagen (URL con extensión .jpg)", () => {
+        expect(parseTexto("La foto está en http://x.com/foto.jpg según me contaron.").success).toBe(false);
+    });
+
+    it("RECHAZA un enlace a video (.mp4)", () => {
+        expect(parseTexto("https://ejemplo.com/clip.mp4").success).toBe(false);
+    });
+
+    it("ACEPTA un enlace que NO es multimedia (fuera del alcance del invariante)", () => {
+        expect(parseTexto("El perfil es https://facebook.com/perfil-sospechoso y pedía fotos.").success).toBe(true);
+    });
+
+    it("RECHAZA texto de más de 2000 caracteres (alineado a AGENTS.md)", () => {
+        const largo = "texto legitimo ".repeat(150); // 2250 chars con espacios (no es blob)
+        expect(largo.length).toBeGreaterThan(2000);
+        expect(parseTexto(largo).success).toBe(false);
+    });
+
+    it("ACEPTA exactamente el límite de 2000 caracteres sin multimedia", () => {
+        const mil = "ab ".repeat(666) + "ab"; // 1998 + 2 = 2000, con espacios (ni blob ni exceso)
+        expect(mil.length).toBe(2000);
+        expect(parseTexto(mil).success).toBe(true);
+    });
+});
+
+describe("textoReporteTieneMultimedia (SPEC-893 · predicado puro)", () => {
+    it("true para data:-URI, blob base64 largo y URL multimedia", () => {
+        expect(textoReporteTieneMultimedia("data:image/jpeg;base64,/9j/4AAQSkZJRg==")).toBe(true);
+        expect(textoReporteTieneMultimedia("x".repeat(250))).toBe(true);
+        expect(textoReporteTieneMultimedia("mirá https://a.b/c.WEBP ahí")).toBe(true);
+        expect(textoReporteTieneMultimedia("audio en http://a.b/v.mp3")).toBe(true);
+    });
+
+    it("false para prosa, teléfono, nick y URL no-multimedia", () => {
+        expect(textoReporteTieneMultimedia("Le pidió fotos a mi hija por el chat, al 3001234567.")).toBe(false);
+        expect(textoReporteTieneMultimedia("El nick es @pedro.perez_99 en la plataforma.")).toBe(false);
+        expect(textoReporteTieneMultimedia("El perfil: https://instagram.com/usuario")).toBe(false);
+        expect(textoReporteTieneMultimedia("Mencionó un archivo foto.jpg pero no lo adjuntó.")).toBe(false);
     });
 });
