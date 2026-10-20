@@ -10,6 +10,7 @@ import {
 import { logAudit } from "@/lib/audit";
 import { programar } from "@/lib/notificaciones";
 import { logger } from "@/lib/logger";
+import { getParametroSistemaValor } from "@/lib/parametros";
 import { descifrarCampoReporte } from "./descifrar-contenido";
 import { CodigoAccesoContenidoRepository } from "../repositories/codigo-acceso";
 import { contenidoIdDeAnotacion } from "../anotacion-texto";
@@ -32,8 +33,18 @@ import { contenidoIdDeAnotacion } from "../anotacion-texto";
  * cliente); un pase de un expediente no abre otro.
  */
 
-const VIGENCIA_CODIGO_MS = 30 * 60 * 1000;
-const VIGENCIA_SESION_MS = 15 * 60 * 1000;
+// SPEC-882 (I-373): las ventanas de seguridad del pase son PARAMETRIZABLES (ParametroSistema) para que el
+// admin/Calidad las ajuste sin desplegar. El default vive acá y se usa si el parámetro falta o es inválido.
+// Mismo patrón que `padre.texto.*_minutos` (stepup-codigo.ts).
+const VIGENCIA_CODIGO_DEFAULT_MIN = 30; // pase sin canjear
+const VIGENCIA_SESION_DEFAULT_MIN = 15; // sesión de visualización tras canjear
+
+/** Minutos→ms de la ventana `clave`, con fallback a `defaultMin` si el parámetro falta o no es un entero > 0. */
+async function ventanaPaseMs(clave: string, defaultMin: number): Promise<number> {
+    const crudo = parseInt((await getParametroSistemaValor(clave)) ?? String(defaultMin), 10);
+    const min = Number.isFinite(crudo) && crudo > 0 ? crudo : defaultMin;
+    return min * 60 * 1000;
+}
 
 // NOTA (deuda): las claves de evento conservan «reporte» por compatibilidad con las
 // reglas de notificación ya sembradas; renombrarlas a «expediente» exige nuevas
@@ -88,7 +99,7 @@ export async function solicitarCodigoAcceso(params: {
 
     const codigo = generarCodigoAcceso();
     const ahora = new Date();
-    const vigenteHasta = new Date(ahora.getTime() + VIGENCIA_CODIGO_MS);
+    const vigenteHasta = new Date(ahora.getTime() + (await ventanaPaseMs("pase.vigencia_codigo_minutos", VIGENCIA_CODIGO_DEFAULT_MIN)));
 
     await prisma.$transaction(async (tx) => {
         // Un solo pase activo por EXPEDIENTE: la nueva solicitud expira los anteriores sin canjear.
@@ -175,7 +186,7 @@ export async function canjearCodigoAcceso(params: {
     }
 
     const tokenSesion = randomUUID();
-    const expiraEn = new Date(ahora.getTime() + VIGENCIA_SESION_MS);
+    const expiraEn = new Date(ahora.getTime() + (await ventanaPaseMs("pase.vigencia_sesion_minutos", VIGENCIA_SESION_DEFAULT_MIN)));
     const actualizado = await prisma.codigoAccesoContenido.updateMany({
         where: { id: registro.id, canjeadoEn: null },
         data: {
