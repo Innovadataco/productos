@@ -6,6 +6,12 @@
 services:
   db:
     image: pgvector/pgvector:pg16
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-db
     restart: always
     environment:
@@ -23,6 +29,10 @@ services:
       timeout: 5s
       retries: 10
 
+  # SPEC-886 (I-438): TODOS los servicios (app + workers + db) llevan `logging:` con rotación
+  # (max-size 10m × max-file 5 ⇒ ~50 MB/servicio tope). El default json-file SIN config perdía los logs al
+  # recrear el contenedor (cada deploy) y crecía sin tope (riesgo de disco); esto da rotación + histórico corto.
+  # Agregación durable a un colector sería un paso 2 aparte.
   app:
     build:
       context: .
@@ -31,6 +41,12 @@ services:
         # Sello de versión (spec 102): deploy-prod.sh exporta APP_BUILD_SHA.
         APP_BUILD_SHA: ${APP_BUILD_SHA:-}
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-app
     restart: always
     env_file: .env.production
@@ -67,6 +83,12 @@ services:
 
   worker:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-worker
     restart: always
     env_file: .env.production
@@ -98,6 +120,12 @@ services:
   # si se levanta dos veces, la segunda instancia sale con código 2.
   monitor:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-monitor
     restart: always
     env_file: .env.production
@@ -124,6 +152,12 @@ services:
   # propio; envía reportes reales al endpoint público inyectando IPs de test RFC 5737.
   simulador-abuso:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-simulador-abuso
     restart: always
     env_file: .env.production
@@ -150,6 +184,12 @@ services:
   # vía advisory lock; envía EMAIL por Resend e IN_APP localmente.
   pi-notificaciones:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-notificaciones
     restart: always
     env_file: .env.production
@@ -177,6 +217,12 @@ services:
   # (montado por consistencia; no genera PDFs).
   pi-senal-comunitaria:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-senal-comunitaria
     restart: always
     env_file: .env.production
@@ -205,6 +251,12 @@ services:
   # purga de retención de snapshots. Advisory lock propio (instancia única).
   pi-analisis-score:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-analisis-score
     restart: always
     env_file: .env.production
@@ -232,6 +284,12 @@ services:
   # Advisory lock propio: una segunda instancia sale con código 2.
   pi-vigencia:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-vigencia
     restart: always
     env_file: .env.production
@@ -261,6 +319,12 @@ services:
   # siempre. Corrida diaria; advisory lock propio (instancia única).
   pi-verificacion-vencimiento:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-verificacion-vencimiento
     restart: always
     env_file: .env.production
@@ -289,6 +353,12 @@ services:
   # `cita.barrido.cron`; instancia única por advisory lock 123456801.
   pi-citas:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-citas
     restart: always
     env_file: .env.production
@@ -315,6 +385,12 @@ services:
   # (frecuenciaMin). Advisory lock propio: instancia única.
   pi-analisis-reglas:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-analisis-reglas
     restart: always
     env_file: .env.production
@@ -345,6 +421,12 @@ services:
   # (123456793): una segunda instancia sale con código 2.
   pi-expediente-motor:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-expediente-motor
     restart: always
     env_file: .env.production
@@ -374,6 +456,12 @@ services:
   # (123456799): una segunda instancia sale con código 2.
   pi-analisis-expediente:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-analisis-expediente
     restart: always
     env_file: .env.production
@@ -403,6 +491,12 @@ services:
   # (123456795): una segunda instancia sale con código 2.
   pi-anomalias:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-anomalias
     restart: always
     env_file: .env.production
@@ -433,6 +527,12 @@ services:
   # si el archivo tiene > 90 s se marca unhealthy y restart:always recicla.
   pi-sesiones:
     image: pi-app:${PI_APP_TAG:-latest}
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-sesiones
     restart: always
     env_file: .env.production
