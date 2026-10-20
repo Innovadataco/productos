@@ -12,7 +12,7 @@
  *
  * Integración (BD de test). NO toca prod.
  */
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { GET } from "./route";
@@ -25,7 +25,30 @@ async function llamar() {
 
 describe("SPEC-874 (I-415) · GET /api/plataformas sin precondición: 200 siempre", { timeout: 30_000 }, () => {
     beforeEach(async () => resetDatabase());
-    afterAll(async () => prisma.$disconnect());
+    // SPEC-881 (I-447) · HIGIENE. Este candado MUTA la tabla Plataforma, que `resetDatabase` PRESERVA
+    // (está en EXCLUDED_TABLES) y `asegurarPlataformas` re-siembra con `upsert({ update: {} })` —o sea, NO
+    // sana el `esActiva` que apaga el test 1 (`updateMany`) NI borra las filas `-874` que crea el test 2—.
+    // Sin restaurar, esos cambios SOBREVIVEN al reset (y a toda la corrida: la BD de test es por-worktree y
+    // persistente) y poluyen a quien lea el catálogo en el MISMO proceso sin shards —p. ej.
+    // `dal/repositories/plataforma.test.ts`, cuyo `findActivas` espera WhatsApp/Instagram ACTIVAS—; CI
+    // shardea y lo esconde (verde falso). Restauramos el catálogo al baseline (8 activas, sin `-874`) tras
+    // cada test: borrar las `-874` y reactivar todo.
+    afterEach(async () => {
+        await prisma.plataforma.deleteMany({ where: { clave: { endsWith: "-874" } } });
+        await prisma.plataforma.updateMany({ data: { esActiva: true } });
+    });
+    // CANDADO que muere con el defecto (NO circular: observa el resultado del `afterEach`, no limpia acá). Si
+    // se quita la restauración de arriba, estas cuentas quedan > 0 al terminar el archivo y el candado rojo.
+    afterAll(async () => {
+        try {
+            const residuo874 = await prisma.plataforma.count({ where: { clave: { endsWith: "-874" } } });
+            const inactivas = await prisma.plataforma.count({ where: { esActiva: false } });
+            expect(residuo874, "no deja filas -874 que poluyan otros tests en el mismo proceso").toBe(0);
+            expect(inactivas, "no deja plataformas del catálogo inactivas (rompería findActivas)").toBe(0);
+        } finally {
+            await prisma.$disconnect();
+        }
+    });
 
     it("catálogo SIN ACTIVAS → 200 con lista vacía (es un 200, no un error): la UI lo trata como estado neutro, sin reintento", async () => {
         // `resetDatabase()` PRESERVA la tabla Plataforma (catálogo estático) y `asegurarPlataformas()` la
