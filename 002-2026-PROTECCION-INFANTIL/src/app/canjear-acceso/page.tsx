@@ -80,6 +80,11 @@ export default function CanjearAccesoPage() {
                 <span aria-hidden>←</span> Volver a mi panel
             </Link>
             <h1 className="mt-4 text-2xl font-bold text-body">Abrir un caso con un pase</h1>
+            {/* SPEC-882 (I-373): «15 minutos» es el DEFAULT de `pase.vigencia_sesion_minutos` (ParametroSistema,
+                leído en codigo-acceso.ts). Coincide con el valor real en estado estable porque el seed re-sana ese
+                parámetro al default en cada deploy (update:{ valor }). Si algún día se vuelve PERSISTENTE
+                (update:{}), este copy debe leer el valor real o divergirá — cablearlo quedó DEFERIDO (decisión de
+                Jelkin). */}
             <p className="mt-2 text-sm text-muted">
                 Pídale el pase al padre o a la madre. Son 8 caracteres. Al abrirlo podrá leer el caso completo durante
                 15 minutos.
