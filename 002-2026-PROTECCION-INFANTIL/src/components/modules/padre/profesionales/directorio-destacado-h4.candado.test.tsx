@@ -51,6 +51,7 @@ function dto(over: Partial<PerfilPublicoDTO> & { id: string; nombreVisible: stri
         emiteFactura: false,
         ciudad: { id: "c1", nombre: "Bogotá", pais: "Colombia" },
         tieneHorariosDisponibles: false,
+        esNuevo: true,
         ...over,
     };
 }

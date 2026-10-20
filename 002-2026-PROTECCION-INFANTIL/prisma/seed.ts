@@ -121,6 +121,9 @@ async function seedParametrosPadre() {
         // constante en el código — el admin lo cambia sin desplegar. El mensaje
         // que ve el padre también se siembra: {{maximo}} se reemplaza al mostrarlo.
         { clave: "padre.hijos.maximo", valor: "5", tipo: TipoParametro.INTEGER, descripcion: "Máximo de menores que un padre puede registrar" },
+        // SPEC-872 (I-444): días desde el alta del perfil para pintar el sello «Nuevo en la red» en el
+        // directorio del padre. Recency: alta < N días ⇒ «Nuevo». Parametrizable (el admin lo cambia sin desplegar).
+        { clave: "directorio.profesional.dias_nuevo", valor: "30", tipo: TipoParametro.INTEGER, descripcion: "SPEC-872: días desde el alta para mostrar «Nuevo en la red» en el directorio (default 30)" },
         // SPEC-340 (A-68 §3.3-bis): el step-up del texto sensible. Dos relojes:
         // re-tapado (ergonomía, cliente) y umbral de contraseña (SERVIDOR).
         { clave: "padre.texto.retapado_minutos", valor: "10", tipo: TipoParametro.INTEGER, descripcion: "Minutos hasta que el texto revelado se vuelve a tapar solo" },

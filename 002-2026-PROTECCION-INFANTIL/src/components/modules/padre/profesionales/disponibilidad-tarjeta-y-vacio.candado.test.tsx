@@ -15,7 +15,7 @@ function dto(over: Partial<PerfilPublicoDTO> = {}): PerfilPublicoDTO {
         id: "p1", nombreVisible: "Dra. Prueba", fotoUrl: null, tituloProfesional: "Psicología",
         especialidades: ["Ansiedad"], rangoEtario: [], ciudadId: "c1", atiendeVirtual: true, atiendePresencial: false,
         aniosExperiencia: 5, presentacion: "", tarifaConsultaCOP: 120000, duracionMinutos: 45, emiteFactura: false,
-        ciudad: { id: "c1", nombre: "Bogotá", pais: "Colombia" }, tieneHorariosDisponibles: true, ...over,
+        ciudad: { id: "c1", nombre: "Bogotá", pais: "Colombia" }, tieneHorariosDisponibles: true, esNuevo: true, ...over,
     };
 }
 const card = (p: PerfilPublicoDTO) => <ProfesionalTarjeta p={p} hrefBase="/x" queryString="" precioPrimeraCitaCOP={100000} />;

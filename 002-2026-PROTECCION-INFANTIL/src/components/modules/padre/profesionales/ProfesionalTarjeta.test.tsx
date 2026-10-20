@@ -17,6 +17,7 @@ const perfil: PerfilPublicoDTO = {
     especialidades: ["Ansiedad", "Adolescencia"],
     rangoEtario: [], // SPEC-816: campo nuevo del DTO (no lo ejercita este test)
     tieneHorariosDisponibles: true, // SPEC-818: campo nuevo del DTO (no lo ejercita este test)
+    esNuevo: true, // SPEC-872: por defecto nuevo; el candado de abajo ejercita AMBOS valores
     ciudadId: "ciudad-bog",
     ciudad: { id: "ciudad-bog", nombre: "Bogotá", pais: "Colombia" },
     atiendeVirtual: true,
@@ -99,9 +100,17 @@ describe("ProfesionalTarjeta", () => {
         expect(texto).toContain("Ansiedad");
     });
 
-    it("siempre muestra «Nuevo en la red» (candado del brief · L3 sin encuestas)", () => {
-        render(<ProfesionalTarjeta p={perfil} hrefBase="/x" queryString="" precioPrimeraCitaCOP={50000} />);
-        expect(screen.getByText(/Nuevo en la red/)).toBeTruthy();
+    it("SPEC-872 (I-444): «Nuevo en la red» SOLO si esNuevo — ya no es incondicional (control positivo)", () => {
+        // Control positivo: un perfil NO nuevo (esNuevo:false) NO muestra el sello — el defecto de I-444
+        // (badge incondicional que mentía) muere acá: si volviera a ser siempre, esta aserción falla.
+        const { unmount } = render(
+            <ProfesionalTarjeta p={{ ...perfil, esNuevo: false }} hrefBase="/x" queryString="" precioPrimeraCitaCOP={50000} />,
+        );
+        expect(screen.queryByText(/Nuevo en la red/), "no-nuevo NO muestra el sello").toBeNull();
+        unmount();
+        // Y un perfil nuevo (esNuevo:true) SÍ lo muestra.
+        render(<ProfesionalTarjeta p={{ ...perfil, esNuevo: true }} hrefBase="/x" queryString="" precioPrimeraCitaCOP={50000} />);
+        expect(screen.getByText(/Nuevo en la red/), "nuevo SÍ muestra el sello").toBeTruthy();
     });
 
     it("preserva query string al construir el enlace", () => {

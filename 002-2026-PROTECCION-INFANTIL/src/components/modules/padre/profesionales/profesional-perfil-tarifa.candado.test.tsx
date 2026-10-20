@@ -28,6 +28,7 @@ const BASE: PerfilPublicoDTO = {
     especialidades: ["Ansiedad"],
     rangoEtario: [], // SPEC-816: campo nuevo del DTO (no lo ejercita este test)
     tieneHorariosDisponibles: true, // SPEC-818: campo nuevo del DTO (no lo ejercita este test)
+    esNuevo: true, // SPEC-872: campo nuevo del DTO (no lo ejercita este test)
     ciudadId: "c1",
     ciudad: { id: "c1", nombre: "Bogotá", pais: "Colombia" },
     atiendeVirtual: true,
