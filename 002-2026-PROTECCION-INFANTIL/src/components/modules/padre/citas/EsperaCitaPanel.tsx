@@ -28,11 +28,15 @@ const CORREO_SOPORTE = "gerencia@innovadataco.com";
 
 // SPEC-730 · el estado de una cita es PROCESO, nunca criticidad: cielo/pino/ámbar/tinta,
 // CERO rubí. `gris` = tinta neutro (estado pasado/cerrado — SPEC-749 FR-2).
+// SPEC-879 (barrido de contraste · followup de 876): como TEXTO sobre su propio tinte, los tokens CRUDOS
+// fallan AA en claro (medido: cielo 2.19 · ambar 3.29 · subtle 4.39); se usan las variantes legibles
+// `text-estado-*` (ink/700) y `text-muted`. `verde` (pino 4.74) YA pasa y NO se toca. El RELLENO (`bg-*/N`,
+// `border-*`) queda crudo: el defecto es el color como TEXTO, no el fondo.
 const TONO_CLASES: Record<TonoEspera, string> = {
     verde: "bg-pino/10 text-pino border-pino/30",
-    rojo: "bg-ambar/10 text-ambar border-ambar/40",
-    gris: "bg-tinta/5 text-subtle border-tinta/10",
-    espera: "bg-cielo/10 text-cielo border-cielo/30",
+    rojo: "bg-ambar/10 text-estado-ambar border-ambar/40",
+    gris: "bg-tinta/5 text-muted border-tinta/10",
+    espera: "bg-cielo/10 text-estado-cielo border-cielo/30",
 };
 import { GenerarPase } from "@/components/modules/padre/GenerarPase";
 import { Button } from "@/components/ui/Button";
@@ -311,7 +315,7 @@ function ReporteNoCumplio({
                 </p>
             </div>
             {fallo && (
-                <p className="cuerpo text-ambar" role="alert">
+                <p className="cuerpo text-estado-ambar" role="alert">
                     No pudimos registrar tu aviso. Intenta de nuevo.
                 </p>
             )}
@@ -531,7 +535,7 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 controlamos: cero «sala/segura/caduca/un solo uso»; «no lo compartas» es indicación,
                 no garantía. La `url` solo viene en PUBLICADO (derivada y gateada en el DTO). */}
             {confirmadaViva && cita.enlace?.estado === "SIN_PUBLICAR" && (
-                <section className="rounded-2xl border border-ambar/40 bg-ambar/10 p-4 sm:p-5 text-ambar">
+                <section className="rounded-2xl border border-ambar/40 bg-ambar/10 p-4 sm:p-5 text-estado-ambar">
                     <p className="etiqueta">Acceso a la reunión</p>
                     <p className="cuerpo mt-1 text-body">
                         Tu cita está confirmada. El acceso a la reunión aparecerá aquí. Vuelve a esta
@@ -541,7 +545,7 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
             )}
             {confirmadaViva && cita.enlace?.estado === "PUBLICADO" && cita.enlace.url && (
                 <section className="rounded-2xl border border-cielo/30 bg-cielo/10 p-4 sm:p-5 space-y-2">
-                    <p className="etiqueta text-cielo">Acceso a la reunión</p>
+                    <p className="etiqueta text-estado-cielo">Acceso a la reunión</p>
                     <p className="cuerpo text-body">Ya puedes entrar a tu reunión.</p>
                     <a
                         href={cita.enlace.url}

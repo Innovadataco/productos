@@ -80,7 +80,7 @@ export function ProfesionalTarjeta({
                     />
                 ) : (
                     <div
-                        className="h-14 w-14 rounded-full bg-cielo/15 dark:bg-cielo/30 flex items-center justify-center text-cielo dark:text-cielo text-lg font-semibold"
+                        className="h-14 w-14 rounded-full bg-cielo/15 dark:bg-cielo/30 flex items-center justify-center text-estado-cielo text-lg font-semibold"
                         aria-hidden="true"
                     >
                         {p.nombreVisible.charAt(0).toUpperCase()}
@@ -108,7 +108,7 @@ export function ProfesionalTarjeta({
                 se COBRA —el estándar de la primera cita—, el mismo que muestra
                 la ficha. Antes decía «Consulta» sobre la tarifa informativa. */}
             <div className="rounded-xl bg-cielo/10 dark:bg-cielo/10 px-3 py-2">
-                <p className="text-xs text-cielo dark:text-cielo">
+                <p className="text-xs text-estado-cielo">
                     Primera cita{" "}
                     <span className="font-semibold">{CURRENCY_COP.format(precioPrimeraCitaCOP)}</span>
                     <span className="text-muted"> · {p.duracionMinutos} min</span>
@@ -171,7 +171,7 @@ export function ProfesionalTarjeta({
                     </span>
                 )}
                 {p.esNuevo && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-ambar dark:text-ambar">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-estado-ambar">
                         ✨ Nuevo en la red
                     </span>
                 )}
