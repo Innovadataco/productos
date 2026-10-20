@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo, puedeAccederAModulo } from "@/lib/permisos-modulos";
+import { puedeGestionarReporte } from "@/lib/operadores/permisos";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
 import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
@@ -53,6 +55,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
         const reporteId = parsedId.data;
+
+        // SPEC-891 (IDOR · pertenencia por reporte) ANTES de cargar el expediente ajeno: `bandeja_reportes`
+        // solo dice "puede ver bandejas", no "ESTE caso". Sin esto, cualquier OPERADOR leía el expediente
+        // (y, con el módulo de revelado, el textoOriginal + PII) de reportes de OTRO tenant. ADMIN pasa;
+        // OPERADOR dueño (operadorId). COMITE no llega acá (no tiene bandeja_reportes). Mismo patrón que baja.
+        const permisos = await new ReporteRepository().findPermisosGestion(reporteId);
+        if (!permisos) {
+            return NextResponse.json(
+                { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
+                { status: 404 }
+            );
+        }
+        if (!puedeGestionarReporte(user, permisos)) {
+            return NextResponse.json(
+                { error: { message: "No tiene permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
 
         const datos = await cargarDatosExpediente(reporteId);
         if (!datos) {

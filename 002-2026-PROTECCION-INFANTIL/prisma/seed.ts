@@ -3708,8 +3708,9 @@ async function main() {
             campos: ["categorias", "confianza", "usoCascada", "modeloCascada", "latenciaMs", "promptTokens", "responseTokens"],
             camposGated: ["rawResponse"] },
         { orden: 8, fase: "D", faseNombre: "Cierre", clave: "anonimizacion", nombre: "Anonimización PII", icono: "mask", capa: 1, gated: false,
-            campos: ["contienePii", "piiDetectada", "anonimizacionValidadaPorId", "anonimizacionValidadaEn"],
-            camposGated: ["textoOriginal"] },
+            // SPEC-891 (IDOR): contienePii/piiDetectada (PII literal) son GATED, no ungated.
+            campos: ["anonimizacionValidadaPorId", "anonimizacionValidadaEn"],
+            camposGated: ["contienePii", "piiDetectada", "textoOriginal"] },
         { orden: 9, fase: "D", faseNombre: "Cierre", clave: "decision", nombre: "Decisión", icono: "gavel", capa: 2, gated: false,
             campos: ["transiciones"] },
         { orden: 10, fase: "D", faseNombre: "Cierre", clave: "finalizacion", nombre: "Finalización", icono: "flag", capa: 1, gated: false,
