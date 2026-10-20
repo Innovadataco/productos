@@ -468,6 +468,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/monitoreo/latido-motor.candado.test.ts",
     "src/lib/servicios/docker-adapter.test.ts",
     "src/lib/servicios/compose.ratchet.test.ts",
+    "src/lib/servicios/logging-rotacion.candado.test.ts",
     "src/lib/servicios/tick-vida.ratchet.test.ts",
     "src/lib/servicios/api-guard.ratchet.test.ts",
     "src/lib/dal/services/session-log.unit.test.ts",
