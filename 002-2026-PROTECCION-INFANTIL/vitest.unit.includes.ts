@@ -199,6 +199,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/dashboard/colegio/cursos/CursosPageClient.test.tsx",
     "src/app/dashboard/colegio/configuracion/ConfiguracionPageClient.test.tsx",
     "src/app/dashboard/colegio/profesores/ProfesoresPageClient.test.tsx",
+    "src/app/dashboard/colegio/profesores/[id]/plataformas-estado-forma.candado.test.tsx",
     // SPEC-512: candado de voz «la cuenta» (identificador/nick → cuenta en padre+público).
     "src/components/modules/voz-cuenta.candado.test.ts",
     // SPEC-669: candado de clase — el servicio del padre no afirma alcance compartido (ficha propia · D-4).
