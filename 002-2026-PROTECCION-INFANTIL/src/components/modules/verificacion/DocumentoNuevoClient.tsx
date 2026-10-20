@@ -175,7 +175,7 @@ export function DocumentoNuevoClient({ data }: { data: DocumentoNuevoData }) {
                                 type="button"
                                 disabled={enviando}
                                 onClick={() => setModo("idle")}
-                                className="rounded-full bg-tinta/5 px-6 py-2 text-sm font-medium text-subtle transition hover:bg-tinta/10 hover:text-body"
+                                className="rounded-full bg-tinta/5 px-6 py-2 text-sm font-medium text-muted transition hover:bg-tinta/10 hover:text-body"
                             >
                                 Cancelar
                             </button>
@@ -232,7 +232,7 @@ export function DocumentoNuevoClient({ data }: { data: DocumentoNuevoData }) {
                                     setModo("idle");
                                     setObservacion("");
                                 }}
-                                className="rounded-full bg-tinta/5 px-6 py-2 text-sm font-medium text-subtle transition hover:bg-tinta/10 hover:text-body"
+                                className="rounded-full bg-tinta/5 px-6 py-2 text-sm font-medium text-muted transition hover:bg-tinta/10 hover:text-body"
                             >
                                 Cancelar
                             </button>

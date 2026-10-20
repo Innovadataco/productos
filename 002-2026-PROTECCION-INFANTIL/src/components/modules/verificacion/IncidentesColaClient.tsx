@@ -103,7 +103,7 @@ export function IncidentesColaClient() {
                         <span className="text-subtle">→</span>
                         <span className="font-mono text-subtle">{f.profesional.email}</span>
                     </div>
-                    <div className="mt-3 rounded-xl bg-tinta/5 p-3 text-xs text-subtle">
+                    <div className="mt-3 rounded-xl bg-tinta/5 p-3 text-xs text-muted">
                         {f.trazaCodigos === null
                             ? "Traza de códigos pendiente de instrumentar (SPEC-408 · brief §9 momento 6 futuro)."
                             : "Ver traza"}

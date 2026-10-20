@@ -227,7 +227,7 @@ function TabCuentas() {
                                 <div className="flex flex-wrap items-center gap-2">
                                     {/* SPEC-692: estado del PERFIL suspendido, tinta sobria (no rojo). */}
                                     {p.perfilEstado === "SUSPENDIDO" && (
-                                        <span className="rounded-full bg-tinta/10 px-3 py-1 text-xs font-medium text-subtle">
+                                        <span className="rounded-full bg-tinta/10 px-3 py-1 text-xs font-medium text-muted">
                                             Perfil suspendido
                                         </span>
                                     )}
@@ -307,7 +307,7 @@ function TabCuentas() {
                     <div className="glass w-full max-w-md rounded-3xl p-6 anim-entrada">
                         <h3 className="titular-seccion mb-1">Levantar suspensión</h3>
                         <p className="cuerpo mb-3 text-body">{modalLevantar.nombre ?? modalLevantar.email}</p>
-                        <p className="cuerpo mb-4 rounded-2xl bg-tinta/5 p-3 text-subtle">
+                        <p className="cuerpo mb-4 rounded-2xl bg-tinta/5 p-3 text-muted">
                             {modalLevantar.levantarSuspension?.resultado === "ACTIVO"
                                 ? "Al levantar la suspensión, el perfil queda ACTIVO."
                                 : `Al levantar la suspensión, el perfil queda VENCIDO: su verificación venció${

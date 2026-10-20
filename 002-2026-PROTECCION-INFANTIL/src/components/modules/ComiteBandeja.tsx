@@ -280,7 +280,7 @@ export function ComiteBandeja() {
             <div className="glass rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-tinta/5 text-subtle">
+                        <thead className="bg-tinta/5 text-muted">
                             <tr>
                                 <th className="px-4 py-3 font-medium">Tipo</th>
                                 <th className="px-4 py-3 font-medium">Número</th>
