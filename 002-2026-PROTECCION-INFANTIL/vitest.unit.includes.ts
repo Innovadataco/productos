@@ -61,6 +61,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-528: color de «dar de baja» por reversibilidad (rubí solo irreversible).
     "src/components/modules/baja-color-criticidad.candado.test.ts",
     "src/components/text-subtle-sobre-tinte.candado.test.ts",
+    // SPEC-879: token accent crudo (text-cielo/text-ambar) como texto + subtle sobre tinte, en las 2 superficies de cita.
+    "src/components/modules/padre/citas/contraste-crudo-sobre-tinte.candado.test.ts",
     // SPEC-529: tuteo interno (admin/comité validación/verificador) → usted, por clase.
     "src/components/modules/tuteo-interno.candado.test.ts",
     // SPEC-501 (CEO · Jelkin): padre + público hablan de «tú» (sin voseo); BFS del

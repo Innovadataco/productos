@@ -54,7 +54,13 @@ describe("SPEC-818 · chip de disponibilidad + vacío con salida", () => {
         );
         expect(rootSinHorarios, "la sin-horarios NO se atenúa (sin opacity/grayscale)").not.toMatch(/opacity-|grayscale|saturate-0/);
         expect(sinH.innerHTML, "sin horarios NO es criticidad: cero rubí").not.toMatch(/\brubi\b/);
-        expect(sinH.innerHTML, "sin horarios NO es alarma: cero ámbar-alarma en el chip").not.toMatch(/estado-ambar/);
+        // SPEC-879: la invariante «no alarma» es del CHIP (text-muted), no de toda la tarjeta. El badge
+        // «Nuevo en la red» es ámbar LEGÍTIMO (bg-ambar/10 + text-estado-ambar), ajeno a la disponibilidad;
+        // medir en innerHTML daba un falso positivo al pasar el badge al token legible (text-estado-ambar).
+        const chipSinHorarios = screen.getByText(/Sin horarios disponibles ahora/i).className;
+        expect(chipSinHorarios, "sin horarios NO es alarma: el chip es neutro, cero ámbar/rubí").not.toMatch(
+            /ambar|rubi/,
+        );
         // La tarjeta conserva el resto (no degradada): nombre + «Nuevo en la red».
         expect(screen.getByText("Dra. Prueba")).toBeTruthy();
         expect(screen.getByText(/Nuevo en la red/i)).toBeTruthy();
