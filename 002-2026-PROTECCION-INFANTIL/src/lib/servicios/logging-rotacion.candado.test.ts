@@ -1,12 +1,13 @@
 /**
- * CANDADO · SPEC-886 (I-438) · los servicios que SIRVEN rotan sus logs.
+ * CANDADO · SPEC-886 (I-438) · TODOS los servicios de prod rotan sus logs.
  *
  * El driver por defecto `json-file` SIN `max-size`/`max-file` perdía los logs al recrear el contenedor
  * (cada deploy) y crecía sin tope (riesgo de disco) → sin forense cuando algo revienta. Este candado exige
- * que cada servicio que SIRVE (imagen `pi-app`: la app + todos los workers) declare `logging` con
- * `max-size` en `docker-compose.prod.yml`. `db` (pgvector) queda fuera del alcance de esta SPEC.
+ * que CADA servicio de `docker-compose.prod.yml` —la app, todos los workers (imagen `pi-app`) Y la `db`
+ * (pgvector)— declare `logging` con `max-size`. db se incluyó por decisión del CEO: mismo riesgo de disco,
+ * mismo fix; no se deja el hueco.
  *
- * Control positivo: quitarle el bloque `logging` (o el `max-size`) a un serving service → rojo.
+ * Control positivo: quitarle el bloque `logging` (o el `max-size`) a cualquier servicio → rojo.
  * Reusa el parser por-servicio de `compose.ratchet.test.ts` (por línea, sin librería YAML nueva).
  */
 import { describe, it, expect } from "vitest";
@@ -45,34 +46,37 @@ function servicios(): Array<{ nombre: string; bloque: string }> {
     return out;
 }
 
-/** "Sirve" = corre la imagen de la app (app + todos los workers). db (pgvector) no sirve. */
-function sirve(bloque: string): boolean {
-    return /^\s*image:\s*pi-app:/m.test(bloque);
+function tieneRotacion(bloque: string): boolean {
+    const tieneLogging = /\n\s*logging:\s*$/m.test(bloque);
+    const tieneMaxSize = /\n\s*max-size:\s*["']?\d+\s*[kmg]b?["']?/i.test(bloque);
+    return tieneLogging && tieneMaxSize;
 }
 
-describe("SPEC-886 · rotación de logs en los servicios que sirven", () => {
-    const servidores = servicios().filter((s) => sirve(s.bloque));
+describe("SPEC-886 · rotación de logs en TODOS los servicios (app + workers + db)", () => {
+    const svcs = servicios();
 
-    it("sanidad del parseo: ≥12 serving services, incluye app y worker", () => {
-        const nombres = servidores.map((s) => s.nombre);
-        expect(nombres.length).toBeGreaterThanOrEqual(12);
+    it("sanidad del parseo: ≥13 servicios, incluye app, worker y db", () => {
+        const nombres = svcs.map((s) => s.nombre);
+        expect(nombres.length).toBeGreaterThanOrEqual(13);
         expect(nombres).toContain("app");
         expect(nombres).toContain("worker");
+        expect(nombres).toContain("db");
     });
 
-    it("db NO está entre los que sirven (fuera del alcance de esta SPEC)", () => {
-        expect(servidores.map((s) => s.nombre)).not.toContain("db");
+    it("db también tiene rotación (mismo riesgo de disco; no se deja el hueco)", () => {
+        const db = svcs.find((s) => s.nombre === "db");
+        expect(db, "db presente en el compose").toBeTruthy();
+        expect(tieneRotacion(db!.bloque), "db con logging + max-size").toBe(true);
     });
 
-    it("cada servicio que sirve declara logging con max-size (rotación)", () => {
+    it("cada servicio declara logging con max-size (rotación)", () => {
         const violaciones: string[] = [];
-        for (const { nombre, bloque } of servidores) {
-            const tieneLogging = /\n\s*logging:\s*$/m.test(bloque);
-            const tieneMaxSize = /\n\s*max-size:\s*["']?\d+\s*[kmg]b?["']?/i.test(bloque);
-            if (!tieneLogging || !tieneMaxSize) {
-                violaciones.push(`${nombre}: ${!tieneLogging ? "sin bloque logging" : "logging sin max-size"}`);
+        for (const { nombre, bloque } of svcs) {
+            if (!tieneRotacion(bloque)) {
+                const sinLogging = !/\n\s*logging:\s*$/m.test(bloque);
+                violaciones.push(`${nombre}: ${sinLogging ? "sin bloque logging" : "logging sin max-size"}`);
             }
         }
-        expect(violaciones, `serving services sin rotación de logs: ${violaciones.join(" · ")}`).toEqual([]);
+        expect(violaciones, `servicios sin rotación de logs: ${violaciones.join(" · ")}`).toEqual([]);
     });
 });

@@ -6,6 +6,12 @@
 services:
   db:
     image: pgvector/pgvector:pg16
+    # SPEC-886 (I-438): rotación de logs (ver nota en el servicio app).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     container_name: pi-db
     restart: always
     environment:
@@ -23,10 +29,10 @@ services:
       timeout: 5s
       retries: 10
 
-  # SPEC-886 (I-438): los servicios que SIRVEN (app + workers; imagen pi-app) llevan `logging:` con rotación
+  # SPEC-886 (I-438): TODOS los servicios (app + workers + db) llevan `logging:` con rotación
   # (max-size 10m × max-file 5 ⇒ ~50 MB/servicio tope). El default json-file SIN config perdía los logs al
   # recrear el contenedor (cada deploy) y crecía sin tope (riesgo de disco); esto da rotación + histórico corto.
-  # Agregación durable a un colector sería un paso 2 aparte. (db/pgvector queda fuera del alcance de esta SPEC.)
+  # Agregación durable a un colector sería un paso 2 aparte.
   app:
     build:
       context: .
