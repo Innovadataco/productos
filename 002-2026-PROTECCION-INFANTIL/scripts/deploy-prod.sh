@@ -59,17 +59,27 @@ if [ "${HUERFANOS//[[:space:]]/}" != "0" ]; then
   exit 1
 fi
 
-echo "==> Up (app + worker + db)"
+# SPEC-877 (I-391): las migraciones se aplican ANTES de que cualquier contenedor que SIRVE
+# (app/worker) arranque con la imagen NUEVA. El orden viejo (`up -d` de TODO → `migrate deploy` por
+# `exec`) dejaba una ventana donde la app servía el código nuevo contra el SCHEMA VIEJO, y una
+# escritura que esperaba la columna nueva FALLABA en prod. Como `migrate` corre CON la imagen de la
+# app, el patrón es un contenedor de UN SOLO USO: solo la BD arriba → migrate + guardas por
+# `run --rm` (no sirve) → recién entonces levantar app+worker con el schema ya migrado.
+echo "==> Up SOLO la BD (para migrar sin servir todavía)"
+$COMPOSE up -d db
+
+echo "==> Migraciones (aditivas) — contenedor de un solo uso, ANTES de servir"
+$COMPOSE run --rm -T app npx prisma migrate deploy
+
+# SPEC-251 (002-PI-154 · I-49): guardián de índices — verifica los 5 índices críticos justo después
+# de aplicar migraciones. Corre en el MISMO contenedor de un-solo-uso (`run --rm`), post-migrate y
+# ANTES de servir: si falta un índice o el tipo no coincide, el deploy para aquí SIN haber servido
+# nunca con el schema a medias. NO hace rollback automático — el CEO decide.
+echo "==> Guardián de índices (SPEC-251) — post-migrate, antes de servir"
+$COMPOSE run --rm -T app npm run indices:check
+
+echo "==> Up (app + worker) ya con el schema migrado"
 $COMPOSE up -d
-
-echo "==> Migraciones (aditivas)"
-$COMPOSE exec -T app npx prisma migrate deploy
-
-# SPEC-251 (002-PI-154 · I-49): guardián de índices — verifica los 5 índices críticos
-# justo después de aplicar migraciones. Si falta algún índice o el tipo no coincide,
-# el deploy para aquí con error. NO hace rollback automático — el CEO decide.
-echo "==> Guardián de índices (SPEC-251)"
-$COMPOSE exec -T app npm run indices:check
 
 # 002-PI-085 (I-67): seed idempotente de parámetros y catálogos. Respeta los
 # valores custom del CEO (update: {} por defecto; solo los parámetros cuyo
