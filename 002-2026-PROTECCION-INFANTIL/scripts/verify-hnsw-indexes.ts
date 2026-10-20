@@ -33,6 +33,11 @@ export interface IndiceRequerido {
     type: "btree" | "gin" | "hnsw" | "unique";
     sostiene: string;
     migracion: string;
+    // Substrings (minúsculas) que DEBEN aparecer en el `indexdef` — para índices cuya
+    // FORMA importa más allá del tipo (p.ej. un unique PARCIAL: si alguien lo recrea sin
+    // el `WHERE`/`NULLS NOT DISTINCT`, el tipo seguiría siendo 'unique' pero la compuerta
+    // sería otra). SPEC-884.
+    predicado?: string[];
 }
 
 export const REQUIRED: IndiceRequerido[] = [
@@ -75,6 +80,21 @@ export const REQUIRED: IndiceRequerido[] = [
         sostiene: "unicidad de patrón institucional por (colegio, periodo, grado, conducta, plataforma)",
         migracion: "20260802170000_f5_evento_match_f6_patrones",
     },
+    {
+        // SPEC-884 (I-364): compuerta estructural contra ciudades duplicadas. Índice UNIQUE
+        // PARCIAL por SQL crudo (Prisma no expresa WHERE ni NULLS NOT DISTINCT → no vive en
+        // schema.prisma). `migrate dev` es ciego a los parciales y no lo borra, pero igual lo
+        // vigilamos acá para que CI/deploy/pi-monitor lo cacen si un migrate futuro lo pierde.
+        name: "Ciudad_paisId_departamentoId_nombreNormalizado_activas_key",
+        table: "Ciudad",
+        type: "unique",
+        sostiene: "compuerta contra ciudades duplicadas (I-364): unique parcial (paisId,departamentoId,nombreNormalizado) WHERE esActivo, NULLS NOT DISTINCT",
+        migracion: "20261020161100_spec884_ciudad_unique_parcial_pais_depto_norm",
+        // No basta con que sea 'unique': debe ser el PARCIAL con NULLS NOT DISTINCT. Un unique
+        // total o sin WHERE tendría otra semántica (rechazaría dups INACTIVAS, o perdería el
+        // cierre de los null-depto). Estos substrings del indexdef lo fijan.
+        predicado: ["nulls not distinct", "esactivo"],
+    },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -96,6 +116,43 @@ interface FilaIndice {
     indexname: string;
     indexdef: string;
     isunique: boolean;
+}
+
+type EntradaTipoErroneo = { name: string; expected: string; found: string };
+
+/**
+ * Evalúa un índice PRESENTE contra su tipo esperado y (si lo declara) su `predicado`
+ * — substrings del `indexdef` que fijan su FORMA (p.ej. un unique PARCIAL con NULLS
+ * NOT DISTINCT, SPEC-884). Devuelve las discrepancias (vacío = ok).
+ */
+function evaluarIndice(req: IndiceRequerido, row: FilaIndice): EntradaTipoErroneo[] {
+    const def = row.indexdef.toLowerCase();
+    const errores: EntradaTipoErroneo[] = [];
+
+    let tipoOk = false;
+    let tipoEncontrado = "desconocido";
+    if (req.type === "hnsw") {
+        tipoOk = def.includes("using hnsw");
+        if (!tipoOk) tipoEncontrado = def.match(/using (\w+)/)?.[1] ?? "desconocido";
+    } else if (req.type === "gin") {
+        tipoOk = def.includes("using gin");
+        if (!tipoOk) tipoEncontrado = def.match(/using (\w+)/)?.[1] ?? "desconocido";
+    } else if (req.type === "btree") {
+        // btree es el método por defecto; puede aparecer explícito o ausente en indexdef.
+        tipoOk = def.includes("using btree") || !def.includes("using ");
+        if (!tipoOk) tipoEncontrado = def.match(/using (\w+)/)?.[1] ?? "desconocido";
+    } else if (req.type === "unique") {
+        // PostgreSQL emite "CREATE UNIQUE INDEX ..." para todos los unique constraints.
+        tipoOk = Boolean(row.isunique);
+        if (!tipoOk) tipoEncontrado = "no-unique";
+    }
+    if (!tipoOk) errores.push({ name: req.name, expected: req.type, found: tipoEncontrado });
+
+    if (req.predicado) {
+        const faltante = req.predicado.find((sub) => !def.includes(sub));
+        if (faltante) errores.push({ name: req.name, expected: `predicado:${faltante}`, found: "ausente-en-indexdef" });
+    }
+    return errores;
 }
 
 export async function verificarIndices(): Promise<ResultadoVerificacion> {
@@ -126,30 +183,7 @@ export async function verificarIndices(): Promise<ResultadoVerificacion> {
             missing.push(req.name);
             continue;
         }
-        const def = row.indexdef.toLowerCase();
-
-        let tipoOk = false;
-        let tipoEncontrado = "desconocido";
-
-        if (req.type === "hnsw") {
-            tipoOk = def.includes("using hnsw");
-            if (!tipoOk) tipoEncontrado = def.match(/using (\w+)/)?.[1] ?? "desconocido";
-        } else if (req.type === "gin") {
-            tipoOk = def.includes("using gin");
-            if (!tipoOk) tipoEncontrado = def.match(/using (\w+)/)?.[1] ?? "desconocido";
-        } else if (req.type === "btree") {
-            // btree es el método por defecto; puede aparecer explícito o ausente en indexdef.
-            tipoOk = def.includes("using btree") || !def.includes("using ");
-            if (!tipoOk) tipoEncontrado = def.match(/using (\w+)/)?.[1] ?? "desconocido";
-        } else if (req.type === "unique") {
-            // PostgreSQL emite "CREATE UNIQUE INDEX ..." para todos los unique constraints.
-            tipoOk = Boolean(row.isunique);
-            if (!tipoOk) tipoEncontrado = "no-unique";
-        }
-
-        if (!tipoOk) {
-            wrongType.push({ name: req.name, expected: req.type, found: tipoEncontrado });
-        }
+        wrongType.push(...evaluarIndice(req, row));
     }
 
     // Huérfanos: índices públicos no declarados en REQUIRED.

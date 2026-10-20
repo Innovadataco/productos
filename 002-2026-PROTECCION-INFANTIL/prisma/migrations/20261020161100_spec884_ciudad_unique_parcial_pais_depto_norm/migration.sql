@@ -1,0 +1,46 @@
+-- SPEC-884 (I-364) · Compuerta estructural contra ciudades duplicadas.
+--
+-- Índice UNIQUE PARCIAL por SQL CRUDO. Prisma NO puede expresar `WHERE` ni
+-- `NULLS NOT DISTINCT` en `@@unique`, así que este índice NO vive en
+-- `schema.prisma` (igual que los índices trigram/HNSW). Es 100% ADITIVO: no toca
+-- el índice de búsqueda `Ciudad_paisId_nombreNormalizado_idx` ni ninguna
+-- fila/columna existente.
+--
+-- GRANO = (paisId, departamentoId, nombreNormalizado), TRES columnas:
+--   · Medido en prod (SPEC-884): los 253 grupos dup por (paisId, norm) abarcan
+--     TODOS deptos DISTINTOS → son municipios legítimamente distintos (mismo
+--     nombre normalizado, deptos distintos dentro de un país). Un unique por
+--     país SOLO los rechazaría. → hay que AÑADIR departamentoId.
+--   · Pero NO se puede QUITAR paisId: ciudades de PAÍSES distintos con
+--     departamentoId NULL y el mismo norm (p.ej. «Santiago» en CL, PA y DO) son
+--     legítimas; sin paisId en la clave, NULLS NOT DISTINCT las fusionaría.
+--   El dup REAL (variante tilde/espacio de la MISMA ciudad) es por
+--   (paisId, departamentoId, norm) — mismo grano que usa el corrector SPEC-884
+--   (que reusa `calcularDesactivaciones` de SPEC-580 particionando por país).
+--
+-- WHERE "esActivo": el invariante es entre ciudades ACTIVAS (búsqueda y registro
+-- filtran `esActivo`). SPEC-580 resuelve dups por DESACTIVACIÓN (deja la fila
+-- perdedora viva, inactiva, con su norm colisionante) → un unique TOTAL las
+-- chocaría. El parcial coexiste con 580 y mantiene el corrector NO destructivo.
+--
+-- NULLS NOT DISTINCT (PG15+): 69 ciudades activas tienen departamentoId NULL
+-- (medido en prod). Sin esto, Postgres trata cada NULL como distinto y dos
+-- activas (paisId, NULL, "x") escaparían la compuerta. Con 3 columnas, esto solo
+-- iguala NULL==NULL DENTRO del mismo paisId — exacto.
+--   NOTA (preflight, la corre el responsable): si entre las NULL-depto de un
+--   MISMO país hubiera dups-por-norm LEGÍTIMOS, esto los rechazaría; en ese caso
+--   se hace backfill del departamento o se acepta el hueco con NULLS DISTINCT.
+--
+-- GUARDIÁN (I-420 / regla AGENTS.md): como es índice RAW, queda declarado en
+-- `scripts/verify-hnsw-indexes.ts` (REQUIRED) para que CI, deploy-prod.sh y
+-- pi-monitor lo vigilen. `prisma migrate dev` es CIEGO a los índices parciales
+-- (WHERE) → no lo auto-borra, pero el guardián cierra el hueco de todos modos.
+--
+-- PRECONDICIÓN (la corre el responsable contra prod ANTES de este deploy):
+-- `scripts/geo/normalizar-y-dedup-ciudades.ts --confirm` deja 0 dups activos por
+-- (paisId, departamentoId, norm) + 0 norm vacíos/stale. Si queda sucio, este
+-- CREATE UNIQUE INDEX falla (es la red: nunca crea el índice sobre datos sucios).
+CREATE UNIQUE INDEX "Ciudad_paisId_departamentoId_nombreNormalizado_activas_key"
+    ON "Ciudad" ("paisId", "departamentoId", "nombreNormalizado")
+    NULLS NOT DISTINCT
+    WHERE "esActivo";

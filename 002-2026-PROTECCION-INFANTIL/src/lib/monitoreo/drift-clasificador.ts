@@ -25,6 +25,8 @@ export const INDICES_CRUDOS_BASELINE: Record<string, string> = {
     idx_reportes_tenant_estado_eliminado: "índice PARCIAL de reportes (WHERE eliminado); Prisma no ve el WHERE",
     idx_reportes_usuario_eliminado: "índice PARCIAL de reportes (WHERE eliminado); Prisma no ve el WHERE",
     idx_solicitudes_comite_colegio_estado: "índice PARCIAL de solicitudes de comité; Prisma no ve el WHERE",
+    Ciudad_paisId_departamentoId_nombreNormalizado_activas_key:
+        "unique PARCIAL (WHERE esActivo) + NULLS NOT DISTINCT contra ciudades duplicadas (I-364/SPEC-884); Prisma no modela WHERE ni NULLS NOT DISTINCT",
 };
 
 /** Extensiones que gestionamos por SQL crudo, no por Prisma. */
