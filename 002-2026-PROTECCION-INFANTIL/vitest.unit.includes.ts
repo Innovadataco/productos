@@ -141,6 +141,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-774: meta-aserción sobre el propio ci.yml — el trigger de push incluye `main` y la rama
     // fantasma no queda en posición funcional (trigger ni gate de duraciones). Lee el ci.yml real.
     "scripts/ci/trigger-push-main.candado.test.ts",
+    // SPEC-885 / I-443: el barrido de generados converge (no re-pushea con PR abierto) y avisa de verdad (Issue).
+    "scripts/ci/generados-post-merge-converge.candado.test.ts",
     // SPEC-800: la versión de Node del repo (.nvmrc/engines) coincide con la de TODOS los
     // workflows (barrido). Corre acá para BLOQUEAR en CI (pi-gate exige test-unit).
     "scripts/ci/node-version-paridad.candado.test.ts",

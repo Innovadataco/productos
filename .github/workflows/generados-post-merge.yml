@@ -42,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # pushea la rama del bot (el operador abre el PR — flujo B)
+      issues: write # SPEC-885 (I-443): abre/reusa el Issue de aviso (label generados-drift)
+      pull-requests: read # SPEC-885 (I-443): detecta si ya hay un PR abierto del barrido (convergencia)
     defaults:
       run:
         working-directory: 002-2026-PROTECCION-INFANTIL
@@ -86,14 +88,35 @@ jobs:
         if: steps.diff.outputs.cambio == 'si'
         run: npm run arch:check
 
-      # El bot SOLO pushea la rama — NO abre el PR (flujo B, D-110, validado en #406).
-      # El OPERADOR abre el PR como usuario real: (a) esquiva el permiso de create de
-      # Actions (OFF por seguridad) y (b) dispara los required checks (actor real).
-      # El commit vacío anti-recursión NO hace falta. La rama matchea
-      # `verificar-base-pr.yml` (^work/pi-SPEC-[0-9]+-).
-      - name: Pushear la rama y avisar al operador
+      # SPEC-885 (I-443) · CONVERGENCIA: si YA hay un PR abierto del barrido, el operador lo está
+      # atendiendo — NO re-pusheamos (un force-push le resetea los checks/aprobación y nunca converge).
+      # Cuando ese PR mergee, el próximo push a main re-dispara este job y, si sigue habiendo drift,
+      # abre la siguiente ronda. Consistencia eventual, sin tocar ningún gate.
+      - name: ¿Ya hay un PR abierto del barrido?
+        id: pr
         if: steps.diff.outputs.cambio == 'si'
         working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ABIERTOS=$(gh pr list --repo "$GITHUB_REPOSITORY" --head work/pi-SPEC-487-generados --state open --json number --jq 'length')
+          echo "abierto=$ABIERTOS" >> "$GITHUB_OUTPUT"
+          if [ "$ABIERTOS" != "0" ]; then
+            echo "Ya hay $ABIERTOS PR abierto del barrido; no re-pusheo (convergencia). El operador lo cierra y el próximo push re-dispara."
+          fi
+
+      # El bot SOLO pushea la rama — NO abre el PR (flujo B, D-110, validado en #406). El OPERADOR
+      # lo abre como usuario real: (a) esquiva el permiso de create de Actions (OFF) y (b) dispara los
+      # required checks (actor real). La rama matchea `verificar-base-pr.yml` (^work/pi-SPEC-[0-9]+-).
+      # SPEC-885: notificación REAL al operador via Issue con label fijo `generados-drift` (NO un
+      # ::notice que nadie ve). Se REUSA el Issue abierto (comentario) en vez de spamear uno por push;
+      # sin @mención — el operador es la sesión rotativa del CEO, que vigila por label.
+      - name: Pushear la rama y abrir/reusar el Issue de aviso
+        if: steps.diff.outputs.cambio == 'si' && steps.pr.outputs.abierto == '0'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           RAMA="work/pi-SPEC-487-generados"
@@ -105,4 +128,22 @@ jobs:
                   002-2026-PROTECCION-INFANTIL/docs/architecture/03-pantallas.md
           git commit -m "chore(generados): regenerar índice + tablas de arquitectura post-merge (SPEC-487)"
           git push --force origin "$RAMA"
-          echo "::notice title=Barrido de generados (SPEC-487)::Los generados driftearon; la rama $RAMA quedó pusheada. El operador la abre como PR (flujo B): por la UI https://github.com/Innovadataco/productos/pull/new/$RAMA, o con gh: gh pr create --base main --head $RAMA --title 'chore(generados): regenerar índice + tablas de arquitectura (barrido post-merge SPEC-487)' --body 'Barrido post-merge de los generados append-por-spec (SPEC-487). Regenerados sobre main fresco; arch:check verde.'"
+          # Notificación REAL: Issue con label fijo, reusado si ya hay uno abierto (no spam).
+          REPO="$GITHUB_REPOSITORY"
+          NUEVO_PR="https://github.com/$REPO/pull/new/$RAMA"
+          DIFF="https://github.com/$REPO/compare/main...$RAMA"
+          CUERPO=$(printf '%s\n' \
+            "Los generados append-por-spec (specs/README.md, docs/architecture/02-roles-capacidades.md, 03-pantallas.md) driftearon tras un merge a \`main\`. La rama \`$RAMA\` quedó regenerada sobre main fresco (arch:check verde) y pusheada." \
+            "" \
+            "**Operador (flujo B, D-110):** abrí el PR — $NUEVO_PR · diff: $DIFF" \
+            "" \
+            "_Aviso automático del barrido post-merge (SPEC-487 / SPEC-885). Este Issue se REUSA; se cierra solo al mergear el PR del barrido._")
+          gh label create generados-drift --repo "$REPO" --color FBCA04 --description "Barrido de generados post-merge (SPEC-487) pendiente de PR del operador" 2>/dev/null || true
+          EXISTE=$(gh issue list --repo "$REPO" --label generados-drift --state open --json number --jq '.[0].number // ""')
+          if [ -n "$EXISTE" ]; then
+            gh issue comment "$EXISTE" --repo "$REPO" --body "$CUERPO"
+            echo "::notice::Reusé el Issue #$EXISTE (label generados-drift)."
+          else
+            gh issue create --repo "$REPO" --title "Generados driftearon — abrir PR del barrido (SPEC-487)" --label generados-drift --body "$CUERPO"
+            echo "::notice::Abrí un Issue nuevo (label generados-drift)."
+          fi
