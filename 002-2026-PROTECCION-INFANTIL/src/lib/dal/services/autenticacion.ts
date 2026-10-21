@@ -28,6 +28,11 @@ import type {
 
 const LIMITE_SOLICITUDES = 3;
 const VENTANA_MS = 60 * 60 * 1000;
+
+// SPEC-894 (anti-enumeración): hash bcrypt FIJO de cost 12 (igual que hashPassword) contra el que se corre
+// `verifyPassword` cuando el email NO existe, para igualar el tiempo y NO filtrar la existencia por TIMING.
+// No es un secreto: es un comparando-señuelo; `bcrypt.compare` contra él SIEMPRE da false.
+const HASH_DUMMY_TIMING = "$2b$12$B0QCd1PBN3M2wdhHPWE5oOEo3gmfCWKzYFGph3gLu9gag2m5J8H/e";
 const EXPIRACION_TOKEN_MS = 60 * 60 * 1000;
 const EXPIRACION_CODIGO_MS = 15 * 60 * 1000;
 const MAX_INTENTOS_CODIGO = 5;
@@ -57,15 +62,21 @@ export class AutenticacionService {
      */
     async login(email: string, password: string): Promise<ResultadoLogin> {
         const user = await this.usuarios.findByEmail(email);
+
+        // SPEC-894 (anti-enumeración): `verifyPassword` corre SIEMPRE —incluso si el email no existe, contra un
+        // hash señuelo fijo— para no filtrar la EXISTENCIA por TIMING (sin esto, un email inexistente volvía en
+        // ~ms y uno real tras ~100-300ms de bcrypt). `valid` = la cuenta existe Y la contraseña es correcta.
+        const passwordOk = await verifyPassword(password, user?.passwordHash ?? HASH_DUMMY_TIMING);
+        const valid = user !== null && passwordOk;
+
         if (!user) {
             return { ok: false, tipo: "credenciales" };
         }
 
-        if (user.estado === "bloqueado" && user.bloqueadoHasta && user.bloqueadoHasta > new Date()) {
-            return { ok: false, tipo: "bloqueada" };
-        }
-
-        const valid = await verifyPassword(password, user.passwordHash);
+        // SPEC-894: NO se revela "bloqueada"/"inactiva" ANTES de probar la contraseña — sería un oráculo de
+        // existencia por MENSAJE. Una cuenta bloqueada con clave INCORRECTA cae al mismo "credenciales" genérico
+        // que un email inexistente; el lockout igual corre (abajo) y el rate-limit `login` (fail-closed) capa los
+        // intentos por IP, así que correr bcrypt sobre una cuenta bloqueada es aceptable.
         if (!valid) {
             const newAttempts = user.intentosFallidos + 1;
             const maxAttempts = parseInt(
@@ -88,6 +99,12 @@ export class AutenticacionService {
 
             await this.usuarios.actualizar(user.id, updates);
             return { ok: false, tipo: "credenciales" };
+        }
+
+        // SPEC-894: el password ES correcto → recién ahora se puede revelar el estado de la cuenta sin filtrar
+        // existencia (solo lo ve quien probó que sabe la clave). "bloqueada" pasó de PRE-auth a POST-auth.
+        if (user.estado === "bloqueado" && user.bloqueadoHasta && user.bloqueadoHasta > new Date()) {
+            return { ok: false, tipo: "bloqueada" };
         }
 
         // Spec 117 (I-37): una cuenta desactivada por un admin no recupera acceso con
