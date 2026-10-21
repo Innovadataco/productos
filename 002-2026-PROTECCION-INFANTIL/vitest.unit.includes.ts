@@ -38,6 +38,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/roles-titulares.test.ts",
     // SPEC-423 (I-298): la credencial de respaldo se muestra SIEMPRE en admin.
     "src/app/api/admin/credencial-siempre-visible.candado.test.ts",
+    "src/app/api/admin/reportes/[id]/idor-pertenencia-rutas.candado.test.ts",
     // SPEC-878 (I-426 · D-138): las 3 rutas admin de pagos muertas quedan borradas (control positivo por remoción, fs).
     "src/app/api/admin/pagos/rutas-muertas-borradas.candado.test.ts",
     // SPEC-672 (I-399): el camino de autenticación lee el Usuario con select explícito (nunca todos los escalares).
@@ -99,6 +100,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/sesion-estado-emitter.test.ts",
     // 002-PI-232 (A-65 · I-225): borrado FK-safe de Expediente/EventoExpediente en scripts de limpieza.
     "scripts/limpieza/borrar-limpieza.test.ts",
+    "scripts/limpieza/corregir-pii-gated-expediente.candado.test.ts",
     // SPEC-329 (002-PI-229): guardianes de estado devuelven JSON 403 en /api/ (contraprueba 302 en pantallas).
     "src/middleware-api-guardias.test.ts",
     // SPEC-531 (CEO): el CSP con nonce del área privada NO cae sobre la pública prerenderizada

@@ -8,6 +8,7 @@ import { idSchema } from "@/lib/validators";
 import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
 import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { puedeGestionarReporte } from "@/lib/operadores/permisos";
 
 function getClientInfo(request: Request) {
     return {
@@ -39,6 +40,31 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
         const reporteId = parsedId.data;
+
+        // SPEC-891 (IDOR · pertenencia por reporte) ANTES de descifrar: el módulo
+        // `expediente_revelar_original` solo dice "puede revelar textos", no "ESTE texto". Sin esto, un
+        // OPERADOR/COMITE de cualquier tenant descifraba el textoOriginal de CUALQUIER reporte. Mismo patrón
+        // 3-vías que accesos-texto: ADMIN pasa · OPERADOR dueño (operadorId) · COMITE dueño del caso
+        // escalado (comiteId, por SPEC-263). El gate de módulo de arriba se conserva.
+        const permisos = await new ReporteRepository().findPermisosRevision(reporteId);
+        if (!permisos) {
+            return NextResponse.json(
+                { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
+                { status: 404 }
+            );
+        }
+        if (user.rol === "COMITE_VALIDACION" && permisos.comiteId !== user.id) {
+            return NextResponse.json(
+                { error: { message: "No tiene permiso para revelar este caso", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
+        if (user.rol !== "COMITE_VALIDACION" && !puedeGestionarReporte(user, permisos)) {
+            return NextResponse.json(
+                { error: { message: "No tiene permiso para revelar este caso", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
 
         // E-8: la lectura (solo textoOriginal cifrado) vive en el repo; el
         // descifrado sigue por el helper autorizado de SPEC-130.

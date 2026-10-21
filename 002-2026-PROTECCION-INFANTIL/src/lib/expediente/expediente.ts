@@ -292,18 +292,20 @@ function construirPartes(config: EtapaConfig, datos: DatosExpediente): PartesEta
             return {
                 ...base,
                 disponibles: {
-                    contienePii: c?.contienePii ?? null,
-                    piiDetectada: c?.piiDetectada ?? null,
                     anonimizacionValidadaPorId: r.anonimizacionValidadaPorId,
                     anonimizacionValidadaEn: iso(r.anonimizacionValidadaEn),
                 },
-                disponiblesGated: { textoOriginal: datos.textoOriginalPlano ?? null },
+                // SPEC-891 (IDOR): contienePii/piiDetectada son datos sensibles (la PII literal detectada en
+                // el texto). Pasan a GATED (como textoOriginal) → solo con módulo expediente_revelar_original +
+                // auditoría. La `evaluacion` se muestra SIEMPRE y NO depende del config de etapas, así que ya
+                // no revela ni el booleano ni la lista: describe la etapa sin filtrar PII.
+                disponiblesGated: {
+                    contienePii: c?.contienePii ?? null,
+                    piiDetectada: c?.piiDetectada ?? null,
+                    textoOriginal: datos.textoOriginalPlano ?? null,
+                },
                 actividad: "Detección y anonimización de datos personales (PII) en el texto",
-                evaluacion: c
-                    ? c.contienePii
-                        ? `PII detectada: ${c.piiDetectada.length > 0 ? c.piiDetectada.join(", ") : "sí"}`
-                        : "Sin PII detectada"
-                    : "Sin clasificación registrada",
+                evaluacion: c ? "Detección de PII en el texto (detalle al revelar)" : "Sin clasificación registrada",
                 fechaHora: iso(r.anonimizacionValidadaEn) ?? iso(c?.creadoEn),
             };
         case "decision": {

@@ -272,3 +272,86 @@ describe("GET /api/admin/reportes/[id]/expediente (T024)", () => {
         expect(JSON.stringify(audit)).not.toContain("Texto original con datos sensibles");
     });
 });
+
+/**
+ * CANDADO · SPEC-891 (IDOR) — expediente: pertenencia por reporte (2-vías) + PII (contienePii/piiDetectada)
+ * movida a GATED. Control positivo: OPERADOR ajeno pasa a 403 (si se quita el chequeo, vuelve a 200), y la
+ * PII literal NO aparece sin revelar (si se devuelve a `disponibles`/campos, el JSON la filtra → rojo).
+ */
+describe("GET /api/admin/reportes/[id]/expediente · SPEC-891 pertenencia + PII gated (IDOR)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        await crearPlataforma();
+        await crearPaisCiudad();
+        await crearParametrosExpediente();
+        activeToken = null;
+        if (!process.env.PARAM_ENCRYPTION_KEY) {
+            process.env.PARAM_ENCRYPTION_KEY = "a".repeat(32);
+        }
+    });
+
+    async function ver(reporteId: string, userId: string, rol: RolUsuario, revelar = false) {
+        activeToken = await crearTokenUsuario(userId, rol);
+        const url = `http://localhost:5005/api/admin/reportes/${reporteId}/expediente${revelar ? "?revelar=true" : ""}`;
+        return GET(crearRequest(url), { params: Promise.resolve({ id: reporteId }) });
+    }
+
+    it("OPERADOR dueño → 200 · OPERADOR ajeno → 403 · ADMIN → 200", async () => {
+        const dueno = await crearUsuario("OPERADOR");
+        const ajeno = await crearUsuario("OPERADOR");
+        const admin = await crearUsuario("ADMIN");
+        const reporte = await crearReporteCompleto();
+        await prisma.reporte.update({ where: { id: reporte.id }, data: { operadorId: dueno.id } });
+
+        expect((await ver(reporte.id, dueno.id, "OPERADOR")).status).toBe(200);
+        expect((await ver(reporte.id, ajeno.id, "OPERADOR")).status).toBe(403);
+        expect((await ver(reporte.id, admin.id, "ADMIN")).status).toBe(200);
+    });
+
+    it("contienePii/piiDetectada GATED: la PII literal NO aparece sin revelar y SÍ al revelar", async () => {
+        const admin = await crearUsuario("ADMIN");
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        const reporte = await crearReporteFixture(prisma, {
+            data: {
+                identificador: "+57300PII891",
+                plataformaId: plataforma!.id,
+                texto: "Texto anonimizado.",
+                textoOriginal: "Original con PII de prueba.",
+                fechaIncidente: new Date("2026-07-10T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                estado: "CLASIFICADO",
+                numeroSeguimiento: `RPT-PII-${Date.now()}`,
+                clasificacion: {
+                    create: {
+                        categoria: "SOLICITUD_MATERIAL",
+                        confianza: 0.7,
+                        modeloUsado: "rubrica:test",
+                        latenciaMs: 900,
+                        promptTokens: 100,
+                        responseTokens: 20,
+                        contienePii: true,
+                        piiDetectada: ["María González", "3009998888"],
+                    },
+                },
+            },
+        });
+
+        const sin = await ver(reporte.id, admin.id, "ADMIN", false);
+        expect(sin.status).toBe(200);
+        const bodySin = await sin.json();
+        const anonSin = bodySin.etapas.find((e: { clave: string }) => e.clave === "anonimizacion");
+        expect(anonSin.campos.contienePii).toBeUndefined();
+        expect(anonSin.campos.piiDetectada).toBeUndefined();
+        expect(JSON.stringify(bodySin)).not.toContain("María González");
+        expect(JSON.stringify(bodySin)).not.toContain("3009998888");
+
+        const con = await ver(reporte.id, admin.id, "ADMIN", true);
+        const bodyCon = await con.json();
+        const anonCon = bodyCon.etapas.find((e: { clave: string }) => e.clave === "anonimizacion");
+        expect(anonCon.campos.contienePii).toBe(true);
+        expect(anonCon.campos.piiDetectada).toEqual(["María González", "3009998888"]);
+    });
+});
