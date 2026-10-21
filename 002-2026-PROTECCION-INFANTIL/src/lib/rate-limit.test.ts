@@ -231,6 +231,33 @@ describe("fail-closed ante fallo del store (I-28)", () => {
         expect(result.remaining).toBeGreaterThan(0);
     });
 
+    // SPEC-895: los scopes que disparan CORREO/CÓDIGO fallan CERRADO (antes abiertos →
+    // bombardeo de buzón / gasto de Resend bajo store caído, autoamplificante). Control
+    // positivo: quitar cualquiera de FAIL_CLOSED_SCOPES vuelve su caso a allowed:true (rojo).
+    it.each(["recuperar_solicitar", "verificacion_solicitar", "stepup_codigo", "acceso_codigo"])(
+        "SPEC-895: el scope de correo/código %s falla cerrado si el store no responde",
+        async (scope) => {
+            if (rateLimitDisabled) return;
+            await crearParametrosReportes();
+
+            const result = await checkRateLimit(makeRequest("10.9.9.6"), scope, { client: clienteStoreCaido() });
+            expect(result.allowed).toBe(false);
+            expect(result.remaining).toBe(0);
+            expect(result.headers["Retry-After"]).toBeDefined();
+        },
+    );
+
+    // SPEC-895 (decisión): el REPORTE se queda fail-OPEN — el camino de protección infantil
+    // nunca se gatea por un fallo del limitador. Si alguien suma "report" al set, esto se pone rojo.
+    it("SPEC-895: el scope de REPORTE sigue fail-OPEN si el store no responde (protección siempre abierta)", async () => {
+        if (rateLimitDisabled) return;
+        await crearParametrosReportes();
+
+        const result = await checkRateLimit(makeRequest("10.9.9.5"), "report", { client: clienteStoreCaido() });
+        expect(result.allowed).toBe(true);
+        expect(result.remaining).toBeGreaterThan(0);
+    });
+
     it("O-1 (SPEC-108): si la LECTURA DE PARÁMETROS falla (no solo el upsert), seguimiento responde 429 fail-closed y no lanza 500", async () => {
         if (rateLimitDisabled) return;
         await crearParametrosReportes();
