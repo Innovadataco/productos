@@ -113,6 +113,17 @@ export async function darDeBajaReporte(params: {
         // La evidencia (textoOriginalCifrado) queda intacta; reactivar la restaura.
         await purgarTextoTrabajo(tx, reporte.contenidoId);
 
+        // SPEC-892 (I-422 · Ley 1581): purga la PII LITERAL que la IA extrajo del menor
+        // (nombre/teléfono/dirección/colegio). `piiDetectada` va SIN cifrar y `rawResponse` la
+        // repite; sin esto, una eliminación legal deja el relato en «[purgado]» pero la PII
+        // sobrevive en claro indefinidamente. Se purga en TODA baja (no solo legal): abajo no
+        // tiene uso operacional y reactivar la recomputa (mismo trato que el embedding, que ya se
+        // borra en baja; `reactivarReporte` no lee `piiDetectada`). `reporteId` es @unique.
+        await tx.clasificacionIA.updateMany({
+            where: { reporteId },
+            data: { piiDetectada: [], rawResponse: null, contienePii: false },
+        });
+
         // SPEC-142 (F6, FR-004): reversa exacta del aporte al patrón institucional
         // (decremento con piso 0 vía marcador de la alerta), dentro de la misma tx.
         await revertirPatronPorReporte(reporteId, tx);
