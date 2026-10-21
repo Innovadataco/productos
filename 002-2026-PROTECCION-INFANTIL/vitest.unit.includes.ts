@@ -112,6 +112,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-284 (002-PI-184 · I-130): compuerta de IDs de advisory lock únicos.
     "scripts/locks-check.test.ts",
     "scripts/deploy-orden-migrate-antes-de-servir.candado.test.ts",
+    "scripts/retener-imagenes-deploy.candado.test.ts",
+    "scripts/guardia-disco-deploy.candado.test.ts",
     // SPEC-804: ningún test escribe dentro de `src/` (la carrera TOCTOU con los walkers). Barrido.
     "scripts/ningun-test-escribe-en-src.candado.test.ts",
     // SPEC-466: el piso de tokens:check dejó de serializar merges (guard <= +

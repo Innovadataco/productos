@@ -14,6 +14,11 @@ export COMPOSE_DOCKER_CLI_BUILD=1
 
 COMPOSE="docker compose --env-file .env.production -f docker-compose.prod.yml"
 
+# SPEC-903: guardia de disco ANTES de cualquier trabajo (build/migrate/up). Si el espacio libre en / está
+# por debajo del umbral (DEPLOY_MIN_DISCO_GB, default 15g), ABORTA el deploy aquí — nunca lo dejes llenar el
+# disco. La retención del final (post «DEPLOY VERIFICADO») es el complemento que libera.
+"$(dirname "$0")/guardia-disco-deploy.sh"
+
 if [[ "${1:-}" != "--skip-pull" ]]; then
     COMMIT_ANTES=$(git rev-parse HEAD)
     git fetch origin main
@@ -135,5 +140,12 @@ git worktree list | awk 'NR>1 {print $1}' | while read wt; do
     fi
 done
 git worktree prune
+
+# SPEC-903: retención de imágenes/caché. SOLO acá, DESPUÉS de «DEPLOY VERIFICADO» (nunca antes: jamás debe
+# interferir con el deploy en curso). Conserva la imagen recién desplegada (= latest = la de los contenedores
+# corriendo) y purga las pi-app:<sha> viejas + la caché de build a 10GB. `|| echo` porque un fallo de
+# retención NO puede tumbar un deploy YA verificado.
+echo "==> Retención de imágenes y caché (SPEC-903)"
+"$(dirname "$0")/retener-imagenes-deploy.sh" || echo "⚠️  Retención falló o fue saltada — no afecta el deploy ya verificado."
 
 echo "==> Listo. Tag desplegado: ${PI_APP_TAG}"
