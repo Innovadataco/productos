@@ -44,7 +44,7 @@ import * as path from "node:path";
 
 const DASH = path.resolve(__dirname); // .../src/app/dashboard
 const APP = path.resolve(__dirname, ".."); // .../src/app
-const SUPERFICIE = ["admin", "colegio"].map((t) => path.join(DASH, t));
+const SUPERFICIE = ["admin", "colegio", "padre", "profesional"].map((t) => path.join(DASH, t));
 
 // La guardia comentada no es guardia: se detecta sobre código SIN comentarios.
 // (El marcador de deuda ya no existe: el candado nació absoluto.)
@@ -52,8 +52,11 @@ function sinComentarios(s: string): string {
     return s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
-// 1 y 2: mecanismos canónicos (con argumento real, no `verifyAuth()` pelado).
-const CANON = /verifyAuth\s*\(\s*[^)\s]|(?:verificarAccesoPagina|puedeAccederAModulo)\s*\(/;
+// 1 y 2: mecanismos canónicos (con argumento real, no `verifyAuth()` pelado). SPEC-899: las áreas
+// padre/profesional se gatean por sus compuertas de rol dedicadas —`exigirPadre()` (guardia-padre) y
+// `exigirProfesionalHabilitado()` (guardia-habilitado)—, que adentro hacen verifyAuth + redirect por rol;
+// son rol-específicas por definición, así que el nombre ya es el argumento (no requieren uno aparte).
+const CANON = /verifyAuth\s*\(\s*[^)\s]|(?:verificarAccesoPagina|puedeAccederAModulo|exigirPadre|exigirProfesional\w*)\s*\(/;
 // 3: bespoke = verifyToken + un gate (rol o scope de sesión) + redirect.
 const VTOKEN = /verifyToken\s*\(/;
 const REDIR = /(?:permanentRedirect|redirect)\s*\(/;
@@ -117,7 +120,7 @@ function resolver(pageAbs: string): Resuelto {
     return { rel, cubierta: false, procedencia: "SIN GUARDIA" };
 }
 
-describe("SPEC-571 · guardia de autorización por página (admin/** y colegio/**)", () => {
+describe("SPEC-571 · guardia de autorización por página (admin/**, colegio/**, padre/**, profesional/** — SPEC-899)", () => {
     const pags = [...SUPERFICIE.flatMap((d) => [...paginas(d)])].map(resolver);
 
     it("hay superficie que vigilar (el escaneo no quedó vacío)", () => {
@@ -142,7 +145,7 @@ describe("SPEC-571 · guardia de autorización por página (admin/** y colegio/*
         expect(
             sinGuardia,
             "páginas sin autorización declarada. Cada una necesita UNO de: " +
-            "verifyAuth(<rol>) · verificarAccesoPagina(<modulo>) · verifyToken+gate+redirect · stub-redirect-sin-JSX, " +
+            "verifyAuth(<rol>) · verificarAccesoPagina(<modulo>) · exigirPadre() · exigirProfesionalHabilitado() · verifyToken+gate+redirect · stub-redirect-sin-JSX, " +
             "en la página o en un layout ancestro de servidor. Una página cliente va con wrapper de servidor (patrón SPEC-564). " +
             "El rol/módulo se LEE de la API que la página consume, no se adivina por el nombre del directorio.\n" +
             "LÍMITE de este candado: reconoce la PRESENCIA de un mecanismo, NO su correctitud — no prueba que el rol/módulo " +
