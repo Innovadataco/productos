@@ -90,6 +90,19 @@ main() {
         echo "⚠️  [retención] no se pudo podar la caché de build — se salta"
     fi
 
+    # SPEC-903: TRIM best-effort al final. Cuando la purga libera GB DENTRO del guest, el hipervisor (panel
+    # de Hostinger) los sigue viendo ocupados hasta un fstrim; el VPS tiene fstrim.timer SEMANAL, así que tras
+    # un deploy que libera mucho el panel queda desfasado hasta una semana. `fstrim -a` devuelve los bloques
+    # al hipervisor EN EL ACTO. Best-effort TOTAL: `sudo -n` (nunca pide clave → nunca cuelga el deploy); si
+    # no hay privilegios, se salta (el fstrim.timer lo hará igual). Jamás tumba el deploy.
+    if [ "$DRY_RUN" = "1" ]; then
+        echo "[retención] (dry-run) fstrim -a (devolvería al hipervisor los bloques liberados)"
+    elif fstrim -a 2>/dev/null || sudo -n fstrim -a 2>/dev/null; then
+        echo "[retención] fstrim -a OK (el panel del hipervisor reflejará el disco liberado)."
+    else
+        echo "⚠️  [retención] fstrim no disponible/sin privilegios — se salta (fstrim.timer semanal lo hará)."
+    fi
+
     return 0  # la retención NUNCA falla el deploy
 }
 
