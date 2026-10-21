@@ -75,6 +75,9 @@ export const REGISTRO_COLUMNAS_SENSIBLES: readonly EntradaColumnaSensible[] = [
     // ── Fuentes 5 + 2 · cifrado at-rest + REVOKE bi_replica → en-reposo + replica-bi ──
     { tabla: "ContenidoReporte", columna: "textoCifrado", sensiblePara: ["en-reposo", "replica-bi"], razon: "texto del reporte cifrado con DEK; REVOKEado del rol bi_replica (SPEC-762)", fuente: "cifrado-at-rest + REVOKE-762" },
     { tabla: "ContenidoReporte", columna: "textoOriginalCifrado", sensiblePara: ["en-reposo", "replica-bi"], razon: "texto ORIGINAL (evidencia) cifrado con DEK; REVOKEado de bi_replica", fuente: "cifrado-at-rest + REVOKE-762" },
+    // ── Fuente 2 · PII LITERAL que extrae la IA, CORTADA del whitelist bi_replica (SPEC-762) + DROP en la réplica (09b). SPEC-892: se purga en la baja del reporte. ──
+    { tabla: "ClasificacionIA", columna: "piiDetectada", sensiblePara: ["replica-bi"], razon: "PII literal del menor (nombre/teléfono/dirección/colegio) SIN cifrar; cortada del whitelist bi_replica (2026-09-05) y DROPeada en la réplica (09b); se purga en la baja (SPEC-892)", fuente: "whitelist-762 (cortada) + 09b DROP" },
+    { tabla: "ClasificacionIA", columna: "rawResponse", sensiblePara: ["replica-bi"], razon: "respuesta cruda del clasificador; repite la PII del relato; misma cuña que piiDetectada (cortada del whitelist + DROP en réplica); se purga en la baja (SPEC-892)", fuente: "whitelist-762 (cortada) + 09b DROP" },
     // ── Adición 2 · superficie profesional (el registro puede decir que 754 la vació) ──
     { tabla: "Usuario", columna: "email", sensiblePara: ["profesional"], razon: "el email del PADRE queda visible al profesional en la cita (calendario.service / cita/dto), gateado por contactoVisiblePorSesion; SPEC-754 lo cierra — cuando lo haga, esta entrada se retira", fuente: "codigo: calendario.service.ts + profesional/cita/dto.ts" },
 ] as const;

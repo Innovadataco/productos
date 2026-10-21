@@ -27,17 +27,30 @@ const WHITELIST_006 = resolve(
     "../006-2026-BI-INTELIGENCIA-NEGOCIO/scripts/replica-setup/02-pi-db-publicacion.sql",
 );
 
-/** `ARRAY['Tabla', 'col1,col2,...']` → Map<Tabla, Set<columnas permitidas>>. */
+/** `ARRAY['Tabla', 'col1,col2,...']` → Map<Tabla, Set<columnas PUBLICADAS>>.
+ *
+ * SPEC-892: el whitelist REAL es el allow-list `canon` (las columnas que SÍ viajan a BI). El mismo
+ * SQL trae después `columnas_vetadas` (lista de VETO: PII que NUNCA se publica) con el MISMO patrón
+ * `ARRAY['t','col']`. Parsear ambas y sobrescribir (`mapa.set`) hacía que, para una tabla presente en
+ * las dos (ClasificacionIA, AuditLog…), el whitelist quedara con las columnas VETADAS (último match) —
+ * un FALSO POSITIVO: `ClasificacionIA.piiDetectada` está vetada (segura) pero aparecía «publicada». Se
+ * acota el parseo al bloque `canon` (entre `canon text[][] :=` y `columnas_vetadas text[][] :=`) y se
+ * UNEN columnas por si una tabla se repite. */
 function parsearWhitelist(sql: string): Map<string, Set<string>> {
+    const iCanon = sql.indexOf("canon text[][]");
+    const iVetadas = sql.indexOf("columnas_vetadas text[][]");
+    const bloque = iCanon >= 0 && iVetadas > iCanon ? sql.slice(iCanon, iVetadas) : sql;
     const mapa = new Map<string, Set<string>>();
     const re = /ARRAY\['([^']+)',\s*'([^']*)'\]/g;
     let m: RegExpExecArray | null;
-    while ((m = re.exec(sql)) !== null) {
+    while ((m = re.exec(bloque)) !== null) {
         const cols = m[2]
             .split(",")
             .map((c) => c.trim())
             .filter(Boolean);
-        mapa.set(m[1], new Set(cols));
+        const set = mapa.get(m[1]) ?? new Set<string>();
+        for (const c of cols) set.add(c);
+        mapa.set(m[1], set);
     }
     return mapa;
 }
