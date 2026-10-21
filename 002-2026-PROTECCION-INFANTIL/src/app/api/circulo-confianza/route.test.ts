@@ -81,4 +81,25 @@ describe("/api/circulo-confianza", () => {
         expect(json.identificadores).toHaveLength(1);
         expect(json.identificadores[0].valor).toBe("+57300222222");
     });
+
+    // SPEC-902 · CANDADO: la nota del contacto es texto libre → invariante SOLO-TEXTO. Muere con
+    // el defecto: sin el refine, una nota con multimedia pasa el schema (no da 400).
+    it("SPEC-902: POST RECHAZA (400) una nota de contacto con multimedia (URL de imagen)", async () => {
+        const user = await crearUsuario("PARENT");
+        mockToken = await crearTokenUsuario(user.id, "PARENT");
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+
+        const req = new Request("http://localhost:5005/api/circulo-confianza", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                etiqueta: "primo",
+                nota: "mirá http://x.com/foto.jpg",
+                identificadores: [{ valor: "+57300333333", tipo: "telefono", plataformaId: plataforma!.id }],
+            }),
+        });
+
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+    });
 });

@@ -4,6 +4,13 @@ import { NivelLog, EstadoNotificacion, CanalNotificacion } from "@prisma/client"
 // consumidores de @/lib/schemas). También en ./identidad viven las de profesor.
 import { cuidIdSchema, materiaIdSchema, emailSchema, parametroClaveSchema, estadoActivoSchema } from "./base";
 import { profesorNuevoSchema } from "./identidad";
+// SPEC-902: reusa el predicado SOLO-TEXTO de SPEC-893 (sin duplicar la lógica) para los
+// campos de texto libre internos que deben rechazar multimedia.
+import { textoReporteTieneMultimedia } from "../validators";
+
+/** SPEC-902: mensaje NEUTRAL (voz «usted», sin voseo) del rechazo SOLO-TEXTO en notas internas. */
+export const MENSAJE_SOLO_TEXTO_NOTA =
+    "La nota es solo texto: no se permiten imágenes, enlaces de multimedia ni archivos";
 
 /**
  * Esquemas zod reutilizables para validación de entradas en rutas API.
@@ -405,13 +412,16 @@ export const notaSeguimientoSchema = z.object({
         .string()
         .trim()
         .min(1, "Escribe lo que hiciste antes de registrarlo")
-        .max(1000, "La nota no puede superar 1000 caracteres"),
+        .max(1000, "La nota no puede superar 1000 caracteres")
+        // SPEC-902: la bitácora del caso es texto libre interno → invariante SOLO-TEXTO.
+        .refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO_NOTA }),
 });
 
 // SPEC-150 (FR-002): marca de observación especial — motivo opcional, texto
 // plano ≤ 500 (solo visible para el colegio; React escapa al renderizar).
 export const observacionBodySchema = z.object({
-    motivo: z.string().trim().max(500, "El motivo no puede superar 500 caracteres").optional(),
+    // SPEC-902: motivo de observación del alumno = texto libre interno → SOLO-TEXTO.
+    motivo: z.string().trim().max(500, "El motivo no puede superar 500 caracteres").refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO_NOTA }).optional(),
 });
 
 // SPEC-168 (Fase F): cuenta compartida del Comité de Convivencia.
@@ -551,8 +561,8 @@ export const simularAbusoBodySchema = z.object({
     usuarioId: z.string().cuid().optional(),
     identificadores: z.array(z.string().min(3).max(100)).max(200).optional(),
     ips: z.array(ipv4Schema).max(200).optional(),
-    // SPEC-192: nota interna opcional para el operador.
-    nota: z.string().max(200).optional(),
+    // SPEC-192: nota interna del operador. SPEC-902: texto libre → SOLO-TEXTO.
+    nota: z.string().max(200).refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO_NOTA }).optional(),
 });
 
 export const simulacionAbusoQuerySchema = z.object({

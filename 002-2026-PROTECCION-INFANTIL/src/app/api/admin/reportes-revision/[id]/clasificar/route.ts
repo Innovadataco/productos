@@ -18,6 +18,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CategoriaConducta } from "@prisma/client";
 import { verifyAuth } from "@/lib/auth";
+import { textoReporteTieneMultimedia } from "@/lib/validators"; // SPEC-902: invariante SOLO-TEXTO (predicado de 893)
+import { MENSAJE_SOLO_TEXTO_NOTA } from "@/lib/schemas";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
@@ -40,7 +42,13 @@ const clasificarSchema = z.object({
     categoria: z.enum(CATEGORIAS),
     // La nota es el porqué de la decisión humana: obligatoria para que el
     // caso quede auditable (quién clasificó, en qué categoría y con qué razón).
-    nota: z.string().trim().min(10, "La nota debe explicar el criterio (mínimo 10 caracteres)").max(2000),
+    // SPEC-902: nota libre interna del operador → invariante SOLO-TEXTO.
+    nota: z
+        .string()
+        .trim()
+        .min(10, "La nota debe explicar el criterio (mínimo 10 caracteres)")
+        .max(2000)
+        .refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO_NOTA }),
 });
 
 function getClientInfo(request: Request) {
