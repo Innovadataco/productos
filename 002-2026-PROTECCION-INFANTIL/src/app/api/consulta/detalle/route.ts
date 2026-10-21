@@ -63,11 +63,9 @@ async function resolverDetalle(request: Request, identificador: string) {
     }
 }
 
-/** GET (compat API). El cliente web usa POST: el identificador nunca va en la URL (spec 091-D). */
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    return resolverDetalle(request, searchParams.get("identificador") ?? "");
-}
+// SPEC-897 (seguridad · regla dura 091-D): NO hay handler GET — el identificador nunca va en la URL
+// (historial, logs de proxy/CDN, Referer). Solo POST con el identificador en el cuerpo; un GET recibe
+// 405 de Next (método no exportado). El cliente web ya usa POST.
 
 /** POST /api/consulta/detalle — detalle autenticado con el identificador en el CUERPO. */
 export async function POST(request: Request) {

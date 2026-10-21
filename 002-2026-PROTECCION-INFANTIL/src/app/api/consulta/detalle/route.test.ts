@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
-import { GET } from "./route";
+import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
@@ -56,7 +56,7 @@ async function crearReporteClasificado(
     return reporte;
 }
 
-describe("GET /api/consulta/detalle", () => {
+describe("POST /api/consulta/detalle", () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();
@@ -67,7 +67,7 @@ describe("GET /api/consulta/detalle", () => {
 
     it("devuelve 401 si no está autenticado", async () => {
         vi.spyOn(auth, "verifyAuth").mockRejectedValue(new Error("No autenticado"));
-        const res = await GET(new Request("http://localhost:5005/api/consulta/detalle?identificador=3001111111"));
+        const res = await POST(new Request("http://localhost:5005/api/consulta/detalle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: "3001111111" }) }));
         expect(res.status).toBe(401);
     });
 
@@ -75,7 +75,7 @@ describe("GET /api/consulta/detalle", () => {
         await crearReporteClasificado("3001111111", "SOLICITUD_MATERIAL", 0.85, true);
         await crearReporteClasificado("3001111111", "SOLICITUD_MATERIAL", 0.9, false);
 
-        const res = await GET(new Request("http://localhost:5005/api/consulta/detalle?identificador=3001111111"));
+        const res = await POST(new Request("http://localhost:5005/api/consulta/detalle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: "3001111111" }) }));
         expect(res.status).toBe(200);
         const body = await res.json();
 
@@ -94,7 +94,7 @@ describe("GET /api/consulta/detalle", () => {
     it("incluye ubicaciones aproximadas a nivel ciudad", async () => {
         await crearReporteClasificado("3002222222", "CONTACTO_INSISTENTE", 0.7, true);
 
-        const res = await GET(new Request("http://localhost:5005/api/consulta/detalle?identificador=3002222222"));
+        const res = await POST(new Request("http://localhost:5005/api/consulta/detalle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: "3002222222" }) }));
         expect(res.status).toBe(200);
         const body = await res.json();
 
@@ -123,7 +123,7 @@ describe("GET /api/consulta/detalle", () => {
             },
         });
 
-        const res = await GET(new Request("http://localhost:5005/api/consulta/detalle?identificador=3003333333"));
+        const res = await POST(new Request("http://localhost:5005/api/consulta/detalle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: "3003333333" }) }));
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.tieneReportes).toBe(false);
@@ -173,7 +173,7 @@ describe("GET /api/consulta/detalle", () => {
             },
         });
 
-        const res = await GET(new Request("http://localhost:5005/api/consulta/detalle?identificador=3004444444"));
+        const res = await POST(new Request("http://localhost:5005/api/consulta/detalle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: "3004444444" }) }));
         expect(res.status).toBe(200);
         const body = await res.json();
 

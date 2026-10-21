@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { POST } from "./route";
-import { GET as GETConsulta } from "@/app/api/consulta/route";
+import { POST as POSTConsulta } from "@/app/api/consulta/route";
 import { PATCH as PATCHVigencia } from "@/app/api/admin/padres/[id]/vigencia/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -217,8 +217,12 @@ describe("POST /api/auth/login — vigencia del cliente (SPEC-119)", () => {
             data: { finServicio: diasDesdeHoy(-1) },
         });
 
-        const res = await GETConsulta(
-            new Request("http://localhost:5005/api/consulta?identificador=%2B573009990002")
+        const res = await POSTConsulta(
+            new Request("http://localhost:5005/api/consulta", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ identificador: "+573009990002" }),
+            })
         );
         expect(res.status).toBe(200);
     });

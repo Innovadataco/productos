@@ -69,14 +69,10 @@ async function resolverConsulta(request: Request, identificador: string) {
     }
 }
 
-/**
- * GET /api/consulta?identificador=... (compatibilidad de API).
- * El cliente web usa POST: el identificador NUNCA debe viajar en la URL (spec 091-US1).
- */
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    return resolverConsulta(request, searchParams.get("identificador") ?? "");
-}
+// SPEC-897 (seguridad · regla dura 091-US1): NO hay handler GET. El identificador (teléfono/nick del
+// presunto agresor, y la señal de a quién investiga un padre) NUNCA debe viajar en la URL — quedaría en
+// el historial, en los logs de proxy/CDN y en la cabecera Referer. Solo POST con el identificador en el
+// cuerpo; un GET recibe 405 de Next (método no exportado). El cliente web ya usa POST.
 
 /**
  * POST /api/consulta — consulta pública con el identificador en el CUERPO.

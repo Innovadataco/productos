@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
-import { GET, POST } from "./route";
+import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -79,7 +79,7 @@ async function crearReporteEnRevision(identificador: string, plataformaId: strin
     });
 }
 
-describe("GET /api/consulta", () => {
+describe("POST /api/consulta", () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();
@@ -88,8 +88,8 @@ describe("GET /api/consulta", () => {
     });
 
     it("devuelve sin reportes cuando el identificador no existe", async () => {
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300111111");
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: decodeURIComponent("%2B57300111111") }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.tieneReportes).toBe(false);
@@ -99,8 +99,8 @@ describe("GET /api/consulta", () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         await crearReporteVisible("+57300BAJO", plataforma!.id, "OFRECIMIENTO_REGALOS", false);
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300BAJO");
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: decodeURIComponent("%2B57300BAJO") }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.tieneReportes).toBe(true);
@@ -124,8 +124,8 @@ describe("GET /api/consulta", () => {
             await crearReporteVisible("+57300ANON", plataforma!.id, "OFRECIMIENTO_REGALOS", i === 0);
         }
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300ANON");
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: decodeURIComponent("%2B57300ANON") }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.tieneReportes).toBe(true);
@@ -150,8 +150,8 @@ describe("GET /api/consulta", () => {
             await crearReporteVisible("+57300AUTH", plataforma!.id, "OFRECIMIENTO_REGALOS", false);
         }
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300AUTH");
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: decodeURIComponent("%2B57300AUTH") }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.tieneReportes).toBe(true);
@@ -171,8 +171,8 @@ describe("GET /api/consulta", () => {
         await crearReporteVisible("+57300SPAM", plataforma!.id, "OTRO", false);
         await crearReporteVisible("+57300SPAM", plataforma!.id, "EXTORSION", false);
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300SPAM");
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: decodeURIComponent("%2B57300SPAM") }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
         // Antes del predicado único contaba 4; ahora solo el aprobado (riesgo real)
@@ -185,8 +185,8 @@ describe("GET /api/consulta", () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         await crearReporteVisible("+57300SOLOSPAM", plataforma!.id, "SPAM", false);
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300SOLOSPAM");
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: decodeURIComponent("%2B57300SOLOSPAM") }) });
+        const res = await POST(req);
         const body = await res.json();
         expect(body.tieneReportes).toBe(false);
     });
@@ -222,8 +222,8 @@ describe("GET /api/consulta", () => {
     });
 
     it("rechaza parámetros inválidos", async () => {
-        const req = new Request("http://localhost:5005/api/consulta?identificador=ab");
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: decodeURIComponent("ab") }) });
+        const res = await POST(req);
         expect(res.status).toBe(400);
     });
 
@@ -235,8 +235,8 @@ describe("GET /api/consulta", () => {
             await crearReporteVisible("+57300MULTI", instagram.id, "CONTACTO_INSISTENTE", false);
         }
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300MULTI");
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: decodeURIComponent("%2B57300MULTI") }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.tieneReportes).toBe(true);
@@ -249,8 +249,8 @@ describe("GET /api/consulta", () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         await crearReporteEnRevision("+57300REVISION", plataforma!.id);
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300REVISION");
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: decodeURIComponent("%2B57300REVISION") }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.tieneReportes).toBe(false);
@@ -263,8 +263,8 @@ describe("GET /api/consulta", () => {
         await crearReporteVisible("+57300MIX", plataforma!.id, "OFRECIMIENTO_REGALOS", false);
         await crearReporteEnRevision("+57300MIX", plataforma!.id);
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300MIX");
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: decodeURIComponent("%2B57300MIX") }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.tieneReportes).toBe(true);
@@ -286,10 +286,12 @@ describe("GET /api/consulta", () => {
         const casos = ["nick_colegio_uno", "NICK_COLEGIO_UNO", "Nick_Colegio_Uno", "  nick_COLEGIO_uno  "];
         const respuestas: Array<{ tieneReportes: boolean; totalReportes: number }> = [];
         for (const variante of casos) {
-            const req = new Request(
-                `http://localhost:5005/api/consulta?identificador=${encodeURIComponent(variante)}`
-            );
-            const res = await GET(req);
+            const req = new Request("http://localhost:5005/api/consulta", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ identificador: variante }),
+            });
+            const res = await POST(req);
             expect(res.status).toBe(200);
             const body = await res.json();
             respuestas.push({ tieneReportes: body.tieneReportes, totalReportes: body.totalReportes });
