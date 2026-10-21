@@ -3,7 +3,8 @@
  * Repositorio, parámetros, generador de código de referido y audit mockeados
  * (sin BD; mismo patrón que `vigencia.service.test.ts`).
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { formatInTimeZone } from "date-fns-tz";
 import { EstadoSuscripcion, TipoTitular, DuracionPlan } from "@prisma/client";
 import { crearSuscripcionCliente, extenderVigenciaDesdeFreemium } from "./freemium.service";
 
@@ -150,8 +151,27 @@ describe("extenderVigenciaDesdeFreemium", () => {
         };
     }
 
-    it("convierte el freemium y extiende desde freemiumFechaFin (AS-004)", async () => {
-        mockRepo.obtenerSuscripcionFreemiumPorId.mockResolvedValue(suscripcionFreemium());
+    // SPEC-901: AS-004 era FLAKY — `freemiumFechaFin = now()+10d` flotaba con la fecha de corrida y el
+    // esperado usaba `setMonth(+1)` INGENUO (que DESBORDA: 31-oct → 1-dic) sobre el instante UTC crudo,
+    // mientras el servicio CLAMPA correcto en calendario Bogotá (31-oct + 1 mes → 30-nov, porque noviembre
+    // no tiene 31 — FR-003/SPEC-794). El bug vivía en el ESPERADO del test, no en el servicio. Ahora: reloj
+    // anclado (SOLO Date, patrón SPEC-866) a un FIN DE MES que dispara el clamp, y el esperado = el día
+    // calendario Bogotá CLAMPADO del servicio. Determinista en cualquier fecha de corrida y EJERCITA el borde.
+    afterEach(() => vi.useRealTimers());
+
+    it.each([
+        { nowUTC: "2026-10-21T12:00:00Z", finBogota: "2026-11-30", caso: "31-oct → 30-nov (clamp: noviembre tiene 30)" },
+        { nowUTC: "2026-12-21T12:00:00Z", finBogota: "2027-01-31", caso: "31-dic → 31-ene (cruce de año)" },
+        { nowUTC: "2027-01-21T12:00:00Z", finBogota: "2027-02-28", caso: "31-ene → 28-feb (clamp: febrero no bisiesto)" },
+    ])("convierte el freemium y extiende desde freemiumFechaFin clampando a fin de mes — $caso (AS-004)", async ({ nowUTC, finBogota }) => {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(new Date(nowUTC));
+
+        // freemiumFechaFin = fin de mes (now+10d cae en un 31), en el FUTURO respecto a `ahora` → es la base.
+        const freemiumFechaFin = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+        mockRepo.obtenerSuscripcionFreemiumPorId.mockResolvedValue(
+            suscripcionFreemium({ freemiumFechaFin, fechaFin: freemiumFechaFin })
+        );
 
         const resultado = await extenderVigenciaDesdeFreemium({
             suscripcionId: "sub-1",
@@ -164,10 +184,9 @@ describe("extenderVigenciaDesdeFreemium", () => {
         const data = mockRepo.actualizarSuscripcion.mock.calls[0]?.[1] as Record<string, unknown>;
         expect(data.esFreemium).toBe(false);
         expect(data.fechaCorteProgramado).toBeNull();
-        // fechaFin ≈ freemiumFechaFin + 1 mes.
-        const esperado = new Date(FREEMIUM_FIN_FUTURO);
-        esperado.setMonth(esperado.getMonth() + 1);
-        expect((data.fechaFin as Date).toISOString()).toBe(esperado.toISOString());
+        // El servicio CLAMPA «+1 mes» al último día del mes siguiente (Bogotá), NO desborda (setMonth daría
+        // 1-dic). Afirmamos el día calendario Bogotá del resultado. Volver a `finBogota` del overflow → rojo.
+        expect(formatInTimeZone(data.fechaFin as Date, "America/Bogota", "yyyy-MM-dd")).toBe(finBogota);
         expect(data.estado).toBeUndefined();
         expect(mockAudit.logAudit).toHaveBeenCalledWith(
             expect.objectContaining({ accion: "SUSCRIPCION_FREEMIUM_CONVERTIDA", recursoId: "sub-1", usuarioId: "admin-1" })
