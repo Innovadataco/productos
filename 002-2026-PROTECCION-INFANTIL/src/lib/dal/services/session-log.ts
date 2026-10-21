@@ -65,6 +65,31 @@ export class SessionLogService {
         return resultado.count > 0;
     }
 
+    /**
+     * SPEC-896: el propio usuario cierra SU sesión en el logout. Scopeada al `usuarioId` (nadie cierra la de
+     * otro por id) e IDEMPOTENTE (`updateMany`: no lanza si ya estaba cerrada o el id no existe). Tras esto,
+     * `estaSesionActiva`/`pingSesion` (que exigen `cerradaEn: null`) rechazan ese JWT aunque no haya expirado.
+     */
+    async cerrarPropia(sesionLogId: string, usuarioId: string): Promise<boolean> {
+        const resultado = await prisma.sesionLog.updateMany({
+            where: { id: sesionLogId, usuarioId, cerradaEn: null },
+            data: { cerradaEn: new Date(), motivoCierre: "LOGOUT" },
+        });
+        return resultado.count > 0;
+    }
+
+    /**
+     * SPEC-896: cierra TODAS las sesiones ABIERTAS de un usuario. Un reset/cambio de contraseña debe EXPULSAR
+     * cualquier JWT vivo (incluido el de un atacante que motivó el reset). Devuelve cuántas cerró. Idempotente.
+     */
+    async cerrarTodasPorUsuario(usuarioId: string): Promise<number> {
+        const resultado = await prisma.sesionLog.updateMany({
+            where: { usuarioId, cerradaEn: null },
+            data: { cerradaEn: new Date(), motivoCierre: "FORZADA" },
+        });
+        return resultado.count;
+    }
+
     async cerrarPorInactividad(minutosInactividad: number): Promise<number> {
         const limite = new Date(Date.now() - minutosInactividad * 60 * 1000);
         const abiertas = await prisma.sesionLog.findMany({

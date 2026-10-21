@@ -382,6 +382,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // repositorios Prisma al evaluarse; lo movemos a integration.
     "src/lib/api-handler.test.ts",
     "src/lib/auth.test.ts",
+    "src/lib/extraer-token-sesion.candado.test.ts",
     // SPEC-310 (002-PI-211): whitelist de returnTo del puente PI→BI — función pura, sin BD.
     "src/lib/auth/validar-return-to.test.ts",
     // SPEC-319 (002-PI-219 · I-212): fuente única rol→home — función pura, sin BD.

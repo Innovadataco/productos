@@ -15,6 +15,7 @@ import { UsuarioRepository } from "../repositories/usuario";
 import { TokenRecuperacionRepository } from "../repositories/token-recuperacion";
 import { CodigoVerificacionRepository } from "../repositories/codigo-verificacion";
 import { ParametroRepository } from "../repositories/parametro";
+import { SessionLogService } from "./session-log";
 import type {
     ResultadoCambioPassword,
     ResultadoLogin,
@@ -177,6 +178,8 @@ export class AutenticacionService {
             passwordCreadaEn: new Date(),
             debeCambiarPassword: false,
         });
+        // SPEC-896: cambiar la contraseña EXPULSA toda sesión viva del usuario (un JWT robado no sobrevive).
+        await new SessionLogService().cerrarTodasPorUsuario(input.usuarioId);
         return { ok: true };
     }
 
@@ -285,6 +288,11 @@ export class AutenticacionService {
             });
             await new TokenRecuperacionRepository(tx).marcarUsado(tokenId);
         });
+
+        // SPEC-896: el reset preventivo EXPULSA toda sesión viva del usuario (incluido el JWT del atacante que
+        // motivó el reset). Fuera de la tx: el password ya quedó cambiado; cerrar las sesiones es el paso que
+        // invalida los tokens vivos vía estaSesionActiva/pingSesion.
+        await new SessionLogService().cerrarTodasPorUsuario(usuarioId);
 
         // SPEC-322: email para aviso. SPEC-318: userId para logAudit USUARIO_CAMBIO_PASSWORD.
         return { ok: true, email: tokenEncontrado.usuario.email, userId: usuarioId };
