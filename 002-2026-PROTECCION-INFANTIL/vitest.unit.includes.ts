@@ -15,6 +15,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/arch/docs-globales-fuera-del-gate.candado.test.ts",
     // SPEC-808: el mensaje de reporte duplicado no acusa ni afirma la conducta vieja del anónimo.
     "src/app/api/reportes/reporte-duplicado-mensaje.candado.test.ts",
+    // SPEC-897: la consulta pública no acepta el identificador por GET (URL) — solo POST (cuerpo).
+    "src/app/api/consulta/no-get-identificador.candado.test.ts",
     // CEO 06-09: parseArgs de scripts/demo ABORTA ante flag desconocido (no traga banderas en un script destructivo).
     "scripts/demo/parseargs-estricto.candado.test.ts",
     // SPEC-287 (002-PI-187): fuente única de guardias + cookie firmada de vigencia + 4 ratchets estáticos.

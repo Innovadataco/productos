@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
-import { GET } from "./route";
+import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma, crearPaisCiudad, crearParametrosReportes } from "@/lib/reporte-test-utils";
@@ -70,8 +70,8 @@ describe("GET /api/consulta (F3: consulta vacía)", () => {
 
     it("consulta vacía: incluye bloqueVacia curado y registra el evento SIN el identificador", async () => {
         const identificador = "+57300999000";
-        const req = new Request(`http://localhost:5005/api/consulta?identificador=${encodeURIComponent(identificador)}`);
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: identificador }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
 
@@ -93,8 +93,8 @@ describe("GET /api/consulta (F3: consulta vacía)", () => {
     });
 
     it("consulta vacía de un nick: tipoIdentificador=nick en los metadatos", async () => {
-        const req = new Request(`http://localhost:5005/api/consulta?identificador=${encodeURIComponent("@sospechoso")}`);
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: "@sospechoso" }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
 
         const evento = await prisma.auditLog.findFirst({ where: { accion: "CONSULTA_SIN_RESULTADOS" } });
@@ -106,8 +106,8 @@ describe("GET /api/consulta (F3: consulta vacía)", () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         await crearReporteVisible("+57300CONREP", plataforma!.id);
 
-        const req = new Request(`http://localhost:5005/api/consulta?identificador=${encodeURIComponent("+57300CONREP")}`);
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: "+57300CONREP" }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
 
@@ -119,8 +119,8 @@ describe("GET /api/consulta (F3: consulta vacía)", () => {
     it("degradación limpia: sin los parámetros no hay bloqueVacia pero sí evento", async () => {
         await prisma.parametroSistema.deleteMany({ where: { clave: { startsWith: "consulta.vacia." } } });
 
-        const req = new Request(`http://localhost:5005/api/consulta?identificador=${encodeURIComponent("+57300888777")}`);
-        const res = await GET(req);
+        const req = new Request("http://localhost:5005/api/consulta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ identificador: "+57300888777" }) });
+        const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
 
