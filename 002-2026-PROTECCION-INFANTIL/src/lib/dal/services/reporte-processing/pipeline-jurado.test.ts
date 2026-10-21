@@ -26,6 +26,9 @@ const mocks = vi.hoisted(() => ({
     findUnique: vi.fn(),
     create: vi.fn(),
     createManyVotos: vi.fn(),
+    // SPEC-904: el create + el sellado de piiDetectada van en una tx; el seal (pii vacía en este
+    // test) hace `contenidoReporte.update({ piiDetectadaCifrado: null })`.
+    contenidoUpdate: vi.fn(),
 }));
 
 vi.mock("@/lib/ai/motor", () => ({
@@ -36,8 +39,10 @@ vi.mock("@/lib/ai/pii-detector", () => ({
     detectarPiiCombinado: mocks.detectarPiiCombinado,
 }));
 
-vi.mock("@/lib/prisma", () => ({
-    prisma: {
+vi.mock("@/lib/prisma", () => {
+    // SPEC-904: `$transaction` pasa el MISMO objeto como tx (mismos delegates), así el create y el
+    // `sellarPiiDetectada` (→ contenidoReporte.update) corren contra los mocks.
+    const prisma: Record<string, unknown> = {
         clasificacionIA: {
             findUnique: mocks.findUnique,
             create: mocks.create,
@@ -45,8 +50,13 @@ vi.mock("@/lib/prisma", () => ({
         clasificacionRubricaVoto: {
             createMany: mocks.createManyVotos,
         },
-    },
-}));
+        contenidoReporte: {
+            update: mocks.contenidoUpdate,
+        },
+    };
+    prisma.$transaction = async (fn: (tx: unknown) => unknown) => fn(prisma);
+    return { prisma };
+});
 
 import { clasificarReporte } from "./clasificacion";
 import type { ParametrosClasificacion } from "./parametros";
@@ -104,12 +114,14 @@ describe("clasificarReporte — candado del jurado del pipeline real (SPEC-398 �
         mocks.clasificarConMotorActivo.mockResolvedValue(resultadoRubricaTresModelos());
         mocks.create.mockResolvedValue({ id: "cid-1" });
         mocks.createManyVotos.mockResolvedValue({ count: 3 });
+        mocks.contenidoUpdate.mockResolvedValue({});
     });
 
     // ── EL CANDADO ─────────────────────────────────────────────────────────
     it("sin override → llama a `clasificarConMotorActivo` con OPCIONES VACÍAS (jurado completo)", async () => {
         await clasificarReporte({
             reporteId: "r1",
+            contenidoId: "cid-test",
             texto: "texto de prueba",
             parametros: parametrosBase(), // overrideModeloClasificacion=undefined
             ejemplosRag: [],
@@ -127,6 +139,7 @@ describe("clasificarReporte — candado del jurado del pipeline real (SPEC-398 �
     it("con override → llama a `clasificarConMotorActivo` con `{modeloClasificacion: X}` (mono-modelo intencional)", async () => {
         await clasificarReporte({
             reporteId: "r2",
+            contenidoId: "cid-test",
             texto: "texto",
             parametros: parametrosBase({ overrideModeloClasificacion: "ornith:9b" }),
             ejemplosRag: [],
@@ -143,6 +156,7 @@ describe("clasificarReporte — candado del jurado del pipeline real (SPEC-398 �
         // quirúrgico del comité de votación".
         await clasificarReporte({
             reporteId: "r3",
+            contenidoId: "cid-test",
             texto: "texto",
             parametros: parametrosBase({
                 modeloClasificacion: "ornith:9b",
@@ -159,6 +173,7 @@ describe("clasificarReporte — candado del jurado del pipeline real (SPEC-398 �
     it("cuando el motor devuelve el comité completo, se persiste una fila `ClasificacionRubricaVoto` POR MODELO", async () => {
         await clasificarReporte({
             reporteId: "r4",
+            contenidoId: "cid-test",
             texto: "texto",
             parametros: parametrosBase(),
             ejemplosRag: [],
@@ -177,6 +192,7 @@ describe("clasificarReporte — candado del jurado del pipeline real (SPEC-398 �
     it("pipeline real (sin override) persiste `overrideModeloUsado: null`", async () => {
         await clasificarReporte({
             reporteId: "r5",
+            contenidoId: "cid-test",
             texto: "texto",
             parametros: parametrosBase(),
             ejemplosRag: [],
@@ -188,6 +204,7 @@ describe("clasificarReporte — candado del jurado del pipeline real (SPEC-398 �
     it("A/B intencional (con override) persiste `overrideModeloUsado: <modelo>` — así la alarma no chilla", async () => {
         await clasificarReporte({
             reporteId: "r6",
+            contenidoId: "cid-test",
             texto: "texto",
             parametros: parametrosBase({ overrideModeloClasificacion: "ornith:9b" }),
             ejemplosRag: [],

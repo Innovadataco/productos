@@ -5,7 +5,7 @@ import { recalcularYGuardarScoreSiReporteReal } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
-import { descifrarCampo, estaPurgado, purgarTextoTrabajo, restaurarTextoTrabajo } from "@/lib/reporte-texto-contenido";
+import { descifrarCampo, estaPurgado, purgarTextoTrabajo, purgarPiiDetectada, restaurarTextoTrabajo } from "@/lib/reporte-texto-contenido";
 import { revertirPatronPorReporte } from "@/lib/colegio/patrones";
 import { MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 import type { MotivoBajaReporte, Prisma } from "@prisma/client";
@@ -123,6 +123,8 @@ export async function darDeBajaReporte(params: {
             where: { reporteId },
             data: { piiDetectada: [], rawResponse: null, contienePii: false },
         });
+        // SPEC-904 (I-422): además de la columna plana, cripto-shred del campo CIFRADO de PII.
+        await purgarPiiDetectada(tx, reporte.contenidoId);
 
         // SPEC-142 (F6, FR-004): reversa exacta del aporte al patrón institucional
         // (decremento con piso 0 vía marcador de la alerta), dentro de la misma tx.

@@ -12,6 +12,7 @@ import { z } from "zod";
 import { idSchema } from "@/lib/validators";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { resellarCampo } from "@/lib/reporte-texto-contenido";
+import { descifrarPiiDetectadaReporte } from "@/lib/dal/services/descifrar-contenido";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { ParametroRepository } from "@/lib/dal/repositories/parametro";
@@ -85,7 +86,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const piiEliminada = reporte.clasificacion?.piiDetectada || [];
+        // SPEC-904: la PII literal ya no vive en la columna plana ([]); se descifra del sobre del
+        // reporte (audita la lectura — el operador la ve en la respuesta). Vacía si no había PII.
+        const piiEliminada = await descifrarPiiDetectadaReporte(reporte.contenidoId);
 
         const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
 

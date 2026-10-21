@@ -85,8 +85,12 @@ export function llaveActiva(): { version: number; key: Buffer } {
     return { version, key: llavePorVersion(version) };
 }
 
-/** Campos cifrables de `ContenidoReporte`. */
-export type CampoContenido = "texto" | "textoOriginal";
+/**
+ * Campos cifrables de `ContenidoReporte`. `texto`/`textoOriginal` viven en sus columnas
+ * homónimas; `piiDetectada` (SPEC-904) vive en `piiDetectadaCifrado` (JSON de la lista) y se
+ * sella/descifra con sus helpers dedicados — los descifradores de TEXTO lo rechazan.
+ */
+export type CampoContenido = "texto" | "textoOriginal" | "piiDetectada";
 
 /**
  * AAD que ata el ciphertext a SU fila y SU campo. Formato: `pi:v1:<contenidoId>:<campo>`.

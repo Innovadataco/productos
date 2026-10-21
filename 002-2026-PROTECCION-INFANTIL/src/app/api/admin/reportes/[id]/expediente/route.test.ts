@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { sellarPiiDetectada } from "@/lib/reporte-texto-contenido";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -333,11 +334,15 @@ describe("GET /api/admin/reportes/[id]/expediente · SPEC-891 pertenencia + PII 
                         promptTokens: 100,
                         responseTokens: 20,
                         contienePii: true,
-                        piiDetectada: ["María González", "3009998888"],
+                        // SPEC-904: la columna plana queda []; el literal vive CIFRADO en el sobre.
+                        piiDetectada: [],
                     },
                 },
             },
         });
+        // SPEC-904: sellar la PII literal bajo la DEK del reporte (lo que el pipeline hace en prod);
+        // el revelado del expediente la descifra desde ahí, no de la columna plana.
+        await sellarPiiDetectada(prisma, reporte.contenidoId, ["María González", "3009998888"]);
 
         const sin = await ver(reporte.id, admin.id, "ADMIN", false);
         expect(sin.status).toBe(200);

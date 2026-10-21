@@ -64,6 +64,11 @@ export async function descifrarCampo(
     contenidoId: string,
     campo: CampoContenido
 ): Promise<string> {
+    // SPEC-904: `piiDetectada` vive en otra columna (`piiDetectadaCifrado`) y es una LISTA, no
+    // un texto; este descifrador de TEXTO lo rechaza (si no, caería al else y leería el original).
+    if (campo === "piiDetectada") {
+        throw new Error("[reporte-texto-contenido] descifrarCampo no maneja 'piiDetectada'; usá descifrarPiiDetectada.");
+    }
     const [contenido, llave] = await Promise.all([
         tx.contenidoReporte.findUniqueOrThrow({ where: { id: contenidoId } }),
         tx.llaveReporte.findUniqueOrThrow({ where: { contenidoId } }),
@@ -87,6 +92,9 @@ export async function descifrarCampos(
     contenidoIds: string[],
     campo: CampoContenido
 ): Promise<Map<string, string>> {
+    if (campo === "piiDetectada") {
+        throw new Error("[reporte-texto-contenido] descifrarCampos no maneja 'piiDetectada'; usá descifrarPiiDetectada.");
+    }
     const ids = [...new Set(contenidoIds)];
     const resultado = new Map<string, string>();
     if (ids.length === 0) return resultado; // sin ids no se toca la BD
@@ -230,4 +238,58 @@ export async function purgarOriginal(tx: Prisma.TransactionClient, contenidoId: 
         where: { id: contenidoId },
         data: { textoOriginalCifrado, origenEvidencia: OrigenEvidencia.PURGADA, purgadoEn: new Date() },
     });
+}
+
+/**
+ * SPEC-904 (I-422 · Ley 1581): sella la PII LITERAL detectada (lista) como JSON CIFRADO bajo la
+ * MISMA DEK del reporte (AAD `pi:v1:<contenidoId>:piiDetectada`), en `piiDetectadaCifrado`. Lista
+ * VACÍA → `null` (no hay literal que proteger). Re-sellable: la anonimización actualiza la lista.
+ * No rota la DEK ni toca `texto`/`textoOriginal`. El llamador pasa la lista plana, nunca llaves.
+ */
+export async function sellarPiiDetectada(
+    tx: Prisma.TransactionClient,
+    contenidoId: string,
+    pii: string[]
+): Promise<void> {
+    if (pii.length === 0) {
+        await tx.contenidoReporte.update({ where: { id: contenidoId }, data: { piiDetectadaCifrado: null } });
+        return;
+    }
+    const llave = await tx.llaveReporte.findUniqueOrThrow({ where: { contenidoId } });
+    const kek = llavePorVersion(llave.kekVersion);
+    const dek = Buffer.from(descifrarConLlave(llave.dekCifrada, kek, aadEnvoltura(contenidoId)), "base64");
+    const piiDetectadaCifrado = cifrarConLlave(JSON.stringify(pii), dek, aadDe(contenidoId, "piiDetectada"));
+    await tx.contenidoReporte.update({ where: { id: contenidoId }, data: { piiDetectadaCifrado } });
+}
+
+/**
+ * SPEC-904: descifra la PII literal detectada → `string[]`. `null` → `[]`. Fail-loud ante
+ * contenido/llave ausentes o sobre corrupto (igual que `descifrarCampo`): tras el cripto-shred la
+ * DEK muere y LANZA — la lista queda irrecuperable, que ES el borrado real. El roundtrip devuelve
+ * EXACTAMENTE la lista original (el anonimizador depende de que los fragmentos coincidan).
+ */
+export async function descifrarPiiDetectada(
+    tx: Prisma.TransactionClient,
+    contenidoId: string
+): Promise<string[]> {
+    const contenido = await tx.contenidoReporte.findUniqueOrThrow({ where: { id: contenidoId } });
+    if (contenido.piiDetectadaCifrado === null) return [];
+    const llave = await tx.llaveReporte.findUniqueOrThrow({ where: { contenidoId } });
+    const kek = llavePorVersion(llave.kekVersion);
+    const dek = Buffer.from(descifrarConLlave(llave.dekCifrada, kek, aadEnvoltura(contenidoId)), "base64");
+    const json = descifrarConLlave(contenido.piiDetectadaCifrado, dek, aadDe(contenidoId, "piiDetectada"));
+    const parsed = JSON.parse(json) as unknown;
+    if (!Array.isArray(parsed) || !parsed.every((x) => typeof x === "string")) {
+        throw new Error("[reporte-texto-contenido] piiDetectada descifrada no es string[]");
+    }
+    return parsed;
+}
+
+/**
+ * SPEC-904: purga (cripto-shred del campo) la PII literal en baja — deja `piiDetectadaCifrado` en
+ * `null`. Acompaña a `purgarTextoTrabajo`; mapea el `piiDetectada: []` de SPEC-892 sobre la columna
+ * plana, ahora también sobre el campo cifrado.
+ */
+export async function purgarPiiDetectada(tx: Prisma.TransactionClient, contenidoId: string): Promise<void> {
+    await tx.contenidoReporte.update({ where: { id: contenidoId }, data: { piiDetectadaCifrado: null } });
 }
