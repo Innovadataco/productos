@@ -2220,6 +2220,12 @@ model ContenidoReporte {
   textoCifrado         String          @db.Text
   // Evidencia legal: el texto ORIGINAL previo a anonimización, cifrado. NOT NULL.
   textoOriginalCifrado String          @db.Text
+  // SPEC-904 (I-422 · Ley 1581): PII literal detectada por la IA (nombre/teléfono/dirección/
+  // colegio) como JSON cifrado bajo la MISMA DEK del reporte (AAD `pi:v1:<id>:piiDetectada`).
+  // NULL = sin PII / no sellada. La columna plana `ClasificacionIA.piiDetectada` queda `[]`:
+  // el literal ya no vive ahí. Hereda cripto-shred (LlaveReporte Cascade), AAD por fila+campo
+  // y rotación de KEK, igual que el texto. Helpers en reporte-texto-contenido.ts.
+  piiDetectadaCifrado  String?         @db.Text
   origenEvidencia      OrigenEvidencia
   // Estado purgado (política D4) MODELADO en el esquema, no como cadena en el contenido:
   // con IV aleatorio la igualdad de marcador nunca vuelve a dar true.

@@ -1,0 +1,15 @@
+-- SPEC-904 (I-422 · Ley 1581) · cifrado EN REPOSO de la PII literal detectada.
+--
+-- 100% ADITIVA y NO destructiva: una columna nueva NULLABLE. No toca `textoCifrado`/
+-- `textoOriginalCifrado` ni ninguna fila; no borra ni renombra nada. La columna plana
+-- `ClasificacionIA.piiDetectada` (String[]) NO se toca acá — queda y el corrector/escritores
+-- la dejan en `[]`; su DROP real vive en 006 (réplica BI, parqueado).
+--
+-- El literal de la PII pasa a vivir como JSON CIFRADO en esta columna, bajo la MISMA DEK por
+-- denuncia del sobre `ContenidoReporte`/`LlaveReporte` (AAD `pi:v1:<contenidoId>:piiDetectada`).
+-- Hereda el cripto-shred: borrar el caso cascada `LlaveReporte` → la DEK muere → ilegible.
+--
+-- Escrita a mano (no por `migrate dev`) para NO arrastrar los DROP espurios de los índices
+-- crudos (trigram/HNSW/vector/unique-parcial de 884) que Prisma re-emite por no verlos en el
+-- schema (I-420). Un solo ADD COLUMN; nada más.
+ALTER TABLE "ContenidoReporte" ADD COLUMN "piiDetectadaCifrado" TEXT;

@@ -16,7 +16,7 @@
  * Fail-loud igual que la primitiva: si el contenido o su llave faltan, LANZA (nunca fail-open).
  */
 import { prisma } from "@/lib/prisma";
-import { descifrarCampo, descifrarCampos } from "@/lib/reporte-texto-contenido";
+import { descifrarCampo, descifrarCampos, descifrarPiiDetectada } from "@/lib/reporte-texto-contenido";
 import type { CampoContenido } from "@/lib/reporte-texto-llaves";
 import { actorActual } from "@/lib/auditoria-lectura/actor";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -99,6 +99,32 @@ export async function descifrarCampoReporte(
     const dueno = opciones.dueno ?? (await resolverDuenos([contenidoId])).get(contenidoId) ?? {};
     await registrarLecturaTexto(contenidoId, campo, texto, dueno);
     return texto;
+}
+
+/**
+ * SPEC-904: descifra la PII LITERAL detectada (lista) de un contenido, con el singleton de Prisma,
+ * y AUDITA la lectura (LecturaReporte) como cualquier descifrado — el hash es sobre el JSON de la
+ * lista, NUNCA el literal. Para el revelado GATED del expediente (módulo expediente_revelar_original
+ * + auditoría, SPEC-891). Fail-loud igual que `descifrarCampoReporte`.
+ */
+export async function descifrarPiiDetectadaReporte(
+    contenidoId: string,
+    opciones: OpcionesDescifrado = {}
+): Promise<string[]> {
+    const pii = await descifrarPiiDetectada(prisma, contenidoId);
+    if (opciones.registrarLectura === false) {
+        if (actorActual()?.tipoActor === "EXTERNO") {
+            throw new AppError(
+                "Una lectura por pase no puede evadir la auditoría (actor EXTERNO).",
+                ERROR_CODES.INTERNAL_ERROR,
+                500
+            );
+        }
+        return pii;
+    }
+    const dueno = opciones.dueno ?? (await resolverDuenos([contenidoId])).get(contenidoId) ?? {};
+    await registrarLecturaTexto(contenidoId, "piiDetectada", JSON.stringify(pii), dueno);
+    return pii;
 }
 
 /**

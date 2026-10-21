@@ -194,6 +194,7 @@ export async function procesarReporte(request: Request): Promise<NextResponse> {
             // Clasificar y detectar PII
             resultadoClasificacion = await clasificarReporte({
                 reporteId: reporte.id,
+                contenidoId: reporte.contenidoId,
                 texto: reporte.texto,
                 parametros,
                 ejemplosRag,

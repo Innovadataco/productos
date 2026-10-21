@@ -5,6 +5,7 @@ import type { ResultadoRubrica } from "@/lib/ai/rubrica";
 import { detectarPiiCombinado } from "@/lib/ai/pii-detector";
 import type { EstadoReporte, CategoriaConducta } from "@prisma/client";
 import { aJson } from "../../json";
+import { sellarPiiDetectada } from "@/lib/reporte-texto-contenido";
 import type { ParametrosClasificacion } from "./parametros";
 import type { EjemploRecuperado } from "@/lib/ai/dataset-retrieval";
 
@@ -33,11 +34,14 @@ export interface ClasificacionResult {
 
 export async function clasificarReporte({
     reporteId,
+    contenidoId,
     texto,
     parametros,
     ejemplosRag,
 }: {
     reporteId: string;
+    // SPEC-904: sobre del reporte donde se sella la PII literal cifrada (la columna plana queda []).
+    contenidoId: string;
     texto: string;
     parametros: Pick<
         ParametrosClasificacion,
@@ -102,26 +106,32 @@ export async function clasificarReporte({
     };
 
     try {
-        const clasificacionCreada = await prisma.clasificacionIA.create({
-            data: {
-                reporteId,
-                categoria: clasificacion.categoria,
-                confianza: clasificacion.confianza,
-                contienePii: piiResult.contienePii,
-                piiDetectada: piiResult.piiDetectada,
-                categoriasSecundarias: aJson(clasificacion.categoriasSecundarias),
-                votos: aJson(clasificacion.votos),
-                posibleAgresorPar: clasificacion.posibleAgresorPar,
-                modeloUsado: clasificacion.metrics.modelo,
-                latenciaMs: clasificacion.metrics.latenciaMs + piiResult.metrics.latenciaMs,
-                promptTokens: clasificacion.promptTokens ?? null,
-                responseTokens: clasificacion.responseTokens ?? null,
-                rawResponse: String(clasificacion.rawResponse),
-                // SPEC-398 (I-286): audita si esta clasificación se pidió con
-                // override intencional (sandbox/A-B). `null` en el pipeline
-                // real → la alarma de jurado reducido puede aislar el defecto.
-                overrideModeloUsado: parametros.overrideModeloClasificacion ?? null,
-            },
+        // SPEC-904 (I-422): la PII literal NO se persiste en claro. La columna plana queda `[]`
+        // y el literal se sella CIFRADO bajo la DEK del reporte, en la MISMA tx que el create.
+        const clasificacionCreada = await prisma.$transaction(async (tx) => {
+            const creada = await tx.clasificacionIA.create({
+                data: {
+                    reporteId,
+                    categoria: clasificacion.categoria,
+                    confianza: clasificacion.confianza,
+                    contienePii: piiResult.contienePii,
+                    piiDetectada: [],
+                    categoriasSecundarias: aJson(clasificacion.categoriasSecundarias),
+                    votos: aJson(clasificacion.votos),
+                    posibleAgresorPar: clasificacion.posibleAgresorPar,
+                    modeloUsado: clasificacion.metrics.modelo,
+                    latenciaMs: clasificacion.metrics.latenciaMs + piiResult.metrics.latenciaMs,
+                    promptTokens: clasificacion.promptTokens ?? null,
+                    responseTokens: clasificacion.responseTokens ?? null,
+                    rawResponse: String(clasificacion.rawResponse),
+                    // SPEC-398 (I-286): audita si esta clasificación se pidió con
+                    // override intencional (sandbox/A-B). `null` en el pipeline
+                    // real → la alarma de jurado reducido puede aislar el defecto.
+                    overrideModeloUsado: parametros.overrideModeloClasificacion ?? null,
+                },
+            });
+            await sellarPiiDetectada(tx, contenidoId, piiResult.piiDetectada);
+            return creada;
         });
 
         // Spec 090: persistir la matriz categoría × modelo × 0/1 (con preguntas cumplidas)

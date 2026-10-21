@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
-import { descifrarCampo, resellarCampo } from "@/lib/reporte-texto-contenido";
+import { descifrarCampo, resellarCampo, sellarPiiDetectada } from "@/lib/reporte-texto-contenido";
 import type { EstadoReporte } from "@prisma/client";
 
 /**
@@ -27,9 +27,11 @@ export async function anonimizarReporte({
     await prisma.$transaction(async (tx) => {
         // Solo el texto de TRABAJO pasa a la versión anonimizada; el original queda intacto.
         await resellarCampo(tx, contenidoId, "texto", anonimizacion.textoAnonimizado);
+        // SPEC-904 (I-422): la PII literal FINAL va CIFRADA bajo la DEK; la columna plana queda [].
+        await sellarPiiDetectada(tx, contenidoId, anonimizacion.piiDetectada);
         await tx.clasificacionIA.update({
             where: { reporteId },
-            data: { piiDetectada: anonimizacion.piiDetectada },
+            data: { piiDetectada: [] },
         });
     });
 

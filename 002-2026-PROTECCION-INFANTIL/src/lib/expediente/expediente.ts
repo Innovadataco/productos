@@ -1,5 +1,5 @@
 import { getParametroSistema } from "@/lib/parametros";
-import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
+import { descifrarCampoReporte, descifrarPiiDetectadaReporte } from "@/lib/dal/services/descifrar-contenido";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { PasoProcesamientoRepository } from "@/lib/dal/repositories/paso-procesamiento";
 import type {
@@ -71,6 +71,11 @@ export interface DatosExpediente {
      * auditado por el caller) y lo deja acá para que `construirPartes` lo proyecte. null si no se reveló.
      */
     textoOriginalPlano?: string | null;
+    /**
+     * SPEC-904: PII literal detectada, DESCIFRADA — se descifra UNA vez y solo cuando `revelar`
+     * (gated + auditado por el caller), igual que `textoOriginalPlano`. null si no se reveló.
+     */
+    piiDetectadaPlano?: string[] | null;
 }
 
 function iso(fecha: Date | null | undefined): string | null {
@@ -301,7 +306,9 @@ function construirPartes(config: EtapaConfig, datos: DatosExpediente): PartesEta
                 // no revela ni el booleano ni la lista: describe la etapa sin filtrar PII.
                 disponiblesGated: {
                     contienePii: c?.contienePii ?? null,
-                    piiDetectada: c?.piiDetectada ?? null,
+                    // SPEC-904: la columna plana ya NO trae el literal ([]); el revelado lo proyecta
+                    // DESCIFRADO desde `datos.piiDetectadaPlano` (gated + auditado en armarEtapas).
+                    piiDetectada: datos.piiDetectadaPlano ?? null,
                     textoOriginal: datos.textoOriginalPlano ?? null,
                 },
                 actividad: "Detección y anonimización de datos personales (PII) en el texto",
@@ -382,7 +389,12 @@ export async function armarEtapas(
     // S-C (D-116/D-117): el original (PII) se descifra UNA sola vez y solo si se revela; el caller
     // audita el reveal. `construirPartes` lo proyecta desde `datos.textoOriginalPlano`.
     const datosConOriginal: DatosExpediente = revelar
-        ? { ...datos, textoOriginalPlano: await descifrarCampoReporte(datos.reporte.contenidoId, "textoOriginal") }
+        ? {
+            ...datos,
+            textoOriginalPlano: await descifrarCampoReporte(datos.reporte.contenidoId, "textoOriginal"),
+            // SPEC-904: la PII literal ahora vive cifrada; se descifra (y audita) en el MISMO reveal.
+            piiDetectadaPlano: await descifrarPiiDetectadaReporte(datos.reporte.contenidoId),
+        }
         : datos;
     return config.map((etapa) => {
         const partes = construirPartes(etapa, datosConOriginal);
