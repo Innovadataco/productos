@@ -73,11 +73,31 @@ export function getScopeDefaults(scope: string): ScopeDefaults {
 }
 
 /**
- * Scopes sensibles a abuso de credenciales/identificadores que DEBEN fallar
- * cerrado si el store de rate limiting no responde (I-28). El resto de scopes
- * mantiene el comportamiento fail-open para no bloquear la aplicación.
+ * Scopes sensibles a abuso de credenciales/identificadores/CORREO que DEBEN fallar
+ * CERRADO si el store de rate limiting no responde (I-28; SPEC-895): ante store caído
+ * responden 429 + Retry-After, no permiten sin límite. El resto mantiene fail-open para
+ * no bloquear la aplicación.
+ *
+ * SPEC-895 suma los scopes que DISPARAN CORREO/CÓDIGO (dinero/Resend + bombardeo del buzón
+ * de una víctima): `recuperar_solicitar`, `verificacion_solicitar` (registro + verificación
+ * + registro-profesional + registro-colegio comparten este scope), `stepup_codigo`,
+ * `acceso_codigo`. Ahí el fail-open es AUTOAMPLIFICANTE: cuanto más fuerte el flood, más
+ * probable que el propio query del limitador falle y se abra.
+ *
+ * NO incluye `report` (POST /api/reportes), A PROPÓSITO (SPEC-895): el invariante de producto
+ * es que el camino de REPORTE nunca se gatea — un reporte de protección infantil no se tira
+ * por un fallo del limitador. El reporte comparte el MISMO Postgres que el store, así que un
+ * PG caído ya corta la escritura (500 honesto); un fallo SOLO del query del limitador no debe
+ * bloquear un reporte legítimo. Se queda fail-OPEN (candado lo fija).
  */
-const FAIL_CLOSED_SCOPES = new Set(["seguimiento", "login"]);
+const FAIL_CLOSED_SCOPES = new Set([
+    "seguimiento",
+    "login",
+    "recuperar_solicitar",
+    "verificacion_solicitar",
+    "stepup_codigo",
+    "acceso_codigo",
+]);
 
 async function getScopeConfig(scope: string): Promise<ScopeDefaults> {
     const defaults = getScopeDefaults(scope);
