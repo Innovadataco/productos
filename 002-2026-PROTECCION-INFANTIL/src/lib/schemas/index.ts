@@ -420,7 +420,8 @@ export const notaSeguimientoSchema = z.object({
 // SPEC-150 (FR-002): marca de observación especial — motivo opcional, texto
 // plano ≤ 500 (solo visible para el colegio; React escapa al renderizar).
 export const observacionBodySchema = z.object({
-    motivo: z.string().trim().max(500, "El motivo no puede superar 500 caracteres").optional(),
+    // SPEC-902: motivo de observación del alumno = texto libre interno → SOLO-TEXTO.
+    motivo: z.string().trim().max(500, "El motivo no puede superar 500 caracteres").refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO_NOTA }).optional(),
 });
 
 // SPEC-168 (Fase F): cuenta compartida del Comité de Convivencia.
@@ -560,8 +561,8 @@ export const simularAbusoBodySchema = z.object({
     usuarioId: z.string().cuid().optional(),
     identificadores: z.array(z.string().min(3).max(100)).max(200).optional(),
     ips: z.array(ipv4Schema).max(200).optional(),
-    // SPEC-192: nota interna opcional para el operador.
-    nota: z.string().max(200).optional(),
+    // SPEC-192: nota interna del operador. SPEC-902: texto libre → SOLO-TEXTO.
+    nota: z.string().max(200).refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO_NOTA }).optional(),
 });
 
 export const simulacionAbusoQuerySchema = z.object({

@@ -21,6 +21,8 @@ import {
     ipv4Schema,
     informeMensualQuerySchema,
     notaSeguimientoSchema,
+    observacionBodySchema,
+    simularAbusoBodySchema,
     MENSAJE_SOLO_TEXTO_NOTA,
 } from "./index";
 
@@ -348,5 +350,45 @@ describe("notaSeguimientoSchema · invariante SOLO-TEXTO (SPEC-902)", () => {
 
     it("acepta una nota de texto normal", () => {
         expect(notaSeguimientoSchema.safeParse({ texto: "Llamé al acudiente y registré el acuerdo." }).success).toBe(true);
+    });
+});
+
+// SPEC-902 (follow-up) · observacionBodySchema.motivo: motivo de observación del alumno, texto
+// libre interno → invariante SOLO-TEXTO.
+describe("observacionBodySchema.motivo · invariante SOLO-TEXTO (SPEC-902)", () => {
+    it("rechaza un motivo con URL de imagen, con el mensaje de nota", () => {
+        const r = observacionBodySchema.safeParse({ motivo: "mirá http://x.com/foto.jpg" });
+        expect(r.success).toBe(false);
+        if (!r.success) {
+            expect(r.error.issues.some((i) => i.message === MENSAJE_SOLO_TEXTO_NOTA)).toBe(true);
+        }
+    });
+
+    it("rechaza un motivo con data:-URI", () => {
+        expect(observacionBodySchema.safeParse({ motivo: "x data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==" }).success).toBe(false);
+    });
+
+    it("acepta un motivo de texto normal y el campo ausente (opcional)", () => {
+        expect(observacionBodySchema.safeParse({ motivo: "Reiteró la conducta en clase." }).success).toBe(true);
+        expect(observacionBodySchema.safeParse({}).success).toBe(true);
+    });
+});
+
+// SPEC-902 (follow-up) · simularAbusoBodySchema.nota: nota interna del operador del simulador,
+// texto libre → invariante SOLO-TEXTO. Se aserta por el MENSAJE del issue (sin armar el body
+// completo: el escenario es un enum aparte; el refine de la nota dispara igual).
+describe("simularAbusoBodySchema.nota · invariante SOLO-TEXTO (SPEC-902)", () => {
+    it("una nota con data:-URI produce el issue de solo-texto", () => {
+        const r = simularAbusoBodySchema.safeParse({
+            nota: "ver data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAoNUEVAAAAASUVORK5CYII=",
+        });
+        expect(r.success).toBe(false);
+        expect(r.error?.issues.some((i) => i.message === MENSAJE_SOLO_TEXTO_NOTA)).toBe(true);
+    });
+
+    it("una nota de texto normal NO produce el issue de solo-texto", () => {
+        const r = simularAbusoBodySchema.safeParse({ nota: "Corrida de control del operador." });
+        const tieneIssueSoloTexto = !r.success && r.error.issues.some((i) => i.message === MENSAJE_SOLO_TEXTO_NOTA);
+        expect(tieneIssueSoloTexto).toBe(false);
     });
 });
