@@ -138,7 +138,10 @@ export async function checkRateLimit(
     scope: string,
     options?: { identifier?: string | undefined; soft?: boolean | undefined; client?: PrismaClient | undefined }
 ): Promise<RateLimitResult> {
-    if (process.env.DISABLE_RATE_LIMIT === "true") {
+    // SPEC-898: el bypass es SOLO para E2E. Si el flag se filtra al env de PROD, el rate
+    // limiting (incluido login y el fail-closed de SPEC-895) debe seguir corriendo pase lo
+    // que pase — en producción el flag se IGNORA.
+    if (process.env.DISABLE_RATE_LIMIT === "true" && process.env.NODE_ENV !== "production") {
         return {
             allowed: true,
             limit: 0,

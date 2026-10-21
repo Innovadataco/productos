@@ -310,3 +310,31 @@ describe("SPEC-184: BlockList intercepta antes de contar", () => {
         expect(result.remaining).toBe(29);
     });
 });
+
+// SPEC-898 · CANDADO: el bypass DISABLE_RATE_LIMIT NO aplica en producción. Estos tests FIJAN
+// NODE_ENV ellos mismos (no usan el guard `rateLimitDisabled`), así que corren de verdad en
+// local Y en CI — no se saltan aunque .env.test traiga DISABLE_RATE_LIMIT=true.
+describe("SPEC-898: DISABLE_RATE_LIMIT con guarda de producción", () => {
+    afterEach(() => {
+        vi.unstubAllEnvs();
+    });
+
+    it("en PRODUCCIÓN ignora el flag: el limitador IGUAL corre (login fail-closed ante store caído → 429)", async () => {
+        await crearParametrosReportes();
+        vi.stubEnv("NODE_ENV", "production");
+        vi.stubEnv("DISABLE_RATE_LIMIT", "true");
+
+        // Control positivo: sin la guarda, el flag haría bypass → allowed:true (rojo).
+        const result = await checkRateLimit(makeRequest("198.51.100.7"), "login", { client: clienteStoreCaido() });
+        expect(result.allowed).toBe(false);
+        expect(result.headers["Retry-After"]).toBeDefined();
+    });
+
+    it("en test/dev el flag SÍ desactiva el limitador (comportamiento E2E intacto)", async () => {
+        vi.stubEnv("NODE_ENV", "test");
+        vi.stubEnv("DISABLE_RATE_LIMIT", "true");
+
+        const result = await checkRateLimit(makeRequest("198.51.100.8"), "login", { client: clienteStoreCaido() });
+        expect(result.allowed).toBe(true);
+    });
+});
