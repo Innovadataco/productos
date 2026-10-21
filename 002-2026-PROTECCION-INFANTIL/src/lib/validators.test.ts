@@ -1,11 +1,15 @@
 import { describe, it, expect } from "vitest";
+import { MotivoBajaReporte } from "@prisma/client";
 import {
     authRegisterSchema,
     recuperarSolicitarSchema,
     restablecerPasswordSchema,
     crearReporteSchema,
+    darDeBajaReporteSchema,
+    reactivarReporteSchema,
     textoReporteTieneMultimedia,
     MENSAJE_SOLO_TEXTO,
+    MENSAJE_SOLO_TEXTO_NOTA,
 } from "./validators";
 
 describe("authRegisterSchema", () => {
@@ -233,5 +237,50 @@ describe("textoReporteTieneMultimedia (SPEC-893 · predicado puro)", () => {
         expect(textoReporteTieneMultimedia("El nick es @pedro.perez_99 en la plataforma.")).toBe(false);
         expect(textoReporteTieneMultimedia("El perfil: https://instagram.com/usuario")).toBe(false);
         expect(textoReporteTieneMultimedia("Mencionó un archivo foto.jpg pero no lo adjuntó.")).toBe(false);
+    });
+});
+
+// SPEC-900 · CANDADO: el invariante SOLO-TEXTO también cubre los `nota` de operador
+// (darDeBaja/reactivar). Muere con el defecto: sin el `.refine`, una nota con multimedia pasa.
+describe("nota de operador · invariante SOLO-TEXTO (SPEC-900)", () => {
+    const motivo = Object.values(MotivoBajaReporte)[0];
+
+    it("reactivar: una nota con data:-URI (imagen embebida) es rechazada con el mensaje de nota", () => {
+        const r = reactivarReporteSchema.safeParse({
+            nota: "listo: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAoNUEVAAAAASUVORK5CYII=",
+        });
+        expect(r.success).toBe(false);
+        if (!r.success) {
+            expect(r.error.issues.some((i) => i.message === MENSAJE_SOLO_TEXTO_NOTA)).toBe(true);
+        }
+    });
+
+    it("reactivar: una URL de imagen en la nota es rechazada", () => {
+        const r = reactivarReporteSchema.safeParse({ nota: "ver http://x.com/evidencia.jpg" });
+        expect(r.success).toBe(false);
+    });
+
+    it("reactivar: una nota de texto normal pasa", () => {
+        const r = reactivarReporteSchema.safeParse({
+            nota: "Se reactiva: el reportante corrigió el identificador y el caso vuelve a ser válido.",
+        });
+        expect(r.success).toBe(true);
+    });
+
+    it("reactivar: un enlace NO-multimedia en la nota pasa (no se bloquea un link de página)", () => {
+        const r = reactivarReporteSchema.safeParse({ nota: "Caso externo en https://fiscalia.gov.co/caso/123" });
+        expect(r.success).toBe(true);
+    });
+
+    it("darDeBaja: un blob base64 en la nota es rechazado; con texto normal pasa", () => {
+        const blob = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAoNUEVA".repeat(6); // 240 chars base64 contiguos
+        const malo = darDeBajaReporteSchema.safeParse({ motivo, nota: `adjunto ${blob}` });
+        expect(malo.success).toBe(false);
+
+        const bueno = darDeBajaReporteSchema.safeParse({
+            motivo,
+            nota: "Se da de baja por duplicado confirmado con el caso RPT-ABC123.",
+        });
+        expect(bueno.success).toBe(true);
     });
 });
