@@ -3,15 +3,23 @@ import { CategoriaConducta, EstadoReporte, AccionAudit, MotivoBajaReporte } from
 import { sugerirDominioCorreo } from "./email-typo";
 import { FRANJAS } from "./reportes/franja-aproximada";
 
+// SPEC-900 (auditoría seg): el invariante SOLO-TEXTO también cubre los `nota` de OPERADOR
+// (darDeBaja/reactivar), cerrando el vector interno que quedó abierto en SPEC-893. Reusa el
+// predicado `textoReporteTieneMultimedia` de SPEC-893 (función hoisteada, definida abajo) — sin
+// duplicar la lógica. El mensaje se declara ACÁ (antes de los schemas) para evitar la TDZ: los
+// schemas se construyen al cargar el módulo y el `message:` se evalúa en ese momento.
+export const MENSAJE_SOLO_TEXTO_NOTA =
+    "La nota es solo texto: no se permiten imágenes, enlaces de multimedia ni archivos";
+
 const motivosBaja = Object.values(MotivoBajaReporte) as [string, ...string[]];
 export const darDeBajaReporteSchema = z.object({
     motivo: z.enum(motivosBaja),
-    nota: z.string().min(1).max(2000),
+    nota: z.string().min(1).max(2000).refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO_NOTA }),
 });
 export type DarDeBajaReporteInput = z.infer<typeof darDeBajaReporteSchema>;
 
 export const reactivarReporteSchema = z.object({
-    nota: z.string().min(1).max(2000),
+    nota: z.string().min(1).max(2000).refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO_NOTA }),
 });
 export type ReactivarReporteInput = z.infer<typeof reactivarReporteSchema>;
 
