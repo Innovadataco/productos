@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAuth, verifyToken } from "@/lib/auth";
+import { verifyAuth, verifyToken, extraerTokenSesion } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { SessionLogService } from "@/lib/dal/services/session-log";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -18,9 +18,9 @@ export async function POST(request: Request) {
 
         const user = await verifyAuth();
 
-        const cookieHeader = request.headers.get("cookie") ?? "";
-        const match = cookieHeader.match(/(?:__Host-)?token=([^;]+)/);
-        const payload = match ? await verifyToken(match[1]) : null;
+        // SPEC-896: token por nombre EXACTO (no un regex sin anclar que una cookie señuelo podría secuestrar).
+        const token = extraerTokenSesion(request.headers.get("cookie"));
+        const payload = token ? await verifyToken(token) : null;
         const sesionLogId = payload && typeof payload.sesionLogId === "string" ? payload.sesionLogId : undefined;
 
         if (!sesionLogId) {

@@ -118,13 +118,29 @@ export async function verifyToken(token: string) {
     }
 }
 
+/**
+ * SPEC-896: lee el token de sesión de un header `Cookie` por nombre EXACTO. El regex anterior
+ * `/(?:__Host-)?token=([^;]+)/` NO anclaba el nombre, así que una cookie señuelo (`xtoken=`, `faketoken=`)
+ * podía ser elegida antes que la real (confusión/DoS de auth). Prefiere `__Host-token` sobre la legacy
+ * `token`, igual que `verifyAuth`/`getSessionUser` (`cookieStore.get(HOST_COOKIE_NAME) ?? …`).
+ */
+export function extraerTokenSesion(cookieHeader: string | null): string | undefined {
+    if (!cookieHeader) return undefined;
+    let legacy: string | undefined;
+    for (const parte of cookieHeader.split(";")) {
+        const i = parte.indexOf("=");
+        if (i === -1) continue;
+        const nombre = parte.slice(0, i).trim();
+        if (nombre === HOST_COOKIE_NAME) return parte.slice(i + 1).trim(); // __Host- gana siempre
+        if (nombre === LEGACY_COOKIE_NAME) legacy = parte.slice(i + 1).trim();
+    }
+    return legacy;
+}
+
 export async function getUserFromToken(request: Request) {
     try {
-        const cookieHeader = request.headers.get("cookie");
-        if (!cookieHeader) return null;
-        const match = cookieHeader.match(/(?:__Host-)?token=([^;]+)/);
-        if (!match) return null;
-        const token = match[1];
+        const token = extraerTokenSesion(request.headers.get("cookie"));
+        if (!token) return null;
         const payload = await verifyToken(token);
         if (!payload || !payload.sub) return null;
         const user = await prisma.usuario.findUnique({

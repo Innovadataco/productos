@@ -1,10 +1,30 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { sessionCookieAttributes } from "@/lib/auth";
+import { sessionCookieAttributes, verifyToken } from "@/lib/auth";
+import { SessionLogService } from "@/lib/dal/services/session-log";
 import { NOMBRE_COOKIE } from "@/lib/routing/vigencia-cookie";
 
 export async function POST() {
     const cookieStore = await cookies();
+
+    // SPEC-896: cerrar la SesionLog del JWT ANTES de borrar la cookie — sin esto, un token robado sobrevivía
+    // al logout hasta su `exp` (24h) y se mantenía vivo con /api/session/ping (`estaSesionActiva`/`pingSesion`
+    // ya rechazan `cerradaEn!=null`; faltaba CERRARLA). Best-effort: si el token falta o es inválido, igual se
+    // limpian las cookies y se responde 200.
+    try {
+        const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
+        if (token) {
+            const payload = await verifyToken(token);
+            const sesionLogId = payload && typeof payload.sesionLogId === "string" ? payload.sesionLogId : null;
+            const usuarioId = payload && typeof payload.sub === "string" ? payload.sub : null;
+            if (sesionLogId && usuarioId) {
+                await new SessionLogService().cerrarPropia(sesionLogId, usuarioId);
+            }
+        }
+    } catch {
+        // best-effort: el cierre del SesionLog no debe impedir el logout ni filtrar errores.
+    }
+
     // Spec 106 (I-32): el borrado debe llevar los MISMOS atributos con que se creó la
     // cookie; sin ellos el navegador rechaza el Set-Cookie y la sesión sobrevive.
     // __Host-token SIEMPRE con secure+path (el prefijo __Host- lo exige, sin consultar
