@@ -35,6 +35,11 @@ export async function POST(request: Request) {
         const resultado = await new AutenticacionService().login(email, password);
 
         if (!resultado.ok) {
+            // SPEC-894 (anti-enumeración): el servicio ya colapsa email-inexistente, clave-mala y
+            // bloqueada/inactiva-SIN-clave a `tipo:"credenciales"` → "Credenciales inválidas" (mismo mensaje,
+            // mismo status, tiempo igualado por bcrypt). "bloqueada"/"inactiva" SOLO llegan acá tras una
+            // contraseña CORRECTA, así que su mensaje distinto NO filtra existencia. No volver a mergearlos ni
+            // devolver estado pre-auth.
             if (resultado.tipo === "bloqueada") {
                 return NextResponse.json(
                     { error: { message: "Cuenta bloqueada temporalmente", code: ERROR_CODES.AUTH_INVALID } },
