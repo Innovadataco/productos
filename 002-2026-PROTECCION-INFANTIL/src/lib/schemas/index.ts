@@ -4,6 +4,13 @@ import { NivelLog, EstadoNotificacion, CanalNotificacion } from "@prisma/client"
 // consumidores de @/lib/schemas). También en ./identidad viven las de profesor.
 import { cuidIdSchema, materiaIdSchema, emailSchema, parametroClaveSchema, estadoActivoSchema } from "./base";
 import { profesorNuevoSchema } from "./identidad";
+// SPEC-902: reusa el predicado SOLO-TEXTO de SPEC-893 (sin duplicar la lógica) para los
+// campos de texto libre internos que deben rechazar multimedia.
+import { textoReporteTieneMultimedia } from "../validators";
+
+/** SPEC-902: mensaje NEUTRAL (voz «usted», sin voseo) del rechazo SOLO-TEXTO en notas internas. */
+export const MENSAJE_SOLO_TEXTO_NOTA =
+    "La nota es solo texto: no se permiten imágenes, enlaces de multimedia ni archivos";
 
 /**
  * Esquemas zod reutilizables para validación de entradas en rutas API.
@@ -405,7 +412,9 @@ export const notaSeguimientoSchema = z.object({
         .string()
         .trim()
         .min(1, "Escribe lo que hiciste antes de registrarlo")
-        .max(1000, "La nota no puede superar 1000 caracteres"),
+        .max(1000, "La nota no puede superar 1000 caracteres")
+        // SPEC-902: la bitácora del caso es texto libre interno → invariante SOLO-TEXTO.
+        .refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO_NOTA }),
 });
 
 // SPEC-150 (FR-002): marca de observación especial — motivo opcional, texto

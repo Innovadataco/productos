@@ -20,6 +20,8 @@ import {
     monitoreoLogsPurgeSchema,
     ipv4Schema,
     informeMensualQuerySchema,
+    notaSeguimientoSchema,
+    MENSAJE_SOLO_TEXTO_NOTA,
 } from "./index";
 
 describe("schemas/index", () => {
@@ -324,5 +326,27 @@ describe("schemas profesor (SPEC-145)", () => {
     it("informeMensualQuerySchema rechaza formato de mes inválido", () => {
         expect(() => informeMensualQuerySchema.parse({ mes: "2026-13" })).toThrow();
         expect(() => informeMensualQuerySchema.parse({ mes: "2026-1" })).toThrow();
+    });
+});
+
+// SPEC-902 · CANDADO: la bitácora del caso (notaSeguimientoSchema.texto) es texto libre
+// interno → invariante SOLO-TEXTO. Muere con el defecto: sin el refine, la multimedia pasa.
+describe("notaSeguimientoSchema · invariante SOLO-TEXTO (SPEC-902)", () => {
+    it("rechaza una nota con data:-URI (imagen embebida) con el mensaje de nota", () => {
+        const r = notaSeguimientoSchema.safeParse({
+            texto: "listo: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAoNUEVAAAAASUVORK5CYII=",
+        });
+        expect(r.success).toBe(false);
+        if (!r.success) {
+            expect(r.error.issues.some((i) => i.message === MENSAJE_SOLO_TEXTO_NOTA)).toBe(true);
+        }
+    });
+
+    it("rechaza una URL de imagen en la nota", () => {
+        expect(notaSeguimientoSchema.safeParse({ texto: "evidencia en http://x.com/foto.jpg" }).success).toBe(false);
+    });
+
+    it("acepta una nota de texto normal", () => {
+        expect(notaSeguimientoSchema.safeParse({ texto: "Llamé al acudiente y registré el acuerdo." }).success).toBe(true);
     });
 });

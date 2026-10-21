@@ -203,4 +203,25 @@ describe("POST /api/admin/reportes-revision/[id]/clasificar (A-70 · B2)", () =>
         );
         expect(res.status).toBe(403);
     });
+
+    // SPEC-902 · CANDADO: la nota de clasificación es texto libre interno → invariante SOLO-TEXTO.
+    // Muere con el defecto: sin el refine, la nota con multimedia pasa el schema y no da 400.
+    it("SPEC-902: RECHAZA (400) una nota de clasificación con multimedia (data:-URI)", async () => {
+        const operador = await crearUsuario("OPERADOR");
+        mockToken = await crearTokenUsuario(operador.id, "OPERADOR");
+        const reporte = await reporteAtascado(operador.id);
+
+        const res = await POST(
+            req(
+                reporte.id,
+                {
+                    categoria: "CIBERACOSO",
+                    nota: "ver esto: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAoNUEVAAAAASUVORK5CYII=",
+                },
+                mockToken,
+            ),
+            { params: Promise.resolve({ id: reporte.id }) },
+        );
+        expect(res.status).toBe(400);
+    });
 });

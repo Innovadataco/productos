@@ -3,13 +3,20 @@ import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { textoReporteTieneMultimedia } from "@/lib/validators"; // SPEC-902: invariante SOLO-TEXTO (predicado de 893)
+import { MENSAJE_SOLO_TEXTO_NOTA } from "@/lib/schemas";
 import { actualizarContacto, obtenerDetalleContacto, eliminarContacto } from "@/lib/dal/services/circulo-confianza";
 
 const updateSchema = z.object({
     etiqueta: z.string().max(100).optional(),
     nombre: z.string().max(100).optional(), // SPEC-325
     parentesco: z.string().max(60).optional(), // SPEC-325
-    nota: z.string().max(1000).optional(),
+    // SPEC-902: la nota del contacto es texto libre → invariante SOLO-TEXTO (igual que en create).
+    nota: z
+        .string()
+        .max(1000)
+        .refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO_NOTA })
+        .optional(),
     activo: z.boolean().optional(),
     identificadores: z
         .array(
