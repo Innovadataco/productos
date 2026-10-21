@@ -39,12 +39,50 @@ export const fechaIncidenteSchema = z.string().datetime()
     );
 export type FechaIncidenteInput = z.infer<typeof fechaIncidenteSchema>;
 
+// SPEC-893 (auditoría seg) · invariante DURO de producto SOLO-TEXTO (AGENTS.md ·
+// DECISIONES.md: «prohibido subir, almacenar o procesar fotos, video, audio o cualquier
+// multimedia»). Se hace cumplir ACÁ, en la validación del reporte: sin este refine, un
+// reportante —incluido el ANÓNIMO— podía mandar en `texto` un data:-URI base64, un blob
+// base64 crudo o un enlace a multimedia; el schema lo aceptaba, se cifraba, se almacenaba
+// en ContenidoReporte y se procesaba en Ollama — pudiendo quedar la imagen de un menor
+// codificada dentro del campo de texto.
+//
+// Rechaza SOLO multimedia embebida/enlazada; NO toca prosa que cite un teléfono o un nick
+// (el identificador va en su propio campo; «300...» o «@juan» no son blobs ni enlaces).
+const TEXTO_DATA_URI = /data:[a-z0-9.+-]+\/[a-z0-9.+-]+;base64,/i;
+// Run contiguo largo del alfabeto base64 = blob binario pegado, nunca prosa (las palabras
+// llevan espacios/puntuación). 200 chars ≈ 150 bytes: inalcanzable escribiendo, trivial
+// para un pegado de imagen (el `-`/`.`/`:` de una URL cortan el run, así que no es URL).
+const TEXTO_BASE64_BLOB = /[A-Za-z0-9+/]{200,}={0,2}/;
+// Enlace CON esquema a un archivo de imagen/video/audio. Exige `http(s)://` para no
+// confundir una mención en prosa («un archivo foto.jpg») con un enlace real a multimedia.
+const TEXTO_URL_MULTIMEDIA =
+    /https?:\/\/\S+\.(?:png|jpe?g|gif|webp|bmp|svg|ico|tiff?|heic|heif|avif|mp4|m4v|mov|avi|mkv|webm|wmv|flv|mpe?g|mp3|wav|ogg|oga|flac|m4a|aac|opus|weba)(?![a-z0-9])/i;
+
+/**
+ * SPEC-893 · ¿el texto del reporte embebe o enlaza multimedia? FUENTE ÚNICA del invariante
+ * SOLO-TEXTO que comparten el schema y su candado.
+ */
+export function textoReporteTieneMultimedia(texto: string): boolean {
+    return TEXTO_DATA_URI.test(texto) || TEXTO_BASE64_BLOB.test(texto) || TEXTO_URL_MULTIMEDIA.test(texto);
+}
+
+/** SPEC-893 · mensaje NEUTRAL (voz «usted», sin voseo) del rechazo SOLO-TEXTO. */
+export const MENSAJE_SOLO_TEXTO =
+    "El reporte es solo texto: no se permiten imágenes, enlaces de multimedia ni archivos";
+
 export const crearReporteSchema = z.object({
     identificador: z.string().min(3).max(100),
     plataforma: z.string().min(1),
     // La longitud mínima efectiva se valida en la route desde ParametroSistema
     // (reportes.spam.min_text_length, spec 092-US5); aquí solo se exige no vacío.
-    texto: z.string().min(1).max(5000),
+    // SPEC-893: max 2000 alineado a AGENTS.md (el 5000 era el valor ORIGINAL de Fase 3,
+    // 9295ed39 — no un bump deliberado) + invariante SOLO-TEXTO (rechaza multimedia).
+    texto: z
+        .string()
+        .min(1)
+        .max(2000)
+        .refine((val) => !textoReporteTieneMultimedia(val), { message: MENSAJE_SOLO_TEXTO }),
     // SPEC-438 (I-305): obligatoria y nunca rellenada por el sistema. El
     // cliente ya no manda `new Date()` cuando el campo está vacío: si no hay
     // dato, no se envía y el reporte no sale.
