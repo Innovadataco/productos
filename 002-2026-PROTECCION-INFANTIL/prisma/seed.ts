@@ -7,6 +7,7 @@ import { sembrarTopesSubida } from "../src/lib/profesional/tope-subida";
 import { PLANTILLAS_DEFECTO, REENCUADRE_ANONIMO_DEFECTO } from "../src/lib/expediente/plantillas-conducta-semilla";
 import { syncModulosYGrants } from "./seed-modulos-grants";
 import { GUIAS_ACCION_BASE } from "./guias-accion.seed-data";
+import { copyInvitacion } from "./invitaciones-copy.seed-data";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { formatInTimeZone } from "date-fns-tz";
@@ -1282,13 +1283,9 @@ async function seedEventosEmailMigrados() {
 async function seedInvitacionColegio() {
     const evento = "colegio.invitacion.enviada";
     const plantillaClave = `${evento}.email`;
-    const asunto = "Activa tu cuenta de Protección Infantil";
-    const cuerpoMarkdown =
-        "Hola {{nombreRector}},\n\n" +
-        "Has sido registrado como rector de **{{nombreColegio}}** en Protección Infantil.\n\n" +
-        "Para activar tu cuenta y definir tu contraseña, haz clic en el siguiente link:\n\n" +
-        "{{linkActivacion}}\n\n" +
-        "Este link es de un solo uso y expira en 48 horas. Si no solicitaste este registro, ignora este mensaje.";
+    // SPEC-909: copy USTED canónico (Diseño SHA 446e8dc2 §2.1). Fuente única compartida con
+    // el corrector in-place; el motor lo renderiza a HTML (el `[Activar…]` → botón).
+    const { asunto, cuerpoMarkdown } = copyInvitacion(plantillaClave);
 
     await prisma.notificacionPlantilla.upsert({
         where: { clave: plantillaClave },
@@ -1344,13 +1341,9 @@ async function seedInvitacionColegio() {
 async function seedInvitacionComite() {
     const evento = "comite.invitacion.enviada";
     const plantillaClave = `${evento}.email`;
-    const asunto = "Activa la cuenta del Comité de Convivencia";
-    const cuerpoMarkdown =
-        "Hola,\n\n" +
-        "Esta es la invitación para la cuenta compartida del **Comité de Convivencia** de **{{nombreColegio}}** en Protección Infantil.\n\n" +
-        "Para activar la cuenta y definir su contraseña, haz clic en el siguiente link:\n\n" +
-        "{{linkActivacion}}\n\n" +
-        "Este link es de un solo uso y expira en 48 horas. Si no esperabas esta invitación, ignora este mensaje.";
+    // SPEC-909: copy USTED canónico (Diseño SHA 446e8dc2 §2.2). Cuenta COMPARTIDA → sin nombre,
+    // botón «la cuenta». Fuente única con el corrector; el motor lo renderiza a HTML.
+    const { asunto, cuerpoMarkdown } = copyInvitacion(plantillaClave);
 
     const variablesSchema = {
         type: "object",

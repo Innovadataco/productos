@@ -840,4 +840,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-909: el motor manda correos con FORMATO (html + texto). Render Markdown→HTML saneado +
     // el único punto de envío con `html:`. Puro (Resend mockeado, sin base).
     "src/lib/notificaciones/render-html.candado.test.ts",
+    // SPEC-909: NINGÚN resend.emails.send manda text sin html (barrido de los 2 emisores). Puro (lee fuente).
+    "src/lib/notificaciones/envio-con-html.candado.test.ts",
+    // SPEC-909: copy USTED de las invitaciones (voz + CTA→botón + fuente única). Puro (data + render).
+    "prisma/invitaciones-usted.candado.test.ts",
+    // SPEC-909: el corrector in-place es idempotente y fila-por-fila (db falsa). Puro.
+    "scripts/corregir-invitaciones-usted.candado.test.ts",
 ];

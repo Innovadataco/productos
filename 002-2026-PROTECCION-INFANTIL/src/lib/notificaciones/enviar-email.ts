@@ -1,8 +1,13 @@
 /**
  * SPEC-296 (002-PI-197 · cierra parte de I-152): capa de envío real del motor
- * de notificaciones. Es el ÚNICO callsite legítimo de `resend.emails.send()`
- * fuera de tests. El worker `worker-notificaciones.mjs` inyecta esta función
+ * de notificaciones. El worker `worker-notificaciones.mjs` inyecta esta función
  * como `enviarEmail` en `procesarLote()`.
+ *
+ * SPEC-909: ya NO es el único emisor — hay un 2º callsite directo de Resend en
+ * `src/lib/email/notificacion-spam.ts` (notificación de spam al denunciante, desde
+ * una API route). AMBOS envían `html:` + `text:` por `renderizarEmail`; el candado
+ * `envio-con-html.candado.test.ts` exige que ningún `resend.emails.send` mande `text`
+ * sin `html`. (El viejo comentario «único callsite legítimo» quedó STALE y se quitó.)
  *
  * Movida desde `src/lib/email.ts` sin cambio de firma ni de comportamiento —
  * el resto de `email.ts` pasó a ser wrapper de `programar()` del motor.
