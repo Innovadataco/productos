@@ -5,6 +5,8 @@
  */
 export const UNIT_TEST_INCLUDES: string[] = [
     "prisma/seed-security.test.ts",
+    // SPEC-908: las 8 Guías de Acción hablan de «tú» (sin voseo), por morfología. Puro (lee GUIAS_ACCION_BASE).
+    "prisma/guias-accion-voz.candado.test.ts",
     // 3003: detector de typo de dominio (gmaail.com → gmail.com), puro.
     "src/lib/email-typo.test.ts",
     "scripts/arch/no-prisma-mocks.test.ts",
