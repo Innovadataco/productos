@@ -23,6 +23,9 @@ export class ComiteConvivenciaRepository {
                 debeCambiarPassword: true,
                 ultimaSesion: true,
                 creadoEn: true,
+                // SPEC-912: lo usa el service para decidir si, al cambiar el email, reenvía la
+                // invitación (cuenta todavía INVITADO) o solo actualiza (cuenta ya activada).
+                estadoActivacion: true,
             },
         });
     }
@@ -84,6 +87,39 @@ export class ComiteConvivenciaRepository {
         return this.db.usuario.update({
             where: { id },
             data: { tokenInvitacion, tokenInvitacionExpiraEn, estadoActivacion: "INVITADO" },
+            select: {
+                id: true,
+                email: true,
+                estado: true,
+                debeCambiarPassword: true,
+                ultimaSesion: true,
+                creadoEn: true,
+            },
+        });
+    }
+
+    // SPEC-912: cambia el email del registro de la cuenta (caso: cuenta YA activada).
+    actualizarEmail(id: string, email: string) {
+        return this.db.usuario.update({
+            where: { id },
+            data: { email: email.toLowerCase() },
+            select: {
+                id: true,
+                email: true,
+                estado: true,
+                debeCambiarPassword: true,
+                ultimaSesion: true,
+                creadoEn: true,
+            },
+        });
+    }
+
+    // SPEC-912: cambia el email Y regenera el token de invitación en UN solo update (caso:
+    // cuenta todavía INVITADO → la invitación debe reemitirse al email NUEVO).
+    actualizarEmailEInvitacion(id: string, email: string, tokenInvitacion: string, tokenInvitacionExpiraEn: Date) {
+        return this.db.usuario.update({
+            where: { id },
+            data: { email: email.toLowerCase(), tokenInvitacion, tokenInvitacionExpiraEn, estadoActivacion: "INVITADO" },
             select: {
                 id: true,
                 email: true,

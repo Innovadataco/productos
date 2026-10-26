@@ -92,3 +92,48 @@ export async function POST(request: Request) {
         return errorToResponse(error, "[COLEGIO/COMITE/CUENTA]");
     }
 }
+
+// SPEC-912: edita la cuenta del comité (cambia el email del registro). Espeja el POST —
+// SCHOOL_ADMIN + módulo colegios_comite + vigencia + rate admin_write + body { email }.
+export async function PATCH(request: Request) {
+    try {
+        const user = await verifyAuth("SCHOOL_ADMIN");
+        await assertModulo(user, "colegios_comite");
+        const vigencia = await verificarVigenciaColegio(user.id);
+        if (!vigencia.vigente) {
+            return NextResponse.json(
+                { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
+        if (!user.colegioId) {
+            return NextResponse.json(
+                { error: { message: "Usuario no vinculado a un colegio", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
+
+        const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas solicitudes. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
+
+        const body = await withValidation.body(comiteCuentaSchema)(request);
+        const resultado = await new ComiteConvivenciaService().actualizarCuenta(
+            user.colegioId,
+            body.email,
+            user.id,
+            getClientInfo(request)
+        );
+
+        return NextResponse.json(resultado, { status: 200 });
+    } catch (error) {
+        if (error instanceof AppError) {
+            return NextResponse.json(error.toJSON(), { status: error.statusCode });
+        }
+        return errorToResponse(error, "[COLEGIO/COMITE/CUENTA]");
+    }
+}

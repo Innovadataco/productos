@@ -16,6 +16,8 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
     const [invitacionEnviada, setInvitacionEnviada] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // SPEC-912: edición del email del registro de la cuenta.
+    const [editando, setEditando] = useState(false);
 
     async function crearCuenta(event: React.FormEvent) {
         event.preventDefault();
@@ -60,6 +62,35 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
             setInvitacionEnviada(true);
         } catch {
             setError("Error de red al reenviar la invitación");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // SPEC-912: guarda el nuevo email (PATCH). Si la cuenta seguía INVITADO, el server
+    // reenvía la invitación al email nuevo y devuelve invitacionEnviada=true.
+    async function guardarEdicion(event: React.FormEvent) {
+        event.preventDefault();
+        setLoading(true);
+        setError(null);
+        setInvitacionEnviada(false);
+
+        try {
+            const res = await fetch("/api/colegio/comite/cuenta", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error?.message || "Error al actualizar la cuenta");
+                return;
+            }
+            setCuenta(data.cuenta);
+            setInvitacionEnviada(Boolean(data.invitacionEnviada));
+            setEditando(false);
+        } catch {
+            setError("Error de red al actualizar la cuenta");
         } finally {
             setLoading(false);
         }
@@ -132,9 +163,58 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
             {avisoInvitacion}
             {error && <p className="mt-4 text-sm text-estado-rubi">{error}</p>}
 
-            <Button type="button" onClick={reenviarInvitacion} isLoading={loading} className="mt-6">
-                {loading ? "Reenviando…" : "Reenviar invitación"}
-            </Button>
+            {editando ? (
+                <form onSubmit={guardarEdicion} className="mt-6 space-y-4">
+                    <div>
+                        <label htmlFor="email-comite-editar" className="block text-sm font-medium text-body">
+                            Email institucional
+                        </label>
+                        <input
+                            id="email-comite-editar"
+                            type="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="mt-1 w-full rounded-xl glass-input px-4 py-2 text-sm text-body placeholder-subtle ring-accent-input"
+                            placeholder="comite@colegio.edu"
+                        />
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        <Button type="submit" isLoading={loading}>
+                            {loading ? "Guardando…" : "Guardar"}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setEditando(false);
+                                setError(null);
+                            }}
+                            disabled={loading}
+                        >
+                            Cancelar
+                        </Button>
+                    </div>
+                </form>
+            ) : (
+                <div className="mt-6 flex flex-wrap gap-3">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                            setEmail(cuenta.email);
+                            setError(null);
+                            setInvitacionEnviada(false);
+                            setEditando(true);
+                        }}
+                    >
+                        Editar
+                    </Button>
+                    <Button type="button" onClick={reenviarInvitacion} isLoading={loading}>
+                        {loading ? "Reenviando…" : "Reenviar invitación"}
+                    </Button>
+                </div>
+            )}
         </section>
     );
 }
