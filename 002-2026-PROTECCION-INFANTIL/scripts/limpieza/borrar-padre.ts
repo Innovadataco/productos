@@ -16,19 +16,19 @@ import { prisma } from "../../src/lib/prisma";
 import { parseArgs, requerirMotivo, registrarAuditoria, log, PRESERVADOS, bloquearSiHayConsentimiento, contarConsentimientos } from "./_common";
 import { borrarReporte } from "./borrar-reporte";
 import { borrarSubarbolExpediente } from "./_borrar-expediente";
+import { borrarRastroUsuario, rastroVacio, type RastroUsuarioDetalle } from "./_borrar-usuario";
 
 export interface ResultadoBorrarPadre {
     usuarioId: string;
     email: string;
     filasBorradas: number;
     detalle: {
-        contactos: number;
         reportes: number;
-        codigosVerificacion: number;
-        tokensRecuperacion: number;
-        suscripciones: number;
         expedientes: number;
         consentimientos: number;
+        // SPEC-905: el rastro genérico (citas, facturación, apelaciones, alertas, contactos, etc.)
+        // lo borra `borrarRastroUsuario` — una sola fuente del orden FK-safe compartida con borrar-profesional.
+        rastro: RastroUsuarioDetalle;
         usuario: number;
     };
     dryRun: boolean;
@@ -66,29 +66,32 @@ export async function borrarPadre(
     });
     const expedienteIds = expedientesUsuario.map((e) => e.id);
 
-    const conteoDetalle = {
-        contactos: await client.contactoConfianza.count({ where: { usuarioId: usuario.id } }),
-        reportes: reporteIds.length,
-        codigosVerificacion: await client.codigoVerificacion.count({ where: { usuarioId: usuario.id } }),
-        tokensRecuperacion: await client.tokenRecuperacion.count({ where: { usuarioId: usuario.id } }),
-        suscripciones: await client.suscripcion.count({ where: { usuarioId: usuario.id } }),
-        expedientes: expedienteIds.length,
-        // SPEC-508: constancias de consentimiento que el cascade destruiría (evidencia legal).
-        consentimientos: await contarConsentimientos(client, [usuario.id]),
-        usuario: 1,
-    };
+    // SPEC-508: constancias de consentimiento que el cascade destruiría (evidencia legal).
+    const consentimientos = await contarConsentimientos(client, [usuario.id]);
 
     if (!opts.confirm) {
+        const contactos = await client.contactoConfianza.count({ where: { usuarioId: usuario.id } });
+        const suscripciones = await client.suscripcion.count({ where: { usuarioId: usuario.id } });
+        const solicitudesCita = await client.solicitudCita.count({ where: { padreUsuarioId: usuario.id } });
+        const apelaciones = await client.apelacion.count({ where: { usuarioId: usuario.id } });
         log("borrar-padre", `DRY-RUN padre=${email} (${usuario.id})`);
-        log("borrar-padre", `  · ContactoConfianza: ${conteoDetalle.contactos} (cascade IdentificadorContacto)`);
-        log("borrar-padre", `  · Reporte: ${conteoDetalle.reportes} (con sus derivados)`);
-        log("borrar-padre", `  · CodigoVerificacion: ${conteoDetalle.codigosVerificacion}`);
-        log("borrar-padre", `  · TokenRecuperacion: ${conteoDetalle.tokensRecuperacion}`);
-        log("borrar-padre", `  · Suscripcion: ${conteoDetalle.suscripciones}`);
-        log("borrar-padre", `  · Expediente (+ AclaracionExpediente, InformeConsolidado, PatronExpediente, EventoExpediente): ${conteoDetalle.expedientes}`);
-        log("borrar-padre", `  · AuditConsentimiento (EVIDENCIA LEGAL — el borrado se NIEGA si > 0, SPEC-508): ${conteoDetalle.consentimientos}`);
+        log("borrar-padre", `  · Reporte: ${reporteIds.length} (con sus derivados)`);
+        log("borrar-padre", `  · Expediente (+ AclaracionExpediente, InformeConsolidado, PatronExpediente, EventoExpediente): ${expedienteIds.length}`);
+        log("borrar-padre", `  · SolicitudCita (como padre): ${solicitudesCita}`);
+        log("borrar-padre", `  · Suscripcion: ${suscripciones} (+ Pago/BonoAplicado/CodigoReferidoUso que la bloquean, SPEC-905)`);
+        log("borrar-padre", `  · Apelacion: ${apelaciones} (cascade: DocumentoApelacion, AccesoDocumentoApelacion)`);
+        log("borrar-padre", `  · ContactoConfianza: ${contactos} (+ AlertaSuscripcion, ContactoEmergencia, DigestSemanal, NotificacionInApp, CodigoAccesoContenido, codigos/tokens)`);
+        log("borrar-padre", `  · AuditConsentimiento (EVIDENCIA LEGAL — el borrado se NIEGA si > 0, SPEC-508): ${consentimientos}`);
         log("borrar-padre", "  · Usuario: 1");
-        return { usuarioId: usuario.id, email, filasBorradas: 0, detalle: conteoDetalle, dryRun: true };
+        return {
+            usuarioId: usuario.id, email, filasBorradas: 0,
+            detalle: {
+                reportes: reporteIds.length, expedientes: expedienteIds.length, consentimientos,
+                rastro: rastroVacio(),
+                usuario: 1,
+            },
+            dryRun: true,
+        };
     }
 
     // SPEC-508 · para el sangrado del P1-A: no destruir la evidencia de
@@ -109,23 +112,21 @@ export async function borrarPadre(
         // borrarReporte (ejecutado antes) ya puso EventoExpediente.reporteId = null.
         await borrarSubarbolExpediente(tx, expedienteIds);
 
-        const cc = await tx.contactoConfianza.deleteMany({ where: { usuarioId: usuario.id } });
-        const cv = await tx.codigoVerificacion.deleteMany({ where: { usuarioId: usuario.id } });
-        const tr = await tx.tokenRecuperacion.deleteMany({ where: { usuarioId: usuario.id } });
-        const su = await tx.suscripcion.deleteMany({ where: { usuarioId: usuario.id } });
+        // SPEC-905: el resto del rastro genérico (citas como padre, facturación → Suscripcion,
+        // apelaciones, alertas, contactos, códigos) en orden FK-safe, compartido con borrar-profesional.
+        const rastro = await borrarRastroUsuario(tx, [usuario.id]);
         const u = await tx.usuario.delete({ where: { id: usuario.id } });
 
         const detalle = {
-            contactos: cc.count,
             reportes: reporteIds.length,
-            codigosVerificacion: cv.count,
-            tokensRecuperacion: tr.count,
-            suscripciones: su.count,
             expedientes: expedienteIds.length,
             consentimientos: 0, // SPEC-508: garantizado 0 acá (el guard ya se negó si había).
+            rastro,
             usuario: u ? 1 : 0,
         };
-        const total = Object.values(detalle).reduce((a, b) => a + b, 0);
+        const total =
+            detalle.reportes + detalle.expedientes + detalle.usuario +
+            Object.values(rastro).reduce((a, b) => a + b, 0);
 
         await registrarAuditoria(tx, "padre", motivo, total, [usuario.id]);
         log("borrar-padre", `REALIZADO padre=${email} filas=${total}`);

@@ -5,7 +5,7 @@
  */
 import type { PrismaClient, Prisma } from "@prisma/client";
 
-export type TipoPurga = "colegio" | "padre" | "reporte" | "simulacion" | "reset_piloto";
+export type TipoPurga = "colegio" | "padre" | "profesional" | "reporte" | "simulacion" | "reset_piloto";
 
 export interface ArgsBase {
     confirm: boolean;

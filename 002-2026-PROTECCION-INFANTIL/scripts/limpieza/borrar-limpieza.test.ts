@@ -34,7 +34,7 @@ interface FakeModels {
     contactoConfianza: { count: AnyFn; deleteMany: AnyFn };
     codigoVerificacion: { count: AnyFn; deleteMany: AnyFn };
     tokenRecuperacion: { count: AnyFn; deleteMany: AnyFn };
-    suscripcion: { count: AnyFn; deleteMany: AnyFn };
+    suscripcion: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
     auditLog: { create: AnyFn };
     colegio: { findUnique: AnyFn; delete: AnyFn };
     tenant: { delete: AnyFn };
@@ -61,6 +61,21 @@ interface FakeModels {
     identificadorAcudiente: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
     estudianteObservacion: { count: AnyFn; deleteMany: AnyFn };
     acudienteEstudiante: { count: AnyFn; deleteMany: AnyFn };
+    // SPEC-905: rastro genérico del usuario (borrar-padre/profesional) + facturación.
+    solicitudCita: { count: AnyFn; deleteMany: AnyFn };
+    apelacion: { count: AnyFn; deleteMany: AnyFn };
+    bonoAplicado: { deleteMany: AnyFn };
+    codigoReferidoUso: { deleteMany: AnyFn };
+    pago: { deleteMany: AnyFn };
+    alertaSuscripcion: { deleteMany: AnyFn };
+    codigoAccesoContenido: { deleteMany: AnyFn };
+    contactoEmergencia: { deleteMany: AnyFn };
+    digestSemanal: { deleteMany: AnyFn };
+    // SPEC-905: subárbol profesional (borrar-profesional).
+    perfilProfesional: { count: AnyFn; deleteMany: AnyFn; delete: AnyFn; findUnique: AnyFn };
+    franjaDisponible: { count: AnyFn; deleteMany: AnyFn };
+    verificacionProfesional: { count: AnyFn; deleteMany: AnyFn };
+    aceptacionAutorizacionProfesional: { count: AnyFn; deleteMany: AnyFn };
 }
 
 function makeModel(extra: Record<string, AnyFn> = {}) {
@@ -126,6 +141,20 @@ function makeFakeClient(): { client: PrismaClient; tx: FakeModels } {
         identificadorAcudiente: makeModel(),
         estudianteObservacion: makeModel(),
         acudienteEstudiante: makeModel(),
+        // SPEC-905
+        solicitudCita: makeModel(),
+        apelacion: makeModel(),
+        bonoAplicado: makeModel(),
+        codigoReferidoUso: makeModel(),
+        pago: makeModel(),
+        alertaSuscripcion: makeModel(),
+        codigoAccesoContenido: makeModel(),
+        contactoEmergencia: makeModel(),
+        digestSemanal: makeModel(),
+        perfilProfesional: makeModel(),
+        franjaDisponible: makeModel(),
+        verificacionProfesional: makeModel(),
+        aceptacionAutorizacionProfesional: makeModel(),
     };
     const client = {
         ...tx,
@@ -299,6 +328,25 @@ describe("borrarPadre — A-65 · borrado de Expediente antes del Usuario", () =
         expect(resultado.detalle.consentimientos).toBe(3);
         expect(tx.usuario.delete).not.toHaveBeenCalled();
     });
+
+    // ── SPEC-905 · candado de facturación: Pago/BonoAplicado/CodigoReferidoUso ANTES de Suscripcion ──
+    // Muere con el defecto: si borrar-padre/_borrar-usuario vuelve a borrar `suscripcion` sin la cadena
+    // de facturación, el orden cae y este test (y el ensayo de integración) se pone rojo.
+    it("SPEC-905 confirm: borra la facturación ANTES de Suscripcion y la SolicitudCita del padre", async () => {
+        tx.suscripcion.findMany.mockResolvedValue([{ id: "sus1" }]);
+        const { borrarPadre } = await import("./borrar-padre");
+        await borrarPadre("padre@test.com", "test", { confirm: true, client });
+
+        const bonoOrder = tx.bonoAplicado.deleteMany.mock.invocationCallOrder[0];
+        const codigoOrder = tx.codigoReferidoUso.deleteMany.mock.invocationCallOrder[0];
+        const pagoOrder = tx.pago.deleteMany.mock.invocationCallOrder[0];
+        const susOrder = tx.suscripcion.deleteMany.mock.invocationCallOrder[0];
+        expect(bonoOrder, "BonoAplicado antes de Suscripcion").toBeLessThan(susOrder);
+        expect(codigoOrder, "CodigoReferidoUso antes de Suscripcion").toBeLessThan(susOrder);
+        expect(pagoOrder, "Pago antes de Suscripcion").toBeLessThan(susOrder);
+        // SolicitudCita del padre (padreUsuarioId → Usuario RESTRICT) se borra.
+        expect(tx.solicitudCita.deleteMany).toHaveBeenCalledWith({ where: { padreUsuarioId: { in: ["u1"] } } });
+    });
 });
 
 // ── borrarColegio ─────────────────────────────────────────────────────────────
@@ -426,5 +474,62 @@ describe("borrarColegio — A-66 · subárbol A-58 + trampa cross-tenant AlertaC
         // deleteMany de identificadores no hace nada (count=0 pero se llama igual)
         expect(tx.identificadorProfesor.deleteMany).toHaveBeenCalled();
         expect(tx.identificadorEstudiante.deleteMany).toHaveBeenCalled();
+    });
+});
+
+// ── borrarProfesional (SPEC-905) ───────────────────────────────────────────────
+
+describe("borrarProfesional — SPEC-905 · subárbol de agenda/verificación FK-safe", () => {
+    let client: PrismaClient;
+    let tx: FakeModels;
+
+    beforeEach(() => {
+        const f = makeFakeClient();
+        client = f.client;
+        tx = f.tx;
+        tx.usuario.findUnique.mockResolvedValue({ id: "p1", email: "prof@test.com", rol: "PROFESIONAL" });
+        tx.perfilProfesional.findUnique.mockResolvedValue({ id: "perf1" });
+        tx.perfilProfesional.delete.mockResolvedValue({ id: "perf1" });
+        tx.usuario.delete.mockResolvedValue({ id: "p1" });
+    });
+
+    it("rechaza un rol distinto de PROFESIONAL", async () => {
+        tx.usuario.findUnique.mockResolvedValue({ id: "p1", email: "x@test.com", rol: "PARENT" });
+        const { borrarProfesional } = await import("./borrar-profesional");
+        await expect(borrarProfesional("x@test.com", "baja profesional de prueba", { confirm: true, client })).rejects.toThrow(/PROFESIONAL/);
+        expect(tx.usuario.delete).not.toHaveBeenCalled();
+    });
+
+    it("confirm: SolicitudCita → FranjaDisponible → VerificacionProfesional → PerfilProfesional → Usuario (orden FK-safe)", async () => {
+        const { borrarProfesional } = await import("./borrar-profesional");
+        await borrarProfesional("prof@test.com", "baja profesional de prueba", { confirm: true, client });
+
+        const sc = tx.solicitudCita.deleteMany.mock.invocationCallOrder[0];
+        const fr = tx.franjaDisponible.deleteMany.mock.invocationCallOrder[0];
+        const ve = tx.verificacionProfesional.deleteMany.mock.invocationCallOrder[0];
+        const pe = tx.perfilProfesional.delete.mock.invocationCallOrder[0];
+        const us = tx.usuario.delete.mock.invocationCallOrder[0];
+        expect(sc).toBeLessThan(fr);
+        expect(fr).toBeLessThan(ve);
+        expect(ve).toBeLessThan(pe);
+        expect(pe).toBeLessThan(us);
+        expect(tx.verificacionProfesional.deleteMany).toHaveBeenCalledWith({ where: { perfilProfesionalId: "perf1" } });
+    });
+
+    // SPEC-508 (guard intacto en quirúrgico): se niega si el profesional tiene consentimiento.
+    it("SPEC-508 confirm: se NIEGA a borrar si el profesional tiene consentimiento", async () => {
+        tx.auditConsentimiento.count.mockResolvedValue(1);
+        const { borrarProfesional } = await import("./borrar-profesional");
+        await expect(borrarProfesional("prof@test.com", "baja profesional de prueba", { confirm: true, client })).rejects.toThrow(/BLOQUEADO/);
+        expect(tx.usuario.delete).not.toHaveBeenCalled();
+        expect(tx.perfilProfesional.delete).not.toHaveBeenCalled();
+    });
+
+    it("confirm: sin perfil profesional, igual borra el usuario (perfil opcional)", async () => {
+        tx.perfilProfesional.findUnique.mockResolvedValue(null);
+        const { borrarProfesional } = await import("./borrar-profesional");
+        await borrarProfesional("prof@test.com", "baja profesional de prueba", { confirm: true, client });
+        expect(tx.perfilProfesional.delete).not.toHaveBeenCalled();
+        expect(tx.usuario.delete).toHaveBeenCalled();
     });
 });

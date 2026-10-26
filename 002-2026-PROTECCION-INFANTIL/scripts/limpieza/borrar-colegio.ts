@@ -29,6 +29,7 @@ import { prisma } from "../../src/lib/prisma";
 import { parseArgs, requerirMotivo, registrarAuditoria, log, bloquearSiHayConsentimiento } from "./_common";
 import { borrarReporte } from "./borrar-reporte";
 import { borrarSubarbolExpediente } from "./_borrar-expediente";
+import { borrarFacturacionDeSuscripciones, borrarRastroUsuario } from "./_borrar-usuario";
 
 export interface ResultadoBorrarColegio {
     colegioId: string;
@@ -192,6 +193,11 @@ export async function borrarColegio(
         await tx.preferenciaAlertaColegio.deleteMany({ where: { colegioId } });
         await tx.registroAvisoColegio.deleteMany({ where: { colegioId } });
         await tx.onboardingColegio.deleteMany({ where: { colegioId } });
+        // SPEC-905: la suscripción del colegio puede tener Pago/BonoAplicado/CodigoReferidoUso
+        // (FK RESTRICT → Suscripcion) que la bloquean. Se borran ANTES, con el mismo helper que
+        // borrar-padre/profesional (una sola fuente del orden de facturación).
+        const susColegioIds = (await tx.suscripcion.findMany({ where: { colegioId }, select: { id: true } })).map((s) => s.id);
+        await borrarFacturacionDeSuscripciones(tx, susColegioIds);
         await tx.suscripcion.deleteMany({ where: { colegioId } });
 
         // Expedientes de admin/comiteConvivencia: borrar en orden FK-safe antes del usuario.
@@ -209,6 +215,10 @@ export async function borrarColegio(
             // SPEC-615 (I-374): mismo subárbol FK-safe que borrar-padre, vía el mismo helper
             // (incluye InformePadre). Antes acá había una copia que también lo olvidaba.
             await borrarSubarbolExpediente(tx, expColegioIds);
+            // SPEC-905: rastro genérico del admin/comité (citas, facturación de una suscripción
+            // PERSONAL, apelaciones, alertas, notificaciones por usuarioId, códigos) antes de
+            // borrar el Usuario — mismo helper FK-safe que borrar-padre/profesional.
+            await borrarRastroUsuario(tx, usuariosColegio);
         }
 
         // SPEC-508: no destruir evidencia de consentimiento por el cascade. Si el
