@@ -132,6 +132,57 @@ export class ComiteConvivenciaService {
         return { cuenta: toDto(cuenta), invitacionEnviada: true };
     }
 
+    // SPEC-912: edita la cuenta del comité — cambia el email del registro. Valida unicidad
+    // (409, igual que `crearCuenta`), audita antes/después y, si la cuenta sigue INVITADO
+    // (no activada), reemite la invitación al email NUEVO (token regenerado). Si ya está
+    // activada, solo actualiza el email. NUNCA toca ni pinta contraseña (SPEC-319 §2.2).
+    async actualizarCuenta(
+        colegioId: string,
+        nuevoEmail: string,
+        actorId: string,
+        info: InfoClienteDto
+    ): Promise<{ cuenta: ComiteCuentaDto; invitacionEnviada: boolean }> {
+        const cuenta = await this.repo.obtenerPorColegio(colegioId);
+        if (!cuenta) {
+            throw new AppError("Cuenta del comité no encontrada", ERROR_CODES.NOT_FOUND, 404);
+        }
+
+        const emailNuevo = nuevoEmail.toLowerCase();
+        const emailAnterior = cuenta.email;
+
+        // Unicidad (mismo criterio que crearCuenta): 409 si el email pertenece a OTRA cuenta.
+        const emailEnUso = await this.repo.obtenerPorEmail(emailNuevo);
+        if (emailEnUso && emailEnUso.id !== cuenta.id) {
+            throw new AppError("El email ya está registrado", ERROR_CODES.CONFLICT, 409);
+        }
+
+        // Si la cuenta sigue INVITADO se regenera el token (para reemitir la invitación al
+        // email nuevo); si ya está activada, `token` es null y solo se cambia el email.
+        const token = cuenta.estadoActivacion === "INVITADO" ? generarTokenInvitacion() : null;
+        const actualizada = token
+            ? await this.repo.actualizarEmailEInvitacion(cuenta.id, emailNuevo, token, expiracionInvitacion())
+            : await this.repo.actualizarEmail(cuenta.id, emailNuevo);
+
+        await logAudit({
+            accion: "COLEGIO_COMITE_EMAIL_ACTUALIZADO",
+            tipoRecurso: "Usuario",
+            recursoId: actualizada.id,
+            usuarioId: actorId,
+            colegioId,
+            valorAnterior: JSON.stringify({ email: emailAnterior }),
+            valorNuevo: JSON.stringify({ email: actualizada.email, reinvitado: token !== null }),
+            ipAddress: info.ipAddress,
+            userAgent: info.userAgent,
+        });
+
+        // Reemite la invitación al email NUEVO SOLO si la cuenta aún no se activó.
+        if (token) {
+            await this.emitirInvitacion(actualizada.id, colegioId, token);
+        }
+
+        return { cuenta: toDto(actualizada), invitacionEnviada: token !== null };
+    }
+
     // SPEC-319 §2.2/§2.3: reemplaza "regenerar contraseña" (que pintaba la clave).
     // Regenera el token de invitación y reenvía el email — el comité vuelve a definir
     // su clave por /activar. El secreto nunca se muestra ni viaja por chat.

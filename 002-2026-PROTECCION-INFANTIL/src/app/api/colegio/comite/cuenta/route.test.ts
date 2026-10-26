@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { GET, POST } from "./route";
+import { GET, POST, PATCH } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearTokenUsuario, crearRequestAutenticado } from "@/lib/reporte-test-utils";
@@ -117,5 +117,89 @@ describe("/api/colegio/comite/cuenta", () => {
         );
 
         expect(res.status).toBe(409);
+    });
+
+    // SPEC-912 · CANDADO: la cuenta del comité se puede EDITAR (cambiar el email del registro).
+    const URL = "http://localhost:5005/api/colegio/comite/cuenta";
+
+    it("SPEC-912: PATCH cambia el email (cuenta activada) + AuditLog con antes/después", async () => {
+        const { admin, colegio } = await crearColegioConAdmin();
+        mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
+        await prisma.usuario.create({
+            data: {
+                email: "viejo@colegio.test",
+                passwordHash: "x",
+                rol: "COMITE_CONVIVENCIA",
+                estado: "activo",
+                estadoActivacion: "ACTIVO",
+                comiteColegioId: colegio.id,
+            },
+        });
+
+        const res = await PATCH(crearRequestAutenticado("PATCH", URL, { email: "nuevo@colegio.test" }, mockToken));
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.cuenta.email).toBe("nuevo@colegio.test");
+        expect(data.invitacionEnviada).toBe(false); // ya activada → NO reenvía
+        expect(data.passwordTemporal).toBeUndefined(); // nunca contraseña (SPEC-319 §2.2)
+
+        const enDb = await prisma.usuario.findUnique({ where: { comiteColegioId: colegio.id }, select: { email: true } });
+        expect(enDb?.email).toBe("nuevo@colegio.test");
+
+        const audit = await prisma.auditLog.findFirst({ where: { accion: "COLEGIO_COMITE_EMAIL_ACTUALIZADO" } });
+        expect(audit).not.toBeNull();
+        expect(audit?.valorAnterior).toContain("viejo@colegio.test");
+        expect(audit?.valorNuevo).toContain("nuevo@colegio.test");
+    });
+
+    it("SPEC-912: PATCH reenvía la invitación (token nuevo, email nuevo) si sigue INVITADO", async () => {
+        const { admin, colegio } = await crearColegioConAdmin();
+        mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
+        await prisma.usuario.create({
+            data: {
+                email: "inv@colegio.test",
+                passwordHash: "x",
+                rol: "COMITE_CONVIVENCIA",
+                estado: "activo",
+                estadoActivacion: "INVITADO",
+                tokenInvitacion: "a".repeat(64),
+                tokenInvitacionExpiraEn: new Date(Date.now() + 3600_000),
+                comiteColegioId: colegio.id,
+            },
+        });
+
+        const res = await PATCH(crearRequestAutenticado("PATCH", URL, { email: "inv-nuevo@colegio.test" }, mockToken));
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.invitacionEnviada).toBe(true);
+
+        const enDb = await prisma.usuario.findUnique({
+            where: { comiteColegioId: colegio.id },
+            select: { email: true, tokenInvitacion: true, estadoActivacion: true },
+        });
+        expect(enDb?.email).toBe("inv-nuevo@colegio.test");
+        expect(enDb?.tokenInvitacion).not.toBe("a".repeat(64)); // token regenerado
+        expect(enDb?.estadoActivacion).toBe("INVITADO");
+    });
+
+    it("SPEC-912: PATCH rechaza (409) un email ya usado por otro usuario", async () => {
+        const { admin, colegio } = await crearColegioConAdmin();
+        mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
+        await prisma.usuario.create({
+            data: { email: "cuenta@colegio.test", passwordHash: "x", rol: "COMITE_CONVIVENCIA", estado: "activo", estadoActivacion: "ACTIVO", comiteColegioId: colegio.id },
+        });
+        await prisma.usuario.create({
+            data: { email: "ocupado@test.com", passwordHash: "x", rol: "PARENT", estado: "activo" },
+        });
+
+        const res = await PATCH(crearRequestAutenticado("PATCH", URL, { email: "ocupado@test.com" }, mockToken));
+        expect(res.status).toBe(409);
+    });
+
+    it("SPEC-912: PATCH 404 si el colegio no tiene cuenta de comité", async () => {
+        const { admin } = await crearColegioConAdmin();
+        mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
+        const res = await PATCH(crearRequestAutenticado("PATCH", URL, { email: "x@colegio.test" }, mockToken));
+        expect(res.status).toBe(404);
     });
 });

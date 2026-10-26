@@ -848,4 +848,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "prisma/invitaciones-usted.candado.test.ts",
     // SPEC-909: el corrector in-place es idempotente y fila-por-fila (db falsa). Puro.
     "scripts/corregir-invitaciones-usted.candado.test.ts",
+    // SPEC-912: «Editar» de la cuenta del comité postea el email nuevo por PATCH. Puro (jsdom, fetch mockeado).
+    "src/components/modules/colegio/comite/ComiteCuentaCard.candado.test.tsx",
 ];
