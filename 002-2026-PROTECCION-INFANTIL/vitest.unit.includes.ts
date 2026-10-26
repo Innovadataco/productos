@@ -398,6 +398,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/colegio/carga/validator.test.ts",
     // SPEC-911: los dos parsers de carga masiva auto-detectan el delimitador (coma o `;` de Excel-ES). Puro.
     "src/lib/colegio/csv-delimitador.candado.test.ts",
+    // SPEC-913: copy del colegio en «enlace» (no «link») y usted (no tú enclítico). Escanea fuentes, puro.
+    "src/components/modules/colegio/copy-colegio-voz.candado.test.ts",
     // SPEC-352 (hotfix): guard del resetDatabase — jamás truncar una BD sin "test".
     "src/lib/validar-bd-de-test.test.ts",
     // SPEC-584 (Fase 2): hilo conductor del actor de lectura (ALS, sin BD).
