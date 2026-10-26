@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 import { getParametroSistema } from "@/lib/parametros";
+import { detectarDelimitadorCsv } from "@/lib/colegio/csv-delimitador";
 
 export type FilaCargaEstudiante = {
     fila: number;
@@ -100,7 +101,10 @@ function filaAMatrizStrings(fila: unknown[]): string[] {
     return fila.map(celdaAString);
 }
 
-function parseCsvManual(text: string): string[][] {
+// SPEC-911: el delimitador se auto-detecta de la 1ª línea (coma o `;` de Excel-ES),
+// no es fijo. Exportado para el candado de delimitador.
+export function parseCsvManual(text: string): string[][] {
+    const delimitador = detectarDelimitadorCsv(text);
     const rows: string[][] = [];
     let row: string[] = [];
     let cell = "";
@@ -124,7 +128,7 @@ function parseCsvManual(text: string): string[][] {
         } else {
             if (char === '"') {
                 inQuotes = true;
-            } else if (char === ",") {
+            } else if (char === delimitador) {
                 row.push(cell);
                 cell = "";
             } else if (char === "\n") {

@@ -11,6 +11,7 @@
  */
 import ExcelJS from "exceljs";
 import { getParametroSistema } from "@/lib/parametros";
+import { detectarDelimitadorCsv } from "@/lib/colegio/csv-delimitador";
 
 /** Columnas obligatorias del validador. Fuente única — la plantilla las emite. */
 export const COLUMNAS_PROFESOR = [
@@ -75,8 +76,13 @@ function celda(v: unknown): string {
     return String(v).trim();
 }
 
-/** Parser CSV manual con manejo de comillas y `""` como escape. */
-function parseCsv(text: string): string[][] {
+/**
+ * Parser CSV manual con manejo de comillas y `""` como escape. SPEC-911: el
+ * delimitador se auto-detecta de la 1ª línea (coma o `;` de Excel-ES), no es fijo.
+ * Exportado para el candado de delimitador.
+ */
+export function parseCsv(text: string): string[][] {
+    const delimitador = detectarDelimitadorCsv(text);
     const filas: string[][] = [];
     let fila: string[] = [];
     let celdaBuf = "";
@@ -90,7 +96,7 @@ function parseCsv(text: string): string[][] {
             celdaBuf += c; continue;
         }
         if (c === '"') { inQuotes = true; continue; }
-        if (c === ",") { fila.push(celdaBuf); celdaBuf = ""; continue; }
+        if (c === delimitador) { fila.push(celdaBuf); celdaBuf = ""; continue; }
         if (c === "\n") { fila.push(celdaBuf); filas.push(fila); fila = []; celdaBuf = ""; continue; }
         if (c === "\r") { if (n === "\n") i++; fila.push(celdaBuf); filas.push(fila); fila = []; celdaBuf = ""; continue; }
         celdaBuf += c;
