@@ -99,6 +99,26 @@ describe("CursoRepository", () => {
         expect(propio.estado).toBe("inactivo");
     });
 
+    it("SPEC-914: la lista incluye el conteo de materias ACTIVAS (0 para curso sin materias)", async () => {
+        const { colegio: a } = await crearColegioConAdmin();
+        const cursoSin = await crearCurso(a.id, { nombre: "Sin materias" });
+        const cursoCon = await crearCurso(a.id, { nombre: "Con materias" });
+        const m1 = await prisma.materia.create({ data: { colegioId: a.id, nombre: "Mat", estado: "activo" } });
+        const m2 = await prisma.materia.create({ data: { colegioId: a.id, nombre: "Len", estado: "activo" } });
+        const m3 = await prisma.materia.create({ data: { colegioId: a.id, nombre: "Art", estado: "activo" } });
+        // Dos vínculos activos + uno inactivo (este NO debe contar).
+        await prisma.cursoMateria.create({ data: { colegioId: a.id, cursoId: cursoCon.id, materiaId: m1.id, estado: "activo" } });
+        await prisma.cursoMateria.create({ data: { colegioId: a.id, cursoId: cursoCon.id, materiaId: m2.id, estado: "activo" } });
+        await prisma.cursoMateria.create({ data: { colegioId: a.id, cursoId: cursoCon.id, materiaId: m3.id, estado: "inactivo" } });
+        void cursoSin;
+        const repo = new CursoRepository();
+
+        const cursos = await repo.listarActivos(a.id);
+        const conteoPorNombre = new Map(cursos.map((c) => [c.nombre, c._count.CursoMateria]));
+        expect(conteoPorNombre.get("Sin materias"), "curso sin materias cuenta 0").toBe(0);
+        expect(conteoPorNombre.get("Con materias"), "solo las materias ACTIVAS cuentan").toBe(2);
+    });
+
     it("listarParaEstadisticas devuelve los cursos del colegio con el mínimo de campos", async () => {
         const { colegio: a } = await crearColegioConAdmin();
         const { colegio: b } = await crearColegioConAdmin();

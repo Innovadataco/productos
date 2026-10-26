@@ -65,6 +65,12 @@ export class CursoRepository {
         return this.db.curso.findMany({
             where: { colegioId, ...(opts?.incluirInactivos ? {} : { estado: "activo" }) },
             orderBy: { nombre: "asc" },
+            // SPEC-914: conteo de materias ACTIVAS asignadas por curso, para que la lista
+            // del rector resalte los cursos SIN materias. Aditivo: los consumidores que no
+            // lo usan lo ignoran.
+            include: {
+                _count: { select: { CursoMateria: { where: { estado: "activo" } } } },
+            },
         });
     }
 

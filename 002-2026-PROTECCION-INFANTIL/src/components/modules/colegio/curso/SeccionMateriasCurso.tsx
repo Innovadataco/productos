@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -39,6 +40,9 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
     const [materiaId, setMateriaId] = useState("");
     const [profesorId, setProfesorId] = useState("");
     const [asignando, setAsignando] = useState(false);
+    // SPEC-914: crear materia nueva desde el detalle del curso (si no está en el catálogo).
+    const [nuevaMateria, setNuevaMateria] = useState("");
+    const [creandoMateria, setCreandoMateria] = useState(false);
 
     const cargar = useCallback(async () => {
         setLoading(true);
@@ -96,6 +100,35 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
             onAviso("Error de red asignando materia", "error");
         } finally {
             setAsignando(false);
+        }
+    }
+
+    async function crearMateria() {
+        const nombre = nuevaMateria.trim();
+        if (!nombre) return;
+        setCreandoMateria(true);
+        try {
+            const res = await fetch("/api/colegio/materias", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nombre }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.materia?.id) {
+                setNuevaMateria("");
+                await cargarCatalogos();
+                // Preselecciona la materia recién creada para asignarla al curso.
+                setMateriaId(data.materia.id);
+                onAviso(`Materia "${data.materia.nombre}" creada`, "exito");
+            } else {
+                // Maneja el 409 (nombre duplicado) y demás errores con el mensaje del endpoint.
+                onAviso(data?.error?.message || "Error creando la materia", "error");
+            }
+        } catch {
+            onAviso("Error de red creando la materia", "error");
+        } finally {
+            setCreandoMateria(false);
         }
     }
 
@@ -175,6 +208,23 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
                     Toda materia debe llevar un profesor a cargo. Elige uno para poder asignarla.
                 </p>
             )}
+
+            {/* SPEC-914: crear una materia nueva si no está en el catálogo (antes solo se podía asignar
+                del catálogo existente, y sin materias el selector decía «Sin materias disponibles»). */}
+            <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-tinta/10 pt-4">
+                <div className="min-w-[200px] flex-1">
+                    <Input
+                        label="¿No está en la lista? Cree una materia nueva"
+                        value={nuevaMateria}
+                        onChange={(e) => setNuevaMateria(e.target.value)}
+                        placeholder="Ej. Matemáticas"
+                        maxLength={150}
+                    />
+                </div>
+                <Button variant="outline" onClick={crearMateria} isLoading={creandoMateria} disabled={!nuevaMateria.trim()}>
+                    Crear materia
+                </Button>
+            </div>
 
             {loading ? (
                 <div className="mt-6 flex items-center gap-3 text-muted">
