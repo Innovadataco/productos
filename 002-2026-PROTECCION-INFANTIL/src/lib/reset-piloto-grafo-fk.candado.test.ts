@@ -214,5 +214,13 @@ describe("SPEC-905 · ejecutarResetPiloto --purga-total end-to-end (una sola cor
             where: { accion: "LOGS_MANTENIMIENTO_PURGA", metadatos: { path: ["idsAfectados"], array_contains: ["audit_consentimientos"] } },
         });
         expect(logDestruccion).toBeGreaterThanOrEqual(1);
+
+        // 7) el RE-APUNTE del seed queda registrado en AuditLog (efecto runtime, no solo comentario · CEO decisión 4).
+        const logReapunte = await prisma.auditLog.findFirst({
+            where: { accion: "LOGS_MANTENIMIENTO_PURGA", metadatos: { path: ["idsAfectados"], array_contains: ["seed:reapuntado-a-soporte"] } },
+            select: { metadatos: true },
+        });
+        expect(logReapunte, "el barrido debe registrar en AuditLog el re-apunte del seed").not.toBeNull();
+        expect((logReapunte?.metadatos as { motivo?: string } | null)?.motivo ?? "").toMatch(/re-apuntadas 3 filas de seed a soporte@/);
     });
 });

@@ -253,13 +253,24 @@ export async function barridoPurgaTotal(client: PrismaClient, soporteId: string,
         await tx.identificadorReportado.deleteMany({});
         await tx.demoMarcado.deleteMany({});
         // ── RE-APUNTE del autor del seed a soporte@ (NOT NULL · no se puede nulear) ANTES del wipe ──
-        await tx.plan.updateMany({ data: { creadoPorAdminId: soporteId } });
-        await tx.guiaAccionCategoria.updateMany({ data: { creadaPorAdminId: soporteId } });
-        await tx.reglaRecomendacion.updateMany({ data: { creadaPorAdminId: soporteId } });
+        // Herramienta destructiva que RE-ATRIBUYE datos seed → el AuditLog registra el EFECTO runtime
+        // (qué/cuántas filas) además del comentario de diseño, para que el rastro del purga-total sea
+        // auditable (CEO · decisión 4).
+        const planR = await tx.plan.updateMany({ data: { creadoPorAdminId: soporteId } });
+        const guiaR = await tx.guiaAccionCategoria.updateMany({ data: { creadaPorAdminId: soporteId } });
+        const reglaR = await tx.reglaRecomendacion.updateMany({ data: { creadaPorAdminId: soporteId } });
+        const reapuntadas = planR.count + guiaR.count + reglaR.count;
         // ── wipe final de usuarios · solo soporte@ sobrevive ──
         const u = await tx.usuario.deleteMany({ where: { email: { notIn: [...PRESERVADOS.usuarios] } } });
-        await registrarAuditoria(tx, "reset_piloto", `${motivo} [barrido-final purga-total]`, u.count, ["usuarios"]);
-        log("reset-piloto", `Barrido final: ${u.count} usuario(s) borrados (solo soporte@ sobrevive).`);
+        await registrarAuditoria(
+            tx,
+            "reset_piloto",
+            `${motivo} [barrido-final purga-total · re-apuntadas ${reapuntadas} filas de seed a soporte@ ` +
+                `(Plan=${planR.count}/GuiaAccionCategoria=${guiaR.count}/reglas_recomendacion=${reglaR.count}) · ${u.count} usuarios borrados]`,
+            u.count + reapuntadas,
+            ["usuarios", "seed:reapuntado-a-soporte"],
+        );
+        log("reset-piloto", `Barrido final: ${u.count} usuario(s) borrados, ${reapuntadas} fila(s) de seed re-apuntadas a soporte@ (solo soporte@ sobrevive).`);
     });
 }
 
