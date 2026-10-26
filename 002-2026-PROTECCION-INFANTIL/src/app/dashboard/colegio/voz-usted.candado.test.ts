@@ -167,11 +167,14 @@ describe("SPEC-523 · el colegio + comité hablan de «usted» (sin tuteo verbal
     });
 
     it("contraprueba: los imperativos ambiguos que tocó SPEC-523 quedaron en «usted»", () => {
-        const tabla = fs.readFileSync(
-            path.join(SRC, "components/modules/colegio/unificado/TablaEstudiantes.tsx"),
+        // SPEC-910: el hook `useTipoDocumentoOpciones` (con el placeholder «Seleccione tipo»)
+        // se extrajo de TablaEstudiantes a su propio módulo para reusarlo en el modal de alta;
+        // el ancla sigue al archivo movido (sigue siendo subárbol del colegio = usted).
+        const hookTipos = fs.readFileSync(
+            path.join(SRC, "components/modules/colegio/unificado/useTipoDocumentoOpciones.ts"),
             "utf-8",
         );
-        expect(tabla.includes("Seleccione tipo")).toBe(true);
+        expect(hookTipos.includes("Seleccione tipo")).toBe(true);
         const materias = fs.readFileSync(
             path.join(SRC, "components/modules/colegio/curso/SeccionMateriasCurso.tsx"),
             "utf-8",
