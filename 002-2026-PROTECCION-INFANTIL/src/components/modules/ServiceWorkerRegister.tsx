@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { APP_VERSION } from "@/lib/version";
 
 export function ServiceWorkerRegister() {
     useEffect(() => {
@@ -13,8 +14,14 @@ export function ServiceWorkerRegister() {
         // /login, /registro, /mis-reportes, /api/ y los payloads RSC (shouldCache),
         // y hace skipWaiting + clients.claim: registrar NO revive el bug de cachés
         // obsoletas post-login que motivó el desregistro anterior (I-329 causa).
+        //
+        // SPEC-906: el registro lleva ?v=<versión del build> (NEXT_PUBLIC_SW_VERSION =
+        // SHA del build, inyectado en build; fallback APP_VERSION). El SW deriva su
+        // CACHE_NAME de ese ?v=, así que tras un deploy usa un caché nuevo y purga el
+        // viejo en `activate` — sin ChunkLoadError por shell/chunks de un build previo.
+        const version = process.env.NEXT_PUBLIC_SW_VERSION || APP_VERSION;
         const registrar = () => {
-            navigator.serviceWorker.register("/sw.js").catch((error) => {
+            navigator.serviceWorker.register(`/sw.js?v=${encodeURIComponent(version)}`).catch((error) => {
                 console.error("[PWA] Error registrando el Service Worker:", error);
             });
         };

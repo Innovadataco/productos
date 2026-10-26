@@ -26,6 +26,9 @@ echo "==> [2/4] Rebuild limpio (rm -rf .next && build)"
 # Sello de versión (spec 102): SHA corto del build, solo servidor. Si git falla,
 # queda vacío y el panel admin muestra solo la versión (no rompe el build).
 export APP_BUILD_SHA=$(git rev-parse --short HEAD 2>/dev/null || true)
+# SPEC-906: versión del service worker (cliente) = mismo SHA; ServiceWorkerRegister lo usa en /sw.js?v=<sha>
+# para versionar el CACHE_NAME por build. Si git falla, cae a APP_VERSION en el cliente (no rompe el build).
+export NEXT_PUBLIC_SW_VERSION=$APP_BUILD_SHA
 rm -rf .next
 npm run build
 
