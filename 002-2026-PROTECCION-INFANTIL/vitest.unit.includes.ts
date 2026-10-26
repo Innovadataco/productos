@@ -837,4 +837,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/test-db-url.candado.test.ts",
     // SPEC-817 (pieza 2): comparación pura carpeta↔aplicadas y el mensaje que DICE «esquema desactualizado».
     "src/lib/test-esquema.candado.test.ts",
+    // SPEC-909: el motor manda correos con FORMATO (html + texto). Render Markdown→HTML saneado +
+    // el único punto de envío con `html:`. Puro (Resend mockeado, sin base).
+    "src/lib/notificaciones/render-html.candado.test.ts",
 ];
