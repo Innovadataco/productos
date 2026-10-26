@@ -1,8 +1,13 @@
 /**
  * SPEC-296 (002-PI-197 · cierra parte de I-152): capa de envío real del motor
- * de notificaciones. Es el ÚNICO callsite legítimo de `resend.emails.send()`
- * fuera de tests. El worker `worker-notificaciones.mjs` inyecta esta función
+ * de notificaciones. El worker `worker-notificaciones.mjs` inyecta esta función
  * como `enviarEmail` en `procesarLote()`.
+ *
+ * SPEC-909: ya NO es el único emisor — hay un 2º callsite directo de Resend en
+ * `src/lib/email/notificacion-spam.ts` (notificación de spam al denunciante, desde
+ * una API route). AMBOS envían `html:` + `text:` por `renderizarEmail`; el candado
+ * `envio-con-html.candado.test.ts` exige que ningún `resend.emails.send` mande `text`
+ * sin `html`. (El viejo comentario «único callsite legítimo» quedó STALE y se quitó.)
  *
  * Movida desde `src/lib/email.ts` sin cambio de firma ni de comportamiento —
  * el resto de `email.ts` pasó a ser wrapper de `programar()` del motor.
@@ -13,6 +18,7 @@ import { Resend } from "resend";
 import { requireEnv } from "../env";
 import { logger } from "../logger";
 import { EmailProveedorError, resumirErrorProveedor } from "./motivo-error";
+import { renderizarEmail } from "./render-html";
 
 const resend = new Resend(requireEnv("RESEND_API_KEY", 10));
 const FROM = requireEnv("EMAIL_FROM", 5);
@@ -29,17 +35,26 @@ const FROM = requireEnv("EMAIL_FROM", 5);
  * `Notificacion.ultimoError` (sigue leyendo `err.message`, cero cambios en el
  * catch). El log completo con el objeto crudo del proveedor se mantiene para
  * dev; a BD solo va la versión sin PII.
+ *
+ * SPEC-909: `cuerpo` llega como Markdown (ya con las variables `{{..}}` sustituidas
+ * por `renderizarPlantilla`). Antes se enviaba SOLO `text: cuerpo` → `**negrita**` y
+ * los enlaces salían literales. Ahora se envía `html:` (Markdown renderado, saneado,
+ * con layout institucional y enlace → botón) + `text:` (respaldo sin sintaxis). Es el
+ * ÚNICO punto de envío, así que la corrección es sistémica: todos los eventos y el
+ * preview del admin salen con formato por la misma puerta.
  */
 export async function enviarEmailNotificacion(
     email: string,
     asunto: string,
     cuerpo: string
 ): Promise<{ id: string }> {
+    const { html, texto } = renderizarEmail(cuerpo, { asunto });
     const result = await resend.emails.send({
         from: FROM,
         to: email,
         subject: asunto,
-        text: cuerpo,
+        html,
+        text: texto,
     });
 
     if (result.error) {

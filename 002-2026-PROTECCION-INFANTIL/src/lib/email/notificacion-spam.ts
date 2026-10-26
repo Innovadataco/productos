@@ -3,6 +3,9 @@ import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { getParametroSistema } from "@/lib/parametros";
 import { logger } from "@/lib/logger";
 import { maskEmail } from "@/lib/mask-email";
+// SPEC-909: 2º emisor directo de Resend (el otro es el motor en enviar-email.ts). Comparte
+// el render Markdown→HTML + layout institucional para que NINGÚN correo salga en texto crudo.
+import { renderizarEmail } from "@/lib/notificaciones/render-html";
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const emailFrom = process.env.EMAIL_FROM;
@@ -41,11 +44,15 @@ export async function notificarSpamConfirmado(reporte: {
 
     try {
         const resend = new Resend(resendApiKey);
+        const asunto = "Tu reporte fue revisado";
+        // SPEC-909: el cuerpo es Markdown (como el del motor); se envía html + text (respaldo).
+        const { html, texto } = renderizarEmail(template.replace(/{{identificador}}/g, reporte.identificador), { asunto });
         const result = await resend.emails.send({
             from: emailFrom,
             to: usuario.email,
-            subject: "Tu reporte fue revisado",
-            text: template.replace(/{{identificador}}/g, reporte.identificador),
+            subject: asunto,
+            html,
+            text: texto,
         });
         if (result.error) {
             logger.error(`[EMAIL] Error notificando spam confirmado (reporte=${reporte.id}):`, result.error);
