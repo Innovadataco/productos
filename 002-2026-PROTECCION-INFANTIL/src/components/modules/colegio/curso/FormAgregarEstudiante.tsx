@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
+import { useTipoDocumentoOpciones } from "../unificado/useTipoDocumentoOpciones";
 
 /**
  * SPEC-147 (US3, FR-005) — Agregar estudiante desde la vista del curso:
@@ -11,6 +13,12 @@ import { Modal } from "@/components/ui/Modal";
  * teléfono, email — cualquier dato de contacto sirve para que no quede "sin
  * contactos"). Usa el endpoint EXISTENTE `POST /api/colegio/cursos/[id]/alumnos`
  * (atómico con acudientes, SPEC-144) sin tocarlo.
+ *
+ * SPEC-910: SPEC-320 (§2.2-bis) volvió OBLIGATORIO el documento del estudiante en
+ * `estudianteBodySchema`, pero este modal quedó atrás y posteaba sin él → el endpoint
+ * devolvía 400 y el usuario no tenía dónde ponerlo. Se agregan tipo + número de
+ * documento (el select reusa `useTipoDocumentoOpciones`, la misma fuente del wizard),
+ * validados client-side ANTES de postear (mensaje inline, no el 400 crudo).
  */
 
 interface FormAgregarEstudianteProps {
@@ -26,16 +34,21 @@ const ACUDIENTE_VACIO = { nombre: "", relacion: "", telefono: "", email: "" };
 export function FormAgregarEstudiante({ cursoId, isOpen, onClose, onCreado }: FormAgregarEstudianteProps) {
     const [nombre, setNombre] = useState("");
     const [apellidos, setApellidos] = useState("");
+    const [documentoTipo, setDocumentoTipo] = useState("");
+    const [documentoNumero, setDocumentoNumero] = useState("");
     const [conAcudiente, setConAcudiente] = useState(false);
     const [acudiente, setAcudiente] = useState(ACUDIENTE_VACIO);
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState("");
+    const documentoTipoOpciones = useTipoDocumentoOpciones();
 
     // Al abrir: formulario limpio (el modal conserva el estado entre aperturas).
     useEffect(() => {
         if (isOpen) {
             setNombre("");
             setApellidos("");
+            setDocumentoTipo("");
+            setDocumentoNumero("");
             setConAcudiente(false);
             setAcudiente(ACUDIENTE_VACIO);
             setError("");
@@ -47,6 +60,13 @@ export function FormAgregarEstudiante({ cursoId, isOpen, onClose, onCreado }: Fo
         const apellidosLimpios = apellidos.trim();
         if (nombreLimpio.length < 2 || apellidosLimpios.length < 1) {
             setError("Nombre y apellidos del estudiante son obligatorios.");
+            return;
+        }
+        // SPEC-910: el documento es obligatorio (SPEC-320 §2.2-bis). Se valida acá
+        // ANTES de postear para mostrar un mensaje inline, no el 400 del endpoint.
+        const documentoNumeroLimpio = documentoNumero.trim();
+        if (!documentoTipo || documentoNumeroLimpio.length < 1) {
+            setError("Seleccione el tipo y escriba el número de documento del estudiante.");
             return;
         }
         const acudienteCompleto = conAcudiente && acudiente.nombre.trim().length >= 2 && acudiente.relacion.trim().length >= 1;
@@ -65,6 +85,8 @@ export function FormAgregarEstudiante({ cursoId, isOpen, onClose, onCreado }: Fo
                 body: JSON.stringify({
                     nombre: nombreLimpio,
                     apellidos: apellidosLimpios,
+                    documentoTipo,
+                    documentoNumero: documentoNumeroLimpio,
                     ...(acudienteCompleto
                         ? {
                             acudientes: [
@@ -115,6 +137,23 @@ export function FormAgregarEstudiante({ cursoId, isOpen, onClose, onCreado }: Fo
                     onChange={(e) => setApellidos(e.target.value)}
                     placeholder="Ej. Gómez Torres"
                 />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Select
+                        label="Tipo de documento"
+                        options={documentoTipoOpciones}
+                        value={documentoTipo}
+                        onChange={(e) => setDocumentoTipo(e.target.value)}
+                    />
+                    <Input
+                        label="Número de documento"
+                        required
+                        minLength={1}
+                        maxLength={50}
+                        value={documentoNumero}
+                        onChange={(e) => setDocumentoNumero(e.target.value)}
+                        placeholder="Ej. 1012345678"
+                    />
+                </div>
 
                 {conAcudiente ? (
                     <div className="space-y-3 rounded-xl bg-tinta/5 p-3" aria-label="Acudiente del estudiante">
