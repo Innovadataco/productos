@@ -71,7 +71,7 @@ export function FormAgregarEstudiante({ cursoId, isOpen, onClose, onCreado }: Fo
         }
         const acudienteCompleto = conAcudiente && acudiente.nombre.trim().length >= 2 && acudiente.relacion.trim().length >= 1;
         if (conAcudiente && !acudienteCompleto) {
-            setError("El acudiente necesita al menos nombre y relación (o quítalo).");
+            setError("El acudiente necesita al menos nombre y relación (o quítelo).");
             return;
         }
 
@@ -107,10 +107,10 @@ export function FormAgregarEstudiante({ cursoId, isOpen, onClose, onCreado }: Fo
                 onCreado();
                 onClose();
             } else {
-                setError(data?.error?.message || "No pudimos agregar el estudiante. Inténtalo de nuevo.");
+                setError(data?.error?.message || "No pudimos agregar el estudiante. Inténtelo de nuevo.");
             }
         } catch {
-            setError("Error de red agregando el estudiante. Inténtalo de nuevo.");
+            setError("Error de red agregando el estudiante. Inténtelo de nuevo.");
         } finally {
             setGuardando(false);
         }

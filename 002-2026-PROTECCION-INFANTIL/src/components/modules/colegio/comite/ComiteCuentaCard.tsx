@@ -100,7 +100,7 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
         <div className="mt-4 rounded-xl bg-pino/10 p-4 text-sm text-estado-pino ring-1 ring-pino/30">
             <p className="font-semibold">Invitación enviada por email</p>
             <p className="mt-1">
-                El comité recibirá un link para activar la cuenta y definir su propia contraseña. El link expira en 48 horas.
+                El comité recibirá un enlace para activar la cuenta y definir su propia contraseña. El enlace expira en 48 horas.
             </p>
         </div>
     );

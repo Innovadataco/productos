@@ -58,7 +58,7 @@ export function ImportExcel({ onAceptar }: ImportExcelProps) {
             }
             setResultado(data as ResultadoDryRun);
         } catch {
-            setError("Error de red al validar el archivo. Inténtalo de nuevo.");
+            setError("Error de red al validar el archivo. Inténtelo de nuevo.");
         } finally {
             setCargando(false);
         }

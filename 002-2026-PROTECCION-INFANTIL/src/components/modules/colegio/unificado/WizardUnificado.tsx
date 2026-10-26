@@ -91,7 +91,7 @@ export function WizardUnificado({ modoExcelInicial = false }: WizardUnificadoPro
                     data && typeof data === "object" && "error" in data
                         ? (data as { error?: { message?: string } }).error?.message
                         : undefined;
-                setToast({ tipo: "error", mensaje: `No pudimos guardar. ${mensaje ?? "Inténtalo de nuevo."}` });
+                setToast({ tipo: "error", mensaje: `No pudimos guardar. ${mensaje ?? "Inténtelo de nuevo."}` });
                 return;
             }
             const creado = data as { curso: { id: string; nombre: string }; resumen: { estudiantesCreados: number } };
@@ -103,7 +103,7 @@ export function WizardUnificado({ modoExcelInicial = false }: WizardUnificadoPro
             const destino = `/dashboard/colegio/cursos/${creado.curso.id}`;
             setTimeout(() => router.push(destino), 800);
         } catch {
-            setToast({ tipo: "error", mensaje: "No pudimos guardar. Error de red — inténtalo de nuevo." });
+            setToast({ tipo: "error", mensaje: "No pudimos guardar. Error de red — inténtelo de nuevo." });
         } finally {
             setGuardando(false);
         }
