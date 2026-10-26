@@ -37,7 +37,11 @@ ENV RESEND_API_KEY=build-placeholder \
     DATABASE_URL=postgresql://build:build@localhost:5432/build \
     ANTI_ABUSO_SALT=build-placeholder-salt-min-32-chars \
     ENABLE_HTTPS_HEADERS=true \
-    APP_BUILD_SHA=$APP_BUILD_SHA
+    APP_BUILD_SHA=$APP_BUILD_SHA \
+    NEXT_PUBLIC_SW_VERSION=$APP_BUILD_SHA
+# SPEC-906: NEXT_PUBLIC_SW_VERSION = SHA del build, inlineado por Next en el bundle del cliente. Lo usa
+# ServiceWorkerRegister para registrar /sw.js?v=<sha> → el SW versiona su CACHE_NAME por build (anti
+# ChunkLoadError tras deploy). A diferencia de APP_BUILD_SHA (server-only), este SÍ se expone al cliente.
 # SPEC-856: heap fijo para `next build`. Un deploy falló por OOM («JavaScript heap out of memory»)
 # y pasó al reintentar: sin este límite, bajo presión de swap el auto-sizing de Node se queda corto.
 # El VPS tiene ~5 GB libres; 4096 MiB deja margen. Solo afecta el stage builder (no llega al runner).
