@@ -23,6 +23,7 @@
  */
 import { execSync } from "node:child_process";
 import { statSync } from "node:fs";
+import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
 import {
     parseArgs,
@@ -33,9 +34,32 @@ import {
 } from "./_common";
 import { borrarColegio } from "./borrar-colegio";
 import { borrarPadre } from "./borrar-padre";
+import { borrarProfesional } from "./borrar-profesional";
 import { borrarReporte } from "./borrar-reporte";
 import { borrarSimulacion } from "./borrar-simulacion";
 import { planDeBorrado, ejecutarBorrado } from "../demo/_borrado-marcado";
+
+/**
+ * SPEC-905 · tablas de AGREGADO/MARCADOR que `--purga-total` debe dejar en 0 (además de las
+ * entidades-raíz). El reset recalcula `IdentificadorReportado` a 0 al borrar cada reporte
+ * (SPEC-870) pero la FILA queda; acá se borra la fila. El candado estructural exige esta lista.
+ * Orden FK-safe: EventoMatch (→ IdentificadorReportado, Reporte) antes que IdentificadorReportado;
+ * DemoMarcado es marcador polimórfico sin FK.
+ */
+export const TABLAS_AGREGADO_PURGA = ["EventoMatch", "IdentificadorReportado", "DemoMarcado"] as const;
+
+/**
+ * SPEC-905 · FK de tablas SEED (en PRESERVADOS.tablas · NUNCA se borran) hacia el admin creador,
+ * RESTRICT y NOT NULL. Si purga-total borra al admin que creó el seed, la FK trabaría el wipe y no
+ * se puede nulear (NOT NULL) ni borrar el seed. Antes del wipe se RE-APUNTAN a soporte@ (único
+ * usuario que queda). Conciliado con el CEO/Jelkin («desde cero»): preserva el seed, deja 0 usuarios
+ * salvo soporte@. El candado exige que esta lista sea EXACTAMENTE las FK RESTRICT seed→Usuario.
+ */
+export const SEED_FK_REAPUNTAR = [
+    { tabla: "Plan", campo: "creadoPorAdminId" },
+    { tabla: "GuiaAccionCategoria", campo: "creadaPorAdminId" },
+    { tabla: "reglas_recomendacion", campo: "creadaPorAdminId" },
+] as const;
 
 interface ResumenReset {
     backupSize: number;
@@ -112,53 +136,167 @@ export async function seleccionarReportesABorrar(
 }
 
 /**
- * Garantía de `--purga-total`: la migración S-D exige estas cuatro tablas VACÍAS (agrega
- * `contenidoId` NOT NULL). Si algo quedó (un reporte de soporte@ no contemplado, o un contenido
- * sin barrer), ABORTA ruidoso ANTES de la ventana en vez de dejar texto cifrado de denuncias vivo.
+ * Garantía de `--purga-total`: la migración S-D exige las tablas de denuncia VACÍAS (agrega
+ * `contenidoId` NOT NULL). SPEC-905 suma los AGREGADOS/MARCADORES (IdentificadorReportado /
+ * EventoMatch / DemoMarcado) — el reset los recalcula a 0 pero la FILA queda, y la consulta pública
+ * los cuenta — y el barrido de usuarios (solo soporte@ debe sobrevivir). Si algo quedó, ABORTA
+ * ruidoso ANTES de la ventana en vez de dejar texto cifrado de denuncias o agregados vivos.
  */
-export async function afirmarPurgaTotalCompleta(): Promise<void> {
-    const [reportes, eventos, contenidos, llaves] = await Promise.all([
-        prisma.reporte.count(),
-        prisma.eventoExpediente.count(),
-        prisma.contenidoReporte.count(),
-        prisma.llaveReporte.count(),
-    ]);
-    if (reportes || eventos || contenidos || llaves) {
+export async function afirmarPurgaTotalCompleta(client: PrismaClient = prisma): Promise<void> {
+    const [reportes, eventos, contenidos, llaves, identificadores, matches, demo, usuariosNoSoporte] =
+        await Promise.all([
+            client.reporte.count(),
+            client.eventoExpediente.count(),
+            client.contenidoReporte.count(),
+            client.llaveReporte.count(),
+            client.identificadorReportado.count(),
+            client.eventoMatch.count(),
+            client.demoMarcado.count(),
+            client.usuario.count({ where: { email: { notIn: [...PRESERVADOS.usuarios] } } }),
+        ]);
+    const problemas: string[] = [];
+    if (reportes) problemas.push(`Reporte=${reportes}`);
+    if (eventos) problemas.push(`EventoExpediente=${eventos}`);
+    if (contenidos) problemas.push(`ContenidoReporte=${contenidos}`);
+    if (llaves) problemas.push(`LlaveReporte=${llaves}`);
+    if (identificadores) problemas.push(`IdentificadorReportado=${identificadores}`);
+    if (matches) problemas.push(`EventoMatch=${matches}`);
+    if (demo) problemas.push(`DemoMarcado=${demo}`);
+    if (usuariosNoSoporte) problemas.push(`Usuario(≠soporte@)=${usuariosNoSoporte}`);
+    if (problemas.length > 0) {
         throw new Error(
-            `[reset-piloto] --purga-total NO dejó las tablas en 0: Reporte=${reportes} ` +
-                `EventoExpediente=${eventos} ContenidoReporte=${contenidos} LlaveReporte=${llaves}. ` +
-                "La migración S-D las exige vacías; revisá qué quedó antes de la ventana.",
+            `[reset-piloto] --purga-total NO dejó todo en 0: ${problemas.join(" ")}. ` +
+                "La migración S-D exige vacías las de denuncia; los agregados deben irse (la consulta " +
+                "pública los cuenta) y solo soporte@ debe sobrevivir. Revisá qué quedó antes de la ventana.",
         );
     }
 }
 
-async function main(): Promise<void> {
-    const args = parseArgs(process.argv, ["motivo", "backup", "confirm", "solo-sembrado", "purga-total"]);
-    const motivo = requerirMotivo(typeof args.motivo === "string" ? args.motivo : undefined);
-    const backup = typeof args.backup === "string" ? args.backup : "";
-    if (!backup) throw new Error("[reset-piloto] Falta --backup=<ruta.sql>");
-    if (args.confirm !== true) throw new Error("[reset-piloto] Falta --confirm");
-    // D-113 / ventana S-D: --purga-total IGNORA los reportes «preservados» (ya son dato de
-    // prueba) y garantiza las tablas cifradas en 0. soporte@ (login) y el seed NO se tocan.
-    const purgaTotal = args["purga-total"] === true;
+/**
+ * SPEC-905 · DECISIÓN 1 (LEGAL, conciliada con el CEO/Jelkin). ⚠️ `--purga-total` DESTRUYE la
+ * evidencia de consentimiento (audit_consentimientos, Ley 1581). NO hay copia inmutable hasta la
+ * migración P1-A (ConstanciaConsentimiento) → esto es SOLO para pre-lanzamiento / disaster / reset
+ * «desde cero», JAMÁS contra prod con familias reales. El borrado se DOCUMENTA (AuditLog con el
+ * conteo + motivo) y, al hacerse acá PRIMERO, el guard `bloquearSiHayConsentimiento` de borrar-padre/
+ * profesional/colegio ve 0 y pasa — el guard queda INTACTO para los borrados quirúrgicos (allí la
+ * evidencia se preserva siempre). Cuando exista P1-A la constancia inmutable sobrevive y esto deja
+ * de destruir evidencia.
+ */
+export async function destruirConsentimientosPurgaTotal(
+    client: PrismaClient,
+    soporteId: string,
+    motivo: string,
+): Promise<number> {
+    const n = await client.auditConsentimiento.count({ where: { usuarioId: { not: soporteId } } });
+    await client.$transaction(async (tx) => {
+        // AuditLog se preserva (seed) → la constancia de QUÉ se destruyó sobrevive a la purga.
+        await registrarAuditoria(
+            tx,
+            "reset_piloto",
+            `${motivo} [PURGA-TOTAL destruye ${n} AuditConsentimiento — evidencia Ley 1581, sin copia inmutable hasta P1-A]`,
+            n,
+            ["audit_consentimientos"],
+        );
+        await tx.auditConsentimiento.deleteMany({ where: { usuarioId: { not: soporteId } } });
+    });
+    log("reset-piloto", `⚠️ PURGA-TOTAL: destruidas ${n} constancia(s) de consentimiento (documentado en AuditLog).`);
+    return n;
+}
 
-    const backupSize = ejecutarBackup(backup);
+/**
+ * SPEC-905 · barrido FINAL de `--purga-total`, tras los loops (colegios/padres/profesionales/
+ * reportes/simulaciones). Borra, en orden FK-safe, lo que NO cuelga de una entidad looped:
+ * autoría de STAFF (operadores/comité/admin), recomendaciones, facturación suelta, y los AGREGADOS.
+ * Luego RE-APUNTA el autor del seed a soporte@ y borra TODOS los usuarios salvo soporte@. Deja la
+ * base en «cero + soporte@ + seed».
+ */
+export async function barridoPurgaTotal(client: PrismaClient, soporteId: string, motivo: string): Promise<void> {
+    await client.$transaction(async (tx) => {
+        // ── recomendaciones (hijas → reglas_recomendacion[seed]; ejecuciones → recomendaciones) ──
+        await tx.ejecucionAccion.deleteMany({});
+        await tx.recomendacion.deleteMany({});
+        await tx.reglaRecomendacionHistorial.deleteMany({}); // → reglas_recomendacion(seed) + Usuario
+        // ── facturación suelta (staff con suscripción personal) · orden: hijas → Suscripcion ──
+        await tx.bonoAplicado.deleteMany({});
+        await tx.codigoReferidoUso.deleteMany({});
+        await tx.pago.deleteMany({});
+        await tx.suscripcion.deleteMany({});
+        await tx.bonoPromocional.deleteMany({}); // → Usuario (creadoPorAdminId)
+        // ── apelaciones sueltas (cascade: DocumentoApelacion → AccesoDocumentoApelacion) ──
+        await tx.apelacion.deleteMany({});
+        await tx.alertaSuscripcion.deleteMany({});
+        await tx.codigoAccesoContenido.deleteMany({});
+        // ── notificaciones / digests / block-list / contactos / códigos de staff ──
+        await tx.notificacionInApp.deleteMany({});
+        await tx.digestSemanal.deleteMany({});
+        await tx.blockList.deleteMany({});
+        await tx.contactoEmergencia.deleteMany({});
+        await tx.contactoConfianza.deleteMany({});
+        await tx.codigoVerificacion.deleteMany({});
+        await tx.tokenRecuperacion.deleteMany({});
+        // ── perfiles de staff (operador / integrante de comité suelto) ──
+        await tx.perfilOperador.deleteMany({});
+        await tx.integranteComite.deleteMany({});
+        // ── simulaciones por autor staff (el loop borró por run; esto es el cinturón) ──
+        await tx.simulacionAbusoRun.deleteMany({});
+        await tx.simulacionRun.deleteMany({});
+        // ── subárbol profesional · cinturón del loop borrarProfesional (cubre perfiles huérfanos por
+        //    drift de rol). Orden FK-safe: SolicitudCita → FranjaDisponible → VerificacionProfesional →
+        //    AceptacionAutorizacion → PerfilProfesional (cascade: DocumentoProfesional/RevisionRenovacion/DiaBloqueado). ──
+        await tx.solicitudCita.deleteMany({});
+        await tx.franjaDisponible.deleteMany({});
+        await tx.verificacionProfesional.deleteMany({});
+        await tx.aceptacionAutorizacionProfesional.deleteMany({});
+        await tx.perfilProfesional.deleteMany({});
+        // ── AGREGADOS/MARCADORES (SPEC-905 · I-446 a escala de reset) · EventoMatch antes de Identificador ──
+        await tx.eventoMatch.deleteMany({});
+        await tx.identificadorReportado.deleteMany({});
+        await tx.demoMarcado.deleteMany({});
+        // ── RE-APUNTE del autor del seed a soporte@ (NOT NULL · no se puede nulear) ANTES del wipe ──
+        await tx.plan.updateMany({ data: { creadoPorAdminId: soporteId } });
+        await tx.guiaAccionCategoria.updateMany({ data: { creadaPorAdminId: soporteId } });
+        await tx.reglaRecomendacion.updateMany({ data: { creadaPorAdminId: soporteId } });
+        // ── wipe final de usuarios · solo soporte@ sobrevive ──
+        const u = await tx.usuario.deleteMany({ where: { email: { notIn: [...PRESERVADOS.usuarios] } } });
+        await registrarAuditoria(tx, "reset_piloto", `${motivo} [barrido-final purga-total]`, u.count, ["usuarios"]);
+        log("reset-piloto", `Barrido final: ${u.count} usuario(s) borrados (solo soporte@ sobrevive).`);
+    });
+}
 
-    // SPEC-412: modo quirúrgico. Cae SOLO lo que está en `demo_marcado`; lo real
-    // se cuenta antes y después y tiene que quedar igual.
-    if (args["solo-sembrado"] === true) {
-        await resetSoloSembrado(motivo, backupSize);
-        return;
+/**
+ * Núcleo del reset (post-backup), parametrizado por `client` para que el ensayo de integración
+ * (SPEC-905) corra el MISMO camino contra la BD de test. `main` hace el pg_dump y delega acá.
+ * `--purga-total` agrega: destrucción documentada de consentimiento (ANTES de los loops, para que
+ * sus guards vean 0), loop de profesionales (borrarProfesional), barrido final (staff + agregados +
+ * re-apunte de seed + wipe de usuarios) y la aserción extendida.
+ */
+export async function ejecutarResetPiloto(
+    client: PrismaClient,
+    opts: { motivo: string; purgaTotal: boolean; backupSize?: number },
+): Promise<ResumenReset> {
+    const { motivo, purgaTotal } = opts;
+    const backupSize = opts.backupSize ?? 0;
+
+    // soporte@ debe existir: es el único usuario que sobrevive y el nuevo autor del seed.
+    const soporte = await client.usuario.findUnique({
+        where: { email: PRESERVADOS.usuarios[0] },
+        select: { id: true },
+    });
+    if (purgaTotal && !soporte) {
+        throw new Error(`[reset-piloto] --purga-total requiere el usuario ${PRESERVADOS.usuarios[0]} (autor del seed / único sobreviviente).`);
     }
 
-    // A-66 (b): pre-borrado global del subárbol identificadores+alertas en orden
-    // FK-safe ANTES del loop por colegio. Necesario porque AlertaColegio cruza
-    // tenants (alertas.ts:94 buscarActivosPorValor): una alerta del colegio Y puede
-    // referenciar un identificador del colegio X, por lo que borrar colegio X sin
-    // haber eliminado esa alerta de Y causa FK. El pre-borrado global evita tener
-    // que rastrear esa red cross-tenant desde borrar-colegio individualmente.
+    // SPEC-905 · DECISIÓN 1: en purga-total, destruir (documentado) la evidencia de consentimiento
+    // PRIMERO, para que el guard SPEC-508 de los helpers vea 0 y pase (queda intacto para quirúrgico).
+    if (purgaTotal && soporte) {
+        await destruirConsentimientosPurgaTotal(client, soporte.id, motivo);
+    }
+
+    // A-66 (b): pre-borrado global del subárbol identificadores+alertas en orden FK-safe ANTES del
+    // loop por colegio. AlertaColegio cruza tenants: una alerta del colegio Y puede referenciar un
+    // identificador del colegio X, así que borrar X sin eliminar esa alerta de Y causa FK.
     log("reset-piloto", "Pre-borrado global: SolicitudComite, AlertaColegio, identificadores, observaciones...");
-    await prisma.$transaction(async (tx) => {
+    await client.$transaction(async (tx) => {
         await tx.solicitudComite.deleteMany({});
         await tx.notaSeguimiento.deleteMany({});
         // SPEC-351: InformeCaso sin Cascade — explícito antes del caso.
@@ -168,59 +306,70 @@ async function main(): Promise<void> {
         await tx.identificadorProfesor.deleteMany({});
         await tx.identificadorEstudiante.deleteMany({});
         await tx.identificadorAcudiente.deleteMany({});
+        // SPEC-905: faltaba — IdentificadorIntegranteComite (→ Colegio RESTRICT) cascadea de
+        // IntegranteComite SOLO si el colegio tiene comité; sin comité quedaba vivo y trababa el
+        // borrado del Colegio. Se barre acá explícito, como los otros identificadores.
+        await tx.identificadorIntegranteComite.deleteMany({});
         await tx.estudianteObservacion.deleteMany({});
         await tx.acudienteEstudiante.deleteMany({});
     });
     log("reset-piloto", "Pre-borrado global completado.");
 
-    const colegios = await prisma.colegio.findMany({ select: { id: true, nombre: true } });
+    const colegios = await client.colegio.findMany({ select: { id: true, nombre: true } });
     log("reset-piloto", `Colegios a borrar: ${colegios.length}`);
     for (const c of colegios) {
-        await borrarColegio(c.id, motivo, { confirm: true, client: prisma });
+        await borrarColegio(c.id, motivo, { confirm: true, client });
     }
 
-    const padres = await prisma.usuario.findMany({
-        where: {
-            rol: "PARENT",
-            email: { notIn: [...PRESERVADOS.usuarios] },
-        },
+    const padres = await client.usuario.findMany({
+        where: { rol: "PARENT", email: { notIn: [...PRESERVADOS.usuarios] } },
         select: { id: true, email: true },
     });
     log("reset-piloto", `Padres a borrar: ${padres.length}`);
     for (const p of padres) {
-        await borrarPadre(p.email, motivo, { confirm: true, client: prisma });
+        await borrarPadre(p.email, motivo, { confirm: true, client });
+    }
+
+    // SPEC-905 · profesionales (A-75): el reset NO los borraba. borrarProfesional baja el subárbol
+    // de agenda/verificación + el usuario. Solo en purga-total (el reset normal preserva staff).
+    let profesionales: { email: string }[] = [];
+    if (purgaTotal) {
+        profesionales = await client.usuario.findMany({
+            where: { rol: "PROFESIONAL", email: { notIn: [...PRESERVADOS.usuarios] } },
+            select: { email: true },
+        });
+        log("reset-piloto", `Profesionales a borrar: ${profesionales.length}`);
+        for (const p of profesionales) {
+            await borrarProfesional(p.email, motivo, { confirm: true, client });
+        }
     }
 
     const reportesABorrar = await seleccionarReportesABorrar(purgaTotal);
     log("reset-piloto", `Reportes a borrar (${purgaTotal ? "purga-total" : "normal"}): ${reportesABorrar.length}`);
     for (const r of reportesABorrar) {
-        await borrarReporte(r.id, motivo, { confirm: true, client: prisma });
+        await borrarReporte(r.id, motivo, { confirm: true, client });
     }
 
-    const simulaciones = await prisma.simulacionRun.findMany({ select: { id: true } });
+    const simulaciones = await client.simulacionRun.findMany({ select: { id: true } });
     log("reset-piloto", `Simulaciones a borrar: ${simulaciones.length}`);
     for (const s of simulaciones) {
-        await borrarSimulacion(s.id, motivo, { confirm: true, client: prisma });
+        await borrarSimulacion(s.id, motivo, { confirm: true, client });
     }
 
-    // S-D (CEO 06-09 · RISK 1) · barrido de contenido cifrado HUÉRFANO. Los triggers ya queman
-    // el ContenidoReporte cuando su Reporte/Evento se borra fila-a-fila (así borran los helpers
-    // de arriba). Esto es el CINTURÓN: elimina cualquier contenido —y su DEK por Cascade en
-    // LlaveReporte— que haya quedado SIN dueño vivo (un camino no cubierto, o un TRUNCATE futuro
-    // que saltee los triggers row-level). NO toca el contenido de los reportes PRESERVADOS
-    // con dueño VIVO (en el reset normal, los preservados; en --purga-total no queda ninguno,
-    // D-113): esos no son huérfanos. Sin esto, un «borramos todo» podría dejar el texto cifrado
-    // de denuncias vivo en la base — justo lo que se supone que se destruye.
-    const contenidoHuerfano = await prisma.$executeRawUnsafe(`
+    // S-D (CEO 06-09 · RISK 1) · barrido de contenido cifrado HUÉRFANO (cinturón: contenido sin
+    // dueño vivo, su DEK cae por Cascade en LlaveReporte). No toca el de reportes preservados vivos.
+    const contenidoHuerfano = await client.$executeRawUnsafe(`
         DELETE FROM "ContenidoReporte" c
          WHERE NOT EXISTS (SELECT 1 FROM "Reporte" r          WHERE r."contenidoId" = c.id)
            AND NOT EXISTS (SELECT 1 FROM "EventoExpediente" e WHERE e."contenidoId" = c.id)
     `);
     log("reset-piloto", `Contenido cifrado huérfano barrido: ${contenidoHuerfano} filas (LlaveReporte cae por Cascade).`);
 
-    if (purgaTotal) {
-        await afirmarPurgaTotalCompleta();
-        log("reset-piloto", "--purga-total verificado: Reporte/EventoExpediente/ContenidoReporte/LlaveReporte en 0.");
+    // SPEC-905 · barrido final de purga-total: staff + agregados + re-apunte de seed + wipe de usuarios.
+    if (purgaTotal && soporte) {
+        await barridoPurgaTotal(client, soporte.id, motivo);
+        await afirmarPurgaTotalCompleta(client);
+        log("reset-piloto", "--purga-total verificado: denuncia + agregados en 0, solo soporte@ sobrevive.");
     }
 
     const resumen: ResumenReset = {
@@ -231,27 +380,41 @@ async function main(): Promise<void> {
         simulaciones: simulaciones.map((s) => s.id),
     };
     const totalIds =
-        resumen.colegios.length +
-        resumen.padres.length +
-        resumen.reportesHuerfanos.length +
-        resumen.simulaciones.length;
+        resumen.colegios.length + resumen.padres.length + profesionales.length +
+        resumen.reportesHuerfanos.length + resumen.simulaciones.length;
 
-    await prisma.$transaction(async (tx) => {
-        await registrarAuditoria(
-            tx,
-            "reset_piloto",
-            motivo,
-            totalIds,
-            [
-                ...resumen.colegios,
-                ...resumen.padres,
-                ...resumen.reportesHuerfanos,
-                ...resumen.simulaciones,
-            ],
-        );
+    await client.$transaction(async (tx) => {
+        await registrarAuditoria(tx, "reset_piloto", motivo, totalIds, [
+            ...resumen.colegios,
+            ...resumen.padres,
+            ...resumen.reportesHuerfanos,
+            ...resumen.simulaciones,
+        ]);
     });
 
-    log("reset-piloto", `REALIZADO backup=${backupSize}B colegios=${resumen.colegios.length} padres=${resumen.padres.length} reportes=${resumen.reportesHuerfanos.length} simulaciones=${resumen.simulaciones.length}`);
+    log("reset-piloto", `REALIZADO backup=${backupSize}B colegios=${resumen.colegios.length} padres=${resumen.padres.length} profesionales=${profesionales.length} reportes=${resumen.reportesHuerfanos.length} simulaciones=${resumen.simulaciones.length}`);
+    return resumen;
+}
+
+async function main(): Promise<void> {
+    const args = parseArgs(process.argv, ["motivo", "backup", "confirm", "solo-sembrado", "purga-total"]);
+    const motivo = requerirMotivo(typeof args.motivo === "string" ? args.motivo : undefined);
+    const backup = typeof args.backup === "string" ? args.backup : "";
+    if (!backup) throw new Error("[reset-piloto] Falta --backup=<ruta.sql>");
+    if (args.confirm !== true) throw new Error("[reset-piloto] Falta --confirm");
+    // D-113 / ventana S-D: --purga-total IGNORA los reportes «preservados» (ya son dato de
+    // prueba), destruye agregados/consentimiento y deja solo soporte@ + seed.
+    const purgaTotal = args["purga-total"] === true;
+
+    const backupSize = ejecutarBackup(backup);
+
+    // SPEC-412: modo quirúrgico. Cae SOLO lo que está en `demo_marcado`; lo real se conserva.
+    if (args["solo-sembrado"] === true) {
+        await resetSoloSembrado(motivo, backupSize);
+        return;
+    }
+
+    await ejecutarResetPiloto(prisma, { motivo, purgaTotal, backupSize });
 }
 
 if (process.argv[1]?.endsWith("reset-piloto.ts")) {

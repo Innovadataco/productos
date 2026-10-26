@@ -6,6 +6,9 @@
  * (2) `--purga-total` selecciona TODOS los reportes (ignora los «preservados», D-113); el reset
  *     normal los sigue excluyendo.
  * (3) La garantía post-purga: si algo queda en las 4 tablas cifradas, ABORTA ruidoso.
+ *     SPEC-905 extendió `afirmarPurgaTotalCompleta` a los AGREGADOS (IdentificadorReportado/
+ *     EventoMatch/DemoMarcado) y al wipe de usuarios (solo soporte@); el ensayo del grafo FK vive
+ *     en `reset-piloto-grafo-fk.candado.test.ts`. Acá se conserva el contrato original (4 tablas).
  *
  * Test de INTEGRACIÓN (usa la BD): vive en src/ para correr en la suite con BD; importa las
  * funciones puras de reset-piloto por ruta relativa. Corre post-migración (ventana/CI).
@@ -72,7 +75,9 @@ describe("S-D · reset-piloto --purga-total + parseArgs estricto", () => {
 
     it("afirmarPurgaTotalCompleta ABORTA si queda contenido cifrado; pasa con las tablas en 0", async () => {
         await crearReporteVivo("QUEDA-1", null);
-        await expect(afirmarPurgaTotalCompleta()).rejects.toThrow(/NO dejó las tablas en 0/i);
+        // SPEC-905 reformuló el mensaje a «NO dejó todo en 0» (suma agregados + usuarios); el contrato
+        // de ESTE test sigue siendo la rama de las 4 tablas cifradas (un reporte vivo las deja ≠ 0).
+        await expect(afirmarPurgaTotalCompleta()).rejects.toThrow(/NO dejó.*en 0/i);
 
         await resetDatabase(); // vacía las 4 tablas
         await expect(afirmarPurgaTotalCompleta()).resolves.toBeUndefined();
