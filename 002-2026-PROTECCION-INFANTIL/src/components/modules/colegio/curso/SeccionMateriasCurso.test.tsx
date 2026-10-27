@@ -108,3 +108,80 @@ describe("SeccionMateriasCurso — SPEC-379 D3 (candado UI)", () => {
         await waitFor(() => expect(screen.getByText(/Primero cree un profesor/i)).toBeDefined());
     });
 });
+
+/**
+ * SPEC-914 (CANDADO que muere con el defecto): crear materia NUEVA desde el detalle
+ * del curso. Antes solo se podía asignar del catálogo; sin materias el selector decía
+ * «Sin materias disponibles» y no había cómo crearla. El modal debe rendir input +
+ * «Crear materia», postear a POST /api/colegio/materias, refrescar el catálogo y
+ * preseleccionar la nueva; y mostrar el error del 409 (nombre duplicado).
+ */
+describe("SeccionMateriasCurso — SPEC-914 (crear materia nueva)", () => {
+    afterEach(() => { vi.unstubAllGlobals(); });
+
+    /** Mock stateful: el catálogo crece al postear; GET refleja el estado vivo. */
+    function mockCrear(opts?: { postResponse?: { ok: boolean; status?: number; body: unknown } }) {
+        let catalogo = [...MATERIAS_MOCK];
+        const fetchMock = vi.fn().mockImplementation((url: string, init?: { method?: string }) => {
+            if (url.startsWith("/api/colegio/materias")) {
+                if (init?.method === "POST") {
+                    const resp = opts?.postResponse ?? { ok: true, status: 201, body: { materia: { id: "m3", nombre: "Física" } } };
+                    if (resp.ok) catalogo = [...catalogo, { id: "m3", nombre: "Física", estado: "activo" }];
+                    return Promise.resolve({ ok: resp.ok, status: resp.status ?? 201, json: async () => resp.body });
+                }
+                return Promise.resolve({ ok: true, json: async () => ({ materias: catalogo }) });
+            }
+            if (url.startsWith("/api/colegio/profesores")) {
+                return Promise.resolve({ ok: true, json: async () => PROFESORES_MOCK });
+            }
+            return Promise.resolve({ ok: true, json: async () => ({ materias: [] }) });
+        });
+        vi.stubGlobal("fetch", fetchMock);
+        return fetchMock;
+    }
+
+    it("rinde el input de materia nueva y el botón «Crear materia»", async () => {
+        mockCrear();
+        render(<SeccionMateriasCurso cursoId="c1" onAviso={() => {}} />);
+        await waitFor(() => expect(screen.getByText("Matemáticas")).toBeDefined());
+        expect(screen.getByLabelText(/Cree una materia nueva/i)).toBeDefined();
+        expect(screen.getByRole("button", { name: /^crear materia$/i })).toBeDefined();
+    });
+
+    it("al crear: postea a /api/colegio/materias, refresca el catálogo y preselecciona la nueva", async () => {
+        const fetchMock = mockCrear();
+        const onAviso = vi.fn();
+        render(<SeccionMateriasCurso cursoId="c1" onAviso={onAviso} />);
+        await waitFor(() => expect(screen.getByText("Matemáticas")).toBeDefined());
+
+        fireEvent.change(screen.getByLabelText(/Cree una materia nueva/i), { target: { value: "Física" } });
+        fireEvent.click(screen.getByRole("button", { name: /^crear materia$/i }));
+
+        // POST con el nombre al endpoint del catálogo.
+        await waitFor(() => {
+            const post = fetchMock.mock.calls.find((c) => c[0] === "/api/colegio/materias" && c[1]?.method === "POST");
+            expect(post, "debe postear a /api/colegio/materias").toBeTruthy();
+            expect(JSON.parse(post![1].body)).toEqual({ nombre: "Física" });
+        });
+        // Refresca el catálogo (otra GET a materias) y preselecciona la nueva en el dropdown.
+        await waitFor(() => {
+            const materiaSelect = screen.getByRole("combobox", { name: /^Materia$/i }) as HTMLSelectElement;
+            expect(materiaSelect.value).toBe("m3");
+        });
+        expect(onAviso).toHaveBeenCalledWith(expect.stringMatching(/creada/i), "exito");
+    });
+
+    it("maneja el 409 (nombre duplicado): avisa con el mensaje del endpoint y no preselecciona", async () => {
+        mockCrear({ postResponse: { ok: false, status: 409, body: { error: { message: "Ya existe una materia con ese nombre" } } } });
+        const onAviso = vi.fn();
+        render(<SeccionMateriasCurso cursoId="c1" onAviso={onAviso} />);
+        await waitFor(() => expect(screen.getByText("Matemáticas")).toBeDefined());
+
+        fireEvent.change(screen.getByLabelText(/Cree una materia nueva/i), { target: { value: "Matemáticas" } });
+        fireEvent.click(screen.getByRole("button", { name: /^crear materia$/i }));
+
+        await waitFor(() => expect(onAviso).toHaveBeenCalledWith("Ya existe una materia con ese nombre", "error"));
+        const materiaSelect = screen.getByRole("combobox", { name: /^Materia$/i }) as HTMLSelectElement;
+        expect(materiaSelect.value).toBe("");
+    });
+});

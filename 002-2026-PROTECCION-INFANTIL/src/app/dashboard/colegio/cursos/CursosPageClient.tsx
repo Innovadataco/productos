@@ -19,6 +19,8 @@ type Curso = {
     grado: string | null;
     anioLectivo: string | null;
     estado: string;
+    // SPEC-914: conteo de materias activas asignadas (del `_count` del repo).
+    _count?: { CursoMateria: number };
 };
 
 type Mensaje = { type: "success" | "error"; text: string } | null;
@@ -183,6 +185,7 @@ export default function CursosPageClient() {
                                             <th className="pb-3 font-medium">Nombre</th>
                                             <th className="pb-3 font-medium">Grado</th>
                                             <th className="pb-3 font-medium">Año lectivo</th>
+                                            <th className="pb-3 font-medium">Materias</th>
                                             <th className="pb-3 font-medium">Estado</th>
                                             <th className="pb-3 font-medium text-right">Acciones</th>
                                         </tr>
@@ -201,6 +204,16 @@ export default function CursosPageClient() {
                                                 </td>
                                                 <td className="py-3 pr-3 text-muted">{curso.grado || "—"}</td>
                                                 <td className="py-3 pr-3 text-muted">{curso.anioLectivo || "—"}</td>
+                                                <td className="py-3 pr-3">
+                                                    {(curso._count?.CursoMateria ?? 0) === 0 ? (
+                                                        // SPEC-914: resalta en ámbar los cursos sin materias para que el rector los ubique.
+                                                        <Badge variant="warning">Sin materias</Badge>
+                                                    ) : (
+                                                        <span className="text-muted">
+                                                            {curso._count!.CursoMateria} {curso._count!.CursoMateria === 1 ? "materia" : "materias"}
+                                                        </span>
+                                                    )}
+                                                </td>
                                                 <td className="py-3 pr-3">
                                                     <Badge variant={curso.estado === "activo" ? "success" : "neutral"}>
                                                         {curso.estado === "activo" ? "Activo" : "Inactivo"}
