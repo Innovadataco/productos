@@ -205,7 +205,7 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
             </div>
             {materiaId && !profesorId && (
                 <p className="mt-2 text-xs text-muted" role="status">
-                    Toda materia debe llevar un profesor a cargo. Elige uno para poder asignarla.
+                    Toda materia debe llevar un profesor a cargo. Elija uno para poder asignarla.
                 </p>
             )}
 

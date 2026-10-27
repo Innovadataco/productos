@@ -67,7 +67,7 @@ export default async function ComiteIntegrantesPage() {
                 <div>
                     <h1 className="text-3xl font-bold text-body">Comité de Convivencia</h1>
                     <p className="mt-2 text-muted">
-                        Crea la cuenta compartida del comité y documenta a sus integrantes.
+                        Cree la cuenta compartida del comité y documente a sus integrantes.
                     </p>
                 </div>
 

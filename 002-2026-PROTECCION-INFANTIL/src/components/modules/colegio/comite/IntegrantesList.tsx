@@ -159,7 +159,7 @@ export function IntegrantesList({ integrantesIniciales }: Props) {
                 </p>
             </div>
             <p className="mt-2 text-sm text-muted">
-                Documenta quiénes conforman el Comité de Convivencia. No reciben login individual.
+                Documente quiénes conforman el Comité de Convivencia. No reciben login individual.
             </p>
 
             <form onSubmit={agregarIntegrante} className="mt-6 grid gap-4 sm:grid-cols-2">

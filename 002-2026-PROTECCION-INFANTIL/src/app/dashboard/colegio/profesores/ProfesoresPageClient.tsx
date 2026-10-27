@@ -344,7 +344,7 @@ export default function ProfesoresPageClient() {
                                     ? "No hay profesores inactivos"
                                     : "No hay profesores registrados"
                             }
-                            description="Usa «Agregar profesor» para registrar al primero y asignarlo como titular de los cursos."
+                            description="Use «Agregar profesor» para registrar al primero y asignarlo como titular de los cursos."
                         />
                     ) : (
                         <Tabla aria-label="Profesores del colegio">

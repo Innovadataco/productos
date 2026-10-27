@@ -182,3 +182,111 @@ describe("SPEC-523 · el colegio + comité hablan de «usted» (sin tuteo verbal
         expect(materias.includes("Asigne la primera")).toBe(true);
     });
 });
+
+// SPEC-915 · CANDADO DE CLASE (cierra el gap que SPEC-523 dejó anotado en su cabecera):
+// el IMPERATIVO 2ª-sing SUELTO del tuteo («Elige uno», «Selecciona grado», «Consulta el
+// estado») en el árbol del colegio/comité debe ser usted («Elija», «Seleccione»,
+// «Consulte»). SPEC-523 lo difirió al pase visual porque el imperativo tú es homógrafo de
+// la 3ª-persona indicativa y de sustantivos/adjetivos (la consulta, la carga, materia Activa);
+// SPEC-913 solo cazó los enclíticos (inténtalo) y «link», no la forma suelta. Acá se cierra
+// por MORFOLOGÍA, no por lista de superficies:
+//
+//   imperativo tú  =  presente de 2ª persona (la marca de tuteo de SPEC-523)  −  «s» final
+//                     seleccionas→selecciona · eliges→elige · escribes→escribe
+//
+// y se desambigua del homógrafo con dos guardas: (a) POSICIÓN de instrucción — arranque de
+// cadena/oración (inicio de línea, o tras `. ¿ ¡ ( « : > " '`) — y (b) OBJETO — seguido de
+// otra palabra, lo que descarta el adjetivo suelto «Activa»/«Inactiva» del badge de estado.
+// Los sustantivos homógrafos en arranque de oración (p. ej. «Consulta pública») se listan en
+// EXCEPCIONES_SUSTANTIVO. Verificado por MUTACIÓN: revertir «Elija uno»→«Elige uno» cae rojo.
+
+// Presente de 2ª persona de los verbos de INSTRUCCIÓN que aparecen como imperativo en la UI
+// del colegio (superconjunto instruccional de LEXEMAS_TUTEO_VERBAL). El imperativo tú se
+// deriva quitando la «s» — no se enumeran las superficies imperativas.
+const PRESENTE_2A_INSTRUCCIONAL = [
+    "seleccionas", "eliges", "escribes", "ingresas", "revisas", "creas",
+    "agregas", "añades", "completas", "verificas", "cargas", "subes",
+    "buscas", "filtras", "asignas", "guardas", "editas", "intentas",
+    "contactas", "anotas", "activas", "desactivas", "consultas", "indicas",
+    "usas", "documentas", "resuelves", "apruebas", "rechazas", "marcas",
+    "envías", "descargas", "confirmas", "continúas", "empiezas",
+];
+const IMPERATIVO_TU_SUELTO = PRESENTE_2A_INSTRUCCIONAL.map((p) => p.slice(0, -1));
+
+// Arranque de instrucción: inicio de línea o tras terminador/apertura. NO consume letras,
+// así que nunca parte un identificador o una palabra mayor.
+const ARRANQUE = "(?:^|[>\"'`.¿¡(«:–—])";
+// Objeto que sigue al imperativo (otra palabra o apertura «/¿): descarta el adjetivo suelto.
+const SEGUIDO_DE_OBJETO = "(?=\\s+[\\p{L}«¿])";
+const DETECTOR_IMPERATIVO = new RegExp(
+    `(${ARRANQUE})\\s*(${IMPERATIVO_TU_SUELTO.join("|")})${SEGUIDO_DE_OBJETO}`,
+    "giu",
+);
+
+// Sustantivos/adjetivos homógrafos que legítimamente arrancan oración seguidos de palabra
+// (no son imperativos). Clave = forma + primera palabra siguiente, en minúsculas.
+const EXCEPCIONES_SUSTANTIVO = new Set<string>([
+    // (se puebla si el barrido descubre un sustantivo en arranque de oración; p. ej. "consulta pública")
+]);
+
+// Token legítimo (Mayúscula inicial opcional + minúsculas): descarta ENUM en mayúsculas
+// («ACTIVA») e identificadores camelCase.
+const TOKEN_LIMPIO = /^\p{Lu}?\p{Ll}+$/u;
+
+function hitsImperativoSuelto(linea: string): string[] {
+    const encontrados: string[] = [];
+    for (const m of linea.matchAll(DETECTOR_IMPERATIVO)) {
+        const token = m[2];
+        if (!TOKEN_LIMPIO.test(token)) continue;
+        const resto = linea.slice((m.index ?? 0) + m[0].length).trimStart();
+        const siguiente = resto.split(/\s+/)[0]?.toLowerCase().replace(/[.,:;»)]+$/, "") ?? "";
+        if (EXCEPCIONES_SUSTANTIVO.has(`${token.toLowerCase()} ${siguiente}`)) continue;
+        encontrados.push(token);
+    }
+    return encontrados;
+}
+
+describe("SPEC-915 · el colegio + comité hablan de «usted» (imperativo suelto)", () => {
+    it("control POSITIVO: el detector dispara con el defecto y pasa con el fix", () => {
+        expect(hitsImperativoSuelto("a cargo. Elige uno para poder asignarla.")).toEqual(["Elige"]);
+        expect(hitsImperativoSuelto("a cargo. Elija uno para poder asignarla.")).toEqual([]);
+        expect(hitsImperativoSuelto('label: "Selecciona grado (opcional)"')).toEqual(["Selecciona"]);
+        expect(hitsImperativoSuelto('label: "Seleccione grado (opcional)"')).toEqual([]);
+        expect(hitsImperativoSuelto('"Consulta el estado de los casos"')).toEqual(["Consulta"]);
+        expect(hitsImperativoSuelto('description="Usa «Agregar profesor» para…"')).toEqual(["Usa"]);
+        // El adjetivo suelto del badge de estado NO es imperativo (no lleva objeto).
+        expect(hitsImperativoSuelto('materia.estado === "activo" ? "Activa" : "Inactiva"')).toEqual([]);
+        // Sustantivo con artículo / 3ª-persona NO arrancan oración → no disparan.
+        expect(hitsImperativoSuelto("solo la última consulta pinta resultados")).toEqual([]);
+        expect(hitsImperativoSuelto("el sistema crea la alerta automáticamente")).toEqual([]);
+        // ENUM en mayúsculas e identificador camelCase quedan fuera.
+        expect(hitsImperativoSuelto('suscripcion.estado === "ACTIVA"')).toEqual([]);
+        expect(hitsImperativoSuelto("const [consulta, setConsulta] = useState()")).toEqual([]);
+    });
+
+    it("ningún imperativo tú SUELTO queda en el árbol del colegio/comité", () => {
+        const hits: string[] = [];
+        for (const dir of DIRS_COLEGIO) {
+            for (const archivo of recorrer(dir)) {
+                const codigo = sinComentarios(fs.readFileSync(archivo, "utf-8"));
+                for (const [i, linea] of codigo.split("\n").entries()) {
+                    for (const token of hitsImperativoSuelto(linea)) {
+                        hits.push(`${path.relative(SRC, archivo)}:${i + 1} → «${token}»: ${linea.trim().slice(0, 90)}`);
+                    }
+                }
+            }
+        }
+        expect(
+            hits,
+            [
+                "SPEC-915 — imperativo tú SUELTO en una pantalla del colegio/comité:",
+                ...hits,
+                "",
+                "El colegio y el comité hablan de USTED. Pase el imperativo a usted",
+                "(elige→elija, selecciona→seleccione, consulta→consulte, usa→use,",
+                "crea→cree, agrega→agregue, completa→complete). Si es un sustantivo en",
+                "arranque de oración (no un imperativo), decláralo en EXCEPCIONES_SUSTANTIVO.",
+            ].join("\n"),
+        ).toEqual([]);
+    });
+});
