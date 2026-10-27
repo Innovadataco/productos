@@ -378,7 +378,7 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
                     {detalle.integrantesActivos.length === 0 ? (
                         // SPEC-319 §2.4 (FR-019): sin integrantes activos no se puede firmar.
                         <p className="mt-4 text-sm text-estado-rubi">
-                            No hay integrantes activos del comité para firmar el cierre. Agrega o activa un integrante
+                            No hay integrantes activos del comité para firmar el cierre. Agregue o active un integrante
                             antes de cerrar el caso.
                         </p>
                     ) : (
@@ -404,7 +404,7 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
                                     className="mt-1 w-full rounded-xl glass-input px-4 py-2 text-sm text-body ring-accent-input"
                                 >
                                     <option value="" disabled>
-                                        Selecciona un integrante…
+                                        Seleccione un integrante…
                                     </option>
                                     {detalle.integrantesActivos.map((i) => (
                                         <option key={i.id} value={i.id}>

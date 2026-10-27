@@ -44,7 +44,7 @@ export function SeccionIdentificadores({ estudiantes, onChange }: SeccionIdentif
     if (conNombre.length === 0) {
         return (
             <p className="text-sm text-muted">
-                Agrega estudiantes en la sección 2 y aquí podrás registrar sus identificadores digitales. Es opcional:
+                Agregue estudiantes en la sección 2 y aquí podrá registrar sus identificadores digitales. Es opcional:
                 lo puede hacer después.
             </p>
         );

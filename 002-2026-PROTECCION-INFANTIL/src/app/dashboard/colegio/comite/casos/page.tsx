@@ -49,7 +49,7 @@ export default async function ComiteCasosPage() {
                     <p className="mt-2 text-muted">
                         {puedeResolver
                             ? "Revise los casos escalados y registre la decisión del Comité de Convivencia."
-                            : "Consulta el estado de los casos escalados al Comité de Convivencia."}
+                            : "Consulte el estado de los casos escalados al Comité de Convivencia."}
                     </p>
                 </div>
                 <SolicitudesBandeja puedeResolver={puedeResolver} />

@@ -34,7 +34,7 @@ describe("SeccionIdentificadores", () => {
     it("sin estudiantes con nombre: guía a la sección 2", () => {
         vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ plataformas: [] })));
         render(<Harness inicial={[estudianteVacio("est-1")]} />);
-        expect(screen.getByText(/Agrega estudiantes en la sección 2/)).toBeTruthy();
+        expect(screen.getByText(/Agregue estudiantes en la sección 2/)).toBeTruthy();
     });
 
     it("agrega y quita un identificador por estudiante", () => {
