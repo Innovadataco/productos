@@ -20,6 +20,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | jose | ^6.0.10 |
 | leaflet | ^1.9.4 |
 | lucide-react | 1.28.0 |
+| marked | 16.4.0 |
 | next | 16.2.10 |
 | pdfmake | ^0.3.11 |
 | pg-boss | ^12.26.0 |
@@ -74,6 +75,8 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `db:verify:hnsw` | `npm run indices:check` |
 | `dev` | `next dev -p 5005` |
 | `drift:check` | `tsx scripts/verify-schema-drift.ts` |
+| `geo:detectar-duplicados` | `tsx scripts/geo/detectar-ciudades-duplicadas.ts` |
+| `geo:normalizar-dedup` | `tsx scripts/geo/normalizar-y-dedup-ciudades.ts` |
 | `historial:check` | `tsx scripts/verify-historial-esquema.ts` |
 | `indices:check` | `tsx scripts/verify-hnsw-indexes.ts` |
 | `lint` | `eslint .` |
@@ -90,6 +93,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `render:check` | `tsx scripts/render/acento-primario.render.ts` |
 | `render:deshacer:check` | `tsx scripts/render/deshacer-contraste.render.ts` |
 | `render:foco:check` | `tsx scripts/render/foco-outline.render.ts` |
+| `render:texto-roles:check` | `tsx scripts/render/acento-texto-roles.render.ts` |
 | `start` | `next start -p 5005` |
 | `test` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run` |
 | `test:coverage` | `npm run test:unit && npm run test:integration` |
@@ -106,7 +110,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 
 ## Imagen de producción (Dockerfile)
 
-Etapas: node:22-alpine (etapa `deps`) → node:22-alpine (etapa `builder`) → node:22-alpine (etapa `prod`) → node:22-alpine (etapa `runner`).
+Etapas: node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 (etapa `deps`) → node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 (etapa `builder`) → node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 (etapa `prod`) → node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 (etapa `runner`).
 Puertos expuestos: 3000.
 Comando por defecto: `["node", "server.js"]`.
 

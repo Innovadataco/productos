@@ -26,6 +26,23 @@ import { resolve } from "node:path";
 const YML = resolve(__dirname, "../../../.github/workflows/generados-post-merge.yml"); // raíz del monorepo
 const wf = readFileSync(YML, "utf8");
 
+const PREFIJO = "002-2026-PROTECCION-INFANTIL/";
+// La lista $ARCHIVOS del paso de drift (los generados que se regeneran y se chequean), relativa al producto.
+function extraerArchivosDrift(yaml: string): string[] {
+    const m = yaml.match(/ARCHIVOS="([^"]+)"/);
+    return m ? m[1].trim().split(/\s+/) : [];
+}
+// Las rutas del `git add` del paso de push, normalizadas sin el prefijo del producto.
+function extraerGitAdd(yaml: string): Set<string> {
+    const bloque = yaml.match(/git add ([\s\S]*?)git commit/);
+    const set = new Set<string>();
+    if (!bloque) return set;
+    for (const tok of bloque[1].matchAll(/002-2026-PROTECCION-INFANTIL\/[^\s\\]+/g)) {
+        set.add(tok[0].slice(PREFIJO.length));
+    }
+    return set;
+}
+
 describe("SPEC-885 / I-443 · el barrido de generados converge y avisa de verdad", () => {
     it("el job pide los permisos del aviso + detección de PR (issues:write, pull-requests:read)", () => {
         expect(wf, "falta issues: write (para abrir/reusar el Issue)").toMatch(/issues:\s*write/);
@@ -54,6 +71,37 @@ describe("SPEC-885 / I-443 · el barrido de generados converge y avisa de verdad
             /gh issue list[\s\S]*?--label\s+generados-drift[\s\S]*?--state\s+open/,
         );
         expect(wf, "debe comentar el Issue reusado en vez de abrir otro").toMatch(/gh issue comment/);
+    });
+
+    it("SPEC-916 · CONVERGENCIA REAL: el `git add` commitea TODOS los generados que regenera/chequea (ARCHIVOS ⊆ git add)", () => {
+        // El paso de drift chequea el set $ARCHIVOS (6 generados: README + 00/01/02/03/06); el paso de
+        // push stagea otro set con `git add`. Si el segundo no cubre al primero, el drift de los no
+        // stageados (eran 00/01/06) nunca entra a la rama → el barrido NO converge: main queda driftado
+        // y, una vez limpio el trío, `git commit` muere con "nothing to commit". Invariante: ARCHIVOS ⊆ git add.
+        const archivos = extraerArchivosDrift(wf);
+        const stageados = extraerGitAdd(wf);
+        expect(archivos.length, "no se encontró la lista $ARCHIVOS del paso de drift").toBeGreaterThan(0);
+        const faltantes = archivos.filter((a) => !stageados.has(a));
+        expect(
+            faltantes,
+            [
+                "SPEC-916 / I-443 — el push NO commitea generados que SÍ regenera y chequea por drift:",
+                ...faltantes,
+                "",
+                "Lo que se regenera y se detecta como drift DEBE committearse (agregarlo al `git add`",
+                "del paso de push), o el barrido nunca converge.",
+            ].join("\n"),
+        ).toEqual([]);
+    });
+
+    it("control positivo SPEC-916: un `git add` que omite un generado chequeado sería ROJO", () => {
+        const yamlMalo = [
+            'ARCHIVOS="specs/README.md docs/architecture/01-modelo-datos.md"',
+            "          git add 002-2026-PROTECCION-INFANTIL/specs/README.md",
+            '          git commit -m "x"',
+        ].join("\n");
+        const faltantes = extraerArchivosDrift(yamlMalo).filter((a) => !extraerGitAdd(yamlMalo).has(a));
+        expect(faltantes).toEqual(["docs/architecture/01-modelo-datos.md"]);
     });
 
     it("control positivo: un YAML viejo (solo ::notice, push incondicional) sería ROJO", () => {

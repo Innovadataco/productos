@@ -466,6 +466,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | motivo | String | opcional |
 | confirmada | Boolean | — |
 | creadoEn | DateTime | — |
+| datasetOmitidoEn | DateTime | opcional |
 | clasificacion | ClasificacionIA | relación (FK) |
 | admin | Usuario | relación (FK) |
 | datasetRegistros | DatasetEntrenamiento | lista, relación |
@@ -754,6 +755,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | id | String | id |
 | textoCifrado | String | — |
 | textoOriginalCifrado | String | — |
+| piiDetectadaCifrado | String | opcional |
 | origenEvidencia | OrigenEvidencia | — |
 | purgadoEn | DateTime | opcional |
 | creadoEn | DateTime | — |
@@ -1414,6 +1416,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | suscripcion | Suscripcion | relación (FK) |
 | autorizadoPor | Usuario | opcional, relación (FK) |
 | bonosAplicados | BonoAplicado | lista, relación |
+| peticionServicio | PeticionServicio | opcional, relación |
 
 #### `PatronExpediente`
 
@@ -1483,7 +1486,25 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | solicitudes | SolicitudCita | lista, relación |
 | documentos | DocumentoProfesional | lista, relación |
 | diasBloqueados | DiaBloqueado | lista, relación |
-| verificacionesReps | VerificacionReps | lista, relación |
+
+#### `PeticionServicio`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| usuarioId | String | — |
+| motivo | MotivoPeticionServicio | — |
+| creadoEn | DateTime | — |
+| venceEn | DateTime | — |
+| resueltoEn | DateTime | opcional |
+| resueltoPor | String | opcional |
+| solicitudId | String | opcional |
+| solicitudHabeasDataId | String | único, opcional |
+| pagoId | String | único, opcional |
+| usuario | Usuario | relación (FK) |
+| solicitud | SolicitudCita | opcional, relación (FK) |
+| solicitudHabeasData | SolicitudHabeasData | opcional, relación (FK) |
+| pago | Pago | opcional, relación (FK) |
 
 #### `PreferenciaAlertaColegio`
 
@@ -1686,6 +1707,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | expedienteCompartidoId | String | opcional |
 | solicitudPreviaId | String | opcional |
 | pagoHeredadoDeId | String | opcional |
+| reubicadaEnId | String | opcional |
+| reubicadaEn | DateTime | opcional |
+| reubicadaPorId | String | opcional |
 | montoConsulta | Int | — |
 | montoServicio | Int | — |
 | montoTotal | Int | — |
@@ -1703,10 +1727,13 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reprogramaciones | SolicitudCita | lista, relación |
 | pagoHeredadoDe | SolicitudCita | opcional, relación |
 | pagosQueHereda | SolicitudCita | lista, relación |
+| reubicadaEnCita | SolicitudCita | opcional, relación |
+| reubicacionesRecibidas | SolicitudCita | lista, relación |
 | enlaceOperador | Usuario | opcional, relación |
 | encuesta | EncuestaPrimeraCita | opcional, relación |
 | encuestasSesion | EncuestaCita | lista, relación |
 | incidentesContradiccion | IncidenteContradiccionEncuesta | lista, relación |
+| peticionesServicio | PeticionServicio | lista, relación |
 
 #### `SolicitudHabeasData`
 
@@ -1718,15 +1745,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | calidad | CalidadPeticionario | — |
 | peticionarioUsuarioId | String | opcional |
 | sujetoDelDato | String | opcional |
-| plazoDias | Int | — |
-| creadoEn | DateTime | — |
-| recibidoEn | DateTime | — |
-| origen | OrigenSolicitudHabeasData | — |
-| venceEn | DateTime | — |
-| resueltaEn | DateTime | opcional |
-| resultado | ResultadoSolicitudHabeasData | opcional |
-| clasesDatoAfectadas | ClaseDatoTitular | lista |
-| peticionario | Usuario | opcional, relación |
 
 #### `Suscripcion`
 
@@ -1844,23 +1862,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | revisadoPor | Usuario | relación |
 | documentosRevisados | VerificacionDocumento | lista, relación |
 | aceptacionAutorizacion | AceptacionAutorizacionProfesional | opcional, relación (FK) |
-
-#### `VerificacionReps`
-
-| Campo | Tipo | Atributos |
-| --- | --- | --- |
-| id | String | id |
-| profesionalId | String | — |
-| verificadoEn | DateTime | — |
-| fuente | FuenteVerificacionReps | — |
-| resultado | EstadoReps | — |
-| vigenteHasta | DateTime | opcional |
-| modalidades | ModalidadReps | lista |
-| verificadoPorId | String | opcional |
-| verificadoPorSnapshot | String | opcional |
-| creadoEn | DateTime | — |
-| profesional | PerfilProfesional | relación (FK) |
-| verificadoPor | Usuario | opcional, relación |
 
 #### `WorkerLog`
 
@@ -2403,6 +2404,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | apelacionesAsignadas | Apelacion | lista, relación |
 | apelacionesResueltas | Apelacion | lista, relación |
 | accesosDocumentoApelacion | AccesoDocumentoApelacion | lista, relación |
+| peticionesServicio | PeticionServicio | lista, relación |
 | alertasAsignadas | AlertaColegio | lista, relación |
 | notificacionesInApp | NotificacionInApp | lista, relación |
 | bloqueosCreados | BlockList | lista, relación |
@@ -2431,7 +2433,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ciudadPerfil | Ciudad | opcional, relación |
 | perfilProfesional | PerfilProfesional | opcional, relación |
 | verificacionesProfesionalRevisadas | VerificacionProfesional | lista, relación |
-| verificacionesRepsRealizadas | VerificacionReps | lista, relación |
 | revisionesRenovacionHechas | RevisionRenovacion | lista, relación |
 | aceptacionesAutorizacionProfesional | AceptacionAutorizacionProfesional | lista, relación |
 | solicitudesCitaComoPadre | SolicitudCita | lista, relación |
@@ -2520,6 +2521,7 @@ erDiagram
     Materia ||--o{ CursoMateria : "materia"
     ModuloPermisible ||--o{ PermisoModulo : "modulo"
     Pago ||--o{ BonoAplicado : "pago (opcional)"
+    Pago ||--o{ PeticionServicio : "pago (opcional)"
     Pais ||--o{ Ciudad : "pais"
     Pais ||--o{ Colegio : "pais"
     Pais ||--o{ Departamento : "pais"
@@ -2531,7 +2533,6 @@ erDiagram
     PerfilProfesional ||--o{ FranjaDisponible : "profesional"
     PerfilProfesional ||--o{ SolicitudCita : "profesional"
     PerfilProfesional ||--o{ VerificacionProfesional : "perfilProfesional"
-    PerfilProfesional ||--o{ VerificacionReps : "profesional"
     Plan ||--o{ Suscripcion : "planActual"
     Plataforma ||--o{ AlertaSuscripcion : "plataforma"
     Plataforma ||--o{ Apelacion : "plataforma"
@@ -2567,6 +2568,8 @@ erDiagram
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
     SolicitudCita ||--o{ EncuestaPrimeraCita : "solicitud"
     SolicitudCita ||--o{ IncidenteContradiccionEncuesta : "solicitud"
+    SolicitudCita ||--o{ PeticionServicio : "solicitud (opcional)"
+    SolicitudHabeasData ||--o{ PeticionServicio : "solicitudHabeasData (opcional)"
     Suscripcion ||--o{ BonoAplicado : "suscripcion"
     Suscripcion ||--o{ CodigoReferidoUso : "referida"
     Suscripcion ||--o{ CodigoReferidoUso : "referidor"
@@ -2613,6 +2616,7 @@ erDiagram
     Usuario ||--o{ PerfilOperador : "usuario"
     Usuario ||--o{ PerfilProfesional : "usuario"
     Usuario ||--o{ PermisoModulo : "actualizadoPor (opcional)"
+    Usuario ||--o{ PeticionServicio : "usuario"
     Usuario ||--o{ Plan : "creadoPor"
     Usuario ||--o{ Recomendacion : "resueltaPor (opcional)"
     Usuario ||--o{ ReglaRecomendacionHistorial : "cambiadoPor"
