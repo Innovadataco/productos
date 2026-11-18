@@ -536,6 +536,10 @@ jobs:
           EMAIL_FROM: build@ci.local
           ANTI_ABUSO_SALT: build-placeholder-salt-min-32-chars
           DATABASE_URL: postgresql://build:build@localhost:5432/build
+          # SPEC-921: el runner de CI (Node 22.23.4) hacía OOM en `next build` (heap tope ~2079 MB)
+          # y bloqueaba TODO merge — deriva del entorno, no del código. Mismo tope que el stage
+          # builder del Dockerfile (SPEC-856).
+          NODE_OPTIONS: --max-old-space-size=4096
 
   # SPEC-868 (I-445): SMOKE del supervisor del worker. El crash-loop de pi-worker
   # post-deploy (ERR_MODULE_NOT_FOUND al cargar worker-logger.ts bajo type-stripping
