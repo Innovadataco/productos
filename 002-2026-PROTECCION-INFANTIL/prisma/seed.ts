@@ -8,6 +8,7 @@ import { PLANTILLAS_DEFECTO, REENCUADRE_ANONIMO_DEFECTO } from "../src/lib/exped
 import { syncModulosYGrants } from "./seed-modulos-grants";
 import { GUIAS_ACCION_BASE } from "./guias-accion.seed-data";
 import { copyInvitacion } from "./invitaciones-copy.seed-data";
+import { COLEGIO_REGISTRO_ENLACE_COPY } from "./colegio-registro-enlace-copy.seed-data";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { formatInTimeZone } from "date-fns-tz";
@@ -890,10 +891,11 @@ async function seedEventosEmailMigrados() {
         },
         // ── SPEC-344 (A-69 · C1) · registro por enlace del colegio ──────────
         {
-            clave: "colegio.registro_enlace.email",
-            asunto: "Cree su contraseña y empecemos",
-            cuerpoMarkdown:
-                "Hola,\n\nUsted está por activar la cuenta del **{{nombreColegio}}** en Protección Infantil.\n\nAbra este enlace y cree su contraseña:\n{{url}}\n\nEl enlace vence en 24 horas y solo se puede usar una vez.\n\nSi no fue usted quien lo pidió, no tiene que hacer nada.",
+            // SPEC-918: fuente única; el `[Activar mi cuenta]({{url}})` a solas en su párrafo
+            // lo pinta como BOTÓN el motor (SPEC-909). Antes el cuerpo tenía `{{url}}` suelta.
+            clave: COLEGIO_REGISTRO_ENLACE_COPY.clave,
+            asunto: COLEGIO_REGISTRO_ENLACE_COPY.asunto,
+            cuerpoMarkdown: COLEGIO_REGISTRO_ENLACE_COPY.cuerpoMarkdown,
             variablesSchema: {
                 type: "object",
                 properties: { url: { type: "string" }, nombreColegio: { type: "string" } },

@@ -154,6 +154,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-800: la versión de Node del repo (.nvmrc/engines) coincide con la de TODOS los
     // workflows (barrido). Corre acá para BLOQUEAR en CI (pi-gate exige test-unit).
     "scripts/ci/node-version-paridad.candado.test.ts",
+    // SPEC-921: el step build de ci.yml fija NODE_OPTIONS=--max-old-space-size ≥ 4096 (anti-OOM). Puro (lee ci.yml).
+    "scripts/ci/build-heap-ci.candado.test.ts",
     // SPEC-821 (I-441): `prisma generate` va antes de todo paso de ci.yml que ejecute un script que
     // importe el cliente Prisma (indices:check). Enumerador que PARSEA el ci.yml real + camina imports;
     // control positivo adentro. Corre acá para BLOQUEAR (pi-gate exige test-unit).
@@ -850,6 +852,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "prisma/invitaciones-usted.candado.test.ts",
     // SPEC-909: el corrector in-place es idempotente y fila-por-fila (db falsa). Puro.
     "scripts/corregir-invitaciones-usted.candado.test.ts",
+    // SPEC-918: activación por enlace del colegio = botón (no URL pelada); CTA en párrafo propio. Puro (data + render).
+    "prisma/colegio-registro-enlace-boton.candado.test.ts",
+    // SPEC-918: el corrector in-place del correo de activación es idempotente y fila-por-fila (db falsa). Puro.
+    "scripts/corregir-colegio-registro-enlace-boton.candado.test.ts",
     // SPEC-912: «Editar» de la cuenta del comité postea el email nuevo por PATCH. Puro (jsdom, fetch mockeado).
     "src/components/modules/colegio/comite/ComiteCuentaCard.candado.test.tsx",
 ];
