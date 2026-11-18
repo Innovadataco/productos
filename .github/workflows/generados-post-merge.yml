@@ -123,9 +123,18 @@ jobs:
           git config user.email "bot-generados@innovadataco.local"
           git config user.name "bot-generados-post-merge"
           git checkout -B "$RAMA"
+          # SPEC-916 (I-443): se COMMITEAN los MISMOS 6 generados que se regeneran y se chequean
+          # por drift (ver $ARCHIVOS arriba). Antes solo se stageaban 3 (README/02/03) — el drift de
+          # 00/01/06 (byte-exactos añadidos por SPEC-803 a la regeneración y a la detección, pero no
+          # al commit) nunca entraba a la rama → el barrido NO convergía: main quedaba driftado y, una
+          # vez limpio el trío, `git commit` moría con "nothing to commit". El gate es `cambio=si`
+          # (drift en los 6), así que al menos uno de los 6 está modificado y el commit siempre procede.
           git add 002-2026-PROTECCION-INFANTIL/specs/README.md \
+                  002-2026-PROTECCION-INFANTIL/docs/architecture/00-INDICE.md \
+                  002-2026-PROTECCION-INFANTIL/docs/architecture/01-modelo-datos.md \
                   002-2026-PROTECCION-INFANTIL/docs/architecture/02-roles-capacidades.md \
-                  002-2026-PROTECCION-INFANTIL/docs/architecture/03-pantallas.md
+                  002-2026-PROTECCION-INFANTIL/docs/architecture/03-pantallas.md \
+                  002-2026-PROTECCION-INFANTIL/docs/architecture/06-stack.md
           git commit -m "chore(generados): regenerar índice + tablas de arquitectura post-merge (SPEC-487)"
           git push --force origin "$RAMA"
           # Notificación REAL: Issue con label fijo, reusado si ya hay uno abierto (no spam).
