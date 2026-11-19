@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import type { ComiteCuentaDto } from "@/lib/dal/types/comite-convivencia";
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
+    const router = useRouter();
     const [cuenta, setCuenta] = useState<ComiteCuentaDto | null>(cuentaInicial);
     const [email, setEmail] = useState("");
     // SPEC-319 §2.2: el acceso llega por email (link a /activar). NUNCA se pinta una
@@ -39,6 +41,10 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
             setCuenta(data.cuenta);
             setInvitacionEnviada(true);
             setEmail("");
+            // SPEC-935 (I-449): la página (server) decide si mostrar el formulario de integrantes según la
+            // `cuenta` que leyó al renderizar. Sin refrescar, recién creada la cuenta el formulario no aparecía
+            // hasta recargar. `refresh()` re-renderiza el server conservando el estado de esta tarjeta.
+            router.refresh();
         } catch {
             setError("Error de red al crear la cuenta");
         } finally {

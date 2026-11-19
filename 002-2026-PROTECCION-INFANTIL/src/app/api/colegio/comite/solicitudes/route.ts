@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
+import { colegioLecturaCasosComite } from "@/lib/colegio/comite-lectura";
 import { ComiteConvivenciaBandejaService } from "@/lib/dal/services/comite-convivencia-bandeja";
 
 const querySchema = z.object({
@@ -15,18 +16,14 @@ const querySchema = z.object({
 
 export async function GET(request: Request) {
     try {
-        const user = await verifyAuth("COMITE_CONVIVENCIA");
+        // SPEC-935 (I-448): el rector (SCHOOL_ADMIN) también LEE los casos de SU colegio; escribir sigue siendo del comité.
+        const user = await verifyAuth();
+        const colegioId = colegioLecturaCasosComite(user);
         await assertModulo(user, "colegios_comite_bandeja");
         const vigencia = await verificarVigenciaColegio(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(
                 { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
-        if (!user.comiteColegioId) {
-            return NextResponse.json(
-                { error: { message: "Cuenta del comité no vinculada a un colegio", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
             );
         }
@@ -42,7 +39,7 @@ export async function GET(request: Request) {
         const url = new URL(request.url);
         const { page, pageSize } = querySchema.parse(Object.fromEntries(url.searchParams.entries()));
 
-        const resultado = await new ComiteConvivenciaBandejaService().listar(user.comiteColegioId, page, pageSize);
+        const resultado = await new ComiteConvivenciaBandejaService().listar(colegioId, page, pageSize);
 
         return NextResponse.json({
             items: resultado.items,

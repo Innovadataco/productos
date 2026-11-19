@@ -57,7 +57,10 @@ describe("/api/colegio/comite/solicitudes", () => {
         expect(data.items[0].numero).toBe("SOL-CC-TEST");
     });
 
-    it("no permite el acceso con rol SCHOOL_ADMIN", async () => {
+    // SPEC-935 (I-448): CONTRATO CAMBIADO por VEREDICTO del CEO — el rector LEE los casos de su colegio (antes
+    // este test exigía 403 y vigilaba el contrato contrario). La escritura sigue siendo del comité: ver
+    // `rector-lectura.candado.test.ts`.
+    it("el rector (SCHOOL_ADMIN) LEE la lista de su colegio", async () => {
         const { admin } = await setupConSolicitud();
         mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
 
@@ -67,6 +70,7 @@ describe("/api/colegio/comite/solicitudes", () => {
             })
         );
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(200);
+        expect((await res.json()).items.map((i: { numero: string }) => i.numero)).toEqual(["SOL-CC-TEST"]);
     });
 });

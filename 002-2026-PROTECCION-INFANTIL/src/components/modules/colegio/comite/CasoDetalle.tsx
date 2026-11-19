@@ -357,19 +357,22 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
                         ))}
                     </ul>
                 )}
-                <form onSubmit={agregarNota} className="mt-4 space-y-3">
-                    <textarea
-                        required
-                        maxLength={1000}
-                        value={nuevaNota}
-                        onChange={(e) => setNuevaNota(e.target.value)}
-                        placeholder="Registrar lo actuado…"
-                        className="min-h-[80px] w-full rounded-xl glass-input px-4 py-2 text-sm text-body placeholder-subtle ring-accent-input"
-                    />
-                    <Button type="submit" isLoading={accionLoading}>
-                        {accionLoading ? "Guardando…" : "Agregar nota"}
-                    </Button>
-                </form>
+                {/* SPEC-935 (I-448): el rector LEE la bitácora; registrar notas es SOLO del comité (la API responde 403). */}
+                {puedeResolver && (
+                    <form onSubmit={agregarNota} className="mt-4 space-y-3">
+                        <textarea
+                            required
+                            maxLength={1000}
+                            value={nuevaNota}
+                            onChange={(e) => setNuevaNota(e.target.value)}
+                            placeholder="Registrar lo actuado…"
+                            className="min-h-[80px] w-full rounded-xl glass-input px-4 py-2 text-sm text-body placeholder-subtle ring-accent-input"
+                        />
+                        <Button type="submit" isLoading={accionLoading}>
+                            {accionLoading ? "Guardando…" : "Agregar nota"}
+                        </Button>
+                    </form>
+                )}
             </section>
 
             {puedeResolver && solicitud.estado === "PENDIENTE" && (
