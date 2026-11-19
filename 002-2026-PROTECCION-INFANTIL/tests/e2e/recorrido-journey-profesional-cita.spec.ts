@@ -25,10 +25,10 @@
  *   - Sin «Confirmar» para el profesional antes del pago.
  *   - H-2 / SPEC-754: el teléfono y el correo del profesional no aparecen en NINGUNA pantalla del
  *     padre (ficha, panel de espera, panel confirmado).
- *   - Montos contra la BD: `montoConsulta` = precio estándar del parámetro (SPEC-428), y el panel
- *     del padre muestra `montoTotal` de la fila. OJO (I-450, reportado por Calidad 19-11): el modal
- *     dice «Total a pagar» = precio estándar mientras la fila guarda `montoTotal` = precio + comisión,
- *     y el panel lo muestra como «Monto pagado». Este journey NO fija cuál de los dos es el correcto.
+ *   - Montos contra la BD: `montoConsulta` = precio estándar del parámetro (SPEC-428). I-450 RESUELTO por
+ *     SPEC-934: el modal y el panel muestran el TOTAL = `montoTotal` (precio estándar + servicio de la red),
+ *     con «Total a pagar» como cifra grande (`[data-testid="desglose-total"]`). El rótulo del panel sigue el
+ *     estado del pago (SPEC-934 `etiquetaMontoCita`): pendiente «Total a pagar» / aprobado «Monto pagado».
  *
  * AISLAMIENTO. Corrida por `randomUUID`. Escrituras por UI/endpoints reales; Prisma solo LEE (más el
  * admin efímero que crea el fixture). Limpieza en `afterAll` que AFIRMA que no quedan las cuentas.
@@ -139,7 +139,8 @@ test.describe.serial("SPEC-928 · journey core #4: el padre agenda con un profes
 
                 const modal = page.getByRole("dialog", { name: "Confirmar solicitud" });
                 await expect(modal).toBeVisible();
-                const total = await modal.getByText("Total a pagar").locator("xpath=following-sibling::p[1]").innerText();
+                // SPEC-934: el total es la cifra grande del desglose (dt «Total a pagar» + dd testid).
+                const total = await modal.getByTestId("desglose-total").innerText();
                 await modal.getByRole("button", { name: "Confirmar solicitud" }).click();
                 await page.waitForURL(/\/dashboard\/padre\/citas\/[^/]+$/);
                 const id = new URL(page.url()).pathname.split("/").pop()!;
@@ -161,12 +162,15 @@ test.describe.serial("SPEC-928 · journey core #4: el padre agenda con un profes
                 expect(cita.profesionalId).toBe(prof.perfilId);
                 expect(cita.franjaId).toBe(prof.franjaId);
                 expect(cita.montoConsulta, "SPEC-428: 1ª cita al precio estándar").toBe(Number(precio.valor));
-                expect(digitos(totalModal), "el modal muestra el precio estándar (= montoConsulta)").toBe(String(cita.montoConsulta));
+                expect(digitos(totalModal), "SPEC-934 (I-450 resuelto): el modal muestra el TOTAL = montoTotal (estándar + servicio)").toBe(String(cita.montoTotal));
 
                 await expect(page.getByText("Pendiente de pago")).toBeVisible();
-                const montoPanel = await page.getByText("Monto pagado").locator("xpath=following-sibling::p[1]").innerText();
+                // SPEC-934 `etiquetaMontoCita`: con el pago AÚN pendiente (SIN_CONFIRMAR) el panel rotula «Total a
+                // pagar» (no «Monto pagado»); el monto es el TOTAL de la fila, en el dd del desglose (testid).
+                await expect(page.getByText("Total a pagar")).toBeVisible();
+                const montoPanel = await page.getByTestId("desglose-total").innerText();
                 expect(digitos(montoPanel), "el panel muestra el montoTotal de la fila").toBe(String(cita.montoTotal));
-                console.log(`[SPEC-928 · I-450] modal «Total a pagar»=${totalModal} · panel «Monto pagado»=${montoPanel} · montoConsulta=${cita.montoConsulta} · montoTotal=${cita.montoTotal}`);
+                console.log(`[SPEC-928 · I-450 resuelto] modal/panel total=${totalModal}/${montoPanel} · montoConsulta=${cita.montoConsulta} · montoTotal=${cita.montoTotal}`);
                 await expect(page.locator("body"), "H-2: el panel no muestra el teléfono").not.toContainText(TELEFONO_PROF);
                 await expect(page.locator("body"), "H-2: el panel no muestra el correo").not.toContainText(EMAIL_PROF);
             });
