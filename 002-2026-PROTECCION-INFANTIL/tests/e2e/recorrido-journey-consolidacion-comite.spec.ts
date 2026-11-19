@@ -145,7 +145,16 @@ test.describe.serial("SPEC-942 · journey core #6: el comité de validación cor
             });
 
             await test.step("3 · CORRIGE el resumen con motivo → CORREGIDO", async () => {
-                await page.getByLabel("Resumen consolidado").fill(RESUMEN_CORREGIDO);
+                // El textarea es controlado (useState(resumenInicial) en ConsolidacionResumenEditor).
+                // Si el fill corre ANTES de que React hidrate con el valor del servidor, el texto
+                // escrito se CONCATENA con el inicial (CI 19-11 run 44584198583: se guardó
+                // "CORREGIDO"+"IA" → flaky). Esperar a que el campo se ASIENTE exactamente en el valor
+                // IA garantiza que el fill reemplaza sobre el estado ya hidratado; y re-verificar el
+                // valor antes de enviar cierra la carrera por completo (SPEC-945).
+                const resumen = page.getByLabel("Resumen consolidado");
+                await expect(resumen).toHaveValue(RESUMEN_IA);
+                await resumen.fill(RESUMEN_CORREGIDO);
+                await expect(resumen).toHaveValue(RESUMEN_CORREGIDO);
                 await page.getByLabel("Motivo de la corrección").fill(MOTIVO_CORRECCION);
                 await page.getByRole("button", { name: "Corregir resumen" }).click();
                 await expect
