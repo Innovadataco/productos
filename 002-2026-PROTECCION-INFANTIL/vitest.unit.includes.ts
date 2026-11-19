@@ -156,6 +156,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/ci/node-version-paridad.candado.test.ts",
     // SPEC-921: el step build de ci.yml fija NODE_OPTIONS=--max-old-space-size ≥ 4096 (anti-OOM). Puro (lee ci.yml).
     "scripts/ci/build-heap-ci.candado.test.ts",
+    // SPEC-930: el job journeys-e2e (solo recorrido-journey-*) es DURO y pi-gate lo exige. Puro (lee ci.yml).
+    "scripts/ci/journeys-bloqueantes.candado.test.ts",
     // SPEC-821 (I-441): `prisma generate` va antes de todo paso de ci.yml que ejecute un script que
     // importe el cliente Prisma (indices:check). Enumerador que PARSEA el ci.yml real + camina imports;
     // control positivo adentro. Corre acá para BLOQUEAR (pi-gate exige test-unit).
