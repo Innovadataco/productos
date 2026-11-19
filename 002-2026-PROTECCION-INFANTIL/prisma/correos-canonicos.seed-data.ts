@@ -21,6 +21,8 @@
  *   4. CTA (acción primaria): `cta = { etiqueta, variable }` y el `[etiqueta]({{variable}})` A SOLAS
  *      en su párrafo (`\n\n` antes; si hay texto después, `\n\n` después). Un `\n` simple = enlace
  *      inline, NO botón. Un enlace SECUNDARIO va inline dentro de la frase (no pide nada más).
+ *      La variable del botón va DECLARADA en `variablesSchema` (si la fila de hoy no la tiene, se agrega):
+ *      la vista previa del panel admin solo le da valor de muestra a lo declarado.
  *   5. Correo con enlaces y SIN botón (inline a propósito): declará `sinBoton` con su motivo —
  *      `anti-enumeracion` (p. ej. `cuenta_existente`: el aviso no revela si la cuenta existe) o
  *      `seguridad` (enlace incidental de un aviso de seguridad: un botón sobre-dramatiza). Es la
@@ -93,6 +95,7 @@ function schemaDe(...variables: string[]): Record<string, unknown> {
 
 const FORMA_ALTA_COLEGIO =
     "Diseño · Gestión bb6384eb · FORMA-BOTON-Y-VOZ-CORREOS-ALTA-COLEGIO-2026-11-18 · SPEC-922";
+const FORMA_AUTH = "Diseño · Gestión a8a983e1 · FORMA-BARRIDO-01-FAMILIA-AUTH v1.1 · SPEC-923";
 
 const FORMA_BIENVENIDA_FUSIONADA =
     "Diseño · Gestión c540eeac · FORMA-ONBOARDING-COLEGIO-CORREOS-Y-PASOS-2026-11-20 §A · SPEC-955";
@@ -152,6 +155,143 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         cta: null,
         constanciaNorma: ["version"],
         fuente: FORMA_ALTA_COLEGIO,
+    },
+
+    // ── SPEC-923 · familia `auth.*` (FORMA-BARRIDO-01 v1.1) ───────────────────────
+    // Voz horneada por audiencia: COMPARTIDA = impersonal · padre = tú · profesional = usted.
+    // Ninguna saluda con `{{nombre*}}` (riesgo nombre=correo: no aplica a esta familia).
+    {
+        // §1 · Compartida (verificación genérica de correo) → impersonal. Sin URL, sin botón.
+        clave: "auth.codigo_verificacion.email",
+        canal: "EMAIL",
+        asunto: "Código de verificación",
+        cuerpoMarkdown: "El código de verificación es: {{codigo}}\n\nVálido por 15 minutos.",
+        variablesSchema: schemaDe("codigo"),
+        cta: null,
+        fuente: FORMA_AUTH,
+    },
+    {
+        // §2 · Compartida → impersonal + BOTÓN. `url` no estaba declarada: se declara (el emisor ya la pasa).
+        clave: "auth.password_recuperacion.email",
+        canal: "EMAIL",
+        asunto: "Restablecer la contraseña",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Recibimos una solicitud para restablecer la contraseña de esta cuenta.\n\n" +
+            "Para crear una nueva:\n\n" +
+            "[Restablecer la contraseña]({{url}})\n\n" +
+            "El enlace vence en 1 hora y solo se puede usar una vez. Si no se solicitó este cambio, no hay que hacer nada.",
+        variablesSchema: schemaDe("url"),
+        cta: { etiqueta: "Restablecer la contraseña", variable: "url" },
+        fuente: FORMA_AUTH,
+    },
+    {
+        // §3 · COMPARTIDA: la emiten 3 puertas (registro padre, registro profesional y verificar;
+        // `enviarEmailCuentaExistente`) → impersonal. Enlaces INLINE a propósito: el aviso no revela nada.
+        clave: "auth.cuenta_existente.email",
+        canal: "EMAIL",
+        asunto: "Ya existe una cuenta con este correo",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Alguien intentó crear una cuenta con este correo, pero ya existe una cuenta asociada a él.\n\n" +
+            "Para ingresar: [iniciar sesión]({{urlLogin}}). Para restablecer la clave: [recuperar la contraseña]({{urlRecuperar}}).\n\n" +
+            "Si no hubo ninguna solicitud, no hay que hacer nada: la cuenta está segura.",
+        variablesSchema: schemaDe("urlLogin", "urlRecuperar"),
+        cta: null,
+        sinBoton: { motivo: "anti-enumeracion", nota: "aviso de cuenta existente: no revela nada más allá del buzón" },
+        fuente: FORMA_AUTH,
+    },
+    {
+        // §4 · Padre → tú + BOTÓN.
+        clave: "auth.registro_enlace.email",
+        canal: "EMAIL",
+        asunto: "Crea tu contraseña y empecemos",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Estás para cuidarlos. Nosotros, para avisarte.\n\n" +
+            "Abre este enlace y crea tu contraseña:\n\n" +
+            "[Crear mi contraseña]({{url}})\n\n" +
+            "El enlace vence en 24 horas y solo se puede usar una vez.\n\n" +
+            "Si no fuiste tú quien lo pidió, no tienes que hacer nada.",
+        variablesSchema: schemaDe("url"),
+        cta: { etiqueta: "Crear mi contraseña", variable: "url" },
+        fuente: FORMA_AUTH,
+    },
+    {
+        // §5 · Padre → tú + BOTÓN.
+        clave: "auth.bienvenida_padre.email",
+        canal: "EMAIL",
+        asunto: "Tu cuenta está lista",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Tu cuenta quedó creada. Desde acá te avisamos si alguno de los tuyos aparece en un reporte.\n\n" +
+            "Te faltan unos pocos pasos para terminar de configurarla. Con calma, toma un minuto. Entra cuando quieras:\n\n" +
+            "[Entrar a mi cuenta]({{urlLogin}})",
+        variablesSchema: schemaDe("urlLogin"),
+        cta: { etiqueta: "Entrar a mi cuenta", variable: "urlLogin" },
+        fuente: FORMA_AUTH,
+    },
+    {
+        // §6 · Profesional → USTED (era tú) + BOTÓN. Puerta del profesional (SPEC-419).
+        clave: "auth.registro_enlace_profesional.email",
+        canal: "EMAIL",
+        asunto: "Cree su contraseña y empecemos",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Gracias por querer sumarse a la red de profesionales de Protección Infantil.\n\n" +
+            "Abra este enlace y cree su contraseña:\n\n" +
+            "[Crear mi contraseña]({{url}})\n\n" +
+            "El enlace vence en 24 horas y solo se puede usar una vez.\n\n" +
+            "Si no fue usted quien lo pidió, no tiene que hacer nada.",
+        variablesSchema: schemaDe("url"),
+        cta: { etiqueta: "Crear mi contraseña", variable: "url" },
+        fuente: FORMA_AUTH,
+    },
+    {
+        // §7 · Profesional → USTED (era tú). Primaria = completar perfil (BOTÓN); login = secundario (inline).
+        clave: "auth.bienvenida_profesional.email",
+        canal: "EMAIL",
+        asunto: "Su cuenta está lista — falta un paso",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Su cuenta quedó creada.\n\n" +
+            "Para aparecer en el directorio de familias, complete su perfil y suba la autorización firmada. Hasta ese momento su perfil queda en borrador y no llega a revisión:\n\n" +
+            "[Completar mi perfil]({{urlCompletarPerfil}})\n\n" +
+            "También puede [entrar a su cuenta]({{urlLogin}}) cuando quiera.",
+        variablesSchema: schemaDe("urlLogin", "urlCompletarPerfil"),
+        cta: { etiqueta: "Completar mi perfil", variable: "urlCompletarPerfil" },
+        fuente: FORMA_AUTH,
+    },
+    {
+        // §8 · COMPARTIDA (rol ALL; le llegaba en tú al rector) → impersonal. Enlace de seguridad INLINE
+        // (incidental, no CTA). `fechaHora`/`urlRecuperar` no estaban declaradas: se declaran.
+        clave: "auth.password_cambiada.email",
+        canal: "EMAIL",
+        asunto: "Cambio de contraseña — {{fechaHora}}",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "La contraseña de esta cuenta en Protección Infantil se cambió el **{{fechaHora}}** (hora de Colombia).\n\n" +
+            "Si el cambio fue esperado, no hay que hacer nada.\n\n" +
+            "Si no se reconoce, conviene recuperar el acceso de inmediato y escribir a soporte: [recuperar el acceso]({{urlRecuperar}}).\n\n" +
+            "Este es un mensaje automático de seguridad. No contiene la contraseña ni enlaces de sesión.",
+        variablesSchema: schemaDe("fechaHora", "urlRecuperar"),
+        cta: null,
+        sinBoton: { motivo: "seguridad", nota: "confirmación de rutina: un botón grande sobre-dramatiza; el enlace es incidental" },
+        fuente: FORMA_AUTH,
+    },
+    {
+        // §9 (addendum v1.2) · COMPARTIDA (código SPEC-598 para cuenta OAuth que crea su clave; cualquier
+        // rol) → impersonal. Es un CÓDIGO: sin URL, sin botón, sin saludo (igual que codigo_verificacion).
+        clave: "auth.crear_password.codigo.email",
+        canal: "EMAIL",
+        asunto: "Código para crear la contraseña",
+        cuerpoMarkdown:
+            "El código para crear la contraseña de esta cuenta es:\n\n" +
+            "{{codigo}}\n\n" +
+            "Vence en {{vigenciaMinutos}} minutos. Si no se solicitó, se puede ignorar este correo: la cuenta seguirá entrando con Google.",
+        variablesSchema: schemaDe("codigo", "vigenciaMinutos"),
+        cta: null,
+        fuente: FORMA_AUTH,
     },
 ];
 
