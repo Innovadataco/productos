@@ -49,8 +49,9 @@ export const CAMPOS_INTERNOS_CITA = [
 ] as const;
 
 /**
- * @internal — expuesta para el test candado. SPEC-754: el contacto está CERRADO (la fuente
- * `contactoVisiblePorSesion` es `false`) y la excepción de reembolso MIGRÓ a la PQR (SPEC-752).
+ * @internal — expuesta para el test candado. SPEC-940: el padre ve el contacto del profesional en la
+ * dirección `padre_ve_profesional` tras consumir su 1.ª cita (la fuente `contactoVisiblePorSesion` lo
+ * decide; antes 754 lo cerraba `false` siempre). La excepción de reembolso MIGRÓ a la PQR (SPEC-752).
  * `_now`/`pagoAprobadoEn` quedan en la firma por compatibilidad de llamadores; ya no deciden.
  */
 export function debeExponerContacto(
@@ -85,9 +86,9 @@ export function debeExponerContacto(
     // tomó.
     // SPEC-940: set centralizado (misma condición que el bloqueo de la 2.ª cita → invariante visible⟺bloqueado).
     if (estadoPerfil !== null && ESTADOS_PERFIL_CONTACTO_CERRADO.includes(estadoPerfil)) return false;
-    // La visibilidad la decide la fuente única `contactoVisiblePorSesion` (hoy `false`, SPEC-754):
-    // el contacto está cerrado; el canal de la reunión es el enlace de la cita.
-    // SPEC-940: dirección PADRE→PROFESIONAL (el padre ve al profesional tras consumir su 1.ª cita).
+    // La visibilidad la decide la fuente única `contactoVisiblePorSesion`.
+    // SPEC-940: dirección PADRE→PROFESIONAL (el padre ve al profesional tras consumir su 1.ª cita;
+    // antes 754 la tenía cerrada `false` siempre). El canal de la reunión sigue siendo el enlace de la cita.
     if (contactoVisiblePorSesion(solicitud.estado, "padre_ve_profesional")) return true;
     // SPEC-754 · D-1: la excepción de REEMBOLSO (`VENCIDA_SIN_RESPUESTA` + 48h) se RETIRÓ — MIGRÓ a
     // la PQR (SPEC-752, motivo 2 «Un pago o un cobro»). NO sobra: un reembolso es asunto padre↔PI

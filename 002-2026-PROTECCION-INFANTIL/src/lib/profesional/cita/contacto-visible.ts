@@ -19,9 +19,12 @@ import { primeraCitaConsumida } from "./segunda-cita";
  * decida el contacto por su cuenta.
  *
  * ── LA REGLA (parametrizable acá, y SOLO acá) ────────────────────────────────────────────
- * SPEC-754: el contacto mutuo está CERRADO. Ya NO se expone el correo/teléfono de ninguna parte,
- * en NINGÚN estado (`false` siempre). El porqué —para que la próxima persona que lea la línea no
- * la reabra sin contexto—:
+ * SPEC-940 reabre la visibilidad POR DIRECCIÓN (antes 754 la cerraba en AMBAS, `false` siempre):
+ *   · PADRE→PROFESIONAL (`padre_ve_profesional`): el padre ve el contacto del profesional SOLO tras
+ *     CONSUMIR su 1.ª cita con él (`ESTADOS_PRIMERA_CITA_CONSUMIDA`) — antes estaba cerrado.
+ *   · PROFESIONAL→PADRE (`profesional_ve_padre`): SIGUE CERRADA (`false` siempre) — eso de 754 vale.
+ * El porqué de que la dirección profesional→padre siga cerrada —para que quien lea la línea no la
+ * reabra sin contexto—:
  *   · el CANAL de la reunión es el ENLACE de la cita, que pone el operador (SPEC-750) — no el correo;
  *   · el RECURSO de plata (reembolso) va por la PQR (SPEC-752, motivo 2 «Un pago o un cobro»), que
  *     deja constancia de CUÁNDO se reclamó — un correo directo no, y sin esa fecha el plazo de
@@ -34,9 +37,10 @@ import { primeraCitaConsumida } from "./segunda-cita";
  * (cerrar antes deja al padre sin vía). Los prerrequisitos que exigía el destino (canal de
  * continuidad + vía de escalamiento, Ley 1090 art. 2 num. 5) los provee 752.
  *
- * La firma conserva `estado` (los tres llamadores lo pasan y una reapertura futura lo necesitaría),
- * pero HOY no decide: la puerta está cerrada. El candado `contacto-fuente-unica.candado.test.ts`
- * prueba el MECANISMO (la fuente manda); el VALOR (`false`) lo prueba `contacto-visible.test.ts`.
+ * La firma usa `estado`: en la dirección padre→profesional SÍ decide (reapertura de SPEC-940 por
+ * primera cita consumida); en profesional→padre la puerta sigue cerrada. El candado
+ * `contacto-fuente-unica.candado.test.ts` prueba el MECANISMO (la fuente manda); los VALORES por
+ * dirección los prueba `contacto-visible.test.ts`.
  */
 /**
  * Dirección de la visibilidad. SPEC-940 la hace EXPLÍCITA porque la fuente era simétrica y eso ocultaba una fuga:
