@@ -91,6 +91,10 @@ function violacionesNorma(c: CopyCanonico): string[] {
 /** (2)+(3) CTA: a solas en su párrafo, y el motor pinta UN botón hacia la variable declarada. */
 function violacionesDelCta(c: CopyCanonico, cta: CtaCopy, botones: string[]): string[] {
     const v: string[] = c.sinBoton ? ["declara botón Y exención de botón a la vez"] : [];
+    // SPEC-923 (VEREDICTO CEO): la variable del botón va DECLARADA — la vista previa del panel admin
+    // (`variablesDeMuestra`) solo le da valor a lo declarado; sin ella el botón no se pinta en la previa.
+    const props = (c.variablesSchema as { properties?: Record<string, unknown> }).properties ?? {};
+    if (!(cta.variable in props)) v.push(`la variable del botón {{${cta.variable}}} no está declarada en variablesSchema`);
     const enlace = `[${cta.etiqueta}]({{${cta.variable}}})`;
     const i = c.cuerpoMarkdown.indexOf(enlace);
     if (i < 0) {
@@ -166,6 +170,9 @@ describe("SPEC-922 · registro único de copys canónicos", () => {
             "consentimiento.aceptado.email":
                 "Hola {{nombreUsuario}},\n\nConfirmamos que aceptaste la versión {{version}} de los términos de tratamiento de datos personales el {{fechaAceptacion}}.\n\nPuedes consultar tu expediente y configuración en {{urlDashboard}}.",
         };
+        // SPEC-923 · auth: la recuperación tenía `{{url}}` cruda (CTA sin botón).
+        viejos["auth.password_recuperacion.email"] =
+            "Hola,\n\nRecibimos una solicitud para restablecer tu contraseña. Haz clic en el siguiente enlace:\n\n{{url}}\n\nEste enlace expira en 1 hora y solo puede usarse una vez. Si no solicitaste este cambio, ignora este mensaje.";
         for (const [clave, cuerpoViejo] of Object.entries(viejos)) {
             const entrada = CORREOS_CANONICOS.find((c) => c.clave === clave);
             expect(entrada, `${clave} en el registro`).toBeDefined();
@@ -173,6 +180,23 @@ describe("SPEC-922 · registro único de copys canónicos", () => {
             expect(v.some((x) => x.startsWith("URL cruda")), `${clave}: ${JSON.stringify(v)}`).toBe(true);
             expect(v.some((x) => x.startsWith("el motor no pinta UN botón")), `${clave}: ${JSON.stringify(v)}`).toBe(true);
         }
+    });
+
+    it("control POSITIVO (SPEC-923): el copy viejo de password_cambiada (URL cruda, sin enlace) da ROJO", () => {
+        const entrada = CORREOS_CANONICOS.find((c) => c.clave === "auth.password_cambiada.email");
+        expect(entrada).toBeDefined();
+        const viejo =
+            "Hola,\n\nTu contraseña en Protección Infantil fue cambiada el **{{fechaHora}}** (hora de Colombia).\n\nSi fuiste tú, no necesitas hacer nada.\n\nSi **no fuiste tú**, recupera tu acceso de inmediato en {{urlRecuperar}} y escribe a soporte.\n\nEste es un mensaje automático de seguridad. No contiene tu contraseña ni enlaces de sesión.";
+        const v = violacionesDeForma({ ...entrada!, cuerpoMarkdown: viejo });
+        expect(v).toContain("URL cruda en el cuerpo: {{urlRecuperar}}");
+    });
+
+    it("control POSITIVO (SPEC-923): la variable del botón sin declarar da ROJO", () => {
+        const conBoton = CORREOS_CANONICOS.find((c) => c.clave === "auth.password_recuperacion.email");
+        expect(conBoton).toBeDefined();
+        expect(violacionesDeForma({ ...conBoton!, variablesSchema: { type: "object" } })).toEqual([
+            "la variable del botón {{url}} no está declarada en variablesSchema",
+        ]);
     });
 
     describe("soporta los casos que vienen (fixtures sintéticos, MISMO verificador)", () => {
@@ -195,7 +219,7 @@ describe("SPEC-922 · registro único de copys canónicos", () => {
             canal: "EMAIL",
             asunto: "{{asunto}}",
             cuerpoMarkdown: "{{cuerpo}}\n\nIngresa a tu panel para ver el contexto completo:\n\n[Ir a mi panel]({{urlPanel}})",
-            variablesSchema: {},
+            variablesSchema: { type: "object", properties: { cuerpo: {}, asunto: {}, urlPanel: {} } },
             cta: { etiqueta: "Ir a mi panel", variable: "urlPanel" },
             variablesOpacas: ["cuerpo", "asunto"],
             fuente: "fixture",

@@ -911,4 +911,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-977 (I-459): la política nginx del guard deja pasar solo start/stop/restart de los 12
     // pi-* (== whitelist del adapter) y GET containers/json; todo lo demás 403. Mutación. Puro.
     "scripts/ci/docker-guard-politica.candado.test.ts",
+    // SPEC-923: COBERTURA del barrido — registro ∪ pendientes cubre todo evento emitido; ratchet de pendientes. Puro.
+    "prisma/correos-canonicos.cobertura.candado.test.ts",
 ];

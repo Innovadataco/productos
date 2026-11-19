@@ -20,10 +20,13 @@ import * as path from "node:path";
 import type { PrismaClient } from "@prisma/client";
 import { describe, it, expect } from "vitest";
 import { CORREOS_CANONICOS } from "../prisma/correos-canonicos.seed-data";
+import { COPYS_HUERFANOS, COPYS_PENDIENTES } from "../prisma/correos-canonicos.pendientes";
 import {
     corregirCorreosCanonicos,
     correrModo,
     detalleDeFila,
+    escanearCoberturaViva,
+    mergeSchemaAditivo,
     lineaDeAviso,
     parsearArgsCorrector,
     type ResultadoCorrectorCopys,
@@ -80,7 +83,8 @@ function filasViejas(): Record<string, Fila> {
 function filasCanonicas(): Record<string, Fila> {
     const r: Record<string, Fila> = {};
     for (const c of CORREOS_CANONICOS) {
-        r[c.clave] = { id: `id-${c.clave}`, canal: c.canal, asunto: c.asunto ?? null, cuerpoMarkdown: c.cuerpoMarkdown, ...NO_COPY };
+        // Canónica de verdad: copy Y schema del registro (si no, el merge aditivo la vería desactualizada).
+        r[c.clave] = { id: `id-${c.clave}`, canal: c.canal, asunto: c.asunto ?? null, cuerpoMarkdown: c.cuerpoMarkdown, ...NO_COPY, variablesSchema: c.variablesSchema };
     }
     return r;
 }
@@ -104,15 +108,18 @@ describe("SPEC-922 · corrector in-place data-driven de copys canónicos", () =>
         const editada = CLAVES[0]!;
         filas[editada] = { ...filas[editada]!, cuerpoMarkdown: "Cuerpo que editó el admin", version: 3, actualizadaPor: "admin-1" };
         const r = await corregirCorreosCanonicos(fakeDb(filas).db, { dryRun: true });
-        expect(r.desactualizadas).toEqual([{ clave: editada, id: `id-${editada}`, campos: ["cuerpo"], version: 3, editadaEnPanel: true }]);
+        expect(r.desactualizadas).toEqual([
+            { clave: editada, id: `id-${editada}`, campos: ["cuerpo"], variablesNuevas: [], version: 3, editadaEnPanel: true },
+        ]);
         expect(detalleDeFila(r.desactualizadas[0]!)).toContain("EDITADA EN PANEL");
         // Sin edición de panel (desfase del seed), no se rotula como edición.
         const viejas = await corregirCorreosCanonicos(fakeDb(filasViejas()).db, { dryRun: true });
         expect(viejas.desactualizadas.every((d) => !d.editadaEnPanel)).toBe(true);
-        expect(viejas.desactualizadas[0]!.campos).toEqual(["asunto", "cuerpo"]);
+        // La fila vieja trae un schema sin `properties` → el merge aditivo también la marca.
+        expect(viejas.desactualizadas[0]!.campos).toEqual(["asunto", "cuerpo", "schema"]);
     });
 
-    it("--confirm: trae cada fila al copy canónico y PRESERVA activa/schema/canal/version", async () => {
+    it("--confirm: trae cada fila al copy canónico, PRESERVA activa/canal/version y el schema solo GANA claves", async () => {
         const filas = filasViejas();
         const r = await corregirCorreosCanonicos(fakeDb(filas).db, { dryRun: false });
         expect(r.corregidas).toBe(CORREOS_CANONICOS.length);
@@ -122,7 +129,12 @@ describe("SPEC-922 · corrector in-place data-driven de copys canónicos", () =>
             expect(fila.asunto).toBe(c.asunto ?? null); // IN_APP queda sin asunto
             expect(fila.cuerpoMarkdown).toBe(c.cuerpoMarkdown);
             expect(fila.canal).toBe(c.canal);
-            expect(fila.variablesSchema).toEqual(NO_COPY.variablesSchema);
+            // Merge aditivo: lo que ya estaba queda (el centinela) y se ganan las variables del canónico.
+            const schema = fila.variablesSchema as Record<string, unknown>;
+            expect(schema.centinela).toBe("schema-de-prod");
+            expect(Object.keys((schema.properties as Record<string, unknown>) ?? {}).sort()).toEqual(
+                Object.keys((c.variablesSchema.properties as Record<string, unknown>) ?? {}).sort()
+            );
             expect(fila.activa).toBe(false); // desactualizada E inactiva: se corrige el copy, sigue inactiva
             expect(fila.version).toBe(NO_COPY.version);
         }
@@ -132,6 +144,41 @@ describe("SPEC-922 · corrector in-place data-driven de copys canónicos", () =>
         const filas = filasCanonicas(); // activa=false en todas
         await corregirCorreosCanonicos(fakeDb(filas).db, { dryRun: false });
         for (const c of CLAVES) expect(filas[c]!.activa).toBe(false);
+    });
+
+    it("SCHEMA ADITIVO (AJUSTE CEO): la fila sin la variable del botón la GANA; los extras del admin y `activa` quedan", async () => {
+        const conBoton = CORREOS_CANONICOS.find((c) => c.cta)!;
+        const filas = filasCanonicas();
+        // Fila viva con el copy canónico pero el schema viejo: sin la variable del botón y con un extra del admin.
+        filas[conBoton.clave] = {
+            ...filas[conBoton.clave]!,
+            variablesSchema: { type: "object", properties: { notaAdmin: { type: "string", description: "del admin" } }, extraAdmin: true },
+            activa: false,
+        };
+        const dry = await corregirCorreosCanonicos(fakeDb(filas).db, { dryRun: true });
+        expect(dry.desactualizadas.map((d) => [d.clave, d.campos])).toEqual([[conBoton.clave, ["schema"]]]);
+        expect(dry.desactualizadas[0]!.variablesNuevas).toContain(conBoton.cta!.variable);
+        expect(detalleDeFila(dry.desactualizadas[0]!)).toMatch(/schema \+\d+ \(/);
+
+        await corregirCorreosCanonicos(fakeDb(filas).db, { dryRun: false });
+        const fila = filas[conBoton.clave]!;
+        const schema = fila.variablesSchema as { properties: Record<string, unknown>; extraAdmin: boolean };
+        expect(schema.properties[conBoton.cta!.variable], "la gana con --confirm").toBeDefined();
+        expect(schema.properties.notaAdmin, "el extra del admin queda intacto").toEqual({ type: "string", description: "del admin" });
+        expect(schema.extraAdmin).toBe(true);
+        expect(fila.activa, "`activa` intacta").toBe(false);
+        // Y la 2ª corrida ya no tiene nada que agregar.
+        const segunda = await corregirCorreosCanonicos(fakeDb(filas).db, { dryRun: true });
+        expect(segunda.desactualizadas).toEqual([]);
+    });
+
+    it("mergeSchemaAditivo: nunca quita ni cambia una clave existente", () => {
+        const canon = { type: "object", properties: { url: { type: "string" }, nombre: { type: "string" } } };
+        const r = mergeSchemaAditivo({ type: "object", properties: { nombre: { type: "number", custom: 1 } } }, canon);
+        expect(r.nuevas).toEqual(["url"]);
+        expect(r.schema).toEqual({ type: "object", properties: { nombre: { type: "number", custom: 1 }, url: { type: "string" } } });
+        expect(mergeSchemaAditivo(canon, canon).nuevas).toEqual([]); // idempotente
+        expect(mergeSchemaAditivo(null, canon).nuevas).toEqual(["url", "nombre"]); // fila sin schema: gana todo
     });
 
     it("IDEMPOTENTE: sobre filas ya canónicas, 0 desactualizadas y 0 escrituras", async () => {
@@ -187,7 +234,7 @@ describe("SPEC-922 · corrector in-place data-driven de copys canónicos", () =>
     it("línea del aviso: N > 0 manda a correr el corrector; 0 lo dice; fallas se cuentan", () => {
         const r = (n: number, fallidas = 0): ResultadoCorrectorCopys => ({
             encontradas: 3,
-            desactualizadas: Array.from({ length: n }, (_, i) => ({ clave: `k${i}`, id: `i${i}`, campos: ["cuerpo"], version: 1, editadaEnPanel: false })),
+            desactualizadas: Array.from({ length: n }, (_, i) => ({ clave: `k${i}`, id: `i${i}`, campos: ["cuerpo"], variablesNuevas: [], version: 1, editadaEnPanel: false })),
             clavesSinFila: [],
             corregidas: 0,
             fallidas: Array.from({ length: fallidas }, (_, i) => ({ clave: `f${i}`, error: "x" })),
@@ -237,5 +284,22 @@ describe("SPEC-922 · deploy-prod.sh usa el corrector SOLO como detector de deri
 
     it("deploy-prod.sh: aviso blando, después de «DEPLOY VERIFICADO», nunca --confirm", () => {
         expect(problemasDelDeploy(DEPLOY)).toEqual([]);
+    });
+});
+
+describe("SPEC-923 · guardián blando de cobertura contra la tabla viva (escanearCoberturaViva)", () => {
+    const dbCon = (claves: string[]) =>
+        ({ notificacionPlantilla: { findMany: async () => claves.map((clave) => ({ clave })) } }) as unknown as Parameters<
+            typeof escanearCoberturaViva
+        >[0];
+
+    it("una clave viva fuera de registro ∪ pendientes ∪ huérfanas → la reporta", async () => {
+        const huecos = await escanearCoberturaViva(dbCon(["clave.fantasma.email"]));
+        expect(huecos).toEqual(["plantilla viva sin cubrir: «clave.fantasma.email» (ni registro, ni PENDIENTES, ni HUERFANAS)"]);
+    });
+
+    it("las claves declaradas (registro + pendientes + huérfanas) NO se reportan", async () => {
+        const vivas = [CORREOS_CANONICOS[0]!.clave, COPYS_PENDIENTES[0]!.clave, COPYS_HUERFANOS[0]!.clave];
+        expect(await escanearCoberturaViva(dbCon(vivas))).toEqual([]);
     });
 });
