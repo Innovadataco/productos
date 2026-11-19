@@ -118,6 +118,30 @@ export class IdentificadorIntegranteComiteRepository {
         });
     }
 
+    /**
+     * SPEC-932 · edición (valor/tipo/plataforma) del identificador del integrante. Pertenencia DOBLE: el
+     * `colegioId` de la sesión Y el `integranteId` de la ruta — un id de otro integrante (o de otro colegio)
+     * da 404, no edita.
+     */
+    async actualizar(
+        colegioId: string,
+        integranteId: string,
+        id: string,
+        datos: Pick<DatosIdentificadorIntegranteComite, "tipo" | "valor" | "plataformaId">,
+    ): Promise<IdentificadorIntegranteComiteConPlataforma> {
+        const { count } = await this.db.identificadorIntegranteComite.updateMany({
+            where: { id, colegioId, integranteId },
+            data: { tipo: datos.tipo, valor: datos.valor, plataformaId: datos.plataformaId ?? null },
+        });
+        if (count === 0) {
+            throw new AppError("Identificador no encontrado", ERROR_CODES.NOT_FOUND, 404);
+        }
+        return this.db.identificadorIntegranteComite.findUniqueOrThrow({
+            where: { id },
+            include: INCLUDE_PLATAFORMA,
+        });
+    }
+
     async cambiarEstado(
         colegioId: string,
         id: string,

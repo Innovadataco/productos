@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { SkeletonLista } from "@/components/ui/skeletons";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { Modal } from "@/components/ui/Modal";
+import {
+    IdentificadoresParaAlertas,
+    type ApiIdentificadores,
+    type DatosIdentificador,
+    type IdentificadorAlerta,
+} from "@/components/modules/colegio/identificadores/IdentificadoresParaAlertas";
 
 type Profesor = {
     id: string;
@@ -21,71 +23,30 @@ type Profesor = {
     estado: string;
 };
 
-type Identificador = {
-    id: string;
-    tipo: string;
-    valor: string;
-    plataformaId: string | null;
-    plataforma: { id: string; clave: string; nombre: string } | null;
-    estado: string;
-};
-
-type Plataforma = { id: string; clave: string; nombre: string };
-
-type Mensaje = { type: "success" | "error"; text: string } | null;
-
-const IDENTIFICADOR_VACIO = { valor: "", plataformaId: "" };
-
-/**
- * SPEC-874 (I-415) · El AVISO bajo el selector de plataformas, derivado FUERA del render (mantiene la
- * complejidad del componente y hace la lógica testeable). El ERROR tiene su propia caja ámbar aparte; acá
- * solo el aviso neutro de «cargando» vs «cargado-vacío» (200 con lista vacía): no son el mismo estado.
- */
-function hintCargaPlataformas(errorPlataformas: boolean, plataformasCargadas: boolean, cantidad: number): string | null {
-    if (errorPlataformas) return null; // el error va en su caja ámbar, no en el aviso neutro
-    if (!plataformasCargadas) return "Cargando plataformas… el guardado se habilita cuando estén disponibles.";
-    if (cantidad === 0) return "No hay plataformas disponibles en este momento."; // 200 vacío → neutro, sin reintento
-    return null;
-}
-
 export default function ProfesorDetallePageClient({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const [profesorId, setProfesorId] = useState<string | null>(null);
     const [profesor, setProfesor] = useState<Profesor | null>(null);
-    const [identificadores, setIdentificadores] = useState<Identificador[]>([]);
-    const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
-    const [errorPlataformas, setErrorPlataformas] = useState(false);
-    // SPEC-874 (I-415): distingue «cargando» (aún no respondió) de «cargado-vacío» (200 con lista vacía).
-    // `plataformas.length === 0` servía para las DOS cosas → un 200 vacío diría «Cargando…» para siempre.
-    const [plataformasCargadas, setPlataformasCargadas] = useState(false);
+    const [identificadores, setIdentificadores] = useState<IdentificadorAlerta[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [message, setMessage] = useState<Mensaje>(null);
-    const [modalOpen, setModalOpen] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [nuevo, setNuevo] = useState(IDENTIFICADOR_VACIO);
-    const [editando, setEditando] = useState<Identificador | null>(null);
 
     useEffect(() => {
         params.then((p) => {
             setProfesorId(p.id);
             cargar(p.id);
         });
-        void cargarPlataformas();
     }, [params]);
 
-    // /api/plataformas responde { plataformas: [...] }; error visible con reintento (SPEC-173, H03).
-    async function cargarPlataformas() {
+    // SPEC-932: recarga SOLO los identificadores, sin pasar a skeleton — el componente no se desmonta y conserva
+    // su mensaje de éxito tras guardar.
+    async function recargarIdentificadores(id: string) {
         try {
-            const res = await fetch("/api/plataformas", { credentials: "include" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data: unknown = await res.json();
-            const lista = (data as { plataformas?: unknown }).plataformas;
-            setPlataformas(Array.isArray(lista) ? (lista as Plataforma[]) : []);
-            setErrorPlataformas(false);
-            setPlataformasCargadas(true); // SPEC-874: la llamada RESPONDIÓ (200) — ya no es «cargando», aunque venga vacía
+            const res = await fetch(`/api/colegio/profesores/${id}/identificadores`, { credentials: "include" });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) setIdentificadores(data.identificadores || []);
         } catch {
-            setErrorPlataformas(true);
+            // la próxima carga completa lo reintenta; el guardado ya se confirmó en el componente
         }
     }
 
@@ -118,76 +79,21 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
         }
     }
 
-    function abrirNuevo() {
-        setEditando(null);
-        setNuevo(IDENTIFICADOR_VACIO);
-        setModalOpen(true);
+    // SPEC-932 · adaptador del profesor. El alta NO acepta `plataformaId: null` (se omite); la edición sí (limpia).
+    function cuerpoProfesor(d: DatosIdentificador, edicion: boolean): Record<string, unknown> {
+        return {
+            valor: d.valor,
+            ...(d.plataformaId ? { plataformaId: d.plataformaId } : edicion ? { plataformaId: null } : {}),
+            ...(d.confirmarCompartido ? { confirmarCompartido: true } : {}),
+        };
     }
-
-    function abrirEditar(identificador: Identificador) {
-        setEditando(identificador);
-        setNuevo({ valor: identificador.valor, plataformaId: identificador.plataformaId ?? "" });
-        setModalOpen(true);
-    }
-
-    async function guardar() {
-        if (!profesorId || !nuevo.valor.trim()) return;
-        setSaving(true);
-        setMessage(null);
-        try {
-            const url = editando
-                ? `/api/colegio/identificadores-profesor/${editando.id}`
-                : `/api/colegio/profesores/${profesorId}/identificadores`;
-            const res = await fetch(url, {
-                method: editando ? "PATCH" : "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    valor: nuevo.valor.trim(),
-                    ...(nuevo.plataformaId ? { plataformaId: nuevo.plataformaId } : {}),
-                }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) {
-                setModalOpen(false);
-                setNuevo(IDENTIFICADOR_VACIO);
-                setEditando(null);
-                setMessage({ type: "success", text: editando ? "Identificador actualizado" : "Identificador agregado" });
-                await cargar(profesorId);
-            } else {
-                setMessage({ type: "error", text: data?.error?.message || "Error guardando identificador" });
-            }
-        } catch {
-            setMessage({ type: "error", text: "Error de red guardando identificador" });
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    async function toggleEstado(identificador: Identificador) {
-        if (!profesorId) return;
-        const nuevoEstado = identificador.estado === "activo" ? "inactivo" : "activo";
-        setMessage(null);
-        try {
-            const res = await fetch(`/api/colegio/identificadores-profesor/${identificador.id}/estado`, {
-                method: "PATCH",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(nuevoEstado),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) {
-                setMessage({ type: "success", text: `Identificador ${nuevoEstado === "activo" ? "activado" : "desactivado"}` });
-                await cargar(profesorId);
-            } else {
-                setMessage({ type: "error", text: data?.error?.message || "Error cambiando estado" });
-            }
-        } catch {
-            setMessage({ type: "error", text: "Error de red cambiando estado" });
-        }
-    }
-
-    const hintPlataformas = hintCargaPlataformas(errorPlataformas, plataformasCargadas, plataformas.length);
+    const enviar = (url: string, method: "POST" | "PATCH", body: unknown) =>
+        fetch(url, { method, credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const apiIdentificadores: ApiIdentificadores = {
+        crear: (d) => enviar(`/api/colegio/profesores/${profesorId}/identificadores`, "POST", cuerpoProfesor(d, false)),
+        editar: (i, d) => enviar(`/api/colegio/identificadores-profesor/${i.id}`, "PATCH", cuerpoProfesor(d, true)),
+        cambiarEstado: (i, estado) => enviar(`/api/colegio/identificadores-profesor/${i.id}/estado`, "PATCH", estado),
+    };
 
     return (
         <div className="min-h-screen bg-page">
@@ -207,20 +113,8 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
                                 </Badge>
                             )}
                         </div>
-                        <Button onClick={abrirNuevo}>Nuevo identificador</Button>
                     </div>
 
-                    {message && (
-                        <div
-                            className={`rounded-xl p-4 text-sm ${
-                                message.type === "error"
-                                    ? "bg-rubi/10 text-estado-rubi dark:bg-rubi/20"
-                                    : "bg-pino/10 text-estado-pino dark:bg-pino/20"
-                            }`}
-                        >
-                            {message.text}
-                        </div>
-                    )}
 
                     {loading ? (
                         <SkeletonLista />
@@ -242,109 +136,16 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
                                 </div>
                             </GlassCard>
 
-                            <GlassCard>
-                                <h2 className="text-lg font-semibold text-body">Identificadores para alertas</h2>
-                                {identificadores.length === 0 ? (
-                                    <EmptyState
-                                        title="No hay identificadores"
-                                        description="Agregue un identificador para usar en futuras alertas."
-                                        action={<Button onClick={abrirNuevo}>Agregar identificador</Button>}
-                                    />
-                                ) : (
-                                    <div className="mt-4 overflow-x-auto">
-                                        <table className="w-full text-left text-sm">
-                                            <thead className="border-b border-tinta/15">
-                                                <tr className="text-subtle">
-                                                    <th className="pb-3 font-medium">Valor</th>
-                                                    <th className="pb-3 font-medium">Tipo</th>
-                                                    <th className="pb-3 font-medium">Plataforma</th>
-                                                    <th className="pb-3 font-medium">Estado</th>
-                                                    <th className="pb-3 font-medium text-right">Acciones</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-tinta/10">
-                                                {identificadores.map((identificador) => (
-                                                    <tr key={identificador.id} className="align-top">
-                                                        <td className="py-3 pr-3 font-medium text-body">{identificador.valor}</td>
-                                                        <td className="py-3 pr-3 text-muted">{identificador.tipo}</td>
-                                                        <td className="py-3 pr-3 text-muted">{identificador.plataforma?.nombre || "—"}</td>
-                                                        <td className="py-3 pr-3">
-                                                            <Badge variant={identificador.estado === "activo" ? "success" : "neutral"}>
-                                                                {identificador.estado === "activo" ? "Activo" : "Inactivo"}
-                                                            </Badge>
-                                                        </td>
-                                                        <td className="py-3 text-right">
-                                                            <span className="inline-flex flex-wrap justify-end gap-2">
-                                                                <Button
-                                                                    variant="outline"
-                                                                    className="px-3 py-1.5 text-xs"
-                                                                    onClick={() => abrirEditar(identificador)}
-                                                                >
-                                                                    Editar
-                                                                </Button>
-                                                                <Button
-                                                                    variant={identificador.estado === "activo" ? "danger" : "secondary"}
-                                                                    className="px-3 py-1.5 text-xs"
-                                                                    onClick={() => toggleEstado(identificador)}
-                                                                >
-                                                                    {identificador.estado === "activo" ? "Desactivar" : "Activar"}
-                                                                </Button>
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </GlassCard>
+                            {/* SPEC-932: el patrón ÚNICO (canon de la FORMA SPEC-931 §1), compartido por los 4 sujetos. */}
+                            <IdentificadoresParaAlertas
+                                identificadores={identificadores}
+                                api={apiIdentificadores}
+                                onCambio={() => (profesorId ? recargarIdentificadores(profesorId) : undefined)}
+                            />
                         </>
                     ) : null}
                 </div>
             </main>
-
-            <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editando ? "Editar identificador" : "Agregar identificador"}>
-                <div className="space-y-4">
-                    <Input
-                        label="Valor"
-                        required
-                        maxLength={255}
-                        value={nuevo.valor}
-                        onChange={(e) => setNuevo({ ...nuevo, valor: e.target.value })}
-                        placeholder="Ej. +573001234567, correo@dominio.com o nick"
-                    />
-                    {/* SPEC-874 (I-415): falla TRANSITORIA (el endpoint no tiene precondición ni auth → su
-                        única falla es de red/500). Va en ÁMBAR operativo, NUNCA rubí (D-120: el rubí se reserva
-                        a la criticidad de protección de un menor). Voz «usted» (colegio). «Reintentar» SE QUEDA:
-                        acá reintentar es la acción correcta; el «suele ser temporal» nombra la causa probable. */}
-                    {errorPlataformas && (
-                        <div className="flex items-center justify-between gap-3 rounded-xl bg-ambar/10 p-3 text-sm text-estado-ambar dark:bg-ambar/20">
-                            <span>No pudimos cargar las plataformas. Suele ser temporal.</span>
-                            <Button variant="outline" className="px-3 py-1.5 text-xs" onClick={cargarPlataformas}>
-                                Reintentar
-                            </Button>
-                        </div>
-                    )}
-                    <Select
-                        label="Plataforma"
-                        options={[{ value: "", label: "Ninguna / General" }, ...plataformas.map((p) => ({ value: p.id, label: p.nombre }))]}
-                        value={nuevo.plataformaId}
-                        onChange={(e) => setNuevo({ ...nuevo, plataformaId: e.target.value })}
-                    />
-                    {/* SPEC-874 (I-415) §2: «cargando» (aún no respondió) ≠ «cargado-vacío» (200 vacío → NEUTRO,
-                        sin reintentar: la salida es de operación, sembrar el catálogo). La decisión vive en
-                        `hintCargaPlataformas` (fuera del render); el error tiene su propia caja ámbar arriba. */}
-                    {hintPlataformas && <p className="text-xs text-muted">{hintPlataformas}</p>}
-                    <div className="flex items-center gap-3">
-                        <Button onClick={guardar} isLoading={saving} disabled={plataformas.length === 0}>
-                            Guardar
-                        </Button>
-                        <Button variant="outline" onClick={() => setModalOpen(false)}>
-                            Cancelar
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
         </div>
     );
 }
