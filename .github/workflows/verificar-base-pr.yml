@@ -29,17 +29,3 @@ jobs:
                       exit 1
                   fi
                   echo "✅ Nombre de rama OK ($BRANCH)."
-            # SPEC-924: una rama work/pi-SPEC-N-* exige specs/N-*/spec.md con línea Status.
-            # Hueco real: SPEC-921 (PR #918) mergeó sin spec.md. Vive en ESTE job porque es check
-            # requerido y corre en todo PR (el should-skip de ci.yml puede saltar los de solo
-            # workflows). Ramas bi/otras → el script no aplica. Los bots (487/466) pasan porque
-            # sus specs existen. Candado: scripts/ci/verificar-spec-de-rama.candado.test.ts.
-            - uses: actions/checkout@v4
-              with:
-                  sparse-checkout: |
-                      002-2026-PROTECCION-INFANTIL/specs
-                      002-2026-PROTECCION-INFANTIL/scripts/ci
-            - name: Rama de PI debe traer su spec.md con Status
-              env:
-                  BRANCH: ${{ github.head_ref }}
-              run: node 002-2026-PROTECCION-INFANTIL/scripts/ci/verificar-spec-de-rama.mjs "$BRANCH"

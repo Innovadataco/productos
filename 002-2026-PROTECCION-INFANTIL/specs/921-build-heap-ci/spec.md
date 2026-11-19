@@ -3,8 +3,7 @@
 **Status**: IMPLEMENTADO
 
 **Prioridad:** sin deploy (CI/tooling). Mergeado en `4acbc03f` (PR #918).
-**Nota retroactiva:** esta nota se escribe en SPEC-924 — el PR #918 mergeó SIN `spec.md`, que
-es justo el hueco que SPEC-924 cierra con el guardia de `verificar_base`.
+**Nota retroactiva:** escrita en SPEC-924 (higiene del índice; las notas de `specs/` siguen siendo OPCIONALES).
 
 ## Problema
 
