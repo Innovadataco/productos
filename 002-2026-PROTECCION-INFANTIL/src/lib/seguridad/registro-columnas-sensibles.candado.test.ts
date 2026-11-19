@@ -111,33 +111,33 @@ describe("SPEC-765 · registro de columnas sensibles = espejo verificado de las 
         expect(infractoresReplicaBi(leerWhitelist()), "sensible-para-replica-bi pero aún en el whitelist = la dirección peligrosa").toEqual([]);
     });
 
-    // ── SPEC-929 · AuditLog.ipAddress/userAgent ──
-    // Control positivo con la publicación REAL de 006: se le mete ip/userAgent al canon de AuditLog (lo
-    // que haría una edición de 006) y el cruce TIENE que cazarlo. Muere con el defecto: si alguien quita
-    // las dos entradas del registro, el cruce deja de verlas y este test cae.
-    it("SPEC-929 · control positivo · meter AuditLog.ipAddress/userAgent en la lista PUBLICADA de 006 → el cruce lo caza (ROJO)", () => {
+    // ── SPEC-929 · las 5 columnas de AuditLog que 006 veta ──
+    // Control positivo con la publicación REAL de 006: se le mete CADA columna vetada al canon de AuditLog
+    // (lo que haría una edición de 006) y el cruce TIENE que cazarla. Muere con el defecto: si alguien quita
+    // una entrada del registro, el cruce deja de verla y este test cae nombrándola.
+    const VETADAS_AUDITLOG = ["ipAddress", "userAgent", "valorAnterior", "valorNuevo", "metadatos"] as const;
+
+    it("SPEC-929 · control positivo · meter cada columna vetada de AuditLog en la lista PUBLICADA de 006 → el cruce la caza (ROJO)", () => {
         const sql = readFileSync(WHITELIST_006, "utf8");
         const real = parsearWhitelist(sql);
         // Estado real (verificado por el CEO contra el catálogo de prod): AuditLog SÍ se publica, por lista de
-        // columnas, y ip/userAgent quedan afuera — la exclusión es por COLUMNA, no por tabla ausente.
+        // columnas, y las 5 quedan afuera — la exclusión es por COLUMNA, no por tabla ausente.
         expect(real.get("AuditLog")?.size ?? 0, "AuditLog debería estar publicada con lista de columnas").toBeGreaterThan(0);
-        expect(real.get("AuditLog")?.has("ipAddress")).toBe(false);
-        expect(real.get("AuditLog")?.has("userAgent")).toBe(false);
+        for (const col of VETADAS_AUDITLOG) expect(real.get("AuditLog")?.has(col), `AuditLog.${col} ya viaja a BI`).toBe(false);
 
         // Mutación: SOLO dentro del bloque canon (la lista que viaja), no en columnas_vetadas.
         const iCanon = sql.indexOf("canon text[][]");
         const iVetadas = sql.indexOf("columnas_vetadas text[][]");
         const bloque = sql.slice(iCanon, iVetadas);
-        const mutado = bloque.replace(/ARRAY\['AuditLog',\s*'([^']*)'\]/, (_m, cols: string) => `ARRAY['AuditLog', '${cols},ipAddress,userAgent']`);
+        const mutado = bloque.replace(/ARRAY\['AuditLog',\s*'([^']*)'\]/, (_m, cols: string) => `ARRAY['AuditLog', '${cols},${VETADAS_AUDITLOG.join(",")}']`);
         const inyectado = parsearWhitelist(sql.slice(0, iCanon) + mutado + sql.slice(iVetadas));
 
-        // La mutación tiene que haber pegado (si no, el «rojo» de abajo sería vacío).
-        expect(inyectado.get("AuditLog")?.has("ipAddress"), "la inyección no pegó en el canon de AuditLog").toBe(true);
-        expect(inyectado.get("AuditLog")?.has("userAgent"), "la inyección no pegó en el canon de AuditLog").toBe(true);
-
         const infractores = infractoresReplicaBi(inyectado);
-        expect(infractores.some((i) => i.startsWith("AuditLog.ipAddress ")), "publicar AuditLog.ipAddress debe dar ROJO").toBe(true);
-        expect(infractores.some((i) => i.startsWith("AuditLog.userAgent ")), "publicar AuditLog.userAgent debe dar ROJO").toBe(true);
+        for (const col of VETADAS_AUDITLOG) {
+            // La mutación tiene que haber pegado (si no, el «rojo» de abajo sería vacío).
+            expect(inyectado.get("AuditLog")?.has(col), `la inyección de ${col} no pegó en el canon de AuditLog`).toBe(true);
+            expect(infractores.some((i) => i.startsWith(`AuditLog.${col} `)), `publicar AuditLog.${col} debe dar ROJO`).toBe(true);
+        }
     });
 
     it("SPEC-929 · toda columna sensible-para-replica-bi EXISTE en su modelo del schema (el veto no apunta a una columna fantasma)", () => {
