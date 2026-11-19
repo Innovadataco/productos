@@ -13,7 +13,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearPaisCiudad } from "@/lib/reporte-test-utils";
-import { crearSolicitudCita } from "./cita.service";
+import { crearSolicitudCita, reprogramarPorPadre } from "./cita.service";
 import { MENSAJE_SEGUNDA_CITA_FUERA_DE_PI } from "./segunda-cita";
 import type { EstadoSolicitudCita } from "@prisma/client";
 
@@ -120,6 +120,30 @@ describe("SPEC-938 · PI intermedia solo la 1.ª cita con cada profesional", { t
         const otro = await seedProfesional(90_000);
         const nueva = await pedir(padre.id, otro.id, 5);
         expect(nueva.profesionalId).toBe(otro.id);
+    });
+
+    it("tras una CONFIRMADA: crear con ese profesional → 409, PERO reprogramar esa cita → OK (no se funden las rutas)", async () => {
+        // SPEC-938 (hallazgo 1, VEREDICTO CEO): la reprogramación va por `reprogramarPorPadre` (pago heredado),
+        // NO por `crearSolicitudCita`. El 409 de la 2.ª cita no debe tocarla.
+        const padre = await crearUsuario("PARENT");
+        const pro = await seedProfesional(120_000);
+        const primera = await pedir(padre.id, pro.id, 3);
+        // Dejarla CONFIRMADA (pago aprobado + confirmada por el profesional) para que sea reprogramable.
+        await prisma.solicitudCita.update({ where: { id: primera.id }, data: { estado: "CONFIRMADA", pagoAprobadoEn: new Date() } });
+
+        // Pedir OTRA cita con el mismo profesional por la vía normal → bloqueada.
+        await expect(pedir(padre.id, pro.id, 5)).rejects.toMatchObject({ statusCode: 409 });
+
+        // Reprogramar la confirmada → permitida (fila nueva que HEREDA el pago).
+        const nuevaFranja = await seedFranja(pro.id, 7);
+        const reprogramada = await reprogramarPorPadre({
+            padreUsuarioId: padre.id,
+            solicitudId: primera.id,
+            nuevaFranjaId: nuevaFranja.id,
+        });
+        expect(reprogramada.profesionalId).toBe(pro.id);
+        expect(reprogramada.pagoHeredadoDeId).toBe(primera.id);
+        expect((await prisma.solicitudCita.findUniqueOrThrow({ where: { id: primera.id } })).estado).toBe("REPROGRAMADA");
     });
 
     it("otro PADRE con el mismo profesional → permitido (la regla es por dupla padre × profesional)", async () => {

@@ -33,23 +33,27 @@ VEREDICTO CEO: (b) + (a), «1.ª cita» = la primera con ESE profesional.
 
 **PROVISIONAL** el mensaje de bloqueo (`segunda-cita.ts`) y la línea de tarifa informativa: los define Diseño.
 
-## Hallazgos (no corregidos; decisiones)
+## Hallazgos y su veredicto (CEO)
 
-- **Reprogramar pagado:** `reprogramarPorPadre` dice «Ya reprogramaste una vez con este profesional. La siguiente es
-  reserva y pago nuevos» (D-103(g): una gratis, la segunda se cobra). Si la cita está CONFIRMADA, esa «reserva nueva»
-  con el mismo profesional ahora se rechaza → el camino de la 2.ª reprogramación pagada queda cerrado.
-- **Panel del profesional:** `panel.service` muestra «El padre paga» = tarifa del profesional + % — falso según el
-  brief (el padre paga el precio estándar + %).
+- **Reprogramar NO se funde con el bloqueo (hallazgo 1 · FALSO POSITIVO):** `reprogramarPorPadre` crea la fila nueva
+  con `pagoHeredadoDeId`, que entra por la rama de pago heredado de `crearSolicitudCita` — ANTES del guardia de la
+  2.ª cita. Así una cita CONFIRMADA se puede reprogramar aunque pedir una NUEVA con ese profesional dé 409. El candado
+  `segunda-cita` lo fija (caso «crear → 409, reprogramar → OK») para que nadie funda las dos rutas.
+- **Panel del profesional (2) y tarjeta del directorio (3)** — superficies del MISMO defecto, scope de 938 por
+  VEREDICTO del CEO: `panel.service` muestra «El padre paga» = tarifa + % (el padre paga el ESTÁNDAR + %); la tarjeta
+  muestra «De la 2ª cita: $X» sin aclarar que PI no la cobra. El número del panel y el copy de ambas superficies
+  dependen de la FORMA que Diseño está definiendo (el CEO se la pidió) — se aplican junto con esa FORMA, no se
+  adivinan en una superficie 🔴. (Pre-existentes en main; 938 no las empeora.)
 - Pedidos duplicados en curso con el mismo profesional (`SIN_CONFIRMAR`/`PAGADA_PENDIENTE`) siguen permitidos (fuera
   de la regla del VEREDICTO).
-- La tarjeta del directorio conserva «De la 2ª cita en adelante: $X» sin la aclaración (espera el copy de Diseño).
 
 ## Candados
 
 - `src/lib/profesional/cita/segunda-cita.candado.test.ts` (integración, servicio real + BD): 2.ª con el mismo tras
   CONFIRMADA/CUMPLIDA/NO_ASISTIO_PADRE → 409, sin solicitud y franja libre · tras VENCIDA/REEMBOLSADA → permitida ·
   otro profesional → permitida · otro padre → permitida · tarifa 120.000 → se cobra 50.000 + 10 %. Mutación probada:
-  quitar el guardia → 3 rojos.
+  quitar el guardia → 3 rojos. Caso reprogramar: tras una CONFIRMADA, `crearSolicitudCita` con ese profesional → 409
+  pero `reprogramarPorPadre` de esa cita → OK (hereda el pago; la original queda REPROGRAMADA).
 - `cita.service.test.ts`: el test que exigía «sin override cae a la tarifa» se reescribió: sin precio estándar → 500,
   sin solicitud.
 - `src/components/modules/padre/profesionales/segunda-cita-perfil.candado.test.tsx` (unit): aviso y sin panel con cita
