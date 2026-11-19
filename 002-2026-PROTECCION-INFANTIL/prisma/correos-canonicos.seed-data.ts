@@ -96,6 +96,7 @@ function schemaDe(...variables: string[]): Record<string, unknown> {
 const FORMA_ALTA_COLEGIO =
     "Diseño · Gestión bb6384eb · FORMA-BOTON-Y-VOZ-CORREOS-ALTA-COLEGIO-2026-11-18 · SPEC-922";
 const FORMA_AUTH = "Diseño · Gestión a8a983e1 · FORMA-BARRIDO-01-FAMILIA-AUTH v1.1 · SPEC-923";
+const FORMA_BARRIDO_COLEGIO = "Diseño · Gestión 9b3ddbeb · FORMA-BARRIDO-03-FAMILIA-COLEGIO-2026-11-18 · SPEC-919";
 
 const FORMA_BIENVENIDA_FUSIONADA =
     "Diseño · Gestión c540eeac · FORMA-ONBOARDING-COLEGIO-CORREOS-Y-PASOS-2026-11-20 §A · SPEC-955";
@@ -292,6 +293,149 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         variablesSchema: schemaDe("codigo", "vigenciaMinutos"),
         cta: null,
         fuente: FORMA_AUTH,
+    },
+    // ── SPEC-919 · familia «colegio.*» (FORMA-BARRIDO-03) ───────────────────────
+    {
+        // §1 · usted (OK). Tono recomendación, NO orden (SPEC-380). CTA «Abrir el caso».
+        clave: "colegio.comite.recomendacion_informe.email",
+        canal: "EMAIL",
+        asunto: "El comité de convivencia recomienda emitir el informe del caso {{numeroCaso}}",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "El Comité de Convivencia de **{{nombreColegio}}** revisó el caso **{{numeroCaso}}** y le recomienda emitir el informe firmado.\n\n" +
+            "Esto es una recomendación — la decisión y la firma siguen siendo suyas.\n\n" +
+            "Abra el caso y revise el análisis del comité antes de emitir:\n\n" +
+            "[Abrir el caso]({{urlCaso}})",
+        variablesSchema: schemaDe("nombreColegio", "numeroCaso", "urlCaso"),
+        cta: { etiqueta: "Abrir el caso", variable: "urlCaso" },
+        fuente: FORMA_BARRIDO_COLEGIO,
+    },
+    {
+        // §2 · tú → usted (le llega al rector). CTA «Ir a mi panel». El aviso NO trae datos del reporte.
+        clave: "colegio.reporte_nuevo.email",
+        canal: "EMAIL",
+        asunto: "Le avisamos: tiene un reporte nuevo para revisar",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Le avisamos que llegó un reporte nuevo relacionado con su colegio. Ingrese a su panel para revisarlo:\n\n" +
+            "[Ir a mi panel]({{urlAlertas}})\n\n" +
+            "Este aviso no incluye datos del reporte; toda la información está en su panel.",
+        variablesSchema: schemaDe("urlAlertas"),
+        cta: { etiqueta: "Ir a mi panel", variable: "urlAlertas" },
+        fuente: FORMA_BARRIDO_COLEGIO,
+    },
+    {
+        // §3 · tú → usted. CTA «Ir a mi panel». Conteos, sin nombres ni datos.
+        clave: "colegio.curso.umbral.email",
+        canal: "EMAIL",
+        asunto: "Le avisamos: un curso de su colegio acumula reportes",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Le avisamos que un curso de su colegio acumula {{reportes}} reportes en los últimos {{dias}} días. Ingrese a su panel para ver el panorama completo:\n\n" +
+            "[Ir a mi panel]({{urlPanel}})\n\n" +
+            "Este aviso no incluye nombres ni datos de los reportes; toda la información está en su panel.",
+        variablesSchema: schemaDe("reportes", "dias", "urlPanel"),
+        cta: { etiqueta: "Ir a mi panel", variable: "urlPanel" },
+        fuente: FORMA_BARRIDO_COLEGIO,
+    },
+    {
+        // §4 · tú → usted. CTA «Ir a mi panel». Sin el nombre del estudiante.
+        clave: "colegio.estudiante.repetido.email",
+        canal: "EMAIL",
+        asunto: "Le avisamos: un estudiante de su colegio acumula reportes",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Le avisamos que un estudiante de su colegio acumula {{reportes}} reportes en los últimos {{dias}} días. Ingrese a su panel para revisar el caso:\n\n" +
+            "[Ir a mi panel]({{urlAlertas}})\n\n" +
+            "Este aviso no incluye el nombre del estudiante ni datos de los reportes; toda la información está en su panel.",
+        variablesSchema: schemaDe("reportes", "dias", "urlAlertas"),
+        cta: { etiqueta: "Ir a mi panel", variable: "urlAlertas" },
+        fuente: FORMA_BARRIDO_COLEGIO,
+    },
+    {
+        // §5 · tú → usted. CTA «Ir a mi panel». `{{cuerpo}}` = conteos armados aguas arriba (OPACO).
+        clave: "colegio.resumen_semanal.email",
+        canal: "EMAIL",
+        asunto: "Su resumen de la semana",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "{{cuerpo}}\n\n" +
+            "Ingrese a su panel para ver el detalle:\n\n" +
+            "[Ir a mi panel]({{urlPanel}})\n\n" +
+            "Este resumen solo muestra conteos; toda la información está en su panel.",
+        variablesSchema: schemaDe("cuerpo", "urlPanel"),
+        cta: { etiqueta: "Ir a mi panel", variable: "urlPanel" },
+        variablesOpacas: ["cuerpo"],
+        fuente: FORMA_BARRIDO_COLEGIO,
+    },
+    {
+        // §6 · usted (OK). CTA «Ir a mi panel».
+        clave: "colegio.alerta.pendientes.email",
+        canal: "EMAIL",
+        asunto: "Tiene {{novedadTexto}} para revisar en su panel de colegio",
+        cuerpoMarkdown:
+            "Tiene {{novedadTexto}} para revisar en su panel de colegio. Ingrese y valide:\n\n" +
+            "[Ir a mi panel]({{urlAlertas}})",
+        variablesSchema: schemaDe("novedadTexto", "urlAlertas"),
+        cta: { etiqueta: "Ir a mi panel", variable: "urlAlertas" },
+        fuente: FORMA_BARRIDO_COLEGIO,
+    },
+    {
+        // §8 · tú → usted · credenciales. CTA «Entrar a mi cuenta». VIVO (api/admin/colegios · reenviar-email,
+        // evento `colegio.creado`). `Hola {{nombreColegio}}` = nombre del colegio (no correo) → saludo seguro.
+        clave: "colegio.creado.email",
+        canal: "EMAIL",
+        asunto: "Su cuenta institucional en Protección Infantil está lista",
+        cuerpoMarkdown:
+            "Hola {{nombreColegio}},\n\n" +
+            "Se registró su institución en Protección Infantil.\n\n" +
+            "**Acceso inicial**\n" +
+            "- Usuario: {{emailAdmin}}\n" +
+            "- Contraseña temporal: {{passwordTemporal}}\n\n" +
+            "Para entrar y cambiar su contraseña cuanto antes:\n\n" +
+            "[Entrar a mi cuenta]({{urlLogin}})\n\n" +
+            "Si no solicitó este registro, contáctenos de inmediato.",
+        variablesSchema: schemaDe("nombreColegio", "emailAdmin", "passwordTemporal", "urlLogin"),
+        cta: { etiqueta: "Entrar a mi cuenta", variable: "urlLogin" },
+        fuente: FORMA_BARRIDO_COLEGIO,
+    },
+    {
+        // EXENTA anti-enumeración (FORMA): aviso de seguridad que NO revela si la cuenta existe. Los dos
+        // enlaces (login / recuperar) van INLINE en la frase — NO un CTA (un botón lo convertiría en acción).
+        clave: "colegio.registro_enlace.cuenta_existente.email",
+        canal: "EMAIL",
+        asunto: "Ya existe una cuenta con este correo",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Alguien intentó crear una cuenta del colegio **{{nombreColegio}}** con su correo. Su cuenta ya existe.\n\n" +
+            "Si fue usted quien intentó, [ingrese a su cuenta]({{urlLogin}}); si olvidó su contraseña, puede [recuperarla]({{urlRecuperar}}).\n\n" +
+            "Si no fue usted, no tiene que hacer nada.",
+        variablesSchema: schemaDe("nombreColegio", "urlRecuperar", "urlLogin"),
+        cta: null,
+        sinBoton: {
+            motivo: "anti-enumeracion",
+            nota: "El aviso no confirma si la cuenta existe; los enlaces de login y recuperación van inline, sin CTA.",
+        },
+        fuente: FORMA_BARRIDO_COLEGIO,
+    },
+    {
+        // EXENTA anti-enumeración (FORMA): el aviso de NIT ya registrado no revela más; el enlace de soporte
+        // va INLINE en la frase, sin CTA.
+        clave: "colegio.registro_enlace.nit_ya_registrado.email",
+        canal: "EMAIL",
+        asunto: "Alguien intentó registrar su colegio",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Alguien intentó registrar el NIT **{{nit}}** en Protección Infantil, y ese NIT ya está a su nombre.\n\n" +
+            "Si fue usted quien intentó desde otro correo, [escríbanos a soporte]({{urlSoporte}}).\n\n" +
+            "Si no fue usted, no tiene que hacer nada.",
+        variablesSchema: schemaDe("nit", "urlSoporte"),
+        cta: null,
+        sinBoton: {
+            motivo: "anti-enumeracion",
+            nota: "Aviso anti-enumeración (NIT ya a su nombre); el enlace de soporte va inline, sin CTA.",
+        },
+        fuente: FORMA_BARRIDO_COLEGIO,
     },
 ];
 

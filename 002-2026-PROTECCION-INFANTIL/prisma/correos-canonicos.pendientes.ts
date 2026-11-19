@@ -36,19 +36,10 @@ export const COPYS_PENDIENTES: readonly CopyPendiente[] = [
     { clave: "bono.entregado_recompensa.in_app", familia: "7 · extras comerciales", forma: "26c2e1da", spec: null },
     { clave: "caso.asignado.email", familia: "5 · comité/operador/análisis", forma: "26c2e1da", spec: null },
     { clave: "caso.asignado.in_app", familia: "5 · comité/operador/análisis", forma: "26c2e1da", spec: null },
-    { clave: "colegio.alerta.pendientes.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
     { clave: "colegio.bienvenida.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
-    { clave: "colegio.comite.recomendacion_informe.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
     { clave: "colegio.comite.recomendacion_informe.in_app", familia: "3 · colegio", forma: "26c2e1da", spec: null },
-    { clave: "colegio.creado.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
-    { clave: "colegio.curso.umbral.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
-    { clave: "colegio.estudiante.repetido.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
     { clave: "colegio.invitacion.enviada.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
-    { clave: "colegio.registro_enlace.cuenta_existente.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
     { clave: "colegio.registro_enlace.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
-    { clave: "colegio.registro_enlace.nit_ya_registrado.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
-    { clave: "colegio.reporte_nuevo.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
-    { clave: "colegio.resumen_semanal.email", familia: "3 · colegio", forma: "26c2e1da", spec: null },
     { clave: "comite.apelaciones.plazo.email", familia: "5 · comité/operador/análisis", forma: "26c2e1da", spec: null },
     { clave: "comite.invitacion.enviada.email", familia: "5 · comité/operador/análisis", forma: "26c2e1da", spec: null },
     { clave: "comite.pendientes.alerta.email", familia: "5 · comité/operador/análisis", forma: "26c2e1da", spec: null },
@@ -129,7 +120,7 @@ export const COPYS_PENDIENTES: readonly CopyPendiente[] = [
 ];
 
 /** RATCHET: igual al largo de la lista. Solo BAJA (una familia que entra al registro lo baja en su PR). */
-export const TOPE_PENDIENTES = 96;
+export const TOPE_PENDIENTES = 87;
 
 /**
  * HUÉRFANAS a retirar (VEREDICTO CEO 19-11): filas VIVAS en prod cuyo evento YA NO EXISTE, así que
