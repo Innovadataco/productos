@@ -10,6 +10,10 @@
  *       filtro e2e de should-run-e2e-pi) y filtra por el prefijo `recorrido-journey-`;
  *   (2) es DURO: ni el job ni su paso llevan `continue-on-error`;
  *   (3) `pi-gate` (y `gate`) lo tienen en `needs`;
+ *   (5) el verificador de CONTEO (`verificar-journeys.mjs`): 0 journeys / sin reporte / journey rojo / archivo
+ *       que no corrió → ROJO; todos ok → VERDE;
+ *   (6) Playwright CARGA su config (SPEC-817 la rompió 7 semanas: `import.meta` en CJS). Se ejerce de verdad:
+ *       `playwright test --list` sobre los journeys debe salir 0.
  *   (4) control POSITIVO de conducta: con la regla de veredicto REAL de pi-gate (leída del yml:
  *       failure/cancelled en needs → exit 1), un `journeys-e2e` en `failure` deja pi-gate ROJO; y
  *       si se lo saca de `needs`, el mismo fallo pasaría VERDE (el defecto).
@@ -18,8 +22,10 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { verificarJourneys } from "./verificar-journeys.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const CI_YML = resolve(AQUI, "../../../.github/workflows/ci.yml");
@@ -56,7 +62,11 @@ describe("SPEC-930 · los journeys de regresión bloquean el merge", () => {
         expect(needsDe(job!)).toEqual(["should-skip"]);
         expect(job!).toMatch(/^ {4}if: needs\.should-skip\.outputs\.skip != 'true'\s*$/m);
         expect(job!).not.toMatch(/outputs\.e2e/); // no hereda el filtro blando de test-e2e
-        expect(job!).toMatch(/run: npm run test:e2e -- recorrido-journey- --pass-with-no-tests/);
+        expect(job!).toMatch(/run: npm run test:e2e -- recorrido-journey- --reporter=list,json/);
+        expect(job!).toMatch(/PLAYWRIGHT_JSON_OUTPUT_NAME: journeys-report\.json/);
+        expect(job!, "0 journeys NO puede pasar verde").not.toMatch(/--pass-with-no-tests/);
+        // El CONTEO se afirma en un paso que corre SIEMPRE (también si Playwright no arrancó).
+        expect(job!).toMatch(/if: always\(\)\n\s+run: node scripts\/ci\/verificar-journeys\.mjs journeys-report\.json/);
     });
 
     it("(2) es DURO: sin continue-on-error", () => {
@@ -79,4 +89,36 @@ describe("SPEC-930 · los journeys de regresión bloquean el merge", () => {
         const sinJourneys = needs.filter((n) => n !== "journeys-e2e");
         expect(veredictoPiGate(sinJourneys, { "journeys-e2e": "failure" })).toBe("verde");
     });
+
+    it("(5) verificador de CONTEO: 0 journeys / sin reporte / rojo / faltante → ROJO; todo ok → VERDE", () => {
+        const archivos = ["recorrido-journey-a.spec.ts", "recorrido-journey-b.spec.ts"];
+        const reporte = (estados: Record<string, string[]>) => ({
+            suites: Object.entries(estados).map(([file, sts]) => ({
+                file,
+                specs: sts.map((status, i) => ({ title: `t${i}`, file, tests: [{ status }] })),
+            })),
+        });
+        const v = verificarJourneys as (r: unknown, a: string[]) => { ok: boolean; errores: string[] };
+        expect(v(reporte({ [archivos[0]]: ["expected"], [archivos[1]]: ["flaky"] }), archivos).ok).toBe(true);
+        expect(v(reporte({}), []).ok, "0 journeys en el árbol → rojo").toBe(false);
+        expect(v(null, archivos).ok, "sin reporte (config rota) → rojo").toBe(false);
+        expect(v(reporte({ [archivos[0]]: ["expected"], [archivos[1]]: ["unexpected"] }), archivos).ok, "journey rojo → rojo").toBe(false);
+        expect(v(reporte({ [archivos[0]]: ["expected"] }), archivos).ok, "un journey no corrió → rojo").toBe(false);
+        expect(v(reporte({ [archivos[0]]: ["expected"], [archivos[1]]: ["skipped"] }), archivos).ok, "skipped → rojo").toBe(false);
+    });
+
+    it("(6) Playwright CARGA su config (sin `import.meta` en CJS) y lista los journeys", () => {
+        const raiz = resolve(AQUI, "../..");
+        const salida = execFileSync(
+            process.execPath,
+            ["--env-file=.env.test", "./node_modules/@playwright/test/cli.js", "test", "--list", "recorrido-journey-", "--pass-with-no-tests"],
+            {
+                cwd: raiz,
+                encoding: "utf8",
+                timeout: 90_000,
+                env: { ...process.env, DATABASE_URL: "postgresql://x:y@localhost:5433/candado_930_test" },
+            },
+        );
+        expect(salida).toMatch(/Total: \d+ tests? in \d+ files?/);
+    }, 120_000);
 });

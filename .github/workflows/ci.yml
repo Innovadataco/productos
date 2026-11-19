@@ -857,10 +857,17 @@ jobs:
         run: node --env-file=.env.test ./node_modules/.bin/tsx scripts/seed-e2e-multi-tenant.ts
       - run: npx playwright install --with-deps chromium
       # SOLO los journeys de regresión (filtro por ruta de Playwright). DURO: sin
-      # `continue-on-error` → un journey rojo falla el job y pi-gate. `--pass-with-no-tests`:
-      # sin journeys en el árbol el job pasa en vez de reventar por «No tests found».
+      # `continue-on-error` → un journey rojo falla el job y pi-gate. Reporte JSON para
+      # afirmar el CONTEO en el paso siguiente (el exit code solo no distingue «no corrió nada»).
       - name: Journeys de regresión (BLOQUEANTE · SPEC-930)
-        run: npm run test:e2e -- recorrido-journey- --pass-with-no-tests
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: journeys-report.json
+        run: npm run test:e2e -- recorrido-journey- --reporter=list,json
+      # Corre SIEMPRE (también si Playwright falló o no arrancó): exige ≥1 journey en el árbol,
+      # que corrieron EXACTAMENTE esos archivos y 0 no-ok. Sin reporte (config rota) → rojo.
+      - name: Afirmar conteo de journeys (SPEC-930)
+        if: always()
+        run: node scripts/ci/verificar-journeys.mjs journeys-report.json
 
 
   # SPEC-280 (002-PI-180): resumen legible al final de cada corrida. Corre siempre
