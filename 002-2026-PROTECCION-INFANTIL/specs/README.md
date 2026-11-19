@@ -505,6 +505,8 @@
 | [870](870-recalculo-agregado-huerfano/spec.md) | SPEC-870 · Recálculo del agregado público huérfano (I-446) | 🟢 IMPLEMENTADO |
 | [884](884-compuerta-ciudades-duplicadas/spec.md) | SPEC-884 · Compuerta estructural contra ciudades duplicadas (I-364) | 🟢 IMPLEMENTADO |
 | [915](915-voz-colegio-imperativo/spec.md) | SPEC-915 · Residual de voz del colegio: imperativo tú SUELTO → usted | ⚠️ sin Status |
+| [916](916-generador-ci-converge/spec.md) | SPEC-916 · El barrido de generados converge (I-443, cierre real) | ⚠️ sin Status |
+| [918](918-colegio-enlace-boton/spec.md) | SPEC-918 · El correo de activación del colegio muestra un BOTÓN, no la URL pelada | ⚠️ sin Status |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
