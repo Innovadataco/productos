@@ -21,7 +21,6 @@
  * Importado como PRIMER efecto de los setups de test (antes de `./prisma`, que lee `DATABASE_URL` al
  * construirse) y del `playwright.config`.
  */
-import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const DIR_PRODUCTO = "002-2026-PROTECCION-INFANTIL";
@@ -31,11 +30,23 @@ export const BASE_COMPARTIDA_LEGADO = "proteccion_infantil_test";
 const DSN_LOCAL = "postgresql://proteccion:proteccion_dev@localhost:5433";
 
 /**
+ * SPEC-930 · Ruta de ESTE módulo sin `import.meta` (CJS-safe). Playwright carga `playwright.config.ts` como CJS
+ * (el package.json no declara `"type": "module"`) y `import.meta.url` era `SyntaxError: Cannot use 'import.meta'
+ * outside a module` → la suite e2e NO cargaba en CI desde SPEC-817 (el paso blando lo tapaba). `__filename` lo
+ * proveen los dos cargadores que importan este módulo: el CJS de Playwright y vite-node (vitest). Si ninguno lo
+ * provee → THROW (nunca se cae al compartido; candado `test-db-url.candado.test.ts`).
+ */
+export function rutaDeEsteModulo(): string {
+    if (typeof __filename === "string" && __filename.length > 0) return __filename;
+    throw new Error("[SPEC-817/930] No puedo ubicar test-db-url (sin __filename): provisioná DATABASE_URL.");
+}
+
+/**
  * Discriminador por worktree: basename —saneado a nombre de base válido— de la carpeta que CONTIENE a
  * `002-2026-PROTECCION-INFANTIL`. Deriva de `desde` (por defecto, la ruta de este módulo). THROW si no puede:
  * un discriminador vacío o una ruta sin el producto es «no puedo derivar», y eso explota, no cae al compartido.
  */
-export function discriminadorWorktree(desde: string = fileURLToPath(import.meta.url)): string {
+export function discriminadorWorktree(desde: string = rutaDeEsteModulo()): string {
     const marca = `${path.sep}${DIR_PRODUCTO}${path.sep}`;
     const i = desde.indexOf(marca);
     if (i < 0) {
