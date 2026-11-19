@@ -829,30 +829,6 @@ async function seedEventosEmailMigrados() {
                 properties: { url: { type: "string" }, nombreColegio: { type: "string" } },
             },
         },
-        {
-            clave: "colegio.registro_enlace.cuenta_existente.email",
-            asunto: "Ya existe una cuenta con este correo",
-            cuerpoMarkdown:
-                "Hola,\n\nAlguien intentó crear una cuenta del colegio **{{nombreColegio}}** con su correo. Su cuenta ya existe.\n\nSi fue usted quien intentó, ingrese en {{urlLogin}} — puede recuperar su contraseña desde {{urlRecuperar}} si la olvidó.\n\nSi no fue usted, no tiene que hacer nada.",
-            variablesSchema: {
-                type: "object",
-                properties: {
-                    nombreColegio: { type: "string" },
-                    urlRecuperar: { type: "string" },
-                    urlLogin: { type: "string" },
-                },
-            },
-        },
-        {
-            clave: "colegio.registro_enlace.nit_ya_registrado.email",
-            asunto: "Alguien intentó registrar su colegio",
-            cuerpoMarkdown:
-                "Hola,\n\nAlguien intentó registrar el NIT **{{nit}}** en Protección Infantil, y ese NIT ya está a su nombre.\n\nSi fue usted quien intentó desde otro correo, contáctenos: {{urlSoporte}}.\n\nSi no fue usted, no tiene que hacer nada.",
-            variablesSchema: {
-                type: "object",
-                properties: { nit: { type: "string" }, urlSoporte: { type: "string" } },
-            },
-        },
         // SPEC-922: la bienvenida al rector (`colegio.bienvenida_rector`) la siembra el REGISTRO
         // ÚNICO (`seedCorreosCanonicos`); su regla sigue abajo en `reglas`.
         {
@@ -866,20 +842,6 @@ async function seedEventosEmailMigrados() {
         // (nunca orden). El correo va en este bucle (canal EMAIL); la
         // plantilla IN_APP hermana se sella aparte más abajo (el bucle
         // asume EMAIL).
-        {
-            clave: "colegio.comite.recomendacion_informe.email",
-            asunto: "El comité de convivencia recomienda emitir el informe del caso {{numeroCaso}}",
-            cuerpoMarkdown:
-                "Hola,\n\nEl Comité de Convivencia de **{{nombreColegio}}** revisó el caso **{{numeroCaso}}** y le recomienda emitir el informe firmado.\n\nEsto es una recomendación — la decisión y la firma siguen siendo suyas.\n\nAbra el caso y revise el análisis del comité antes de emitir:\n{{urlCaso}}",
-            variablesSchema: {
-                type: "object",
-                properties: {
-                    nombreColegio: { type: "string" },
-                    numeroCaso: { type: "string" },
-                    urlCaso: { type: "string" },
-                },
-            },
-        },
         {
             clave: "usuario.bienvenida.comite.email",
             asunto: "Tu cuenta de comité de validación está lista",
@@ -954,36 +916,6 @@ async function seedEventosEmailMigrados() {
             cuerpoMarkdown:
                 "Hola,\n\nEl correo de tu cuenta de Protección Infantil cambió a este buzón. Si fuiste tú, no tienes que hacer nada.\n\nSi NO fuiste tú, escríbenos de inmediato respondiendo a este correo.\n\nEntra a tu cuenta:\n{{urlLogin}}",
             variablesSchema: { type: "object", properties: { urlLogin: { type: "string" } } },
-        },
-        {
-            clave: "colegio.reporte_nuevo.email",
-            asunto: "Te avisamos: tienes un reporte nuevo para revisar",
-            cuerpoMarkdown:
-                "Hola,\n\nTe avisamos que llegó un reporte nuevo relacionado con tu colegio. Ingresa a tu panel para revisarlo:\n\n{{urlAlertas}}\n\nEste aviso no incluye datos del reporte; toda la información está en tu panel.",
-        },
-        {
-            clave: "colegio.curso.umbral.email",
-            asunto: "Te avisamos: un curso de tu colegio acumula reportes",
-            cuerpoMarkdown:
-                "Hola,\n\nTe avisamos que un curso de tu colegio acumula {{reportes}} reportes en los últimos {{dias}} días. Ingresa a tu panel para ver el panorama completo:\n\n{{urlPanel}}\n\nEste aviso no incluye nombres ni datos de los reportes; toda la información está en tu panel.",
-        },
-        {
-            clave: "colegio.estudiante.repetido.email",
-            asunto: "Te avisamos: un estudiante de tu colegio acumula reportes",
-            cuerpoMarkdown:
-                "Hola,\n\nTe avisamos que un estudiante de tu colegio acumula {{reportes}} reportes en los últimos {{dias}} días. Ingresa a tu panel para revisar el caso:\n\n{{urlAlertas}}\n\nEste aviso no incluye el nombre del estudiante ni datos de los reportes; toda la información está en tu panel.",
-        },
-        {
-            clave: "colegio.resumen_semanal.email",
-            asunto: "Tu resumen de la semana",
-            cuerpoMarkdown:
-                "Hola,\n\n{{cuerpo}}\n\nIngresa a tu panel para ver el detalle:\n\n{{urlPanel}}\n\nEste resumen solo muestra conteos; toda la información está en tu panel.",
-        },
-        {
-            clave: "colegio.alerta.pendientes.email",
-            asunto: "Tiene {{novedadTexto}} para revisar en su panel de colegio",
-            cuerpoMarkdown:
-                "Tiene {{novedadTexto}} para revisar en su panel de colegio. Ingrese y valide.\n\n{{urlAlertas}}",
         },
         {
             clave: "suscriptores.reporte_publicado.email",
@@ -3760,40 +3692,7 @@ async function main() {
     }
     console.log("Plantillas del motor de notificaciones (SPEC-201) creadas");
 
-    // SPEC-258 (002-PI-157): plantilla de onboarding que faltaba para colegio.creado.
-    // La regla ya existía (seed SPEC-204, línea ~2990) pero apuntaba a una plantilla
-    // inexistente → el email nunca se enviaba. Anti-I-100 (update:{}) porque el admin
-    // puede editar el cuerpo desde /dashboard/admin/notificaciones después del deploy.
-    // Variables reales que envía api/admin/colegios/route.ts:
-    //   {{nombreColegio}}, {{emailAdmin}}, {{passwordTemporal}}, {{urlLogin}}
-    await prisma.notificacionPlantilla.upsert({
-        where: { clave: "colegio.creado.email" },
-        update: {},
-        create: {
-            clave: "colegio.creado.email",
-            canal: "EMAIL",
-            asunto: "Tu cuenta institucional en Protección Infantil está lista",
-            cuerpoMarkdown:
-                "Hola {{nombreColegio}},\n\n" +
-                "Se registró tu institución en Protección Infantil.\n\n" +
-                "**Acceso inicial**\n" +
-                "- Usuario: {{emailAdmin}}\n" +
-                "- Contraseña temporal: {{passwordTemporal}}\n\n" +
-                "Ingresa en {{urlLogin}} y cambia tu contraseña lo antes posible.\n\n" +
-                "Si no solicitaste este registro, contáctanos de inmediato.",
-            variablesSchema: {
-                type: "object",
-                properties: {
-                    nombreColegio: { type: "string" },
-                    emailAdmin: { type: "string" },
-                    passwordTemporal: { type: "string" },
-                    urlLogin: { type: "string" },
-                },
-            },
-            activa: true,
-        },
-    });
-    console.log("[SEED] Plantilla colegio.creado.email (SPEC-258) lista");
+    // SPEC-919: `colegio.creado.email` lo siembra ahora el REGISTRO ÚNICO (seedCorreosCanonicos); su regla sigue abajo.
 
     type ReglaSeed = {
         evento: string;
