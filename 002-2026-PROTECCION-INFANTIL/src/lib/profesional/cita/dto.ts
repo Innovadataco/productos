@@ -106,6 +106,11 @@ export interface CitaParaPadreDto {
     venceEn: string;
     pagoAprobadoEn: string | null;
     montoTotal: number;
+    /**
+     * SPEC-934 (I-450 · FORMA §2): el desglose GUARDADO de esta cita (consulta + servicio de la red = total), para
+     * que el padre vea antes y después lo mismo. Son los montos de la fila, no un recálculo.
+     */
+    desglose?: { montoConsulta: number; montoServicio: number; porcentajeServicio: number };
     profesional: {
         id: string;
         nombreVisible: string;
@@ -178,6 +183,11 @@ export function toCitaParaPadre(
         venceEn: solicitud.venceEn.toISOString(),
         pagoAprobadoEn: solicitud.pagoAprobadoEn?.toISOString() ?? null,
         montoTotal: solicitud.montoTotal,
+        desglose: {
+            montoConsulta: solicitud.montoConsulta,
+            montoServicio: solicitud.montoServicio,
+            porcentajeServicio: solicitud.porcentajeServicio,
+        },
         profesional: {
             id: solicitud.profesional.id,
             nombreVisible: solicitud.profesional.nombreVisible,

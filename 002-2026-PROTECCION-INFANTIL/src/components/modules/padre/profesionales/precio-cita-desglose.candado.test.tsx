@@ -59,16 +59,20 @@ describe("SPEC-934 · precio de la cita: total con servicio, desglose y «pagado
         const texto = container.textContent ?? "";
         expect(texto).toContain(formatearCOP(50_000)); // consulta
         expect(texto).toContain(formatearCOP(5_000)); // servicio de la red
-        // La cifra GRANDE es el total, no la consulta (el defecto).
-        const grande = container.querySelector("p.text-3xl");
-        expect(grande?.textContent).toBe(formatearCOP(55_000));
+        // FORMA 24ed7aa1 §1: tres renglones; la cifra GRANDE es «Total a pagar» (no la consulta — el defecto).
+        expect(screen.getByText("Valor de la consulta")).toBeTruthy();
+        expect(screen.getByText("Servicio de la red (10 %)")).toBeTruthy();
+        expect(screen.getByText("Total a pagar")).toBeTruthy();
+        expect(screen.getByTestId("desglose-total").className).toMatch(/text-2xl/);
         cleanup();
     });
 
     it("(1) control POSITIVO: cambiar la comisión cambia lo que ve el padre", () => {
-        const { container } = render(<ProfesionalPerfil p={BASE} cotizacion={desglosarTarifa(50_000, 15)} />);
-        expect(container.querySelector("p.text-3xl")?.textContent).toBe(formatearCOP(57_500));
+        render(<ProfesionalPerfil p={BASE} cotizacion={desglosarTarifa(50_000, 15)} />);
         expect(screen.getByTestId("desglose-total").textContent).toBe(formatearCOP(57_500));
+        // El % sale del parámetro: nunca un «10» quemado en el rótulo.
+        expect(screen.getByText("Servicio de la red (15 %)")).toBeTruthy();
+        expect(screen.queryByText("Servicio de la red (10 %)")).toBeNull();
         cleanup();
     });
 
@@ -88,5 +92,18 @@ describe("SPEC-934 · precio de la cita: total con servicio, desglose y «pagado
         expect(panel).toMatch(/etiquetaMontoCita\(cita\.pagoAprobadoEn\)/);
         // Ningún «Monto pagado» literal en el JSX (solo dentro del helper).
         expect(panel.match(/>\s*Monto pagado\s*</g) ?? []).toEqual([]);
+    });
+
+    it("(3b) el panel de espera pinta el desglose GUARDADO (no recalcula) y su rótulo sigue al pago", () => {
+        const panel = leer("src/components/modules/padre/citas/EsperaCitaPanel.tsx");
+        expect(panel).toMatch(/rotuloTotal=\{etiquetaMontoCita\(cita\.pagoAprobadoEn\)\}/);
+        expect(panel).toMatch(/desgloseDeCitaGuardada\(/);
+        const dto = leer("src/lib/profesional/cita/dto.ts");
+        expect(dto).toMatch(/montoConsulta: solicitud\.montoConsulta/);
+        expect(dto).toMatch(/montoServicio: solicitud\.montoServicio/);
+        expect(dto).toMatch(/porcentajeServicio: solicitud\.porcentajeServicio/);
+        // El componente NO calcula: ni Math.round ni porcentajes propios.
+        const comp = leer("src/components/modules/padre/profesionales/DesgloseCostoCita.tsx");
+        expect(comp).not.toMatch(/Math\.round|\/\s*100/);
     });
 });

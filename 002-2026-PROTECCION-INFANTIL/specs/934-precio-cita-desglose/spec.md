@@ -27,10 +27,14 @@ pagado $55.000» antes de que el pago se aprobara.
   409 el modal refresca la cotización.
 - **Panel de espera:** «Monto pagado» solo con `pagoAprobadoEn`; antes, «Total a pagar» (`etiquetaMontoCita`).
 
-## Copy
+## Copy (FORMA Diseño · Gestión `24ed7aa1`)
 
-**PROVISIONAL** las etiquetas del desglose («Consulta», «Servicio de la red (N %)», «Total») y el mensaje del 409:
-los define Diseño (el CEO los pidió). Voz tú (padre).
+- Desglose (§1): «Valor de la consulta» · «Servicio de la red ({{porcentajeServicio}} %)» · «Total a pagar» como
+  cifra grande (pino, negrita) = `montoTotal`. Mismo término que el panel del profesional. El % sale del parámetro.
+- Panel de espera (§2): pendiente «Total a pagar» / aprobado «Monto pagado» (`pagoAprobadoEn`). Además pinta el
+  desglose GUARDADO de la fila (recomendado por la FORMA): el DTO del padre expone `desglose` con
+  `montoConsulta`/`montoServicio`/`porcentajeServicio` — los montos persistidos, sin recálculo.
+- El mensaje del 409 (`totalEsperado` desactualizado) **sigue provisional**: la FORMA no lo trae; pedido a Diseño.
 
 ## Hallazgos (no corregidos acá; cambian el veredicto)
 
@@ -45,6 +49,7 @@ los define Diseño (el CEO los pidió). Voz tú (padre).
 - `src/app/api/padre/citas/precio-desglose.candado.test.ts` (integración, ruta real + BD): `cotizarCitaNueva()`
   == `montoTotal`/`montoConsulta`/`montoServicio` guardados; control positivo: cambiar la comisión cambia la
   cotización, el total viejo → 409 sin solicitud y con la franja libre, el nuevo → se guarda igual.
+- Redondeo: con consulta impar (50.005 × 10 % = 5.000,5 → 5.001) el preview y la fila coinciden (caso (4)).
 - `src/components/modules/padre/profesionales/precio-cita-desglose.candado.test.tsx` (unit): la cifra grande de la
   ficha es el total y el desglose suma; otra comisión → otra cifra; el modal envía `totalEsperado`; la creación no
   copia la fórmula; «Monto pagado» solo con pago aprobado. Mutaciones probadas: volver a pintar la consulta → rojo;

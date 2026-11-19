@@ -147,4 +147,20 @@ describe("SPEC-934 · el total mostrado al padre == montoTotal guardado", { time
         const guardada = await prisma.solicitudCita.findFirstOrThrow();
         expect(guardada.montoTotal).toBe(vigente.pagaElPadre);
     });
+
+    it("(4) REDONDEO: consulta impar → el preview y lo guardado redondean IGUAL (50.005 × 10 % = 5.000,5 → 5.001)", async () => {
+        await sembrarParametro("profesional.cita.precio_estandar_primera_cita_cop", 50_005);
+        const padre = await crearUsuario("PARENT");
+        mockToken = await crearTokenUsuario(padre.id, "PARENT");
+        const pro = await seedProfesional(120_000);
+        const franja = await seedFranja(pro.id);
+
+        const cotizacion = await cotizarCitaNueva();
+        expect(cotizacion).toMatchObject({ tarifaProfesional: 50_005, servicioRed: 5_001, pagaElPadre: 55_006 });
+        const res = await POST(pedir(pro.id, franja.id, cotizacion.pagaElPadre));
+        expect(res.status).toBe(200);
+        const guardada = await prisma.solicitudCita.findFirstOrThrow();
+        expect(guardada.montoServicio).toBe(cotizacion.servicioRed);
+        expect(guardada.montoTotal).toBe(cotizacion.pagaElPadre);
+    });
 });

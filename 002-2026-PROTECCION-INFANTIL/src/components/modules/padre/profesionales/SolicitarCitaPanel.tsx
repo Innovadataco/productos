@@ -246,10 +246,13 @@ export function SolicitarCitaPanel({
                 <p className="text-[11px] uppercase tracking-wide text-estado-pino">
                     {esReasignacion ? "Pago heredado" : "Costo de esta cita"}
                 </p>
-                <p className="cifra text-2xl font-bold text-estado-pino">
-                    {esReasignacion ? "Sin cargo" : CURRENCY_COP.format(cotizacion.pagaElPadre)}
-                </p>
-                {!esReasignacion && <DesgloseCostoCita cotizacion={cotizacion} />}
+                {/* SPEC-934 (FORMA 24ed7aa1 §1): desglose con «Total a pagar» como cifra grande. Reasignación: sin
+                    desglose (no se recobra). */}
+                {esReasignacion ? (
+                    <p className="cifra text-2xl font-bold text-estado-pino">Sin cargo</p>
+                ) : (
+                    <DesgloseCostoCita cotizacion={cotizacion} />
+                )}
                 <p className="mt-1 text-xs text-subtle">
                     {esReasignacion
                         ? "El pago viaja con esta nueva solicitud desde tu cita anterior — no se cobra de nuevo."
@@ -382,13 +385,15 @@ export function SolicitarCitaPanel({
                         {/* Total a pagar — lo que más pesa (en pino). Mientras no se cobre, es el
                             VALOR de la reserva, no un cobro hecho (§5). */}
                         <div className="mt-3 rounded-xl bg-pino/10 p-3">
-                            <p className="text-[11px] uppercase tracking-wide text-estado-pino">
-                                {esReasignacion ? "Pago" : "Total a pagar"}
-                            </p>
-                            <p className="cifra text-2xl font-bold text-estado-pino">
-                                {esReasignacion ? "Sin cargo" : CURRENCY_COP.format(cotizacion.pagaElPadre)}
-                            </p>
-                            {!esReasignacion && <DesgloseCostoCita cotizacion={cotizacion} />}
+                            {esReasignacion ? (
+                                <>
+                                    <p className="text-[11px] uppercase tracking-wide text-estado-pino">Pago</p>
+                                    <p className="cifra text-2xl font-bold text-estado-pino">Sin cargo</p>
+                                </>
+                            ) : (
+                                // SPEC-934 (FORMA 24ed7aa1 §1): el desglose cierra en «Total a pagar» (cifra grande).
+                                <DesgloseCostoCita cotizacion={cotizacion} />
+                            )}
                         </div>
 
                         <p className="mt-3 text-xs text-subtle">

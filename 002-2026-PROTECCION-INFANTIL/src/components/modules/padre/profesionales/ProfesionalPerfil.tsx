@@ -93,10 +93,8 @@ export function ProfesionalPerfil({
                 <p className="text-xs uppercase tracking-wide text-estado-cielo dark:text-cielo">
                     Costo de la primera cita
                 </p>
-                <p className="mt-1 text-3xl font-bold text-estado-cielo dark:text-cielo">
-                    {CURRENCY_COP.format(cotizacion.pagaElPadre)}
-                </p>
-                {/* SPEC-934 (I-450): el total ES lo que se guarda y se cobra; el desglose lo explica. */}
+                {/* SPEC-934 (I-450 · FORMA 24ed7aa1 §1): desglose; la cifra grande es «Total a pagar» = lo que se
+                    guarda y se cobra (cotización del servidor, sin recalcular en el cliente). */}
                 <DesgloseCostoCita cotizacion={cotizacion} />
                 <p className="mt-1 text-sm text-muted">
                     Sesión de {p.duracionMinutos} minutos{p.emiteFactura ? " · emite factura" : ""}.
