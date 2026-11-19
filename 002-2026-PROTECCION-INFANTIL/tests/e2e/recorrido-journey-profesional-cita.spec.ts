@@ -204,7 +204,7 @@ test.describe.serial("SPEC-928 · journey core #4: el padre agenda con un profes
                 await expect(page.getByText("Esperando confirmación del profesional")).toBeVisible();
             });
 
-            await test.step("6 · el profesional confirma en su panel → el padre ve «Cita confirmada», sin contacto (SPEC-754)", async () => {
+            await test.step("6 · el profesional confirma → el padre ve «Cita confirmada» Y, tras consumir la 1.ª cita, los datos del profesional (SPEC-940)", async () => {
                 await profPage.reload();
                 const confirmar = bloqueSolicitudes.getByRole("button", { name: "Confirmar", exact: true });
                 await expect(confirmar).toBeVisible();
@@ -218,8 +218,12 @@ test.describe.serial("SPEC-928 · journey core #4: el padre agenda con un profes
 
                 await page.reload();
                 await expect(page.getByText("Cita confirmada")).toBeVisible();
-                await expect(page.locator("body"), "SPEC-754: tras confirmar, sin teléfono").not.toContainText(TELEFONO_PROF);
-                await expect(page.locator("body"), "SPEC-754: tras confirmar, sin correo").not.toContainText(EMAIL_PROF);
+                // SPEC-940 (reversión ACOTADA de 754): con la 1.ª cita CONSUMIDA (CONFIRMADA), el padre YA ve el
+                // contacto de ESE profesional en el bloque «Datos del profesional». Antes (754) estaba cerrado.
+                const datos = page.getByTestId("datos-del-profesional");
+                await expect(datos).toBeVisible();
+                await expect(datos, "SPEC-940: el padre ve el correo del profesional").toContainText(EMAIL_PROF);
+                await expect(datos, "SPEC-940: el padre ve el teléfono del profesional").toContainText(TELEFONO_PROF);
             });
         } finally {
             await profCtx?.close();
