@@ -816,74 +816,7 @@ async function seedEventosEmailMigrados() {
         cuerpoMarkdown: string;
         variablesSchema?: Record<string, unknown>;
     }> = [
-        {
-            clave: "auth.codigo_verificacion.email",
-            asunto: "Código de verificación",
-            cuerpoMarkdown: "Tu código de verificación es: {{codigo}}\n\nVálido por 15 minutos.",
-            variablesSchema: { type: "object", properties: { codigo: { type: "string" } } },
-        },
-        {
-            clave: "auth.password_recuperacion.email",
-            asunto: "Restablece tu contraseña",
-            cuerpoMarkdown:
-                "Hola,\n\nRecibimos una solicitud para restablecer tu contraseña. Haz clic en el siguiente enlace:\n\n{{url}}\n\nEste enlace expira en 1 hora y solo puede usarse una vez. Si no solicitaste este cambio, ignora este mensaje.",
-        },
-        {
-            // SPEC-338 (I-226): alguien intentó registrarse con un correo que ya
-            // tiene cuenta. Anti-enumeración: la pantalla no revela nada; el aviso
-            // va SOLO al buzón. Lenguaje de padre (A-62), sin tecnicismos.
-            clave: "auth.cuenta_existente.email",
-            // SPEC-339 (D-1): pasado a tuteo neutro. Este correo lo recibe el padre
-            // DENTRO de la puerta que reconstruye A-67; dejarlo en voseo partiría
-            // la voz en mitad del camino.
-            asunto: "Ya tienes una cuenta con este correo",
-            cuerpoMarkdown:
-                "Hola,\n\nAlguien intentó crear una cuenta con este correo, pero tú ya tienes una con nosotros.\n\nPara entrar, usa tu correo y tu clave acá:\n{{urlLogin}}\n\n¿No recuerdas la clave? La recuperas en un minuto acá:\n{{urlRecuperar}}\n\nSi no fuiste tú, no tienes que hacer nada: tu cuenta está segura.",
-            variablesSchema: { type: "object", properties: { urlLogin: { type: "string" }, urlRecuperar: { type: "string" } } },
-        },
-        {
-            // SPEC-339 (A-67 §2.1): el padre recibe un ENLACE, no un código que
-            // transcribe. Jelkin: "padres adultos que de pronto no son muy cercanos
-            // a la tecnología". Tuteo neutro colombiano (decisión CEO D-1).
-            clave: "auth.registro_enlace.email",
-            asunto: "Crea tu contraseña y empecemos",
-            cuerpoMarkdown:
-                "Hola,\n\nEstás para cuidarlos. Nosotros, para avisarte.\n\nAbre este enlace y crea tu contraseña:\n{{url}}\n\nEl enlace vence en 24 horas y solo se puede usar una vez.\n\nSi no fuiste tú quien lo pidió, no tienes que hacer nada.",
-            variablesSchema: { type: "object", properties: { url: { type: "string" } } },
-        },
-        {
-            // SPEC-339 (A-67 §2.1): confirmación de que la cuenta quedó creada.
-            clave: "auth.bienvenida_padre.email",
-            asunto: "Tu cuenta está lista",
-            cuerpoMarkdown:
-                "Hola,\n\nTu cuenta quedó creada. Desde acá te avisamos si alguno de los tuyos aparece en un reporte.\n\nEntra cuando quieras:\n{{urlLogin}}\n\nTe faltan unos pocos pasos para terminar de configurarla. Con calma, toma un minuto.",
-            variablesSchema: { type: "object", properties: { urlLogin: { type: "string" } } },
-        },
-        // ── SPEC-419 (I-296) · la puerta del profesional ────────────────────
-        // SPEC-391 creó `email-profesional.ts` con estos dos eventos y el seed
-        // NUNCA recibió sus reglas ni sus plantillas. Los dos callsites fallan
-        // en cerrado, la ruta atrapa el throw y responde 202 "revisá tu correo"
-        // igual — así que el psicólogo llenaba el formulario y esperaba un
-        // enlace que no existía. Leíamos "cero profesionales inscritos" como
-        // desinterés; era que no podían. Lo cazó `reglas:check` (SPEC-418) en
-        // su primer uso, antes de desplegar.
-        {
-            clave: "auth.registro_enlace_profesional.email",
-            asunto: "Crea tu contraseña y empecemos",
-            cuerpoMarkdown:
-                "Hola,\n\nGracias por querer sumarte a la red de profesionales de Protección Infantil.\n\nAbre este enlace y crea tu contraseña:\n{{url}}\n\nEl enlace vence en 24 horas y solo se puede usar una vez.\n\nSi no fuiste tú quien lo pidió, no tienes que hacer nada.",
-            variablesSchema: { type: "object", properties: { url: { type: "string" } } },
-        },
-        {
-            clave: "auth.bienvenida_profesional.email",
-            asunto: "Tu cuenta está lista — falta un paso",
-            cuerpoMarkdown:
-                "Hola,\n\nTu cuenta quedó creada.\n\nEntra cuando quieras:\n{{urlLogin}}\n\nPara aparecer en el directorio de familias falta que completes tu perfil y subas la autorización firmada. Hasta ese momento tu perfil queda en borrador y no llega a revisión:\n{{urlCompletarPerfil}}",
-            variablesSchema: {
-                type: "object",
-                properties: { urlLogin: { type: "string" }, urlCompletarPerfil: { type: "string" } },
-            },
-        },
+        // SPEC-923: las 8 plantillas `auth.*` las siembra el REGISTRO ÚNICO (`seedCorreosCanonicos`); sus reglas siguen abajo en `reglas`.
         // ── SPEC-344 (A-69 · C1) · registro por enlace del colegio ──────────
         {
             // SPEC-918: fuente única; el `[Activar mi cuenta]({{url}})` a solas en su párrafo
@@ -1074,13 +1007,6 @@ async function seedEventosEmailMigrados() {
             clave: "motor.deriva.alerta.email",
             asunto: "[PI-MOTOR] Deriva del motor: {{sobreUmbral}} categorías sobre el umbral",
             cuerpoMarkdown: "{{cuerpo}}",
-        },
-        // SPEC-322: aviso de seguridad cuando cambia la contraseña (caminos propios del usuario).
-        {
-            clave: "auth.password_cambiada.email",
-            asunto: "Tu contraseña fue cambiada — {{fechaHora}}",
-            cuerpoMarkdown:
-                "Hola,\n\nTu contraseña en Protección Infantil fue cambiada el **{{fechaHora}}** (hora de Colombia).\n\nSi fuiste tú, no necesitas hacer nada.\n\nSi **no fuiste tú**, recupera tu acceso de inmediato en {{urlRecuperar}} y escribe a soporte.\n\nEste es un mensaje automático de seguridad. No contiene tu contraseña ni enlaces de sesión.",
         },
     ];
 
@@ -2052,14 +1978,9 @@ async function seedAccesoCifradoTextos() {
     // SPEC-598: código temporal para «Crear contraseña» en cuentas OAuth sin
     // clave local. El correo ES el factor de posesión; sin regla activa la
     // solicitud falla (fail-closed, mismo patrón que padre.stepup.codigo).
+    // SPEC-923: la PLANTILLA de este evento la siembra el REGISTRO ÚNICO (`seedCorreosCanonicos`,
+    // FORMA auth v1.2 §9, impersonal). Acá queda solo el evento para su REGLA (abajo).
     const eventoCrearPasswordCodigo = "auth.crear_password.codigo";
-    const asuntoCrearPasswordCodigo = "Tu código para crear tu contraseña";
-    const cuerpoCrearPasswordCodigoEmail =
-        "Hola,\n\n" +
-        "Este es el código para crear la contraseña de tu cuenta:\n\n" +
-        "{{codigo}}\n\n" +
-        "El código vence en {{vigenciaMinutos}} minutos. Si no lo solicitaste, ignora este correo " +
-        "y tu cuenta seguirá entrando con Google.";
 
     const plantillas: Array<{
         clave: string;
@@ -2094,13 +2015,6 @@ async function seedAccesoCifradoTextos() {
             canal: "EMAIL",
             asunto: asuntoStepupCodigo,
             cuerpoMarkdown: cuerpoStepupCodigoEmail,
-            variables: { codigo: { type: "string" }, vigenciaMinutos: { type: "number" } },
-        },
-        {
-            clave: `${eventoCrearPasswordCodigo}.email`,
-            canal: "EMAIL",
-            asunto: asuntoCrearPasswordCodigo,
-            cuerpoMarkdown: cuerpoCrearPasswordCodigoEmail,
             variables: { codigo: { type: "string" }, vigenciaMinutos: { type: "number" } },
         },
     ];

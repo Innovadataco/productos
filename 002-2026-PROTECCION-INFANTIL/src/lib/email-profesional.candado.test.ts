@@ -15,11 +15,14 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { CORREOS_CANONICOS } from "../../prisma/correos-canonicos.seed-data";
 
 const RAIZ = path.resolve(__dirname, "../..");
 const leer = (r: string) => fs.readFileSync(path.join(RAIZ, r), "utf-8");
 
 const seed = leer("prisma/seed.ts");
+/** SPEC-923: las PLANTILLAS de la puerta viven en el registro único (el seed lo siembra, create-only). */
+const plantilla = (evento: string) => CORREOS_CANONICOS.find((c) => c.clave === `${evento}.email`);
 const emisor = leer("src/lib/email-profesional.ts");
 
 /** Los eventos que el emisor dispara, leídos de la fuente y no escritos a mano. */
@@ -36,8 +39,9 @@ describe("SPEC-419 · la puerta del profesional está sembrada", () => {
         );
     });
 
-    it.each(EVENTOS)("%s tiene su PLANTILLA en el seed", (evento) => {
-        expect(seed).toContain(`clave: "${evento}.email"`);
+    it.each(EVENTOS)("%s tiene su PLANTILLA sembrada (registro único, SPEC-923)", (evento) => {
+        expect(plantilla(evento), `sin plantilla de ${evento}, el correo no sale`).toBeDefined();
+        expect(seed, "el seed siembra el registro").toMatch(/await\s+sembrarCorreosCanonicos\(prisma\)/);
     });
 
     it("las dos reglas son del rol PROFESIONAL y OBLIGATORIAS", () => {
@@ -53,15 +57,14 @@ describe("SPEC-419 · la puerta del profesional está sembrada", () => {
     it("la plantilla del enlace lleva la variable {{url}} que el emisor envía", () => {
         // Si la plantilla no la nombra, el correo sale sin enlace: sirve tanto
         // como no mandarlo.
-        const bloque = seed.slice(seed.indexOf('clave: "auth.registro_enlace_profesional.email"'));
-        expect(bloque.slice(0, 900)).toContain("{{url}}");
+        expect(plantilla("auth.registro_enlace_profesional")?.cuerpoMarkdown).toContain("{{url}}");
         expect(emisor).toContain("variables: { url }");
     });
 
     it("la bienvenida lleva las dos variables que el emisor envía", () => {
-        const bloque = seed.slice(seed.indexOf('clave: "auth.bienvenida_profesional.email"'));
-        expect(bloque.slice(0, 900)).toContain("{{urlLogin}}");
-        expect(bloque.slice(0, 900)).toContain("{{urlCompletarPerfil}}");
+        const cuerpo = plantilla("auth.bienvenida_profesional")?.cuerpoMarkdown;
+        expect(cuerpo).toContain("{{urlLogin}}");
+        expect(cuerpo).toContain("{{urlCompletarPerfil}}");
     });
 
     it("el emisor sigue fallando en cerrado — es lo correcto, no se ablanda", () => {
