@@ -407,6 +407,12 @@ function AntesDeLaCita({ cita, expedientes }: { cita: CitaParaPadreDto; expedien
     );
 }
 
+
+/** SPEC-934 (I-450): «Monto pagado» solo si el pago está aprobado; si no, «Total a pagar». */
+export function etiquetaMontoCita(pagoAprobadoEn: string | null): "Monto pagado" | "Total a pagar" {
+    return pagoAprobadoEn ? "Monto pagado" : "Total a pagar";
+}
+
 export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
     const [cita, setCita] = useState<CitaParaPadreDto>(citaInicial);
     const [refrescando, setRefrescando] = useState(false);
@@ -512,7 +518,8 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                     <p className="etiqueta text-subtle capitalize">{cita.franja.modalidad}</p>
                 </div>
                 <div>
-                    <p className="etiqueta text-subtle">Monto pagado</p>
+                    {/* SPEC-934 (I-450): «pagado» SOLO con el pago aprobado; antes es lo que falta pagar. */}
+                    <p className="etiqueta text-subtle">{etiquetaMontoCita(cita.pagoAprobadoEn)}</p>
                     <p className="cuerpo text-body">{formatearMonto(cita.montoTotal)}</p>
                     {cita.pagoHeredadoDeId && (
                         <p className="etiqueta text-subtle">

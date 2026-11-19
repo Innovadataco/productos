@@ -29,6 +29,7 @@ import { VerificacionColaClient } from "@/components/modules/verificacion/Verifi
 import { IncidentesColaClient } from "@/components/modules/verificacion/IncidentesColaClient";
 import { ProfesionalesGestionClient } from "@/components/modules/profesionales-admin/ProfesionalesGestionClient";
 import { SolicitarCitaPanel } from "@/components/modules/padre/profesionales/SolicitarCitaPanel";
+import { desglosarTarifa } from "@/lib/profesional/cita/comision";
 
 // SolicitarCitaPanel usa useRouter; el resto no toca next/navigation.
 vi.mock("next/navigation", () => ({
@@ -77,7 +78,7 @@ const CASOS: Caso[] = [
                 <SolicitarCitaPanel
                     profesionalId="p1"
                     tarifaProfesionalCOP={100000}
-                    precioEstandarPrimeraCitaCOP={120000}
+                    cotizacion={desglosarTarifa(120000, 10)}
                     duracionMinutos={50}
                 />,
             ),

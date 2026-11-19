@@ -15,7 +15,8 @@ import { toCitaParaPadre } from "@/lib/profesional/cita/dto";
 // cambia sin desplegar y el panel del profesional lee el mismo número.
 import { obtenerPorcentajeServicio } from "@/lib/profesional/cita/comision";
 import { crearSolicitudCita } from "@/lib/profesional/cita/cita.service";
-import { leerPrecioEstandarPrimeraCita } from "@/lib/profesional/cita/precio-primera-cita";
+import { cotizarCitaNueva, MENSAJE_TOTAL_CAMBIO } from "@/lib/profesional/cita/cotizacion-cita";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 
 // SPEC-444 (I-310): todos los modelos de PI generan ids con @default(cuid()).
 // Validar con uuid() rechazaba el id real y dejaba la ruta en 400 permanente.
@@ -29,7 +30,12 @@ const crearSchema = z.object({
     urgencia: z.enum(["ESTA_SEMANA", "SIN_APURO"]),
     expedienteCompartidoId: cuidIdSchema.optional(),
     pagoHeredadoDeId: cuidIdSchema.optional(),
+    // SPEC-934 (I-450): el TOTAL que el padre vio y aceptó (consulta + servicio de la red). Si ya no es el
+    // vigente (el admin cambió la comisión o el precio entre ver y confirmar), se rechaza: nunca se guarda
+    // un monto distinto del que aceptó.
+    totalEsperado: z.number().int().positive().optional(),
 });
+
 
 export async function GET() {
     try {
@@ -48,9 +54,12 @@ export async function POST(request: Request) {
         // SPEC-428 §4: la 1ª cita cobra al PRECIO ESTÁNDAR del admin, no a
         // la tarifa del profesional. Solo se inyecta cuando NO se hereda un
         // pago (la reasignación reusa el monto original — regla del brief).
-        const montoConsultaOverride = body.pagoHeredadoDeId
-            ? undefined
-            : await leerPrecioEstandarPrimeraCita();
+        // SPEC-934: la cotización es la MISMA que pinta la ficha/el modal (`cotizarCitaNueva`).
+        const cotizacion = body.pagoHeredadoDeId ? null : await cotizarCitaNueva();
+        if (cotizacion && body.totalEsperado !== undefined && body.totalEsperado !== cotizacion.pagaElPadre) {
+            throw new AppError(MENSAJE_TOTAL_CAMBIO, ERROR_CODES.CONFLICT, 409);
+        }
+        const montoConsultaOverride = cotizacion?.tarifaProfesional;
         const solicitud = await crearSolicitudCita({
             padreUsuarioId: user.id,
             profesionalId: body.profesionalId,
@@ -58,7 +67,7 @@ export async function POST(request: Request) {
             presentacion: body.presentacion,
             urgencia: body.urgencia,
             expedienteCompartidoId: body.expedienteCompartidoId ?? null,
-            porcentajeServicio: await obtenerPorcentajeServicio(),
+            porcentajeServicio: cotizacion?.porcentajeServicio ?? (await obtenerPorcentajeServicio()),
             ...(montoConsultaOverride !== undefined ? { montoConsultaOverride } : {}),
             ...(body.pagoHeredadoDeId ? { pagoHeredadoDeId: body.pagoHeredadoDeId } : {}),
         });

@@ -14,6 +14,7 @@
  *    motivo se usa `REPROGRAMADA`).
  *  · Contador «3 consecutivas vencidas → SUSPENDIDO» + alarma por tasa >1/3.
  */
+import { desglosarTarifa } from "./comision";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
@@ -140,10 +141,13 @@ export async function crearSolicitudCita(input: CrearCitaInput) {
                 400,
             );
         }
-        montoConsulta = base;
-        porcentajeServicio = input.porcentajeServicio;
-        montoServicio = Math.round((montoConsulta * porcentajeServicio) / 100);
-        montoTotal = montoConsulta + montoServicio;
+        // SPEC-934 (I-450): el cálculo vive en UNA función (`desglosarTarifa`), la misma que pinta el
+        // desglose al padre (ficha + modal vía `cotizarCitaNueva`). Antes esta era una copia de la fórmula.
+        const desglose = desglosarTarifa(base, input.porcentajeServicio);
+        montoConsulta = desglose.tarifaProfesional;
+        porcentajeServicio = desglose.porcentajeServicio;
+        montoServicio = desglose.servicioRed;
+        montoTotal = desglose.pagaElPadre;
     }
 
     const creado = await withUnitOfWork(async (tx) => {

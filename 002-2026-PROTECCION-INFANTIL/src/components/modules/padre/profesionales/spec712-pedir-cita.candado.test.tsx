@@ -24,6 +24,7 @@ const pushSpy = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: pushSpy }) }));
 
 import { SolicitarCitaPanel } from "./SolicitarCitaPanel";
+import { desglosarTarifa } from "@/lib/profesional/cita/comision";
 
 // SPEC-730: una franja en el futuro cercano (cae en la semana que abre la rejilla).
 const futuro = (dias: number) => new Date(Date.now() + dias * 24 * 3_600_000);
@@ -34,7 +35,7 @@ const SRC = fs.readFileSync(RUTA, "utf-8");
 const PROPS = {
     profesionalId: "prof1",
     tarifaProfesionalCOP: 120_000,
-    precioEstandarPrimeraCitaCOP: 80_000,
+    cotizacion: desglosarTarifa(80_000, 10),
     duracionMinutos: 45,
 };
 

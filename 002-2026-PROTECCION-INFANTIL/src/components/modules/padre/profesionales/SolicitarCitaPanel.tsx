@@ -27,6 +27,8 @@
  *
  * Diseño: tokens del sistema. Voz del padre = «tú» (D-107).
  */
+import type { CotizacionCita } from "@/lib/profesional/cita/cotizacion-cita";
+import { DesgloseCostoCita } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -46,7 +48,8 @@ interface Props {
     // SPEC-685 (PR2-bis): la tarifa del profesional es nulable («por fijar»); cuando
     // es null no se muestra la línea de la 2ª cita (nunca 0 ni una cifra inventada).
     tarifaProfesionalCOP: number | null;
-    precioEstandarPrimeraCitaCOP: number;
+    /** SPEC-934 (I-450): cotización del servidor (consulta + servicio de la red) — la misma con que se guarda. */
+    cotizacion: CotizacionCita;
     duracionMinutos: number;
     /** Si el padre viene de un expediente, se propone compartirlo. */
     expedienteIdSugerido?: string | undefined;
@@ -90,7 +93,7 @@ function fmtRango(f: Franja): string {
 export function SolicitarCitaPanel({
     profesionalId,
     tarifaProfesionalCOP,
-    precioEstandarPrimeraCitaCOP,
+    cotizacion,
     duracionMinutos,
     expedienteIdSugerido,
     heredarDeSolicitudId,
@@ -177,6 +180,8 @@ export function SolicitarCitaPanel({
                     franjaId: franjaSel.id,
                     presentacion: presentacion.trim(),
                     urgencia,
+                    // SPEC-934: el total que el padre VIO y acepta; el servidor rechaza (409) si ya no es el vigente.
+                    totalEsperado: cotizacion.pagaElPadre,
                 };
             if (!esReasignacion && compartirExpediente && expedienteIdSugerido) {
                 body.expedienteCompartidoId = expedienteIdSugerido;
@@ -192,6 +197,9 @@ export function SolicitarCitaPanel({
                 error?: { message?: string };
             };
             if (!res.ok || !json.data?.id) {
+                // SPEC-934: 409 = el total (o la franja) cambió → refrescar la cotización del servidor para que el
+                // padre vea el valor vigente antes de reintentar.
+                if (res.status === 409) router.refresh();
                 throw new Error(json.error?.message ?? `HTTP ${res.status}`);
             }
             router.push(`/dashboard/padre/citas/${json.data.id}`);
@@ -239,8 +247,9 @@ export function SolicitarCitaPanel({
                     {esReasignacion ? "Pago heredado" : "Costo de esta cita"}
                 </p>
                 <p className="cifra text-2xl font-bold text-estado-pino">
-                    {esReasignacion ? "Sin cargo" : CURRENCY_COP.format(precioEstandarPrimeraCitaCOP)}
+                    {esReasignacion ? "Sin cargo" : CURRENCY_COP.format(cotizacion.pagaElPadre)}
                 </p>
+                {!esReasignacion && <DesgloseCostoCita cotizacion={cotizacion} />}
                 <p className="mt-1 text-xs text-subtle">
                     {esReasignacion
                         ? "El pago viaja con esta nueva solicitud desde tu cita anterior — no se cobra de nuevo."
@@ -377,8 +386,9 @@ export function SolicitarCitaPanel({
                                 {esReasignacion ? "Pago" : "Total a pagar"}
                             </p>
                             <p className="cifra text-2xl font-bold text-estado-pino">
-                                {esReasignacion ? "Sin cargo" : CURRENCY_COP.format(precioEstandarPrimeraCitaCOP)}
+                                {esReasignacion ? "Sin cargo" : CURRENCY_COP.format(cotizacion.pagaElPadre)}
                             </p>
+                            {!esReasignacion && <DesgloseCostoCita cotizacion={cotizacion} />}
                         </div>
 
                         <p className="mt-3 text-xs text-subtle">

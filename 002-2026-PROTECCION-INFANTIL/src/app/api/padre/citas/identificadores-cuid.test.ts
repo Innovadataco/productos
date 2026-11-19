@@ -38,7 +38,9 @@ vi.mock("@/lib/profesional/cita/cita.service", () => ({
     reprogramarPorPadre: mocks.reprogramarPorPadre,
 }));
 
-vi.mock("@/lib/profesional/cita/comision", () => ({
+vi.mock("@/lib/profesional/cita/comision", async (importOriginal) => ({
+    // SPEC-934: `desglosarTarifa` (puro) se conserva real — la cotización de la ruta lo usa.
+    ...(await importOriginal<typeof import("@/lib/profesional/cita/comision")>()),
     obtenerPorcentajeServicio: mocks.obtenerPorcentajeServicio,
 }));
 
