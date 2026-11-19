@@ -17,9 +17,13 @@ import { leerPrecioEstandarPrimeraCita } from "./precio-primera-cita";
 
 export type CotizacionCita = DesgloseTarifa;
 
-/** Mensaje al padre (voz tú) cuando el total cambió entre ver y confirmar (409 de `POST /api/padre/citas`). */
+/**
+ * Aviso al padre (voz tú, ámbar) cuando el total cambió entre abrir y confirmar (409 de `POST /api/padre/citas`).
+ * Copy de Diseño · FORMA 934 §3-bis (Gestión `4245a9cc`): nombra el cambio sin culpar al padre, tranquiliza («no se
+ * creó… ni cobro») y da la salida («confírmala de nuevo»). El desglose recargado (§1) va ARRIBA del aviso.
+ */
 export const MENSAJE_TOTAL_CAMBIO =
-    "El valor de la cita cambió mientras la estabas pidiendo. Revisa el nuevo total y vuelve a confirmar.";
+    "El valor de esta cita cambió mientras la revisabas; lo actualizamos arriba. No se creó la cita ni se hizo ningún cobro. Si el nuevo valor te parece bien, confírmala de nuevo.";
 
 export async function cotizarCitaNueva(client?: ParametroClient): Promise<CotizacionCita> {
     const [precioConsulta, porcentaje] = await Promise.all([

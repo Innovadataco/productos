@@ -29,6 +29,7 @@
  */
 import type { CotizacionCita } from "@/lib/profesional/cita/cotizacion-cita";
 import { DesgloseCostoCita } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
+import { MENSAJE_TOTAL_CAMBIO } from "@/lib/profesional/cita/cotizacion-cita";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -117,6 +118,8 @@ export function SolicitarCitaPanel({
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviando, setEnviando] = useState(false);
     const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+    // SPEC-934 (FORMA §3-bis): aviso ÁMBAR del 409 por precio cambiado (distinto de un error rubí).
+    const [avisoPrecioCambio, setAvisoPrecioCambio] = useState(false);
 
     const cargarFranjas = useCallback(async () => {
         setCargaError(null);
@@ -169,6 +172,7 @@ export function SolicitarCitaPanel({
         if (!franjaSel) return;
         setEnviando(true);
         setErrorEnvio(null);
+        setAvisoPrecioCambio(false);
         try {
             const url = esReasignacion
                 ? `/api/padre/citas/${encodeURIComponent(heredarDeSolicitudId!)}/reasignar`
@@ -197,9 +201,14 @@ export function SolicitarCitaPanel({
                 error?: { message?: string };
             };
             if (!res.ok || !json.data?.id) {
-                // SPEC-934: 409 = el total (o la franja) cambió → refrescar la cotización del servidor para que el
-                // padre vea el valor vigente antes de reintentar.
-                if (res.status === 409) router.refresh();
+                // SPEC-934 (FORMA §3-bis): 409 por PRECIO cambiado → recargar la cotización del servidor y mostrar el
+                // aviso ÁMBAR sobre el desglose recargado (no es un error rubí). El 409 por franja tomada u otros cae
+                // al error genérico de abajo (otro texto).
+                if (res.status === 409 && json.error?.message === MENSAJE_TOTAL_CAMBIO) {
+                    setAvisoPrecioCambio(true);
+                    router.refresh();
+                    return;
+                }
                 throw new Error(json.error?.message ?? `HTTP ${res.status}`);
             }
             router.push(`/dashboard/padre/citas/${json.data.id}`);
@@ -381,6 +390,14 @@ export function SolicitarCitaPanel({
                         <p className="cuerpo text-subtle mt-1">
                             Franja: <span className="cifra font-medium text-body">{nombreFranjaSel}</span>
                         </p>
+
+                        {/* SPEC-934 (FORMA §3-bis): aviso ÁMBAR del 409 por precio cambiado, SOBRE el desglose
+                            recargado. Solo en ese 409; no es el estado normal del modal. */}
+                        {avisoPrecioCambio && !esReasignacion && (
+                            <p className="mt-3 rounded-xl bg-ambar/10 p-3 text-xs text-estado-ambar dark:bg-ambar/20" role="status">
+                                {MENSAJE_TOTAL_CAMBIO}
+                            </p>
+                        )}
 
                         {/* Total a pagar — lo que más pesa (en pino). Mientras no se cobre, es el
                             VALOR de la reserva, no un cobro hecho (§5). */}

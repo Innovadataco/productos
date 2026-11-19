@@ -25,6 +25,7 @@ vi.mock("@/components/modules/CanalesOficiales", () => ({
 import { ProfesionalPerfil } from "./ProfesionalPerfil";
 import { formatearCOP } from "./DesgloseCostoCita";
 import { desglosarTarifa } from "@/lib/profesional/cita/comision";
+import { MENSAJE_TOTAL_CAMBIO } from "@/lib/profesional/cita/cotizacion-cita";
 import { etiquetaMontoCita } from "@/components/modules/padre/citas/EsperaCitaPanel";
 
 const BASE: PerfilPublicoDTO = {
@@ -105,5 +106,20 @@ describe("SPEC-934 · precio de la cita: total con servicio, desglose y «pagado
         // El componente NO calcula: ni Math.round ni porcentajes propios.
         const comp = leer("src/components/modules/padre/profesionales/DesgloseCostoCita.tsx");
         expect(comp).not.toMatch(/Math\.round|\/\s*100/);
+    });
+
+    it("(3c) FORMA §3-bis: el aviso del 409 por precio es ÁMBAR, SOBRE el desglose, y solo para ese 409", () => {
+        const panel = leer("src/components/modules/padre/profesionales/SolicitarCitaPanel.tsx");
+        // Copy de Diseño (texto invariante del aviso).
+        expect(MENSAJE_TOTAL_CAMBIO).toContain("No se creó la cita ni se hizo ningún cobro");
+        // El aviso usa el mensaje de Diseño en una caja ÁMBAR (no rubí).
+        const bloque = panel.slice(panel.indexOf("avisoPrecioCambio && !esReasignacion"), panel.indexOf("Total a pagar — lo que más pesa"));
+        expect(bloque).toMatch(/bg-ambar/);
+        expect(bloque).not.toMatch(/estado-rubi/);
+        expect(bloque).toMatch(/\{MENSAJE_TOTAL_CAMBIO\}/);
+        // SOBRE el desglose recargado del MODAL (identificado por su comentario), no el preview del panel.
+        expect(panel.indexOf("avisoPrecioCambio && !esReasignacion")).toBeLessThan(panel.indexOf("Total a pagar — lo que más pesa"));
+        // Solo para el 409 de precio (no el de franja tomada): la rama lo discrimina por el mensaje.
+        expect(panel).toMatch(/res\.status === 409 && json\.error\?\.message === MENSAJE_TOTAL_CAMBIO/);
     });
 });

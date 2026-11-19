@@ -34,7 +34,10 @@ pagado $55.000» antes de que el pago se aprobara.
 - Panel de espera (§2): pendiente «Total a pagar» / aprobado «Monto pagado» (`pagoAprobadoEn`). Además pinta el
   desglose GUARDADO de la fila (recomendado por la FORMA): el DTO del padre expone `desglose` con
   `montoConsulta`/`montoServicio`/`porcentajeServicio` — los montos persistidos, sin recálculo.
-- El mensaje del 409 (`totalEsperado` desactualizado) **sigue provisional**: la FORMA no lo trae; pedido a Diseño.
+- Mensaje del 409 (`totalEsperado` desactualizado) · FORMA 934 §3-bis (Gestión `4245a9cc`), voz tú, ÁMBAR, SOBRE el
+  desglose recargado del modal: «El valor de esta cita cambió mientras la revisabas; lo actualizamos arriba. No se
+  creó la cita ni se hizo ningún cobro. Si el nuevo valor te parece bien, confírmala de nuevo.» Solo en el 409 por
+  precio (el 409 por franja tomada conserva su texto). `MENSAJE_TOTAL_CAMBIO` en `cotizacion-cita.ts`.
 
 ## Hallazgos (no corregidos acá; cambian el veredicto)
 
