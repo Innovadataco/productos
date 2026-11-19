@@ -91,12 +91,10 @@ test.describe.serial("SPEC-927 · journey core #3: comité de convivencia — es
             await page.getByRole("button", { name: "Enviar invitación" }).click();
             await expect(page.getByText("Invitación enviada por email")).toBeVisible();
 
-            // DEFECTO conocido (reportado por Calidad 19-11): la página decide si mostrar la lista de
-            // integrantes con la cuenta leída en el SERVIDOR; al crearla desde el cliente, el
-            // formulario de integrantes NO aparece hasta recargar. El journey recarga (lo que hoy hace
-            // el rector) y verifica que AHÍ sí aparece. Cuando se arregle, quitar el reload.
-            await expect(page.getByRole("button", { name: "Agregar integrante" })).toHaveCount(0);
-            await page.reload();
+            // SPEC-935 (#933) cerró I-449: el formulario de integrantes YA aparece sin recargar tras
+            // crear la cuenta del comité desde el cliente. El journey verifica el contrato VIGENTE —el
+            // formulario está presente de inmediato— y agrega el integrante sin reload (SPEC-945).
+            await expect(page.getByRole("button", { name: "Agregar integrante" })).toBeVisible();
             await page.getByPlaceholder("Nombres", { exact: true }).fill(INTEGRANTE.nombres);
             await page.getByPlaceholder("Apellidos", { exact: true }).fill(INTEGRANTE.apellidos);
             await page.getByPlaceholder("Número de identificación", { exact: true }).fill(`5${Date.now() % 1_000_000_000}`);
