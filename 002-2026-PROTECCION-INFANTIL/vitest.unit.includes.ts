@@ -858,4 +858,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/corregir-colegio-registro-enlace-boton.candado.test.ts",
     // SPEC-912: «Editar» de la cuenta del comité postea el email nuevo por PATCH. Puro (jsdom, fetch mockeado).
     "src/components/modules/colegio/comite/ComiteCuentaCard.candado.test.tsx",
+    // SPEC-932: componente ÚNICO de identificadores (4 sujetos) + comité migrado + candado de árbol de render.
+    "src/components/modules/colegio/identificadores/IdentificadoresParaAlertas.test.tsx",
+    "src/components/modules/colegio/comite/IdentificadoresIntegranteClient.test.tsx",
+    "src/app/dashboard/colegio/identificadores-patron-unico.candado.test.ts",
 ];

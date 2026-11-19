@@ -19,6 +19,7 @@ import { withValidation } from "@/lib/validation";
 import { cuidIdSchema } from "@/lib/schemas";
 import { IdentificadorIntegranteComiteRepository } from "@/lib/dal/repositories/identificador-integrante-comite";
 import { normalizarIdentificador, inferirTipoIdentificador } from "@/lib/colegio/normalizacion";
+import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import { logAudit } from "@/lib/audit";
 
 const bodySchema = z.object({
@@ -73,13 +74,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const body = await withValidation.body(bodySchema)(request);
         const valor = normalizarIdentificador(body.valor);
         const tipo = (body.tipo && body.tipo.trim()) || inferirTipoIdentificador(valor);
+        // SPEC-932: el comité ahora elige plataforma (componente único). Un id inexistente reventaba la FK (500).
+        if (body.plataformaId && !(await new PlataformaRepository().findById(body.plataformaId))) {
+            return NextResponse.json(
+                { error: { message: "Plataforma no encontrada", code: ERROR_CODES.NOT_FOUND } },
+                { status: 404 }
+            );
+        }
 
         const repo = new IdentificadorIntegranteComiteRepository();
         const duplicado = await repo.buscarDuplicado(colegioId, {
             integranteId: id,
             tipo,
             valor,
-            plataformaId: body.plataformaId ?? null,
+            plataformaId: body.plataformaId || null,
         });
         if (duplicado) {
             return NextResponse.json(
@@ -92,7 +100,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             integranteId: id,
             tipo,
             valor,
-            plataformaId: body.plataformaId ?? null,
+            plataformaId: body.plataformaId || null,
         });
 
         const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";

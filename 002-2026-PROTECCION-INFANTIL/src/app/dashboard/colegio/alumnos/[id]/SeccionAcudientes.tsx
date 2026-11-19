@@ -6,18 +6,14 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
-import { Badge } from "@/components/ui/Badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-
-type Identificador = {
-    id: string;
-    tipo: string;
-    valor: string;
-    plataformaId: string | null;
-    plataforma: { id: string; clave: string; nombre: string } | null;
-    estado: string;
-};
+import {
+    IdentificadoresParaAlertas,
+    type ApiIdentificadores,
+    type DatosIdentificador,
+    type IdentificadorAlerta,
+} from "@/components/modules/colegio/identificadores/IdentificadoresParaAlertas";
 
 type Acudiente = {
     id: string;
@@ -30,10 +26,8 @@ type Acudiente = {
     documentoTipo?: string | null;
     documentoNumero?: string | null;
     estado: string;
-    identificadores: Identificador[];
+    identificadores: IdentificadorAlerta[];
 };
-
-type Plataforma = { id: string; clave: string; nombre: string };
 
 type Mensaje = { type: "success" | "error"; text: string } | null;
 
@@ -47,7 +41,6 @@ const ACUDIENTE_VACIO = {
     documentoTipo: "",
     documentoNumero: "",
 };
-const IDENTIFICADOR_VACIO = { valor: "", plataformaId: "" };
 
 interface SeccionAcudientesProps {
     estudianteId: string;
@@ -55,7 +48,6 @@ interface SeccionAcudientesProps {
 
 export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesProps) {
     const [acudientes, setAcudientes] = useState<Acudiente[]>([]);
-    const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState<Mensaje>(null);
     const [saving, setSaving] = useState(false);
@@ -64,14 +56,14 @@ export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesPro
     const [editandoAcudiente, setEditandoAcudiente] = useState<Acudiente | null>(null);
     const [formAcudiente, setFormAcudiente] = useState(ACUDIENTE_VACIO);
 
-    const [modalIdentificadorOpen, setModalIdentificadorOpen] = useState(false);
-    const [acudienteParaIdentificador, setAcudienteParaIdentificador] = useState<Acudiente | null>(null);
-    const [editandoIdentificador, setEditandoIdentificador] = useState<Identificador | null>(null);
-    const [formIdentificador, setFormIdentificador] = useState(IDENTIFICADOR_VACIO);
 
-    const cargar = useCallback(async () => {
-        setLoading(true);
-        setMessage(null);
+    // SPEC-932: `silencioso` recarga SIN pasar a skeleton — así el componente de identificadores no se desmonta y
+    // conserva su mensaje de éxito tras guardar.
+    const cargar = useCallback(async (silencioso = false) => {
+        if (!silencioso) {
+            setLoading(true);
+            setMessage(null);
+        }
         try {
             const res = await fetch(`/api/colegio/alumnos/${estudianteId}/acudientes`, { credentials: "include" });
             const data = await res.json().catch(() => ({}));
@@ -88,11 +80,7 @@ export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesPro
     }, [estudianteId]);
 
     useEffect(() => {
-        cargar();
-        fetch("/api/plataformas", { credentials: "include" })
-            .then((r) => r.json().catch(() => ({})))
-            .then((data) => setPlataformas(data.plataformas || []))
-            .catch(() => {});
+        void cargar();
     }, [cargar]);
 
     function abrirNuevoAcudiente() {
@@ -176,75 +164,23 @@ export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesPro
         }
     }
 
-    function abrirNuevoIdentificador(acudiente: Acudiente) {
-        setAcudienteParaIdentificador(acudiente);
-        setEditandoIdentificador(null);
-        setFormIdentificador(IDENTIFICADOR_VACIO);
-        setModalIdentificadorOpen(true);
+    // SPEC-932 · adaptador del acudiente. El alta NO acepta `plataformaId: null` (se omite); la edición sí (limpia).
+    function cuerpoAcudiente(d: DatosIdentificador, edicion: boolean): Record<string, unknown> {
+        return {
+            valor: d.valor,
+            ...(d.plataformaId ? { plataformaId: d.plataformaId } : edicion ? { plataformaId: null } : {}),
+            ...(d.confirmarCompartido ? { confirmarCompartido: true } : {}),
+        };
     }
-
-    function abrirEditarIdentificador(acudiente: Acudiente, identificador: Identificador) {
-        setAcudienteParaIdentificador(acudiente);
-        setEditandoIdentificador(identificador);
-        setFormIdentificador({ valor: identificador.valor, plataformaId: identificador.plataformaId ?? "" });
-        setModalIdentificadorOpen(true);
-    }
-
-    async function guardarIdentificador() {
-        if (!acudienteParaIdentificador || !formIdentificador.valor.trim()) return;
-        setSaving(true);
-        setMessage(null);
-        try {
-            const url = editandoIdentificador
-                ? `/api/colegio/acudientes/${acudienteParaIdentificador.id}/identificadores/${editandoIdentificador.id}`
-                : `/api/colegio/acudientes/${acudienteParaIdentificador.id}/identificadores`;
-            const res = await fetch(url, {
-                method: editandoIdentificador ? "PATCH" : "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    valor: formIdentificador.valor.trim(),
-                    ...(formIdentificador.plataformaId ? { plataformaId: formIdentificador.plataformaId } : {}),
-                }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) {
-                setModalIdentificadorOpen(false);
-                setMessage({ type: "success", text: editandoIdentificador ? "Identificador actualizado" : "Identificador agregado" });
-                await cargar();
-            } else {
-                setMessage({ type: "error", text: data?.error?.message || "Error guardando identificador" });
-            }
-        } catch {
-            setMessage({ type: "error", text: "Error de red guardando identificador" });
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    async function toggleEstadoIdentificador(acudiente: Acudiente, identificador: Identificador) {
-        const nuevoEstado = identificador.estado === "activo" ? "inactivo" : "activo";
-        setMessage(null);
-        try {
-            const res = await fetch(
-                `/api/colegio/acudientes/${acudiente.id}/identificadores/${identificador.id}/estado`,
-                {
-                    method: "PATCH",
-                    credentials: "include",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(nuevoEstado),
-                }
-            );
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) {
-                setMessage({ type: "success", text: `Identificador ${nuevoEstado === "activo" ? "activado" : "desactivado"}` });
-                await cargar();
-            } else {
-                setMessage({ type: "error", text: data?.error?.message || "Error cambiando estado" });
-            }
-        } catch {
-            setMessage({ type: "error", text: "Error de red cambiando estado" });
-        }
+    function apiDe(acudiente: Acudiente): ApiIdentificadores {
+        const base = `/api/colegio/acudientes/${acudiente.id}/identificadores`;
+        const enviar = (url: string, method: "POST" | "PATCH", body: unknown) =>
+            fetch(url, { method, credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        return {
+            crear: (d) => enviar(base, "POST", cuerpoAcudiente(d, false)),
+            editar: (i, d) => enviar(`${base}/${i.id}`, "PATCH", cuerpoAcudiente(d, true)),
+            cambiarEstado: (i, estado) => enviar(`${base}/${i.id}/estado`, "PATCH", estado),
+        };
     }
 
     const puedeAgregarAcudiente = acudientes.length < 2;
@@ -326,57 +262,13 @@ export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesPro
                                 </div>
                             </div>
 
-                            <div className="mt-3">
-                                <div className="mb-2 flex items-center justify-between">
-                                    <h3 className="text-sm font-semibold text-body">Identificadores para alertas</h3>
-                                    <Button
-                                        variant="ghost"
-                                        className="h-auto px-2 py-1 text-xs"
-                                        onClick={() => abrirNuevoIdentificador(acudiente)}
-                                    >
-                                        + Agregar identificador
-                                    </Button>
-                                </div>
-                                {acudiente.identificadores.length === 0 ? (
-                                    <p className="text-sm text-muted">Sin identificadores registrados.</p>
-                                ) : (
-                                    <ul className="space-y-2">
-                                        {acudiente.identificadores.map((identificador) => (
-                                            <li
-                                                key={identificador.id}
-                                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-tinta/5 p-2 text-sm"
-                                            >
-                                                <span className="text-body">
-                                                    {identificador.valor}{" "}
-                                                    <span className="text-subtle">({identificador.tipo})</span>
-                                                    {identificador.plataforma ? (
-                                                        <span className="text-subtle"> · {identificador.plataforma.nombre}</span>
-                                                    ) : null}
-                                                </span>
-                                                <span className="inline-flex items-center gap-2">
-                                                    <Badge variant={identificador.estado === "activo" ? "success" : "neutral"}>
-                                                        {identificador.estado === "activo" ? "Activo" : "Inactivo"}
-                                                    </Badge>
-                                                    <Button
-                                                        variant="outline"
-                                                        className="h-auto px-2 py-1 text-xs"
-                                                        onClick={() => abrirEditarIdentificador(acudiente, identificador)}
-                                                    >
-                                                        Editar
-                                                    </Button>
-                                                    <Button
-                                                        variant={identificador.estado === "activo" ? "danger" : "secondary"}
-                                                        className="h-auto px-2 py-1 text-xs"
-                                                        onClick={() => toggleEstadoIdentificador(acudiente, identificador)}
-                                                    >
-                                                        {identificador.estado === "activo" ? "Desactivar" : "Activar"}
-                                                    </Button>
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div>
+                            {/* SPEC-932: el patrón ÚNICO (FORMA SPEC-931 §2.3/§4), anidado bajo el acudiente. */}
+                            <IdentificadoresParaAlertas
+                                identificadores={acudiente.identificadores}
+                                api={apiDe(acudiente)}
+                                onCambio={() => cargar(true)}
+                                variante="anidado"
+                            />
                         </div>
                     ))}
                 </div>
@@ -451,32 +343,6 @@ export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesPro
                 </div>
             </Modal>
 
-            <Modal isOpen={modalIdentificadorOpen} onClose={() => setModalIdentificadorOpen(false)} title={editandoIdentificador ? "Editar identificador" : "Agregar identificador"}>
-                <div className="space-y-4">
-                    <Input
-                        label="Valor"
-                        required
-                        maxLength={255}
-                        value={formIdentificador.valor}
-                        onChange={(e) => setFormIdentificador({ ...formIdentificador, valor: e.target.value })}
-                        placeholder="Ej. +573001234567, correo@dominio.com o nick"
-                    />
-                    <Select
-                        label="Plataforma"
-                        options={[{ value: "", label: "Ninguna / General" }, ...plataformas.map((p) => ({ value: p.id, label: p.nombre }))]}
-                        value={formIdentificador.plataformaId}
-                        onChange={(e) => setFormIdentificador({ ...formIdentificador, plataformaId: e.target.value })}
-                    />
-                    <div className="flex items-center gap-3">
-                        <Button onClick={guardarIdentificador} isLoading={saving}>
-                            Guardar
-                        </Button>
-                        <Button variant="outline" onClick={() => setModalIdentificadorOpen(false)}>
-                            Cancelar
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
         </GlassCard>
     );
 }

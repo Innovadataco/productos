@@ -5,15 +5,16 @@ import { SkeletonLista } from "@/components/ui/skeletons";
 import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { Modal } from "@/components/ui/Modal";
 import { relativoHumano } from "@/lib/colegio/fechas-humano";
 import SeccionAcudientes from "./SeccionAcudientes";
+import {
+    IdentificadoresParaAlertas,
+    type ApiIdentificadores,
+    type DatosIdentificador,
+} from "@/components/modules/colegio/identificadores/IdentificadoresParaAlertas";
 
 type Estudiante = {
     id: string;
@@ -36,8 +37,6 @@ type Identificador = {
     etiquetaRelacion: string;
     estado: string;
 };
-
-type Plataforma = { id: string; clave: string; nombre: string };
 
 /** SPEC-150 (US3): marca de observación especial con actores legibles (ficha). */
 type ObservacionVista = {
@@ -71,24 +70,28 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
     const [identificadores, setIdentificadores] = useState<Identificador[]>([]);
     const [observacion, setObservacion] = useState<EstadoObservacion | null>(null);
     const [togglingObservacion, setTogglingObservacion] = useState(false);
-    const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [message, setMessage] = useState<Mensaje>(null);
-    const [modalOpen, setModalOpen] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [nuevo, setNuevo] = useState({ valor: "", plataformaId: "", etiquetaRelacion: "ESTUDIANTE" });
 
     useEffect(() => {
         params.then((p) => {
             setEstudianteId(p.id);
             cargar(p.id);
         });
-        fetch("/api/plataformas", { credentials: "include" })
-            .then((r) => r.json().catch(() => ({})))
-            .then((data) => setPlataformas(data.plataformas || []))
-            .catch(() => {});
     }, [params]);
+
+    // SPEC-932: recarga SOLO los identificadores, sin pasar a skeleton — el componente no se desmonta y conserva
+    // su mensaje de éxito tras guardar.
+    async function recargarIdentificadores(id: string) {
+        try {
+            const res = await fetch(`/api/colegio/alumnos/${id}/identificadores`, { credentials: "include" });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) setIdentificadores(data.identificadores || []);
+        } catch {
+            // la próxima carga completa lo reintenta; el guardado ya se confirmó en el componente
+        }
+    }
 
     async function cargar(id: string) {
         setLoading(true);
@@ -130,39 +133,6 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
         }
     }
 
-    async function agregarIdentificador() {
-        if (!estudianteId || !nuevo.valor.trim()) return;
-        setSaving(true);
-        setMessage(null);
-        try {
-            const payload: Record<string, unknown> = {
-                valor: nuevo.valor.trim(),
-                etiquetaRelacion: nuevo.etiquetaRelacion,
-            };
-            if (nuevo.plataformaId) payload.plataformaId = nuevo.plataformaId;
-
-            const res = await fetch(`/api/colegio/alumnos/${estudianteId}/identificadores`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) {
-                setModalOpen(false);
-                setNuevo({ valor: "", plataformaId: "", etiquetaRelacion: "ESTUDIANTE" });
-                setMessage({ type: "success", text: "Identificador agregado" });
-                if (estudianteId) await cargar(estudianteId);
-            } else {
-                setMessage({ type: "error", text: data?.error?.message || "Error agregando identificador" });
-            }
-        } catch {
-            setMessage({ type: "error", text: "Error de red agregando identificador" });
-        } finally {
-            setSaving(false);
-        }
-    }
-
     // SPEC-150 (US3): estrella de observación especial — POST marca (idempotente),
     // DELETE desmarca (soft delete: la fila y el historial se conservan).
     async function toggleObservacion() {
@@ -196,26 +166,22 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
         }
     }
 
-    async function toggleEstadoIdentificador(identificador: Identificador) {
-        const nuevoEstado = identificador.estado === "activo" ? "inactivo" : "activo";
-        try {
-            const res = await fetch(`/api/colegio/identificadores/${identificador.id}/estado`, {
-                method: "PATCH",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(nuevoEstado),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) {
-                setMessage({ type: "success", text: `Identificador ${nuevoEstado === "activo" ? "activado" : "desactivado"}` });
-                if (estudianteId) await cargar(estudianteId);
-            } else {
-                setMessage({ type: "error", text: data?.error?.message || "Error cambiando estado" });
-            }
-        } catch {
-            setMessage({ type: "error", text: "Error de red cambiando estado" });
-        }
+    // SPEC-932 · adaptador del estudiante. El alta NO acepta `plataformaId: null` (se omite); la edición sí (limpia).
+    function cuerpoEstudiante(d: DatosIdentificador, edicion: boolean): Record<string, unknown> {
+        return {
+            valor: d.valor,
+            ...(d.plataformaId ? { plataformaId: d.plataformaId } : edicion ? { plataformaId: null } : {}),
+            ...(d.etiquetaRelacion ? { etiquetaRelacion: d.etiquetaRelacion } : {}),
+            ...(d.confirmarCompartido ? { confirmarCompartido: true } : {}),
+        };
     }
+    const enviar = (url: string, method: "POST" | "PATCH", body: unknown) =>
+        fetch(url, { method, credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const apiIdentificadores: ApiIdentificadores = {
+        crear: (d) => enviar(`/api/colegio/alumnos/${estudianteId}/identificadores`, "POST", cuerpoEstudiante(d, false)),
+        editar: (i, d) => enviar(`/api/colegio/identificadores/${i.id}`, "PATCH", cuerpoEstudiante(d, true)),
+        cambiarEstado: (i, estado) => enviar(`/api/colegio/identificadores/${i.id}/estado`, "PATCH", estado),
+    };
 
     return (
         <div className="min-h-screen bg-page">
@@ -233,7 +199,6 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                             <h1 className="text-2xl font-bold text-body">{estudiante?.nombre || "Estudiante"}</h1>
                             {curso && <p className="text-sm text-muted">{curso.nombre}</p>}
                         </div>
-                        <Button onClick={() => setModalOpen(true)}>Nuevo identificador</Button>
                     </div>
 
                     {message && (
@@ -322,59 +287,13 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                                 ) : null}
                             </GlassCard>
 
-                            <GlassCard>
-                                <h2 className="text-lg font-semibold text-body">Identificadores</h2>
-                                {identificadores.length === 0 ? (
-                                    <EmptyState
-                                        title="No hay identificadores"
-                                        description="Agregue un identificador para usar en futuras alertas."
-                                        action={
-                                            <Button onClick={() => setModalOpen(true)}>Agregar identificador</Button>
-                                        }
-                                    />
-                                ) : (
-                                    <div className="mt-4 overflow-x-auto">
-                                        <table className="w-full text-left text-sm">
-                                            <thead className="border-b border-tinta/15">
-                                                <tr className="text-subtle">
-                                                    <th className="pb-3 font-medium">Valor</th>
-                                                    <th className="pb-3 font-medium">Tipo</th>
-                                                    <th className="pb-3 font-medium">Plataforma</th>
-                                                    <th className="pb-3 font-medium">Relación</th>
-                                                    <th className="pb-3 font-medium">Estado</th>
-                                                    <th className="pb-3 font-medium text-right">Acciones</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-tinta/10">
-                                                {identificadores.map((identificador) => (
-                                                    <tr key={identificador.id} className="align-top">
-                                                        <td className="py-3 pr-3 font-medium text-body">{identificador.valor}</td>
-                                                        <td className="py-3 pr-3 text-muted">{identificador.tipo}</td>
-                                                        <td className="py-3 pr-3 text-muted">{identificador.plataforma?.nombre || "—"}</td>
-                                                        <td className="py-3 pr-3 text-muted">
-                                                            {etiquetaOptions.find((e) => e.value === identificador.etiquetaRelacion)?.label || identificador.etiquetaRelacion}
-                                                        </td>
-                                                        <td className="py-3 pr-3">
-                                                            <Badge variant={identificador.estado === "activo" ? "success" : "neutral"}>
-                                                                {identificador.estado === "activo" ? "Activo" : "Inactivo"}
-                                                            </Badge>
-                                                        </td>
-                                                        <td className="py-3 text-right">
-                                                            <Button
-                                                                variant={identificador.estado === "activo" ? "danger" : "secondary"}
-                                                                className="px-3 py-1.5 text-xs"
-                                                                onClick={() => toggleEstadoIdentificador(identificador)}
-                                                            >
-                                                                {identificador.estado === "activo" ? "Desactivar" : "Activar"}
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </GlassCard>
+                            {/* SPEC-932: el patrón ÚNICO (FORMA SPEC-931 §2.2) — gana «Editar», conserva «Relación». */}
+                            <IdentificadoresParaAlertas
+                                identificadores={identificadores}
+                                api={apiIdentificadores}
+                                onCambio={() => (estudianteId ? recargarIdentificadores(estudianteId) : undefined)}
+                                relacion={{ opciones: etiquetaOptions, porDefecto: "ESTUDIANTE" }}
+                            />
 
                             <SeccionAcudientes estudianteId={estudianteId!} />
                         </div>
@@ -382,42 +301,6 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                 </div>
             </main>
 
-            <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Agregar identificador">
-                <div className="space-y-4">
-                    <Input
-                        label="Valor"
-                        required
-                        maxLength={255}
-                        value={nuevo.valor}
-                        onChange={(e) => setNuevo({ ...nuevo, valor: e.target.value })}
-                        placeholder="Ej. +573001234567, correo@dominio.com o nick"
-                    />
-                    <Select
-                        label="Plataforma"
-                        options={[
-                            { value: "", label: "Ninguna / General" },
-                            ...plataformas.map((p) => ({ value: p.id, label: p.nombre })),
-                        ]}
-                        value={nuevo.plataformaId}
-                        onChange={(e) => setNuevo({ ...nuevo, plataformaId: e.target.value })}
-                    />
-                    <Select
-                        label="Relación"
-                        required
-                        options={etiquetaOptions}
-                        value={nuevo.etiquetaRelacion}
-                        onChange={(e) => setNuevo({ ...nuevo, etiquetaRelacion: e.target.value })}
-                    />
-                    <div className="flex items-center gap-3">
-                        <Button onClick={agregarIdentificador} isLoading={saving}>
-                            Agregar
-                        </Button>
-                        <Button variant="outline" onClick={() => setModalOpen(false)}>
-                            Cancelar
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
         </div>
     );
 }
