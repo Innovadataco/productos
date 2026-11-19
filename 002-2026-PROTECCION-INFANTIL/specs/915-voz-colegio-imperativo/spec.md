@@ -1,5 +1,7 @@
 # SPEC-915 · Residual de voz del colegio: imperativo tú SUELTO → usted
 
+**Status**: IMPLEMENTADO
+
 **Prioridad:** BAJA · sin deploy especial (viaja en el próximo deploy de colegio).
 **Rama:** `work/pi-SPEC-915-voz-colegio-imperativo` desde `origin/main` (968d5c0a).
 **Regla:** D-107 · el territorio del colegio + comité habla de **usted**; el padre/público conserva **tú** (no se toca).

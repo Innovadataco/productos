@@ -1,5 +1,7 @@
 # SPEC-918 · El correo de activación del colegio muestra un BOTÓN, no la URL pelada
 
+**Status**: IMPLEMENTADO
+
 **Rama:** `work/pi-SPEC-918-colegio-enlace-boton` desde `origin/main` (54145873).
 **Deploy + corrector contra prod:** los corre el CEO.
 
