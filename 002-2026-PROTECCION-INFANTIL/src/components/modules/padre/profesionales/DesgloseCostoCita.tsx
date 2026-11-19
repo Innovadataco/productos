@@ -29,6 +29,12 @@ export const ROTULO_CONSULTA = "Valor de la consulta";
 export const rotuloServicio = (porcentaje: number) => `Servicio de la red (${porcentaje} %)`;
 export const ROTULO_TOTAL = "Total a pagar";
 
+/**
+ * SPEC-938 · la tarifa que declara el profesional es INFORMATIVA: PI no cobra ni intermedia la 2.ª cita
+ * (brief A-75 v2.0 §4/§9). COPY PROVISIONAL — lo define Diseño.
+ */
+export const TARIFA_INFORMATIVA = "Se acuerda directamente con el profesional; la red no la cobra.";
+
 /** Desglose de una cita YA guardada (montos persistidos; nada se recalcula). */
 export function desgloseDeCitaGuardada(c: {
     montoConsulta: number;
