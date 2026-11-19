@@ -702,6 +702,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-444 (I-310): los ids de PI son cuid. Validarlos con uuid() dejaba
     // `POST /api/padre/citas` en 400 permanente. Candado de caso + de clase.
     "src/app/api/padre/citas/identificadores-cuid.test.ts",
+    // SPEC-934 (I-450): total mostrado = total guardado, desglose, «pagado» solo con pago aprobado. Render + fuente.
+    "src/components/modules/padre/profesionales/precio-cita-desglose.candado.test.tsx",
     "src/lib/schemas/identificadores.candado.test.ts",
     // SPEC-438 (I-305): el sistema no puede volver a inventar la hora del hecho.
     "src/lib/reportes/fecha-hecho.candado.test.ts",

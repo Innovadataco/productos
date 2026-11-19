@@ -27,6 +27,9 @@
  *
  * Diseño: tokens del sistema. Voz del padre = «tú» (D-107).
  */
+import type { CotizacionCita } from "@/lib/profesional/cita/cotizacion-cita";
+import { DesgloseCostoCita } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
+import { MENSAJE_TOTAL_CAMBIO } from "@/lib/profesional/cita/cotizacion-cita";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -46,7 +49,8 @@ interface Props {
     // SPEC-685 (PR2-bis): la tarifa del profesional es nulable («por fijar»); cuando
     // es null no se muestra la línea de la 2ª cita (nunca 0 ni una cifra inventada).
     tarifaProfesionalCOP: number | null;
-    precioEstandarPrimeraCitaCOP: number;
+    /** SPEC-934 (I-450): cotización del servidor (consulta + servicio de la red) — la misma con que se guarda. */
+    cotizacion: CotizacionCita;
     duracionMinutos: number;
     /** Si el padre viene de un expediente, se propone compartirlo. */
     expedienteIdSugerido?: string | undefined;
@@ -90,7 +94,7 @@ function fmtRango(f: Franja): string {
 export function SolicitarCitaPanel({
     profesionalId,
     tarifaProfesionalCOP,
-    precioEstandarPrimeraCitaCOP,
+    cotizacion,
     duracionMinutos,
     expedienteIdSugerido,
     heredarDeSolicitudId,
@@ -114,6 +118,8 @@ export function SolicitarCitaPanel({
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviando, setEnviando] = useState(false);
     const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+    // SPEC-934 (FORMA §3-bis): aviso ÁMBAR del 409 por precio cambiado (distinto de un error rubí).
+    const [avisoPrecioCambio, setAvisoPrecioCambio] = useState(false);
 
     const cargarFranjas = useCallback(async () => {
         setCargaError(null);
@@ -166,6 +172,7 @@ export function SolicitarCitaPanel({
         if (!franjaSel) return;
         setEnviando(true);
         setErrorEnvio(null);
+        setAvisoPrecioCambio(false);
         try {
             const url = esReasignacion
                 ? `/api/padre/citas/${encodeURIComponent(heredarDeSolicitudId!)}/reasignar`
@@ -177,6 +184,8 @@ export function SolicitarCitaPanel({
                     franjaId: franjaSel.id,
                     presentacion: presentacion.trim(),
                     urgencia,
+                    // SPEC-934: el total que el padre VIO y acepta; el servidor rechaza (409) si ya no es el vigente.
+                    totalEsperado: cotizacion.pagaElPadre,
                 };
             if (!esReasignacion && compartirExpediente && expedienteIdSugerido) {
                 body.expedienteCompartidoId = expedienteIdSugerido;
@@ -192,6 +201,14 @@ export function SolicitarCitaPanel({
                 error?: { message?: string };
             };
             if (!res.ok || !json.data?.id) {
+                // SPEC-934 (FORMA §3-bis): 409 por PRECIO cambiado → recargar la cotización del servidor y mostrar el
+                // aviso ÁMBAR sobre el desglose recargado (no es un error rubí). El 409 por franja tomada u otros cae
+                // al error genérico de abajo (otro texto).
+                if (res.status === 409 && json.error?.message === MENSAJE_TOTAL_CAMBIO) {
+                    setAvisoPrecioCambio(true);
+                    router.refresh();
+                    return;
+                }
                 throw new Error(json.error?.message ?? `HTTP ${res.status}`);
             }
             router.push(`/dashboard/padre/citas/${json.data.id}`);
@@ -238,9 +255,13 @@ export function SolicitarCitaPanel({
                 <p className="text-[11px] uppercase tracking-wide text-estado-pino">
                     {esReasignacion ? "Pago heredado" : "Costo de esta cita"}
                 </p>
-                <p className="cifra text-2xl font-bold text-estado-pino">
-                    {esReasignacion ? "Sin cargo" : CURRENCY_COP.format(precioEstandarPrimeraCitaCOP)}
-                </p>
+                {/* SPEC-934 (FORMA 24ed7aa1 §1): desglose con «Total a pagar» como cifra grande. Reasignación: sin
+                    desglose (no se recobra). */}
+                {esReasignacion ? (
+                    <p className="cifra text-2xl font-bold text-estado-pino">Sin cargo</p>
+                ) : (
+                    <DesgloseCostoCita cotizacion={cotizacion} />
+                )}
                 <p className="mt-1 text-xs text-subtle">
                     {esReasignacion
                         ? "El pago viaja con esta nueva solicitud desde tu cita anterior — no se cobra de nuevo."
@@ -370,15 +391,26 @@ export function SolicitarCitaPanel({
                             Franja: <span className="cifra font-medium text-body">{nombreFranjaSel}</span>
                         </p>
 
+                        {/* SPEC-934 (FORMA §3-bis): aviso ÁMBAR del 409 por precio cambiado, SOBRE el desglose
+                            recargado. Solo en ese 409; no es el estado normal del modal. */}
+                        {avisoPrecioCambio && !esReasignacion && (
+                            <p className="mt-3 rounded-xl bg-ambar/10 p-3 text-xs text-estado-ambar dark:bg-ambar/20" role="status">
+                                {MENSAJE_TOTAL_CAMBIO}
+                            </p>
+                        )}
+
                         {/* Total a pagar — lo que más pesa (en pino). Mientras no se cobre, es el
                             VALOR de la reserva, no un cobro hecho (§5). */}
                         <div className="mt-3 rounded-xl bg-pino/10 p-3">
-                            <p className="text-[11px] uppercase tracking-wide text-estado-pino">
-                                {esReasignacion ? "Pago" : "Total a pagar"}
-                            </p>
-                            <p className="cifra text-2xl font-bold text-estado-pino">
-                                {esReasignacion ? "Sin cargo" : CURRENCY_COP.format(precioEstandarPrimeraCitaCOP)}
-                            </p>
+                            {esReasignacion ? (
+                                <>
+                                    <p className="text-[11px] uppercase tracking-wide text-estado-pino">Pago</p>
+                                    <p className="cifra text-2xl font-bold text-estado-pino">Sin cargo</p>
+                                </>
+                            ) : (
+                                // SPEC-934 (FORMA 24ed7aa1 §1): el desglose cierra en «Total a pagar» (cifra grande).
+                                <DesgloseCostoCita cotizacion={cotizacion} />
+                            )}
                         </div>
 
                         <p className="mt-3 text-xs text-subtle">

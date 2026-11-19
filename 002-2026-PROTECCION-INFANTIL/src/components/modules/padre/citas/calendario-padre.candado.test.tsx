@@ -25,6 +25,7 @@ vi.mock("@/lib/padre/borrador-consulta", () => ({
 import { SolicitarCitaPanel } from "@/components/modules/padre/profesionales/SolicitarCitaPanel";
 import { RejillaMisCitas } from "./RejillaMisCitas";
 import { EsperaCitaPanel } from "./EsperaCitaPanel";
+import { desglosarTarifa } from "@/lib/profesional/cita/comision";
 
 // SPEC-866: este test sembraba las citas con `Date.now() + N días` y la rejilla
 // (`useCalendarioNav`) abre en la vista SEMANA (lunes–domingo) de HOY. Cuando HOY
@@ -74,7 +75,7 @@ describe("SPEC-730 · el padre elige y ve sus citas en la rejilla, no en una lis
     it("(1) elegir franja pinta la rejilla (columnas [data-col]) y el toque selecciona la franja", async () => {
         vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ data: [franja("f1", 2, "VIRTUAL")] }), { status: 200 }));
         const { container } = render(
-            <SolicitarCitaPanel profesionalId="prof1" tarifaProfesionalCOP={120_000} precioEstandarPrimeraCitaCOP={80_000} duracionMinutos={45} />,
+            <SolicitarCitaPanel profesionalId="prof1" tarifaProfesionalCOP={120_000} cotizacion={desglosarTarifa(80_000, 10)} duracionMinutos={45} />,
         );
         // Las franjas cargan async: se espera el bloque, luego se afirma la estructura.
         const bloque = await screen.findByText("Virtual");

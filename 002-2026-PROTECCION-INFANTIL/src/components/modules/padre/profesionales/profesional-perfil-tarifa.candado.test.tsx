@@ -19,6 +19,7 @@ vi.mock("@/components/modules/CanalesOficiales", () => ({
 }));
 
 import { ProfesionalPerfil } from "./ProfesionalPerfil";
+import { desglosarTarifa } from "@/lib/profesional/cita/comision";
 
 const BASE: PerfilPublicoDTO = {
     id: "prof-1",
@@ -41,7 +42,7 @@ const BASE: PerfilPublicoDTO = {
 };
 
 function pintar(tarifa: number | null) {
-    return render(<ProfesionalPerfil p={{ ...BASE, tarifaConsultaCOP: tarifa }} precioEstandarPrimeraCitaCOP={50_000} />);
+    return render(<ProfesionalPerfil p={{ ...BASE, tarifaConsultaCOP: tarifa }} cotizacion={desglosarTarifa(50_000, 10)} />);
 }
 
 describe("SPEC-685 · ProfesionalPerfil · tarifa de la 2ª cita: «por definir», nunca «$0»", () => {

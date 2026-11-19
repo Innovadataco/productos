@@ -13,6 +13,8 @@ import Link from "next/link";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { SolicitarCitaPanel } from "@/components/modules/padre/profesionales/SolicitarCitaPanel";
 import type { PerfilPublicoDTO } from "@/lib/dal/repositories/perfil-profesional";
+import type { CotizacionCita } from "@/lib/profesional/cita/cotizacion-cita";
+import { DesgloseCostoCita } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
 
 const CURRENCY_COP = new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -31,7 +33,7 @@ export function ProfesionalPerfil({
     p,
     // SPEC-428: se paga el PRECIO ESTÁNDAR (§4). La tarifa del profesional
     // aplica desde la 2ª cita en adelante; ambas se muestran al padre.
-    precioEstandarPrimeraCitaCOP,
+    cotizacion,
     expedienteIdSugerido,
     // SPEC-428 (M7): si viene, el panel de reserva usa el flujo de reasignación
     // (POST /citas/[id]/reasignar) — hereda el pago, no cobra de nuevo.
@@ -40,7 +42,8 @@ export function ProfesionalPerfil({
     audienciasPendientes,
 }: {
     p: PerfilPublicoDTO;
-    precioEstandarPrimeraCitaCOP: number;
+    /** SPEC-934: cotización del servidor (consulta + servicio de la red) — la misma con que se guarda. */
+    cotizacion: CotizacionCita;
     expedienteIdSugerido?: string | undefined;
     heredarDeSolicitudId?: string | undefined;
     /** SPEC-751 T010 (§2): nº de audiencias «oír al menor» pendientes del titular (heads-up en la cita). */
@@ -90,9 +93,9 @@ export function ProfesionalPerfil({
                 <p className="text-xs uppercase tracking-wide text-estado-cielo dark:text-cielo">
                     Costo de la primera cita
                 </p>
-                <p className="mt-1 text-3xl font-bold text-estado-cielo dark:text-cielo">
-                    {CURRENCY_COP.format(precioEstandarPrimeraCitaCOP)}
-                </p>
+                {/* SPEC-934 (I-450 · FORMA 24ed7aa1 §1): desglose; la cifra grande es «Total a pagar» = lo que se
+                    guarda y se cobra (cotización del servidor, sin recalcular en el cliente). */}
+                <DesgloseCostoCita cotizacion={cotizacion} />
                 <p className="mt-1 text-sm text-muted">
                     Sesión de {p.duracionMinutos} minutos{p.emiteFactura ? " · emite factura" : ""}.
                 </p>
@@ -168,7 +171,7 @@ export function ProfesionalPerfil({
             <SolicitarCitaPanel
                 profesionalId={p.id}
                 tarifaProfesionalCOP={p.tarifaConsultaCOP}
-                precioEstandarPrimeraCitaCOP={precioEstandarPrimeraCitaCOP}
+                cotizacion={cotizacion}
                 duracionMinutos={p.duracionMinutos}
                 {...(expedienteIdSugerido !== undefined ? { expedienteIdSugerido } : {})}
                 {...(heredarDeSolicitudId !== undefined ? { heredarDeSolicitudId } : {})}

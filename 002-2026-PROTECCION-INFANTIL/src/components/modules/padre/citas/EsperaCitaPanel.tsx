@@ -16,6 +16,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { CitaParaPadreDto } from "@/lib/profesional/cita/dto";
+import { DesgloseCostoCita, desgloseDeCitaGuardada } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
 import type { ExpedienteParaCompartirDto } from "@/lib/dal/services/expediente-detalle/types";
 import { badgeDeCitaEfectivo } from "@/lib/padre/citas-listado";
 import { derivarVistaFranjaPasada, type VistaEspera, type AccionesEspera, type TonoEspera } from "@/lib/padre/vista-espera-cita";
@@ -407,6 +408,12 @@ function AntesDeLaCita({ cita, expedientes }: { cita: CitaParaPadreDto; expedien
     );
 }
 
+
+/** SPEC-934 (I-450): «Monto pagado» solo si el pago está aprobado; si no, «Total a pagar». */
+export function etiquetaMontoCita(pagoAprobadoEn: string | null): "Monto pagado" | "Total a pagar" {
+    return pagoAprobadoEn ? "Monto pagado" : "Total a pagar";
+}
+
 export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
     const [cita, setCita] = useState<CitaParaPadreDto>(citaInicial);
     const [refrescando, setRefrescando] = useState(false);
@@ -512,8 +519,19 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                     <p className="etiqueta text-subtle capitalize">{cita.franja.modalidad}</p>
                 </div>
                 <div>
-                    <p className="etiqueta text-subtle">Monto pagado</p>
-                    <p className="cuerpo text-body">{formatearMonto(cita.montoTotal)}</p>
+                    {/* SPEC-934 (I-450 · FORMA 24ed7aa1 §2): «pagado» SOLO con el pago aprobado; antes, lo que falta
+                        pagar. Con el desglose GUARDADO, el padre ve lo mismo que vio al pedirla. */}
+                    {cita.desglose ? (
+                        <DesgloseCostoCita
+                            cotizacion={desgloseDeCitaGuardada({ ...cita.desglose, montoTotal: cita.montoTotal })}
+                            rotuloTotal={etiquetaMontoCita(cita.pagoAprobadoEn)}
+                        />
+                    ) : (
+                        <>
+                            <p className="etiqueta text-subtle">{etiquetaMontoCita(cita.pagoAprobadoEn)}</p>
+                            <p className="cuerpo text-body">{formatearMonto(cita.montoTotal)}</p>
+                        </>
+                    )}
                     {cita.pagoHeredadoDeId && (
                         <p className="etiqueta text-subtle">
                             Pago heredado de una cita previa — no se cobró de nuevo.

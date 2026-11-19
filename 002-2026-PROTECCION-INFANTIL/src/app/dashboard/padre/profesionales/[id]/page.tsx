@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { ProfesionalPerfil } from "@/components/modules/padre/profesionales/ProfesionalPerfil";
-import { leerPrecioEstandarPrimeraCita } from "@/lib/profesional/cita/precio-primera-cita";
+import { cotizarCitaNueva } from "@/lib/profesional/cita/cotizacion-cita";
 import { menoresPendientesDeAudienciaDelTitular } from "@/lib/dal/services/audiencia-menor";
 
 export default async function PadreProfesionalPerfilPage({
@@ -34,9 +34,10 @@ export default async function PadreProfesionalPerfilPage({
     if (heredarDe) paramsVolver.set("heredarDe", heredarDe);
     const hrefVolverQuery = paramsVolver.toString() ? `?${paramsVolver.toString()}` : "";
 
-    const [perfil, precioEstandarPrimeraCitaCOP, pendientesAudiencia] = await Promise.all([
+    const [perfil, cotizacionCita, pendientesAudiencia] = await Promise.all([
         new PerfilProfesionalRepository().obtenerPublicoPorId(id, user.id), // SPEC-655: visor de la sesión
-        leerPrecioEstandarPrimeraCita(),
+        // SPEC-934 (I-450): la MISMA cotización con la que la ruta crea la solicitud (consulta + servicio).
+        cotizarCitaNueva(),
         // SPEC-751 T010 (§2): heads-up «oír al menor» en la cita. Solo el CONTEO (no nombres) —
         // la cita no es por-hijo, así que el renglón se enmarca por «tu hijo/tus hijos», sin PII.
         menoresPendientesDeAudienciaDelTitular(user.id),
@@ -46,7 +47,7 @@ export default async function PadreProfesionalPerfilPage({
     return (
         <ProfesionalPerfil
             p={perfil}
-            precioEstandarPrimeraCitaCOP={precioEstandarPrimeraCitaCOP}
+            cotizacion={cotizacionCita}
             expedienteIdSugerido={expedienteId}
             heredarDeSolicitudId={heredarDe}
             audienciasPendientes={pendientesAudiencia.length}
