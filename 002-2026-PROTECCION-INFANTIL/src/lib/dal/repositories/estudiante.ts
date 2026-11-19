@@ -94,6 +94,53 @@ export class EstudianteRepository {
         ]);
     }
 
+    /**
+     * SPEC-931 (Usuarios → Estudiantes): estudiantes ACTIVOS del COLEGIO con su curso y los CONTEOS de
+     * identificadores activos y acudientes activos, en UN findMany + UN count (cero N+1). SIEMPRE acotado
+     * al colegio: `cursoId` solo acota DENTRO de él. `select` explícito: ningún otro escalar (documento,
+     * contactos) sale del repo. Búsqueda por palabras: cada palabra debe aparecer en nombre O apellidos
+     * («Juan Pérez» cruza los dos campos). Orden: apellidos, nombre. Devuelve [items, total].
+     */
+    listarDelColegio(
+        colegioId: string,
+        filtro: { busqueda?: string | undefined; cursoId?: string | undefined; skip: number; take: number }
+    ) {
+        const palabras = (filtro.busqueda ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 5);
+        const porPalabra: Prisma.EstudianteWhereInput[] = palabras.map((p) => ({
+            OR: [
+                { nombre: { contains: p, mode: "insensitive" } },
+                { apellidos: { contains: p, mode: "insensitive" } },
+            ],
+        }));
+        const where = {
+            colegioId,
+            estado: "activo",
+            ...(filtro.cursoId ? { cursoId: filtro.cursoId } : {}),
+            ...(porPalabra.length > 0 ? { AND: porPalabra } : {}),
+        } satisfies Prisma.EstudianteWhereInput;
+        return Promise.all([
+            this.db.estudiante.findMany({
+                where,
+                orderBy: [{ apellidos: "asc" }, { nombre: "asc" }],
+                skip: filtro.skip,
+                take: filtro.take,
+                select: {
+                    id: true,
+                    nombre: true,
+                    apellidos: true,
+                    curso: { select: { id: true, nombre: true } },
+                    _count: {
+                        select: {
+                            identificadores: { where: { estado: "activo" } },
+                            acudientes: { where: { estado: "activo" } },
+                        },
+                    },
+                },
+            }),
+            this.db.estudiante.count({ where }),
+        ]);
+    }
+
     /** Total de estudiantes del colegio (totales generales de estadísticas). */
     contarPorColegio(colegioId: string): Promise<number> {
         return this.db.estudiante.count({ where: { colegioId } });

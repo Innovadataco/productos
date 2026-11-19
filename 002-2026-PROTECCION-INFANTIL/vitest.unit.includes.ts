@@ -864,4 +864,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/colegio/identificadores/IdentificadoresParaAlertas.test.tsx",
     "src/components/modules/colegio/comite/IdentificadoresIntegranteClient.test.tsx",
     "src/app/dashboard/colegio/identificadores-patron-unico.candado.test.ts",
+    // SPEC-931: Usuarios → Estudiantes — entrada en el menú (módulo colegios_gestion), página con guardia de
+    // servidor del mismo módulo, DTO exacto, «← Volver» coherente, copy I-429. Puro (la BD vive en route.test).
+    "src/lib/colegio/estudiantes-en-usuarios.candado.test.ts",
 ];

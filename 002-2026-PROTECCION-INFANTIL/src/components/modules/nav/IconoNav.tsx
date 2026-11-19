@@ -291,6 +291,9 @@ export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     // Colegio.
     "/dashboard/colegio": InicioIcon,
     "/dashboard/colegio/cursos": CursosIcon,
+    // SPEC-931 · provisional, a certificar por Diseño (la FORMA no fija ícono). NO `UsersIcon`: es el MISMO
+    // dibujo que el `UsuariosIcon` del encabezado «Usuarios» (el candado compara identidad, no el trazo).
+    "/dashboard/colegio/estudiantes": UserCircleIcon,
     "/dashboard/colegio/profesores": ProfesoresIcon,
     "/dashboard/colegio/alertas": AlertasIcon,
     "/dashboard/colegio/estadisticas": ChartIcon,

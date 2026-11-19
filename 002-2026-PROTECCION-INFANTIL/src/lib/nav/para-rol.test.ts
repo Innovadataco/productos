@@ -155,11 +155,14 @@ describe("navParaRol · roles internos (compuerta por módulo ∧ proxy)", () =>
 describe("navParaRol · colegio (grupos con hijos)", () => {
     it("SCHOOL_ADMIN: el grupo «Usuarios» filtra sus hijos por módulo y se oculta si queda vacío", () => {
         // Solo `colegios_gestion`: el padre «Usuarios» se muestra; de sus hijos solo
-        // «Profesores» (colegios_gestion); «Comité de convivencia» (colegios_comite) cae.
+        // «Estudiantes» y «Profesores» (colegios_gestion); «Comité de convivencia» (colegios_comite) cae.
         const salida = navParaRol("SCHOOL_ADMIN", { modulosPermitidos: ["colegios_gestion"] });
         const usuarios = salida.find((e) => e.label === "Usuarios");
         expect(usuarios, "el grupo Usuarios debe verse con colegios_gestion").toBeTruthy();
-        expect(usuarios?.children?.map((c) => c.href)).toEqual(["/dashboard/colegio/profesores"]);
+        expect(usuarios?.children?.map((c) => c.href)).toEqual([
+            "/dashboard/colegio/estudiantes", // SPEC-931
+            "/dashboard/colegio/profesores",
+        ]);
 
         // Sin ningún módulo del colegio: nada, ni el grupo.
         expect(navParaRol("SCHOOL_ADMIN", { modulosPermitidos: [] })).toEqual([]);
@@ -223,6 +226,7 @@ describe("navMovilParaRol · barra móvil {principales≤4, resto}, DATA de la f
         // Colegio «Usuarios»: sin hijos promovidos → va ENTERO al resto (grupo con children).
         const { resto } = navMovilParaRol("SCHOOL_ADMIN", ctxDe("SCHOOL_ADMIN"));
         expect(resto.find((e) => e.label === "Usuarios")?.children?.map((c) => c.href)).toEqual([
+            "/dashboard/colegio/estudiantes", // SPEC-931
             "/dashboard/colegio/profesores",
             "/dashboard/colegio/comite/integrantes",
         ]);
