@@ -203,6 +203,7 @@ describe("SPEC-922 · registro único de copys canónicos", () => {
         // Forma de las FORMAs de Diseño (SPEC-919 / BARRIDO-01/02): enlaces inline en la frase.
         const antiEnum: CopyCanonico = {
             clave: "fixture.cuenta_existente.email",
+            audiencia: "compartida",
             canal: "EMAIL",
             asunto: "Ya existe una cuenta con este correo",
             cuerpoMarkdown:
@@ -216,6 +217,7 @@ describe("SPEC-922 · registro único de copys canónicos", () => {
         };
         const opaco: CopyCanonico = {
             clave: "fixture.reporte_enriquecido.email",
+            audiencia: "compartida",
             canal: "EMAIL",
             asunto: "{{asunto}}",
             cuerpoMarkdown: "{{cuerpo}}\n\nIngresa a tu panel para ver el contexto completo:\n\n[Ir a mi panel]({{urlPanel}})",

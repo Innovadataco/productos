@@ -39,12 +39,24 @@
  * fila existente: el seed no toca filas existentes y el corrector escribe SOLO asunto + cuerpo. Al
  * crear, `activa = !derogada` (una derogada nace inactiva).
  *
- * La VOZ va horneada en el copy (no hay candado de voz acá — eso es SPEC-920): el texto de cada
- * entrada ES la forma aprobada; cambiarlo es cambiar la FORMA, no «mejorar la redacción».
+ * La VOZ va horneada en el copy y DECLARADA por `audiencia` (SPEC-920): cada entrada dice a quién le
+ * habla, y el candado `correos-canonicos-voz.candado.test.ts` exige que su texto NO tutee salvo que
+ * `audiencia` sea «padre» (la única voz informal aprobada por la FORMA). El texto ES la forma aprobada;
+ * cambiarlo —o cambiar su `audiencia`— es cambiar la FORMA, no «mejorar la redacción».
  */
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 export type CanalCopy = "EMAIL" | "IN_APP";
+
+/**
+ * A quién le habla el copy. La VOZ se deriva de aquí (FORMA-BARRIDO · SPEC-920):
+ *   - `padre` → tú (ÚNICA voz informal aprobada).
+ *   - `compartida` → impersonal (evento multi-rol: el motor no filtra por rol).
+ *   - `profesional` · `colegio` · `interno` → usted.
+ * El candado `correos-canonicos-voz.candado.test.ts` EXIGE cero tuteo en toda entrada cuya `audiencia`
+ * no sea `padre`. Cambiar la `audiencia` de una entrada cambia la voz que se le exige: es cambiar la FORMA.
+ */
+export type Audiencia = "compartida" | "padre" | "profesional" | "colegio" | "interno";
 
 export interface CtaCopy {
     /** Texto del botón (lo fija la FORMA de Diseño). */
@@ -66,6 +78,12 @@ export interface CopyCanonico {
     /** Clave de la plantilla (no se cambia). */
     clave: string;
     canal: CanalCopy;
+    /**
+     * A quién le habla (deriva la voz). REQUERIDA: tsc la exige en cada entrada para que la voz sea una
+     * decisión explícita, no un descuido. Solo `padre` admite tú; el resto, cero tuteo (lo vigila el
+     * candado de voz de SPEC-920). Ver {@link Audiencia}.
+     */
+    audiencia: Audiencia;
     /** Solo EMAIL. IN_APP (campana) va sin asunto. */
     asunto?: string;
     cuerpoMarkdown: string;
@@ -97,6 +115,7 @@ const FORMA_ALTA_COLEGIO =
     "Diseño · Gestión bb6384eb · FORMA-BOTON-Y-VOZ-CORREOS-ALTA-COLEGIO-2026-11-18 · SPEC-922";
 const FORMA_AUTH = "Diseño · Gestión a8a983e1 · FORMA-BARRIDO-01-FAMILIA-AUTH v1.1 · SPEC-923";
 const FORMA_BARRIDO_COLEGIO = "Diseño · Gestión 9b3ddbeb · FORMA-BARRIDO-03-FAMILIA-COLEGIO-2026-11-18 · SPEC-919";
+const FORMA_BARRIDO_INTERNO = "Diseño · Gestión 7a0c4ae3 · FORMA-BARRIDO-05-FAMILIA-COMITE-OPERADOR-ANALISIS-2026-11-19 · SPEC-920";
 
 const FORMA_BIENVENIDA_FUSIONADA =
     "Diseño · Gestión c540eeac · FORMA-ONBOARDING-COLEGIO-CORREOS-Y-PASOS-2026-11-20 §A · SPEC-955";
@@ -113,6 +132,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         // corrector de la ola la actualice; hasta entonces el envío manda `urlLogin=urlPanel`
         // para que la plantilla viva (vieja) no deje el botón roto (email-colegio.ts).
         clave: "colegio.bienvenida_rector.email",
+        audiencia: "colegio",
         canal: "EMAIL",
         asunto: "Su cuenta de {{nombreColegio}} está lista",
         cuerpoMarkdown:
@@ -133,6 +153,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         // ⚖️ [NORMA] La constancia = versión + fecha (`{{version}}`, `{{fechaAceptacion}}`). Esta
         // redacción impersonal queda FIJA hasta que entre la cadena del abogado: no se reescribe libre.
         clave: "consentimiento.aceptado.email",
+        audiencia: "compartida",
         canal: "EMAIL",
         asunto: "Confirmación de aceptación de términos",
         cuerpoMarkdown:
@@ -149,6 +170,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         // §4 · Hermana IN_APP (campana): misma audiencia compartida → impersonal, sin botón ni
         // saludo. Conserva `{{version}}` (dato de la constancia [NORMA]; la fecha vive en el correo).
         clave: "consentimiento.aceptado.in_app",
+        audiencia: "compartida",
         canal: "IN_APP",
         cuerpoMarkdown:
             "Se registró la aceptación de los términos de tratamiento de datos personales (versión {{version}}).",
@@ -164,6 +186,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §1 · Compartida (verificación genérica de correo) → impersonal. Sin URL, sin botón.
         clave: "auth.codigo_verificacion.email",
+        audiencia: "compartida",
         canal: "EMAIL",
         asunto: "Código de verificación",
         cuerpoMarkdown: "El código de verificación es: {{codigo}}\n\nVálido por 15 minutos.",
@@ -174,6 +197,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §2 · Compartida → impersonal + BOTÓN. `url` no estaba declarada: se declara (el emisor ya la pasa).
         clave: "auth.password_recuperacion.email",
+        audiencia: "compartida",
         canal: "EMAIL",
         asunto: "Restablecer la contraseña",
         cuerpoMarkdown:
@@ -190,6 +214,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         // §3 · COMPARTIDA: la emiten 3 puertas (registro padre, registro profesional y verificar;
         // `enviarEmailCuentaExistente`) → impersonal. Enlaces INLINE a propósito: el aviso no revela nada.
         clave: "auth.cuenta_existente.email",
+        audiencia: "compartida",
         canal: "EMAIL",
         asunto: "Ya existe una cuenta con este correo",
         cuerpoMarkdown:
@@ -205,6 +230,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §4 · Padre → tú + BOTÓN.
         clave: "auth.registro_enlace.email",
+        audiencia: "padre",
         canal: "EMAIL",
         asunto: "Crea tu contraseña y empecemos",
         cuerpoMarkdown:
@@ -221,6 +247,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §5 · Padre → tú + BOTÓN.
         clave: "auth.bienvenida_padre.email",
+        audiencia: "padre",
         canal: "EMAIL",
         asunto: "Tu cuenta está lista",
         cuerpoMarkdown:
@@ -235,6 +262,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §6 · Profesional → USTED (era tú) + BOTÓN. Puerta del profesional (SPEC-419).
         clave: "auth.registro_enlace_profesional.email",
+        audiencia: "profesional",
         canal: "EMAIL",
         asunto: "Cree su contraseña y empecemos",
         cuerpoMarkdown:
@@ -251,6 +279,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §7 · Profesional → USTED (era tú). Primaria = completar perfil (BOTÓN); login = secundario (inline).
         clave: "auth.bienvenida_profesional.email",
+        audiencia: "profesional",
         canal: "EMAIL",
         asunto: "Su cuenta está lista — falta un paso",
         cuerpoMarkdown:
@@ -267,6 +296,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         // §8 · COMPARTIDA (rol ALL; le llegaba en tú al rector) → impersonal. Enlace de seguridad INLINE
         // (incidental, no CTA). `fechaHora`/`urlRecuperar` no estaban declaradas: se declaran.
         clave: "auth.password_cambiada.email",
+        audiencia: "compartida",
         canal: "EMAIL",
         asunto: "Cambio de contraseña — {{fechaHora}}",
         cuerpoMarkdown:
@@ -284,6 +314,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         // §9 (addendum v1.2) · COMPARTIDA (código SPEC-598 para cuenta OAuth que crea su clave; cualquier
         // rol) → impersonal. Es un CÓDIGO: sin URL, sin botón, sin saludo (igual que codigo_verificacion).
         clave: "auth.crear_password.codigo.email",
+        audiencia: "compartida",
         canal: "EMAIL",
         asunto: "Código para crear la contraseña",
         cuerpoMarkdown:
@@ -298,6 +329,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §1 · usted (OK). Tono recomendación, NO orden (SPEC-380). CTA «Abrir el caso».
         clave: "colegio.comite.recomendacion_informe.email",
+        audiencia: "colegio",
         canal: "EMAIL",
         asunto: "El comité de convivencia recomienda emitir el informe del caso {{numeroCaso}}",
         cuerpoMarkdown:
@@ -313,6 +345,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §2 · tú → usted (le llega al rector). CTA «Ir a mi panel». El aviso NO trae datos del reporte.
         clave: "colegio.reporte_nuevo.email",
+        audiencia: "colegio",
         canal: "EMAIL",
         asunto: "Le avisamos: tiene un reporte nuevo para revisar",
         cuerpoMarkdown:
@@ -327,6 +360,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §3 · tú → usted. CTA «Ir a mi panel». Conteos, sin nombres ni datos.
         clave: "colegio.curso.umbral.email",
+        audiencia: "colegio",
         canal: "EMAIL",
         asunto: "Le avisamos: un curso de su colegio acumula reportes",
         cuerpoMarkdown:
@@ -341,6 +375,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §4 · tú → usted. CTA «Ir a mi panel». Sin el nombre del estudiante.
         clave: "colegio.estudiante.repetido.email",
+        audiencia: "colegio",
         canal: "EMAIL",
         asunto: "Le avisamos: un estudiante de su colegio acumula reportes",
         cuerpoMarkdown:
@@ -355,6 +390,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §5 · tú → usted. CTA «Ir a mi panel». `{{cuerpo}}` = conteos armados aguas arriba (OPACO).
         clave: "colegio.resumen_semanal.email",
+        audiencia: "colegio",
         canal: "EMAIL",
         asunto: "Su resumen de la semana",
         cuerpoMarkdown:
@@ -371,6 +407,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     {
         // §6 · usted (OK). CTA «Ir a mi panel».
         clave: "colegio.alerta.pendientes.email",
+        audiencia: "colegio",
         canal: "EMAIL",
         asunto: "Tiene {{novedadTexto}} para revisar en su panel de colegio",
         cuerpoMarkdown:
@@ -384,6 +421,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         // §8 · tú → usted · credenciales. CTA «Entrar a mi cuenta». VIVO (api/admin/colegios · reenviar-email,
         // evento `colegio.creado`). `Hola {{nombreColegio}}` = nombre del colegio (no correo) → saludo seguro.
         clave: "colegio.creado.email",
+        audiencia: "colegio",
         canal: "EMAIL",
         asunto: "Su cuenta institucional en Protección Infantil está lista",
         cuerpoMarkdown:
@@ -403,6 +441,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         // EXENTA anti-enumeración (FORMA): aviso de seguridad que NO revela si la cuenta existe. Los dos
         // enlaces (login / recuperar) van INLINE en la frase — NO un CTA (un botón lo convertiría en acción).
         clave: "colegio.registro_enlace.cuenta_existente.email",
+        audiencia: "colegio",
         canal: "EMAIL",
         asunto: "Ya existe una cuenta con este correo",
         cuerpoMarkdown:
@@ -422,6 +461,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         // EXENTA anti-enumeración (FORMA): el aviso de NIT ya registrado no revela más; el enlace de soporte
         // va INLINE en la frase, sin CTA.
         clave: "colegio.registro_enlace.nit_ya_registrado.email",
+        audiencia: "colegio",
         canal: "EMAIL",
         asunto: "Alguien intentó registrar su colegio",
         cuerpoMarkdown:
@@ -436,6 +476,95 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
             nota: "Aviso anti-enumeración (NIT ya a su nombre); el enlace de soporte va inline, sin CTA.",
         },
         fuente: FORMA_BARRIDO_COLEGIO,
+    },
+    // ── SPEC-920 · familia interna comité/operador (FORMA-BARRIDO-05) ───────────
+    {
+        // §1 · COMITE_VALIDACION → usted (voz 920). CTA «Ir a la bandeja».
+        clave: "comite.pendientes.alerta.email",
+        audiencia: "interno",
+        canal: "EMAIL",
+        asunto: "Tiene {{cantidad}} casos pendientes de revisión",
+        cuerpoMarkdown:
+            "Tiene {{cantidad}} {{plural}} pendientes de revisión en el comité de validación.\n\n" +
+            "Ingrese para revisar:\n\n" +
+            "[Ir a la bandeja]({{urlBandeja}})",
+        variablesSchema: schemaDe("cantidad", "plural", "urlBandeja"),
+        cta: { etiqueta: "Ir a la bandeja", variable: "urlBandeja" },
+        fuente: FORMA_BARRIDO_INTERNO,
+    },
+    {
+        // §1 · COMITE_VALIDACION. CTA «Ir a la bandeja de apelaciones». `{{lineas}}` OPACO.
+        // ⚖️ [NORMA] Ley 1581: «15 días hábiles, Ley 1581» va LITERAL en el cuerpo — no se reescribe libre.
+        clave: "comite.apelaciones.plazo.email",
+        audiencia: "interno",
+        canal: "EMAIL",
+        asunto: "{{cantidad}} {{plural}} {{pluralVencer}}",
+        cuerpoMarkdown:
+            "Hay {{cantidad}} {{plural}} sin resolver que se acercan al plazo de respuesta (15 días hábiles, Ley 1581):\n\n" +
+            "{{lineas}}\n\n" +
+            "Revise la bandeja de apelaciones:\n\n" +
+            "[Ir a la bandeja de apelaciones]({{urlBandeja}})",
+        variablesSchema: schemaDe("cantidad", "plural", "pluralVencer", "lineas", "urlBandeja"),
+        cta: { etiqueta: "Ir a la bandeja de apelaciones", variable: "urlBandeja" },
+        variablesOpacas: ["lineas"],
+        fuente: FORMA_BARRIDO_INTERNO,
+    },
+    {
+        // §1 · credencial del comité de validación. tú→usted. CTA «Entrar a mi cuenta».
+        clave: "usuario.bienvenida.comite.email",
+        audiencia: "interno",
+        canal: "EMAIL",
+        asunto: "Su cuenta de comité de validación está lista",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Se creó su cuenta de comité de validación en Protección Infantil.\n\n" +
+            "Usuario: {{email}}\nContraseña temporal: {{tempPassword}}\n\n" +
+            "Para entrar y cambiar su contraseña cuanto antes:\n\n" +
+            "[Entrar a mi cuenta]({{urlLogin}})\n\n" +
+            "Esta contraseña temporal no se volverá a mostrar.",
+        variablesSchema: schemaDe("email", "tempPassword", "urlLogin"),
+        cta: { etiqueta: "Entrar a mi cuenta", variable: "urlLogin" },
+        fuente: FORMA_BARRIDO_INTERNO,
+    },
+    {
+        // §2 · credencial del operador. FIX de voz tú→usted (nuevo). CTA «Entrar a mi cuenta».
+        clave: "usuario.bienvenida.operador.email",
+        audiencia: "interno",
+        canal: "EMAIL",
+        asunto: "Su cuenta de operador está lista",
+        cuerpoMarkdown:
+            "Hola,\n\n" +
+            "Se creó su cuenta de operador en Protección Infantil.\n\n" +
+            "Usuario: {{email}}\nContraseña temporal: {{tempPassword}}\n\n" +
+            "Para entrar y cambiar su contraseña cuanto antes:\n\n" +
+            "[Entrar a mi cuenta]({{urlLogin}})\n\n" +
+            "Esta contraseña temporal no se volverá a mostrar.",
+        variablesSchema: schemaDe("email", "tempPassword", "urlLogin"),
+        cta: { etiqueta: "Entrar a mi cuenta", variable: "urlLogin" },
+        fuente: FORMA_BARRIDO_INTERNO,
+    },
+    {
+        // §3 · 3 roles internos → usted (voz 920). SIN URL → sin botón. Saludo: QUITA `{{nombre}}` (axis-3:
+        // el nombre del destinatario interno puede traer el correo → riesgo nombre=correo). `nombre` queda
+        // DECLARADA en el schema (paso 7: el contrato no se recorta) aunque el cuerpo ya no la use.
+        clave: "caso.asignado.email",
+        audiencia: "interno",
+        canal: "EMAIL",
+        asunto: "Se le asignó un caso",
+        cuerpoMarkdown: "Hola,\n\nSe le asignó un caso para revisión. Ingrese al panel de administración.",
+        variablesSchema: schemaDe("nombre"),
+        cta: null,
+        fuente: FORMA_BARRIDO_INTERNO,
+    },
+    {
+        // §3 · hermana IN_APP (campana): usted, sin URL, sin nombre.
+        clave: "caso.asignado.in_app",
+        audiencia: "interno",
+        canal: "IN_APP",
+        cuerpoMarkdown: "Se le asignó un caso. Revise la bandeja.",
+        variablesSchema: schemaDe("nombre"),
+        cta: null,
+        fuente: FORMA_BARRIDO_INTERNO,
     },
 ];
 

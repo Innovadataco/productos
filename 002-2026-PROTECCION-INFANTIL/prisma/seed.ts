@@ -831,40 +831,16 @@ async function seedEventosEmailMigrados() {
         },
         // SPEC-922: la bienvenida al rector (`colegio.bienvenida_rector`) la siembra el REGISTRO
         // ÚNICO (`seedCorreosCanonicos`); su regla sigue abajo en `reglas`.
-        {
-            clave: "usuario.bienvenida.operador.email",
-            asunto: "Tu cuenta de operador está lista",
-            cuerpoMarkdown:
-                "Hola,\n\nSe creó tu cuenta de operador en Protección Infantil.\n\nUsuario: {{email}}\nContraseña temporal: {{tempPassword}}\n\nIngresa en {{urlLogin}} y cambia tu contraseña lo antes posible desde tu perfil o usando \"Olvidé mi contraseña\".\n\nEsta contraseña temporal no se volverá a mostrar.",
-        },
         // SPEC-380 (PR A · C4): el comité de convivencia le RECOMIENDA al
         // rector emitir el informe del caso. Voz: usted, tono recomendación
         // (nunca orden). El correo va en este bucle (canal EMAIL); la
         // plantilla IN_APP hermana se sella aparte más abajo (el bucle
         // asume EMAIL).
         {
-            clave: "usuario.bienvenida.comite.email",
-            asunto: "Tu cuenta de comité de validación está lista",
-            cuerpoMarkdown:
-                "Hola,\n\nSe creó tu cuenta de comité de validación en Protección Infantil.\n\nUsuario: {{email}}\nContraseña temporal: {{tempPassword}}\n\nIngresa en {{urlLogin}} y cambia tu contraseña lo antes posible desde tu perfil o usando \"Olvidé mi contraseña\".\n\nEsta contraseña temporal no se volverá a mostrar.",
-        },
-        {
             clave: "usuario.credenciales.padre.email",
             asunto: "Tu cuenta en Protección Infantil",
             cuerpoMarkdown:
                 "Hola,\n\nEl equipo de la plataforma gestionó el acceso a tu cuenta en Protección Infantil.\n\nUsuario: {{email}}\nContraseña temporal: {{tempPassword}}\n\nIngresa en {{urlLogin}} y cambia tu contraseña lo antes posible.\n\nEsta contraseña temporal no se volverá a mostrar.",
-        },
-        {
-            clave: "comite.pendientes.alerta.email",
-            asunto: "Tienes {{cantidad}} casos pendientes de revisión",
-            cuerpoMarkdown:
-                "Tienes {{cantidad}} {{plural}} pendientes de revisión en el comité de validación. Ingresa para revisar:\n\n{{urlBandeja}}",
-        },
-        {
-            clave: "comite.apelaciones.plazo.email",
-            asunto: "{{cantidad}} {{plural}} {{pluralVencer}}",
-            cuerpoMarkdown:
-                "Hay {{cantidad}} {{plural}} sin resolver que se acercan al plazo de respuesta (15 días hábiles, Ley 1581):\n\n{{lineas}}\n\nRevisa la bandeja de apelaciones:\n{{urlBandeja}}",
         },
         {
             clave: "reporte.revision.requerida.email",
@@ -3602,18 +3578,6 @@ async function main() {
             cuerpoMarkdown: "Tu reporte fue resuelto. Revisa el panel.",
         },
         // caso.asignado
-        {
-            clave: "caso.asignado.email",
-            canal: "EMAIL",
-            asunto: "Se te asignó un caso",
-            cuerpoMarkdown:
-                "Hola {{nombre}},\n\nSe te asignó un caso para revisión. Ingresa al panel de administración.",
-        },
-        {
-            clave: "caso.asignado.in_app",
-            canal: "IN_APP",
-            cuerpoMarkdown: "Se te asignó un caso. Revisa la bandeja.",
-        },
         // admin.contacto_bloqueado (evento interno)
         {
             clave: "admin.contacto_bloqueado.email",

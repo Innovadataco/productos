@@ -894,6 +894,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-922: registro ÚNICO de copys canónicos (barrido de correos) — por CADA entrada cero URL cruda;
     // por cada CTA el motor pinta UN botón hacia su variable; seed+corrector sourcean del registro. Puro.
     "prisma/correos-canonicos.candado.test.ts",
+    // SPEC-920: ninguna entrada del registro de correos tutea (usted/impersonal).
+    "prisma/correos-canonicos-voz.candado.test.ts",
     // SPEC-922: el corrector data-driven del registro es idempotente, fila-por-fila y aborta ante flag desconocido (db falsa). Puro.
     "scripts/corregir-correos-canonicos.candado.test.ts",
     // SPEC-965: overview Órbita — capa 1 nunca rubí, rubí SOLO en alumno de alerta alta, nunca dibuja
