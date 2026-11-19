@@ -1,5 +1,7 @@
 # SPEC-916 · El barrido de generados converge (I-443, cierre real)
 
+**Status**: IMPLEMENTADO
+
 **Prioridad:** sin deploy (CI/tooling).
 **Rama:** `work/pi-SPEC-916-generador-ci-converge` desde `origin/main` (54145873).
 **I-443:** el PR del generador de arquitectura no convergía en CI. SPEC-885 arregló el
