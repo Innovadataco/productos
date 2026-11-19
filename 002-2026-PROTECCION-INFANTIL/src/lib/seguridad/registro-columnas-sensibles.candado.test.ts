@@ -69,6 +69,17 @@ function leerWhitelist(path: string = WHITELIST_006): Map<string, Set<string>> {
     return mapa;
 }
 
+/** Cruce de fuente 1: columnas sensible-para-replica-bi que SIGUEN en el whitelist (la dirección peligrosa). */
+function infractoresReplicaBi(whitelist: Map<string, Set<string>>): string[] {
+    const infractores: string[] = [];
+    for (const e of REGISTRO_COLUMNAS_SENSIBLES) {
+        if (!e.sensiblePara.includes("replica-bi")) continue;
+        const permitidas = whitelist.get(e.tabla);
+        if (permitidas && permitidas.has(e.columna)) infractores.push(`${e.tabla}.${e.columna} SIGUE en el whitelist (viaja a BI)`);
+    }
+    return infractores;
+}
+
 describe("SPEC-765 · registro de columnas sensibles = espejo verificado de las 5 fuentes", () => {
     it("cada entrada está documentada (tabla/columna/sensiblePara≥1/razon/fuente) y el registro no está vacío", () => {
         expect(REGISTRO_COLUMNAS_SENSIBLES.length).toBeGreaterThan(0);
@@ -97,14 +108,51 @@ describe("SPEC-765 · registro de columnas sensibles = espejo verificado de las 
     });
 
     it("cruce fuente 1 (subset) · toda columna sensible-para-replica-bi está EXCLUIDA del whitelist de 006", () => {
-        const whitelist = leerWhitelist();
-        const infractores: string[] = [];
+        expect(infractoresReplicaBi(leerWhitelist()), "sensible-para-replica-bi pero aún en el whitelist = la dirección peligrosa").toEqual([]);
+    });
+
+    // ── SPEC-929 · AuditLog.ipAddress/userAgent ──
+    // Control positivo con la publicación REAL de 006: se le mete ip/userAgent al canon de AuditLog (lo
+    // que haría una edición de 006) y el cruce TIENE que cazarlo. Muere con el defecto: si alguien quita
+    // las dos entradas del registro, el cruce deja de verlas y este test cae.
+    it("SPEC-929 · control positivo · meter AuditLog.ipAddress/userAgent en la lista PUBLICADA de 006 → el cruce lo caza (ROJO)", () => {
+        const sql = readFileSync(WHITELIST_006, "utf8");
+        const real = parsearWhitelist(sql);
+        // Estado real (verificado por el CEO contra el catálogo de prod): AuditLog SÍ se publica, por lista de
+        // columnas, y ip/userAgent quedan afuera — la exclusión es por COLUMNA, no por tabla ausente.
+        expect(real.get("AuditLog")?.size ?? 0, "AuditLog debería estar publicada con lista de columnas").toBeGreaterThan(0);
+        expect(real.get("AuditLog")?.has("ipAddress")).toBe(false);
+        expect(real.get("AuditLog")?.has("userAgent")).toBe(false);
+
+        // Mutación: SOLO dentro del bloque canon (la lista que viaja), no en columnas_vetadas.
+        const iCanon = sql.indexOf("canon text[][]");
+        const iVetadas = sql.indexOf("columnas_vetadas text[][]");
+        const bloque = sql.slice(iCanon, iVetadas);
+        const mutado = bloque.replace(/ARRAY\['AuditLog',\s*'([^']*)'\]/, (_m, cols: string) => `ARRAY['AuditLog', '${cols},ipAddress,userAgent']`);
+        const inyectado = parsearWhitelist(sql.slice(0, iCanon) + mutado + sql.slice(iVetadas));
+
+        // La mutación tiene que haber pegado (si no, el «rojo» de abajo sería vacío).
+        expect(inyectado.get("AuditLog")?.has("ipAddress"), "la inyección no pegó en el canon de AuditLog").toBe(true);
+        expect(inyectado.get("AuditLog")?.has("userAgent"), "la inyección no pegó en el canon de AuditLog").toBe(true);
+
+        const infractores = infractoresReplicaBi(inyectado);
+        expect(infractores.some((i) => i.startsWith("AuditLog.ipAddress ")), "publicar AuditLog.ipAddress debe dar ROJO").toBe(true);
+        expect(infractores.some((i) => i.startsWith("AuditLog.userAgent ")), "publicar AuditLog.userAgent debe dar ROJO").toBe(true);
+    });
+
+    it("SPEC-929 · toda columna sensible-para-replica-bi EXISTE en su modelo del schema (el veto no apunta a una columna fantasma)", () => {
+        const schema = readFileSync(resolve(process.cwd(), "prisma/schema.prisma"), "utf8");
+        const faltantes: string[] = [];
         for (const e of REGISTRO_COLUMNAS_SENSIBLES) {
             if (!e.sensiblePara.includes("replica-bi")) continue;
-            const permitidas = whitelist.get(e.tabla);
-            if (permitidas && permitidas.has(e.columna)) infractores.push(`${e.tabla}.${e.columna} SIGUE en el whitelist (viaja a BI)`);
+            const modelo = new RegExp(`^model ${e.tabla} \\{([\\s\\S]*?)^\\}`, "m").exec(schema)?.[1];
+            if (!modelo) {
+                faltantes.push(`${e.tabla} (modelo no encontrado en schema.prisma)`);
+                continue;
+            }
+            if (!new RegExp(`^\\s+${e.columna}\\s`, "m").test(modelo)) faltantes.push(`${e.tabla}.${e.columna}`);
         }
-        expect(infractores, "sensible-para-replica-bi pero aún en el whitelist = la dirección peligrosa").toEqual([]);
+        expect(faltantes, "una columna vetada que ya no existe (renombrada/borrada) deja el veto apuntando a nada").toEqual([]);
     });
 
     it("control positivo FAIL-LOUD · path inexistente → FALLA (no pasa en verde con cero)", () => {
