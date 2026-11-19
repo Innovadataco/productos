@@ -15,7 +15,7 @@
  *  · Contador «3 consecutivas vencidas → SUSPENDIDO» + alarma por tasa >1/3.
  */
 import { desglosarTarifa } from "./comision";
-import { MENSAJE_SEGUNDA_CITA_FUERA_DE_PI } from "./segunda-cita";
+import { mensajeSegundaCitaFueraDePi } from "./segunda-cita";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
@@ -40,8 +40,6 @@ const UMBRAL_TASA_VENCIMIENTOS = 1 / 3;
  * «por su culpa» a las 3 vencidas lo bloquearía sin aviso ni salida.
  */
 const PARAM_MAX_CONSECUTIVAS = "profesional.cita.max_consecutivas_suspender";
-
-export { MENSAJE_SEGUNDA_CITA_FUERA_DE_PI };
 
 export interface CrearCitaInput {
     padreUsuarioId: string;
@@ -142,7 +140,7 @@ export async function crearSolicitudCita(input: CrearCitaInput) {
         // una cita que llegó a confirmarse (o posterior), se rechaza EN EL SERVIDOR (esconder el botón no basta).
         // Las que no prosperaron (vencida, reembolsada, sin confirmar…) no cuentan; con OTRO profesional, se puede.
         if (await new SolicitudCitaRepository().existeCitaConfirmadaConProfesional(input.padreUsuarioId, input.profesionalId)) {
-            throw new AppError(MENSAJE_SEGUNDA_CITA_FUERA_DE_PI, ERROR_CODES.CONFLICT, 409);
+            throw new AppError(mensajeSegundaCitaFueraDePi(pro.nombreVisible), ERROR_CODES.CONFLICT, 409);
         }
         // SPEC-934 (I-450): el cálculo vive en UNA función (`desglosarTarifa`), la misma que pinta el
         // desglose al padre (ficha + modal vía `cotizarCitaNueva`). Antes esta era una copia de la fórmula.

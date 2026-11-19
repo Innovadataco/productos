@@ -289,10 +289,9 @@ function pesos(valor: number): string {
 }
 
 export function PorCobrar({ data }: { data: PanelProfesionalDto }) {
-    const { montoRetenido, citasEsperandoCierre, desglose, tarifaDeclarada } = data.porCobrar;
-    // SPEC-940 (COPY PLACEHOLDER — la FORMA del panel la define Diseño): el desglose es sobre el precio ESTÁNDAR
-    // (lo que PI cobra y gira), no la tarifa del profesional. «El padre paga» ya no miente. La tarifa declarada es
-    // informativa (de la 2.ª cita; la red no la cobra).
+    const { montoRetenido, citasEsperandoCierre, tarifaDeclarada, porcentajeServicio } = data.porCobrar;
+    // SPEC-940 · FORMA 169bd6fc §(c): se QUITÓ la fila «El padre paga = tarifa» (mentía: el padre paga el precio
+    // ESTÁNDAR + servicio en la 1.ª, no la tarifa). Se muestra la tarifa DECLARADA (directa, de la 2.ª cita) + prosa.
     return (
         <Bloque titulo="Por cobrar">
             <div className="flex items-baseline gap-2">
@@ -304,20 +303,20 @@ export function PorCobrar({ data }: { data: PanelProfesionalDto }) {
             <p className="mt-2 text-xs text-muted">
                 Una cita sin cerrar no entra en el giro.
             </p>
-            {desglose && (
-                <dl className="mt-4 space-y-1.5 border-t border-tinta/8 pt-3 text-xs">
-                    <Fila termino="Valor de la consulta" valor={pesos(desglose.tarifaProfesional)} fuerte />
-                    <Fila termino="El padre paga" valor={pesos(desglose.pagaElPadre)} />
-                    <Fila
-                        termino={`Servicio de la red (${desglose.porcentajeServicio}%)`}
-                        valor={pesos(desglose.servicioRed)}
-                    />
-                </dl>
-            )}
-            <p className="mt-3 text-xs text-subtle">
-                Tu tarifa declarada (de la 2.ª cita en adelante):{" "}
-                {tarifaDeclarada !== null && tarifaDeclarada > 0 ? pesos(tarifaDeclarada) : "por definir"}. La red no la
-                cobra: esas citas las acuerdas directamente con la familia.
+            <dl className="mt-4 space-y-1.5 border-t border-tinta/8 pt-3 text-xs">
+                <Fila
+                    termino="Su tarifa por consulta"
+                    valor={tarifaDeclarada !== null && tarifaDeclarada > 0 ? pesos(tarifaDeclarada) : "por definir"}
+                    fuerte
+                />
+            </dl>
+            <p className="mt-1 text-xs text-subtle">
+                Es la que acuerda directamente con la familia de la segunda cita en adelante.
+            </p>
+            <p className="mt-3 text-xs text-muted">
+                En la primera cita —la que gestiona Protección Infantil— la familia paga el precio estándar + el
+                servicio de la red ({porcentajeServicio} %). De la segunda en adelante usted le cobra su tarifa
+                directamente; esa no pasa por la red.
             </p>
         </Bloque>
     );

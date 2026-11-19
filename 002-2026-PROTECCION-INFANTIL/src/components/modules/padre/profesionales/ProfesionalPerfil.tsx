@@ -14,8 +14,8 @@ import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { SolicitarCitaPanel } from "@/components/modules/padre/profesionales/SolicitarCitaPanel";
 import type { PerfilPublicoDTO } from "@/lib/dal/repositories/perfil-profesional";
 import type { CotizacionCita } from "@/lib/profesional/cita/cotizacion-cita";
-import { MENSAJE_SEGUNDA_CITA_FUERA_DE_PI } from "@/lib/profesional/cita/segunda-cita";
-import { DesgloseCostoCita, TARIFA_INFORMATIVA } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
+import { mensajeSegundaCitaFueraDePi } from "@/lib/profesional/cita/segunda-cita";
+import { DesgloseCostoCita } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
 
 const CURRENCY_COP = new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -103,19 +103,13 @@ export function ProfesionalPerfil({
                 <p className="mt-1 text-sm text-muted">
                     Sesión de {p.duracionMinutos} minutos{p.emiteFactura ? " · emite factura" : ""}.
                 </p>
-                {/* SPEC-685 (PR2-bis · FORMA §2-ter c): la tarifa de la 2ª cita se muestra
-                    solo si el profesional la fijó; si no, «por definir» — NUNCA «$0» (un $0
-                    le diría a la familia que las siguientes citas son gratis, y es falso). */}
+                {/* SPEC-940 · FORMA 169bd6fc §(b): la 2.ª cita se arregla DIRECTO con el profesional; su tarifa
+                    es informativa (la red NO la cobra, sin servicio sumado). «> 0», no «!== null» (SPEC-685): un 0 es
+                    «por definir», nunca «$0». */}
                 <p className="mt-2 text-xs text-muted">
-                    De la segunda cita en adelante:{" "}
-                    <span className="font-medium">
-                        {/* SPEC-685 (Diseño): «> 0», no «!== null» — misma regla que cita.service.
-                            Un 0 (viejo centinela) también es «por definir», nunca «$0». */}
-                        {p.tarifaConsultaCOP !== null && p.tarifaConsultaCOP > 0 ? `${CURRENCY_COP.format(p.tarifaConsultaCOP)} (tarifa del profesional)` : "por definir"}
-                    </span>
-                    .{/* SPEC-940 (COPY PROVISIONAL, Diseño): la tarifa es INFORMATIVA — PI no cobra ni intermedia
-                        la 2.ª cita (brief A-75 v2.0 §4/§9). */}
-                    {" "}{TARIFA_INFORMATIVA}
+                    {p.tarifaConsultaCOP !== null && p.tarifaConsultaCOP > 0
+                        ? `Primera cita al precio estándar. De la segunda en adelante la arreglas directamente con el profesional (su tarifa: ${CURRENCY_COP.format(p.tarifaConsultaCOP)}); esa no la cobra Protección Infantil.`
+                        : "Primera cita al precio estándar. De la segunda en adelante la arreglas directamente con el profesional; su tarifa, por definir."}
                 </p>
                 <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-estado-ambar dark:text-ambar">
                     Nuevo en la red
@@ -176,7 +170,7 @@ export function ProfesionalPerfil({
                 pago y decisión de compartir expediente en un solo panel. */}
             {segundaCitaFueraDePi ? (
                 <div className="glass rounded-2xl p-5 bg-cielo/10 dark:bg-cielo/10" role="status" data-testid="segunda-cita-fuera-de-pi">
-                    <p className="text-sm text-body">{MENSAJE_SEGUNDA_CITA_FUERA_DE_PI}</p>
+                    <p className="text-sm text-body">{mensajeSegundaCitaFueraDePi(p.nombreVisible)}</p>
                 </div>
             ) : (
                 <SolicitarCitaPanel

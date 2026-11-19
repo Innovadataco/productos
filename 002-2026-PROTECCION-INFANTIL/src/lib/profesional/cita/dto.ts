@@ -26,6 +26,7 @@ import type {
     Usuario,
 } from "@prisma/client";
 import { contactoVisiblePorSesion } from "./contacto-visible";
+import { ESTADOS_PERFIL_CONTACTO_CERRADO } from "./segunda-cita";
 import { derivarEnlaceParaCita, type EnlaceParaCita } from "./enlace-derivado";
 
 const HORAS_48_EN_MS = 48 * 60 * 60 * 1000;
@@ -82,7 +83,8 @@ export function debeExponerContacto(
     // La lista es explícita a propósito: un `!== "ACTIVO"` cerraría también
     // estados de tránsito como `EN_REVISION`, y eso es otra decisión que nadie
     // tomó.
-    if (estadoPerfil === "VENCIDO" || estadoPerfil === "SUSPENDIDO") return false;
+    // SPEC-940: set centralizado (misma condición que el bloqueo de la 2.ª cita → invariante visible⟺bloqueado).
+    if (estadoPerfil !== null && ESTADOS_PERFIL_CONTACTO_CERRADO.includes(estadoPerfil)) return false;
     // La visibilidad la decide la fuente única `contactoVisiblePorSesion` (hoy `false`, SPEC-754):
     // el contacto está cerrado; el canal de la reunión es el enlace de la cita.
     // SPEC-940: dirección PADRE→PROFESIONAL (el padre ve al profesional tras consumir su 1.ª cita).

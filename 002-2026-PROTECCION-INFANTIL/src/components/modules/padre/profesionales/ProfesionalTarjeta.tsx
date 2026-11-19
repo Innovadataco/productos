@@ -122,13 +122,11 @@ export function ProfesionalTarjeta({
                     definir» es la cara del padre; «Sin fijar» es la etiqueta INTERNA del
                     profesional (mi-perfil-resumen) — no se mezclan. Va sin el paréntesis
                     «(tarifa del profesional)» de la ficha: la tarjeta se mantiene compacta. */}
+                {/* SPEC-940 · FORMA 169bd6fc §(b): la 2.ª cita es DIRECTA con el profesional; la red no la cobra. */}
                 <p className="mt-0.5 text-xs text-muted">
-                    De la 2ª cita en adelante:{" "}
-                    <span className="font-medium">
-                        {p.tarifaConsultaCOP !== null && p.tarifaConsultaCOP > 0
-                            ? CURRENCY_COP.format(p.tarifaConsultaCOP)
-                            : "por definir"}
-                    </span>
+                    {p.tarifaConsultaCOP !== null && p.tarifaConsultaCOP > 0
+                        ? `De la 2.ª cita: ${CURRENCY_COP.format(p.tarifaConsultaCOP)} — la arreglas directo con el profesional; no la cobra la red.`
+                        : "De la 2.ª cita: la arreglas directo con el profesional; su tarifa, por definir."}
                 </p>
             </div>
 

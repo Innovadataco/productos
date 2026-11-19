@@ -8,7 +8,7 @@ import type {
     SolicitudCita,
 } from "@prisma/client";
 import { prisma } from "../prisma";
-import { ESTADOS_PRIMERA_CITA_CONSUMIDA } from "@/lib/profesional/cita/segunda-cita";
+import { ESTADOS_PRIMERA_CITA_CONSUMIDA, ESTADOS_PERFIL_CONTACTO_CERRADO } from "@/lib/profesional/cita/segunda-cita";
 import type { DbClient } from "../unit-of-work";
 import { logger } from "@/lib/logger";
 
@@ -138,8 +138,16 @@ export class SolicitudCitaRepository {
      * VENCIDA_SIN_RESPUESTA, REEMBOLSADA) ni REPROGRAMADA (la cadena sigue en la fila nueva, que decide por sí).
      */
     async existeCitaConfirmadaConProfesional(padreUsuarioId: string, profesionalId: string): Promise<boolean> {
+        // SPEC-940: bloquear ⟺ el contacto es EXPONIBLE = cita consumida Y perfil NO cerrado (VENCIDO/SUSPENDIDO).
+        // En vencido no se bloquea acá (y el padre igual no puede agendar: obtenerPublicoPorId filtra ACTIVO/vigente
+        // en crearSolicitudCita → rechazo upstream). Así el aviso (a) solo aparece cuando el contacto YA es visible.
         const n = await this.db.solicitudCita.count({
-            where: { padreUsuarioId, profesionalId, estado: { in: ESTADOS_PRIMERA_CITA_CONSUMIDA } },
+            where: {
+                padreUsuarioId,
+                profesionalId,
+                estado: { in: ESTADOS_PRIMERA_CITA_CONSUMIDA },
+                profesional: { estado: { notIn: ESTADOS_PERFIL_CONTACTO_CERRADO } },
+            },
         });
         return n > 0;
     }

@@ -14,7 +14,9 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearPaisCiudad } from "@/lib/reporte-test-utils";
 import { crearSolicitudCita, reprogramarPorPadre } from "./cita.service";
-import { MENSAJE_SEGUNDA_CITA_FUERA_DE_PI } from "./segunda-cita";
+import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
+import { debeExponerContacto } from "./dto";
+import { FRAGMENTO_SEGUNDA_CITA_CANAL } from "./segunda-cita";
 import type { EstadoSolicitudCita } from "@prisma/client";
 
 async function seedProfesional(tarifaCOP: number | null = 120_000) {
@@ -97,10 +99,11 @@ describe("SPEC-940 · PI intermedia solo la 1.ª cita con cada profesional", { t
             const antes = await prisma.solicitudCita.count();
             const franjasLibres = await prisma.franjaDisponible.count({ where: { tomada: false } });
 
-            await expect(pedir(padre.id, pro.id, 5)).rejects.toMatchObject({
-                statusCode: 409,
-                message: MENSAJE_SEGUNDA_CITA_FUERA_DE_PI,
-            });
+            // Una sola llamada (cada `pedir` crea una franja): 409 + el fragmento INVARIANTE del canal (el mensaje
+            // interpola el nombre del profesional, FORMA §a).
+            const err = (await pedir(padre.id, pro.id, 5).catch((e: unknown) => e)) as { statusCode?: number; message?: string };
+            expect(err.statusCode).toBe(409);
+            expect(err.message).toContain(FRAGMENTO_SEGUNDA_CITA_CANAL);
             expect(await prisma.solicitudCita.count()).toBe(antes);
             // La franja nueva (creada por `pedir`) sigue libre: el rechazo es ANTES de tomarla.
             expect(await prisma.franjaDisponible.count({ where: { tomada: false } })).toBe(franjasLibres + 1);
@@ -159,5 +162,21 @@ describe("SPEC-940 · PI intermedia solo la 1.ª cita con cada profesional", { t
         const s = await pedir(padre.id, pro.id);
         expect(s.montoConsulta).toBe(50_000);
         expect(s.montoTotal).toBe(55_000);
+    });
+
+    it("INVARIANTE borde VENCIDO: con 1.ª cita CONFIRMADA pero perfil VENCIDO → NI bloqueado NI visible", async () => {
+        const padre = await crearUsuario("PARENT");
+        const pro = await seedProfesional(120_000);
+        const primera = await pedir(padre.id, pro.id, 3);
+        await prisma.solicitudCita.update({ where: { id: primera.id }, data: { estado: "CONFIRMADA" } });
+        await prisma.perfilProfesional.update({ where: { id: pro.id }, data: { estado: "VENCIDO" } });
+
+        // BLOQUEO alineado al predicado completo: un profesional VENCIDO NO cuenta → no bloquea (el padre igual no
+        // puede agendar con un vencido: obtenerPublicoPorId lo filtra en crearSolicitudCita).
+        const bloqueado = await new SolicitudCitaRepository().existeCitaConfirmadaConProfesional(padre.id, pro.id);
+        expect(bloqueado, "vencido → NO bloqueado (invariante)").toBe(false);
+        // VISIBLE = false también: override legal cierra el contacto aunque la cita esté CONFIRMADA.
+        expect(debeExponerContacto({ estado: "CONFIRMADA", pagoAprobadoEn: new Date() }, new Date(), "VENCIDO")).toBe(false);
+        // NI bloqueado NI visible → la invariante visible⟺bloqueado se mantiene en el borde.
     });
 });

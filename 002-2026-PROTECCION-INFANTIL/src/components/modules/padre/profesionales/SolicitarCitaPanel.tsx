@@ -28,7 +28,7 @@
  * Diseño: tokens del sistema. Voz del padre = «tú» (D-107).
  */
 import type { CotizacionCita } from "@/lib/profesional/cita/cotizacion-cita";
-import { DesgloseCostoCita, TARIFA_INFORMATIVA } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
+import { DesgloseCostoCita } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
 import { MENSAJE_TOTAL_CAMBIO } from "@/lib/profesional/cita/cotizacion-cita";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -263,19 +263,13 @@ export function SolicitarCitaPanel({
                     <DesgloseCostoCita cotizacion={cotizacion} />
                 )}
                 <p className="mt-1 text-xs text-subtle">
+                    {/* SPEC-940 · FORMA 169bd6fc §(b): la 2.ª cita se arregla DIRECTO con el profesional; su tarifa
+                        es informativa, la red no la cobra. */}
                     {esReasignacion
                         ? "El pago viaja con esta nueva solicitud desde tu cita anterior — no se cobra de nuevo."
                         : tarifaProfesionalCOP !== null && tarifaProfesionalCOP > 0
-                            ? (
-                                <>
-                                Primera cita al precio estándar. De la 2ª cita en adelante:
-                                    <span className="cifra"> {CURRENCY_COP.format(tarifaProfesionalCOP)}</span>
-                                    {duracionMinutos ? ` · ${duracionMinutos} min` : ""}
-                                    {/* SPEC-940 (COPY PROVISIONAL): la tarifa es informativa; PI no la cobra. */}
-                                    {"."} {TARIFA_INFORMATIVA}
-                                </>
-                            )
-                            : `Primera cita al precio estándar. De la segunda cita en adelante: por definir. ${TARIFA_INFORMATIVA}`}
+                            ? `Primera cita al precio estándar. De la segunda en adelante la arreglas directamente con el profesional (su tarifa: ${CURRENCY_COP.format(tarifaProfesionalCOP)}${duracionMinutos ? ` · ${duracionMinutos} min` : ""}); esa no la cobra Protección Infantil.`
+                            : "Primera cita al precio estándar. De la segunda en adelante la arreglas directamente con el profesional; su tarifa, por definir."}
                 </p>
             </div>
 

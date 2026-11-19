@@ -15,9 +15,8 @@ vi.mock("@/components/modules/CanalesOficiales", () => ({
 }));
 
 import { ProfesionalPerfil } from "./ProfesionalPerfil";
-import { TARIFA_INFORMATIVA } from "./DesgloseCostoCita";
 import { desglosarTarifa } from "@/lib/profesional/cita/comision";
-import { MENSAJE_SEGUNDA_CITA_FUERA_DE_PI } from "@/lib/profesional/cita/segunda-cita";
+import { FRAGMENTO_SEGUNDA_CITA_CANAL } from "@/lib/profesional/cita/segunda-cita";
 
 const BASE: PerfilPublicoDTO = {
     id: "prof-1",
@@ -42,7 +41,7 @@ const BASE: PerfilPublicoDTO = {
 describe("SPEC-940 · ficha: 2.ª cita fuera de PI + tarifa informativa", () => {
     it("con cita confirmada previa: aviso y SIN panel de reserva", () => {
         render(<ProfesionalPerfil p={BASE} cotizacion={desglosarTarifa(50_000, 10)} segundaCitaFueraDePi />);
-        expect(screen.getByTestId("segunda-cita-fuera-de-pi").textContent).toContain(MENSAJE_SEGUNDA_CITA_FUERA_DE_PI);
+        expect(screen.getByTestId("segunda-cita-fuera-de-pi").textContent).toContain(FRAGMENTO_SEGUNDA_CITA_CANAL);
         expect(screen.queryByTestId("panel")).toBeNull();
         cleanup();
     });
@@ -56,7 +55,9 @@ describe("SPEC-940 · ficha: 2.ª cita fuera de PI + tarifa informativa", () => 
 
     it("la tarifa del profesional se presenta como informativa (la red no la cobra)", () => {
         const { container } = render(<ProfesionalPerfil p={BASE} cotizacion={desglosarTarifa(50_000, 10)} />);
-        expect(container.textContent).toContain(TARIFA_INFORMATIVA);
+        // FORMA §b: la tarifa de la 2.ª cita se presenta como DIRECTA con el profesional; la red no la cobra.
+        expect(container.textContent).toMatch(/directamente con el profesional/);
+        expect(container.textContent).toMatch(/no la cobra Protección Infantil/);
         cleanup();
     });
 });

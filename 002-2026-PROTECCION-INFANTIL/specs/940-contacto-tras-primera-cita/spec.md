@@ -35,10 +35,28 @@ movió a otro profesional, art. 19/SPEC-814). Es EXACTAMENTE el set que bloquea 
    es `null` si el precio estándar no está sembrado (resiliente, nunca un número inventado). Ficha/tarjeta/perfil:
    la tarifa va con la aclaración informativa.
 
-## Copy
+## Copy (FORMA Diseño · Gestión `169bd6fc`, SPEC-938 v2.0) — aplicado
 
-**PLACEHOLDER** (perfil/panel/tarjeta/bloqueo): lo define la FORMA nueva de Diseño. El mensaje del bloqueo
-(`MENSAJE_SEGUNDA_CITA_FUERA_DE_PI`) y «la red no la cobra» son provisionales.
+- **(a) bloqueo 2.ª cita:** `mensajeSegundaCitaFueraDePi(nombreProfesional)` — interpola el nombre y apunta al canal
+  real («tienes sus datos en el panel de tu cita»); por la invariante, cuando aparece el contacto ya es visible.
+- **(b) perfil/panel/tarjeta:** la 2.ª cita se arregla DIRECTO con el profesional; su tarifa es informativa, la red
+  no la cobra (sin servicio sumado).
+- **(c) panel del profesional:** se QUITÓ la fila mentirosa «El padre paga = tarifa». Muestra la tarifa declarada
+  (directa, de la 2.ª cita) + prosa: la 1.ª la cobra PI al precio estándar + servicio ({{%}}). `porCobrar` expone
+  `tarifaDeclarada` + `porcentajeServicio` (ya no un desglose basado en la tarifa).
+- **(d) NUEVO bloque «Datos del profesional»** en `EsperaCitaPanel` (componente `DatosProfesionalCita`): email
+  siempre + teléfono opcional + marcador tú; solo cuando el DTO trae el contacto. Dirección única (el profesional no
+  ve los datos del padre).
+
+## Corrección de lógica (borde VENCIDO) — plan A
+
+El bloqueo de la 2.ª cita se alineó al predicado COMPLETO de exponibilidad: bloquear ⟺ contacto exponible = cita
+consumida Y perfil NO cerrado (`ESTADOS_PERFIL_CONTACTO_CERRADO = {VENCIDO, SUSPENDIDO}`, fuente única compartida por
+`debeExponerContacto` y el repo). Antes el bloqueo miraba solo el estado de la cita → en vencido+CONFIRMADA quedaba
+bloqueado=true pero visible=false y el invariante se rompía justo donde (a) promete «tenés sus datos». Ahora en
+vencido NO se bloquea (y el padre igual no puede agendar: `obtenerPublicoPorId` filtra ACTIVO/vigente en
+`crearSolicitudCita` → rechazo upstream, sin hueco) y tampoco se muestra contacto → **NI bloqueado NI visible**,
+invariante intacto. (No se usó la variante de mensaje plan B.)
 
 ## Candados
 
@@ -50,7 +68,16 @@ movió a otro profesional, art. 19/SPEC-814). Es EXACTAMENTE el set que bloquea 
   args) · `dto.test.ts` (reapertura padre, override) · `segunda-cita.candado.test.ts` (bloqueo + reprogramar) ·
   panel `route.test.ts` (desglose sobre el estándar, tarifa declarada informativa).
 
+## Candados (añadidos)
+
+- `segunda-cita.candado.test.ts`: borde VENCIDO — con 1.ª cita CONFIRMADA pero perfil VENCIDO, `existeCitaConfirmada…`
+  = false (no bloquea) y `debeExponerContacto` = false (no visible). Mutación probada: quitar el filtro de perfil del
+  bloqueo → el borde VENCIDO rompe.
+- `contacto-tras-primera-cita.candado.test.ts`: repo y gate comparten `ESTADOS_PERFIL_CONTACTO_CERRADO` (block ⟺
+  exponible, borde incluido).
+- `DatosProfesionalCita.test.tsx`: (d) copy + teléfono opcional + dirección única.
+
 ## Certificación
 
-Diseño certifica el render (contacto en la cita, aviso del bloqueo, panel, tarjeta) contra el commit desplegado.
-Revisión adversarial fuerte: esto reabre un canal que 754 cerró a propósito.
+Diseño certifica el render de las 4 superficies (contacto en la cita, aviso del bloqueo, panel, tarjeta) contra el
+commit desplegado de #936. Revisión adversarial: reabre un canal que 754 cerró a propósito.

@@ -257,35 +257,23 @@ describe("GET /api/profesional/panel · SPEC-425 (A-75 · L5)", () => {
         expect(despues.citasConfirmadas, "después del inicio: ya no en agenda").toHaveLength(0);
     });
 
-    it("SPEC-940: el desglose es sobre el PRECIO ESTÁNDAR (lo que PI cobra), no la tarifa del profesional", async () => {
+    it("SPEC-940 (FORMA §c): el panel muestra la tarifa DECLARADA (directa de la 2.ª cita) + el % del servicio, NO «El padre paga = tarifa»", async () => {
         const { perfil } = await sembrarProfesional();
         await sembrarSolicitud(perfil.id, "CONFIRMADA"); // se cobró al 15 %
         const panel = await leerPanel();
-        // El padre paga el ESTÁNDAR (50.000) + 15 %, NO la tarifa del profesional (180.000). Esa era la mentira.
-        expect(panel.porCobrar.desglose).toEqual({
-            tarifaProfesional: 50000,
-            pagaElPadre: 57500,
-            servicioRed: 7500,
-            porcentajeServicio: 15,
-        });
-        // La tarifa declarada (180.000) es informativa — de la 2.ª cita; PI no la cobra.
+        // La tarifa declarada (180.000) es la que el profesional cobra directo; PI cobra la 1.ª al estándar + %.
         expect(panel.porCobrar.tarifaDeclarada).toBe(180000);
+        expect(panel.porCobrar.porcentajeServicio).toBe(15); // el % con el que se cobró (de la solicitud)
+        // Ya NO existe la fila mentirosa «El padre paga = tarifa + servicio».
+        expect(panel.porCobrar).not.toHaveProperty("desglose");
     });
 
-    it("SPEC-403: sin solicitudes, muestra el porcentaje VIGENTE del parámetro", async () => {
+    it("SPEC-403: sin solicitudes, el % es el VIGENTE del parámetro (el admin lo cambia sin desplegar)", async () => {
         const { perfil } = await sembrarProfesional();
         await sembrarComision(10);
-        expect((await leerPanel()).porCobrar.desglose).toEqual({
-            tarifaProfesional: 50000,
-            pagaElPadre: 55000,
-            servicioRed: 5000,
-            porcentajeServicio: 10,
-        });
-
-        // El admin lo cambia y la pantalla cambia con él, sin desplegar.
+        expect((await leerPanel()).porCobrar.porcentajeServicio).toBe(10);
         await sembrarComision(20);
-        expect((await leerPanel()).porCobrar.desglose.porcentajeServicio).toBe(20);
-        // La tarifa declarada sigue informativa, separada del desglose.
+        expect((await leerPanel()).porCobrar.porcentajeServicio).toBe(20);
         expect((await leerPanel()).porCobrar.tarifaDeclarada).toBe(180000);
         expect(perfil.tarifaConsultaCOP).toBe(180000);
     });

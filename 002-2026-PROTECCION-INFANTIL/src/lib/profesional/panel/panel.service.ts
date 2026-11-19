@@ -28,8 +28,7 @@ import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { VerificadorRepository } from "@/lib/dal/repositories/verificador-repository";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { saludoDelPanel } from "./saludo";
-import { desglosarTarifa, obtenerPorcentajeServicio, type DesgloseTarifa } from "../cita/comision";
-import { leerPrecioEstandarPrimeraCita } from "../cita/precio-primera-cita";
+import { obtenerPorcentajeServicio } from "../cita/comision";
 import { estadoEfectivoDeCita } from "../cita/estado-efectivo";
 import { citasPendientesEncuesta } from "@/lib/dal/services/encuesta-cita";
 
@@ -118,14 +117,11 @@ export interface PanelProfesionalDto {
         /** Suma retenida de las citas que esperan cierre. */
         montoRetenido: number;
         citasEsperandoCierre: number;
-        /**
-         * SPEC-940: desglose de lo que PI MUEVE por una cita intermediada = precio ESTÁNDAR + servicio de la red
-         * (NO la tarifa del profesional: PI cobra el estándar, brief A-75 v2.0 §4). `null` si el precio estándar no
-         * está disponible (no se inventa un número). La tarifa declarada va aparte, informativa.
-         */
-        desglose: DesgloseTarifa | null;
-        /** SPEC-940: tarifa que el profesional declaró (de la 2.ª cita; PI NO la cobra). Informativa. */
+        /** SPEC-940 (FORMA 169bd6fc §c): tarifa que el profesional declaró — la que cobra DIRECTO de la 2.ª cita
+         * en adelante; PI NO la cobra. `null` = por definir. */
         tarifaDeclarada: number | null;
+        /** SPEC-940: % del servicio de la red sobre la 1.ª cita (la única que PI cobra, al precio estándar). */
+        porcentajeServicio: number;
     };
     marcador: MarcadorDto;
     verificacion: VerificacionPanelDto | null;
@@ -175,14 +171,6 @@ export async function panelDelProfesional(
     // — una solicitud ya creada conserva el suyo aunque el parámetro cambie
     // después. Sin solicitudes todavía, se le muestra el que se aplicaría hoy.
     const porcentaje = solicitudes[0]?.porcentajeServicio ?? (await obtenerPorcentajeServicio());
-    // SPEC-940: precio estándar de la 1.ª cita (lo que el padre paga de consulta). Resiliente: si el parámetro no
-    // está sembrado, el panel NO truena — muestra el desglose como no disponible (`null`), nunca un número falso.
-    let precioEstandar: number | null = null;
-    try {
-        precioEstandar = await leerPrecioEstandarPrimeraCita();
-    } catch {
-        precioEstandar = null;
-    }
 
     const retenidas = solicitudes.filter((s) => RETIENEN_PAGO.includes(s.estado));
 
@@ -237,11 +225,10 @@ export async function panelDelProfesional(
         porCobrar: {
             montoRetenido: retenidas.reduce((suma, s) => suma + s.montoConsulta, 0),
             citasEsperandoCierre: retenidas.length,
-            // SPEC-940: el desglose es sobre el precio ESTÁNDAR (lo que PI realmente cobra y gira), no la tarifa
-            // del profesional (mentira vieja «El padre paga = tarifa + servicio»). `null` si el estándar no está
-            // disponible — nunca un número inventado. La tarifa declarada va informativa, aparte.
-            desglose: precioEstandar !== null ? desglosarTarifa(precioEstandar, porcentaje) : null,
+            // SPEC-940 (FORMA §c): se quitó la fila mentirosa «El padre paga = tarifa + servicio». El panel muestra
+            // la tarifa declarada (directa, de la 2.ª cita) + prosa de que la 1.ª la cobra PI al estándar + servicio.
             tarifaDeclarada: perfil.tarifaConsultaCOP ?? null,
+            porcentajeServicio: porcentaje,
         },
         marcador,
         verificacion: construirVerificacion(perfil.verificaciones[0], ahora),

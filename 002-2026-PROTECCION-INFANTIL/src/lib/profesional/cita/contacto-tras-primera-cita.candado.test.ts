@@ -84,5 +84,9 @@ describe("SPEC-940 · contacto tras la 1.ª cita (unidireccional)", () => {
         // la fuente de contacto usa la MISMA constante (vía primeraCitaConsumida).
         const gate = fs.readFileSync(path.resolve(__dirname, "contacto-visible.ts"), "utf-8");
         expect(gate).toMatch(/return primeraCitaConsumida\(estado\)/);
+        // El borde VENCIDO/SUSPENDIDO: repo y gate comparten `ESTADOS_PERFIL_CONTACTO_CERRADO` (block ⟺ exponible).
+        expect(repo).toMatch(/profesional:\s*\{\s*estado:\s*\{\s*notIn:\s*ESTADOS_PERFIL_CONTACTO_CERRADO\s*\}/);
+        const dto = fs.readFileSync(path.resolve(__dirname, "dto.ts"), "utf-8");
+        expect(dto).toMatch(/ESTADOS_PERFIL_CONTACTO_CERRADO\.includes\(estadoPerfil\)/);
     });
 });
