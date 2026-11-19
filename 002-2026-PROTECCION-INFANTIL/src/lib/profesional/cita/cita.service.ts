@@ -15,6 +15,7 @@
  *  · Contador «3 consecutivas vencidas → SUSPENDIDO» + alarma por tasa >1/3.
  */
 import { desglosarTarifa } from "./comision";
+import { mensajeSegundaCitaFueraDePi } from "./segunda-cita";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
@@ -53,10 +54,9 @@ export interface CrearCitaInput {
     solicitudPreviaId?: string | null;
     /**
      * SPEC-428 (A-75 §9 M4 §4): la primera cita se paga al PRECIO ESTÁNDAR
-     * definido por el admin, no a la tarifa del profesional (que aplica a
-     * partir de la 2ª cita). Cuando `montoConsultaOverride` viene definido,
-     * el service usa este valor en vez de `pro.tarifaConsultaCOP`. La ruta
-     * `/api/padre/citas` inyecta el precio estándar leído del parámetro.
+     * definido por el admin, no a la tarifa del profesional. SPEC-940: OBLIGATORIO para una cita nueva (sin
+     * pago heredado); ya no hay fallback a `pro.tarifaConsultaCOP` — PI no cobra la tarifa del profesional
+     * (brief A-75 v2.0 §4/§9). La ruta `/api/padre/citas` inyecta el precio estándar leído del parámetro.
      */
     montoConsultaOverride?: number;
 }
@@ -123,23 +123,24 @@ export async function crearSolicitudCita(input: CrearCitaInput) {
         // aprobación manual del admin).
         pagoAprobadoEn = new Date();
     } else {
-        // SPEC-428 §4: la 1ª cita usa el precio ESTÁNDAR (parametrizado por el
-        // admin) que la ruta inyecta como override. La tarifa del profesional
-        // aplica desde la 2ª cita en adelante y se muestra al padre como
-        // informativa en el perfil. Si el caller no envía override (compatibilidad
-        // hacia atrás para tests/callers viejos), cae a la tarifa del profesional.
-        // SPEC-685 (PR2-bis): la tarifa es NULABLE («por fijar»). Si esta cita usaría
-        // la tarifa del profesional y no está fijada, NO se cobra 0 ni un centinela:
-        // se rechaza con un error claro.
-        const base = input.montoConsultaOverride ?? pro.tarifaConsultaCOP;
-        if (base === null || base <= 0) {
-            // FORMA-MI-PERFIL §2-ter (b) · mensaje al PADRE (voz tú): la 1ª cita
-            // (precio estándar) sí se agenda; las siguientes, no, hasta que fije tarifa.
+        // SPEC-428 §4 + brief A-75 v2.0 §4/§9 (Jelkin, 03-09): PI cobra SOLO la primera cita con el profesional,
+        // al PRECIO ESTÁNDAR del admin (que la ruta inyecta en `montoConsultaOverride`) + servicio de la red. «De
+        // la segunda cita en adelante PI no lo cobra ni lo intermedia».
+        // SPEC-940 (I-452): se retiró el fallback a `pro.tarifaConsultaCOP` (y el error de SPEC-685 que suponía
+        // cobrar la 2.ª por PI). Sin precio estándar → falla en CERRADO: ningún camino cobra la tarifa del profesional.
+        const base = input.montoConsultaOverride;
+        if (base === undefined || base <= 0) {
             throw new AppError(
-                "Por ahora solo puedes agendar la primera cita con este profesional. El valor de las siguientes todavía no está disponible.",
-                ERROR_CODES.VALIDATION_ERROR,
-                400,
+                "[cita.service] crearSolicitudCita sin precio estándar de primera cita: no se cobra la tarifa del profesional.",
+                ERROR_CODES.INTERNAL_ERROR,
+                500,
             );
+        }
+        // SPEC-940 (b): PI no intermedia la 2.ª cita con un profesional. Si el padre ya tiene con ESTE profesional
+        // una cita que llegó a confirmarse (o posterior), se rechaza EN EL SERVIDOR (esconder el botón no basta).
+        // Las que no prosperaron (vencida, reembolsada, sin confirmar…) no cuentan; con OTRO profesional, se puede.
+        if (await new SolicitudCitaRepository().existeCitaConfirmadaConProfesional(input.padreUsuarioId, input.profesionalId)) {
+            throw new AppError(mensajeSegundaCitaFueraDePi(pro.nombreVisible), ERROR_CODES.CONFLICT, 409);
         }
         // SPEC-934 (I-450): el cálculo vive en UNA función (`desglosarTarifa`), la misma que pinta el
         // desglose al padre (ficha + modal vía `cotizarCitaNueva`). Antes esta era una copia de la fórmula.

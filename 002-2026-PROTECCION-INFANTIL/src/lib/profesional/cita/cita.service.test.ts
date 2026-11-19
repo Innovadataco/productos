@@ -89,23 +89,24 @@ describe("SPEC-428 · crearSolicitudCita · precio ESTÁNDAR sobre tarifa del pr
         expect(solicitud.porcentajeServicio).toBe(15);
     });
 
-    it("SIN override cae a la tarifa del profesional (compatibilidad hacia atrás)", async () => {
+    // SPEC-940 (I-452): ya NO hay fallback a la tarifa del profesional (brief A-75 v2.0: PI no la cobra).
+    it("SIN precio estándar FALLA en cerrado: nunca cae a la tarifa del profesional", async () => {
         const padre = await crearUsuario("PARENT");
         const pro = await seedProfesional(120_000);
         const franja = await seedFranja(pro.id);
 
-        const solicitud = await crearSolicitudCita({
-            padreUsuarioId: padre.id,
-            profesionalId: pro.id,
-            franjaId: franja.id,
-            presentacion: "Contexto suficiente para pasar el mínimo del schema.",
-            urgencia: "SIN_APURO",
-            porcentajeServicio: 15,
-        });
-
-        expect(solicitud.montoConsulta).toBe(120_000);
-        expect(solicitud.montoServicio).toBe(18_000);
-        expect(solicitud.montoTotal).toBe(138_000);
+        await expect(
+            crearSolicitudCita({
+                padreUsuarioId: padre.id,
+                profesionalId: pro.id,
+                franjaId: franja.id,
+                presentacion: "Contexto suficiente para pasar el mínimo del schema.",
+                urgencia: "SIN_APURO",
+                porcentajeServicio: 15,
+            }),
+        ).rejects.toMatchObject({ statusCode: 500 });
+        expect(await prisma.solicitudCita.count()).toBe(0);
+        expect((await prisma.franjaDisponible.findUniqueOrThrow({ where: { id: franja.id } })).tomada).toBe(false);
     });
 });
 
@@ -114,35 +115,8 @@ describe("SPEC-685 (PR2-bis) · cita a la tarifa del profesional SIN fijar", { t
         await resetDatabase();
     });
 
-    it("RECHAZA (400) crear una cita a la tarifa del profesional cuando la tarifa es null", async () => {
-        const padre = await crearUsuario("PARENT");
-        const pro = await seedProfesional(null); // «por fijar»
-        const franja = await seedFranja(pro.id);
-
-        // SIN override → usaría la tarifa del profesional, que está sin fijar.
-        let statusCode: number | undefined;
-        let message = "";
-        try {
-            await crearSolicitudCita({
-                padreUsuarioId: padre.id,
-                profesionalId: pro.id,
-                franjaId: franja.id,
-                presentacion: "Contexto suficiente para pasar el mínimo del schema.",
-                urgencia: "SIN_APURO",
-                porcentajeServicio: 15,
-            });
-        } catch (e) {
-            statusCode = (e as { statusCode?: number }).statusCode;
-            message = (e as { message?: string }).message ?? "";
-        }
-        expect(statusCode).toBe(400);
-        // FORMA §2-ter (b): mensaje al padre — puede la 1ª, no las siguientes.
-        expect(message).toContain("primera cita");
-
-        // Conducta, no texto: NO se creó ninguna solicitud (nada de cobrar 0).
-        expect(await prisma.solicitudCita.count()).toBe(0);
-    });
-
+    // SPEC-940: el error de SPEC-685 («solo puedes agendar la primera cita…») suponía cobrar la 2.ª por PI; se
+    // retiró. Sin precio estándar la creación falla en cerrado (ver arriba); con él, la tarifa null no importa.
     it("control positivo: CON override (1ª cita al estándar) SÍ crea aunque la tarifa esté null", async () => {
         const padre = await crearUsuario("PARENT");
         const pro = await seedProfesional(null);

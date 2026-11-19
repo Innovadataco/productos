@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { CitaParaPadreDto } from "@/lib/profesional/cita/dto";
 import { DesgloseCostoCita, desgloseDeCitaGuardada } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
+import { DatosProfesionalCita } from "@/components/modules/padre/citas/DatosProfesionalCita";
 import type { ExpedienteParaCompartirDto } from "@/lib/dal/services/expediente-detalle/types";
 import { badgeDeCitaEfectivo } from "@/lib/padre/citas-listado";
 import { derivarVistaFranjaPasada, type VistaEspera, type AccionesEspera, type TonoEspera } from "@/lib/padre/vista-espera-cita";
@@ -538,12 +539,10 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                         </p>
                     )}
                 </div>
-                {/* SPEC-754 · el bloque de CONTACTO del profesional se retiró: el contacto mutuo
-                    está CERRADO (`debeExponerContacto` → false siempre; `cita.contactoProfesional`
-                    ya no llega poblado). El canal de la reunión es el ENLACE de la cita (SPEC-750)
-                    y el recurso de plata va por la PQR (SPEC-752). El MARCADOR (copy que le dice al
-                    padre por dónde seguir) lo entrega Diseño en su commit al sistema de diseño;
-                    hasta entonces NO se inventa texto acá. */}
+                {/* SPEC-940 · FORMA 169bd6fc §(d): «Datos del profesional» — SOLO cuando el DTO trae el contacto. */}
+                {cita.contactoProfesional && (
+                    <DatosProfesionalCita contacto={cita.contactoProfesional} nombreVisible={cita.profesional.nombreVisible} />
+                )}
             </section>
 
             {/* SPEC-778 · el ACCESO a la reunión — la razón por la que el padre vuelve a esta

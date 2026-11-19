@@ -50,8 +50,11 @@ describe("ProfesionalTarjeta", () => {
         // «Consulta». Los rótulos secuenciales son el anti-«dos precios sueltos».
         render(<ProfesionalTarjeta p={perfil} hrefBase="/x" queryString="" precioPrimeraCitaCOP={50000} />);
         const texto = document.body.textContent ?? "";
-        expect(texto).toContain("De la 2ª cita en adelante:");
+        // SPEC-940 (FORMA §b): «De la 2.ª cita: $X — … directo con el profesional; no la cobra la red».
+        expect(texto).toContain("De la 2.ª cita:");
         expect(texto).toMatch(/120\.000/);
+        expect(texto).toMatch(/directo con el profesional/);
+        expect(texto).toMatch(/no la cobra la red/);
         expect(texto, "el rótulo viejo «Consulta» no vuelve").not.toContain("Consulta");
     });
 
@@ -59,7 +62,7 @@ describe("ProfesionalTarjeta", () => {
         const sinTarifa = { ...perfil, tarifaConsultaCOP: null };
         render(<ProfesionalTarjeta p={sinTarifa} hrefBase="/x" queryString="" precioPrimeraCitaCOP={50000} />);
         const texto = document.body.textContent ?? "";
-        expect(texto).toContain("De la 2ª cita en adelante: por definir");
+        expect(texto).toContain("su tarifa, por definir");
         expect(/\$\s?0(?!\d)/.test(texto), "un $0 diría que las siguientes citas son gratis").toBe(false);
         expect(texto, "«Sin fijar» es la etiqueta INTERNA del profesional; la cara del padre dice «por definir»").not.toContain("Sin fijar");
     });
@@ -68,7 +71,7 @@ describe("ProfesionalTarjeta", () => {
         const tarifaCero = { ...perfil, tarifaConsultaCOP: 0 };
         render(<ProfesionalTarjeta p={tarifaCero} hrefBase="/x" queryString="" precioPrimeraCitaCOP={50000} />);
         const texto = document.body.textContent ?? "";
-        expect(texto).toContain("De la 2ª cita en adelante: por definir");
+        expect(texto).toContain("su tarifa, por definir");
         expect(/\$\s?0(?!\d)/.test(texto), "el 0 no es «gratis»").toBe(false);
     });
 

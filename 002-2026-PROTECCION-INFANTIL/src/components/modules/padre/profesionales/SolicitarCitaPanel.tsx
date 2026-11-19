@@ -263,17 +263,13 @@ export function SolicitarCitaPanel({
                     <DesgloseCostoCita cotizacion={cotizacion} />
                 )}
                 <p className="mt-1 text-xs text-subtle">
+                    {/* SPEC-940 · FORMA 169bd6fc §(b): la 2.ª cita se arregla DIRECTO con el profesional; su tarifa
+                        es informativa, la red no la cobra. */}
                     {esReasignacion
                         ? "El pago viaja con esta nueva solicitud desde tu cita anterior — no se cobra de nuevo."
                         : tarifaProfesionalCOP !== null && tarifaProfesionalCOP > 0
-                            ? (
-                                <>
-                                Primera cita al precio estándar. De la 2ª cita en adelante:
-                                    <span className="cifra"> {CURRENCY_COP.format(tarifaProfesionalCOP)}</span>
-                                    {duracionMinutos ? ` · ${duracionMinutos} min` : ""}
-                                </>
-                            )
-                            : "Primera cita al precio estándar. De la segunda cita en adelante: por definir."}
+                            ? `Primera cita al precio estándar. De la segunda en adelante la arreglas directamente con el profesional (su tarifa: ${CURRENCY_COP.format(tarifaProfesionalCOP)}${duracionMinutos ? ` · ${duracionMinutos} min` : ""}); esa no la cobra Protección Infantil.`
+                            : "Primera cita al precio estándar. De la segunda en adelante la arreglas directamente con el profesional; su tarifa, por definir."}
                 </p>
             </div>
 

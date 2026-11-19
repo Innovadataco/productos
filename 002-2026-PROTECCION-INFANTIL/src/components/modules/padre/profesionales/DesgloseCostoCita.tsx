@@ -29,6 +29,7 @@ export const ROTULO_CONSULTA = "Valor de la consulta";
 export const rotuloServicio = (porcentaje: number) => `Servicio de la red (${porcentaje} %)`;
 export const ROTULO_TOTAL = "Total a pagar";
 
+
 /** Desglose de una cita YA guardada (montos persistidos; nada se recalcula). */
 export function desgloseDeCitaGuardada(c: {
     montoConsulta: number;

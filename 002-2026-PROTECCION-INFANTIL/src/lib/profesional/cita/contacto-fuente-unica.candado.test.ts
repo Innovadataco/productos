@@ -36,7 +36,7 @@ import path from "node:path";
 // un solo mock cubre las tres superficies.
 const { visibleMock } = vi.hoisted(() => ({ visibleMock: vi.fn() }));
 vi.mock("@/lib/profesional/cita/contacto-visible", () => ({
-    contactoVisiblePorSesion: (estado: unknown) => visibleMock(estado),
+    contactoVisiblePorSesion: (estado: unknown, direccion: unknown) => visibleMock(estado, direccion),
 }));
 
 // El calendario es un servicio que consulta repos; los reemplazamos por dobles

@@ -28,7 +28,7 @@ import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { VerificadorRepository } from "@/lib/dal/repositories/verificador-repository";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { saludoDelPanel } from "./saludo";
-import { desglosarTarifa, obtenerPorcentajeServicio, type DesgloseTarifa } from "../cita/comision";
+import { obtenerPorcentajeServicio } from "../cita/comision";
 import { estadoEfectivoDeCita } from "../cita/estado-efectivo";
 import { citasPendientesEncuesta } from "@/lib/dal/services/encuesta-cita";
 
@@ -117,7 +117,11 @@ export interface PanelProfesionalDto {
         /** Suma retenida de las citas que esperan cierre. */
         montoRetenido: number;
         citasEsperandoCierre: number;
-        desglose: DesgloseTarifa;
+        /** SPEC-940 (FORMA 169bd6fc §c): tarifa que el profesional declaró — la que cobra DIRECTO de la 2.ª cita
+         * en adelante; PI NO la cobra. `null` = por definir. */
+        tarifaDeclarada: number | null;
+        /** SPEC-940: % del servicio de la red sobre la 1.ª cita (la única que PI cobra, al precio estándar). */
+        porcentajeServicio: number;
     };
     marcador: MarcadorDto;
     verificacion: VerificacionPanelDto | null;
@@ -221,9 +225,10 @@ export async function panelDelProfesional(
         porCobrar: {
             montoRetenido: retenidas.reduce((suma, s) => suma + s.montoConsulta, 0),
             citasEsperandoCierre: retenidas.length,
-            // SPEC-685 (PR2-bis): tarifa nulable («por fijar»). El desglose ilustra la
-            // tarifa vigente; sin fijar, 0 (computado, no un 0 guardado).
-            desglose: desglosarTarifa(perfil.tarifaConsultaCOP ?? 0, porcentaje),
+            // SPEC-940 (FORMA §c): se quitó la fila mentirosa «El padre paga = tarifa + servicio». El panel muestra
+            // la tarifa declarada (directa, de la 2.ª cita) + prosa de que la 1.ª la cobra PI al estándar + servicio.
+            tarifaDeclarada: perfil.tarifaConsultaCOP ?? null,
+            porcentajeServicio: porcentaje,
         },
         marcador,
         verificacion: construirVerificacion(perfil.verificaciones[0], ahora),

@@ -141,7 +141,8 @@ export async function calendarioDelProfesional(
             // `estado` de bloque, que es una etiqueta de presentación. Antes esta línea
             // REPLICABA la regla (`estado === "confirmada"`) y por eso el correo del
             // padre se filtraba acá aunque el DTO la endureciera: la fuga que vio Jelkin.
-            if (contactoVisiblePorSesion(f.solicitud.estado) && f.solicitud.padreUsuario.email) {
+            // SPEC-940: dirección PROFESIONAL→PADRE — cerrada (false). El calendario del profesional no expone el correo del padre.
+            if (contactoVisiblePorSesion(f.solicitud.estado, "profesional_ve_padre") && f.solicitud.padreUsuario.email) {
                 bloque.contactoEmail = f.solicitud.padreUsuario.email;
             }
             // SPEC-778: el enlace de la reunión, derivado y gateado (solo CONFIRMADA). Misma
