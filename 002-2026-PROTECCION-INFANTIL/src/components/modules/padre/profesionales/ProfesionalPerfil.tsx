@@ -14,7 +14,8 @@ import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { SolicitarCitaPanel } from "@/components/modules/padre/profesionales/SolicitarCitaPanel";
 import type { PerfilPublicoDTO } from "@/lib/dal/repositories/perfil-profesional";
 import type { CotizacionCita } from "@/lib/profesional/cita/cotizacion-cita";
-import { DesgloseCostoCita } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
+import { MENSAJE_SEGUNDA_CITA_FUERA_DE_PI } from "@/lib/profesional/cita/segunda-cita";
+import { DesgloseCostoCita, TARIFA_INFORMATIVA } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
 
 const CURRENCY_COP = new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -34,6 +35,7 @@ export function ProfesionalPerfil({
     // SPEC-428: se paga el PRECIO ESTÁNDAR (§4). La tarifa del profesional
     // aplica desde la 2ª cita en adelante; ambas se muestran al padre.
     cotizacion,
+    segundaCitaFueraDePi = false,
     expedienteIdSugerido,
     // SPEC-428 (M7): si viene, el panel de reserva usa el flujo de reasignación
     // (POST /citas/[id]/reasignar) — hereda el pago, no cobra de nuevo.
@@ -44,6 +46,8 @@ export function ProfesionalPerfil({
     p: PerfilPublicoDTO;
     /** SPEC-934: cotización del servidor (consulta + servicio de la red) — la misma con que se guarda. */
     cotizacion: CotizacionCita;
+    /** SPEC-940: ya tuvo una cita confirmada con este profesional → PI no intermedia la 2.ª (no hay panel). */
+    segundaCitaFueraDePi?: boolean;
     expedienteIdSugerido?: string | undefined;
     heredarDeSolicitudId?: string | undefined;
     /** SPEC-751 T010 (§2): nº de audiencias «oír al menor» pendientes del titular (heads-up en la cita). */
@@ -109,7 +113,9 @@ export function ProfesionalPerfil({
                             Un 0 (viejo centinela) también es «por definir», nunca «$0». */}
                         {p.tarifaConsultaCOP !== null && p.tarifaConsultaCOP > 0 ? `${CURRENCY_COP.format(p.tarifaConsultaCOP)} (tarifa del profesional)` : "por definir"}
                     </span>
-                    .
+                    .{/* SPEC-940 (COPY PROVISIONAL, Diseño): la tarifa es INFORMATIVA — PI no cobra ni intermedia
+                        la 2.ª cita (brief A-75 v2.0 §4/§9). */}
+                    {" "}{TARIFA_INFORMATIVA}
                 </p>
                 <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-estado-ambar dark:text-ambar">
                     Nuevo en la red
@@ -168,15 +174,21 @@ export function ProfesionalPerfil({
 
             {/* SPEC-428 (L4): reserva viva — franjas, presentación, urgencia,
                 pago y decisión de compartir expediente en un solo panel. */}
-            <SolicitarCitaPanel
-                profesionalId={p.id}
-                tarifaProfesionalCOP={p.tarifaConsultaCOP}
-                cotizacion={cotizacion}
-                duracionMinutos={p.duracionMinutos}
-                {...(expedienteIdSugerido !== undefined ? { expedienteIdSugerido } : {})}
-                {...(heredarDeSolicitudId !== undefined ? { heredarDeSolicitudId } : {})}
-                {...(audienciasPendientes !== undefined ? { audienciasPendientes } : {})}
-            />
+            {segundaCitaFueraDePi ? (
+                <div className="glass rounded-2xl p-5 bg-cielo/10 dark:bg-cielo/10" role="status" data-testid="segunda-cita-fuera-de-pi">
+                    <p className="text-sm text-body">{MENSAJE_SEGUNDA_CITA_FUERA_DE_PI}</p>
+                </div>
+            ) : (
+                <SolicitarCitaPanel
+                    profesionalId={p.id}
+                    tarifaProfesionalCOP={p.tarifaConsultaCOP}
+                    cotizacion={cotizacion}
+                    duracionMinutos={p.duracionMinutos}
+                    {...(expedienteIdSugerido !== undefined ? { expedienteIdSugerido } : {})}
+                    {...(heredarDeSolicitudId !== undefined ? { heredarDeSolicitudId } : {})}
+                    {...(audienciasPendientes !== undefined ? { audienciasPendientes } : {})}
+                />
+            )}
 
             <CanalesOficiales />
         </div>

@@ -8,6 +8,7 @@ import type {
     SolicitudCita,
 } from "@prisma/client";
 import { prisma } from "../prisma";
+import { ESTADOS_PRIMERA_CITA_CONSUMIDA } from "@/lib/profesional/cita/segunda-cita";
 import type { DbClient } from "../unit-of-work";
 import { logger } from "@/lib/logger";
 
@@ -41,6 +42,8 @@ function sinCamposEnlaceSesion<T>(cita: T): Omit<T, "enlaceReunion" | "enlaceOpe
     delete copia.enlacePublicadoEn;
     return copia as Omit<T, "enlaceReunion" | "enlaceOperadorId" | "enlacePublicadoEn">;
 }
+
+
 
 export class SolicitudCitaRepository {
     private readonly db: DbClient;
@@ -126,6 +129,19 @@ export class SolicitudCitaRepository {
             orderBy: { creadoEn: "desc" },
             take: 100,
         });
+    }
+
+    /**
+     * SPEC-940 · ¿El padre ya tuvo con ESTE profesional una cita que llegó a confirmarse (o posterior)? PI no
+     * intermedia la 2.ª cita (brief A-75 v2.0 §4/§9). Cuentan: CONFIRMADA, CUMPLIDA, NO_ASISTIO_PADRE,
+     * NO_ASISTIO_PROFESIONAL, REUBICADA. NO cuentan las que no prosperaron (SIN_CONFIRMAR, PAGADA_PENDIENTE,
+     * VENCIDA_SIN_RESPUESTA, REEMBOLSADA) ni REPROGRAMADA (la cadena sigue en la fila nueva, que decide por sí).
+     */
+    async existeCitaConfirmadaConProfesional(padreUsuarioId: string, profesionalId: string): Promise<boolean> {
+        const n = await this.db.solicitudCita.count({
+            where: { padreUsuarioId, profesionalId, estado: { in: ESTADOS_PRIMERA_CITA_CONSUMIDA } },
+        });
+        return n > 0;
     }
 
     listarPorProfesional(profesionalId: string, estados?: EstadoSolicitudCita[]) {

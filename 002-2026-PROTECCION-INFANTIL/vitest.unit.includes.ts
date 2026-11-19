@@ -704,6 +704,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/api/padre/citas/identificadores-cuid.test.ts",
     // SPEC-934 (I-450): total mostrado = total guardado, desglose, «pagado» solo con pago aprobado. Render + fuente.
     "src/components/modules/padre/profesionales/precio-cita-desglose.candado.test.tsx",
+    // SPEC-938: ficha sin panel cuando PI ya no intermedia (2.ª cita) + tarifa informativa.
+    "src/components/modules/padre/profesionales/segunda-cita-perfil.candado.test.tsx",
+    "src/lib/profesional/cita/contacto-tras-primera-cita.candado.test.ts",
     "src/lib/schemas/identificadores.candado.test.ts",
     // SPEC-438 (I-305): el sistema no puede volver a inventar la hora del hecho.
     "src/lib/reportes/fecha-hecho.candado.test.ts",

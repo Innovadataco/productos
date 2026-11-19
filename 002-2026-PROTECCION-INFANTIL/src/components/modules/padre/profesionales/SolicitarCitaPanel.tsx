@@ -28,7 +28,7 @@
  * Diseño: tokens del sistema. Voz del padre = «tú» (D-107).
  */
 import type { CotizacionCita } from "@/lib/profesional/cita/cotizacion-cita";
-import { DesgloseCostoCita } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
+import { DesgloseCostoCita, TARIFA_INFORMATIVA } from "@/components/modules/padre/profesionales/DesgloseCostoCita";
 import { MENSAJE_TOTAL_CAMBIO } from "@/lib/profesional/cita/cotizacion-cita";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -271,9 +271,11 @@ export function SolicitarCitaPanel({
                                 Primera cita al precio estándar. De la 2ª cita en adelante:
                                     <span className="cifra"> {CURRENCY_COP.format(tarifaProfesionalCOP)}</span>
                                     {duracionMinutos ? ` · ${duracionMinutos} min` : ""}
+                                    {/* SPEC-940 (COPY PROVISIONAL): la tarifa es informativa; PI no la cobra. */}
+                                    {"."} {TARIFA_INFORMATIVA}
                                 </>
                             )
-                            : "Primera cita al precio estándar. De la segunda cita en adelante: por definir."}
+                            : `Primera cita al precio estándar. De la segunda cita en adelante: por definir. ${TARIFA_INFORMATIVA}`}
                 </p>
             </div>
 

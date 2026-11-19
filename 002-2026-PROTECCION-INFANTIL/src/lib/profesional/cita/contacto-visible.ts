@@ -1,4 +1,5 @@
 import type { EstadoSolicitudCita } from "@prisma/client";
+import { primeraCitaConsumida } from "./segunda-cita";
 
 /**
  * FUENTE ÚNICA de la regla «¿el contacto de una cita es visible?» (SPEC-395 · hallazgo de
@@ -37,6 +38,18 @@ import type { EstadoSolicitudCita } from "@prisma/client";
  * pero HOY no decide: la puerta está cerrada. El candado `contacto-fuente-unica.candado.test.ts`
  * prueba el MECANISMO (la fuente manda); el VALOR (`false`) lo prueba `contacto-visible.test.ts`.
  */
-export function contactoVisiblePorSesion(_estado: EstadoSolicitudCita): boolean {
-    return false;
+/**
+ * Dirección de la visibilidad. SPEC-940 la hace EXPLÍCITA porque la fuente era simétrica y eso ocultaba una fuga:
+ * reabrir «el padre ve al profesional» NO debe reabrir «el profesional ve el correo del padre».
+ */
+export type DireccionContacto = "padre_ve_profesional" | "profesional_ve_padre";
+
+export function contactoVisiblePorSesion(estado: EstadoSolicitudCita, direccion: DireccionContacto): boolean {
+    // SPEC-940 · el profesional NUNCA recibe el contacto del padre por sesión (minimización H-2 · Ley 2375/2024;
+    // 754 sigue en esta dirección). El canal del profesional hacia el padre lo media PI.
+    if (direccion === "profesional_ve_padre") return false;
+    // SPEC-940 · el padre ve el contacto del profesional SOLO tras CONSUMIR su 1.ª cita con él
+    // (`ESTADOS_PRIMERA_CITA_CONSUMIDA`) — el MISMO set que bloquea la 2.ª cita por PI: invariante «visible ⟺
+    // bloqueado». El override VENCIDO/SUSPENDIDO de `debeExponerContacto` cierra por encima de esto.
+    return primeraCitaConsumida(estado);
 }

@@ -85,7 +85,8 @@ export function debeExponerContacto(
     if (estadoPerfil === "VENCIDO" || estadoPerfil === "SUSPENDIDO") return false;
     // La visibilidad la decide la fuente única `contactoVisiblePorSesion` (hoy `false`, SPEC-754):
     // el contacto está cerrado; el canal de la reunión es el enlace de la cita.
-    if (contactoVisiblePorSesion(solicitud.estado)) return true;
+    // SPEC-940: dirección PADRE→PROFESIONAL (el padre ve al profesional tras consumir su 1.ª cita).
+    if (contactoVisiblePorSesion(solicitud.estado, "padre_ve_profesional")) return true;
     // SPEC-754 · D-1: la excepción de REEMBOLSO (`VENCIDA_SIN_RESPUESTA` + 48h) se RETIRÓ — MIGRÓ a
     // la PQR (SPEC-752, motivo 2 «Un pago o un cobro»). NO sobra: un reembolso es asunto padre↔PI
     // (la plata la tiene PI), y la reversión corre con plazos contados DESDE el reclamo (padre 5
@@ -282,7 +283,9 @@ export function toCitaParaProfesional(
     };
     // Simétrico: al profesional se le da el correo del padre por la misma regla de sesión
     // (fuente única `contactoVisiblePorSesion`). Antes, el sistema mediador es PI.
-    if (contactoVisiblePorSesion(solicitud.estado)) {
+    // SPEC-940: dirección PROFESIONAL→PADRE. Sigue CERRADA (false siempre): el profesional no recibe el correo
+    // del padre por sesión (minimización H-2). La reapertura de SPEC-940 es SOLO padre→profesional.
+    if (contactoVisiblePorSesion(solicitud.estado, "profesional_ve_padre")) {
         dto.padre.email = solicitud.padreUsuario.email;
     }
     // SPEC-778: el enlace de la reunión, misma derivación que el padre (solo CONFIRMADA).

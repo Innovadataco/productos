@@ -29,6 +29,7 @@ import { VerificadorRepository } from "@/lib/dal/repositories/verificador-reposi
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { saludoDelPanel } from "./saludo";
 import { desglosarTarifa, obtenerPorcentajeServicio, type DesgloseTarifa } from "../cita/comision";
+import { leerPrecioEstandarPrimeraCita } from "../cita/precio-primera-cita";
 import { estadoEfectivoDeCita } from "../cita/estado-efectivo";
 import { citasPendientesEncuesta } from "@/lib/dal/services/encuesta-cita";
 
@@ -117,7 +118,14 @@ export interface PanelProfesionalDto {
         /** Suma retenida de las citas que esperan cierre. */
         montoRetenido: number;
         citasEsperandoCierre: number;
-        desglose: DesgloseTarifa;
+        /**
+         * SPEC-940: desglose de lo que PI MUEVE por una cita intermediada = precio ESTÁNDAR + servicio de la red
+         * (NO la tarifa del profesional: PI cobra el estándar, brief A-75 v2.0 §4). `null` si el precio estándar no
+         * está disponible (no se inventa un número). La tarifa declarada va aparte, informativa.
+         */
+        desglose: DesgloseTarifa | null;
+        /** SPEC-940: tarifa que el profesional declaró (de la 2.ª cita; PI NO la cobra). Informativa. */
+        tarifaDeclarada: number | null;
     };
     marcador: MarcadorDto;
     verificacion: VerificacionPanelDto | null;
@@ -167,6 +175,14 @@ export async function panelDelProfesional(
     // — una solicitud ya creada conserva el suyo aunque el parámetro cambie
     // después. Sin solicitudes todavía, se le muestra el que se aplicaría hoy.
     const porcentaje = solicitudes[0]?.porcentajeServicio ?? (await obtenerPorcentajeServicio());
+    // SPEC-940: precio estándar de la 1.ª cita (lo que el padre paga de consulta). Resiliente: si el parámetro no
+    // está sembrado, el panel NO truena — muestra el desglose como no disponible (`null`), nunca un número falso.
+    let precioEstandar: number | null = null;
+    try {
+        precioEstandar = await leerPrecioEstandarPrimeraCita();
+    } catch {
+        precioEstandar = null;
+    }
 
     const retenidas = solicitudes.filter((s) => RETIENEN_PAGO.includes(s.estado));
 
@@ -221,9 +237,11 @@ export async function panelDelProfesional(
         porCobrar: {
             montoRetenido: retenidas.reduce((suma, s) => suma + s.montoConsulta, 0),
             citasEsperandoCierre: retenidas.length,
-            // SPEC-685 (PR2-bis): tarifa nulable («por fijar»). El desglose ilustra la
-            // tarifa vigente; sin fijar, 0 (computado, no un 0 guardado).
-            desglose: desglosarTarifa(perfil.tarifaConsultaCOP ?? 0, porcentaje),
+            // SPEC-940: el desglose es sobre el precio ESTÁNDAR (lo que PI realmente cobra y gira), no la tarifa
+            // del profesional (mentira vieja «El padre paga = tarifa + servicio»). `null` si el estándar no está
+            // disponible — nunca un número inventado. La tarifa declarada va informativa, aparte.
+            desglose: precioEstandar !== null ? desglosarTarifa(precioEstandar, porcentaje) : null,
+            tarifaDeclarada: perfil.tarifaConsultaCOP ?? null,
         },
         marcador,
         verificacion: construirVerificacion(perfil.verificaciones[0], ahora),

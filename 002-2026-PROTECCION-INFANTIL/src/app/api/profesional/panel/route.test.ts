@@ -130,6 +130,21 @@ async function sembrarComision(porcentaje: number) {
     });
 }
 
+async function sembrarPrecioEstandar(valor: number) {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "profesional.cita.precio_estandar_primera_cita_cop" },
+        update: { valor: String(valor) },
+        create: {
+            clave: "profesional.cita.precio_estandar_primera_cita_cop",
+            valor: String(valor),
+            tipo: "INTEGER",
+            categoria: "SYSTEM",
+            esPublico: false,
+            descripcion: "Precio estándar 1.ª cita (test)",
+        },
+    });
+}
+
 async function leerPanel() {
     const res = await GET();
     expect(res.status).toBe(200);
@@ -143,6 +158,8 @@ describe("GET /api/profesional/panel · SPEC-425 (A-75 · L5)", () => {
         // SPEC-403: la comisión es parámetro y el panel falla en cerrado sin
         // ella. `resetDatabase` no siembra parámetros, así que la pone el test.
         await sembrarComision(15);
+        // SPEC-940: el panel muestra el desglose sobre el precio ESTÁNDAR (no la tarifa). El test lo siembra.
+        await sembrarPrecioEstandar(50000);
     });
 
     afterAll(async () => prisma.$disconnect());
@@ -240,34 +257,36 @@ describe("GET /api/profesional/panel · SPEC-425 (A-75 · L5)", () => {
         expect(despues.citasConfirmadas, "después del inicio: ya no en agenda").toHaveLength(0);
     });
 
-    it("el desglose de la tarifa es el que se le cobró al padre, no uno inventado", async () => {
+    it("SPEC-940: el desglose es sobre el PRECIO ESTÁNDAR (lo que PI cobra), no la tarifa del profesional", async () => {
         const { perfil } = await sembrarProfesional();
         await sembrarSolicitud(perfil.id, "CONFIRMADA"); // se cobró al 15 %
         const panel = await leerPanel();
-        expect(
-            panel.porCobrar.desglose,
-            "una solicitud ya creada conserva el porcentaje con el que se cobró",
-        ).toEqual({
-            tarifaProfesional: 180000,
-            pagaElPadre: 207000,
-            servicioRed: 27000,
+        // El padre paga el ESTÁNDAR (50.000) + 15 %, NO la tarifa del profesional (180.000). Esa era la mentira.
+        expect(panel.porCobrar.desglose).toEqual({
+            tarifaProfesional: 50000,
+            pagaElPadre: 57500,
+            servicioRed: 7500,
             porcentajeServicio: 15,
         });
+        // La tarifa declarada (180.000) es informativa — de la 2.ª cita; PI no la cobra.
+        expect(panel.porCobrar.tarifaDeclarada).toBe(180000);
     });
 
     it("SPEC-403: sin solicitudes, muestra el porcentaje VIGENTE del parámetro", async () => {
         const { perfil } = await sembrarProfesional();
         await sembrarComision(10);
         expect((await leerPanel()).porCobrar.desglose).toEqual({
-            tarifaProfesional: 180000,
-            pagaElPadre: 198000,
-            servicioRed: 18000,
+            tarifaProfesional: 50000,
+            pagaElPadre: 55000,
+            servicioRed: 5000,
             porcentajeServicio: 10,
         });
 
         // El admin lo cambia y la pantalla cambia con él, sin desplegar.
         await sembrarComision(20);
         expect((await leerPanel()).porCobrar.desglose.porcentajeServicio).toBe(20);
+        // La tarifa declarada sigue informativa, separada del desglose.
+        expect((await leerPanel()).porCobrar.tarifaDeclarada).toBe(180000);
         expect(perfil.tarifaConsultaCOP).toBe(180000);
     });
 

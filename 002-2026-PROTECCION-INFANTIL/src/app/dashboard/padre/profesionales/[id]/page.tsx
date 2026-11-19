@@ -10,6 +10,7 @@ import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { ProfesionalPerfil } from "@/components/modules/padre/profesionales/ProfesionalPerfil";
 import { cotizarCitaNueva } from "@/lib/profesional/cita/cotizacion-cita";
+import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { menoresPendientesDeAudienciaDelTitular } from "@/lib/dal/services/audiencia-menor";
 
 export default async function PadreProfesionalPerfilPage({
@@ -34,13 +35,17 @@ export default async function PadreProfesionalPerfilPage({
     if (heredarDe) paramsVolver.set("heredarDe", heredarDe);
     const hrefVolverQuery = paramsVolver.toString() ? `?${paramsVolver.toString()}` : "";
 
-    const [perfil, cotizacionCita, pendientesAudiencia] = await Promise.all([
+    const [perfil, cotizacionCita, pendientesAudiencia, segundaCitaFueraDePi] = await Promise.all([
         new PerfilProfesionalRepository().obtenerPublicoPorId(id, user.id), // SPEC-655: visor de la sesión
         // SPEC-934 (I-450): la MISMA cotización con la que la ruta crea la solicitud (consulta + servicio).
         cotizarCitaNueva(),
         // SPEC-751 T010 (§2): heads-up «oír al menor» en la cita. Solo el CONTEO (no nombres) —
         // la cita no es por-hijo, así que el renglón se enmarca por «tu hijo/tus hijos», sin PII.
         menoresPendientesDeAudienciaDelTitular(user.id),
+        // SPEC-940: si ya tuvo una cita confirmada con ESTE profesional, PI no intermedia la 2.ª (el servidor
+        // además la rechaza en `crearSolicitudCita`; esto solo evita mostrar un panel que no va a funcionar).
+        // La reasignación (pago heredado) es otro camino y no se toca.
+        heredarDe ? Promise.resolve(false) : new SolicitudCitaRepository().existeCitaConfirmadaConProfesional(user.id, id),
     ]);
     if (!perfil) notFound();
 
@@ -48,6 +53,7 @@ export default async function PadreProfesionalPerfilPage({
         <ProfesionalPerfil
             p={perfil}
             cotizacion={cotizacionCita}
+            segundaCitaFueraDePi={segundaCitaFueraDePi}
             expedienteIdSugerido={expedienteId}
             heredarDeSolicitudId={heredarDe}
             audienciasPendientes={pendientesAudiencia.length}
