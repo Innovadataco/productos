@@ -8,6 +8,9 @@
 import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+// SPEC-935: la tarjeta usa `useRouter()` (refresh tras crear); en jsdom no hay app-router montado.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
+
 import { ComiteCuentaCard } from "./ComiteCuentaCard";
 
 const CUENTA = {

@@ -8,22 +8,19 @@ import { errorToResponse } from "@/lib/api-handler";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
 import { cuidIdSchema } from "@/lib/schemas";
+import { colegioLecturaCasosComite } from "@/lib/colegio/comite-lectura";
 import { ComiteConvivenciaBandejaService } from "@/lib/dal/services/comite-convivencia-bandeja";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const user = await verifyAuth("COMITE_CONVIVENCIA");
+        // SPEC-935 (I-448): el rector (SCHOOL_ADMIN) también LEE los casos de SU colegio; escribir sigue siendo del comité.
+        const user = await verifyAuth();
+        const colegioId = colegioLecturaCasosComite(user);
         await assertModulo(user, "colegios_comite_bandeja");
         const vigencia = await verificarVigenciaColegio(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(
                 { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
-        if (!user.comiteColegioId) {
-            return NextResponse.json(
-                { error: { message: "Cuenta del comité no vinculada a un colegio", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
             );
         }
@@ -37,7 +34,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
 
         const { id } = withValidation.params(z.object({ id: cuidIdSchema }))(await params);
-        const detalle = await new ComiteConvivenciaBandejaService().obtenerDetalle(user.comiteColegioId, id);
+        const detalle = await new ComiteConvivenciaBandejaService().obtenerDetalle(colegioId, id);
 
         return NextResponse.json(detalle);
     } catch (error) {
