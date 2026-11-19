@@ -9,6 +9,7 @@ import { syncModulosYGrants } from "./seed-modulos-grants";
 import { GUIAS_ACCION_BASE } from "./guias-accion.seed-data";
 import { copyInvitacion } from "./invitaciones-copy.seed-data";
 import { COLEGIO_REGISTRO_ENLACE_COPY } from "./colegio-registro-enlace-copy.seed-data";
+import { sembrarCorreosCanonicos } from "./correos-canonicos.seed-data";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { formatInTimeZone } from "date-fns-tz";
@@ -336,54 +337,8 @@ async function seedConsentimiento() {
     console.log("[SEED] Parámetros de consentimiento (SPEC-241) listos");
 
     const evento = "consentimiento.aceptado";
-    const asunto = "Confirmación de aceptación de términos";
-    const cuerpoEmail =
-        "Hola {{nombreUsuario}},\n\n" +
-        "Confirmamos que aceptaste la versión {{version}} de los términos de tratamiento de datos personales el {{fechaAceptacion}}.\n\n" +
-        "Puedes consultar tu expediente y configuración en {{urlDashboard}}.";
-    const cuerpoInApp = "Aceptaste los términos de tratamiento de datos personales (versión {{version}}).";
-
-    const plantillas = [
-        { clave: `${evento}.email`, canal: "EMAIL" as const, asunto, cuerpoMarkdown: cuerpoEmail },
-        { clave: `${evento}.in_app`, canal: "IN_APP" as const, asunto: undefined, cuerpoMarkdown: cuerpoInApp },
-    ];
-
-    for (const pl of plantillas) {
-        await prisma.notificacionPlantilla.upsert({
-            where: { clave: pl.clave },
-            update: {
-                canal: pl.canal,
-                asunto: pl.asunto ?? null,
-                cuerpoMarkdown: pl.cuerpoMarkdown,
-                variablesSchema: {
-                    type: "object",
-                    properties: {
-                        nombreUsuario: { type: "string" },
-                        version: { type: "string" },
-                        fechaAceptacion: { type: "string" },
-                        urlDashboard: { type: "string" },
-                    },
-                },
-                activa: true,
-            },
-            create: {
-                clave: pl.clave,
-                canal: pl.canal,
-                asunto: pl.asunto ?? null,
-                cuerpoMarkdown: pl.cuerpoMarkdown,
-                variablesSchema: {
-                    type: "object",
-                    properties: {
-                        nombreUsuario: { type: "string" },
-                        version: { type: "string" },
-                        fechaAceptacion: { type: "string" },
-                        urlDashboard: { type: "string" },
-                    },
-                },
-                activa: true,
-            },
-        });
-    }
+    // SPEC-922: las plantillas `.email` / `.in_app` de este evento las siembra el REGISTRO ÚNICO
+    // (`correos-canonicos.seed-data.ts` vía `seedCorreosCanonicos`). Acá quedan solo sus reglas.
 
     // SPEC-247: una sola regla por (evento, canal, plantillaClave); el motor no usa
     // `rol` para filtrar destinatarios, así que el representante del evento basta.
@@ -808,6 +763,19 @@ async function seedParametrosPagos() {
     console.log(`[SEED] ${pagosParams.length} parámetros pagos.* listos`);
 }
 
+// ── SPEC-922 · REGISTRO ÚNICO de copys canónicos (barrido de correos) ───────
+// CREATE-ONLY (VEREDICTO CEO 19-11): crea la plantilla que FALTA y NO pisa la existente — el panel
+// admin edita plantillas y el deploy corre este seed; pisar revertiría esa edición en silencio. Lo
+// canónico llega a una fila viva por el corrector (`scripts/corregir-correos-canonicos.ts`), como
+// acto deliberado. Las familias siguientes solo APPENDean al registro. Las REGLAS de cada evento NO
+// van acá (siguen en su bloque; `plantillaClave` no tiene FK).
+async function seedCorreosCanonicos() {
+    const r = await sembrarCorreosCanonicos(prisma);
+    console.log(
+        `[SEED] Registro de copys (SPEC-922): ${r.creadas.length} creadas · ${r.existentes.length} existentes intactas (create-only)`
+    );
+}
+
 // ── SPEC-296 (002-PI-197 · cierra I-152): 19 eventos + plantillas + reglas para
 // los emails migrados desde src/lib/email.ts al motor. Cada uno tiene texto
 // equivalente al `text:` que hoy vive inline en email.ts (copia literal con
@@ -925,16 +893,8 @@ async function seedEventosEmailMigrados() {
                 properties: { nit: { type: "string" }, urlSoporte: { type: "string" } },
             },
         },
-        {
-            clave: "colegio.bienvenida_rector.email",
-            asunto: "Su cuenta del colegio está lista",
-            cuerpoMarkdown:
-                "Hola,\n\nLa cuenta del **{{nombreColegio}}** quedó creada. Desde aquí protegerá a sus estudiantes, profesores y acudientes.\n\nEntre cuando quiera:\n{{urlLogin}}\n\nLe faltan unos pocos pasos para terminar de configurarla. Los recorremos juntos.",
-            variablesSchema: {
-                type: "object",
-                properties: { nombreColegio: { type: "string" }, urlLogin: { type: "string" } },
-            },
-        },
+        // SPEC-922: la bienvenida al rector (`colegio.bienvenida_rector`) la siembra el REGISTRO
+        // ÚNICO (`seedCorreosCanonicos`); su regla sigue abajo en `reglas`.
         {
             clave: "usuario.bienvenida.operador.email",
             asunto: "Tu cuenta de operador está lista",
@@ -2672,6 +2632,9 @@ async function main() {
     // SPEC-296 (002-PI-197 · cierra I-152): eventos + plantillas + reglas de los
     // 19 emails migrados desde src/lib/email.ts al motor de notificaciones.
     await seedEventosEmailMigrados();
+
+    // SPEC-922: copys canónicos del barrido de correos (registro único, extensible).
+    await seedCorreosCanonicos();
 
     // Nuevos parámetros del módulo de reportes (fase 2)
     const reportesParams = [

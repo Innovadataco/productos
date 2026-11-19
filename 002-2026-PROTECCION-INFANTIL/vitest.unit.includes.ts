@@ -871,4 +871,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-931: Usuarios → Estudiantes — entrada en el menú (módulo colegios_gestion), página con guardia de
     // servidor del mismo módulo, DTO exacto, «← Volver» coherente, copy I-429. Puro (la BD vive en route.test).
     "src/lib/colegio/estudiantes-en-usuarios.candado.test.ts",
+    // SPEC-922: registro ÚNICO de copys canónicos (barrido de correos) — por CADA entrada cero URL cruda;
+    // por cada CTA el motor pinta UN botón hacia su variable; seed+corrector sourcean del registro. Puro.
+    "prisma/correos-canonicos.candado.test.ts",
+    // SPEC-922: el corrector data-driven del registro es idempotente, fila-por-fila y aborta ante flag desconocido (db falsa). Puro.
+    "scripts/corregir-correos-canonicos.candado.test.ts",
 ];
