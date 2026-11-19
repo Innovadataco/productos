@@ -141,6 +141,13 @@ git worktree list | awk 'NR>1 {print $1}' | while read wt; do
 done
 git worktree prune
 
+# SPEC-922: detector de DERIVA de los copys canónicos (registro único del barrido de correos). El seed
+# es CREATE-ONLY —no pisa ediciones del panel admin—, así que lo canónico llega a una fila viva SOLO por
+# el corrector, como acto deliberado del CEO. Acá solo AVISA (solo lectura, `--aviso`; NUNCA `--confirm`).
+# `|| echo` porque un fallo del detector NO puede tumbar un deploy YA verificado.
+echo "==> Deriva de copys canónicos (SPEC-922 · aviso, no bloquea)"
+$COMPOSE exec -T app node --import tsx scripts/corregir-correos-canonicos.ts --aviso || echo "⚠️  No se pudo verificar la deriva de copys — no afecta el deploy ya verificado."
+
 # SPEC-903: retención de imágenes/caché. SOLO acá, DESPUÉS de «DEPLOY VERIFICADO» (nunca antes: jamás debe
 # interferir con el deploy en curso). Conserva la imagen recién desplegada (= latest = la de los contenedores
 # corriendo) y purga las pi-app:<sha> viejas + la caché de build a 10GB. `|| echo` porque un fallo de
