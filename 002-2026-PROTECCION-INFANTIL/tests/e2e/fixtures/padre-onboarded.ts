@@ -134,6 +134,29 @@ export async function limpiarPadreOnboarded(padre: PadreOnboarded): Promise<void
         await prisma.suscripcion.deleteMany({ where: { usuarioId: { in: ids } } }).catch(() => undefined);
         await prisma.hijo.deleteMany({ where: { usuarioId: { in: ids } } }).catch(() => undefined);
         await prisma.auditLog.deleteMany({ where: { usuarioId: { in: ids } } }).catch(() => undefined);
+        // SPEC-939: cuando el motor clasifica el 1er reporte del padre crea un Expediente
+        // automático (SPEC-604) con un EventoExpediente por reporte. El Expediente FK-ea al
+        // Usuario con Restrict, así que sin barrerlo `usuario.deleteMany` fallaba — y como
+        // cada delete está envuelto en `.catch(() => undefined)`, fallaba EN SILENCIO y dejaba
+        // al padre + su expediente huérfanos (reportes=0 pero padres/expedientes acumulándose
+        // en la BD de larga vida). Se barre el subárbol del Expediente ANTES de borrar al
+        // Usuario: primero los hijos Restrict (los Cascade —AnalisisExpediente,
+        // CodigoAccesoContenido— caen con el Expediente), luego el Expediente.
+        // SIN `.catch`: si un journey nuevo cuelga otro hijo Restrict del Expediente, el
+        // afterAll debe GRITAR (FK violation), no volver a tragárselo — esa fue la causa raíz.
+        const expedientes = await prisma.expediente.findMany({
+            where: { padreUsuarioId: { in: ids } },
+            select: { id: true },
+        });
+        if (expedientes.length > 0) {
+            const eids = expedientes.map((e) => e.id);
+            await prisma.eventoExpediente.deleteMany({ where: { expedienteId: { in: eids } } });
+            await prisma.informePadre.deleteMany({ where: { expedienteId: { in: eids } } });
+            await prisma.informeConsolidado.deleteMany({ where: { expedienteId: { in: eids } } });
+            await prisma.patronExpediente.deleteMany({ where: { expedienteId: { in: eids } } });
+            await prisma.aclaracionExpediente.deleteMany({ where: { expedienteId: { in: eids } } });
+            await prisma.expediente.deleteMany({ where: { id: { in: eids } } });
+        }
         await prisma.usuario.deleteMany({ where: { id: { in: ids } } }).catch(() => undefined);
     }
     if (padre._limpieza.tokens.length > 0) {
