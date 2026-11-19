@@ -240,7 +240,7 @@ export const COMITE_NAV_TABS: NavItem[] = [
 ];
 
 // SPEC-173 (FASE-C): menú del rector — 8 entradas; "Usuarios" es un nodo padre
-// expandible (href "#", no navegable) con Profesores e Integrantes del comité.
+// expandible (href "#", no navegable) con Estudiantes (SPEC-931), Profesores e Integrantes del comité.
 // Retirados: Onboarding, Materias y Subir lista (quedan accesibles por flujo, no por menú).
 export const COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio", label: "Inicio", modulo: "colegios" },
@@ -256,6 +256,9 @@ export const COLEGIO_NAV_ITEMS: NavItem[] = [
         iconKey: "usuarios",
         modulo: "colegios_gestion",
         children: [
+            // SPEC-931 (FORMA Diseño f700b2c2 §3.1): el estudiante es el sujeto central del colegio → primero.
+            // Mismo módulo que Profesores (sin módulo nuevo): la página lo exige también en el servidor.
+            { href: "/dashboard/colegio/estudiantes", label: "Estudiantes", modulo: "colegios_gestion" },
             { href: "/dashboard/colegio/profesores", label: "Profesores", modulo: "colegios_gestion" },
             { href: "/dashboard/colegio/comite/integrantes", label: "Comité de convivencia", modulo: "colegios_comite" },
         ],

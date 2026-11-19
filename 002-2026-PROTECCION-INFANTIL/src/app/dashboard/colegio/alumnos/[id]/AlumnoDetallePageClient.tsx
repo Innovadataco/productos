@@ -9,6 +9,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { relativoHumano } from "@/lib/colegio/fechas-humano";
+import { destinoVolverEstudiante } from "@/lib/colegio/volver-estudiante";
 import SeccionAcudientes from "./SeccionAcudientes";
 import {
     IdentificadoresParaAlertas,
@@ -62,7 +63,14 @@ const etiquetaOptions = [
     { value: "OTRO", label: "Otro" },
 ];
 
-export default function AlumnoDetallePageClient({ params }: { params: Promise<{ id: string }> }) {
+export default function AlumnoDetallePageClient({
+    params,
+    desde,
+}: {
+    params: Promise<{ id: string }>;
+    /** SPEC-931: origen de la navegación (`?desde=estudiantes`) → a dónde vuelve «← Volver». */
+    desde?: string | string[] | undefined;
+}) {
     const router = useRouter();
     const [estudianteId, setEstudianteId] = useState<string | null>(null);
     const [estudiante, setEstudiante] = useState<Estudiante | null>(null);
@@ -183,6 +191,9 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
         cambiarEstado: (i, estado) => enviar(`/api/colegio/identificadores/${i.id}/estado`, "PATCH", estado),
     };
 
+    // SPEC-931: «← Volver» regresa a donde el usuario venía (listado de estudiantes o curso).
+    const volver = destinoVolverEstudiante(desde, estudiante);
+
     return (
         <div className="min-h-screen bg-page">
             <main className="p-4 sm:p-6 lg:p-8">
@@ -191,10 +202,10 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                         <div>
                             <Button
                                 variant="outline"
-                                onClick={() => router.push(`/dashboard/colegio/cursos/${estudiante?.cursoId || ""}`)}
+                                onClick={() => router.push(volver.href)}
                                 className="mb-2"
                             >
-                                ← Volver al curso
+                                {volver.etiqueta}
                             </Button>
                             <h1 className="text-2xl font-bold text-body">{estudiante?.nombre || "Estudiante"}</h1>
                             {curso && <p className="text-sm text-muted">{curso.nombre}</p>}
