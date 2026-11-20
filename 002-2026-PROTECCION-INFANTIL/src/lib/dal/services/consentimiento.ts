@@ -10,6 +10,7 @@ import type { RolUsuario } from "@prisma/client";
 import { AppError, ERROR_CODES } from "../../errors";
 import { getParametroSistemaValor } from "../../parametros";
 import { programar } from "../../notificaciones";
+import { enviarBienvenidaRectorFusionada } from "../../email-colegio";
 import { withUnitOfWork } from "../unit-of-work";
 import { UsuarioRepository } from "../repositories/usuario";
 import { ConsentimientoRepository } from "../repositories/consentimiento";
@@ -50,6 +51,9 @@ export interface AceptarConsentimientoInput {
     esRepresentanteLegal: boolean;
     ip: string;
     userAgent: string | null;
+    // SPEC-955: para el correo fusionado del colegio (lookup del nombre por colegioId).
+    // Solo se usa cuando el aceptante es SCHOOL_ADMIN en su primera aceptación.
+    colegioId?: string | null;
 }
 
 export class ConsentimientoService {
@@ -137,6 +141,13 @@ export class ConsentimientoService {
             const repoUsuario = new UsuarioRepository(tx);
             const repoConsentimiento = new ConsentimientoRepository(tx);
 
+            // SPEC-955: ¿es la PRIMERA aceptación del usuario? Se mide DENTRO de la
+            // transacción, ANTES de crear la fila, para que el bifurcado del correo
+            // (bienvenida fusionada del colegio vs recibo genérico) sea atómico y no
+            // dependa de un conteo posterior sujeto a carreras.
+            const aceptacionesPrevias = await repoConsentimiento.findByUsuarioId(input.usuarioId);
+            const esPrimeraAceptacion = aceptacionesPrevias.length === 0;
+
             const audit = await repoConsentimiento.crear({
                 usuarioId: input.usuarioId,
                 version: versionActual,
@@ -155,30 +166,49 @@ export class ConsentimientoService {
                 consentimientoIP: input.ip,
             });
 
-            return { audit, usuario };
+            return { audit, usuario, esPrimeraAceptacion };
         };
 
         const resultado = await withUnitOfWork(ejecutar);
 
         // Notificación al usuario (best-effort; no falla la aceptación).
+        //
+        // SPEC-955 · BIFURCACIÓN por rol del aceptante (FORMA-ONBOARDING-COLEGIO §A.1):
+        //  - SCHOOL_ADMIN en su PRIMERA aceptación → UN correo FUSIONADO
+        //    (`colegio.bienvenida_rector`: bienvenida + recibo + botón al panel), y NO
+        //    el recibo genérico (sin duplicado). El momento en que la cuenta queda
+        //    REALMENTE lista es al aceptar la Política, así que bienvenida y recibo son
+        //    un solo toque.
+        //  - cualquier otro caso (otros roles, o un colegio RE-aceptando por un bump de
+        //    versión) → el recibo genérico `consentimiento.aceptado` COMPARTIDO, sin
+        //    cambio (no se reescribe esa plantilla: rompería a los padres, SPEC-247).
         try {
             const fechaBogota = formatInTimeZone(aceptadoEn, TIMEZONE_BOGOTA, "yyyy-MM-dd HH:mm");
-            await programar({
-                evento: "consentimiento.aceptado",
-                sujetoTipo: "usuario",
-                sujetoId: input.usuarioId,
-                destinatarios: [
-                    {
-                        usuarioId: input.usuarioId,
-                        variables: {
-                            nombreUsuario: resultado.usuario.nombre ?? "Usuario",
-                            version: versionActual,
-                            fechaAceptacion: fechaBogota,
-                            urlDashboard: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5005"}/dashboard`,
+            if (input.rol === "SCHOOL_ADMIN" && resultado.esPrimeraAceptacion) {
+                await enviarBienvenidaRectorFusionada({
+                    usuarioId: input.usuarioId,
+                    colegioId: input.colegioId ?? null,
+                    version: versionActual,
+                    fechaAceptacion: fechaBogota,
+                });
+            } else {
+                await programar({
+                    evento: "consentimiento.aceptado",
+                    sujetoTipo: "usuario",
+                    sujetoId: input.usuarioId,
+                    destinatarios: [
+                        {
+                            usuarioId: input.usuarioId,
+                            variables: {
+                                nombreUsuario: resultado.usuario.nombre ?? "Usuario",
+                                version: versionActual,
+                                fechaAceptacion: fechaBogota,
+                                urlDashboard: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5005"}/dashboard`,
+                            },
                         },
-                    },
-                ],
-            });
+                    ],
+                });
+            }
         } catch (error) {
             const msg = error instanceof Error ? error.message : "Error desconocido";
             console.error("[Consentimiento] Error programando notificación:", msg);

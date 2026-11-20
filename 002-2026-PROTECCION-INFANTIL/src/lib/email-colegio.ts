@@ -9,6 +9,7 @@
  */
 import { programar } from "./notificaciones/motor.ts";
 import { baseUrl } from "./email";
+import { ColegioRepository } from "./dal/repositories/colegio";
 
 /**
  * SPEC-344 · caso "correo Y NIT nuevos": enlace para crear la clave del rector.
@@ -112,17 +113,44 @@ export async function enviarRecomendacionInformeAlRector(
 }
 
 /**
- * SPEC-344 · confirmación de cuenta creada, tras completar el enlace.
+ * SPEC-955 · correo FUSIONADO del colegio = bienvenida + recibo de aceptación.
+ * Lo dispara la PRIMERA aceptación de la Política del rector (FORMA-ONBOARDING-
+ * COLEGIO-CORREOS §A, Gestión c540eeac). Reemplaza a la vieja «bienvenida al
+ * crear la contraseña» (SPEC-344), que salía ANTES de aceptar.
+ *
+ * - Voz usted; botón «Entrar a mi panel» → /dashboard (en este momento el rector
+ *   YA está autenticado, por eso va al panel y no a un login).
+ * - La constancia [NORMA] (versión + fecha) viaja en el cuerpo; la autoritativa
+ *   es el AuditConsentimiento que el servicio ya escribió (no el correo).
+ * - VENTANA pre-2.ª-ola: la plantilla VIVA sigue siendo la de SPEC-922 (usa
+ *   {{urlLogin}}). Se manda `urlLogin = urlPanel` para que el botón NO salga roto
+ *   hasta que el corrector de la 2.ª ola aplique el cuerpo fusionado canónico
+ *   (FORMA A.3.4). El renderer deja vacío todo {{var}} ausente → sin este alias
+ *   el botón vivo quedaría con href vacío en la ventana.
  */
-export async function enviarBienvenidaRector(email: string, nombreColegio: string): Promise<void> {
+export async function enviarBienvenidaRectorFusionada(params: {
+    usuarioId: string;
+    colegioId: string | null;
+    version: string;
+    fechaAceptacion: string;
+}): Promise<void> {
+    const colegio = params.colegioId ? await new ColegioRepository().obtenerResumen(params.colegioId) : null;
+    const nombreColegio = colegio?.nombre ?? "su colegio";
+    const urlPanel = `${baseUrl()}/dashboard`;
+
     const result = await programar({
         evento: "colegio.bienvenida_rector",
+        sujetoTipo: "usuario",
+        sujetoId: params.usuarioId,
         destinatarios: [
             {
-                email,
+                usuarioId: params.usuarioId,
                 variables: {
                     nombreColegio,
-                    urlLogin: `${baseUrl()}/login`,
+                    version: params.version,
+                    fechaAceptacion: params.fechaAceptacion,
+                    urlPanel,
+                    urlLogin: urlPanel, // alias de ventana pre-2.ª-ola (ver doc arriba)
                 },
             },
         ],
