@@ -62,7 +62,7 @@ describe("importar los fixtures de Trii", () => {
 describe("reimportar no duplica", () => {
   it("el mismo archivo otra vez: 0 filas nuevas y la carga deja constancia de lo que vio", async () => {
     const n = nemo("RE");
-    const contenido = csv(`${DIVIDENDOS}2026-01-15,${n},,100.0\n2026-04-15,${n},,110.0\n`);
+    const contenido = csv(`${DIVIDENDOS}2026-01-21,${n},,100.0\n2026-04-15,${n},,110.0\n`);
     const primera = await importar("div-a.ficticio.csv", contenido);
     const segunda = await importar("div-a.ficticio.csv", contenido);
     expect(primera.filasNuevas).toBe(2);
@@ -73,15 +73,15 @@ describe("reimportar no duplica", () => {
 
   it("una exportación solapada solo suma las filas nuevas", async () => {
     const n = nemo("SO");
-    await importar("div-1.ficticio.csv", csv(`${DIVIDENDOS}2026-01-15,${n},,100.0\n`));
-    const solapada = await importar("div-2.ficticio.csv", csv(`${DIVIDENDOS}2026-01-15,${n},,100.0\n2026-04-15,${n},,110.0\n`));
+    await importar("div-1.ficticio.csv", csv(`${DIVIDENDOS}2026-01-21,${n},,100.0\n`));
+    const solapada = await importar("div-2.ficticio.csv", csv(`${DIVIDENDOS}2026-01-21,${n},,100.0\n2026-04-15,${n},,110.0\n`));
     expect(solapada).toMatchObject({ filasNuevas: 1, filasRepetidas: 1 });
     expect(await db.dividendo.count({ where: { instrumento: { nemotecnico: n } } })).toBe(2);
   });
 
   it("el instrumento se crea una sola vez entre cargas", async () => {
     const n = nemo("IN");
-    const a = await importar("i1.ficticio.csv", csv(`${DIVIDENDOS}2026-02-02,${n},,5.0\n`));
+    const a = await importar("i1.ficticio.csv", csv(`${DIVIDENDOS}2026-02-09,${n},,5.0\n`));
     const b = await importar("i2.ficticio.csv", csv(`${DIVIDENDOS}2026-05-02,${n},,6.0\n`));
     expect([a.instrumentosCreados, b.instrumentosCreados]).toEqual([1, 0]);
     expect(await db.instrumento.count({ where: { nemotecnico: n } })).toBe(1);
