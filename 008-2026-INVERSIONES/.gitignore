@@ -11,9 +11,37 @@
 *.jpeg
 *.webp
 *.heic
+*.heif
+*.gif
+*.bmp
+*.tif
+*.tiff
+*.xlsm
+*.xlsb
+*.ods
+*.numbers
+*.docx
+*.zip
+*.7z
+*.gz
+*.tgz
+*.tar
+*.rar
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.parquet
 !*.ficticio.*
+# Secretos y claves: sin excepción .ficticio.
 .env
 .env.*
+*.env
+.envrc
+*.pem
+*.key
+*.p12
+*.pfx
 !.env.example
 
 # ECC (piloto): nada de su estado local se versiona
