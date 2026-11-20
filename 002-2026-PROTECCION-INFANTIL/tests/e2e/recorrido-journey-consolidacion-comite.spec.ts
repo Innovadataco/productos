@@ -173,6 +173,14 @@ test.describe.serial("SPEC-942 · journey core #6: el comité de validación cor
                 // toHaveValue simple — justo lo que SPEC-945 dejó pasar (CI run 44768061155 · SPEC-961).
                 // Re-ejecutar el fill dentro de un toPass hasta que el valor QUEDE exactamente el
                 // corregido cierra la carrera: una vez hidratado, el fill es determinista y converge.
+                //
+                // LÍMITE DECLARADO (no es descuido): este re-fill converge AUNQUE el producto reiniciara
+                // el campo UNA vez al montar (volvería a rellenar), y la lectura persistida de abajo
+                // tampoco lo vería. Por eso este journey NO vigila el contrato de producto «el usuario no
+                // pierde lo que escribe». Hoy ESE reinicio no existe (ConsolidacionResumenEditor es un
+                // controlado limpio, sin useEffect/reset — verificado 20-11); si algún día se agrega un
+                // efecto que reinyecte resumenInicial, ese contrato necesita su PROPIO test (unit del
+                // componente), no este recorrido.
                 const resumen = page.getByLabel("Resumen consolidado");
                 await expect(async () => {
                     await resumen.fill(RESUMEN_CORREGIDO);
