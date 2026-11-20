@@ -1,4 +1,4 @@
 Fecha y hora,Símbolo de la acción,Tipo de orden,Estado,Acciones completadas,Acciones pendientes,Precio por acción,Total invertido,Valor comisión,Total estimado
-"19 may 2025, 10:01 a. m.",FICTA,Compra,Aprobado,100/100,0,1500.0,150000.0,1250.75,151250.75
-"20 may 2025, 2:15 p. m.",FICTB,Compra,Cancelado,0/50,50,0,0,0,0
-"18 nov 2026, 3:59 p. m.",FICTA,Venta,Aprobado,40,0,1800.0,72000.0,980.1,71019.9
+"8 abr 2024, 10:01 a. m.",FICTA,Compra,Aprobado,100/100,0,1500.0,150000.0,1250.75,151250.75
+"9 abr 2024, 2:15 p. m.",FICTB,Compra,Cancelado,0/50,50,0,0,0,0
+"13 nov 2024, 3:59 p. m.",FICTA,Venta,Aprobado,40,0,1800.0,72000.0,980.1,71019.9

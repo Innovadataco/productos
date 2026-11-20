@@ -74,6 +74,13 @@ export function validarEscision(d: DatosEscision): { ok: true; valor: EscisionVa
   return { ok: true, valor: { origen, destino, fecha, razon, pagoFraccion, montoFraccion, nota } };
 }
 
+/** P2002 (clave única): el mismo evento, o un pago de fracción que ya pertenece a otro evento. */
+function traducirChoque(error: unknown): unknown {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") return error;
+  const objetivo = JSON.stringify(error.meta?.["target"] ?? "");
+  return new ErrorEvento(/pago_fraccion|fechaPagoFraccion/.test(objetivo) ? "PAGO_FRACCION_DUPLICADO" : "EVENTO_DUPLICADO");
+}
+
 export interface ResultadoEscision {
   readonly eventoId: string;
   /** Dividendos ya importados como ordinarios que coinciden con el pago de la fracción. */
@@ -87,21 +94,23 @@ export async function registrarEscision(db: PrismaClient, e: EscisionValida): Pr
   );
   if (!origen || !destino) throw new ErrorEvento("INSTRUMENTO_DESCONOCIDO");
 
-  const duplicado = await db.eventoCorporativo.findFirst({
-    where: { tipo: "ESCISION", origenId: origen.id, destinoId: destino.id, fecha: e.fecha },
-    select: { id: true },
-  });
-  if (duplicado) throw new ErrorEvento("EVENTO_DUPLICADO");
-
-  const evento = await db.eventoCorporativo.create({
-    data: {
-      tipo: "ESCISION", fecha: e.fecha, origenId: origen.id, destinoId: destino.id,
-      razon: e.razon === null ? null : new Prisma.Decimal(e.razon),
-      fechaPagoFraccion: e.pagoFraccion,
-      montoFraccion: e.montoFraccion === null ? null : new Prisma.Decimal(e.montoFraccion),
-      nota: e.nota,
-    },
-  });
+  // La base garantiza la unicidad (índices únicos de la migración eventos_unicos), también ante
+  // dos registros simultáneos; aquí solo se traduce el choque a un código claro.
+  let evento: { id: string };
+  try {
+    evento = await db.eventoCorporativo.create({
+      data: {
+        tipo: "ESCISION", fecha: e.fecha, origenId: origen.id, destinoId: destino.id,
+        razon: e.razon === null ? null : new Prisma.Decimal(e.razon),
+        fechaPagoFraccion: e.pagoFraccion,
+        montoFraccion: e.montoFraccion === null ? null : new Prisma.Decimal(e.montoFraccion),
+        nota: e.nota,
+      },
+      select: { id: true },
+    });
+  } catch (error) {
+    throw traducirChoque(error);
+  }
   const dividendosYaImportados = e.pagoFraccion
     ? await db.dividendo.count({ where: { instrumentoId: destino.id, fechaPago: e.pagoFraccion, tipo: { not: "FRACCION_ESCISION" } } })
     : 0;

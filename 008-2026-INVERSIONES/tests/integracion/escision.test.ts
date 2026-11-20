@@ -30,10 +30,10 @@ afterAll(async () => {
 
 describe("eventos de escisión en cadena", () => {
   it("con los dos eventos registrados antes, las dos fracciones se cargan como fracción y el resto como ordinario", async () => {
-    const e1 = await registrarEscision(db, valido({ origen: nemo("A"), destino: nemo("B"), fecha: "2025-07-14", pagoFraccion: "2025-07-25", nota: "por confirmar" }));
-    const e2 = await registrarEscision(db, valido({ origen: nemo("B"), destino: nemo("C"), fecha: "2025-07-28", razon: "0.5", pagoFraccion: "2025-08-08" }));
+    const e1 = await registrarEscision(db, valido({ origen: nemo("A"), destino: nemo("B"), fecha: "2024-02-12", pagoFraccion: "2024-02-23", nota: "por confirmar" }));
+    const e2 = await registrarEscision(db, valido({ origen: nemo("B"), destino: nemo("C"), fecha: "2024-02-26", razon: "0.5", pagoFraccion: "2024-03-08" }));
     expect(e1.dividendosYaImportados).toBe(0);
-    const r = await dividendos(`2025-07-25,${nemo("B")},,300.0\n2025-08-08,${nemo("C")},,200.0\n2025-10-14,${nemo("C")},,50.0\n`);
+    const r = await dividendos(`2024-02-23,${nemo("B")},,300.0\n2024-03-08,${nemo("C")},,200.0\n2024-04-15,${nemo("C")},,50.0\n`);
     expect(r.estado).toBe("CARGADO");
     const filas = await db.dividendo.findMany({ where: { instrumento: { nemotecnico: { in: [nemo("B"), nemo("C")] } } }, orderBy: { fechaPago: "asc" } });
     expect(filas.map((d) => [d.tipo, d.eventoId])).toEqual([
@@ -44,12 +44,26 @@ describe("eventos de escisión en cadena", () => {
   });
 
   it("no registra dos veces el mismo evento", async () => {
-    await expect(registrarEscision(db, valido({ origen: nemo("A"), destino: nemo("B"), fecha: "2025-07-14" }))).rejects.toThrow(ErrorEvento);
-    await expect(registrarEscision(db, valido({ origen: nemo("A"), destino: nemo("B"), fecha: "2025-07-14" }))).rejects.toThrow(/EVENTO_DUPLICADO/);
+    await expect(registrarEscision(db, valido({ origen: nemo("A"), destino: nemo("B"), fecha: "2024-02-12" }))).rejects.toThrow(ErrorEvento);
+    await expect(registrarEscision(db, valido({ origen: nemo("A"), destino: nemo("B"), fecha: "2024-02-12" }))).rejects.toThrow(/EVENTO_DUPLICADO/);
+  });
+
+  it("dos registros simultáneos del mismo evento: la base deja pasar solo uno", async () => {
+    const datos = valido({ origen: nemo("C"), destino: nemo("A"), fecha: "2024-05-06" });
+    const resultados = await Promise.allSettled([registrarEscision(db, datos), registrarEscision(db, datos)]);
+    expect(resultados.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const rechazo = resultados.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(rechazo.reason).toMatchObject({ codigo: "EVENTO_DUPLICADO" });
+  });
+
+  it("un mismo pago de fracción no puede pertenecer a dos eventos (la importación casaría solo uno)", async () => {
+    await expect(
+      registrarEscision(db, valido({ origen: nemo("C"), destino: nemo("B"), fecha: "2024-02-20", pagoFraccion: "2024-02-23" })),
+    ).rejects.toMatchObject({ codigo: "PAGO_FRACCION_DUPLICADO" });
   });
 
   it("no crea instrumentos: un nemotécnico mal escrito se rechaza", async () => {
-    await expect(registrarEscision(db, valido({ origen: nemo("A"), destino: "NOEXISTE9", fecha: "2025-07-14" }))).rejects.toThrow(/INSTRUMENTO_DESCONOCIDO/);
+    await expect(registrarEscision(db, valido({ origen: nemo("A"), destino: "NOEXISTE9", fecha: "2024-02-12" }))).rejects.toThrow(/INSTRUMENTO_DESCONOCIDO/);
   });
 
   it("si el dividendo ya se importó como ordinario, avisa cuántos hay que revertir", async () => {

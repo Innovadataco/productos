@@ -45,8 +45,8 @@ describe("importar los fixtures de Trii", () => {
     const venta = await db.orden.findFirst({ where: { lado: "VENTA", filaFuente: { primeraCargaId: ordenes.cargaId } }, include: { filaFuente: true } });
     expect(venta?.filaFuente.primeraFilaNo).toBe(4);
     expect((venta?.filaFuente.crudo as Record<string, string>)["Tipo de orden"]).toBe("Venta");
-    // 18-nov-2026 (miércoles) + 2 hábiles = 20-nov-2026 (viernes).
-    expect(venta?.fechaLiquidacion.toISOString().slice(0, 10)).toBe("2026-11-20");
+    // 13-nov-2024 (miércoles) + 2 hábiles = 15-nov-2024 (viernes).
+    expect(venta?.fechaLiquidacion.toISOString().slice(0, 10)).toBe("2024-11-15");
   });
 
   it("dos filas idénticas legítimas en el mismo archivo quedan como dos hechos", async () => {
@@ -182,9 +182,9 @@ describe("permisos y fracciones", () => {
     const origen = await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo("ORI"), nombre: "Origen ficticio" } });
     const destino = await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo("DES"), nombre: "Destino ficticio" } });
     const evento = await db.eventoCorporativo.create({
-      data: { tipo: "ESCISION", fecha: new Date("2025-07-28"), origenId: origen.id, destinoId: destino.id, fechaPagoFraccion: new Date("2025-08-08"), nota: "por confirmar con el extracto de A&V" },
+      data: { tipo: "ESCISION", fecha: new Date("2024-02-26"), origenId: origen.id, destinoId: destino.id, fechaPagoFraccion: new Date("2024-03-08"), nota: "por confirmar con el extracto de A&V" },
     });
-    await importar("frac.ficticio.csv", csv(`${DIVIDENDOS}2025-08-08,${destino.nemotecnico},,4321.0\n2025-10-14,${destino.nemotecnico},,50.0\n`));
+    await importar("frac.ficticio.csv", csv(`${DIVIDENDOS}2024-03-08,${destino.nemotecnico},,4321.0\n2024-04-15,${destino.nemotecnico},,50.0\n`));
     const [fraccion, ordinario] = await db.dividendo.findMany({ where: { instrumentoId: destino.id }, orderBy: { fechaPago: "asc" } });
     expect(fraccion).toMatchObject({ tipo: "FRACCION_ESCISION", eventoId: evento.id });
     expect(ordinario).toMatchObject({ tipo: "ORDINARIO", eventoId: null });

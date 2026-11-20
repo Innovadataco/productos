@@ -24,24 +24,24 @@ describe("detectarTipo", () => {
 
 describe("interpretarFila", () => {
   it("lee un movimiento de caja", () => {
-    const r = registro(interpretarFila("TRII_CAJA", ["12 may 2025, 4:42 p. m.", "Depósito", "Aprobado", "100000.0"], 2));
+    const r = registro(interpretarFila("TRII_CAJA", ["14 mar 2024, 3:27 p. m.", "Depósito", "Aprobado", "100000.0"], 2));
     expect(r.hecho).toMatchObject({ tipo: "DEPOSITO", estado: "APROBADO", monto: "100000" });
   });
 
-  it("lee una orden con «1412/1412» y comisión con decimales", () => {
+  it("lee una orden con «1000/1000» y comisión con decimales", () => {
     const r = registro(
-      interpretarFila("TRII_ORDENES", ["3 jul 2025, 10:15 a. m.", "ficta", "Compra", "Aprobado", "1412/1412", "0", "1000.5", "1412706.0", "1234.56", "1413940.56"], 2),
+      interpretarFila("TRII_ORDENES", ["5 feb 2024, 10:15 a. m.", "ficta", "Compra", "Aprobado", "1000/1000", "0", "1000.5", "1000500.0", "1234.56", "1001734.56"], 2),
     );
-    expect(r.hecho).toMatchObject({ nemotecnico: "FICTA", lado: "COMPRA", cantidadCompletada: 1412n, cantidadSolicitada: 1412n, comision: "1234.56" });
+    expect(r.hecho).toMatchObject({ nemotecnico: "FICTA", lado: "COMPRA", cantidadCompletada: 1000n, cantidadSolicitada: 1000n, comision: "1234.56" });
   });
 
   it("lee un dividendo con «Estado» vacío", () => {
-    const r = registro(interpretarFila("TRII_DIVIDENDOS", ["2026-10-19", "FICTA", "", "23778.4"], 2));
-    expect(r.hecho).toMatchObject({ nemotecnico: "FICTA", montoNeto: "23778.4" });
+    const r = registro(interpretarFila("TRII_DIVIDENDOS", ["2024-10-17", "FICTA", "", "31415.9"], 2));
+    expect(r.hecho).toMatchObject({ nemotecnico: "FICTA", montoNeto: "31415.9" });
   });
 
   it("los errores dicen fila, columna y código, nunca el valor", () => {
-    const r = interpretarFila("TRII_CAJA", ["32 may 2025, 4:42 p. m.", "Transferencia", "Aprobado", "1.234,56"], 7);
+    const r = interpretarFila("TRII_CAJA", ["32 mar 2024, 3:27 p. m.", "Transferencia", "Aprobado", "1.234,56"], 7);
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.errores).toEqual([
@@ -59,7 +59,7 @@ describe("interpretarFila", () => {
 
 describe("clave natural", () => {
   const orden = (estado: string, comision: string) =>
-    registro(interpretarFila("TRII_ORDENES", ["3 jul 2025, 10:15 a. m.", "FICTA", "Compra", estado, "10", "0", "100", "1000", comision, "1010"], 2));
+    registro(interpretarFila("TRII_ORDENES", ["5 feb 2024, 10:15 a. m.", "FICTA", "Compra", estado, "10", "0", "100", "1000", comision, "1010"], 2));
 
   it("no depende del estado ni de la comisión (Trii puede cambiarlos entre exportaciones)", () => {
     expect(claveNatural(orden("Aprobado", "10"))).toBe(claveNatural(orden("Cancelado", "12.5")));
@@ -75,18 +75,18 @@ describe("clave natural", () => {
   });
 
   it("«1500» y «1500.0» dan la misma clave (no duplican)", () => {
-    const fila = (monto: string) => registro(interpretarFila("TRII_CAJA", ["12 may 2025, 4:42 p. m.", "Depósito", "Aprobado", monto], 2));
+    const fila = (monto: string) => registro(interpretarFila("TRII_CAJA", ["14 mar 2024, 3:27 p. m.", "Depósito", "Aprobado", monto], 2));
     expect(claveNatural(fila("1500"))).toBe(claveNatural(fila("1500.0")));
   });
 
   it("cambia si cambia un campo que identifica la fila", () => {
-    const a = registro(interpretarFila("TRII_CAJA", ["12 may 2025, 4:42 p. m.", "Depósito", "Aprobado", "100"], 2));
-    const b = registro(interpretarFila("TRII_CAJA", ["12 may 2025, 4:42 p. m.", "Depósito", "Aprobado", "101"], 3));
+    const a = registro(interpretarFila("TRII_CAJA", ["14 mar 2024, 3:27 p. m.", "Depósito", "Aprobado", "100"], 2));
+    const b = registro(interpretarFila("TRII_CAJA", ["14 mar 2024, 3:27 p. m.", "Depósito", "Aprobado", "101"], 3));
     expect(claveNatural(a)).not.toBe(claveNatural(b));
   });
 
   it("dos filas idénticas legítimas reciben ocurrencias 1 y 2", () => {
-    const r = registro(interpretarFila("TRII_CAJA", ["12 may 2025, 4:42 p. m.", "Depósito", "Aprobado", "100"], 2));
+    const r = registro(interpretarFila("TRII_CAJA", ["14 mar 2024, 3:27 p. m.", "Depósito", "Aprobado", "100"], 2));
     const claves = asignarClaves([{ registro: r, fila: 2 }, { registro: r, fila: 3 }]);
     expect(claves.map((c) => c.ocurrencia)).toEqual([1, 2]);
     expect(claves[0]!.clave).toBe(claves[1]!.clave);

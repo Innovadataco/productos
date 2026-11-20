@@ -394,6 +394,7 @@ model EventoCorporativo {
   ajustesCaja       AjusteCaja[]
   dividendos        Dividendo[]
 
+  @@unique([tipo, origenId, destinoId, fecha])
   @@map("evento_corporativo")
 }
 
