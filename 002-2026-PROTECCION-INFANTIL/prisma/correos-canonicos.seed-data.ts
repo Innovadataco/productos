@@ -94,21 +94,33 @@ function schemaDe(...variables: string[]): Record<string, unknown> {
 const FORMA_ALTA_COLEGIO =
     "Diseño · Gestión bb6384eb · FORMA-BOTON-Y-VOZ-CORREOS-ALTA-COLEGIO-2026-11-18 · SPEC-922";
 
+const FORMA_BIENVENIDA_FUSIONADA =
+    "Diseño · Gestión 399ddc0a · FORMA-ONBOARDING-COLEGIO-CORREOS-Y-PASOS-2026-11-20 §A · SPEC-955";
+
 export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     // ── SPEC-922 · familia «alta del colegio» ───────────────────────────────────
     {
-        // §1 · Voz usted ya correcta (audiencia SCHOOL_ADMIN); el defecto era la URL pelada.
+        // SPEC-955 · FUSIONADO (bienvenida + recibo de aceptación), voz usted. Antes era la
+        // «bienvenida al crear la contraseña» (SPEC-922, botón a login); ahora la dispara la
+        // PRIMERA aceptación de la Política del rector (bifurcación por rol en consentimiento.ts),
+        // así que el botón va al PANEL (ya autenticado) y el cuerpo lleva la constancia [NORMA]
+        // versión+fecha. El `consentimiento.aceptado` compartido NO se envía al rol colegio.
+        // ⚠️ Esta plantilla la RENDERIZA la 2.ª ola: el cuerpo-botón-vivo recién aplica cuando el
+        // corrector de la ola la actualice; hasta entonces el envío manda `urlLogin=urlPanel`
+        // para que la plantilla viva (vieja) no deje el botón roto (email-colegio.ts).
         clave: "colegio.bienvenida_rector.email",
         canal: "EMAIL",
-        asunto: "Su cuenta del colegio está lista",
+        asunto: "La cuenta de {{nombreColegio}} está lista",
         cuerpoMarkdown:
             "Hola,\n\n" +
-            "La cuenta del **{{nombreColegio}}** quedó creada. Desde aquí protegerá a sus estudiantes, profesores y acudientes.\n\n" +
-            "Le faltan unos pocos pasos para terminar de configurarla, y los recorremos juntos. Entre cuando quiera:\n\n" +
-            "[Entrar a mi cuenta]({{urlLogin}})",
-        variablesSchema: schemaDe("nombreColegio", "urlLogin"),
-        cta: { etiqueta: "Entrar a mi cuenta", variable: "urlLogin" },
-        fuente: FORMA_ALTA_COLEGIO,
+            "La cuenta de **{{nombreColegio}}** quedó lista. Desde aquí protegerá a sus estudiantes, profesores y acudientes.\n\n" +
+            "Dejamos registrada su aceptación de la versión {{version}} de los términos de tratamiento de datos personales, el {{fechaAceptacion}}.\n\n" +
+            "Entre a su panel cuando quiera:\n\n" +
+            "[Entrar a mi panel]({{urlPanel}})",
+        variablesSchema: schemaDe("nombreColegio", "version", "fechaAceptacion", "urlPanel"),
+        cta: { etiqueta: "Entrar a mi panel", variable: "urlPanel" },
+        constanciaNorma: ["version", "fechaAceptacion"],
+        fuente: FORMA_BIENVENIDA_FUSIONADA,
     },
     {
         // §2 · COMPARTIDA: el evento dispara para todo el que acepta términos (el motor NO filtra
