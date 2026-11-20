@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
+import { CampoCorreoDominio } from "@/components/modules/CampoCorreoDominio";
 import { useTipoDocumentoOpciones } from "../unificado/useTipoDocumentoOpciones";
 
 /**
@@ -180,14 +181,16 @@ export function FormAgregarEstudiante({ cursoId, isOpen, onClose, onCreado }: Fo
                                 value={acudiente.telefono}
                                 onChange={(e) => setAcudiente({ ...acudiente, telefono: e.target.value })}
                             />
-                            <Input
-                                aria-label="Email del acudiente"
-                                placeholder="Email"
-                                maxLength={255}
-                                value={acudiente.email}
-                                onChange={(e) => setAcudiente({ ...acudiente, email: e.target.value })}
-                            />
                         </div>
+                        {/* SPEC-956: correo del acudiente con CampoCorreoDominio (chips de dominio +
+                            aviso de typo). SIN dominio institucional — el acudiente es un padre, correo
+                            personal; el prop institucional es solo del profesor (SPEC-958). */}
+                        <CampoCorreoDominio
+                            label="Email del acudiente"
+                            placeholderLocal="acudiente"
+                            value={acudiente.email}
+                            onChange={(correo) => setAcudiente({ ...acudiente, email: correo })}
+                        />
                         <Button type="button" variant="ghost" className="min-h-12" onClick={() => setConAcudiente(false)}>
                             Quitar acudiente
                         </Button>
