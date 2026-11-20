@@ -6,12 +6,12 @@
  *  · Si venció (`VENCIDA_SIN_RESPUESTA`) o el profesional no asistió, ofrece
  *    «Elegir otro profesional» que hereda el pago (SPEC-395 · `/reasignar`).
  *
- * SPEC-754 · el contacto del profesional NO se muestra en ningún estado: el
- * contacto mutuo está CERRADO (`debeExponerContacto` → false siempre), así que
- * `cita.contactoProfesional` nunca llega poblado y no viaja al cliente. El canal
- * de la reunión es el ENLACE de la cita (SPEC-750); el recurso de plata, la PQR
- * (SPEC-752). El campo `contactoProfesional?` se conserva en el DTO solo para que
- * los candados afirmen su AUSENCIA.
+ * SPEC-940 · el padre VE el contacto del profesional (bloque «Datos del profesional», §(d) abajo)
+ * cuando `cita.contactoProfesional` llega poblado — `debeExponerContacto` lo entrega tras consumir la
+ * 1.ª cita ({CONFIRMADA, CUMPLIDA, NO_ASISTIO_PADRE}). NO es un campo muerto: antes 754 lo cerraba en
+ * todo estado, pero 940 reabrió la dirección padre→profesional. NO borres el bloque §(d) ni el campo
+ * del DTO creyéndolos sin uso. La dirección profesional→padre sigue cerrada (eso de 754 vale). El canal
+ * de la reunión es el ENLACE de la cita (SPEC-750); el recurso de plata, la PQR (SPEC-752).
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -595,8 +595,8 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 Compartir un caso es un EXTRA OPCIONAL (§2), nunca un requisito. Nada de esto
                 antes de CONFIRMADA (candado). El «dónde» presencial (dirección) llega con SPEC-708
                 y el enlace de la reunión es POR CITA —lo pone el operador, no un campo del perfil—;
-                el contacto del profesional NO se expone (SPEC-754); el recordatorio por correo y la
-                encuesta NO existen y esta pantalla no los promete.
+                el contacto del profesional se muestra en su propio bloque §(d) (SPEC-940, tras la 1.ª
+                cita); el recordatorio por correo y la encuesta NO existen y esta pantalla no los promete.
                 SPEC-749 FR-2: NADA de esto sobre una cita cuya hora YA PASÓ (`!vistaPasada`) —
                 «Agregar a mi calendario» agendaría un evento del pasado (Calidad, 29-09), y
                 «compartir un caso para la sesión» ya no aplica. La forma exige que en
