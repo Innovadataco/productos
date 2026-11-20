@@ -34,6 +34,7 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 | `npm test` | Pruebas unitarias, incluidos los candados del esquema (sin `Float`, dinero en `Decimal`, acciones en `BigInt`, trazabilidad, sin archivo original) y de infraestructura (un solo servicio, base en el 5438, app en el 5008) |
 | `npm run db:up && npm run test:integracion` | Integración contra la base `inversiones_test` del compose: reinicia esa base con las migraciones y verifica que existan y muerdan los CHECK, los índices parciales, la exclusión de vigencias y la regla de solo inserción. Se niega a correr si la base no termina en `_test` |
 | `npm run build` | Que la app compila (`next build`) |
+| `npm run importar:trii -- --email <correo> <archivos.csv>` | Carga local de los CSV de Trii (INV-SPEC-8). Solo para datos del dueño en su base; en el repo, solo fixtures `.ficticio.csv` |
 
 Cada SPEC que agregue código suma aquí sus guardianes y su job en `inv.yml`, con `needs` en `inv-gate`. `inv.yml` está fuera de la zona de ECC: ese cableado va en un PR aparte que mergea el CEO de PI.
 
@@ -61,6 +62,7 @@ PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) 
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.8 · 2026-11-20 · 18:04 (-05) · INV · Fábrica ECC · INV-SPEC-8: comando de importación de Trii
 > v1.7 · 2026-11-20 · 17:22 (-05) · INV · Fábrica ECC · INV-SPEC-5: guardianes de la app (tipos, pruebas unitarias e integración, build) y regla de migraciones
 > v1.6 · 2026-11-20 · ≈17:16 (-05) · INV · Fábrica ECC · INV-SPEC-4: candados de punta a punta (rutas crudas con `-z`, frontera sin renombres, más extensiones y claves)
 > v1.5 · 2026-11-20 · CEO 008 · frontera desde main (INV-SPEC-3) y su límite conocido

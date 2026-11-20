@@ -14,7 +14,8 @@
     "test:integracion": "node scripts/integracion.mjs",
     "db:up": "docker compose up -d --wait db",
     "db:migrate": "prisma migrate deploy",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "importar:trii": "tsx scripts/importar-trii.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
@@ -27,6 +28,7 @@
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.5",
     "prisma": "5.22.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3",
     "yaml": "^2.8.0"

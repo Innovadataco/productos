@@ -1,0 +1,40 @@
+-- 008 · Días no hábiles de la BVC 2025-2026 (festivos de Colombia, Ley 51 de 1983 «Ley Emiliani»).
+-- Datos públicos. Los fines de semana no se guardan (no son hábiles por regla). Un año sin
+-- ninguna fila aquí se considera NO sembrado y la importación de órdenes de ese año se rechaza
+-- (`CALENDARIO_BVC_INCOMPLETO`), para no guardar una fecha de liquidación T+2 equivocada.
+-- Pendiente de verificar contra el calendario oficial de la BVC (cierres especiales no incluidos).
+INSERT INTO "calendario_bvc" ("dia", "esHabil", "nota") VALUES
+  ('2025-01-01', false, 'Año Nuevo'),
+  ('2025-01-06', false, 'Reyes Magos'),
+  ('2025-03-24', false, 'San José'),
+  ('2025-04-17', false, 'Jueves Santo'),
+  ('2025-04-18', false, 'Viernes Santo'),
+  ('2025-05-01', false, 'Día del Trabajo'),
+  ('2025-06-02', false, 'Ascensión del Señor'),
+  ('2025-06-23', false, 'Corpus Christi'),
+  ('2025-06-30', false, 'Sagrado Corazón y San Pedro y San Pablo'),
+  ('2025-08-07', false, 'Batalla de Boyacá'),
+  ('2025-08-18', false, 'Asunción de la Virgen'),
+  ('2025-10-13', false, 'Día de la Raza'),
+  ('2025-11-03', false, 'Todos los Santos'),
+  ('2025-11-17', false, 'Independencia de Cartagena'),
+  ('2025-12-08', false, 'Inmaculada Concepción'),
+  ('2025-12-25', false, 'Navidad'),
+  ('2026-01-01', false, 'Año Nuevo'),
+  ('2026-01-12', false, 'Reyes Magos'),
+  ('2026-03-23', false, 'San José'),
+  ('2026-04-02', false, 'Jueves Santo'),
+  ('2026-04-03', false, 'Viernes Santo'),
+  ('2026-05-01', false, 'Día del Trabajo'),
+  ('2026-05-18', false, 'Ascensión del Señor'),
+  ('2026-06-08', false, 'Corpus Christi'),
+  ('2026-06-15', false, 'Sagrado Corazón'),
+  ('2026-06-29', false, 'San Pedro y San Pablo'),
+  ('2026-07-20', false, 'Independencia de Colombia'),
+  ('2026-08-07', false, 'Batalla de Boyacá'),
+  ('2026-08-17', false, 'Asunción de la Virgen'),
+  ('2026-10-12', false, 'Día de la Raza'),
+  ('2026-11-02', false, 'Todos los Santos'),
+  ('2026-11-16', false, 'Independencia de Cartagena'),
+  ('2026-12-08', false, 'Inmaculada Concepción'),
+  ('2026-12-25', false, 'Navidad');

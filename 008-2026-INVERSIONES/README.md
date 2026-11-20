@@ -15,4 +15,13 @@ npx prisma migrate deploy
 npm run dev            # http://localhost:5008 · salud en /api/salud
 ```
 
+## Cargar los CSV de Trii (INV-SPEC-8)
+```bash
+npm run importar:trii -- --email <su-correo> movimientos.csv ordenes.csv dividendos.csv
+```
+- Reconoce cada archivo por su encabezado. Reimportar o cargar exportaciones que se solapan no duplica.
+- Si una fila no se puede leer, **ese archivo no se carga** y el comando dice la fila, la columna y el código del error (nunca el valor).
+- Lo ya cargado no se edita: si Trii cambia una fila ya importada (otro estado u otra comisión), el archivo se rechaza con `CONFLICTO_*`.
+- Las órdenes necesitan el calendario de la BVC del año (sembrado 2025-2026) para calcular la liquidación T+2.
+
 Este repo es público: aquí no hay datos reales. Los datos de prueba están inventados y marcados `.ficticio.`.
