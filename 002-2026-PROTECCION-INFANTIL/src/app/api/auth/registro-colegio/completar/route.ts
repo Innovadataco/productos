@@ -21,7 +21,6 @@ import { RegistroColegioService } from "@/lib/dal/services/registro-colegio";
 import { TokenRegistroRepository } from "@/lib/dal/repositories/token-registro";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
-import { enviarBienvenidaRector } from "@/lib/email-colegio";
 
 type ResultadoRegistrar = Awaited<ReturnType<RegistroColegioService["registrarPublico"]>>;
 
@@ -156,14 +155,10 @@ export async function POST(request: Request) {
 
         await sellarCookieSesionEstado(res, usuarioCreado.id);
 
-        // 5) Bienvenida (cortesía, fallo silencioso).
-        try {
-            await enviarBienvenidaRector(usuarioCreado.email, nombreColegio);
-        } catch (err) {
-            logger.error(
-                `[REGISTRO-COL] Bienvenida: envío fallido — ${safeErrorMessage(err)}`,
-            );
-        }
+        // SPEC-955: la bienvenida del colegio NO se envía aquí (al crear la
+        // contraseña) — se enviaba antes de que el rector aceptara la Política.
+        // Ahora la dispara la PRIMERA aceptación de consentimiento del rector
+        // (src/app/api/consentimiento/aceptar/route.ts → enviarBienvenidaRectorSiPrimeraAceptacion).
 
         return res;
     } catch (error) {

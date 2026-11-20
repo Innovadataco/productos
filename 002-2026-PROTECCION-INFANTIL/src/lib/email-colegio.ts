@@ -9,6 +9,9 @@
  */
 import { programar } from "./notificaciones/motor.ts";
 import { baseUrl } from "./email";
+import { prisma } from "./prisma";
+import { logger } from "./logger";
+import { safeErrorMessage } from "./errors";
 
 /**
  * SPEC-344 · caso "correo Y NIT nuevos": enlace para crear la clave del rector.
@@ -129,5 +132,45 @@ export async function enviarBienvenidaRector(email: string, nombreColegio: strin
     });
     if (result.programadas === 0) {
         throw new Error("Sin reglas activas para colegio.bienvenida_rector");
+    }
+}
+
+/**
+ * SPEC-955 · Dispara la bienvenida del rector SOLO tras su PRIMERA aceptación de
+ * consentimiento (cuenta de colegio recién creada). Antes se enviaba al CREAR la
+ * contraseña (registro-colegio/completar), antes de que el rector aceptara la
+ * Política; Jelkin la quiere DESPUÉS del clic en «Acepto».
+ *
+ * El flujo de aceptar (ConsentimientoService/aceptar) es genérico para TODOS los
+ * titulares, así que este acote vive acá, en el borde:
+ *  - SOLO SCHOOL_ADMIN (no mandar «cuenta del colegio lista» a un padre que acepta
+ *    la política).
+ *  - SOLO la PRIMERA aceptación: exactamente una AuditConsentimiento (la que el
+ *    aceptar que acaba de correr creó). 0 = aún no aceptó; >1 = re-aceptación o
+ *    bump de versión → NO reenvía.
+ *
+ * Best-effort (cortesía): nunca lanza — un fallo no debe tumbar la aceptación.
+ * Debe invocarse DESPUÉS de persistir la aceptación y NUNCA en el camino
+ * idempotente (versión ya vigente), para no contar una fila preexistente como «1».
+ */
+export async function enviarBienvenidaRectorSiPrimeraAceptacion(usuario: {
+    id: string;
+    rol: string;
+    email: string;
+    colegioId: string | null;
+}): Promise<void> {
+    if (usuario.rol !== "SCHOOL_ADMIN") return;
+    try {
+        const aceptaciones = await prisma.auditConsentimiento.count({ where: { usuarioId: usuario.id } });
+        if (aceptaciones !== 1) return;
+
+        const colegio = usuario.colegioId
+            ? await prisma.colegio.findUnique({ where: { id: usuario.colegioId }, select: { nombre: true } })
+            : null;
+        await enviarBienvenidaRector(usuario.email, colegio?.nombre ?? "su colegio");
+    } catch (err) {
+        logger.error(
+            `[BIENVENIDA-COL] envío tras 1.ª aceptación fallido — usuario=${usuario.id}: ${safeErrorMessage(err)}`,
+        );
     }
 }

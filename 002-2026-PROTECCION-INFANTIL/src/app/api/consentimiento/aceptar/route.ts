@@ -8,6 +8,7 @@ import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { consentimientoAceptarSchema } from "@/lib/validators";
 import { ConsentimientoService } from "@/lib/dal/services/consentimiento";
+import { enviarBienvenidaRectorSiPrimeraAceptacion } from "@/lib/email-colegio";
 import { esTitularDelDato } from "@/lib/routing/roles-titulares";
 import { logAudit } from "@/lib/audit";
 import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
@@ -88,6 +89,17 @@ export async function POST(request: Request) {
             ipAddress: ip,
             userAgent: userAgent ?? "",
             metadatos: { evento: "consentimiento.aceptado", version: resultado.version },
+        });
+
+        // SPEC-955: la bienvenida del colegio se envía tras la PRIMERA aceptación del
+        // rector (antes se mandaba al crear la contraseña, ANTES de aceptar la Política).
+        // Acotado a SCHOOL_ADMIN + primera aceptación dentro del helper. Camino real
+        // (no el idempotente de arriba, que retorna antes de crear la AuditConsentimiento).
+        await enviarBienvenidaRectorSiPrimeraAceptacion({
+            id: user.id,
+            rol: user.rol,
+            email: user.email,
+            colegioId: user.colegioId,
         });
 
         const res = NextResponse.json(
