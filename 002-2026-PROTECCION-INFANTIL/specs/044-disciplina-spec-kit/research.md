@@ -16,7 +16,7 @@
 **Datos del commit**:
 - Hash: `a449bbe4a04afc08cb5ef621269d84d9dfb71834`
 - Fecha: 2026-07-19 00:35:09 -0500
-- Autor: Jelkin Zair Carrillo Franco `<jelkin.carrillo@innovadataco.com>`
+- Autor: equipo IDC
 - Asunto: `docs: cierre de fixes 031 UI + UX seguimiento`
 
 ### D2: No retrofitar specs cerrados

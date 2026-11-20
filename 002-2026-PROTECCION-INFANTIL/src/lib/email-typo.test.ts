@@ -94,23 +94,23 @@ describe("distanciaDamerau", () => {
 
 describe("partirEntradaCorreo (3003 · campo inteligente)", () => {
     it("solo parte local → dominio null", () => {
-        expect(partirEntradaCorreo("jelkinx")).toEqual({ local: "jelkinx", dominio: null });
+        expect(partirEntradaCorreo("usuariox")).toEqual({ local: "usuariox", dominio: null });
     });
 
     it("correo completo → parte local + dominio en minúsculas", () => {
-        expect(partirEntradaCorreo("jelkinx@Gmail.COM")).toEqual({ local: "jelkinx", dominio: "gmail.com" });
+        expect(partirEntradaCorreo("usuariox@Gmail.COM")).toEqual({ local: "usuariox", dominio: "gmail.com" });
     });
 
-    it("doble @@ colapsa al pegar («jelkinx@@gmail.com» → igual que el simple)", () => {
-        expect(partirEntradaCorreo("jelkinx@@gmail.com")).toEqual({ local: "jelkinx", dominio: "gmail.com" });
+    it("doble @@ colapsa al pegar («usuariox@@gmail.com» → igual que el simple)", () => {
+        expect(partirEntradaCorreo("usuariox@@gmail.com")).toEqual({ local: "usuariox", dominio: "gmail.com" });
     });
 
-    it("espacios sueltos se quitan (« jelkin x @ gma il.com » → limpio)", () => {
-        expect(partirEntradaCorreo(" jelkin x @ gma il.com ")).toEqual({ local: "jelkinx", dominio: "gmail.com" });
+    it("espacios sueltos se quitan (« usuario x @ gma il.com » → limpio)", () => {
+        expect(partirEntradaCorreo(" usuario x @ gma il.com ")).toEqual({ local: "usuariox", dominio: "gmail.com" });
     });
 
     it("termina en @ → dominio null (no inventa nada)", () => {
-        expect(partirEntradaCorreo("jelkinx@")).toEqual({ local: "jelkinx", dominio: null });
+        expect(partirEntradaCorreo("usuariox@")).toEqual({ local: "usuariox", dominio: null });
     });
 
     it("vacío → local vacío y dominio null", () => {

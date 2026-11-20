@@ -3,7 +3,7 @@
  *
  * ORIGEN. SPEC-440 (P1 · I-306) ya está en main. El defecto: al elegir una
  * psicóloga, la app navegaba a
- *   `/dashboard/padre/profesionales/<id>?u=ESTA_SEMANA&pres=soy+Jelkin+...`
+ *   `/dashboard/padre/profesionales/<id>?u=ESTA_SEMANA&pres=soy+Zacarías+...`
  * — los datos personales del padre (su presentación al profesional) quedaban
  * escritos en la barra de direcciones: historial, logs de proxy, «compartir».
  * SPEC-440 mueve ese dato al BODY/estado y limpia la URL.
@@ -70,10 +70,10 @@ const EMAIL_PROF = `${CORRIDA}-prof@proteccion.local`;
 // de estos valores puede aparecer en una URL del flujo.
 const DOC_PADRE = `10${CORRIDA.replace(/[^0-9]/g, "")}0987`.slice(0, 12);
 const TEL_PADRE = "+57 300 555 4433";
-// La presentación lleva marcas identificables a propósito: `soy Jelkin`, la
+// La presentación lleva marcas identificables a propósito: `soy Zacarías`, la
 // palabra `documento` y la palabra `telefono` — exactamente lo que el barrido
 // busca en las URLs.
-const PRESENTACION = `soy Jelkin Zair Carrillo Franco padre de un menor; mi documento es ${DOC_PADRE} y mi telefono ${TEL_PADRE}, necesito apoyo esta semana`;
+const PRESENTACION = `soy Zacarías Prueba Canario Ficticio padre de un menor; mi documento es ${DOC_PADRE} y mi telefono ${TEL_PADRE}, necesito apoyo esta semana`;
 
 async function ctx(): Promise<APIRequestContext> {
     return playwrightRequest.newContext();
@@ -170,7 +170,7 @@ test.describe.serial("La presentación del padre no viaja en la URL (SPEC-440)",
 
             // ── EL CANDADO ──────────────────────────────────────────────────
             const juntas = urlsVisitadas.join(" ");
-            // Fragmentos genéricos del defecto I-306 (`?pres=soy+Jelkin+...`).
+            // Fragmentos genéricos del defecto I-306 (`?pres=soy+Zacarías+...`).
             expect(
                 juntas,
                 `alguna URL del flujo lleva datos personales del padre. URLs=${juntas}`,
@@ -179,7 +179,7 @@ test.describe.serial("La presentación del padre no viaja en la URL (SPEC-440)",
             const telDigitos = TEL_PADRE.replace(/[^0-9]/g, "");
             expect(juntas, "el documento del padre aparece en una URL").not.toContain(DOC_PADRE);
             expect(juntas, "el teléfono del padre aparece en una URL").not.toContain(telDigitos);
-            expect(juntas, "la presentación en claro aparece en una URL").not.toContain("Jelkin Zair");
+            expect(juntas, "la presentación en claro aparece en una URL").not.toContain("Zacarías Prueba");
         } finally {
             await request.dispose();
         }
@@ -210,7 +210,7 @@ test.describe.serial("La presentación del padre no viaja en la URL (SPEC-440)",
             const json = JSON.parse(crudo) as { data?: unknown };
             const serializado = JSON.stringify(json);
             // El DTO no expone la presentación en claro…
-            expect(serializado, "el DTO del padre reemite la presentación").not.toContain("Jelkin Zair");
+            expect(serializado, "el DTO del padre reemite la presentación").not.toContain("Zacarías Prueba");
             // …ni un campo de navegación que la recolocaría en la barra.
             expect(serializado, "el DTO trae un campo tipo url/redirectTo").not.toMatch(/"(redirectTo|url|href)"\s*:/i);
         } finally {
