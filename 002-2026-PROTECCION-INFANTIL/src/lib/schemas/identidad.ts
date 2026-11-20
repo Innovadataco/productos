@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { EDAD_MIN_ADULTO, EDAD_MAX_ADULTO } from "@/lib/identidad/anio-nacimiento";
+// SPEC-954: import RELATIVO (no alias `@/lib/`): este schema está en la cadena
+// de imports del WORKER, que no resuelve el alias en runtime (arch:check regla f).
+import { EDAD_MIN_ADULTO, EDAD_MAX_ADULTO } from "../identidad/anio-nacimiento";
 import { cuidIdSchema, emailSchema, estadoActivoSchema } from "./base";
 
 /**
