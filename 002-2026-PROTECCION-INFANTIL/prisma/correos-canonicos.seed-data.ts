@@ -95,7 +95,7 @@ const FORMA_ALTA_COLEGIO =
     "Diseño · Gestión bb6384eb · FORMA-BOTON-Y-VOZ-CORREOS-ALTA-COLEGIO-2026-11-18 · SPEC-922";
 
 const FORMA_BIENVENIDA_FUSIONADA =
-    "Diseño · Gestión 399ddc0a · FORMA-ONBOARDING-COLEGIO-CORREOS-Y-PASOS-2026-11-20 §A · SPEC-955";
+    "Diseño · Gestión c540eeac · FORMA-ONBOARDING-COLEGIO-CORREOS-Y-PASOS-2026-11-20 §A · SPEC-955";
 
 export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
     // ── SPEC-922 · familia «alta del colegio» ───────────────────────────────────
@@ -110,7 +110,7 @@ export const CORREOS_CANONICOS: readonly CopyCanonico[] = [
         // para que la plantilla viva (vieja) no deje el botón roto (email-colegio.ts).
         clave: "colegio.bienvenida_rector.email",
         canal: "EMAIL",
-        asunto: "La cuenta de {{nombreColegio}} está lista",
+        asunto: "Su cuenta de {{nombreColegio}} está lista",
         cuerpoMarkdown:
             "Hola,\n\n" +
             "La cuenta de **{{nombreColegio}}** quedó lista. Desde aquí protegerá a sus estudiantes, profesores y acudientes.\n\n" +

@@ -1,6 +1,6 @@
 /**
  * SPEC-955 · CANDADO del correo FUSIONADO del colegio (bienvenida + recibo).
- * FORMA-ONBOARDING-COLEGIO-CORREOS §A (Gestión 399ddc0a).
+ * FORMA-ONBOARDING-COLEGIO-CORREOS §A (Gestión c540eeac).
  *
  * El correo de «cuenta lista» se enviaba al CREAR la contraseña (completar),
  * ANTES de aceptar la Política. Ahora:

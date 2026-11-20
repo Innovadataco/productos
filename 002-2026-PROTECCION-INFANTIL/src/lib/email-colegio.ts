@@ -115,7 +115,7 @@ export async function enviarRecomendacionInformeAlRector(
 /**
  * SPEC-955 · correo FUSIONADO del colegio = bienvenida + recibo de aceptación.
  * Lo dispara la PRIMERA aceptación de la Política del rector (FORMA-ONBOARDING-
- * COLEGIO-CORREOS §A, Gestión 399ddc0a). Reemplaza a la vieja «bienvenida al
+ * COLEGIO-CORREOS §A, Gestión c540eeac). Reemplaza a la vieja «bienvenida al
  * crear la contraseña» (SPEC-344), que salía ANTES de aceptar.
  *
  * - Voz usted; botón «Entrar a mi panel» → /dashboard (en este momento el rector
