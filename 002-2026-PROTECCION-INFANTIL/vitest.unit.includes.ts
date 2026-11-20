@@ -389,6 +389,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-954: el año de nacimiento del adulto se elige de una lista (18-80), no se teclea. Puro jsdom.
     "src/components/ui/selector-anio-nacimiento.candado.test.tsx",
     "src/app/camino/colegio/profesores/ano-nacimiento-selector.candado.test.tsx",
+    // SPEC-956: el Paso 5 (estudiantes) del camino es inline; cero enlaces a /dashboard. Puro jsdom.
+    "src/app/camino/colegio/estudiantes/estudiantes-inline-sin-dashboard.candado.test.tsx",
     // SPEC-245 (002-PI-148): modal de activación / autorización manual (sin BD).
     "src/components/modules/pagos/ActivarSuscripcionManual.test.tsx",
     // 002-PI-068: fuente-reporte-salt.test.ts importa fuente-reporte.ts que carga
