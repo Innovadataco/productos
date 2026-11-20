@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CampoCorreoDominio } from "@/components/modules/CampoCorreoDominio";
 import { Select } from "@/components/ui/Select";
 import { SelectorAnioNacimiento } from "@/components/ui/SelectorAnioNacimiento";
 import { rangoAnioNacimientoAdulto } from "@/lib/identidad/anio-nacimiento";
@@ -62,6 +63,8 @@ export default function PasoProfesoresColegio() {
     const [form, setForm] = useState(FORM_VACIO);
     const [enviando, setEnviando] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
+    // SPEC-958 (M5a): dominio del colegio para el 1.er chip del correo del profesor.
+    const [dominioInstitucional, setDominioInstitucional] = useState<string | null>(null);
 
     const cargarProfesores = async () => {
         setCargando(true);
@@ -79,6 +82,13 @@ export default function PasoProfesoresColegio() {
 
     useEffect(() => {
         void cargarProfesores();
+        // SPEC-958 (M5a): dominio institucional del colegio (del correo del rector, si no
+        // es genérico) para ofrecerlo como 1.er chip. Best-effort: si falla, el campo
+        // queda con comunes + «Otro».
+        fetch("/api/colegio/dominio-institucional", { credentials: "include" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((json) => setDominioInstitucional(json?.dominioInstitucional ?? null))
+            .catch(() => null);
         fetch("/api/colegio/tipos-documento", { credentials: "include" })
             .then((r) => (r.ok ? r.json() : null))
             .then((json) => {
@@ -223,12 +233,17 @@ export default function PasoProfesoresColegio() {
                         value={form.sexo}
                         onChange={(e) => setForm({ ...form, sexo: e.target.value })}
                     />
-                    <Input
-                        label="Email"
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    />
+                    {/* SPEC-958 (M5a): campo de correo partido [usuario]@[dominio] con el
+                        dominio del colegio como 1.ª opción, preseleccionado para el profesor. */}
+                    <div className="sm:col-span-2">
+                        <CampoCorreoDominio
+                            label="Email"
+                            value={form.email}
+                            onChange={(email) => setForm({ ...form, email })}
+                            dominioInstitucional={dominioInstitucional}
+                            preseleccionarInstitucional
+                        />
+                    </div>
                     <Input
                         label="Teléfono"
                         value={form.telefono}

@@ -26,30 +26,45 @@ import {
  */
 export function CampoCorreoDominio({
     label,
-    placeholderLocal = "tucorreo",
+    placeholderLocal = "usuario",
     value,
     onChange,
+    dominioInstitucional = null,
+    preseleccionarInstitucional = false,
 }: {
     label: string;
     placeholderLocal?: string;
     value: string;
     onChange: (correo: string) => void;
+    // SPEC-958 (M5a): dominio del colegio (del correo del rector, si no es genérico).
+    // Cuando viene, se ofrece como PRIMER chip destacado. Null = sin institucional.
+    dominioInstitucional?: string | null;
+    // Solo el campo PROFESOR lo pre-selecciona (el profesor suele compartir el
+    // dominio del colegio). El acudiente/rector NO lo preseleccionan.
+    preseleccionarInstitucional?: boolean;
 }) {
+    // El dominio institucional es un chip más (además de los ATAJOS comunes).
+    const esChip = (d: string | null | undefined): d is string =>
+        !!d && (d === dominioInstitucional || ATAJOS_DOMINIO.includes(d));
+
     // Estado derivado del valor externo solo como punto de partida; a partir de
     // ahí el componente es dueño de la descomposición (la persona puede cambiar
     // de dominio sin reescribir la parte local).
     const [local, setLocal] = useState(() => partirEntradaCorreo(value).local);
     const [dominio, setDominio] = useState(() => {
         const d = partirEntradaCorreo(value).dominio;
-        return d && ATAJOS_DOMINIO.includes(d) ? d : "";
+        if (esChip(d)) return d;
+        // SPEC-958: preselección del institucional en el campo profesor (valor vacío).
+        if (preseleccionarInstitucional && dominioInstitucional && !d) return dominioInstitucional;
+        return "";
     });
     const [otroActivo, setOtroActivo] = useState(() => {
         const d = partirEntradaCorreo(value).dominio;
-        return !!d && !ATAJOS_DOMINIO.includes(d);
+        return !!d && !esChip(d);
     });
     const [dominioLibre, setDominioLibre] = useState(() => {
         const d = partirEntradaCorreo(value).dominio;
-        return d && !ATAJOS_DOMINIO.includes(d) ? d : "";
+        return d && !esChip(d) ? d : "";
     });
 
     const dominioEfectivo = otroActivo ? dominioLibre : dominio;
@@ -65,7 +80,7 @@ export function CampoCorreoDominio({
         // Pegó/escribió un correo completo (con @): parsear y reenfocar el dominio.
         const { local: nuevoLocal, dominio: dominioPegado } = partirEntradaCorreo(raw);
         if (dominioPegado) {
-            if (ATAJOS_DOMINIO.includes(dominioPegado)) {
+            if (esChip(dominioPegado)) {
                 setDominio(dominioPegado);
                 setOtroActivo(false);
                 setDominioLibre("");
@@ -119,7 +134,7 @@ export function CampoCorreoDominio({
                     <input
                         type="text"
                         inputMode="url"
-                        placeholder="tudominio.com"
+                        placeholder="dominio.com"
                         aria-label="Dominio del correo"
                         value={dominioLibre}
                         onChange={(e) => cambiarDominioLibre(e.target.value)}
@@ -127,13 +142,28 @@ export function CampoCorreoDominio({
                     />
                 ) : (
                     <span className="flex items-center rounded-xl glass-input px-3 py-3 text-sm text-body">
-                        {dominio || "elige el dominio"}
+                        {dominio || "elegir dominio"}
                     </span>
                 )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted">Dominio:</span>
+                {/* SPEC-958 (M5a): el dominio del colegio va PRIMERO y destacado. */}
+                {dominioInstitucional && (
+                    <button
+                        type="button"
+                        aria-pressed={!otroActivo && dominio === dominioInstitucional}
+                        onClick={() => elegirAtajo(dominioInstitucional)}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-accent transition ${
+                            !otroActivo && dominio === dominioInstitucional
+                                ? "accent-gradient text-white"
+                                : "glass text-body hover:opacity-80"
+                        }`}
+                    >
+                        @{dominioInstitucional}
+                    </button>
+                )}
                 {ATAJOS_DOMINIO.map((atajo) => (
                     <button
                         key={atajo}
@@ -163,13 +193,21 @@ export function CampoCorreoDominio({
                 </button>
             </div>
 
+            {/* SPEC-958 (M5a): ayuda bajo los chips, solo cuando hay institucional. */}
+            {dominioInstitucional && (
+                <p className="text-xs text-muted">El primero es el dominio de su colegio.</p>
+            )}
+
+            {/* SPEC-958 (M5a) · voz IMPERSONAL REAL: el bloque entero ES el botón; «usar»
+                es infinitivo (ni «tú» ni «usted»), para no romperle la voz al padre ni al
+                colegio que comparten este componente. */}
             {sugerencia && (
                 <button
                     type="button"
                     onClick={() => cambiarDominioLibre(sugerencia)}
                     className="block w-full rounded-xl bg-ambar/10 px-3 py-2 text-left text-xs text-estado-ambar transition hover:opacity-80"
                 >
-                    ¿Quisiste decir <span className="font-semibold">{aplicarSugerenciaDominio(correoCompleto, sugerencia)}</span>? Toca para corregir
+                    Posible corrección: <span className="font-semibold">{aplicarSugerenciaDominio(correoCompleto, sugerencia)}</span> — usar
                 </button>
             )}
 
