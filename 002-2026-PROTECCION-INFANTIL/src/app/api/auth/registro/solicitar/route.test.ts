@@ -117,11 +117,11 @@ describe("POST /api/auth/registro/solicitar (SPEC-339)", { timeout: 30_000 }, ()
     });
 
     it("3003: dominio mal escrito → 400 con sugerencia (gmaail.com → gmail.com) y sin token", async () => {
-        const res = await POST(makeRequest({ email: "jelkin.carrillo+padre01@gmaail.com" }));
+        const res = await POST(makeRequest({ email: "usuario.prueba+padre01@gmaail.com" }));
         expect(res.status).toBe(400);
         const body = await res.json();
         expect(body.sugerencia).toBe("gmail.com");
-        expect(await prisma.tokenRegistro.count({ where: { email: "jelkin.carrillo+padre01@gmaail.com" } })).toBe(0);
+        expect(await prisma.tokenRegistro.count({ where: { email: "usuario.prueba+padre01@gmaail.com" } })).toBe(0);
         expect(mocks.enviarEnlaceRegistro).not.toHaveBeenCalled();
     });
 

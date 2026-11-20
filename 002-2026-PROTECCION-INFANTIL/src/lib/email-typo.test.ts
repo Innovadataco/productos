@@ -3,7 +3,7 @@ import { sugerirDominioCorreo, aplicarSugerenciaDominio, completarDominio, dista
 
 describe("sugerirDominioCorreo (3003)", () => {
     it("detecta inserción: gmaail.com → gmail.com", () => {
-        expect(sugerirDominioCorreo("jelkin.carrillo+padre01@gmaail.com")).toBe("gmail.com");
+        expect(sugerirDominioCorreo("usuario.prueba+padre01@gmaail.com")).toBe("gmail.com");
     });
 
     it("detecta transposición: gmial.com → gmail.com", () => {
@@ -59,8 +59,8 @@ describe("sugerirDominioCorreo (3003)", () => {
 
 describe("aplicarSugerenciaDominio", () => {
     it("reemplaza solo el dominio; la parte local queda intacta (alias + mayúsculas)", () => {
-        expect(aplicarSugerenciaDominio("Jelkin.Carrillo+padre01@gmaail.com", "gmail.com"))
-            .toBe("Jelkin.Carrillo+padre01@gmail.com");
+        expect(aplicarSugerenciaDominio("Usuario.Prueba+padre01@gmaail.com", "gmail.com"))
+            .toBe("Usuario.Prueba+padre01@gmail.com");
     });
 
     it("sin @ devuelve el valor tal cual", () => {
@@ -70,7 +70,7 @@ describe("aplicarSugerenciaDominio", () => {
 
 describe("completarDominio (atajos 3003)", () => {
     it("sin @ agrega el dominio", () => {
-        expect(completarDominio("Jelkin.Carrillo+padre01", "gmail.com")).toBe("Jelkin.Carrillo+padre01@gmail.com");
+        expect(completarDominio("Usuario.Prueba+padre01", "gmail.com")).toBe("Usuario.Prueba+padre01@gmail.com");
     });
     it("con dominio a medias lo reemplaza", () => {
         expect(completarDominio("ana@hot", "hotmail.com")).toBe("ana@hotmail.com");
@@ -94,23 +94,23 @@ describe("distanciaDamerau", () => {
 
 describe("partirEntradaCorreo (3003 · campo inteligente)", () => {
     it("solo parte local → dominio null", () => {
-        expect(partirEntradaCorreo("jelkinx")).toEqual({ local: "jelkinx", dominio: null });
+        expect(partirEntradaCorreo("usuariox")).toEqual({ local: "usuariox", dominio: null });
     });
 
     it("correo completo → parte local + dominio en minúsculas", () => {
-        expect(partirEntradaCorreo("jelkinx@Gmail.COM")).toEqual({ local: "jelkinx", dominio: "gmail.com" });
+        expect(partirEntradaCorreo("usuariox@Gmail.COM")).toEqual({ local: "usuariox", dominio: "gmail.com" });
     });
 
-    it("doble @@ colapsa al pegar («jelkinx@@gmail.com» → igual que el simple)", () => {
-        expect(partirEntradaCorreo("jelkinx@@gmail.com")).toEqual({ local: "jelkinx", dominio: "gmail.com" });
+    it("doble @@ colapsa al pegar («usuariox@@gmail.com» → igual que el simple)", () => {
+        expect(partirEntradaCorreo("usuariox@@gmail.com")).toEqual({ local: "usuariox", dominio: "gmail.com" });
     });
 
-    it("espacios sueltos se quitan (« jelkin x @ gma il.com » → limpio)", () => {
-        expect(partirEntradaCorreo(" jelkin x @ gma il.com ")).toEqual({ local: "jelkinx", dominio: "gmail.com" });
+    it("espacios sueltos se quitan (« usuario x @ gma il.com » → limpio)", () => {
+        expect(partirEntradaCorreo(" usuario x @ gma il.com ")).toEqual({ local: "usuariox", dominio: "gmail.com" });
     });
 
     it("termina en @ → dominio null (no inventa nada)", () => {
-        expect(partirEntradaCorreo("jelkinx@")).toEqual({ local: "jelkinx", dominio: null });
+        expect(partirEntradaCorreo("usuariox@")).toEqual({ local: "usuariox", dominio: null });
     });
 
     it("vacío → local vacío y dominio null", () => {

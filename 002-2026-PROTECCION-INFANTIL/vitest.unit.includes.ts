@@ -216,6 +216,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/crudo-comite-expediente.candado.test.ts",
     // SPEC-343 (I-232): candado — los documentos legales servidos no contienen notas internas.
     "src/lib/legal/documentos-servidos.test.ts",
+    // SPEC-960 (B1): higiene del repo PÚBLICO — docs/legal/ vacío + sin `[ABOGADO:` fuera de specs/public. Puro (fs).
+    "src/lib/legal/higiene-repo-publico.candado.test.ts",
     // SPEC-326 §3.1: vista de notificaciones del padre en frases (sin BD, mock fetch).
     "src/components/modules/perfil/PreferenciasNotificaciones.test.tsx",
     "src/app/dashboard/colegio/cursos/CursosPageClient.test.tsx",

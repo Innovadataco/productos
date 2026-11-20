@@ -165,7 +165,7 @@ specs/287-ratchet-vigencia-middleware/
 ### Fase 11 — Verificación en vivo obligatoria (SC-006)
 
 39. Levantar app en local (`./scripts/dev-restart.sh` o docker compose local).
-40. Sembrar/usar `carrillo_franco@hotmail.com` (SCHOOL_ADMIN sin suscripción). Cookie de sesión válida.
+40. Sembrar/usar `usuario@ejemplo.com` (SCHOOL_ADMIN sin suscripción). Cookie de sesión válida.
 41. `curl -sIL -b "cookies.txt" https://localhost/dashboard/colegio/suscripcion | head -30` → verificar que la cadena termina en `200` sobre `/dashboard/colegio/suscripcion` (no `ERR_TOO_MANY_REDIRECTS`, no 3xx en cadena).
 42. Reportar bitácora corta con los tres números: status final, cantidad de redirects intermedios, URL final.
 
