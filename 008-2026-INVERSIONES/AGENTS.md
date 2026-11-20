@@ -37,6 +37,10 @@ Cada SPEC que agregue código suma aquí sus guardianes (lint, tipos, pruebas) y
 - ECC está instalado solo en el clon de trabajo propio de 008, nunca a nivel global ni en la raíz de este repo ni en la de la gestión.
 - Prohibido que ECC instale git hooks o toque `core.hooksPath` en este repo, o que escriba memoria o reglas en archivos compartidos.
 
+## Frontera de 008 y su límite
+- **Zona de ECC:** `008-2026-INVERSIONES/**` y nada más. El check `frontera-008-main` (`.github/workflows/inv-frontera.yml`, con `pull_request_target`) lo toma GitHub **siempre de `main`**, así que un PR no lo puede aflojar. Cualquier cambio fuera de la zona, incluidos `inv.yml` e `inv-frontera.yml`, da rojo, y ese PR lo revisa y lo mergea el CEO de PI.
+- **Límite conocido:** la frontera se activa por el **nombre** de la rama (`work/inv-*`). Protege de **errores** de ECC, no de un ECC que use otra rama o empuje directo a `main` (`main` no tiene protección de rama). Por eso la regla de ECC también es parte de la barrera: **solo ramas `work/inv-SPEC-<N>-<slug>` y nunca push directo a `main`.**
+
 ## Cómo se cierra un cambio
 PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) → revisión adversarial de ECC sobre la rama del PR → merge y despliegue por ECC (D-011) → auditoría del CEO de 008.
 
@@ -46,6 +50,7 @@ PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) 
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.5 · 2026-11-20 · CEO 008 · frontera desde main (INV-SPEC-3) y su límite conocido
 > v1.4 · 2026-11-20 · CEO 008 · candado de frontera y workflow que no corre en PRs de PI (condiciones 5 y 6 del CEO de PI)
 > v1.3 · 2026-11-20 · CEO 008 · merge y despliegue autónomos de ECC (D-011)
 > v1.2 · 2026-11-20 · CEO 008 · ECC como metodología de 008 (D-010)
