@@ -1,0 +1,32 @@
+# ==========================================================================
+# Candado de datos reales de 008 para PR de CUALQUIER rama que toque la carpeta
+# de 008 (INV-SPEC-6, hallazgo MEDIO de la revisión de ECC). inv.yml solo lo
+# corre en ramas work/inv-*; este cubre work/pi-*, work/bi-* u otras.
+# Por el filtro de rutas, no corre en PRs de PI que no toquen 008.
+# ==========================================================================
+name: inv-datos
+
+on:
+  pull_request:
+    paths:
+      - "008-2026-INVERSIONES/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inv-datos-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  candado-datos-reales-008:
+    if: ${{ !startsWith(github.head_ref, 'work/inv-') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prueba por mutación del candado
+        run: bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.test.sh
+      - name: Sin datos reales versionados en 008
+        run: git -c core.quotepath=off ls-files 008-2026-INVERSIONES | bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.sh
