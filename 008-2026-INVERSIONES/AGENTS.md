@@ -23,6 +23,8 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 |---|---|
 | `bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.test.sh` | Que el candado de datos reales sigue mordiendo (prueba por mutación) |
 | `git ls-files 008-2026-INVERSIONES \| bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.sh` | Que no hay extractos, exportaciones, capturas ni `.env` versionados |
+| `bash 008-2026-INVERSIONES/scripts/ci/frontera-008.test.sh` | Que el candado de frontera sigue mordiendo (prueba por mutación) |
+| `git diff --name-only origin/main...HEAD \| bash 008-2026-INVERSIONES/scripts/ci/frontera-008.sh` | Que la rama solo toca `008-2026-INVERSIONES/` e `inv.yml` (si toca algo más, ese PR lo mergea el CEO de PI) |
 
 Cada SPEC que agregue código suma aquí sus guardianes (lint, tipos, pruebas) y su job en `inv.yml`, con `needs` en `inv-gate`.
 
@@ -44,6 +46,7 @@ PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) 
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.4 · 2026-11-20 · CEO 008 · candado de frontera y workflow que no corre en PRs de PI (condiciones 5 y 6 del CEO de PI)
 > v1.3 · 2026-11-20 · CEO 008 · merge y despliegue autónomos de ECC (D-011)
 > v1.2 · 2026-11-20 · CEO 008 · ECC como metodología de 008 (D-010)
 > v1.1 · 2026-11-20 · CEO 008 · stack definido (D-008): el de la fábrica, puertos 5438/5008
