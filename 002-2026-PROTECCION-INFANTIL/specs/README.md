@@ -504,9 +504,16 @@
 | [863](863-discriminador-reporte-simulacro/spec.md) | SPEC-863 · Discriminador de reportes de simulacro (I-400) | 🟢 IMPLEMENTADO |
 | [870](870-recalculo-agregado-huerfano/spec.md) | SPEC-870 · Recálculo del agregado público huérfano (I-446) | 🟢 IMPLEMENTADO |
 | [884](884-compuerta-ciudades-duplicadas/spec.md) | SPEC-884 · Compuerta estructural contra ciudades duplicadas (I-364) | 🟢 IMPLEMENTADO |
-| [915](915-voz-colegio-imperativo/spec.md) | SPEC-915 · Residual de voz del colegio: imperativo tú SUELTO → usted | ⚠️ sin Status |
-| [916](916-generador-ci-converge/spec.md) | SPEC-916 · El barrido de generados converge (I-443, cierre real) | ⚠️ sin Status |
-| [918](918-colegio-enlace-boton/spec.md) | SPEC-918 · El correo de activación del colegio muestra un BOTÓN, no la URL pelada | ⚠️ sin Status |
+| [915](915-voz-colegio-imperativo/spec.md) | SPEC-915 · Residual de voz del colegio: imperativo tú SUELTO → usted | 🟢 IMPLEMENTADO |
+| [916](916-generador-ci-converge/spec.md) | SPEC-916 · El barrido de generados converge (I-443, cierre real) | 🟢 IMPLEMENTADO |
+| [918](918-colegio-enlace-boton/spec.md) | SPEC-918 · El correo de activación del colegio muestra un BOTÓN, no la URL pelada | 🟢 IMPLEMENTADO |
+| [921](921-build-heap-ci/spec.md) | SPEC-921 · El step build de CI sube el heap a 4096 MB (anti-OOM) | 🟢 IMPLEMENTADO |
+| [924](924-guardia-spec-existe/spec.md) | SPEC-924 · Higiene del índice de specs: notas retroactivas y Status faltantes | 🟢 IMPLEMENTADO |
+| [930](930-journeys-bloqueantes/spec.md) | SPEC-930 · Los journeys de regresión de Calidad bloquean el merge | 🟢 IMPLEMENTADO |
+| [932](932-identificadores-patron-unico/spec.md) | SPEC-932 · Gestión de identificadores: UN componente para los 4 sujetos del colegio | 🟢 IMPLEMENTADO |
+| [934](934-precio-cita-desglose/spec.md) | SPEC-934 · I-450 · El padre ve el total que se cobra (consulta + servicio de la red) | 🟢 IMPLEMENTADO |
+| [935](935-comite-rector-lectura-y-alta/spec.md) | SPEC-935 · El rector lee los casos del comité (I-448) + integrantes sin recargar (I-449) | 🟢 IMPLEMENTADO |
+| [940](940-contacto-tras-primera-cita/spec.md) | SPEC-940 · I-452 · Tras la 1.ª cita consumida: PI deja de intermediar Y reabre el contacto al padre | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
