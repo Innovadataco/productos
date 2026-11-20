@@ -31,12 +31,12 @@ Cada SPEC que agregue código suma aquí sus guardianes (lint, tipos, pruebas) y
 - Los datos de prueba son **inventados** y van en archivos marcados `.ficticio.` (ej. `tests/fixtures/ordenes.ficticio.csv`).
 
 ## ECC (D-010): metodología de 008
-008 se construye con ECC (affaan-m/ECC v2.2.3): planear, diseñar, construir con pruebas primero, revisar y verificar con sus agentes y comandos. **Las compuertas del manual 02 se mantienen**: el número de SPEC lo da el CEO, cada cambio entra por PR con CI verde y revisión adversarial, y el merge y el despliegue los hace el CEO.
+008 se construye con ECC (affaan-m/ECC v2.2.3): planear, diseñar, construir con pruebas primero, revisar y verificar con sus agentes y comandos. **Merge y despliegue autónomos (D-011):** el número de SPEC lo da el CEO; cada cambio entra por PR con CI verde y revisión adversarial de los agentes `code-reviewer` y `security-reviewer` de ECC, registrada en el PR. Si se cumple, ECC mergea (de a uno, nunca con `main` en rojo) y despliega. Los PR que tocan archivos fuera de `008-2026-INVERSIONES/` e `inv.yml` los mergea el CEO de PI. El CEO de 008 audita después de cada merge y puede ordenar detener.
 - ECC está instalado solo en el clon de trabajo propio de 008, nunca a nivel global ni en la raíz de este repo ni en la de la gestión.
 - Prohibido que ECC instale git hooks o toque `core.hooksPath` en este repo, o que escriba memoria o reglas en archivos compartidos.
 
 ## Cómo se cierra un cambio
-PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) → revisión adversarial del CEO sobre la rama del PR → merge y despliegue por el CEO → certificación de Calidad.
+PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) → revisión adversarial de ECC sobre la rama del PR → merge y despliegue por ECC (D-011) → auditoría del CEO de 008.
 
 ## Prohibido
 - Secretos, datos personales, negocio o legal en el repo (es público).
@@ -44,6 +44,7 @@ PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) 
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.3 · 2026-11-20 · CEO 008 · merge y despliegue autónomos de ECC (D-011)
 > v1.2 · 2026-11-20 · CEO 008 · ECC como metodología de 008 (D-010)
 > v1.1 · 2026-11-20 · CEO 008 · stack definido (D-008): el de la fábrica, puertos 5438/5008
 > v1.0 · 2026-11-20 · CEO 008 · creación desde la plantilla del manual 02
