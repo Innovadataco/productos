@@ -26,7 +26,18 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 | `bash 008-2026-INVERSIONES/scripts/ci/frontera-008.test.sh` | Que el candado de frontera sigue mordiendo (prueba por mutación) |
 | `bash 008-2026-INVERSIONES/scripts/ci/frontera-008.sh origin/main` | Que la rama solo toca `008-2026-INVERSIONES/` e `inv.yml`, contando un renombre como borrado + alta (si toca algo más, ese PR lo mergea el CEO de PI) |
 
-Cada SPEC que agregue código suma aquí sus guardianes (lint, tipos, pruebas) y su job en `inv.yml`, con `needs` en `inv-gate`.
+**App (INV-SPEC-5)**, desde `008-2026-INVERSIONES/` con Node 22 (`.nvmrc`) y `npm ci`:
+
+| Comando | Qué verifica |
+|---|---|
+| `npm run typecheck` | Tipos de TypeScript (`tsc --noEmit`, modo estricto) |
+| `npm test` | Pruebas unitarias, incluidos los candados del esquema (sin `Float`, dinero en `Decimal`, acciones en `BigInt`, trazabilidad, sin archivo original) y de infraestructura (un solo servicio, base en el 5438, app en el 5008) |
+| `npm run db:up && npm run test:integracion` | Integración contra la base `inversiones_test` del compose: reinicia esa base con las migraciones y verifica que existan y muerdan los CHECK, los índices parciales, la exclusión de vigencias y la regla de solo inserción. Se niega a correr si la base no termina en `_test` |
+| `npm run build` | Que la app compila (`next build`) |
+
+Cada SPEC que agregue código suma aquí sus guardianes y su job en `inv.yml`, con `needs` en `inv-gate`. `inv.yml` está fuera de la zona de ECC: ese cableado va en un PR aparte que mergea el CEO de PI.
+
+**Migraciones:** créelas con `npx prisma migrate dev --create-only` y revise el SQL antes de aplicarlas. La migración inicial trae reglas escritas a mano (CHECK, índices parciales, exclusión y disparadores de solo inserción) que Prisma no conoce; si una migración nueva las borra, `npm run test:integracion` se pone rojo.
 
 ## Datos (regla dura)
 - **Los datos reales nunca entran al repo**: ni montos, ni cuentas, ni posiciones, ni extractos, ni capturas; tampoco en seeds, tests o fixtures. Viven solo en la base de datos del servidor y en sus secretos.
@@ -50,7 +61,8 @@ PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) 
 - Tocar carpetas o workflows de otros productos.
 
 ---
-> v1.6 · 2026-11-20 · 17:30 (-05) · INV · Fábrica ECC · INV-SPEC-4: candados de punta a punta (rutas crudas con `-z`, frontera sin renombres, más extensiones y claves)
+> v1.7 · 2026-11-20 · 17:22 (-05) · INV · Fábrica ECC · INV-SPEC-5: guardianes de la app (tipos, pruebas unitarias e integración, build) y regla de migraciones
+> v1.6 · 2026-11-20 · ≈17:16 (-05) · INV · Fábrica ECC · INV-SPEC-4: candados de punta a punta (rutas crudas con `-z`, frontera sin renombres, más extensiones y claves)
 > v1.5 · 2026-11-20 · CEO 008 · frontera desde main (INV-SPEC-3) y su límite conocido
 > v1.4 · 2026-11-20 · CEO 008 · candado de frontera y workflow que no corre en PRs de PI (condiciones 5 y 6 del CEO de PI)
 > v1.3 · 2026-11-20 · CEO 008 · merge y despliegue autónomos de ECC (D-011)

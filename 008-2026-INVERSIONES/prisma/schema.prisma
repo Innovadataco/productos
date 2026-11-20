@@ -1,0 +1,589 @@
+// 008 · INVERSIONES · esquema de la Fase 1 (núcleo).
+// Fuente: gestión de 008, MODELO-DATOS-FASE-1.md v0.5 (§2b «núcleo» + catálogo).
+// Quedan para después: ValorPosicionDiario, PortafolioDiario (caché), ReporteEnviado
+// (hito 5) y AjusteCostoLote (se sigue al portal de A&V).
+//
+// Reglas: dinero en Decimal (nunca Float), cantidades de acciones en BigInt, fechas de
+// negocio en @db.Date (hora de Colombia). Lo que Prisma no expresa (CHECK, índices
+// parciales, exclusión de vigencias, solo inserción) va en SQL dentro de la migración
+// inicial; las pruebas de integración verifican que exista.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext, btree_gist]
+}
+
+// ───────────── Enums ─────────────
+enum RolUsuario {
+  DUENO
+  FAMILIA
+}
+
+enum TipoFuente {
+  TRII_CAJA
+  TRII_ORDENES
+  TRII_DIVIDENDOS
+  AV_CERTIFICACION
+  AV_LOTES
+}
+
+enum EstadoCarga {
+  VALIDANDO
+  CARGADO
+  RECHAZADO
+  REVERTIDO
+}
+
+enum TipoInstrumento {
+  ACCION
+  FIC
+}
+
+enum Moneda {
+  COP
+}
+
+enum TipoMovimientoCaja {
+  DEPOSITO
+  RETIRO
+}
+
+enum EstadoMovimiento {
+  APROBADO
+  RECHAZADO
+}
+
+enum LadoOrden {
+  COMPRA
+  VENTA
+}
+
+enum EstadoOrden {
+  APROBADO
+  CANCELADO
+}
+
+enum TipoDividendo {
+  ORDINARIO
+  EXTRAORDINARIO
+  FRACCION_ESCISION // no es dividendo: va a ganancia realizada (costo 0)
+}
+
+enum CategoriaAjusteCaja {
+  APORTE_FIC
+  FRACCION_ESCISION
+  GMF
+  RETENCION
+  INTERES
+  CUSTODIA
+  OTRO
+}
+
+enum FuenteAjuste {
+  MANUAL
+  EXTRACTO
+  CERTIFICACION
+  INFERIDO
+}
+
+enum OrigenLote {
+  COMPRA
+  ESCISION
+}
+
+enum FuenteCosto {
+  TRII_ORDEN
+  AV_PORTAL
+}
+
+enum MetodoAsignacion {
+  FIFO
+  ESPECIFICA
+}
+
+enum TipoEventoCorporativo {
+  ESCISION
+}
+
+enum TipoMovimientoFondo {
+  CONSTITUCION
+  APORTE
+  RETIRO
+  AJUSTE
+}
+
+enum EstadoPrecio {
+  VERIFICADO
+  NO_VERIFICADO
+}
+
+enum ResultadoConciliacion {
+  CUADRA
+  NO_CUADRA
+  PARCIAL
+}
+
+enum TipoControl {
+  FRACCION
+  CANTIDAD
+  VALOR
+  EFECTIVO
+  FONDO
+  PRECIO
+  COSTO_LOTE
+}
+
+enum ResultadoControl {
+  CUADRA
+  NO_CUADRA
+  PENDIENTE_LIQUIDACION
+}
+
+// ───────────── Usuarios ─────────────
+model Usuario {
+  id             String         @id @default(cuid())
+  email          String         @unique @db.Citext
+  rol            RolUsuario
+  telegramChatId BigInt?
+  activo         Boolean        @default(true)
+  creadoEn       DateTime       @default(now()) @db.Timestamptz(6)
+  cargas         CargaArchivo[]
+  ajustesCaja    AjusteCaja[]
+
+  @@map("usuario")
+}
+
+// ───────────── Importación y trazabilidad ─────────────
+model CargaArchivo {
+  id             String         @id @default(cuid())
+  tipoFuente     TipoFuente
+  nombreArchivo  String
+  sha256         String         @db.Char(64)
+  fechaCorte     DateTime?      @db.Date
+  estado         EstadoCarga
+  filasTotal     Int?
+  filasNuevas    Int?
+  filasRepetidas Int?
+  errores        Json? // solo códigos y números de fila, nunca valores reales
+  // El archivo original NO se guarda (decisión del CEO): solo su sha256 y las filas.
+  cargadoPorId   String
+  cargadoPor     Usuario        @relation(fields: [cargadoPorId], references: [id])
+  cargadoEn      DateTime       @default(now()) @db.Timestamptz(6)
+  revertidaPorId String? // solo DUENO (Jelkin autoriza)
+  revertidaEn    DateTime?      @db.Timestamptz(6)
+  filasNacidas   FilaFuente[]
+  filas          FilaDeCarga[]
+  filasLoteAv    FilaLoteAv[]
+  certificacion  Certificacion?
+
+  @@index([tipoFuente, sha256])
+  @@map("carga_archivo")
+}
+
+/// Fila cruda de un archivo. Clave natural = sha256 de los campos canónicos SIN estado ni
+/// comisión, + `ocurrencia` (n-ésima fila idéntica del archivo) para no fusionar filas legítimas.
+model FilaFuente {
+  id             String          @id @default(cuid())
+  tipoFuente     TipoFuente
+  claveNatural   String          @db.Char(64)
+  ocurrencia     Int             @db.SmallInt
+  primeraCargaId String
+  primeraCarga   CargaArchivo    @relation(fields: [primeraCargaId], references: [id])
+  primeraFilaNo  Int
+  crudo          Json
+  vistaEn        FilaDeCarga[]
+  movimientoCaja MovimientoCaja?
+  orden          Orden?
+  dividendo      Dividendo?
+  filaLoteAv     FilaLoteAv?
+
+  @@unique([tipoFuente, claveNatural, ocurrencia])
+  @@map("fila_fuente")
+}
+
+/// Qué carga vio qué fila: reimportar no duplica, pero deja registro.
+model FilaDeCarga {
+  cargaId      String
+  filaNo       Int
+  filaFuenteId String
+  carga        CargaArchivo @relation(fields: [cargaId], references: [id])
+  filaFuente   FilaFuente   @relation(fields: [filaFuenteId], references: [id])
+
+  @@id([cargaId, filaNo])
+  @@index([filaFuenteId])
+  @@map("fila_de_carga")
+}
+
+// ───────────── Catálogo ─────────────
+model Instrumento {
+  id                   String                  @id @default(cuid())
+  tipo                 TipoInstrumento
+  nemotecnico          String?                 @unique // BVC (acciones)
+  simboloTrii          String?                 @unique // si difiere del nemotécnico
+  codigoFic            String?                 @unique // codigo_negocio de la SFC (fondo)
+  nombre               String
+  moneda               Moneda                  @default(COP)
+  activo               Boolean                 @default(true)
+  notaCosto            String? // «costo según Acciones & Valores, sin ajuste por escisión»
+  simbolos             SimboloPrecio[]
+  ordenes              Orden[]
+  dividendos           Dividendo[]
+  dividendosDecretados DividendoDecretado[]
+  lotes                Lote[]
+  filasLoteAv          FilaLoteAv[]
+  posCert              CertificacionPosicion[]
+  fondosCert           CertificacionFondo[]
+  movsFondo            MovimientoFondo[]
+  valoresUnidad        ValorUnidadFondo[]
+  precios              PrecioCierre[]
+  controles            ControlConciliacion[]
+  eventosOrigen        EventoCorporativo[]     @relation("EventoOrigen")
+  eventosDestino       EventoCorporativo[]     @relation("EventoDestino")
+
+  @@map("instrumento")
+}
+
+/// Nemotécnico BVC → símbolo del proveedor (Yahoo `.CL`), con vigencia y verificación.
+model SimboloPrecio {
+  id               String      @id @default(cuid())
+  instrumentoId    String
+  instrumento      Instrumento @relation(fields: [instrumentoId], references: [id])
+  proveedor        String      @default("yahoo")
+  simbolo          String
+  vigenteDesde     DateTime    @db.Date
+  vigenteHasta     DateTime?   @db.Date
+  verificadoEn     DateTime?   @db.Date
+  verificadoContra String?
+
+  @@index([instrumentoId, proveedor])
+  @@map("simbolo_precio")
+}
+
+/// Días hábiles y festivos de la BVC: se siembra, no se deriva.
+model CalendarioBvc {
+  dia     DateTime @id @db.Date
+  esHabil Boolean
+  nota    String?
+
+  @@map("calendario_bvc")
+}
+
+// ───────────── Hechos de Trii (solo inserción) ─────────────
+model MovimientoCaja {
+  id           String             @id @default(cuid())
+  filaFuenteId String             @unique
+  filaFuente   FilaFuente         @relation(fields: [filaFuenteId], references: [id])
+  ocurridoEn   DateTime           @db.Timestamptz(6)
+  fecha        DateTime           @db.Date
+  tipo         TipoMovimientoCaja
+  estado       EstadoMovimiento
+  monto        Decimal            @db.Decimal(20, 4)
+  moneda       Moneda             @default(COP)
+
+  @@index([fecha])
+  @@map("movimiento_caja")
+}
+
+model Orden {
+  id                 String            @id @default(cuid())
+  filaFuenteId       String            @unique
+  filaFuente         FilaFuente        @relation(fields: [filaFuenteId], references: [id])
+  ejecutadaEn        DateTime          @db.Timestamptz(6)
+  fechaOperacion     DateTime          @db.Date
+  fechaLiquidacion   DateTime          @db.Date // T+2 hábiles según CalendarioBvc
+  instrumentoId      String
+  instrumento        Instrumento       @relation(fields: [instrumentoId], references: [id])
+  lado               LadoOrden
+  estado             EstadoOrden
+  cantidadCompletada BigInt
+  cantidadSolicitada BigInt?
+  cantidadPendiente  BigInt            @default(0)
+  precioUnitario     Decimal           @db.Decimal(20, 6)
+  totalInvertido     Decimal           @db.Decimal(20, 4) // SIN comisión
+  comision           Decimal           @db.Decimal(20, 4)
+  totalEstimado      Decimal           @db.Decimal(20, 4) // compra: + comisión · venta: − comisión. La caja usa este
+  moneda             Moneda            @default(COP)
+  lote               Lote?
+  asignaciones       AsignacionVenta[]
+
+  @@index([instrumentoId, fechaOperacion])
+  @@map("orden")
+}
+
+/// Dividendo recibido. El CSV de Trii trae el NETO; bruto = decreto × acciones.
+model Dividendo {
+  id            String              @id @default(cuid())
+  filaFuenteId  String              @unique
+  filaFuente    FilaFuente          @relation(fields: [filaFuenteId], references: [id])
+  fechaPago     DateTime            @db.Date
+  instrumentoId String
+  instrumento   Instrumento         @relation(fields: [instrumentoId], references: [id])
+  tipo          TipoDividendo       @default(ORDINARIO)
+  montoNeto     Decimal             @db.Decimal(20, 4)
+  montoBruto    Decimal?            @db.Decimal(20, 4)
+  retencion     Decimal?            @db.Decimal(20, 4)
+  tasaRetencion Decimal?            @db.Decimal(9, 6)
+  decretadoId   String?
+  decretado     DividendoDecretado? @relation(fields: [decretadoId], references: [id])
+  eventoId      String? // FRACCION_ESCISION: evento cuya fracción pagó esta fila
+  evento        EventoCorporativo?  @relation(fields: [eventoId], references: [id])
+  moneda        Moneda              @default(COP)
+
+  @@index([instrumentoId, fechaPago])
+  @@map("dividendo")
+}
+
+/// Lo que anunció el emisor (fuente del bruto).
+model DividendoDecretado {
+  id             String        @id @default(cuid())
+  instrumentoId  String
+  instrumento    Instrumento   @relation(fields: [instrumentoId], references: [id])
+  tipo           TipoDividendo
+  valorPorAccion Decimal       @db.Decimal(20, 6)
+  fechaPago      DateTime      @db.Date
+  fuente         String
+  nota           String?
+  recibidos      Dividendo[]
+
+  @@index([instrumentoId, fechaPago])
+  @@map("dividendo_decretado")
+}
+
+/// Partidas de caja que ningún CSV trae. Signo: + entra, − sale.
+model AjusteCaja {
+  id                  String              @id @default(cuid())
+  fecha               DateTime            @db.Date
+  monto               Decimal             @db.Decimal(20, 4)
+  categoria           CategoriaAjusteCaja
+  fuente              FuenteAjuste
+  motivo              String
+  referenciaEvidencia String?
+  creadoPorId         String
+  creadoPor           Usuario             @relation(fields: [creadoPorId], references: [id])
+  creadoEn            DateTime            @default(now()) @db.Timestamptz(6)
+  moneda              Moneda              @default(COP)
+  movimientoFondo     MovimientoFondo?
+  eventoId            String?
+  evento              EventoCorporativo?  @relation(fields: [eventoId], references: [id])
+
+  @@index([fecha])
+  @@map("ajuste_caja")
+}
+
+// ───────────── Lotes, escisión y ventas ─────────────
+model EventoCorporativo {
+  id                String                @id @default(cuid())
+  tipo              TipoEventoCorporativo
+  fecha             DateTime              @db.Date
+  origenId          String
+  origen            Instrumento           @relation("EventoOrigen", fields: [origenId], references: [id])
+  destinoId         String
+  destino           Instrumento           @relation("EventoDestino", fields: [destinoId], references: [id])
+  razon             Decimal?              @db.Decimal(20, 10)
+  fechaPagoFraccion DateTime?             @db.Date
+  montoFraccion     Decimal?              @db.Decimal(20, 4)
+  nota              String?
+  lotes             Lote[]
+  ajustesCaja       AjusteCaja[]
+  dividendos        Dividendo[]
+
+  @@map("evento_corporativo")
+}
+
+/// Lote de compra (sale de una orden) o de escisión (sale de un evento). Costo SIN comisión.
+model Lote {
+  id               String             @id @default(cuid())
+  instrumentoId    String
+  instrumento      Instrumento        @relation(fields: [instrumentoId], references: [id])
+  origen           OrigenLote
+  ordenId          String?            @unique
+  orden            Orden?             @relation(fields: [ordenId], references: [id])
+  eventoId         String?
+  evento           EventoCorporativo? @relation(fields: [eventoId], references: [id])
+  loteOrigenId     String?
+  loteOrigen       Lote?              @relation("CadenaEscision", fields: [loteOrigenId], references: [id])
+  lotesDerivados   Lote[]             @relation("CadenaEscision")
+  fechaCompra      DateTime           @db.Date
+  fechaLiquidacion DateTime           @db.Date
+  cantidad         BigInt
+  costoUnitario    Decimal            @db.Decimal(20, 6)
+  costoTotal       Decimal            @db.Decimal(20, 4)
+  comision         Decimal            @default(0) @db.Decimal(20, 4)
+  fuenteCosto      FuenteCosto
+  filasAv          FilaLoteAv[]
+  asignaciones     AsignacionVenta[]
+
+  @@index([instrumentoId, fechaCompra, id])
+  @@map("lote")
+}
+
+model AsignacionVenta {
+  id           String           @id @default(cuid())
+  ordenVentaId String
+  ordenVenta   Orden            @relation(fields: [ordenVentaId], references: [id])
+  loteId       String
+  lote         Lote             @relation(fields: [loteId], references: [id])
+  cantidad     BigInt
+  costoBase    Decimal          @db.Decimal(20, 4)
+  metodo       MetodoAsignacion @default(FIFO)
+  bloqueada    Boolean          @default(false)
+
+  @@unique([ordenVentaId, loteId])
+  @@index([loteId])
+  @@map("asignacion_venta")
+}
+
+// ───────────── Acciones & Valores ─────────────
+model FilaLoteAv {
+  id               String       @id @default(cuid())
+  cargaId          String
+  carga            CargaArchivo @relation(fields: [cargaId], references: [id])
+  filaFuenteId     String       @unique
+  filaFuente       FilaFuente   @relation(fields: [filaFuenteId], references: [id])
+  fechaCorte       DateTime     @db.Date
+  instrumentoId    String
+  instrumento      Instrumento  @relation(fields: [instrumentoId], references: [id])
+  fechaCompra      DateTime     @db.Date
+  cantidad         BigInt
+  precioCompra     Decimal      @db.Decimal(20, 6)
+  precioValoracion Decimal?     @db.Decimal(20, 6)
+  valorMercado     Decimal?     @db.Decimal(20, 4)
+  loteId           String?
+  lote             Lote?        @relation(fields: [loteId], references: [id])
+
+  @@index([fechaCorte, instrumentoId])
+  @@map("fila_lote_av")
+}
+
+model Certificacion {
+  id             String                  @id @default(cuid())
+  cargaId        String                  @unique
+  carga          CargaArchivo            @relation(fields: [cargaId], references: [id])
+  fechaCorte     DateTime                @unique @db.Date
+  saldoEfectivo  Decimal                 @db.Decimal(20, 4)
+  posiciones     CertificacionPosicion[]
+  fondos         CertificacionFondo[]
+  conciliaciones Conciliacion[]
+
+  @@map("certificacion")
+}
+
+model CertificacionPosicion {
+  certificacionId  String
+  certificacion    Certificacion @relation(fields: [certificacionId], references: [id])
+  instrumentoId    String
+  instrumento      Instrumento   @relation(fields: [instrumentoId], references: [id])
+  cantidad         BigInt
+  precioValoracion Decimal       @db.Decimal(20, 6)
+  valorMercado     Decimal       @db.Decimal(20, 4)
+  referenciaPdf    String?
+
+  @@id([certificacionId, instrumentoId])
+  @@map("certificacion_posicion")
+}
+
+model CertificacionFondo {
+  certificacionId String
+  certificacion   Certificacion @relation(fields: [certificacionId], references: [id])
+  instrumentoId   String
+  instrumento     Instrumento   @relation(fields: [instrumentoId], references: [id])
+  encargo         String
+  saldo           Decimal       @db.Decimal(20, 4)
+  unidades        Decimal?      @db.Decimal(24, 8)
+
+  @@id([certificacionId, instrumentoId])
+  @@map("certificacion_fondo")
+}
+
+// ───────────── Fondo (FIC) ─────────────
+model MovimientoFondo {
+  id           String              @id @default(cuid())
+  fondoId      String
+  fondo        Instrumento         @relation(fields: [fondoId], references: [id])
+  fecha        DateTime            @db.Date
+  unidades     Decimal             @db.Decimal(24, 8)
+  monto        Decimal?            @db.Decimal(20, 4)
+  tipo         TipoMovimientoFondo
+  fuente       FuenteAjuste
+  ajusteCajaId String?             @unique
+  ajusteCaja   AjusteCaja?         @relation(fields: [ajusteCajaId], references: [id])
+
+  @@index([fondoId, fecha])
+  @@map("movimiento_fondo")
+}
+
+model ValorUnidadFondo {
+  id            String      @id @default(cuid())
+  fondoId       String
+  fondo         Instrumento @relation(fields: [fondoId], references: [id])
+  fechaValor    DateTime    @db.Date
+  valorUnidad   Decimal     @db.Decimal(20, 8)
+  valorFondo    Decimal?    @db.Decimal(24, 4)
+  fuente        String      @default("sfc:qhpu-8ixx")
+  traidoEn      DateTime    @default(now()) @db.Timestamptz(6)
+  reemplazadoEn DateTime?   @db.Timestamptz(6)
+
+  @@index([fondoId, fechaValor])
+  @@map("valor_unidad_fondo")
+}
+
+// ───────────── Precios ─────────────
+model PrecioCierre {
+  id               String       @id @default(cuid())
+  instrumentoId    String
+  instrumento      Instrumento  @relation(fields: [instrumentoId], references: [id])
+  fecha            DateTime     @db.Date
+  precio           Decimal      @db.Decimal(20, 6) // cierre SIN ajustar
+  fuente           String
+  estado           EstadoPrecio
+  fuenteReferencia String?
+  precioReferencia Decimal?     @db.Decimal(20, 6)
+  desviacionPct    Decimal?     @db.Decimal(9, 6)
+  traidoEn         DateTime     @default(now()) @db.Timestamptz(6)
+  reemplazadoEn    DateTime?    @db.Timestamptz(6)
+  moneda           Moneda       @default(COP)
+
+  @@index([instrumentoId, fecha])
+  @@map("precio_cierre")
+}
+
+// ───────────── Conciliación ─────────────
+model Conciliacion {
+  id              String                @id @default(cuid())
+  certificacionId String
+  certificacion   Certificacion         @relation(fields: [certificacionId], references: [id])
+  fechaCorte      DateTime              @db.Date
+  calculadaEn     DateTime              @default(now()) @db.Timestamptz(6)
+  versionCalculo  String
+  resultado       ResultadoConciliacion
+  controles       ControlConciliacion[]
+
+  @@index([fechaCorte])
+  @@map("conciliacion")
+}
+
+model ControlConciliacion {
+  id             String           @id @default(cuid())
+  conciliacionId String
+  conciliacion   Conciliacion     @relation(fields: [conciliacionId], references: [id])
+  tipo           TipoControl
+  instrumentoId  String?
+  instrumento    Instrumento?     @relation(fields: [instrumentoId], references: [id])
+  esperado       Decimal?         @db.Decimal(24, 6)
+  real           Decimal?         @db.Decimal(24, 6)
+  diferencia     Decimal?         @db.Decimal(24, 6)
+  tolerancia     Decimal?         @db.Decimal(9, 6)
+  resultado      ResultadoControl
+  codigoMotivo   String?
+  detalle        Json?
+
+  @@index([conciliacionId])
+  @@map("control_conciliacion")
+}

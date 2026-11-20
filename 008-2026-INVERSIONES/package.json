@@ -1,0 +1,34 @@
+{
+  "name": "008-2026-inversiones",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev -p 5008",
+    "build": "next build",
+    "start": "next start -p 5008",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integracion": "node scripts/integracion.mjs",
+    "db:up": "docker compose up -d --wait db",
+    "db:migrate": "prisma migrate deploy",
+    "db:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.5",
+    "prisma": "5.22.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.3",
+    "yaml": "^2.8.0"
+  }
+}

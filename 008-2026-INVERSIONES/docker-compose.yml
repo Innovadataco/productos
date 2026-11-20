@@ -1,0 +1,27 @@
+# 008 · INVERSIONES · base de datos local (D-008, ADR_001: contenedor propio).
+# Un solo servicio. Puerto 5438 (la app corre en el 5008 con `npm run dev`).
+# No agregar otras bases ni servicios aquí sin decisión registrada.
+name: inv-008
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: inversiones
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-inversiones_dev}
+      POSTGRES_DB: inversiones
+      TZ: America/Bogota
+    volumes:
+      - inv008_postgres:/var/lib/postgresql/data
+      # Crea la base de pruebas `inversiones_test` en el primer arranque.
+      - ./prisma/init/01-base-de-pruebas.sql:/docker-entrypoint-initdb.d/01-base-de-pruebas.sql:ro
+    ports:
+      - "5438:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inversiones -d inversiones"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  inv008_postgres:
