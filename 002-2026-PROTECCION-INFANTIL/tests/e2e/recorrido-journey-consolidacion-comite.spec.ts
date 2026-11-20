@@ -28,7 +28,7 @@
  * va por UI/endpoints. Limpieza FK-safe en `afterAll` que AFIRMA 0 expedientes y 0 cuentas de la
  * corrida, y cierra pg-boss (aprobar publica un evento). Guardia SPEC-770 (BD `*_test`); nunca prod.
  */
-import { test, expect, request as playwrightRequest, type BrowserContext } from "@playwright/test";
+import { test, expect, request as playwrightRequest, type APIRequestContext, type BrowserContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
@@ -57,6 +57,26 @@ async function crearCuenta(rol: RolUsuario, etiqueta: string): Promise<{ id: str
     });
     cuentas.push(u.id);
     return { id: u.id, email };
+}
+
+/**
+ * Login por API tolerante al ECONNRESET transitorio del dev server bajo carga (CI run 44768061155,
+ * línea del 2º voto): reintenta el POST con backoff corto hasta 200. No enmascara un 401 real —
+ * si el status no es 200 tras los reintentos, lanza con el último cuerpo.
+ */
+async function loginConReintento(ctx: APIRequestContext, email: string): Promise<void> {
+    let ultimo = "";
+    for (let intento = 0; intento < 4; intento++) {
+        try {
+            const res = await ctx.post("/api/auth/login", { data: { email, password: PASSWORD } });
+            if (res.status() === 200) return;
+            ultimo = `status ${res.status()} · ${await res.text().catch(() => "")}`;
+        } catch (e) {
+            ultimo = e instanceof Error ? e.message : String(e); // ECONNRESET / socket hang up transitorio
+        }
+        await new Promise((r) => setTimeout(r, 300 * (intento + 1)));
+    }
+    throw new Error(`login ${email} no devolvió 200 tras reintentos: ${ultimo}`);
 }
 
 /** Planta el estado que deja el motor de IA: Expediente + InformeConsolidado PENDIENTE_COMITE. */
@@ -136,7 +156,7 @@ test.describe.serial("SPEC-942 · journey core #6: el comité de validación cor
         const ctx1: BrowserContext = await browser.newContext({ baseURL: baseURL() });
         try {
             const page = await ctx1.newPage();
-            expect((await ctx1.request.post("/api/auth/login", { data: { email: miembro1.email, password: PASSWORD } })).status(), "login miembro 1").toBe(200);
+            await loginConReintento(ctx1.request, miembro1.email);
 
             await test.step("2 · el miembro abre el expediente consolidado y puede actuar", async () => {
                 await page.goto(`/dashboard/admin/comite/consolidacion/${expA}`);
@@ -145,16 +165,19 @@ test.describe.serial("SPEC-942 · journey core #6: el comité de validación cor
             });
 
             await test.step("3 · CORRIGE el resumen con motivo → CORREGIDO", async () => {
-                // El textarea es controlado (useState(resumenInicial) en ConsolidacionResumenEditor).
-                // Si el fill corre ANTES de que React hidrate con el valor del servidor, el texto
-                // escrito se CONCATENA con el inicial (CI 19-11 run 44584198583: se guardó
-                // "CORREGIDO"+"IA" → flaky). Esperar a que el campo se ASIENTE exactamente en el valor
-                // IA garantiza que el fill reemplaza sobre el estado ya hidratado; y re-verificar el
-                // valor antes de enviar cierra la carrera por completo (SPEC-945).
+                // El textarea es controlado (ConsolidacionResumenEditor: useState(resumenInicial),
+                // value={texto}, onChange — SIN useEffect/reset). El DOM del SSR ya muestra el valor IA
+                // ANTES de que React hidrate, así que toHaveValue(RESUMEN_IA) NO prueba interactividad:
+                // el fill podía correr pre-hidratación y CONCATENARSE con el inicial ("CORREGIDO"+"IA"),
+                // y como ese valor cae en el estado de React, SOBREVIVE a los reintentos de un
+                // toHaveValue simple — justo lo que SPEC-945 dejó pasar (CI run 44768061155 · SPEC-961).
+                // Re-ejecutar el fill dentro de un toPass hasta que el valor QUEDE exactamente el
+                // corregido cierra la carrera: una vez hidratado, el fill es determinista y converge.
                 const resumen = page.getByLabel("Resumen consolidado");
-                await expect(resumen).toHaveValue(RESUMEN_IA);
-                await resumen.fill(RESUMEN_CORREGIDO);
-                await expect(resumen).toHaveValue(RESUMEN_CORREGIDO);
+                await expect(async () => {
+                    await resumen.fill(RESUMEN_CORREGIDO);
+                    expect(await resumen.inputValue()).toBe(RESUMEN_CORREGIDO);
+                }).toPass({ timeout: 15_000, intervals: [200, 400, 800, 1_500] });
                 await page.getByLabel("Motivo de la corrección").fill(MOTIVO_CORRECCION);
                 await page.getByRole("button", { name: "Corregir resumen" }).click();
                 await expect
@@ -179,7 +202,7 @@ test.describe.serial("SPEC-942 · journey core #6: el comité de validación cor
             await test.step("5 · 2º voto de un miembro DISTINTO (quórum) → APROBADO + expediente EN_APROBACION_PADRE", async () => {
                 const api2 = await playwrightRequest.newContext({ baseURL: baseURL() });
                 try {
-                    expect((await api2.post("/api/auth/login", { data: { email: miembro2.email, password: PASSWORD } })).status(), "login miembro 2").toBe(200);
+                    await loginConReintento(api2, miembro2.email);
                     const res = await api2.post(`/api/admin/comite/consolidacion/${expA}/aprobar`, { data: {} });
                     expect(res.status(), `2º voto · body=${await res.text()}`).toBe(200);
                 } finally {
@@ -193,8 +216,17 @@ test.describe.serial("SPEC-942 · journey core #6: el comité de validación cor
             await test.step("6 · en otro expediente DEVUELVE con motivo → DEVUELTO; aprobar lo devuelto es rechazado", async () => {
                 await page.goto(`/dashboard/admin/comite/consolidacion/${expB}`);
                 await expect(page.getByText("Acciones del comité")).toBeVisible();
-                await page.getByRole("button", { name: "Devolver", exact: true }).click();
-                await page.getByLabel("Motivo de la devolución").fill(MOTIVO_DEVOLUCION);
+                // "Devolver" es un TOGGLE (setMostrarDevolucion(v => !v)): un click pre-hidratación es
+                // no-op y no abre el panel del motivo. Reintentar de forma IDEMPOTENTE —clickear solo si
+                // el panel sigue cerrado— evita cerrarlo por re-click y tolera la hidratación lenta (SPEC-961).
+                const motivoDevolucion = page.getByLabel("Motivo de la devolución");
+                await expect(async () => {
+                    if (!(await motivoDevolucion.isVisible())) {
+                        await page.getByRole("button", { name: "Devolver", exact: true }).click();
+                    }
+                    await expect(motivoDevolucion).toBeVisible({ timeout: 2_000 });
+                }).toPass({ timeout: 15_000, intervals: [200, 400, 800, 1_500] });
+                await motivoDevolucion.fill(MOTIVO_DEVOLUCION);
                 await page.getByRole("button", { name: "Confirmar devolución" }).click();
                 await expect
                     .poll(() => estadoInforme(expB), { message: "el informe queda DEVUELTO", timeout: 10_000 })
@@ -205,7 +237,7 @@ test.describe.serial("SPEC-942 · journey core #6: el comité de validación cor
                 // Control: lo DEVUELTO no admite aprobación hasta una nueva consolidación.
                 const api2 = await playwrightRequest.newContext({ baseURL: baseURL() });
                 try {
-                    await api2.post("/api/auth/login", { data: { email: miembro2.email, password: PASSWORD } });
+                    await loginConReintento(api2, miembro2.email);
                     const res = await api2.post(`/api/admin/comite/consolidacion/${expB}/aprobar`, { data: {} });
                     expect(res.status(), "aprobar un informe DEVUELTO → 409").toBe(409);
                 } finally {
