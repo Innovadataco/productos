@@ -1,7 +1,7 @@
 # SPEC-434 · La ficha del profesional, usable de verdad — cierra I-302
 
 **Status**: IMPLEMENTADO
-**Fecha**: 2026-09-04 · **Dev**: PI-1 (`idc-32`) · **Origen**: Jelkin probando en vivo prod `d0b30369` el 04-09 ~13:4x con `jelkin.carrillo+psico1@gmail.com`. Radicado por CEO idc-66.
+**Fecha**: 2026-09-04 · **Dev**: PI-1 (`idc-32`) · **Origen**: Jelkin probando en vivo prod `d0b30369` el 04-09 ~13:4x con `usuario@ejemplo.com`. Radicado por CEO idc-66.
 **Prueba dura del hueco**: `SELECT count(*) FROM "PerfilProfesional"` = 0 en producción — nadie completó ficha en toda la historia.
 
 ## Cambios

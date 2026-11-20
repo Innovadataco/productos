@@ -73,7 +73,7 @@
 
 ## Fase 10 — Verificación en vivo obligatoria (SC-006)
 
-- **T035** [✓] Local: `carrillo_franco@hotmail.com` (SCHOOL_ADMIN sin suscripción) → `curl -sIL https://localhost/dashboard/colegio/suscripcion` termina en 200 sin `ERR_TOO_MANY_REDIRECTS`. Reporte bitácora.
+- **T035** [✓] Local: `usuario@ejemplo.com` (SCHOOL_ADMIN sin suscripción) → `curl -sIL https://localhost/dashboard/colegio/suscripcion` termina en 200 sin `ERR_TOO_MANY_REDIRECTS`. Reporte bitácora.
 
 ---
 

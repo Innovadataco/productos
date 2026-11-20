@@ -35,7 +35,7 @@ Impacto en arquitectura: **estructural — mueve TODOS los guardianes de acceso 
 
 ### User Story 1 — Recorrido A A6..A10: el colegio compra suscripción sin bucle (Priority: P1)
 
-`carrillo_franco@hotmail.com` (SCHOOL_ADMIN sin suscripción) entra a la app, es redirigido a `/dashboard/colegio/suscripcion`, ve la lista de planes y activa freemium con un click. La página se re-renderiza en 200 sin `ERR_TOO_MANY_REDIRECTS`. Es el único camino por el que el producto cobra.
+`usuario@ejemplo.com` (SCHOOL_ADMIN sin suscripción) entra a la app, es redirigido a `/dashboard/colegio/suscripcion`, ve la lista de planes y activa freemium con un click. La página se re-renderiza en 200 sin `ERR_TOO_MANY_REDIRECTS`. Es el único camino por el que el producto cobra.
 
 **Why this priority**: Sin este fix, el producto no puede cobrar. I-141 lo bloqueó verificablemente hace <24h en `/dashboard/colegio` y `/dashboard/padre`. I-25 e I-111 son la misma clase de fallo con la misma raíz.
 
@@ -146,7 +146,7 @@ Usuarios anónimos pueden ver `/`, `/dashboard-publico`, `/seguimiento`, `/repor
 - **SC-003**: `grep -R "redirect(" src/app/dashboard --include='layout.tsx'` → **0 líneas**.
 - **SC-004**: Los 4 ratchets estáticos corren en `verificaciones` y salen con código 0 sobre el árbol post-fix. Un PR de prueba con violación intencional los hace fallar con mensaje humano — documentado en `cierre.md`, no se mergea.
 - **SC-005**: Los 3 tests E2E de `journeys` corren y son verdes: (a) `loop-padre.spec.ts` — PARENT sin vigencia en `/dashboard/padre/suscripcion` → 200 cero redirects; (b) `loop-colegio.spec.ts` — SCHOOL_ADMIN sin vigencia en `/dashboard/colegio/suscripcion` → 200 cero redirects; (c) `redireccion-una-sola-vez.spec.ts` — PARENT sin vigencia en `/dashboard/padre` → un redirect a `/dashboard/padre/suscripcion`, allí para.
-- **SC-006**: **Verificación en vivo por Desarrollo**: `carrillo_franco@hotmail.com` (SCHOOL_ADMIN sin suscripción), `curl -sIL` contra `https://localhost/dashboard/colegio/suscripcion` con cookie de sesión → cadena termina en `200`, cero `ERR_TOO_MANY_REDIRECTS`. Reporte con la salida real.
+- **SC-006**: **Verificación en vivo por Desarrollo**: `usuario@ejemplo.com` (SCHOOL_ADMIN sin suscripción), `curl -sIL` contra `https://localhost/dashboard/colegio/suscripcion` con cookie de sesión → cadena termina en `200`, cero `ERR_TOO_MANY_REDIRECTS`. Reporte con la salida real.
 - **SC-007**: Usuario con vigencia ACTIVA — navegación `dashboard`, `dashboard/mis-reportes`, `dashboard/padre/suscripcion` y `dashboard/padre/circulo-confianza`: todos 200, cero redirects. Comportamiento idéntico al pre-fix.
 - **SC-008**: Gate LOCAL verde: `tsc --noEmit`, `lint 0 err`, `tokens:check`, `arch:check`, `locks:check`, `test:unit` (incluidos los 4 ratchets + los tests migrados de `proxy.test.ts`).
 - **SC-009**: Latencia p95 de middleware < 10 ms por request (cookie firmada — cero I/O). Medido con Playwright/`waitUntil: "commit"`.
