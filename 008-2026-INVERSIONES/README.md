@@ -20,7 +20,11 @@ npm run dev            # http://localhost:5008 · salud en /api/salud
 npm run importar:trii -- --email <su-correo> movimientos.csv ordenes.csv dividendos.csv
 ```
 - La primera vez, con la base vacía, agregue `--crear-dueno`. Solo funciona si todavía no hay ningún dueño: un error de tipeo en el correo nunca crea otro.
-- Registre los eventos de escisión antes de cargar los dividendos. Si no, un pago de fracción queda como dividendo ordinario y habrá que revertir esa carga.
+- Registre los eventos de escisión antes de cargar los dividendos (INV-SPEC-10). Si no, un pago de fracción queda como dividendo ordinario y habrá que revertir esa carga:
+  ```bash
+  npm run escision:registrar -- --origen <NEMO> --destino <NEMO> --fecha AAAA-MM-DD [--razon 0.5] [--pago-fraccion AAAA-MM-DD] [--monto-fraccion 100.5] [--nota "por confirmar"]
+  ```
+  Los instrumentos deben existir (se crean al importar las órdenes); un nemotécnico mal escrito se rechaza.
 - Montos con más decimales de los que guarda la base se rechazan (`NUMERO_PRECISION`) en vez de redondearse.
 - Reconoce cada archivo por su encabezado. Reimportar o cargar exportaciones que se solapan no duplica.
 - Si una fila no se puede leer, **ese archivo no se carga** y el comando dice la fila, la columna y el código del error (nunca el valor).
