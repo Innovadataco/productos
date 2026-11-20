@@ -22,6 +22,7 @@ import {
 import { actualizarFinServicioDesdePlan } from "@/lib/pagos/vigencia-colegio.service";
 import { sellarCookieSesionEstadoEnAccion } from "@/lib/routing/sellar-sesion-estado";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
+import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { anioBogota } from "@/lib/pagos/renovacion-calculos";
 import { obtenerTasaIva, ivaAplicaA } from "@/lib/pagos/parametros-pagos";
 import { PlanesSelector } from "@/components/modules/pagos/PlanesSelector";
@@ -103,10 +104,12 @@ export default async function CaminoColegioPlanPage() {
         if (paso !== "plan") redirect(destinoDePasoColegio(paso));
     }
 
-    const [planes, tasaIva, aplicaIva] = await Promise.all([
+    const [planes, tasaIva, aplicaIva, colegio] = await Promise.all([
         new PagosClienteRepository().listarPlanesActivosPorTitular("COLEGIO", anioBogota()),
         obtenerTasaIva(),
         ivaAplicaA("COLEGIO"),
+        // SPEC-957 (B.1): nombre real del colegio para titular la tarjeta freemium.
+        usuario.colegioId ? new ColegioRepository().obtenerResumen(usuario.colegioId) : Promise.resolve(null),
     ]);
 
     const dtos: PlanSelectorDTO[] = planes.map((plan) => ({
@@ -138,6 +141,7 @@ export default async function CaminoColegioPlanPage() {
                 onFreemium={actionActivarFreemiumColegio}
                 tasaIva={tasaIva}
                 aplicaIva={aplicaIva}
+                nombreColegio={colegio?.nombre ?? undefined}
             />
 
             {/* SPEC-442 (I-307 · Jelkin vivo 04-09): «siempre hay salida». */}

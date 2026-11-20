@@ -18,6 +18,10 @@ interface PlanesSelectorProps {
     duracionFreemiumDias?: number;
     tasaIva?: number;
     aplicaIva?: boolean;
+    // SPEC-957 (B.1): nombre real del colegio para titular su tarjeta freemium
+    // («{{nombreColegio}} · Prueba gratis N días»), en vez del nombre genérico del
+    // plan sembrado. Solo aplica al rol colegio; el padre no lo usa.
+    nombreColegio?: string | undefined;
 }
 
 const DURACION_ORDEN: Record<string, number> = {
@@ -58,6 +62,7 @@ export function PlanesSelector({
     duracionFreemiumDias = 30,
     tasaIva = 19,
     aplicaIva = true,
+    nombreColegio,
 }: PlanesSelectorProps) {
     const acento = ACENTOS[color];
     const [planSeleccionado, setPlanSeleccionado] = useState<PlanSelectorDTO | null>(null);
@@ -128,7 +133,11 @@ export function PlanesSelector({
                             </span>
                         </div>
                         <h3 className="text-lg font-semibold text-body">
-                            {esColegio ? (planFreemium?.nombre ?? "Prueba institucional") : "Prueba gratis"}
+                            {/* SPEC-957 (B.1): el colegio ve su NOMBRE real, no el nombre
+                                genérico del plan sembrado («Colegio · Prueba gratis 30 días»). */}
+                            {esColegio
+                                ? `${nombreColegio ?? "Su colegio"} · Prueba gratis ${duracionFreemiumDias} días`
+                                : "Prueba gratis"}
                         </h3>
                         <p className="mt-1 text-sm text-muted">
                             {esColegio

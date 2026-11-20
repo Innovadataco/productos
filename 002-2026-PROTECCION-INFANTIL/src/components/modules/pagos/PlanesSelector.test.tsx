@@ -34,7 +34,12 @@ const PLAN_FREEMIUM: PlanSelectorDTO = {
     activo: true,
 };
 
-function renderSelector(opts: { planes: PlanSelectorDTO[]; rol: "PARENT" | "SCHOOL_ADMIN"; conFreemium?: boolean }) {
+function renderSelector(opts: {
+    planes: PlanSelectorDTO[];
+    rol: "PARENT" | "SCHOOL_ADMIN";
+    conFreemium?: boolean;
+    nombreColegio?: string;
+}) {
     return render(
         <PlanesSelector
             planes={opts.planes}
@@ -42,15 +47,25 @@ function renderSelector(opts: { planes: PlanSelectorDTO[]; rol: "PARENT" | "SCHO
             color={opts.rol === "PARENT" ? "cielo" : "pino"}
             onSeleccionar={vi.fn()}
             onFreemium={opts.conFreemium === false ? undefined : vi.fn()}
+            nombreColegio={opts.nombreColegio}
         />,
     );
 }
 
 describe("PlanesSelector (SPEC-355)", () => {
-    it("COLEGIO: pinta la tarjeta freemium cuando el plan freemium existe, con su nombre de BD", () => {
-        renderSelector({ planes: [PLAN_FREEMIUM, PLAN_PAGADO], rol: "SCHOOL_ADMIN" });
+    // SPEC-957 (B.1) · CANDADO: la tarjeta freemium del colegio se titula con el
+    // NOMBRE REAL del colegio, no con el nombre genérico del plan sembrado. Control
+    // positivo: si el título volviera a `planFreemium.nombre`, mostraría «Colegio ·
+    // Prueba gratis 30 días» y no «Colegio 40 …» → este test se pone rojo.
+    it("COLEGIO: la tarjeta freemium se titula con el NOMBRE del colegio (no el del plan sembrado)", () => {
+        renderSelector({ planes: [PLAN_FREEMIUM, PLAN_PAGADO], rol: "SCHOOL_ADMIN", nombreColegio: "Colegio 40" });
         const tarjeta = screen.getByTestId("plan-freemium");
-        expect(tarjeta.textContent).toContain("Colegio · Prueba gratis 30 días");
+        // Título compuesto con el nombre real + la duración.
+        expect(tarjeta.textContent).toContain("Colegio 40 · Prueba gratis 30 días");
+        // El nombre genérico del plan sembrado NO titula la tarjeta.
+        const titulo = tarjeta.querySelector("h3");
+        expect(titulo?.textContent).toBe("Colegio 40 · Prueba gratis 30 días");
+        expect(titulo?.textContent).not.toBe(PLAN_FREEMIUM.nombre);
         expect(tarjeta.textContent).toContain("Pruebe la plataforma con su colegio sin costo.");
         expect(screen.getByRole("button", { name: "Activar prueba gratis" })).toBeTruthy();
         // El plan pagado sigue presente.

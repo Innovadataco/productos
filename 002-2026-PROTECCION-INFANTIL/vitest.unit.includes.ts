@@ -391,6 +391,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/camino/colegio/profesores/ano-nacimiento-selector.candado.test.tsx",
     // SPEC-956: el Paso 5 (estudiantes) del camino es inline; cero enlaces a /dashboard. Puro jsdom.
     "src/app/camino/colegio/estudiantes/estudiantes-inline-sin-dashboard.candado.test.tsx",
+    // SPEC-957 (B.3): el paso de cursos no enlaza «Materias» a /dashboard. Lee el fuente, sin BD.
+    "src/app/camino/colegio/cursos/sin-enlace-materias.candado.test.ts",
     // SPEC-245 (002-PI-148): modal de activación / autorización manual (sin BD).
     "src/components/modules/pagos/ActivarSuscripcionManual.test.tsx",
     // 002-PI-068: fuente-reporte-salt.test.ts importa fuente-reporte.ts que carga
