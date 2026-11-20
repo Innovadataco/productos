@@ -1,0 +1,89 @@
+# ==========================================================================
+# Frontera de 008 (INV-SPEC-3, pedido del CEO de PI, 2026-11-20).
+#
+# Con `pull_request_target`, GitHub toma SIEMPRE este archivo de `main`, nunca
+# de la rama del PR: un PR de 008 no puede aflojar ni borrar su propio guardián.
+#
+# SEGURIDAD: este workflow corre con el contexto de `main`. Por eso NO ejecuta
+# nada del PR (ni scripts, ni npm, ni checkout de la cabeza): solo hace
+# checkout de la base, trae la cabeza con `git fetch` y compara nombres de
+# archivo con `git diff --name-only`. La lista permitida está escrita aquí.
+#
+# Zona de ECC: `008-2026-INVERSIONES/**` y nada más. Tocar `inv.yml`, este
+# archivo o cualquier otra cosa da rojo: ese PR lo revisa y lo mergea el CEO de PI.
+# ==========================================================================
+name: inv-frontera
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inv-frontera-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  frontera-008-main:
+    if: startsWith(github.event.pull_request.head.ref, 'work/inv-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout de la base (main), nunca de la cabeza del PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Regla de la frontera (escrita en main) y su prueba por mutación
+        run: |
+          set -euo pipefail
+          fuera_de_frontera() {
+            # Lee rutas por stdin; imprime las que están fuera de la zona de ECC.
+            local ruta
+            while IFS= read -r ruta; do
+              [[ -z "$ruta" ]] && continue
+              case "$ruta" in
+                008-2026-INVERSIONES/*) ;;
+                *) printf '%s\n' "$ruta" ;;
+              esac
+            done
+          }
+          # Mutación: cada caso prohibido DEBE aparecer y cada permitido NO.
+          fallas=0
+          for prohibida in \
+            "002-2026-PROTECCION-INFANTIL/src/app/page.tsx" \
+            ".github/workflows/inv.yml" \
+            ".github/workflows/inv-frontera.yml" \
+            ".github/workflows/ci.yml" \
+            "AGENTS.md" \
+            "008-2026-INVERSIONES-falso/x.ts"; do
+            [[ -n "$(printf '%s\n' "$prohibida" | fuera_de_frontera)" ]] || { echo "❌ MUTANTE VIVO: pasó $prohibida"; fallas=$((fallas+1)); }
+          done
+          for permitida in "008-2026-INVERSIONES/AGENTS.md" "008-2026-INVERSIONES/app/src/page.tsx"; do
+            [[ -z "$(printf '%s\n' "$permitida" | fuera_de_frontera)" ]] || { echo "❌ FALSO POSITIVO: bloqueó $permitida"; fallas=$((fallas+1)); }
+          done
+          (( fallas == 0 )) || exit 1
+          echo "✅ La regla de la frontera muerde (prueba por mutación)."
+          declare -f fuera_de_frontera > "$RUNNER_TEMP/frontera.sh"
+
+      - name: El PR solo toca 008-2026-INVERSIONES/
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/frontera.sh"
+          # Solo se traen los objetos de la cabeza; no se hace checkout ni se ejecuta nada de ella.
+          git fetch --no-tags --quiet origin "+refs/pull/${PR_NUMBER}/head:refs/remotes/pr/head"
+          [[ "$(git rev-parse refs/remotes/pr/head)" == "$HEAD_SHA" ]] || { echo "❌ La cabeza traída no es la del evento"; exit 1; }
+          fuera="$(git diff --name-only "$BASE_SHA...$HEAD_SHA" | fuera_de_frontera)"
+          if [[ -n "$fuera" ]]; then
+            echo "❌ Fuera de la frontera de 008 (este PR lo revisa y lo mergea el CEO de PI):"
+            printf '%s\n' "$fuera"
+            exit 1
+          fi
+          echo "✅ Todos los cambios están dentro de 008-2026-INVERSIONES/."
