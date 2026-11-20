@@ -64,6 +64,18 @@ export class ColegioRepository {
         });
     }
 
+    /**
+     * SPEC-958 (M5a): correo del representante legal (rector) — fuente del dominio
+     * institucional del colegio. Null si el colegio no existe.
+     */
+    async obtenerRepresentanteEmail(colegioId: string): Promise<string | null> {
+        const fila = await this.db.colegio.findUnique({
+            where: { id: colegioId },
+            select: { representanteLegalEmail: true },
+        });
+        return fila?.representanteLegalEmail ?? null;
+    }
+
     /** SPEC-143: ficha de la home del rector (nombre + fin de vigencia). Null si no existe. */
     obtenerFichaHome(colegioId: string): Promise<ColegioFichaHomeRow | null> {
         return this.db.colegio.findUnique({

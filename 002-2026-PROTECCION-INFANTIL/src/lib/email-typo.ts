@@ -143,3 +143,19 @@ export function partirEntradaCorreo(raw: string): { local: string; dominio: stri
 export function limpiarDominioLibre(raw: string): string {
     return raw.replace(/\s+/g, "").replace(/@+/g, "").toLowerCase();
 }
+
+/**
+ * SPEC-958 (M5a) · dominio institucional del colegio = el dominio del correo del
+ * RECTOR (`Colegio.representanteLegalEmail`), SOLO si NO es genérico. Un dominio
+ * genérico (gmail, hotmail, …) no identifica al colegio, así que no se ofrece como
+ * «institucional». Reusa `DOMINIOS_COMUNES` (una sola fuente de «genérico»), no una
+ * lista nueva. Devuelve `null` cuando no hay institucional confiable (sin correo,
+ * sin «@», dominio sin punto, o genérico) → el campo cae a comunes + «Otro», nada
+ * inventado. El nombre del colegio NO sirve de fuente (no da dominio confiable).
+ */
+export function dominioInstitucionalDe(email: string | null | undefined): string | null {
+    if (!email) return null;
+    const { dominio } = partirEntradaCorreo(email);
+    if (!dominio || !dominio.includes(".")) return null;
+    return DOMINIOS_COMUNES.includes(dominio) ? null : dominio;
+}
