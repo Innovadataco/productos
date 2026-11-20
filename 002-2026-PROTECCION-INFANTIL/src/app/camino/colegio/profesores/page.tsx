@@ -175,9 +175,14 @@ export default function PasoProfesoresColegio() {
             {/* SPEC-442: agregar profesor SIN salir del camino. */}
             <GlassCard>
                 <h2 className="font-semibold text-body">Agregar un profesor</h2>
-                <p className="mt-1 text-xs text-muted">
-                    Puede agregar varios; al terminar el camino los edita desde el panel.
-                </p>
+                {/* SPEC-957 (B.2): aviso de tranquilidad VISIBLE (antes era text-xs muted y
+                    se perdía). Tono informativo, no alarma — «no tiene que cargarlos todos
+                    ahora». Copy de Diseño (FORMA-ONBOARDING §B.2). */}
+                <div className="mt-3">
+                    <Alerta tono="info">
+                        No tiene que cargarlos todos ahora. Sume los que quiera y, al terminar el camino, agregue o edite el resto desde el panel.
+                    </Alerta>
+                </div>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Input
                         label="Nombres"

@@ -13,7 +13,6 @@
  * Voz: usted formal Colombia.
  */
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
@@ -137,10 +136,12 @@ export default function PasoCursosColegio() {
             : conteoActivos === 0
                 ? "No hay cursos configurados. Cree uno para continuar."
                 : `Tiene ${conteoActivos} curso${conteoActivos === 1 ? "" : "s"} activo${conteoActivos === 1 ? "" : "s"}. Ajuste sin digitar nada.`;
+    // SPEC-957 (B.3): foco en CREAR dentro del paso. La 2.ª línea nombra dónde viven
+    // las materias SIN enlazar fuera del camino (FORMA-ONBOARDING §B.3).
     const copiaDinamica =
         conteoActivos === 0
-            ? "Este paso exige al menos un curso. Puede crear uno acá mismo o volver al paso anterior."
-            : "Para dividir un curso en A/B o asignar materias con profesor, entre a la ficha del curso.";
+            ? "Este paso necesita al menos un curso. Créelo aquí mismo."
+            : "Puede ajustar o crear más cursos. Las materias de cada curso se arman después, desde su panel.";
 
     return (
         <div className="space-y-6">
@@ -164,13 +165,10 @@ export default function PasoCursosColegio() {
                                         <p className="text-xs text-muted">Año lectivo {c.anioLectivo}</p>
                                     )}
                                 </div>
+                                {/* SPEC-957 (B.3): se quitó el enlace «Materias» → /dashboard
+                                    (sacaba del camino). La fila queda nombre + año lectivo +
+                                    Quitar/Reactivar. Las materias se arman después, desde el panel. */}
                                 <div className="flex items-center gap-2">
-                                    <Link
-                                        href={`/dashboard/colegio/cursos/${c.id}`}
-                                        className="text-xs font-medium text-accent hover:underline"
-                                    >
-                                        Materias
-                                    </Link>
                                     {c.estado === "activo" ? (
                                         <button
                                             type="button"
