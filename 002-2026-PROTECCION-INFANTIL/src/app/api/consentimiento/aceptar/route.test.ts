@@ -143,15 +143,16 @@ describe("POST /api/consentimiento/aceptar (SPEC-241)", () => {
         expect(cookieStr).toContain("sesion_estado=");
     });
 
-    it("SCHOOL_ADMIN acepta el convenio institucional", async () => {
+    it("SCHOOL_ADMIN acepta la autorización de tratamiento (POLITICA_DATOS, SPEC-953)", async () => {
         const admin = await crearUsuario("SCHOOL_ADMIN");
         mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
 
+        // SPEC-953: el servidor DERIVA del rol e ignora el cuerpo (que aquí miente con el valor viejo).
         const res = await POST(requestAceptar(mockToken, { documentoTipo: "CONVENIO_INSTITUCIONAL", esRepresentanteLegal: true }));
         expect(res.status).toBe(201);
 
         const audits = await prisma.auditConsentimiento.findMany({ where: { usuarioId: admin.id } });
         expect(audits).toHaveLength(1);
-        expect(audits[0].documentoTipo).toBe("CONVENIO_INSTITUCIONAL");
+        expect(audits[0].documentoTipo).toBe("POLITICA_DATOS");
     });
 });

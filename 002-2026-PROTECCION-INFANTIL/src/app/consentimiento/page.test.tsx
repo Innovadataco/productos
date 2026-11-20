@@ -130,7 +130,7 @@ describe("ConsentimientoPage (SPEC-241)", () => {
         expect(elemento.props.documentoContenido.length).toBeGreaterThan(0);
     });
 
-    it("renderiza ModalConsentimiento con el convenio institucional para SCHOOL_ADMIN", async () => {
+    it("renderiza ModalConsentimiento con la autorización de tratamiento (POLITICA_DATOS) para SCHOOL_ADMIN (SPEC-953)", async () => {
         const admin = await crearUsuario("SCHOOL_ADMIN");
         mockToken = "token-admin";
         mockPayload = { sub: admin.id, rol: "SCHOOL_ADMIN" };
@@ -139,7 +139,9 @@ describe("ConsentimientoPage (SPEC-241)", () => {
 
         expect(elemento.type).toBe(ModalConsentimiento);
         expect(elemento.props.rol).toBe("SCHOOL_ADMIN");
-        expect(elemento.props.documentoTipo).toBe("CONVENIO_INSTITUCIONAL");
+        // SPEC-953: el colegio firma la autorización de tratamiento, no el convenio bilateral.
+        expect(elemento.props.documentoTipo).toBe("POLITICA_DATOS");
+        expect(elemento.props.documentoTipo).not.toBe("CONVENIO_INSTITUCIONAL");
         expect(elemento.props.redirectUrl).toBe("/dashboard/colegio");
         expect(elemento.props.documentoContenido.length).toBeGreaterThan(0);
     });

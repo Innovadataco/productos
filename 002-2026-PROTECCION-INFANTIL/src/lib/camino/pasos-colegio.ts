@@ -9,7 +9,7 @@
  * datos vive en `src/lib/dal/services/camino/estado-colegio.ts`.
  *
  * Los 5 pasos vienen del brief A-69 C1 y del mockup aprobado v3 (momento 1):
- *   1. Rector — datos de identidad + convenio institucional (SPEC-343)
+ *   1. Rector — datos de identidad + autorización de tratamiento (SPEC-953; antes convenio SPEC-343)
  *   2. Plan — freemium 30 días o pagado (escribe Colegio.finServicio, puente D2)
  *   3. Profesores — alta individual + Excel fresco
  *   4. Cursos — 11 grados sembrados + materias con profesor obligatorio (D3)

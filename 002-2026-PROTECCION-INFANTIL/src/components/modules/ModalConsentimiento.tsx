@@ -53,7 +53,12 @@ export function ModalConsentimiento({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const esColegio = documentoTipo === "CONVENIO_INSTITUCIONAL";
+    // SPEC-953: el rótulo del firmante depende del ROL (quién firma), NO del
+    // documento. Desde 953 el colegio firma la AUTORIZACIÓN de tratamiento
+    // (POLITICA_DATOS, el mismo documento que el padre), así que no se puede
+    // derivar "es colegio" del tipo de documento: un titular de colegio sigue
+    // firmando "como representante legal del colegio", no "como padre o tutor".
+    const esColegio = rol === "SCHOOL_ADMIN" || rol === "COMITE_CONVIVENCIA";
 
     /**
      * SPEC-358 (A-70 · B3): la puerta de entrada NO puede depender de que un

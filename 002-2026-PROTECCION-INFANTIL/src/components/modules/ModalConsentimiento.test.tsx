@@ -312,4 +312,22 @@ describe("ModalConsentimiento · el gate no depende del observer (SPEC-358 · B3
 
         await waitFor(() => expect(getBoton().disabled).toBe(false));
     });
+
+    // SPEC-953: el colegio firma la AUTORIZACIÓN de tratamiento (POLITICA_DATOS),
+    // el MISMO documento que el padre. El rótulo del firmante NO puede derivarse
+    // del tipo de documento (sería "padre o tutor" para un colegio) — depende del
+    // ROL. Control positivo: si `esColegio` se vuelve a atar a documentoTipo, un
+    // SCHOOL_ADMIN con POLITICA_DATOS mostraría el rótulo del padre y esto se pone rojo.
+    it("SPEC-953: SCHOOL_ADMIN con POLITICA_DATOS firma «como representante legal del colegio», no como padre", () => {
+        render(
+            <ModalConsentimiento
+                rol="SCHOOL_ADMIN"
+                documentoTipo="POLITICA_DATOS"
+                documentoContenido={"Línea 1\nLínea 2\nLínea 3"}
+                redirectUrl="/dashboard/colegio"
+            />
+        );
+        expect(screen.getByText("Firmo como representante legal del colegio")).toBeTruthy();
+        expect(screen.queryByText("Declaro ser padre o tutor legal del menor")).toBeNull();
+    });
 });

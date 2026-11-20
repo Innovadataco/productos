@@ -4,8 +4,9 @@
  * SPEC-344 (A-69 · C1) — Paso 1 del camino del colegio · Quien responde.
  *
  * El rector completa 5 campos (tipo/número doc, nombres, apellidos, teléfono)
- * y acepta el Convenio Institucional (v1.0 público de SPEC-343). Con estos
- * datos el informe que firme ante una autoridad tiene validez.
+ * y, en el gate de /consentimiento, acepta la AUTORIZACIÓN de tratamiento de
+ * datos (POLITICA_DATOS; SPEC-953 reemplazó aquí al convenio bilateral). Con
+ * estos datos el informe que firme ante una autoridad tiene validez.
  *
  * Voz: usted formal Colombia (brief §0).
  */
@@ -80,9 +81,9 @@ export default function PasoRectorColegio() {
                 setCampoError(json?.error?.campo ?? null);
                 throw new Error(json?.error?.message || "No pudimos guardar sus datos. Intente de nuevo.");
             }
-            // El convenio ya lo aceptó en /consentimiento (guardián de
-            // consentimiento corre antes del guardián del camino). El Paso 1
-            // del camino se enfoca en los 5 campos del rector.
+            // La autorización de tratamiento ya la aceptó en /consentimiento
+            // (SPEC-953; el guardián de consentimiento corre antes del guardián
+            // del camino). El Paso 1 del camino se enfoca en los 5 campos del rector.
             router.push("/camino/colegio/plan");
         } catch (err) {
             setError(err instanceof Error ? err.message : "No pudimos continuar. Intente de nuevo.");

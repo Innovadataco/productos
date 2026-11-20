@@ -23,13 +23,22 @@ export const TIPO_DOCUMENTO_CONSENTIMIENTO = {
 export type TipoDocumentoConsentimiento =
     (typeof TIPO_DOCUMENTO_CONSENTIMIENTO)[keyof typeof TIPO_DOCUMENTO_CONSENTIMIENTO];
 
+// SPEC-953: la puerta de consentimiento del colegio sirve la AUTORIZACIÓN de
+// tratamiento (POLITICA_DATOS) — un acto unilateral del titular, igual que el
+// del padre/admin/operador/comité de validación. Antes servía
+// CONVENIO_INSTITUCIONAL, un CONTRATO BILATERAL (Encargado↔Responsable) con
+// placeholders de parte y firma de dos partes, que se "aceptaba" en el gate
+// ANTES de identificar al firmante (ciudad/dirección/representante aún sin
+// capturar). Instrumento equivocado para un click-wrap de registro.
+// El tipo CONVENIO_INSTITUCIONAL y su .md QUEDAN definidos (instrumento formal
+// aparte, pendiente del abogado); solo dejan de estar cableados a este gate.
 const ROL_A_DOCUMENTO: Record<string, TipoDocumentoConsentimiento> = {
     PARENT: "POLITICA_DATOS",
     ADMIN: "POLITICA_DATOS",
     OPERADOR: "POLITICA_DATOS",
     COMITE_VALIDACION: "POLITICA_DATOS",
-    COMITE_CONVIVENCIA: "CONVENIO_INSTITUCIONAL",
-    SCHOOL_ADMIN: "CONVENIO_INSTITUCIONAL",
+    COMITE_CONVIVENCIA: "POLITICA_DATOS",
+    SCHOOL_ADMIN: "POLITICA_DATOS",
 };
 
 const TIMEZONE_BOGOTA = "America/Bogota";
