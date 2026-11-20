@@ -40,3 +40,21 @@ export function colorDeEstadoColegio(estado: EstadoColegio): Extract<EstadoSiste
             return "pino";
     }
 }
+
+/**
+ * SPEC-964 (FORMA Órbita §3 · PARÁ 1) — color del NODO DE CURSO en el overview radial. Es la MISMA
+ * ley del inicio: un nodo de RESUMEN solo pinta DOS colores, NUNCA rubí (D-120/SPEC-566 — el rubí
+ * vive un nivel más abajo, en una alerta de alto riesgo sobre el identificador de un alumno, no en
+ * un promedio de curso). El tipo de retorno lo hace estructural: pintar un curso en rubí no compila.
+ *
+ * pino si el curso NO cruza el umbral de «mirada»; ámbar si lo cruza. Cero reportes es SIEMPRE pino
+ * (en calma), aun con un umbral degenerado. El umbral llega del parámetro sembrado (PARÁ 3), nunca
+ * quemado — ver `CLAVE_CURSO_MIRADA_UMBRAL`.
+ */
+export function colorCursoOrbita(
+    alertas30d: number,
+    umbralMirada: number
+): Extract<EstadoSistema, "pino" | "ambar"> {
+    if (alertas30d <= 0) return "pino";
+    return alertas30d >= umbralMirada ? "ambar" : "pino";
+}

@@ -5,6 +5,7 @@ import { SEMILLAS_CATALOGO_PROFESIONAL } from "../src/lib/profesional/catalogos"
 import { REQUISITOS_VERIFICACION_DEFAULT, CLAVE_PARAMETRO_REQUISITOS } from "../src/lib/profesionales/verificador/requisitos-default";
 import { sembrarTopesSubida } from "../src/lib/profesional/tope-subida";
 import { PLANTILLAS_DEFECTO, REENCUADRE_ANONIMO_DEFECTO } from "../src/lib/expediente/plantillas-conducta-semilla";
+import { CLAVE_CURSO_MIRADA_UMBRAL, CURSO_MIRADA_UMBRAL_DEFAULT } from "../src/lib/colegio/curso-mirada";
 import { syncModulosYGrants } from "./seed-modulos-grants";
 import { GUIAS_ACCION_BASE } from "./guias-accion.seed-data";
 import { copyInvitacion } from "./invitaciones-copy.seed-data";
@@ -202,6 +203,32 @@ async function seedParametrosPadre() {
 // SPEC-234 (002-PI-134): parámetro de frecuencia de refresco de la caché de
 // señal comunitaria. Idempotente anti-I-100: un cambio de default en código se
 // propaga a la base de datos.
+// ── SPEC-964 (FORMA Órbita · PARÁ 3): umbral calma↔mirada del curso, SEMBRADO (no quemado). ──────
+// Valor inicial = 1 → no cambia lo que hoy se ve (ámbar ⇔ ≥1 reporte en 30 días). Idempotente que
+// NO pisa el valor en `update`: si el admin lo ajusta desde el panel, un deploy posterior NO revierte
+// su cambio (solo refresca la metadata); el default solo se escribe al CREAR la fila.
+const DESC_CURSO_MIRADA_UMBRAL =
+    "SPEC-964 (Órbita): reportes distintos en 30 días a partir de los cuales un curso pasa de pino (calma) a ámbar (mirada) en el overview del colegio. Default 1 = no cambia lo que hoy se ve.";
+async function seedParametroOrbitaCurso() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: CLAVE_CURSO_MIRADA_UMBRAL },
+        update: {
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            descripcion: DESC_CURSO_MIRADA_UMBRAL,
+        },
+        create: {
+            clave: CLAVE_CURSO_MIRADA_UMBRAL,
+            valor: String(CURSO_MIRADA_UMBRAL_DEFAULT),
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: DESC_CURSO_MIRADA_UMBRAL,
+        },
+    });
+    console.log(`[SEED] SPEC-964 parámetro ${CLAVE_CURSO_MIRADA_UMBRAL} listo`);
+}
+
 async function seedParametrosSenalComunitaria() {
     await prisma.parametroSistema.upsert({
         where: { clave: "padre.senal_comunitaria.refresh_min" },
@@ -4291,6 +4318,9 @@ async function main() {
     //    Hora de corrida parametrizable + aviso «te vence pronto», los dos
     //    sembrados: el admin ajusta la hora y edita el texto sin desplegar.
     await seedVencimientoVerificacion();
+
+    // ── SPEC-964 (FORMA Órbita · PARÁ 3): umbral calma↔mirada del curso (overview radial) ──
+    await seedParametroOrbitaCurso();
 
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
