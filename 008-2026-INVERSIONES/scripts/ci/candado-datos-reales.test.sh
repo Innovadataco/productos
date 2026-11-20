@@ -62,6 +62,21 @@ debe_fallar ".envrc"
 debe_fallar "certs/servidor.pem"
 debe_fallar "certs/servidor.ficticio.pem"
 
+# Doble extensión, respaldos y otros formatos de datos
+debe_fallar "datos.csv.bak"
+debe_fallar "datos.csv.gz"
+debe_fallar "extracto.csv "
+debe_fallar "posiciones.tar.xz"
+debe_fallar "notas.docx"
+debe_fallar "sync.log"
+# Claves sin extensión
+debe_fallar ".ssh/id_rsa"
+debe_fallar ".netrc"
+debe_fallar "firma.p8"
+# La excepción .ficticio. exige el sufijo exacto en minúsculas
+debe_fallar "ordenes.FICTICIO.csv"
+debe_fallar "a.ficticio.b.csv"
+
 # Permitidos
 debe_pasar "tests/fixtures/ordenes.ficticio.csv"
 debe_pasar "tests/fixtures/dividendos año.ficticio.csv"
@@ -72,6 +87,11 @@ debe_pasar "package.json"
 debe_pasar "prisma/migrations/0001_inicial/migration.sql"
 debe_pasar "src/app/page.tsx"
 debe_pasar "docs/decisión.md"
+debe_pasar "x.csv.ficticio.md"
+debe_pasar "next-env.d.ts"
+debe_pasar "src/app/favicon.ico"
+debe_pasar "public/logo.svg"
+debe_pasar "tsconfig.json"
 
 if (( fallas > 0 )); then echo "❌ $fallas caso(s) del candado fallaron"; exit 1; fi
 echo "✅ candado-datos-reales: todos los casos de mutación se comportan como se espera"

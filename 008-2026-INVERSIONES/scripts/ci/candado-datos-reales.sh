@@ -18,6 +18,10 @@ carpeta="${CARPETA_008:-008-2026-INVERSIONES}"
 # Imprime una ruta sin caracteres de control (evita romper el log o inyectar comandos de Actions).
 mostrar() { printf '%s' "${1//[[:cntrl:]]/?}"; }
 
+# Lo que llegue por stdin se ignora (el inv.yml de main le pasa una lista por tubería):
+# el listado lo hace este script. No se lee stdin a propósito: si quedara abierto sin EOF,
+# el candado se colgaría.
+
 lista="$(mktemp)"
 trap 'rm -f "$lista"' EXIT
 git -c core.quotepath=off ls-files -z -- "$carpeta" >"$lista"
@@ -25,13 +29,16 @@ git -c core.quotepath=off ls-files -z -- "$carpeta" >"$lista"
 prohibidos=0
 while IFS= read -r -d '' ruta; do
   nombre="${ruta##*/}"
+  # Sin espacios ni puntos al final (`extracto.csv ` o `extracto.csv.` no deben escapar).
+  while [[ "$nombre" == *" " || "$nombre" == *"." ]]; do nombre="${nombre%?}"; done
   minus="$(printf '%s' "$nombre" | tr '[:upper:]' '[:lower:]')"
 
   # Secretos y claves: siempre prohibidos, sin excepción `.ficticio.`.
   # (.env, .env.local, .env.production, prod.env, .envrc, *.pem, *.key, *.p12, *.pfx; se permite .env.example)
   if [[ "$minus" != ".env.example" ]]; then
     case "$minus" in
-      .env|.env.*|*.env|.envrc|*.pem|*.key|*.p12|*.pfx)
+      .env|.env.*|*.env|.envrc|.netrc|id_rsa*|id_ed25519*|id_ecdsa*|\
+      *.pem|*.key|*.p8|*.p12|*.pfx|*.jks|*.keystore|*.kdbx|*.ppk|*.gpg)
         echo "❌ Secreto o clave versionado: $(mostrar "$ruta")"
         prohibidos=$((prohibidos + 1))
         continue
@@ -40,11 +47,14 @@ while IFS= read -r -d '' ruta; do
   fi
 
   case "$minus" in
-    *.csv|*.tsv|*.xlsx|*.xls|*.xlsm|*.xlsb|*.ods|*.numbers|*.docx|*.pdf|*.ofx|*.qif|\
-    *.png|*.jpg|*.jpeg|*.webp|*.heic|*.heif|*.gif|*.bmp|*.tif|*.tiff|\
-    *.zip|*.7z|*.gz|*.tgz|*.tar|*.rar|\
-    *.sqlite|*.sqlite3|*.db|*.dump|*.parquet)
-      if [[ "$minus" != *.ficticio.* ]]; then
+    *.csv|*.tsv|*.xlsx|*.xls|*.xlsm|*.xlsb|*.ods|*.numbers|*.doc|*.docx|*.docm|*.pptx|*.pdf|*.ofx|*.qif|\
+    *.png|*.jpg|*.jpeg|*.webp|*.avif|*.heic|*.heif|*.gif|*.bmp|*.tif|*.tiff|\
+    *.zip|*.7z|*.gz|*.tgz|*.tar|*.rar|*.xz|*.bz2|\
+    *.sqlite|*.sqlite3|*.db|*.mdb|*.dump|*.parquet|*.log|\
+    *.bak|*.old|*.orig|*.csv.*|*.xlsx.*|*.pdf.*)
+      # Excepción: el nombre termina EXACTAMENTE en `.ficticio.<ext>`, en minúsculas.
+      sin_ext="${nombre%.*}"
+      if [[ "$sin_ext" != *.ficticio ]]; then
         echo "❌ Posible dato real (extracto, exportación, captura, base o comprimido): $(mostrar "$ruta")"
         echo "   Si es un dato de prueba INVENTADO, renómbralo con «.ficticio.» (ej. ordenes.ficticio.csv)."
         prohibidos=$((prohibidos + 1))
