@@ -47,3 +47,10 @@
 # ECC (piloto): nada de su estado local se versiona
 .ecc/
 .claude/settings.local.json
+
+# Next.js, Node y Prisma (artefactos locales)
+node_modules/
+.next/
+*.tsbuildinfo
+coverage/
+next-env.d.ts
