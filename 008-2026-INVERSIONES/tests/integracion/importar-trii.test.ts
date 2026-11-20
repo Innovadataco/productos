@@ -150,8 +150,17 @@ describe("rechazo atómico", () => {
   });
 
   it("una orden de un año sin calendario de la BVC sembrado se rechaza (no inventa la fecha T+2)", async () => {
-    const r = await importar("o-2027.ficticio.csv", csv(`${ORDENES}"10 feb 2027, 10:00 a. m.",${nemo("CA")},Compra,Aprobado,1,0,100.0,100.0,1.0,101.0\n`));
+    const r = await importar("o-2030.ficticio.csv", csv(`${ORDENES}"10 feb 2030, 10:00 a. m.",${nemo("CA")},Compra,Aprobado,1,0,100.0,100.0,1.0,101.0\n`));
     expect(r.errores[0]?.codigo).toBe("CALENDARIO_BVC_INCOMPLETO");
+  });
+
+  it("una orden de 2023 liquida con el calendario sembrado (INV-SPEC-9)", async () => {
+    // Viernes 17-mar-2023 + 2 hábiles: lunes 20 es San José → martes 21 y miércoles 22.
+    const n = nemo("23");
+    const r = await importar("o-2023.ficticio.csv", csv(`${ORDENES}"17 mar 2023, 10:00 a. m.",${n},Compra,Aprobado,1,0,100.0,100.0,1.0,101.0\n`));
+    expect(r.estado).toBe("CARGADO");
+    const orden = await db.orden.findFirstOrThrow({ where: { instrumento: { nemotecnico: n } } });
+    expect(orden.fechaLiquidacion.toISOString().slice(0, 10)).toBe("2023-03-22");
   });
 
   it("la liquidación T+2 salta festivos y fines de semana", async () => {
