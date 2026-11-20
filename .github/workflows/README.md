@@ -80,6 +80,7 @@ Cuando el producto merge por primera vez el sentinel a `main`:
 |---------------------------------|--------------------------------------|---------------|---------------------|
 | 002 · PROTECCIÓN INFANTIL       | `002-2026-PROTECCION-INFANTIL/`      | `ci.yml`      | `pi-gate`           |
 | 006 · BI                        | `006-2026-BI-INTELIGENCIA-NEGOCIO/`  | `bi-006.yml`  | checks `bi-006`     |
+| 008 · INVERSIONES               | `008-2026-INVERSIONES/`              | `inv.yml`     | `inv-gate`          |
 
 > Productos retirados del monorepo (D-141, SPEC-867): 000-MODELOS, 001-INNOVADATACO, 003-SICOV-OTPC, 004-SARLAFT, 008-PGN-SIMULACRO. BI 005 se consolidó en 006.
 
