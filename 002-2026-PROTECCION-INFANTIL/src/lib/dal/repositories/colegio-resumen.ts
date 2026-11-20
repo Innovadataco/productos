@@ -27,6 +27,9 @@ import { ProfesorRepository } from "./profesor";
 import { AlertaColegioRepository } from "./alerta-colegio";
 import { AcudienteEstudianteRepository } from "./acudiente-estudiante";
 import { ComiteConvivenciaSolicitudesRepository } from "./comite-convivencia-solicitudes";
+import { ParametroRepository } from "./parametro";
+import { colorCursoOrbita } from "@/lib/colegio/semaforo";
+import { CLAVE_CURSO_MIRADA_UMBRAL, CURSO_MIRADA_UMBRAL_DEFAULT } from "@/lib/colegio/curso-mirada";
 
 export interface PuntoTendencia {
     /** Fecha ISO de inicio del periodo (lunes / día 1 / 1 de enero, en UTC). */
@@ -41,6 +44,35 @@ export interface CursoMirada {
     profesorTitular: string | null;
     /** Reportes DISTINTOS (D2) de los últimos 30 días. */
     alertas30d: number;
+}
+
+/**
+ * SPEC-964 (FORMA Órbita · capa 1): un nodo-curso del overview radial. Conteos agregados del propio
+ * colegio (I-29: sin scores ni textos) + el color ya resuelto por la ley del inicio (pino/ámbar,
+ * NUNCA rubí — PARÁ 1). `color` es el tipo de resumen: el rubí de alumno vive en la capa 2 (SPEC-965).
+ */
+export interface CursoOrbita {
+    cursoId: string;
+    nombre: string;
+    /** Estudiantes ACTIVOS del curso (tamaño del nodo). */
+    estudiantes: number;
+    /** Reportes DISTINTOS (D2) de los últimos 30 días. */
+    alertas30d: number;
+    /** pino/ámbar por `colorCursoOrbita(alertas30d, umbralMirada)` — jamás rubí (PARÁ 1). */
+    color: "pino" | "ambar";
+}
+
+/**
+ * SPEC-964 (FORMA Órbita · capa 1): insumos del overview radial del colegio. TODOS los cursos (PARÁ 2),
+ * no el top-3 de la home, con el estado del centro (`semaforo`) y el nodo comité (`casosComite`)
+ * REUSADOS de `homeRector` (misma lógica, sin duplicar). `umbralMirada` = el parámetro que coloreó.
+ */
+export interface OrbitaColegio {
+    cursos: CursoOrbita[];
+    semaforo: { alertasNuevas: number; alertas72h: number };
+    casosComite: { abiertos: number; masViejoEn: Date | null };
+    /** Umbral calma↔mirada aplicado (del parámetro sembrado, PARÁ 3). */
+    umbralMirada: number;
 }
 
 /** SPEC-150 (FR-004): fila del escritorio del curso + flag de observación especial (aditivo). */
@@ -399,5 +431,82 @@ export class ColegioResumenRepository {
             identificadoresActivos: estudiantes.reduce((total, e) => total + e.identificadores.length, 0),
             acudientesActivos: estudiantes.reduce((total, e) => total + e.acudientes.length, 0),
         };
+    }
+
+    /**
+     * SPEC-964 (FORMA Órbita · capa 1): TODOS los cursos activos del colegio con su `alertas30d`
+     * (D2) + nº de estudiantes activos y su color de resumen (pino/ámbar), más el estado del centro
+     * y el nodo comité REUSADOS de `homeRector` (misma lógica). Cuatro consultas en paralelo (cero
+     * N+1): el agregado de cursos es UN solo query con dos LEFT JOIN. El color sale del umbral
+     * SEMBRADO (PARÁ 3); cambiar el parámetro cambia el color sin tocar código. I-29: solo conteos.
+     */
+    async orbitaColegio(colegioId: string): Promise<OrbitaColegio> {
+        const ahora = new Date();
+        const hace30d = new Date(ahora.getTime() - 30 * DIA_MS);
+
+        const tx = this.tx();
+        const alertaRepo = new AlertaColegioRepository(tx);
+        const comiteRepo = new ComiteConvivenciaSolicitudesRepository(tx);
+        const parametroRepo = new ParametroRepository(tx);
+
+        const [filas, semaforo, casosComite, paramUmbral] = await Promise.all([
+            this.cursosConConteos(colegioId, hace30d),
+            alertaRepo.conteosSemaforo(colegioId),
+            comiteRepo.abiertosConAntiguedad(colegioId),
+            parametroRepo.findByClave(CLAVE_CURSO_MIRADA_UMBRAL),
+        ]);
+
+        const parseado = Number(paramUmbral?.valor);
+        const umbralMirada = Number.isInteger(parseado) && parseado >= 1 ? parseado : CURSO_MIRADA_UMBRAL_DEFAULT;
+
+        const cursos: CursoOrbita[] = filas.map((f) => ({
+            cursoId: f.cursoId,
+            nombre: f.nombre,
+            estudiantes: f.estudiantes,
+            alertas30d: f.alertas30d,
+            color: colorCursoOrbita(f.alertas30d, umbralMirada),
+        }));
+
+        return { cursos, semaforo, casosComite, umbralMirada };
+    }
+
+    /**
+     * Agregado de la capa 1 en UN solo query (sin N+1): TODOS los cursos activos del colegio
+     * (incluidos los de 0 reportes, vía LEFT JOIN) con su nº de estudiantes activos y sus reportes
+     * DISTINTOS (D2, métrica de `topCursosPorReportes`) de los últimos 30 días. Tenant E-1 en cada
+     * lado. Orden: más reportes primero, luego nombre.
+     */
+    private cursosConConteos(
+        colegioId: string,
+        hace30d: Date
+    ): Promise<{ cursoId: string; nombre: string; estudiantes: number; alertas30d: number }[]> {
+        return this.db.$queryRaw`
+            SELECT c.id AS "cursoId",
+                   c.nombre AS nombre,
+                   COALESCE(est.n, 0)::int AS estudiantes,
+                   COALESCE(rep.n, 0)::int AS "alertas30d"
+            FROM "Curso" c
+            LEFT JOIN (
+                SELECT al."cursoId" AS "cursoId", COUNT(*)::int AS n
+                FROM "Alumno" al
+                WHERE al."colegioId" = ${colegioId} AND al.estado = 'activo'
+                GROUP BY al."cursoId"
+            ) est ON est."cursoId" = c.id
+            LEFT JOIN (
+                SELECT a."cursoId" AS "cursoId", COUNT(DISTINCT ac."reporteId")::int AS n
+                FROM "AlertaColegio" ac
+                JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
+                JOIN "Alumno" a ON a.id = i."alumnoId"
+                JOIN "Reporte" r ON r.id = ac."reporteId"
+                WHERE a."colegioId" = ${colegioId}
+                  AND ac."colegioId" = a."colegioId"
+                  AND ac."tipoSujeto" = 'ESTUDIANTE'
+                  AND r.eliminado = false
+                  AND ac."creadoEn" >= ${hace30d}
+                GROUP BY a."cursoId"
+            ) rep ON rep."cursoId" = c.id
+            WHERE c."colegioId" = ${colegioId} AND c.estado = 'activo'
+            ORDER BY "alertas30d" DESC, c.nombre ASC
+        `;
     }
 }
