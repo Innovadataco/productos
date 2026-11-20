@@ -1,0 +1,76 @@
+# ==========================================================================
+# CI del producto 008 (INVERSIONES). Archivo propio de 008: no edita los
+# workflows de PI ni de BI. Patrón sentinel multi-producto: ver README.md.
+#
+# Condiciones del CEO de PI (2026-11-20):
+#  5. No corre en PRs ni pushes de PI. En push solo con cambios en 008/** o en
+#     este archivo. En PR todos los jobs se saltan salvo en ramas work/inv-*,
+#     así un PR de PI nunca ve un rojo de 008.
+#  6. Candado de frontera: una rama work/inv-* que toque CUALQUIER archivo
+#     fuera de 008-2026-INVERSIONES/ o de este archivo falla (ECC no mergea
+#     fuera de su frontera; eso lo hace cumplir el CI, no una promesa).
+#  (Sin filtro de rutas en pull_request a propósito: si una rama work/inv-*
+#   tocara SOLO archivos de PI, con filtro de rutas este workflow no correría y
+#   la frontera no se verificaría.)
+# ==========================================================================
+name: inv
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "008-2026-INVERSIONES/**"
+      - ".github/workflows/inv.yml"
+  pull_request:
+
+concurrency:
+  group: inv-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # Condición 6: frontera de 008, solo en PR de ramas work/inv-*.
+  frontera-008:
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'work/inv-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prueba por mutación de la frontera
+        run: bash 008-2026-INVERSIONES/scripts/ci/frontera-008.test.sh
+      - name: La rama solo toca 008-2026-INVERSIONES/ e inv.yml
+        run: git diff --name-only "origin/${{ github.base_ref }}...HEAD" | bash 008-2026-INVERSIONES/scripts/ci/frontera-008.sh
+
+  # Candado: el repo es PÚBLICO; ningún dato real (extractos, capturas, .env) entra.
+  candado-datos-reales:
+    if: github.event_name == 'push' || startsWith(github.head_ref, 'work/inv-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prueba por mutación del candado
+        run: bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.test.sh
+      - name: Sin datos reales versionados
+        run: git ls-files 008-2026-INVERSIONES | bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.sh
+
+  # Sentinel multi-producto (SPEC-299 / BRIEF A-49). Ver .github/workflows/README.md.
+  # Solo evalúa en push de 008 o en PR de ramas work/inv-*; en PRs de PI se salta.
+  inv-gate:
+    runs-on: ubuntu-latest
+    needs: [frontera-008, candado-datos-reales]
+    if: always() && (github.event_name == 'push' || startsWith(github.head_ref, 'work/inv-'))
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Evaluar veredicto agregado
+        run: |
+          set -euo pipefail
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "❌ inv-gate: al menos un job requerido falló."
+            exit 1
+          fi
+          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "❌ inv-gate: al menos un job requerido fue cancelado."
+            exit 1
+          fi
+          echo "✅ inv-gate: todos los jobs requeridos pasaron o fueron skipped."

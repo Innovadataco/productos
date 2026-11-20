@@ -1,0 +1,21 @@
+# 008 · datos reales nunca al repo (primera barrera; el CI `candado-datos-reales` es la segunda)
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.pdf
+*.ofx
+*.qif
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.heic
+!*.ficticio.*
+.env
+.env.*
+!.env.example
+
+# ECC (piloto): nada de su estado local se versiona
+.ecc/
+.claude/settings.local.json
