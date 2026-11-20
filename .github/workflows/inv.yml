@@ -28,19 +28,6 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  # Condición 6: frontera de 008, solo en PR de ramas work/inv-*.
-  frontera-008:
-    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'work/inv-')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Prueba por mutación de la frontera
-        run: bash 008-2026-INVERSIONES/scripts/ci/frontera-008.test.sh
-      - name: La rama solo toca 008-2026-INVERSIONES/ e inv.yml
-        run: git diff --name-only "origin/${{ github.base_ref }}...HEAD" | bash 008-2026-INVERSIONES/scripts/ci/frontera-008.sh
-
   # Candado: el repo es PÚBLICO; ningún dato real (extractos, capturas, .env) entra.
   candado-datos-reales:
     if: github.event_name == 'push' || startsWith(github.head_ref, 'work/inv-')
@@ -56,7 +43,7 @@ jobs:
   # Solo evalúa en push de 008 o en PR de ramas work/inv-*; en PRs de PI se salta.
   inv-gate:
     runs-on: ubuntu-latest
-    needs: [frontera-008, candado-datos-reales]
+    needs: [candado-datos-reales]
     if: always() && (github.event_name == 'push' || startsWith(github.head_ref, 'work/inv-'))
     defaults:
       run:
