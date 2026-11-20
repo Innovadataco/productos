@@ -30,7 +30,7 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 
 | Comando | Qué verifica |
 |---|---|
-| `npm run typecheck` | Tipos de TypeScript (`tsc --noEmit`, modo estricto) |
+| `npm run typecheck` | Tipos de TypeScript (`next typegen` y `tsc --noEmit`, modo estricto; `next-env.d.ts` se genera, no se versiona) |
 | `npm test` | Pruebas unitarias, incluidos los candados del esquema (sin `Float`, dinero en `Decimal`, acciones en `BigInt`, trazabilidad, sin archivo original) y de infraestructura (un solo servicio, base en el 5438, app en el 5008) |
 | `npm run db:up && npm run test:integracion` | Integración contra la base `inversiones_test` del compose: reinicia esa base con las migraciones y verifica que existan y muerdan los CHECK, los índices parciales, la exclusión de vigencias y la regla de solo inserción. Se niega a correr si la base no termina en `_test` |
 | `npm run build` | Que la app compila (`next build`) |

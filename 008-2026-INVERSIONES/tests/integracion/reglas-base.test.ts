@@ -9,10 +9,12 @@ let usuarioId = "";
 let cargaId = "";
 let instrumentoId = "";
 let n = 0;
+// Prefijo por corrida: las filas no se pueden borrar (solo inserción), así que las claves no deben repetirse.
+const corrida = Date.now().toString(16);
 
 const clave = () => {
   n += 1;
-  return n.toString(16).padStart(64, "0");
+  return `${corrida}-${n}`.padStart(64, "0");
 };
 
 async function nuevaFila(tipoFuente: "TRII_CAJA" | "TRII_ORDENES" | "TRII_DIVIDENDOS" = "TRII_CAJA") {
@@ -43,6 +45,12 @@ describe("reglas escritas a mano en la migración", () => {
       SELECT conname FROM pg_constraint WHERE conname LIKE '%\_chk' OR conname LIKE '%\_excl'`;
     const nombres = restricciones.map((r) => r.conname);
     for (const esperado of [
+      "orden_montos_chk",
+      "orden_aprobada_precio_chk",
+      "lote_cantidad_chk",
+      "asignacion_venta_cantidad_chk",
+      "dividendo_neto_chk",
+      "ajuste_caja_fraccion_chk",
       "movimiento_caja_monto_chk",
       "dividendo_bruto_chk",
       "dividendo_fraccion_chk",
@@ -117,7 +125,9 @@ describe("reglas escritas a mano en la migración", () => {
   it("un solo precio vigente por día y fuente; el reemplazado queda como historia", async () => {
     const base = { instrumentoId, fecha: new Date("2026-11-19"), fuente: "yahoo", estado: "VERIFICADO" as const };
     const primero = await db.precioCierre.create({ data: { ...base, precio: new Prisma.Decimal("1000") } });
-    await expect(db.precioCierre.create({ data: { ...base, precio: new Prisma.Decimal("1001") } })).rejects.toThrow();
+    await expect(db.precioCierre.create({ data: { ...base, precio: new Prisma.Decimal("1001") } })).rejects.toThrow(
+      /Unique constraint failed|precio_cierre_vigente_key/,
+    );
     await db.precioCierre.update({ where: { id: primero.id }, data: { reemplazadoEn: new Date() } });
     const segundo = await db.precioCierre.create({ data: { ...base, precio: new Prisma.Decimal("1001") } });
     expect(segundo.precio.toString()).toBe("1001");
@@ -130,6 +140,71 @@ describe("reglas escritas a mano en la migración", () => {
     ).rejects.toThrow(/simbolo_precio_sin_solape_excl/);
     const siguiente = await db.simboloPrecio.create({ data: { instrumentoId, simbolo: "FICT2.CL", vigenteDesde: new Date("2026-01-01") } });
     expect(siguiente.simbolo).toBe("FICT2.CL");
+  });
+});
+
+describe("reglas de coherencia con casos legítimos y prohibidos", () => {
+  async function nuevaOrden(estado: "APROBADO" | "CANCELADO", precio: string, lado: "COMPRA" | "VENTA" = "COMPRA") {
+    const fila = await nuevaFila("TRII_ORDENES");
+    const cero = new Prisma.Decimal("0");
+    return db.orden.create({
+      data: {
+        filaFuenteId: fila.id, ejecutadaEn: new Date(), fechaOperacion: new Date("2025-05-19"), fechaLiquidacion: new Date("2025-05-21"),
+        instrumentoId, lado, estado, cantidadCompletada: estado === "APROBADO" ? 10n : 0n,
+        precioUnitario: new Prisma.Decimal(precio), totalInvertido: estado === "APROBADO" ? new Prisma.Decimal("1000") : cero,
+        comision: cero, totalEstimado: estado === "APROBADO" ? new Prisma.Decimal("1000") : cero,
+      },
+    });
+  }
+
+  it("una orden cancelada puede venir sin precio; una aprobada no", async () => {
+    await expect(nuevaOrden("CANCELADO", "0")).resolves.toBeTruthy();
+    await expect(nuevaOrden("APROBADO", "0")).rejects.toThrow(/orden_aprobada_precio_chk/);
+  });
+
+  it("un lote de compra lleva orden; uno de escisión lleva evento y lote madre", async () => {
+    const compra = await nuevaOrden("APROBADO", "100");
+    const base = { instrumentoId, fechaCompra: new Date("2025-05-19"), fechaLiquidacion: new Date("2025-05-21"), cantidad: 10n, costoUnitario: new Prisma.Decimal("100"), costoTotal: new Prisma.Decimal("1000") };
+    const madre = await db.lote.create({ data: { ...base, origen: "COMPRA", ordenId: compra.id, fuenteCosto: "AV_PORTAL" } });
+    const destino = await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `FICTB${Date.now()}`, nombre: "Destino ficticio" } });
+    const evento = await db.eventoCorporativo.create({ data: { tipo: "ESCISION", fecha: new Date("2025-07-14"), origenId: instrumentoId, destinoId: destino.id } });
+    // Escisión sin lote madre: prohibido.
+    await expect(
+      db.lote.create({ data: { ...base, instrumentoId: destino.id, origen: "ESCISION", eventoId: evento.id, fuenteCosto: "AV_PORTAL" } }),
+    ).rejects.toThrow(/lote_origen_chk/);
+    // Compra sin orden: prohibido.
+    await expect(db.lote.create({ data: { ...base, origen: "COMPRA", fuenteCosto: "AV_PORTAL" } })).rejects.toThrow(/lote_origen_chk/);
+    // Escisión completa: permitido.
+    const hijo = await db.lote.create({
+      data: { ...base, instrumentoId: destino.id, origen: "ESCISION", eventoId: evento.id, loteOrigenId: madre.id, fuenteCosto: "AV_PORTAL" },
+    });
+    expect(hijo.loteOrigenId).toBe(madre.id);
+  });
+
+  it("una acción exige nemotécnico y un fondo exige código de la SFC", async () => {
+    await expect(db.instrumento.create({ data: { tipo: "ACCION", nombre: "Sin nemotécnico" } })).rejects.toThrow(/instrumento_tipo_chk/);
+    await expect(db.instrumento.create({ data: { tipo: "FIC", nombre: "Fondo sin código" } })).rejects.toThrow(/instrumento_tipo_chk/);
+  });
+
+  it("un ajuste de caja puede ser negativo, pero la fracción de escisión exige su evento", async () => {
+    const base = { fecha: new Date("2025-05-19"), fuente: "MANUAL" as const, motivo: "caso ficticio", creadoPorId: usuarioId };
+    await expect(db.ajusteCaja.create({ data: { ...base, monto: new Prisma.Decimal("-500"), categoria: "APORTE_FIC" } })).resolves.toBeTruthy();
+    await expect(db.ajusteCaja.create({ data: { ...base, monto: new Prisma.Decimal("50"), categoria: "FRACCION_ESCISION" } })).rejects.toThrow(
+      /ajuste_caja_fraccion_chk/,
+    );
+  });
+
+  it("la reversión de una carga es la única salida de la regla de solo inserción", async () => {
+    const fila = await nuevaFila();
+    await expect(db.filaFuente.delete({ where: { id: fila.id } })).rejects.toThrow(/solo inserción/);
+    await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL inv.reversion = 'on'`;
+      await tx.filaFuente.delete({ where: { id: fila.id } });
+    });
+    expect(await db.filaFuente.findUnique({ where: { id: fila.id } })).toBeNull();
+    // Fuera de esa transacción, la regla vuelve a morder.
+    const otra = await nuevaFila();
+    await expect(db.filaFuente.delete({ where: { id: otra.id } })).rejects.toThrow(/solo inserción/);
   });
 });
 

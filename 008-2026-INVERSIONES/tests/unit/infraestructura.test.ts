@@ -15,10 +15,10 @@ describe("docker-compose.yml de 008", () => {
     expect(Object.keys(compose.services)).toEqual(["db"]);
   });
 
-  it("la base es PostgreSQL 16 y publica solo el puerto 5438", () => {
+  it("la base es PostgreSQL 16 y publica solo el puerto 5438, y solo en 127.0.0.1", () => {
     const db = compose.services.db!;
     expect(db.image).toMatch(/^postgres:16(\.|-|$)/);
-    expect(db.ports).toEqual(["5438:5432"]);
+    expect(db.ports).toEqual(["127.0.0.1:5438:5432"]);
   });
 });
 

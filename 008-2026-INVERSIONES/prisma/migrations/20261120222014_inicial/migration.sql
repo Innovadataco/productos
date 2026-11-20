@@ -632,7 +632,9 @@ ALTER TABLE "control_conciliacion" ADD CONSTRAINT "control_conciliacion_instrume
 ALTER TABLE "fila_fuente"       ADD CONSTRAINT "fila_fuente_ocurrencia_chk"      CHECK ("ocurrencia" >= 1);
 ALTER TABLE "movimiento_caja"   ADD CONSTRAINT "movimiento_caja_monto_chk"       CHECK ("monto" > 0);
 ALTER TABLE "orden"             ADD CONSTRAINT "orden_cantidades_chk"            CHECK ("cantidadCompletada" >= 0 AND "cantidadPendiente" >= 0);
-ALTER TABLE "orden"             ADD CONSTRAINT "orden_montos_chk"                CHECK ("precioUnitario" > 0 AND "totalInvertido" >= 0 AND "comision" >= 0 AND "totalEstimado" >= 0);
+-- Una orden cancelada puede venir sin precio ejecutado; una aprobada siempre lo trae.
+ALTER TABLE "orden"             ADD CONSTRAINT "orden_montos_chk"                CHECK ("precioUnitario" >= 0 AND "totalInvertido" >= 0 AND "comision" >= 0 AND "totalEstimado" >= 0);
+ALTER TABLE "orden"             ADD CONSTRAINT "orden_aprobada_precio_chk"       CHECK ("estado" <> 'APROBADO' OR "precioUnitario" > 0);
 ALTER TABLE "dividendo"         ADD CONSTRAINT "dividendo_neto_chk"              CHECK ("montoNeto" > 0);
 ALTER TABLE "dividendo"         ADD CONSTRAINT "dividendo_bruto_chk"             CHECK ("montoBruto" IS NULL OR ("retencion" IS NOT NULL AND "montoBruto" - "retencion" = "montoNeto"));
 ALTER TABLE "dividendo"         ADD CONSTRAINT "dividendo_fraccion_chk"          CHECK (("tipo" = 'FRACCION_ESCISION') = ("eventoId" IS NOT NULL));
@@ -661,9 +663,14 @@ ALTER TABLE "simbolo_precio" ADD CONSTRAINT "simbolo_precio_sin_solape_excl"
   EXCLUDE USING gist ("instrumentoId" WITH =, "proveedor" WITH =, daterange("vigenteDesde", "vigenteHasta", '[)') WITH &&);
 
 -- Solo inserción: los hechos importados no se editan ni se borran.
--- Corregir = revertir la carga completa (función propia en la SPEC de importación).
+-- Corregir = revertir la carga completa. La única salida prevista es la función de reversión
+-- (SPEC de importación), que hace `SET LOCAL inv.reversion = 'on'` dentro de su transacción.
+-- Es un freno contra errores, no contra un usuario de la base malintencionado.
 CREATE FUNCTION "inv_solo_insercion"() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
+  IF current_setting('inv.reversion', true) = 'on' THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
   RAISE EXCEPTION 'La tabla % es de solo inserción: los hechos importados no se editan ni se borran', TG_TABLE_NAME
     USING ERRCODE = 'restrict_violation';
 END;
