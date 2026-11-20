@@ -240,4 +240,17 @@ describe("ProfesoresPageClient", () => {
         const filaCarlos = screen.getByText("Carlos Gómez").closest("tr")!;
         expect(within(filaCarlos).getByText("0")).toBeTruthy();
     });
+
+    // SPEC-954 · CANDADO de forma: el año de nacimiento se ELIGE, no se teclea.
+    // Muere si el control del alta vuelve a ser un `<input type="number">` libre.
+    it("SPEC-954: el año de nacimiento del alta es un <select>, no un número libre", async () => {
+        mockFetchList();
+        render(<ProfesoresPageClient />);
+        await screen.findByText("María López");
+        fireEvent.click(screen.getAllByRole("button", { name: "Agregar profesor" })[0]!);
+        const anio = screen.getByLabelText("Año de nacimiento") as HTMLElement;
+        expect(anio.tagName).toBe("SELECT");
+        // en TODO el modal de alta no queda ningún campo numérico libre
+        expect(document.querySelector('input[type="number"]')).toBeNull();
+    });
 });

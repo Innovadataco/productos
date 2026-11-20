@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EDAD_MIN_ADULTO, EDAD_MAX_ADULTO } from "@/lib/identidad/anio-nacimiento";
 import { cuidIdSchema, emailSchema, estadoActivoSchema } from "./base";
 
 /**
@@ -23,12 +24,14 @@ export const profesorBodySchema = z.object({
     numeroDocumento: z.string({ message: "Falta el número de documento del profesor" }).min(1, "Falta el número de documento del profesor").max(50),
     // SPEC-442 (I-307 · Jelkin vivo 04-09): rango real de edad — 18 a 80 años.
     // Antes el schema aceptaba desde 1900 hasta el año actual, así que un
-    // profesor de 5 años pasaba. La regla es de negocio, no numérica; la UI
-    // usa el mismo rango (`RANGO_ANIO_NACIMIENTO` en `ProfesoresPageClient`).
+    // profesor de 5 años pasaba. La regla es de negocio, no numérica.
+    // SPEC-954: las edades 18/80 viven en `@/lib/identidad/anio-nacimiento`
+    // (`EDAD_MIN_ADULTO`/`EDAD_MAX_ADULTO`), fuente única del selector de la UI
+    // y de esta red de seguridad — no las dupliques acá.
     anioNacimiento: z.coerce.number({ message: "Falta el año de nacimiento del profesor" })
         .int()
-        .gte(new Date().getFullYear() - 80, "Año de nacimiento inválido — el profesor debe tener a lo sumo 80 años")
-        .lte(new Date().getFullYear() - 18, "Año de nacimiento inválido — el profesor debe tener al menos 18 años"),
+        .gte(new Date().getFullYear() - EDAD_MAX_ADULTO, "Año de nacimiento inválido — el profesor debe tener a lo sumo 80 años")
+        .lte(new Date().getFullYear() - EDAD_MIN_ADULTO, "Año de nacimiento inválido — el profesor debe tener al menos 18 años"),
     sexo: sexoSchema,
     email: emailSchema,
     telefono: z.string({ message: "Falta el teléfono del profesor" }).min(1, "Falta el teléfono del profesor").max(50),

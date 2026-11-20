@@ -15,6 +15,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { SelectorAnioNacimiento } from "@/components/ui/SelectorAnioNacimiento";
+import { rangoAnioNacimientoAdulto } from "@/lib/identidad/anio-nacimiento";
 import { Alerta } from "@/components/ui/Alerta";
 import { CargaProfesoresExcel } from "@/components/modules/colegio/CargaProfesoresExcel";
 
@@ -28,13 +30,10 @@ interface ProfesorItem {
 
 interface TipoDoc { clave: string; etiqueta: string }
 
-// SPEC-442: mismo rango que `ProfesoresPageClient.RANGO_ANIO_NACIMIENTO`
-// (18 a 80 años). Duplicación mínima intencional — el paso vive en un árbol
-// separado y no queremos importar la clase entera del panel.
-const RANGO_ANIO_NACIMIENTO = (() => {
-    const ahora = new Date().getFullYear();
-    return { minAnio: ahora - 80, maxAnio: ahora - 18 };
-})();
+// SPEC-954: rango desde la fuente única `@/lib/identidad/anio-nacimiento`
+// (antes se duplicaba el IIFE acá). La red de seguridad del cliente lo sigue
+// usando; el control de la UI es `SelectorAnioNacimiento`.
+const RANGO_ANIO_NACIMIENTO = rangoAnioNacimientoAdulto();
 
 const SEXO_OPTIONS = [
     { value: "", label: "Elija…" },
@@ -209,15 +208,9 @@ export default function PasoProfesoresColegio() {
                         value={form.numeroDocumento}
                         onChange={(e) => setForm({ ...form, numeroDocumento: e.target.value })}
                     />
-                    <Input
-                        label="Año de nacimiento"
-                        type="number"
-                        min={RANGO_ANIO_NACIMIENTO.minAnio}
-                        max={RANGO_ANIO_NACIMIENTO.maxAnio}
-                        step={1}
-                        placeholder={`${RANGO_ANIO_NACIMIENTO.minAnio}–${RANGO_ANIO_NACIMIENTO.maxAnio}`}
+                    <SelectorAnioNacimiento
                         value={form.anioNacimiento}
-                        onChange={(e) => setForm({ ...form, anioNacimiento: e.target.value })}
+                        onChange={(anio) => setForm({ ...form, anioNacimiento: anio })}
                     />
                     <Select
                         label="Sexo"
