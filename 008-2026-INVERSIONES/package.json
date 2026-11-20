@@ -15,7 +15,8 @@
     "db:up": "docker compose up -d --wait db",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
-    "importar:trii": "tsx scripts/importar-trii.ts"
+    "importar:trii": "tsx scripts/importar-trii.ts",
+    "escision:registrar": "tsx scripts/registrar-escision.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

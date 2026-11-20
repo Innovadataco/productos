@@ -15,7 +15,7 @@ describe("leerCsv", () => {
   });
 
   it("conserva campos vacíos (el Estado de dividendos viene vacío)", () => {
-    expect(leerCsv("a,b,c\n2026-10-19,,5\n")).toEqual([["a", "b", "c"], ["2026-10-19", "", "5"]]);
+    expect(leerCsv("a,b,c\n2024-10-17,,5\n")).toEqual([["a", "b", "c"], ["2024-10-17", "", "5"]]);
   });
 
   it("falla si una comilla queda sin cerrar", () => {

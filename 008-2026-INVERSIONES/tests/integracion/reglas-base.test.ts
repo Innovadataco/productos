@@ -77,7 +77,7 @@ describe("reglas escritas a mano en la migración", () => {
   it("los hechos importados son de solo inserción", async () => {
     const fila = await nuevaFila();
     const mov = await db.movimientoCaja.create({
-      data: { filaFuenteId: fila.id, ocurridoEn: new Date("2025-05-12T21:42:00Z"), fecha: new Date("2025-05-12"), tipo: "DEPOSITO", estado: "APROBADO", monto: new Prisma.Decimal("100000.00") },
+      data: { filaFuenteId: fila.id, ocurridoEn: new Date("2024-03-14T20:27:00Z"), fecha: new Date("2024-03-14"), tipo: "DEPOSITO", estado: "APROBADO", monto: new Prisma.Decimal("100000.00") },
     });
     await expect(db.movimientoCaja.update({ where: { id: mov.id }, data: { monto: new Prisma.Decimal("1") } })).rejects.toThrow(/solo inserción/);
     await expect(db.movimientoCaja.delete({ where: { id: mov.id } })).rejects.toThrow(/solo inserción/);
@@ -117,13 +117,13 @@ describe("reglas escritas a mano en la migración", () => {
     const fila = await nuevaFila("TRII_DIVIDENDOS");
     await expect(
       db.dividendo.create({
-        data: { filaFuenteId: fila.id, fechaPago: new Date("2025-08-08"), instrumentoId, tipo: "FRACCION_ESCISION", montoNeto: new Prisma.Decimal("10") },
+        data: { filaFuenteId: fila.id, fechaPago: new Date("2024-03-08"), instrumentoId, tipo: "FRACCION_ESCISION", montoNeto: new Prisma.Decimal("10") },
       }),
     ).rejects.toThrow(/dividendo_fraccion_chk/);
   });
 
   it("un solo precio vigente por día y fuente; el reemplazado queda como historia", async () => {
-    const base = { instrumentoId, fecha: new Date("2026-11-19"), fuente: "yahoo", estado: "VERIFICADO" as const };
+    const base = { instrumentoId, fecha: new Date("2024-11-19"), fuente: "yahoo", estado: "VERIFICADO" as const };
     const primero = await db.precioCierre.create({ data: { ...base, precio: new Prisma.Decimal("1000") } });
     await expect(db.precioCierre.create({ data: { ...base, precio: new Prisma.Decimal("1001") } })).rejects.toThrow(
       /Unique constraint failed|precio_cierre_vigente_key/,
@@ -149,7 +149,7 @@ describe("reglas de coherencia con casos legítimos y prohibidos", () => {
     const cero = new Prisma.Decimal("0");
     return db.orden.create({
       data: {
-        filaFuenteId: fila.id, ejecutadaEn: new Date(), fechaOperacion: new Date("2025-05-19"), fechaLiquidacion: new Date("2025-05-21"),
+        filaFuenteId: fila.id, ejecutadaEn: new Date(), fechaOperacion: new Date("2024-04-15"), fechaLiquidacion: new Date("2024-04-17"),
         instrumentoId, lado, estado, cantidadCompletada: estado === "APROBADO" ? 10n : 0n,
         precioUnitario: new Prisma.Decimal(precio), totalInvertido: estado === "APROBADO" ? new Prisma.Decimal("1000") : cero,
         comision: cero, totalEstimado: estado === "APROBADO" ? new Prisma.Decimal("1000") : cero,
@@ -164,10 +164,10 @@ describe("reglas de coherencia con casos legítimos y prohibidos", () => {
 
   it("un lote de compra lleva orden; uno de escisión lleva evento y lote madre", async () => {
     const compra = await nuevaOrden("APROBADO", "100");
-    const base = { instrumentoId, fechaCompra: new Date("2025-05-19"), fechaLiquidacion: new Date("2025-05-21"), cantidad: 10n, costoUnitario: new Prisma.Decimal("100"), costoTotal: new Prisma.Decimal("1000") };
+    const base = { instrumentoId, fechaCompra: new Date("2024-04-15"), fechaLiquidacion: new Date("2024-04-17"), cantidad: 10n, costoUnitario: new Prisma.Decimal("100"), costoTotal: new Prisma.Decimal("1000") };
     const madre = await db.lote.create({ data: { ...base, origen: "COMPRA", ordenId: compra.id, fuenteCosto: "AV_PORTAL" } });
     const destino = await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `FICTB${Date.now()}`, nombre: "Destino ficticio" } });
-    const evento = await db.eventoCorporativo.create({ data: { tipo: "ESCISION", fecha: new Date("2025-07-14"), origenId: instrumentoId, destinoId: destino.id } });
+    const evento = await db.eventoCorporativo.create({ data: { tipo: "ESCISION", fecha: new Date("2024-02-12"), origenId: instrumentoId, destinoId: destino.id } });
     // Escisión sin lote madre: prohibido.
     await expect(
       db.lote.create({ data: { ...base, instrumentoId: destino.id, origen: "ESCISION", eventoId: evento.id, fuenteCosto: "AV_PORTAL" } }),
@@ -187,7 +187,7 @@ describe("reglas de coherencia con casos legítimos y prohibidos", () => {
   });
 
   it("un ajuste de caja puede ser negativo, pero la fracción de escisión exige su evento", async () => {
-    const base = { fecha: new Date("2025-05-19"), fuente: "MANUAL" as const, motivo: "caso ficticio", creadoPorId: usuarioId };
+    const base = { fecha: new Date("2024-04-15"), fuente: "MANUAL" as const, motivo: "caso ficticio", creadoPorId: usuarioId };
     await expect(db.ajusteCaja.create({ data: { ...base, monto: new Prisma.Decimal("-500"), categoria: "APORTE_FIC" } })).resolves.toBeTruthy();
     await expect(db.ajusteCaja.create({ data: { ...base, monto: new Prisma.Decimal("50"), categoria: "FRACCION_ESCISION" } })).rejects.toThrow(
       /ajuste_caja_fraccion_chk/,

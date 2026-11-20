@@ -28,7 +28,7 @@ function fechaValida(anio: number, mes: number, dia: number): boolean {
 }
 
 /**
- * «12 may 2025, 4:42 p. m.» (hora de Colombia) → instante UTC y fecha de negocio en Colombia.
+ * «14 mar 2024, 3:27 p. m.» (hora de Colombia) → instante UTC y fecha de negocio en Colombia.
  * Acepta «a. m.»/«p. m.» con o sin espacios y puntos, meses abreviados con o sin punto.
  */
 export function leerFechaHoraTrii(texto: string): ResultadoValor<{ instante: Date; fecha: Date }> {
@@ -50,7 +50,7 @@ export function leerFechaHoraTrii(texto: string): ResultadoValor<{ instante: Dat
   return { ok: true, valor: { instante, fecha: fechaDeNegocio(anio, mes, dia) } };
 }
 
-/** «2026-10-19» → fecha de negocio. */
+/** «2024-10-17» → fecha de negocio. */
 export function leerFechaIso(texto: string): ResultadoValor<Date> {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalizarEspacios(texto));
   if (!m) return { ok: false, codigo: "FECHA_FORMATO" };
@@ -65,7 +65,7 @@ export const ESCALA_MONTO = 4;
 const DIGITOS_TOTALES = 20;
 
 /**
- * Número decimal con punto, sin separador de miles: «23778.4», «1500», «0.35».
+ * Número decimal con punto, sin separador de miles: «31415.9», «1500», «0.35».
  * Devuelve el texto canónico: sin ceros sobrantes a la izquierda ni a la derecha de la fracción
  * («1500.0» y «1500» son el mismo número y deben dar la misma clave). Rechaza comas, «$»,
  * exponentes, más decimales que la escala de la columna (`NUMERO_PRECISION`, para no redondear
@@ -84,7 +84,7 @@ export function leerDecimal(texto: string, escala: number = ESCALA_MONTO): Resul
   return { ok: true, valor: negativo && canon !== "0" ? `-${canon}` : canon };
 }
 
-/** Cantidad entera de acciones: «1412» o «1412/1412» (completadas/solicitadas). */
+/** Cantidad entera de acciones: «1000» o «1000/1000» (completadas/solicitadas). */
 export function leerCantidad(texto: string): ResultadoValor<{ completada: bigint; solicitada: bigint | null }> {
   const t = normalizarEspacios(texto);
   const m = /^(\d+)(?:\/(\d+))?$/.exec(t);
