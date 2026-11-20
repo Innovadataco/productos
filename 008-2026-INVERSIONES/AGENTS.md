@@ -22,9 +22,9 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 | Comando (desde la raíz del repo) | Qué verifica |
 |---|---|
 | `bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.test.sh` | Que el candado de datos reales sigue mordiendo (prueba por mutación) |
-| `git ls-files 008-2026-INVERSIONES \| bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.sh` | Que no hay extractos, exportaciones, capturas ni `.env` versionados |
+| `bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.sh` | Que no hay extractos, exportaciones, capturas, bases, comprimidos, claves ni `.env` versionados (lee las rutas crudas con `-z`, también con tildes) |
 | `bash 008-2026-INVERSIONES/scripts/ci/frontera-008.test.sh` | Que el candado de frontera sigue mordiendo (prueba por mutación) |
-| `git diff --name-only origin/main...HEAD \| bash 008-2026-INVERSIONES/scripts/ci/frontera-008.sh` | Que la rama solo toca `008-2026-INVERSIONES/` e `inv.yml` (si toca algo más, ese PR lo mergea el CEO de PI) |
+| `bash 008-2026-INVERSIONES/scripts/ci/frontera-008.sh origin/main` | Que la rama solo toca `008-2026-INVERSIONES/` e `inv.yml`, contando un renombre como borrado + alta (si toca algo más, ese PR lo mergea el CEO de PI) |
 
 Cada SPEC que agregue código suma aquí sus guardianes (lint, tipos, pruebas) y su job en `inv.yml`, con `needs` en `inv-gate`.
 
@@ -50,6 +50,7 @@ PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) 
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.6 · 2026-11-20 · 17:30 (-05) · INV · Fábrica ECC · INV-SPEC-4: candados de punta a punta (rutas crudas con `-z`, frontera sin renombres, más extensiones y claves)
 > v1.5 · 2026-11-20 · CEO 008 · frontera desde main (INV-SPEC-3) y su límite conocido
 > v1.4 · 2026-11-20 · CEO 008 · candado de frontera y workflow que no corre en PRs de PI (condiciones 5 y 6 del CEO de PI)
 > v1.3 · 2026-11-20 · CEO 008 · merge y despliegue autónomos de ECC (D-011)
