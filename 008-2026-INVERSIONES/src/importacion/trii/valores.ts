@@ -59,16 +59,27 @@ export function leerFechaIso(texto: string): ResultadoValor<Date> {
   return { ok: true, valor: fechaDeNegocio(anio, mes, dia) };
 }
 
+/** Escala (decimales) de las columnas de la base: precios Decimal(20,6), montos Decimal(20,4). */
+export const ESCALA_PRECIO = 6;
+export const ESCALA_MONTO = 4;
+const DIGITOS_TOTALES = 20;
+
 /**
  * Número decimal con punto, sin separador de miles: «23778.4», «1500», «0.35».
- * Devuelve el texto canónico (sin ceros sobrantes a la izquierda). Rechaza comas, «$», exponentes.
+ * Devuelve el texto canónico: sin ceros sobrantes a la izquierda ni a la derecha de la fracción
+ * («1500.0» y «1500» son el mismo número y deben dar la misma clave). Rechaza comas, «$»,
+ * exponentes, más decimales que la escala de la columna (`NUMERO_PRECISION`, para no redondear
+ * en silencio) y números que no caben en ella (`NUMERO_RANGO`).
  */
-export function leerDecimal(texto: string): ResultadoValor<string> {
+export function leerDecimal(texto: string, escala: number = ESCALA_MONTO): ResultadoValor<string> {
   const t = normalizarEspacios(texto);
   if (!/^-?\d+(\.\d+)?$/.test(t)) return { ok: false, codigo: "NUMERO_FORMATO" };
   const negativo = t.startsWith("-");
-  const [entera, fraccion] = (negativo ? t.slice(1) : t).split(".");
+  const [entera, fraccionCruda = ""] = (negativo ? t.slice(1) : t).split(".");
   const enteraLimpia = entera!.replace(/^0+(?=\d)/, "");
+  const fraccion = fraccionCruda.replace(/0+$/, "");
+  if (fraccion.length > escala) return { ok: false, codigo: "NUMERO_PRECISION" };
+  if (enteraLimpia.length > DIGITOS_TOTALES - escala) return { ok: false, codigo: "NUMERO_RANGO" };
   const canon = fraccion ? `${enteraLimpia}.${fraccion}` : enteraLimpia;
   return { ok: true, valor: negativo && canon !== "0" ? `-${canon}` : canon };
 }

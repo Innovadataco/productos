@@ -13,6 +13,9 @@ import { detectarTipo, type TipoTrii } from "./formatos";
 import { guardarRegistro, ErrorImportacion, prepararContexto } from "./guardar";
 
 export const MAX_ERRORES_REGISTRADOS = 100;
+/** Topes para cualquier llamador (CLI, API o web futura): un extracto real está muy por debajo. */
+export const MAX_BYTES = 5 * 1024 * 1024;
+export const MAX_FILAS = 50_000;
 
 export interface ArchivoTrii {
   readonly nombreArchivo: string;
@@ -36,6 +39,9 @@ type Analisis =
   | { ok: false; tipo: TipoTrii | null; filasTotal: number; errores: ErrorFila[] };
 
 function analizar(contenido: Uint8Array): Analisis {
+  if (contenido.byteLength > MAX_BYTES) {
+    return { ok: false, tipo: null, filasTotal: 0, errores: [{ fila: 0, columna: null, codigo: "ARCHIVO_DEMASIADO_GRANDE" }] };
+  }
   let texto: string;
   try {
     texto = new TextDecoder("utf-8", { fatal: true }).decode(contenido);
@@ -53,6 +59,7 @@ function analizar(contenido: Uint8Array): Analisis {
   const datos = filas.slice(1);
   if (!tipo) return { ok: false, tipo: null, filasTotal: datos.length, errores: [{ fila: 1, columna: null, codigo: "ENCABEZADO_DESCONOCIDO" }] };
   if (datos.length === 0) return { ok: false, tipo, filasTotal: 0, errores: [{ fila: 0, columna: null, codigo: "ARCHIVO_SIN_FILAS" }] };
+  if (datos.length > MAX_FILAS) return { ok: false, tipo, filasTotal: datos.length, errores: [{ fila: 0, columna: null, codigo: "DEMASIADAS_FILAS" }] };
 
   const errores: ErrorFila[] = [];
   const validos = datos.flatMap((celdas, i) => {
@@ -64,6 +71,12 @@ function analizar(contenido: Uint8Array): Analisis {
   });
   if (errores.length > 0) return { ok: false, tipo, filasTotal: datos.length, errores };
   return { ok: true, tipo, registros: asignarClaves(validos) };
+}
+
+/** Código del fallo de la base, sin el mensaje (puede traer valores). P2028 = transacción vencida. */
+function codigoDeBase(e: unknown): string {
+  if (e instanceof Prisma.PrismaClientKnownRequestError) return e.code === "P2028" ? "TIEMPO_AGOTADO" : `BASE_${e.code}`;
+  return "BASE_ERROR";
 }
 
 async function registrarRechazo(
@@ -119,7 +132,7 @@ export async function importarArchivoTrii(db: PrismaClient, archivo: ArchivoTrii
     const error: ErrorFila =
       e instanceof ErrorImportacion
         ? { fila: e.fila ?? 0, columna: null, codigo: e.codigo }
-        : { fila: 0, columna: null, codigo: e instanceof Prisma.PrismaClientKnownRequestError ? `BASE_${e.code}` : "BASE_ERROR" };
+        : { fila: 0, columna: null, codigo: codigoDeBase(e) };
     return registrarRechazo(db, archivo, sha256, tipo, registros.length, [error]);
   }
 }

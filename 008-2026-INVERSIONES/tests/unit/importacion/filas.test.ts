@@ -25,7 +25,7 @@ describe("detectarTipo", () => {
 describe("interpretarFila", () => {
   it("lee un movimiento de caja", () => {
     const r = registro(interpretarFila("TRII_CAJA", ["12 may 2025, 4:42 p. m.", "Depósito", "Aprobado", "100000.0"], 2));
-    expect(r.hecho).toMatchObject({ tipo: "DEPOSITO", estado: "APROBADO", monto: "100000.0" });
+    expect(r.hecho).toMatchObject({ tipo: "DEPOSITO", estado: "APROBADO", monto: "100000" });
   });
 
   it("lee una orden con «1412/1412» y comisión con decimales", () => {
@@ -65,14 +65,18 @@ describe("clave natural", () => {
     expect(claveNatural(orden("Aprobado", "10"))).toBe(claveNatural(orden("Cancelado", "12.5")));
   });
 
-  it("la ocurrencia no depende del orden de las filas en el archivo", () => {
+  it("la ocurrencia sigue el orden de aparición, no el contenido (estado o cantidades cambian entre exportaciones)", () => {
     const a = orden("Aprobado", "10");
     const b = orden("Cancelado", "0");
-    const ida = asignarClaves([{ registro: a, fila: 2 }, { registro: b, fila: 3 }]);
-    const vuelta = asignarClaves([{ registro: b, fila: 2 }, { registro: a, fila: 3 }]);
-    const ocurrenciaDe = (lista: typeof ida, r: typeof a) => lista.find((x) => x.registro === r)!.ocurrencia;
-    expect(ocurrenciaDe(ida, a)).toBe(ocurrenciaDe(vuelta, a));
-    expect(ocurrenciaDe(ida, b)).toBe(ocurrenciaDe(vuelta, b));
+    expect(asignarClaves([{ registro: a, fila: 2 }, { registro: b, fila: 3 }]).map((x) => x.ocurrencia)).toEqual([1, 2]);
+    // La misma primera fila, ahora con otro estado: sigue siendo la ocurrencia 1.
+    const aCambiada = orden("Cancelado", "10");
+    expect(asignarClaves([{ registro: aCambiada, fila: 2 }, { registro: b, fila: 3 }])[0]!.ocurrencia).toBe(1);
+  });
+
+  it("«1500» y «1500.0» dan la misma clave (no duplican)", () => {
+    const fila = (monto: string) => registro(interpretarFila("TRII_CAJA", ["12 may 2025, 4:42 p. m.", "Depósito", "Aprobado", monto], 2));
+    expect(claveNatural(fila("1500"))).toBe(claveNatural(fila("1500.0")));
   });
 
   it("cambia si cambia un campo que identifica la fila", () => {

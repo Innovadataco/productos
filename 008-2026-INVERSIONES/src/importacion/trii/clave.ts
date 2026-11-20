@@ -19,21 +19,21 @@ export interface RegistroConClave {
   readonly crudo: Readonly<Record<string, string>>;
 }
 
-/** Desempate estable dentro de un grupo de filas con la misma clave: no depende del orden del archivo. */
-function huella(registro: Registro): string {
-  return JSON.stringify(registro.hecho, (_k, v: unknown) => (typeof v === "bigint" ? v.toString() : v));
-}
-
+/**
+ * La ocurrencia sigue el ORDEN DE APARICIÓN en el archivo (Trii exporta en orden cronológico).
+ * No se ordena por contenido: estado, cantidades y totales cambian entre exportaciones y
+ * cambiarían qué fila es la 1 y cuál la 2. Límite conocido: si una exportación trae solo una
+ * parte de un grupo de filas con la misma clave (mismo minuto, especie y lado), puede chocar
+ * como conflicto; falla del lado seguro (rechaza, no duplica).
+ */
 export function asignarClaves(
   registros: readonly { registro: Registro; fila: number; crudo?: Readonly<Record<string, string>> }[],
 ): RegistroConClave[] {
-  const conClave = registros.map((r) => ({ ...r, clave: claveNatural(r.registro), huella: huella(r.registro) }));
-  const grupos = new Map<string, typeof conClave>();
-  for (const r of conClave) grupos.set(r.clave, [...(grupos.get(r.clave) ?? []), r]);
-  const ocurrencias = new Map<(typeof conClave)[number], number>();
-  for (const grupo of grupos.values()) {
-    [...grupo].sort((a, b) => (a.huella < b.huella ? -1 : a.huella > b.huella ? 1 : a.fila - b.fila))
-      .forEach((r, i) => ocurrencias.set(r, i + 1));
-  }
-  return conClave.map((r) => ({ registro: r.registro, fila: r.fila, clave: r.clave, ocurrencia: ocurrencias.get(r)!, crudo: r.crudo ?? {} }));
+  const vistas = new Map<string, number>();
+  return registros.map(({ registro, fila, crudo }) => {
+    const clave = claveNatural(registro);
+    const ocurrencia = (vistas.get(clave) ?? 0) + 1;
+    vistas.set(clave, ocurrencia);
+    return { registro, fila, clave, ocurrencia, crudo: crudo ?? {} };
+  });
 }

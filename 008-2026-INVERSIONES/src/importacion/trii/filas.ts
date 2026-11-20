@@ -6,7 +6,7 @@
  */
 import { ENCABEZADOS, type TipoTrii } from "./formatos";
 import {
-  leerCantidad, leerCategoria, leerDecimal, leerFechaHoraTrii, leerFechaIso, leerNemotecnico, type ResultadoValor,
+  ESCALA_PRECIO, leerCantidad, leerCategoria, leerDecimal, leerFechaHoraTrii, leerFechaIso, leerNemotecnico, type ResultadoValor,
 } from "./valores";
 
 export interface ErrorFila {
@@ -77,7 +77,8 @@ function interpretarOrden(c: readonly string[], fila: number): ResultadoFila {
   const estado = leer(col[3]!, leerCategoria(c[3]!, ESTADOS_ORDEN));
   const cant = leer(col[4]!, leerCantidad(c[4]!));
   const pend = leer(col[5]!, leerCantidad(c[5]!));
-  const [precio, invertido, comision, estimado] = [6, 7, 8, 9].map((i) => leer(col[i]!, leerDecimal(c[i]!)));
+  const precio = leer(col[6]!, leerDecimal(c[6]!, ESCALA_PRECIO));
+  const [invertido, comision, estimado] = [7, 8, 9].map((i) => leer(col[i]!, leerDecimal(c[i]!)));
   if (errores.length > 0 || !fh || !nemotecnico || !lado || !estado || !cant || !pend) return { ok: false, errores };
   if (precio === undefined || invertido === undefined || comision === undefined || estimado === undefined) {
     return { ok: false, errores };

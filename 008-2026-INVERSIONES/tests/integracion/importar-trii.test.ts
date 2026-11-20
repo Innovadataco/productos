@@ -50,7 +50,11 @@ describe("importar los fixtures de Trii", () => {
   });
 
   it("dos filas idénticas legítimas en el mismo archivo quedan como dos hechos", async () => {
-    const filas = await db.filaFuente.findMany({ where: { tipoFuente: "TRII_CAJA", crudo: { path: ["Valor total"], equals: "500000.0" } } });
+    const monto = `${Date.now() % 100000}.25`;
+    const fila = `"7 mar 2026, 8:00 a. m.",Depósito,Aprobado,${monto}\n`;
+    const r = await importar("dobles.ficticio.csv", csv(`${CAJA}${fila}${fila}`));
+    expect(r).toMatchObject({ estado: "CARGADO", filasNuevas: 2 });
+    const filas = await db.filaFuente.findMany({ where: { primeraCargaId: r.cargaId } });
     expect(filas.map((f) => f.ocurrencia).sort()).toEqual([1, 2]);
   });
 });
@@ -81,6 +85,33 @@ describe("reimportar no duplica", () => {
     const b = await importar("i2.ficticio.csv", csv(`${DIVIDENDOS}2026-05-02,${n},,6.0\n`));
     expect([a.instrumentosCreados, b.instrumentosCreados]).toEqual([1, 0]);
     expect(await db.instrumento.count({ where: { nemotecnico: n } })).toBe(1);
+  });
+});
+
+describe("precisión y forma de los números", () => {
+  it("«1500» y luego «1500.0» del mismo movimiento no duplican", async () => {
+    const monto = 1000 + (Date.now() % 1000);
+    const fila = (m: string) => `${CAJA}"8 mar 2026, 9:00 a. m.",Depósito,Aprobado,${m}\n`;
+    expect((await importar("e1.ficticio.csv", csv(fila(`${monto}`)))).filasNuevas).toBe(1);
+    expect(await importar("e2.ficticio.csv", csv(fila(`${monto}.0`)))).toMatchObject({ estado: "CARGADO", filasNuevas: 0, filasRepetidas: 1 });
+  });
+
+  it("más decimales que la columna se rechazan (no se redondea en silencio) y no bloquean reimportaciones", async () => {
+    const n = nemo("PR");
+    const r = await importar("p.ficticio.csv", csv(`${ORDENES}"11 feb 2026, 10:00 a. m.",${n},Compra,Aprobado,3,0,33.3333333,100.00005,1.0,101.00005\n`));
+    expect(r.estado).toBe("RECHAZADO");
+    expect(r.errores.map((e) => e.codigo)).toEqual(["NUMERO_PRECISION", "NUMERO_PRECISION", "NUMERO_PRECISION"]);
+    const exacto = csv(`${ORDENES}"11 feb 2026, 10:00 a. m.",${n},Compra,Aprobado,3,0,33.333333,99.999999,1.0,100.999999\n`);
+    expect((await importar("p2.ficticio.csv", exacto)).errores[0]?.codigo).toBe("NUMERO_PRECISION");
+  });
+
+  it("dos órdenes del mismo minuto, especie y lado se reimportan sin conflicto", async () => {
+    const n = nemo("MM");
+    const archivo = csv(
+      `${ORDENES}"12 feb 2026, 10:00 a. m.",${n},Compra,Aprobado,5,0,10.0,50.0,1.0,51.0\n"12 feb 2026, 10:00 a. m.",${n},Compra,Aprobado,7,0,10.0,70.0,1.0,71.0\n`,
+    );
+    expect((await importar("mm1.ficticio.csv", archivo)).filasNuevas).toBe(2);
+    expect(await importar("mm2.ficticio.csv", archivo)).toMatchObject({ estado: "CARGADO", filasNuevas: 0, filasRepetidas: 2 });
   });
 });
 

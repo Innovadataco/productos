@@ -61,7 +61,10 @@ describe("leerDecimal", () => {
     ["23778.4", "23778.4"],
     ["1500", "1500"],
     ["0.35", "0.35"],
-    ["007.50", "7.50"],
+    ["007.50", "7.5"],
+    ["1500.0", "1500"],
+    ["0.10", "0.1"],
+    ["-0.0", "0"],
     [" 12.5 ", "12.5"],
   ])("%j → %j", (texto, esperado) => {
     expect(ok(leerDecimal(texto))).toBe(esperado);
@@ -69,6 +72,19 @@ describe("leerDecimal", () => {
 
   it.each(["1.234.567,00", "1,5", "$1500", "1e3", "", "abc"])("rechaza %j (no adivina formatos)", (texto) => {
     expect(leerDecimal(texto)).toEqual({ ok: false, codigo: "NUMERO_FORMATO" });
+  });
+
+  it("rechaza más decimales que la escala de la columna en vez de redondear en silencio", () => {
+    expect(leerDecimal("100.00005")).toEqual({ ok: false, codigo: "NUMERO_PRECISION" });
+    expect(ok(leerDecimal("100.0001"))).toBe("100.0001");
+    expect(leerDecimal("33.3333333", 6)).toEqual({ ok: false, codigo: "NUMERO_PRECISION" });
+    expect(ok(leerDecimal("33.333333", 6))).toBe("33.333333");
+    expect(ok(leerDecimal("100.00050"))).toBe("100.0005"); // los ceros finales no cuentan
+  });
+
+  it("rechaza números que no caben en la columna", () => {
+    expect(leerDecimal("12345678901234567")).toEqual({ ok: false, codigo: "NUMERO_RANGO" });
+    expect(ok(leerDecimal("1234567890123456"))).toBe("1234567890123456");
   });
 });
 
