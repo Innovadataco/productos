@@ -56,7 +56,11 @@ async function sembrarReglaBienvenidaRector() {
         create: {
             clave: `${EVENTO_FUSIONADO}.email`,
             canal: "EMAIL",
-            asunto: "La cuenta de {{nombreColegio}} está lista",
+            // Alineado al canónico (seed-data.ts): asunto «Su cuenta de…», cuerpo «La cuenta
+            // de… quedó lista» (así lo fija la FORMA A.2). El candado no asierta el contenido
+            // del cuerpo —solo que el envío ocurre— pero el fixture espeja el canónico para
+            // que nadie copie de vuelta un string viejo.
+            asunto: "Su cuenta de {{nombreColegio}} está lista",
             cuerpoMarkdown:
                 "Hola,\n\nLa cuenta de {{nombreColegio}} quedó lista.\n\nAceptación v{{version}} el {{fechaAceptacion}}.\n\n[Entrar a mi panel]({{urlPanel}})",
             variablesSchema: {
