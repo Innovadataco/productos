@@ -117,3 +117,5 @@ npx tsc --noEmit
 
 - Ver `specs/001-multi-role-auth-config/quickstart.md` para escenarios de autenticación.
 - Ver `specs/02-reportes-comunitarios/quickstart.md` para escenarios del módulo de reportes.
+
+<!-- Prueba de la frontera de 008 (INV-SPEC-3). NO MERGEAR. -->
