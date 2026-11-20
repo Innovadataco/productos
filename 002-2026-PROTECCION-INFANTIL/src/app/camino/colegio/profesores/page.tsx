@@ -180,7 +180,7 @@ export default function PasoProfesoresColegio() {
                     ahora». Copy de Diseño (FORMA-ONBOARDING §B.2). */}
                 <div className="mt-3">
                     <Alerta tono="info">
-                        No tiene que cargarlos todos ahora. Agregue los que quiera y, al terminar el camino, agrega o edita el resto desde el panel.
+                        No tiene que cargarlos todos ahora. Sume los que quiera y, al terminar el camino, agregue o edite el resto desde el panel.
                     </Alerta>
                 </div>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
