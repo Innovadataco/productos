@@ -1,0 +1,53 @@
+# ==========================================================================
+# CI del producto 008 (INVERSIONES). Archivo propio de 008: no edita los
+# workflows de PI ni de BI. Patrón sentinel multi-producto: ver README.md.
+# ==========================================================================
+name: inv
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "008-2026-INVERSIONES/**"
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - "008-2026-INVERSIONES/**"
+      - ".github/workflows/**"
+
+concurrency:
+  group: inv-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # Candado: el repo es PÚBLICO; ningún dato real (extractos, capturas, .env) entra.
+  candado-datos-reales:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prueba por mutación del candado
+        run: bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.test.sh
+      - name: Sin datos reales versionados
+        run: git ls-files 008-2026-INVERSIONES | bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.sh
+
+  # Sentinel multi-producto (SPEC-299 / BRIEF A-49). Ver .github/workflows/README.md.
+  inv-gate:
+    runs-on: ubuntu-latest
+    needs: [candado-datos-reales]
+    if: always()
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Evaluar veredicto agregado
+        run: |
+          set -euo pipefail
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "❌ inv-gate: al menos un job requerido falló."
+            exit 1
+          fi
+          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "❌ inv-gate: al menos un job requerido fue cancelado."
+            exit 1
+          fi
+          echo "✅ inv-gate: todos los jobs requeridos pasaron o fueron skipped."
