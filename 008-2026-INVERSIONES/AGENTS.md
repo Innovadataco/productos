@@ -2,12 +2,13 @@
 
 Sistema personal de seguimiento de un portafolio de inversiones: importa las exportaciones de la casa de bolsa, calcula posiciones, costo, dividendos y rentabilidad (TWR), trae precios y envía reportes por Telegram y en una web con gráficas. Es de solo lectura: no opera ni guarda credenciales de plataformas de inversión.
 
-## Stack (propuesto; se fija en la SPEC de base técnica)
-- Backend y procesos programados: Python 3.12 · FastAPI · SQLAlchemy · Alembic.
-- Base de datos: PostgreSQL.
-- Web: Next.js con gráficas.
+## Stack (D-008, igual al de la fábrica)
+- Web y API: Next.js (App Router) + React, Node 22 (fijar en `.nvmrc` y `engines`, igual que el CI).
+- Datos: Prisma + PostgreSQL 16 en **contenedor propio** (`docker-compose.yml` del producto, sobre Colima). Puerto local **5438**.
+- Tareas programadas (precios al cierre, valor del fondo, reporte diario): pg-boss sobre la misma PostgreSQL.
 - Reportes: bot de Telegram.
-- Dónde corre: VPS propio (el costo lo aprueba el dueño antes).
+- App local en el puerto **5008**. Producción: `docker-compose.prod.yml` (copiar repo + `.env` + `docker compose up`).
+- **No crear otras bases de datos ni otros servicios** fuera del compose del producto.
 
 ## Cómo se trabaja
 Metodología: `~/GitHub/ODIN/manuales-operativos/02-metodologia-desarrollo/README.md` (repo `Innovadataco/odin`).
@@ -43,4 +44,5 @@ PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) 
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.1 · 2026-11-20 · CEO 008 · stack definido (D-008): el de la fábrica, puertos 5438/5008
 > v1.0 · 2026-11-20 · CEO 008 · creación desde la plantilla del manual 02
