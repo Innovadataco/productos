@@ -75,6 +75,32 @@ export interface OrbitaColegio {
     umbralMirada: number;
 }
 
+/**
+ * SPEC-965 (FORMA Órbita · capa 2): un alumno que MERECE MIRADA. `riesgo` decide su color:
+ * "alta" → rubí (alerta viva de alto riesgo; el ÚNICO rubí del overview, sobre el identificador de
+ * un alumno), "sin_contacto" → ámbar (acudiente sin contacto).
+ */
+export interface AlumnoOrbita {
+    estudianteId: string;
+    nombre: string;
+    riesgo: "alta" | "sin_contacto";
+}
+
+/**
+ * SPEC-965 (FORMA Órbita · capa 2): overview de UN curso. NUNCA todos los alumnos — solo los que
+ * merecen mirada + el conteo «resto en calma» (principio de overview). El centro (curso) y el titular
+ * van en pino/ámbar, jamás rubí: el rubí vive solo en el nodo de un alumno con alerta alta viva.
+ */
+export interface CursoOrbitaDetalle {
+    curso: { cursoId: string; nombre: string; alertas30d: number; color: "pino" | "ambar" };
+    /** Titular del curso (nodo neutro; nunca rubí). */
+    titular: { nombre: string } | null;
+    /** Alumnos que merecen mirada: alerta alta viva (rubí) o acudiente sin contacto (ámbar). */
+    alumnosMirada: AlumnoOrbita[];
+    /** Alumnos activos restantes, en calma (conteo, no nodos). */
+    restoEnCalma: number;
+}
+
 /** SPEC-150 (FR-004): fila del escritorio del curso + flag de observación especial (aditivo). */
 export type EstudianteDetalleCurso = EstudianteConDetalleRow & { observado: boolean };
 
@@ -508,5 +534,83 @@ export class ColegioResumenRepository {
             WHERE c."colegioId" = ${colegioId} AND c.estado = 'activo'
             ORDER BY "alertas30d" DESC, c.nombre ASC
         `;
+    }
+
+    /**
+     * SPEC-965 (FORMA Órbita · capa 2): overview de UN curso — los alumnos que MERECEN MIRADA (alerta
+     * alta viva → rubí; acudiente sin contacto → ámbar), el titular (nodo neutro) y el conteo «resto en
+     * calma». NUNCA devuelve todos los alumnos (principio de overview): solo la mirada + el conteo del
+     * resto. 404 si el curso no existe o es de otro colegio (tenant-first E-1). I-29: nombres de
+     * alumno/profesor (panel interno del rector), cero scores ni textos.
+     */
+    async cursoOrbita(colegioId: string, cursoId: string): Promise<CursoOrbitaDetalle> {
+        const ahora = new Date();
+        const hace30d = new Date(ahora.getTime() - 30 * DIA_MS);
+
+        const tx = this.tx();
+        const cursoRepo = new CursoRepository(tx);
+        const estudianteRepo = new EstudianteRepository(tx);
+        const alertaRepo = new AlertaColegioRepository(tx);
+        const parametroRepo = new ParametroRepository(tx);
+
+        const [cursos, estudiantes, alertas30d, altaViva, paramUmbral] = await Promise.all([
+            cursoRepo.obtenerConTitularPorIds(colegioId, [cursoId]),
+            estudianteRepo.listarPorCursoConDetalle(colegioId, cursoId),
+            alertaRepo.contarReportesDistintosPorCurso(colegioId, cursoId, hace30d),
+            this.estudiantesAltaVivaPorCurso(colegioId, cursoId),
+            parametroRepo.findByClave(CLAVE_CURSO_MIRADA_UMBRAL),
+        ]);
+
+        const curso = cursos[0];
+        if (!curso) {
+            throw new AppError("Curso no encontrado", ERROR_CODES.NOT_FOUND, 404);
+        }
+
+        const parseado = Number(paramUmbral?.valor);
+        const umbralMirada = Number.isInteger(parseado) && parseado >= 1 ? parseado : CURSO_MIRADA_UMBRAL_DEFAULT;
+
+        const alumnosMirada: AlumnoOrbita[] = [];
+        for (const e of estudiantes) {
+            const riesgo: "alta" | "sin_contacto" | null = altaViva.has(e.id)
+                ? "alta"
+                : e.acudientes.length === 0
+                    ? "sin_contacto"
+                    : null;
+            if (riesgo) {
+                alumnosMirada.push({ estudianteId: e.id, nombre: `${e.nombre} ${e.apellidos}`.trim(), riesgo });
+            }
+        }
+        // Rubí (alta) primero, luego ámbar (sin contacto); dentro de cada grupo se conserva el orden
+        // alfabético que ya trae `listarPorCursoConDetalle` (apellidos, nombre).
+        alumnosMirada.sort((a, b) => (a.riesgo === b.riesgo ? 0 : a.riesgo === "alta" ? -1 : 1));
+
+        const titular = curso.profesorTitular
+            ? { nombre: `${curso.profesorTitular.nombre} ${curso.profesorTitular.apellidos}`.trim() }
+            : null;
+
+        return {
+            curso: { cursoId, nombre: curso.nombre, alertas30d, color: colorCursoOrbita(alertas30d, umbralMirada) },
+            titular,
+            alumnosMirada,
+            restoEnCalma: estudiantes.length - alumnosMirada.length,
+        };
+    }
+
+    /**
+     * SPEC-965 (capa 2): estudianteIds del curso con una alerta VIVA de ALTA prioridad
+     * (nueva/vista/escalada — no gestionada/cerrada). Único insumo del nodo RUBÍ (D-120). Tenant E-1.
+     */
+    private async estudiantesAltaVivaPorCurso(colegioId: string, cursoId: string): Promise<Set<string>> {
+        const filas: { id: string }[] = await this.db.$queryRaw`
+            SELECT DISTINCT a.id AS id
+            FROM "AlertaColegio" ac
+            JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
+            JOIN "Alumno" a ON a.id = i."alumnoId"
+            JOIN "Reporte" r ON r.id = ac."reporteId"
+            WHERE a."colegioId" = ${colegioId} AND ac."colegioId" = a."colegioId" AND a."cursoId" = ${cursoId}
+              AND ac."tipoSujeto" = 'ESTUDIANTE' AND ac.prioridad = 'alta'
+              AND ac.estado IN ('nueva', 'vista', 'escalada') AND r.eliminado = false
+        `;
+        return new Set(filas.map((f) => f.id));
     }
 }
