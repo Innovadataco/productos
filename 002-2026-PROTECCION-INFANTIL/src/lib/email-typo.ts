@@ -1,7 +1,7 @@
 /**
  * 3003 — detector de «typo de dominio» en correos.
  *
- * Caso real del dueño: `Jelkin.Carrillo+padre01@gmaail.com` (doble «a») crea
+ * Caso típico: `Usuario.Prueba+padre01@gmaail.com` (doble «a») crea
  * una cuenta cuyo enlace de registro se pierde para siempre en un buzón que
  * no existe. El detector compara el dominio escrito contra los proveedores
  * más usados con distancia de Damerau-Levenshtein (admite inserción, borrado,
@@ -90,7 +90,7 @@ export function sugerirDominioCorreo(email: string): string | null {
 
 /**
  * Devuelve el correo con el dominio reemplazado por la sugerencia
- * (`jelkin@gmaail.com` + `gmail.com` → `jelkin@gmail.com`). La parte local
+ * (`usuario@gmaail.com` + `gmail.com` → `usuario@gmail.com`). La parte local
  * no se toca (alias `+padre01`, puntos y mayúsculas incluidos).
  */
 export function aplicarSugerenciaDominio(email: string, dominioSugerido: string): string {
@@ -121,7 +121,7 @@ export function completarDominio(email: string, dominio: string): string {
 
 /**
  * 3003 · inteligencia del campo de correo: la persona escribe o PEGA cualquier
- * cosa en la parte local («jelkinx», «jelkinx@gmail.com», «jelkinx@@gmail.com»,
+ * cosa en la parte local («usuariox», «usuariox@gmail.com», «usuariox@@gmail.com»,
  * con espacios) y esto lo normaliza. El «@» es estructural: nunca se teclea.
  * - Quita espacios (inválidos en un correo).
  * - Con «@»: parte local a la izquierda, dominio a la derecha; los «@»
