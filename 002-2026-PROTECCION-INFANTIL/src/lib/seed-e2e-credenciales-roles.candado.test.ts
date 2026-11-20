@@ -147,7 +147,7 @@ describe("credenciales e2e de roles (colegio/operador/comité/verificador) · ar
     const COMITE = CREDS[2].email;
     const VERIFICADOR = CREDS[3].email; // SPEC-822 · no-titular, como OPERADOR/COMITE
 
-    it("SPEC-757: el SCHOOL_ADMIN (titular) queda con firma CONVENIO_INSTITUCIONAL DERIVADA y cruza la puerta", async () => {
+    it("SPEC-757/953: el SCHOOL_ADMIN (titular) queda con firma POLITICA_DATOS DERIVADA y cruza la puerta", async () => {
         await correr(base);
         const svc = new ConsentimientoService();
         const version = await svc.versionVigente();
@@ -156,7 +156,8 @@ describe("credenciales e2e de roles (colegio/operador/comité/verificador) · ar
         const audits = await prisma.auditConsentimiento.findMany({ where: { usuarioId: sa.id } });
         expect(audits).toHaveLength(1);
         // documentoTipo DERIVADO del rol (no quemado): igual a lo que dice el servicio.
-        expect(audits[0].documentoTipo).toBe("CONVENIO_INSTITUCIONAL");
+        // SPEC-953: el colegio firma la autorización de tratamiento, no el convenio bilateral.
+        expect(audits[0].documentoTipo).toBe("POLITICA_DATOS");
         expect(audits[0].documentoTipo).toBe(svc.documentoPorRol("SCHOOL_ADMIN"));
         expect(audits[0].version).toBe(version);
         expect(audits[0].esRepresentanteLegal).toBe(true);

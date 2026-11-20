@@ -7,7 +7,8 @@
  * auditor (`depurar-consentimientos-internos.ts`) llevaba
  *   ["ADMIN","OPERADOR","COMITE_VALIDACION","COMITE_CONVIVENCIA","SCHOOL_ADMIN"]
  * y driftó en LAS DOS direcciones: INCLUÍA a SCHOOL_ADMIN —titular del dato
- * desde SPEC-416 (I-118), firma CONVENIO_INSTITUCIONAL legítima— y OMITÍA a
+ * desde SPEC-416 (I-118), firma legítima (POLITICA_DATOS desde SPEC-953; antes
+ * CONVENIO_INSTITUCIONAL)— y OMITÍA a
  * PROFESIONAL y VERIFICADOR, roles internos que la propia roles-titulares.ts
  * nombra. Con la lista vieja, 50 firmas legítimas de colegios se reportaban
  * como «internas» (medido en prod 2026-09-29: 69 PARENT · 50 SCHOOL_ADMIN · 0

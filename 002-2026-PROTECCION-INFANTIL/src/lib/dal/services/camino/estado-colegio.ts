@@ -65,8 +65,8 @@ export async function derivarPasoPendienteColegio(
     if (!usuario.colegioId) return "rector";
 
     // Paso 1 · Rector. Reutiliza el guardián de consentimiento ya existente
-    // (SPEC-241 / SPEC-343 para el convenio institucional). Una sola definición
-    // de "consentimiento vigente" en el sistema.
+    // (SPEC-241; SPEC-953 sirve aquí la autorización de tratamiento, no el
+    // convenio bilateral). Una sola definición de "consentimiento vigente" en el sistema.
     if (await requiereConsentimientoActual(usuarioId)) return "rector";
     if (CAMPOS_RECTOR_OBLIGATORIOS.some((campo) => estaVacio(usuario[campo]))) return "rector";
 

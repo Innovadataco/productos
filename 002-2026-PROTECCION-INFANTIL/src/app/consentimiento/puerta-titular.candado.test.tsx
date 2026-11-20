@@ -91,13 +91,14 @@ describe("SPEC-756 · puerta de titular en /consentimiento (página)", () => {
         expect(modal.getAttribute("data-doc")).toBe("POLITICA_DATOS");
     });
 
-    it("titular SCHOOL_ADMIN sin firma vigente → SÍ sirve el formulario (CONVENIO_INSTITUCIONAL)", async () => {
+    it("titular SCHOOL_ADMIN sin firma vigente → SÍ sirve el formulario (POLITICA_DATOS, SPEC-953)", async () => {
         verifyTokenMock.mockResolvedValue({ sub: "sa-1", rol: "SCHOOL_ADMIN" });
-        documentoPorRolMock.mockReturnValue("CONVENIO_INSTITUCIONAL");
+        // SPEC-953: el colegio sirve la autorización de tratamiento, no el convenio bilateral.
+        documentoPorRolMock.mockReturnValue("POLITICA_DATOS");
         const jsx = await ConsentimientoPage();
         render(jsx);
         const modal = screen.getByTestId("modal-consent");
-        expect(modal.getAttribute("data-doc")).toBe("CONVENIO_INSTITUCIONAL");
+        expect(modal.getAttribute("data-doc")).toBe("POLITICA_DATOS");
     });
 
     it("titular que YA aceptó (versión vigente) → redirige a su tablero (no rompe el camino existente)", async () => {

@@ -14,6 +14,11 @@
  * Integración (BD real): prueba la PERSISTENCIA, no solo la respuesta. Control
  * positivo en las dos direcciones + control del «ignora el cuerpo» plantando un
  * documentoTipo mentiroso en el body.
+ *
+ * SPEC-953: desde este SPEC el colegio firma la AUTORIZACIÓN de tratamiento
+ * (POLITICA_DATOS), no el convenio bilateral. El control positivo del colegio
+ * verifica que el gate NUNCA deriva CONVENIO_INSTITUCIONAL para SCHOOL_ADMIN /
+ * COMITE_CONVIVENCIA (mutá el mapa a CONVENIO y estos casos se ponen ROJOS).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { POST } from "./route";
@@ -21,6 +26,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
 import { crearParametrosConsentimiento, crearEventoConsentimiento } from "@/lib/consentimiento-test-utils";
+import { ConsentimientoService } from "@/lib/dal/services/consentimiento";
 
 let mockToken: string | undefined;
 
@@ -74,18 +80,23 @@ describe("SPEC-756 · puerta de titular + documentoTipo derivado (endpoint)", ()
         expect(audits).toHaveLength(0);
     });
 
-    it("titular SCHOOL_ADMIN → 201 y graba el documento DERIVADO (CONVENIO), IGNORANDO el cuerpo mentiroso (POLITICA)", async () => {
+    it("titular SCHOOL_ADMIN → 201 y graba el documento DERIVADO (POLITICA, SPEC-953), IGNORANDO el cuerpo mentiroso (CONVENIO)", async () => {
         const sa = await crearUsuario("SCHOOL_ADMIN");
         mockToken = await crearTokenUsuario(sa.id, "SCHOOL_ADMIN");
 
-        // el cuerpo miente a propósito: manda POLITICA_DATOS
-        const res = await POST(requestAceptar(mockToken, { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: true }));
+        // SPEC-953 · control positivo: el gate del colegio NUNCA sirve el convenio
+        // bilateral. El cuerpo miente a propósito con el valor viejo (CONVENIO); el
+        // servidor DERIVA del rol y graba la AUTORIZACIÓN de tratamiento. Si se
+        // revierte ROL_A_DOCUMENTO del colegio a CONVENIO, este caso se pone ROJO.
+        const res = await POST(requestAceptar(mockToken, { documentoTipo: "CONVENIO_INSTITUCIONAL", esRepresentanteLegal: true }));
         expect(res.status).toBe(201);
 
         const audits = await prisma.auditConsentimiento.findMany({ where: { usuarioId: sa.id } });
         expect(audits).toHaveLength(1);
         // el servidor grabó el documento del ROL, no el del cuerpo
-        expect(audits[0].documentoTipo).toBe("CONVENIO_INSTITUCIONAL");
+        expect(audits[0].documentoTipo).toBe("POLITICA_DATOS");
+        // y jamás el convenio bilateral
+        expect(audits[0].documentoTipo).not.toBe("CONVENIO_INSTITUCIONAL");
         // la declaración SÍ viene del cuerpo (conservada)
         expect(audits[0].esRepresentanteLegal).toBe(true);
     });
@@ -100,5 +111,18 @@ describe("SPEC-756 · puerta de titular + documentoTipo derivado (endpoint)", ()
         const audits = await prisma.auditConsentimiento.findMany({ where: { usuarioId: p.id } });
         expect(audits).toHaveLength(1);
         expect(audits[0].documentoTipo).toBe("POLITICA_DATOS");
+    });
+
+    // SPEC-953 · control positivo de la DERIVACIÓN para los roles de colegio.
+    // COMITE_CONVIVENCIA NO es titular (esTitularDelDato=false) → el endpoint le
+    // da 403 y nunca llega a `aceptar`; por eso su garantía se verifica en la
+    // fuente (documentoPorRol), no por POST. Ambos roles de colegio deben derivar
+    // la AUTORIZACIÓN de tratamiento, jamás el convenio bilateral.
+    it("documentoPorRol: SCHOOL_ADMIN y COMITE_CONVIVENCIA → POLITICA_DATOS, nunca CONVENIO (SPEC-953)", () => {
+        const svc = new ConsentimientoService();
+        for (const rol of ["SCHOOL_ADMIN", "COMITE_CONVIVENCIA"] as const) {
+            expect(svc.documentoPorRol(rol), rol).toBe("POLITICA_DATOS");
+            expect(svc.documentoPorRol(rol), rol).not.toBe("CONVENIO_INSTITUCIONAL");
+        }
     });
 });

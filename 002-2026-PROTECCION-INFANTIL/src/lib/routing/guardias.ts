@@ -264,7 +264,7 @@ export const GUARDIAS_ACCESO = {
         exentasColegio: [
             // Pantallas del propio camino del colegio.
             "/camino/colegio",
-            // Paso 1 · rector + convenio.
+            // Paso 1 · rector + autorización de tratamiento (SPEC-953).
             "/consentimiento",
             "/api/consentimiento",
             "/api/colegio/rector",

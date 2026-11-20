@@ -1,9 +1,11 @@
 /**
  * SPEC-343 (I-232) · Test-candado de documentos legales SERVIDOS.
- * Falla si lo que el seed apunta (= lo que el servicio de consentimiento sirve
- * a padres y colegios) contiene notas internas de borrador. Protege contra:
- * editar el documento público con marcadores, o re-apuntar un parámetro a un
- * borrador interno.
+ * Falla si lo que el seed apunta contiene notas internas de borrador. Protege
+ * contra: editar el documento público con marcadores, o re-apuntar un parámetro
+ * a un borrador interno.
+ * SPEC-953: el gate del colegio ya NO sirve `consentimiento.colegio.documento_ruta`
+ * (el colegio firma la política de tratamiento); el .md y el parámetro se
+ * conservan para el instrumento formal aparte, y su higiene se sigue vigilando aquí.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
