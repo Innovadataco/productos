@@ -22,9 +22,9 @@ npm run importar:trii -- --email <su-correo> movimientos.csv ordenes.csv dividen
 - La primera vez, con la base vacía, agregue `--crear-dueno`. Solo funciona si todavía no hay ningún dueño: un error de tipeo en el correo nunca crea otro.
 - Registre los eventos de escisión antes de cargar los dividendos (INV-SPEC-10). Si no, un pago de fracción queda como dividendo ordinario y habrá que revertir esa carga:
   ```bash
-  npm run escision:registrar -- --origen <NEMO> --destino <NEMO> --fecha AAAA-MM-DD [--razon 0.5] [--pago-fraccion AAAA-MM-DD] [--monto-fraccion 100.5] [--nota "por confirmar"]
+  npm run escision:registrar -- --origen <NEMO> --destino <NEMO> --fecha AAAA-MM-DD [--razon 0.5] [--pago-fraccion AAAA-MM-DD] [--monto-fraccion 100.5] [--nota "por confirmar"] [--crear-destino]
   ```
-  Los instrumentos deben existir (se crean al importar las órdenes); un nemotécnico mal escrito se rechaza.
+  El origen debe existir (se crea al importar las órdenes); un nemotécnico mal escrito se rechaza. Si la especie destino solo le llegó por la escisión (no está en ninguna orden), agregue `--crear-destino`.
   Un evento registrado no se corrige con el comando: revise los datos antes. El mismo evento o un mismo pago de fracción en dos eventos se rechazan (`EVENTO_DUPLICADO`, `PAGO_FRACCION_DUPLICADO`). La salida 3 indica que el evento quedó registrado, pero hay dividendos ya cargados como ordinarios que hay que revertir.
 - Montos con más decimales de los que guarda la base se rechazan (`NUMERO_PRECISION`) en vez de redondearse.
 - Reconoce cada archivo por su encabezado. Reimportar o cargar exportaciones que se solapan no duplica.

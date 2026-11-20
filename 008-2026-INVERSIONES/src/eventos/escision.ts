@@ -81,38 +81,55 @@ function traducirChoque(error: unknown): unknown {
   return new ErrorEvento(/pago_fraccion|fechaPagoFraccion/.test(objetivo) ? "PAGO_FRACCION_DUPLICADO" : "EVENTO_DUPLICADO");
 }
 
+export interface OpcionesEscision {
+  /** Crea la especie destino si no existe (las que llegan solo por escisión no vienen en ninguna orden). */
+  readonly crearDestino?: boolean;
+}
+
 export interface ResultadoEscision {
   readonly eventoId: string;
+  readonly destinoCreado: boolean;
   /** Dividendos ya importados como ordinarios que coinciden con el pago de la fracción. */
   readonly dividendosYaImportados: number;
 }
 
-/** Registra el evento. No crea instrumentos: un nemotécnico mal escrito se rechaza. */
-export async function registrarEscision(db: PrismaClient, e: EscisionValida): Promise<ResultadoEscision> {
-  const [origen, destino] = await Promise.all(
-    [e.origen, e.destino].map((n) => db.instrumento.findFirst({ where: { OR: [{ nemotecnico: n }, { simboloTrii: n }] }, select: { id: true } })),
-  );
-  if (!origen || !destino) throw new ErrorEvento("INSTRUMENTO_DESCONOCIDO");
+type Tx = Prisma.TransactionClient;
 
-  // La base garantiza la unicidad (índices únicos de la migración eventos_unicos), también ante
-  // dos registros simultáneos; aquí solo se traduce el choque a un código claro.
-  let evento: { id: string };
+const buscar = (tx: Tx, n: string) => tx.instrumento.findFirst({ where: { OR: [{ nemotecnico: n }, { simboloTrii: n }] }, select: { id: true } });
+
+/**
+ * Registra el evento. El origen siempre debe existir. El destino solo se crea con `crearDestino`
+ * (opción explícita); sin ella, un nemotécnico mal escrito se rechaza. Todo en una transacción:
+ * si el evento choca, tampoco queda creada la especie destino.
+ */
+export async function registrarEscision(db: PrismaClient, e: EscisionValida, opciones: OpcionesEscision = {}): Promise<ResultadoEscision> {
   try {
-    evento = await db.eventoCorporativo.create({
-      data: {
-        tipo: "ESCISION", fecha: e.fecha, origenId: origen.id, destinoId: destino.id,
-        razon: e.razon === null ? null : new Prisma.Decimal(e.razon),
-        fechaPagoFraccion: e.pagoFraccion,
-        montoFraccion: e.montoFraccion === null ? null : new Prisma.Decimal(e.montoFraccion),
-        nota: e.nota,
-      },
-      select: { id: true },
-    });
+    return await db.$transaction((tx) => registrarEnTransaccion(tx, e, opciones));
   } catch (error) {
     throw traducirChoque(error);
   }
+}
+
+async function registrarEnTransaccion(tx: Tx, e: EscisionValida, opciones: OpcionesEscision): Promise<ResultadoEscision> {
+  const origen = await buscar(tx, e.origen);
+  const existente = await buscar(tx, e.destino);
+  if (!origen || (!existente && !opciones.crearDestino)) throw new ErrorEvento("INSTRUMENTO_DESCONOCIDO");
+  const destino = existente ?? (await tx.instrumento.create({ data: { tipo: "ACCION", nemotecnico: e.destino, nombre: e.destino }, select: { id: true } }));
+
+  // La base garantiza la unicidad (índices únicos de la migración eventos_unicos), también ante
+  // dos registros simultáneos; traducirChoque convierte el choque en un código claro.
+  const evento = await tx.eventoCorporativo.create({
+    data: {
+      tipo: "ESCISION", fecha: e.fecha, origenId: origen.id, destinoId: destino.id,
+      razon: e.razon === null ? null : new Prisma.Decimal(e.razon),
+      fechaPagoFraccion: e.pagoFraccion,
+      montoFraccion: e.montoFraccion === null ? null : new Prisma.Decimal(e.montoFraccion),
+      nota: e.nota,
+    },
+    select: { id: true },
+  });
   const dividendosYaImportados = e.pagoFraccion
-    ? await db.dividendo.count({ where: { instrumentoId: destino.id, fechaPago: e.pagoFraccion, tipo: { not: "FRACCION_ESCISION" } } })
+    ? await tx.dividendo.count({ where: { instrumentoId: destino.id, fechaPago: e.pagoFraccion, tipo: { not: "FRACCION_ESCISION" } } })
     : 0;
-  return { eventoId: evento.id, dividendosYaImportados };
+  return { eventoId: evento.id, destinoCreado: !existente, dividendosYaImportados };
 }

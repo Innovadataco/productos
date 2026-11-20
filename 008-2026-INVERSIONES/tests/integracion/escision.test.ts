@@ -66,6 +66,20 @@ describe("eventos de escisión en cadena", () => {
     await expect(registrarEscision(db, valido({ origen: nemo("A"), destino: "NOEXISTE9", fecha: "2024-02-12" }))).rejects.toThrow(/INSTRUMENTO_DESCONOCIDO/);
   });
 
+  it("con --crear-destino crea la especie destino una sola vez; sin la opción, la rechaza", async () => {
+    const nueva = nemo("NUE");
+    const datos = valido({ origen: nemo("A"), destino: nueva, fecha: "2024-06-03" });
+    await expect(registrarEscision(db, datos)).rejects.toThrow(/INSTRUMENTO_DESCONOCIDO/);
+    const r = await registrarEscision(db, datos, { crearDestino: true });
+    expect(r.destinoCreado).toBe(true);
+    await expect(registrarEscision(db, datos, { crearDestino: true })).rejects.toThrow(/EVENTO_DUPLICADO/);
+    expect(await db.instrumento.count({ where: { nemotecnico: nueva } })).toBe(1);
+  });
+
+  it("el origen nunca se crea, ni con --crear-destino", async () => {
+    await expect(registrarEscision(db, valido({ origen: "NOEXISTE8", destino: nemo("A"), fecha: "2024-06-17" }), { crearDestino: true })).rejects.toThrow(/INSTRUMENTO_DESCONOCIDO/);
+  });
+
   it("si el dividendo ya se importó como ordinario, avisa cuántos hay que revertir", async () => {
     const d = nemo("D");
     await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: d, nombre: "Ficticia D" } });
