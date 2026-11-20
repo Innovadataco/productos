@@ -30,9 +30,9 @@ Cada SPEC que agregue código suma aquí sus guardianes (lint, tipos, pruebas) y
 - **Los datos reales nunca entran al repo**: ni montos, ni cuentas, ni posiciones, ni extractos, ni capturas; tampoco en seeds, tests o fixtures. Viven solo en la base de datos del servidor y en sus secretos.
 - Los datos de prueba son **inventados** y van en archivos marcados `.ficticio.` (ej. `tests/fixtures/ordenes.ficticio.csv`).
 
-## Piloto de ECC (affaan-m/ECC v2.2.3)
-008 pilotea ECC como caja de herramientas dentro de las sesiones (planear, pruebas primero, revisar, verificar). **El manual 02 sigue mandando**: radicados, ramas, CI, revisión adversarial y merge por el CEO.
-- ECC se instala solo en el clon de trabajo propio de 008, nunca a nivel global ni en la raíz de este repo ni en la de la gestión.
+## ECC (D-010): metodología de 008
+008 se construye con ECC (affaan-m/ECC v2.2.3): planear, diseñar, construir con pruebas primero, revisar y verificar con sus agentes y comandos. **Las compuertas del manual 02 se mantienen**: el número de SPEC lo da el CEO, cada cambio entra por PR con CI verde y revisión adversarial, y el merge y el despliegue los hace el CEO.
+- ECC está instalado solo en el clon de trabajo propio de 008, nunca a nivel global ni en la raíz de este repo ni en la de la gestión.
 - Prohibido que ECC instale git hooks o toque `core.hooksPath` en este repo, o que escriba memoria o reglas en archivos compartidos.
 
 ## Cómo se cierra un cambio
@@ -44,5 +44,6 @@ PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) 
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.2 · 2026-11-20 · CEO 008 · ECC como metodología de 008 (D-010)
 > v1.1 · 2026-11-20 · CEO 008 · stack definido (D-008): el de la fábrica, puertos 5438/5008
 > v1.0 · 2026-11-20 · CEO 008 · creación desde la plantilla del manual 02
