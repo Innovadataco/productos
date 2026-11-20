@@ -9,6 +9,7 @@
 #  6. Candado de frontera: una rama work/inv-* que toque CUALQUIER archivo
 #     fuera de 008-2026-INVERSIONES/ o de este archivo falla (ECC no mergea
 #     fuera de su frontera; eso lo hace cumplir el CI, no una promesa).
+#  INV-SPEC-6: permisos de solo lectura, sin credenciales persistidas y base_ref por env.
 #  (Sin filtro de rutas en pull_request a propósito: si una rama work/inv-*
 #   tocara SOLO archivos de PI, con filtro de rutas este workflow no correría y
 #   la frontera no se verificaría.)
@@ -23,6 +24,9 @@ on:
       - ".github/workflows/inv.yml"
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: inv-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -36,10 +40,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Prueba por mutación de la frontera
         run: bash 008-2026-INVERSIONES/scripts/ci/frontera-008.test.sh
-      - name: La rama solo toca 008-2026-INVERSIONES/ e inv.yml
-        run: git diff --name-only "origin/${{ github.base_ref }}...HEAD" | bash 008-2026-INVERSIONES/scripts/ci/frontera-008.sh
+      - name: La rama solo toca 008-2026-INVERSIONES/ e inv.yml (chequeo de 008; el que manda es frontera-008-main)
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        # Compatible con las dos versiones del script: la vieja lee la lista por stdin,
+        # la nueva (INV-SPEC-4) la calcula ella misma con el argumento.
+        run: git -c core.quotepath=off diff --no-renames --name-only "origin/${BASE_REF}...HEAD" | bash 008-2026-INVERSIONES/scripts/ci/frontera-008.sh "origin/${BASE_REF}"
 
   # Candado: el repo es PÚBLICO; ningún dato real (extractos, capturas, .env) entra.
   candado-datos-reales:
@@ -47,6 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Prueba por mutación del candado
         run: bash 008-2026-INVERSIONES/scripts/ci/candado-datos-reales.test.sh
       - name: Sin datos reales versionados

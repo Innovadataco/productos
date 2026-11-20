@@ -1,5 +1,6 @@
 # ==========================================================================
 # Frontera de 008 (INV-SPEC-3, pedido del CEO de PI, 2026-11-20).
+# INV-SPEC-6: sin detección de renombres y con rutas crudas (-z, tildes).
 #
 # Con `pull_request_target`, GitHub toma SIEMPRE este archivo de `main`, nunca
 # de la rama del PR: un PR de 008 no puede aflojar ni borrar su propio guardián.
@@ -41,16 +42,20 @@ jobs:
         run: |
           set -euo pipefail
           fuera_de_frontera() {
-            # Lee rutas por stdin; imprime las que están fuera de la zona de ECC.
+            # Lee rutas separadas por NUL (git diff -z); imprime, una por línea,
+            # las que están fuera de la zona de ECC (caracteres de control -> ?).
             local ruta
-            while IFS= read -r ruta; do
+            while IFS= read -r -d '' ruta; do
               [[ -z "$ruta" ]] && continue
               case "$ruta" in
                 008-2026-INVERSIONES/*) ;;
-                *) printf '%s\n' "$ruta" ;;
+                *) printf '%s\n' "${ruta//[[:cntrl:]]/?}" ;;
               esac
             done
           }
+          # Rutas crudas y SIN detección de renombres: un `git mv` desde otro
+          # producto hacia 008 lista también el origen (borrado fuera de la frontera).
+          diff_rutas() { git -c core.quotepath=off diff --no-renames --name-only -z "$1"; }
           # Mutación: cada caso prohibido DEBE aparecer y cada permitido NO.
           fallas=0
           for prohibida in \
@@ -60,14 +65,25 @@ jobs:
             ".github/workflows/ci.yml" \
             "AGENTS.md" \
             "008-2026-INVERSIONES-falso/x.ts"; do
-            [[ -n "$(printf '%s\n' "$prohibida" | fuera_de_frontera)" ]] || { echo "❌ MUTANTE VIVO: pasó $prohibida"; fallas=$((fallas+1)); }
+            [[ -n "$(printf '%s\0' "$prohibida" | fuera_de_frontera)" ]] || { echo "❌ MUTANTE VIVO: pasó $prohibida"; fallas=$((fallas+1)); }
           done
-          for permitida in "008-2026-INVERSIONES/AGENTS.md" "008-2026-INVERSIONES/app/src/page.tsx"; do
-            [[ -z "$(printf '%s\n' "$permitida" | fuera_de_frontera)" ]] || { echo "❌ FALSO POSITIVO: bloqueó $permitida"; fallas=$((fallas+1)); }
+          for permitida in "008-2026-INVERSIONES/AGENTS.md" "008-2026-INVERSIONES/app/src/page.tsx" "008-2026-INVERSIONES/configuración con tilde.md"; do
+            [[ -z "$(printf '%s\0' "$permitida" | fuera_de_frontera)" ]] || { echo "❌ FALSO POSITIVO: bloqueó $permitida"; fallas=$((fallas+1)); }
           done
+          # Mutación del comando de diff: un renombre 002 -> 008 DEBE delatar el origen.
+          repo="$(mktemp -d)"
+          git -C "$repo" init -q
+          mkdir -p "$repo/002-x" "$repo/008-2026-INVERSIONES"
+          echo x > "$repo/002-x/archivo.ts"
+          git -C "$repo" add -A
+          git -C "$repo" -c user.email=ci@local -c user.name=ci commit -qm base
+          base="$(git -C "$repo" rev-parse HEAD)"
+          git -C "$repo" mv 002-x/archivo.ts 008-2026-INVERSIONES/archivo.ts
+          git -C "$repo" -c user.email=ci@local -c user.name=ci commit -qm renombre
+          [[ -n "$(cd "$repo" && diff_rutas "$base...HEAD" | fuera_de_frontera)" ]] || { echo "❌ MUTANTE VIVO: un renombre 002 -> 008 pasó la frontera"; fallas=$((fallas+1)); }
           (( fallas == 0 )) || exit 1
-          echo "✅ La regla de la frontera muerde (prueba por mutación)."
-          declare -f fuera_de_frontera > "$RUNNER_TEMP/frontera.sh"
+          echo "✅ La regla de la frontera muerde (prueba por mutación, incluido el renombre)."
+          declare -f fuera_de_frontera diff_rutas > "$RUNNER_TEMP/frontera.sh"
 
       - name: El PR solo toca 008-2026-INVERSIONES/
         env:
@@ -80,7 +96,7 @@ jobs:
           # Solo se traen los objetos de la cabeza; no se hace checkout ni se ejecuta nada de ella.
           git fetch --no-tags --quiet origin "+refs/pull/${PR_NUMBER}/head:refs/remotes/pr/head"
           [[ "$(git rev-parse refs/remotes/pr/head)" == "$HEAD_SHA" ]] || { echo "❌ La cabeza traída no es la del evento"; exit 1; }
-          fuera="$(git diff --name-only "$BASE_SHA...$HEAD_SHA" | fuera_de_frontera)"
+          fuera="$(diff_rutas "$BASE_SHA...$HEAD_SHA" | fuera_de_frontera)"
           if [[ -n "$fuera" ]]; then
             echo "❌ Fuera de la frontera de 008 (este PR lo revisa y lo mergea el CEO de PI):"
             printf '%s\n' "$fuera"
