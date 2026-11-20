@@ -1,23 +1,20 @@
 /**
- * SPEC-955 · CANDADO del correo FUSIONADO del colegio (bienvenida + recibo).
- * FORMA-ONBOARDING-COLEGIO-CORREOS §A (Gestión c540eeac).
+ * SPEC-962 · CANDADO (#1): aceptar la Política NO encola el correo de bienvenida
+ * del rector.
  *
- * El correo de «cuenta lista» se enviaba al CREAR la contraseña (completar),
- * ANTES de aceptar la Política. Ahora:
- *  - NO sale en completar (M2 eliminado).
- *  - En el envío M3 (aceptar) se BIFURCA por rol del aceptante, solo en la 1.ª
- *    aceptación:
- *      · SCHOOL_ADMIN 1.ª aceptación → UN `colegio.bienvenida_rector` fusionado, y
- *        NO el `consentimiento.aceptado` genérico (sin duplicado).
- *      · otros roles (o un colegio re-aceptando por bump) → `consentimiento.aceptado`.
- *  - re-aceptación de la misma versión → idempotente, no reenvía.
+ * El correo «Su cuenta de {colegio} está lista» salía al ACEPTAR la Política
+ * (SPEC-955), con el camino aún en el Paso 1 — dos caminos que se contradecían.
+ * Ahora NACE del CIERRE del camino (ver completar-colegio.candado.test.ts). En la
+ * aceptación, el rector no recibe NI la bienvenida NI el recibo genérico
+ * `consentimiento.aceptado` (el motor no filtra por rol, SPEC-247, así que el
+ * genérico SÍ le llegaría si cayera en el else — por eso el branch es explícito).
  *
- * Control positivo (muere con el defecto): quitar/mover el bifurcado de aceptar
- * pone rojos los casos del fusionado.
+ * Muere con el defecto: la regla de la bienvenida se SIEMBRA activa a propósito, de
+ * modo que el `0` prueba que lo frena el CÓDIGO (el branch de aceptar), no una regla
+ * faltante. Si alguien re-cableara el envío al aceptar (el bug de origen), el caso
+ * del SCHOOL_ADMIN se pondría rojo.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -45,21 +42,18 @@ function requestAceptar(token: string | undefined, body: Record<string, unknown>
     });
 }
 
-const EVENTO_FUSIONADO = "colegio.bienvenida_rector";
+const EVENTO_BIENVENIDA = "colegio.bienvenida_rector";
 const EVENTO_GENERICO = "consentimiento.aceptado";
 
-/** Siembra plantilla + regla (rol SCHOOL_ADMIN) del fusionado, como en prod (seed.ts:1152). */
+/** Siembra plantilla + regla (rol SCHOOL_ADMIN) de la bienvenida, como en prod
+ *  (seed.ts:1152). Se siembra ACTIVA para que el 0 sea control positivo. */
 async function sembrarReglaBienvenidaRector() {
     await prisma.notificacionPlantilla.upsert({
-        where: { clave: `${EVENTO_FUSIONADO}.email` },
+        where: { clave: `${EVENTO_BIENVENIDA}.email` },
         update: { activa: true },
         create: {
-            clave: `${EVENTO_FUSIONADO}.email`,
+            clave: `${EVENTO_BIENVENIDA}.email`,
             canal: "EMAIL",
-            // Alineado al canónico (seed-data.ts): asunto «Su cuenta de…», cuerpo «La cuenta
-            // de… quedó lista» (así lo fija la FORMA A.2). El candado no asierta el contenido
-            // del cuerpo —solo que el envío ocurre— pero el fixture espeja el canónico para
-            // que nadie copie de vuelta un string viejo.
             asunto: "Su cuenta de {{nombreColegio}} está lista",
             cuerpoMarkdown:
                 "Hola,\n\nLa cuenta de {{nombreColegio}} quedó lista.\n\nAceptación v{{version}} el {{fechaAceptacion}}.\n\n[Entrar a mi panel]({{urlPanel}})",
@@ -78,18 +72,18 @@ async function sembrarReglaBienvenidaRector() {
     await prisma.notificacionRegla.upsert({
         where: {
             evento_canal_plantillaClave_rol: {
-                evento: EVENTO_FUSIONADO,
+                evento: EVENTO_BIENVENIDA,
                 canal: "EMAIL",
-                plantillaClave: `${EVENTO_FUSIONADO}.email`,
+                plantillaClave: `${EVENTO_BIENVENIDA}.email`,
                 rol: "SCHOOL_ADMIN",
             },
         },
         update: { activa: true },
         create: {
-            evento: EVENTO_FUSIONADO,
+            evento: EVENTO_BIENVENIDA,
             rol: "SCHOOL_ADMIN",
             canal: "EMAIL",
-            plantillaClave: `${EVENTO_FUSIONADO}.email`,
+            plantillaClave: `${EVENTO_BIENVENIDA}.email`,
             offset: "+0m",
             obligatoria: true,
             activa: true,
@@ -101,7 +95,7 @@ function contar(evento: string, usuarioId: string) {
     return prisma.notificacion.count({ where: { evento, destinatarioUsuarioId: usuarioId } });
 }
 
-describe("SPEC-955 · correo fusionado del colegio, bifurcado por rol en la 1.ª aceptación", () => {
+describe("SPEC-962 · aceptar la Política NO encola la bienvenida del rector", () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosConsentimiento();
@@ -110,41 +104,31 @@ describe("SPEC-955 · correo fusionado del colegio, bifurcado por rol en la 1.ª
         mockToken = undefined;
     });
 
-    it("SCHOOL_ADMIN 1.ª aceptación → UN fusionado y CERO genérico (sin duplicado)", async () => {
+    it("SCHOOL_ADMIN 1.ª aceptación → CERO bienvenida y CERO genérico (nada al aceptar)", async () => {
         const sa = await crearUsuario("SCHOOL_ADMIN");
         mockToken = await crearTokenUsuario(sa.id, "SCHOOL_ADMIN");
 
         const res = await POST(requestAceptar(mockToken, { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: true }));
         expect(res.status).toBe(201);
 
-        expect(await contar(EVENTO_FUSIONADO, sa.id)).toBe(1);
+        // #1 · muere con el defecto: la bienvenida NO sale al aceptar (nace del cierre).
+        expect(await contar(EVENTO_BIENVENIDA, sa.id)).toBe(0);
+        // El rector tampoco recibe el recibo genérico en su 1.ª aceptación.
         expect(await contar(EVENTO_GENERICO, sa.id)).toBe(0);
     });
 
-    it("PARENT 1.ª aceptación → genérico `consentimiento.aceptado`, NUNCA el fusionado", async () => {
+    it("PARENT 1.ª aceptación → recibo genérico, NUNCA la bienvenida del rector", async () => {
         const padre = await crearUsuario("PARENT");
         mockToken = await crearTokenUsuario(padre.id, "PARENT");
 
         const res = await POST(requestAceptar(mockToken, { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: true }));
         expect(res.status).toBe(201);
 
-        expect(await contar(EVENTO_FUSIONADO, padre.id)).toBe(0);
+        expect(await contar(EVENTO_BIENVENIDA, padre.id)).toBe(0);
         expect(await contar(EVENTO_GENERICO, padre.id)).toBeGreaterThanOrEqual(1);
     });
 
-    it("SCHOOL_ADMIN re-aceptar la MISMA versión → idempotente: sigue 1 fusionado, 0 genérico", async () => {
-        const sa = await crearUsuario("SCHOOL_ADMIN");
-        mockToken = await crearTokenUsuario(sa.id, "SCHOOL_ADMIN");
-
-        await POST(requestAceptar(mockToken, { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: true }));
-        const res2 = await POST(requestAceptar(mockToken, { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: true }));
-        expect(res2.status).toBe(200); // camino idempotente (versión ya vigente)
-
-        expect(await contar(EVENTO_FUSIONADO, sa.id)).toBe(1);
-        expect(await contar(EVENTO_GENERICO, sa.id)).toBe(0);
-    });
-
-    it("SCHOOL_ADMIN bump de versión → recibe el genérico (recibo), NO re-manda el fusionado", async () => {
+    it("SCHOOL_ADMIN bump de versión → recibo genérico, NUNCA la bienvenida", async () => {
         const sa = await crearUsuario("SCHOOL_ADMIN");
         mockToken = await crearTokenUsuario(sa.id, "SCHOOL_ADMIN");
 
@@ -158,17 +142,9 @@ describe("SPEC-955 · correo fusionado del colegio, bifurcado por rol en la 1.ª
         expect(res2.status).toBe(201);
 
         expect(await prisma.auditConsentimiento.count({ where: { usuarioId: sa.id } })).toBe(2);
-        expect(await contar(EVENTO_FUSIONADO, sa.id)).toBe(1); // la bienvenida solo la 1.ª vez
-        // el recibo genérico del bump SÍ sale (≥1: el motor tiene regla EMAIL + IN_APP).
+        // La bienvenida NUNCA sale por la vía de aceptar (ni 1.ª ni bump).
+        expect(await contar(EVENTO_BIENVENIDA, sa.id)).toBe(0);
+        // El recibo genérico del bump SÍ sale (else branch; motor con regla EMAIL + IN_APP).
         expect(await contar(EVENTO_GENERICO, sa.id)).toBeGreaterThanOrEqual(1);
-    });
-
-    it("estructural: completar NO llama ni importa la bienvenida (no se envía al crear la contraseña)", () => {
-        const fuente = readFileSync(
-            path.join(process.cwd(), "src/app/api/auth/registro-colegio/completar/route.ts"),
-            "utf-8",
-        );
-        expect(fuente, "completar no debe INVOCAR la bienvenida").not.toMatch(/enviarBienvenidaRector\w*\s*\(/);
-        expect(fuente, "completar no debe IMPORTAR la bienvenida").not.toMatch(/import\s*\{[^}]*enviarBienvenidaRector/);
     });
 });

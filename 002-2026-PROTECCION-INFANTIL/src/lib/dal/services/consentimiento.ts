@@ -10,7 +10,6 @@ import type { RolUsuario } from "@prisma/client";
 import { AppError, ERROR_CODES } from "../../errors";
 import { getParametroSistemaValor } from "../../parametros";
 import { programar } from "../../notificaciones";
-import { enviarBienvenidaRectorFusionada } from "../../email-colegio";
 import { withUnitOfWork } from "../unit-of-work";
 import { UsuarioRepository } from "../repositories/usuario";
 import { ConsentimientoRepository } from "../repositories/consentimiento";
@@ -51,9 +50,6 @@ export interface AceptarConsentimientoInput {
     esRepresentanteLegal: boolean;
     ip: string;
     userAgent: string | null;
-    // SPEC-955: para el correo fusionado del colegio (lookup del nombre por colegioId).
-    // Solo se usa cuando el aceptante es SCHOOL_ADMIN en su primera aceptación.
-    colegioId?: string | null;
 }
 
 export class ConsentimientoService {
@@ -173,25 +169,22 @@ export class ConsentimientoService {
 
         // Notificación al usuario (best-effort; no falla la aceptación).
         //
-        // SPEC-955 · BIFURCACIÓN por rol del aceptante (FORMA-ONBOARDING-COLEGIO §A.1):
-        //  - SCHOOL_ADMIN en su PRIMERA aceptación → UN correo FUSIONADO
-        //    (`colegio.bienvenida_rector`: bienvenida + recibo + botón al panel), y NO
-        //    el recibo genérico (sin duplicado). El momento en que la cuenta queda
-        //    REALMENTE lista es al aceptar la Política, así que bienvenida y recibo son
-        //    un solo toque.
+        // SPEC-962 · BIFURCACIÓN por rol del aceptante:
+        //  - SCHOOL_ADMIN en su PRIMERA aceptación → NO se manda nada acá. El correo de
+        //    bienvenida del rector (`colegio.bienvenida_rector`) salía en este punto
+        //    (SPEC-955), con el camino aún en el Paso 1; ahora lo dispara el CIERRE del
+        //    camino (completarCaminoColegio). Tampoco cae al recibo genérico
+        //    `consentimiento.aceptado`: el motor NO filtra por rol (SPEC-247), así que
+        //    SÍ llegaría al rector si cayera en el else — por eso el branch es explícito.
         //  - cualquier otro caso (otros roles, o un colegio RE-aceptando por un bump de
         //    versión) → el recibo genérico `consentimiento.aceptado` COMPARTIDO, sin
         //    cambio (no se reescribe esa plantilla: rompería a los padres, SPEC-247).
         try {
-            const fechaBogota = formatInTimeZone(aceptadoEn, TIMEZONE_BOGOTA, "yyyy-MM-dd HH:mm");
             if (input.rol === "SCHOOL_ADMIN" && resultado.esPrimeraAceptacion) {
-                await enviarBienvenidaRectorFusionada({
-                    usuarioId: input.usuarioId,
-                    colegioId: input.colegioId ?? null,
-                    version: versionActual,
-                    fechaAceptacion: fechaBogota,
-                });
+                // SPEC-962: sin aviso al aceptar; la bienvenida del colegio nace del
+                // cierre del camino. La aceptación ya quedó registrada arriba.
             } else {
+                const fechaBogota = formatInTimeZone(aceptadoEn, TIMEZONE_BOGOTA, "yyyy-MM-dd HH:mm");
                 await programar({
                     evento: "consentimiento.aceptado",
                     sujetoTipo: "usuario",

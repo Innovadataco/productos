@@ -73,8 +73,6 @@ export async function POST(request: Request) {
             esRepresentanteLegal,
             ip,
             userAgent,
-            // SPEC-955: para el correo fusionado del colegio (lookup del nombre por colegioId).
-            colegioId: user.colegioId,
         });
 
         await logAudit({

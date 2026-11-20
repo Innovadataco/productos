@@ -16,6 +16,11 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
+// SPEC-962: «Terminar» cierra el camino por SERVER ACTION (redirige server-side al
+// panel), ya no por navegación cliente a /listo. Se mockea la acción para el unit.
+const completarAction = vi.fn();
+vi.mock("./actions", () => ({ accionCompletarCaminoColegio: () => completarAction() }));
+
 import PasoEstudiantesColegio from "./page";
 
 const CURSOS = [{ id: "c1", nombre: "6A" }, { id: "c2", nombre: "7B" }];
@@ -38,6 +43,7 @@ function mockFetch({ total = 0, items = [] as unknown[] } = {}) {
 
 beforeEach(() => {
     push.mockClear();
+    completarAction.mockClear();
     vi.unstubAllGlobals();
 });
 
@@ -58,7 +64,7 @@ describe("SPEC-956 · Paso 5 estudiantes: inline, sin salir a /dashboard", () =>
         expect(screen.getByText("Agregue su primer estudiante para terminar.")).toBeTruthy();
     });
 
-    it("con ≥1 estudiante activo, «Terminar» se habilita y lleva a /camino/colegio/listo", async () => {
+    it("con ≥1 estudiante activo, «Terminar» se habilita y cierra el camino por SERVER ACTION (SPEC-962), sin navegar a /listo", async () => {
         mockFetch({ total: 1, items: [{ id: "e1", nombre: "María Gómez", curso: { id: "c1", nombre: "6A" } }] });
         render(<PasoEstudiantesColegio />);
         await screen.findByText("María Gómez");
@@ -66,7 +72,10 @@ describe("SPEC-956 · Paso 5 estudiantes: inline, sin salir a /dashboard", () =>
         const terminar = screen.getByRole("button", { name: "Terminar" }) as HTMLButtonElement;
         expect(terminar.disabled).toBe(false);
         fireEvent.click(terminar);
-        expect(push).toHaveBeenCalledWith("/camino/colegio/listo");
+        // SPEC-962: ya NO es router.push('/camino/colegio/listo'); llama a la acción que
+        // cierra el camino y redirige server-side al panel.
+        await waitFor(() => expect(completarAction).toHaveBeenCalled());
+        expect(push).not.toHaveBeenCalledWith("/camino/colegio/listo");
     });
 
     it("«Agregar estudiante» abre el alta INLINE (misma pantalla), sin navegar a ningún lado", async () => {

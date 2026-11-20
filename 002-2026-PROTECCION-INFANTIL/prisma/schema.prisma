@@ -1365,6 +1365,13 @@ model Colegio {
   representanteLegalTelefono       String?
   inicioServicio                   DateTime
   finServicio                      DateTime?
+  // SPEC-962: pestillo de idempotencia del correo de bienvenida del rector. NO es
+  // fuente del progreso (eso se SIGUE derivando de los hechos en estado-colegio.ts):
+  // nombra lo que ES — la bienvenida ya se envió para este colegio. El correo sale al
+  // TERMINAR los 5 pasos (no al aceptar la Política). `null` = aún no enviada; se fija
+  // UNA sola vez por compare-and-set (updateMany where null). El backfill de la
+  // migración la siembra para los colegios que ya recibieron la bienvenida al aceptar.
+  bienvenidaEnviadaEn              DateTime?            @db.Timestamptz(6)
   tipoPeriodo                      TipoPeriodoServicio
   estado                           String              @default("activo")
   // SPEC-351 (A-69 · D1): clave del escudo institucional cargado en Configuración
