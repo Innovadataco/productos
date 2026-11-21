@@ -122,7 +122,8 @@ resolver_pubkey() {
 }
 
 # ---- respaldo de UNA base ----------------------------------------------------------------------
-# $1 label(pi|bi)  $2 contenedor  $3 usuario  $4 base  $5 proyecto(prefijo de fichero)
+# $1 label(pi|bi)  $2 contenedor  $3 usuario  $4 base  $5 proyecto(prefijo de fichero = nombre CORTO
+#   del proyecto, pi/bi, NO el de la base: el interino y el Mac filtran por «pi-*»/«bi-*»)
 respaldar_una_base() {
     local label="$1" contenedor="$2" usuario="$3" base="$4" proyecto="$5"
     local stamp dest destdir tmp shatmp hash
@@ -209,7 +210,7 @@ main() {
     local fallos=0
 
     # --- pi-db: usuario y base FIJOS (proteccion / proteccion_infantil) ---
-    if respaldar_una_base "pi" "$PI_DB_CONTAINER" "$PI_DB_USER" "$PI_DB_NAME" "$PI_DB_NAME"; then
+    if respaldar_una_base "pi" "$PI_DB_CONTAINER" "$PI_DB_USER" "$PI_DB_NAME" "pi"; then
         aplicar_retencion "pi"
     else
         fallos=$((fallos + 1))
@@ -222,7 +223,7 @@ main() {
     if [ -z "$bi_user" ] || [ -z "$bi_db" ]; then
         log "🚨 bi: no se pudo leer POSTGRES_USER/POSTGRES_DB de $BI_DB_CONTAINER — se omite esta base"
         fallos=$((fallos + 1))
-    elif respaldar_una_base "bi" "$BI_DB_CONTAINER" "$bi_user" "$bi_db" "$bi_db"; then
+    elif respaldar_una_base "bi" "$BI_DB_CONTAINER" "$bi_user" "$bi_db" "bi"; then
         aplicar_retencion "bi"
     else
         fallos=$((fallos + 1))
