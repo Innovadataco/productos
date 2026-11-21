@@ -20,6 +20,7 @@ const ORBITA: OrbitaColegio = {
     cursos: [
         { cursoId: "c1", nombre: "A-1", estudiantes: 20, alertas30d: 3, color: "ambar" },
         { cursoId: "c2", nombre: "A-2", estudiantes: 10, alertas30d: 0, color: "pino" },
+        { cursoId: "c3", nombre: "A-3", estudiantes: 8, alertas30d: 1, color: "ambar" },
     ],
     semaforo: { alertasNuevas: 0, alertas72h: 0 },
     casosComite: { abiertos: 1, masViejoEn: new Date() },
@@ -56,6 +57,19 @@ describe("SPEC-965 · OrbitaColegioMapa", () => {
         expect(screen.getByRole("button", { name: /Curso A-2\./ })).toBeTruthy();
     });
 
+    it("SPEC-968: el chip lleva el sustantivo «reporte(s)» con singular/plural correcto (texto y aria-label)", () => {
+        montar();
+        // A-3 tiene 1 reporte → «1 reporte» (NO «1 reportes»), en el chip visible y en el aria-label.
+        const btnSingular = screen.getByRole("button", { name: /Curso A-3\./ });
+        expect(btnSingular.getAttribute("aria-label")).toContain("1 reporte en 30 días");
+        expect(btnSingular.getAttribute("aria-label")).not.toContain("1 reportes");
+        expect(screen.getByText(/1 reporte · 30 días/)).toBeTruthy();
+        // A-1 tiene 3 → plural «3 reportes».
+        expect(screen.getByRole("button", { name: /Curso A-1\./ }).getAttribute("aria-label")).toContain(
+            "3 reportes en 30 días"
+        );
+    });
+
     it("al abrir un curso: el rubí aparece SOLO en el alumno de alerta alta; titular y curso nunca rubí", async () => {
         vi.stubGlobal(
             "fetch",
@@ -76,10 +90,12 @@ describe("SPEC-965 · OrbitaColegioMapa", () => {
         expect(filaAmbar.querySelector(".bg-rubi")).toBeNull();
         expect(filaAmbar.querySelector(".bg-ambar")).not.toBeNull();
 
-        // El titular nunca es rubí.
+        // SPEC-968: el titular lleva un contorno NEUTRO de contexto, NO un color de estado (ni pino, ni
+        // ámbar, ni rubí) — para que el rector no lo lea como «profesor sin novedad».
         const filaTitular = screen.getByText(/Profesor titular/).closest("li")!;
-        expect(filaTitular.querySelector(".bg-rubi")).toBeNull();
-        expect(filaTitular.querySelector(".bg-pino")).not.toBeNull();
+        const puntoTitular = filaTitular.querySelector("span[aria-hidden='true']")!;
+        expect(puntoTitular.className).not.toMatch(/bg-(pino|ambar|rubi)\b/);
+        expect(puntoTitular.className).toContain("border-tinta");
 
         // El centro (curso) es ámbar, no rubí.
         const centro = container.querySelector('circle[r="36"]')!;

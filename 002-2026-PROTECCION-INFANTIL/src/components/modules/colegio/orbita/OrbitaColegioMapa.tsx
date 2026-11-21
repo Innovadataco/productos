@@ -31,6 +31,10 @@ function palabraRiesgo(riesgo: "alta" | "sin_contacto"): string {
 function colorRiesgo(riesgo: "alta" | "sin_contacto"): ColorNodo {
     return riesgo === "alta" ? "rubi" : "ambar";
 }
+/** SPEC-968: «{N} reporte(s)» con el sustantivo y el singular/plural correctos (también en el aria-label). */
+function reportesTexto(n: number): string {
+    return `${n} ${n === 1 ? "reporte" : "reportes"}`;
+}
 
 const LIENZO = 360;
 const CENTRO = LIENZO / 2;
@@ -166,12 +170,12 @@ function CapaColegio({
                             type="button"
                             onClick={() => onAbrirCurso(c)}
                             className="ring-accent flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-tinta/5"
-                            aria-label={`Curso ${c.nombre}. ${c.alertas30d} reportes en 30 días. ${palabraCurso(c.color)}. Abrir el curso.`}
+                            aria-label={`Curso ${c.nombre}. ${reportesTexto(c.alertas30d)} en 30 días. ${palabraCurso(c.color)}. Abrir el curso.`}
                         >
                             <span className={`h-3 w-3 shrink-0 rounded-full ${PUNTO[c.color]}`} aria-hidden="true" />
                             <span className="flex-1 text-sm text-tinta">{c.nombre}</span>
                             <span className="text-xs text-subtle">
-                                {c.alertas30d} · 30 días · {palabraCurso(c.color)}
+                                {reportesTexto(c.alertas30d)} · 30 días · {palabraCurso(c.color)}
                             </span>
                         </button>
                     </li>
@@ -237,7 +241,8 @@ function CapaCurso({
                                 piezas.push(
                                     <g key="titular">
                                         <line x1={CENTRO} y1={CENTRO} x2={p.x} y2={p.y} className="stroke-tinta/20" strokeWidth={1} />
-                                        <circle cx={p.x} cy={p.y} r={14} className={FILL.pino} />
+                                        {/* SPEC-968: titular = contorno neutro de CONTEXTO, no el pino-estado (no «sin novedad»). */}
+                                        <circle cx={p.x} cy={p.y} r={14} className="fill-none stroke-tinta/50" strokeWidth={2} />
                                     </g>
                                 );
                                 i += 1;
@@ -256,7 +261,7 @@ function CapaCurso({
 
                     {/* Equivalente en lista (teclado / lector de pantalla) */}
                     <h2 className="mt-4 mb-2 text-sm font-medium text-muted">
-                        {detalle.curso.nombre} — {detalle.curso.alertas30d} reportes · 30 días
+                        {detalle.curso.nombre} — {reportesTexto(detalle.curso.alertas30d)} · 30 días
                     </h2>
                     <ul className="divide-y divide-tinta/10 rounded-lg border border-tinta/12">
                         {detalle.alumnosMirada.length === 0 && (
@@ -271,7 +276,8 @@ function CapaCurso({
                         ))}
                         {detalle.titular && (
                             <li className="flex items-center gap-3 px-3 py-2">
-                                <span className="h-3 w-3 shrink-0 rounded-full bg-pino" aria-hidden="true" />
+                                {/* SPEC-968: contorno neutro de contexto (no bg-pino de estado). */}
+                                <span className="h-3 w-3 shrink-0 rounded-full border border-tinta/50" aria-hidden="true" />
                                 <span className="flex-1 text-sm text-tinta">Profesor titular: {detalle.titular.nombre}</span>
                             </li>
                         )}
