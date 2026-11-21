@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# curl falso: responde la API de GitHub con FALSO_CHECKS y FALSO_COMPARE.
+linea_falso="$(basename "$0")"; for a in "$@"; do linea_falso="$linea_falso"$'\t'"$a"; done; printf '%s\n' "$linea_falso" >>"$FALSO_REGISTRO" # una sola escritura: atómica entre procesos
+[ "${FALSO_CURL_RC:-0}" = "0" ] || exit "${FALSO_CURL_RC}"
+case "${!#}" in
+  *check-runs*) printf '%s' "${FALSO_CHECKS:-}" ;;
+  *compare*) printf '%s' "${FALSO_COMPARE:-}" ;;
+esac

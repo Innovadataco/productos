@@ -1,0 +1,314 @@
+// inv-008-vigia (docker/vigia/vigia.sh): vigila la memoria del VPS compartido y los OOM de cualquier
+// contenedor (memory.events de cada docker-*.scope) y AVISA por Telegram. Nunca actúa: el corte es manual.
+// Máquina de estados sin spam: OK → ALERTA (una vez) → PEOR (solo si empeora) → RESUELTO (una vez).
+// RESUELTO solo con MemAvailable ≥ umbral + 256 MiB durante 3 pasadas seguidas y sin OOM en la ventana de calma.
+// El OOM se lee del contador JERÁRQUICO (system.slice o docker): persiste aunque el scope del contenedor muerto
+// se borre. El token va a curl por stdin (-K -), nunca en sus argumentos.
+// El Telegram falso escucha en un socket Unix (sin puertos TCP).
+import { spawn } from "node:child_process";
+import { mkdirSync, readFileSync, writeFileSync, existsSync, utimesSync } from "node:fs";
+import { createServer, type Server } from "node:http";
+import path from "node:path";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { chmodSync } from "node:fs";
+import { carpetaTemporal, crearFalsos, entorno, ruta008, type Falsos } from "./falsos";
+
+// Cada prueba corre scripts de bash con varios procesos: con la suite en paralelo puede pasar de 5 s.
+vi.setConfig({ testTimeout: 60_000 });
+
+const VIGIA = ruta008("docker/vigia/vigia.sh");
+const TOKEN = "123456:TOKEN-FICTICIO-NUNCA-EN-EL-MENSAJE";
+const ID_OOM = "4f3c2b1a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b";
+
+type Mensaje = { url: string; cuerpo: { chat_id: string; text: string } };
+let servidor: Server;
+let socket: string;
+let mensajes: Mensaje[] = [];
+let responder = 200;
+
+beforeAll(async () => {
+  socket = path.join(carpetaTemporal("telegram"), "t.sock");
+  servidor = createServer((req, res) => {
+    let datos = "";
+    req.on("data", (c) => (datos += c));
+    req.on("end", () => {
+      if (responder === 200) mensajes.push({ url: req.url ?? "", cuerpo: JSON.parse(datos) });
+      res.statusCode = responder;
+      res.end(JSON.stringify({ ok: responder === 200 }));
+    });
+  });
+  await new Promise<void>((ok) => servidor.listen(socket, ok));
+});
+afterAll(() => new Promise<void>((ok) => servidor.close(() => ok())));
+
+function preparar() {
+  const dir = carpetaTemporal("vigia");
+  const falsos: Falsos = crearFalsos(dir);
+  const meminfo = path.join(dir, "meminfo");
+  const cgroup = path.join(dir, "cgroup");
+  const scope = path.join(cgroup, "system.slice", `docker-${ID_OOM}.scope`);
+  mkdirSync(scope, { recursive: true });
+  mkdirSync(path.join(cgroup, "user.slice", "otro.scope"), { recursive: true });
+  writeFileSync(path.join(cgroup, "user.slice", "otro.scope", "memory.events"), "oom_kill 7\n");
+  const estado = path.join(dir, "estado");
+  const fijarMemoria = (mib: number, swapMib = 2470) =>
+    writeFileSync(meminfo, `MemTotal: 8000000 kB\nMemAvailable: ${mib * 1024} kB\nSwapTotal: 4194300 kB\nSwapFree: ${swapMib * 1024} kB\n`);
+  // Contador jerárquico (system.slice) y el del scope del contenedor. Un OOM real sube los dos; si el scope se
+  // recrea (reinicio), el suyo vuelve a 0 y el jerárquico conserva el total.
+  let jerarquico = 0;
+  const escribirJerarquico = () => writeFileSync(path.join(cgroup, "system.slice", "memory.events"), `oom ${jerarquico}\noom_kill ${jerarquico}\n`);
+  const fijarOom = (n: number) => {
+    jerarquico += Math.max(0, n - oomScope);
+    oomScope = n;
+    writeFileSync(path.join(scope, "memory.events"), `low 0\nhigh 0\nmax 3\noom ${n}\noom_kill ${n}\n`);
+    escribirJerarquico();
+  };
+  let oomScope = 0;
+  /** OOM que mata el proceso principal: el contador jerárquico sube y el scope vuelve en 0 (recreado). */
+  const oomConReinicio = () => {
+    jerarquico += 1;
+    oomScope = 0;
+    writeFileSync(path.join(scope, "memory.events"), "oom 0\noom_kill 0\n");
+    escribirJerarquico();
+  };
+  fijarMemoria(4000);
+  fijarOom(0);
+  // curl envuelto: registra sus argumentos y habla con el Telegram falso por el socket.
+  const envoltorio = path.join(dir, "curl-real");
+  mkdirSync(envoltorio);
+  writeFileSync(
+    path.join(envoltorio, "curl"),
+    `#!/usr/bin/env bash\nl="curl"; for a in "$@"; do l="$l"$'\\t'"$a"; done; printf '%s\\n' "$l" >>"$FALSO_REGISTRO"\nexec /usr/bin/curl --unix-socket "$FALSO_TELEGRAM_SOCKET" "$@"\n`,
+  );
+  chmodSync(path.join(envoltorio, "curl"), 0o755);
+  const env = entorno(falsos, {
+    VIGIA_MEMINFO: meminfo,
+    VIGIA_CGROUP: cgroup,
+    VIGIA_ESTADO_DIR: estado,
+    TELEGRAM_BOT_TOKEN: TOKEN,
+    TELEGRAM_CHAT_ID: "-100123",
+    TELEGRAM_API: "http://telegram.falso",
+    FALSO_TELEGRAM_SOCKET: socket,
+    VIGIA_OOM_CALMA_S: "0",
+  });
+  env.PATH = `${envoltorio}:${env.PATH}`;
+  const pasada = (extra: Record<string, string> = {}) =>
+    new Promise<{ status: number | null; stdout: string; stderr: string }>((ok) => {
+      const hijo = spawn("sh", [VIGIA, "--una-pasada"], { env: { ...env, ...extra } as NodeJS.ProcessEnv });
+      let stdout = "";
+      let stderr = "";
+      hijo.stdout.on("data", (c: Buffer) => (stdout += c));
+      hijo.stderr.on("data", (c: Buffer) => (stderr += c));
+      hijo.on("close", (status: number | null) => ok({ status, stdout, stderr }));
+    });
+  return { dir, falsos, estado, fijarMemoria, fijarOom, oomConReinicio, pasada, env };
+}
+
+const textos = () => mensajes.map((m) => m.cuerpo.text);
+
+describe("vigía · máquina de estados sin spam", () => {
+  it("OK no avisa; ALERTA avisa una vez; PEOR solo si baja 256 MiB más; RESUELTO una vez", async () => {
+    mensajes = [];
+    const v = preparar();
+    expect((await v.pasada()).status).toBe(0);
+    expect(mensajes).toHaveLength(0);
+
+    v.fijarMemoria(900);
+    await v.pasada();
+    expect(textos()).toHaveLength(1);
+    expect(textos()[0]).toMatch(/ALERTA/);
+
+    v.fijarMemoria(700);
+    await v.pasada();
+    expect(textos()).toHaveLength(1);
+
+    v.fijarMemoria(640);
+    await v.pasada();
+    expect(textos()).toHaveLength(2);
+    expect(textos()[1]).toMatch(/PEOR/);
+
+    v.fijarMemoria(500);
+    await v.pasada();
+    expect(textos()).toHaveLength(2);
+
+    v.fijarMemoria(2900);
+    await v.pasada();
+    await v.pasada();
+    expect(textos()).toHaveLength(2);
+    await v.pasada();
+    expect(textos()).toHaveLength(3);
+    expect(textos()[2]).toMatch(/RESUELTO/);
+
+    await v.pasada();
+    expect(textos()).toHaveLength(3);
+  });
+
+  it("histéresis: en el vaivén alrededor del umbral avisa una sola ALERTA y un solo RESUELTO", async () => {
+    mensajes = [];
+    const v = preparar();
+    await v.pasada();
+    for (const mib of [900, 1100, 1300, 900, 1300, 1300, 1100, 1300, 1300]) {
+      v.fijarMemoria(mib);
+      await v.pasada();
+    }
+    expect(textos()).toHaveLength(1);
+    v.fijarMemoria(1300);
+    await v.pasada();
+    expect(textos()).toHaveLength(2);
+    expect(textos()[0]).toMatch(/ALERTA/);
+    expect(textos()[1]).toMatch(/RESUELTO/);
+  });
+
+  it("una alerta de OOM no se resuelve mientras no pase la ventana de calma", async () => {
+    mensajes = [];
+    const v = preparar();
+    await v.pasada();
+    v.fijarOom(1);
+    await v.pasada({ VIGIA_OOM_CALMA_S: "3600" });
+    for (let i = 0; i < 5; i++) await v.pasada({ VIGIA_OOM_CALMA_S: "3600" });
+    expect(textos()).toHaveLength(1);
+    for (let i = 0; i < 3; i++) await v.pasada({ VIGIA_OOM_CALMA_S: "0" });
+    expect(textos()).toHaveLength(2);
+    expect(textos()[1]).toMatch(/RESUELTO/);
+  });
+
+  it("OOM típico: el proceso principal muere, el scope vuelve en 0 y el contador jerárquico lo delata", async () => {
+    mensajes = [];
+    const v = preparar();
+    await v.pasada();
+    v.fijarOom(2);
+    await v.pasada();
+    expect(textos()).toHaveLength(1);
+    v.oomConReinicio();
+    await v.pasada();
+    expect(textos()).toHaveLength(2);
+    expect(textos()[1]).toMatch(/PEOR/);
+    expect(textos()[1]).toMatch(/recreado/);
+    expect(textos()[1]).toContain(ID_OOM.slice(0, 12));
+  });
+
+  it("un oom_kill nuevo en un docker-*.scope dispara la alerta con el id corto y el comando para identificarlo", async () => {
+    mensajes = [];
+    const v = preparar();
+    await v.pasada();
+    expect(mensajes).toHaveLength(0);
+    v.fijarOom(1);
+    await v.pasada();
+    expect(textos()).toHaveLength(1);
+    expect(textos()[0]).toMatch(/OOM/);
+    expect(textos()[0]).toContain(ID_OOM.slice(0, 12));
+    expect(textos()[0]).toContain(`docker ps --no-trunc | grep ${ID_OOM.slice(0, 12)}`);
+  });
+
+  it("también entiende el driver cgroupfs (docker/<id>/memory.events), como Colima", async () => {
+    mensajes = [];
+    const v = preparar();
+    const dirCgroupfs = path.join(v.env.VIGIA_CGROUP!, "docker", ID_OOM.replace(/^4f/, "9a"));
+    mkdirSync(dirCgroupfs, { recursive: true });
+    writeFileSync(path.join(dirCgroupfs, "memory.events"), "oom_kill 0\n");
+    writeFileSync(path.join(v.env.VIGIA_CGROUP!, "docker", "memory.events"), "oom_kill 0\n");
+    await v.pasada();
+    writeFileSync(path.join(dirCgroupfs, "memory.events"), "oom_kill 1\n");
+    writeFileSync(path.join(v.env.VIGIA_CGROUP!, "docker", "memory.events"), "oom_kill 1\n");
+    await v.pasada();
+    expect(textos()).toHaveLength(1);
+    expect(textos()[0]).toContain(`docker ps --no-trunc | grep 9a3c2b1a0e9d`);
+  });
+
+  it("con la alerta abierta, otro OOM nuevo es PEOR", async () => {
+    mensajes = [];
+    const v = preparar();
+    await v.pasada();
+    v.fijarOom(1);
+    await v.pasada();
+    v.fijarMemoria(900);
+    v.fijarOom(2);
+    await v.pasada();
+    expect(textos()).toHaveLength(2);
+    expect(textos()[1]).toMatch(/PEOR/);
+  });
+
+  it("si Telegram falla, no cambia de estado: reintenta en la pasada siguiente", async () => {
+    mensajes = [];
+    const v = preparar();
+    v.fijarMemoria(800);
+    responder = 500;
+    expect((await v.pasada()).status).toBe(0);
+    responder = 200;
+    expect(mensajes).toHaveLength(0);
+    await v.pasada();
+    expect(textos()).toHaveLength(1);
+    expect(textos()[0]).toMatch(/ALERTA/);
+  });
+});
+
+describe("vigía · contenido del mensaje", () => {
+  it("trae hora COT, MemAvailable, SwapFree y el comando de corte; nunca el token", async () => {
+    mensajes = [];
+    const v = preparar();
+    v.fijarMemoria(812, 1999);
+    await v.pasada();
+    const m = mensajes[0]!;
+    expect(m.url).toBe(`/bot${TOKEN}/sendMessage`);
+    expect(m.cuerpo.chat_id).toBe("-100123");
+    expect(m.cuerpo.text).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2} COT/);
+    expect(m.cuerpo.text).toMatch(/MemAvailable: 812 MiB/);
+    expect(m.cuerpo.text).toMatch(/SwapFree: 1999 MiB/);
+    expect(m.cuerpo.text).toContain("ssh pi-vps sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/pausar-008.sh");
+    expect(m.cuerpo.text).not.toContain(TOKEN);
+    expect(m.cuerpo.text).not.toContain("TOKEN-FICTICIO");
+  });
+
+  it("el token nunca va en los argumentos de curl (se vería en ps): va por stdin con -K -", async () => {
+    mensajes = [];
+    const v = preparar();
+    v.fijarMemoria(700);
+    await v.pasada();
+    expect(mensajes).toHaveLength(1);
+    const argumentos = readFileSync(v.falsos.registro, "utf8");
+    expect(argumentos).toMatch(/^curl\t/m);
+    expect(argumentos).toContain("-K\t-");
+    expect(argumentos).not.toContain("TOKEN-FICTICIO");
+  });
+
+  it("el umbral es configurable (control positivo en el VPS con 7168 MiB)", async () => {
+    mensajes = [];
+    const v = preparar();
+    v.fijarMemoria(4000);
+    await v.pasada({ VIGIA_UMBRAL_MEMAVAILABLE_MIB: "7168" });
+    expect(textos()).toHaveLength(1);
+    expect(textos()[0]).toMatch(/umbral de 7168 MiB/);
+  });
+});
+
+describe("vigía · nunca actúa y deja su latido", () => {
+  it("con alerta y OOM no llama a docker, ssh ni al script de corte", async () => {
+    mensajes = [];
+    const v = preparar();
+    await v.pasada();
+    v.fijarMemoria(100);
+    v.fijarOom(5);
+    await v.pasada();
+    expect(v.falsos.llamadas().filter((l) => ["docker", "ssh", "flock", "ps", "wget"].includes(l[0]!))).toEqual([]);
+  });
+
+  it("deja el latido en su carpeta de estado y --salud lo valida", async () => {
+    const v = preparar();
+    await v.pasada();
+    const latido = path.join(v.estado, "latido");
+    expect(existsSync(latido)).toBe(true);
+    const salud = (extra: Record<string, string> = {}) =>
+      new Promise<number | null>((ok) => spawn("sh", [VIGIA, "--salud"], { env: { ...v.env, ...extra } as NodeJS.ProcessEnv }).on("close", ok));
+    expect(await salud()).toBe(0);
+    const viejo = new Date(Date.now() - 3600_000);
+    utimesSync(latido, viejo, viejo);
+    expect(await salud()).not.toBe(0);
+  });
+
+  it("sin token o sin chat no arranca (falla cerrada, sin imprimir valores)", async () => {
+    const v = preparar();
+    const r = await v.pasada({ TELEGRAM_BOT_TOKEN: "" });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).not.toContain(TOKEN);
+  });
+});

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+linea_falso="$(basename "$0")"; for a in "$@"; do linea_falso="$linea_falso"$'\t'"$a"; done; printf '%s\n' "$linea_falso" >>"$FALSO_REGISTRO" # una sola escritura: atómica entre procesos
+printf 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/falso 100000000 1 %s 1%% /\n' "${FALSO_DF_KB:-52428800}"

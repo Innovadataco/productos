@@ -1,0 +1,20 @@
+# Inversiones · contexto de la imagen. Nunca secretos ni artefactos locales (la imagen no lleva secretos).
+.env*
+**/.env*
+*.env
+node_modules
+**/node_modules
+.next
+**/.next
+coverage
+playwright-report
+test-results
+# Pruebas y su configuración: next build revisaría los tipos de playwright.config.ts, que importa tests/.
+tests
+playwright.config.ts
+vitest.config.ts
+vitest.integracion.config.ts
+docs
+*.log
+.DS_Store
+.git

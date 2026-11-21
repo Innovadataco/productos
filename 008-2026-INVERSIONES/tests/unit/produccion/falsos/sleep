@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+linea_falso="$(basename "$0")"; for a in "$@"; do linea_falso="$linea_falso"$'\t'"$a"; done; printf '%s\n' "$linea_falso" >>"$FALSO_REGISTRO" # una sola escritura: atómica entre procesos
+# FALSO_SLEEP_ROMPE_SALUD: al «dormir», la salud de la app cambia (para la verificación después de la espera).
+[ -z "${FALSO_SLEEP_ROMPE_SALUD:-}" ] || printf '%s' "$FALSO_SLEEP_ROMPE_SALUD" >"$FALSO_SALUD_ARCHIVO"
+exit 0
