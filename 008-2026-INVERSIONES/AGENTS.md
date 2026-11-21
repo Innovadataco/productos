@@ -133,7 +133,7 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
-> v1.22 · 2026-11-21 · 10:55 (-05) · INV · Fábrica ECC (frente precios-carga) · `precios:exportar` (Mac) y `precios:importar` (vía B, camino único de escritura); en la carga, certificación → precios → conciliación
+> v1.22 · 2026-11-21 · 10:48 (-05) · INV · Fábrica ECC (frente precios-carga) · `precios:exportar` (Mac) y `precios:importar` (vía B, camino único de escritura); en la carga, certificación → precios → conciliación
 > v1.21 · 2026-11-21 · 09:28 (-05) · INV · Fábrica ECC (frente app-sin-salida) · la app sin salida a internet detrás de `inv-008-entrada`, redes internal con la puerta de enlace aislada; la reversa con el clon en el sha que corre
 > v1.20 · 2026-11-21 · 08:34 (-05) · INV · Fábrica Inversiones · cobertura unida (`test:cobertura` = unidad + integración con `--merge-reports`, pisos 92/93/97/92); se retiran los pisos separados
 > v1.19 · 2026-11-21 · 06:57 (-05) · INV · Fábrica ECC (frente infra-literales) · sin nombres de otros proyectos del VPS en la sección de producción; reversa con el clon en el sha anterior
