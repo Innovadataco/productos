@@ -65,6 +65,62 @@ preparar_entorno() {
   fi
 }
 
+# Imprime, una por línea, las rutas de las que depende lo que corre con sudo y que alguien distinto de $1
+# podría cambiar: de otro dueño, con escritura del grupo o de otros, o enlaces simbólicos. Sin salida = sano.
+#  - los padres de la carpeta 008 ($3), sin recursión, hasta $2 (en producción, /): quien escribe en un padre
+#    puede cambiar la carpeta entera;
+#  - scripts/ (recursivo) y el compose: es lo que corre y lo que decide qué contenedores corren;
+#  - .git, .git/config y .git/hooks del clon: `git status` como root puede correr core.fsmonitor o el hook
+#    post-index-change;
+#  - el archivo de producción ($4): además, sin lectura del grupo ni de otros (600).
+# Solo -perm -NNNN y -user: igual en el find de GNU (VPS) y en el de BSD (Mac).
+rutas_inseguras() {
+  local dueno="$1" tope="$2" dir008="$3" archivo_prod="$4" repo ruta
+  repo="$(dirname "$dir008")"
+  ruta="$dir008"
+  while :; do
+    find "$ruta" -maxdepth 0 \( ! -user "$dueno" -o -perm -0020 -o -perm -0002 -o -type l \) -print ||
+      printf '%s (no se pudo revisar)\n' "$ruta"
+    { [ "$ruta" != "$tope" ] && [ "$ruta" != "/" ]; } || break
+    ruta="$(dirname "$ruta")"
+  done
+  for ruta in "$dir008/scripts" "$dir008/docker-compose.prod.yml"; do
+    if [ ! -e "$ruta" ] && [ ! -L "$ruta" ]; then printf '%s (no existe)\n' "$ruta"; continue; fi
+    find "$ruta" \( ! -user "$dueno" -o -perm -0020 -o -perm -0002 -o -type l \) -print || printf '%s (no se pudo revisar)\n' "$ruta"
+  done
+  if [ -e "$repo/.git" ] || [ -L "$repo/.git" ]; then
+    find "$repo/.git" -maxdepth 0 \( ! -user "$dueno" -o -perm -0020 -o -perm -0002 -o -type l \) -print || printf '%s (no se pudo revisar)\n' "$repo/.git"
+  fi
+  for ruta in "$repo/.git/config" "$repo/.git/hooks"; do
+    [ -e "$ruta" ] || [ -L "$ruta" ] || continue
+    find "$ruta" \( ! -user "$dueno" -o -perm -0020 -o -perm -0002 -o -type l \) -print || printf '%s (no se pudo revisar)\n' "$ruta"
+  done
+  if [ -e "$archivo_prod" ] || [ -L "$archivo_prod" ]; then
+    find "$archivo_prod" -maxdepth 0 \( ! -user "$dueno" -o -perm -0040 -o -perm -0004 -o -perm -0020 -o -perm -0002 -o -type l \) -print ||
+      printf '%s (no se pudo revisar)\n' "$archivo_prod"
+  fi
+  return 0
+}
+
+# Primera revisión de todo script con sudo en producción, justo después de preparar_entorno: aborta si lo que
+# corre como root (o lo decide) no es solo de root. Con --solo-avisar (pausar-008.sh) solo avisa, para no
+# frenar un corte de emergencia. En el proyecto de prueba no revisa (en el Mac nada es de root).
+# Límite: un script no responde por sí mismo. Cuando esto corre, bash ya leyó el script y este archivo; si
+# alguien pudo cambiarlos, también pudo quitar esta revisión. Lo que sí cuida: los scripts, el compose y el
+# SQL que se leen después, la cadena de padres y la configuración de git, ante un permiso mal puesto.
+revisar_arbol() {
+  local malas
+  [ "$INV_PROYECTO_ACTIVO" = "$INV_PROYECTO_PROD" ] || return 0
+  malas="$(rutas_inseguras root / "$INV_DIR_008" "$INV_ENV_PROD")"
+  [ -n "$malas" ] || return 0
+  malas="$(printf '%s\n' "$malas" | tr '\n' ' ')"
+  if [ "${1:-}" = "--solo-avisar" ]; then
+    informar "⚠️  rutas que no son solo de root (otro dueño, escritura del grupo u otros, enlaces, o el archivo de producción sin 600): ${malas}· se sigue: la pausa no se frena"
+    return 0
+  fi
+  morir "rutas que no son solo de root (otro dueño, escritura del grupo u otros, enlaces, o el archivo de producción sin 600): ${malas}· no se corre con sudo"
+}
+
 # Arma COMPOSE (arreglo): el proyecto, el compose de este clon y el archivo de producción SOLO para
 # interpolar (ningún servicio usa env_file). Es la única forma en que los scripts hablan con Compose.
 armar_compose() {

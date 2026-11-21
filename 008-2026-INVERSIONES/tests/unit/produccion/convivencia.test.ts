@@ -69,6 +69,30 @@ describe("medir-memoria.sh", () => {
     expect((await correr(MEDIR, [], { ...env, INV_MEMINFO: "/no/existe" })).status).not.toBe(0);
   });
 
+  it("opción desconocida: falla sin medir ni llamar a Docker", async () => {
+    const { falsos, env } = preparar();
+    const r = await correr(MEDIR, ["--forzar"], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/opción desconocida/);
+    expect(docker(falsos.llamadas())).toEqual([]);
+  });
+
+  it("sin contenedores del proyecto: lo dice y no llama a docker stats", async () => {
+    const { falsos, env } = preparar({ FALSO_CID_APP: "", FALSO_CID_DB: "" });
+    const r = await correr(MEDIR, [], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/sin contenedores de inv-008-prueba corriendo/);
+    expect(docker(falsos.llamadas()).some((l) => l[1] === "stats")).toBe(false);
+  });
+
+  it("--salida acumula: la medición de antes y la de después quedan en el mismo archivo", async () => {
+    const { base, env } = preparar();
+    const salida = path.join(base, "estado", "mediciones", "m.txt");
+    expect((await correr(MEDIR, ["--etiqueta", "antes de up", "--salida", salida], env)).status).toBe(0);
+    expect((await correr(MEDIR, ["--etiqueta", "10 min después de up", "--salida", salida], env)).status).toBe(0);
+    expect(readFileSync(salida, "utf8")).toMatch(/== antes de up[\s\S]*== 10 min después de up/);
+  });
+
   it("candado de rutas: no escribe la medición fuera de la raíz", async () => {
     const { env } = preparar();
     expect((await correr(MEDIR, ["--salida", "/tmp/inv-008-medicion-fuera.txt"], env)).status).not.toBe(0);
@@ -196,6 +220,52 @@ describe("pausar-008.sh y reanudar-008.sh · la pausa sobrevive a un reinicio de
     expect(docker(falsos.llamadas())).toEqual([]);
   });
 
+  it("pausar con otra operación de Inversiones en curso (candado propio): no deja marca ni toca Docker", async () => {
+    const { base, falsos, env } = conEstado({ FALSO_FLOCK_OCUPADO: "8" });
+    expect((await correr(PAUSAR, [], env)).status).not.toBe(0);
+    expect(existsSync(marca(base))).toBe(false);
+    expect(docker(falsos.llamadas())).toEqual([]);
+  });
+
+  it("pausar toma solo el candado propio: funciona aunque PI tenga el común (la pausa de emergencia no espera a PI)", async () => {
+    const { base, falsos, env } = conEstado({ FALSO_FLOCK_OCUPADO: "9" });
+    const r = await correr(PAUSAR, [], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(existsSync(marca(base))).toBe(true);
+    expect(falsos.llamadas().filter((l) => l[0] === "flock").map((l) => l.at(-1))).toEqual(["8"]);
+  });
+
+  it("pausar sanea el motivo: la marca no lleva comillas, sustituciones ni separadores de comandos", async () => {
+    const { base, env } = conEstado();
+    expect((await correr(PAUSAR, ["corte; $(touch /tmp/x) `id` | y > z"], env)).status).toBe(0);
+    const texto = readFileSync(marca(base), "utf8");
+    expect(texto).toMatch(/corte/);
+    expect(texto).not.toMatch(/[;$`|>()]/);
+  });
+
+  it("pausar: si el down falla, sale con error y la marca queda (la pausa se mantiene)", async () => {
+    const { base, env } = conEstado({ FALSO_DOWN_RC: "1" });
+    expect((await correr(PAUSAR, [], env)).status).not.toBe(0);
+    expect(existsSync(marca(base))).toBe(true);
+  });
+
+  it("reanudar con estado/sha-actual malformado: no toca Docker ni borra la marca", async () => {
+    const { base, falsos, env } = conEstado();
+    writeFileSync(path.join(base, "estado", "sha-actual"), "latest\n");
+    writeFileSync(marca(base), "pausa\n");
+    expect((await correr(REANUDAR, [], env)).status).not.toBe(0);
+    expect(docker(falsos.llamadas())).toEqual([]);
+    expect(existsSync(marca(base))).toBe(true);
+  });
+
+  it("reanudar con otra operación de Inversiones en curso (candado propio): no toca Docker", async () => {
+    const { base, falsos, env } = conEstado({ FALSO_FLOCK_OCUPADO: "8" });
+    writeFileSync(marca(base), "pausa\n");
+    expect((await correr(REANUDAR, [], env)).status).not.toBe(0);
+    expect(docker(falsos.llamadas())).toEqual([]);
+    expect(existsSync(marca(base))).toBe(true);
+  });
+
   it("reanudar falla (y deja la marca) si el up --wait no queda healthy", async () => {
     const { base, env } = conEstado({ FALSO_UP_RC: "1" });
     writeFileSync(marca(base), "pausa\n");
@@ -240,6 +310,36 @@ describe("crear-acceso-inicial.sh · recuperación de acceso (lo corre Jelk por 
   it("sin despliegue registrado ni INV_TAG, no corre", async () => {
     const { falsos, env } = preparar();
     expect((await correr(ACCESO, [], env)).status).not.toBe(0);
+    expect(docker(falsos.llamadas())).toEqual([]);
+  });
+
+  for (const malo of ["latest", "1".repeat(39), "1".repeat(41), "G".repeat(40), `${"1".repeat(40)} x`, "$(id)"]) {
+    it(`INV_TAG «${malo}» no es un sha de 40 hex: se niega sin tocar Docker`, async () => {
+      const { falsos, env } = preparar({ INV_TAG: malo });
+      const r = await correr(ACCESO, ["--email", "dueno@ejemplo.invalid"], env);
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toMatch(/40 hex/);
+      expect(docker(falsos.llamadas())).toEqual([]);
+    });
+  }
+
+  it("sin INV_TAG usa el sha de estado/sha-actual para el migrador", async () => {
+    const { base, env } = preparar();
+    const sha = "2".repeat(40);
+    mkdirSync(path.join(base, "estado"), { recursive: true });
+    writeFileSync(path.join(base, "estado", "sha-actual"), `${sha}\n`);
+    const runs = path.join(base, "runs.txt");
+    const r = await correr(ACCESO, ["--email", "dueno@ejemplo.invalid"], { ...env, FALSO_RUN_TAGS: runs });
+    expect(r.status, r.stderr).toBe(0);
+    expect(readFileSync(runs, "utf8")).toMatch(new RegExp(`^run ${sha} .*inv-008-migrador`, "m"));
+  });
+
+  it("estado/sha-actual malformado (sin INV_TAG): se niega sin tocar Docker", async () => {
+    const { base, falsos, env } = preparar();
+    mkdirSync(path.join(base, "estado"), { recursive: true });
+    writeFileSync(path.join(base, "estado", "sha-actual"), "inv-008-app:latest\n");
+    const r = await correr(ACCESO, [], env);
+    expect(r.status).not.toBe(0);
     expect(docker(falsos.llamadas())).toEqual([]);
   });
 

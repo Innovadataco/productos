@@ -87,7 +87,7 @@ describe("desplegar-prod.sh · camino feliz", () => {
     expect(readFileSync(path.join(base, "estado", "imagen-actual"), "utf8").trim()).toBe(ID);
   });
 
-  it("orden: candados → disco → PI → CI → base y respaldo → roles → respaldo → migrador → app → versión", async () => {
+  it("orden: candados → disco → PI → CI → base y respaldo → roles → app detenida → respaldo → respaldo diario detenido → migrador → app → versión", async () => {
     const { falsos, env, script } = preparar();
     expect((await correr(script, [ID], env)).status).toBe(0);
     const ll = falsos.llamadas();
@@ -99,7 +99,9 @@ describe("desplegar-prod.sh · camino feliz", () => {
       indice(ll, (l) => l[0] === "curl" && l.join(" ").includes("check-runs")),
       indice(ll, compose("up", "inv-008-db", "inv-008-respaldo")),
       indice(ll, compose("exec", "psql")),
+      indice(ll, compose("stop", "inv-008-app")),
       indice(ll, compose("exec", "inv-008-respaldo")),
+      indice(ll, compose("stop", "inv-008-respaldo")),
       indice(ll, compose("run", "inv-008-migrador")),
       indice(ll, compose("up", "inv-008-app")),
       indice(ll, (l) => l[0] === "docker" && l[1] === "exec" && l.join(" ").includes("http://127.0.0.1:5008/api/salud")),
@@ -243,7 +245,10 @@ describe("desplegar-prod.sh · guardas que abortan sin DEPLOY VERIFICADO", () =>
     const r = await correr(script, [ID], { ...env, INV_MEMINFO: archivoMem });
     expect(r.status).toBe(3);
     expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
-    expect(falsos.llamadas().some((l) => l.includes("stop") || l.includes("down"))).toBe(false);
+    const ll = falsos.llamadas();
+    expect(ll.some((l) => l.includes("down"))).toBe(false);
+    // Las únicas detenciones son las de antes del migrador (app y respaldo diario).
+    expect(ll.slice(indice(ll, compose("run", "inv-008-migrador"))).some((l) => l.includes("stop"))).toBe(false);
   });
 });
 
@@ -331,6 +336,130 @@ describe("desplegar-prod.sh · reversa (--sin-migrar) y carga del .tar", () => {
   });
 });
 
+describe("desplegar-prod.sh · pausa antes del migrador (la app vieja no retiene tablas) y su reversa", () => {
+  const conEstado = (sha: string, imagen = ID) => {
+    const p = preparar();
+    mkdirSync(path.join(p.base, "estado"), { recursive: true });
+    writeFileSync(path.join(p.base, "estado", "sha-actual"), `${sha}\n`);
+    writeFileSync(path.join(p.base, "estado", "imagen-actual"), `${imagen}\n`);
+    return p;
+  };
+  const ups = (base: string) => readFileSync(path.join(base, "tags.txt"), "utf8").trim().split("\n");
+
+  it("revisa PI antes de detener la app (si PI aparece, no se detiene nada)", async () => {
+    const { falsos, env, script } = preparar();
+    expect((await correr(script, [ID], env)).status).toBe(0);
+    const ll = falsos.llamadas();
+    const roles = indice(ll, compose("exec", "psql"));
+    const stopApp = indice(ll, compose("stop", "inv-008-app"));
+    const ps = ll.findIndex((l, i) => i > roles && l[0] === "ps");
+    expect(ps).toBeGreaterThan(roles);
+    expect(ps).toBeLessThan(stopApp);
+  });
+
+  it("después del migrador levanta los tres permanentes: app, vigía y respaldo", async () => {
+    const { falsos, env, script } = preparar();
+    expect((await correr(script, [ID], env)).status).toBe(0);
+    const ll = falsos.llamadas();
+    const final = ll.slice(indice(ll, compose("run", "inv-008-migrador"))).find(compose("up"));
+    expect(final).toEqual(expect.arrayContaining(["up", "-d", "--wait", "inv-008-app", "inv-008-vigia", "inv-008-respaldo"]));
+  });
+
+  it("con --sin-migrar no detiene nada (no hay migración que proteger)", async () => {
+    const { falsos, env, script } = conEstado("7".repeat(40));
+    const r = await correr(script, [ID, "--sin-migrar"], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(falsos.llamadas().some(compose("stop"))).toBe(false);
+  });
+
+  it("re-desplegar el mismo sha con el migrador fallido: la vuelta atrás levanta otra vez la app detenida", async () => {
+    const { repo, base, env, script } = preparar();
+    mkdirSync(path.join(base, "estado"), { recursive: true });
+    writeFileSync(path.join(base, "estado", "sha-actual"), `${repo.sha}\n`);
+    writeFileSync(path.join(base, "estado", "imagen-actual"), `${ID}\n`);
+    const r = await correr(script, [ID], { ...env, FALSO_MIGRADOR_RC: "1" });
+    expect(r.status).not.toBe(0);
+    expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
+    expect(r.stderr).toMatch(/vuelta atrás/i);
+    expect(ups(base).at(-1)).toMatch(new RegExp(`^up ${repo.sha} .*inv-008-app.*inv-008-vigia.*inv-008-respaldo`));
+  });
+
+  for (const [nombre, falla] of [
+    ["el migrador (o el guardián del esquema)", { FALSO_MIGRADOR_RC: "1" }],
+    ["el respaldo previo (con la app ya detenida)", { FALSO_RESPALDO_RC: "2" }],
+  ] as const) {
+    it(`si falla ${nombre}, vuelve a levantar app, vigía y respaldo con el sha que corría`, async () => {
+      const { repo, base, env, script } = preparar();
+      git(repo.dir, ["commit", "-q", "--allow-empty", "-m", "segundo"]);
+      const nuevo = git(repo.dir, ["rev-parse", "HEAD"]);
+      mkdirSync(path.join(base, "estado"), { recursive: true });
+      writeFileSync(path.join(base, "estado", "sha-actual"), `${repo.sha}\n`);
+      writeFileSync(path.join(base, "estado", "imagen-actual"), `sha256:${"a".repeat(64)}\n`);
+      const r = await correr(script, [ID], { ...env, ...falla, FALSO_SHA: nuevo, FALSO_SALUD: JSON.stringify({ estado: "ok", version: nuevo }) });
+      expect(r.status).not.toBe(0);
+      expect(ups(base).at(-1)).toMatch(new RegExp(`^up ${repo.sha} .*inv-008-app.*inv-008-vigia.*inv-008-respaldo`));
+      expect(readFileSync(path.join(base, "estado", "sha-actual"), "utf8").trim()).toBe(repo.sha);
+    });
+  }
+
+  for (const [nombre, falla] of [
+    ["el migrador", { FALSO_MIGRADOR_RC: "1" }],
+    ["el respaldo previo", { FALSO_RESPALDO_RC: "2" }],
+  ] as const) {
+    it(`primer despliegue y falla ${nombre}: no hay imagen a la que volver, no inventa una y lo dice`, async () => {
+      const { repo, base, env, script } = preparar(falla);
+      const r = await correr(script, [ID], env);
+      expect(r.status).not.toBe(0);
+      expect(ups(base).every((l) => l.startsWith(`up ${repo.sha} `) && !l.includes("inv-008-app"))).toBe(true);
+      expect(r.stderr).toMatch(/no hay imagen a la que volver/);
+    });
+  }
+
+  it("la vuelta atrás nunca levanta un sha que no sea de 40 hex (estado/sha-actual dañado)", async () => {
+    const { repo, base, env, script } = preparar();
+    mkdirSync(path.join(base, "estado"), { recursive: true });
+    writeFileSync(path.join(base, "estado", "sha-actual"), "latest\n");
+    writeFileSync(path.join(base, "estado", "imagen-actual"), `${ID}\n`);
+    const r = await correr(script, [ID, "--sin-migrar"], { ...env, FALSO_UP_FALLA_TAG: repo.sha });
+    expect(r.status).not.toBe(0);
+    expect(ups(base).some((l) => l.startsWith("up latest "))).toBe(false);
+    expect(r.stderr).toMatch(/no se vuelve/);
+  });
+});
+
+describe("desplegar-prod.sh · tamaño del pool de la app (connection_limit): solo avisa, no bloquea", () => {
+  const sinValor = (texto: string) => {
+    expect(texto).not.toContain("c".repeat(64));
+    expect(texto).not.toMatch(/postgresql:\/\//);
+  };
+
+  it("sin connection_limit en la URL de la app: avisa sin imprimir la URL y despliega igual", async () => {
+    const { repo, base, env, script } = preparar();
+    envProduccionFicticio(base, { INV_APP_DATABASE_URL: `postgresql://inv_app:${"c".repeat(64)}@inv-008-db:5432/inversiones?schema=public` });
+    const r = await correr(script, [ID], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${repo.sha}`);
+    expect(r.stderr).toMatch(/sin connection_limit en la URL de la app/);
+    sinValor(r.stderr + r.stdout);
+  });
+
+  it("connection_limit por encima del tope (20, con inv_app limitado a 10): avisa y despliega igual", async () => {
+    const { base, env, script } = preparar();
+    envProduccionFicticio(base, { INV_APP_DATABASE_URL: `postgresql://inv_app:${"c".repeat(64)}@inv-008-db:5432/inversiones?schema=public&connection_limit=20` });
+    const r = await correr(script, [ID], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toMatch(/connection_limit/);
+    sinValor(r.stderr + r.stdout);
+  });
+
+  it("con connection_limit=5 (el de la plantilla) no avisa", async () => {
+    const { env, script } = preparar();
+    const r = await correr(script, [ID], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).not.toMatch(/connection_limit/);
+  });
+});
+
 describe("desplegar-prod.sh · funciones puras", () => {
   const script = ruta008("scripts/desplegar-prod.sh");
 
@@ -369,9 +498,12 @@ describe("desplegar-prod.sh · funciones puras", () => {
     expect(ok([`inv-008-app:${sha}`])).not.toBe(0);
   });
 
-  it("scripts_seguros: rechaza scripts que no son de root o que otros pueden escribir", async () => {
-    const dir = carpetaTemporal("scripts-no-root");
-    writeFileSync(path.join(dir, "x.sh"), "echo");
-    expect(funcion(script, `scripts_seguros "${dir}"`).status).not.toBe(0);
+  it("pool_app_ok: connection_limit único, entero de 1 a 8, sin ceros a la izquierda", async () => {
+    const url = (consulta: string) => `postgresql://inv_app:${"c".repeat(64)}@inv-008-db:5432/inversiones${consulta}`;
+    const ok = (consulta: string) => funcion(script, `pool_app_ok "${url(consulta)}"`).status;
+    for (const bueno of ["?schema=public&connection_limit=5", "?connection_limit=1", "?schema=public&connection_limit=8"]) expect(ok(bueno), bueno).toBe(0);
+    for (const malo of ["", "?schema=public", "?connection_limit=0", "?connection_limit=9", "?connection_limit=05", "?connection_limit=", "?connection_limit=x", "?connection_limit=5&connection_limit=5", "?xconnection_limit=5"]) {
+      expect(ok(malo), malo).not.toBe(0);
+    }
   });
 });

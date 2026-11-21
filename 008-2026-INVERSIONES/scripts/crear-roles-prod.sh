@@ -40,6 +40,7 @@ generar_entrada_psql() {
 main() {
   [ $# -eq 0 ] || morir "no lleva argumentos"
   preparar_entorno
+  revisar_arbol
   armar_compose
   local url_dueno url_app
   url_dueno="$(leer_variable_env "$INV_ENV_PROD" INV_DUENO_DATABASE_URL)" || morir "falta INV_DUENO_DATABASE_URL en $INV_ENV_PROD"

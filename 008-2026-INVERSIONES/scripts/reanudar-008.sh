@@ -13,6 +13,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 main() {
   [ $# -eq 0 ] || morir "no lleva argumentos"
   preparar_entorno
+  revisar_arbol
   armar_compose
   local sha
   sha="$( [ -r "$INV_ESTADO_DIR/sha-actual" ] && tr -d '[:space:]' <"$INV_ESTADO_DIR/sha-actual" || true)"

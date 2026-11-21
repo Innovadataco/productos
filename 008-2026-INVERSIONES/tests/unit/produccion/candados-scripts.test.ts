@@ -72,6 +72,22 @@ describe("candados de los scripts de producción", () => {
     }
   });
 
+  it("todo script que corre con sudo revisa el árbol justo después de preparar_entorno; la pausa solo avisa", () => {
+    const conSudo = [
+      "scripts/desplegar-prod.sh",
+      "scripts/crear-roles-prod.sh",
+      "scripts/crear-acceso-inicial.sh",
+      "scripts/reanudar-008.sh",
+      "scripts/respaldar-base.sh",
+      "scripts/medir-memoria.sh",
+      "scripts/vigilar-convivencia.sh",
+    ];
+    for (const archivo of conSudo) expect(leer008(archivo), archivo).toMatch(/^\s*preparar_entorno\n\s*revisar_arbol\n/m);
+    expect(leer008("scripts/pausar-008.sh")).toMatch(/^\s*preparar_entorno\n\s*revisar_arbol --solo-avisar\n/m);
+    // La revisión tardía (dentro de verificar_clon, después de docker load) ya no existe.
+    expect(leer008("scripts/desplegar-prod.sh")).not.toMatch(/scripts_seguros/);
+  });
+
   it("los scripts que escriben en el VPS pasan cada ruta por ruta_escribible", () => {
     for (const archivo of ["scripts/desplegar-prod.sh", "scripts/respaldar-base.sh", "scripts/medir-memoria.sh", "scripts/vigilar-convivencia.sh"]) {
       expect(leer008(archivo), archivo).toMatch(/ruta_escribible/);
