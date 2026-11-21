@@ -196,6 +196,7 @@ DECLARE
     ['valor_unidad_fondo', 'valor_unidad_fondo_fondoId_fkey', 'FOREIGN KEY ("fondoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT']
   ];
   disparadores text[] := ARRAY[
+    ['asignacion_venta', 'asignacion_venta_coherente', 'CREATE TRIGGER asignacion_venta_coherente BEFORE INSERT OR UPDATE OF "ordenVentaId", "loteId", cantidad ON public.asignacion_venta FOR EACH ROW EXECUTE FUNCTION inv_asignacion_coherente()'],
     ['codigo_recuperacion', 'codigo_recuperacion_un_solo_uso', 'CREATE TRIGGER codigo_recuperacion_un_solo_uso BEFORE DELETE OR UPDATE ON public.codigo_recuperacion FOR EACH ROW EXECUTE FUNCTION inv_codigo_un_solo_uso()'],
     ['decision', 'decision_solo_insercion', 'CREATE TRIGGER decision_solo_insercion BEFORE DELETE OR UPDATE ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['dividendo', 'dividendo_solo_insercion', 'CREATE TRIGGER dividendo_solo_insercion BEFORE DELETE OR UPDATE ON public.dividendo FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
@@ -203,6 +204,7 @@ DECLARE
     ['fila_de_carga', 'fila_de_carga_solo_insercion', 'CREATE TRIGGER fila_de_carga_solo_insercion BEFORE DELETE OR UPDATE ON public.fila_de_carga FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['fila_fuente', 'fila_fuente_solo_insercion', 'CREATE TRIGGER fila_fuente_solo_insercion BEFORE DELETE OR UPDATE ON public.fila_fuente FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['intento_ingreso', 'intento_ingreso_solo_insercion', 'CREATE TRIGGER intento_ingreso_solo_insercion BEFORE DELETE OR UPDATE ON public.intento_ingreso FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['lote', 'lote_fijo', 'CREATE TRIGGER lote_fijo BEFORE UPDATE OF "instrumentoId", "fechaCompra", cantidad, "costoTotal" ON public.lote FOR EACH ROW EXECUTE FUNCTION inv_lote_fijo()'],
     ['movimiento_caja', 'movimiento_caja_solo_insercion', 'CREATE TRIGGER movimiento_caja_solo_insercion BEFORE DELETE OR UPDATE ON public.movimiento_caja FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['orden', 'orden_solo_insercion', 'CREATE TRIGGER orden_solo_insercion BEFORE DELETE OR UPDATE ON public.orden FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['plan_version', 'plan_version_solo_insercion', 'CREATE TRIGGER plan_version_solo_insercion BEFORE DELETE OR UPDATE ON public.plan_version FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
@@ -211,7 +213,9 @@ DECLARE
     ['usuario', 'usuario_transiciones', 'CREATE TRIGGER usuario_transiciones BEFORE UPDATE ON public.usuario FOR EACH ROW EXECUTE FUNCTION inv_usuario_transiciones()']
   ];
   funciones text[] := ARRAY[
+    ['inv_asignacion_coherente', 'e102cbd2ac508ce492a6081f44c8818d'],
     ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301'],
+    ['inv_lote_fijo', '6906ddebe6b9194201de631eac40241a'],
     ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77'],
     ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546'],
     ['inv_usuario_transiciones', '368539024fbeaeb771669ff741aa7ed3']

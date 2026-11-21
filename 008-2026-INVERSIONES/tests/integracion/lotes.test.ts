@@ -122,6 +122,8 @@ const ordenDe = async (n: string, lado: "COMPRA" | "VENTA", fecha: string) =>
 const loteDe = async (n: string, fecha: string) =>
   db.lote.findFirstOrThrow({ where: { instrumento: { nemotecnico: n }, fechaCompra: new Date(`${fecha}T00:00:00Z`) } });
 type Fija = { ordenVentaId: string; loteId: string; cantidad: bigint; costoBase: string };
+/** Señal para deshacer una transacción de prueba. */
+class Deshacer extends Error {}
 /**
  * Simula una bloqueada YA guardada en la base del dueño (anterior a las defensas de la base): se inserta sin
  * disparadores, solo en la base de pruebas y dentro de su propia transacción.
@@ -301,6 +303,123 @@ describe("construirLotes en ensayo", () => {
     expect(r.lotesCreados).toBeGreaterThanOrEqual(1);
     expect(r.asignacionesRecalculadas).toBeGreaterThanOrEqual(1);
     expect(await db.lote.count({ where: { instrumento: { nemotecnico: n } } })).toBe(0);
+  });
+});
+
+describe("defensa de la base: asignacion_venta coherente y lote fijo (D4, D6)", () => {
+  // Datos: compra 100 (ene), venta 30 (mar), venta 200 (abr), compra 20 (jun, posterior) y otra especie con 100.
+  // Las ventas no caben en los lotes (VENTA_SIN_LOTES): la construcción no deja asignaciones FIFO en ellos.
+  const preparar = async (base: string) => {
+    const [n, otra] = [nemo(`${base}1`), nemo(`${base}2`)];
+    await ordenes(
+      fila("8 ene 2024", n, "Compra", "Aprobado", 100, 10) + fila("4 mar 2024", n, "Venta", "Aprobado", 30, 15) +
+      fila("1 abr 2024", n, "Venta", "Aprobado", 200, 15) + fila("5 jun 2024", n, "Compra", "Aprobado", 20, 12) +
+      fila("8 ene 2024", otra, "Compra", "Aprobado", 100, 10),
+    );
+    await construirLotes(db);
+    return {
+      venta: await ordenDe(n, "VENTA", "2024-03-04"), ventaGrande: await ordenDe(n, "VENTA", "2024-04-01"), compra: await ordenDe(n, "COMPRA", "2024-01-08"),
+      lote: await loteDe(n, "2024-01-08"), posterior: await loteDe(n, "2024-06-05"), ajeno: await loteDe(otra, "2024-01-08"),
+    };
+  };
+  const insertar = (ordenVentaId: string, loteId: string, cantidad: bigint) =>
+    db.asignacionVenta.create({ data: { ordenVentaId, loteId, cantidad, costoBase: "1", metodo: "ESPECIFICA", bloqueada: true } });
+
+  it("rechaza una orden que no es venta, un lote de otra especie y un lote comprado después de la venta", async () => {
+    const x = await preparar("DB");
+    await expect(insertar(x.compra.id, x.lote.id, 10n)).rejects.toThrow(/asignación: la orden no es una venta aprobada/);
+    await expect(insertar(x.venta.id, x.ajeno.id, 10n)).rejects.toThrow(/asignación: el lote es de otra especie que la venta/);
+    await expect(insertar(x.venta.id, x.posterior.id, 10n)).rejects.toThrow(/asignación: el lote se compró después de la venta/);
+    expect(await db.asignacionVenta.count({ where: { ordenVentaId: { in: [x.compra.id, x.venta.id] } } })).toBe(0);
+  });
+
+  it("rechaza una fila que pasa sola su venta (80 sobre 30) o su lote (150 sobre 100, con una venta de 200)", async () => {
+    const x = await preparar("DC");
+    await expect(insertar(x.venta.id, x.lote.id, 80n)).rejects.toThrow(/asignación: la cantidad pasa la de la venta/);
+    await expect(insertar(x.ventaGrande.id, x.lote.id, 150n)).rejects.toThrow(/asignación: la cantidad pasa la del lote/);
+    await expect(insertar(x.venta.id, x.lote.id, 30n)).resolves.toMatchObject({ cantidad: 30n });
+  });
+
+  it("un UPDATE de la asignación pasa por la misma regla (cambiar de lote o de cantidad)", async () => {
+    const x = await preparar("DU");
+    const a = await insertar(x.venta.id, x.lote.id, 10n);
+    await expect(db.asignacionVenta.update({ where: { id: a.id }, data: { loteId: x.ajeno.id } })).rejects.toThrow(/otra especie que la venta/);
+    await expect(db.asignacionVenta.update({ where: { id: a.id }, data: { cantidad: 31n } })).rejects.toThrow(/pasa la de la venta/);
+    await expect(db.asignacionVenta.update({ where: { id: a.id }, data: { bloqueada: false } })).resolves.toMatchObject({ bloqueada: false });
+  });
+
+  it("un lote con asignaciones no cambia de especie, fecha de compra, cantidad ni costo; sin asignaciones, sí", async () => {
+    const x = await preparar("DL");
+    await insertar(x.venta.id, x.lote.id, 10n);
+    for (const data of [{ instrumentoId: x.ajeno.instrumentoId }, { fechaCompra: new Date("2024-03-10T00:00:00Z") }, { cantidad: 5n }, { costoTotal: "1" }]) {
+      await expect(db.lote.update({ where: { id: x.lote.id }, data })).rejects.toThrow(/lote: con asignaciones no cambia/);
+    }
+    await expect(db.lote.update({ where: { id: x.posterior.id }, data: { cantidad: 21n } })).resolves.toMatchObject({ cantidad: 21n });
+  });
+
+  it("FOR SHARE: mientras una inserción no confirma, un UPDATE de su lote espera (con lock_timeout, falla)", async () => {
+    const x = await preparar("DS");
+    let soltar = () => {};
+    const suelta = new Promise<void>((r) => (soltar = r));
+    let avisar = () => {};
+    const insertada = new Promise<void>((r) => (avisar = r));
+    const a = db
+      .$transaction(async (tx) => {
+        await tx.asignacionVenta.create({ data: { ordenVentaId: x.venta.id, loteId: x.lote.id, cantidad: 10n, costoBase: "100", metodo: "ESPECIFICA", bloqueada: true } });
+        avisar();
+        await suelta;
+        throw new Deshacer();
+      }, { timeout: 20_000 })
+      .catch((e: unknown) => {
+        if (!(e instanceof Deshacer)) throw e;
+      });
+    await insertada;
+    const b = db.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe("SET LOCAL lock_timeout = '500ms'");
+      await tx.lote.update({ where: { id: x.lote.id }, data: { cantidad: 99n } });
+    });
+    await expect(b).rejects.toThrow(/lock timeout/);
+    soltar();
+    await a;
+    expect((await db.lote.findUniqueOrThrow({ where: { id: x.lote.id } })).cantidad).toBe(100n);
+  });
+});
+
+describe("el guardián del esquema vigila los disparadores y funciones nuevos", () => {
+  const guardian = readFileSync(fileURLToPath(new URL("../../scripts/verificar-esquema.sql", import.meta.url)), "utf8");
+  /** Corre el guardián después de romper algo, todo en una transacción que se deshace. Devuelve su error o null. */
+  const guardianTras = async (romper: readonly string[]): Promise<string | null> => {
+    let error: string | null = null;
+    await db
+      .$transaction(async (tx) => {
+        for (const sql of romper) await tx.$executeRawUnsafe(sql);
+        try {
+          await tx.$executeRawUnsafe(guardian);
+        } catch (e) {
+          error = e instanceof Error ? e.message : String(e);
+        }
+        throw new Deshacer();
+      }, { timeout: 30_000 })
+      .catch((e: unknown) => {
+        if (!(e instanceof Deshacer)) throw e;
+      });
+    return error;
+  };
+  const vacia = (f: string) => `CREATE OR REPLACE FUNCTION "${f}"() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END; $$`;
+
+  it("sin romper nada, pasa", async () => {
+    expect(await guardianTras([])).toBeNull();
+  });
+
+  it.each([
+    [['DROP TRIGGER "asignacion_venta_coherente" ON "asignacion_venta"'], "disparador asignacion_venta_coherente"],
+    [['DROP TRIGGER "lote_fijo" ON "lote"'], "disparador lote_fijo"],
+    [[vacia("inv_asignacion_coherente")], "función inv_asignacion_coherente"],
+    [[vacia("inv_lote_fijo")], "función inv_lote_fijo"],
+    [['ALTER TABLE "asignacion_venta" DISABLE TRIGGER "asignacion_venta_coherente"'], "disparador asignacion_venta_coherente"],
+    [['ALTER TABLE "lote" DISABLE TRIGGER "lote_fijo"'], "disparador lote_fijo"],
+  ])("falla si se rompe: %j", async (romper, esperado) => {
+    expect(await guardianTras(romper)).toContain(esperado);
   });
 });
 
