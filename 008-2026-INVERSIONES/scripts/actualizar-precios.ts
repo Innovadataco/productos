@@ -1,13 +1,16 @@
 /**
  * Trae los cierres diarios de Yahoo (.CL) de las especies con lotes (INV-SPEC-13).
  *   npm run precios:actualizar [-- --desde AAAA-MM-DD] [--hasta AAAA-MM-DD]   (por defecto, los últimos 10 días)
- * Imprime conteos, códigos y el id interno de la especie fallida (con nombre y código del error, nunca su mensaje); nunca precios ni nemotécnicos.
+ * Imprime conteos (por razón de omisión: horario, día no hábil, sin negociación, sin calendario), códigos y el
+ * id interno de la especie fallida (con nombre y código del error, nunca su mensaje); nunca precios ni nemotécnicos.
+ * Sale con 3 si hubo fallos o barras sin guardar porque calendario_bvc no cubre su año (`src/precios/reporte.ts`).
  */
 import { PrismaClient } from "@prisma/client";
 import { parseArgs } from "node:util";
 import { leerFechaIso } from "../src/importacion/trii/valores";
 import { actualizarPrecios } from "../src/precios/actualizar";
 import { fechaEnBogota } from "../src/precios/horario";
+import { reporteActualizacion } from "../src/precios/reporte";
 
 const DIAS_POR_DEFECTO = 10;
 
@@ -27,13 +30,9 @@ async function main(): Promise<void> {
   }
   const db = new PrismaClient();
   try {
-    const r = await actualizarPrecios(db, { desde: desde.valor, hasta: hasta.valor, buscar: fetch });
-    console.log(`✅ ${r.especies} especie(s) · cierres nuevos: ${r.cierresNuevos} · revisados: ${r.cierresRevisados} · verificados en el rango: ${r.verificados} · omitidas por no haber cerrado la BVC: ${r.omitidasPorHorario}`);
-    if (r.fallidas.length > 0) {
-      console.log(`⚠️  ${r.fallidas.length} especie(s) con fallo (Yahoo o guardado):`);
-      for (const f of r.fallidas) console.log(`   · especie ${f.instrumentoId} · ${f.codigo}${f.detalle ? ` · ${f.detalle}` : ""} · barras guardadas: ${f.barrasGuardadas} · fallidas: ${f.barrasFallidas}`);
-      process.exitCode = 3;
-    }
+    const reporte = reporteActualizacion(await actualizarPrecios(db, { desde: desde.valor, hasta: hasta.valor, buscar: fetch }));
+    for (const linea of reporte.lineas) console.log(linea);
+    if (reporte.codigoSalida !== 0) process.exitCode = reporte.codigoSalida;
   } catch (e) {
     console.error(`❌ No se actualizaron los precios: ${e instanceof Error ? e.name : "error"}`);
     process.exitCode = 1;
