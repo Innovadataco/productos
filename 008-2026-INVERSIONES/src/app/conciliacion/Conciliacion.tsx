@@ -28,7 +28,7 @@ const textoDeCuentas = (c: CuentasVista): string =>
 
 function Encabezado() {
   return (
-    <header className="top">
+    <header className="top concilia-top">
       <div className="wrap fila-top">
         <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio</div>
         <a className="pill" href="/">Volver al portafolio</a>
@@ -38,7 +38,7 @@ function Encabezado() {
 }
 
 function Estado({ estado }: { estado: FilaEspecieVista["estado"] }) {
-  return <span className={`estado ${estado.tono}`}>{estado.texto}</span>;
+  return <span className={`estado tono-${estado.tono}`}>{estado.texto}</span>;
 }
 
 function Porque({ frases, precios }: { frases: readonly string[]; precios?: FilaEspecieVista["precios"] }) {
@@ -84,9 +84,9 @@ function FilaMonto({ f, columnas }: { f: FilaMontoVista; columnas: "acciones" | 
 
 function TablaAcciones({ c }: { c: ConciliacionVista }) {
   return (
-    <section className="bloque" aria-labelledby="t-acciones">
+    <section className="bloque">
       <div className="cabeza"><div><div className="eyebrow">Una por una</div><h2 id="t-acciones">Acciones</h2></div></div>
-      <div className="tabla">
+      <div className="tabla" role="region" aria-labelledby="t-acciones" tabIndex={0}>
         <table aria-labelledby="t-acciones">
           <thead>
             <tr>
@@ -106,9 +106,9 @@ function TablaMontos({ c }: { c: ConciliacionVista }) {
   const filas = [...c.fondos, ...(c.efectivo ? [c.efectivo] : [])];
   if (filas.length === 0) return null;
   return (
-    <section className="bloque" aria-labelledby="t-montos">
+    <section className="bloque">
       <div className="cabeza"><div><div className="eyebrow">Saldos</div><h2 id="t-montos">Fondo y efectivo</h2></div></div>
-      <div className="tabla">
+      <div className="tabla" role="region" aria-labelledby="t-montos" tabIndex={0}>
         <table aria-labelledby="t-montos" className="angosta">
           <thead>
             <tr>
@@ -116,7 +116,7 @@ function TablaMontos({ c }: { c: ConciliacionVista }) {
               <th scope="col">Diferencia %</th><th scope="col">Resultado</th><th scope="col">Por qué</th>
             </tr>
           </thead>
-          <tbody>{filas.map((f) => <FilaMonto key={f.id} f={f} columnas="montos" />)}</tbody>
+          <tbody>{filas.map((f, i) => <FilaMonto key={`${f.id}-${i}`} f={f} columnas="montos" />)}</tbody>
         </table>
       </div>
     </section>
@@ -125,18 +125,19 @@ function TablaMontos({ c }: { c: ConciliacionVista }) {
 
 function PorLiquidar({ filas }: { filas: readonly PorLiquidarVista[] }) {
   return (
-    <section className="bloque" aria-labelledby="t-liquidar">
+    <section className="bloque">
       <div className="cabeza"><div><div className="eyebrow">T+2</div><h2 id="t-liquidar">Por liquidar al corte</h2></div></div>
       <p className="nota">Operaciones hechas hasta el corte que se liquidan después, según las órdenes que hay hoy en el sistema.</p>
       {filas.length === 0 ? (
         <p className="nota">No hay operaciones por liquidar al corte.</p>
       ) : (
-        <div className="tabla">
+        <div className="tabla" role="region" aria-labelledby="t-liquidar" tabIndex={0}>
           <table aria-labelledby="t-liquidar" className="angosta">
             <thead><tr><th scope="col">Especie</th><th scope="col">Operación</th><th scope="col">Cantidad</th><th scope="col">Fecha de operación</th><th scope="col">Se liquida</th></tr></thead>
             <tbody>
-              {filas.map((p) => (
-                <tr key={`${p.nemo}-${p.operacion}-${p.fechaOperacion}-${p.cantidad}`}>
+              {/* Lista estática (sin JS en el navegador): el índice desempata dos órdenes partidas idénticas. */}
+              {filas.map((p, i) => (
+                <tr key={`${p.nemo}-${p.fechaOperacion}-${i}`}>
                   <th scope="row">{p.nemo}</th><td>{p.operacion}</td><td className="num">{cantidad(p.cantidad)}</td><td>{fecha(p.fechaOperacion)}</td><td>{fecha(p.fechaLiquidacion)}</td>
                 </tr>
               ))}
@@ -191,11 +192,11 @@ function Corte({ vista }: { vista: VistaCorte }) {
       <Portada titulo={titulo}>
         {c ? (
           <>
-            <p className={`resumen estado ${c.resultado.tono}`}>{textoDeCuentas(c.cuentas)}</p>
+            <p className={`resumen tono-${c.resultado.tono}`}>{textoDeCuentas(c.cuentas)}</p>
             <p className="nota">{calculadaEl(c.calculadaEn)}</p>
             <Frescura frescura={c.frescura} />
             <p className="nota">A&amp;V es lo que dice la certificación. Sistema es lo que calcula 008 con los archivos cargados, a la fecha del corte.</p>
-            {c.noReconocidos > 0 ? <p className="nota aviso">{`Hay ${plural(c.noReconocidos, "control", "controles")} que esta pantalla todavía no sabe mostrar.`}</p> : null}
+            {c.noReconocidos > 0 ? <p className="nota aviso">{`Hay ${plural(c.noReconocidos, "comprobación", "comprobaciones")} que esta pantalla todavía no sabe mostrar.`}</p> : null}
           </>
         ) : (
           <p>La certificación de este corte está cargada, pero todavía no se ha conciliado.</p>
@@ -233,7 +234,7 @@ export function Conciliacion({ datos }: { datos: DatosConciliacion }) {
       <Encabezado />
       <main className="wrap concilia">
         <Contenido datos={datos} />
-        <footer className="pie">El sistema calcula y muestra; no recomienda comprar ni vender. Datos de su base local.</footer>
+        <footer className="pie">El sistema calcula y muestra; no recomienda comprar ni vender. Datos guardados en este sistema.</footer>
       </main>
     </>
   );

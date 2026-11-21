@@ -6,15 +6,13 @@
 import "server-only";
 import type { PrismaClient } from "@prisma/client";
 import { cortesDisponibles, leerConciliacion } from "@/conciliacion/leer";
-import { aCortes, aVistaCorte } from "./serializar";
+import { aCortes, aVistaCorte, dia } from "./serializar";
 import type { CorteVista, VistaCorte } from "./tipos";
 
 export type DatosConciliacion =
   | { readonly estado: "SIN_CERTIFICACION" }
   | { readonly estado: "CORTE_INVALIDO"; readonly cortes: readonly CorteVista[] }
   | { readonly estado: "CORTE"; readonly vista: VistaCorte; readonly cortes: readonly CorteVista[] };
-
-const dia = (d: Date): string => d.toISOString().slice(0, 10);
 
 export async function datosDeConciliacion(db: PrismaClient, pedido: string | string[] | undefined): Promise<DatosConciliacion> {
   const cortes = await cortesDisponibles(db);

@@ -18,7 +18,8 @@ const GRAVEDAD: Readonly<Record<Tono, number>> = { cuadra: 0, "por-liquidar": 1,
 const TONO_GLOBAL: Readonly<Record<ResultadoConciliacion, Tono>> = { CUADRA: "cuadra", PARCIAL: "por-liquidar", NO_CUADRA: "no-cuadra" };
 const OPERACION: Readonly<Record<PorLiquidar["operacion"], PorLiquidarVista["operacion"]>> = { COMPRA: "Compra", VENTA: "Venta", ESCISION: "Escisión" };
 
-const dia = (d: Date): string => d.toISOString().slice(0, 10);
+/** Columnas DATE: el día UTC es el día del dato. */
+export const dia = (d: Date): string => d.toISOString().slice(0, 10);
 const horaColombia = (d: Date): string => new Date(d.getTime() - DESFASE_COLOMBIA_MS).toISOString().slice(0, 16).replace("T", " ");
 const texto = (d: Prisma.Decimal | null): string | null => (d === null ? null : d.toString());
 

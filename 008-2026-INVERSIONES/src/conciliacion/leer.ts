@@ -17,7 +17,8 @@ type Lector = Prisma.TransactionClient;
 
 /** Cuántos cortes ofrece el selector de la pantalla. */
 export const MAX_CORTES = 60;
-const TIEMPO_MAXIMO_MS = 30_000;
+/** Tope de la transacción por visita (security-reviewer MEDIO): una sola persona con sesión, pero acotado. */
+const TIEMPO_MAXIMO_MS = 15_000;
 const ESPERA_MAXIMA_MS = 10_000;
 const MAS_RECIENTE = [{ calculadaEn: "desc" }, { id: "desc" }] satisfies Prisma.ConciliacionOrderByWithRelationInput[];
 
