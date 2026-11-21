@@ -1167,6 +1167,12 @@ describe("desplegar-prod.sh · funciones de la espera: resumen del compose y del
     ["una etiqueta !reset", "services:\n  uno:\n    mem_limit: !reset null\n"],
     ["un límite interpolado (depende del archivo de producción, fuera de git)", "services:\n  uno:\n    mem_limit: ${INV_LIMITE:-37m}\n"],
     ["una imagen interpolada que no es la de INV_TAG", "services:\n  uno:\n    image: ${OTRA_IMAGEN}\n"],
+    // Revisión de seguridad (MEDIO): formas del YAML que el resumen no lee y que esconderían un cambio de límites.
+    ["una clave entre comillas dobles", 'services:\n  uno:\n    "mem_limit": 1237m\n'],
+    ["una clave entre comillas simples", "services:\n  uno:\n    'mem_limit': 1237m\n"],
+    ["un mapa en línea (flow)", "services:\n  uno:\n    deploy: {resources: {limits: {memory: 1237m}}}\n"],
+    ["un servicio en línea (flow)", "services:\n  uno: {image: x, mem_limit: 1237m}\n"],
+    ["un mapa en línea dentro de una lista", "services:\n  uno:\n    volumes:\n      - {type: tmpfs, target: /x}\n"],
   ];
   for (const [nombre, texto] of indeterminados) {
     it(`resumen_compose con ${nombre}: INDETERMINADO (la espera completa)`, () => {
@@ -1211,6 +1217,40 @@ describe("desplegar-prod.sh · funciones de la espera: resumen del compose y del
   it("memoria_bajo_piso: sin SwapFree legible, o sin swap (SwapFree 0), cuenta como bajo el piso: no se da por buena una memoria sin medir", () => {
     expect(piso("MemTotal: 7913473 kB\nMemAvailable: 3617293 kB\n").stdout).toMatch(/no se pudo leer SwapFree/);
     expect(piso(meminfo(3617293, 0)).stdout).toBe("SwapFree 0 MiB < 512 MiB\n");
+  });
+
+  it("los awk de la espera usan solo ERE portable (mawk del VPS): sin anclas dentro de un grupo ni \\t entre corchetes", () => {
+    const fuente = leer008("scripts/desplegar-prod.sh");
+    for (const f of ["resumen_compose", "resumen_dockerfile"]) {
+      const desde = fuente.indexOf(`${f}() {`);
+      const cuerpo = fuente.slice(desde, fuente.indexOf("\n}\n", desde));
+      expect(desde, f).toBeGreaterThan(-1);
+      expect(cuerpo.length, f).toBeGreaterThan(200);
+      expect(cuerpo, f).not.toMatch(/\(\^|\|\$\)|\[[^\]]*\\t[^\]]*\]/);
+    }
+  });
+
+  it("diferencias: si solo cambia el orden lo dice (la decisión ya es la espera completa)", () => {
+    expect(funcion(script, "diferencias $'FROM a AS x\\nFROM b AS y' $'FROM b AS y\\nFROM a AS x'").stdout).toBe("mismas líneas en otro orden");
+  });
+
+  it("diferencias: sin caracteres de control en el log y cada línea acotada", () => {
+    const r = funcion(script, `diferencias 'servicio uno' $'servicio uno\\nuno image x\\033[31m${"y".repeat(300)}'`).stdout;
+    expect(r).toContain("ahora «uno image x");
+    expect(r).not.toMatch(/[\u0000-\u0008\u000b-\u001f\u007f]/);
+    expect(r.length).toBeLessThan(220);
+  });
+
+  it("archivo_en_sha lee el commit del clon aunque haya un objeto de reemplazo o un GIT_DIR en el entorno (git corre como root)", () => {
+    const repo = crearRepo([], { "nota.ficticio.txt": "original 4613\n" });
+    const otraNota = path.join(carpetaTemporal("reemplazo"), "nota.txt");
+    writeFileSync(otraNota, "reemplazo 1237\n");
+    const original = git(repo.dir, ["rev-parse", `${repo.sha}:008-2026-INVERSIONES/nota.ficticio.txt`]);
+    git(repo.dir, ["replace", original, git(repo.dir, ["hash-object", "-w", otraNota])]);
+    const leer = (env: Entorno) => funcion(script, `INV_DIR_008='${repo.dir008}'; archivo_en_sha '${repo.sha}' nota.ficticio.txt`, env).stdout;
+    expect(leer(process.env)).toBe("original 4613\n");
+    const otro = crearRepo([], { "nota.ficticio.txt": "de otro repo 37911\n" });
+    expect(leer({ ...process.env, GIT_DIR: path.join(otro.dir, ".git") })).toBe("original 4613\n");
   });
 
   it("motivo_espera_completa: sin un sha que corre de 40 hex (también una opción disfrazada) o con uno que el clon no tiene, da la espera completa", () => {
