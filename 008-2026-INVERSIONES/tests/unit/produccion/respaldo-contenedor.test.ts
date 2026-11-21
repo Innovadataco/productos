@@ -5,7 +5,7 @@
 // borran; del resto, 10). Se corre con `sh`, como en la imagen (busybox).
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { carpetaTemporal, ruta008 } from "./falsos";
@@ -37,6 +37,8 @@ function preparar(extra: Record<string, string> = {}) {
   // awk que, con FALSO_AWK_MUERE, imprime la última línea de su entrada (el respaldo más viejo) y muere: un
   // cálculo de retención cortado a mitad. Sin la variable, el del sistema.
   falso("awk", '[ -z "${FALSO_AWK_MUERE:-}" ] || { tail -n 1; exit 1; }; for d in /usr/bin /bin; do [ -x "$d/awk" ] && exec "$d/awk" "$@"; done; exit 127');
+  // rm que falla, sin borrar nada, si algún argumento termina en FALSO_RM_FALLA (y si no, el del sistema).
+  falso("rm", 'if [ -n "${FALSO_RM_FALLA:-}" ]; then for a in "$@"; do case "$a" in *"$FALSO_RM_FALLA") exit 1 ;; esac; done; fi; for d in /bin /usr/bin; do [ -x "$d/rm" ] && exec "$d/rm" "$@"; done; exit 127');
   // flock de verdad en el Mac (que no lo trae) y en Linux: flock(2) con perl sobre el descriptor heredado,
   // con la interfaz de BusyBox que usa la imagen (-n, -u y -x; sin -w). El candado queda tomado mientras el
   // descriptor siga abierto en el proceso que lo pidió, como con el flock real.
@@ -571,5 +573,35 @@ describe("respaldo.sh · retención al guardar un respaldo (de punta a punta)", 
     expect(res.stdout).toMatch(/proximo=0/);
     expect(existsSync(path.join(r.respaldos, ".ultimo-diario"))).toBe(true);
     for (const n of viejos) expect(existsSync(path.join(r.respaldos, n)), n).toBe(true);
+  });
+
+  it("un enlace simbólico con nombre de respaldo no se borra (ni lo que apunta)", () => {
+    const r = preparar();
+    const ahora = Date.now();
+    const viejos = Array.from({ length: 12 }, (_, k) => extra(ahora - 72 * H - k * H, "pre-migracion"));
+    for (const n of viejos.slice(0, 11)) escribirRespaldo(r.respaldos, n);
+    const objetivo = path.join(r.dir, "objetivo.ficticio.txt");
+    writeFileSync(objetivo, "no es un respaldo\n");
+    symlinkSync(objetivo, path.join(r.respaldos, viejos[11]!));
+    const res = r.correr(["--ahora", "--motivo", "x"]);
+    expect(res.status, res.stderr).toBe(0);
+    expect(lstatSync(path.join(r.respaldos, viejos[11]!)).isSymbolicLink()).toBe(true);
+    expect(readFileSync(objetivo, "utf8")).toBe("no es un respaldo\n");
+  });
+
+  it("si no se puede borrar el .age, el par queda entero; si falla el .sha256, queda suelto; los dos se registran", () => {
+    const ahora = Date.now();
+    const viejos = Array.from({ length: 12 }, (_, k) => extra(ahora - 72 * H - k * H, "pre-migracion"));
+    for (const [falla, quedaAge] of [[`${viejos[11]}`, true], [`${viejos[11]}.sha256`, false]] as const) {
+      const r = preparar();
+      for (const n of viejos) escribirRespaldo(r.respaldos, n);
+      const res = r.correr(["--ahora", "--motivo", "x"], { FALSO_RM_FALLA: falla });
+      expect(res.status, res.stderr).toBe(0);
+      expect(existsSync(path.join(r.respaldos, viejos[11]!)), falla).toBe(quedaAge);
+      expect(existsSync(path.join(r.respaldos, `${viejos[11]}.sha256`)), falla).toBe(true);
+      expect(res.stderr).toContain(`no se pudo borrar ${viejos[11]}`);
+      expect(res.stderr).toMatch(/retención: no se completó/);
+      expect(existsSync(res.stdout.trim())).toBe(true);
+    }
   });
 });

@@ -101,16 +101,18 @@ sha256_cuadra() {
 
 # La retención después de un respaldo nuevo ($1, su nombre). En un subshell: no pisa las variables de respaldar.
 # Primero calcula la lista completa; si algo falla (listar, la hora o el cálculo), no borra nada. Nunca borra el
-# recién escrito ni un respaldo cuyo .sha256 falte o no cuadre (queda para revisarlo a mano). Borra el .age y
-# solo después su .sha256: si lo primero falla, el par queda entero. Sale con 1 si algo no se pudo hacer.
+# recién escrito ni un respaldo cuyo .sha256 falte o no cuadre (queda para revisarlo a mano, y sigue ocupando su
+# puesto). Borra el .age y solo después su .sha256: si falla el primero, el par queda entero; si falla el segundo,
+# queda un .sha256 suelto (sin respaldo) y se registra. Sale con 1 si algo no se pudo hacer.
 retener() (
   set -f
-  listado="$(ls -1 "$DIR")" || { registrar "retención: no se pudo listar la carpeta: no se borra nada"; exit 1; }
+  listado="$(ls -1 -- "$DIR")" || { registrar "retención: no se pudo listar la carpeta: no se borra nada"; exit 1; }
   ahora="$(hora_cot +%Y%m%d-%H%M%S)" || { registrar "retención: no se pudo leer la hora: no se borra nada"; exit 1; }
   sobran="$(printf '%s\n' "$listado" | respaldos_a_borrar "$ahora" "$1")" ||
     { registrar "retención: falló el cálculo: no se borra nada"; exit 1; }
   fallo=0
   for viejo in $sobran; do
+    # Defensa en profundidad: respaldos_a_borrar ya filtra la forma y excluye el recién escrito.
     case "$viejo" in
       inv-008-*.dump.age) ;;
       *) registrar "retención: nombre inesperado, no se borra: $viejo"; fallo=1; continue ;;
