@@ -8,10 +8,10 @@
  * fallo, dato atrasado o ningún fondo registrado.
  */
 import { PrismaClient } from "@prisma/client";
-import { actualizarFondo, DIAS_ATRASO_AVISO, type ResultadoFondo } from "../src/fondo/actualizar";
+import { actualizarFondo, type ResultadoFondo } from "../src/fondo/actualizar";
 import { interpretarArgumentos } from "../src/fondo/argumentos";
 import { ErrorRegistroFondo, registrarFondo, type DatosRegistroFondo } from "../src/fondo/registrar";
-import { isoDia } from "../src/fondo/sfc";
+import { reporteFondo } from "../src/fondo/reporte";
 import { detalleDeError } from "../src/precios/actualizar";
 
 async function registrar(db: PrismaClient, datos: DatosRegistroFondo, hoy: Date): Promise<void> {
@@ -24,20 +24,11 @@ async function registrar(db: PrismaClient, datos: DatosRegistroFondo, hoy: Date)
   }
 }
 
+/** El reporte vive en src/fondo/reporte.ts: es el mismo que imprime importar-valores-fondo después de su línea. */
 function informar(r: ResultadoFondo): void {
-  if (r.fondos === 0) {
-    console.log("⚠️  SIN_FONDOS: no hay fondos (FIC) activos registrados. Regístrelo con --registrar.");
-    process.exitCode = 3;
-    return;
-  }
-  console.log(`✅ ${r.fondos} fondo(s) · valores nuevos: ${r.valoresNuevos} · revisados: ${r.valoresRevisados}`);
-  for (const u of r.ultimos) {
-    console.log(`   · fondo ${u.instrumentoId} · último dato: ${u.ultimaFecha ? isoDia(u.ultimaFecha) : "sin datos"}${u.atrasado ? ` · ATRASADO (más de ${DIAS_ATRASO_AVISO} días)` : ""}`);
-  }
-  for (const f of r.fallidos) {
-    console.log(`⚠️  fondo ${f.instrumentoId} · ${f.codigo}${f.detalle ? ` · ${f.detalle}` : ""} · guardados: ${f.guardados} · con error: ${f.conError} · descartados: ${f.descartados}`);
-  }
-  if (r.fallidos.length > 0 || r.ultimos.some((u) => u.atrasado)) process.exitCode = 3;
+  const reporte = reporteFondo(r);
+  for (const linea of reporte.lineas) console.log(linea);
+  if (reporte.codigoSalida !== 0) process.exitCode = reporte.codigoSalida;
 }
 
 async function main(): Promise<void> {
