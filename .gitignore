@@ -1,2 +1,6 @@
 .DS_Store
 .worktrees/
+
+# Configuración local de agentes (ECC u otros) en la raíz: nunca se versiona.
+# Anclado a la raíz: PI versiona 002-2026-PROTECCION-INFANTIL/.claude/skills/.
+/.claude/
