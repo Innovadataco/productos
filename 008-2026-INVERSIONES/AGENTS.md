@@ -57,6 +57,8 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 |---|---|---|
 | `npx tsx scripts/importar-plan.ts --ficha <ruta.md> --email <correo-del-dueño> [--aplicar]` | Mac, con la base del dueño | Carga el plan desde la ficha. Sin `--aplicar` no escribe. Datos reales: solo en la base del dueño |
 | `npx tsx scripts/actualizar-fondo.ts [--desde AAAA-MM-DD] [--hasta AAAA-MM-DD]` · `--registrar --codigo <n> [--participacion <n>] --nombre <texto>` | Mac o servidor del dueño | Valor de unidad diario de los fondos desde la SFC (consulta un servicio externo). Imprime solo conteos y códigos |
+| `npx tsx scripts/importar-certificacion.ts --email <correo-del-dueño> --fecha-corte AAAA-MM-DD [--fondo <codigoFic>] <certificacion.pdf>` | Mac o servidor, con la base del dueño | Importa la certificación PDF de Acciones & Valores (lector propio acotado; filas crudas y `encargo` cifrados; reimportar no duplica; una fila inválida rechaza el archivo) y la concilia por fecha de corte. La fecha de corte es obligatoria: el PDF no la trae. `--fondo` solo la primera vez, para vincular el NIT del fondo. Imprime solo conteos, códigos y el siguiente paso: `npm run precios:actualizar -- --desde <corte>` para verificar los cierres de ese día (no lo corre: llama a la red). Datos reales: solo en la base del dueño |
+| `npx tsx scripts/conciliar-certificacion.ts --fecha-corte AAAA-MM-DD` | Mac o servidor, con la base del dueño | Vuelve a conciliar la certificación de esa fecha (después de traer precios o de registrar lotes, unidades del fondo o ajustes de caja). Guarda una conciliación nueva; la anterior queda en la historia. Imprime solo el resultado, conteos y códigos de motivo |
 | `npx tsx scripts/cifrar-existentes.ts` · `--aplicar --base <nombre>` · `--re-cifrar --base <nombre>` | Mac o servidor, con la base del dueño | Cifrado de lo existente (#11). Sin flags es ensayo y no escribe. Se corre con los importadores detenidos, con respaldo previo, y dos veces (la segunda debe dar 0 cambios). Datos reales: solo en la base del dueño |
 | `scripts/crear-acceso-inicial.sh` (VPS, por SSH) · `crear-acceso-inicial.ts` | VPS, lo corre el dueño (no la Fábrica) | Crea el acceso inicial con `inv_dueno`; imprime una sola vez el enlace de definir clave. Se corre antes de cargar datos reales |
 | `scripts/construir-imagen.sh <sha> [--guardar <carpeta>]` | Mac | Construye las tres imágenes desde `git archive <sha>`, corre `npm audit --omit=dev --audit-level=high` y verifica el sha de cada imagen |
@@ -117,6 +119,7 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.17 · 2026-11-21 · 05:38 (-05) · INV · Fábrica Inversiones · certificación de A&V: `importar-certificacion` y `conciliar-certificacion` (hito 1, PR-B)
 > v1.16 · 2026-11-21 · 04:38 (-05) · INV · Fábrica Inversiones · `precios:actualizar` re-verifica los cierres iguales contra la certificación (`--desde <corte>`)
 > v1.15 · 2026-11-21 · 04:24 (-05) · INV · Fábrica Inversiones · pisos de cobertura en `test:cobertura` (solo muerden con `--coverage`)
 > v1.14 · 2026-11-21 · 03:40 (-05) · INV · Fábrica Inversiones · comando `precios:depurar` (SPEC-13: cierres de días no hábiles o sin negociación)
