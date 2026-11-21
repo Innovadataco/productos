@@ -2,19 +2,24 @@
  * Lo que hace y dice el CLI de importación de la certificación: importa, concilia si quedó cargada e indica el
  * siguiente paso. Si la certificación quedó guardada y lo que falla es la conciliación, lo dice así (no «la
  * importación falló»): el reintento sería idempotente, pero el dueño debe saber que ya está cargada.
- * Las líneas llevan solo conteos, códigos y la fecha de corte que dio el dueño; nunca cifras, especies ni cuentas.
+ * Si se rechazó porque la fecha de corte no es día hábil, dice el último día hábil anterior según calendario_bvc y
+ * cómo correrlo de nuevo; nunca reimporta con otra fecha por su cuenta.
+ * Las líneas llevan solo conteos, códigos, la fecha de corte que dio el dueño y la de calendario_bvc; nunca cifras,
+ * especies ni cuentas.
  */
 import type { PrismaClient } from "@prisma/client";
 import { conciliarCertificacion, type ResumenConciliacion } from "../../conciliacion/conciliar";
-import { isoDia } from "./fecha-corte";
+import { isoDia, leerCalendarioCorte, MAX_DIAS_ANTES_DEL_PDF, ultimoHabilAnterior, type CalendarioCorte, type UltimoHabil } from "./fecha-corte";
 import { importarCertificacion, type ArchivoCertificacion, type ResultadoImportacionAv } from "./importar";
 
 export interface Pasos {
   readonly importar: (db: PrismaClient, a: ArchivoCertificacion) => Promise<ResultadoImportacionAv>;
   readonly conciliar: (db: PrismaClient, o: { readonly fechaCorte: Date }) => Promise<ResumenConciliacion>;
+  /** El calendario de la BVC, solo si la fecha de corte no es hábil. Sin él, se lee calendario_bvc. */
+  readonly calendario?: (db: PrismaClient) => Promise<CalendarioCorte>;
 }
 
-const PASOS: Pasos = { importar: importarCertificacion, conciliar: conciliarCertificacion };
+const PASOS: Pasos = { importar: importarCertificacion, conciliar: conciliarCertificacion, calendario: leerCalendarioCorte };
 
 export function lineasDeImportacion(r: ResultadoImportacionAv): string[] {
   if (r.estado === "RECHAZADO") {
@@ -51,10 +56,37 @@ function pasosSiguientes(corte: string, produccion: boolean): { readonly reconci
   return { reconciliar, siguiente: `➡️  Siguiente paso: corra \`npm run precios:actualizar -- --desde ${corte}\` para verificar los cierres de ese día, y después ${reconciliar}.` };
 }
 
+/** Cómo correr de nuevo la importación con otra fecha de corte (texto ya con sus comillas de código), en local o en producción. */
+function reimportar(corte: string, produccion: boolean): string {
+  if (produccion) return `corra de nuevo \`cargar-prod.sh importar-certificacion\` con el mismo PDF y, en la cabecera, \`--fecha-corte ${corte}\` (con el mismo \`--fondo\`, si lo dio)`;
+  return `corra de nuevo \`npx tsx scripts/importar-certificacion.ts --email <correo-del-dueño> --fecha-corte ${corte} [--fondo <codigoFic>] <certificacion.pdf>\` (con el mismo \`--fondo\`, si lo dio)`;
+}
+
+/** Qué decir de una fecha de corte no hábil: el último día hábil anterior de calendario_bvc, o que su año no está sembrado. */
+function lineasDeCorteNoHabil(corte: string, ultimo: UltimoHabil, produccion: boolean): string[] {
+  const aviso = `📅 La fecha de corte ${corte} no es día hábil de la BVC y no se ajusta sola.`;
+  if (!ultimo.ok) return [`${aviso} calendario_bvc no cubre ${ultimo.anioSinCalendario}: no se puede indicar el último día hábil anterior; hay que sembrar ese año.`];
+  return [
+    `${aviso} Según calendario_bvc, el último día hábil anterior es ${ultimo.dia}.`,
+    `➡️  Si la certificación de A&V es al cierre de ese día, ${reimportar(ultimo.dia, produccion)}. La nueva corrida vuelve a validar la fecha: no posterior a la generación del PDF ni de más de ${MAX_DIAS_ANTES_DEL_PDF} días antes.`,
+  ];
+}
+
+/** Solo si el rechazo fue por la fecha no hábil: lee el calendario y dice el último día hábil anterior. */
+async function pistaDeCorte(db: PrismaClient, r: ResultadoImportacionAv, fechaCorte: Date, pasos: Pasos, produccion: boolean): Promise<string[]> {
+  if (!r.errores.some((e) => e.codigo === "FECHA_CORTE_NO_HABIL")) return [];
+  try {
+    const calendario = await (pasos.calendario ?? leerCalendarioCorte)(db);
+    return lineasDeCorteNoHabil(isoDia(fechaCorte), ultimoHabilAnterior(fechaCorte, calendario), produccion);
+  } catch (e) {
+    return [`⚠️  No se pudo leer calendario_bvc para indicar el último día hábil anterior (${nombreDe(e)}): corra de nuevo con un día hábil de la BVC.`];
+  }
+}
+
 export async function cargarYConciliar(db: PrismaClient, a: ArchivoCertificacion, pasos: Pasos = PASOS, opciones: OpcionesSalida = {}): Promise<{ lineas: string[]; codigo: 0 | 1 }> {
   const r = await pasos.importar(db, a);
   const lineas = lineasDeImportacion(r);
-  if (r.estado === "RECHAZADO") return { lineas, codigo: 1 };
+  if (r.estado === "RECHAZADO") return { lineas: [...lineas, ...(await pistaDeCorte(db, r, a.fechaCorte, pasos, opciones.produccion ?? false))], codigo: 1 };
   const { reconciliar, siguiente } = pasosSiguientes(isoDia(a.fechaCorte), opciones.produccion ?? false);
   try {
     lineas.push(lineaDeConciliacion(await pasos.conciliar(db, { fechaCorte: a.fechaCorte })));
