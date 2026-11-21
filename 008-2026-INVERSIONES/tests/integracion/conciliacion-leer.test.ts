@@ -111,7 +111,10 @@ describe("leerConciliacion", () => {
     expect(texto).not.toMatch(/"(encargo|crudo|cuenta|referenciaPdf)"/);
     const cifrado = (await db.certificacionFondo.findFirstOrThrow({ where: { instrumentoId: c.fic.id }, select: { encargo: true } })).encargo;
     expect(cifrado).not.toBe(ENCARGO);
-    expect(texto).not.toContain(cifrado);
+    // JSON.stringify escapa las comillas del sobre: se busca también cada cadena larga del sobre por separado.
+    const partes = Object.values(JSON.parse(cifrado) as Record<string, unknown>).filter((v): v is string => typeof v === "string" && v.length >= 12);
+    expect(partes.length).toBeGreaterThanOrEqual(2);
+    for (const prohibido of [cifrado, JSON.stringify(cifrado), ...partes]) expect(texto).not.toContain(prohibido);
   });
 
   it("si los datos cambian después de conciliar, queda DESACTUALIZADA; al volver a conciliar, lee la nueva y está al día", async () => {
