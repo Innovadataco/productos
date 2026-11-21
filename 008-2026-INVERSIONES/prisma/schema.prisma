@@ -351,6 +351,7 @@ model Instrumento {
   moneda               Moneda                  @default(COP)
   activo               Boolean                 @default(true)
   notaCosto            String? // «costo según Acciones & Valores, sin ajuste por escisión»
+  nitFondo             String?                 @unique // NIT del fondo en la certificación de A&V (solo FIC): así se reconoce su fila
   simbolos             SimboloPrecio[]
   ordenes              Orden[]
   dividendos           Dividendo[]
@@ -595,15 +596,17 @@ model FilaLoteAv {
 }
 
 model Certificacion {
-  id             String                  @id @default(cuid())
-  cargaId        String                  @unique
-  carga          CargaArchivo            @relation(fields: [cargaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  fechaCorte     DateTime                @unique @db.Date
-  saldoEfectivo  Decimal                 @db.Decimal(20, 4)
-  posiciones     CertificacionPosicion[]
-  fondos         CertificacionFondo[]
-  conciliaciones Conciliacion[]
+  id                 String                  @id @default(cuid())
+  cargaId            String                  @unique
+  carga              CargaArchivo            @relation(fields: [cargaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  fechaCorte         DateTime                @unique @db.Date
+  saldoEfectivo      Decimal                 @db.Decimal(20, 4)
+  referenciaEfectivo String? // de qué fila del PDF salió el saldo («p2:f17»)
+  posiciones         CertificacionPosicion[]
+  fondos             CertificacionFondo[]
+  conciliaciones     Conciliacion[]
 
+  @@unique([id, fechaCorte]) // destino de la FK compuesta de Conciliacion
   @@map("certificacion")
 }
 
@@ -615,7 +618,7 @@ model CertificacionPosicion {
   cantidad         BigInt
   precioValoracion Decimal       @db.Decimal(20, 6)
   valorMercado     Decimal       @db.Decimal(20, 4)
-  referenciaPdf    String?
+  referenciaPdf    String? // filas del PDF que se sumaron («p1:f2,p1:f3»)
 
   @@id([certificacionId, instrumentoId])
   @@index([instrumentoId])
@@ -630,6 +633,7 @@ model CertificacionFondo {
   encargo         String
   saldo           Decimal       @db.Decimal(20, 4)
   unidades        Decimal?      @db.Decimal(24, 8)
+  referenciaPdf   String? // de qué fila del PDF salió («p1:f1»)
 
   @@id([certificacionId, instrumentoId])
   @@index([instrumentoId])
@@ -692,7 +696,8 @@ model PrecioCierre {
 model Conciliacion {
   id              String                @id @default(cuid())
   certificacionId String
-  certificacion   Certificacion         @relation(fields: [certificacionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  // Compuesta: la fecha de corte de la conciliación es, por la base, la de su certificación.
+  certificacion   Certificacion         @relation(fields: [certificacionId, fechaCorte], references: [id, fechaCorte], onDelete: Restrict, onUpdate: Restrict)
   fechaCorte      DateTime              @db.Date
   calculadaEn     DateTime              @default(now()) @db.Timestamptz(6)
   versionCalculo  String
@@ -700,7 +705,7 @@ model Conciliacion {
   controles       ControlConciliacion[]
 
   @@index([fechaCorte])
-  @@index([certificacionId])
+  @@index([certificacionId, fechaCorte])
   @@map("conciliacion")
 }
 

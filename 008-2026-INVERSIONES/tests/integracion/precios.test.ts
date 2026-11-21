@@ -265,6 +265,12 @@ describe("actualizarPrecios · corridas simultáneas", () => {
 describe("actualizarPrecios · re-verificación de un cierre igual", () => {
   const AHORA = new Date("2024-09-30T20:00:00Z");
   const especie = async (sufijo: string) => (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRV${sufijo}${corrida}`, nombre: "Ficticia V" } })).id;
+  /** Simula una certificación corregida: en la app se revierte la carga (la posición es de solo inserción), aquí se abre la reversión. */
+  const corregirCertificacion = (args: Prisma.CertificacionPosicionUpdateArgs) =>
+    db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('inv.reversion', 'on', true)`;
+      return tx.certificacionPosicion.update(args);
+    });
   const certificar = async (id: string, fechaCorte: Date, precioValoracion: string, sha: string) => {
     const carga = await db.cargaArchivo.create({ data: { tipoFuente: "AV_CERTIFICACION", nombreArchivo: `cert-${sha}.ficticio.pdf`, sha256: sha.repeat(64), estado: "CARGADO", cargadoPorId: duenoId } });
     const cert = await db.certificacion.create({ data: { cargaId: carga.id, fechaCorte, saldoEfectivo: new Prisma.Decimal(0) } });
@@ -300,7 +306,7 @@ describe("actualizarPrecios · re-verificación de un cierre igual", () => {
     expect(await correr(id, dia, 250)).toMatchObject({ cierresNuevos: 1, fallidas: [] });
     expect(await vigentesDe(id)).toEqual([["250", "VERIFICADO", "certificacion:2024-09-11", "250", "0"]]);
     // Simula una certificación corregida (en la app se revierte la carga y se importa otra); aquí solo se cambia el dato inventado.
-    await db.certificacionPosicion.update({ where: { certificacionId_instrumentoId: { certificacionId, instrumentoId: id } }, data: { precioValoracion: new Prisma.Decimal("260") } });
+    await corregirCertificacion({ where: { certificacionId_instrumentoId: { certificacionId, instrumentoId: id } }, data: { precioValoracion: new Prisma.Decimal("260") } });
     const r = await correr(id, dia, 250);
     expect(await vigentesDe(id)).toEqual([["250", "NO_VERIFICADO", "certificacion:2024-09-11", "260", "3.846154"]]); // 10/260
     expect(await historiaDe(id)).toEqual([["250", "VERIFICADO", "certificacion:2024-09-11", "250", "0"]]);
@@ -328,7 +334,7 @@ describe("actualizarPrecios · re-verificación de un cierre igual", () => {
     const dia = new Date("2024-09-16T00:00:00Z");
     const certificacionId = await certificar(id, dia, "250", "5");
     expect(await correr(id, dia, 250)).toMatchObject({ cierresNuevos: 1, fallidas: [] });
-    await db.certificacionPosicion.update({ where: { certificacionId_instrumentoId: { certificacionId, instrumentoId: id } }, data: { precioValoracion: new Prisma.Decimal("1") } });
+    await corregirCertificacion({ where: { certificacionId_instrumentoId: { certificacionId, instrumentoId: id } }, data: { precioValoracion: new Prisma.Decimal("1") } });
     const r = await correr(id, dia, 250);
     expect(await vigentesDe(id)).toEqual([["250", "NO_VERIFICADO", "certificacion:2024-09-16", "1", null]]);
     expect(r).toMatchObject({ cierresReverificados: 1, fallidas: [] });
