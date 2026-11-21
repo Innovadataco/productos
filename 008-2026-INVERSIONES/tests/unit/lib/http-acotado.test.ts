@@ -142,6 +142,26 @@ describe("pedirJsonAcotado · plazo total (reloj falso)", () => {
     expect(cancelado).toBe(true);
   });
 
+  it("si buscar responde después del plazo, su cuerpo se cancela sin leerlo", async () => {
+    conRelojFalso();
+    let cancelado = false;
+    const abierto = new ReadableStream<Uint8Array>({
+      cancel() {
+        cancelado = true;
+      },
+    });
+    const tardio: BuscarHttp = () =>
+      new Promise((resolver) => {
+        setTimeout(() => resolver(new Response(abierto)), PLAZO_MS + 1);
+      });
+    const v = vigilar(pedir(tardio));
+    await vi.advanceTimersByTimeAsync(PLAZO_MS);
+    expect(v).toEqual({ listo: true, valor: { ok: false, codigo: "PRUEBA_RED" } });
+    await vi.advanceTimersByTimeAsync(1);
+    await new Promise((resolver) => setImmediate(resolver));
+    expect(cancelado).toBe(true);
+  });
+
   it("tras un pedido exitoso no queda ningún reloj vivo", async () => {
     conRelojFalso();
     expect(await pedir(responder("[]"))).toEqual({ ok: true, datos: [] });

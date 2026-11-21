@@ -44,6 +44,11 @@ async function leerCuerpoAcotado(respuesta: RespuestaHttp, bytesMaximos: number,
   if (declarado > bytesMaximos || !respuesta.body) return { ok: false, falla: "FORMATO" };
   const lector = respuesta.body.getReader();
   const cancelar = (): void => void lector.cancel().catch(() => undefined);
+  if (senal.aborted) {
+    // El plazo venció antes de que llegara la respuesta: nadie espera ya este cuerpo.
+    cancelar();
+    return { ok: false, falla: "RED" };
+  }
   senal.addEventListener("abort", cancelar, { once: true });
   const partes: Uint8Array[] = [];
   let total = 0;
