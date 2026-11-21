@@ -33,6 +33,11 @@ export function leerCalendario(filas: readonly FilaCalendario[]): CalendarioBvc 
   };
 }
 
+/** Rango de días de los años que tocan [desde, hasta]: lo que hay que leer de calendario_bvc. */
+export function aniosDelRango(desde: Date, hasta: Date): { readonly gte: Date; readonly lt: Date } {
+  return { gte: new Date(Date.UTC(desde.getUTCFullYear(), 0, 1)), lt: new Date(Date.UTC(hasta.getUTCFullYear() + 1, 0, 1)) };
+}
+
 /** null si la barra es el cierre de su día; si no, la razón para no guardarla. */
 export function motivoOmision(barra: Pick<Cierre, "fecha" | "volumen">, ahora: Date, calendario: CalendarioBvc): MotivoOmision | null {
   if (!barraDefinitiva(barra.fecha, ahora, calendario.noHabiles)) return "HORARIO";

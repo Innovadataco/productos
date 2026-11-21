@@ -69,7 +69,8 @@ function baseFalsa(previas: readonly Fila[], ganchos: Ganchos = {}) {
   };
   const db = {
     instrumento: { findMany: async () => [{ id: ESPECIE, nemotecnico: "FICT1" }] },
-    calendarioBvc: { findMany: async () => [] },
+    // Una fila ficticia de 2024: el año queda cubierto (sin calendario, las barras se omitirían por SIN_CALENDARIO).
+    calendarioBvc: { findMany: async () => [{ dia: new Date("2024-01-01T00:00:00Z"), esHabil: false }] },
     simboloPrecio: { findFirst: async () => null },
     certificacionPosicion: { findFirst: async () => (llamadas.certificacion++, null) },
     precioCierre,

@@ -2,7 +2,7 @@
 // Una sola razón por barra, en orden: HORARIO > NO_HABIL > SIN_NEGOCIACION > SIN_CALENDARIO. Datos inventados.
 import { describe, expect, it } from "vitest";
 import { esDiaHabil } from "@/precios/horario";
-import { leerCalendario, motivoOmision, type MotivoOmision } from "@/precios/negociacion";
+import { aniosDelRango, leerCalendario, motivoOmision, type MotivoOmision } from "@/precios/negociacion";
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00Z`);
 // Calendario ficticio de 2024: un miércoles festivo y un sábado marcado (raro) como hábil.
@@ -19,6 +19,13 @@ describe("leerCalendario", () => {
   });
   it("sin filas no cubre ningún año", () => {
     expect(leerCalendario([]).aniosCubiertos.size).toBe(0);
+  });
+});
+
+describe("aniosDelRango", () => {
+  it("cubre los años completos que toca el rango (lo que se lee de calendario_bvc)", () => {
+    expect(aniosDelRango(utc("2024-12-20"), utc("2025-01-05"))).toEqual({ gte: utc("2024-01-01"), lt: utc("2026-01-01") });
+    expect(aniosDelRango(utc("2024-03-12"), utc("2024-03-12"))).toEqual({ gte: utc("2024-01-01"), lt: utc("2025-01-01") });
   });
 });
 

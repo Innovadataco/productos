@@ -5,13 +5,16 @@
  * - Candado: si hay certificación de A&V con fecha de corte igual, el cierre se compara con su
  *   precio de valoración: VERIFICADO si difiere ≤ 1 %, si no NO_VERIFICADO. Sin referencia oficial
  *   ese día, NO_VERIFICADO (nunca se presenta como verificado lo que no se comparó).
+ * - SPEC-13 «nunca un precio viejo como de hoy»: una barra que no es el cierre de su día (aún no
+ *   definitiva, día no hábil, sin negociación o año sin calendario; ver `negociacion.ts`) no se guarda
+ *   y se cuenta por su razón.
  * - Una fuente caída o un símbolo sin datos no escribe nada para esa especie: se informa.
  * - Cada barra se guarda en una transacción (lectura del vigente, reemplazo con guarda e inserción).
  *   Ante una carrera con otra corrida (el vigente ya fue reemplazado, o P2002 por el índice parcial
  *   único) se deshace y se reintenta releyendo: lo que la otra corrida ya guardó igual queda «sin cambios».
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { barraDefinitiva } from "./horario";
+import { aniosDelRango, leerCalendario, motivoOmision, type CalendarioBvc, type MotivoOmision } from "./negociacion";
 import { obtenerCierres, type Buscar, type Cierre } from "./yahoo";
 
 export const TOLERANCIA_VERIFICACION = new Prisma.Decimal("0.01");
@@ -40,13 +43,39 @@ export interface ResultadoActualizacion {
   readonly cierresNuevos: number;
   readonly cierresRevisados: number;
   readonly verificados: number;
-  /** Barras de hoy no guardadas por no haber cerrado aún la BVC. */
+  /** Barras aún no definitivas: hoy antes de la hora, hoy no hábil o fecha futura. */
   readonly omitidasPorHorario: number;
+  /** Barras de fin de semana o festivo de calendario_bvc. */
+  readonly omitidasNoHabil: number;
+  /** Barras con volumen 0: ese día no hubo negociación. */
+  readonly omitidasSinNegociacion: number;
+  /** Barras de un día entre semana de un año que calendario_bvc no cubre. */
+  readonly omitidasSinCalendario: number;
   readonly fallidas: readonly FalloEspecie[];
 }
 
+type Omitidas = Readonly<Record<MotivoOmision, number>>;
+interface Conteo {
+  readonly nuevos: number;
+  readonly revisados: number;
+  readonly omitidas: Omitidas;
+}
+const CONTEO_CERO: Conteo = { nuevos: 0, revisados: 0, omitidas: { HORARIO: 0, NO_HABIL: 0, SIN_NEGOCIACION: 0, SIN_CALENDARIO: 0 } };
+
+function sumar(a: Conteo, b: Conteo): Conteo {
+  const o = (m: MotivoOmision) => a.omitidas[m] + b.omitidas[m];
+  return { nuevos: a.nuevos + b.nuevos, revisados: a.revisados + b.revisados, omitidas: { HORARIO: o("HORARIO"), NO_HABIL: o("NO_HABIL"), SIN_NEGOCIACION: o("SIN_NEGOCIACION"), SIN_CALENDARIO: o("SIN_CALENDARIO") } };
+}
+
+const conOmitida = (c: Conteo, motivo: MotivoOmision): Conteo => ({ ...c, omitidas: { ...c.omitidas, [motivo]: c.omitidas[motivo] + 1 } });
+
+/** Calendario de la BVC de los años del rango, en una consulta. */
+export async function leerCalendarioBvc(db: Pick<PrismaClient, "calendarioBvc">, desde: Date, hasta: Date): Promise<CalendarioBvc> {
+  return leerCalendario(await db.calendarioBvc.findMany({ where: { dia: aniosDelRango(desde, hasta) }, select: { dia: true, esHabil: true } }));
+}
+
 /** Símbolo de Yahoo vigente en la fecha, o `<NEMO>.CL` si no hay equivalencia registrada. */
-async function simboloDe(db: PrismaClient, instrumentoId: string, nemotecnico: string, hoy: Date): Promise<string> {
+export async function simboloDe(db: PrismaClient, instrumentoId: string, nemotecnico: string, hoy: Date): Promise<string> {
   const mapa = await db.simboloPrecio.findFirst({
     where: { instrumentoId, proveedor: FUENTE, vigenteDesde: { lte: hoy }, OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: hoy } }] },
     select: { simbolo: true },
@@ -108,52 +137,74 @@ async function guardarCierre(db: PrismaClient, instrumentoId: string, c: Cierre)
   }
 }
 
-export async function actualizarPrecios(db: PrismaClient, opciones: { desde: Date; hasta: Date; buscar: Buscar; instrumentoIds?: readonly string[]; ahora?: Date }): Promise<ResultadoActualizacion> {
+interface ResultadoEspecie {
+  readonly conteo: Conteo;
+  readonly fallo: FalloEspecie | null;
+}
+
+/** Guarda las barras que son cierre de su día y cuenta las omitidas. Una barra que falla no aborta las demás. */
+async function guardarBarras(db: PrismaClient, instrumentoId: string, cierres: readonly Cierre[], ahora: Date, calendario: CalendarioBvc): Promise<ResultadoEspecie> {
+  let conteo = CONTEO_CERO;
+  let barrasGuardadas = 0;
+  let barrasFallidas = 0;
+  let detalle: string | undefined;
+  for (const c of cierres) {
+    const motivo = motivoOmision(c, ahora, calendario);
+    if (motivo) {
+      conteo = conOmitida(conteo, motivo);
+      continue;
+    }
+    try {
+      const cambio = await guardarCierre(db, instrumentoId, c);
+      conteo = { ...conteo, nuevos: conteo.nuevos + (cambio === "nuevo" ? 1 : 0), revisados: conteo.revisados + (cambio === "revisado" ? 1 : 0) };
+      barrasGuardadas += 1;
+    } catch (err) {
+      barrasFallidas += 1;
+      detalle ??= detalleDeError(err);
+    }
+  }
+  const fallo = barrasFallidas > 0 ? { instrumentoId, codigo: "GUARDADO_ERROR", ...(detalle ? { detalle } : {}), barrasGuardadas, barrasFallidas } : null;
+  return { conteo, fallo };
+}
+
+interface OpcionesActualizacion {
+  readonly desde: Date;
+  readonly hasta: Date;
+  readonly buscar: Buscar;
+  readonly instrumentoIds?: readonly string[];
+  readonly ahora?: Date;
+}
+
+/** Una especie: pide a Yahoo y guarda. Un fallo de Yahoo o del símbolo no escribe nada y se informa. */
+async function procesarEspecie(db: PrismaClient, e: { readonly id: string; readonly nemotecnico: string | null }, opciones: OpcionesActualizacion, ahora: Date, calendario: CalendarioBvc): Promise<ResultadoEspecie> {
+  let r;
+  try {
+    r = await obtenerCierres(await simboloDe(db, e.id, e.nemotecnico!, opciones.hasta), opciones.desde, opciones.hasta, opciones.buscar);
+  } catch (err) {
+    return { conteo: CONTEO_CERO, fallo: { instrumentoId: e.id, codigo: "GUARDADO_ERROR", detalle: detalleDeError(err), barrasGuardadas: 0, barrasFallidas: 0 } };
+  }
+  if (!r.ok) return { conteo: CONTEO_CERO, fallo: { instrumentoId: e.id, codigo: r.codigo, barrasGuardadas: 0, barrasFallidas: 0 } };
+  return guardarBarras(db, e.id, r.cierres, ahora, calendario);
+}
+
+export async function actualizarPrecios(db: PrismaClient, opciones: OpcionesActualizacion): Promise<ResultadoActualizacion> {
   const especies = await db.instrumento.findMany({
     where: { tipo: "ACCION", activo: true, nemotecnico: { not: null }, ...(opciones.instrumentoIds ? { id: { in: [...opciones.instrumentoIds] } } : { lotes: { some: {} } }) },
     select: { id: true, nemotecnico: true },
   });
   const ahora = opciones.ahora ?? new Date();
-  const noHabiles = new Set(
-    (await db.calendarioBvc.findMany({ where: { esHabil: false, dia: { gte: opciones.desde, lte: opciones.hasta } }, select: { dia: true } })).map((d) => d.dia.toISOString().slice(0, 10)),
-  );
-  let cierresNuevos = 0;
-  let cierresRevisados = 0;
-  let omitidasPorHorario = 0;
+  const calendario = await leerCalendarioBvc(db, opciones.desde, opciones.hasta);
+  let total = CONTEO_CERO;
   const fallidas: FalloEspecie[] = [];
   for (const e of especies) {
-    let r;
-    try {
-      r = await obtenerCierres(await simboloDe(db, e.id, e.nemotecnico!, opciones.hasta), opciones.desde, opciones.hasta, opciones.buscar);
-    } catch (err) {
-      fallidas.push({ instrumentoId: e.id, codigo: "GUARDADO_ERROR", detalle: detalleDeError(err), barrasGuardadas: 0, barrasFallidas: 0 });
-      continue;
-    }
-    if (!r.ok) {
-      fallidas.push({ instrumentoId: e.id, codigo: r.codigo, barrasGuardadas: 0, barrasFallidas: 0 });
-      continue;
-    }
-    // Una barra que falla no aborta las demás de la especie ni las demás especies: se cuenta y se sigue.
-    let barrasGuardadas = 0;
-    let barrasFallidas = 0;
-    let detalle: string | undefined;
-    for (const c of r.cierres) {
-      if (!barraDefinitiva(c.fecha, ahora, noHabiles)) {
-        omitidasPorHorario += 1;
-        continue;
-      }
-      try {
-        const cambio = await guardarCierre(db, e.id, c);
-        if (cambio === "nuevo") cierresNuevos += 1;
-        if (cambio === "revisado") cierresRevisados += 1;
-        barrasGuardadas += 1;
-      } catch (err) {
-        barrasFallidas += 1;
-        detalle ??= detalleDeError(err);
-      }
-    }
-    if (barrasFallidas > 0) fallidas.push({ instrumentoId: e.id, codigo: "GUARDADO_ERROR", ...(detalle ? { detalle } : {}), barrasGuardadas, barrasFallidas });
+    const r = await procesarEspecie(db, e, opciones, ahora, calendario);
+    total = sumar(total, r.conteo);
+    if (r.fallo) fallidas.push(r.fallo);
   }
   const verificados = await db.precioCierre.count({ where: { estado: "VERIFICADO", reemplazadoEn: null, fecha: { gte: opciones.desde, lte: opciones.hasta } } });
-  return { especies: especies.length, cierresNuevos, cierresRevisados, verificados, omitidasPorHorario, fallidas };
+  return {
+    especies: especies.length, cierresNuevos: total.nuevos, cierresRevisados: total.revisados, verificados,
+    omitidasPorHorario: total.omitidas.HORARIO, omitidasNoHabil: total.omitidas.NO_HABIL, omitidasSinNegociacion: total.omitidas.SIN_NEGOCIACION, omitidasSinCalendario: total.omitidas.SIN_CALENDARIO,
+    fallidas,
+  };
 }
