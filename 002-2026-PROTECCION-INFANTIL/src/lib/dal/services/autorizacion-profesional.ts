@@ -57,7 +57,9 @@ export class AutorizacionProfesionalService {
         if (!ruta) {
             throw new AppError("Ruta del documento de autorización no configurada", ERROR_CODES.INTERNAL_ERROR, 500);
         }
-        const rutaAbsoluta = path.isAbsolute(ruta) ? ruta : path.resolve(process.cwd(), ruta);
+        // SPEC-966: ruta del documento legal (parámetro) resuelta en runtime → el tracer
+        // de next trazaba el proyecto entero. El .md lo EMBARCA el Dockerfile (COPY).
+        const rutaAbsoluta = path.isAbsolute(ruta) ? ruta : path.resolve(/*turbopackIgnore: true*/ process.cwd(), ruta);
         try {
             return await readFile(rutaAbsoluta, "utf-8");
         } catch (error) {

@@ -35,7 +35,10 @@ export async function leerDocumentoConfianza(clave: string): Promise<DocumentoLe
     if (!permitido) return null;
 
     const raiz = process.cwd();
-    const absoluta = path.resolve(raiz, documento.ruta);
+    // SPEC-966: ruta de un allowlist CERRADO, pero resuelta contra cwd en runtime; el
+    // tracer de next no puede seguirla y trazaba el proyecto entero. Estos .md los
+    // EMBARCA el Dockerfile (COPY), no el trace → opt-out del tracing.
+    const absoluta = path.resolve(/*turbopackIgnore: true*/ raiz, documento.ruta);
     if (!absoluta.startsWith(raiz + path.sep)) return null;
 
     let markdown: string;

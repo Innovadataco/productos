@@ -22,7 +22,9 @@ export async function leerDocumento(ruta: string): Promise<DocumentoLeido | null
     if (!permitido) return null;
 
     const raiz = process.cwd();
-    const absoluta = path.resolve(raiz, ruta);
+    // SPEC-966: ruta de allowlist resuelta contra cwd en runtime → el tracer de next
+    // trazaba todo el proyecto. El .md lo EMBARCA el Dockerfile (COPY), no el trace.
+    const absoluta = path.resolve(/*turbopackIgnore: true*/ raiz, ruta);
     if (!absoluta.startsWith(raiz + path.sep)) return null;
 
     let markdown: string;
