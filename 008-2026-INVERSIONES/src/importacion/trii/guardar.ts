@@ -1,5 +1,7 @@
 /** Escritura de los registros de un CSV de Trii dentro de la transacción de importación. */
 import { Prisma } from "@prisma/client";
+import { cifrarCrudo } from "../../cifrado/campos";
+import type { Llavero } from "../../cifrado/llavero";
 import { DIAS_LIQUIDACION, sumarDiasHabiles } from "../liquidacion";
 import type { RegistroConClave } from "./clave";
 import type { HechoCaja, HechoDividendo, HechoOrden } from "./filas";
@@ -106,8 +108,12 @@ async function verificarSinConflicto(tx: Tx, filaFuenteId: string, r: RegistroCo
   // Dividendos: todos sus campos forman la clave; no hay nada más que comparar.
 }
 
-/** Devuelve true si la fila es nueva. Siempre deja constancia de que esta carga la vio. */
-export async function guardarRegistro(tx: Tx, ctx: Contexto, cargaId: string, r: RegistroConClave): Promise<boolean> {
+/**
+ * Devuelve true si la fila es nueva. Siempre deja constancia de que esta carga la vio.
+ * El crudo se guarda cifrado (#11), atado a su llave natural: la clave natural ya se calculó
+ * (de los campos canónicos, no del crudo) antes de cifrar, así que reimportar no duplica.
+ */
+export async function guardarRegistro(tx: Tx, ctx: Contexto, cargaId: string, r: RegistroConClave, llavero: Llavero): Promise<boolean> {
   const where = { tipoFuente_claveNatural_ocurrencia: { tipoFuente: r.registro.tipo, claveNatural: r.clave, ocurrencia: r.ocurrencia } };
   const existente = await tx.filaFuente.findUnique({ where, select: { id: true } });
   if (existente) {
@@ -115,7 +121,7 @@ export async function guardarRegistro(tx: Tx, ctx: Contexto, cargaId: string, r:
     await tx.filaDeCarga.create({ data: { cargaId, filaNo: r.fila, filaFuenteId: existente.id } });
     return false;
   }
-  const crudo = { ...r.crudo };
+  const crudo = cifrarCrudo(r.crudo, { tipoFuente: r.registro.tipo, claveNatural: r.clave, ocurrencia: r.ocurrencia }, llavero);
   const fila = await tx.filaFuente.create({
     data: { tipoFuente: r.registro.tipo, claveNatural: r.clave, ocurrencia: r.ocurrencia, primeraCargaId: cargaId, primeraFilaNo: r.fila, crudo },
   });

@@ -3,9 +3,13 @@
  * - Una fila inválida, un conflicto o un fallo de la base → el archivo entero queda RECHAZADO
  *   (se registra la carga con códigos y filas, nunca con valores) y no se guarda ningún hecho.
  * - Reimportar no duplica: cada fila se identifica por (tipo, clave natural, ocurrencia).
+ * - El crudo de cada fila se guarda cifrado (#11). Sin un llavero válido la importación falla cerrado
+ *   (ErrorCifrado) antes de tocar la base: no queda ni la carga RECHAZADA.
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { createHash } from "node:crypto";
+import { ErrorCifrado } from "../../cifrado/errores";
+import { obtenerLlavero } from "../../cifrado/llavero";
 import { asignarClaves, type RegistroConClave } from "./clave";
 import { ErrorCsv, leerCsv } from "./csv";
 import { interpretarFila, type ErrorFila } from "./filas";
@@ -95,6 +99,7 @@ async function registrarRechazo(
 }
 
 export async function importarArchivoTrii(db: PrismaClient, archivo: ArchivoTrii): Promise<ResultadoImportacion> {
+  const llavero = obtenerLlavero(); // primero: sin claves no se escribe nada, ni el rechazo
   const usuario = await db.usuario.findUnique({ where: { id: archivo.usuarioId } });
   if (!usuario || !usuario.activo || usuario.rol !== "DUENO") throw new ErrorImportacion("USUARIO_NO_AUTORIZADO");
 
@@ -114,7 +119,7 @@ export async function importarArchivoTrii(db: PrismaClient, archivo: ArchivoTrii
         const ctx = await prepararContexto(tx, registros);
         let nuevas = 0;
         for (const r of registros) {
-          if (await guardarRegistro(tx, ctx, carga.id, r)) nuevas += 1;
+          if (await guardarRegistro(tx, ctx, carga.id, r, llavero)) nuevas += 1;
         }
         await tx.cargaArchivo.update({
           where: { id: carga.id },
@@ -129,10 +134,13 @@ export async function importarArchivoTrii(db: PrismaClient, archivo: ArchivoTrii
     );
   } catch (e) {
     // El mensaje de Prisma puede traer valores reales: solo se registra un código.
+    // Un ErrorCifrado lleva su propio código (fijo, sin valores): el problema no es de la base.
     const error: ErrorFila =
       e instanceof ErrorImportacion
         ? { fila: e.fila ?? 0, columna: null, codigo: e.codigo }
-        : { fila: 0, columna: null, codigo: codigoDeBase(e) };
+        : e instanceof ErrorCifrado
+          ? { fila: 0, columna: null, codigo: e.codigo }
+          : { fila: 0, columna: null, codigo: codigoDeBase(e) };
     return registrarRechazo(db, archivo, sha256, tipo, registros.length, [error]);
   }
 }
