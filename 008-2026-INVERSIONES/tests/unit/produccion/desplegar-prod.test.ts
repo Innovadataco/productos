@@ -402,10 +402,28 @@ describe("desplegar-prod.sh · pausa antes del migrador (la app vieja no retiene
     });
   }
 
-  it("primer despliegue con el migrador fallido: no hay imagen a la que volver y no inventa una", async () => {
-    const { repo, base, env, script } = preparar({ FALSO_MIGRADOR_RC: "1" });
-    expect((await correr(script, [ID], env)).status).not.toBe(0);
-    expect(ups(base).every((l) => l.startsWith(`up ${repo.sha} `) && !l.includes("inv-008-app"))).toBe(true);
+  for (const [nombre, falla] of [
+    ["el migrador", { FALSO_MIGRADOR_RC: "1" }],
+    ["el respaldo previo", { FALSO_RESPALDO_RC: "2" }],
+  ] as const) {
+    it(`primer despliegue y falla ${nombre}: no hay imagen a la que volver, no inventa una y lo dice`, async () => {
+      const { repo, base, env, script } = preparar(falla);
+      const r = await correr(script, [ID], env);
+      expect(r.status).not.toBe(0);
+      expect(ups(base).every((l) => l.startsWith(`up ${repo.sha} `) && !l.includes("inv-008-app"))).toBe(true);
+      expect(r.stderr).toMatch(/no hay imagen a la que volver/);
+    });
+  }
+
+  it("la vuelta atrás nunca levanta un sha que no sea de 40 hex (estado/sha-actual dañado)", async () => {
+    const { repo, base, env, script } = preparar();
+    mkdirSync(path.join(base, "estado"), { recursive: true });
+    writeFileSync(path.join(base, "estado", "sha-actual"), "latest\n");
+    writeFileSync(path.join(base, "estado", "imagen-actual"), `${ID}\n`);
+    const r = await correr(script, [ID, "--sin-migrar"], { ...env, FALSO_UP_FALLA_TAG: repo.sha });
+    expect(r.status).not.toBe(0);
+    expect(ups(base).some((l) => l.startsWith("up latest "))).toBe(false);
+    expect(r.stderr).toMatch(/no se vuelve/);
   });
 });
 

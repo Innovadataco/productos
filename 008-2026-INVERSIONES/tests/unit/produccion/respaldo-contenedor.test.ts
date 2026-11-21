@@ -30,6 +30,8 @@ function preparar(extra: Record<string, string> = {}) {
   // FALSO_PGDUMP_SENAL: archivo que pg_dump deja justo antes de fallar (la prueba espera a verlo).
   falso("pg_dump", 'printf "%s\\n" "PG:$PGUSER@$PGHOST:$PGPORT/$PGDATABASE" >>"$FALSO_REGISTRO"; [ -z "${FALSO_PGDUMP_ESPERA:-}" ] || sleep "$FALSO_PGDUMP_ESPERA"; [ "${FALSO_PGDUMP_RC:-0}" = 0 ] || { [ -z "${FALSO_PGDUMP_SENAL:-}" ] || : >"$FALSO_PGDUMP_SENAL"; exit "$FALSO_PGDUMP_RC"; }; printf "PGDMP-TEXTO-PLANO-secreto"');
   falso("age", '[ "${FALSO_AGE_RC:-0}" = 0 ] || { cat >/dev/null; exit "$FALSO_AGE_RC"; }; printf "age-encryption.org/v1\\n"; tr "A-Za-z" "N-ZA-Mn-za-m"; [ -z "${FALSO_AGE_ESPERA:-}" ] || sleep "$FALSO_AGE_ESPERA"');
+  // chgrp que falla con FALSO_CHGRP_RC (y si no, el del sistema).
+  falso("chgrp", '[ "${FALSO_CHGRP_RC:-0}" = 0 ] || exit "$FALSO_CHGRP_RC"; for d in /usr/bin /bin; do [ -x "$d/chgrp" ] && exec "$d/chgrp" "$@"; done; exit 127');
   // flock de verdad en el Mac (que no lo trae) y en Linux: flock(2) con perl sobre el descriptor heredado,
   // con la interfaz de BusyBox que usa la imagen (-n, -u y -x; sin -w). El candado queda tomado mientras el
   // descriptor siga abierto en el proceso que lo pidió, como con el flock real.
@@ -326,6 +328,16 @@ describe("respaldo.sh · pasada del bucle diario", () => {
     expect(res.stdout).toMatch(/proximo=0/);
     expect(existsSync(path.join(r.respaldos, ".ultimo-diario"))).toBe(true);
     expect(conAge(r.respaldos)).toHaveLength(1);
+  });
+
+  it("si falla un paso después del cifrado (el grupo, el .sha256): no cuenta como respaldo, castiga y no deja archivos", () => {
+    const r = preparar({ RESPALDO_HORA: "0000", RESPALDO_GID: String(process.getgid!()), FALSO_CHGRP_RC: "1" });
+    const res = r.funcion(PASADA);
+    expect(res.status, res.stderr).toBe(0);
+    expect(res.stdout).not.toMatch(/proximo=0/);
+    expect(res.stderr).not.toMatch(/respaldo listo/);
+    expect(existsSync(path.join(r.respaldos, ".ultimo-diario"))).toBe(false);
+    expect(archivosDe(r.respaldos)).toEqual([]);
   });
 
   it("si el respaldo falla: castiga 15 minutos y no marca el día", () => {
