@@ -63,7 +63,9 @@ function flujoWeb(respuesta: IncomingMessage): ReadableStream<Uint8Array> {
         if (Number(control.desiredSize) <= 0) respuesta.pause();
       });
       respuesta.once("end", () => una(() => control.close()));
-      respuesta.once("error", (error) => una(() => control.error(error)));
+      // on y no once: un abort y luego el reset del socket pueden emitir dos «error»; sin oyente, el segundo tumbaría
+      // el proceso. `una` hace que solo el primero cuente.
+      respuesta.on("error", (error) => una(() => control.error(error)));
       respuesta.once("close", () => una(() => control.error(new Error("PRECIOS_RED: la respuesta se cortó"))));
     },
     pull() {

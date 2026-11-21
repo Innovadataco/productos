@@ -45,10 +45,21 @@ export interface OpcionesCorredor {
 
 const lanzarSinShell: Lanzar = (ejecutable, args, opciones) => spawn(ejecutable, [...args], opciones);
 
-/** Manda SIGTERM y, si el hijo no sale en la gracia, SIGKILL. */
+const yaSalio = (hijo: ChildProcess): boolean => hijo.exitCode !== null || hijo.signalCode !== null;
+
+const terminados = new WeakSet<ChildProcess>();
+
+/**
+ * Manda SIGTERM y, si el hijo no sale en la gracia, SIGKILL. Una sola vez por hijo (vencer el plazo y detener pueden
+ * coincidir) y nunca a uno que ya salió.
+ */
 function terminar(hijo: ChildProcess, graciaMs: number): void {
+  if (terminados.has(hijo) || yaSalio(hijo)) return;
+  terminados.add(hijo);
   hijo.kill("SIGTERM");
-  const golpe = setTimeout(() => hijo.kill("SIGKILL"), graciaMs);
+  const golpe = setTimeout(() => {
+    if (!yaSalio(hijo)) hijo.kill("SIGKILL");
+  }, graciaMs);
   hijo.once("close", () => clearTimeout(golpe));
 }
 
