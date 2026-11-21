@@ -22,18 +22,25 @@ ALTER TABLE "orden" ADD CONSTRAINT "orden_fechas_chk" CHECK ("fechaLiquidacion" 
 -- inv_app tiene UPDATE por columna en usuario (docker/migrador/privilegios.sql). Sin esto, una app
 -- comprometida (o un error) podía bajar sesionVersion y revivir JWT revocados. Reglas, verificadas contra
 -- src/auth (acceso.ts, reinicio-totp.ts, enrolamiento.ts, cuenta-totp.ts, segundo-paso.ts, regenerar.ts):
---   R1 sesionVersion nunca baja;
+--   R1 sesionVersion nunca baja, y sube de a uno (todo src/auth hace `increment: 1`): un salto al máximo del
+--      entero dejaría la cuenta sin poder cambiar la clave ni reiniciar el TOTP, para siempre;
 --   R2 si había clave y cambia (a otra o a NULL), sesionVersion sube en el mismo UPDATE (la primera clave,
 --      de NULL a un hash, queda libre: sin clave no hay sesión válida, src/auth/sesion.ts);
 --   R3 con el TOTP activo (último paso no nulo antes y después), el último paso nunca baja (antireplay);
 --   R4 apagar el TOTP (totpActivadoEn de un valor a NULL, el reinicio) exige subir sesionVersion.
 -- Alcance: impide revivir sesiones cerradas y obliga a cerrarlas al cambiar la clave o reiniciar el TOTP.
--- NO impide que quien controle inv_app tome la cuenta (puede fijar otra clave subiendo la versión).
+-- NO impide que quien controle inv_app (o escriba SQL con su conexión) tome la cuenta: puede fijar otra clave
+-- subiendo la versión, o reiniciar el TOTP (subiéndola) y volver a activarlo con el último paso que quiera;
+-- tampoco limita bloqueadoHasta (puede levantar el bloqueo por fallos), presesionHash ni la activación del
+-- TOTP (de NULL a una hora). Apagar el último paso con el TOTP activo ya lo frena usuario_totp_chk.
 -- Sin salida de escape: inv_app podría usar cualquier GUC (SET LOCAL), así que no hay ninguna.
 CREATE FUNCTION "inv_usuario_transiciones"() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW."sesionVersion" < OLD."sesionVersion" THEN
     RAISE EXCEPTION 'usuario: la versión de sesión no baja' USING ERRCODE = 'restrict_violation';
+  END IF;
+  IF NEW."sesionVersion" > OLD."sesionVersion" + 1 THEN
+    RAISE EXCEPTION 'usuario: la versión de sesión sube de a uno' USING ERRCODE = 'restrict_violation';
   END IF;
   IF OLD."claveHash" IS NOT NULL AND NEW."claveHash" IS DISTINCT FROM OLD."claveHash"
      AND NEW."sesionVersion" <= OLD."sesionVersion" THEN

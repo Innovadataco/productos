@@ -6,7 +6,7 @@
 --    con su definición exacta (pg_get_indexdef), único si lo es, y válido, listo y vivo (indisvalid,
 --    indisready, indislive); además, ningún índice del esquema puede quedar a medias, esté o no en la lista;
 --  - cada llave primaria y foránea con su definición exacta (pg_get_constraintdef: columnas, tabla destino y
---    ON DELETE / ON UPDATE) y validada;
+--    ON DELETE / ON UPDATE) y validada, y toda FK con un índice que empiece por sus columnas;
 --  - cada CHECK y EXCLUDE con su definición exacta y validado, salvo los de `sin_validar`: nacieron NOT VALID
 --    para no revisar filas existentes y se aceptan sin validar hasta que una migración posterior los valide
 --    (antes, el dueño corre scripts/contar-sin-validar.sql, de solo lectura);
@@ -20,6 +20,9 @@
 -- prisma/migrations: tests/unit/produccion/verificar-esquema.test.ts exige que coincida, y
 -- tests/integracion/guardian-esquema.test.ts (Mac y CI) y roles-base.test.ts (CI) lo corren contra PostgreSQL
 -- real y lo rompen a propósito.
+-- Para sumar un objeto nuevo, se copia su definición de una base de pruebas recién migrada, con
+-- `SET search_path = public` y estas funciones: pg_get_indexdef(oid del índice), pg_get_constraintdef(oid de
+-- la restricción; sin el sufijo ' NOT VALID'), pg_get_triggerdef(oid del disparador) y md5(prosrc) de la función.
 DO $$
 DECLARE
   indices text[] := ARRAY[
@@ -211,7 +214,7 @@ DECLARE
     ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301'],
     ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77'],
     ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546'],
-    ['inv_usuario_transiciones', 'd1090caf153d2438bcdb3169fce25764']
+    ['inv_usuario_transiciones', '368539024fbeaeb771669ff741aa7ed3']
   ];
   extensiones text[] := ARRAY['btree_gist', 'citext'];
   listados text[] := '{}';
@@ -269,6 +272,21 @@ BEGIN
     ELSIF def <> fila[3] OR NOT valida THEN
       distintos := distintos || ('llave ' || fila[2]);
     END IF;
+  END LOOP;
+
+  -- Toda FK con un índice que empiece por sus columnas (con RESTRICT, borrar o actualizar el padre la busca
+  -- en la hija): si una migración o un DROP INDEX se lo quita, el despliegue se detiene.
+  FOR x IN
+    SELECT c.conname FROM pg_constraint c
+    WHERE c.contype = 'f' AND c.connamespace = 'public'::regnamespace
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_index i
+        WHERE i.indrelid = c.conrelid
+          AND (i.indkey::int2[])[0:cardinality(c.conkey) - 1] @> c.conkey
+          AND (i.indkey::int2[])[0:cardinality(c.conkey) - 1] <@ c.conkey)
+    ORDER BY 1
+  LOOP
+    distintos := distintos || ('llave sin índice ' || x);
   END LOOP;
 
   FOREACH fila SLICE 1 IN ARRAY disparadores LOOP

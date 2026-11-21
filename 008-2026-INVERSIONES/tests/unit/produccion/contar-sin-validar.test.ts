@@ -38,9 +38,9 @@ describe("contar-sin-validar.sql", () => {
   it("devuelve solo conteos: count(*) por restricción, nunca columnas de las filas", () => {
     const consulta = sql.split(";")[1] ?? "";
     expect(consulta).not.toMatch(/SELECT\s+\*/i);
-    for (const m of consulta.matchAll(/SELECT\s+'([a-z_]+)'(?:\s+AS\s+restriccion)?\s*,\s*([^\n]+?)\s+FROM\s+"([a-z_]+)"/gi)) {
-      expect(m[2], m[1]).toMatch(/^count\(\*\) FILTER \(WHERE NOT \(/);
-    }
+    const conteos = [...consulta.matchAll(/SELECT\s+'([a-z_]+)'(?:\s+AS\s+restriccion)?\s*,\s*([^\n]+?)\s+FROM\s+"([a-z_]+)"/gi)];
+    expect(conteos).toHaveLength(sinValidar.length);
+    for (const m of conteos) expect(m[2], m[1]).toMatch(/^count\(\*\) FILTER \(WHERE NOT \(/);
   });
 
   it("cubre exactamente los CHECK de sin_validar del guardián, con la misma expresión que su migración", () => {

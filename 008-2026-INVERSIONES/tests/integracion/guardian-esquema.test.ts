@@ -1,6 +1,7 @@
 // Guardián del esquema (scripts/verificar-esquema.sql) contra la base de PRUEBAS, en el Mac y en el CI.
 // Cada caso rompe algo DENTRO de una transacción, corre el guardián en esa misma transacción y la deshace
-// siempre: la base queda como estaba. Solo toca el catálogo (sin datos).
+// siempre: la base queda como estaba. Solo toca el catálogo (sin datos). Dos casos (UPDATE pg_index y
+// DISABLE TRIGGER ALL) exigen que el usuario de DATABASE_URL_TEST sea superusuario, como en el compose y en el CI.
 // Escenario que cierra (database-reviewer, D1): un DROP INDEX o una migración futura que quite un índice
 // único, una FK o le cambie el ON DELETE, y el guardián pasaba igual (la reimportación duplicaría filas).
 import { readFileSync } from "node:fs";
@@ -108,7 +109,11 @@ describe("guardián del esquema: llaves foráneas y su ON DELETE", () => {
   });
 
   it("falla si los disparadores internos de las FK de una tabla quedan deshabilitados", async () => {
-    expect(await guardianTras(['ALTER TABLE "lote" DISABLE TRIGGER ALL'])).toMatch(/lote/);
+    expect(await guardianTras(['ALTER TABLE "lote" DISABLE TRIGGER ALL'])).toContain("disparadores deshabilitados en lote");
+  });
+
+  it("falla si una FK se queda sin índice que empiece por sus columnas (p. ej. si se borra el suyo)", async () => {
+    expect(await guardianTras(['DROP INDEX "dividendo_eventoId_idx"'])).toContain("dividendo_eventoId_fkey");
   });
 });
 

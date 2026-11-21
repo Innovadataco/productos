@@ -84,6 +84,18 @@ describe("transiciones de usuario (disparador usuario_transiciones)", () => {
     await expect(db.usuario.update({ where: { id }, data: { sesionVersion: { increment: 1 } } })).resolves.toMatchObject({ sesionVersion: 4 });
   });
 
+  it("sesionVersion sube de a uno: un salto no agota el entero (cerraría el acceso para siempre, porque no baja)", async () => {
+    const id = await nuevo();
+    await expect(db.usuario.update({ where: { id }, data: { sesionVersion: 3 } })).rejects.toThrow(/la versión de sesión sube de a uno/);
+    await expect(db.usuario.update({ where: { id }, data: { sesionVersion: 2_147_483_647 } })).rejects.toThrow(/la versión de sesión sube de a uno/);
+    await expect(db.usuario.update({ where: { id }, data: { sesionVersion: { increment: 1 } } })).resolves.toMatchObject({ sesionVersion: 2 });
+  });
+
+  it("con el TOTP activo, el último paso no se puede poner en NULL sin apagarlo (lo frena usuario_totp_chk)", async () => {
+    const id = await nuevo({ totpSecreto: SOBRE, totpActivadoEn: new Date(), totpUltimoPaso: 100 });
+    await expect(db.usuario.update({ where: { id }, data: { totpUltimoPaso: null } })).rejects.toThrow(/usuario_totp_chk/);
+  });
+
   it("cambiar o quitar la clave exige subir sesionVersion en el mismo UPDATE (así lo hace definirClave)", async () => {
     const id = await nuevo({ claveHash: HASH_DE_FORMA_VALIDA });
     await expect(db.usuario.update({ where: { id }, data: { claveHash: OTRO_HASH } })).rejects.toThrow(/cambiar o quitar la clave/);

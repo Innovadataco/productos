@@ -4,6 +4,9 @@
 // La lista del guardián debe ser EXACTAMENTE la que sale de prisma/migrations: si alguien agrega uno y no lo
 // suma, esto se pone rojo. Las definiciones exactas las comprueban contra PostgreSQL real
 // tests/integracion/guardian-esquema.test.ts (en el Mac y en el CI) y roles-base.test.ts (solo CI).
+// Límites del lector de migraciones (por regex): exige nombres entre comillas (lo hace cumplir una prueba de
+// abajo), no modela DROP TABLE, DROP COLUMN ni RENAME (hoy ninguna migración los usa) y quita los `--` de
+// comentario sin mirar si caen dentro de un literal.
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -128,8 +131,19 @@ describe("verificar-esquema.sql coincide con las migraciones", () => {
     for (const nombre of enGuardian) expect(esperado.restricciones.has(nombre), nombre).toBe(true);
   });
 
-  it("toda FK que se agrega NOT VALID se valida en la misma migración (el guardián las exige validadas)", () => {
+  it("ninguna FK queda NOT VALID al final de las migraciones (el guardián las exige validadas)", () => {
     expect([...esperado.llavesSinValidar]).toEqual([]);
+  });
+
+  it("las migraciones nombran entre comillas cada índice, disparador, función, extensión y restricción (si no, esta prueba no los vería)", () => {
+    const sinComillas = migraciones().flatMap((sql) => [
+      ...sql.matchAll(/\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(?!(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?")\S+/gi),
+      ...sql.matchAll(/\bCREATE\s+(?:CONSTRAINT\s+)?TRIGGER\s+(?!")\S+/gi),
+      ...sql.matchAll(/\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?!")\S+/gi),
+      ...sql.matchAll(/\bCREATE\s+EXTENSION\s+(?!(?:IF\s+NOT\s+EXISTS\s+)?")\S+/gi),
+      ...sql.matchAll(/\bCONSTRAINT\s+(?!")\S+\s+(?:CHECK|EXCLUDE|PRIMARY|FOREIGN|UNIQUE)\b/gi),
+    ]).map((m) => m[0]);
+    expect(sinComillas).toEqual([]);
   });
 
   it("extensiones: las mismas que crean las migraciones (btree_gist y citext)", () => {
@@ -138,10 +152,10 @@ describe("verificar-esquema.sql coincide con las migraciones", () => {
     expect(enGuardian).toEqual(expect.arrayContaining(["btree_gist", "citext"]));
   });
 
-  it("las migraciones no traen CHECK sin nombre (el guardián no podría seguirlos)", () => {
+  it("las migraciones no traen CHECK ni EXCLUDE sin nombre (el guardián no podría seguirlos)", () => {
     for (const sql of migraciones()) {
       for (const sentencia of sql.split(";")) {
-        for (const m of sentencia.matchAll(/\bCHECK\s*\(/gi)) {
+        for (const m of sentencia.matchAll(/\b(?:CHECK\s*\(|EXCLUDE\s+USING\b)/gi)) {
           const antes = sentencia.slice(0, m.index).trimEnd();
           expect(antes, sentencia.slice(0, 120)).toMatch(/CONSTRAINT\s+"[^"]+"$/i);
         }
