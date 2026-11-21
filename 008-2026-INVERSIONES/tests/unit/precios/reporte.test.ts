@@ -65,10 +65,14 @@ describe("reporteDepuracion", () => {
   });
 
   it("avisa y sale con 3 si Yahoo falló, falta calendario o el volumen 0 trae otro cierre", () => {
-    const r = reporteDepuracion({ ...ensayo, sinCalendario: 2, diagnostico: { ...ensayo.diagnostico, sinNegociacionConCierreDistinto: 1 }, fallidas: [{ instrumentoId: "esp-9", codigo: "YAHOO_RED" }] });
+    const r = reporteDepuracion({
+      ...ensayo, sinCalendario: 2, diagnostico: { ...ensayo.diagnostico, sinNegociacionConCierreDistinto: 1 },
+      fallidas: [{ instrumentoId: "esp-9", codigo: "YAHOO_RED" }, { instrumentoId: "esp-8", codigo: "GUARDADO_ERROR", detalle: "TypeError" }],
+    });
     expect(r.lineas).toEqual(expect.arrayContaining([
-      "⚠️  1 especie(s) sin respuesta de Yahoo (sus días hábiles no se tocaron):",
+      "⚠️  2 especie(s) con fallo (si es de Yahoo, solo se tocaron sus días no hábiles; si es GUARDADO_ERROR, nada de esa especie):",
       "   · especie esp-9 · YAHOO_RED",
+      "   · especie esp-8 · GUARDADO_ERROR · TypeError",
       "⚠️  2 cierre(s) sin tocar porque calendario_bvc no cubre su año: hay que sembrar ese año.",
       "⚠️  1 barra(s) con volumen 0 y un cierre distinto del anterior: contradicen «volumen 0 = sin negociación». Revíselo antes de --aplicar.",
     ]));

@@ -29,7 +29,10 @@ export function reporteActualizacion(r: ResultadoActualizacion): Reporte {
 
 function avisosDepuracion(r: ResultadoDepuracion): string[] {
   return [
-    ...(r.fallidas.length === 0 ? [] : [`⚠️  ${r.fallidas.length} especie(s) sin respuesta de Yahoo (sus días hábiles no se tocaron):`, ...r.fallidas.map((f) => `   · especie ${f.instrumentoId} · ${f.codigo}`)]),
+    ...(r.fallidas.length === 0 ? [] : [
+      `⚠️  ${r.fallidas.length} especie(s) con fallo (si es de Yahoo, solo se tocaron sus días no hábiles; si es GUARDADO_ERROR, nada de esa especie):`,
+      ...r.fallidas.map((f) => `   · especie ${f.instrumentoId} · ${f.codigo}${f.detalle ? ` · ${f.detalle}` : ""}`),
+    ]),
     ...(r.sinCalendario === 0 ? [] : [`⚠️  ${r.sinCalendario} cierre(s) sin tocar porque calendario_bvc no cubre su año: hay que sembrar ese año.`]),
     ...(r.diagnostico.sinNegociacionConCierreDistinto === 0 ? [] : [`⚠️  ${r.diagnostico.sinNegociacionConCierreDistinto} barra(s) con volumen 0 y un cierre distinto del anterior: contradicen «volumen 0 = sin negociación». Revíselo antes de --aplicar.`]),
     ...(r.cambiadosPorOtro === 0 ? [] : [`⚠️  ${r.cambiadosPorOtro} cierre(s) cambiados por otra corrida durante la depuración: no se pisaron; vuelva a correr.`]),

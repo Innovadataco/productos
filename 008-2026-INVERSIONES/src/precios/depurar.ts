@@ -5,13 +5,15 @@
  * - día no hábil (fin de semana o festivo de calendario_bvc): sobra, sin preguntar a Yahoo;
  * - día hábil cuya barra de Yahoo trae volumen 0: sobra (sin negociación);
  * - año sin calendario o barra aún no definitiva: no se toca, solo se cuenta;
- * - si Yahoo falla para una especie, sus días hábiles no se tocan y se informa el código.
+ * - si Yahoo falla para una especie, sus días hábiles no se tocan y se informa el código;
+ * - si la base falla en una especie (símbolo o retiro), esa especie no se toca, se informa
+ *   GUARDADO_ERROR con nombre y código del error (nunca su mensaje) y se sigue con las demás.
  * Sin `aplicar` es un ensayo: no escribe. Con `aplicar` exige que `base` sea la base conectada y retira
  * por id con guarda (`reemplazadoEn` sin sucesor; nada se borra). Solo devuelve conteos, códigos e ids internos.
  * El diagnóstico cuenta lo que prueba los supuestos de volumen antes de aplicar.
  */
 import type { PrismaClient } from "@prisma/client";
-import { FUENTE, leerCalendarioBvc, simboloDe } from "./actualizar";
+import { detalleDeError, FUENTE, leerCalendarioBvc, simboloDe } from "./actualizar";
 import { motivoOmision, type CalendarioBvc } from "./negociacion";
 import { obtenerCierres, type Buscar, type Cierre } from "./yahoo";
 
@@ -91,7 +93,14 @@ export interface ResultadoDepuracion {
   readonly sinCalendario: number;
   readonly aunNoDefinitivos: number;
   readonly diagnostico: Diagnostico;
-  readonly fallidas: readonly { readonly instrumentoId: string; readonly codigo: string }[];
+  readonly fallidas: readonly FalloDepuracion[];
+}
+
+export interface FalloDepuracion {
+  readonly instrumentoId: string;
+  readonly codigo: string;
+  /** Solo nombre y código del error de base; nunca el mensaje. */
+  readonly detalle?: string;
 }
 
 interface Especie {
@@ -125,16 +134,39 @@ interface PasoEspecie {
   readonly clasificacion: ClasificacionEspecie;
   readonly diagnostico: Diagnostico;
   readonly retirados: number;
-  readonly fallo: string | null;
+  /** Con aplicar: a retirar que ya no estaban vigentes (otra corrida). */
+  readonly cambiados: number;
+  readonly fallo: FalloDepuracion | null;
+}
+
+const CLASIFICACION_VACIA: ClasificacionEspecie = { noHabil: [], sinNegociacion: [], sinCalendario: 0, aunNoDefinitivos: 0 };
+const fallaDeBase = (instrumentoId: string, err: unknown): FalloDepuracion => ({ instrumentoId, codigo: "GUARDADO_ERROR", detalle: detalleDeError(err) });
+
+/** Barras de Yahoo de la especie; null si Yahoo falló (con su código). Lanza solo si falla la base. */
+async function barrasDe(db: PrismaClient, e: Especie, o: OpcionesDepuracion): Promise<{ readonly barras: readonly Cierre[] | null; readonly codigo: string | null }> {
+  if (!e.nemotecnico) return { barras: null, codigo: "SIN_NEMOTECNICO" };
+  const r = await obtenerCierres(await simboloDe(db, e.id, e.nemotecnico, o.hasta), o.desde, o.hasta, o.buscar);
+  return r.ok ? { barras: r.cierres, codigo: null } : { barras: null, codigo: r.codigo };
 }
 
 async function depurarEspecie(db: PrismaClient, e: Especie, o: OpcionesDepuracion, ahora: Date, calendario: CalendarioBvc): Promise<PasoEspecie> {
-  const nemotecnico = e.nemotecnico ?? "";
-  const r = nemotecnico ? await obtenerCierres(await simboloDe(db, e.id, nemotecnico, o.hasta), o.desde, o.hasta, o.buscar) : { ok: false as const, codigo: "SIN_NEMOTECNICO" };
-  const barras = r.ok ? r.cierres : null;
-  const clasificacion = clasificarVigentes(e.vigentes, barras, ahora, calendario);
-  const retirados = o.aplicar ? await retirarPorId(db, [...clasificacion.noHabil, ...clasificacion.sinNegociacion]) : 0;
-  return { instrumentoId: e.id, clasificacion, diagnostico: barras ? diagnosticar(barras, ahora, calendario) : DIAGNOSTICO_CERO, retirados, fallo: r.ok ? null : r.codigo };
+  const vacio = { instrumentoId: e.id, clasificacion: CLASIFICACION_VACIA, diagnostico: DIAGNOSTICO_CERO, retirados: 0, cambiados: 0 };
+  let yahoo;
+  try {
+    yahoo = await barrasDe(db, e, o);
+  } catch (err) {
+    return { ...vacio, fallo: fallaDeBase(e.id, err) };
+  }
+  const clasificacion = clasificarVigentes(e.vigentes, yahoo.barras, ahora, calendario);
+  const paso = { ...vacio, clasificacion, diagnostico: yahoo.barras ? diagnosticar(yahoo.barras, ahora, calendario) : DIAGNOSTICO_CERO, fallo: yahoo.codigo ? { instrumentoId: e.id, codigo: yahoo.codigo } : null };
+  if (!o.aplicar) return paso;
+  const ids = [...clasificacion.noHabil, ...clasificacion.sinNegociacion];
+  try {
+    const retirados = await retirarPorId(db, ids);
+    return { ...paso, retirados, cambiados: ids.length - retirados };
+  } catch (err) {
+    return { ...paso, fallo: fallaDeBase(e.id, err) };
+  }
 }
 
 const sumarDiagnostico = (a: Diagnostico, b: Diagnostico): Diagnostico => ({
@@ -152,13 +184,12 @@ export async function depurarPrecios(db: PrismaClient, o: OpcionesDepuracion): P
   const pasos: PasoEspecie[] = [];
   for (const e of especies) pasos.push(await depurarEspecie(db, e, o, ahora, calendario));
   const suma = (f: (p: PasoEspecie) => number) => pasos.reduce((t, p) => t + f(p), 0);
-  const aRetirar = suma((p) => p.clasificacion.noHabil.length + p.clasificacion.sinNegociacion.length);
   return {
     base, aplicado: o.aplicar, especies: especies.length, vigentesRevisados: especies.reduce((t, e) => t + e.vigentes.length, 0),
     aRetirarNoHabil: suma((p) => p.clasificacion.noHabil.length), aRetirarSinNegociacion: suma((p) => p.clasificacion.sinNegociacion.length),
-    retirados: suma((p) => p.retirados), cambiadosPorOtro: o.aplicar ? aRetirar - suma((p) => p.retirados) : 0,
+    retirados: suma((p) => p.retirados), cambiadosPorOtro: suma((p) => p.cambiados),
     sinCalendario: suma((p) => p.clasificacion.sinCalendario), aunNoDefinitivos: suma((p) => p.clasificacion.aunNoDefinitivos),
     diagnostico: pasos.reduce((t, p) => sumarDiagnostico(t, p.diagnostico), DIAGNOSTICO_CERO),
-    fallidas: pasos.flatMap((p) => (p.fallo ? [{ instrumentoId: p.instrumentoId, codigo: p.fallo }] : [])),
+    fallidas: pasos.flatMap((p) => (p.fallo ? [p.fallo] : [])),
   };
 }
