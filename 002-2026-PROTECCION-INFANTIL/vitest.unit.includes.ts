@@ -897,4 +897,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-965: overview Órbita — capa 1 nunca rubí, rubí SOLO en alumno de alerta alta, nunca dibuja
     // todos los alumnos, y la órbita tiene equivalente en lista accesible. Puro (fetch mockeado, jsdom).
     "src/components/modules/colegio/orbita/orbita-mapa.candado.test.tsx",
+    // SPEC-967: el override exceljs.uuid sigue justificado mientras exceljs DECLARE uuid < 11.1.1 (lee el
+    // rango del package.json de exceljs, no el lock). Puro (filesystem + semver).
+    "scripts/deps/exceljs-uuid-override.candado.test.ts",
 ];

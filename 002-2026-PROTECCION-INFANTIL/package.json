@@ -2,6 +2,11 @@
   "name": "002-2026-proteccion-infantil",
   "version": "1.0.0",
   "private": true,
+  "overrides": {
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
+  },
   "engines": {
     "node": "22.x"
   },
