@@ -33,18 +33,35 @@ export function lineaDeConciliacion(c: ResumenConciliacion): string {
 
 const nombreDe = (e: unknown) => (e instanceof Error ? e.name : "error");
 
-export async function cargarYConciliar(db: PrismaClient, a: ArchivoCertificacion, pasos: Pasos = PASOS): Promise<{ lineas: string[]; codigo: 0 | 1 }> {
+/** Dónde corre: en producción no hay red y los pasos van por cargar-prod.sh (vía B, docs/despliegue/produccion.md §11). */
+export interface OpcionesSalida {
+  readonly produccion?: boolean;
+}
+
+/** Cómo volver a conciliar y cómo traer los cierres del día de corte (texto ya con sus comillas de código), en local o en producción. */
+function pasosSiguientes(corte: string, produccion: boolean): { readonly reconciliar: string; readonly siguiente: string } {
+  if (produccion) {
+    const reconciliar = `\`cargar-prod.sh conciliar-certificacion\` con la cabecera \`--fecha-corte ${corte}\``;
+    return {
+      reconciliar,
+      siguiente: `➡️  Siguiente paso (vía B, §11 del runbook): cargue los cierres con \`cargar-prod.sh importar-precios\` (el CSV de precios:exportar del Mac, que cubra ${corte}) y después ${reconciliar}.`,
+    };
+  }
+  const reconciliar = `\`npx tsx scripts/conciliar-certificacion.ts --fecha-corte ${corte}\``;
+  return { reconciliar, siguiente: `➡️  Siguiente paso: corra \`npm run precios:actualizar -- --desde ${corte}\` para verificar los cierres de ese día, y después ${reconciliar}.` };
+}
+
+export async function cargarYConciliar(db: PrismaClient, a: ArchivoCertificacion, pasos: Pasos = PASOS, opciones: OpcionesSalida = {}): Promise<{ lineas: string[]; codigo: 0 | 1 }> {
   const r = await pasos.importar(db, a);
   const lineas = lineasDeImportacion(r);
   if (r.estado === "RECHAZADO") return { lineas, codigo: 1 };
-  const corte = isoDia(a.fechaCorte);
-  const reconciliar = `npx tsx scripts/conciliar-certificacion.ts --fecha-corte ${corte}`;
+  const { reconciliar, siguiente } = pasosSiguientes(isoDia(a.fechaCorte), opciones.produccion ?? false);
   try {
     lineas.push(lineaDeConciliacion(await pasos.conciliar(db, { fechaCorte: a.fechaCorte })));
   } catch (e) {
-    lineas.push(`⚠️  La certificación quedó cargada, pero la conciliación falló (${nombreDe(e)}): corra \`${reconciliar}\`.`);
+    lineas.push(`⚠️  La certificación quedó cargada, pero la conciliación falló (${nombreDe(e)}): corra ${reconciliar}.`);
     return { lineas, codigo: 1 };
   }
-  lineas.push(`➡️  Siguiente paso: corra \`npm run precios:actualizar -- --desde ${corte}\` para verificar los cierres de ese día, y después \`${reconciliar}\`.`);
+  lineas.push(siguiente);
   return { lineas, codigo: 0 };
 }

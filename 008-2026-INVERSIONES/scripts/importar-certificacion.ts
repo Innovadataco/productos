@@ -9,7 +9,9 @@
  * - Al cargar, concilia y deja la conciliación guardada.
  * - Orden recomendado: importar la certificación y DESPUÉS traer los cierres de ese día con
  *   `npm run precios:actualizar -- --desde <corte>` (este comando no llama a la red; lo imprime como siguiente paso),
- *   y volver a conciliar con `npx tsx scripts/conciliar-certificacion.ts --fecha-corte <corte>`.
+ *   y volver a conciliar con `npx tsx scripts/conciliar-certificacion.ts --fecha-corte <corte>`. En producción (sin
+ *   red, NODE_ENV=production) el siguiente paso que imprime es la vía B: `cargar-prod.sh importar-precios` y después
+ *   `cargar-prod.sh conciliar-certificacion` (docs/despliegue/produccion.md §11).
  * Usa DATABASE_URL (la base de 008) y las claves de cifrado del entorno. Imprime solo conteos, códigos y la fecha de
  * corte que usted dio; nunca montos, especies, cuentas ni el correo. El archivo original no se guarda.
  */
@@ -50,7 +52,8 @@ async function main(): Promise<void> {
   try {
     const usuario = await db.usuario.findUnique({ where: { email: a.email }, select: { id: true } });
     if (!usuario) return salir("❌ USUARIO_NO_REGISTRADO · ese correo no está registrado (este comando no crea usuarios).");
-    const r = await cargarYConciliar(db, { contenido, usuarioId: usuario.id, fechaCorte: a.fechaCorte, fondoCodigo: a.fondo });
+    // La imagen del migrador trae NODE_ENV=production: allí no hay red y el siguiente paso es la vía B (cargar-prod.sh).
+    const r = await cargarYConciliar(db, { contenido, usuarioId: usuario.id, fechaCorte: a.fechaCorte, fondoCodigo: a.fondo }, undefined, { produccion: process.env.NODE_ENV === "production" });
     for (const linea of r.lineas) console.log(linea);
     process.exitCode = r.codigo;
   } finally {
