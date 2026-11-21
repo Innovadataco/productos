@@ -174,6 +174,23 @@ describe("verificar-esquema.sql coincide con las migraciones", () => {
     }
   });
 
+  // Una función SECURITY DEFINER o con otro search_path no cambia su md5 (prosrc), pero en una función de los
+  // disparadores de integridad de precios eximiría a todos: dentro de una DEFINER, current_user es el dueño.
+  it("de cada función exige una sola con ese nombre, que no sea SECURITY DEFINER y su SET exacto (proconfig)", () => {
+    for (const patron of [/count\(\*\)/, /p\.prosecdef/, /p\.proconfig/, /n_funciones > 1/]) expect(guardian).toMatch(patron);
+    const filas = [...bloque("funciones").matchAll(/\[\s*'([^']*)'\s*,\s*'([0-9a-f]{32})'\s*,\s*'([^']*)'\s*\]/g)];
+    expect(filas.length).toBe(nombres("funciones", 1).length);
+    const config = new Map(filas.map((m) => [m[1]!, m[3]!]));
+    for (const nombre of ["inv_precio_cierre_insercion", "inv_retiro_vigente", "inv_valor_unidad_fondo_insercion"]) {
+      expect(config.get(nombre), nombre).toBe("search_path=pg_catalog, public");
+    }
+    for (const [nombre, valor] of config) if (!nombre.startsWith("inv_precio_") && !nombre.startsWith("inv_valor_") && nombre !== "inv_retiro_vigente") expect(valor, nombre).toBe("");
+  });
+
+  it("ninguna migración crea una función SECURITY DEFINER", () => {
+    for (const sql of migraciones()) expect(sql).not.toMatch(/SECURITY\s+DEFINER/i);
+  });
+
   it("el migrador lo corre después de migrate deploy y antes de los privilegios", () => {
     const migrar = leer008("docker/migrar.sh");
     const a = migrar.indexOf("node_modules/.bin/prisma migrate deploy");
