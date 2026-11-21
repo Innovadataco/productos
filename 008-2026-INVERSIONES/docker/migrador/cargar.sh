@@ -46,6 +46,7 @@ case "$comando" in
   importar-certificacion) cli=scripts/importar-certificacion.ts archivo=certificacion.pdf tope=$TOPE_CERTIFICACION ;;
   importar-precios) cli=scripts/importar-precios.ts archivo=precios.csv tope=$TOPE_PRECIOS ;;
   registrar-escision) cli=scripts/registrar-escision.ts ;;
+  registrar-fondo) cli=scripts/actualizar-fondo.ts ;;
   lote-escision) cli=scripts/lote-escision.ts ;;
   construir-lotes) cli=scripts/construir-lotes.ts ;;
   conciliar-certificacion) cli=scripts/conciliar-certificacion.ts ;;
@@ -136,6 +137,20 @@ fondo_valido() {
   case "$1" in '' | *[!0-9]*) return 1 ;; esac
   [ "${#1}" -le 12 ]
 }
+# La clase del fondo en la SFC (tipo_participacion): de 1 a 6 dígitos (PARTICIPACION_RE de src/fondo/sfc.ts).
+participacion_valida() {
+  case "$1" in '' | *[!0-9]*) return 1 ;; esac
+  [ "${#1}" -le 6 ]
+}
+# El nombre del fondo: no vacío, sin «-» al inicio (el CLI lo tomaría por una opción), sin caracteres de control y
+# de hasta MAX_NOMBRE_FONDO bytes, contados en C (no dependen del locale ni del shell). Es un tope grueso: el CLI
+# (validarRegistroFondo, en src/fondo/registrar.ts) manda y admite hasta 120 caracteres.
+MAX_NOMBRE_FONDO=200
+nombre_valido() {
+  case "$1" in '' | -*) return 1 ;; esac
+  [ "$(printf '%s' "$1" | LC_ALL=C tr -d '\001-\037\177')" = "$1" ] || return 1
+  [ "$(printf '%s' "$1" | LC_ALL=C wc -c | tr -d ' ')" -le "$MAX_NOMBRE_FONDO" ]
+}
 
 # Los comandos con archivo: lista blanca de opciones por comando; el contenedor agrega la ruta del temporal.
 if [ -n "$archivo" ]; then
@@ -201,6 +216,43 @@ if [ -n "$archivo" ]; then
   esac
 else
   [ -z "$bytes$sha" ] || falla "$comando no lleva archivo (sobran --bytes o --sha256)"
+  # registrar-fondo: lista blanca propia. El contenedor arma `--registrar --codigo … [--participacion …] --nombre …`
+  # en ese orden: el modo con red de actualizar-fondo (--desde, --hasta) nunca llega al CLI.
+  if [ "$comando" = registrar-fondo ]; then
+    codigo=""
+    participacion=""
+    nombre=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --codigo)
+          [ -z "$codigo" ] || falla "--codigo repetido"
+          if [ $# -lt 2 ] || ! fondo_valido "$2"; then falla "--codigo necesita el código numérico del fondo en la SFC (de 1 a 12 dígitos)"; fi
+          codigo="$2"
+          shift 2
+          ;;
+        --participacion)
+          [ -z "$participacion" ] || falla "--participacion repetido"
+          if [ $# -lt 2 ] || ! participacion_valida "$2"; then falla "--participacion necesita la clase numérica del fondo en la SFC (de 1 a 6 dígitos)"; fi
+          participacion="$2"
+          shift 2
+          ;;
+        --nombre)
+          [ -z "$nombre" ] || falla "--nombre repetido"
+          if [ $# -lt 2 ] || ! nombre_valido "$2"; then falla "--nombre necesita un texto de 1 a $MAX_NOMBRE_FONDO bytes, sin caracteres de control y que no empiece por «-»"; fi
+          nombre="$2"
+          shift 2
+          ;;
+        *) falla "opción no permitida para registrar-fondo (se admiten --codigo, --participacion y --nombre)" ;;
+      esac
+    done
+    [ -n "$codigo" ] || falla "falta --codigo <código del fondo en la SFC>"
+    [ -n "$nombre" ] || falla "falta --nombre <nombre del fondo>"
+    if [ -n "$participacion" ]; then
+      set -- --registrar --codigo "$codigo" --participacion "$participacion" --nombre "$nombre"
+    else
+      set -- --registrar --codigo "$codigo" --nombre "$nombre"
+    fi
+  fi
   # conciliar-certificacion: lista blanca también aquí (defensa en profundidad; su CLI ya es estricto). Los otros
   # comandos sin archivo pasan sus argumentos tal cual a su CLI estricto.
   if [ "$comando" = conciliar-certificacion ]; then
