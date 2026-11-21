@@ -3,7 +3,9 @@
 // redirección es un error, nunca se sigue) y la conexión solo a IPv4 públicas que validó el lookup propio.
 // Sin red real: los pedidos van a un servidor HTTP local (la petición se reescribe hacia él después de que el
 // buscador armó sus opciones) o el lookup rechaza antes de conectar. Datos inventados.
-import { createServer, request as pedirHttp, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { EventEmitter } from "node:events";
+import { createServer, request as pedirHttp, type ClientRequest, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { PassThrough } from "node:stream";
 import type { AddressInfo } from "node:net";
 import type { RequestOptions } from "node:https";
 import { afterEach, describe, expect, it } from "vitest";
@@ -226,6 +228,22 @@ describe("la respuesta, por el pedido acotado (src/lib/http-acotado.ts)", () => 
       setTimeout(() => r.socket?.destroy(), 17);
     });
     expect(await pedirJsonAcotado(crearBuscadorFijo({ solicitar }), YAHOO, LIMITES)).toEqual({ ok: false, codigo: "YAHOO_RED" });
+  });
+
+  it("dos errores seguidos de la respuesta (abort y reset del socket) no tumban el proceso: el cuerpo falla una vez", async () => {
+    const respuesta = Object.assign(new PassThrough(), { statusCode: 200, headers: {} }) as unknown as IncomingMessage & PassThrough;
+    const solicitar: Solicitar = (_, alResponder) => {
+      const pedido = Object.assign(new EventEmitter(), { end: () => setImmediate(() => alResponder(respuesta)) });
+      return pedido as unknown as ClientRequest;
+    };
+    const r = await crearBuscadorFijo({ solicitar })(YAHOO, INIT);
+    const lector = r.body!.getReader();
+    respuesta.write("{");
+    expect((await lector.read()).done).toBe(false);
+    const leyendo = lector.read();
+    respuesta.emit("error", Object.assign(new Error("aborted"), { code: "ECONNRESET" }));
+    expect(() => respuesta.emit("error", new Error("segundo error del socket"))).not.toThrow();
+    await expect(leyendo).rejects.toMatchObject({ code: "ECONNRESET" });
   });
 
   it("un error de la petición (conexión rechazada) → rechazo con su causa → YAHOO_RED", async () => {

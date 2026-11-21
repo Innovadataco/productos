@@ -12,7 +12,7 @@ import { dependenciasReales, servirAhora, servirBucle, type Proceso } from "../.
 
 vi.setConfig({ testTimeout: 30_000 });
 
-const URL_PRECIOS = "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones_ficticia_test";
+const URL_PRECIOS = "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones_ficticia_test?connection_limit=2";
 const carpeta = (): string => mkdtempSync(path.join(tmpdir(), "inv-008-precios-cableado-"));
 const hasta = (condicion: () => boolean): Promise<void> =>
   vi.waitFor(

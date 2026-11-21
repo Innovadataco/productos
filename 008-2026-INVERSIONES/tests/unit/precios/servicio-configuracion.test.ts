@@ -18,6 +18,39 @@ describe("revisarCredencial", () => {
     expect(revisarCredencial(url("inv_precios", "inv-008-db", "postgres"))).toEqual({ ok: true });
   });
 
+  // Revisión de la base (M1 y M2): el pool del servicio cabe en el CONNECTION LIMIT 4 de inv_precios, y ningún
+  // parámetro de la URL cambia el destino (libpq y Prisma aceptan host, hostaddr… en la consulta).
+  for (const buena of [
+    "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=1",
+    "postgresql://inv_precios:clave-ficticia-4613@inv-008-db/inversiones?connection_limit=2",
+    "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones_ficticia_test?schema=public&connection_limit=2&connect_timeout=7&pool_timeout=13",
+  ]) {
+    it(`acepta ${buena.replace("clave-ficticia-4613", "<clave>")}`, () => {
+      expect(revisarCredencial(buena)).toEqual({ ok: true });
+    });
+  }
+
+  for (const [caso, mala] of [
+    ["sin connection_limit (Prisma abriría núcleos×2+1 conexiones)", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones"],
+    ["connection_limit 3 (con el bucle y un --ahora pasaría del límite 4)", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=3"],
+    ["connection_limit 0", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=0"],
+    ["connection_limit que no es un entero", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=2x"],
+    ["connection_limit repetido", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=2&connection_limit=1"],
+    ["host en la consulta", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=2&host=ejemplo.invalid"],
+    ["hostaddr en la consulta", `postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=2&hostaddr=${[172, 17, 0, 1].join(".")}`],
+    ["otro parámetro fuera de la lista", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=2&sslmode=disable"],
+    ["host múltiple", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db,ejemplo.invalid:5432/inversiones?connection_limit=2"],
+    ["otro puerto", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5433/inversiones?connection_limit=2"],
+    ["sin base", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/?connection_limit=2"],
+    ["una base con ruta", "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones/otra?connection_limit=2"],
+  ] as const) {
+    it(`${caso}: SECRETO_INVALIDO, sin repetir la URL`, () => {
+      const r = revisarCredencial(mala);
+      expect(r).toMatchObject({ ok: false, estado: "SECRETO_INVALIDO" });
+      if (!r.ok) for (const dato of ["clave-ficticia-4613", "ejemplo.invalid", "sslmode", "5433"]) expect(r.motivo).not.toContain(dato);
+    });
+  }
+
   for (const vacia of [undefined, "", "   ", "\n"]) {
     it(`sin secreto (${JSON.stringify(vacia)}): SIN_SECRETO, en espera`, () => {
       const r = revisarCredencial(vacia);

@@ -14,7 +14,7 @@ import { DIR_008, carpetaTemporal, leer008, ruta008 } from "./falsos";
 vi.setConfig({ testTimeout: 90_000, hookTimeout: 60_000 });
 
 const CLAVE = "clave-ficticia-4613";
-const URL_PRECIOS = `postgresql://inv_precios:${CLAVE}@inv-008-db:5432/inversiones_ficticia_test?connect_timeout=3`;
+const URL_PRECIOS = `postgresql://inv_precios:${CLAVE}@inv-008-db:5432/inversiones_ficticia_test?connection_limit=2&connect_timeout=3`;
 const URL_AJENA = `postgresql://inv_app:${CLAVE}@inv-008-db:5432/inversiones_ficticia_test`;
 /** Lo que nunca debe salir en la consola: la URL, su clave y la base. */
 const NUNCA = [CLAVE, "postgresql://", "inversiones_ficticia_test"];

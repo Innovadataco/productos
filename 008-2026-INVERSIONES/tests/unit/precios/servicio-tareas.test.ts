@@ -1,7 +1,8 @@
 // Corredor de tareas del servicio de precios: cada tarea (precios, fondo) es un proceso hijo del MISMO bundle con el
 // MISMO CLI de scripts/, con plazo (timeout): al vencer, SIGTERM, y SIGKILL si no sale en la gracia. Sin reintentos.
 // Aquí el «bundle» es un guion de node -e que se porta como se le pida (salir con un código, colgarse, ignorar SIGTERM).
-import { spawn, type SpawnOptions } from "node:child_process";
+import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -99,6 +100,47 @@ describe("crearCorredor · el hijo", () => {
   it("el ejecutable no existe → NO_ARRANCO (una sola vez, aunque lleguen error y close)", async () => {
     const r = await corredor({ ejecutable: path.join(tmpdir(), "no-existe-node-ficticio") }).correr("fondo", [], 10_000);
     expect(r.codigo).toBe("NO_ARRANCO");
+  });
+});
+
+/** Un hijo falso que registra las señales y sale cuando la prueba lo dice. */
+function hijoFalso() {
+  const senales: string[] = [];
+  const hijo = Object.assign(new EventEmitter(), {
+    exitCode: null as number | null,
+    signalCode: null as string | null,
+    kill: (s: string) => (senales.push(s), true),
+  });
+  const salir = (codigo: number) => {
+    hijo.exitCode = codigo;
+    hijo.emit("exit", codigo, null);
+    hijo.emit("close", codigo, null);
+  };
+  return { hijo: hijo as unknown as ChildProcess, senales, salir };
+}
+
+describe("crearCorredor · señales sin repetir (revisión: BAJO 4 y 5)", () => {
+  it("si vence el plazo y además lo detienen, manda SIGTERM una sola vez y un solo SIGKILL", async () => {
+    const f = hijoFalso();
+    const c = corredor({ graciaMs: 137, lanzar: () => f.hijo });
+    const enCurso = c.correr("precios", [], 37);
+    await new Promise((ok) => setTimeout(ok, 61));
+    c.detener();
+    await new Promise((ok) => setTimeout(ok, 311));
+    expect(f.senales).toEqual(["SIGTERM", "SIGKILL"]);
+    f.salir(0);
+    expect((await enCurso).codigo).toBe("TIEMPO");
+  });
+
+  it("detener justo cuando el hijo ya salió (sin close todavía) no le manda señales", async () => {
+    const f = hijoFalso();
+    const c = corredor({ lanzar: () => f.hijo });
+    const enCurso = c.correr("fondo", [], 10_000);
+    (f.hijo as unknown as { exitCode: number }).exitCode = 0;
+    c.detener();
+    expect(f.senales).toEqual([]);
+    f.salir(0);
+    expect((await enCurso).codigo).toBe("0");
   });
 });
 
