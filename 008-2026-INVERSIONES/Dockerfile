@@ -2,7 +2,8 @@
 # Inversiones (008) · imágenes de producción. Se construyen EN EL MAC con scripts/construir-imagen.sh
 # (git archive del sha + buildx --platform linux/amd64); el VPS de PI no construye nada.
 #
-#   runner   → inv-008-app: la app (Next standalone).
+#   runner   → inv-008-app: la app (Next standalone) y el bundle de precios (precios/servicio-precios.mjs, de
+#              esbuild, sin tsx), que correrá el servicio inv-008-precios con esta misma imagen y otro entrypoint.
 #   migrador → inv-008-migrador: prisma migrate deploy + guardián del esquema + privilegios de inv_app y
 #              los comandos de carga (inv-cargar: el sobre por stdin, sin copias en el VPS) y de acceso
 #              inicial (tsx, rol inv_dueno). Lleva el node_modules completo
@@ -33,7 +34,8 @@ COPY . .
 # Heap fijo para `next build`, como PI: bajo emulación amd64 el ajuste automático de Node se queda corto.
 # Solo afecta esta etapa.
 ENV NODE_OPTIONS=--max-old-space-size=3072
-RUN npx prisma generate && npm run build
+# El bundle de precios va DESPUÉS de next build, que vacía .next al empezar.
+RUN npx prisma generate && npm run build && npm run build:precios
 
 FROM base AS runner
 ARG APP_VERSION
@@ -45,12 +47,22 @@ LABEL org.opencontainers.image.revision="${APP_VERSION}" \
       org.opencontainers.image.source="https://github.com/Innovadataco/productos"
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# El bundle de precios (scripts/servicio-precios.ts con esbuild): usa el @prisma/client y el engine del standalone.
+# De root y de solo lectura: el usuario 10008 lo lee y lo corre, pero no lo cambia. La carpeta va antes y con 0755:
+# COPY --chmod=0444 le pondría 0444 también a la carpeta que crea, y 10008 no podría entrar.
+RUN mkdir -p -m 0755 /app/precios
+COPY --from=builder --chmod=0444 /app/.next/precios/servicio-precios.mjs ./precios/servicio-precios.mjs
+RUN test "$(stat -c '%u:%g %a' precios)" = "0:0 755" && test "$(stat -c '%u:%g %a' precios/servicio-precios.mjs)" = "0:0 444" && test ! -e node_modules/tsx && test ! -e node_modules/esbuild && test ! -e node_modules/@esbuild || { echo "el bundle de precios no es de root (carpeta 0755, archivo 0444), o la imagen trae tsx o esbuild" >&2; exit 1; }
 # El build falla si el standalone no trae el engine de Prisma para musl (si no, fallaría en el VPS).
 RUN test -f node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node || { echo "falta el engine de Prisma linux-musl-openssl-3.0.x en el standalone" >&2; exit 1; }
 # Ningún .env en la imagen (next build copia el .env de la carpeta al standalone): el build falla si hay uno.
 RUN if find / -xdev \( -name '.env' -o -name '.env.*' \) 2>/dev/null | grep -q .; then echo "la imagen trae archivos .env: no se construye" >&2; exit 1; fi
 RUN mkdir -p /app/.next/cache
 USER 10008:10008
+# Con el usuario de la imagen: no puede escribir el bundle, y el humo (si no carga o no resuelve @prisma/client en el
+# standalone, no se construye).
+RUN test ! -w precios/servicio-precios.mjs || { echo "el usuario 10008 puede escribir el bundle de precios" >&2; exit 1; }
+RUN node precios/servicio-precios.mjs --ayuda >/dev/null
 EXPOSE 5008
 CMD ["node", "server.js"]
 
