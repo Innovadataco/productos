@@ -3,7 +3,8 @@
  * Datos inventados (ver la cabecera de sembrar-conciliacion.ts):
  *   22-nov-2024 · FICTA y FICTB cuadran; FICTC sin cierre del día (no se pudo verificar); FICTI solo en el
  *                 sistema; el efectivo con una partida sin fuente → «No cuadra».
- *   14-nov-2024 · FICTB con la venta del 13-nov por liquidar (T+2) y la de FICTI del 14-nov; sin cierres.
+ *   14-nov-2024 · FICTB con la venta del 13-nov por liquidar (T+2) y la de FICTI del 14-nov; sin cierres al
+ *                 conciliar. Después de conciliar se siembra un cierre de FICTI de ese día: queda desactualizada.
  * La prueba no cambia la base.
  */
 import { expect } from "@playwright/test";
@@ -18,6 +19,9 @@ test.describe("conciliación con la certificación de A&V", () => {
   test("desde el tablero, la línea lleva al último corte: resultado, al día y la tabla de acciones", async ({ page }, info) => {
     await PaginaTablero.abrir(page, info);
     const linea = page.getByRole("link", { name: "Conciliación con A&V al 22-nov-2024: no cuadra", exact: true });
+    // react-reviewer ALTO: el enlace lleva el color de la marca (el del sello), no el azul del navegador.
+    const marca = await page.locator(".sello").evaluate((e) => getComputedStyle(e).color);
+    await expect(linea).toHaveCSS("color", marca);
     await linea.click();
     await expect(page).toHaveURL("/conciliacion");
 
@@ -54,6 +58,7 @@ test.describe("conciliación con la certificación de A&V", () => {
     await expect(page).toHaveURL("/conciliacion?corte=2024-11-14");
     await expect(c.titulo).toHaveText("Corte del 14-nov-2024: No cuadra");
     await expect(c.corte("14-nov-2024 · No cuadra")).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("status")).toHaveText("Los datos del sistema cambiaron después de este cálculo: el resultado puede no estar al día. Hay que volver a conciliar este corte.");
 
     const fictb = await c.celdas(c.fila(c.acciones, "FICTB"));
     expect(fictb.slice(0, 3)).toEqual(["80", "100", "−20"]);
@@ -64,13 +69,16 @@ test.describe("conciliación con la certificación de A&V", () => {
     expect(await c.celdas(c.fila(c.porLiquidar, "FICTI"))).toEqual(["Venta", "20", "14-nov-2024", "18-nov-2024"]);
   });
 
-  test("un corte que no está cargado da un aviso y ofrece los cortes", async ({ page }, info) => {
+  test("un corte que no está cargado o mal escrito da un aviso (nunca un error) y ofrece los cortes", async ({ page }, info) => {
     await PaginaTablero.abrir(page, info);
-    await page.goto("/conciliacion?corte=2024-11-15");
     const c = new PaginaConciliacion(page);
-    await expect(c.titulo).toHaveText("No hay certificación con esa fecha de corte");
-    await expect(c.cortes.getByRole("link")).toHaveCount(2);
-    await expect(c.acciones).toHaveCount(0);
+    for (const corte of ["2024-11-15", "basura", "2024-13-45", "2024-11-22&corte=2024-11-14"]) {
+      const r = await page.goto(`/conciliacion?corte=${corte}`);
+      expect(r?.status(), corte).toBe(200);
+      await expect(c.titulo).toHaveText("No hay certificación con esa fecha de corte");
+      await expect(c.cortes.getByRole("link")).toHaveCount(2);
+      await expect(c.acciones).toHaveCount(0);
+    }
   });
 
   test("en el teléfono la página no se desborda a lo ancho (las tablas se desplazan dentro de su caja)", async ({ page }, info) => {
@@ -80,6 +88,11 @@ test.describe("conciliación con la certificación de A&V", () => {
     const c = new PaginaConciliacion(page);
     await expect(c.titulo).toBeVisible();
     expect(await c.desbordeHorizontal()).toBe(0);
+    const caja = page.getByRole("region", { name: "Acciones", exact: true });
+    expect(await caja.evaluate((e) => e.scrollWidth > e.clientWidth)).toBe(true);
+    await caja.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => caja.evaluate((e) => e.scrollLeft)).toBeGreaterThan(0);
   });
 
   test("sin sesión, /conciliacion lleva a ingresar", async ({ page }) => {
