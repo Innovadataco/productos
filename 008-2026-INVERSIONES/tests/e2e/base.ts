@@ -65,3 +65,12 @@ export function baseDePruebas(valor: string): BaseDePruebas {
   if (!NOMBRE_E2E.test(nombre)) throw rechazo("el nombre debe ser minúsculas, dígitos o «_» y terminar en «_e2e_test»");
   return { nombre, url: conexion(u, nombre), urlMantenimiento: conexion(u, "postgres") };
 }
+
+/** Una cuenta del E2E: todo inventado (correos `@ejemplo.invalid`, contraseñas ficticias). */
+export interface CuentaE2E {
+  readonly email: string;
+  readonly clave: string;
+}
+
+/** El dueño del E2E: lo crea la siembra (como el comando de acceso inicial) y le pone su clave ficticia. */
+export const DUENO_E2E: CuentaE2E = { email: "dueno-e2e@ejemplo.invalid", clave: "clave-ficticia-e2e-dueno" };

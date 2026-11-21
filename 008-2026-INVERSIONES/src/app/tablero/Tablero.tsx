@@ -68,6 +68,37 @@ function suscribirTema(aviso: () => void): () => void {
 
 const claroEnServidor = (): boolean => false;
 
+/**
+ * «Salir» (D-014): POST /api/sesion/salir cierra TODAS las sesiones de la cuenta, borra la cookie y se
+ * vuelve a /ingresar. Un doble clic hace un solo pedido. Si no hubo respuesta (sin red), se avisa en vez
+ * de navegar: con la cookie viva, /ingresar devolvería al tablero; al reintentar, el aviso se limpia.
+ */
+function BotonSalir() {
+  const [fallo, setFallo] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
+  const enCurso = useRef(false);
+  const salir = async () => {
+    if (enCurso.current) return;
+    enCurso.current = true;
+    setSaliendo(true);
+    setFallo(false);
+    const r = await fetch("/api/sesion/salir", { method: "POST", cache: "no-store" }).catch(() => null);
+    if (r && (r.ok || r.status === 401)) {
+      window.location.assign("/ingresar");
+      return;
+    }
+    enCurso.current = false;
+    setSaliendo(false);
+    setFallo(true);
+  };
+  return (
+    <>
+      <button type="button" className="pill" onClick={salir} aria-disabled={saliendo} aria-busy={saliendo}>Salir</button>
+      {fallo ? <span className="nota aviso" role="status">No se pudo cerrar la sesión. Intente de nuevo.</span> : null}
+    </>
+  );
+}
+
 function Encabezado({ vista }: { vista: Vista }) {
   const claro = useSyncExternalStore(suscribirTema, temaClaro, claroEnServidor);
   const alternarTema = () => { document.documentElement.dataset.theme = claro ? "dark" : "light"; };
@@ -79,6 +110,7 @@ function Encabezado({ vista }: { vista: Vista }) {
           Cierre <b>{fecha(vista.ultimoCierre)}</b> · última carga <b>{fecha(vista.ultimaCarga)}</b>
         </div>
         <button type="button" className="pill" onClick={alternarTema} aria-pressed={claro}>Tema claro</button>
+        <BotonSalir />
       </div>
     </header>
   );

@@ -71,6 +71,7 @@ describe("reglas escritas a mano en la migración", () => {
       "enlace_decision_orden_solo_insercion",
       "fila_de_carga_solo_insercion",
       "fila_fuente_solo_insercion",
+      "intento_ingreso_solo_insercion",
       "movimiento_caja_solo_insercion",
       "orden_solo_insercion",
       "plan_version_solo_insercion",
@@ -213,10 +214,11 @@ describe("reglas de coherencia con casos legítimos y prohibidos", () => {
 });
 
 describe("GET /api/salud", () => {
-  it("responde 200 con la base arriba", async () => {
+  it("responde 200 con la base arriba, y solo estado y versión (es pública)", async () => {
     const { GET } = await import("@/app/api/salud/route");
     const respuesta = await GET();
     expect(respuesta.status).toBe(200);
-    expect(await respuesta.json()).toMatchObject({ estado: "ok", base: "ok" });
+    expect(Object.keys(await respuesta.json()).sort()).toEqual(["estado", "version"]);
+    expect(respuesta.headers.get("cache-control")).toBe("no-store");
   });
 });

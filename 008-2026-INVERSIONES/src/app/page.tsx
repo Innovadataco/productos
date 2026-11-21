@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { exigirSesion } from "@/auth/sesion";
 import { db } from "@/lib/db";
 import { obtenerResumen, type Resumen } from "@/tablero/datos";
 import { aVista } from "./tablero/serializar";
@@ -25,6 +26,8 @@ function SinBase() {
 export default async function Inicio() {
   let resumen: Resumen;
   try {
+    // Revalida la sesión contra la base (D-014). Sin sesión, `redirect` lanza y el catch la deja pasar.
+    await exigirSesion();
     resumen = await obtenerResumen(db);
   } catch (error) {
     if (!esErrorDeBase(error)) throw error;

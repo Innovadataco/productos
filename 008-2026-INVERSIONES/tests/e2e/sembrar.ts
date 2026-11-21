@@ -6,14 +6,19 @@
  *   2. candado de la URL (tests/e2e/base.ts) → borra y crea la base e2e desde `postgres`;
  *   3. `prisma migrate deploy` (no borra nada, aunque el CLI leyera otra URL de la .env);
  *   4. comprueba `current_database()` y siembra con los importadores de 008.
+ * Cuentas del login (D-014): el dueño nace como lo crea `scripts/crear-acceso-inicial.ts` (sin clave,
+ * con un enlace de un solo uso) y la siembra le pone su clave ficticia directo en la base. Las pruebas
+ * que cambian una cuenta (bloqueo, enlace) crean la suya, con correo único (tests/e2e/cuentas.ts).
  */
 import { Prisma, PrismaClient } from "@prisma/client";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { connect } from "node:net";
+import { emitirAcceso } from "../../src/auth/acceso";
+import { hashClave } from "../../src/auth/clave";
 import { importarArchivoTrii } from "../../src/importacion/trii/importar";
 import { construirLotes } from "../../src/lotes/construir";
-import { APP, baseDePruebas, type BaseDePruebas } from "./base";
+import { APP, DUENO_E2E, baseDePruebas, type BaseDePruebas } from "./base";
 
 const FIXTURES = new URL("./fixtures/", import.meta.url);
 const ESPERA_PUERTO_MS = 1000;
@@ -74,12 +79,20 @@ async function sembrarCierres(db: PrismaClient): Promise<void> {
   await db.precioCierre.createMany({ data: filas.flat() });
 }
 
+/** Las cuentas del login. Devuelve el id del dueño (el que carga los datos). */
+async function sembrarCuentas(db: PrismaClient): Promise<string> {
+  const primero = await emitirAcceso(db, { email: DUENO_E2E.email, ahora: new Date() });
+  if (!primero.creado || primero.proposito !== "INICIAL") throw new Error("La base del E2E debía empezar sin dueño.");
+  await db.usuario.update({ where: { id: primero.usuarioId }, data: { claveHash: await hashClave(DUENO_E2E.clave) } });
+  return primero.usuarioId;
+}
+
 async function sembrar(base: BaseDePruebas): Promise<void> {
   const db = new PrismaClient({ datasourceUrl: base.url });
   try {
     const actual = (await db.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db;
     if (actual !== base.nombre) throw new Error("La conexión no quedó en la base del E2E. No se siembra.");
-    const { id } = await db.usuario.create({ data: { email: "dueno-e2e@ejemplo.invalid", rol: "DUENO" } });
+    const id = await sembrarCuentas(db);
     await importar(db, id, "ordenes.ficticio.csv");
     await importar(db, id, "dividendos.ficticio.csv");
     const lotes = await construirLotes(db);

@@ -168,13 +168,73 @@ model Usuario {
   telegramChatId  BigInt?
   activo          Boolean               @default(true)
   creadoEn        DateTime              @default(now()) @db.Timestamptz(6)
+  // Login (D-014). Hash bcrypt de costo 12; null = la cuenta no puede entrar.
+  claveHash       String?
+  // Va en el JWT: subirla cierra todas las sesiones abiertas (cambio de clave, «cerrar todas»).
+  sesionVersion   Int                   @default(1)
+  // 5 fallos en 15 min bloquean la cuenta 15 min.
+  bloqueadoHasta  DateTime?             @db.Timestamptz(6)
   cargas          CargaArchivo[]
   ajustesCaja     AjusteCaja[]
   planesAprobados PlanVersion[]
   decisiones      Decision[]
   enlaces         EnlaceDecisionOrden[]
+  intentos        IntentoIngreso[]
+  tokensAcceso    TokenAcceso[]
 
   @@map("usuario")
+}
+
+enum ResultadoIngreso {
+  EXITO
+  CLAVE_INCORRECTA
+  USUARIO_INEXISTENTE
+  SIN_CLAVE
+  CUENTA_BLOQUEADA
+  CUENTA_INACTIVA
+  ROL_NO_PERMITIDO
+  CLAVE_DEFINIDA // la clave se fijó con un enlace de un solo uso
+  TOKEN_INVALIDO // enlace inexistente, vencido, ya usado o reemplazado
+}
+
+enum PropositoToken {
+  INICIAL
+  RECUPERACION
+}
+
+/// Intentos de inicio de sesión y de definir clave (D-014). Solo inserción (disparador en la migración).
+/// No guarda el correo tecleado ni la contraseña: si el correo no existe, usuarioId queda vacío.
+/// Índices parciales (en SQL, Prisma no los expresa): fallos por IP y último éxito por cuenta.
+/// Purga (pendiente, deuda aceptada): borrar lo de más de 30 días solo por una vía explícita, con el rol
+/// dueño y `SET LOCAL inv.reversion = 'on'` dentro de su transacción (la salida del disparador).
+model IntentoIngreso {
+  id         String           @id @default(cuid())
+  usuarioId  String?
+  usuario    Usuario?         @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ip         String?          @db.Inet
+  resultado  ResultadoIngreso
+  ocurridoEn DateTime         @default(now()) @db.Timestamptz(6)
+
+  @@index([usuarioId, ocurridoEn])
+  @@map("intento_ingreso")
+}
+
+/// Enlace de un solo uso para definir la clave (D-014: no hay contraseña inicial). Guarda solo el
+/// sha256 del token; el token va en el fragmento de la URL y nunca toca la base ni los logs.
+/// Vence a los 30 min, se invalida al usarse y emitir uno nuevo deja sin valor los anteriores (solo vale
+/// el más reciente del usuario). Un disparador admite un único UPDATE: marcar `usadoEn` una vez.
+model TokenAcceso {
+  id        String         @id @default(cuid())
+  usuarioId String
+  usuario   Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  tokenHash String         @unique @db.Char(64)
+  proposito PropositoToken
+  venceEn   DateTime       @db.Timestamptz(6)
+  usadoEn   DateTime?      @db.Timestamptz(6)
+  creadoEn  DateTime       @default(now()) @db.Timestamptz(6)
+
+  @@index([usuarioId, creadoEn])
+  @@map("token_acceso")
 }
 
 // ───────────── Importación y trazabilidad ─────────────
