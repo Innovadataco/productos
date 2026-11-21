@@ -201,14 +201,15 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
 - en producción, solo `prisma migrate deploy`;
 - solo migraciones **aditivas**: columnas nuevas con nulos o con valor por defecto, y nunca un DROP ni un RENAME en el mismo despliegue que la quita del código;
 - antes de cualquier DROP, revisar `pg_depend`;
-- el guardián del esquema (`scripts/verificar-esquema.sql`) corre después de `migrate deploy`. Compara contra las definiciones canónicas:
-  - los índices parciales, por su definición exacta y su unicidad;
-  - los CHECK y EXCLUDE, por su definición exacta;
-  - los disparadores: tabla, tipo, función y que estén habilitados;
-  - el md5 de la función de solo inserción;
-  - las extensiones.
-  
-  Si algo falta o cambió, aborta antes de levantar la app.
+- el guardián del esquema (`scripts/verificar-esquema.sql`) corre después de `migrate deploy`, con su propio `search_path = public`. Compara contra las definiciones canónicas de PostgreSQL 16:
+  - **índices únicos y parciales** (los únicos de Prisma sostienen la idempotencia de las cargas): definición exacta, unicidad, y que estén válidos, listos y vivos. Ningún índice del esquema puede quedar a medias, aunque no esté en la lista;
+  - **llaves primarias y foráneas:** definición exacta, con su ON DELETE y ON UPDATE (todas RESTRICT/RESTRICT), y validadas. Toda FK debe tener un índice que empiece por sus columnas;
+  - **CHECK y EXCLUDE:** definición exacta y validados. Los de su lista `sin_validar` se aceptan NOT VALID hasta que una migración posterior los valide. Antes de esa migración, el dueño corre `scripts/contar-sin-validar.sql` (solo lectura, solo conteos);
+  - **disparadores:** definición exacta (`pg_get_triggerdef`: eventos, `UPDATE OF`, `WHEN` y función) y habilitados. Ninguno sobra y ninguno está deshabilitado, incluidos los internos de las FK;
+  - el **md5** del código de cada función escrita a mano;
+  - las **extensiones**.
+
+  Si algo falta o cambió, aborta antes de levantar la app. Si la migración misma falla, ver la §10.
 
 ## 6 · Respaldos
 - **El contenedor `inv-008-respaldo`** es permanente y programa el respaldo él mismo, sin systemd ni cron del host:
@@ -319,6 +320,6 @@ Lo aplica el coordinador con el CEO de PI, en una ventana acordada y **solo con 
 - Las migraciones de 008 toman `SET LOCAL lock_timeout = '5s'`. Si la app vieja retiene una tabla, el migrador falla rápido, se deshace y se sigue este mismo procedimiento.
 
 ---
-> v2.1 · 2026-11-21 · 03:06 (-05) · Inversiones · Fábrica ECC (frente base) · sección 10: migración fallida y P3009 (`migrate resolve` lo decide el CEO)
+> v2.1 · 2026-11-21 · 03:27 (-05) · Inversiones · Fábrica ECC (frente base) · §5: el guardián nuevo; §10: migración fallida y P3009 (`migrate resolve` lo decide el CEO)
 > v2.0 · 2026-11-21 · 00:40 (-05) · Inversiones · Fábrica ECC (frente producción) · correcciones de la GATE 2 (VPS compartido con PI)
 > v1.0 · 2026-11-20 · 23:59 (-05) · Inversiones · Fábrica ECC (frente producción)
