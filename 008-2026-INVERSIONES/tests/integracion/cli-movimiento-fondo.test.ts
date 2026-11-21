@@ -1,6 +1,6 @@
 // scripts/registrar-movimiento-fondo.ts como proceso contra la base de PRUEBAS (frente fondo-movimientos, T5): códigos
 // de salida (0 ensayo, registrada o ya existía · 2 uso · 3 rechazo) y que la consola NO lleve el correo, el código del
-// fondo, las unidades, el monto ni la URL de la base. El hijo recibe un entorno mínimo. Datos inventados (2027).
+// fondo, las unidades, el monto ni la URL de la base. El hijo recibe un entorno mínimo. Datos inventados.
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { POR_CLI_MS, comprobar as comprobarSalida, correr as correrCli, entornoMinimo, type Salida } from "../ayudas/cli";
@@ -10,7 +10,9 @@ const URL_BASE = process.env.DATABASE_URL ?? "";
 const corrida = String(Date.now()).slice(-5);
 const email = `dueno-cli-fondo-${corrida}@ejemplo.invalid`;
 const CODIGO = `6${corrida}47`;
-const FECHA = "2027-09-08";
+// El CLI usa el reloj real: la fecha debe ser pasada, fuera del rango de la historia real (reglas de valores inventados)
+// y anterior a la fecha del caso «corte sin historia» de conciliacion.test.ts, que exige que nada escriba caja hasta ese día.
+const FECHA = "2022-09-14";
 const UNIDADES = "1031.77246";
 const MONTO = "4729785.4531";
 const MONTO_QUE_NO_CUADRA = "4760000.1373";

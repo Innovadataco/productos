@@ -42,7 +42,8 @@ describe("interpretarArgumentosMovimiento", () => {
   });
 
   it("los datos inválidos dicen campo y código, sin el valor", () => {
-    const r = interpretarArgumentosMovimiento([...BASE.slice(0, 7), "1031,77246", "--monto", "-4729785.4531"], AHORA);
+    // Un valor que empieza por «-» solo llega pegado con «=» (si no, parseArgs lo toma por una opción).
+    const r = interpretarArgumentosMovimiento([...BASE.slice(0, 7), "1031,77246", "--monto=-4729785.4531"], AHORA);
     expect(r).toEqual({ ok: false, errores: [{ campo: "unidades", codigo: "NUMERO_FORMATO" }, { campo: "monto", codigo: "DEBE_SER_POSITIVO" }] });
     expect(JSON.stringify(r)).not.toMatch(/1031|4729785/);
   });
