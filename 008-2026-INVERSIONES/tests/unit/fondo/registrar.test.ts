@@ -10,6 +10,10 @@ describe("validarRegistroFondo", () => {
     });
   });
 
+  it("acepta tildes, eñes y signos comunes en el nombre", () => {
+    expect(validarRegistroFondo({ codigo: "999001", nombre: "Fondo ficticio ñandú · inmobiliario (FIC) – 2024" }).ok).toBe(true);
+  });
+
   it("sin clase, queda en null", () => {
     const r = validarRegistroFondo({ codigo: "999001", nombre: "Fondo ficticio" });
     expect(r.ok && r.valor.participacion).toBeNull();
@@ -24,6 +28,16 @@ describe("validarRegistroFondo", () => {
     [{ codigo: "999001", nombre: "   " }, "nombre", "NOMBRE_FORMATO"],
     [{ codigo: "999001", nombre: "x".repeat(121) }, "nombre", "NOMBRE_FORMATO"],
     [{ codigo: "999001", nombre: "Fondo\nficticio" }, "nombre", "NOMBRE_FORMATO"],
+    // security-reviewer BAJO: controles C1 (U+0085), de formato (bidi U+202E, U+200B, U+2066, BOM) y separadores de
+    // línea o párrafo (U+2028, U+2029): son caracteres de control o invisibles que confunden pantallas y reportes.
+    [{ codigo: "999001", nombre: "Fondo\u0085ficticio" }, "nombre", "NOMBRE_FORMATO"],
+    [{ codigo: "999001", nombre: "Fondo \u202eoicitcif" }, "nombre", "NOMBRE_FORMATO"],
+    [{ codigo: "999001", nombre: "Fondo\u200bficticio" }, "nombre", "NOMBRE_FORMATO"],
+    [{ codigo: "999001", nombre: "Fondo \u2066ficticio" }, "nombre", "NOMBRE_FORMATO"],
+    // (Un BOM al principio o al final lo quita el recorte: trim() lo trata como espacio. Dentro, se rechaza.)
+    [{ codigo: "999001", nombre: "Fondo\ufeffficticio" }, "nombre", "NOMBRE_FORMATO"],
+    [{ codigo: "999001", nombre: "Fondo\u2028ficticio" }, "nombre", "NOMBRE_FORMATO"],
+    [{ codigo: "999001", nombre: "Fondo\u2029ficticio" }, "nombre", "NOMBRE_FORMATO"],
   ])("rechaza %j", (entrada, campo, codigo) => {
     expect(validarRegistroFondo(entrada)).toEqual({ ok: false, errores: [{ campo, codigo }] });
   });

@@ -13,6 +13,11 @@ import { CODIGO_FIC_RE, FUENTE_SFC, PARTICIPACION_RE } from "./sfc";
 /** La serie de la SFC empieza en 2016: la clase registrada rige desde ahí. */
 const INICIO_SERIE_SFC = new Date(Date.UTC(2016, 0, 1));
 const NOMBRE_MAXIMO = 120;
+/**
+ * Lo que el nombre no admite: controles (C0, DEL y C1), caracteres de formato invisibles (bidi, ancho cero, BOM) y
+ * separadores de línea o de párrafo. Confunden la pantalla y los reportes.
+ */
+const NOMBRE_PROHIBIDO = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
 const MAX_INTENTOS_REGISTRO = 2;
 
 export interface DatosRegistroFondo {
@@ -48,7 +53,7 @@ export function validarRegistroFondo(entrada: { codigo?: string | undefined; par
   const nombre = (entrada.nombre ?? "").trim();
   if (!CODIGO_FIC_RE.test(codigo)) errores.push({ campo: "codigo", codigo: "CODIGO_FIC_FORMATO" });
   if (entrada.participacion !== undefined && !PARTICIPACION_RE.test(entrada.participacion)) errores.push({ campo: "participacion", codigo: "PARTICIPACION_FORMATO" });
-  if (nombre.length === 0 || nombre.length > NOMBRE_MAXIMO || /[\u0000-\u001f\u007f]/.test(nombre)) errores.push({ campo: "nombre", codigo: "NOMBRE_FORMATO" });
+  if (nombre.length === 0 || nombre.length > NOMBRE_MAXIMO || NOMBRE_PROHIBIDO.test(nombre)) errores.push({ campo: "nombre", codigo: "NOMBRE_FORMATO" });
   if (errores.length > 0) return { ok: false, errores };
   return { ok: true, valor: { codigo, participacion: entrada.participacion ?? null, nombre } };
 }

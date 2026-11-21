@@ -30,7 +30,9 @@
     "precios:actualizar": "tsx scripts/actualizar-precios.ts",
     "precios:depurar": "tsx scripts/depurar-precios.ts",
     "precios:exportar": "tsx scripts/exportar-precios.ts",
-    "precios:importar": "tsx scripts/importar-precios.ts"
+    "precios:importar": "tsx scripts/importar-precios.ts",
+    "fondo:exportar": "tsx scripts/exportar-valores-fondo.ts",
+    "fondo:importar": "tsx scripts/importar-valores-fondo.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

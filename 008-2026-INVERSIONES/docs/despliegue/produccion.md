@@ -540,7 +540,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
   --email
   dueno@ejemplo.ficticio
   ```
-  - Para un comando sin argumentos va vacía (`/dev/null`). También para `importar-precios`, que no lleva opciones.
+  - Para un comando sin argumentos va vacía (`/dev/null`). También para `importar-precios` e `importar-valores-fondo`, que no llevan opciones.
   - Para uno con argumentos sin datos reales, sirve `<(printf '%s\n' --ensayo)`.
   - Los valores reales nunca se escriben en la línea de comandos: quedarían en el historial.
 - **En la línea de comandos del VPS solo va el nombre del comando**, de una lista cerrada. Nada real queda en el registro de sudo ni en `ps` del host.
@@ -560,7 +560,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
   - Con **64** si `inv-cargar` se niega sin correr el CLI (uso, correo, swap, tamaño o sha256 del archivo): es distinto de los códigos de los CLI.
   - Con **1** si `cargar-prod.sh` se niega antes de correr (marca de pausa, candado común tomado o PI desplegando, sin sha registrado, comando fuera de la lista, árbol de root). El mensaje empieza por `[cargar-prod]`.
 - **Riesgo residual aceptado por el CEO:**
-  - qué: los parámetros (correo, especies, cifras de `registrar-escision` y `lote-escision`) van en el argv del CLI **dentro** del contenedor, y root los ve con `ps` mientras corre;
+  - qué: los parámetros (correo, especies, cifras de `registrar-escision` y `lote-escision`, código, clase y nombre del fondo de `registrar-fondo`) van en el argv del CLI **dentro** del contenedor, y root los ve con `ps` mientras corre;
   - no quedan en disco salvo que se active la auditoría de `execve` del host;
   - además, el sobre pasa por la memoria del host (sshd, el cliente de Docker y dockerd), que sí puede bajar al swap del host: el `memory.swap.max = 0` solo cubre el contenedor;
   - seguimiento: que los CLI lean sus parámetros desde stdin o desde un archivo.
@@ -578,11 +578,61 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 | 7 | Lotes otra vez | `construir-lotes` | vacía | — |
 | 8 | La ficha, primero en ensayo | `importar-plan` | `--email` y el correo | la ficha |
 | 9 | La ficha, aplicada | `importar-plan` | `--email`, el correo y `--aplicar` | la ficha |
-| 10 | La certificación de A&V, que concilia y marca los cierres que faltan | `importar-certificacion` | `--email`, el correo, `--fecha-corte` y la fecha; `--fondo` y su código solo la primera vez | el PDF |
-| 11 | Los precios, que se verifican al escribir contra la certificación ya cargada | `importar-precios` | vacía (`/dev/null`) | el CSV de cierres que exportó el Mac (abajo) |
-| 12 | La conciliación otra vez, con los precios ya cargados | `conciliar-certificacion` | `--fecha-corte` y la fecha | — |
+| 10 | El fondo (FIC), una sola vez y antes de la certificación, que lo exige registrado | `registrar-fondo` | `--codigo` y su código de la SFC, `--participacion` y su clase (si la tiene), `--nombre` y el nombre | — |
+| 11 | La certificación de A&V, que concilia y marca los cierres que faltan | `importar-certificacion` | `--email`, el correo, `--fecha-corte` y la fecha; `--fondo` y su código solo la primera vez | el PDF |
+| 12 | Los valores de unidad del fondo, con el del día del corte | `importar-valores-fondo` | vacía (`/dev/null`) | el CSV de valores que exportó el Mac (abajo) |
+| 13 | Los precios, que se verifican al escribir contra la certificación ya cargada | `importar-precios` | vacía (`/dev/null`) | el CSV de cierres que exportó el Mac (abajo) |
+| 14 | La conciliación otra vez, con los valores del fondo y los precios ya cargados | `conciliar-certificacion` | `--fecha-corte` y la fecha | — |
 
-**Los precios (paso 11): se exportan en el Mac del dueño y viajan en el sobre.** Producción no tiene salida a internet: la app y el migrador no llegan a Yahoo.
+**El fondo (pasos 10 y 12).** Producción no tiene salida a internet: el migrador no llega a la SFC (datos.gov.co).
+1. **Registrarlo (paso 10), por el sobre y sin red.** La cabecera (privada; valores inventados):
+   ```text
+   --codigo
+   9990001
+   --participacion
+   907
+   --nombre
+   Fondo ficticio
+   ```
+   ```sh
+   scripts/armar-sobre.sh <cabecera-del-fondo> | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh registrar-fondo
+   ```
+   - `inv-cargar` admite solo esas tres opciones, cada una una vez: `--codigo`, de 1 a 12 dígitos (el `codigo_negocio` de la SFC); `--participacion`, opcional, de 1 a 6 dígitos (el `tipo_participacion`: la SFC usa de 1 a 3, p. ej. `800`); `--nombre`, de 1 a 200 bytes, sin caracteres de control y sin «-» al inicio. El CLI manda: el nombre, hasta 120 caracteres.
+   - Arma `--registrar --codigo … [--participacion …] --nombre …` para `scripts/actualizar-fondo.ts` (el mismo `registrarFondo` del Mac). Su modo con red (`--desde`, `--hasta`) no pasa: sale con 64.
+   - Es idempotente: otra vez da «ya existía» y no cambia nada (tampoco el nombre). Con otra clase, sale con 1 y `CLASE_DISTINTA`.
+2. **Los valores de unidad (paso 12): se exportan en el Mac del dueño y viajan en el sobre.**
+   - **La SFC publica con T−2.** Verificado en el ensayo de este frente (un sábado): el último valor publicado de un fondo público era el del miércoles anterior. La conciliación usa **solo** el valor del día exacto del corte (regla del CEO): si todavía no está, el fondo queda en «sin valor de unidad al corte» (`sin_valor_unidad_al_corte`) y nunca se toma el de otro día. Se espera a que salga y se repiten los pasos 12 y 14.
+   - **En el Mac, con red.** La lista de fondos (privada: dice qué fondo tiene el dueño) lleva una línea por fondo, `<codigo>,<participacion>` (o solo `<codigo>` si no tiene clase registrada); `#` comenta; hasta 10. La crea el dueño en su carpeta privada; que la Fábrica la saque de producción no está decidido (por decidir por el CEO Inversiones, como con los precios):
+     ```sh
+     umask 077
+     npm run -s fondo:exportar -- --fondos <carpeta-privada>/fondos.txt --desde <fecha> > <carpeta-privada>/valores-fondo.csv.parcial \
+       && mv <carpeta-privada>/valores-fondo.csv.parcial <carpeta-privada>/valores-fondo.csv
+     ```
+     - `-s`, el `.parcial` y el `&& mv`: igual que con los precios (abajo).
+     - **`umask 077` es obligatorio:** el exportador se niega a escribir en una terminal y también en un archivo que otros pueden leer (`SALIDA_NO_PRIVADA`, salida 2, sin pedir nada a la SFC).
+     - Pide a la SFC (`obtenerValores`, el de `actualizar-fondo`: sin redirecciones, con plazo y tope de bytes) en serie, con una pausa entre fondos; `--hasta` por defecto es hoy y el rango llega a 1830 días.
+     - Por stderr, por línea de la lista: cuántos valores y el último día. **Si el último día es anterior al corte, el del corte aún no está publicado** (T−2).
+     - Salida: 0 bien · 3 algún fondo quedó fuera (por su línea) o trajo valores de unidad inválidos (`SFC_VALOR_INVALIDO`; el CSV trae el resto) · 2 uso o lista ilegible · 1 lista inválida, sin valores o error.
+   - **El CSV viaja por stdin, en el sobre:** `scripts/armar-sobre.sh /dev/null <carpeta-privada>/valores-fondo.csv | ssh <vps> …/scripts/cargar-prod.sh importar-valores-fondo`. `inv-cargar` lo deja en el temporal `valores-fondo.csv` (tope 2 MiB, sin opciones) y `importar-valores-fondo` (`npm run -s fondo:importar`) lo valida **entero** antes de abrir la base: con un error no guarda nada.
+     - **Por el mismo camino que `actualizar-fondo`** (`src/fondo/guardar.ts`): fondos FIC activos, la misma fuente (`sfc:qhpu-8ixx`), versionado y lotes con reintento. Reimportar el mismo CSV no escribe nada.
+     - Salida 3: un código sin fondo FIC activo (`FONDO_NO_REGISTRADO`, por su línea; no escribe nada de él: falta el paso 10), una clase distinta de la registrada (`CLASE_DISTINTA`), un fallo del guardado o un dato atrasado (`ATRASADO`: el último valor es de hace más de 7 días frente a hoy).
+     - **Importe siempre un CSV recién exportado:** uno viejo vuelve a escribir los valores que trae, aunque la SFC los haya corregido después (la versión anterior queda en la historia).
+   - **Formato exacto** (`src/fondo/csv-valores.ts`): solo ASCII imprimible y LF, sin BOM, CR, tabuladores ni comillas; el encabezado exacto `codigo_fic,participacion,fecha,valor_unidad,valor_fondo`; una línea por día, cada una terminada en LF, sin líneas vacías y de hasta 80 bytes:
+     - `codigo_fic`: de 1 a 12 dígitos; `participacion`: vacía o de 1 a 6 dígitos, la misma en todas las líneas del fondo;
+     - `fecha`: `20AA-MM-DD`, una fecha que existe y no es posterior a hoy;
+     - `valor_unidad`: el decimal canónico que deja el lector de la SFC (sin ceros sobrantes, hasta 8 decimales, sin exponente), > 0 y ≤ 10 000 000;
+     - `valor_fondo`: vacío o el decimal canónico (hasta 4 decimales);
+     - ningún par (fondo, fecha) repetido; al menos una línea; hasta 20 000 líneas y 10 fondos.
+
+     Ejemplo inventado:
+     ```text
+     codigo_fic,participacion,fecha,valor_unidad,valor_fondo
+     9990001,907,2024-03-11,10001.25,500000000.1235
+     9990001,907,2024-03-12,10002,
+     ```
+   - **Las unidades del fondo** (cuántas tiene el dueño) no las carga este paso. Hoy ningún comando las registra en producción: sin ellas, el fondo queda en `fondo_sin_unidades` aunque el valor del corte esté (seguimiento, otro frente).
+
+**Los precios (paso 13): se exportan en el Mac del dueño y viajan en el sobre.** Producción no tiene salida a internet: la app y el migrador no llegan a Yahoo.
 1. **En el Mac del dueño, que sí tiene red,** se exportan los cierres. La lista de nemotécnicos (uno por línea; `#` comenta) la crea el dueño en su carpeta privada. **La Fábrica lo corre con los símbolos del portafolio solo con orden del CEO Inversiones** (decisión del CEO, 2026-11-21): saca la lista de producción (acción activa con lotes) sin imprimirla, la deja con el CSV en una carpeta 700 (`umask 077`) y la borra al terminar, junto con el CSV. Para la Fábrica, `<carpeta-privada>` es esa carpeta 700 que ella crea: nunca escribe en la carpeta privada del dueño. Con la misma orden corre también el paso 2:
    ```sh
    umask 077
@@ -617,16 +667,18 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 - **`registrar-escision` con salida 3:** había dividendos importados como ordinarios. En la vía B no debe pasar: si pasa, se para.
 - **`construir-lotes` con salida 3:** son avisos, no un error. En el paso 5 puede dar 3 por la escisión; en el 7 debe dar 0, o 3 con los avisos explicados.
 - **`importar-plan` con salida 3:** había otra importación en curso: se reintenta.
-- **`importar-certificacion` (paso 10):** concilia al cargar; sin los cierres del día de corte, el valor sale `sin_precio_al_corte`. Es lo esperado: lo resuelven los pasos 11 y 12. Su «siguiente paso» en producción ya es este (vía B), no `precios:actualizar`.
-- **`importar-precios` (paso 11):** imprime `CSV de cierres · filas · especies` y el reporte de `precios:actualizar`. Si el CSV cubre el día de corte, «verificados en el rango» cuenta los cierres de ese día que cuadran (±1 %) con la certificación; uno que no cuadra queda NO_VERIFICADO y lo muestra la conciliación del paso 12. Con salida 3: especies sin acción activa con lotes (`ESPECIE_NO_REGISTRADA`, por su línea del CSV), otro símbolo de Yahoo registrado (`SIMBOLO_DISTINTO`), un fallo del guardado o un año sin calendario: se para y se avisa.
-- **`conciliar-certificacion` (paso 12):** guarda una conciliación nueva, ahora con los precios; la anterior queda en la historia.
+- **`registrar-fondo` (paso 10):** imprime el id interno del fondo, «creado» o «ya existía» y la clase; nunca el código ni el nombre.
+- **`importar-certificacion` (paso 11):** concilia al cargar; sin los cierres del día de corte, el valor sale `sin_precio_al_corte`, y el fondo, `fondo_sin_unidades` o `sin_valor_unidad_al_corte`. Es lo esperado: lo resuelven los pasos 12 a 14. Su «siguiente paso» en producción ya es este (vía B), no `precios:actualizar`.
+- **`importar-valores-fondo` (paso 12):** imprime `CSV de valores del fondo · filas · fondos` y el reporte de `actualizar-fondo` (valores nuevos y revisados, el último dato de cada fondo por su id interno).
+- **`importar-precios` (paso 13):** imprime `CSV de cierres · filas · especies` y el reporte de `precios:actualizar`. Si el CSV cubre el día de corte, «verificados en el rango» cuenta los cierres de ese día que cuadran (±1 %) con la certificación; uno que no cuadra queda NO_VERIFICADO y lo muestra la conciliación del paso 14. Con salida 3: especies sin acción activa con lotes (`ESPECIE_NO_REGISTRADA`, por su línea del CSV), otro símbolo de Yahoo registrado (`SIMBOLO_DISTINTO`), un fallo del guardado o un año sin calendario: se para y se avisa.
+- **`conciliar-certificacion` (paso 14):** guarda una conciliación nueva, ahora con los valores del fondo y los precios; la anterior queda en la historia.
 
 **Después de la carga:**
 1. **Revisión, de solo lectura:**
    - `contar-bloqueadas.sql`, en el VPS: `sudo $COMPOSE exec -T inv-008-db psql -X -v ON_ERROR_STOP=1 -U inv_dueno -d inversiones < $B/repo/008-2026-INVERSIONES/scripts/contar-bloqueadas.sql` (solo conteos);
    - y `construir-lotes` con `--ensayo`, por `cargar-prod.sh`.
 2. **Cuadre del costo total por especie contra el portal de A&V** (la madre y el hijo de la escisión). Lo mira **Jelk**; la Fábrica reporta solo **sí o no**.
-3. **Precios:** ya entraron en el paso 11 (vía B). Cuando exista el servicio de precios (otro frente), `precios:actualizar` los versiona encima: es la misma fuente (`yahoo`). Para ponerlos al día antes de eso, se repiten los pasos 11 y 12 con un `--desde` reciente.
+3. **Precios y valores del fondo:** ya entraron en los pasos 12 y 13 (vía B). Cuando exista el servicio de precios (otro frente), `precios:actualizar` y `actualizar-fondo` los versionan encima: son las mismas fuentes (`yahoo` y `sfc:qhpu-8ixx`). Para ponerlos al día antes de eso, se repiten los pasos 12 a 14 con un `--desde` reciente.
 4. **Anotar** en `ESTADO.md` de la gestión: el resultado de cada paso, sin valores.
 
 ## 12 · Vía A, el volcado de solo datos: NO USAR
@@ -636,6 +688,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.11 · 2026-11-21 · 17:48 (-05) · Inversiones · Fábrica Inversiones (frente fondo-carga) · §11: el fondo por la vía B: paso 10 `registrar-fondo` por el sobre (lista blanca), paso 12 los valores de unidad (`fondo:exportar` en el Mac con `umask 077` → `importar-valores-fondo` por el sobre, camino único), formato exacto del CSV, la regla T−2 (solo el valor del día del corte) y el hueco de las unidades del fondo; los pasos de los precios pasan de 10–12 a 11, 13 y 14 (la numeración v2.11 sigue a la v2.10 de main)
 > v2.10 · 2026-11-21 · 17:01 (-05) · Inversiones · Fábrica Inversiones (frente precios-rol) · §2: `INV_PRECIOS_DATABASE_URL` opcional, cómo la agrega Jelk sin verla (y sin escribir nada si `openssl` falla), cuándo llegan los permisos y por qué la línea no se quita (restauración); §4: los permisos por columna de `inv_precios`
 > v2.9 · 2026-11-21 · 16:03 (-05) · Inversiones · Fábrica Inversiones (frente reglas-exportar-restauracion) · §6: frecuencias de las pruebas de restauración (mensual ligera, trimestral real del caso (A), (B) al cambiar el esquema); §11: `precios:exportar` con los símbolos del portafolio, la Fábrica solo con orden del CEO Inversiones
 > v2.8 · 2026-11-21 · 15:46 (-05) · Inversiones · Fábrica Inversiones (frente runbook-restauracion) · §6: la prueba de restauración mensual con el comando que corrió Jelk (identificar la clave con `age-keygen -y`, el prefijo que falta, verificar solo con conteos en `--network none` y `--platform linux/amd64`, carpeta 700 en el home, limpieza) y sus avisos (Terminal de macOS, clave maestra compartida con PI y BI)

@@ -4,11 +4,11 @@
 # y el sobre por la entrada estándar (lo arma scripts/armar-sobre.sh en el Mac):
 #   - cabecera de EXACTAMENTE 4096 bytes: un argumento por línea, una línea vacía y relleno de líneas vacías. Con
 #     archivo trae --bytes <N> y --sha256 <H>, que se consumen aquí y no pasan al CLI;
-#   - el archivo (importar-trii, importar-plan, importar-certificacion e importar-precios).
+#   - el archivo (importar-trii, importar-plan, importar-certificacion, importar-precios e importar-valores-fondo).
 # Antes de leer nada comprueba que el contenedor no use swap: el temporal vive en el tmpfs /tmp, que con
 # mem = memswap no baja al disco. El archivo queda en un temporal 600 dentro de una carpeta 700 con nombre fijo
-# (trii.csv, ficha.md, certificacion.pdf o precios.csv: el nombre real no llega a la base), corre el CLI y lo borra
-# SIEMPRE (trap), también si el CLI falla o llega una señal. El tmpfs muere con el contenedor.
+# (trii.csv, ficha.md, certificacion.pdf, precios.csv o valores-fondo.csv: el nombre real no llega a la base), corre el
+# CLI y lo borra SIEMPRE (trap), también si el CLI falla o llega una señal. El tmpfs muere con el contenedor.
 # Nunca imprime la cabecera ni el archivo: solo errores sin valores. Sale con 64 (EX_USAGE, distinto de los
 # códigos de los CLI, de 0 a 3) si se niega sin correr el CLI, o con el código del CLI.
 # Solo POSIX (busybox en la imagen; dash o bash en las pruebas). INV_CARGAR_* solo los usan las pruebas.
@@ -24,10 +24,12 @@ MAX_ARGUMENTOS=30
 MAX_LARGO=512
 TOPE_TRII=5242880
 TOPE_FICHA=262144
-# Los dos siguientes son los topes de sus CLI (una sola fuente; tests/unit/produccion/cargar-contenedor.test.ts los
-# compara): MAX_BYTES del PDF (src/importacion/av/pdf/documento.ts) y MAX_BYTES_CSV (src/precios/csv-cierres.ts).
+# Los tres siguientes son los topes de sus CLI (una sola fuente; tests/unit/produccion/cargar-contenedor.test.ts y
+# cargar-fondo.test.ts los comparan): MAX_BYTES del PDF (src/importacion/av/pdf/documento.ts), MAX_BYTES_CSV
+# (src/precios/csv-cierres.ts) y MAX_BYTES_CSV_FONDO (src/fondo/csv-valores.ts).
 TOPE_CERTIFICACION=15728640
 TOPE_PRECIOS=4194304
+TOPE_VALORES_FONDO=2097152
 
 NIEGA=64
 falla() {
@@ -45,7 +47,9 @@ case "$comando" in
   importar-plan) cli=scripts/importar-plan.ts archivo=ficha.md tope=$TOPE_FICHA ;;
   importar-certificacion) cli=scripts/importar-certificacion.ts archivo=certificacion.pdf tope=$TOPE_CERTIFICACION ;;
   importar-precios) cli=scripts/importar-precios.ts archivo=precios.csv tope=$TOPE_PRECIOS ;;
+  importar-valores-fondo) cli=scripts/importar-valores-fondo.ts archivo=valores-fondo.csv tope=$TOPE_VALORES_FONDO ;;
   registrar-escision) cli=scripts/registrar-escision.ts ;;
+  registrar-fondo) cli=scripts/actualizar-fondo.ts ;;
   lote-escision) cli=scripts/lote-escision.ts ;;
   construir-lotes) cli=scripts/construir-lotes.ts ;;
   conciliar-certificacion) cli=scripts/conciliar-certificacion.ts ;;
@@ -136,6 +140,20 @@ fondo_valido() {
   case "$1" in '' | *[!0-9]*) return 1 ;; esac
   [ "${#1}" -le 12 ]
 }
+# La clase del fondo en la SFC (tipo_participacion): de 1 a 6 dígitos (PARTICIPACION_RE de src/fondo/sfc.ts).
+participacion_valida() {
+  case "$1" in '' | *[!0-9]*) return 1 ;; esac
+  [ "${#1}" -le 6 ]
+}
+# El nombre del fondo: no vacío, sin «-» al inicio (el CLI lo tomaría por una opción), sin caracteres de control y
+# de hasta MAX_NOMBRE_FONDO bytes, contados en C (no dependen del locale ni del shell). Es un tope grueso: el CLI
+# (validarRegistroFondo, en src/fondo/registrar.ts) manda y admite hasta 120 caracteres.
+MAX_NOMBRE_FONDO=200
+nombre_valido() {
+  case "$1" in '' | -*) return 1 ;; esac
+  [ "$(printf '%s' "$1" | LC_ALL=C tr -d '\001-\037\177')" = "$1" ] || return 1
+  [ "$(printf '%s' "$1" | LC_ALL=C wc -c | tr -d ' ')" -le "$MAX_NOMBRE_FONDO" ]
+}
 
 # Los comandos con archivo: lista blanca de opciones por comando; el contenedor agrega la ruta del temporal.
 if [ -n "$archivo" ]; then
@@ -153,6 +171,7 @@ if [ -n "$archivo" ]; then
   while [ $# -gt 0 ]; do
     case "$comando:$1" in
       importar-precios:*) falla "importar-precios no lleva opciones: el CSV de cierres llega en el sobre" ;;
+      importar-valores-fondo:*) falla "importar-valores-fondo no lleva opciones: el CSV de valores del fondo llega en el sobre" ;;
       *:--email)
         [ -z "$correo" ] || falla "--email repetido"
         [ $# -ge 2 ] || falla "--email necesita un correo"
@@ -182,7 +201,7 @@ if [ -n "$archivo" ]; then
       *) falla "opción no permitida para $comando (se admiten --email; en importar-plan, --aplicar; en importar-certificacion, --fecha-corte y --fondo)" ;;
     esac
   done
-  [ "$comando" = importar-precios ] || [ -n "$correo" ] || falla "falta --email <correo-del-dueño>"
+  case "$comando" in importar-precios | importar-valores-fondo) ;; *) [ -n "$correo" ] || falla "falta --email <correo-del-dueño>" ;; esac
   [ "$comando" != importar-certificacion ] || [ -n "$corte" ] || falla "falta --fecha-corte AAAA-MM-DD"
   # El archivo: exactamente N bytes y su sha256 (frena un archivo truncado por un corte del SSH).
   head -c "$bytes" >"$dir/$archivo" || falla "no se pudo leer el archivo"
@@ -197,10 +216,47 @@ if [ -n "$archivo" ]; then
       # El PDF va al final: es el argumento suelto del CLI (y su nombre termina en .pdf, como exige).
       if [ -n "$fondo" ]; then set -- --email "$correo" --fecha-corte "$corte" --fondo "$fondo" "$dir/$archivo"; else set -- --email "$correo" --fecha-corte "$corte" "$dir/$archivo"; fi
       ;;
-    importar-precios) set -- --archivo "$dir/$archivo" ;;
+    importar-precios | importar-valores-fondo) set -- --archivo "$dir/$archivo" ;;
   esac
 else
   [ -z "$bytes$sha" ] || falla "$comando no lleva archivo (sobran --bytes o --sha256)"
+  # registrar-fondo: lista blanca propia. El contenedor arma `--registrar --codigo … [--participacion …] --nombre …`
+  # en ese orden: el modo con red de actualizar-fondo (--desde, --hasta) nunca llega al CLI.
+  if [ "$comando" = registrar-fondo ]; then
+    codigo=""
+    participacion=""
+    nombre=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --codigo)
+          [ -z "$codigo" ] || falla "--codigo repetido"
+          if [ $# -lt 2 ] || ! fondo_valido "$2"; then falla "--codigo necesita el código numérico del fondo en la SFC (de 1 a 12 dígitos)"; fi
+          codigo="$2"
+          shift 2
+          ;;
+        --participacion)
+          [ -z "$participacion" ] || falla "--participacion repetido"
+          if [ $# -lt 2 ] || ! participacion_valida "$2"; then falla "--participacion necesita la clase numérica del fondo en la SFC (de 1 a 6 dígitos)"; fi
+          participacion="$2"
+          shift 2
+          ;;
+        --nombre)
+          [ -z "$nombre" ] || falla "--nombre repetido"
+          if [ $# -lt 2 ] || ! nombre_valido "$2"; then falla "--nombre necesita un texto de 1 a $MAX_NOMBRE_FONDO bytes, sin caracteres de control y que no empiece por «-»"; fi
+          nombre="$2"
+          shift 2
+          ;;
+        *) falla "opción no permitida para registrar-fondo (se admiten --codigo, --participacion y --nombre)" ;;
+      esac
+    done
+    [ -n "$codigo" ] || falla "falta --codigo <código del fondo en la SFC>"
+    [ -n "$nombre" ] || falla "falta --nombre <nombre del fondo>"
+    if [ -n "$participacion" ]; then
+      set -- --registrar --codigo "$codigo" --participacion "$participacion" --nombre "$nombre"
+    else
+      set -- --registrar --codigo "$codigo" --nombre "$nombre"
+    fi
+  fi
   # conciliar-certificacion: lista blanca también aquí (defensa en profundidad; su CLI ya es estricto). Los otros
   # comandos sin archivo pasan sus argumentos tal cual a su CLI estricto.
   if [ "$comando" = conciliar-certificacion ]; then
