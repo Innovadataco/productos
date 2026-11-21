@@ -66,6 +66,9 @@ describe("reglas escritas a mano en la migración", () => {
     const disparadores = await db.$queryRaw<{ tgname: string }[]>`
       SELECT tgname FROM pg_trigger WHERE tgname LIKE '%\_solo\_insercion'`;
     expect(disparadores.map((d) => d.tgname).sort()).toEqual([
+      "certificacion_solo_insercion",
+      "conciliacion_solo_insercion",
+      "control_conciliacion_solo_insercion",
       "decision_solo_insercion",
       "dividendo_solo_insercion",
       "enlace_decision_orden_solo_insercion",
