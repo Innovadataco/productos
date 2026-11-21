@@ -8,6 +8,7 @@
  * - La clase del CSV es la que pidió el exportador. Si no es la clase vigente registrada del fondo (o una de las dos
  *   falta), esos valores no son los que usaría `actualizar-fondo` y no se escriben (CLASE_DISTINTA, como fallo del
  *   fondo). La vigencia se mira a la última fecha del CSV, pero nunca después de hoy.
+ * - El atraso se mide contra HOY, como `actualizar-fondo` por defecto: un CSV viejo avisa ATRASADO (salida 3).
  * - «Todo o nada» es la VALIDACIÓN del CSV. La escritura es por lotes (como en actualizar-fondo): si el proceso muere a
  *   mitad, queda lo guardado hasta ahí, y volver a correr el mismo CSV completa sin duplicar.
  */
@@ -49,6 +50,6 @@ export async function importarValoresFondo(db: PrismaClient, csv: LecturaValidaF
     const instrumentoId = idDe.get(f.codigoFic);
     return instrumentoId ? [{ instrumentoId, traer: () => delCsv(db, instrumentoId, f, vigencia) }] : [];
   });
-  const guardado = await guardarValoresDeFondos(db, fuentes, { hasta: csv.hasta });
+  const guardado = await guardarValoresDeFondos(db, fuentes, { hasta: hoy });
   return { filas: csv.filas, fondosCsv: csv.fondos.length, sinFondo, guardado };
 }

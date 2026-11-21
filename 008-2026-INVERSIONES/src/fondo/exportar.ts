@@ -50,6 +50,16 @@ export interface ResultadoExportacionFondo {
 }
 
 const dormir = (ms: number) => new Promise<void>((listo) => setTimeout(listo, ms));
+/** Permisos de grupo y de otros (rwx): un CSV del fondo con alguno de ellos lo podría leer otro usuario del Mac. */
+const PERMISOS_DE_OTROS = 0o077;
+
+/**
+ * ¿La salida es un archivo regular que otros pueden leer o escribir? Entonces no se escribe el CSV (el `>` de la shell
+ * lo crea con el umask, que por defecto es 022). Un tubo o /dev/null no son archivos regulares: pasan.
+ */
+export function salidaNoPrivada(esArchivo: boolean, modo: number): boolean {
+  return esArchivo && (modo & PERMISOS_DE_OTROS) !== 0;
+}
 
 export async function exportarValoresFondo(o: OpcionesExportacionFondo): Promise<ResultadoExportacionFondo> {
   const esperar = o.esperar ?? dormir;

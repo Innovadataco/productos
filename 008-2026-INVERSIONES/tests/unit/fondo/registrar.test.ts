@@ -34,7 +34,8 @@ describe("validarRegistroFondo", () => {
     [{ codigo: "999001", nombre: "Fondo \u202eoicitcif" }, "nombre", "NOMBRE_FORMATO"],
     [{ codigo: "999001", nombre: "Fondo\u200bficticio" }, "nombre", "NOMBRE_FORMATO"],
     [{ codigo: "999001", nombre: "Fondo \u2066ficticio" }, "nombre", "NOMBRE_FORMATO"],
-    [{ codigo: "999001", nombre: "\ufeffFondo ficticio" }, "nombre", "NOMBRE_FORMATO"],
+    // (Un BOM al principio o al final lo quita el recorte: trim() lo trata como espacio. Dentro, se rechaza.)
+    [{ codigo: "999001", nombre: "Fondo\ufeffficticio" }, "nombre", "NOMBRE_FORMATO"],
     [{ codigo: "999001", nombre: "Fondo\u2028ficticio" }, "nombre", "NOMBRE_FORMATO"],
     [{ codigo: "999001", nombre: "Fondo\u2029ficticio" }, "nombre", "NOMBRE_FORMATO"],
   ])("rechaza %j", (entrada, campo, codigo) => {

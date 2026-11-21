@@ -4,17 +4,19 @@
  * docs/despliegue/produccion.md §11):
  *   npm run -s fondo:exportar -- --fondos <lista.txt> --desde AAAA-MM-DD [--hasta AAAA-MM-DD] > <valores-fondo.csv.parcial> && mv …
  * «-s» hace falta: sin él, npm escribe su encabezado en stdout y quedaría dentro del CSV (el importador lo rechaza).
- * Se niega a escribir en una terminal (el CSV dice qué fondo tiene el dueño). Sin base de datos. Por stderr solo
+ * Se niega a escribir en una terminal o en un archivo que otros pueden leer (el CSV dice qué fondo tiene el dueño:
+ * `umask 077` antes del `>`). Sin base de datos. Por stderr solo
  * conteos, códigos, fechas y números de línea de la lista; nunca el código del fondo ni valores.
  * Salida: 0 bien · 3 algún fondo quedó fuera o trajo valores inválidos (el CSV trae el resto) · 2 uso o lista
  * ilegible · 1 lista inválida, sin valores, tope del CSV o la salida se cerró.
  */
+import { fstatSync } from "node:fs";
 import { ErrorArgumentosCarga } from "../src/precios/argumentos-carga";
 import { escribirCompleto } from "../src/precios/exportar";
 import { fechaEnBogota } from "../src/precios/horario";
 import { reporteErroresCsv } from "../src/precios/reporte";
 import { USO_EXPORTAR_VALORES_FONDO, leerArgumentosExportarValoresFondo, type ArgumentosExportarValoresFondo } from "../src/fondo/argumentos-carga";
-import { exportarValoresFondo } from "../src/fondo/exportar";
+import { exportarValoresFondo, salidaNoPrivada } from "../src/fondo/exportar";
 import { MAX_BYTES_LISTA_FONDOS, leerListaFondos, type FondoDeLista } from "../src/fondo/lista-fondos";
 import { reporteExportacionFondo } from "../src/fondo/reporte";
 import { leerArchivoAcotado } from "../src/lib/archivo-acotado";
@@ -51,6 +53,11 @@ async function main(): Promise<number> {
   if (a === null) return 2;
   if (process.stdout.isTTY) {
     console.error("❌ SALIDA_TERMINAL · el CSV va a un archivo de su carpeta privada (> …), nunca a la pantalla.");
+    return 2;
+  }
+  const salida = fstatSync(1);
+  if (salidaNoPrivada(salida.isFile(), salida.mode)) {
+    console.error("❌ SALIDA_NO_PRIVADA · el archivo de salida lo pueden leer otros usuarios: créelo con «umask 077» antes del «>» (no se pidió nada a la SFC).");
     return 2;
   }
   const fondos = lista(a.fondos);

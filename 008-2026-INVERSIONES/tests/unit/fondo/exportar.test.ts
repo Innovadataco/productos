@@ -4,7 +4,7 @@
 // siempre es un doble. Códigos, clases y cifras inventados.
 import { describe, expect, it } from "vitest";
 import { leerCsvValoresFondo } from "@/fondo/csv-valores";
-import { PAUSA_ENTRE_PEDIDOS_FONDO_MS, exportarValoresFondo } from "@/fondo/exportar";
+import { PAUSA_ENTRE_PEDIDOS_FONDO_MS, exportarValoresFondo, salidaNoPrivada } from "@/fondo/exportar";
 import { reporteExportacionFondo } from "@/fondo/reporte";
 import type { BuscarSfc } from "@/fondo/sfc";
 import type { InitHttp } from "@/lib/http-acotado";
@@ -86,5 +86,16 @@ describe("exportarValoresFondo", () => {
     const r = await exportarValoresFondo({ lista: [{ codigo: "9990001", participacion: "800", linea: 1 }], desde: DESDE, hasta: HASTA, ahora: AHORA, buscar: s.buscar, esperar: sinPausa });
     expect(r.fallidos).toEqual([{ linea: 1, codigo: "SFC_FORMATO" }]);
     expect(r.csv).toBeNull();
+  });
+});
+
+describe("salidaNoPrivada (security-reviewer MEDIO)", () => {
+  it("un archivo con permisos de grupo u otros no es privado; uno 600, un tubo o /dev/null, sí", () => {
+    expect(salidaNoPrivada(true, 0o100644)).toBe(true);
+    expect(salidaNoPrivada(true, 0o100640)).toBe(true);
+    expect(salidaNoPrivada(true, 0o100602)).toBe(true);
+    expect(salidaNoPrivada(true, 0o100600)).toBe(false);
+    expect(salidaNoPrivada(true, 0o100400)).toBe(false);
+    expect(salidaNoPrivada(false, 0o010666)).toBe(false);
   });
 });

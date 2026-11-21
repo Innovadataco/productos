@@ -21,6 +21,12 @@ import { FUENTE_SFC, type ResultadoSfc, type ValorDia } from "./sfc";
 export const DIAS_ATRASO_AVISO = 7;
 export const TAMANO_LOTE = 500;
 export const MAX_INTENTOS = 3;
+/**
+ * Plazo de la transacción de un lote (lectura, reemplazo e inserción de hasta TAMANO_LOTE días). El de Prisma por
+ * defecto es 5 s; el migrador corre con CPU acotada en el VPS compartido. Si se vence, el lote se deshace entero y
+ * sale como GUARDADO_ERROR (volver a correr completa sin duplicar).
+ */
+export const TIEMPO_MAXIMO_LOTE_MS = 30_000;
 const MS_POR_DIA = 86_400_000;
 
 export interface FalloFondo {
@@ -122,7 +128,7 @@ async function guardarLote(db: PrismaClient, fondoId: string, lote: readonly Val
     const aInsertar = [...nuevos, ...revisados.map((r) => r.valor)];
     if (aInsertar.length > 0) await tx.valorUnidadFondo.createMany({ data: aInsertar.map((v) => filaNueva(fondoId, v)) });
     return { nuevos: nuevos.length, revisados: revisados.length };
-  });
+  }, { timeout: TIEMPO_MAXIMO_LOTE_MS });
 }
 
 const esConflicto = (e: unknown): boolean => e instanceof ConflictoConcurrente || (e as { code?: unknown } | null)?.code === "P2002";

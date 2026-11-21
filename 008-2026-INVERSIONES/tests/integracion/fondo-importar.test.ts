@@ -13,6 +13,7 @@ import { escribirCsvValoresFondo, leerCsvValoresFondo, type FondoAEscribir, type
 import { importarValoresFondo } from "@/fondo/importar";
 import { registrarFondo } from "@/fondo/registrar";
 import { FUENTE_SFC, type BuscarSfc, type ValorDia } from "@/fondo/sfc";
+import { fechaEnBogota } from "@/precios/horario";
 import { comprobar, correr, entornoMinimo } from "../ayudas/cli";
 
 const db = new PrismaClient();
@@ -146,14 +147,17 @@ describe("CLI importar-valores-fondo.ts como proceso", { timeout: 120_000 }, () 
     const carpeta = mkdtempSync(join(tmpdir(), "inv008-fondo-cli-"));
     try {
       const ruta = join(carpeta, "valores.ficticio.csv");
-      const w = escribirCsvValoresFondo([{ codigoFic: a.codigo, participacion: "907", valores: valores(["43210.5", "43211"]) }], HOY);
+      // Fechas recientes (hoy − 3 y hoy − 2): el CLI mide el atraso contra hoy y un CSV viejo saldría con 3.
+      const hoyReal = fechaEnBogota(new Date());
+      const recientes = [3, 2].map((d, i) => ({ fecha: new Date(hoyReal.getTime() - d * 86_400_000), valorUnidad: ["43210.5", "43211"][i]!, valorFondo: null }));
+      const w = escribirCsvValoresFondo([{ codigoFic: a.codigo, participacion: "907", valores: recientes }], hoyReal);
       writeFileSync(ruta, w.ok ? w.texto : "");
       const env = entornoMinimo({ DATABASE_URL: process.env.DATABASE_URL ?? "" });
       const nunca = [a.codigo, "43210.5", "43211", carpeta];
       const primero = correr("importar-valores-fondo.ts", ["--archivo", ruta], env);
       comprobar(primero, 0, "📄 CSV de valores del fondo · filas: 2 · fondos: 1", nunca);
       expect(primero.texto).toContain("valores nuevos: 2 · revisados: 0");
-      expect(primero.texto).toContain(`fondo ${a.id} · último dato: 2024-03-11`);
+      expect(primero.texto).toContain(`fondo ${a.id} · último dato: ${recientes[1]!.fecha.toISOString().slice(0, 10)}`);
       comprobar(correr("importar-valores-fondo.ts", ["--archivo", ruta], env), 0, "valores nuevos: 0 · revisados: 0", nunca);
     } finally {
       rmSync(carpeta, { recursive: true, force: true });
