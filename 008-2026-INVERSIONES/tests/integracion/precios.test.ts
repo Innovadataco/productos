@@ -165,39 +165,89 @@ describe("actualizarPrecios · barra corrupta", () => {
   });
 });
 
-/** Barrera: las primeras `n` llamadas esperan hasta que llega la última; así las corridas guardan a la vez. */
-function barrera(n: number): () => Promise<void> {
-  let llegadas = 0;
-  let abrir: () => void = () => undefined;
-  const abierta = new Promise<void>((resolver) => {
-    abrir = resolver;
-  });
-  return () => {
-    llegadas += 1;
-    if (llegadas === n) abrir();
-    return abierta;
+/**
+ * Barrera por clave: las primeras `n` llegadas con la misma clave esperan a la última. Si no llegan
+ * todas en `ms`, rechaza (la prueba falla en vez de colgarse).
+ */
+function barreraPorClave(n: number, ms = 5_000): (clave: string) => Promise<void> {
+  const esperas = new Map<string, { llegadas: number; abrir: () => void; abierta: Promise<void> }>();
+  return (clave) => {
+    if (!esperas.has(clave)) {
+      let abrir: () => void = () => undefined;
+      const abierta = new Promise<void>((resolver) => {
+        abrir = resolver;
+      });
+      esperas.set(clave, { llegadas: 0, abrir, abierta });
+    }
+    const espera = esperas.get(clave)!;
+    espera.llegadas += 1;
+    if (espera.llegadas === n) espera.abrir();
+    let reloj: ReturnType<typeof setTimeout> | undefined;
+    const vencida = new Promise<never>((_resolver, rechazar) => {
+      reloj = setTimeout(() => rechazar(new Error("barrera incompleta")), ms);
+    });
+    return Promise.race([espera.abierta, vencida]).finally(() => clearTimeout(reloj));
   };
 }
 
+type Delegado = PrismaClient["precioCierre"];
+type ArgsLectura = Parameters<Delegado["findFirst"]>[0];
+
+/**
+ * Cliente de prueba que fuerza la carrera: tras la PRIMERA lectura del cierre vigente de cada día (dentro o
+ * fuera de una transacción), la corrida espera en la barrera. Así las dos corridas leen el mismo estado antes
+ * de que alguna escriba, en cada barra y siempre. Cuenta todas las lecturas (las de los reintentos también).
+ */
+function conBarreraTrasLeer(base: PrismaClient, esperar: (clave: string) => Promise<void>): { db: PrismaClient; lecturas: () => number } {
+  const vistas = new Set<string>();
+  let lecturas = 0;
+  const leerConBarrera = (delegado: Delegado) => async (args: ArgsLectura) => {
+    const fila = await delegado.findFirst(args);
+    lecturas += 1;
+    const clave = String((args?.where as { fecha?: Date } | undefined)?.fecha?.toISOString());
+    if (!vistas.has(clave)) {
+      vistas.add(clave);
+      await esperar(clave);
+    }
+    return fila;
+  };
+  const envolver = <T extends object>(cliente: T): T =>
+    new Proxy(cliente, {
+      get(objetivo, prop) {
+        if (prop === "precioCierre") {
+          const delegado = Reflect.get(objetivo, prop) as Delegado;
+          return new Proxy(delegado, { get: (d, p) => (p === "findFirst" ? leerConBarrera(d) : Reflect.get(d, p)) });
+        }
+        if (prop === "$transaction") {
+          return (fn: (tx: Prisma.TransactionClient) => Promise<unknown>, opciones?: Parameters<PrismaClient["$transaction"]>[1]) =>
+            (objetivo as unknown as PrismaClient).$transaction((tx) => fn(envolver(tx)), opciones);
+        }
+        return Reflect.get(objetivo, prop);
+      },
+    });
+  return { db: envolver(base), lecturas: () => lecturas };
+}
+
 describe("actualizarPrecios · corridas simultáneas", () => {
-  it("dos corridas a la vez dejan un solo cierre vigente por día, sin errores, al guardar y al revisar", async () => {
+  it("dos corridas que leen a la vez dejan un solo cierre vigente por día, sin errores, al guardar y al revisar (el reintento corre siempre)", async () => {
     const id = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRG${corrida}`, nombre: "Ficticia G" } })).id;
     const ts = [Date.UTC(2024, 7, 6, 14, 30) / 1000, Date.UTC(2024, 7, 7, 14, 30) / 1000];
-    const ronda = (cierres: number[]) => {
-      const esperar = barrera(2);
-      const buscar: Buscar = async () => {
-        await esperar();
-        return respuestaChart(ts, cierres);
-      };
-      const opciones = { desde: new Date("2024-08-06T00:00:00Z"), hasta: new Date("2024-08-07T00:00:00Z"), buscar, instrumentoIds: [id] };
-      return Promise.all([actualizarPrecios(db, opciones), actualizarPrecios(db, opciones)]);
+    const ronda = async (cierres: number[]) => {
+      const esperar = barreraPorClave(2);
+      const [a, b] = [conBarreraTrasLeer(db, esperar), conBarreraTrasLeer(db, esperar)];
+      const opciones = { desde: new Date("2024-08-06T00:00:00Z"), hasta: new Date("2024-08-07T00:00:00Z"), buscar: (async () => respuestaChart(ts, cierres)) as Buscar, instrumentoIds: [id] };
+      const resultados = await Promise.all([actualizarPrecios(a.db, opciones), actualizarPrecios(b.db, opciones)]);
+      return { resultados, lecturas: a.lecturas() + b.lecturas() };
     };
+    // 2 barras × 2 corridas = 4 lecturas, más 1 relectura por barra de la corrida que pierde la carrera.
     const nuevas = await ronda([500, 501]);
-    expect(nuevas.flatMap((r) => r.fallidas)).toEqual([]);
-    expect(nuevas[0]!.cierresNuevos + nuevas[1]!.cierresNuevos).toBe(2);
+    expect(nuevas.resultados.flatMap((r) => r.fallidas)).toEqual([]);
+    expect(nuevas.resultados[0]!.cierresNuevos + nuevas.resultados[1]!.cierresNuevos).toBe(2);
+    expect(nuevas.lecturas).toBe(6);
     const revisadas = await ronda([600, 601]);
-    expect(revisadas.flatMap((r) => r.fallidas)).toEqual([]);
-    expect(revisadas[0]!.cierresRevisados + revisadas[1]!.cierresRevisados).toBe(2);
+    expect(revisadas.resultados.flatMap((r) => r.fallidas)).toEqual([]);
+    expect(revisadas.resultados[0]!.cierresRevisados + revisadas.resultados[1]!.cierresRevisados).toBe(2);
+    expect(revisadas.lecturas).toBe(6);
     expect(await preciosDe(id)).toEqual(["600", "601"]);
     expect(await db.precioCierre.count({ where: { instrumentoId: id } })).toBe(4);
     expect(await db.precioCierre.count({ where: { instrumentoId: id, reemplazadoEn: { not: null } } })).toBe(2);
