@@ -918,4 +918,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/ci/docker-guard-politica.candado.test.ts",
     // SPEC-923: COBERTURA del barrido — registro ∪ pendientes cubre todo evento emitido; ratchet de pendientes. Puro.
     "prisma/correos-canonicos.cobertura.candado.test.ts",
+    // SPEC-980: deploy-prod.sh toma el candado COMÚN del VPS (/var/lock/despliegue-vps.lock, acordado con
+    // Inversiones) ANTES de todo build/pull y aborta (exit 3) si no lo obtiene; además neutraliza el stdin.
+    // Estático (orden + exit 3) + prueba viva con lock ocupado donde hay flock(1). Puro (texto + bash + tmp).
+    "scripts/deploy-candado-comun.candado.test.ts",
 ];

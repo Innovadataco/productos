@@ -6,6 +6,26 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# SPEC-980 (infra · acordado con Inversiones): CANDADO COMÚN del VPS. Inversiones toma este MISMO lock en
+# sus deploys y en sus cargas de datos (que duran minutos); sin él, un deploy de PI no espera y ambos
+# procesos se pisan sobre el mismo host (build, migraciones y reinicios concurrentes). Se toma ACÁ, ANTES
+# de cualquier build o pull, y se libera SOLO al salir (el fd 8 muere con el proceso, pase lo que pase: no
+# hay rama que lo deje tomado). Si está ocupado, ESPERA hasta DESPLIEGUE_LOCK_WAIT s (default 900) y, si no
+# lo obtiene, ABORTA LIMPIO sin tocar nada (exit 3). Ruta y espera por variable para probarlo fuera del VPS.
+DESPLIEGUE_LOCK="${DESPLIEGUE_LOCK:-/var/lock/despliegue-vps.lock}"
+DESPLIEGUE_LOCK_WAIT="${DESPLIEGUE_LOCK_WAIT:-900}"
+exec 8>"$DESPLIEGUE_LOCK"
+flock -w "$DESPLIEGUE_LOCK_WAIT" 8 || {
+    echo "❌ ABORT SPEC-980: candado común del VPS ocupado (otro deploy o carga en curso): abortado sin cambios (tras ${DESPLIEGUE_LOCK_WAIT}s de espera)." >&2
+    exit 3
+}
+
+# SPEC-980: que NADA del script consuma el stdin del invocador. Correrlo por `bash -s` con un heredoc hacía
+# que un comando interno se tragara el resto del heredoc y se PERDIERAN los pasos siguientes. Redirigir el
+# stdin del propio script a /dev/null de una vez es más fuerte que parchear comando por comando: ningún
+# paso puede volver a leer del stdin heredado, y ninguno de este deploy lo necesita.
+exec </dev/null
+
 # SPEC-294 (002-PI-195): BuildKit obligatorio para respetar `RUN --mount=type=cache`
 # del Dockerfile (npm ci cache mount, prisma consolidado). Compose-plugin ya lo usa
 # por default; docker-compose classic (v1/v2 legacy) requiere estas dos vars.
