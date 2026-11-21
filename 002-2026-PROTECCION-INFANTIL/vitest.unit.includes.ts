@@ -911,4 +911,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-977 (I-459): la política nginx del guard deja pasar solo start/stop/restart de los 12
     // pi-* (== whitelist del adapter) y GET containers/json; todo lo demás 403. Mutación. Puro.
     "scripts/ci/docker-guard-politica.candado.test.ts",
+    // SPEC-978: el respaldo diario JAMÁS escribe un dump en claro (análisis estático del pipe
+    // pg_dump|age), aborta ante flag desconocido y falla cerrado sin destinatario. Mutación. Puro.
+    "scripts/respaldo/respaldar-bd.candado.test.ts",
 ];
