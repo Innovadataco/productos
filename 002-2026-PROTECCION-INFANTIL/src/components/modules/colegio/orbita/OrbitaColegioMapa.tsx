@@ -40,13 +40,32 @@ const LIENZO = 360;
 const CENTRO = LIENZO / 2;
 const RADIO_ORBITA = 128;
 
+/**
+ * SPEC-971 · redondea una coordenada/medida CALCULADA a una resolución fija.
+ *
+ * El defecto (hallazgo de Calidad sobre d30b9735): Math.cos/sin/sqrt dan resultados que
+ * difieren en el ÚLTIMO decimal entre el libm del servidor (Node) y el del navegador, así
+ * que un mismo atributo del SVG se renderiza con dígitos distintos en SSR y en cliente →
+ * warning de hidratación de React. Redondeando TODA coordenada calculada a 2 decimales,
+ * servidor y cliente coinciden. Se aplica en el ÚNICO lugar donde nace cada número
+ * (posicionEnOrbita y radioNodo); el resto de atributos del SVG son enteros constantes.
+ */
+const DECIMALES_SVG = 2;
+function redondear(n: number): number {
+    const factor = 10 ** DECIMALES_SVG;
+    return Math.round(n * factor) / factor;
+}
+
 function posicionEnOrbita(indice: number, total: number): { x: number; y: number } {
     const angulo = -Math.PI / 2 + (2 * Math.PI * indice) / Math.max(1, total);
-    return { x: CENTRO + RADIO_ORBITA * Math.cos(angulo), y: CENTRO + RADIO_ORBITA * Math.sin(angulo) };
+    return {
+        x: redondear(CENTRO + RADIO_ORBITA * Math.cos(angulo)),
+        y: redondear(CENTRO + RADIO_ORBITA * Math.sin(angulo)),
+    };
 }
 /** Radio del nodo ∝ nº de estudiantes (acotado para que el overview no se sature). */
 function radioNodo(estudiantes: number): number {
-    return Math.max(12, Math.min(26, 12 + Math.sqrt(Math.max(0, estudiantes)) * 2.6));
+    return redondear(Math.max(12, Math.min(26, 12 + Math.sqrt(Math.max(0, estudiantes)) * 2.6)));
 }
 
 interface Props {
