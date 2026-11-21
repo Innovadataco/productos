@@ -51,6 +51,9 @@ describe("reglas escritas a mano en la migración", () => {
       "asignacion_venta_cantidad_chk",
       "dividendo_neto_chk",
       "ajuste_caja_fraccion_chk",
+      "movimiento_fondo_unidades_chk",
+      "movimiento_fondo_monto_chk",
+      "movimiento_fondo_aporte_enlace_chk",
       "movimiento_caja_monto_chk",
       "dividendo_bruto_chk",
       "dividendo_fraccion_chk",
@@ -61,11 +64,12 @@ describe("reglas escritas a mano en la migración", () => {
       expect(nombres, esperado).toContain(esperado);
     }
     const indices = await db.$queryRaw<{ indexname: string }[]>`
-      SELECT indexname FROM pg_indexes WHERE indexname IN ('valor_unidad_fondo_vigente_key', 'precio_cierre_vigente_key')`;
-    expect(indices).toHaveLength(2);
+      SELECT indexname FROM pg_indexes WHERE indexname IN ('valor_unidad_fondo_vigente_key', 'precio_cierre_vigente_key', 'movimiento_fondo_constitucion_key')`;
+    expect(indices).toHaveLength(3);
     const disparadores = await db.$queryRaw<{ tgname: string }[]>`
       SELECT tgname FROM pg_trigger WHERE tgname LIKE '%\_solo\_insercion'`;
     expect(disparadores.map((d) => d.tgname).sort()).toEqual([
+      "ajuste_caja_solo_insercion",
       "certificacion_posicion_solo_insercion",
       "certificacion_solo_insercion",
       "conciliacion_solo_insercion",
@@ -77,6 +81,7 @@ describe("reglas escritas a mano en la migración", () => {
       "fila_fuente_solo_insercion",
       "intento_ingreso_solo_insercion",
       "movimiento_caja_solo_insercion",
+      "movimiento_fondo_solo_insercion",
       "orden_solo_insercion",
       "plan_version_solo_insercion",
       "regla_plan_solo_insercion",
