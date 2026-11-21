@@ -135,6 +135,15 @@ describe("actualizarPrecios · días no hábiles y sin negociación (base falsa)
     expect(llamadas.retiros).toBe(0);
   });
 
+  it("un retiro se revierte solo: si Yahoo trae después volumen para ese día, la carga vuelve a guardar el cierre", async () => {
+    const retirado = { ...previa("2024-03-27"), reemplazadoEn: new Date("2024-04-02T00:00:00Z") };
+    const { db, filas } = baseFalsa(CALENDARIO_2024, [retirado]);
+    const r = await actualizarPrecios(db, { desde: utc("2024-03-27"), hasta: utc("2024-03-27"), buscar: yahoo([{ dia: "2024-03-27", close: 100, volume: 800 }]), instrumentoIds: [ESPECIE], ahora: DESPUES });
+    expect(r).toMatchObject({ cierresNuevos: 1, cierresRetirados: 0 });
+    expect(vigentes(filas)).toEqual([["2024-03-27", "100"]]);
+    expect(filas).toHaveLength(2); // el retirado sigue en la historia
+  });
+
   it("HORARIO y SIN_CALENDARIO no retiran: no hay certeza de que el vigente sobre", async () => {
     const hoy = baseFalsa(CALENDARIO_2024, [previa("2024-03-26")]);
     const rHoy = await actualizarPrecios(hoy.db, { desde: utc("2024-03-26"), hasta: utc("2024-03-26"), buscar: yahoo([{ dia: "2024-03-26", close: 100, volume: 0 }]), instrumentoIds: [ESPECIE], ahora: new Date("2024-03-26T15:00:00Z") });

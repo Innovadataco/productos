@@ -41,4 +41,9 @@ describe("ayuda del script", () => {
     expect(USO_DEPURAR).toMatch(/dos veces/);
     expect(USO_DEPURAR).toMatch(/desplegado/);
   });
+
+  it("dice cómo se revierte un retiro (revisión de seguridad): la carga vuelve a guardar el cierre si Yahoo trae volumen", () => {
+    expect(USO_DEPURAR).toMatch(/[Ss]e revierte/);
+    expect(USO_DEPURAR).toMatch(/precios:actualizar -- --desde/);
+  });
 });

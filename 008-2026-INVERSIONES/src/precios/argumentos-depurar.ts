@@ -8,6 +8,8 @@ export const USO_DEPURAR = [
   "  Para escribir, --base debe ser el nombre de la base conectada (DATABASE_URL). --hasta por defecto: hoy.",
   "  Aplíquelo solo cuando el arreglo esté desplegado donde corran las cargas de precios (si no, el código",
   "  viejo vuelve a guardarlos), y córralo dos veces: la segunda debe dar 0 retirados.",
+  "  Se revierte solo: si Yahoo trae después volumen para un día retirado, `npm run precios:actualizar -- --desde",
+  "  <ese día>` vuelve a guardar su cierre (fila nueva); la retirada queda en la historia.",
 ].join("\n");
 
 export interface ArgumentosDepurar {
