@@ -37,7 +37,7 @@ async function caso() {
   const fecha = new Date(Date.UTC(2025, 1, 5) + (k - 1) * 7 * DIA);
   const nemos = ["A", "B"].map((l) => `L${corrida}${k}${l}`);
   const antes = new Date(fecha.getTime() - 14 * DIA);
-  const filas = [orden(antes, nemos[0]!, "Compra", 150, 1000), orden(antes, nemos[1]!, "Compra", 2500, 20), orden(new Date(fecha.getTime() - DIA), nemos[1]!, "Venta", 500, 20)];
+  const filas = [orden(antes, nemos[0]!, "Compra", 150, 1000), orden(antes, nemos[1]!, "Compra", 2600, 20), orden(new Date(fecha.getTime() - DIA), nemos[1]!, "Venta", 600, 20)];
   const t = await importarArchivoTrii(db, { nombreArchivo: `ordenes-leer-${k}.ficticio.csv`, contenido: new TextEncoder().encode(`${ENCABEZADO}\n${filas.join("\n")}\n`), usuarioId: duenoId });
   expect(t.estado).toBe("CARGADO");
   const fic = await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `3${String(k).padStart(3, "0")}${digitos}`, nombre: `Fondo ficticio de lectura ${k}` } });
@@ -87,7 +87,7 @@ describe("leerConciliacion", () => {
     const l = await leerConciliacion(db, c.fecha);
     expect(l).toMatchObject({ fechaCorte: c.fecha, conciliacion: null, frescura: null });
     expect(l!.porLiquidar).toEqual([
-      { nemotecnico: c.nemos[1], operacion: "VENTA", cantidad: 500n, fechaOperacion: new Date(c.fecha.getTime() - DIA), fechaLiquidacion: new Date(c.fecha.getTime() + DIA) },
+      { nemotecnico: c.nemos[1], operacion: "VENTA", cantidad: 600n, fechaOperacion: new Date(c.fecha.getTime() - DIA), fechaLiquidacion: new Date(c.fecha.getTime() + DIA) },
     ]);
   });
 
