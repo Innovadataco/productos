@@ -113,7 +113,7 @@ describe("la versión vigente, con cierres y distancia al nivel", () => {
     expect(celdas(fila(raiz, "FICTP"))[6]).toBe("sin cierre: el sistema solo trae cierres de las especies con compras");
     const portafolio = [...raiz.querySelectorAll("tbody tr")].filter((tr) => texto(tr.querySelector("th")) === "Portafolio").map(celdas);
     expect(portafolio.map((c) => [c[1], c[2], c[6], c[7]])).toEqual([
-      ["Monto por orden menor a", "$ 2.222.000", "—", "—"],
+      ["Monto por orden menor a", "$ 1.234.000", "—", "—"],
       ["Regla escrita", "—", "—", "—"],
     ]);
   });
@@ -183,5 +183,15 @@ describe("sin recomendaciones ni comandos", () => {
     const raiz = await pantalla();
     const nav = [...raiz.querySelectorAll('header nav a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
     expect(nav).toEqual([["Portafolio", "/", null], ["Plan", "/plan", "page"], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null]]);
+  });
+});
+
+describe("landmarks", () => {
+  it("no hay dos regiones con el mismo nombre (una sección con nombre ya es una región)", async () => {
+    const raiz = await pantalla();
+    const nombre = (el: Element) => (el.getAttribute("aria-labelledby") ?? "").split(" ").map((id) => raiz.querySelector(`#${id}`)?.textContent ?? "").join(" ");
+    const regiones = [...raiz.querySelectorAll('section[aria-labelledby], [role="region"]')].map(nombre);
+    expect(regiones.length).toBeGreaterThan(0);
+    expect(new Set(regiones).size, regiones.join(" | ")).toBe(regiones.length);
   });
 });

@@ -33,7 +33,7 @@ const regla = (r: Partial<ReglaLeida> & Pick<ReglaLeida, "id">): ReglaLeida => (
 });
 
 export const REGLAS_V1: readonly ReglaLeida[] = [
-  regla({ id: "r-port", condicion: "MONTO_ORDEN_BAJO", nivel: D("2222000"), detalle: "No operar con menos de ese monto por orden (ficticia)" }),
+  regla({ id: "r-port", condicion: "MONTO_ORDEN_BAJO", nivel: D("1234000"), detalle: "No operar con menos de ese monto por orden (ficticia)" }),
   regla({ id: "r-c", instrumentoId: "c", nemotecnico: "FICTC", conLotes: true, condicion: "CIERRE_BAJO", nivel: D("480"), accion: "COMPRAR", cantidad: 10n, detalle: "Si cierra bajo el nivel, comprar 10 (ficticia)" }),
   regla({ id: "r-a", instrumentoId: "a", nemotecnico: "FICTA", conLotes: true, condicion: "CIERRE_SOBRE", nivel: D("1200"), accion: "VENDER", cantidad: 50n, detalle: "Si cierra sobre el nivel, vender 50 (ficticia)", decisiones: 2 }),
   regla({ id: "r-b", instrumentoId: "b", nemotecnico: "FICTB", conLotes: true, condicion: "CIERRE_BAJO", nivel: D("2000"), accion: "VENDER", plazoHasta: dia("2024-10-31"), detalle: "Vender si cae bajo el nivel (ficticia)" }),

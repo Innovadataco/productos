@@ -11,6 +11,7 @@ import { importarArchivoTrii } from "@/importacion/trii/importar";
 import { registrarDecision } from "@/plan/decisiones";
 import { enlazarOrden } from "@/plan/enlaces";
 import { sumarDias } from "@/plan/fechas";
+import { ultimosCierres } from "@/plan/lectura";
 import { crearVersionPlan } from "@/plan/versiones";
 import { fechaEnBogota } from "@/precios/horario";
 import { obtenerResumen } from "@/tablero/datos";
@@ -164,5 +165,22 @@ describe("/decisiones/[id] contra la base", () => {
     expect(h).toContain(fecha(iso(d(10))));
     expect(h).toMatch(/fila \d+ de la carga del /);
     expect(h).not.toMatch(/"(cifrado|nonce|etiqueta)"/);
+  });
+});
+
+describe("último cierre por especie (database-reviewer MEDIO)", () => {
+  it("una sola consulta para todas las especies, con el desempate total y sin los reemplazados", async () => {
+    const contado = new PrismaClient({ log: [{ emit: "event", level: "query" }] });
+    let consultas = 0;
+    contado.$on("query", () => { consultas += 1; });
+    try {
+      const r = await ultimosCierres(contado, [ids.p1, ids.p2, "no-existe"]);
+      expect(consultas).toBe(1);
+      expect([r.get(ids.p1)?.fecha, r.get(ids.p1)?.precio.toString(), r.get(ids.p2)?.fecha]).toEqual([d(95), "11", d(5)]);
+      expect(r.has("no-existe")).toBe(false);
+      expect(await ultimosCierres(contado, [])).toEqual(new Map());
+    } finally {
+      await contado.$disconnect();
+    }
   });
 });

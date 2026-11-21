@@ -129,3 +129,13 @@ describe("una venta enlazada y una decisión corregida", () => {
     expect(texto((await pantalla("d-noact")).querySelector("footer"))).toContain("no recomienda comprar ni vender");
   });
 });
+
+describe("landmarks", () => {
+  it("no hay dos regiones con el mismo nombre (una sección con nombre ya es una región)", async () => {
+    const raiz = await pantalla("d-noact");
+    const nombre = (el: Element) => (el.getAttribute("aria-labelledby") ?? "").split(" ").map((id) => raiz.querySelector(`#${id}`)?.textContent ?? "").join(" ");
+    const regiones = [...raiz.querySelectorAll('section[aria-labelledby], [role="region"]')].map(nombre);
+    expect(regiones.length).toBeGreaterThan(0);
+    expect(new Set(regiones).size, regiones.join(" | ")).toBe(regiones.length);
+  });
+});

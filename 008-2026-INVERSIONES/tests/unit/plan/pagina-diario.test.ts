@@ -162,3 +162,13 @@ describe("sin recomendaciones", () => {
     expect(texto(raiz)).not.toMatch(/\b(compre|venda|recomendamos|le recomendamos|debería)\b/i);
   });
 });
+
+describe("landmarks", () => {
+  it("no hay dos regiones con el mismo nombre (una sección con nombre ya es una región)", async () => {
+    const raiz = await pantalla();
+    const nombre = (el: Element) => (el.getAttribute("aria-labelledby") ?? "").split(" ").map((id) => raiz.querySelector(`#${id}`)?.textContent ?? "").join(" ");
+    const regiones = [...raiz.querySelectorAll('section[aria-labelledby], [role="region"]')].map(nombre);
+    expect(regiones.length).toBeGreaterThan(0);
+    expect(new Set(regiones).size, regiones.join(" | ")).toBe(regiones.length);
+  });
+});

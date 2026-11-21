@@ -19,3 +19,18 @@ describe("plan.css", () => {
     for (const s of lista) expect(s, s).toMatch(/^\.plan(-top)?[\s.:[>]/);
   });
 });
+
+describe("plan.css · anclas y pares", () => {
+  const css = readFileSync(new URL("../../../src/app/_plan/plan.css", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const regla = (selector: string): string => new RegExp(`${selector.replace(/[.[\]:()]/g, "\\$&")}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? "";
+
+  it("un destino de un enlace (#regla-…, #ordenes, #resultado) no queda bajo el encabezado fijo y se marca", () => {
+    expect(regla(".plan [id]")).toMatch(/scroll-margin-top:/);
+    expect(regla(".plan tr:target")).toMatch(/outline:/);
+  });
+
+  it("los pares de la decisión no colapsan la etiqueta con un motivo largo", () => {
+    expect(regla(".plan .pares")).toMatch(/grid-template-columns:\s*max-content minmax\(0, 1fr\)/);
+    expect(regla(".plan .pares dd")).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+});

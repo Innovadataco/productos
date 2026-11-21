@@ -99,6 +99,12 @@ describe("el resultado de una decisión", () => {
   });
 });
 
+describe("los motivos dicen lo que se mide", () => {
+  it("CARGA_NO_CUBRE: se mide por la fecha de la última carga de Trii, no por el contenido del archivo", () => {
+    expect(MOTIVOS_SIN_DIVIDENDOS.CARGA_NO_CUBRE).toBe("la última carga de los archivos de Trii es anterior a la fecha objetivo");
+  });
+});
+
 describe("ningún texto recomienda comprar ni vender", () => {
   it("las frases fijas y las de todas las acciones, condiciones y motivos", () => {
     const todos = [
