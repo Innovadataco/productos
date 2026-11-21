@@ -17,6 +17,9 @@ const POSICION_E = ENTRYPOINT.indexOf("-e");
 const SCRIPT = POSICION_E >= 0 ? (ENTRYPOINT[POSICION_E + 1] ?? "") : "";
 const ARGUMENTOS_PROD = POSICION_E >= 0 ? ENTRYPOINT.slice(POSICION_E + 2) : [];
 
+// El relé corre sin ninguna variable de entorno, como en el compose.
+const SIN_ENTORNO = {} as NodeJS.ProcessEnv;
+
 const vivos: Array<ChildProcess | net.Server | net.Socket> = [];
 afterEach(() => {
   for (const x of vivos.splice(0)) {
@@ -59,7 +62,7 @@ type Rele = { puerto: number; salida: () => string; proceso: ChildProcess };
 async function rele(puertoDestino: number, opciones: { inactivoS?: string; maximo?: string } = {}): Promise<Rele> {
   const puerto = await puertoLibre();
   const args = ["-e", SCRIPT, "127.0.0.1", String(puertoDestino), String(puerto), opciones.inactivoS ?? "120", opciones.maximo ?? "64"];
-  const proceso = spawn(process.execPath, args, { env: {} });
+  const proceso = spawn(process.execPath, args, { env: SIN_ENTORNO });
   vivos.push(proceso);
   let salida = "";
   proceso.stdout.on("data", (c: Buffer) => (salida += c));
@@ -203,7 +206,7 @@ describe("inv-008-entrada · el relé ejecutado contra un eco", () => {
 
   it("con argumentos inválidos no arranca (sale con 64) y lo dice sin eco de lo recibido", async () => {
     for (const args of [["inv-008-app", "5008", "5008", "120"], ["inv-008-app;x", "5008", "5008", "120", "64"], ["inv-008-app", "0", "5008", "120", "64"], ["inv-008-app", "5008", "5008", "0", "64"]]) {
-      const proceso = spawn(process.execPath, ["-e", SCRIPT, ...args], { env: {} });
+      const proceso = spawn(process.execPath, ["-e", SCRIPT, ...args], { env: SIN_ENTORNO });
       vivos.push(proceso);
       let salida = "";
       proceso.stderr.on("data", (c: Buffer) => (salida += c));

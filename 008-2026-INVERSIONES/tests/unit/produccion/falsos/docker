@@ -113,19 +113,23 @@ case "${1:-}" in
     esac
     exit 0 ;;
   exec)
-    # La prueba de no salida: nslookup y nc dentro de la entrada (con salida) o de la app (sin salida).
+    # La prueba de no salida: nslookup y nc dentro de la entrada (con salida) o de la app (sin salida). Los textos
+    # por defecto van en variables: un apóstrofo dentro de ${x-…} entre comillas dobles rompe el análisis de bash.
     cid_exec="${2:-}"
+    resuelve_entrada="Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\nNon-authoritative answer:\nName:\tapi.telegram.org\nAddress: 203.0.113.7\n"
+    no_resuelve_app="Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\n** server can't find api.telegram.org: SERVFAIL\n"
+    sin_ruta="nc: can't connect to remote host (203.0.113.7): Network unreachable"
     case " $* " in
       *" nslookup "*)
         if [ "$cid_exec" = "${FALSO_CID_ENTRADA-cidentrada}" ]; then
-          printf '%b' "${FALSO_NSLOOKUP_ENTRADA-Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\nNon-authoritative answer:\nName:\tapi.telegram.org\nAddress: 203.0.113.7\n}"
+          printf '%b' "${FALSO_NSLOOKUP_ENTRADA-$resuelve_entrada}"
           exit "${FALSO_NSLOOKUP_ENTRADA_RC:-0}"
         fi
-        printf '%b' "${FALSO_NSLOOKUP_APP-Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\n** server can't find api.telegram.org: SERVFAIL\n}"
+        printf '%b' "${FALSO_NSLOOKUP_APP-$no_resuelve_app}"
         exit "${FALSO_NSLOOKUP_APP_RC:-1}" ;;
       *" nc "*)
         if [ "$cid_exec" = "${FALSO_CID_ENTRADA-cidentrada}" ]; then exit "${FALSO_NC_ENTRADA_RC:-0}"; fi
-        printf '%s\n' "${FALSO_NC_APP_MSG-nc: can't connect to remote host (203.0.113.7): Network unreachable}" >&2
+        printf '%s\n' "${FALSO_NC_APP_MSG-$sin_ruta}" >&2
         exit "${FALSO_NC_APP_RC:-1}" ;;
     esac
     [ -z "${FALSO_EXECS:-}" ] || printf '%s\n' "$cid_exec" >>"$FALSO_EXECS"
