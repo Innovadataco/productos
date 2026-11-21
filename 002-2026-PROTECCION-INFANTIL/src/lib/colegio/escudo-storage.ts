@@ -22,7 +22,9 @@ export function getEscudosStorageDir(): string {
 
 export function rutaEscudo(assetKey: string): string {
     // assetKey es "<colegioId>.<ext>" — path.basename evita traversal.
-    return path.join(getEscudosStorageDir(), path.basename(assetKey));
+    // SPEC-966: el escudo vive en storage/escudos (subida de RUNTIME, no existe al build);
+    // el tracer de next no puede ni debe trazarlo → opt-out.
+    return path.join(/*turbopackIgnore: true*/ getEscudosStorageDir(), path.basename(assetKey));
 }
 
 export type ValidacionEscudo = { ok: true; ext: "png" | "jpg" } | { ok: false; motivo: string };
@@ -55,7 +57,8 @@ export async function guardarEscudo(colegioId: string, buffer: Buffer): Promise<
 export async function leerEscudoDataUri(assetKey: string | null): Promise<string | null> {
     if (!assetKey) return null;
     try {
-        const buffer = await readFile(rutaEscudo(assetKey));
+        // SPEC-966: subida de RUNTIME (storage/escudos), no un archivo del proyecto → opt-out del tracing.
+        const buffer = await readFile(/*turbopackIgnore: true*/ rutaEscudo(assetKey));
         const mime = assetKey.endsWith(".png") ? "image/png" : "image/jpeg";
         return `data:${mime};base64,${buffer.toString("base64")}`;
     } catch {

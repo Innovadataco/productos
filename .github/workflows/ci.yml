@@ -541,7 +541,19 @@ jobs:
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
       # Placeholders SOLO de build.
-      - run: npm run build
+      # SPEC-966 · candado de CONDUCTA (no de palabras): el build FALLA si next traza el
+      # proyecto entero por acceso dinámico a fs — el síntoma real, venga de donde venga
+      # (un readFile/fs/path dinámico sin /*turbopackIgnore: true*/). Mira la SALIDA de
+      # next build, no el fuente: un fs dinámico escrito de otra forma también cae acá.
+      # Mutación: quitar un turbopackIgnore reintroduce el warning → este paso da rojo.
+      - name: Build (+ candado anti-tracing dinámico de fs · SPEC-966)
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee /tmp/next-build-966.log
+          if grep -qE 'Dynamic filesystem access|matches [0-9]+ files in' /tmp/next-build-966.log; then
+            echo "::error::SPEC-966 · next build trazó el proyecto entero por acceso dinámico a fs (infla el standalone y puede embarcar archivos que no deben ir). Acotá la ruta a una base fija o agregá /*turbopackIgnore: true*/ a la llamada señalada arriba."
+            exit 1
+          fi
         env:
           RESEND_API_KEY: build-placeholder
           EMAIL_FROM: build@ci.local
