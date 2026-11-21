@@ -371,10 +371,42 @@ sudo env INV_TAG=<sha> $COMPOSE up -d --wait                    # app, entrada, 
 2. `$COMPOSE exec -T inv-008-db psql -U postgres -c 'DROP DATABASE inversiones WITH (FORCE)' -c 'CREATE DATABASE inversiones OWNER inv_dueno'`
 3. Seguir como en (A) desde `crear-roles-prod.sh`.
 
-**Prueba de restauración mensual** (y la primera, antes de retirar el chat de inversiones, D-013):
-- se hace con el caso (A), en un proyecto de prueba en el Mac;
-- los conteos por tabla deben ser iguales y la app debe responder `ok`;
-- se anotan la fecha y el resultado en `ESTADO.md`.
+**Prueba de restauración mensual** (y la primera, antes de retirar el chat de inversiones, D-013). La corre **Jelk en la Terminal de macOS**. Así la corrió el 2026-11-21, y funcionó.
+- **Dónde va la clave:** siempre en la Terminal de macOS, **nunca en una sesión de Claude ni en un chat**, ni siquiera un fragmento.
+- **Qué clave es:** la clave maestra de los respaldos, **la misma de PI y BI**. Si se expone, hay que volver a cifrar los respaldos de los tres productos.
+- **Cómo entra:** sale del gestor de contraseñas al portapapeles y entra por la entrada estándar (`pbpaste`). Nunca se guarda en un archivo.
+- **Qué prueba:** que la clave abre el respaldo y que `pg_restore` lo lee entero. Solo imprime conteos.
+- **Lo que no reemplaza:** la restauración real de los casos (A) y (B).
+
+1. **Carpeta de trabajo, en el home y en 700.** Docker Desktop no ve `/private/tmp` ni el `TMPDIR` de macOS. `<sha>` es el que corre (`estado/sha-actual`) o uno retenido; las dos imágenes del vigía traen `age` y `pg_restore`.
+   ```sh
+   umask 077
+   mkdir -m 700 ~/inv-008-restauracion
+   cp ~/<copia>/inversiones/inv-008-<fecha>.dump.age ~/<copia>/inversiones/inv-008-<fecha>.dump.age.sha256 ~/inv-008-restauracion/
+   (cd ~/inv-008-restauracion && shasum -a 256 -c inv-008-<fecha>.dump.age.sha256)   # debe decir OK
+   V=inv-008-vigia:<sha>
+   D=(docker run --rm -i --network none --platform linux/amd64)   # la imagen es amd64: en el Mac corre emulada
+   ```
+2. **Identificar la clave sin mostrarla.** Copie la clave del gestor y derive su pública. Debe ser igual a la pública de producción (`INV_AGE_PUBLICA`, <ver ESTADO en la gestión>).
+   ```sh
+   pbpaste | "${D[@]}" --entrypoint age-keygen "$V" -y
+   ```
+   - **Si `age-keygen` dice que la clave no es válida,** es porque el gestor la guardó sin el prefijo. En ese paso y en el siguiente, cambie `pbpaste` por `{ printf 'AGE-SECRET-KEY-'; pbpaste; }`.
+   - **Después, guárdela completa en el gestor**, con el prefijo.
+3. **Verificar, solo con conteos y sin red.** `age` descifra, `pg_restore -f -` lee el respaldo entero y `awk` cuenta las tablas con datos y las filas de `orden` y `lote`, sin imprimir valores:
+   ```sh
+   pbpaste | "${D[@]}" -v ~/inv-008-restauracion:/r:ro --entrypoint sh "$V" -c \
+     'age -d -i - /r/inv-008-<fecha>.dump.age | pg_restore -f - | awk '\''/^COPY /{t=$2;n=0;next} /^\\\.$/{if(t!=""){if(n>0)c++; if(t=="public.orden")o=n; if(t=="public.lote")l=n}; t="";next} t!=""{n++} END{printf "tablas con datos: %d · orden: %d · lote: %d\n",c,o,l}'\'''
+   ```
+   - **Resultado bueno:** los tres números son iguales a los de producción en la fecha del respaldo.
+   - **Si `age` falla,** la clave no corresponde a ese respaldo.
+   - **Si `pg_restore` falla,** el archivo está dañado: se prueba con otro respaldo y se avisa al CEO.
+4. **Limpiar:** el portapapeles y la carpeta.
+   ```sh
+   pbcopy < /dev/null
+   rm -rf ~/inv-008-restauracion
+   ```
+5. **Anotar** en `ESTADO.md` la fecha, el respaldo usado y el resultado. Solo conteos.
 
 ## 7 · Las imágenes no traen secretos
 ```sh
@@ -572,6 +604,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.8 · 2026-11-21 · 16:20 (-05) · Inversiones · Fábrica Inversiones (frente runbook-restauracion) · §6: la prueba de restauración mensual con el comando que corrió Jelk (identificar la clave con `age-keygen -y`, el prefijo que falta, verificar solo con conteos en `--network none` y `--platform linux/amd64`, carpeta 700 en el home, limpieza) y sus avisos (Terminal de macOS, clave maestra compartida con PI y BI)
 > v2.7 · 2026-11-21 · 11:14 (-05) · Inversiones · Fábrica ECC (frente precios-carga) · §11: pasos 10 a 12 (certificación, precios por `precios:exportar` en el Mac y `importar-precios` por el sobre, y la conciliación otra vez); formato exacto del CSV de cierres; `-s`, `.parcial` y `&& mv`, `umask 077`; «Después de la carga» sin el pendiente de precios
 > v2.6 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · la carpeta de respaldos en 750 (la copia de IDC depende de eso); montaje del host `nosuid,noexec` revisado por los scripts (por ahora avisa): un bind de Docker no los aplica
 > v2.5 · 2026-11-21 · 07:05 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · revisiones de seguridad y de código: SPEC-980 de PI activa (aviso en una línea, el candado común resuelve la exclusión); salida 64 de `inv-cargar`; el sobre en la memoria del host como riesgo residual; cita de Jelk restituida
