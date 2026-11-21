@@ -3,6 +3,7 @@
  * Una especie con ventas que sus lotes no cubren (VENTA_SIN_LOTES) no entra en filas, cerradas ni
  * totales: se informa aparte por nemotécnico hasta que se complete la carga de órdenes.
  */
+import "server-only";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { posiciones, type Posicion } from "../lotes/posiciones";
 import { calcularTablero, type EntradaEspecie, type Tablero } from "./calculo";

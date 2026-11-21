@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { Linea, Peso } from "./Graficas";
 import type { FilaVista, Vista } from "./tipos";
@@ -78,7 +78,7 @@ function Encabezado({ vista }: { vista: Vista }) {
         <div className="meta">
           Cierre <b>{fecha(vista.ultimoCierre)}</b> · última carga <b>{fecha(vista.ultimaCarga)}</b>
         </div>
-        <button type="button" className="pill" onClick={alternarTema} aria-pressed={claro} aria-label="Tema claro">Tema</button>
+        <button type="button" className="pill" onClick={alternarTema} aria-pressed={claro}>Tema claro</button>
       </div>
     </header>
   );
@@ -222,10 +222,15 @@ const sentido = (k: Orden): "ascending" | "descending" => (k === "nemo" ? "ascen
 function FilaPosicion({ f, activa, idBoton, elegir }: { f: FilaVista; activa: boolean; idBoton: string; elegir: (id: string) => void }) {
   const sube = n(f.sinVender) >= 0;
   const elegirEsta = () => elegir(f.id);
+  /** El botón no deja subir el clic a la fila: si no, se elegiría dos veces. */
+  const elegirDesdeBoton = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    elegirEsta();
+  };
   return (
     // El clic en la fila es un atajo de ratón; con teclado se usa el botón de la primera celda.
     <tr className={activa ? "sel" : ""} onClick={elegirEsta}>
-      <td><button type="button" id={idBoton} className="especie" aria-pressed={activa} onClick={elegirEsta}>{f.nemo}</button></td>
+      <td><button type="button" id={idBoton} className="especie" aria-pressed={activa} onClick={elegirDesdeBoton}>{f.nemo}</button></td>
       <td className="num">{numero(n(f.cantidad))}</td>
       <td className="num">{f.cierre ? cop(n(f.cierre.precio)) : SIN_DATO}<br />
         <span className={`chip ${f.cierre?.verificado ? "ok" : ""}`}>{f.cierre?.verificado ? "verificado A&V" : `sin verificar · ${fecha(f.cierre?.fecha ?? null)}`}</span></td>

@@ -11,27 +11,27 @@ const cierre = (precio: number) => ({ precio: D(precio), fecha: new Date("2024-0
 describe("calcularTablero", () => {
   const entradas = [
     especie({ nemotecnico: "AA", cantidad: 100n, costoVivo: D(1000), cierre: cierre(12), dividendos: D(30), comisiones: D(7) }),
-    especie({ nemotecnico: "BB", cantidad: 50n, costoVivo: D(2000), cierre: cierre(38), comisiones: D(7) }),
+    especie({ nemotecnico: "BB", cantidad: 50n, costoVivo: D(2000), cierre: cierre(37), comisiones: D(7) }),
     especie({ nemotecnico: "CC", cantidad: 0n, realizada: D(250), dividendos: D(15), comisiones: D(14) }),
   ];
   const t = calcularTablero(entradas);
 
   it("la ganancia total es exactamente sin vender + por ventas + dividendos − comisiones", () => {
-    expect(t.sinVender.toString()).toBe("100"); // AA +200, BB −100
+    expect(t.sinVender.toString()).toBe("50"); // AA +200, BB −150
     expect(t.porVentas.toString()).toBe("250");
     expect(t.dividendos.toString()).toBe("45");
     expect(t.comisiones.toString()).toBe("28");
-    expect(t.gananciaTotal.toString()).toBe("367");
+    expect(t.gananciaTotal.toString()).toBe("317");
     expect(t.gananciaTotal.equals(t.sinVender.add(t.porVentas).add(t.dividendos).sub(t.comisiones))).toBe(true);
   });
 
   it("valor, rentabilidad y peso de cada especie viva; los pesos suman 100", () => {
     expect(t.filas.map((f) => [f.nemotecnico, f.valor?.toString(), f.rentabilidadPct?.toFixed(1), f.pesoPct?.toFixed(2)])).toEqual([
-      ["BB", "1900", "-5.0", "61.29"],
-      ["AA", "1200", "20.0", "38.71"],
+      ["BB", "1850", "-7.5", "60.66"],
+      ["AA", "1200", "20.0", "39.34"],
     ]);
     expect(t.filas.reduce((s, f) => s.add(f.pesoPct!), D(0)).toFixed(6)).toBe("100.000000");
-    expect(t.valorAcciones.toString()).toBe("3100");
+    expect(t.valorAcciones.toString()).toBe("3050");
   });
 
   it("una especie vendida por completo no es una fila viva, pero su ganancia cuenta", () => {
