@@ -123,6 +123,24 @@ function filtroFlate(dic: PdfDic): boolean {
   return true;
 }
 
+/** Lee el objeto que la xref dice que está en su offset; debe declarar ese mismo número y generación. */
+function leerObjeto(b: Uint8Array, entrada: { offset: number; gen: number } | undefined, ref: PdfRef): Objeto {
+  if (!entrada || entrada.gen !== ref.gen || entrada.offset >= b.length) throw new ErrorPdf("PDF_XREF_INVALIDA");
+  const lex = new Lexico(b, entrada.offset);
+  if (numero(lex, "PDF_XREF_INVALIDA") !== ref.num || numero(lex, "PDF_XREF_INVALIDA") !== ref.gen) throw new ErrorPdf("PDF_XREF_INVALIDA");
+  palabra(lex, "obj", "PDF_XREF_INVALIDA");
+  const valor = leerValor(lex);
+  const t = lex.siguiente();
+  if (t?.t !== "palabra" || (t.v !== "endobj" && t.v !== "stream")) throw new ErrorPdf("PDF_OBJETO_INVALIDO");
+  return { valor, inicioStream: t.v === "stream" ? inicioDeDatos(b, lex.posicion) : null };
+}
+
+/** Los datos de un stream cortados por /Length (que debe terminar en «endstream»), sin decodificar. */
+function datosCrudos(b: Uint8Array, inicio: number, largo: number | null): Uint8Array {
+  if (largo === null || inicio + largo > b.length || !terminaEnEndstream(b, inicio + largo)) throw new ErrorPdf("PDF_STREAM_INVALIDO");
+  return b.subarray(inicio, inicio + largo);
+}
+
 export function abrirReferencias(b: Uint8Array): Referencias {
   const { offsets, trailer } = leerXref(b);
   const cache = new Map<number, Objeto>();
@@ -131,17 +149,7 @@ export function abrirReferencias(b: Uint8Array): Referencias {
   let inflados = 0;
 
   const objeto = (ref: PdfRef): Objeto => {
-    const enCache = cache.get(ref.num);
-    if (enCache) return enCache;
-    const entrada = offsets.get(ref.num);
-    if (!entrada || entrada.gen !== ref.gen || entrada.offset >= b.length) throw new ErrorPdf("PDF_XREF_INVALIDA");
-    const lex = new Lexico(b, entrada.offset);
-    if (numero(lex, "PDF_XREF_INVALIDA") !== ref.num || numero(lex, "PDF_XREF_INVALIDA") !== ref.gen) throw new ErrorPdf("PDF_XREF_INVALIDA");
-    palabra(lex, "obj", "PDF_XREF_INVALIDA");
-    const valor = leerValor(lex);
-    const t = lex.siguiente();
-    if (t?.t !== "palabra" || (t.v !== "endobj" && t.v !== "stream")) throw new ErrorPdf("PDF_OBJETO_INVALIDO");
-    const leido: Objeto = { valor, inicioStream: t.v === "stream" ? inicioDeDatos(b, lex.posicion) : null };
+    const leido = cache.get(ref.num) ?? leerObjeto(b, offsets.get(ref.num), ref);
     cache.set(ref.num, leido);
     return leido;
   };
@@ -167,9 +175,7 @@ export function abrirReferencias(b: Uint8Array): Referencias {
     const num = (valor as PdfRef).num;
     const enCache = decodificados.get(num);
     if (enCache) return { dic: o.valor, datos: enCache };
-    const largo = entero(resolver(o.valor.v.get("Length")) ?? null);
-    if (largo === null || o.inicioStream + largo > b.length || !terminaEnEndstream(b, o.inicioStream + largo)) throw new ErrorPdf("PDF_STREAM_INVALIDO");
-    const crudos = b.subarray(o.inicioStream, o.inicioStream + largo);
+    const crudos = datosCrudos(b, o.inicioStream, entero(resolver(o.valor.v.get("Length")) ?? null));
     const datos = filtroFlate(o.valor) ? inflar(crudos, MAX_INFLADO_TOTAL - inflados) : crudos;
     if (datos !== crudos) inflados += datos.length;
     decodificados.set(num, datos);
