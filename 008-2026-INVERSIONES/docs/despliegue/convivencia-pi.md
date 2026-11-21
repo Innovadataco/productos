@@ -8,7 +8,7 @@ Inversiones comparte el VPS de producción con PI (D-015). **PI tiene prioridad*
 
 **Cómo se garantiza:**
 - `mem_limit` igual a `memswap_limit` en cada contenedor, y `cpu_shares: 256`;
-- la **pausa obligatoria** en cada despliegue de PI;
+- la **pausa condicional** en los despliegues de PI (D-019): solo si su preflight de memoria arranca bajo;
 - un candado común;
 - el criterio de corte, que es **manual**, con dos herramientas que solo leen:
   - el vigía `inv-008-vigia`, que avisa por Telegram;
@@ -17,14 +17,17 @@ Inversiones comparte el VPS de producción con PI (D-015). **PI tiene prioridad*
 **Ninguna herramienta de Inversiones usa Docker sobre los contenedores de PI.** El OOM se lee del cgroup jerárquico en solo lectura, la memoria de `/proc/meminfo`, y nunca se usan el socket de Docker ni `/var/lib/docker`.
 - **Riesgo cerrado:** el contenedor de la app de PI ya no monta `docker.sock` ([productos#993](https://github.com/Innovadataco/productos/pull/993), con el guardia de PI). El riesgo de que un contenedor de PI comprometido leyera los secretos o la base de Inversiones por el socket ya no existe.
 
-## 1 · Pausa obligatoria en cada despliegue de PI
-**La medición del CEO de PI:**
-- durante su build, `MemAvailable` llegó a un mínimo de **1.593 MB**;
-- con los **1.152 MiB** de Inversiones quedarían unos **0,4 GB**;
-- por eso, pausar Inversiones en **cada** despliegue de PI es **obligatorio**.
+## 1 · Pausa condicional en los despliegues de PI (D-019)
+**La medición del CEO de PI:** durante su build, `MemAvailable` llegó a un mínimo de **1.593 MB**; con los **1.152 MiB** de Inversiones quedarían unos **0,4 GB**. Por eso, al principio la pausa era obligatoria en cada despliegue de PI.
 
-**La pausa la hace PI, con su propio código, en su `deploy-prod.sh`.** No llama a `pausar-008.sh`. Su procedimiento (lo hace PI, no Inversiones):
-1. **Al inicio:** `docker stop` de los contenedores con la etiqueta `com.docker.compose.project=inv-008-prod`. Compose la pone en todos los permanentes de Inversiones, también en `inv-008-entrada`; en el ensayo, lo comprobó `docker ps --filter label=…`. PI guarda esos IDs.
+**D-019 (decisión de Jelk, 2026-11-21): la pausa deja de ser obligatoria.**
+- **Cuándo la hay:** el `deploy-prod.sh` de PI corre un **preflight de memoria** al inicio. Pausa Inversiones **solo para ese build** si arranca con `MemAvailable` < **1 GiB** o `SwapFree` < **512 MB**.
+- **Si no se cumple ninguna de las dos,** Inversiones sigue arriba durante el build de PI.
+- **La marca de pausa y el candado común siguen como están acordados.**
+- **Inversiones no cambia nada de su lado.** El criterio de corte manual (§4) y el vigía (§5) siguen vigentes.
+
+**Cuando pausa, la hace PI, con su propio código, en su `deploy-prod.sh`.** No llama a `pausar-008.sh`. Su procedimiento (lo hace PI, no Inversiones):
+1. **Al inicio, si el preflight lo pide:** `docker stop` de los contenedores con la etiqueta `com.docker.compose.project=inv-008-prod`. Compose la pone en todos los permanentes de Inversiones, también en `inv-008-entrada`; en el ensayo, lo comprobó `docker ps --filter label=…`. PI guarda esos IDs.
    - El `docker start` de vuelta no sigue el orden de Compose: la entrada puede arrancar antes que la app. Está bien: resuelve la app en cada conexión. Lo midió el ensayo del frente app-sin-salida (stop por etiqueta y start con la app al final: 307, 401 y 200 por la entrada).
 2. **Al final**, con una trampa aunque falle, `docker start` de esos mismos IDs, **salvo que exista la marca de pausa** `<raíz>/estado/pausado`. Si existe, PI no reanuda.
 3. **Mientras despliega, PI tiene el candado común** (`/var/lock/despliegue-vps.lock`).
@@ -173,6 +176,7 @@ Lo ejecuta el coordinador con Jelk después del primer despliegue (condición de
 - `desplegar-prod.sh` toma los dos candados y revisa los procesos de PI en tres momentos: antes de empezar, antes de migrar y antes de `up`.
 
 ---
+> v2.5 · 2026-11-21 · 16:57 (-05) · Inversiones · Fábrica Inversiones (frente convivencia-d019) · D-019: la pausa de Inversiones en los despliegues de PI ya no es obligatoria; PI pausa solo para ese build si su preflight arranca con MemAvailable < 1 GiB o SwapFree < 512 MB; marca de pausa y candado común sin cambios
 > v2.4 · 2026-11-21 · 07:05 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · SPEC-980 de PI activa: PI toma el candado común y espera hasta 900 s; la pausa baja aunque no pueda escribir la marca, y con un despliegue en curso se niega; marcador `<raíz>` en el aviso del vigía
 > v2.3 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · sin nombres de contenedores ni de proyectos ajenos (salvo el alias SSH del Mac, decidido); reanudación manual marcada como excepción; `crear-roles-prod.sh` y `crear-acceso-inicial.sh` también toman el candado común
 > v2.3 · 2026-11-21 · 08:42 (-05) · Inversiones · Fábrica ECC (frente app-sin-salida) · la entrada en la pausa por etiqueta y en el presupuesto (techo de 1.088 MiB); el vigía comparte `inv-008-red` solo con la entrada
