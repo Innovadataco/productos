@@ -115,6 +115,16 @@ describe("importarCertificacion: reimportar no duplica y lo importado no se edit
     expect((await importarCertificacion(db, archivo(c, {}, menos))).errores.map((e) => e.codigo)).toEqual(["CONFLICTO_CERTIFICACION"]);
   });
 
+  it("misma fecha y mismas cifras pero otro encargo u otra descripción del fondo: CONFLICTO (security-reviewer MEDIO)", async () => {
+    const c = caso();
+    await registrarFondo(c);
+    await importarCertificacion(db, archivo(c));
+    const otroEncargo = { ...c.espec, fondos: [{ ...c.espec.fondos[0]!, encargo: "000000002" }] };
+    expect((await importarCertificacion(db, archivo(c, {}, otroEncargo))).errores.map((e) => e.codigo)).toEqual(["CONFLICTO_CERTIFICACION"]);
+    const otraDescripcion = { ...c.espec, fondos: [{ ...c.espec.fondos[0]!, descripcion: "FONDO FICTICIO DOS" }] };
+    expect((await importarCertificacion(db, archivo(c, {}, otraDescripcion))).errores.map((e) => e.codigo)).toEqual(["CONFLICTO_CERTIFICACION"]);
+  });
+
   it("el mismo archivo con otra fecha de corte se rechaza (ARCHIVO_YA_CARGADO)", async () => {
     const c = caso();
     await registrarFondo(c);
@@ -190,6 +200,26 @@ describe("importarCertificacion: el fondo se reconoce por su NIT", () => {
     const c = caso();
     await db.instrumento.create({ data: { tipo: "FIC", codigoFic: c.codigoFic, nombre: "Fondo ficticio", nitFondo: "99988877-1" } });
     expect((await importarCertificacion(db, archivo(c))).errores.map((e) => e.codigo)).toEqual(["FONDO_NO_COINCIDE"]);
+  });
+});
+
+describe("importarCertificacion: especies (database-reviewer y security-reviewer)", () => {
+  it("un nemotécnico que es símbolo de Trii de una acción y nemotécnico de otra: RECHAZADO ESPECIE_AMBIGUA, sin elegir al azar", async () => {
+    const c = caso();
+    await registrarFondo(c);
+    await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `${c.nemos[1]}X`, simboloTrii: c.nemos[1], nombre: "Acción ficticia" } });
+    await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: c.nemos[1]!, nombre: "Otra acción ficticia" } });
+    const r = await importarCertificacion(db, archivo(c));
+    expect(r.errores).toEqual([{ pagina: 1, fila: 4, columna: "NEMOTÉCNICO", codigo: "ESPECIE_AMBIGUA" }]);
+  });
+
+  it("un nemotécnico que coincide con el símbolo de un instrumento que no es acción no se asocia a él", async () => {
+    const c = caso();
+    await registrarFondo(c);
+    const fic = await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `8${c.codigoFic}`, simboloTrii: c.nemos[2], nombre: "Fondo ficticio" } });
+    expect((await importarCertificacion(db, archivo(c))).estado).toBe("CARGADO");
+    const pos = await db.certificacionPosicion.findMany({ where: { certificacion: { fechaCorte: c.fecha } }, select: { instrumentoId: true } });
+    expect(pos.map((p) => p.instrumentoId)).not.toContain(fic.id);
   });
 });
 
