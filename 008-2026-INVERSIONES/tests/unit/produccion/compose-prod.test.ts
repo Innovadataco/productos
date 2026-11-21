@@ -147,7 +147,9 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
   });
 
   it("el volumen de respaldos no cambia dueño ni permisos (sin uid, gid ni mode): la copia de IDC los necesita intactos", () => {
-    expect(compose.volumes[VOLUMEN_RESPALDOS]?.driver_opts?.o).not.toMatch(/uid|gid|mode|umask/);
+    const opciones = (compose.volumes[VOLUMEN_RESPALDOS]?.driver_opts?.o ?? "").split(",");
+    expect(opciones.filter((o) => /^(uid|gid|mode|umask|dmode|fmode)=/.test(o))).toEqual([]);
+    expect(opciones).toEqual(["bind", "nosuid", "noexec"]);
   });
 
   it("ningún servicio deja volcados de memoria (ulimits core 0): el host los escribiría en disco", () => {

@@ -234,14 +234,16 @@ problema_lugar_respaldos() {
 }
 
 # Imprime el problema de dueño, grupo o permisos de la carpeta de respaldos $1 (en producción), o nada: de $2
-# (root), del grupo $3 (INV_RESPALDO_GID, entero mayor que 0: nunca el de root), sin escritura del grupo ni de
-# otros, y sus padres hasta $4 (/) de $2 y sin escritura del grupo ni de otros. dockerd vuelve a resolver la
-# carpeta en cada arranque del respaldo: quien escribe en un padre podría cambiarla.
+# (root), del grupo $3 (INV_RESPALDO_GID, entero mayor que 0: nunca el de root), con los permisos de 750 (el grupo
+# lee y entra, sin escribir; nadie más: la copia diaria de IDC la baja con el usuario del grupo), y sus padres
+# hasta $4 (/) de $2 y sin escritura del grupo ni de otros. dockerd vuelve a montar la carpeta en cada arranque
+# del respaldo: quien escribe en un padre podría cambiarla.
 problema_permisos_respaldos() {
   local dir="$1" dueno="$2" gid="$3" tope="${4:-/}" ruta
   [[ "$gid" =~ ^[1-9][0-9]*$ ]] || { echo "INV_RESPALDO_GID no es un gid válido (entero mayor que 0)"; return 0; }
-  [ -n "$(find "$dir" -maxdepth 0 -type d -user "$dueno" -group "$gid" ! -perm -0020 ! -perm -0002 -print 2>/dev/null)" ] ||
-    { echo "no es de $dueno con el grupo $gid sin escritura del grupo ni de otros"; return 0; }
+  [ -n "$(find "$dir" -maxdepth 0 -type d -user "$dueno" -group "$gid" -perm -0050 ! -perm -0020 \
+    ! -perm -0004 ! -perm -0002 ! -perm -0001 -print 2>/dev/null)" ] ||
+    { echo "no es de $dueno con el grupo $gid en 750 (el grupo lee y entra sin escribir; nadie más)"; return 0; }
   ruta="$dir"
   while [ "$ruta" != "$tope" ] && [ "$ruta" != "/" ]; do
     ruta="$(dirname "$ruta")"
