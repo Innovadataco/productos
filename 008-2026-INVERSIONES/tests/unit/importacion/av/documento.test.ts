@@ -204,7 +204,7 @@ describe("abrirDocumento: revisión de PR-A (code-reviewer A1/M2/M3 y security-r
   it("la misma referencia repetida en /Contents se rechaza de inmediato, sin inflar una vez por referencia", () => {
     const inicio = Date.now();
     expect(codigo(() => abrirDocumento(pdf({ comprimir: true, contenidoExtra: OCHO_MB, repetirFlujo: 70 })))).toBe("PDF_ESTRUCTURA_INVALIDA");
-    expect(Date.now() - inicio).toBeLessThan(3000);
+    expect(Date.now() - inicio).toBeLessThan(1500);
   });
 
   it("más de 64 partes en /Contents se rechazan", () => {
