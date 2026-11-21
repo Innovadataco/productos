@@ -69,7 +69,7 @@ jobs:
   app-008:
     if: github.event_name == 'push' || startsWith(github.head_ref, 'work/inv-')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: 008-2026-INVERSIONES
@@ -106,10 +106,12 @@ jobs:
         run: npx prisma generate
       - name: Tipos
         run: npm run typecheck
-      - name: Pruebas unitarias (candados del esquema y la infraestructura)
-        run: npm test
-      - name: Pruebas de integración (reglas de la base)
-        run: npm run test:integracion
+      - name: Pruebas unitarias con cobertura (candados del esquema y la infraestructura)
+        run: npm run test:cobertura:unidad
+      - name: Pruebas de integración con cobertura (reglas de la base)
+        run: npm run test:cobertura:integracion
+      - name: Cobertura unida y pisos (unidad + integración, #1017)
+        run: npm run test:cobertura:unir
       - name: Build
         run: npm run build
 
