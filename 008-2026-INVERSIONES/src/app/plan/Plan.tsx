@@ -67,16 +67,16 @@ function Fila({ regla, conCierres }: { readonly regla: ReglaVista; readonly conC
 
 function Reglas({ vista }: { readonly vista: VistaPlan }) {
   return (
-    <section className="bloque" aria-labelledby="t-reglas">
+    <section className="bloque">
       <div className="cabeza"><div><div className="eyebrow">Una por una</div><h2 id="t-reglas">Reglas</h2></div></div>
       <div className="tabla" role="region" aria-labelledby="t-reglas" tabIndex={0}>
         <table aria-labelledby="t-reglas">
           <thead>
             <tr>
-              <th scope="col">Especie</th><th scope="col">Condición</th><th scope="col">Nivel</th><th scope="col">Acción de su regla</th>
-              <th scope="col">Cantidad</th><th scope="col">Plazo</th>
+              <th scope="col">Especie</th><th scope="col">Condición</th><th scope="col" className="num">Nivel</th><th scope="col">Acción de su regla</th>
+              <th scope="col" className="num">Cantidad</th><th scope="col">Plazo</th>
               {vista.conCierres ? <><th scope="col">Último cierre</th><th scope="col">Frente al nivel</th></> : null}
-              <th scope="col">Decisiones</th><th scope="col">Detalle</th>
+              <th scope="col" className="num">Decisiones</th><th scope="col">Detalle</th>
             </tr>
           </thead>
           <tbody>{vista.reglas.map((r) => <Fila key={r.id} regla={r} conCierres={vista.conCierres} />)}</tbody>

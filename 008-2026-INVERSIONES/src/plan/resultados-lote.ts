@@ -50,14 +50,25 @@ async function leerDecisiones(db: Db, ids: readonly string[]): Promise<DecisionL
   return filas.map((f) => ({ id: f.id, accion: f.accion, fechaDecision: f.fechaDecision, cantidad: f.cantidad, instrumentoId: f.instrumentoId, ordenes: f.enlaces.map((e) => e.orden) }));
 }
 
-/** Movimientos de la tenencia por especie hasta `hasta`: órdenes aprobadas por su operación y lotes de escisión por su fecha. */
-export async function movimientosDeEspecies(db: Db, especies: readonly string[], hasta: Date): Promise<Map<string, MovimientoTenencia[]>> {
+export interface Rango {
+  readonly desde: Date;
+  readonly hasta: Date;
+}
+
+/** Hasta qué fecha leer los movimientos de cada especie (todos desde el principio: la tenencia se acumula). */
+type Hastas = ReadonlyMap<string, Date> | Date;
+const hastaDe = (hastas: Hastas, id: string): Date | undefined => (hastas instanceof Date ? hastas : hastas.get(id));
+
+/** Movimientos de la tenencia por especie hasta su fecha: órdenes aprobadas por su operación y lotes de escisión por su fecha. */
+export async function movimientosDeEspecies(db: Db, especies: readonly string[], hastas: Hastas): Promise<Map<string, MovimientoTenencia[]>> {
+  const ids = especies.filter((id) => hastaDe(hastas, id) !== undefined);
+  if (ids.length === 0) return new Map();
   const [ordenes, lotes] = await Promise.all([
     db.orden.findMany({
-      where: { instrumentoId: { in: [...especies] }, estado: "APROBADO", cantidadCompletada: { gt: 0n }, fechaOperacion: { lte: hasta } },
+      where: { estado: "APROBADO", cantidadCompletada: { gt: 0n }, OR: ids.map((id) => ({ instrumentoId: id, fechaOperacion: { lte: hastaDe(hastas, id) } })) },
       select: { instrumentoId: true, lado: true, cantidadCompletada: true, fechaOperacion: true },
     }),
-    db.lote.findMany({ where: { instrumentoId: { in: [...especies] }, origen: "ESCISION", fechaCompra: { lte: hasta } }, select: { instrumentoId: true, cantidad: true, fechaCompra: true } }),
+    db.lote.findMany({ where: { origen: "ESCISION", OR: ids.map((id) => ({ instrumentoId: id, fechaCompra: { lte: hastaDe(hastas, id) } })) }, select: { instrumentoId: true, cantidad: true, fechaCompra: true } }),
   ]);
   const filas = [
     ...ordenes.map((o) => ({ instrumentoId: o.instrumentoId, fecha: o.fechaOperacion, cantidad: SIGNO_LADO[o.lado] * o.cantidadCompletada })),
@@ -78,23 +89,40 @@ async function cubiertoHasta(db: Db): Promise<Date | null> {
   return fechaEnBogota(new Date(Math.min(...fechas.map((f) => f!.getTime()))));
 }
 
-interface Rango {
-  readonly desde: Date;
-  readonly hasta: Date;
+interface BaseDecision {
+  readonly instrumentoId: string;
+  readonly fechaDecision: Date;
+  readonly ordenes: readonly { readonly fechaOperacion: Date }[];
 }
 
-async function contextos(db: Db, especies: readonly string[], r: Rango): Promise<{ cierres: Map<string, Cierre[]>; contexto: (id: string) => ContextoEspecie }> {
+/** Por especie, los días que usan SUS decisiones: de la base más vieja − 7 días a la más reciente + 90. */
+export function rangosPorEspecie(decisiones: readonly BaseDecision[]): Map<string, Rango> {
+  const bases = agrupar(decisiones, (d) => [d.fechaDecision, ...d.ordenes.map((o) => o.fechaOperacion)].map((f) => f.getTime()));
+  return new Map(
+    [...bases].map(([id, listas]) => {
+      const tiempos = listas.flat();
+      return [id, { desde: sumarDias(new Date(Math.min(...tiempos)), -MAX_RETROCESO_DIAS), hasta: sumarDias(new Date(Math.max(...tiempos)), HORIZONTE_MAX) }];
+    }),
+  );
+}
+
+async function contextos(db: Db, rangos: ReadonlyMap<string, Rango>): Promise<{ cierres: Map<string, Cierre[]>; contexto: (id: string) => ContextoEspecie }> {
+  const especies = [...rangos.keys()];
+  const porRango = <C extends string>(campo: C, desdeExclusivo: boolean) =>
+    [...rangos].map(([id, r]) => ({ instrumentoId: id, [campo]: desdeExclusivo ? { gt: r.desde, lte: r.hasta } : { gte: r.desde, lte: r.hasta } }));
+  const hastaGlobal = new Date(Math.max(...[...rangos.values()].map((r) => r.hasta.getTime())));
   const [cierres, dividendos, movimientos, eventos, cobertura] = await Promise.all([
     db.precioCierre.findMany({
-      where: { instrumentoId: { in: [...especies] }, fuente: FUENTE_CIERRES, reemplazadoEn: null, fecha: { gte: r.desde, lte: r.hasta } },
+      where: { fuente: FUENTE_CIERRES, reemplazadoEn: null, OR: porRango("fecha", false) },
       select: { id: true, instrumentoId: true, fecha: true, precio: true, estado: true, fuente: true },
-      orderBy: { fecha: "asc" },
+      orderBy: [{ fecha: "asc" }, { id: "asc" }],
     }),
-    db.dividendo.findMany({ where: { instrumentoId: { in: [...especies] }, fechaPago: { gt: r.desde, lte: r.hasta } }, select: { id: true, instrumentoId: true, fechaPago: true, montoNeto: true, tipo: true } }),
-    movimientosDeEspecies(db, especies, r.hasta),
+    db.dividendo.findMany({ where: { OR: porRango("fechaPago", true) }, select: { id: true, instrumentoId: true, fechaPago: true, montoNeto: true, tipo: true } }),
+    movimientosDeEspecies(db, especies, new Map([...rangos].map(([id, r]) => [id, r.hasta]))),
     db.eventoCorporativo.findMany({
-      where: { fecha: { lte: r.hasta }, OR: [{ origenId: { in: [...especies] } }, { destinoId: { in: [...especies] } }] },
-      select: { origenId: true, destinoId: true, fecha: true, _count: { select: { lotes: true } } },
+      where: { fecha: { lte: hastaGlobal }, OR: [{ origenId: { in: especies } }, { destinoId: { in: especies } }] },
+      // Solo cuentan los lotes de escisión (database-reviewer BAJO): un lote de otro origen no completa la tenencia del destino.
+      select: { origenId: true, destinoId: true, fecha: true, _count: { select: { lotes: { where: { origen: "ESCISION" } } } } },
     }),
     cubiertoHasta(db),
   ]);
@@ -117,10 +145,7 @@ export async function resultadosDeDecisiones(db: Db, ids: readonly string[], hoy
   if (ids.length === 0) return new Map();
   const decisiones = await leerDecisiones(db, ids);
   if (decisiones.length === 0) return new Map();
-  const bases = decisiones.flatMap((d) => [d.fechaDecision, ...d.ordenes.map((o) => o.fechaOperacion)]).map((f) => f.getTime());
-  const rango = { desde: sumarDias(new Date(Math.min(...bases)), -MAX_RETROCESO_DIAS), hasta: sumarDias(new Date(Math.max(...bases)), HORIZONTE_MAX) };
-  const especies = [...new Set(decisiones.map((d) => d.instrumentoId))];
-  const { cierres, contexto } = await contextos(db, especies, rango);
+  const { cierres, contexto } = await contextos(db, rangosPorEspecie(decisiones));
   return new Map(
     decisiones.map((d) => {
       const r = calcularResultados({ accion: d.accion, fechaDecision: d.fechaDecision, cantidad: d.cantidad, ordenes: d.ordenes, cierres: cierres.get(d.instrumentoId) ?? [], especie: contexto(d.instrumentoId), hoy });

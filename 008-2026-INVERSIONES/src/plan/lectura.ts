@@ -126,15 +126,19 @@ export async function leerReglas(db: Db, planVersionId: string): Promise<ReglaLe
   return filas.map(({ instrumento, _count, ...r }) => ({ ...r, nemotecnico: instrumento?.nemotecnico ?? null, conLotes: (instrumento?._count.lotes ?? 0) > 0, decisiones: _count.decisiones }));
 }
 
-/** El último cierre vigente de cada especie, de cualquier fuente (la regla del tablero). */
+/**
+ * El último cierre vigente de cada especie, de cualquier fuente (la regla del tablero), en UNA consulta
+ * (database-reviewer MEDIO: no una por especie). `DISTINCT ON` con desempate total; los ids van parametrizados.
+ */
 export async function ultimosCierres(db: Db, ids: readonly string[]): Promise<ReadonlyMap<string, CierreLeido>> {
-  const filas = await Promise.all(
-    [...new Set(ids)].map(async (id) => {
-      const c = await db.precioCierre.findFirst({ where: { instrumentoId: id, reemplazadoEn: null }, orderBy: [{ fecha: "desc" }, { traidoEn: "desc" }], select: { fecha: true, precio: true, estado: true } });
-      return [id, c] as const;
-    }),
-  );
-  return new Map(filas.flatMap(([id, c]) => (c ? [[id, c] as const] : [])));
+  const unicos = [...new Set(ids)];
+  if (unicos.length === 0) return new Map();
+  const filas = await db.$queryRaw<(CierreLeido & { readonly instrumentoId: string })[]>`
+    SELECT DISTINCT ON ("instrumentoId") "instrumentoId", "fecha", "precio", "estado"::text AS "estado"
+    FROM "precio_cierre"
+    WHERE "instrumentoId" = ANY(${unicos}::text[]) AND "reemplazadoEn" IS NULL
+    ORDER BY "instrumentoId", "fecha" DESC, "traidoEn" DESC, "id" DESC`;
+  return new Map(filas.map(({ instrumentoId, ...c }) => [instrumentoId, c]));
 }
 
 /** calendario_bvc es chica (festivos de 2022 a 2027): se lee entera. */

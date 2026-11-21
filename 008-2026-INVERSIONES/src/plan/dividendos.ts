@@ -6,7 +6,9 @@
  * Entran los pagos con fecha en (base, objetivo] que no son la fracción de una escisión (esa es ganancia realizada).
  * Cuando no se puede saber qué le tocaba a la cantidad medida, el tramo NO es medible y se dice por qué:
  *   - ESCISION_SIN_LOTE: la especie salió de una escisión sin su lote: la tenencia está incompleta.
- *   - CARGA_NO_CUBRE: el objetivo es posterior a lo que llegan las cargas de Trii (órdenes y dividendos).
+ *   - CARGA_NO_CUBRE: el objetivo es posterior a la fecha de la última carga de Trii (órdenes y dividendos). Es una
+ *     APROXIMACIÓN: se mide por cuándo se cargó, no por la última fecha que trae el archivo (Trii no la da aparte);
+ *     un archivo exportado antes de cargarlo puede no traer un pago reciente.
  *   - SIN_TENENCIA: algún día de la ventana no hubo acciones (p. ej. se vendió todo): no se sabe qué pagó la especie.
  *   - TENENCIA_CAMBIA_CERCA_DEL_PAGO: hubo compras o ventas en los VENTANA_EX_DIAS anteriores a un pago. Es una
  *     APROXIMACIÓN de la fecha ex (que la base no tiene): el periodo ex de la BVC está por verificar.
@@ -35,7 +37,7 @@ export interface DividendoPagado {
 export interface ContextoEspecie {
   readonly dividendos: readonly DividendoPagado[];
   readonly movimientos: readonly MovimientoTenencia[];
-  /** Hasta qué fecha llegan las cargas de Trii de órdenes Y de dividendos; null si falta alguna. */
+  /** El día (en Colombia) de la última carga de Trii de órdenes Y de dividendos, el menor de los dos; null si falta alguna. */
   readonly cubiertoHasta: Date | null;
   readonly destinoSinLote: boolean;
   /** Fechas de las escisiones en que la especie es el origen. */

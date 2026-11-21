@@ -18,7 +18,7 @@ export const NOTA_FUENTES = "Los dividendos salen de los archivos de Trii; los c
 export const MOTIVOS_SIN_DIVIDENDOS: Readonly<Record<MotivoSinDividendos, string>> = {
   SIN_TENENCIA: "no quedaron acciones en la ventana para saber qué pagó la especie",
   TENENCIA_CAMBIA_CERCA_DEL_PAGO: "la tenencia cambió en los 10 días anteriores a un pago (aproximación de la fecha ex, que la base no tiene)",
-  CARGA_NO_CUBRE: "los archivos de Trii cargados no llegan a la fecha objetivo",
+  CARGA_NO_CUBRE: "la última carga de los archivos de Trii es anterior a la fecha objetivo",
   ESCISION_SIN_LOTE: "falta el lote de la escisión de la que salió la especie",
 };
 

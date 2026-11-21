@@ -2,14 +2,7 @@
  * Encabezado de las pantallas del plan y del diario: la marca y la navegación entre secciones, con la actual marcada
  * (`aria-current="page"`). Componente del servidor, sin JavaScript en el navegador.
  */
-const SECCIONES = [
-  { clave: "portafolio", texto: "Portafolio", href: "/" },
-  { clave: "plan", texto: "Plan", href: "/plan" },
-  { clave: "decisiones", texto: "Decisiones", href: "/decisiones" },
-  { clave: "conciliacion", texto: "Conciliación", href: "/conciliacion" },
-] as const;
-
-export type Seccion = (typeof SECCIONES)[number]["clave"];
+import { SECCIONES, type Seccion } from "../tablero/secciones";
 
 export function Encabezado({ actual }: { readonly actual: Seccion }) {
   return (

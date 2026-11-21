@@ -47,8 +47,8 @@ function Decision({ v }: { readonly v: VistaDecision }) {
         <dt>Fecha</dt><dd>{fecha(d.fecha)}</dd>
         <dt>Registrada</dt><dd>{`${fechaHora(v.registradaEl)} (hora de Colombia)`}</dd>
       </dl>
-      {d.corregidaPor ? <p className="nota aviso">{`Esta decisión se corrigió el ${fecha(d.corregidaPor.fecha)}: `}<a href={`/decisiones/${encodeURIComponent(d.corregidaPor.id)}`}>ver la corrección</a></p> : null}
-      {d.corrige ? <p className="nota">{`Corrige la decisión del ${fecha(d.corrige.fecha)}: `}<a href={`/decisiones/${encodeURIComponent(d.corrige.id)}`}>ver la anterior</a></p> : null}
+      {d.corregidaPor ? <p className="nota aviso">{`Esta decisión se corrigió el ${fecha(d.corregidaPor.fecha)}: `}<a href={`/decisiones/${encodeURIComponent(d.corregidaPor.id)}`} aria-label={`ver la corrección del ${fecha(d.corregidaPor.fecha)}`}>ver la corrección</a></p> : null}
+      {d.corrige ? <p className="nota">{`Corrige la decisión del ${fecha(d.corrige.fecha)}: `}<a href={`/decisiones/${encodeURIComponent(d.corrige.id)}`} aria-label={`ver la decisión anterior, del ${fecha(d.corrige.fecha)}`}>ver la anterior</a></p> : null}
     </section>
   );
 }
@@ -60,12 +60,12 @@ const textoEnlace = (e: EnlaceVista): string => {
 
 function Ordenes({ v }: { readonly v: VistaDecision }) {
   return (
-    <section className="bloque" id="ordenes" aria-labelledby="t-ordenes">
+    <section className="bloque" id="ordenes">
       <div className="cabeza"><div><div className="eyebrow">De Trii</div><h2 id="t-ordenes">Órdenes enlazadas</h2></div></div>
       {v.ordenes.length === 0 ? <p className="nota">Todavía no tiene órdenes enlazadas.</p> : (
         <div className="tabla" role="region" aria-labelledby="t-ordenes" tabIndex={0}>
           <table aria-labelledby="t-ordenes" className="angosta">
-            <thead><tr><th scope="col">Fecha</th><th scope="col">Operación</th><th scope="col">Cantidad</th><th scope="col">Total con comisión</th><th scope="col">Fila importada</th></tr></thead>
+            <thead><tr><th scope="col">Fecha</th><th scope="col">Operación</th><th scope="col" className="num">Cantidad</th><th scope="col" className="num">Total con comisión</th><th scope="col">Fila importada</th></tr></thead>
             <tbody>
               {v.ordenes.map((o) => (
                 <tr key={o.id}>
@@ -110,12 +110,12 @@ function Horizonte({ h }: { readonly h: HorizonteVista }) {
       {h.tramos.length > 0 ? (
         <div className="tabla" role="region" aria-labelledby={id} tabIndex={0}>
           <table aria-labelledby={id} className="angosta">
-            <thead><tr><th scope="col">Desde</th><th scope="col">Hasta</th><th scope="col">Cierre inicial</th><th scope="col">Cierre final</th><th scope="col">Precio</th><th scope="col">Dividendos</th></tr></thead>
+            <thead><tr><th scope="col">Desde</th><th scope="col">Hasta</th><th scope="col" className="num">Cierre inicial</th><th scope="col" className="num">Cierre final</th><th scope="col" className="num">Precio</th><th scope="col" className="num">Dividendos</th></tr></thead>
             <tbody>
               {h.tramos.map((t, i) => (
                 // Lista estática (sin JS en el navegador): dos ejecuciones del mismo día comparten fechas; el índice desempata.
                 <tr key={`${t.desde}-${i}`}>
-                  <th scope="row">{fecha(t.desde)}</th><td>{fecha(t.hasta)}</td><td className="num">{cierre(t.precioBase)}</td><td className="num">{cierre(t.precioObjetivo)}</td>
+                  <th scope="row">{fecha(t.desde)}</th><td className="texto">{fecha(t.hasta)}</td><td className="num">{cierre(t.precioBase)}</td><td className="num">{cierre(t.precioObjetivo)}</td>
                   <td className="num">{t.resultadoPrecio === null ? SIN_DATO : cop(n(t.resultadoPrecio), true)}</td><td className="num">{celdaDividendos(t)}</td>
                 </tr>
               ))}

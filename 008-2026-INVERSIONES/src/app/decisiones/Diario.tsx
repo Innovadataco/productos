@@ -31,7 +31,10 @@ function Fila({ d }: { readonly d: DecisionVista }) {
       <td className="texto">{d.motivo}</td>
       <td className="num">{d.accion === "NO_ACTUAR" ? SIN_DATO : d.ordenes}</td>
       {d.corregidaPor ? (
-        <td className="texto" colSpan={2}>Corregida: <a href={`/decisiones/${encodeURIComponent(d.corregidaPor.id)}`}>ver la corrección</a></td>
+        <td className="texto" colSpan={2}>
+          Corregida:{" "}
+          <a href={`/decisiones/${encodeURIComponent(d.corregidaPor.id)}`} aria-label={`ver la corrección del ${fecha(d.corregidaPor.fecha)} (de la decisión del ${fecha(d.fecha)})`}>ver la corrección</a>
+        </td>
       ) : (
         <>
           <td className="texto">{d.d30 ? <Resultado resultado={d.d30} href={enlace} /> : SIN_DATO}</td>
@@ -48,8 +51,8 @@ function TablaDecisiones({ vista }: { readonly vista: VistaDiario }) {
       <table aria-labelledby="t-decisiones">
         <thead>
           <tr>
-            <th scope="col">Fecha</th><th scope="col">Especie</th><th scope="col">Decidió</th><th scope="col">Cantidad</th><th scope="col">Regla</th>
-            <th scope="col">Motivo</th><th scope="col">Órdenes</th><th scope="col">A 30 días</th><th scope="col">A 90 días</th>
+            <th scope="col">Fecha</th><th scope="col">Especie</th><th scope="col">Decidió</th><th scope="col" className="num">Cantidad</th><th scope="col">Regla</th>
+            <th scope="col">Motivo</th><th scope="col" className="num">Órdenes</th><th scope="col">A 30 días</th><th scope="col">A 90 días</th>
           </tr>
         </thead>
         <tbody>{vista.decisiones.map((d) => <Fila key={d.id} d={d} />)}</tbody>
@@ -60,7 +63,7 @@ function TablaDecisiones({ vista }: { readonly vista: VistaDiario }) {
 
 function Decisiones({ vista }: { readonly vista: VistaDiario }) {
   return (
-    <section className="bloque" aria-labelledby="t-decisiones">
+    <section className="bloque">
       <div className="cabeza"><div><div className="eyebrow">Una por una</div><h2 id="t-decisiones">Decisiones</h2></div></div>
       {vista.decisiones.length === 0 ? <p>Todavía no hay decisiones registradas.</p> : <TablaDecisiones vista={vista} />}
       {vista.truncado ? <p className="nota aviso">{`Se muestran las ${TOPE_DIARIO} decisiones más recientes.`}</p> : null}
@@ -72,7 +75,7 @@ function TablaOrdenes({ ordenes, id }: { readonly ordenes: readonly OrdenVista[]
   return (
     <div className="tabla" role="region" aria-labelledby={id} tabIndex={0}>
       <table aria-labelledby={id} className="angosta">
-        <thead><tr><th scope="col">Fecha</th><th scope="col">Especie</th><th scope="col">Operación</th><th scope="col">Cantidad</th><th scope="col">Origen</th></tr></thead>
+        <thead><tr><th scope="col">Fecha</th><th scope="col">Especie</th><th scope="col">Operación</th><th scope="col" className="num">Cantidad</th><th scope="col">Origen</th></tr></thead>
         <tbody>
           {ordenes.map((o) => (
             <tr key={o.id}>
@@ -88,7 +91,7 @@ function TablaOrdenes({ ordenes, id }: { readonly ordenes: readonly OrdenVista[]
 
 function SinDecision({ vista }: { readonly vista: VistaDiario }) {
   return (
-    <section className="bloque" aria-labelledby="t-sin-decision">
+    <section className="bloque">
       <div className="cabeza"><div><div className="eyebrow">Trazabilidad</div><h2 id="t-sin-decision">Órdenes sin decisión registrada</h2></div></div>
       {vista.inicioPlan ? <p className="nota">{`Órdenes aprobadas de Trii desde que rige el plan (${fecha(vista.inicioPlan)}) que todavía no están enlazadas a una decisión.`}</p> : null}
       {vista.sinDecision.length > 0 ? <TablaOrdenes ordenes={vista.sinDecision} id="t-sin-decision" /> : <p className="nota">Todas las órdenes desde que rige el plan tienen su decisión.</p>}

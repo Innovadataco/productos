@@ -3,6 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } fro
 import type { KeyboardEvent, MouseEvent } from "react";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { Linea, Peso } from "./Graficas";
+import { SECCIONES } from "./secciones";
 import type { FilaVista, LineaConciliacionVista, MovimientoVista, Vista } from "./tipos";
 
 const MOVIMIENTO_REDUCIDO = "(prefers-reduced-motion: reduce)";
@@ -109,18 +110,11 @@ function FechaDeCierres({ vista }: { vista: Vista }) {
 }
 
 /** Las otras pantallas (plan, diario y conciliación); el portafolio es la actual. */
-const SECCIONES = [
-  { texto: "Portafolio", href: "/" },
-  { texto: "Plan", href: "/plan" },
-  { texto: "Decisiones", href: "/decisiones" },
-  { texto: "Conciliación", href: "/conciliacion" },
-] as const;
-
 function Secciones() {
   return (
     <nav aria-label="Secciones">
       <ul className="secciones">
-        {SECCIONES.map((s) => <li key={s.href}><a href={s.href} aria-current={s.href === "/" ? "page" : undefined}>{s.texto}</a></li>)}
+        {SECCIONES.map((s) => <li key={s.clave}><a href={s.href} aria-current={s.clave === "portafolio" ? "page" : undefined}>{s.texto}</a></li>)}
       </ul>
     </nav>
   );

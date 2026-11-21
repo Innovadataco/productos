@@ -24,3 +24,12 @@
 .plan details summary { cursor: pointer; font-weight: 600; margin-block: 8px; }
 .plan .lista { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
 .plan table.angosta { min-width: 640px; }
+/* El encabezado es fijo (sticky) y en el teléfono ocupa varias líneas: el destino de un enlace no queda debajo. */
+.plan [id] { scroll-margin-top: 160px; }
+.plan tr:target { background: var(--bg-2); outline: 2px solid var(--gold); outline-offset: -2px; }
+/* Los pares de la decisión: la etiqueta toma su ancho y el valor (un motivo largo) se parte. */
+.plan .pares { grid-template-columns: max-content minmax(0, 1fr); }
+.plan .pares dd { text-align: left; overflow-wrap: anywhere; }
+/* Encabezados de columna alineados con su dato: texto a la izquierda, cifras a la derecha. */
+.plan th[scope="col"] { text-align: left; }
+.plan th[scope="col"].num { text-align: right; }
