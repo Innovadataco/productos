@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
     // Spec 097: build standalone para la imagen Docker de producción (no afecta dev).
     output: "standalone",
+    // SPEC-975: Next 16.4 genera/actualiza AGENTS.md cuando `next dev` detecta un agente de IA
+    // (`syncAgentRulesForDev(dir, agentRules !== false)` en
+    // node_modules/next/dist/server/lib/start-server.js). Para PI, AGENTS.md es doctrina, no un
+    // archivo gestionado por el framework: lo desactivamos explícitamente. Candado:
+    // scripts/ci/next-agent-rules-off.candado.test.ts.
+    agentRules: false,
     // 002-PI-051 (B2): el proxy trunca el body a 10MB por defecto y el multipart de la
     // evidencia de apelación llegaba corrupto a request.formData() (el usuario veía
     // "La solicitud debe ser multipart/form-data" en vez del 413 por tamaño). Con 25MB
