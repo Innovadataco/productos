@@ -66,7 +66,7 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 | `scripts/construir-imagen.sh <sha> [--guardar <carpeta>]` | Mac | Construye las tres imágenes desde `git archive <sha>`, corre `npm audit --omit=dev --audit-level=high` y verifica el sha de cada imagen |
 | `sudo scripts/desplegar-prod.sh <inv-008-app:<sha>> [--cargar <tar> <sha256>] [--sin-migrar]` | VPS, con sudo | Despliega con respaldo previo, migraciones, healthcheck y convivencia. Sin «DEPLOY VERIFICADO <sha>» como última línea, no se dio por desplegado |
 | `scripts/respaldar-base.sh [--motivo <x>]` | VPS | Respaldo cifrado ya (lo pide al contenedor `inv-008-respaldo`) |
-| `scripts/crear-roles-prod.sh` | VPS, con sudo | Crea los roles de la base de producción (claves desde el único archivo de secretos) |
+| `scripts/crear-roles-prod.sh` | VPS, con sudo | Crea los roles de la base de producción (claves desde el único archivo de secretos): `inv_dueno`, `inv_app` y, solo si el archivo trae `INV_PRECIOS_DATABASE_URL`, `inv_precios` (servicio de precios; sin la línea lo omite y avisa, mal formada aborta). Sus permisos, por columna, los da el migrador (`docker/migrador/privilegios.sql`) |
 | `scripts/pausar-008.sh` · `scripts/reanudar-008.sh` | VPS, con sudo | Pausa (`down` sin `-v`, con marca) y reanudación de Inversiones |
 | `scripts/medir-memoria.sh` · `scripts/vigilar-convivencia.sh` | VPS | Medición de memoria y revisión de convivencia con PI. Solo informan: el corte es manual |
 
@@ -133,7 +133,8 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
-> v1.23 · 2026-11-21 · 17:05 (-05) · INV · Fábrica Inversiones (frente reglas-exportar-restauracion) · `precios:exportar` con los símbolos del portafolio: la Fábrica solo con orden del CEO Inversiones (decisión del CEO, 2026-11-21)
+> v1.24 · 2026-11-21 · 16:53 (-05) · INV · Fábrica Inversiones (frente precios-rol) · `crear-roles-prod.sh` también crea `inv_precios` si el archivo trae su URL
+> v1.23 · 2026-11-21 · 16:03 (-05) · INV · Fábrica Inversiones (frente reglas-exportar-restauracion) · `precios:exportar` con los símbolos del portafolio: la Fábrica solo con orden del CEO Inversiones (decisión del CEO, 2026-11-21)
 > v1.22 · 2026-11-21 · 10:48 (-05) · INV · Fábrica ECC (frente precios-carga) · `precios:exportar` (Mac) y `precios:importar` (vía B, camino único de escritura); en la carga, certificación → precios → conciliación
 > v1.21 · 2026-11-21 · 09:28 (-05) · INV · Fábrica ECC (frente app-sin-salida) · la app sin salida a internet detrás de `inv-008-entrada`, redes internal con la puerta de enlace aislada; la reversa con el clon en el sha que corre
 > v1.20 · 2026-11-21 · 08:34 (-05) · INV · Fábrica Inversiones · cobertura unida (`test:cobertura` = unidad + integración con `--merge-reports`, pisos 92/93/97/92); se retiran los pisos separados

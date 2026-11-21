@@ -185,6 +185,20 @@ Después se agregan a mano con `sudo nano`, sin pegarlas en la terminal:
   - Los pone **Jelk**, o un script que él corre, sin que pasen por el chat ni por un log.
   - La Fábrica no los lee: ni en pruebas ni en scripts se toca `~/.config/odin/`.
 
+**`INV_PRECIOS_DATABASE_URL`, el rol `inv_precios` del servicio de precios.** Es opcional mientras ese servicio no esté desplegado.
+- **Sin la línea,** `crear-roles-prod.sh` omite `inv_precios` y lo avisa: no lo crea ni le cambia la clave. Con la línea vacía o mal formada, aborta sin tocar Docker (y tampoco rota las otras dos claves).
+- **Formato:** `postgresql://inv_precios:<clave>@inv-008-db:5432/inversiones?connection_limit=2`, con una clave de `openssl rand -hex 32` distinta de las otras dos.
+- **La agrega Jelk en el VPS, sin verla,** cuando este cambio ya esté desplegado. Agrega la línea solo si no existe, con salto de línea previo si al archivo le falta; si `openssl` falla, no escribe nada. Deja el archivo en 600:
+  ```sh
+  sudo sh -c 'umask 077; f=<raíz>/.env.inversiones.production; if ! grep -q "^INV_PRECIOS_DATABASE_URL=" "$f"; then k="$(openssl rand -hex 32)" && [ ${#k} -eq 64 ] || { echo "openssl falló: no se escribió nada"; exit 1; }; [ -z "$(tail -c1 "$f")" ] || echo >> "$f"; printf "INV_PRECIOS_DATABASE_URL=postgresql://inv_precios:%s@inv-008-db:5432/inversiones?connection_limit=2\n" "$k" >> "$f"; fi; chmod 600 "$f"; stat -c "%a %U" "$f"; grep -cx "INV_PRECIOS_DATABASE_URL=postgresql://inv_precios:[0-9a-f]\{64\}@inv-008-db:5432/inversiones?connection_limit=2" "$f"'
+  ```
+  - Debe imprimir `600 root` y `1`. La clave no sale en pantalla ni en el historial.
+  - Si imprime `0`, la línea ya estaba con otro formato y el comando no la tocó. `crear-roles-prod.sh` abortaría con ella: corríjala con `sudo nano`, sin mostrar la pantalla.
+- **Después,** `sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-roles-prod.sh`. Debe decir «creando o actualizando inv_dueno, inv_app e inv_precios» y `roles listos: inv_app, inv_dueno, inv_precios`.
+- **Los permisos de tablas llegan con el siguiente despliegue que corra el migrador** (no con `--sin-migrar`): los da `privilegios.sql`. Hasta entonces `inv_precios` se conecta y no lee nada.
+- **Una vez creado el rol, la línea no se quita.** Los respaldos traen los permisos de `inv_precios`, y en una restauración (§6) `pg_restore --exit-on-error` se detiene en el primero si `crear-roles-prod.sh` no creó el rol (comprobado en una base de prueba con un rol temporal). Para cortarle el acceso, se rota su clave.
+  - Lo mismo en la restauración real de prueba en el Mac (§6, trimestral): su archivo ficticio debe traer una `INV_PRECIOS_DATABASE_URL` ficticia.
+
 **Clave de `age`.** Se genera en el Mac. La **privada** va directo al gestor de contraseñas de Jelk y **nunca** va al VPS. Al VPS solo va la **pública** (`age1…`).
 ```sh
 docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
@@ -194,7 +208,7 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
 
 **Rotación:**
 - **Cuándo:** todas las claves una vez al año y ante cualquier sospecha.
-- **Claves de los roles:** se cambian en el archivo y se corre `crear-roles-prod.sh`.
+- **Claves de los roles** (también la de `inv_precios`): se cambian en el archivo y se corre `crear-roles-prod.sh`.
 - **`INV_AUTH_SECRET`:** rotarlo cierra las sesiones.
 - **Claves de cifrado (`INV_CIFRADO_CLAVE_V<n>`) y el TOTP:**
   - `scripts/cifrar-existentes.ts` re-cifra `crudo` y `encargo`, pero no conoce `usuario.totpSecreto`.
@@ -245,7 +259,12 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
      - `token_acceso`: UPDATE de `usadoEn`;
      - `intento_ingreso`: INSERT;
      - `codigo_recuperacion`: INSERT, y UPDATE de `usadoEn` y `anuladoEn` (nunca DELETE).
-   - Esos permisos los aplica el migrador.
+   - `inv_precios`, solo si el archivo trae `INV_PRECIOS_DATABASE_URL` (§2). Todo por columna, con lo que usan `precios:actualizar` y `actualizar-fondo`:
+     - lee las especies y los fondos de `instrumento`, de `lote` solo `instrumentoId` (qué especies tienen lote), los símbolos y clases, el calendario, y de la certificación solo la fecha de corte y el precio de valoración;
+     - `precio_cierre` y `valor_unidad_fondo`: INSERT sin `reemplazadoEn` (lo que inserta nace vigente) y UPDATE solo de `reemplazadoEn`;
+     - nada de usuario, órdenes, filas crudas, cantidades ni costos; sin DELETE ni TRUNCATE.
+     - **Riesgo conocido:** quien tenga su clave puede insertar cierres o valores falsos (también como VERIFICADO) y, con el UPDATE de `reemplazadoEn`, retirar o reabrir vigentes. Ningún disparador lo acota todavía: va en una migración aparte, antes de desplegar el servicio.
+   - Esos permisos los aplica el migrador. Los de `inv_precios` se omiten si el rol no existe.
 3. **Desplegar:**
    ```sh
    sudo <raíz>/repo/008-2026-INVERSIONES/scripts/desplegar-prod.sh <id-imagen> \
@@ -617,8 +636,9 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
-> v2.9 · 2026-11-21 · 17:05 (-05) · Inversiones · Fábrica Inversiones (frente reglas-exportar-restauracion) · §6: frecuencias de las pruebas de restauración (mensual ligera, trimestral real del caso (A), (B) al cambiar el esquema); §11: `precios:exportar` con los símbolos del portafolio, la Fábrica solo con orden del CEO Inversiones
-> v2.8 · 2026-11-21 · 16:20 (-05) · Inversiones · Fábrica Inversiones (frente runbook-restauracion) · §6: la prueba de restauración mensual con el comando que corrió Jelk (identificar la clave con `age-keygen -y`, el prefijo que falta, verificar solo con conteos en `--network none` y `--platform linux/amd64`, carpeta 700 en el home, limpieza) y sus avisos (Terminal de macOS, clave maestra compartida con PI y BI)
+> v2.10 · 2026-11-21 · 17:01 (-05) · Inversiones · Fábrica Inversiones (frente precios-rol) · §2: `INV_PRECIOS_DATABASE_URL` opcional, cómo la agrega Jelk sin verla (y sin escribir nada si `openssl` falla), cuándo llegan los permisos y por qué la línea no se quita (restauración); §4: los permisos por columna de `inv_precios`
+> v2.9 · 2026-11-21 · 16:03 (-05) · Inversiones · Fábrica Inversiones (frente reglas-exportar-restauracion) · §6: frecuencias de las pruebas de restauración (mensual ligera, trimestral real del caso (A), (B) al cambiar el esquema); §11: `precios:exportar` con los símbolos del portafolio, la Fábrica solo con orden del CEO Inversiones
+> v2.8 · 2026-11-21 · 15:46 (-05) · Inversiones · Fábrica Inversiones (frente runbook-restauracion) · §6: la prueba de restauración mensual con el comando que corrió Jelk (identificar la clave con `age-keygen -y`, el prefijo que falta, verificar solo con conteos en `--network none` y `--platform linux/amd64`, carpeta 700 en el home, limpieza) y sus avisos (Terminal de macOS, clave maestra compartida con PI y BI)
 > v2.7 · 2026-11-21 · 11:14 (-05) · Inversiones · Fábrica ECC (frente precios-carga) · §11: pasos 10 a 12 (certificación, precios por `precios:exportar` en el Mac y `importar-precios` por el sobre, y la conciliación otra vez); formato exacto del CSV de cierres; `-s`, `.parcial` y `&& mv`, `umask 077`; «Después de la carga» sin el pendiente de precios
 > v2.6 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · la carpeta de respaldos en 750 (la copia de IDC depende de eso); montaje del host `nosuid,noexec` revisado por los scripts (por ahora avisa): un bind de Docker no los aplica
 > v2.5 · 2026-11-21 · 07:05 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · revisiones de seguridad y de código: SPEC-980 de PI activa (aviso en una línea, el candado común resuelve la exclusión); salida 64 de `inv-cargar`; el sobre en la memoria del host como riesgo residual; cita de Jelk restituida
