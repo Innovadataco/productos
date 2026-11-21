@@ -102,6 +102,11 @@ describe("leerTablaCertificacion: rechaza el archivo entero", () => {
     expect(error(() => leerTablaCertificacion(lectura([...RV, ...PIE]))).codigo).toBe("SECCION_FALTANTE");
   });
 
+  it("un título al final de una página puede tener su encabezado en la siguiente", () => {
+    const filas = leerTablaCertificacion(lectura([...RV, EFECTIVO[0]!, ...PIE], [EFECTIVO[1]!, EFECTIVO[2]!]));
+    expect(resumen(filas)).toEqual([["RENTA_VARIABLE", 1, 1, 4], ["EFECTIVO", 2, 2, 3]]);
+  });
+
   it("si una sección termina sin su encabezado de columnas", () => {
     expect(error(() => leerTablaCertificacion(lectura([...RV, ...PIE], [EFECTIVO[0]!])))).toEqual({ codigo: "ENCABEZADO_DESCONOCIDO", pagina: 2, linea: 1 });
   });
