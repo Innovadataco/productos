@@ -50,6 +50,8 @@ export interface OpcionesPdf {
   readonly fuenteF1?: string;
   /** Texto crudo que se agrega dentro del diccionario del trailer (p. ej. «/Encrypt 99 0 R»). */
   readonly trailerExtra?: string;
+  /** /Contents como arreglo de referencias («[4 0 R]») en vez de una referencia sola. */
+  readonly contenidosEnArreglo?: boolean;
 }
 
 export const CERTIFICACION_FICTICIA: EspecCertificacion = {
@@ -172,7 +174,7 @@ function flujo(contenido: string, comprimir: boolean): Objeto {
 
 function objetos(espec: EspecCertificacion, o: OpcionesPdf): Map<number, Objeto> {
   const [c1, c2] = paginas(espec, o);
-  const pagina = (contenido: number) => `<</Type /Page\n/Parent 1 0 R\n/Resources 2 0 R\n/MediaBox [0 0 ${n(ANCHO)} ${n(ALTO)}]\n/Contents ${contenido} 0 R\n>>`;
+  const pagina = (contenido: number) => `<</Type /Page\n/Parent 1 0 R\n/Resources 2 0 R\n/MediaBox [0 0 ${n(ANCHO)} ${n(ALTO)}]\n/Contents ${o.contenidosEnArreglo ? `[${contenido} 0 R]` : `${contenido} 0 R`}\n>>`;
   const fuentes = FUENTES.map((base, i) => [10 + i, i === 0 && o.fuenteF1 ? o.fuenteF1 : diccionarioFuente(base)] as const);
   const info = `<<\n/Producer (jsPDF 0.0.0-ficticio)${espec.creadoEn ? `\n/CreationDate (${espec.creadoEn})` : ""}\n>>`;
   return new Map<number, Objeto>([
