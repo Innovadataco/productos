@@ -62,14 +62,21 @@ describe("eventos de escisión en cadena", () => {
     ).rejects.toMatchObject({ codigo: "PAGO_FRACCION_DUPLICADO" });
   });
 
-  it("no crea instrumentos: un nemotécnico mal escrito se rechaza", async () => {
+  it("no crea instrumentos: un nemotécnico mal escrito se rechaza y dice cuál (O2: el destino)", async () => {
     await expect(registrarEscision(db, valido({ origen: nemo("A"), destino: "NOEXISTE9", fecha: "2024-02-12" }))).rejects.toThrow(/INSTRUMENTO_DESCONOCIDO/);
+    await expect(registrarEscision(db, valido({ origen: nemo("A"), destino: "NOEXISTE9", fecha: "2027-03-17" }))).rejects.toMatchObject({ codigo: "INSTRUMENTO_DESCONOCIDO", campo: "destino" });
+  });
+
+  it("con el origen y el destino desconocidos dice el origen (se revisa primero) y no crea ninguno (O2)", async () => {
+    const [origen, destino] = ["NOEXISTE7", "NOEXISTE6"];
+    await expect(registrarEscision(db, valido({ origen, destino, fecha: "2027-03-17" }), { crearDestino: true })).rejects.toMatchObject({ codigo: "INSTRUMENTO_DESCONOCIDO", campo: "origen" });
+    expect(await db.instrumento.count({ where: { nemotecnico: { in: [origen, destino] } } })).toBe(0);
   });
 
   it("con --crear-destino crea la especie destino una sola vez; sin la opción, la rechaza", async () => {
     const nueva = nemo("NUE");
     const datos = valido({ origen: nemo("A"), destino: nueva, fecha: "2024-06-03" });
-    await expect(registrarEscision(db, datos)).rejects.toThrow(/INSTRUMENTO_DESCONOCIDO/);
+    await expect(registrarEscision(db, datos)).rejects.toMatchObject({ codigo: "INSTRUMENTO_DESCONOCIDO", campo: "destino" });
     const r = await registrarEscision(db, datos, { crearDestino: true });
     expect(r.destinoCreado).toBe(true);
     await expect(registrarEscision(db, datos, { crearDestino: true })).rejects.toThrow(/EVENTO_DUPLICADO/);
@@ -77,7 +84,7 @@ describe("eventos de escisión en cadena", () => {
   });
 
   it("el origen nunca se crea, ni con --crear-destino", async () => {
-    await expect(registrarEscision(db, valido({ origen: "NOEXISTE8", destino: nemo("A"), fecha: "2024-06-17" }), { crearDestino: true })).rejects.toThrow(/INSTRUMENTO_DESCONOCIDO/);
+    await expect(registrarEscision(db, valido({ origen: "NOEXISTE8", destino: nemo("A"), fecha: "2027-06-16" }), { crearDestino: true })).rejects.toMatchObject({ codigo: "INSTRUMENTO_DESCONOCIDO", campo: "origen" });
   });
 
   it("si el dividendo ya se importó como ordinario, avisa cuántos hay que revertir", async () => {

@@ -67,8 +67,8 @@ describe("CLI · argumentos inválidos y --ayuda (sin base)", { timeout: 4 * POR
     comprobar(correr("lote-escision.ts", ["FICTSUELTO"]), 2, opciones, ["FICTSUELTO"]);
   });
 
-  // Datos mal formados → 2 es la salida que documenta registrar-escision.ts. lote-escision sale con 1 en ese caso
-  // (O2, reportado aparte): no se prueba aquí hasta que se decida cuál es la correcta.
+  // Datos mal formados → 2 en registrar-escision y, desde O2, también en lote-escision (sus casos, en
+  // tests/unit/cli/escision-proceso.test.ts).
   it("registrar-escision: --ayuda → 2; datos mal formados → 2 con el código por campo, sin repetir los valores", () => {
     comprobar(correr("registrar-escision.ts", ["--ayuda"]), 2, "Argumentos inválidos. Opciones: --origen --destino --fecha");
     const s = correr("registrar-escision.ts", ["--origen", "fict-minusculas", "--destino", "FICTDES", "--fecha", "26-02-2024"]);
