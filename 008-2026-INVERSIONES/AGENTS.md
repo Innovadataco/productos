@@ -52,10 +52,12 @@ Cada SPEC que agregue código suma aquí sus guardianes y su job en `inv.yml`, c
 
 ## Frontera de 008 y su límite
 - **Zona de ECC:** `008-2026-INVERSIONES/**` y nada más. El check `frontera-008-main` (`.github/workflows/inv-frontera.yml`, con `pull_request_target`) lo toma GitHub **siempre de `main`**, así que un PR no lo puede aflojar. Cualquier cambio fuera de la zona, incluidos `inv.yml` e `inv-frontera.yml`, da rojo, y ese PR lo revisa y lo mergea el CEO de PI.
-- **Límite conocido:** la frontera se activa por el **nombre** de la rama (`work/inv-*`). Protege de **errores** de ECC, no de un ECC que use otra rama o empuje directo a `main` (`main` no tiene protección de rama). Por eso la regla de ECC también es parte de la barrera: **solo ramas `work/inv-SPEC-<N>-<slug>` y nunca push directo a `main`.**
+- **Checks obligatorios (2026-11-20):** el ruleset «Gate CI - main» exige `verificar_base`, `pi-gate`, `bi-gate`, **`inv-gate`** y **`frontera-008-main`**, y que todo entre por PR. Si la frontera o las pruebas de 008 dan rojo, GitHub bloquea el merge. En los PR de PI esos dos checks salen «skipped» y no los frenan.
+- **Límite conocido:** la frontera se activa por el **nombre** de la rama (`work/inv-*`). Protege de **errores** de ECC, no de un ECC que use otra rama. Por eso la regla de ECC también es parte de la barrera: **solo ramas `work/inv-SPEC-<N>-<slug>`.**
+- **Cambios de 008 en `.github` (raros):** los hace el **CEO de 008**, no ECC, en una rama **`work/pi-SPEC-<N>-inv-<slug>`** (allí `frontera-008-main` se omite), y los revisa y mergea el **CEO de PI**. ECC no abre ramas `work/pi-*`.
 
 ## Cómo se cierra un cambio
-PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) → revisión adversarial de ECC sobre la rama del PR → merge y despliegue por ECC (D-011) → auditoría del CEO de 008.
+PR con CI verde (los 5 checks obligatorios del repo) → revisión adversarial de ECC sobre la rama del PR → merge y despliegue por ECC (D-011) → auditoría del CEO de 008.
 
 ## Prohibido
 - Secretos, datos personales, negocio o legal en el repo (es público).
@@ -69,6 +71,7 @@ PR con CI verde (`verificar_base`, `inv-gate` y los checks requeridos del repo) 
 > v1.6 · 2026-11-20 · ≈17:16 (-05) · INV · Fábrica ECC · INV-SPEC-4: candados de punta a punta (rutas crudas con `-z`, frontera sin renombres, más extensiones y claves)
 > v1.5 · 2026-11-20 · CEO 008 · frontera desde main (INV-SPEC-3) y su límite conocido
 > v1.4 · 2026-11-20 · CEO 008 · candado de frontera y workflow que no corre en PRs de PI (condiciones 5 y 6 del CEO de PI)
+> v1.6 · 2026-11-20 · CEO 008 · inv-gate y frontera-008-main obligatorios; procedimiento para cambios de 008 en .github (INV-SPEC-13)
 > v1.3 · 2026-11-20 · CEO 008 · merge y despliegue autónomos de ECC (D-011)
 > v1.2 · 2026-11-20 · CEO 008 · ECC como metodología de 008 (D-010)
 > v1.1 · 2026-11-20 · CEO 008 · stack definido (D-008): el de la fábrica, puertos 5438/5008
