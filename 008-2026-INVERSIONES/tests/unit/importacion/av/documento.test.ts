@@ -197,3 +197,37 @@ describe("leerFechaPdf", () => {
     expect(leerFechaPdf("20240105")).toBeNull();
   });
 });
+
+describe("abrirDocumento: revisión de PR-A (code-reviewer A1/M2/M3 y security-reviewer ALTO-1)", () => {
+  const OCHO_MB = `% ${"A".repeat(MAX_INFLADO_POR_STREAM - 100)}`;
+
+  it("la misma referencia repetida en /Contents se rechaza de inmediato, sin inflar una vez por referencia", () => {
+    const inicio = Date.now();
+    expect(codigo(() => abrirDocumento(pdf({ comprimir: true, contenidoExtra: OCHO_MB, repetirFlujo: 70 })))).toBe("PDF_ESTRUCTURA_INVALIDA");
+    expect(Date.now() - inicio).toBeLessThan(3000);
+  });
+
+  it("más de 64 partes en /Contents se rechazan", () => {
+    expect(codigo(() => abrirDocumento(pdf({ flujosExtra: { cuantos: 64, contenido: "" } })))).toBe("PDF_ESTRUCTURA_INVALIDA");
+    expect(abrirDocumento(pdf({ flujosExtra: { cuantos: 63, contenido: "" } })).paginas).toHaveLength(2);
+  });
+
+  it("varios streams distintos que juntos pasan el tope total fallan con INFLADO_EXCESIVO", () => {
+    const seis = `% ${"B".repeat(6 * 1024 * 1024)}`;
+    expect(codigo(() => abrirDocumento(pdf({ comprimir: true, flujosExtra: { cuantos: 3, contenido: seis } })))).toBe("PDF_INFLADO_EXCESIVO");
+  });
+
+  it("/Contents como referencia indirecta a un arreglo se lee", () => {
+    expect(latin1(abrirDocumento(pdf({ contenidosIndirectos: true })).paginas[0]!.contenido)).toContain("(RENTA VARIABLE) Tj");
+  });
+
+  it("/Rotate distinto de 0 (heredado del nodo /Pages) se rechaza; /Rotate 0 se acepta", () => {
+    expect(codigo(() => abrirDocumento(pdf({ rotar: 90 })))).toBe("PDF_ESTRUCTURA_INVALIDA");
+    expect(abrirDocumento(pdf({ rotar: 0 })).paginas).toHaveLength(2);
+  });
+
+  it("un /CropBox distinto del /MediaBox se rechaza; igual, se acepta", () => {
+    expect(codigo(() => abrirDocumento(pdf({ cropBox: "[0 0 300 300]" })))).toBe("PDF_ESTRUCTURA_INVALIDA");
+    expect(abrirDocumento(pdf({ cropBox: "[0 0 595.28 841.89]" })).paginas).toHaveLength(2);
+  });
+});

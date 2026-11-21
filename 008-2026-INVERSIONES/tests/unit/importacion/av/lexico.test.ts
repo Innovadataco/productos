@@ -76,6 +76,10 @@ describe("léxico de PDF: otros valores", () => {
     });
   });
 
+  it("un diccionario con una clave repetida es inválido (code-reviewer B2)", () => {
+    expect(codigo(() => valor("<< /Length 1 /Length 2 >>"))).toBe("PDF_OBJETO_INVALIDO");
+  });
+
   it("dos números sin R no son una referencia", () => {
     expect(valor("[1 0 0 1 20 30]")).toEqual({ tipo: "arreglo", v: [1, 0, 0, 1, 20, 30] });
   });

@@ -58,6 +58,16 @@ export interface OpcionesPdf {
   readonly decodeParmsEnContenido?: boolean;
   /** Páginas en blanco que se agregan al final de /Kids (pruebas del tope de páginas). */
   readonly paginasVacias?: number;
+  /** /Rotate en el nodo /Pages (se hereda a cada página). */
+  readonly rotar?: number;
+  /** /CropBox de la página 1, tal cual (p. ej. «[0 0 300 300]»). */
+  readonly cropBox?: string;
+  /** /Contents de la página 1 = la misma referencia repetida n veces (bomba de inflado). */
+  readonly repetirFlujo?: number;
+  /** Streams de contenido distintos que se agregan a /Contents de la página 1. */
+  readonly flujosExtra?: { readonly cuantos: number; readonly contenido: string };
+  /** /Contents de la página 1 como referencia indirecta a un arreglo de referencias. */
+  readonly contenidosIndirectos?: boolean;
 }
 
 export const CERTIFICACION_FICTICIA: EspecCertificacion = {
@@ -192,15 +202,36 @@ function vacias(o: OpcionesPdf): [number, string][] {
   return Array.from({ length: o.paginasVacias ?? 0 }, (_, i) => [100 + i, "<</Type /Page\n/Parent 1 0 R\n>>"]);
 }
 
+const PRIMER_EXTRA = 200;
+const ARREGLO_INDIRECTO = 300;
+
+/** /Contents de la página 1 según las opciones de prueba. */
+function contenidosPagina1(o: OpcionesPdf): string {
+  const refs = [4, ...Array.from({ length: o.flujosExtra?.cuantos ?? 0 }, (_, i) => PRIMER_EXTRA + i)].map((r) => `${r} 0 R`);
+  if (o.repetirFlujo) return `[${Array.from({ length: o.repetirFlujo }, () => "4 0 R").join(" ")}]`;
+  if (o.contenidosIndirectos) return `${ARREGLO_INDIRECTO} 0 R`;
+  return o.contenidosEnArreglo || refs.length > 1 ? `[${refs.join(" ")}]` : refs[0]!;
+}
+
+function extras(o: OpcionesPdf): [number, Objeto][] {
+  const flujos = Array.from({ length: o.flujosExtra?.cuantos ?? 0 }, (_, i): [number, Objeto] => [PRIMER_EXTRA + i, flujo(o.flujosExtra!.contenido, o)]);
+  return o.contenidosIndirectos ? [...flujos, [ARREGLO_INDIRECTO, "[4 0 R]"]] : flujos;
+}
+
 function objetos(espec: EspecCertificacion, o: OpcionesPdf): Map<number, Objeto> {
   const [c1, c2] = paginas(espec, o);
-  const pagina = (contenido: number) => `<</Type /Page\n/Parent 1 0 R\n/Resources 2 0 R\n/MediaBox [0 0 ${n(ANCHO)} ${n(ALTO)}]\n/Contents ${o.contenidosEnArreglo ? `[${contenido} 0 R]` : `${contenido} 0 R`}\n>>`;
+  const pagina = (contenido: number) => {
+    const contenidos = contenido === 4 ? contenidosPagina1(o) : o.contenidosEnArreglo ? `[${contenido} 0 R]` : `${contenido} 0 R`;
+    const recorte = contenido === 4 && o.cropBox ? `\n/CropBox ${o.cropBox}` : "";
+    return `<</Type /Page\n/Parent 1 0 R\n/Resources 2 0 R\n/MediaBox [0 0 ${n(ANCHO)} ${n(ALTO)}]${recorte}\n/Contents ${contenidos}\n>>`;
+  };
   const fuentes = FUENTES.map((base, i) => [10 + i, i === 0 && o.fuenteF1 ? o.fuenteF1 : diccionarioFuente(base)] as const);
   const info = `<<\n/Producer (jsPDF 0.0.0-ficticio)${espec.creadoEn ? `\n/CreationDate (${espec.creadoEn})` : ""}\n>>`;
   return new Map<number, Objeto>([
     [3, pagina(4)], [4, flujo(c1, o)], [5, pagina(6)], [6, flujo(c2, o)],
-    [1, `<</Type /Pages\n/Kids [3 0 R 5 0 R ${vacias(o).map(([num]) => `${num} 0 R `).join("")}]\n/Count ${2 + (o.paginasVacias ?? 0)}\n/Resources 2 0 R\n/MediaBox [0 0 ${n(ANCHO)} ${n(ALTO)}]\n>>`],
+    [1, `<</Type /Pages\n/Kids [3 0 R 5 0 R ${vacias(o).map(([num]) => `${num} 0 R `).join("")}]\n/Count ${2 + (o.paginasVacias ?? 0)}${o.rotar === undefined ? "" : `\n/Rotate ${o.rotar}`}\n/Resources 2 0 R\n/MediaBox [0 0 ${n(ANCHO)} ${n(ALTO)}]\n>>`],
     ...vacias(o),
+    ...extras(o),
     ...fuentes,
     [2, `<<\n/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]\n/Font <<\n${fuentes.map(([num], i) => `/F${i + 1} ${num} 0 R`).join("\n")}\n>>\n/XObject <<\n/I0 7 0 R\n>>\n>>`],
     [7, { dic: `<<\n/Type /XObject\n/Subtype /Image\n/Width 1\n/Height 1\n/ColorSpace /DeviceGray\n/BitsPerComponent 8\n/Length ${IMAGEN.length}\n${filtroImagen(o)}>>`, datos: IMAGEN }],

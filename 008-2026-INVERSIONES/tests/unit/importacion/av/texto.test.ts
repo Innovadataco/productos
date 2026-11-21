@@ -142,3 +142,45 @@ describe("extraerLineas", () => {
     expect(codigo(() => agruparLineas([{ pagina: 1, x: 1, y: 1, texto: " " }]))).toBe("PDF_SIN_TEXTO");
   });
 });
+
+describe("extraerCeldas: lo extraído es lo que se ve (revisión: security MEDIO-1/2, code M1/M4)", () => {
+  const rechazos: readonly [string, string, string][] = [
+    ["texto blanco (1 g)", "1 g BT /F1 9 Tf 50 10 Td (oculto) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["texto blanco en RGB", "1 1 1 rg BT /F1 9 Tf 50 10 Td (oculto) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["texto blanco en CMYK", "0 0 0 0 k BT /F1 9 Tf 50 10 Td (oculto) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["texto con un espacio de color que no se evalúa", "/CS0 cs 1 sc BT /F1 9 Tf 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un relleno blanco que tapa un texto ya pintado", "BT /F1 9 Tf 50 10 Td (x) Tj ET 1 g 40 5 100 20 re f", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un relleno con trazo (B) que tapa un texto ya pintado", "BT /F1 9 Tf 50 10 Td (x) Tj ET 0.96 g 40 5 100 20 re B", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un trazado libre que tapa un texto", "BT /F1 9 Tf 50 10 Td (x) Tj ET 1 g 40 5 m 140 5 l 140 14 l 40 14 l h f", "PDF_TEXTO_NO_SOPORTADO"],
+    ["una imagen encima de un texto ya pintado", "BT /F1 9 Tf 50 10 Td (x) Tj ET q 100 0 0 10 40 5 cm /I0 Do Q", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un recorte (W n)", "0 0 10 10 re W n", "PDF_OPERADOR_NO_SOPORTADO"],
+    ["un estado gráfico externo (gs: transparencia)", "/GS0 gs", "PDF_OPERADOR_NO_SOPORTADO"],
+    ["contenido marcado (capas opcionales)", "/OC /L0 BDC EMC", "PDF_OPERADOR_NO_SOPORTADO"],
+    ["un sombreado (sh)", "/Sh0 sh", "PDF_OPERADOR_NO_SOPORTADO"],
+    ["escala horizontal 0 (Tz 0)", "BT /F1 9 Tf 0 Tz 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["elevación del texto (Ts)", "BT /F1 9 Tf 5000 Ts 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["tamaño de fuente negativo con matriz espejada", "BT /F1 -9 Tf 1 0 0 -1 50 10 Tm (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un carácter de control dentro del texto", "BT /F1 9 Tf 50 10 Td (a\\001b) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un salto de línea escapado dentro del texto", "BT /F1 9 Tf 50 10 Td (a\\nb) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un byte sin definir en WinAnsi (U+FFFD)", "BT /F1 9 Tf 50 10 Td (a\\201b) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+  ];
+  for (const [nombre, contenido, esperado] of rechazos) {
+    it(`rechaza ${nombre}`, () => {
+      expect(codigo(() => celdas({ contenidoExtra: contenido }))).toBe(esperado);
+    });
+  }
+
+  it("acepta texto gris oscuro (0.267 g), Tz 100 y Ts 0, como el portal", () => {
+    expect(extra("0.267 g BT /F1 9 Tf 100 Tz 0 Ts 50 10 Td (gris) Tj ET").map((c) => c.texto)).toEqual(["gris"]);
+  });
+
+  it("acepta un relleno claro pintado después que NO tapa ningún texto (celdas de la tabla)", () => {
+    expect(extra("BT /F1 9 Tf 50 10 Td (x) Tj ET 0.96 g 200 2 100 10 re B 0 g BT /F1 9 Tf 210 5 Td (y) Tj ET").map((c) => c.texto)).toEqual(["x", "y"]);
+  });
+});
+
+describe("extraerLineas: errores inesperados (code-reviewer B4)", () => {
+  it("un error que no es del lector sale como ErrorPdf con código fijo, sin la causa", () => {
+    expect(codigo(() => extraerLineas(null as unknown as Uint8Array))).toBe("PDF_ERROR_INTERNO");
+  });
+});

@@ -111,8 +111,29 @@ describe("leerTablaCertificacion: rechaza el archivo entero", () => {
     expect(error(() => leerTablaCertificacion(lectura([...RV, ...PIE], [EFECTIVO[0]!])))).toEqual({ codigo: "ENCABEZADO_DESCONOCIDO", pagina: 2, linea: 1 });
   });
 
-  it("si no hay ni fondos ni acciones", () => {
-    expect(error(() => leerTablaCertificacion(lectura([RV[0]!, RV[1]!, ...EFECTIVO, ...PIE]))).codigo).toBe("SIN_FILAS");
+  it("si no aparece ni la sección de fondos ni la de acciones (code-reviewer B5)", () => {
+    expect(error(() => leerTablaCertificacion(lectura([...EFECTIVO, ...PIE]))).codigo).toBe("SIN_FILAS");
+  });
+
+  it("acepta una certificación con la sección de acciones vacía y solo efectivo", () => {
+    expect(resumen(leerTablaCertificacion(lectura([RV[0]!, RV[1]!, ...EFECTIVO, ...PIE])))).toEqual([["EFECTIVO", 1, 1, 3]]);
+  });
+
+  it("si una línea del pie trae más de una celda (una fila escondida bajo el pie, code-reviewer M5)", () => {
+    expect(error(() => leerTablaCertificacion(lectura([...RV, ...EFECTIVO, ...PIE, ["FICT9", "10"]]))).codigo).toBe("FILA_FUERA_DE_SECCION");
+  });
+
+  it("si una línea del pie trae un monto con otro formato ($)", () => {
+    expect(error(() => leerTablaCertificacion(lectura([...RV, ...EFECTIVO, ...PIE, ["Saldo $ 1.000"]]))).codigo).toBe("FILA_FUERA_DE_SECCION");
+  });
+
+  it("si el título de la sección actual se repite en la misma página (filas duplicadas, code-reviewer B1)", () => {
+    expect(error(() => leerTablaCertificacion(lectura([...RV, ...RV, ...EFECTIVO, ...PIE]))).codigo).toBe("SECCION_REPETIDA");
+  });
+
+  it("acepta el título de la sección actual repetido en la página siguiente (continuación)", () => {
+    const filas = leerTablaCertificacion(lectura([...RV, ...PIE], [...RV, ...EFECTIVO, ...PIE]));
+    expect(resumen(filas)).toEqual([["RENTA_VARIABLE", 1, 1, 4], ["RENTA_VARIABLE", 2, 2, 4], ["EFECTIVO", 2, 3, 3]]);
   });
 
   it("el error nunca lleva el texto de la celda", () => {
