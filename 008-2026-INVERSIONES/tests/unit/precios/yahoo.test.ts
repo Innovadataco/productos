@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { BARRAS_MAXIMAS, PRECIO_MAXIMO_COP, obtenerCierres, parsearYahoo, type Buscar } from "@/precios/yahoo";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { BARRAS_MAXIMAS, BYTES_MAXIMOS_YAHOO, PRECIO_MAXIMO_COP, obtenerCierres, parsearYahoo, type Buscar, type ResultadoYahoo } from "@/precios/yahoo";
 
 // 2024-03-12 14:30 UTC = 09:30 en Colombia (apertura); 2024-03-13 04:30 UTC = 23:30 del 12 en Colombia.
 const T1 = Date.UTC(2024, 2, 12, 14, 30) / 1000;
@@ -96,5 +96,68 @@ describe("obtenerCierres", () => {
 
   it("rechaza símbolos raros antes de pedir nada", async () => {
     expect(await obtenerCierres("x/../y", desde, hasta, async () => { throw new Error("no debía llamarse"); })).toEqual({ ok: false, codigo: "SIMBOLO_INVALIDO" });
+  });
+
+  it("pide sin seguir redirecciones, con el User-Agent y una señal de aborto", async () => {
+    let init: Parameters<Buscar>[1] | undefined;
+    await obtenerCierres("FICTA.CL", desde, hasta, async (_url, i) => {
+      init = i;
+      return new Response(JSON.stringify(respuesta([1, 2, 3])));
+    });
+    expect(init?.redirect).toBe("error");
+    expect(init?.headers).toEqual({ "User-Agent": "Mozilla/5.0" });
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("un cuerpo que declara o que trae más del tope de bytes es YAHOO_FORMATO (no se lee entero)", async () => {
+    const declarado: Buscar = async () => new Response(JSON.stringify(respuesta([1, 2, 3])), { headers: { "content-length": String(BYTES_MAXIMOS_YAHOO + 1) } });
+    expect(await obtenerCierres("FICTA.CL", desde, hasta, declarado)).toEqual({ ok: false, codigo: "YAHOO_FORMATO" });
+    const relleno: Buscar = async () => new Response(JSON.stringify(respuesta([1, 2, 3])) + " ".repeat(BYTES_MAXIMOS_YAHOO));
+    expect(await obtenerCierres("FICTA.CL", desde, hasta, relleno)).toEqual({ ok: false, codigo: "YAHOO_FORMATO" });
+  });
+
+  it("un cuerpo que no es JSON es YAHOO_FORMATO, no un fallo de red", async () => {
+    expect(await obtenerCierres("FICTA.CL", desde, hasta, async () => new Response("<html>no es json</html>"))).toEqual({ ok: false, codigo: "YAHOO_FORMATO" });
+  });
+});
+
+describe("obtenerCierres · plazo de 10 s (reloj falso)", () => {
+  const desde = new Date("2024-03-12T00:00:00Z");
+  const hasta = new Date("2024-03-14T00:00:00Z");
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  function vigilar(p: Promise<ResultadoYahoo>): { listo: boolean; valor?: ResultadoYahoo } {
+    const v: { listo: boolean; valor?: ResultadoYahoo } = { listo: false };
+    void p.then((x) => {
+      v.listo = true;
+      v.valor = x;
+    });
+    return v;
+  }
+
+  it("con un buscar que respeta la señal: se aborta a los 10 s y da YAHOO_RED", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    let senal: AbortSignal | undefined;
+    const buscar: Buscar = (_url, init) =>
+      new Promise((_resolver, rechazar) => {
+        senal = init.signal;
+        init.signal.addEventListener("abort", () => rechazar(new DOMException("abortado", "AbortError")));
+      });
+    const v = vigilar(obtenerCierres("FICTA.CL", desde, hasta, buscar));
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect([v.listo, senal?.aborted]).toEqual([false, false]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(senal?.aborted).toBe(true);
+    expect(v).toEqual({ listo: true, valor: { ok: false, codigo: "YAHOO_RED" } });
+  });
+
+  it("con un buscar que nunca resuelve ni mira la señal: da YAHOO_RED a los 10 s (no se cuelga)", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const v = vigilar(obtenerCierres("FICTA.CL", desde, hasta, () => new Promise(() => undefined)));
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(v.listo).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(v).toEqual({ listo: true, valor: { ok: false, codigo: "YAHOO_RED" } });
   });
 });

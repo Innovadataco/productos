@@ -3,7 +3,10 @@
  * Endpoint no oficial (INVESTIGACION-FUENTES-DATOS de 008): uso personal y moderado; si cambia o
  * falla, el dato no se guarda y el resultado lo informa. Se usa el cierre SIN ajustar
  * (`indicators.quote.close`): el ajustado no cuadra con el precio de valoración de A&V.
+ * El pedido no sigue redirecciones y tiene plazo total y tope de bytes (`src/lib/http-acotado.ts`).
  */
+import { pedirJsonAcotado, type BuscarHttp } from "../lib/http-acotado";
+
 const DESFASE_COT_MS = 5 * 60 * 60 * 1000;
 const ESCALA_PRECIO = 6;
 const TIEMPO_MAXIMO_MS = 10_000;
@@ -11,6 +14,8 @@ const TIEMPO_MAXIMO_MS = 10_000;
 export const PRECIO_MAXIMO_COP = 10_000_000;
 /** Tope de barras por respuesta (~40 años de ruedas): por encima, la respuesta se considera corrupta. */
 export const BARRAS_MAXIMAS = 10_000;
+/** Tope del cuerpo de la respuesta: 10 000 barras con sus seis series caben en ~1,3 MB (estimado por verificar). */
+export const BYTES_MAXIMOS_YAHOO = 2 * 1024 * 1024;
 
 export interface Cierre {
   readonly fecha: Date; // fecha de negocio en Colombia, a medianoche UTC
@@ -19,7 +24,8 @@ export interface Cierre {
 
 export type ResultadoYahoo = { ok: true; cierres: Cierre[] } | { ok: false; codigo: string };
 
-export type Buscar = (url: string, init: { headers: Record<string, string>; signal: AbortSignal }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+/** `fetch` inyectable: en las pruebas nunca hay red real. Se pide sin seguir redirecciones. */
+export type Buscar = BuscarHttp;
 
 /** Precio con a lo sumo 6 decimales, sin notación científica ni punto flotante residual. */
 function canonico(n: number): string | null {
@@ -71,11 +77,6 @@ export async function obtenerCierres(simbolo: string, desde: Date, hasta: Date, 
   const p1 = Math.floor(desde.getTime() / 1000);
   const p2 = Math.floor(hasta.getTime() / 1000) + 24 * 60 * 60;
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbolo)}?interval=1d&period1=${p1}&period2=${p2}`;
-  try {
-    const respuesta = await buscar(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS) });
-    if (!respuesta.ok) return { ok: false, codigo: `YAHOO_HTTP_${respuesta.status}` };
-    return parsearYahoo(await respuesta.json());
-  } catch {
-    return { ok: false, codigo: "YAHOO_RED" };
-  }
+  const r = await pedirJsonAcotado(buscar, url, { prefijo: "YAHOO", headers: { "User-Agent": "Mozilla/5.0" }, bytesMaximos: BYTES_MAXIMOS_YAHOO, tiempoMaximoMs: TIEMPO_MAXIMO_MS });
+  return r.ok ? parsearYahoo(r.datos) : r;
 }
