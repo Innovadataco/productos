@@ -116,7 +116,7 @@ describe("conciliarCertificacion: fondo, efectivo e historia", () => {
     const deposito = dec("1000").sub(previa.esperado!).add("5000000");
     const carga = await importarArchivoTrii(db, {
       nombreArchivo: `caja-${k}.ficticio.csv`, usuarioId: duenoId,
-      contenido: new TextEncoder().encode(`Fecha y hora,Tipo de movimiento,Estado,Valor total\n${trii(antes)},Depósito,Aprobado,${deposito.toFixed(1)}\n`),
+      contenido: new TextEncoder().encode(`Fecha y hora,Tipo de movimiento,Estado,Valor total\n${trii(antes)},Depósito,Aprobado,${deposito.toFixed(4)}\n`),
     });
     expect(carga.estado).toBe("CARGADO");
     const ajuste = await db.ajusteCaja.create({ data: { fecha: antes, monto: dec("-5000000"), categoria: "APORTE_FIC", fuente: "MANUAL", motivo: "aporte ficticio", creadoPorId: duenoId } });

@@ -99,29 +99,35 @@ function controlCantidad(e: EspecieEntrada): Control {
   });
 }
 
+/** Con T+2 pendiente (la certificación cuenta lo operado), se valora con lo operado; si no, con lo liquidado. */
+const cantidadValuada = (e: EspecieEntrada, pendiente: boolean): bigint => (pendiente ? e.operada : e.liquidada);
+
 const precioDistinto = (e: EspecieEntrada) =>
   e.certificada !== null && e.cierre !== null && !dentroRelativo(D(e.cierre), D(e.certificada.precioValoracion));
 
-function controlValor(e: EspecieEntrada & { certificada: NonNullable<EspecieEntrada["certificada"]> }, cantidadCuadra: boolean): Control {
+const PENDIENTE = { resultado: "PENDIENTE_LIQUIDACION", codigoMotivo: "t_mas_2" } as const;
+
+function controlValor(e: EspecieEntrada & { certificada: NonNullable<EspecieEntrada["certificada"]> }, cantidad: Resultado): Control {
   const real = D(e.certificada.valorMercado);
   const base = { real: txt(real), tolerancia: TOLERANCIA_VALOR };
   if (e.cierre === null) return control("VALOR", e.instrumentoId, { ...base, resultado: "NO_CUADRA", codigoMotivo: "sin_precio_al_corte" });
-  const esperado = D(e.cierre).mul(e.liquidada.toString());
+  const pendiente = cantidad === "PENDIENTE_LIQUIDACION";
+  const esperado = D(e.cierre).mul(cantidadValuada(e, pendiente).toString());
   const valores = { ...base, esperado: txt(esperado), diferencia: txt(real.sub(esperado)) };
-  if (dentroRelativo(esperado, real)) return control("VALOR", e.instrumentoId, valores);
-  if (!cantidadCuadra) return control("VALOR", e.instrumentoId, { ...valores, resultado: "NO_CUADRA", codigoMotivo: "por_cantidad" });
+  if (dentroRelativo(esperado, real)) return control("VALOR", e.instrumentoId, pendiente ? { ...valores, ...PENDIENTE } : valores);
+  if (cantidad === "NO_CUADRA") return control("VALOR", e.instrumentoId, { ...valores, resultado: "NO_CUADRA", codigoMotivo: "por_cantidad" });
   const motivo = precioDistinto(e) ? "precio_distinto" : "diferencia_valor";
   return control("VALOR", e.instrumentoId, { ...valores, resultado: "NO_CUADRA", codigoMotivo: motivo, detalle: { cierre: e.cierre, precioValoracion: e.certificada.precioValoracion } });
 }
 
-function controlValorTotal(especies: readonly EspecieEntrada[]): Control {
+function controlValorTotal(especies: readonly EspecieEntrada[], pendientes: ReadonlySet<string>): Control {
   const certificadas = especies.filter((e) => e.certificada !== null);
   const real = certificadas.reduce((s, e) => s.add(e.certificada!.valorMercado), D(0));
   const base = { real: txt(real), tolerancia: TOLERANCIA_VALOR, detalle: { alcance: "total_acciones" } };
   if (certificadas.some((e) => e.cierre === null)) return control("VALOR", null, { ...base, resultado: "NO_CUADRA", codigoMotivo: "sin_precio_al_corte" });
-  const esperado = certificadas.reduce((s, e) => s.add(D(e.cierre!).mul(e.liquidada.toString())), D(0));
+  const esperado = certificadas.reduce((s, e) => s.add(D(e.cierre!).mul(cantidadValuada(e, pendientes.has(e.instrumentoId)).toString())), D(0));
   const valores = { ...base, esperado: txt(esperado), diferencia: txt(real.sub(esperado)) };
-  if (dentroRelativo(esperado, real)) return control("VALOR", null, valores);
+  if (dentroRelativo(esperado, real)) return control("VALOR", null, certificadas.some((e) => pendientes.has(e.instrumentoId)) ? { ...valores, ...PENDIENTE } : valores);
   const dudosa = certificadas.length >= 2 && certificadas.every(precioDistinto);
   return control("VALOR", null, { ...valores, resultado: "NO_CUADRA", codigoMotivo: dudosa ? "fecha_corte_dudosa" : "por_especies" });
 }
@@ -148,8 +154,9 @@ function controlEfectivo(e: EfectivoEntrada): Control {
 
 export function calcularConciliacion(e: EntradasConciliacion): Conciliado {
   const cantidades = e.especies.map(controlCantidad);
-  const valores = e.especies.flatMap((x, i) => (x.certificada === null ? [] : [controlValor({ ...x, certificada: x.certificada }, cantidades[i]!.resultado === "CUADRA")]));
-  const controles = [...cantidades, ...valores, controlValorTotal(e.especies), ...e.fondos.map(controlFondo), controlEfectivo(e.efectivo)];
+  const valores = e.especies.flatMap((x, i) => (x.certificada === null ? [] : [controlValor({ ...x, certificada: x.certificada }, cantidades[i]!.resultado)]));
+  const pendientes = new Set(cantidades.filter((c) => c.resultado === "PENDIENTE_LIQUIDACION").map((c) => c.instrumentoId!));
+  const controles = [...cantidades, ...valores, controlValorTotal(e.especies, pendientes), ...e.fondos.map(controlFondo), controlEfectivo(e.efectivo)];
   const resultado = controles.some((c) => c.resultado === "NO_CUADRA") ? "NO_CUADRA" : controles.some((c) => c.resultado === "PENDIENTE_LIQUIDACION") ? "PARCIAL" : "CUADRA";
   return { resultado, controles };
 }
