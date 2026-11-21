@@ -18,13 +18,14 @@ Inversiones comparte el VPS de producción con PI (D-015). **PI tiene prioridad*
 - **Riesgo cerrado:** el contenedor de la app de PI ya no monta `docker.sock` ([productos#993](https://github.com/Innovadataco/productos/pull/993), con el guardia de PI). El riesgo de que un contenedor de PI comprometido leyera los secretos o la base de Inversiones por el socket ya no existe.
 
 ## 1 · Pausa condicional en los despliegues de PI (D-019)
-**La medición del CEO de PI:** durante su build, `MemAvailable` llegó a un mínimo de **1.593 MB**; con los **1.152 MiB** de Inversiones quedarían unos **0,4 GB**. Por eso, al principio la pausa era obligatoria en cada despliegue de PI.
+**La medición del CEO de PI:** durante su build, `MemAvailable` llegó a un mínimo de **1.593 MB**; con los **1.152 MiB** de Inversiones quedarían unos **0,4 GB**. Por eso, hasta D-019, PI pausaba Inversiones en todos sus despliegues.
 
 **D-019 (decisión de Jelk, 2026-11-21): la pausa deja de ser obligatoria.**
 - **Cuándo la hay:** el `deploy-prod.sh` de PI corre un **preflight de memoria** al inicio. Pausa Inversiones **solo para ese build** si arranca con `MemAvailable` < **1 GiB** o `SwapFree` < **512 MB**.
 - **Si no se cumple ninguna de las dos,** Inversiones sigue arriba durante el build de PI.
 - **La marca de pausa y el candado común siguen como están acordados.**
 - **Inversiones no cambia nada de su lado.** El criterio de corte manual (§4) y el vigía (§5) siguen vigentes.
+- **Un aviso del vigía durante un build de PI sin pausa es esperable:** con la medición de arriba, `MemAvailable` puede bajar del umbral de 1 GiB mientras dura el build. El aviso no obliga a cortar: la decisión sigue siendo manual (§4). Si el corte se repite en varios builds, se revisa D-019 con Jelk.
 
 **Cuando pausa, la hace PI, con su propio código, en su `deploy-prod.sh`.** No llama a `pausar-008.sh`. Su procedimiento (lo hace PI, no Inversiones):
 1. **Al inicio, si el preflight lo pide:** `docker stop` de los contenedores con la etiqueta `com.docker.compose.project=inv-008-prod`. Compose la pone en todos los permanentes de Inversiones, también en `inv-008-entrada`; en el ensayo, lo comprobó `docker ps --filter label=…`. PI guarda esos IDs.
