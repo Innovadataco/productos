@@ -164,3 +164,42 @@ describe("actualizarPrecios · barra corrupta", () => {
     expect(await db.precioCierre.count({ where: { instrumentoId: id } })).toBe(2);
   });
 });
+
+/** Barrera: las primeras `n` llamadas esperan hasta que llega la última; así las corridas guardan a la vez. */
+function barrera(n: number): () => Promise<void> {
+  let llegadas = 0;
+  let abrir: () => void = () => undefined;
+  const abierta = new Promise<void>((resolver) => {
+    abrir = resolver;
+  });
+  return () => {
+    llegadas += 1;
+    if (llegadas === n) abrir();
+    return abierta;
+  };
+}
+
+describe("actualizarPrecios · corridas simultáneas", () => {
+  it("dos corridas a la vez dejan un solo cierre vigente por día, sin errores, al guardar y al revisar", async () => {
+    const id = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRG${corrida}`, nombre: "Ficticia G" } })).id;
+    const ts = [Date.UTC(2024, 7, 6, 14, 30) / 1000, Date.UTC(2024, 7, 7, 14, 30) / 1000];
+    const ronda = (cierres: number[]) => {
+      const esperar = barrera(2);
+      const buscar: Buscar = async () => {
+        await esperar();
+        return respuestaChart(ts, cierres);
+      };
+      const opciones = { desde: new Date("2024-08-06T00:00:00Z"), hasta: new Date("2024-08-07T00:00:00Z"), buscar, instrumentoIds: [id] };
+      return Promise.all([actualizarPrecios(db, opciones), actualizarPrecios(db, opciones)]);
+    };
+    const nuevas = await ronda([500, 501]);
+    expect(nuevas.flatMap((r) => r.fallidas)).toEqual([]);
+    expect(nuevas[0]!.cierresNuevos + nuevas[1]!.cierresNuevos).toBe(2);
+    const revisadas = await ronda([600, 601]);
+    expect(revisadas.flatMap((r) => r.fallidas)).toEqual([]);
+    expect(revisadas[0]!.cierresRevisados + revisadas[1]!.cierresRevisados).toBe(2);
+    expect(await preciosDe(id)).toEqual(["600", "601"]);
+    expect(await db.precioCierre.count({ where: { instrumentoId: id } })).toBe(4);
+    expect(await db.precioCierre.count({ where: { instrumentoId: id, reemplazadoEn: { not: null } } })).toBe(2);
+  });
+});
