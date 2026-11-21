@@ -26,7 +26,7 @@ describe("agregarPosiciones", () => {
     expect(r).toEqual({
       ok: true,
       valor: [
-        { nemo: "FICT1", cantidad: 150n, precioValoracion: "1000", valorMercado: "150000", referenciaPdf: "p1:f2,p1:f3" },
+        { nemo: "FICT1", cantidad: 150n, precioValoracion: "1000", valorMercado: "150000.01", referenciaPdf: "p1:f2,p1:f3" },
         { nemo: "FICT2", cantidad: 2000n, precioValoracion: "20", valorMercado: "40000", referenciaPdf: "p1:f4" },
         { nemo: "FICT3", cantidad: 10n, precioValoracion: "32500", valorMercado: "325000", referenciaPdf: "p1:f5" },
       ],

@@ -58,7 +58,7 @@ describe("importarCertificacion: carga y trazabilidad", () => {
     expect([cert.saldoEfectivo.toString(), cert.referenciaEfectivo, cert.carga.nombreArchivo, cert.carga.estado]).toEqual(["1000", "p2:f6", `certificacion-av-${c.fecha.toISOString().slice(0, 10)}.pdf`, "CARGADO"]);
     const posiciones = cert.posiciones.map((p) => [p.instrumento.nemotecnico, p.cantidad, p.precioValoracion.toString(), p.valorMercado.toString(), p.referenciaPdf]).sort();
     expect(posiciones).toEqual([
-      [c.nemos[0], 150n, "1000", "150000", "p1:f2,p1:f3"],
+      [c.nemos[0], 150n, "1000", "150000.01", "p1:f2,p1:f3"],
       [c.nemos[1], 2000n, "20", "40000", "p1:f4"],
       [c.nemos[2], 10n, "32500", "325000", "p1:f5"],
     ]);

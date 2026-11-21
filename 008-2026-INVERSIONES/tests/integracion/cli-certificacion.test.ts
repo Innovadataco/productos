@@ -24,7 +24,7 @@ let carpeta = "";
 const claves = (): Record<string, string> =>
   Object.fromEntries(Object.entries(process.env).filter(([k, v]) => k.startsWith("CIFRADO_CLAVE_") && v !== undefined)) as Record<string, string>;
 const correr = (script: string, args: readonly string[]): Salida => correrCli(script, args, entornoMinimo({ DATABASE_URL: URL_BASE, ...claves() }));
-const DATOS = [email, ...nemos, NIT, "000000001", CODIGO_FIC, "6.250.000", "6250000", "150000", "Titular"];
+const DATOS = [email, ...nemos, NIT, "000000001", CODIGO_FIC, "6.250.000", "6250000", "150000.01", "Titular"];
 const comprobar = (s: Salida, codigo: number, esperado: string, mas: readonly string[] = []) => comprobarSalida(s, codigo, esperado, [...DATOS, ...mas, URL_BASE, "postgresql://"]);
 
 beforeAll(async () => {

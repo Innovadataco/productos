@@ -9,15 +9,17 @@
  * - Al cargar, concilia y deja la conciliación guardada.
  * - Orden recomendado: importar la certificación y DESPUÉS traer los cierres de ese día con
  *   `npm run precios:actualizar -- --desde <corte>` (este comando no llama a la red; lo imprime como siguiente paso),
- *   y volver a conciliar con `npx tsx scripts/conciliar-certificacion.ts --fecha-corte <corte>`.
+ *   y volver a conciliar con `npx tsx scripts/conciliar-certificacion.ts --fecha-corte <corte>`. En producción (sin
+ *   red, NODE_ENV=production) el siguiente paso que imprime es la vía B: `cargar-prod.sh importar-precios` y después
+ *   `cargar-prod.sh conciliar-certificacion` (docs/despliegue/produccion.md §11).
  * Usa DATABASE_URL (la base de 008) y las claves de cifrado del entorno. Imprime solo conteos, códigos y la fecha de
  * corte que usted dio; nunca montos, especies, cuentas ni el correo. El archivo original no se guarda.
  */
 import { PrismaClient } from "@prisma/client";
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { ErrorArgumentosAv, leerArgumentosImportar, type ArgumentosImportarCertificacion } from "../src/importacion/av/argumentos";
 import { MAX_BYTES } from "../src/importacion/av/importar";
 import { cargarYConciliar } from "../src/importacion/av/salida";
+import { leerArchivoAcotado } from "../src/lib/archivo-acotado";
 
 const USO = "Uso: npx tsx scripts/importar-certificacion.ts --email <correo-del-dueño> --fecha-corte AAAA-MM-DD [--fondo <codigoFic>] <certificacion.pdf>";
 
@@ -35,28 +37,12 @@ function salir(mensaje: string): never {
   process.exit(1);
 }
 
-/** Lee como mucho `tope` bytes de un archivo REGULAR (un FIFO o un dispositivo no pasan); null si no se puede. */
-function leerAcotado(ruta: string, tope: number): Uint8Array | null {
-  let fd: number | null = null;
-  try {
-    fd = openSync(ruta, "r");
-    if (!fstatSync(fd).isFile()) return null;
-    const buffer = Buffer.alloc(tope);
-    let leidos = 0;
-    for (let n = 1; n > 0 && leidos < tope; leidos += n) n = readSync(fd, buffer, leidos, tope - leidos, null);
-    return new Uint8Array(buffer.subarray(0, leidos));
-  } catch {
-    return null;
-  } finally {
-    if (fd !== null) closeSync(fd);
-  }
-}
-
+/** El PDF de un archivo REGULAR, sin leer más del tope (un FIFO, un dispositivo o una carpeta no pasan ni cuelgan). */
 function leerPdf(ruta: string): Uint8Array {
-  const contenido = leerAcotado(ruta, MAX_BYTES + 1);
-  if (contenido === null) return salir("❌ ARCHIVO_ILEGIBLE · no se pudo leer el PDF indicado.");
-  if (contenido.byteLength > MAX_BYTES) return salir("❌ PDF_DEMASIADO_GRANDE · el archivo pasa de 15 MB y no se importa.");
-  return contenido;
+  const r = leerArchivoAcotado(ruta, MAX_BYTES);
+  if (r.ok) return r.bytes;
+  if (r.codigo === "ARCHIVO_DEMASIADO_GRANDE") return salir("❌ PDF_DEMASIADO_GRANDE · el archivo pasa de 15 MB y no se importa.");
+  return salir("❌ ARCHIVO_ILEGIBLE · no se pudo leer el PDF indicado.");
 }
 
 async function main(): Promise<void> {
@@ -66,7 +52,8 @@ async function main(): Promise<void> {
   try {
     const usuario = await db.usuario.findUnique({ where: { email: a.email }, select: { id: true } });
     if (!usuario) return salir("❌ USUARIO_NO_REGISTRADO · ese correo no está registrado (este comando no crea usuarios).");
-    const r = await cargarYConciliar(db, { contenido, usuarioId: usuario.id, fechaCorte: a.fechaCorte, fondoCodigo: a.fondo });
+    // La imagen del migrador trae NODE_ENV=production: allí no hay red y el siguiente paso es la vía B (cargar-prod.sh).
+    const r = await cargarYConciliar(db, { contenido, usuarioId: usuario.id, fechaCorte: a.fechaCorte, fondoCodigo: a.fondo }, undefined, { produccion: process.env.NODE_ENV === "production" });
     for (const linea of r.lineas) console.log(linea);
     process.exitCode = r.codigo;
   } finally {

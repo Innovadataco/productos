@@ -7,7 +7,8 @@
 #   scripts/armar-sobre.sh <cabecera> [<archivo>] | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh <comando>
 #   <cabecera>: un argumento del CLI por línea, por ejemplo «--email» y en la línea siguiente el correo. Vacía (o
 #   /dev/null) para un comando sin argumentos.
-#   <archivo>: el CSV de Trii o la ficha (solo importar-trii e importar-plan).
+#   <archivo>: el CSV de Trii, la ficha, el PDF de la certificación o el CSV de cierres (importar-trii, importar-plan,
+#   importar-certificacion e importar-precios).
 #
 # Formato (lo lee docker/migrador/cargar.sh): una cabecera de EXACTAMENTE 4096 bytes (los argumentos, uno por
 # línea; con archivo, además --bytes <N> y --sha256 <H>; una línea vacía; relleno de líneas vacías) y después el
