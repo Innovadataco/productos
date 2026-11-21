@@ -188,6 +188,7 @@ describe("desplegar-prod.sh · guardas que abortan sin DEPLOY VERIFICADO", () =>
     ["la base está en una red con salida", { FALSO_REDES_DB: "inv-008-prueba_inv-008-red-interna inv-008-prueba_inv-008-red", FALSO_REDES_CON_SALIDA: "inv-008-prueba_inv-008-red" }],
     ["la red interna de la base, internal pero sin aislar la puerta de enlace (llegaría al host)", { FALSO_REDES_SIN_AISLAR: "inv-008-prueba_inv-008-red-interna" }],
     ["la red de la entrada, internal pero sin aislar la puerta de enlace (la app llegaría al host)", { FALSO_REDES_SIN_AISLAR: "inv-008-prueba_inv-008-red-entrada" }],
+    ["la red interna dice isolated pero tiene puerta de enlace del host (el demonio no aplicó el aislamiento)", { FALSO_REDES_CON_GW: "inv-008-prueba_inv-008-red-interna" }],
     ["no hay contenedor de la entrada", { FALSO_CID_ENTRADA: "" }],
     ["la entrada se reinició (no quedó corriendo de una vez)", { FALSO_ESTADO_ENTRADA: "running 1" }],
     ["la entrada corre otra imagen que la enviada", { FALSO_IMAGEN_ENTRADA: `sha256:${"e".repeat(64)}` }],
@@ -476,7 +477,11 @@ describe("desplegar-prod.sh · la app sin salida a internet, detrás de la entra
     expect((await correr(script, [ID], env)).status).toBe(0);
     const redes = falsos.llamadas().filter((l) => l[0] === "docker" && l[1] === "inspect" && l.join(" ").includes(".Internal"));
     expect(new Set(redes.map((l) => l.at(-1)))).toEqual(new Set(["inv-008-prueba_inv-008-red-entrada", "inv-008-prueba_inv-008-red-interna"]));
-    for (const l of redes) expect(l.join(" ")).toContain('{{index .Options "com.docker.network.bridge.gateway_mode_ipv4"}}');
+    for (const l of redes) {
+      expect(l.join(" ")).toContain('{{index .Options "com.docker.network.bridge.gateway_mode_ipv4"}}');
+      // El efecto, no solo la opción: una red aislada no tiene puerta de enlace del host.
+      expect(l.join(" ")).toContain("{{range .IPAM.Config}}{{.Gateway}}{{end}}");
+    }
   });
 
   it("una red internal sin aislar la puerta de enlace detiene el despliegue y lo dice", async () => {
@@ -552,6 +557,24 @@ describe("desplegar-prod.sh · redes de una versión anterior (sin aislar): down
     expect(r.stderr).toMatch(/vuelta atrás/i);
     const ups = readFileSync(path.join(base, "tags.txt"), "utf8").trim().split("\n");
     expect(ups.at(-1)).toMatch(new RegExp(`^up ${repo.sha} .*inv-008-app.*inv-008-entrada.*inv-008-vigia.*inv-008-respaldo`));
+  });
+
+  it("valida la carpeta de respaldos ANTES de ese down: si dejó de ser válida, no baja nada", async () => {
+    const { base, falsos, env, script } = preparar({ FALSO_REDES_VIEJAS: VIEJA });
+    const r = await correr(script, [ID], { ...env, FALSO_BORRAR_EN_PS: path.join(base, "respaldos") });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/carpeta de respaldos dejó de pasar la validación/);
+    expect(falsos.llamadas().some(compose("down"))).toBe(false);
+  });
+
+  it("revisa otra vez que PI no esté desplegando justo antes de ese down", async () => {
+    const { falsos, env, script } = preparar({ FALSO_REDES_VIEJAS: VIEJA });
+    expect((await correr(script, [ID], env)).status).toBe(0);
+    const ll = falsos.llamadas();
+    const down = indice(ll, compose("down"));
+    const ps = ll.slice(0, down).map((l, i) => (l[0] === "ps" ? i : -1)).filter((i) => i >= 0);
+    expect(ps.length).toBeGreaterThanOrEqual(2);
+    expect(ll.slice(ps.at(-1)! + 1, down).some(compose("up"))).toBe(false);
   });
 
   it("si el down falla, se detiene sin levantar nada a medias", async () => {

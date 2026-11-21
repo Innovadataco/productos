@@ -7,9 +7,9 @@
 #   sudo scripts/desplegar-prod.sh <id-imagen | inv-008-app:<sha>> [--cargar <archivo.tar> <sha256>]
 #   sudo scripts/desplegar-prod.sh inv-008-app:<sha> --sin-migrar     (reversa a la imagen actual o anterior;
 #                                                                     no consulta GitHub)
-# La reversa corre con el compose del sha QUE CORRE: el clon se queda en ese sha (estado/sha-actual) y solo la
-# imagen vuelve atrás. Así nunca se cruza a una topología vieja (produccion.md §5). Despliegue normal: el clon en
-# el sha de la imagen.
+# La reversa corre con el compose del clon: el sha que corre (estado/sha-actual) o uno posterior, si un despliegue
+# falló; el clon no se mueve y solo la imagen vuelve atrás. Así nunca se cruza a una topología vieja
+# (produccion.md §5). Despliegue normal: el clon en el sha de la imagen.
 #
 # Orden: marca de pausa → candados (Inversiones y común con PI) → disco → PI sin desplegar → (.tar:
 # etiquetas, sha256 y disco; docker load) → las tres imágenes del mismo sha, amd64 → CI en verde y sha en
@@ -284,20 +284,25 @@ verificar_corriendo() {
   [ "$imagen" = "$ID" ] || morir "$quien corre $imagen y no la imagen enviada $ID"
 }
 
-# Sin puertos y solo en redes internal (sin salida a internet) con la puerta de enlace aislada (sin dirección del
-# host en el puente: desde ahí no se llega al host): cada red del contenedor $2, una por una.
+# Sin puertos y solo en redes internal (sin salida a internet) con la puerta de enlace aislada: cada red del
+# contenedor $2, una por una. Del aislamiento se revisa la opción Y su efecto: una red aislada no tiene puerta de
+# enlace del host (Docker 29 la muestra como «invalid IP»); si el demonio no aplicó la opción, tendría una dirección.
 verificar_aislado() {
-  local quien="$1" cid="$2" puertos redes red datos interna modo
+  local quien="$1" cid="$2" puertos redes red datos interna modo puerta
   puertos="$(docker port "$cid")"
   [ -z "$puertos" ] || morir "$quien publica puertos ($puertos): debe quedar solo en redes internas"
   redes="$(docker inspect -f '{{range $nombre, $_ := .NetworkSettings.Networks}}{{$nombre}} {{end}}' "$cid")" || morir "no se pudieron leer las redes de $quien"
   [ -n "${redes// /}" ] || morir "$quien no está en ninguna red"
   for red in $redes; do
-    datos="$(docker inspect --type network -f '{{.Internal}} {{index .Options "com.docker.network.bridge.gateway_mode_ipv4"}}' "$red")" ||
+    datos="$(docker inspect --type network -f '{{.Internal}}|{{index .Options "com.docker.network.bridge.gateway_mode_ipv4"}}|{{range .IPAM.Config}}{{.Gateway}}{{end}}' "$red")" ||
       morir "no se pudo leer la red $red"
-    read -r interna modo <<<"$datos"
+    IFS='|' read -r interna modo puerta <<<"$datos"
     [ "$interna" = "true" ] || morir "$quien está en la red $red, que tiene salida a internet (no es internal)"
     [ "$modo" = "isolated" ] || morir "$quien está en la red $red, internal pero sin aislar la puerta de enlace (gateway_mode_ipv4: ${modo:-ninguno}): llegaría al host"
+    case "$puerta" in
+      '' | 'invalid IP') ;;
+      *) morir "$quien está en la red $red, que dice isolated pero tiene puerta de enlace del host ($puerta): el demonio no aplicó el aislamiento" ;;
+    esac
   done
 }
 
@@ -341,6 +346,7 @@ bajar_si_redes_viejas() {
   local viejas
   viejas="$(redes_viejas)"
   [ -n "$viejas" ] || return 0
+  revisar_pi "antes de bajar para recrear las redes"
   # Desde aquí la vuelta atrás vuelve a levantar todo, aunque el sha sea el mismo.
   DETENIDOS=1
   informar "redes de una versión anterior, sin aislar la puerta de enlace ($(printf '%s' "$viejas" | tr '\n' ' ')): down SIN -v para que el up las cree nuevas; los volúmenes quedan"
@@ -495,9 +501,10 @@ main() {
   [ "$SHA_VUELTA" != "$SHA" ] || SHA_VUELTA=""
   trap vuelta_atras EXIT
 
+  # La carpeta de respaldos se valida ANTES del down de las redes viejas: si fallara después, quedaría todo abajo.
+  respaldos_siguen_validos || morir "la carpeta de respaldos dejó de pasar la validación antes del up"
   bajar_si_redes_viejas
   informar "base y respaldo: up --wait"
-  respaldos_siguen_validos || morir "la carpeta de respaldos dejó de pasar la validación antes del up"
   "${COMPOSE[@]}" up -d --wait --wait-timeout 180 inv-008-db inv-008-respaldo
   verificar_roles
   if [ "$sin_migrar" = 0 ]; then
