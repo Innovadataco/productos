@@ -43,7 +43,7 @@ describe("leerTablaCertificacion: el PDF ficticio", () => {
 
   it("las celdas van en el orden de las columnas del encabezado", () => {
     const [fondo, primera] = leer();
-    expect(fondo!.celdas).toEqual(["FONDO FICTICIO INMOBILIARIO UNO", "999000111-0", "000000001", "COP 5.000.000,00"]);
+    expect(fondo!.celdas).toEqual(["FONDO FICTICIO UNO", "999000111-0", "000000001", "COP 5.000.000,00"]);
     expect(primera!.celdas).toEqual(["FICT1", "100", "COP 1.000,00", "COP 100.000,00"]);
   });
 
