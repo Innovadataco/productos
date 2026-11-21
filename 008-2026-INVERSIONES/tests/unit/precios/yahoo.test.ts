@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { obtenerCierres, parsearYahoo, type Buscar } from "@/precios/yahoo";
+import { PRECIO_MAXIMO_COP, obtenerCierres, parsearYahoo, type Buscar } from "@/precios/yahoo";
 
 // 2024-03-12 14:30 UTC = 09:30 en Colombia (apertura); 2024-03-13 04:30 UTC = 23:30 del 12 en Colombia.
 const T1 = Date.UTC(2024, 2, 12, 14, 30) / 1000;
@@ -26,6 +26,17 @@ describe("parsearYahoo", () => {
     const tarde = Date.UTC(2024, 2, 13, 4, 30) / 1000;
     const r = parsearYahoo(respuesta([900], [tarde]));
     expect(r.ok && r.cierres[0]!.fecha.toISOString().slice(0, 10)).toBe("2024-03-12");
+  });
+
+  it("un precio sobre el máximo razonable invalida la respuesta (YAHOO_FORMATO)", () => {
+    expect(parsearYahoo(respuesta([PRECIO_MAXIMO_COP + 1], [T1]))).toEqual({ ok: false, codigo: "YAHOO_FORMATO" });
+    const r = parsearYahoo(respuesta([PRECIO_MAXIMO_COP], [T1]));
+    expect(r.ok && r.cierres).toHaveLength(1);
+  });
+
+  it("descarta la barra cuyo timestamp no es finito", () => {
+    const r = parsearYahoo(respuesta([100, 200, 300], [Number.NaN, T2, Number.POSITIVE_INFINITY]));
+    expect(r.ok && r.cierres.map((c) => c.precio)).toEqual(["200"]);
   });
 
   it("redondea a 6 decimales sin notación científica", () => {
