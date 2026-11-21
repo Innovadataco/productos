@@ -15,18 +15,38 @@
  *     («N plantillas difieren del canónico → corré el corrector»). El deploy lo corre con `|| echo`:
  *     nunca lo tumba, y NUNCA aplica — eso queda para el `--confirm` deliberado.
  *
- * Escribe SOLO `asunto` + `cuerpoMarkdown`. PRESERVA `activa` (una plantilla DEROGADA o desactivada
- * por el admin sigue inactiva), `canal`, `version` y `variablesSchema`. ABORTA ante flag desconocido
+ * Escribe `asunto` + `cuerpoMarkdown` y hace un merge ADITIVO de `variablesSchema` (AJUSTE CEO 19-11):
+ * agrega las variables que el canónico declara y la fila viva no tiene —p. ej. la `{{url}}` de un botón
+ * nuevo, que sin declarar deja la vista previa del panel con el enlace vacío—, y NUNCA quita ni cambia
+ * las existentes (las que agregó el admin quedan). PRESERVA `activa` (una plantilla DEROGADA o
+ * desactivada por el admin sigue inactiva), `canal` y `version`. ABORTA ante flag desconocido
  * (`--confirmar` no es `--confirm`) y ante `--confirm` + `--aviso` juntos. exit≠0 si una fila falla.
  *
  * Uso: node --import tsx scripts/corregir-correos-canonicos.ts [--confirm | --aviso]
  */
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 import { parseArgs } from "./limpieza/_common";
 import { CORREOS_CANONICOS } from "../prisma/correos-canonicos.seed-data";
+import { COPYS_HUERFANOS, COPYS_PENDIENTES, violacionesCobertura } from "../prisma/correos-canonicos.pendientes";
 
 const TAG = "[corregir-correos-canonicos]";
+
+/**
+ * GUARDIÁN BLANDO de cobertura contra la TABLA VIVA (deploy `--aviso`). CI solo ve el seed fresco; la
+ * BD viva puede tener claves que el seed ya no crea (p. ej. una huérfana nueva) — este scan las caza.
+ * Solo lectura; devuelve las violaciones de cobertura (la fila viva fuera de registro ∪ pendientes ∪
+ * huérfanas). No bloquea el deploy: el que lo corre decide.
+ */
+export async function escanearCoberturaViva(db: Pick<PrismaClient, "notificacionPlantilla">): Promise<string[]> {
+    const vivas = (await db.notificacionPlantilla.findMany({ select: { clave: true } })).map((p) => p.clave);
+    return violacionesCobertura(
+        { vivas },
+        CORREOS_CANONICOS.map((c) => c.clave),
+        COPYS_PENDIENTES.map((p) => p.clave),
+        COPYS_HUERFANOS.map((h) => h.clave)
+    );
+}
 
 export const FLAGS_CORRECTOR = ["confirm", "aviso"] as const;
 
@@ -46,8 +66,10 @@ export function parsearArgsCorrector(argv: string[]): { modo: ModoCorrector } {
 export interface FilaCopyCambio {
     clave: string;
     id: string;
-    /** Qué difiere del canónico. */
-    campos: ("asunto" | "cuerpo")[];
+    /** Qué difiere del canónico (`schema` = le faltan variables que el canónico declara). */
+    campos: ("asunto" | "cuerpo" | "schema")[];
+    /** Variables que el merge aditivo le agrega al `variablesSchema` de la fila. */
+    variablesNuevas: string[];
     version: number;
     /** La tocó un admin desde el panel (`actualizadaPor`): pisarla revierte esa edición. */
     editadaEnPanel: boolean;
@@ -76,6 +98,34 @@ interface FilaLeida {
     cuerpoMarkdown: string;
     version: number;
     actualizadaPor: string | null;
+    variablesSchema: unknown;
+}
+
+function esObjeto(v: unknown): v is Record<string, unknown> {
+    return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Merge ADITIVO del `variablesSchema`: agrega a la fila viva las `properties` que el canónico declara y
+ * ella no tiene. Nunca quita ni cambia una clave existente (de la fila o agregada por el admin).
+ */
+export function mergeSchemaAditivo(
+    vivo: unknown,
+    canonico: Record<string, unknown>
+): { schema: Record<string, unknown>; nuevas: string[] } {
+    const base = esObjeto(vivo) ? vivo : {};
+    const propsVivo = esObjeto(base.properties) ? base.properties : {};
+    const propsCanon = esObjeto(canonico.properties) ? canonico.properties : {};
+    const nuevas = Object.keys(propsCanon).filter((k) => !(k in propsVivo));
+    if (nuevas.length === 0) return { schema: base, nuevas };
+    return {
+        schema: {
+            ...base,
+            type: base.type ?? canonico.type ?? "object",
+            properties: { ...propsVivo, ...Object.fromEntries(nuevas.map((k) => [k, propsCanon[k]])) },
+        },
+        nuevas,
+    };
 }
 
 /**
@@ -110,11 +160,14 @@ export async function corregirCorreosCanonicos(
         const campos: FilaCopyCambio["campos"] = [];
         if ((fila.asunto ?? null) !== asunto) campos.push("asunto");
         if (fila.cuerpoMarkdown !== c.cuerpoMarkdown) campos.push("cuerpo");
+        const merge = mergeSchemaAditivo(fila.variablesSchema, c.variablesSchema);
+        if (merge.nuevas.length > 0) campos.push("schema");
         if (campos.length === 0) continue; // idempotente
         desactualizadas.push({
             clave: c.clave,
             id: fila.id,
             campos,
+            variablesNuevas: merge.nuevas,
             version: fila.version,
             editadaEnPanel: fila.actualizadaPor != null,
         });
@@ -122,8 +175,12 @@ export async function corregirCorreosCanonicos(
         try {
             await db.notificacionPlantilla.update({
                 where: { clave: c.clave },
-                // activa, canal, version y variablesSchema se PRESERVAN.
-                data: { asunto, cuerpoMarkdown: c.cuerpoMarkdown },
+                // activa, canal y version se PRESERVAN; el schema solo GANA claves (merge aditivo).
+                data: {
+                    asunto,
+                    cuerpoMarkdown: c.cuerpoMarkdown,
+                    ...(merge.nuevas.length > 0 ? { variablesSchema: merge.schema as Prisma.InputJsonValue } : {}),
+                },
             });
             corregidas++;
         } catch (e) {
@@ -158,7 +215,12 @@ export function lineaDeAviso(r: ResultadoCorrectorCopys): string {
 /** El detalle de una fila desactualizada (para el DRY-RUN y el aviso). */
 export function detalleDeFila(f: FilaCopyCambio): string {
     const panel = f.editadaEnPanel ? " · EDITADA EN PANEL (--confirm revierte esa edición)" : "";
-    return `  ${f.clave} — difiere: ${f.campos.join(" + ")} · v${f.version}${panel}`;
+    const copy = f.campos.filter((x) => x !== "schema");
+    const partes = [
+        ...(copy.length > 0 ? [`difiere: ${copy.join(" + ")}`] : []),
+        ...(f.variablesNuevas.length > 0 ? [`schema +${f.variablesNuevas.length} (${f.variablesNuevas.join(", ")})`] : []),
+    ];
+    return `  ${f.clave} — ${partes.join(" · ")} · v${f.version}${panel}`;
 }
 
 async function main(): Promise<void> {
@@ -169,6 +231,14 @@ async function main(): Promise<void> {
         console.log(`${TAG} ${lineaDeAviso(r)}`);
         for (const f of r.desactualizadas) console.log(detalleDeFila(f));
         for (const f of r.fallidas) console.log(`  ✗ ${f.clave}: ${f.error}`);
+        // Guardián blando de COBERTURA contra la tabla viva (lo que CI, con seed fresco, no ve).
+        const huecos = await escanearCoberturaViva(prisma).catch((e) => [`no se pudo escanear cobertura: ${e instanceof Error ? e.message : String(e)}`]);
+        if (huecos.length > 0) {
+            console.log(`${TAG} ⚠️  cobertura: ${huecos.length} clave(s) viva(s) fuera de registro ∪ pendientes ∪ huérfanas → declarar en pendientes/huérfanas:`);
+            for (const h of huecos) console.log(`    ${h}`);
+        } else {
+            console.log(`${TAG} ✓ cobertura: toda clave viva está declarada (registro ∪ pendientes ∪ huérfanas)`);
+        }
         if (r.fallidas.length > 0) process.exitCode = 1;
         return;
     }
