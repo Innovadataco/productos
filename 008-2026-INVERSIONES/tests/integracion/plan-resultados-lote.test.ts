@@ -127,12 +127,13 @@ describe("resultado en lote con dividendos", () => {
     for (const id of todas) expect(lote.get(id)).toEqual(await resultadoDeDecision(db, id, HOY));
   });
 
+  // Se compara con la de venta: Prisma solo consulta las órdenes de los enlaces si hay enlaces.
   it("no hace una consulta por decisión: con 1 o con 4 decisiones son las mismas consultas", async () => {
     const contado = new PrismaClient({ log: [{ emit: "event", level: "query" }] });
     let consultas = 0;
     contado.$on("query", () => { consultas += 1; });
     try {
-      await resultadosDeDecisiones(contado, [decisiones.noActuar], HOY);
+      await resultadosDeDecisiones(contado, [decisiones.vender], HOY);
       const conUna = consultas;
       consultas = 0;
       await resultadosDeDecisiones(contado, Object.values(decisiones), HOY);
