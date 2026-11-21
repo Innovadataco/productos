@@ -296,7 +296,15 @@ export const GUARDIAS_ACCESO = {
             // pero sus datos responden 403 CAMINO_INCOMPLETO.
             "/api/colegio/materias",
             "/api/colegio/identificadores-profesor",
-            // Paso 5 · estudiantes.
+            // Paso 5 · estudiantes. SPEC-956 volvió el paso INLINE y su «Lista actual» la
+            // alimenta GET /api/colegio/estudiantes (SPEC-931), NO /api/colegio/alumnos.
+            // SPEC-979 (I-460 · prod 799c8880, hallazgo de Jelk): sin esta exención, un colegio
+            // con 0 estudiantes está parado EN el paso «estudiantes» → el guardián del camino le
+            // devuelve 403 CAMINO_INCOMPLETO a la MISMA lista que el paso necesita para
+            // renderizarse, y la pantalla pinta «No pudimos cargar la lista de estudiantes» sobre la
+            // lista vacía. Al agregar el primero el camino cierra y la exención dejaba de pesar —
+            // por eso SOLO fallaba con 0. Mismo encierro que SPEC-357 cerró para vigencia.
+            "/api/colegio/estudiantes",
             "/api/colegio/carga",
             "/api/colegio/alumnos",
             // Auditoría #222 · punto 1: las alertas de menores NUNCA se bloquean
@@ -391,6 +399,11 @@ export const GUARDIAS_ACCESO = {
                 "/api/colegio/profesores",
                 "/api/colegio/carga-profesores",
                 "/api/colegio/cursos",
+                // SPEC-979: la lista del paso 5 (GET /api/colegio/estudiantes · SPEC-931) es
+                // hermana de /cursos y /profesores — exenta también de vigencia para que un colegio
+                // vencido a MEDIAS del camino pueda verla. El handler ya aplica
+                // verificarVigenciaColegioSalvoCamino; el muro no debe taparla antes de llegar.
+                "/api/colegio/estudiantes",
                 "/api/colegio/carga",
                 "/api/colegio/alumnos",
                 "/api/colegio/tipos-documento",

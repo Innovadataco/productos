@@ -26,6 +26,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // INVARIANTE DE PRODUCTO (CEO · extraído de SPEC-751): el camino de REPORTE y los canales
     // oficiales NUNCA se gatean. Estructural, control positivo; cae si una compuerta los tapa.
     "src/lib/routing/proteccion-siempre-abierta.candado.test.ts",
+    // SPEC-979 (I-460): la lista del paso 5 del colegio (GET /api/colegio/estudiantes) queda exenta
+    // del camino y de vigencia — sin ella, un colegio con 0 estudiantes se bloquea a sí mismo (403).
+    "src/lib/routing/estudiantes-paso5-camino-exenta.candado.test.ts",
     "src/lib/routing/vigencia-cookie.test.ts",
     "src/lib/routing/middleware.test.ts",
     // SPEC-572 (I-236): interceptor cliente que refresca sesion_estado ante el 403 del cerrojo.
