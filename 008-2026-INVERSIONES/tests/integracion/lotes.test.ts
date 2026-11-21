@@ -1,4 +1,6 @@
 // Integración de INV-SPEC-12 contra la base de PRUEBAS. Datos inventados.
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { registrarEscision, validarEscision } from "@/eventos/escision";
@@ -210,6 +212,68 @@ describe("rechazos dentro del FIFO (BLOQUEADA_INCOMPLETA, COSTO_NEGATIVO)", () =
     expect(r.especiesRechazadas).toContainEqual({ instrumentoId: l.instrumentoId, codigo: "COSTO_NEGATIVO", ventaId: null, loteId: l.id });
     expect(await db.asignacionVenta.findMany({ where: { loteId: l.id }, select: { ordenVentaId: true, bloqueada: true } })).toEqual([{ ordenVentaId: v1.id, bloqueada: true }]);
     expect((await posiciones(db)).especiesIncompletas).toContain(l.instrumentoId);
+  });
+});
+
+describe("scripts/contar-bloqueadas.sql (solo conteos, solo lectura)", () => {
+  /** La consulta del script, sin su BEGIN READ ONLY ni su ROLLBACK. */
+  const consulta = (): string =>
+    readFileSync(fileURLToPath(new URL("../../scripts/contar-bloqueadas.sql", import.meta.url)), "utf8").replace(/--.*$/gm, "").split(";")[1]!;
+  const contar = async () => new Map((await db.$queryRawUnsafe<{ codigo: string; filas: bigint }[]>(consulta())).map((f) => [f.codigo, Number(f.filas)]));
+
+  it("cuenta por código las bloqueadas inválidas ya guardadas, sin mostrar ninguna fila", async () => {
+    const n = nemo("CB");
+    await ordenes(
+      fila("8 ene 2024", n, "Compra", "Aprobado", 100, 10) + fila("4 mar 2024", n, "Venta", "Aprobado", 30, 15) +
+      fila("5 mar 2024", n, "Venta", "Aprobado", 200, 15) + fila("5 jun 2024", n, "Compra", "Aprobado", 20, 12),
+    );
+    await construirLotes(db);
+    const [v, vg, c, l, lp] = [
+      await ordenDe(n, "VENTA", "2024-03-04"), await ordenDe(n, "VENTA", "2024-03-05"), await ordenDe(n, "COMPRA", "2024-01-08"),
+      await loteDe(n, "2024-01-08"), await loteDe(n, "2024-06-05"),
+    ];
+    const antes = await contar();
+    await fijarComoAntes([
+      { ordenVentaId: c.id, loteId: l.id, cantidad: 1n, costoBase: "1" }, // orden que no es venta (mismo día que el lote)
+      { ordenVentaId: v.id, loteId: lp.id, cantidad: 5n, costoBase: "60" }, // lote posterior a la venta
+      { ordenVentaId: vg.id, loteId: l.id, cantidad: 150n, costoBase: "1500" }, // pasa el lote de 100
+    ]);
+    const despues = await contar();
+    const delta = (codigo: string) => (despues.get(codigo) ?? 0) - (antes.get(codigo) ?? 0);
+    expect([delta("BLOQUEADAS"), delta("BLOQUEADA_VENTA_AJENA"), delta("BLOQUEADA_LOTE_POSTERIOR"), delta("BLOQUEADA_EXCEDE_LOTE")]).toEqual([3, 1, 1, 1]);
+    expect(Object.keys((await db.$queryRawUnsafe<object[]>(consulta()))[0] ?? {}).sort()).toEqual(["codigo", "filas"]);
+  });
+
+  it("cuenta los 8 códigos, y los bordes (costo igual al del lote; lote agotado con 1 COP de más) dan 0", async () => {
+    const [n, m, k] = [nemo("CC"), nemo("CM"), nemo("CK")];
+    await ordenes(
+      fila("8 ene 2024", n, "Compra", "Aprobado", 100, 10) + fila("5 feb 2024", n, "Compra", "Aprobado", 100, 10) +
+      fila("6 feb 2024", n, "Compra", "Aprobado", 10, 10) + fila("4 mar 2024", n, "Venta", "Aprobado", 30, 15) +
+      fila("5 mar 2024", n, "Venta", "Aprobado", 200, 15) + fila("8 ene 2024", m, "Compra", "Aprobado", 100, 10) +
+      fila("8 ene 2024", k, "Compra", "Aprobado", 10, 10) + fila("9 ene 2024", k, "Compra", "Aprobado", 100, 10) +
+      fila("4 mar 2024", k, "Venta", "Aprobado", 120, 15),
+    );
+    await construirLotes(db); // n y k: VENTA_SIN_LOTES (sin FIFO); m: sin ventas
+    const [v1, v2, kv] = [await ordenDe(n, "VENTA", "2024-03-04"), await ordenDe(n, "VENTA", "2024-03-05"), await ordenDe(k, "VENTA", "2024-03-04")];
+    const [l1, l2, l3, m1, k1, k2] = [
+      await loteDe(n, "2024-01-08"), await loteDe(n, "2024-02-05"), await loteDe(n, "2024-02-06"),
+      await loteDe(m, "2024-01-08"), await loteDe(k, "2024-01-08"), await loteDe(k, "2024-01-09"),
+    ];
+    const antes = await contar();
+    await fijarComoAntes([
+      { ordenVentaId: v1.id, loteId: m1.id, cantidad: 5n, costoBase: "50" }, // lote de otra especie
+      { ordenVentaId: v1.id, loteId: l1.id, cantidad: 40n, costoBase: "400" }, // v1: 45 sobre 30
+      { ordenVentaId: v2.id, loteId: l2.id, cantidad: 50n, costoBase: "1500" }, // lote no agotado con más costo que el suyo
+      { ordenVentaId: v2.id, loteId: l3.id, cantidad: 10n, costoBase: "98.9" }, // lote agotado, 1,1 COP de menos
+      { ordenVentaId: kv.id, loteId: k1.id, cantidad: 10n, costoBase: "101" }, // borde: agotado con 1 COP de más
+      { ordenVentaId: kv.id, loteId: k2.id, cantidad: 50n, costoBase: "1000" }, // borde: no agotado, costo igual al total
+    ]);
+    const despues = await contar();
+    const delta = (codigo: string) => (despues.get(codigo) ?? 0) - (antes.get(codigo) ?? 0);
+    expect(Object.fromEntries([...despues.keys()].map((c) => [c, delta(c)]))).toEqual({
+      BLOQUEADAS: 6, BLOQUEADA_VENTA_AJENA: 0, BLOQUEADA_LOTE_AJENO: 1, BLOQUEADA_LOTE_POSTERIOR: 0,
+      BLOQUEADA_EXCEDE_VENTA: 1, BLOQUEADA_EXCEDE_LOTE: 0, BLOQUEADA_EXCEDE_COSTO: 1, BLOQUEADA_COSTO_DESCUADRADO: 1,
+    });
   });
 });
 
