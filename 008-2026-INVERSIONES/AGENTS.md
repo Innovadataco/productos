@@ -49,7 +49,7 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 | `npm run precios:actualizar [-- --desde …]` | Cierres diarios de Yahoo `.CL`, versionados y verificados contra la certificación. Cada corrida re-verifica también los cierres iguales: si la verificación cambió (llegó, cambió o ya no está la certificación del día), versiona el mismo precio y lo cuenta como «re-verificado»; para una certificación con corte fuera de los últimos 10 días, corra `-- --desde <corte>`. Consulta un servicio externo con los símbolos del portafolio: solo desde la máquina del dueño o el servidor |
 | `npm run precios:depurar -- --desde AAAA-MM-DD [--aplicar --base <nombre>]` | Retira (`reemplazadoEn`, nada se borra) los cierres de Yahoo ya guardados de días no hábiles o sin negociación (volumen 0). Sin `--aplicar` es un ensayo con conteos; aplicar solo con el arreglo desplegado donde corran las cargas, y dos veces (la segunda da 0). Se revierte con `precios:actualizar -- --desde <día>` si Yahoo trae después volumen. Consulta Yahoo: solo desde la máquina del dueño o el servidor |
 | `npm run test:e2e` | Playwright (`playwright.config.ts`): flujos de punta a punta (ingreso, definir clave, tablero, cabeceras). Levanta `next dev` y siembra la base e2e (`tests/e2e/sembrar.ts`). Por verificar si requiere `npm run db:up` antes |
-| `npm run test:cobertura` | Vitest con cobertura (`@vitest/coverage-v8`). `vitest.config.ts` no fija umbral: el mínimo de 80% de ECC no está automatizado (por verificar) |
+| `npm run test:cobertura` | Vitest con cobertura (`@vitest/coverage-v8`). Pisos medidos en main y redondeados hacia abajo: unidad en `vitest.config.ts` (statements 57, branches 93, functions 87, lines 57) e integración en `vitest.integracion.config.ts` (71, 82, 92, 71; con la base recién reiniciada y `vitest run --config vitest.integracion.config.ts --coverage`). Solo muerden con `--coverage`: el CI no corre cobertura, y el 80 % de ECC sigue sin automatizarse |
 
 **Datos y producción** (comandos fuera de `npm test`):
 
@@ -117,7 +117,8 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
-> v1.15 · 2026-11-21 · 04:20 (-05) · INV · Fábrica Inversiones · `precios:actualizar` re-verifica los cierres iguales contra la certificación (`--desde <corte>`)
+> v1.16 · 2026-11-21 · 04:38 (-05) · INV · Fábrica Inversiones · `precios:actualizar` re-verifica los cierres iguales contra la certificación (`--desde <corte>`)
+> v1.15 · 2026-11-21 · 04:24 (-05) · INV · Fábrica Inversiones · pisos de cobertura en `test:cobertura` (solo muerden con `--coverage`)
 > v1.14 · 2026-11-21 · 03:40 (-05) · INV · Fábrica Inversiones · comando `precios:depurar` (SPEC-13: cierres de días no hábiles o sin negociación)
 > v1.13 · 2026-11-21 · 02:08 (-05) · INV · Fábrica Inversiones · producción con su procedimiento real (`produccion.md`, `convivencia-pi.md`, `inv-008-prod`, `.env` 600, `DEPLOY VERIFICADO`); guardianes de e2e y cobertura; comandos de datos y de producción verificados en `package.json` y `scripts/`
 > v1.12 · 2026-11-20 · 21:16 (-05) · INV · Fábrica ECC · solo ECC por orden de Jelk: sin SPEC, radicados ni manual 02; ramas `work/inv-<nombre-corto>`; «ECC usado» en cada PR
