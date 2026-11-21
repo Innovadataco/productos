@@ -18,10 +18,11 @@ const yahoo = (barras: readonly Barra[]): Buscar => async () =>
   }));
 
 interface Fila { id: string; instrumentoId: string; fecha: Date; precio: Prisma.Decimal; fuente: string; reemplazadoEn: Date | null }
-type Donde = { id?: string; instrumentoId?: string; fecha?: Date; fuente?: string; reemplazadoEn?: null };
+type Donde = { id?: string; instrumentoId?: string; fecha?: Date | { in: Date[] }; fuente?: string; reemplazadoEn?: null };
+const mismaFecha = (f: Date, w: Date | { in: Date[] }) => (w instanceof Date ? [w] : w.in).some((d) => d.getTime() === f.getTime());
 const cumple = (w: Donde) => (f: Fila) =>
   (w.id === undefined || f.id === w.id) && (w.instrumentoId === undefined || f.instrumentoId === w.instrumentoId) &&
-  (w.fecha === undefined || f.fecha.getTime() === w.fecha.getTime()) && (w.fuente === undefined || f.fuente === w.fuente) &&
+  (w.fecha === undefined || mismaFecha(f.fecha, w.fecha)) && (w.fuente === undefined || f.fuente === w.fuente) &&
   (!("reemplazadoEn" in w) || f.reemplazadoEn === null);
 
 /**
@@ -30,9 +31,11 @@ const cumple = (w: Donde) => (f: Fila) =>
  */
 function baseFalsa(calendario: readonly { dia: Date; esHabil: boolean }[], previas: readonly Fila[] = [], fallarRetiro = false) {
   const filas: Fila[] = previas.map((f) => ({ ...f }));
+  const llamadas = { retiros: 0 };
   const precioCierre = {
     findFirst: async ({ where }: { where: Donde }) => filas.find(cumple(where)) ?? null,
     updateMany: async ({ where, data }: { where: Donde; data: { reemplazadoEn: Date } }) => {
+      if (where.id === undefined) llamadas.retiros += 1;
       if (fallarRetiro && where.id === undefined) throw Object.assign(new Error("valor 777111 en la consulta"), { name: "PrismaClientKnownRequestError", code: "P1001" });
       const blanco = filas.filter(cumple(where));
       for (const f of blanco) f.reemplazadoEn = data.reemplazadoEn;
@@ -53,7 +56,7 @@ function baseFalsa(calendario: readonly { dia: Date; esHabil: boolean }[], previ
     precioCierre,
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(db),
   };
-  return { db: db as unknown as PrismaClient, filas };
+  return { db: db as unknown as PrismaClient, filas, llamadas };
 }
 
 const vigentes = (filas: readonly Fila[]) =>
@@ -116,6 +119,20 @@ describe("actualizarPrecios · días no hábiles y sin negociación (base falsa)
     expect(filas.filter((f) => f.reemplazadoEn !== null).map((f) => f.id)).toEqual(["v-2024-03-27", "v-2024-03-28"]);
     expect(filas).toHaveLength(4); // nada se borra
     expect(r).toMatchObject({ cierresNuevos: 1, cierresRevisados: 0, cierresRetirados: 2, omitidasNoHabil: 1, omitidasSinNegociacion: 1, fallidas: [] });
+  });
+
+  it("retira con una sola sentencia por especie, no una por barra (revisión: N+1)", async () => {
+    const { db, filas, llamadas } = baseFalsa(CALENDARIO_2024, [previa("2024-03-27"), previa("2024-03-28")]);
+    const r = await actualizarPrecios(db, { desde: utc("2024-03-26"), hasta: utc("2024-04-01"), buscar: yahoo(SEMANA), instrumentoIds: [ESPECIE], ahora: DESPUES });
+    expect(llamadas.retiros).toBe(1);
+    expect(r.cierresRetirados).toBe(2);
+    expect(filas.filter((f) => f.reemplazadoEn !== null)).toHaveLength(2);
+  });
+
+  it("sin barras que retirar no hay sentencia de retiro", async () => {
+    const { db, llamadas } = baseFalsa(CALENDARIO_2024);
+    await actualizarPrecios(db, { desde: utc("2024-03-26"), hasta: utc("2024-03-26"), buscar: yahoo([{ dia: "2024-03-26", close: 100, volume: 10 }]), instrumentoIds: [ESPECIE], ahora: DESPUES });
+    expect(llamadas.retiros).toBe(0);
   });
 
   it("HORARIO y SIN_CALENDARIO no retiran: no hay certeza de que el vigente sobre", async () => {

@@ -146,44 +146,53 @@ async function guardarCierre(db: PrismaClient, instrumentoId: string, c: Cierre)
 }
 
 /**
- * Retira el cierre vigente de ese día: `reemplazadoEn` sin sucesor; la fila queda como historia.
- * Una sola sentencia con guarda (`reemplazadoEn: null`): ante otra corrida, una retira y la otra ve 0.
+ * Retira los cierres vigentes de la especie en esas fechas: `reemplazadoEn` sin sucesor; las filas
+ * quedan como historia. Una sola sentencia con guarda (`reemplazadoEn: null`): ante otra corrida,
+ * una retira y la otra ve 0. Devuelve cuántos retiró.
  */
-export async function retirarVigente(db: Pick<PrismaClient, "precioCierre">, instrumentoId: string, fecha: Date): Promise<number> {
-  const { count } = await db.precioCierre.updateMany({ where: { instrumentoId, fecha, fuente: FUENTE, reemplazadoEn: null }, data: { reemplazadoEn: new Date() } });
+export async function retirarVigentes(db: Pick<PrismaClient, "precioCierre">, instrumentoId: string, fechas: readonly Date[]): Promise<number> {
+  if (fechas.length === 0) return 0;
+  const { count } = await db.precioCierre.updateMany({ where: { instrumentoId, fecha: { in: [...fechas] }, fuente: FUENTE, reemplazadoEn: null }, data: { reemplazadoEn: new Date() } });
   return count;
 }
 
-/** Escribe lo que toca a una barra: el cierre si no hay razón para omitirla, o el retiro del vigente si la razón lo pide. */
-async function escribirBarra(db: PrismaClient, instrumentoId: string, c: Cierre, motivo: MotivoOmision | null): Promise<Conteo> {
-  if (!motivo) {
-    const cambio = await guardarCierre(db, instrumentoId, c);
-    return { ...CONTEO_CERO, nuevos: cambio === "nuevo" ? 1 : 0, revisados: cambio === "revisado" ? 1 : 0 };
-  }
-  return retiraElVigente(motivo) ? { ...CONTEO_CERO, retirados: await retirarVigente(db, instrumentoId, c.fecha) } : CONTEO_CERO;
-}
+const conCambio = (c: Conteo, cambio: Cambio): Conteo => ({ ...c, nuevos: c.nuevos + (cambio === "nuevo" ? 1 : 0), revisados: c.revisados + (cambio === "revisado" ? 1 : 0) });
 
 interface ResultadoEspecie {
   readonly conteo: Conteo;
   readonly fallo: FalloEspecie | null;
 }
 
-/** Guarda las barras que son cierre de su día, cuenta las omitidas y retira lo que sobra. Una barra que falla no aborta las demás. */
+/**
+ * Guarda las barras que son cierre de su día, cuenta las omitidas y, al final, retira en una sola
+ * sentencia los vigentes de los días que sobran. Una barra que falla no aborta las demás.
+ */
 async function guardarBarras(db: PrismaClient, instrumentoId: string, cierres: readonly Cierre[], ahora: Date, calendario: CalendarioBvc): Promise<ResultadoEspecie> {
   let conteo = CONTEO_CERO;
   let barrasGuardadas = 0;
   let barrasFallidas = 0;
   let detalle: string | undefined;
+  const aRetirar: Date[] = [];
   for (const c of cierres) {
     const motivo = motivoOmision(c, ahora, calendario);
-    if (motivo) conteo = conOmitida(conteo, motivo);
+    if (motivo) {
+      conteo = conOmitida(conteo, motivo);
+      if (retiraElVigente(motivo)) aRetirar.push(c.fecha);
+      continue;
+    }
     try {
-      conteo = sumar(conteo, await escribirBarra(db, instrumentoId, c, motivo));
-      if (!motivo) barrasGuardadas += 1;
+      conteo = conCambio(conteo, await guardarCierre(db, instrumentoId, c));
+      barrasGuardadas += 1;
     } catch (err) {
       barrasFallidas += 1;
       detalle ??= detalleDeError(err);
     }
+  }
+  try {
+    conteo = { ...conteo, retirados: conteo.retirados + (await retirarVigentes(db, instrumentoId, aRetirar)) };
+  } catch (err) {
+    barrasFallidas += aRetirar.length;
+    detalle ??= detalleDeError(err);
   }
   const fallo = barrasFallidas > 0 ? { instrumentoId, codigo: "GUARDADO_ERROR", ...(detalle ? { detalle } : {}), barrasGuardadas, barrasFallidas } : null;
   return { conteo, fallo };
