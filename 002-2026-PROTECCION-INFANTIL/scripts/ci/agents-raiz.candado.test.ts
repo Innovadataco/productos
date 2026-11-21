@@ -1,15 +1,17 @@
 /**
- * CANDADO · SPEC-976 — el AGENTS.md RAÍZ del monorepo describe la estructura REAL.
+ * CANDADO · SPEC-976 — los documentos RAÍZ del monorepo (`AGENTS.md` y `README.md`) describen
+ * la estructura REAL. Los leen TODAS las sesiones de TODOS los productos.
  *
- * El defecto: el `/AGENTS.md` raíz (lo leen TODAS las sesiones de TODOS los productos) citaba
- * carpetas que no existen (`fabrica-de-software/`, `documentacion-tecnica/`), repetía reglas
- * derogadas y describía mal el repo. Una sesión que lo tomaba como verdad arrancaba perdida.
+ * El defecto: ambos citaban carpetas que no existen (`fabrica-de-software/`,
+ * `documentacion-tecnica/`), reglas derogadas («5 reglas de oro», «sin ACTA-VALIDACION no hay
+ * merge») y describían mal el repo. Una sesión que los tomaba como verdad arrancaba perdida.
  *
- * Este candado lee el AGENTS.md raíz y afirma, contra el disco, que lo que nombra es real:
- *  1. NO cita las dos carpetas derogadas (imposibilidad estructural: si vuelven al texto, rojo).
+ * Por CADA documento raíz este candado afirma, contra el disco, que lo que nombra es real:
+ *  1. NO cita las carpetas derogadas (imposibilidad estructural: si vuelven al texto, rojo).
  *  2. Toda carpeta de producto `NNN-AAAA-<NOMBRE>` que menciona EXISTE como directorio en la raíz.
  *  3. Todo workflow `*.yml` que menciona EXISTE en `.github/workflows/`.
- *  4. El parser no quedó vacío (cita ≥2 productos y ≥2 workflows): evita un verde vacuo.
+ * Además, el parser no quedó vacío (AGENTS.md cita ≥2 productos y ≥2 workflows; README ≥2
+ * productos): evita un verde vacuo si una regex deja de casar.
  *
  * Control positivo por MUTACIÓN en memoria: re-citar una carpeta muerta → rojo; citar un
  * producto o un workflow inexistente → rojo. NO afirma sobre prosa: solo sobre tokens que el
@@ -23,8 +25,10 @@ import { dirname, resolve } from "node:path";
 
 const AQUI = dirname(fileURLToPath(import.meta.url)); // 002-…/scripts/ci
 const REPO_ROOT = resolve(AQUI, "../../.."); // raíz del monorepo
-const AGENTS_RAIZ = resolve(REPO_ROOT, "AGENTS.md");
 const WORKFLOWS_DIR = resolve(REPO_ROOT, ".github/workflows");
+
+/** Documentos raíz que leen todas las sesiones. */
+const DOCS_RAIZ = ["AGENTS.md", "README.md"] as const;
 
 /** Carpetas que el texto anterior inventaba y que NO existen en el repo. */
 export const CARPETAS_DEROGADAS = ["fabrica-de-software", "documentacion-tecnica"] as const;
@@ -46,35 +50,42 @@ export function workflowsReferenciados(texto: string): string[] {
     return [...new Set(encontrados)];
 }
 
-describe("SPEC-976 · el AGENTS.md raíz describe la estructura real", () => {
-    const texto = readFileSync(AGENTS_RAIZ, "utf8");
-    const productos = carpetasDeProductoReferenciadas(texto);
-    const workflows = workflowsReferenciados(texto);
+describe("SPEC-976 · los documentos raíz describen la estructura real", () => {
+    for (const doc of DOCS_RAIZ) {
+        describe(doc, () => {
+            const ruta = resolve(REPO_ROOT, doc);
+            it("existe", () => {
+                expect(existsSync(ruta), `no existe ${ruta}`).toBe(true);
+            });
 
-    it("existe el AGENTS.md raíz", () => {
-        expect(existsSync(AGENTS_RAIZ), `no existe ${AGENTS_RAIZ}`).toBe(true);
-    });
+            const texto = existsSync(ruta) ? readFileSync(ruta, "utf8") : "";
 
-    it("NO cita carpetas derogadas (imposibilidad estructural)", () => {
-        expect(carpetasDerogadasEnTexto(texto), "carpetas muertas aún citadas").toEqual([]);
-    });
+            it("NO cita carpetas derogadas (imposibilidad estructural)", () => {
+                expect(carpetasDerogadasEnTexto(texto), "carpetas muertas aún citadas").toEqual([]);
+            });
 
-    it("el parser no quedó vacío (cita ≥2 productos y ≥2 workflows)", () => {
-        expect(productos.length, "ningún NNN-AAAA-* — ¿regex o ruta mal?").toBeGreaterThanOrEqual(2);
-        expect(workflows.length, "ningún *.yml citado — ¿regex o ruta mal?").toBeGreaterThanOrEqual(2);
-    });
+            it("toda carpeta de producto citada EXISTE como directorio en la raíz", () => {
+                const fantasmas = carpetasDeProductoReferenciadas(texto).filter((p) => {
+                    const r = resolve(REPO_ROOT, p);
+                    return !existsSync(r) || !statSync(r).isDirectory();
+                });
+                expect(fantasmas, `carpetas citadas que no existen: ${fantasmas.join(" · ")}`).toEqual([]);
+            });
 
-    it("toda carpeta de producto citada EXISTE como directorio en la raíz", () => {
-        const fantasmas = productos.filter((p) => {
-            const ruta = resolve(REPO_ROOT, p);
-            return !existsSync(ruta) || !statSync(ruta).isDirectory();
+            it("todo workflow citado EXISTE en .github/workflows/", () => {
+                const fantasmas = workflowsReferenciados(texto).filter((w) => !existsSync(resolve(WORKFLOWS_DIR, w)));
+                expect(fantasmas, `workflows citados que no existen: ${fantasmas.join(" · ")}`).toEqual([]);
+            });
+
+            it("el parser no quedó vacío (cita ≥2 productos)", () => {
+                expect(carpetasDeProductoReferenciadas(texto).length, "ningún NNN-AAAA-* — ¿regex o ruta mal?").toBeGreaterThanOrEqual(2);
+            });
         });
-        expect(fantasmas, `carpetas citadas que no existen: ${fantasmas.join(" · ")}`).toEqual([]);
-    });
+    }
 
-    it("todo workflow citado EXISTE en .github/workflows/", () => {
-        const fantasmas = workflows.filter((w) => !existsSync(resolve(WORKFLOWS_DIR, w)));
-        expect(fantasmas, `workflows citados que no existen: ${fantasmas.join(" · ")}`).toEqual([]);
+    it("AGENTS.md cita ≥2 workflows del ruleset (no es un verde vacuo)", () => {
+        const texto = readFileSync(resolve(REPO_ROOT, "AGENTS.md"), "utf8");
+        expect(workflowsReferenciados(texto).length, "ningún *.yml citado — ¿regex o ruta mal?").toBeGreaterThanOrEqual(2);
     });
 
     it("CONTROL POSITIVO por MUTACIÓN (en memoria, las dos direcciones)", () => {
