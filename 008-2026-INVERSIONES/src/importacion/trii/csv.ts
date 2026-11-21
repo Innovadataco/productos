@@ -1,7 +1,13 @@
 /**
  * Lector CSV mínimo (RFC 4180): comas, comillas dobles, comillas escapadas ("") y saltos de
- * línea dentro de comillas. Quita el BOM UTF-8 y las líneas vacías del final.
- * Devuelve filas como arreglos de texto, sin interpretar valores.
+ * línea dentro de comillas. Quita el BOM UTF-8. Devuelve los registros con su texto, sin interpretar valores,
+ * y con su número en el archivo (el encabezado es el 1): la trazabilidad de filas y errores (O4).
+ * - Una línea totalmente vacía (cero caracteres entre dos saltos, fuera de comillas) se omite en cualquier
+ *   posición, pero cuenta para la numeración. «,,,», «   » y «""» NO son vacías: se conservan.
+ * - Al final del archivo se quitan además los registros en blanco (todas sus celdas en blanco: también «,,,» y
+ *   «   »), como antes. Asimetría a propósito (decisión G7): en medio, esos registros los rechaza quien los
+ *   interpreta.
+ * El número es el del registro, no el de la línea física: un salto dentro de comillas no suma.
  */
 export class ErrorCsv extends Error {
   constructor(readonly codigo: "COMILLA_SIN_CERRAR") {
@@ -10,12 +16,28 @@ export class ErrorCsv extends Error {
   }
 }
 
-export function leerCsv(texto: string): string[][] {
+export interface RegistroCsv {
+  /** Número del registro en el archivo, contando el encabezado como 1 y las líneas vacías omitidas. */
+  readonly numero: number;
+  readonly celdas: readonly string[];
+}
+
+export function leerCsv(texto: string): RegistroCsv[] {
   const contenido = texto.charCodeAt(0) === 0xfeff ? texto.slice(1) : texto;
-  const filas: string[][] = [];
-  let fila: string[] = [];
+  const registros: RegistroCsv[] = [];
+  let numero = 1;
+  let celdas: string[] = [];
   let campo = "";
+  let conTexto = false; // si el registro en curso tuvo algún carácter (comillas y comas incluidas)
   let enComillas = false;
+  /** Cierra el registro en curso: si no tuvo ningún carácter es una línea vacía y solo suma a la numeración. */
+  const cerrar = (): void => {
+    if (conTexto) registros.push({ numero, celdas: [...celdas, campo] });
+    numero += 1;
+    celdas = [];
+    campo = "";
+    conTexto = false;
+  };
 
   for (let i = 0; i < contenido.length; i += 1) {
     const c = contenido[i];
@@ -30,31 +52,28 @@ export function leerCsv(texto: string): string[][] {
       }
       continue;
     }
+    if (c === "\n" || c === "\r") {
+      if (c === "\r" && contenido[i + 1] === "\n") i += 1;
+      cerrar();
+      continue;
+    }
+    conTexto = true;
     if (c === '"') {
       enComillas = true;
     } else if (c === ",") {
-      fila.push(campo);
-      campo = "";
-    } else if (c === "\n" || c === "\r") {
-      if (c === "\r" && contenido[i + 1] === "\n") i += 1;
-      fila.push(campo);
-      filas.push(fila);
-      fila = [];
+      celdas.push(campo);
       campo = "";
     } else {
       campo += c;
     }
   }
   if (enComillas) throw new ErrorCsv("COMILLA_SIN_CERRAR");
-  if (campo !== "" || fila.length > 0) {
-    fila.push(campo);
-    filas.push(fila);
-  }
-  return quitarVaciasDelFinal(filas);
+  if (conTexto) cerrar();
+  return quitarEnBlancoDelFinal(registros);
 }
 
-function quitarVaciasDelFinal(filas: string[][]): string[][] {
-  let fin = filas.length;
-  while (fin > 0 && filas[fin - 1]!.every((v) => v.trim() === "")) fin -= 1;
-  return filas.slice(0, fin);
+function quitarEnBlancoDelFinal(registros: readonly RegistroCsv[]): RegistroCsv[] {
+  let fin = registros.length;
+  while (fin > 0 && registros[fin - 1]!.celdas.every((v) => v.trim() === "")) fin -= 1;
+  return registros.slice(0, fin);
 }

@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { ErrorCifrado } from "../../cifrado/errores";
 import { obtenerLlavero } from "../../cifrado/llavero";
 import { asignarClaves, type RegistroConClave } from "./clave";
-import { ErrorCsv, leerCsv } from "./csv";
+import { ErrorCsv, leerCsv, type RegistroCsv } from "./csv";
 import { interpretarFila, type ErrorFila } from "./filas";
 import { detectarTipo, type TipoTrii } from "./formatos";
 import { guardarRegistro, ErrorImportacion, prepararContexto } from "./guardar";
@@ -52,24 +52,26 @@ function analizar(contenido: Uint8Array): Analisis {
   } catch {
     return { ok: false, tipo: null, filasTotal: 0, errores: [{ fila: 0, columna: null, codigo: "CODIFICACION_NO_UTF8" }] };
   }
-  let filas: string[][];
+  let registros: RegistroCsv[];
   try {
-    filas = leerCsv(texto);
+    registros = leerCsv(texto);
   } catch (e) {
     const codigo = e instanceof ErrorCsv ? e.codigo : "CSV_ILEGIBLE";
     return { ok: false, tipo: null, filasTotal: 0, errores: [{ fila: 0, columna: null, codigo }] };
   }
-  const tipo = detectarTipo(filas[0] ?? []);
-  const datos = filas.slice(1);
-  if (!tipo) return { ok: false, tipo: null, filasTotal: datos.length, errores: [{ fila: 1, columna: null, codigo: "ENCABEZADO_DESCONOCIDO" }] };
+  // Las líneas vacías ya no están (O4); cada registro trae su número en el archivo, que es el que se guarda y
+  // el que llevan los errores. El encabezado es el primer registro.
+  const [encabezado, ...datos] = registros;
+  const tipo = encabezado ? detectarTipo(encabezado.celdas) : null;
+  if (!encabezado || !tipo) return { ok: false, tipo: null, filasTotal: datos.length, errores: [{ fila: encabezado?.numero ?? 1, columna: null, codigo: "ENCABEZADO_DESCONOCIDO" }] };
   if (datos.length === 0) return { ok: false, tipo, filasTotal: 0, errores: [{ fila: 0, columna: null, codigo: "ARCHIVO_SIN_FILAS" }] };
   if (datos.length > MAX_FILAS) return { ok: false, tipo, filasTotal: datos.length, errores: [{ fila: 0, columna: null, codigo: "DEMASIADAS_FILAS" }] };
 
+  const columnas = encabezado.celdas.map((col) => col.trim());
   const errores: ErrorFila[] = [];
-  const validos = datos.flatMap((celdas, i) => {
-    const r = interpretarFila(tipo, celdas, i + 2);
-    const encabezado = filas[0]!;
-    if (r.ok) return [{ registro: r.registro, fila: i + 2, crudo: Object.fromEntries(encabezado.map((col, j) => [col.trim(), celdas[j] ?? ""])) }];
+  const validos = datos.flatMap(({ numero, celdas }) => {
+    const r = interpretarFila(tipo, celdas, numero);
+    if (r.ok) return [{ registro: r.registro, fila: numero, crudo: Object.fromEntries(columnas.map((col, j) => [col, celdas[j] ?? ""])) }];
     errores.push(...r.errores);
     return [];
   });
