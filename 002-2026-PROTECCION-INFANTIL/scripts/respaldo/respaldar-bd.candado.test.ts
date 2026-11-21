@@ -128,9 +128,9 @@ describe("SPEC-978 · candado · respaldo cifrado de las bases", () => {
     });
 
     // ---- 3. Funciones puras (por source) --------------------------------------------------------
-    it("ruta_respaldo arma <dir>/<label>/<proyecto>-<stamp>.dump.age", () => {
-        expect(source("ruta_respaldo /var/backups/idc pi proteccion_infantil 20261121-0300")).toBe(
-            "/var/backups/idc/pi/proteccion_infantil-20261121-0300.dump.age",
+    it("ruta_respaldo arma <dir>/<label>/<proyecto>-<stamp>.dump.age (prefijo = nombre corto pi/bi)", () => {
+        expect(source("ruta_respaldo /var/backups/idc pi pi 20261121-0300")).toBe(
+            "/var/backups/idc/pi/pi-20261121-0300.dump.age",
         );
         expect(source("ruta_respaldo /var/backups/idc bi bi 20261121-0300")).toBe(
             "/var/backups/idc/bi/bi-20261121-0300.dump.age",
@@ -139,21 +139,18 @@ describe("SPEC-978 · candado · respaldo cifrado de las bases", () => {
 
     it("retención: borra SOLO lo anterior al corte; conserva el corte y lo más nuevo; ignora lo sin fecha", () => {
         const nombres = [
-            "proteccion_infantil-20261101-0300.dump.age", // viejo → borrar
-            "proteccion_infantil-20261101-0300.dump.age.sha256", // viejo → borrar
-            "proteccion_infantil-20261107-0300.dump.age", // == corte → conservar
-            "proteccion_infantil-20261120-0300.dump.age", // nuevo → conservar
+            "pi-20261101-0300.dump.age", // viejo → borrar
+            "pi-20261101-0300.dump.age.sha256", // viejo → borrar
+            "pi-20261107-0300.dump.age", // == corte → conservar
+            "pi-20261120-0300.dump.age", // nuevo → conservar
             "README.txt", // sin fecha → jamás se borra
         ].join("\n");
         const out = source("seleccionar_respaldos_a_borrar 20261107", nombres).split("\n").filter(Boolean);
-        expect(out).toEqual([
-            "proteccion_infantil-20261101-0300.dump.age",
-            "proteccion_infantil-20261101-0300.dump.age.sha256",
-        ]);
+        expect(out).toEqual(["pi-20261101-0300.dump.age", "pi-20261101-0300.dump.age.sha256"]);
     });
 
     it("fecha_de_nombre extrae el AAAAMMDD embebido (vacío si no casa)", () => {
-        expect(source("fecha_de_nombre proteccion_infantil-20261121-0300.dump.age")).toBe("20261121");
+        expect(source("fecha_de_nombre pi-20261121-0300.dump.age")).toBe("20261121");
         expect(source("fecha_de_nombre README.txt")).toBe("");
     });
 
@@ -169,5 +166,13 @@ describe("SPEC-978 · candado · respaldo cifrado de las bases", () => {
         expect(SRC).toMatch(/RESPALDO_RETENCION_DIAS:-14/);
         expect(SRC).toContain(".sha256");
         expect(SRC).toMatch(/--dry-run/);
+    });
+
+    it("el prefijo del fichero es el nombre CORTO (pi/bi), no el de la base: el Mac/interino filtran por pi-*/bi-*", () => {
+        // respaldar_una_base <label> <contenedor> <usuario> <base> <PROYECTO=prefijo>. La base (4º arg)
+        // sigue siendo la BD a volcar; el 5º (prefijo) debe ser el nombre corto "pi"/"bi". Una regresión
+        // a `… "$PI_DB_NAME" "$PI_DB_NAME"` (prefijo = nombre de base) rompería el filtro pi-*/bi-* → red.
+        expect(SRC).toMatch(/respaldar_una_base "pi" [^\n]*"\$PI_DB_NAME" "pi";/);
+        expect(SRC).toMatch(/respaldar_una_base "bi" [^\n]*"\$bi_db" "bi";/);
     });
 });
