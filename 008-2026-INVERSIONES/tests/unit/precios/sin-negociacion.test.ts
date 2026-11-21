@@ -24,12 +24,16 @@ const cumple = (w: Donde) => (f: Fila) =>
   (w.fecha === undefined || f.fecha.getTime() === w.fecha.getTime()) && (w.fuente === undefined || f.fuente === w.fuente) &&
   (!("reemplazadoEn" in w) || f.reemplazadoEn === null);
 
-/** Base falsa con lo que usa actualizarPrecios; el calendario es el que se le pase (filas de calendario_bvc). */
-function baseFalsa(calendario: readonly { dia: Date; esHabil: boolean }[]) {
-  const filas: Fila[] = [];
+/**
+ * Base falsa con lo que usa actualizarPrecios; el calendario es el que se le pase (filas de calendario_bvc).
+ * `previas` son cierres ya guardados; `fallarRetiro` hace fallar el reemplazo sin sucesor (retiro).
+ */
+function baseFalsa(calendario: readonly { dia: Date; esHabil: boolean }[], previas: readonly Fila[] = [], fallarRetiro = false) {
+  const filas: Fila[] = previas.map((f) => ({ ...f }));
   const precioCierre = {
     findFirst: async ({ where }: { where: Donde }) => filas.find(cumple(where)) ?? null,
     updateMany: async ({ where, data }: { where: Donde; data: { reemplazadoEn: Date } }) => {
+      if (fallarRetiro && where.id === undefined) throw Object.assign(new Error("valor 777111 en la consulta"), { name: "PrismaClientKnownRequestError", code: "P1001" });
       const blanco = filas.filter(cumple(where));
       for (const f of blanco) f.reemplazadoEn = data.reemplazadoEn;
       return { count: blanco.length };
@@ -95,5 +99,41 @@ describe("actualizarPrecios · días no hábiles y sin negociación (base falsa)
     const rDespues = await actualizarPrecios(despues.db, { desde: utc("2024-03-26"), hasta: utc("2024-03-26"), buscar: yahoo(hoy), instrumentoIds: [ESPECIE], ahora: new Date("2024-03-26T22:30:00Z") }); // 17:30 COT
     expect(rDespues).toMatchObject({ omitidasPorHorario: 0, omitidasSinNegociacion: 1 });
     expect(vigentes(despues.filas)).toEqual([]);
+  });
+
+  const previa = (dia: string, precio = 100): Fila => ({ id: `v-${dia}`, instrumentoId: ESPECIE, fecha: utc(dia), precio: new Prisma.Decimal(precio), fuente: "yahoo", reemplazadoEn: null });
+  const SEMANA: Barra[] = [
+    { dia: "2024-03-26", close: 100, volume: 1500 },
+    { dia: "2024-03-27", close: 100, volume: 0 },
+    { dia: "2024-03-28", close: 100, volume: 0 },
+    { dia: "2024-04-01", close: 101, volume: null },
+  ];
+
+  it("datos ya guardados: retira (reemplazadoEn, sin sucesor) el vigente de un día que ahora se omite por no hábil o sin negociación", async () => {
+    const { db, filas } = baseFalsa(CALENDARIO_2024, [previa("2024-03-26"), previa("2024-03-27"), previa("2024-03-28")]);
+    const r = await actualizarPrecios(db, { desde: utc("2024-03-26"), hasta: utc("2024-04-01"), buscar: yahoo(SEMANA), instrumentoIds: [ESPECIE], ahora: DESPUES });
+    expect(vigentes(filas)).toEqual([["2024-03-26", "100"], ["2024-04-01", "101"]]);
+    expect(filas.filter((f) => f.reemplazadoEn !== null).map((f) => f.id)).toEqual(["v-2024-03-27", "v-2024-03-28"]);
+    expect(filas).toHaveLength(4); // nada se borra
+    expect(r).toMatchObject({ cierresNuevos: 1, cierresRevisados: 0, cierresRetirados: 2, omitidasNoHabil: 1, omitidasSinNegociacion: 1, fallidas: [] });
+  });
+
+  it("HORARIO y SIN_CALENDARIO no retiran: no hay certeza de que el vigente sobre", async () => {
+    const hoy = baseFalsa(CALENDARIO_2024, [previa("2024-03-26")]);
+    const rHoy = await actualizarPrecios(hoy.db, { desde: utc("2024-03-26"), hasta: utc("2024-03-26"), buscar: yahoo([{ dia: "2024-03-26", close: 100, volume: 0 }]), instrumentoIds: [ESPECIE], ahora: new Date("2024-03-26T15:00:00Z") });
+    expect(rHoy).toMatchObject({ omitidasPorHorario: 1, cierresRetirados: 0 });
+    expect(vigentes(hoy.filas)).toEqual([["2024-03-26", "100"]]);
+    const viejo = baseFalsa(CALENDARIO_2024, [previa("2019-03-12", 90)]);
+    const rViejo = await actualizarPrecios(viejo.db, { desde: utc("2019-03-12"), hasta: utc("2019-03-12"), buscar: yahoo([{ dia: "2019-03-12", close: 90, volume: 700 }]), instrumentoIds: [ESPECIE], ahora: DESPUES });
+    expect(rViejo).toMatchObject({ omitidasSinCalendario: 1, cierresRetirados: 0 });
+    expect(vigentes(viejo.filas)).toEqual([["2019-03-12", "90"]]);
+  });
+
+  it("un retiro que falla no aborta las demás barras: GUARDADO_ERROR con nombre y código, sin el mensaje", async () => {
+    const { db, filas } = baseFalsa(CALENDARIO_2024, [previa("2024-03-27")], true);
+    const r = await actualizarPrecios(db, { desde: utc("2024-03-26"), hasta: utc("2024-04-01"), buscar: yahoo(SEMANA), instrumentoIds: [ESPECIE], ahora: DESPUES });
+    expect(r.fallidas).toEqual([{ instrumentoId: ESPECIE, codigo: "GUARDADO_ERROR", detalle: "PrismaClientKnownRequestError P1001", barrasGuardadas: 2, barrasFallidas: 2 }]);
+    expect(JSON.stringify(r)).not.toContain("777111");
+    expect(vigentes(filas)).toEqual([["2024-03-26", "100"], ["2024-03-27", "100"], ["2024-04-01", "101"]]);
   });
 });

@@ -38,6 +38,12 @@ export function aniosDelRango(desde: Date, hasta: Date): { readonly gte: Date; r
   return { gte: new Date(Date.UTC(desde.getUTCFullYear(), 0, 1)), lt: new Date(Date.UTC(hasta.getUTCFullYear() + 1, 0, 1)) };
 }
 
+/**
+ * ¿La razón deja sin sustento el cierre vigente de ese día (si lo hay)? Solo cuando hay certeza:
+ * día no hábil o sin negociación. HORARIO (aún no es definitiva) y SIN_CALENDARIO (no se sabe) no.
+ */
+export const retiraElVigente = (motivo: MotivoOmision): boolean => motivo === "NO_HABIL" || motivo === "SIN_NEGOCIACION";
+
 /** null si la barra es el cierre de su día; si no, la razón para no guardarla. */
 export function motivoOmision(barra: Pick<Cierre, "fecha" | "volumen">, ahora: Date, calendario: CalendarioBvc): MotivoOmision | null {
   if (!barraDefinitiva(barra.fecha, ahora, calendario.noHabiles)) return "HORARIO";

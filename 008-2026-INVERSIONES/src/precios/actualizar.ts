@@ -7,14 +7,16 @@
  *   ese día, NO_VERIFICADO (nunca se presenta como verificado lo que no se comparó).
  * - SPEC-13 «nunca un precio viejo como de hoy»: una barra que no es el cierre de su día (aún no
  *   definitiva, día no hábil, sin negociación o año sin calendario; ver `negociacion.ts`) no se guarda
- *   y se cuenta por su razón.
+ *   y se cuenta por su razón. Si la razón es día no hábil o sin negociación y ya había un cierre
+ *   vigente de ese día (guardado por el código anterior), se retira: queda con `reemplazadoEn` y sin
+ *   sucesor (historia, nunca se borra). Así una corrida con `--desde` corrige lo ya guardado.
  * - Una fuente caída o un símbolo sin datos no escribe nada para esa especie: se informa.
  * - Cada barra se guarda en una transacción (lectura del vigente, reemplazo con guarda e inserción).
  *   Ante una carrera con otra corrida (el vigente ya fue reemplazado, o P2002 por el índice parcial
  *   único) se deshace y se reintenta releyendo: lo que la otra corrida ya guardó igual queda «sin cambios».
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { aniosDelRango, leerCalendario, motivoOmision, type CalendarioBvc, type MotivoOmision } from "./negociacion";
+import { aniosDelRango, leerCalendario, motivoOmision, retiraElVigente, type CalendarioBvc, type MotivoOmision } from "./negociacion";
 import { obtenerCierres, type Buscar, type Cierre } from "./yahoo";
 
 export const TOLERANCIA_VERIFICACION = new Prisma.Decimal("0.01");
@@ -42,6 +44,8 @@ export interface ResultadoActualizacion {
   readonly especies: number;
   readonly cierresNuevos: number;
   readonly cierresRevisados: number;
+  /** Vigentes retirados (reemplazadoEn, sin sucesor) porque su día ahora se omite por no hábil o sin negociación. */
+  readonly cierresRetirados: number;
   readonly verificados: number;
   /** Barras aún no definitivas: hoy antes de la hora, hoy no hábil o fecha futura. */
   readonly omitidasPorHorario: number;
@@ -58,13 +62,17 @@ type Omitidas = Readonly<Record<MotivoOmision, number>>;
 interface Conteo {
   readonly nuevos: number;
   readonly revisados: number;
+  readonly retirados: number;
   readonly omitidas: Omitidas;
 }
-const CONTEO_CERO: Conteo = { nuevos: 0, revisados: 0, omitidas: { HORARIO: 0, NO_HABIL: 0, SIN_NEGOCIACION: 0, SIN_CALENDARIO: 0 } };
+const CONTEO_CERO: Conteo = { nuevos: 0, revisados: 0, retirados: 0, omitidas: { HORARIO: 0, NO_HABIL: 0, SIN_NEGOCIACION: 0, SIN_CALENDARIO: 0 } };
 
 function sumar(a: Conteo, b: Conteo): Conteo {
   const o = (m: MotivoOmision) => a.omitidas[m] + b.omitidas[m];
-  return { nuevos: a.nuevos + b.nuevos, revisados: a.revisados + b.revisados, omitidas: { HORARIO: o("HORARIO"), NO_HABIL: o("NO_HABIL"), SIN_NEGOCIACION: o("SIN_NEGOCIACION"), SIN_CALENDARIO: o("SIN_CALENDARIO") } };
+  return {
+    nuevos: a.nuevos + b.nuevos, revisados: a.revisados + b.revisados, retirados: a.retirados + b.retirados,
+    omitidas: { HORARIO: o("HORARIO"), NO_HABIL: o("NO_HABIL"), SIN_NEGOCIACION: o("SIN_NEGOCIACION"), SIN_CALENDARIO: o("SIN_CALENDARIO") },
+  };
 }
 
 const conOmitida = (c: Conteo, motivo: MotivoOmision): Conteo => ({ ...c, omitidas: { ...c.omitidas, [motivo]: c.omitidas[motivo] + 1 } });
@@ -137,12 +145,30 @@ async function guardarCierre(db: PrismaClient, instrumentoId: string, c: Cierre)
   }
 }
 
+/**
+ * Retira el cierre vigente de ese día: `reemplazadoEn` sin sucesor; la fila queda como historia.
+ * Una sola sentencia con guarda (`reemplazadoEn: null`): ante otra corrida, una retira y la otra ve 0.
+ */
+export async function retirarVigente(db: Pick<PrismaClient, "precioCierre">, instrumentoId: string, fecha: Date): Promise<number> {
+  const { count } = await db.precioCierre.updateMany({ where: { instrumentoId, fecha, fuente: FUENTE, reemplazadoEn: null }, data: { reemplazadoEn: new Date() } });
+  return count;
+}
+
+/** Escribe lo que toca a una barra: el cierre si no hay razón para omitirla, o el retiro del vigente si la razón lo pide. */
+async function escribirBarra(db: PrismaClient, instrumentoId: string, c: Cierre, motivo: MotivoOmision | null): Promise<Conteo> {
+  if (!motivo) {
+    const cambio = await guardarCierre(db, instrumentoId, c);
+    return { ...CONTEO_CERO, nuevos: cambio === "nuevo" ? 1 : 0, revisados: cambio === "revisado" ? 1 : 0 };
+  }
+  return retiraElVigente(motivo) ? { ...CONTEO_CERO, retirados: await retirarVigente(db, instrumentoId, c.fecha) } : CONTEO_CERO;
+}
+
 interface ResultadoEspecie {
   readonly conteo: Conteo;
   readonly fallo: FalloEspecie | null;
 }
 
-/** Guarda las barras que son cierre de su día y cuenta las omitidas. Una barra que falla no aborta las demás. */
+/** Guarda las barras que son cierre de su día, cuenta las omitidas y retira lo que sobra. Una barra que falla no aborta las demás. */
 async function guardarBarras(db: PrismaClient, instrumentoId: string, cierres: readonly Cierre[], ahora: Date, calendario: CalendarioBvc): Promise<ResultadoEspecie> {
   let conteo = CONTEO_CERO;
   let barrasGuardadas = 0;
@@ -150,14 +176,10 @@ async function guardarBarras(db: PrismaClient, instrumentoId: string, cierres: r
   let detalle: string | undefined;
   for (const c of cierres) {
     const motivo = motivoOmision(c, ahora, calendario);
-    if (motivo) {
-      conteo = conOmitida(conteo, motivo);
-      continue;
-    }
+    if (motivo) conteo = conOmitida(conteo, motivo);
     try {
-      const cambio = await guardarCierre(db, instrumentoId, c);
-      conteo = { ...conteo, nuevos: conteo.nuevos + (cambio === "nuevo" ? 1 : 0), revisados: conteo.revisados + (cambio === "revisado" ? 1 : 0) };
-      barrasGuardadas += 1;
+      conteo = sumar(conteo, await escribirBarra(db, instrumentoId, c, motivo));
+      if (!motivo) barrasGuardadas += 1;
     } catch (err) {
       barrasFallidas += 1;
       detalle ??= detalleDeError(err);
@@ -203,7 +225,7 @@ export async function actualizarPrecios(db: PrismaClient, opciones: OpcionesActu
   }
   const verificados = await db.precioCierre.count({ where: { estado: "VERIFICADO", reemplazadoEn: null, fecha: { gte: opciones.desde, lte: opciones.hasta } } });
   return {
-    especies: especies.length, cierresNuevos: total.nuevos, cierresRevisados: total.revisados, verificados,
+    especies: especies.length, cierresNuevos: total.nuevos, cierresRevisados: total.revisados, cierresRetirados: total.retirados, verificados,
     omitidasPorHorario: total.omitidas.HORARIO, omitidasNoHabil: total.omitidas.NO_HABIL, omitidasSinNegociacion: total.omitidas.SIN_NEGOCIACION, omitidasSinCalendario: total.omitidas.SIN_CALENDARIO,
     fallidas,
   };
