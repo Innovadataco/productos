@@ -105,7 +105,9 @@ describe("llaves foráneas", () => {
         data: { fecha: new Date("2099-02-01"), monto: dec("-10"), categoria: "APORTE_FIC", fuente: "MANUAL", motivo: "ficticio", creadoPorId: u.id },
       });
       const fic = await fondo(tx);
-      await tx.movimientoFondo.create({ data: { fondoId: fic.id, fecha: ajuste.fecha, unidades: dec("1"), tipo: "APORTE", fuente: "MANUAL", ajusteCajaId: ajuste.id } });
+      await tx.movimientoFondo.create({ data: { fondoId: fic.id, fecha: ajuste.fecha, unidades: dec("1"), monto: dec("10"), tipo: "APORTE", fuente: "MANUAL", ajusteCajaId: ajuste.id } });
+      // ajuste_caja es de solo inserción: con la salida de reversión, el borrado llega a la FK, que es lo que se prueba.
+      await tx.$executeRaw`SET LOCAL inv.reversion = 'on'`;
       await tx.ajusteCaja.delete({ where: { id: ajuste.id } });
     });
     expect(error).toMatch(/movimiento_fondo_ajusteCajaId_fkey|Foreign key constraint/);

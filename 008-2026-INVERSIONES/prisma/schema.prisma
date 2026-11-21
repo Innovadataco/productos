@@ -641,6 +641,9 @@ model CertificacionFondo {
 }
 
 // ───────────── Fondo (FIC) ─────────────
+/// Unidades del fondo, de solo inserción. En SQL (migración movimiento_fondo_reglas): unidades > 0 (un AJUSTE, ≠ 0),
+/// monto nulo o > 0; una CONSTITUCION o un APORTE exigen su AjusteCaja APORTE_FIC de la MISMA fecha, con −monto; a lo
+/// sumo una CONSTITUCION por fondo. La escribe solo src/fondo/movimiento.ts.
 model MovimientoFondo {
   id           String              @id @default(cuid())
   fondoId      String

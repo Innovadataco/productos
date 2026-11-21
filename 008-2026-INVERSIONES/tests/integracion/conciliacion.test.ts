@@ -146,7 +146,7 @@ describe("conciliarCertificacion: fondo, efectivo e historia", () => {
     });
     expect(carga.estado).toBe("CARGADO");
     const ajuste = await db.ajusteCaja.create({ data: { fecha: antes, monto: dec("-6250000"), categoria: "APORTE_FIC", fuente: "MANUAL", motivo: "aporte ficticio", creadoPorId: duenoId } });
-    await db.movimientoFondo.create({ data: { fondoId: c.fic.id, fecha: antes, unidades: dec("1000"), tipo: "CONSTITUCION", fuente: "MANUAL", ajusteCajaId: ajuste.id } });
+    await db.movimientoFondo.create({ data: { fondoId: c.fic.id, fecha: antes, unidades: dec("1000"), monto: dec("6250000"), tipo: "CONSTITUCION", fuente: "MANUAL", ajusteCajaId: ajuste.id } });
     await db.valorUnidadFondo.create({ data: { fondoId: c.fic.id, fechaValor: c.fecha, valorUnidad: dec("6250") } });
     const cs = await controles((await conciliarCertificacion(db, { fechaCorte: c.fecha })).conciliacionId);
     const fondo = cs.find((x) => x.tipo === "FONDO")!;

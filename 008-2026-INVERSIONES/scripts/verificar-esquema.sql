@@ -52,6 +52,7 @@ DECLARE
     ['lote', 'lote_ordenId_key', 'CREATE UNIQUE INDEX "lote_ordenId_key" ON public.lote USING btree ("ordenId")'],
     ['movimiento_caja', 'movimiento_caja_filaFuenteId_key', 'CREATE UNIQUE INDEX "movimiento_caja_filaFuenteId_key" ON public.movimiento_caja USING btree ("filaFuenteId")'],
     ['movimiento_fondo', 'movimiento_fondo_ajusteCajaId_key', 'CREATE UNIQUE INDEX "movimiento_fondo_ajusteCajaId_key" ON public.movimiento_fondo USING btree ("ajusteCajaId")'],
+    ['movimiento_fondo', 'movimiento_fondo_constitucion_key', 'CREATE UNIQUE INDEX movimiento_fondo_constitucion_key ON public.movimiento_fondo USING btree ("fondoId") WHERE (tipo = ''CONSTITUCION''::"TipoMovimientoFondo")'],
     ['orden', 'orden_filaFuenteId_key', 'CREATE UNIQUE INDEX "orden_filaFuenteId_key" ON public.orden USING btree ("filaFuenteId")'],
     ['plan_version', 'plan_version_version_key', 'CREATE UNIQUE INDEX plan_version_version_key ON public.plan_version USING btree (version)'],
     ['precio_cierre', 'precio_cierre_vigente_key', 'CREATE UNIQUE INDEX precio_cierre_vigente_key ON public.precio_cierre USING btree ("instrumentoId", fecha, fuente) WHERE ("reemplazadoEn" IS NULL)'],
@@ -95,6 +96,9 @@ DECLARE
     ['lote', 'lote_cantidad_chk', 'CHECK (((cantidad > 0) AND ("costoUnitario" >= (0)::numeric) AND ("costoTotal" >= (0)::numeric) AND (comision >= (0)::numeric)))'],
     ['lote', 'lote_origen_chk', 'CHECK ((((origen = ''COMPRA''::"OrigenLote") AND ("ordenId" IS NOT NULL) AND ("eventoId" IS NULL) AND ("loteOrigenId" IS NULL)) OR ((origen = ''ESCISION''::"OrigenLote") AND ("ordenId" IS NULL) AND ("eventoId" IS NOT NULL) AND ("loteOrigenId" IS NOT NULL))))'],
     ['movimiento_caja', 'movimiento_caja_monto_chk', 'CHECK ((monto > (0)::numeric))'],
+    ['movimiento_fondo', 'movimiento_fondo_aporte_enlace_chk', 'CHECK (((tipo <> ALL (ARRAY[''CONSTITUCION''::"TipoMovimientoFondo", ''APORTE''::"TipoMovimientoFondo"])) OR (("ajusteCajaId" IS NOT NULL) AND (monto IS NOT NULL))))'],
+    ['movimiento_fondo', 'movimiento_fondo_monto_chk', 'CHECK (((monto IS NULL) OR (monto > (0)::numeric)))'],
+    ['movimiento_fondo', 'movimiento_fondo_unidades_chk', 'CHECK ((((tipo = ''AJUSTE''::"TipoMovimientoFondo") AND (unidades <> (0)::numeric)) OR ((tipo <> ''AJUSTE''::"TipoMovimientoFondo") AND (unidades > (0)::numeric))))'],
     ['orden', 'orden_aprobada_precio_chk', 'CHECK (((estado <> ''APROBADO''::"EstadoOrden") OR ("precioUnitario" > (0)::numeric)))'],
     ['orden', 'orden_cantidades_chk', 'CHECK ((("cantidadCompletada" >= 0) AND ("cantidadPendiente" >= 0)))'],
     ['orden', 'orden_fechas_chk', 'CHECK (("fechaLiquidacion" >= "fechaOperacion"))'],
@@ -206,6 +210,7 @@ DECLARE
     ['valor_unidad_fondo', 'valor_unidad_fondo_fondoId_fkey', 'FOREIGN KEY ("fondoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT']
   ];
   disparadores text[] := ARRAY[
+    ['ajuste_caja', 'ajuste_caja_solo_insercion', 'CREATE TRIGGER ajuste_caja_solo_insercion BEFORE DELETE OR UPDATE ON public.ajuste_caja FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['asignacion_venta', 'asignacion_venta_coherente', 'CREATE TRIGGER asignacion_venta_coherente BEFORE INSERT OR UPDATE OF "ordenVentaId", "loteId", cantidad ON public.asignacion_venta FOR EACH ROW EXECUTE FUNCTION inv_asignacion_coherente()'],
     ['certificacion', 'certificacion_solo_insercion', 'CREATE TRIGGER certificacion_solo_insercion BEFORE DELETE OR UPDATE ON public.certificacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['certificacion_posicion', 'certificacion_posicion_solo_insercion', 'CREATE TRIGGER certificacion_posicion_solo_insercion BEFORE DELETE OR UPDATE ON public.certificacion_posicion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
@@ -221,6 +226,8 @@ DECLARE
     ['intento_ingreso', 'intento_ingreso_solo_insercion', 'CREATE TRIGGER intento_ingreso_solo_insercion BEFORE DELETE OR UPDATE ON public.intento_ingreso FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['lote', 'lote_fijo', 'CREATE TRIGGER lote_fijo BEFORE UPDATE OF "instrumentoId", "fechaCompra", cantidad, "costoTotal" ON public.lote FOR EACH ROW EXECUTE FUNCTION inv_lote_fijo()'],
     ['movimiento_caja', 'movimiento_caja_solo_insercion', 'CREATE TRIGGER movimiento_caja_solo_insercion BEFORE DELETE OR UPDATE ON public.movimiento_caja FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['movimiento_fondo', 'movimiento_fondo_coherente', 'CREATE TRIGGER movimiento_fondo_coherente BEFORE INSERT OR UPDATE ON public.movimiento_fondo FOR EACH ROW EXECUTE FUNCTION inv_movimiento_fondo_coherente()'],
+    ['movimiento_fondo', 'movimiento_fondo_solo_insercion', 'CREATE TRIGGER movimiento_fondo_solo_insercion BEFORE DELETE OR UPDATE ON public.movimiento_fondo FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['orden', 'orden_solo_insercion', 'CREATE TRIGGER orden_solo_insercion BEFORE DELETE OR UPDATE ON public.orden FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['plan_version', 'plan_version_solo_insercion', 'CREATE TRIGGER plan_version_solo_insercion BEFORE DELETE OR UPDATE ON public.plan_version FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['regla_plan', 'regla_plan_solo_insercion', 'CREATE TRIGGER regla_plan_solo_insercion BEFORE DELETE OR UPDATE ON public.regla_plan FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
@@ -232,6 +239,7 @@ DECLARE
     ['inv_certificacion_fondo_solo_encargo', '0c694690f57d13c0fbd819a28130c975'],
     ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301'],
     ['inv_lote_fijo', '6906ddebe6b9194201de631eac40241a'],
+    ['inv_movimiento_fondo_coherente', '53cb26c826f67c555b19e1b8ad9dffd0'],
     ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77'],
     ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546'],
     ['inv_usuario_transiciones', '368539024fbeaeb771669ff741aa7ed3']
