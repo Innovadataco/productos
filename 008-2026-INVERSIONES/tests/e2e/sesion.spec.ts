@@ -1,5 +1,6 @@
 /**
- * E2E del login de Inversiones (D-014) contra la base e2e sembrada por tests/e2e/sembrar.ts:
+ * E2E del login de Inversiones (D-014) contra la base e2e sembrada por tests/e2e/sembrar.ts (el segundo
+ * factor tiene su propio archivo, totp.spec.ts; aquí cada ingreso completo enrola una cuenta propia):
  * entrar, fallar, correo inexistente, bloqueo, la cookie, el enlace de un solo uso (vigente, usado y
  * vencido), salir, rutas protegidas, cabeceras, 404 con CSP, contraste y foco. Cada prueba que cambia una
  * cuenta crea la suya (tests/e2e/cuentas.ts) y llega con su propia IP (tests/e2e/sesion.ts): aguanta
@@ -9,7 +10,7 @@ import { expect, type Page } from "@playwright/test";
 import { emitirAcceso } from "../../src/auth/acceso";
 import { DUENO_E2E } from "./base";
 import { baseE2E, cerrarBaseE2E, crearCuenta } from "./cuentas";
-import { PaginaIngreso, iniciarSesion, test } from "./sesion";
+import { PaginaIngreso, iniciarSesion, pasarClave, test } from "./sesion";
 
 const GENERICO = "Usuario o contraseña incorrectos";
 const ENLACE_INVALIDO = "El enlace no es válido o ya venció. Pida uno nuevo.";
@@ -21,14 +22,14 @@ test.afterAll(async () => {
 });
 
 test.describe("ingreso", () => {
-  test("con la clave correcta entra al tablero, que se llama Inversiones", async ({ page }) => {
-    await iniciarSesion(page, DUENO_E2E);
+  test("con la clave correcta y el segundo factor entra al tablero, que se llama Inversiones", async ({ page }, info) => {
+    await iniciarSesion(page, info, "entra");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("¿Gano?");
     await expect(page).toHaveTitle(/^Inversiones/);
   });
 
-  test("la cookie de sesión es __Host-sesion, HttpOnly, Secure, SameSite=Strict y de 8 h", async ({ page, context }) => {
-    await iniciarSesion(page, DUENO_E2E);
+  test("la cookie de sesión es __Host-sesion, HttpOnly, Secure, SameSite=Strict y de 8 h", async ({ page, context }, info) => {
+    await iniciarSesion(page, info, "cookie");
     const sesion = (await context.cookies()).find((c) => c.name === "__Host-sesion");
     expect(sesion).toMatchObject({ httpOnly: true, secure: true, sameSite: "Strict", path: "/" });
     expect(Math.abs((sesion?.expires ?? 0) - (Date.now() / 1000 + OCHO_HORAS))).toBeLessThan(120);
@@ -66,7 +67,8 @@ test.describe("ingreso", () => {
     await expect(page.locator("form")).toHaveAttribute("method", "post");
   });
 
-  test("mientras envía, el botón conserva el foco y queda aria-disabled", async ({ page }) => {
+  test("mientras envía, el botón conserva el foco y queda aria-disabled", async ({ page }, info) => {
+    const cuenta = await crearCuenta(info, "foco", true);
     let soltar: () => void = () => undefined;
     const retenido = new Promise<void>((r) => (soltar = r));
     await page.route("**/api/sesion/ingresar", async (ruta) => {
@@ -74,14 +76,14 @@ test.describe("ingreso", () => {
       await ruta.continue();
     });
     const p = await PaginaIngreso.abrir(page);
-    await p.correo.fill(DUENO_E2E.email);
-    await p.clave.fill(DUENO_E2E.clave);
+    await p.correo.fill(cuenta.email);
+    await p.clave.fill(cuenta.clave);
     await p.boton.focus();
     await page.keyboard.press("Enter");
     await expect(p.boton).toHaveAttribute("aria-disabled", "true");
     await expect(p.boton).toBeFocused();
     soltar();
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL("/totp/enrolar");
   });
 });
 
@@ -137,7 +139,8 @@ test.describe("enlace de un solo uso", () => {
     await expect(page.getByRole("main").getByRole("alert")).toHaveText(ENLACE_INVALIDO);
     await expect(page.getByRole("button", { name: "Definir contraseña" })).toHaveCount(0);
 
-    await iniciarSesion(page, cuenta);
+    // La clave nueva pasa el primer paso; como es el primer ingreso, toca enrolar el segundo factor.
+    await pasarClave(page, cuenta, "/totp/enrolar");
   });
 
   test("un enlace vencido (más de 30 min) no sirve y lo dice", async ({ page }, info) => {
@@ -184,15 +187,14 @@ test.describe("rutas protegidas y salida", () => {
     expect(await r.json()).toEqual({ error: "No autenticado" });
   });
 
-  test("con sesión, /ingresar lleva al tablero", async ({ page }) => {
-    await iniciarSesion(page, DUENO_E2E);
+  test("con sesión, /ingresar lleva al tablero", async ({ page }, info) => {
+    await iniciarSesion(page, info, "con-sesion");
     await page.goto("/ingresar");
     await expect(page).toHaveURL("/");
   });
 
   test("«Salir» cierra la sesión con un solo pedido aunque se haga doble clic", async ({ page, context }, info) => {
-    const cuenta = await crearCuenta(info, "salir", true);
-    await iniciarSesion(page, cuenta);
+    await iniciarSesion(page, info, "salir");
     const salidas: string[] = [];
     page.on("request", (r) => {
       if (r.url().endsWith("/api/sesion/salir")) salidas.push(r.method());
@@ -205,8 +207,8 @@ test.describe("rutas protegidas y salida", () => {
     await expect(page).toHaveURL("/ingresar");
   });
 
-  test("las páginas llevan las cabeceras de seguridad y no se guardan en caché", async ({ page }) => {
-    await iniciarSesion(page, DUENO_E2E);
+  test("las páginas llevan las cabeceras de seguridad y no se guardan en caché", async ({ page }, info) => {
+    await iniciarSesion(page, info, "cabeceras");
     const r = await page.goto("/");
     const c = r?.headers() ?? {};
     expect(c["content-security-policy"]).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
@@ -222,13 +224,13 @@ test.describe("rutas protegidas y salida", () => {
 
   test.describe("404 con la CSP activa", () => {
     test.use({ erroresEsperados: [/\/no-existe$/] });
-    test("una ruta que no existe responde 404, todo su HTML trae el nonce y no hay violaciones de CSP", async ({ page }) => {
+    test("una ruta que no existe responde 404, todo su HTML trae el nonce y no hay violaciones de CSP", async ({ page }, info) => {
       await page.addInitScript(() => {
         const w = window as unknown as { violaciones: string[] };
         w.violaciones = [];
         document.addEventListener("securitypolicyviolation", (e) => w.violaciones.push(`${e.violatedDirective} ${e.blockedURI}`));
       });
-      await iniciarSesion(page, DUENO_E2E);
+      await iniciarSesion(page, info, "no-existe");
       const r = await page.goto("/no-existe");
       expect(r?.status()).toBe(404);
       const nonce = /'nonce-([^']+)'/.exec(r?.headers()["content-security-policy"] ?? "")?.[1] ?? "";

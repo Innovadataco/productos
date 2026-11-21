@@ -1,5 +1,6 @@
 "use client";
-import { useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
+import { useHidratado } from "./useHidratado";
 
 type Estado = { readonly tipo: "listo" } | { readonly tipo: "enviando" } | { readonly tipo: "error"; readonly mensaje: string };
 
@@ -8,16 +9,21 @@ const POR_ESTADO: Readonly<Record<number, string>> = {
   429: "Demasiadas solicitudes. Espere un momento e intente de nuevo.",
 };
 const OTRO_ERROR = "No se pudo iniciar sesión. Intente de nuevo.";
+/** El segundo paso (TOTP): solo estas dos rutas, nunca una que mande el servidor. */
+const SEGUNDO_PASO: Readonly<Record<string, string>> = { totp: "/totp", enrolar: "/totp/enrolar" };
 
-const sinSuscripcion = () => () => {};
-/** true solo en el navegador ya hidratado: antes, el botón queda deshabilitado (no hay envío sin JS). */
-const useHidratado = (): boolean => useSyncExternalStore(sinSuscripcion, () => true, () => false);
+async function rutaDelSegundoPaso(r: Response): Promise<string | null> {
+  const cuerpo = (await r.json().catch(() => null)) as { paso?: unknown } | null;
+  const paso = typeof cuerpo?.paso === "string" ? cuerpo.paso : "";
+  return Object.hasOwn(SEGUNDO_PASO, paso) ? (SEGUNDO_PASO[paso] ?? null) : null;
+}
 
 /**
- * Formulario de ingreso (D-014). Envía por `fetch` (el POST lleva el Origin real; un formulario nativo,
+ * Formulario de ingreso, primer paso (D-014 y TOTP). Con la clave correcta lleva al segundo paso: /totp
+ * o /totp/enrolar, según diga el servidor (de una lista fija). Envía por `fetch` (el POST lleva el Origin real; un formulario nativo,
  * con `Referrer-Policy: no-referrer`, mandaría `Origin: null`). `method="post"` impide que, sin JS, la
  * clave termine en la URL. Mientras envía, el botón queda `aria-disabled` (no `disabled`: así no pierde
- * el foco) y un segundo envío se ignora.
+ * el foco) y un segundo envío se ignora; si salió bien, se sigue ignorando mientras la página navega.
  */
 export function FormularioIngreso() {
   const hidratado = useHidratado();
@@ -39,15 +45,22 @@ export function FormularioIngreso() {
         cache: "no-store",
       });
       if (r.ok) {
-        window.location.assign("/");
+        const ruta = await rutaDelSegundoPaso(r);
+        if (ruta) {
+          // `enCurso` queda en true: la página navega y un doble Enter no debe reenviar la clave.
+          window.location.assign(ruta);
+          return;
+        }
+        enCurso.current = false;
+        setEstado({ tipo: "error", mensaje: OTRO_ERROR });
         return;
       }
+      enCurso.current = false;
       (formulario.elements.namedItem("clave") as HTMLInputElement | null)?.select();
       setEstado({ tipo: "error", mensaje: POR_ESTADO[r.status] ?? OTRO_ERROR });
     } catch {
-      setEstado({ tipo: "error", mensaje: OTRO_ERROR });
-    } finally {
       enCurso.current = false;
+      setEstado({ tipo: "error", mensaje: OTRO_ERROR });
     }
   }
 

@@ -2,6 +2,7 @@
 // Origin en los POST, limita las API por IP y pone la CSP con nonce. Falla cerrada sin secreto.
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { firmarPresesion } from "@/auth/presesion";
 import { firmarToken } from "@/auth/token";
 
 /** Secreto inventado para la prueba. */
@@ -164,5 +165,36 @@ describe("proxy · tope general de las API por IP (60 por minuto)", () => {
     const cabeceras = { "cf-connecting-ip": "203.0.113.79" };
     for (let k = 0; k < 70; k += 1) await proxy(pedido("/ingresar", { cabeceras }));
     expect((await proxy(pedido("/api/salud", { cabeceras }))).status).not.toBe(429);
+  });
+});
+
+describe("proxy · pre-sesión del TOTP", () => {
+  const presesion = async () =>
+    firmarPresesion({ sub: "u1", sesionVersion: 1, jti: "j".repeat(43) }, new TextEncoder().encode(SECRETO), Date.now());
+
+  it("las páginas del segundo paso pasan sin sesión (exigen la pre-sesión en el servidor)", async () => {
+    for (const ruta of ["/totp", "/totp/enrolar"]) expect(pasa(await proxy(pedido(ruta))), ruta).toBe(true);
+  });
+
+  it("las API del segundo paso pasan sin sesión solo por POST y con Origin", async () => {
+    for (const ruta of ["/api/sesion/totp", "/api/sesion/totp/enrolar"]) {
+      expect(pasa(await proxy(pedido(ruta, { metodo: "POST", cabeceras: { origin: ORIGEN } }))), ruta).toBe(true);
+      expect((await proxy(pedido(ruta, { metodo: "POST", cabeceras: { origin: "https://atacante.example" } }))).status, ruta).toBe(403);
+    }
+  });
+
+  it("con solo la pre-sesión, una página protegida lleva a /ingresar y una API da 401", async () => {
+    const cookie = `__Host-presesion=${await presesion()}`;
+    const pagina = await proxy(pedido("/", { cabeceras: { cookie } }));
+    expect(pagina.status).toBe(307);
+    expect(new URL(pagina.headers.get("location") ?? "", ORIGEN).pathname).toBe("/ingresar");
+    expect((await proxy(pedido("/api/plan", { cabeceras: { cookie } }))).status).toBe(401);
+    expect((await proxy(pedido("/totp/codigos", { cabeceras: { cookie } }))).status).toBe(307);
+  });
+
+  it("la pre-sesión metida en la cookie de la sesión no pasa", async () => {
+    const r = await proxy(pedido("/", { cabeceras: { cookie: `__Host-sesion=${await presesion()}` } }));
+    expect(r.status).toBe(307);
+    expect(r.headers.get("set-cookie")).toMatch(/^__Host-sesion=;/);
   });
 });

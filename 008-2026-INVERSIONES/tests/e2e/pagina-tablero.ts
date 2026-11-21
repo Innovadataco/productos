@@ -1,6 +1,5 @@
 /** Página del tablero para el E2E (INV-SPEC-15): localizadores por rol y nombre accesible. */
-import { expect, type Locator, type Page } from "@playwright/test";
-import { DUENO_E2E } from "./base";
+import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { iniciarSesion } from "./sesion";
 
 export class PaginaTablero {
@@ -22,12 +21,13 @@ export class PaginaTablero {
   }
 
   /**
-   * Abre el tablero (iniciando sesión con el dueño ficticio si hace falta) y espera la hidratación:
+   * Abre el tablero (iniciando sesión, con un dueño ficticio propio de la prueba y su TOTP, si hace falta)
+   * y espera la hidratación:
    * el contador pasa a «fin» solo cuando su efecto corre en el navegador. Antes, un clic no tendría manejador.
    */
-  static async abrir(page: Page): Promise<PaginaTablero> {
+  static async abrir(page: Page, info: TestInfo): Promise<PaginaTablero> {
     await page.goto("/");
-    if (new URL(page.url()).pathname === "/ingresar") await iniciarSesion(page, DUENO_E2E);
+    if (new URL(page.url()).pathname === "/ingresar") await iniciarSesion(page, info, "tablero");
     const t = new PaginaTablero(page);
     await expect(t.cifraDelTotal).toHaveAttribute("data-fase", "fin");
     return t;

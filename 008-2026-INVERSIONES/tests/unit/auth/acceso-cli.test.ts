@@ -4,7 +4,9 @@ import { Writable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const emitirAcceso = vi.hoisted(() => vi.fn());
+const reiniciarTotp = vi.hoisted(() => vi.fn());
 vi.mock("@/auth/acceso", async (original) => ({ ...(await original<typeof import("@/auth/acceso")>()), emitirAcceso }));
+vi.mock("@/auth/reinicio-totp", () => ({ reiniciarTotp }));
 
 import { ErrorAcceso } from "@/auth/acceso";
 import { ejecutar } from "@/auth/acceso-cli";
@@ -25,6 +27,7 @@ const consola = () => ({ salida: new Salida(), error: new Salida() });
 
 afterEach(() => {
   emitirAcceso.mockReset();
+  reiniciarTotp.mockReset();
 });
 
 describe("crear-acceso-inicial", () => {
@@ -84,5 +87,56 @@ describe("crear-acceso-inicial", () => {
     expect(await ejecutar(["--email", "d@ejemplo.invalid"], c, db, { NODE_ENV: "development" })).toBe(1);
     expect(c.error.texto).toContain("P1001");
     expect(c.error.texto).not.toContain("postgresql://");
+  });
+});
+
+describe("crear-acceso-inicial --reiniciar-totp (recuperación total del segundo factor)", () => {
+  it.each([
+    [["--email", "dueno@ejemplo.invalid", "--reiniciar-totp"]],
+    [["--reiniciar-totp", "--email", "dueno@ejemplo.invalid"]],
+  ])("con %j reinicia el TOTP de esa cuenta, no emite enlace y dice qué sigue", async (argv) => {
+    reiniciarTotp.mockResolvedValueOnce({ usuarioId: "u1" });
+    const c = consola();
+    expect(await ejecutar(argv, c, db, { NODE_ENV: "development" })).toBe(0);
+    expect(reiniciarTotp).toHaveBeenCalledWith(db, { email: "dueno@ejemplo.invalid", ahora: expect.any(Date) });
+    expect(emitirAcceso).not.toHaveBeenCalled();
+    expect(c.salida.texto).toMatch(/reinici/i);
+    expect(c.salida.texto).toMatch(/30 minutos/);
+    expect(c.salida.texto).toMatch(/sesiones/);
+  });
+
+  it("sin --email, con la bandera repetida o con otra bandera sale con 2 y muestra el uso", async () => {
+    for (const argv of [["--reiniciar-totp"], ["--email", "d@ejemplo.invalid", "--reiniciar-totp", "--reiniciar-totp"], ["--email", "d@ejemplo.invalid", "--reiniciar"]]) {
+      const c = consola();
+      expect(await ejecutar(argv, c, db, { NODE_ENV: "development" }), argv.join(" ")).toBe(2);
+      expect(c.error.texto).toMatch(/Uso:/);
+      expect(c.error.texto).toMatch(/--reiniciar-totp/);
+    }
+    expect(reiniciarTotp).not.toHaveBeenCalled();
+  });
+
+  it("si no hay una cuenta con ese correo, sale con 2 y lo dice", async () => {
+    reiniciarTotp.mockRejectedValueOnce(new ErrorAcceso("NO_EXISTE"));
+    const c = consola();
+    expect(await ejecutar(["--email", "nadie@ejemplo.invalid", "--reiniciar-totp"], c, db, { NODE_ENV: "development" })).toBe(2);
+    expect(c.error.texto).toMatch(/no hay una cuenta/i);
+  });
+
+  /** Una base falsa que solo responde quién es el rol conectado. */
+  const conRol = (rol: string) => ({ $queryRaw: vi.fn().mockResolvedValue([{ rol }]) }) as never;
+
+  it("en producción no necesita APP_ORIGEN (no imprime enlace) y corre con el rol inv_dueno", async () => {
+    reiniciarTotp.mockResolvedValueOnce({ usuarioId: "u1" });
+    const c = consola();
+    const base = conRol("inv_dueno");
+    expect(await ejecutar(["--email", "dueno@ejemplo.invalid", "--reiniciar-totp"], c, base, { NODE_ENV: "production" })).toBe(0);
+    expect(reiniciarTotp).toHaveBeenCalledWith(base, expect.anything());
+  });
+
+  it("en producción, con otro rol que inv_dueno (p. ej. inv_app), sale con 2 y no reinicia", async () => {
+    const c = consola();
+    expect(await ejecutar(["--email", "dueno@ejemplo.invalid", "--reiniciar-totp"], c, conRol("inv_app"), { NODE_ENV: "production" })).toBe(2);
+    expect(c.error.texto).toMatch(/inv_dueno/);
+    expect(reiniciarTotp).not.toHaveBeenCalled();
   });
 });

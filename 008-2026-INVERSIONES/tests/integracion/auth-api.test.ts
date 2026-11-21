@@ -4,7 +4,9 @@
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { hashClave } from "@/auth/clave";
-import { verificarToken } from "@/auth/token";
+import { hashJti, verificarPresesion } from "@/auth/presesion";
+import { firmarToken, verificarToken } from "@/auth/token";
+import { activarTotp } from "./auth-totp-ayudas";
 
 // Secreto inventado solo para esta prueba (el proceso de vitest no lee ningún .env de producción).
 process.env.AUTH_SECRET = "secreto-ficticio-de-integracion-0123456789";
@@ -48,14 +50,28 @@ afterAll(async () => {
 });
 
 describe("POST /api/sesion/ingresar", () => {
-  it("con la clave correcta responde 200, no-store y la cookie de sesión exacta", async () => {
+  it("con la clave correcta responde 200, no-store y SOLO la pre-sesión (5 min), no la sesión", async () => {
     const r = await ingresar(pedido("/api/sesion/ingresar", { email, clave: CLAVE }));
     expect(r.status).toBe(200);
     expect(r.headers.get("cache-control")).toBe("no-store");
-    const cookie = cookieDe(r);
-    expect(cookie).toMatch(/^__Host-sesion=[A-Za-z0-9._-]+; Path=\/; HttpOnly; Secure; SameSite=Strict; Max-Age=28800$/);
-    const token = /^__Host-sesion=([^;]+)/.exec(cookie)?.[1] ?? "";
-    expect(await verificarToken(token, CLAVE_SESION, Date.now())).toEqual({ sub: usuarioId, sesionVersion: 1 });
+    const cookies = r.headers.getSetCookie();
+    expect(cookies).toHaveLength(1);
+    expect(cookies[0]).toMatch(/^__Host-presesion=[A-Za-z0-9._-]+; Path=\/; HttpOnly; Secure; SameSite=Strict; Max-Age=300$/);
+    const token = /^__Host-presesion=([^;]+)/.exec(cookies[0] ?? "")?.[1] ?? "";
+    const pre = await verificarPresesion(token, CLAVE_SESION, Date.now());
+    expect(pre).toMatchObject({ sub: usuarioId, sesionVersion: 1 });
+    expect(await verificarToken(token, CLAVE_SESION, Date.now())).toBeNull();
+    expect((await db.usuario.findUniqueOrThrow({ where: { id: usuarioId } })).presesionHash).toBe(hashJti(pre?.jti ?? ""));
+  });
+
+  it("dice el paso siguiente: enrolar sin TOTP activo, totp con él", async () => {
+    const sin = await ingresar(pedido("/api/sesion/ingresar", { email, clave: CLAVE }));
+    expect(await sin.json()).toEqual({ ok: true, paso: "enrolar" });
+    const conEmail = `api-totp-${corrida}@ejemplo.invalid`;
+    const con = await db.usuario.create({ data: { email: conEmail, rol: "DUENO", claveHash: await hashClave(CLAVE) } });
+    await activarTotp(db, con.id, new Date());
+    const r = await ingresar(pedido("/api/sesion/ingresar", { email: conEmail, clave: CLAVE }));
+    expect(await r.json()).toEqual({ ok: true, paso: "totp" });
   });
 
   it("registra la IP de Cf-Connecting-IP", async () => {
@@ -101,10 +117,23 @@ describe("POST /api/sesion/ingresar", () => {
 });
 
 describe("POST /api/sesion/salir", () => {
+  let idSalir = "";
+
+  beforeAll(async () => {
+    idSalir = (await db.usuario.create({ data: { email: `api-salir-${corrida}@ejemplo.invalid`, rol: "DUENO", claveHash: await hashClave(CLAVE) } })).id;
+    await activarTotp(db, idSalir, new Date());
+  });
+
+  /** Una sesión completa (la que da el segundo paso), firmada con la versión vigente de la cuenta. */
   async function cookieValida(): Promise<string> {
-    const r = await ingresar(pedido("/api/sesion/ingresar", { email, clave: CLAVE }));
-    return cookieDe(r).split(";")[0] ?? "";
+    const { sesionVersion } = await db.usuario.findUniqueOrThrow({ where: { id: idSalir } });
+    return `__Host-sesion=${await firmarToken({ sub: idSalir, sesionVersion }, CLAVE_SESION, Date.now())}`;
   }
+
+  it("borra también la pre-sesión", async () => {
+    const r = await salir(pedido("/api/sesion/salir", {}, { cookie: await cookieValida() }));
+    expect(r.headers.getSetCookie().some((c) => /^__Host-presesion=; Path=\/; HttpOnly; Secure; SameSite=Strict; Max-Age=0/.test(c))).toBe(true);
+  });
 
   it("con sesión responde 200 y borra la cookie con los mismos atributos", async () => {
     const r = await salir(pedido("/api/sesion/salir", {}, { cookie: await cookieValida() }));

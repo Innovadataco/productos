@@ -1,9 +1,28 @@
 /**
  * Respuestas JSON del login y del proxy: siempre `Cache-Control: no-store` (nada de la sesión se guarda
- * en cachés). Módulo puro: lo usa también el proxy.
+ * en cachés) y, si hace falta, varias Set-Cookie (el segundo paso crea la sesión y borra la pre-sesión en
+ * la misma respuesta). Módulo puro: lo usa también el proxy.
  */
 export const MENSAJE_GENERICO = "Usuario o contraseña incorrectos";
 
-export function respuestaJson(cuerpo: unknown, estado: number, cabeceras: Readonly<Record<string, string>> = {}): Response {
-  return Response.json(cuerpo, { status: estado, headers: { "Cache-Control": "no-store", ...cabeceras } });
+/** Un solo mensaje para todo fallo del segundo paso: código errado, repetido, de recuperación usado o bloqueo. */
+export const MENSAJE_SEGUNDO_PASO = "Código incorrecto";
+
+/** La pre-sesión venció, se reemplazó o no llegó: hay que volver a pasar la clave. */
+export const MENSAJE_PRESESION_VENCIDA = "La verificación venció. Ingrese de nuevo.";
+
+/** El enrolamiento solo vale 30 min después del enlace o de `--reiniciar-totp` (decisión D1). */
+export const MENSAJE_FUERA_DE_PLAZO =
+  "Pasaron más de 30 minutos desde que se definió la clave: pida un enlace nuevo con crear-acceso-inicial o corra crear-acceso-inicial --reiniciar-totp.";
+
+export function respuestaJson(
+  cuerpo: unknown,
+  estado: number,
+  cabeceras: Readonly<Record<string, string>> = {},
+  cookies: readonly string[] = [],
+): Response {
+  const h = new Headers(cabeceras);
+  h.set("Cache-Control", "no-store");
+  for (const cookie of cookies) h.append("Set-Cookie", cookie);
+  return Response.json(cuerpo, { status: estado, headers: h });
 }

@@ -1,7 +1,15 @@
 // La cookie de la sesión (D-014): `__Host-sesion` con HttpOnly, Secure, SameSite=Strict, Path=/ y sin
 // Domain, 8 h. El borrado lleva los mismos atributos (si no, el navegador lo rechaza y la sesión sigue).
 import { describe, expect, it } from "vitest";
-import { NOMBRE_COOKIE, cookieDeBorrado, cookieDeSesion, leerToken } from "@/auth/cookie";
+import {
+  NOMBRE_COOKIE,
+  NOMBRE_PRESESION,
+  cookieDeBorrado,
+  cookieDeBorradoPresesion,
+  cookieDePresesion,
+  cookieDeSesion,
+  leerToken,
+} from "@/auth/cookie";
 
 const partes = (setCookie: string) => setCookie.split(";").map((p) => p.trim());
 
@@ -40,5 +48,35 @@ describe("leerToken", () => {
     expect(leerToken(null)).toBeUndefined();
     expect(leerToken("")).toBeUndefined();
     expect(leerToken("__Host-sesion=")).toBeUndefined();
+  });
+});
+
+describe("cookie de la pre-sesión (TOTP)", () => {
+  it("se llama __Host-presesion, distinta de la sesión", () => {
+    expect(NOMBRE_PRESESION).toBe("__Host-presesion");
+    expect(NOMBRE_PRESESION).not.toBe(NOMBRE_COOKIE);
+  });
+
+  it("al crearla lleva HttpOnly, Secure, SameSite=Strict, Path=/, 5 min y ningún Domain", () => {
+    const p = partes(cookieDePresesion("abc.def.ghi"));
+    expect(p[0]).toBe("__Host-presesion=abc.def.ghi");
+    expect(p).toEqual(expect.arrayContaining(["Path=/", "HttpOnly", "Secure", "SameSite=Strict", "Max-Age=300"]));
+    expect(p.some((x) => /^domain=/i.test(x))).toBe(false);
+  });
+
+  it("al borrarla lleva los mismos atributos, vacía y vencida", () => {
+    const p = partes(cookieDeBorradoPresesion());
+    expect(p[0]).toBe("__Host-presesion=");
+    expect(p).toEqual(expect.arrayContaining(["Path=/", "HttpOnly", "Secure", "SameSite=Strict", "Max-Age=0"]));
+  });
+
+  it("se niega a escribir un valor que rompería la cabecera", () => {
+    expect(() => cookieDePresesion("a;b")).toThrow();
+  });
+
+  it("leerToken de la sesión no devuelve la pre-sesión, y la pre-sesión se lee por su nombre", () => {
+    expect(leerToken("__Host-presesion=pre")).toBeUndefined();
+    expect(leerToken("__Host-sesion=ses; __Host-presesion=pre", NOMBRE_PRESESION)).toBe("pre");
+    expect(leerToken("x__Host-presesion=falso", NOMBRE_PRESESION)).toBeUndefined();
   });
 });

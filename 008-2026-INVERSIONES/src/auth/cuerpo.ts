@@ -67,3 +67,12 @@ export async function leerNuevaClave(pedido: Request): Promise<NuevaClave | null
   const datos = await leerCampos(pedido, ["token", "clave"] as const);
   return datos ? { token: datos.token, clave: datos.clave } : null;
 }
+
+/** Un código del segundo paso (TOTP o de recuperación) no pasa de esto, con guiones y espacios. */
+const CODIGO_MAX = 64;
+
+/** El código del POST del segundo paso (`{ "codigo": "…" }`), o null si el cuerpo no es válido. */
+export async function leerCodigo(pedido: Request): Promise<string | null> {
+  const datos = await leerCampos(pedido, ["codigo"] as const);
+  return datos && datos.codigo.length <= CODIGO_MAX ? datos.codigo : null;
+}
