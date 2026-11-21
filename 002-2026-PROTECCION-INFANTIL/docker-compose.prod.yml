@@ -54,19 +54,16 @@ services:
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
       WORKER_RUN_DIR: /app/run
+      # SPEC-977 (I-459): endpoint HTTP del guard del docker.sock (servicio docker-guard).
+      DOCKER_GUARD_URL: http://pi-docker-guard:2375
     volumes:
       - pi_worker_run:/app/run
       # SPEC-110: evidencia cifrada de apelaciones (persistente entre deploys).
       - pi_apelaciones_storage:/app/storage
-      # SPEC-291 (002-PI-191): docker socket para acciones admin sobre servicios.
-      # Whitelist estricta en src/lib/servicios/docker-adapter.ts (3 cmds × 10 conts).
-      - /var/run/docker.sock:/var/run/docker.sock
-    # SPEC-291: el user `nextjs` (uid 100, gid 101) del contenedor NO puede
-    # leer /var/run/docker.sock (root:988, mode 660). Añadimos el gid 988
-    # (grupo `docker` del host) como grupo suplementario para que el proceso
-    # tenga permiso sobre el socket sin correr como root.
-    group_add:
-      - "988"
+    # SPEC-977 (I-459): pi-app ya NO monta el docker.sock. Las acciones admin sobre
+    # servicios (start/stop/restart de los pi-* del panel) van por HTTP al guard
+    # `pi-docker-guard` (DOCKER_GUARD_URL), ÚNICO servicio que monta el socket. Doble
+    # capa: la whitelist de src/lib/servicios/docker-adapter.ts se conserva.
     ports:
       # Solo localhost: lo publica cloudflared (pi.innovadataco.com).
       - "127.0.0.1:5005:3000"
@@ -80,6 +77,42 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      docker-guard:
+        condition: service_started
+
+  # SPEC-977 (I-459): guard del docker.sock. ÚNICO servicio que monta el socket.
+  # Reverse-proxy nginx con allowlist estricta (ver docker/pi-docker-guard.conf):
+  # deja pasar solo start/stop/restart de los 12 pi-* del panel y GET containers/json
+  # (con filtro pi- forzado); todo lo demás → 403. Sin puertos publicados: solo en la
+  # red interna de PI. read_only + cap_drop ALL + no-new-privileges + memoria acotada.
+  docker-guard:
+    image: nginx:alpine
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    container_name: pi-docker-guard
+    restart: always
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 32m
+    tmpfs:
+      - /tmp
+    volumes:
+      # Socket en SOLO LECTURA; es el ÚNICO montaje del docker.sock en todo el stack.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./docker/pi-docker-guard.conf:/etc/nginx/nginx.conf:ro
+    # Sin `ports:` — no se publica al host; solo la red interna de PI lo alcanza.
+    healthcheck:
+      # Liveness: nginx responde y alcanza el socket (containers/json → 200).
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:2375/containers/json || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   worker:
     image: pi-app:${PI_APP_TAG:-latest}

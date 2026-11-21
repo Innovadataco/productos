@@ -905,4 +905,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-976: el AGENTS.md RAÍZ describe la estructura real — no cita carpetas derogadas, y toda carpeta
     // de producto NNN-AAAA-* y todo workflow *.yml que menciona EXISTE en disco. Puro (lee texto + fs).
     "scripts/ci/agents-raiz.candado.test.ts",
+    // SPEC-977 (I-459): el docker.sock vive SOLO en pi-docker-guard (no en pi-app), en :ro y sin
+    // puertos publicados. Estático sobre docker-compose.prod.yml. Puro (lee texto).
+    "scripts/ci/docker-guard-compose.candado.test.ts",
+    // SPEC-977 (I-459): la política nginx del guard deja pasar solo start/stop/restart de los 12
+    // pi-* (== whitelist del adapter) y GET containers/json; todo lo demás 403. Mutación. Puro.
+    "scripts/ci/docker-guard-politica.candado.test.ts",
 ];
