@@ -253,8 +253,10 @@ describe("sql_rol_precios (SQL puro, sin claves)", () => {
     expect(sinComentarios).not.toMatch(/^\s*\\/m);
   });
 
-  it("sin superusuario, sin crear bases ni roles, sin replicación, sin BYPASSRLS, NOINHERIT y pocas conexiones", () => {
-    expect(sinComentarios).toMatch(/ALTER ROLE inv_precios WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 3;/);
+  // 4 conexiones: el pool de su URL (connection_limit=2) dos veces, p. ej. precios:actualizar y actualizar-fondo a la
+  // vez (revisión de base, M2). Con inv_dueno (5) e inv_app (10) suman 19 de las 30 de la base.
+  it("sin superusuario, sin crear bases ni roles, sin replicación, sin BYPASSRLS, NOINHERIT y 4 conexiones", () => {
+    expect(sinComentarios).toMatch(/ALTER ROLE inv_precios WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 4;/);
   });
 
   it("solo se conecta a la base y usa el esquema: los privilegios de tablas los da privilegios.sql", () => {

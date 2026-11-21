@@ -245,11 +245,11 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       expect(String(antesDelMigrador)).toMatch(/42501|permission denied/);
     });
 
-    it("atributos del rol: LOGIN, NOINHERIT, sin superusuario, sin crear bases ni roles, sin replicación ni BYPASSRLS, 3 conexiones", async () => {
+    it("atributos del rol: LOGIN, NOINHERIT, sin superusuario, sin crear bases ni roles, sin replicación ni BYPASSRLS, 4 conexiones", async () => {
       const filas = await admin.$queryRawUnsafe<Array<Record<string, unknown>>>(
         "SELECT rolcanlogin, rolinherit, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls, rolconnlimit FROM pg_roles WHERE rolname = 'inv_precios'",
       );
-      expect(filas).toEqual([{ rolcanlogin: true, rolinherit: false, rolsuper: false, rolcreatedb: false, rolcreaterole: false, rolreplication: false, rolbypassrls: false, rolconnlimit: 3 }]);
+      expect(filas).toEqual([{ rolcanlogin: true, rolinherit: false, rolsuper: false, rolcreatedb: false, rolcreaterole: false, rolreplication: false, rolbypassrls: false, rolconnlimit: 4 }]);
     });
 
     it("el catálogo tiene exactamente los permisos de la lista, por columna; nada de tabla, secuencia ni por defecto", async () => {
