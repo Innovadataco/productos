@@ -117,6 +117,7 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.14 · 2026-11-21 · 03:40 (-05) · INV · Fábrica Inversiones · comando `precios:depurar` (SPEC-13: cierres de días no hábiles o sin negociación)
 > v1.13 · 2026-11-21 · 02:08 (-05) · INV · Fábrica Inversiones · producción con su procedimiento real (`produccion.md`, `convivencia-pi.md`, `inv-008-prod`, `.env` 600, `DEPLOY VERIFICADO`); guardianes de e2e y cobertura; comandos de datos y de producción verificados en `package.json` y `scripts/`
 > v1.12 · 2026-11-20 · 21:16 (-05) · INV · Fábrica ECC · solo ECC por orden de Jelk: sin SPEC, radicados ni manual 02; ramas `work/inv-<nombre-corto>`; «ECC usado» en cada PR
 > v1.11 · 2026-11-20 · 19:39 (-05) · INV · Fábrica ECC · INV-SPEC-13: precios de Yahoo
