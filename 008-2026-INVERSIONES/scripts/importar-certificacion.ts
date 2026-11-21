@@ -2,7 +2,9 @@
  * Carga local de la certificación PDF de Acciones & Valores y su conciliación por fecha de corte (hito 1).
  *   npx tsx scripts/importar-certificacion.ts --email <correo-del-dueño> --fecha-corte AAAA-MM-DD [--fondo <codigoFic>] <certificacion.pdf>
  * - La fecha de corte es OBLIGATORIA: el texto del PDF no la trae y nunca se infiere. Debe ser día hábil de la BVC,
- *   no posterior a la fecha de generación del PDF y de hasta 7 días antes.
+ *   no posterior a la fecha de generación del PDF y de hasta 7 días antes. Si no es hábil (por ejemplo, la de un PDF
+ *   generado en fin de semana o festivo), se rechaza, nunca se ajusta sola, y se indica el último día hábil anterior
+ *   según calendario_bvc con el comando para correrlo de nuevo.
  * - `--fondo <codigoFic>` (el código de la SFC del fondo ya registrado con actualizar-fondo) solo hace falta la
  *   primera vez, para vincular el NIT del fondo que trae la certificación.
  * - El correo debe ser el de un DUENO ya registrado (este comando no crea usuarios).
