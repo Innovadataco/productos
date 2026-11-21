@@ -476,7 +476,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
   --email
   dueno@ejemplo.ficticio
   ```
-  - Para un comando sin argumentos va vacía (`/dev/null`).
+  - Para un comando sin argumentos va vacía (`/dev/null`). También para `importar-precios`, que no lleva opciones.
   - Para uno con argumentos sin datos reales, sirve `<(printf '%s\n' --ensayo)`.
   - Los valores reales nunca se escriben en la línea de comandos: quedarían en el historial.
 - **En la línea de comandos del VPS solo va el nombre del comando**, de una lista cerrada. Nada real queda en el registro de sudo ni en `ps` del host.
@@ -514,6 +514,36 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 | 7 | Lotes otra vez | `construir-lotes` | vacía | — |
 | 8 | La ficha, primero en ensayo | `importar-plan` | `--email` y el correo | la ficha |
 | 9 | La ficha, aplicada | `importar-plan` | `--email`, el correo y `--aplicar` | la ficha |
+| 10 | La certificación de A&V, que concilia y marca los cierres que faltan | `importar-certificacion` | `--email`, el correo, `--fecha-corte` y la fecha; `--fondo` y su código solo la primera vez | el PDF |
+| 11 | Los precios, que se verifican al escribir contra la certificación ya cargada | `importar-precios` | vacía (`/dev/null`) | el CSV de cierres que exportó el Mac (abajo) |
+| 12 | La conciliación otra vez, con los precios ya cargados | `conciliar-certificacion` | `--fecha-corte` y la fecha | — |
+
+**Los precios (paso 11): se exportan en el Mac del dueño y viajan en el sobre.** Producción no tiene salida a internet: la app y el migrador no llegan a Yahoo.
+1. **En el Mac del dueño, que sí tiene red,** se exportan los cierres. La lista de nemotécnicos (uno por línea; `#` comenta) la crea el dueño en su carpeta privada; la Fábrica nunca la lee:
+   ```sh
+   umask 077
+   npm run -s precios:exportar -- --nemos <carpeta-privada>/nemos.txt --desde <fecha> > <carpeta-privada>/precios.csv.parcial \
+     && mv <carpeta-privada>/precios.csv.parcial <carpeta-privada>/precios.csv
+   ```
+   - **`-s` es obligatorio:** sin él, npm escribe su encabezado en stdout y queda dentro del CSV (el importador lo rechaza por el encabezado). Sirve también `npx tsx scripts/exportar-precios.ts …`.
+   - **El `&& mv`:** la shell crea el archivo aunque el exportador falle; con `.parcial` y `mv`, solo un CSV completo (salida 0) queda con su nombre. Con salida 3 (alguna especie quedó fuera, por su línea de la lista), el CSV de las demás es válido: se decide a conciencia si se usa (`mv` a mano) o se repite.
+   - **El CSV no es público:** el conjunto de especies es la composición del portafolio. Va en la carpeta privada, con `umask 077`; nunca al repo. El exportador se niega a escribirlo en una terminal y por stderr solo da conteos, códigos y números de línea de la lista.
+   - Pide `<NEMO>.CL` en serie, con una pausa entre pedidos; `--hasta` por defecto es hoy y el rango llega a 1830 días. Nunca deja una barra que aún no es definitiva **al exportar** (la de hoy antes de la hora).
+2. **El CSV viaja por stdin, en el sobre,** como los demás archivos: `scripts/armar-sobre.sh /dev/null <carpeta-privada>/precios.csv | ssh <vps> …/scripts/cargar-prod.sh importar-precios`. `inv-cargar` lo deja en el temporal `precios.csv` (tope 4 MiB) y `precios:importar` lo valida **entero** antes de abrir la base: con un error no guarda nada.
+3. **Formato exacto** (`src/precios/csv-cierres.ts`): solo ASCII imprimible y LF, sin BOM, CR, tabuladores ni comillas; el encabezado exacto `nemotecnico,fecha,cierre,volumen`; una línea por barra, cada una terminada en LF, sin líneas vacías y de hasta 80 bytes:
+   - `nemotecnico`: `[A-Z0-9]{2,20}`;
+   - `fecha`: `20AA-MM-DD`, una fecha que existe;
+   - `cierre`: decimal canónico (sin ceros sobrantes, hasta 6 decimales, sin exponente), > 0 y ≤ 10 000 000;
+   - `volumen`: vacío (Yahoo no lo trajo) o un entero ≥ 0 de hasta 15 dígitos;
+   - ningún par (nemotécnico, fecha) repetido; al menos una fila; hasta 60 000 filas y 40 especies.
+
+   Ejemplo inventado:
+   ```text
+   nemotecnico,fecha,cierre,volumen
+   FICTA,2024-03-12,1234.5,800
+   FICTA,2024-03-13,1240,
+   ```
+4. **Por el mismo camino que `precios:actualizar`:** mismas especies (acción activa con lotes), la misma fuente `yahoo`, versión con guarda, las omisiones de SPEC-13 (día no hábil y volumen 0 se omiten; el año sin calendario sale con 3) y la verificación contra la certificación del mismo día. Reimportar el mismo CSV no escribe nada.
 
 **Qué esperar de cada paso:**
 - **Un CSV por llamada:** el tipo (órdenes, caja o dividendos) sale del encabezado, no del nombre. El nombre que guarda la base es fijo (`trii.csv`): el nombre real no llega al VPS.
@@ -521,13 +551,16 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 - **`registrar-escision` con salida 3:** había dividendos importados como ordinarios. En la vía B no debe pasar: si pasa, se para.
 - **`construir-lotes` con salida 3:** son avisos, no un error. En el paso 5 puede dar 3 por la escisión; en el 7 debe dar 0, o 3 con los avisos explicados.
 - **`importar-plan` con salida 3:** había otra importación en curso: se reintenta.
+- **`importar-certificacion` (paso 10):** concilia al cargar; sin los cierres del día de corte, el valor sale `sin_precio_al_corte`. Es lo esperado: lo resuelven los pasos 11 y 12. Su «siguiente paso» en producción ya es este (vía B), no `precios:actualizar`.
+- **`importar-precios` (paso 11):** imprime `CSV de cierres · filas · especies` y el reporte de `precios:actualizar`. Debe dar «verificados en el rango» de al menos las especies certificadas el día de corte. Con salida 3: especies sin acción activa con lotes (`ESPECIE_NO_REGISTRADA`, por su línea del CSV), otro símbolo de Yahoo registrado (`SIMBOLO_DISTINTO`), un fallo del guardado o un año sin calendario: se para y se avisa.
+- **`conciliar-certificacion` (paso 12):** guarda una conciliación nueva, ahora con los precios; la anterior queda en la historia.
 
 **Después de la carga:**
 1. **Revisión, de solo lectura:**
    - `contar-bloqueadas.sql`, en el VPS: `sudo $COMPOSE exec -T inv-008-db psql -X -v ON_ERROR_STOP=1 -U inv_dueno -d inversiones < $B/repo/008-2026-INVERSIONES/scripts/contar-bloqueadas.sql` (solo conteos);
    - y `construir-lotes` con `--ensayo`, por `cargar-prod.sh`.
 2. **Cuadre del costo total por especie contra el portal de A&V** (la madre y el hijo de la escisión). Lo mira **Jelk**; la Fábrica reporta solo **sí o no**.
-3. **Precios:** `precios:actualizar -- --desde <fecha>`, cuando exista el servicio de precios (otro frente). **Pendiente.**
+3. **Precios:** ya entraron en el paso 11 (vía B). Cuando exista el servicio de precios (otro frente), `precios:actualizar` los versiona encima: es la misma fuente (`yahoo`). Para ponerlos al día antes de eso, se repiten los pasos 11 y 12 con un `--desde` reciente.
 4. **Anotar** en `ESTADO.md` de la gestión: el resultado de cada paso, sin valores.
 
 ## 12 · Vía A, el volcado de solo datos: NO USAR
@@ -537,6 +570,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.7 · 2026-11-21 · 10:50 (-05) · Inversiones · Fábrica ECC (frente precios-carga) · §11: pasos 10 a 12 (certificación, precios por `precios:exportar` en el Mac y `importar-precios` por el sobre, y la conciliación otra vez); formato exacto del CSV de cierres; `-s`, `.parcial` y `&& mv`, `umask 077`; «Después de la carga» sin el pendiente de precios
 > v2.6 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · la carpeta de respaldos en 750 (la copia de IDC depende de eso); montaje del host `nosuid,noexec` revisado por los scripts (por ahora avisa): un bind de Docker no los aplica
 > v2.5 · 2026-11-21 · 07:05 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · revisiones de seguridad y de código: SPEC-980 de PI activa (aviso en una línea, el candado común resuelve la exclusión); salida 64 de `inv-cargar`; el sobre en la memoria del host como riesgo residual; cita de Jelk restituida
 > v2.5 · 2026-11-21 · 09:28 (-05) · Inversiones · Fábrica ECC (frente app-sin-salida) · la app sin salida a internet: solo redes internal, con la puerta de enlace aislada, detrás de `inv-008-entrada` (relé TCP en node, el único con 127.0.0.1:5008); verificación de no salida con control positivo; reversa con el clon en el sha que corre (cambio de contrato de `verificar_clon`); alcance de «sin salida»; primer despliegue con la entrada (down sin -v para recrear las redes)
