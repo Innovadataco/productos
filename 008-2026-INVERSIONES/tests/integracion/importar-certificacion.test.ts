@@ -60,9 +60,9 @@ describe("importarCertificacion: carga y trazabilidad", () => {
     expect(posiciones).toEqual([
       [c.nemos[0], 150n, "1000", "150000", "p1:f2,p1:f3"],
       [c.nemos[1], 2000n, "20", "40000", "p1:f4"],
-      [c.nemos[2], 10n, "30000", "300000", "p1:f5"],
+      [c.nemos[2], 10n, "32500", "325000", "p1:f5"],
     ]);
-    expect(cert.fondos.map((f) => [f.instrumentoId, f.saldo.toString(), f.referenciaPdf])).toEqual([[fic.id, "5000000", "p1:f1"]]);
+    expect(cert.fondos.map((f) => [f.instrumentoId, f.saldo.toString(), f.referenciaPdf])).toEqual([[fic.id, "6250000", "p1:f1"]]);
     expect((await db.instrumento.findUniqueOrThrow({ where: { id: fic.id } })).nitFondo).toBe(c.nit);
   });
 
@@ -250,6 +250,6 @@ describe("importarCertificacion: quién carga y con qué llaves", () => {
     await registrarFondo(c);
     await importarCertificacion(db, archivo(c));
     const [fila] = await db.$queryRaw<{ saldo: Prisma.Decimal }[]>`SELECT f.saldo FROM certificacion_fondo f JOIN certificacion c ON c.id = f."certificacionId" WHERE c."fechaCorte" = ${c.fecha.toISOString().slice(0, 10)}::date`;
-    expect(fila!.saldo.toString()).toBe("5000000");
+    expect(fila!.saldo.toString()).toBe("6250000");
   });
 });

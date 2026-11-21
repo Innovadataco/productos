@@ -18,13 +18,13 @@ const nemos = ["A", "B", "C"].map((l) => `L${corrida}${l}`);
 const NIT = "99700000-1";
 const CODIGO_FIC = "5550001";
 /** Un miércoles pasado de 2026 que no usan los otros archivos de certificación (el CLI usa el reloj real). */
-const CORTE = "2026-09-02";
+const CORTE = "2026-09-23";
 let carpeta = "";
 
 const claves = (): Record<string, string> =>
   Object.fromEntries(Object.entries(process.env).filter(([k, v]) => k.startsWith("CIFRADO_CLAVE_") && v !== undefined)) as Record<string, string>;
 const correr = (script: string, args: readonly string[]): Salida => correrCli(script, args, entornoMinimo({ DATABASE_URL: URL_BASE, ...claves() }));
-const DATOS = [email, ...nemos, NIT, "000000001", CODIGO_FIC, "5.000.000", "5000000", "150000", "Titular"];
+const DATOS = [email, ...nemos, NIT, "000000001", CODIGO_FIC, "6.250.000", "6250000", "150000", "Titular"];
 const comprobar = (s: Salida, codigo: number, esperado: string, mas: readonly string[] = []) => comprobarSalida(s, codigo, esperado, [...DATOS, ...mas, URL_BASE, "postgresql://"]);
 
 beforeAll(async () => {
@@ -47,7 +47,7 @@ describe("importar-certificacion y conciliar-certificacion contra la base", { ti
       ...CERTIFICACION_FICTICIA,
       fondos: [{ ...CERTIFICACION_FICTICIA.fondos[0]!, nit: NIT }],
       rentaVariable: rv.map((f, i) => ({ ...f, nemo: nemos[[0, 0, 1, 2][i]!]! })),
-      creadoEn: "D:20260903101500-05'00'",
+      creadoEn: "D:20260924101500-05'00'",
     };
     const ruta = join(carpeta, "cert.ficticio.pdf");
     writeFileSync(ruta, generarCertificacionPdf(espec));
@@ -61,10 +61,10 @@ describe("importar-certificacion y conciliar-certificacion contra la base", { ti
   });
 
   it("un PDF con una fila inválida: 1, RECHAZADO con página, fila, columna y código, sin valores", () => {
-    const mala = { ...CERTIFICACION_FICTICIA, rentaVariable: [{ ...CERTIFICACION_FICTICIA.rentaVariable[0]!, nemo: nemos[0]!, valor: "COP 123.456,00" }], creadoEn: "D:20260903101500-05'00'" };
+    const mala = { ...CERTIFICACION_FICTICIA, rentaVariable: [{ ...CERTIFICACION_FICTICIA.rentaVariable[0]!, nemo: nemos[0]!, valor: "COP 123.456,00" }], creadoEn: "D:20260924101500-05'00'" };
     const ruta = join(carpeta, "mala.ficticio.pdf");
     writeFileSync(ruta, generarCertificacionPdf(mala));
-    comprobar(correr("importar-certificacion.ts", ["--email", email, "--fecha-corte", "2026-09-01", ruta]), 1, "página 1 · fila 2 · VALOR DE MERCADO · VALOR_INCOHERENTE", ["123.456", carpeta]);
+    comprobar(correr("importar-certificacion.ts", ["--email", email, "--fecha-corte", "2026-09-22", ruta]), 1, "página 1 · fila 2 · VALOR DE MERCADO · VALOR_INCOHERENTE", ["123.456", carpeta]);
   });
 
   it("un correo que no está registrado: 1, sin repetirlo y sin crear usuarios", () => {
