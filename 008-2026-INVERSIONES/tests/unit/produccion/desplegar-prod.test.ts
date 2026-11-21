@@ -514,6 +514,55 @@ describe("desplegar-prod.sh · la app sin salida a internet, detrás de la entra
   });
 });
 
+describe("desplegar-prod.sh · redes de una versión anterior (sin aislar): down sin -v antes de levantar", () => {
+  // Medido en el Mac (Compose 5.3.1): Compose no recrea en su lugar una red internal cuyas driver_opts cambiaron si hay
+  // contenedores conectados («container … is not connected to the network»); el up falla y la vuelta atrás también.
+  // Con un down previo (sin -v), el up crea las redes nuevas sin problema.
+  const VIEJA = "inv-008-prueba_inv-008-red-interna";
+
+  it("si la red interna existe sin aislar, baja el proyecto con down SIN -v antes de levantar la base, y despliega", async () => {
+    const { repo, falsos, env, script } = preparar({ FALSO_REDES_VIEJAS: VIEJA });
+    const r = await correr(script, [ID], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${repo.sha}`);
+    const ll = falsos.llamadas();
+    const down = indice(ll, compose("down"));
+    expect(down).toBeGreaterThanOrEqual(0);
+    expect(ll[down]).not.toContain("-v");
+    expect(ll[down]).not.toContain("--volumes");
+    expect(down).toBeLessThan(indice(ll, compose("up", "inv-008-db", "inv-008-respaldo")));
+    expect(r.stderr).toMatch(/redes de una versión anterior/);
+  });
+
+  it("con las redes al día o sin redes todavía, no baja nada", async () => {
+    for (const extra of [{}, { FALSO_REDES_AL_DIA: `${VIEJA} inv-008-prueba_inv-008-red-entrada` }]) {
+      const { falsos, env, script } = preparar(extra);
+      expect((await correr(script, [ID], env)).status).toBe(0);
+      expect(falsos.llamadas().some(compose("down"))).toBe(false);
+    }
+  });
+
+  it("después de ese down, si algo falla, la vuelta atrás levanta todo con el sha que corría (aunque sea el mismo)", async () => {
+    const { repo, base, env, script } = preparar({ FALSO_REDES_VIEJAS: VIEJA, FALSO_ROLES: "0" });
+    mkdirSync(path.join(base, "estado"), { recursive: true });
+    writeFileSync(path.join(base, "estado", "sha-actual"), `${repo.sha}\n`);
+    writeFileSync(path.join(base, "estado", "imagen-actual"), `${ID}\n`);
+    const r = await correr(script, [ID, "--sin-migrar"], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/vuelta atrás/i);
+    const ups = readFileSync(path.join(base, "tags.txt"), "utf8").trim().split("\n");
+    expect(ups.at(-1)).toMatch(new RegExp(`^up ${repo.sha} .*inv-008-app.*inv-008-entrada.*inv-008-vigia.*inv-008-respaldo`));
+  });
+
+  it("si el down falla, se detiene sin levantar nada a medias", async () => {
+    const { falsos, env, script } = preparar({ FALSO_REDES_VIEJAS: VIEJA, FALSO_DOWN_RC: "1" });
+    const r = await correr(script, [ID], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
+    expect(falsos.llamadas().some(compose("up", "inv-008-db"))).toBe(false);
+  });
+});
+
 describe("desplegar-prod.sh · reversa con el compose del sha que corre (el clon no se mueve)", () => {
   // viejo = repo.sha: la imagen anterior, de antes del cambio de topología. nuevo = el sha que corre, y donde está el clon.
   const conCambio = () => {

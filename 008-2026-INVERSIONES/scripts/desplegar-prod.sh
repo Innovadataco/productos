@@ -13,12 +13,13 @@
 #
 # Orden: marca de pausa → candados (Inversiones y común con PI) → disco → PI sin desplegar → (.tar:
 # etiquetas, sha256 y disco; docker load) → las tres imágenes del mismo sha, amd64 → CI en verde y sha en
-# main → clon en el sha, limpio y de root → solo hacia adelante → medición → base y respaldo → roles →
-# PI otra vez → (si migra) app vieja detenida → respaldo cifrado → (si migra) respaldo diario detenido →
-# migrador (migraciones, guardián del esquema y privilegios) → app, entrada, vigía y respaldo → imagen,
-# salud por la entrada, la app sin puertos y solo en redes internal → la app sin salida a internet (con control
-# positivo desde la entrada), las redes internal con la puerta de enlace aislada → mem = memswap → medición 10 min después → salud otra vez → estado → retención →
-# convivencia → DEPLOY VERIFICADO <sha>. Si algo falla después de tocar contenedores, vuelve a la imagen que corría.
+# main → clon en el sha, limpio y de root → solo hacia adelante → medición → (redes de una versión anterior:
+# down sin -v) → base y respaldo → roles → PI otra vez → (si migra) app vieja detenida → respaldo cifrado →
+# (si migra) respaldo diario detenido → migrador (migraciones, guardián del esquema y privilegios) → app,
+# entrada, vigía y respaldo → imagen, salud por la entrada, la app y la base sin puertos y solo en redes internal
+# con la puerta de enlace aislada → la app sin salida a internet (con control positivo desde la entrada) →
+# mem = memswap → medición 10 min después → salud otra vez → estado → retención → convivencia →
+# DEPLOY VERIFICADO <sha>. Si algo falla después de tocar contenedores, vuelve a la imagen que corría.
 # Mientras migra no corre nada de Inversiones que retenga tablas: la app queda abajo desde el respaldo previo
 # hasta que el up de la versión nueva queda healthy.
 set -euo pipefail
@@ -33,6 +34,8 @@ PERMANENTES=(inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo)
 # resuelve y lo alcanza la ENTRADA (control positivo); desde la app no debe haber ruta.
 SONDA_SALIDA_DESTINO="api.telegram.org"
 SONDA_SALIDA_PUERTO=443
+# Las redes internal del compose, que van con la puerta de enlace aislada (gateway_mode_ipv4: isolated).
+REDES_AISLADAS=(inv-008-red-interna inv-008-red-entrada)
 # El control positivo depende de un tercero (el DNS y la sonda): se reintenta antes de dar el despliegue por caído.
 INTENTOS_CONTROL=3
 PAUSA_CONTROL_S=2
@@ -321,6 +324,29 @@ verificar_servicio() {
   informar "la app corre la imagen enviada, sin puertos y solo en redes internal; /api/salud por la entrada responde ok con la versión $SHA"
 }
 
+# Imprime, una por línea, las redes internal del proyecto que YA existen sin la puerta de enlace aislada (de una
+# versión anterior). Sin salida: no existen todavía o están al día.
+redes_viejas() {
+  local red modo
+  for red in "${REDES_AISLADAS[@]}"; do
+    modo="$(docker inspect --type network -f '{{index .Options "com.docker.network.bridge.gateway_mode_ipv4"}}' "${INV_PROYECTO_ACTIVO}_$red" 2>/dev/null)" || continue
+    [ "$modo" = "isolated" ] || printf '%s\n' "${INV_PROYECTO_ACTIVO}_$red"
+  done
+}
+
+# Medido en el Mac (Compose 5.3.1): Compose no recrea en su lugar una red internal cuyas driver_opts cambiaron si tiene
+# contenedores conectados («container … is not connected to the network»): el up falla y la vuelta atrás también. Por
+# eso, si quedan redes de una versión anterior, primero un down SIN -v (los volúmenes quedan); el up las crea nuevas.
+bajar_si_redes_viejas() {
+  local viejas
+  viejas="$(redes_viejas)"
+  [ -n "$viejas" ] || return 0
+  # Desde aquí la vuelta atrás vuelve a levantar todo, aunque el sha sea el mismo.
+  DETENIDOS=1
+  informar "redes de una versión anterior, sin aislar la puerta de enlace ($(printf '%s' "$viejas" | tr '\n' ' ')): down SIN -v para que el up las cree nuevas; los volúmenes quedan"
+  "${COMPOSE[@]}" down || morir "el down para recrear las redes falló: revise a mano (produccion.md §5)"
+}
+
 # La IPv4 de la sonda, resuelta DENTRO del contenedor $1 (vacío y falla si no resolvió).
 ipv4_resuelta_en() {
   local cid="$1"
@@ -469,6 +495,7 @@ main() {
   [ "$SHA_VUELTA" != "$SHA" ] || SHA_VUELTA=""
   trap vuelta_atras EXIT
 
+  bajar_si_redes_viejas
   informar "base y respaldo: up --wait"
   respaldos_siguen_validos || morir "la carpeta de respaldos dejó de pasar la validación antes del up"
   "${COMPOSE[@]}" up -d --wait --wait-timeout 180 inv-008-db inv-008-respaldo
