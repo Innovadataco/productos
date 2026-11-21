@@ -1,8 +1,9 @@
-// Reporte de `npm run precios:actualizar` (SPEC-13): conteos por razón de omisión y código de salida.
+// Reportes de `npm run precios:actualizar` y `precios:depurar` (SPEC-13): conteos y código de salida.
 // Nunca imprime precios ni nemotécnicos (el resultado no los trae). Datos inventados.
 import { describe, expect, it } from "vitest";
 import type { ResultadoActualizacion } from "@/precios/actualizar";
-import { reporteActualizacion } from "@/precios/reporte";
+import type { ResultadoDepuracion } from "@/precios/depurar";
+import { reporteActualizacion, reporteDepuracion } from "@/precios/reporte";
 
 const base: ResultadoActualizacion = {
   especies: 2, cierresNuevos: 3, cierresRevisados: 1, cierresRetirados: 4, verificados: 0,
@@ -33,6 +34,44 @@ describe("reporteActualizacion", () => {
       "   · especie esp-1 · GUARDADO_ERROR · TypeError · barras guardadas: 1 · fallidas: 2",
       "   · especie esp-2 · YAHOO_HTTP_503 · barras guardadas: 0 · fallidas: 0",
     ]);
+    expect(r.codigoSalida).toBe(3);
+  });
+});
+
+describe("reporteDepuracion", () => {
+  const ensayo: ResultadoDepuracion = {
+    base: "inversiones_x", aplicado: false, especies: 2, vigentesRevisados: 40, aRetirarNoHabil: 3, aRetirarSinNegociacion: 4, retirados: 0, cambiadosPorOtro: 0,
+    sinCalendario: 0, aunNoDefinitivos: 0, diagnostico: { barras: 38, sinNegociacionConCierreDistinto: 0, habilesConVolumenNull: 5 }, fallidas: [],
+  };
+
+  it("ensayo: conteos, diagnóstico y el siguiente paso; sale con 0", () => {
+    expect(reporteDepuracion(ensayo)).toEqual({
+      lineas: [
+        "Base: inversiones_x · modo: ENSAYO (no escribe) · 2 especie(s) · cierres vigentes de Yahoo revisados: 40",
+        "   sobran · día no hábil: 3 · sin negociación: 4 · retirados ahora: 0 · cambiados por otra corrida (no se pisaron): 0",
+        "   sin tocar · año sin calendario: 0 · aún no definitivos: 0",
+        "   diagnóstico de Yahoo · barras: 38 · volumen 0 con cierre distinto del anterior: 0 · días hábiles con volumen null: 5",
+        "Siguiente: con el arreglo desplegado donde corran las cargas, repita con --aplicar --base inversiones_x y después otra vez (debe dar 0 retirados).",
+      ],
+      codigoSalida: 0,
+    });
+  });
+
+  it("aplicado: pide repetir para confirmar 0", () => {
+    const r = reporteDepuracion({ ...ensayo, aplicado: true, retirados: 7 });
+    expect(r.lineas[0]).toContain("modo: APLICAR (retira)");
+    expect(r.lineas.at(-1)).toBe("Siguiente: corra el mismo comando otra vez (debe dar 0 retirados).");
+    expect(r.codigoSalida).toBe(0);
+  });
+
+  it("avisa y sale con 3 si Yahoo falló, falta calendario o el volumen 0 trae otro cierre", () => {
+    const r = reporteDepuracion({ ...ensayo, sinCalendario: 2, diagnostico: { ...ensayo.diagnostico, sinNegociacionConCierreDistinto: 1 }, fallidas: [{ instrumentoId: "esp-9", codigo: "YAHOO_RED" }] });
+    expect(r.lineas).toEqual(expect.arrayContaining([
+      "⚠️  1 especie(s) sin respuesta de Yahoo (sus días hábiles no se tocaron):",
+      "   · especie esp-9 · YAHOO_RED",
+      "⚠️  2 cierre(s) sin tocar porque calendario_bvc no cubre su año: hay que sembrar ese año.",
+      "⚠️  1 barra(s) con volumen 0 y un cierre distinto del anterior: contradicen «volumen 0 = sin negociación». Revíselo antes de --aplicar.",
+    ]));
     expect(r.codigoSalida).toBe(3);
   });
 });

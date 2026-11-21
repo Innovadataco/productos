@@ -22,7 +22,8 @@
     "escision:registrar": "tsx scripts/registrar-escision.ts",
     "lotes:construir": "tsx scripts/construir-lotes.ts",
     "lote:escision": "tsx scripts/lote-escision.ts",
-    "precios:actualizar": "tsx scripts/actualizar-precios.ts"
+    "precios:actualizar": "tsx scripts/actualizar-precios.ts",
+    "precios:depurar": "tsx scripts/depurar-precios.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
