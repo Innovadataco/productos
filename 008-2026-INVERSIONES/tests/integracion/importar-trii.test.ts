@@ -287,6 +287,47 @@ describe("bordes del CSV", () => {
     expect(await db.dividendo.count({ where: { instrumento: { nemotecnico: n } } })).toBe(2);
   });
 
+  // O4: una línea totalmente vacía en medio rechazaba el archivo entero (COLUMNAS_INCORRECTAS). Ahora se ignora en
+  // cualquier posición, y cada fila conserva su número en el archivo original (trazabilidad: primeraFilaNo y errores).
+  it("una línea vacía en medio (LF o CRLF) se ignora y las filas conservan su número del archivo", async () => {
+    for (const [nombre, salto] of [["vacia-medio-lf", "\n"], ["vacia-medio-crlf", "\r\n"]] as const) {
+      const n = nemo(nombre === "vacia-medio-lf" ? "VL" : "VC");
+      const texto = `${DIVIDENDOS}2026-01-21,${n},,100.0\n\n2026-04-15,${n},,110.5\n\n\n2026-05-05,${n},,120.0\n`.replaceAll("\n", salto);
+      const r = await importar(`${nombre}.ficticio.csv`, csv(texto));
+      expect(r, nombre).toMatchObject({ estado: "CARGADO", filasTotal: 3, filasNuevas: 3, filasRepetidas: 0 });
+      const filas = await db.filaFuente.findMany({ where: { primeraCargaId: r.cargaId }, orderBy: { primeraFilaNo: "asc" } });
+      expect(filas.map((f) => f.primeraFilaNo), nombre).toEqual([2, 4, 7]);
+    }
+  });
+
+  it("líneas vacías antes del encabezado también se ignoran: el encabezado y las filas conservan su número", async () => {
+    const n = nemo("VE");
+    const r = await importar("vacia-antes.ficticio.csv", csv(`﻿\n\n${DIVIDENDOS}2026-01-21,${n},,100.0\n`));
+    expect(r).toMatchObject({ estado: "CARGADO", tipo: "TRII_DIVIDENDOS", filasTotal: 1, filasNuevas: 1 });
+    expect((await db.filaFuente.findFirstOrThrow({ where: { primeraCargaId: r.cargaId } })).primeraFilaNo).toBe(4);
+    const ajeno = await importar("vacia-antes-ajeno.ficticio.csv", csv("\n\nColumna ajena,Otra\n1,2\n"));
+    expect(ajeno).toMatchObject({ estado: "RECHAZADO", tipo: null, errores: [{ fila: 3, columna: null, codigo: "ENCABEZADO_DESCONOCIDO" }] });
+  });
+
+  it("tras una línea vacía, el error de una fila mala lleva su número del archivo (y la vacía no da error)", async () => {
+    const n = nemo("VM");
+    const r = await importar("vacia-y-mala.ficticio.csv", csv(`${DIVIDENDOS}2026-01-21,${n},,100.0\n\nfila-mala-ficticia\n`));
+    expect(r).toMatchObject({ estado: "RECHAZADO", filasTotal: 2, errores: [{ fila: 4, columna: null, codigo: "COLUMNAS_INCORRECTAS" }] });
+    expect(await db.instrumento.count({ where: { nemotecnico: n } })).toBe(0);
+  });
+
+  it("una línea con solo comas, solo espacios o \"\" NO es vacía: se rechaza en su número de fila", async () => {
+    for (const [nombre, linea, codigo] of [["comas", ",,,", null], ["espacios", "   ", "COLUMNAS_INCORRECTAS"], ["comillas", '""', "COLUMNAS_INCORRECTAS"]] as const) {
+      const n = nemo(`N${nombre.slice(0, 2).toUpperCase()}`);
+      const r = await importar(`no-vacia-${nombre}.ficticio.csv`, csv(`${DIVIDENDOS}2026-01-21,${n},,100.0\n${linea}\n2026-04-15,${n},,110.5\n`));
+      expect(r.estado, nombre).toBe("RECHAZADO");
+      expect(r.errores.length, nombre).toBeGreaterThan(0);
+      expect(r.errores.every((e) => e.fila === 3), nombre).toBe(true);
+      if (codigo) expect(r.errores, nombre).toEqual([{ fila: 3, columna: null, codigo }]);
+      expect(await db.instrumento.count({ where: { nemotecnico: n } }), nombre).toBe(0);
+    }
+  });
+
   it("una comilla sin cerrar rechaza el archivo con COMILLA_SIN_CERRAR y no guarda ni las filas sanas de antes", async () => {
     const n = nemo("CO");
     const r = await importar("comilla.ficticio.csv", csv(`${DIVIDENDOS}2026-01-21,${n},,1.0\n"2026-01-22,${n},,2.0\n`));
