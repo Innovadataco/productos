@@ -12,7 +12,7 @@ import type { DocumentoPdf, FuenteEstandar, PaginaPdf } from "./documento";
 import { ErrorPdf } from "./errores";
 import { IDENTIDAD, por, traslacion, type Matriz } from "./geometria";
 import { Lexico, leerValor, type PdfValor } from "./lexico";
-import { Pintura, SOLO_FUERA_DE_TEXTO, type EstadoPintura } from "./pintura";
+import { Pintura, PINTURA_INICIAL, SOLO_FUERA_DE_TEXTO, type EstadoPintura } from "./pintura";
 import { decodificarWinAnsi } from "./winansi";
 
 export interface CeldaPdf {
@@ -23,7 +23,7 @@ export interface CeldaPdf {
 }
 
 export const MAX_TEXTO_CELDA = 1024;
-export const MAX_CELDAS = 20_000;
+export const MAX_CELDAS = 10_000;
 const MAX_OPERADORES = 500_000;
 const MAX_OPERANDOS = 64;
 const MAX_PILA_GRAFICA = 64;
@@ -60,7 +60,7 @@ function numeros(a: readonly PdfValor[], cuantos: number): number[] {
 const matriz = (a: readonly PdfValor[]): Matriz => numeros(a, 6) as unknown as Matriz;
 
 class Interprete {
-  private g: EstadoGrafico = { ctm: IDENTIDAD, pintura: { relleno: 0, grosor: 1 }, fuente: null, tamano: 0, tl: 0, tr: 0, tz: ESCALA_NORMAL, ts: 0 };
+  private g: EstadoGrafico = { ctm: IDENTIDAD, pintura: PINTURA_INICIAL, fuente: null, tamano: 0, tl: 0, tr: 0, tz: ESCALA_NORMAL, ts: 0 };
   private readonly pila: EstadoGrafico[] = [];
   private readonly pintura = new Pintura();
   private enTexto = false;
@@ -159,12 +159,12 @@ class Interprete {
     if (!this.enTexto) throw new ErrorPdf("PDF_CONTENIDO_INVALIDO");
   }
 
-  /** Horizontal, sin espejo, de tamaño legible, sin Tz/Ts, visible y en color oscuro. */
+  /** Horizontal, sin espejo, de tamaño legible, sin Tz/Ts y visible (el color y el fondo los mira pintura.ts). */
   private seVe(m: Matriz): boolean {
     const { tr, tz, ts, tamano } = this.g;
     // Con tamano > 0, «m[3] · tamano ≥ 1» ya exige m[3] > 0: no hay espejo vertical.
     const horizontal = Math.abs(m[1]) < EPSILON && Math.abs(m[2]) < EPSILON && m[0] > 0;
-    return horizontal && tr === 0 && tz === ESCALA_NORMAL && ts === 0 && tamano > 0 && m[3] * tamano >= TAMANO_MINIMO && this.pintura.textoLegible();
+    return horizontal && tr === 0 && tz === ESCALA_NORMAL && ts === 0 && tamano > 0 && m[3] * tamano >= TAMANO_MINIMO;
   }
 
   /** Piezas: bytes WinAnsi o un espacio que viene de un ajuste de TJ. */
@@ -175,11 +175,11 @@ class Interprete {
     const dentro = x >= 0 && y >= 0 && x <= this.pagina.ancho && y <= this.pagina.alto;
     const texto = piezas.map((p) => (p === " " ? " " : decodificarWinAnsi(p))).join("");
     if (!this.seVe(m) || !dentro || NO_VISIBLE.test(texto)) throw new ErrorPdf("PDF_TEXTO_NO_SOPORTADO");
+    this.pintura.texto(m[4], m[5], m[3] * this.g.tamano, !this.continua);
     const previa = this.continua ? this.celdas.pop() : undefined;
     const celda = previa ? { ...previa, texto: previa.texto + texto } : { pagina: this.pagina.numero, x, y, texto };
     if (celda.texto.length > MAX_TEXTO_CELDA) throw new ErrorPdf("PDF_DEMASIADO_TEXTO");
     this.celdas.push(celda);
-    if (!previa) this.pintura.anclar(m[4], m[5]);
     this.continua = true;
   }
 }

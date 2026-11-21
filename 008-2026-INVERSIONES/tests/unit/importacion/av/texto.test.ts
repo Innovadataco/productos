@@ -170,7 +170,12 @@ describe("extraerCeldas: lo extraído es lo que se ve (revisión: security MEDIO
     ["un relleno oscuro pintado ANTES debajo de un texto oscuro (code-reviewer N2)", "0 g 40 5 100 20 re f BT /F1 9 Tf 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["un relleno gris medio debajo de un texto gris oscuro (poco contraste)", "0.4 g 40 5 100 20 re f 0.267 g BT /F1 9 Tf 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["un relleno de color no evaluable debajo del texto", "/CS0 cs 1 sc 40 5 100 20 re f 0 g BT /F1 9 Tf 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un relleno no evaluable debajo de un texto gris (0.4)", "/CS0 cs 1 sc 40 5 100 20 re f 0.4 g BT /F1 9 Tf 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un texto gris (0.4) encima de una imagen", "q 100 0 0 30 40 0 cm /I0 Do Q 0.4 g BT /F1 9 Tf 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["más pinturas opacas en una página que el tope", `${"0.9 g 0 0 1 1 re f ".repeat(2001)}`, "PDF_DEMASIADO_TEXTO"],
+    ["un trazo grueso oscuro pintado antes debajo de un texto oscuro", "0 G 20 w 30 12 m 150 12 l S BT /F1 9 Tf 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["un texto pintado encima de una imagen", "q 100 0 0 30 40 0 cm /I0 Do Q BT /F1 9 Tf 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["una segunda pieza de la misma celda en blanco (dígitos escondidos)", "BT /F1 9 Tf 50 10 Td (COP ) Tj 1 g (5) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["un carácter de control dentro del texto", "BT /F1 9 Tf 50 10 Td (a\\001b) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["un salto de línea escapado dentro del texto", "BT /F1 9 Tf 50 10 Td (a\\nb) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["un byte sin definir en WinAnsi (U+FFFD)", "BT /F1 9 Tf 50 10 Td (a\\201b) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
@@ -188,6 +193,14 @@ describe("extraerCeldas: lo extraído es lo que se ve (revisión: security MEDIO
   it("acepta un relleno claro pintado antes debajo de un texto oscuro (la celda del portal)", () => {
     expect(extra("0.96 g 40 5 100 20 re B 0 g BT /F1 9 Tf 50 10 Td (x) Tj ET 1 g 40 5 100 0.1 re f").map((c) => c.texto)).toEqual(["x"]);
     expect(extra("0.9 g 40 5 100 20 re f 0.267 g BT /F1 9 Tf 50 10 Td (y) Tj ET").map((c) => c.texto)).toEqual(["y"]);
+  });
+
+  it("acepta un trazo grueso claro pintado antes debajo de un texto oscuro", () => {
+    expect(extra("0.9 G 20 w 30 12 m 150 12 l S BT /F1 9 Tf 50 10 Td (x) Tj ET").map((c) => c.texto)).toEqual(["x"]);
+  });
+
+  it("acepta hasta el tope de pinturas opacas en una página", () => {
+    expect(() => celdas({ contenidoExtra: "0.9 g 0 0 1 1 re f ".repeat(1990) })).not.toThrow();
   });
 
   it("acepta un relleno oscuro pintado antes que no queda debajo del texto", () => {
