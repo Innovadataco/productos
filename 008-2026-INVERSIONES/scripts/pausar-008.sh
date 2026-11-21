@@ -11,7 +11,10 @@
 # Nunca se rompe por interpolación: el down va solo con el nombre del proyecto (COMPOSE_PAUSA, sin -f ni
 # --env-file) y no lee la configuración no secreta. Si ese down falla (un compose que no lo admita), cae al
 # compose del clon con el centinela. Con las anclas de la raíz rotas no escribe nada: baja por nombre y sale
-# con error («SIN marca»).
+# con error («SIN marca»); si la marca no se puede escribir, también baja y sale con error.
+# Con otra operación de Inversiones en curso (el candado propio tomado, p. ej. un despliegue) se niega: el
+# despliegue podría volver a levantar lo que se baje. Corte primero el despliegue (Ctrl-C: su vuelta atrás) y
+# vuelva a pausar.
 #
 # Uso: sudo <raíz>/repo/008-2026-INVERSIONES/scripts/pausar-008.sh [motivo]   (<raíz>: ver ESTADO en la gestión)
 # Reanudar: scripts/reanudar-008.sh
@@ -39,7 +42,22 @@ main() {
   fi
   revisar_arbol --solo-avisar
   tomar_candado_propio
-  escribir_atomico "$INV_MARCA_PAUSA" "$(date '+%Y-%m-%d %H:%M:%S %z') · ${motivo//[^[:alnum:] ._:-]/}"
+  # Si la marca no se puede escribir (disco lleno, ruta rota), el corte igual baja: sin marca, y sale con error.
+  # En una subshell con set -e propio (fuera de un if, donde bash lo apagaría), para que un `morir` o un fallo
+  # de escribir_atomico no corte la pausa antes del down.
+  local rc_marca=0
+  set +e
+  (
+    set -e
+    escribir_atomico "$INV_MARCA_PAUSA" "$(date '+%Y-%m-%d %H:%M:%S %z') · ${motivo//[^[:alnum:] ._:-]/}"
+  )
+  rc_marca=$?
+  set -e
+  if [ "$rc_marca" != 0 ]; then
+    informar "⚠️  no se pudo escribir la marca de pausa: se baja igual"
+    bajar_por_pausa || morir "no se pudo escribir la marca y el down también falló: revise a mano"
+    morir "Inversiones abajo SIN marca de pausa: un despliegue o PI podrían levantarla. Corrija la ruta de la marca y vuelva a pausar"
+  fi
   informar "marca de pausa: $INV_MARCA_PAUSA"
   bajar_por_pausa
   informar "Inversiones en pausa: contenedores abajo, base y respaldos intactos. Reanudar: scripts/reanudar-008.sh"

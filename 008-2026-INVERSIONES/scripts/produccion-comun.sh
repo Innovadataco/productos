@@ -188,9 +188,10 @@ revisar_arbol() {
 # Imprime el problema de la forma o del contenido de la carpeta de respaldos $1, o nada si está bien: ruta
 # absoluta de caracteres [A-Za-z0-9_./-], sin //, . ni .., sin / final, sin enlaces en ningún componente, una
 # carpeta que existe y que solo tiene respaldos de 008 (los nombres de docker/respaldo/respaldo.sh). Nunca
-# nombra lo que hay dentro: solo cuenta.
+# nombra lo que hay dentro: solo cuenta. El contenido se recorre con un glob en una subshell (un nombre con
+# salto de línea es UNA entrada, y cuenta como ajena); si la carpeta no se puede listar, falla cerrado.
 problema_ruta_respaldos() {
-  local dir="$1" parcial="" componente resto ajenas=0 entrada nombre
+  local dir="$1" parcial="" componente resto ajenas
   [[ "$dir" =~ $INV_RUTA_SEGURA ]] || { echo "no es una ruta absoluta con caracteres [A-Za-z0-9_./-]"; return 0; }
   case "$dir/" in *//* | */./* | */../*) echo "tiene //, . o .."; return 0 ;; esac
   [ "$dir" != "/" ] || { echo "es /"; return 0; }
@@ -203,13 +204,20 @@ problema_ruta_respaldos() {
     resto="${resto#*/}"
   done
   [ -d "$dir" ] || { echo "no es una carpeta que exista"; return 0; }
-  while IFS= read -r entrada; do
-    nombre="${entrada##*/}"
-    [[ "$nombre" =~ ^inv-008-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.dump\.age(\.sha256)?$ ]] && continue
-    [[ "$nombre" =~ ^\.inv-008-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.dump\.age\.[0-9]+\.parcial$ ]] && continue
-    [ "$nombre" = ".ultimo-diario" ] && continue
-    ajenas=$((ajenas + 1))
-  done < <(find "$dir" -mindepth 1 -maxdepth 1 -print)
+  [ -r "$dir" ] && [ -x "$dir" ] || { echo "no se puede listar (sin permiso de lectura)"; return 0; }
+  ajenas="$(
+    shopt -s nullglob dotglob
+    n=0
+    for entrada in "$dir"/*; do
+      nombre="${entrada##*/}"
+      [[ "$nombre" =~ ^inv-008-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.dump\.age(\.sha256)?$ ]] && continue
+      [[ "$nombre" =~ ^\.inv-008-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.dump\.age\.[0-9]+\.parcial$ ]] && continue
+      [ "$nombre" = ".ultimo-diario" ] && continue
+      n=$((n + 1))
+    done
+    printf '%s' "$n"
+  )" || { echo "no se puede listar"; return 0; }
+  [[ "$ajenas" =~ ^[0-9]+$ ]] || { echo "no se puede listar"; return 0; }
   [ "$ajenas" = 0 ] || echo "tiene $ajenas entrada(s) que no son respaldos de 008"
 }
 

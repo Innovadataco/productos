@@ -9,8 +9,8 @@
 # mem = memswap no baja al disco. El archivo queda en un temporal 600 dentro de una carpeta 700 con nombre fijo
 # (trii.csv o ficha.md: el nombre real no llega a la base), corre el CLI y lo borra SIEMPRE (trap), también si
 # el CLI falla o llega una señal. El tmpfs muere con el contenedor.
-# Nunca imprime la cabecera ni el archivo: solo errores sin valores. Sale con 2 si se niega (sin correr el CLI)
-# o con el código del CLI.
+# Nunca imprime la cabecera ni el archivo: solo errores sin valores. Sale con 64 (EX_USAGE, distinto de los
+# códigos de los CLI, de 0 a 3) si se niega sin correr el CLI, o con el código del CLI.
 # Solo POSIX (busybox en la imagen; dash o bash en las pruebas). INV_CARGAR_* solo los usan las pruebas.
 set -eu
 ulimit -c 0
@@ -25,9 +25,10 @@ MAX_LARGO=512
 TOPE_TRII=5242880
 TOPE_FICHA=262144
 
+NIEGA=64
 falla() {
   printf '❌ [carga] %s\n' "$1" >&2
-  exit 2
+  exit "$NIEGA"
 }
 
 [ $# -eq 1 ] || falla "uso: inv-cargar <comando>; los parámetros y el archivo llegan por la entrada estándar"
@@ -51,8 +52,9 @@ dir="$(mktemp -d "$TMP_BASE/inv-carga.XXXXXX")" || falla "no se pudo crear la ca
 hijo=""
 limpiar() { rm -rf "$dir"; }
 terminar() {
+  # Al hijo siempre TERM: en un sh sin control de trabajos, un proceso en segundo plano nace con INT ignorado.
   if [ -n "$hijo" ]; then
-    kill -s "$1" "$hijo" 2>/dev/null || true
+    kill -s TERM "$hijo" 2>/dev/null || true
     wait "$hijo" 2>/dev/null || true
   fi
   limpiar

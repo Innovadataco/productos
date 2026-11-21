@@ -41,7 +41,7 @@ esac
 if [ -n "$RUTA_PAUSA" ]; then
   CORTE="ssh pi-vps sudo $RUTA_PAUSA"
 else
-  CORTE="ssh pi-vps sudo <base>/repo/008-2026-INVERSIONES/scripts/pausar-008.sh (<base>: ver ESTADO en la gestión)"
+  CORTE="ssh pi-vps sudo <raíz>/repo/008-2026-INVERSIONES/scripts/pausar-008.sh (<raíz>: ver ESTADO en la gestión)"
 fi
 
 # Hora de Colombia (UTC-5, sin horario de verano) sin depender de tzdata.
