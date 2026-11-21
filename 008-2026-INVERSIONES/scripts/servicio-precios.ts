@@ -25,7 +25,7 @@ const TAREAS: ReadonlyMap<string, () => Promise<unknown>> = new Map([
 ]);
 
 async function main(): Promise<void> {
-  const [nodo, guion, tarea, ...resto] = process.argv;
+  const [tarea, ...resto] = process.argv.slice(2);
   if (tarea === "--ayuda") {
     console.log(USO);
     return;
@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   }
   // Los CLI leen sus opciones de process.argv (parseArgs y process.argv.slice(2)) y corren al cargarse: se les deja
   // el argv que verían con tsx, sin el nombre de la tarea. Es la única escritura global, y va antes de cargarlos.
-  process.argv = [nodo!, guion!, ...resto];
+  process.argv = [...process.argv.slice(0, 2), ...resto];
   await cargar();
 }
 

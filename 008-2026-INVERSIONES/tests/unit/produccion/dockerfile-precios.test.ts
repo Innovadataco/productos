@@ -84,9 +84,13 @@ describe("Dockerfile · bundle de precios", () => {
     expect(escritura, "falta el control de escritura con el usuario 10008").toBeGreaterThan(usuario);
   });
 
-  it("solo la imagen de la app lleva el bundle; ninguna etapa final lleva tsx ni esbuild para él", () => {
+  it("solo la imagen de la app lleva el bundle; el runner no instala ni copia tsx ni esbuild (solo los prohíbe)", () => {
     for (const nombre of ["migrador", "vigia"]) expect(etapa(nombre).cuerpo.join("\n")).not.toContain(BUNDLE);
-    expect(etapa("runner").cuerpo.join("\n")).not.toMatch(/\btsx\b|esbuild/);
+    const runner = etapa("runner").cuerpo;
+    expect(runner.join("\n")).not.toMatch(/\bnpm (ci|install|i)\b|\bnpx\b|COPY --from=deps|COPY --from=builder \/app\/node_modules/);
+    const menciones = runner.filter((l) => /\btsx\b|esbuild/.test(l));
+    expect(menciones.length).toBeGreaterThan(0);
+    expect(menciones.every((l) => /test ! -e node_modules\/tsx && test ! -e node_modules\/esbuild/.test(l))).toBe(true);
   });
 
   it("siguen tres imágenes finales: runner, migrador y vigia (el servicio de precios usa la de la app)", () => {

@@ -48,15 +48,20 @@ LABEL org.opencontainers.image.revision="${APP_VERSION}" \
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 # El bundle de precios (scripts/servicio-precios.ts con esbuild): usa el @prisma/client y el engine del standalone.
-# De root y de solo lectura: el usuario 10008 lo lee y lo corre, pero no lo cambia.
+# De root y de solo lectura: el usuario 10008 lo lee y lo corre, pero no lo cambia. La carpeta va antes y con 0755:
+# COPY --chmod=0444 le pondría 0444 también a la carpeta que crea, y 10008 no podría entrar.
+RUN mkdir -p -m 0755 /app/precios
 COPY --from=builder --chmod=0444 /app/.next/precios/servicio-precios.mjs ./precios/servicio-precios.mjs
+RUN test "$(stat -c '%u:%g %a' precios)" = "0:0 755" && test "$(stat -c '%u:%g %a' precios/servicio-precios.mjs)" = "0:0 444" && test ! -e node_modules/tsx && test ! -e node_modules/esbuild && test ! -e node_modules/@esbuild || { echo "el bundle de precios no es de root (carpeta 0755, archivo 0444), o la imagen trae tsx o esbuild" >&2; exit 1; }
 # El build falla si el standalone no trae el engine de Prisma para musl (si no, fallaría en el VPS).
 RUN test -f node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node || { echo "falta el engine de Prisma linux-musl-openssl-3.0.x en el standalone" >&2; exit 1; }
 # Ningún .env en la imagen (next build copia el .env de la carpeta al standalone): el build falla si hay uno.
 RUN if find / -xdev \( -name '.env' -o -name '.env.*' \) 2>/dev/null | grep -q .; then echo "la imagen trae archivos .env: no se construye" >&2; exit 1; fi
 RUN mkdir -p /app/.next/cache
 USER 10008:10008
-# Humo del bundle con el usuario de la imagen: si no carga o no resuelve @prisma/client en el standalone, no se construye.
+# Con el usuario de la imagen: no puede escribir el bundle, y el humo (si no carga o no resuelve @prisma/client en el
+# standalone, no se construye).
+RUN test ! -w precios/servicio-precios.mjs || { echo "el usuario 10008 puede escribir el bundle de precios" >&2; exit 1; }
 RUN node precios/servicio-precios.mjs --ayuda >/dev/null
 EXPOSE 5008
 CMD ["node", "server.js"]
