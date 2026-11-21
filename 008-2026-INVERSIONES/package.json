@@ -16,7 +16,9 @@
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "importar:trii": "tsx scripts/importar-trii.ts",
-    "escision:registrar": "tsx scripts/registrar-escision.ts"
+    "escision:registrar": "tsx scripts/registrar-escision.ts",
+    "lotes:construir": "tsx scripts/construir-lotes.ts",
+    "lote:escision": "tsx scripts/lote-escision.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
