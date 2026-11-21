@@ -5,8 +5,10 @@
 //
 // Reglas: dinero en Decimal (nunca Float), cantidades de acciones en BigInt, fechas de
 // negocio en @db.Date (hora de Colombia). Lo que Prisma no expresa (CHECK, índices
-// parciales, exclusión de vigencias, solo inserción) va en SQL dentro de la migración
-// inicial; las pruebas de integración verifican que exista.
+// parciales, exclusión de vigencias, disparadores) va en SQL dentro de las migraciones.
+// Toda relación es onDelete: Restrict, onUpdate: Restrict, y toda FK tiene su índice.
+// scripts/verificar-esquema.sql (el guardián del migrador) exige todo eso y los índices
+// únicos en la base real; las pruebas de integración verifican que exista y muerda.
 
 generator client {
   provider        = "prisma-client-js"
@@ -171,6 +173,8 @@ model Usuario {
   // Login (D-014). Hash bcrypt de costo 12; null = la cuenta no puede entrar.
   claveHash           String?
   // Va en el JWT: subirla cierra todas las sesiones abiertas (cambio de clave, «cerrar todas»).
+  // El disparador usuario_transiciones (SQL) impide bajarla y exige subirla al cambiar o quitar la
+  // clave y al apagar el TOTP; también impide bajar totpUltimoPaso con el TOTP activo.
   sesionVersion       Int                   @default(1)
   // 5 fallos de clave en 15 min bloquean la cuenta 15 min; los del segundo paso, cada vez el doble (hasta 24 h).
   bloqueadoHasta      DateTime?             @db.Timestamptz(6)
@@ -287,7 +291,7 @@ model CargaArchivo {
   errores        Json? // solo códigos y números de fila, nunca valores reales
   // El archivo original NO se guarda (decisión del CEO): solo su sha256 y las filas.
   cargadoPorId   String
-  cargadoPor     Usuario        @relation(fields: [cargadoPorId], references: [id])
+  cargadoPor     Usuario        @relation(fields: [cargadoPorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   cargadoEn      DateTime       @default(now()) @db.Timestamptz(6)
   revertidaPorId String? // solo DUENO (Jelkin autoriza)
   revertidaEn    DateTime?      @db.Timestamptz(6)
@@ -297,6 +301,7 @@ model CargaArchivo {
   certificacion  Certificacion?
 
   @@index([tipoFuente, sha256])
+  @@index([cargadoPorId])
   @@map("carga_archivo")
 }
 
@@ -308,7 +313,7 @@ model FilaFuente {
   claveNatural   String          @db.Char(64)
   ocurrencia     Int             @db.SmallInt
   primeraCargaId String
-  primeraCarga   CargaArchivo    @relation(fields: [primeraCargaId], references: [id])
+  primeraCarga   CargaArchivo    @relation(fields: [primeraCargaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   primeraFilaNo  Int
   crudo          Json
   vistaEn        FilaDeCarga[]
@@ -318,6 +323,7 @@ model FilaFuente {
   filaLoteAv     FilaLoteAv?
 
   @@unique([tipoFuente, claveNatural, ocurrencia])
+  @@index([primeraCargaId])
   @@map("fila_fuente")
 }
 
@@ -326,8 +332,8 @@ model FilaDeCarga {
   cargaId      String
   filaNo       Int
   filaFuenteId String
-  carga        CargaArchivo @relation(fields: [cargaId], references: [id])
-  filaFuente   FilaFuente   @relation(fields: [filaFuenteId], references: [id])
+  carga        CargaArchivo @relation(fields: [cargaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  filaFuente   FilaFuente   @relation(fields: [filaFuenteId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@id([cargaId, filaNo])
   @@index([filaFuenteId])
@@ -369,7 +375,7 @@ model Instrumento {
 model SimboloPrecio {
   id               String      @id @default(cuid())
   instrumentoId    String
-  instrumento      Instrumento @relation(fields: [instrumentoId], references: [id])
+  instrumento      Instrumento @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   proveedor        String      @default("yahoo")
   simbolo          String
   vigenteDesde     DateTime    @db.Date
@@ -394,7 +400,7 @@ model CalendarioBvc {
 model MovimientoCaja {
   id           String             @id @default(cuid())
   filaFuenteId String             @unique
-  filaFuente   FilaFuente         @relation(fields: [filaFuenteId], references: [id])
+  filaFuente   FilaFuente         @relation(fields: [filaFuenteId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   ocurridoEn   DateTime           @db.Timestamptz(6)
   fecha        DateTime           @db.Date
   tipo         TipoMovimientoCaja
@@ -409,12 +415,12 @@ model MovimientoCaja {
 model Orden {
   id                 String                @id @default(cuid())
   filaFuenteId       String                @unique
-  filaFuente         FilaFuente            @relation(fields: [filaFuenteId], references: [id])
+  filaFuente         FilaFuente            @relation(fields: [filaFuenteId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   ejecutadaEn        DateTime              @db.Timestamptz(6)
   fechaOperacion     DateTime              @db.Date
   fechaLiquidacion   DateTime              @db.Date // T+2 hábiles según CalendarioBvc
   instrumentoId      String
-  instrumento        Instrumento           @relation(fields: [instrumentoId], references: [id])
+  instrumento        Instrumento           @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   lado               LadoOrden
   estado             EstadoOrden
   cantidadCompletada BigInt
@@ -437,22 +443,24 @@ model Orden {
 model Dividendo {
   id            String              @id @default(cuid())
   filaFuenteId  String              @unique
-  filaFuente    FilaFuente          @relation(fields: [filaFuenteId], references: [id])
+  filaFuente    FilaFuente          @relation(fields: [filaFuenteId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   fechaPago     DateTime            @db.Date
   instrumentoId String
-  instrumento   Instrumento         @relation(fields: [instrumentoId], references: [id])
+  instrumento   Instrumento         @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   tipo          TipoDividendo       @default(ORDINARIO)
   montoNeto     Decimal             @db.Decimal(20, 4)
   montoBruto    Decimal?            @db.Decimal(20, 4)
   retencion     Decimal?            @db.Decimal(20, 4)
   tasaRetencion Decimal?            @db.Decimal(9, 6)
   decretadoId   String?
-  decretado     DividendoDecretado? @relation(fields: [decretadoId], references: [id])
+  decretado     DividendoDecretado? @relation(fields: [decretadoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   eventoId      String? // FRACCION_ESCISION: evento cuya fracción pagó esta fila
-  evento        EventoCorporativo?  @relation(fields: [eventoId], references: [id])
+  evento        EventoCorporativo?  @relation(fields: [eventoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   moneda        Moneda              @default(COP)
 
   @@index([instrumentoId, fechaPago])
+  @@index([decretadoId])
+  @@index([eventoId])
   @@map("dividendo")
 }
 
@@ -460,7 +468,7 @@ model Dividendo {
 model DividendoDecretado {
   id             String        @id @default(cuid())
   instrumentoId  String
-  instrumento    Instrumento   @relation(fields: [instrumentoId], references: [id])
+  instrumento    Instrumento   @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   tipo           TipoDividendo
   valorPorAccion Decimal       @db.Decimal(20, 6)
   fechaPago      DateTime      @db.Date
@@ -482,14 +490,16 @@ model AjusteCaja {
   motivo              String
   referenciaEvidencia String?
   creadoPorId         String
-  creadoPor           Usuario             @relation(fields: [creadoPorId], references: [id])
+  creadoPor           Usuario             @relation(fields: [creadoPorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   creadoEn            DateTime            @default(now()) @db.Timestamptz(6)
   moneda              Moneda              @default(COP)
   movimientoFondo     MovimientoFondo?
   eventoId            String?
-  evento              EventoCorporativo?  @relation(fields: [eventoId], references: [id])
+  evento              EventoCorporativo?  @relation(fields: [eventoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([fecha])
+  @@index([creadoPorId])
+  @@index([eventoId])
   @@map("ajuste_caja")
 }
 
@@ -499,9 +509,9 @@ model EventoCorporativo {
   tipo              TipoEventoCorporativo
   fecha             DateTime              @db.Date
   origenId          String
-  origen            Instrumento           @relation("EventoOrigen", fields: [origenId], references: [id])
+  origen            Instrumento           @relation("EventoOrigen", fields: [origenId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   destinoId         String
-  destino           Instrumento           @relation("EventoDestino", fields: [destinoId], references: [id])
+  destino           Instrumento           @relation("EventoDestino", fields: [destinoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   razon             Decimal?              @db.Decimal(20, 10)
   fechaPagoFraccion DateTime?             @db.Date
   montoFraccion     Decimal?              @db.Decimal(20, 4)
@@ -511,6 +521,7 @@ model EventoCorporativo {
   dividendos        Dividendo[]
 
   @@unique([tipo, origenId, destinoId, fecha])
+  @@index([origenId])
   @@map("evento_corporativo")
 }
 
@@ -518,14 +529,14 @@ model EventoCorporativo {
 model Lote {
   id               String             @id @default(cuid())
   instrumentoId    String
-  instrumento      Instrumento        @relation(fields: [instrumentoId], references: [id])
+  instrumento      Instrumento        @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   origen           OrigenLote
   ordenId          String?            @unique
-  orden            Orden?             @relation(fields: [ordenId], references: [id])
+  orden            Orden?             @relation(fields: [ordenId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   eventoId         String?
-  evento           EventoCorporativo? @relation(fields: [eventoId], references: [id])
+  evento           EventoCorporativo? @relation(fields: [eventoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   loteOrigenId     String?
-  loteOrigen       Lote?              @relation("CadenaEscision", fields: [loteOrigenId], references: [id])
+  loteOrigen       Lote?              @relation("CadenaEscision", fields: [loteOrigenId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   lotesDerivados   Lote[]             @relation("CadenaEscision")
   fechaCompra      DateTime           @db.Date
   fechaLiquidacion DateTime           @db.Date
@@ -538,15 +549,16 @@ model Lote {
   asignaciones     AsignacionVenta[]
 
   @@index([instrumentoId, fechaCompra, id])
+  @@index([loteOrigenId])
   @@map("lote")
 }
 
 model AsignacionVenta {
   id           String           @id @default(cuid())
   ordenVentaId String
-  ordenVenta   Orden            @relation(fields: [ordenVentaId], references: [id])
+  ordenVenta   Orden            @relation(fields: [ordenVentaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   loteId       String
-  lote         Lote             @relation(fields: [loteId], references: [id])
+  lote         Lote             @relation(fields: [loteId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   cantidad     BigInt
   costoBase    Decimal          @db.Decimal(20, 4)
   metodo       MetodoAsignacion @default(FIFO)
@@ -561,28 +573,31 @@ model AsignacionVenta {
 model FilaLoteAv {
   id               String       @id @default(cuid())
   cargaId          String
-  carga            CargaArchivo @relation(fields: [cargaId], references: [id])
+  carga            CargaArchivo @relation(fields: [cargaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   filaFuenteId     String       @unique
-  filaFuente       FilaFuente   @relation(fields: [filaFuenteId], references: [id])
+  filaFuente       FilaFuente   @relation(fields: [filaFuenteId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   fechaCorte       DateTime     @db.Date
   instrumentoId    String
-  instrumento      Instrumento  @relation(fields: [instrumentoId], references: [id])
+  instrumento      Instrumento  @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   fechaCompra      DateTime     @db.Date
   cantidad         BigInt
   precioCompra     Decimal      @db.Decimal(20, 6)
   precioValoracion Decimal?     @db.Decimal(20, 6)
   valorMercado     Decimal?     @db.Decimal(20, 4)
   loteId           String?
-  lote             Lote?        @relation(fields: [loteId], references: [id])
+  lote             Lote?        @relation(fields: [loteId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([fechaCorte, instrumentoId])
+  @@index([cargaId])
+  @@index([instrumentoId])
+  @@index([loteId])
   @@map("fila_lote_av")
 }
 
 model Certificacion {
   id             String                  @id @default(cuid())
   cargaId        String                  @unique
-  carga          CargaArchivo            @relation(fields: [cargaId], references: [id])
+  carga          CargaArchivo            @relation(fields: [cargaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   fechaCorte     DateTime                @unique @db.Date
   saldoEfectivo  Decimal                 @db.Decimal(20, 4)
   posiciones     CertificacionPosicion[]
@@ -594,28 +609,30 @@ model Certificacion {
 
 model CertificacionPosicion {
   certificacionId  String
-  certificacion    Certificacion @relation(fields: [certificacionId], references: [id])
+  certificacion    Certificacion @relation(fields: [certificacionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   instrumentoId    String
-  instrumento      Instrumento   @relation(fields: [instrumentoId], references: [id])
+  instrumento      Instrumento   @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   cantidad         BigInt
   precioValoracion Decimal       @db.Decimal(20, 6)
   valorMercado     Decimal       @db.Decimal(20, 4)
   referenciaPdf    String?
 
   @@id([certificacionId, instrumentoId])
+  @@index([instrumentoId])
   @@map("certificacion_posicion")
 }
 
 model CertificacionFondo {
   certificacionId String
-  certificacion   Certificacion @relation(fields: [certificacionId], references: [id])
+  certificacion   Certificacion @relation(fields: [certificacionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   instrumentoId   String
-  instrumento     Instrumento   @relation(fields: [instrumentoId], references: [id])
+  instrumento     Instrumento   @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   encargo         String
   saldo           Decimal       @db.Decimal(20, 4)
   unidades        Decimal?      @db.Decimal(24, 8)
 
   @@id([certificacionId, instrumentoId])
+  @@index([instrumentoId])
   @@map("certificacion_fondo")
 }
 
@@ -623,14 +640,14 @@ model CertificacionFondo {
 model MovimientoFondo {
   id           String              @id @default(cuid())
   fondoId      String
-  fondo        Instrumento         @relation(fields: [fondoId], references: [id])
+  fondo        Instrumento         @relation(fields: [fondoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   fecha        DateTime            @db.Date
   unidades     Decimal             @db.Decimal(24, 8)
   monto        Decimal?            @db.Decimal(20, 4)
   tipo         TipoMovimientoFondo
   fuente       FuenteAjuste
   ajusteCajaId String?             @unique
-  ajusteCaja   AjusteCaja?         @relation(fields: [ajusteCajaId], references: [id])
+  ajusteCaja   AjusteCaja?         @relation(fields: [ajusteCajaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([fondoId, fecha])
   @@map("movimiento_fondo")
@@ -639,7 +656,7 @@ model MovimientoFondo {
 model ValorUnidadFondo {
   id            String      @id @default(cuid())
   fondoId       String
-  fondo         Instrumento @relation(fields: [fondoId], references: [id])
+  fondo         Instrumento @relation(fields: [fondoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   fechaValor    DateTime    @db.Date
   valorUnidad   Decimal     @db.Decimal(20, 8)
   valorFondo    Decimal?    @db.Decimal(24, 4)
@@ -655,7 +672,7 @@ model ValorUnidadFondo {
 model PrecioCierre {
   id               String       @id @default(cuid())
   instrumentoId    String
-  instrumento      Instrumento  @relation(fields: [instrumentoId], references: [id])
+  instrumento      Instrumento  @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   fecha            DateTime     @db.Date
   precio           Decimal      @db.Decimal(20, 6) // cierre SIN ajustar
   fuente           String
@@ -675,7 +692,7 @@ model PrecioCierre {
 model Conciliacion {
   id              String                @id @default(cuid())
   certificacionId String
-  certificacion   Certificacion         @relation(fields: [certificacionId], references: [id])
+  certificacion   Certificacion         @relation(fields: [certificacionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   fechaCorte      DateTime              @db.Date
   calculadaEn     DateTime              @default(now()) @db.Timestamptz(6)
   versionCalculo  String
@@ -683,16 +700,17 @@ model Conciliacion {
   controles       ControlConciliacion[]
 
   @@index([fechaCorte])
+  @@index([certificacionId])
   @@map("conciliacion")
 }
 
 model ControlConciliacion {
   id             String           @id @default(cuid())
   conciliacionId String
-  conciliacion   Conciliacion     @relation(fields: [conciliacionId], references: [id])
+  conciliacion   Conciliacion     @relation(fields: [conciliacionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   tipo           TipoControl
   instrumentoId  String?
-  instrumento    Instrumento?     @relation(fields: [instrumentoId], references: [id])
+  instrumento    Instrumento?     @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   esperado       Decimal?         @db.Decimal(24, 6)
   real           Decimal?         @db.Decimal(24, 6)
   diferencia     Decimal?         @db.Decimal(24, 6)
@@ -702,6 +720,7 @@ model ControlConciliacion {
   detalle        Json?
 
   @@index([conciliacionId])
+  @@index([instrumentoId])
   @@map("control_conciliacion")
 }
 
@@ -724,6 +743,7 @@ model PlanVersion {
   reglas        ReglaPlan[]
   decisiones    Decision[]
 
+  @@index([aprobadaPorId])
   @@map("plan_version")
 }
 
@@ -773,6 +793,7 @@ model Decision {
   @@index([instrumentoId, fechaDecision])
   @@index([planVersionId])
   @@index([reglaId, planVersionId])
+  @@index([decididaPorId])
   @@map("decision")
 }
 
@@ -797,5 +818,6 @@ model EnlaceDecisionOrden {
   @@unique([reemplazaId, ordenId])
   @@index([ordenId])
   @@index([decisionId])
+  @@index([creadoPorId])
   @@map("enlace_decision_orden")
 }

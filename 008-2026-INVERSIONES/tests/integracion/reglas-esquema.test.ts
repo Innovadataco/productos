@@ -3,6 +3,8 @@
 // - toda FK tiene un índice que empieza por sus columnas;
 // - CHECK de defensa en profundidad (NOT VALID: protegen las filas nuevas sin revisar las existentes).
 // Cada caso de datos corre en una transacción que se deshace: no deja filas. Datos inventados.
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -171,6 +173,39 @@ describe("CHECK de defensa en profundidad (NOT VALID)", () => {
     expect(await enTransaccionDeshecha((tx) => orden(tx, "2099-05-05", "2099-05-04"))).toMatch(/orden_fechas_chk/);
     expect(await enTransaccionDeshecha((tx) => orden(tx, "2099-05-05", "2099-05-05"))).toBeNull();
     expect(await enTransaccionDeshecha((tx) => orden(tx, "2099-05-05", "2099-05-07"))).toBeNull();
+  });
+
+  /** La consulta de scripts/contar-sin-validar.sql (sin su BEGIN READ ONLY ni su ROLLBACK, que pone el script). */
+  const conteo = (): string =>
+    readFileSync(fileURLToPath(new URL("../../scripts/contar-sin-validar.sql", import.meta.url)), "utf8")
+      .replace(/--.*$/gm, "")
+      .split(";")[1]!;
+  type Conteo = { restriccion: string; validada: boolean | null; filas_que_no_cumplen: bigint };
+
+  it("contar-sin-validar.sql da 0 por restricción en una base que cumple, y dice que siguen sin validar", async () => {
+    const filas = await db.$queryRawUnsafe<Conteo[]>(conteo());
+    expect(filas.map((f) => [f.restriccion, f.validada, Number(f.filas_que_no_cumplen)])).toEqual([
+      ["dividendo_retencion_chk", false, 0],
+      ["dividendo_tasa_retencion_chk", false, 0],
+      ["evento_corporativo_origen_destino_chk", false, 0],
+      ["evento_corporativo_razon_chk", false, 0],
+      ["orden_fechas_chk", false, 0],
+    ]);
+  });
+
+  it("contar-sin-validar.sql cuenta la fila vieja que no cumple (sin mostrarla)", async () => {
+    let filas: Conteo[] = [];
+    const error = await enTransaccionDeshecha(async (tx) => {
+      // Una fila «de antes» del CHECK: se quita el CHECK, se inserta y se vuelve a poner NOT VALID.
+      await tx.$executeRawUnsafe('ALTER TABLE "orden" DROP CONSTRAINT "orden_fechas_chk"');
+      await orden(tx, "2099-06-10", "2099-06-09");
+      await tx.$executeRawUnsafe('ALTER TABLE "orden" ADD CONSTRAINT "orden_fechas_chk" CHECK ("fechaLiquidacion" >= "fechaOperacion") NOT VALID');
+      filas = await tx.$queryRawUnsafe<Conteo[]>(conteo());
+    });
+    expect(error).toBeNull();
+    const porNombre = new Map(filas.map((f) => [f.restriccion, Number(f.filas_que_no_cumplen)]));
+    expect(porNombre.get("orden_fechas_chk")).toBe(1);
+    expect(Object.keys(filas[0] ?? {}).sort()).toEqual(["filas_que_no_cumplen", "restriccion", "validada"]);
   });
 
   it("los CHECK nuevos nacen NOT VALID: no revisan las filas que ya existen", async () => {

@@ -10,6 +10,9 @@
 --   codigo_recuperacion INSERT y UPDATE ("usadoEn", "anuladoEn") (un disparador admite una sola marca)
 -- Nunca TRUNCATE, REFERENCES, TRIGGER ni DDL. Sin UPDATE ni DELETE en las tablas de solo inserción,
 -- `SET LOCAL inv.reversion = 'on'` no le sirve a inv_app para saltarse sus disparadores.
+-- El UPDATE por columna de usuario lo acota el disparador usuario_transiciones (migración
+-- 20261121100100_usuario_transiciones_checks): sesionVersion nunca baja, cambiar o quitar la clave y apagar
+-- el TOTP exigen subirla, y el último paso del TOTP nunca baja.
 -- inv_dueno, el dueño, crea usuarios y tokens (crear-acceso-inicial.ts) y corre las cargas (Trii, precios,
 -- fondo, plan), todo en el migrador.
 -- Sin condiciones: si faltan las tablas o las columnas del login o del TOTP, el GRANT falla y el despliegue

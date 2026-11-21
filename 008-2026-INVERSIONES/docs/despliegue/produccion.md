@@ -298,6 +298,27 @@ Lo aplica el coordinador con el CEO de PI, en una ventana acordada y **solo con 
 - **Limpieza:** al final, `docker compose -p inv-008-prueba down -v`, que borra solo ese proyecto.
 - **Resultados:** en [capas-pi.md](capas-pi.md#ensayo-local-salidas).
 
+## 10 · Si una migración falla (P3009)
+**Qué pasa.** Verificado en el Mac el 2026-11-21 con una migración de ensayo en una base `_test`:
+- Prisma corre cada `migration.sql` en **una sola transacción**: si una sentencia falla, la migración se deshace entera y la base queda como estaba antes de ella.
+- Pero la fila de esa migración queda en `_prisma_migrations` sin `finished_at`, y **el siguiente `migrate deploy` se niega con P3009** hasta que alguien la resuelva.
+- `desplegar-prod.sh` se detiene en el migrador, no levanta la app nueva y su vuelta atrás deja corriendo la imagen que había.
+
+**Qué se hace:**
+1. **No reintentar** el despliegue ni tocar la base. Se lee el error del migrador: código SQLSTATE y mensaje, que no traen valores de las filas.
+2. Se avisa al **CEO de 008** con el nombre de la migración y el error.
+3. **`prisma migrate resolve --rolled-back <nombre>` es una decisión del CEO, nunca automática.** Ningún script lo corre. Solo se decide después de confirmar dos cosas:
+   - que la migración se deshizo entera: sus objetos no existen;
+   - que la causa se corrigió. Si la migración ya entró en otra base, la corrección va en una migración **nueva**; nunca se edita la fallida.
+4. **Si el CEO lo decide**, se corre con el rol `inv_dueno` en el contenedor del migrador, con el mismo patrón de `crear-acceso-inicial.sh`. Este comando **no se ha probado contra producción**:
+   ```sh
+   sudo $COMPOSE run --rm -T inv-008-migrador node_modules/.bin/prisma migrate resolve --rolled-back <nombre> --schema prisma/schema.prisma
+   ```
+   Después se despliega de nuevo, normal.
+- Nunca `migrate resolve --applied` para una migración que falló: marcaría como aplicado algo que no está.
+- Las migraciones de 008 toman `SET LOCAL lock_timeout = '5s'`. Si la app vieja retiene una tabla, el migrador falla rápido, se deshace y se sigue este mismo procedimiento.
+
 ---
+> v2.1 · 2026-11-21 · 03:06 (-05) · Inversiones · Fábrica ECC (frente base) · sección 10: migración fallida y P3009 (`migrate resolve` lo decide el CEO)
 > v2.0 · 2026-11-21 · 00:40 (-05) · Inversiones · Fábrica ECC (frente producción) · correcciones de la GATE 2 (VPS compartido con PI)
 > v1.0 · 2026-11-20 · 23:59 (-05) · Inversiones · Fábrica ECC (frente producción)

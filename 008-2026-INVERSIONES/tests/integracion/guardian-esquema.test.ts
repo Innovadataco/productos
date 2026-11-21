@@ -48,6 +48,10 @@ describe("guardián del esquema en la base recién migrada", () => {
   it("pasa sin cambios (definiciones exactas de PostgreSQL 16)", async () => {
     expect(await guardianTras([])).toBeNull();
   });
+
+  it("pasa aunque la conexión traiga otro search_path (fija el suyo: sin falsos positivos por nombres calificados)", async () => {
+    expect(await guardianTras(["SET LOCAL search_path = pg_catalog"])).toBeNull();
+  });
 });
 
 describe("guardián del esquema: índices únicos de Prisma (idempotencia)", () => {

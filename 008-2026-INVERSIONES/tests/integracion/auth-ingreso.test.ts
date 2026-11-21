@@ -147,7 +147,7 @@ describe("carreras del ingreso", () => {
     const otro = await hashClave("otra-clave-ficticia-cambio");
     const cambiaEnMedio = async (clave: string, hashLeido: string | null) => {
       const ok = await compararClave(clave, hashLeido);
-      await db.usuario.update({ where: { id: u.id }, data: { claveHash: otro } });
+      await db.usuario.update({ where: { id: u.id }, data: { claveHash: otro, sesionVersion: { increment: 1 } } });
       return ok;
     };
     const r = await ingresar(db, { email: u.email, clave: CLAVE, ip: ipNueva(), ahora: reloj(16)() }, cambiaEnMedio);
