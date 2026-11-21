@@ -205,7 +205,7 @@ dos --ahora a la vez → los dos bien: inv-008-20261121-043628-par y inv-008-202
 # pg_dump real: cada .age se descifró fuera del contenedor y pg_restore --list leyó 32 TABLE DATA (0640, sha256 bien)
 ```
 
-**Ronda app-sin-salida** (2026-11-21, Colima arm64, Docker 29.5.2, Compose 5.3.1; imágenes arm64 del sha viejo `15e6b401`, de antes de la entrada, y del nuevo `1ba6c064`; mismo proyecto `inv-008-prueba` con su candado; la entrada publicada en otro puerto del Mac, nunca el 5008 ni el 5438; secretos ficticios; `down -v` al final). Las direcciones se taparon. Salidas reales, recortadas:
+**Ronda app-sin-salida** (2026-11-21, Colima arm64, Docker 29.5.2, Compose 5.3.1; imágenes arm64 del sha viejo `15e6b401`, de antes de la entrada, y del nuevo `1ba6c064`, que es de antes del rebase de la rama sobre `825f0fe6` (el rebase solo trajo la cobertura unida y su CI: no tocó el compose, los scripts de producción, el Dockerfile ni `docker/`); mismo proyecto `inv-008-prueba` con su candado; la entrada publicada en otro puerto del Mac, nunca el 5008 ni el 5438; secretos ficticios; `down -v` al final). Las direcciones se taparon. Salidas reales, recortadas:
 
 ```text
 # 1 · el sha viejo (la app con el puerto y en la red con salida) → DEPLOY VERIFICADO 15e6b401… · / → 307 · API → 401
