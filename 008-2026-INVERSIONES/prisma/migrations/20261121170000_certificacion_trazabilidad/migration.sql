@@ -58,9 +58,8 @@ ALTER TABLE "control_conciliacion" ADD CONSTRAINT "control_conciliacion_motivo_c
 
 -- Solo inserción: lo importado y lo conciliado no se edita ni se borra (recalcular = conciliación nueva;
 -- corregir una certificación = revertir su carga, con `SET LOCAL inv.reversion = 'on'`).
--- certificacion_posicion queda sin disparador por ahora: la suite de precios simula una certificación corregida
--- editando una posición (tests/integracion/precios.test.ts); el importador solo inserta.
 CREATE TRIGGER "certificacion_solo_insercion" BEFORE UPDATE OR DELETE ON "certificacion" FOR EACH ROW EXECUTE FUNCTION "inv_solo_insercion"();
+CREATE TRIGGER "certificacion_posicion_solo_insercion" BEFORE UPDATE OR DELETE ON "certificacion_posicion" FOR EACH ROW EXECUTE FUNCTION "inv_solo_insercion"();
 CREATE TRIGGER "conciliacion_solo_insercion" BEFORE UPDATE OR DELETE ON "conciliacion" FOR EACH ROW EXECUTE FUNCTION "inv_solo_insercion"();
 CREATE TRIGGER "control_conciliacion_solo_insercion" BEFORE UPDATE OR DELETE ON "control_conciliacion" FOR EACH ROW EXECUTE FUNCTION "inv_solo_insercion"();
 

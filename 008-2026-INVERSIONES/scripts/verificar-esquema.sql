@@ -208,6 +208,7 @@ DECLARE
   disparadores text[] := ARRAY[
     ['asignacion_venta', 'asignacion_venta_coherente', 'CREATE TRIGGER asignacion_venta_coherente BEFORE INSERT OR UPDATE OF "ordenVentaId", "loteId", cantidad ON public.asignacion_venta FOR EACH ROW EXECUTE FUNCTION inv_asignacion_coherente()'],
     ['certificacion', 'certificacion_solo_insercion', 'CREATE TRIGGER certificacion_solo_insercion BEFORE DELETE OR UPDATE ON public.certificacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['certificacion_posicion', 'certificacion_posicion_solo_insercion', 'CREATE TRIGGER certificacion_posicion_solo_insercion BEFORE DELETE OR UPDATE ON public.certificacion_posicion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['certificacion_fondo', 'certificacion_fondo_solo_encargo', 'CREATE TRIGGER certificacion_fondo_solo_encargo BEFORE DELETE OR UPDATE ON public.certificacion_fondo FOR EACH ROW EXECUTE FUNCTION inv_certificacion_fondo_solo_encargo()'],
     ['codigo_recuperacion', 'codigo_recuperacion_un_solo_uso', 'CREATE TRIGGER codigo_recuperacion_un_solo_uso BEFORE DELETE OR UPDATE ON public.codigo_recuperacion FOR EACH ROW EXECUTE FUNCTION inv_codigo_un_solo_uso()'],
     ['conciliacion', 'conciliacion_solo_insercion', 'CREATE TRIGGER conciliacion_solo_insercion BEFORE DELETE OR UPDATE ON public.conciliacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
