@@ -13,7 +13,7 @@ export default defineConfig({
   test: {
     include: ["tests/unit/**/*.test.ts"],
     environment: "node",
-    // `npm run test:cobertura`. Pisos = lo medido en main (fcf8e7c1, 2026-11-21) redondeado hacia abajo:
+    // `npm run test:cobertura`. Pisos = lo medido en main fcf8e7c1 (2026-11-21), redondeado hacia abajo:
     // solo muerden con --coverage (el CI corre `npm test` sin cobertura). Statements y lines son lo que
     // manda: el código que solo cubre la integración cuenta aquí como no cubierto. Seguimiento: correrlo en
     // el CI y medir unidad + integración juntas, camino al 80 % de ECC.

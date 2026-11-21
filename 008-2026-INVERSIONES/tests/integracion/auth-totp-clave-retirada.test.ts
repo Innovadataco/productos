@@ -15,7 +15,8 @@ import { firmarToken } from "@/auth/token";
 import { pasoDe } from "@/auth/totp";
 import { activarTotp, codigoEn } from "./auth-totp-ayudas";
 
-// Secreto de sesión inventado solo para esta prueba.
+// Secreto de sesión inventado solo para esta prueba (se restaura el anterior en afterAll).
+const AUTH_SECRET_ANTERIOR = process.env.AUTH_SECRET;
 process.env.AUTH_SECRET = "secreto-ficticio-de-integracion-clave-retirada-0123";
 const CLAVE_SESION = new TextEncoder().encode(process.env.AUTH_SECRET);
 
@@ -62,10 +63,15 @@ async function presesion(id: string): Promise<string> {
 }
 
 /** Lo que una ruta que falló no debe haber tocado: la cuenta tal cual y sus intentos. */
+const CAMPOS_FOTO = { totpSecreto: true, totpUltimoPaso: true, presesionHash: true, bloqueadoHasta: true, sesionVersion: true } as const;
 const foto = async (id: string) => ({
-  cuenta: await db.usuario.findUniqueOrThrow({ where: { id }, select: { totpSecreto: true, totpUltimoPaso: true, presesionHash: true, bloqueadoHasta: true, sesionVersion: true } }),
+  cuenta: await db.usuario.findUniqueOrThrow({ where: { id }, select: CAMPOS_FOTO }),
   intentos: await db.intentoIngreso.count({ where: { usuarioId: id } }),
-  codigos: await db.codigoRecuperacion.findMany({ where: { usuarioId: id }, orderBy: { id: "asc" }, select: { id: true, usadoEn: true, anuladoEn: true } }),
+  codigos: await db.codigoRecuperacion.findMany({
+    where: { usuarioId: id },
+    orderBy: { id: "asc" },
+    select: { id: true, usadoEn: true, anuladoEn: true },
+  }),
 });
 
 /** Un 503 del segundo factor: su mensaje fijo, sin caché, sin cookie de sesión y sin el error crudo. */
@@ -80,7 +86,6 @@ async function esperar503(r: Response, mensaje: string): Promise<void> {
 function esperarRegistro(contexto: string): void {
   const registrado = registro.mock.calls.flat().map(String).join("\n");
   expect(registrado).toContain(`[sesion] ${contexto} (código: CLAVE_NO_DISPONIBLE)`);
-  expect(CLAVE_V1).not.toBe("");
   for (const filtrado of ["cuya clave no está cargada", "CIFRADO_CLAVE", CLAVE_V2, CLAVE_V1]) {
     expect(registrado, filtrado).not.toContain(filtrado);
   }
@@ -89,6 +94,8 @@ function esperarRegistro(contexto: string): void {
 beforeAll(async () => {
   const nombreBase = (await db.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db ?? "";
   if (!nombreBase.endsWith("_test")) throw new Error(`Se negó a correr sobre «${nombreBase}»: solo bases *_test`);
+  // Sin la v1 de la corrida, «retirarla» no probaría nada.
+  if (CLAVE_V1 === "") throw new Error("Falta CIFRADO_CLAVE_V1 (la fija vitest.integracion.config.ts)");
   hash = await hashClave("clave-ficticia-clave-retirada");
   totp = (await import("@/app/api/sesion/totp/route")).POST;
   enrolar = (await import("@/app/api/sesion/totp/enrolar/route")).POST;
@@ -105,6 +112,8 @@ afterEach(() => {
 });
 
 afterAll(async () => {
+  if (AUTH_SECRET_ANTERIOR === undefined) delete process.env.AUTH_SECRET;
+  else process.env.AUTH_SECRET = AUTH_SECRET_ANTERIOR;
   await db.$disconnect();
 });
 
@@ -113,9 +122,12 @@ describe("segundo paso con la clave v1 retirada", () => {
     const id = await cuentaNueva();
     await activarTotp(db, id, new Date(), pasoDe(Date.now()) - 10);
     const cookie = await presesion(id);
+    const antes = await foto(id);
     retirarV1();
-    await esperar503(await totp(pedido("/api/sesion/totp", { codigo: codigoEn(new Date()) }, cookie)), "No se pudo verificar el código. Intente de nuevo.");
+    const r = await totp(pedido("/api/sesion/totp", { codigo: codigoEn(new Date()) }, cookie));
+    await esperar503(r, "No se pudo verificar el código. Intente de nuevo.");
     esperarRegistro("no se pudo verificar el segundo paso");
+    expect(await foto(id)).toEqual(antes);
   });
 
   it("no escribe nada: ni fallo, ni bloqueo, ni pre-sesión gastada; al volver la v1, el mismo código entra", async () => {
@@ -137,7 +149,8 @@ describe("segundo paso con la clave v1 retirada", () => {
     retirarV1();
     const nueva = await cuentaNueva();
     await activarTotp(db, nueva, new Date(), pasoDe(Date.now()) - 10); // se cifra con la activa: v2
-    expect(((await db.usuario.findUniqueOrThrow({ where: { id: nueva } })).totpSecreto as { kid: string }).kid).toBe("v2");
+    const sobreNuevo = (await db.usuario.findUniqueOrThrow({ where: { id: nueva } })).totpSecreto as { kid: string };
+    expect(sobreNuevo.kid).toBe("v2");
     expect((await totp(pedido("/api/sesion/totp", { codigo: codigoEn(new Date()) }, cookieVieja))).status).toBe(503);
     expect((await totp(pedido("/api/sesion/totp", { codigo: codigoEn(new Date()) }, await presesion(nueva)))).status).toBe(200);
     const { GET } = await import("@/app/api/salud/route");
@@ -148,13 +161,15 @@ describe("segundo paso con la clave v1 retirada", () => {
 describe("enrolar y regenerar códigos con la clave v1 retirada", () => {
   it("POST /api/sesion/totp/enrolar con el pendiente en v1: 503 fijo, sin sesión, y la cuenta queda igual", async () => {
     const id = await cuentaNueva();
-    await db.intentoIngreso.create({ data: { usuarioId: id, resultado: "CLAVE_DEFINIDA", ocurridoEn: new Date() } }); // ventana de 30 min abierta
+    // La ventana de 30 min para enrolar, abierta.
+    await db.intentoIngreso.create({ data: { usuarioId: id, resultado: "CLAVE_DEFINIDA", ocurridoEn: new Date() } });
     const secreto = Buffer.from("enrolar-retirada-fict", "ascii");
     await db.usuario.update({ where: { id }, data: { totpSecreto: cifrarSecretoTotp(secreto, id) } });
     const cookie = await presesion(id);
     const antes = await foto(id);
     retirarV1();
-    await esperar503(await enrolar(pedido("/api/sesion/totp/enrolar", { codigo: "123456" }, cookie)), "No se pudo activar el segundo factor. Intente de nuevo.");
+    const r = await enrolar(pedido("/api/sesion/totp/enrolar", { codigo: "123456" }, cookie));
+    await esperar503(r, "No se pudo activar el segundo factor. Intente de nuevo.");
     esperarRegistro("no se pudo confirmar el enrolamiento");
     expect(await foto(id)).toEqual(antes);
   });

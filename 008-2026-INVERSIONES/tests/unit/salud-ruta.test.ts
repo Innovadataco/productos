@@ -1,7 +1,7 @@
 // GET /api/salud como la llama Next, con la base SIMULADA: la ruta es pública (D-014) y sirve para verificar
 // despliegues. Con la base caída responde 503 «degradado», sin caché y sin el mensaje crudo del error (puede
-// traer la URL de conexión con su clave), ni en el cuerpo ni en el registro. La ruta con la base arriba la
-// prueba tests/integracion/reglas-base.test.ts. Datos inventados: host de documentación (RFC 5737).
+// traer la URL de conexión con su clave), ni en el cuerpo ni en el registro. Con la base REAL arriba, la
+// ruta la prueba también tests/integracion/reglas-base.test.ts. Datos inventados: host de documentación (RFC 5737).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const consultar = vi.hoisted(() => vi.fn());

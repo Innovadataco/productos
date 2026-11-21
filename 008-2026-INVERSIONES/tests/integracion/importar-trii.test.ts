@@ -275,7 +275,7 @@ describe("bordes del CSV", () => {
   });
 
   it("el encabezado y líneas en blanco al final (BOM y CRLF) también es ARCHIVO_SIN_FILAS", async () => {
-    const r = await importar("blancas.ficticio.csv", csv(`﻿${CRLF(`${CAJA}\n\n`)}`));
+    const r = await importar("blancas.ficticio.csv", csv(`\uFEFF${CRLF(`${CAJA}\n\n`)}`));
     expect(r).toMatchObject({ estado: "RECHAZADO", tipo: "TRII_CAJA", errores: [{ fila: 0, columna: null, codigo: "ARCHIVO_SIN_FILAS" }] });
   });
 
@@ -283,13 +283,13 @@ describe("bordes del CSV", () => {
     const n = nemo("CR");
     const filas = `${DIVIDENDOS}2026-01-21,${n},,100.0\n2026-04-15,${n},,110.5\n`;
     expect(await importar("lf.ficticio.csv", csv(filas))).toMatchObject({ estado: "CARGADO", filasNuevas: 2 });
-    expect(await importar("crlf.ficticio.csv", csv(`﻿${CRLF(filas)}`))).toMatchObject({ estado: "CARGADO", filasNuevas: 0, filasRepetidas: 2 });
+    expect(await importar("crlf.ficticio.csv", csv(`\uFEFF${CRLF(filas)}`))).toMatchObject({ estado: "CARGADO", filasNuevas: 0, filasRepetidas: 2 });
     expect(await db.dividendo.count({ where: { instrumento: { nemotecnico: n } } })).toBe(2);
   });
 
-  it("una comilla sin cerrar rechaza el archivo con COMILLA_SIN_CERRAR y no guarda ningún hecho", async () => {
+  it("una comilla sin cerrar rechaza el archivo con COMILLA_SIN_CERRAR y no guarda ni las filas sanas de antes", async () => {
     const n = nemo("CO");
-    const r = await importar("comilla.ficticio.csv", csv(`${CAJA}"9 mar 2026, 8:00 a. m.,Depósito,Aprobado,1.0\n${DIVIDENDOS}2026-01-21,${n},,1.0\n`));
+    const r = await importar("comilla.ficticio.csv", csv(`${DIVIDENDOS}2026-01-21,${n},,1.0\n"2026-01-22,${n},,2.0\n`));
     expect(r).toMatchObject({ estado: "RECHAZADO", tipo: null, filasTotal: 0, errores: [{ fila: 0, columna: null, codigo: "COMILLA_SIN_CERRAR" }] });
     expect(await db.instrumento.count({ where: { nemotecnico: n } })).toBe(0);
   });

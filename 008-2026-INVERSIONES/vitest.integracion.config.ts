@@ -16,7 +16,7 @@ export default defineConfig({
     environment: "node",
     fileParallelism: false,
     testTimeout: 20000,
-    // Cobertura de la integración (no la corre el CI): después de `prisma migrate reset` sobre la base *_test,
+    // Cobertura de la integración (no la corre el CI; el piso solo vale con la base recién reiniciada): tras `prisma migrate reset` sobre la *_test,
     // `vitest run --config vitest.integracion.config.ts --coverage`. Pisos = lo medido en main (fcf8e7c1,
     // 2026-11-21) redondeado hacia abajo. Seguimiento: correrla en el CI y unirla con la de unidad.
     coverage: {

@@ -4,38 +4,20 @@
 // con 1 y un PrismaClientInitializationError, no con 2. El entorno del hijo es mínimo: no hereda la
 // DATABASE_URL ni las claves de quien corre las pruebas. Sin red. Datos inventados.
 // Fuera de aquí: actualizar-precios.ts (frente de precios) y construir-lotes.ts (frente de lotes).
-import { spawnSync } from "node:child_process";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { POR_CLI_MS, comprobar as comprobarSalida, correr as correrCli, entornoMinimo, type Salida } from "../../ayudas/cli";
 
-const RAIZ = join(__dirname, "..", "..", "..");
-const TSX = join(RAIZ, "node_modules", ".bin", "tsx");
 const INALCANZABLE = "postgresql://ficticio:clave-ficticia@127.0.0.1:1/inalcanzable_test";
 /** Lo que nunca debe salir en la consola de un CLI: la URL de la base, su host y su clave. */
 const NUNCA = ["127.0.0.1", "clave-ficticia", "postgresql://", "inalcanzable_test"];
-const POR_CLI_MS = 60_000;
+const ENTORNO = entornoMinimo({ DATABASE_URL: INALCANZABLE });
 
-interface Salida {
-  readonly codigo: number | null;
-  readonly texto: string;
-}
+const correr = (script: string, args: readonly string[]): Salida => correrCli(script, args, ENTORNO);
 
-function correr(script: string, args: readonly string[]): Salida {
-  const r = spawnSync(TSX, [join("scripts", script), ...args], {
-    cwd: RAIZ,
-    env: { PATH: process.env.PATH ?? "", NODE_ENV: "test", DATABASE_URL: INALCANZABLE, NO_COLOR: "1" },
-    encoding: "utf8",
-    timeout: POR_CLI_MS,
-  });
-  return { codigo: r.status, texto: `${r.stdout}${r.stderr}` };
-}
-
-/** Sale con `codigo`, dice `esperado`, no llegó a la base y no imprime nada de `ademas` ni de la URL. */
+/** Sale con `codigo`, dice `esperado`, un 2 no llegó a la base, y no imprime nada de `ademas` ni de la URL. */
 function comprobar(s: Salida, codigo: number, esperado: string, ademas: readonly string[] = []): void {
-  expect(s.codigo, s.texto).toBe(codigo);
-  expect(s.texto).toContain(esperado);
+  comprobarSalida(s, codigo, esperado, [...NUNCA, ...ademas]);
   if (codigo === 2) expect(s.texto, "un 2 no debe haber intentado la base").not.toContain("PrismaClient");
-  for (const p of [...NUNCA, ...ademas]) expect(s.texto, p).not.toContain(p);
 }
 
 describe("CLI · argumentos inválidos y --ayuda (sin base)", { timeout: 4 * POR_CLI_MS }, () => {
@@ -76,6 +58,8 @@ describe("CLI · argumentos inválidos y --ayuda (sin base)", { timeout: 4 * POR
     comprobar(correr("lote-escision.ts", ["FICTSUELTO"]), 2, opciones, ["FICTSUELTO"]);
   });
 
+  // Datos mal formados → 2 es la salida que documenta registrar-escision.ts. lote-escision sale con 1 en ese caso
+  // (O2, reportado aparte): no se prueba aquí hasta que se decida cuál es la correcta.
   it("registrar-escision: --ayuda → 2; datos mal formados → 2 con el código por campo, sin repetir los valores", () => {
     comprobar(correr("registrar-escision.ts", ["--ayuda"]), 2, "Argumentos inválidos. Opciones: --origen --destino --fecha");
     const s = correr("registrar-escision.ts", ["--origen", "fict-minusculas", "--destino", "FICTDES", "--fecha", "26-02-2024"]);
