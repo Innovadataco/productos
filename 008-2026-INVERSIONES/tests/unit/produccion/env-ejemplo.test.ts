@@ -1,5 +1,6 @@
 // La plantilla del archivo de producción (docs/despliegue/env-inversiones-production.example) declara
-// exactamente las variables que interpola docker-compose.prod.yml, y no trae ningún valor secreto.
+// exactamente las variables que interpola docker-compose.prod.yml, más las que lee solo un script (SOLO_DE_SCRIPTS),
+// y no trae ningún valor secreto.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { carpetaTemporal, envProduccionFicticio, leer008 } from "./falsos";
@@ -24,10 +25,26 @@ const activas = new Map(
 );
 const obligatorias = new Set([...compose.matchAll(/\$\{([A-Z0-9_]+):\?/g)].map((m) => m[1]!));
 const opcionales = new Set([...ejemplo.matchAll(/^# ([A-Z0-9_]+)=/gm)].map((m) => m[1]!));
+// Las que lee un script y todavía no interpola el compose. INV_PRECIOS_DATABASE_URL: la lee crear-roles-prod.sh para
+// crear inv_precios; el servicio de precios (PR 3) la llevará al compose y entonces sale de esta lista.
+const SOLO_DE_SCRIPTS = ["INV_PRECIOS_DATABASE_URL"];
 
 describe("plantilla del archivo de producción", () => {
-  it("cubre exactamente las variables que interpola el compose (las opcionales, comentadas)", () => {
-    expect([...new Set([...activas.keys(), ...opcionales])].sort()).toEqual([...enCompose].sort());
+  it("cubre exactamente las variables que interpola el compose y las que lee solo un script (las opcionales, comentadas)", () => {
+    expect([...new Set([...activas.keys(), ...opcionales])].sort()).toEqual([...new Set([...enCompose, ...SOLO_DE_SCRIPTS])].sort());
+  });
+
+  it("las de SOLO_DE_SCRIPTS no las interpola el compose y sí las lee un script de producción", () => {
+    const rolesSh = leer008("scripts/crear-roles-prod.sh");
+    for (const n of SOLO_DE_SCRIPTS) {
+      expect(enCompose.has(n), `${n} ya está en el compose: sáquela de SOLO_DE_SCRIPTS`).toBe(false);
+      expect(rolesSh, n).toMatch(new RegExp(`leer_variable_env "\\$INV_ENV_PROD" ${n}\\b`));
+    }
+  });
+
+  it("INV_PRECIOS_DATABASE_URL va solo comentada (sin ella se omite el rol) y con el formato del ESTADO", () => {
+    expect(activas.has("INV_PRECIOS_DATABASE_URL")).toBe(false);
+    expect(ejemplo).toContain("\n# INV_PRECIOS_DATABASE_URL=postgresql://inv_precios:<clave>@inv-008-db:5432/inversiones?connection_limit=2\n");
   });
 
   it("no trae valores: solo vacíos, marcadores <clave> o el origen público", () => {
