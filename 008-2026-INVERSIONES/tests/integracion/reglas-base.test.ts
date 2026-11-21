@@ -66,11 +66,15 @@ describe("reglas escritas a mano en la migración", () => {
     const disparadores = await db.$queryRaw<{ tgname: string }[]>`
       SELECT tgname FROM pg_trigger WHERE tgname LIKE '%\_solo\_insercion'`;
     expect(disparadores.map((d) => d.tgname).sort()).toEqual([
+      "decision_solo_insercion",
       "dividendo_solo_insercion",
+      "enlace_decision_orden_solo_insercion",
       "fila_de_carga_solo_insercion",
       "fila_fuente_solo_insercion",
       "movimiento_caja_solo_insercion",
       "orden_solo_insercion",
+      "plan_version_solo_insercion",
+      "regla_plan_solo_insercion",
     ]);
   });
 
