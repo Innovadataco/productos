@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { hoyDelE2E } from "../../e2e/base";
 
-const leer = (ruta: string) => readFileSync(new URL(`../../${ruta}`, import.meta.url), "utf8");
+const leer = (ruta: string) => readFileSync(new URL(`../../../${ruta}`, import.meta.url), "utf8");
 const anterior = process.env.E2E_HOY;
 
 afterEach(() => {

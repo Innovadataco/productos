@@ -1,18 +1,18 @@
 /**
  * E2E de /plan, /decisiones y /decisiones/[id] (fase B, corte 3) contra la base e2e sembrada por tests/e2e/sembrar.ts
- * y sembrar-plan.ts (ver su cabecera). Datos inventados. Las fechas «de hoy» salen del reloj de la corrida, en
- * Colombia. La prueba no cambia la base.
+ * y sembrar-plan.ts (ver su cabecera). Datos inventados. Las fechas «de hoy» son las de la corrida (hoyDelE2E, la
+ * misma que usó la siembra). La prueba no cambia la base.
  */
 import { expect } from "@playwright/test";
 import { fecha } from "../../src/app/tablero/formato";
 import { sumarDias } from "../../src/plan/fechas";
-import { fechaEnBogota } from "../../src/precios/horario";
+import { hoyDelE2E } from "./base";
 import { PaginaPlan } from "./pagina-plan";
 import { PaginaTablero } from "./pagina-tablero";
 import { test } from "./sesion";
 
 const ANCHO_MOVIL = { width: 400, height: 900 };
-const enDias = (dias: number) => fecha(sumarDias(fechaEnBogota(new Date()), dias).toISOString().slice(0, 10));
+const enDias = (dias: number) => fecha(sumarDias(hoyDelE2E(), dias).toISOString().slice(0, 10));
 
 test.describe("plan y diario de decisiones", () => {
   test("del tablero al plan: la vigente, sus reglas, la distancia al nivel y FICTC «sin negociación desde…»", async ({ page }, info) => {
@@ -83,6 +83,11 @@ test.describe("plan y diario de decisiones", () => {
       await expect(p.titulo).toHaveText("No hay una versión del plan con ese número");
       await expect(p.versiones.getByRole("link")).toHaveCount(2);
     }
+    // Con sesión, una decisión que no existe da su aviso (nunca un 500 ni el id escrito).
+    const r = await page.goto("/decisiones/noexiste");
+    expect(r?.status()).toBe(200);
+    await expect(p.titulo).toHaveText("No hay una decisión con ese identificador");
+    await expect(page.locator("main")).not.toContainText("noexiste");
   });
 
   test("en el teléfono, /plan y /decisiones no se desbordan a lo ancho (las tablas se desplazan en su caja)", async ({ page }, info) => {

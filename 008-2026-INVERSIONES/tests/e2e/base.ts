@@ -73,6 +73,22 @@ export function baseDePruebas(valor: string): BaseDePruebas {
  */
 export const secretoSesionE2E = (): string => process.env.E2E_AUTH_SECRET ?? "";
 
+const DIA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+const DESFASE_BOGOTA_MS = 5 * 60 * 60 * 1000;
+
+/** El día de hoy en Colombia, «AAAA-MM-DD» (UTC−5, sin horario de verano). */
+export const hoyEnBogotaIso = (ahora: Date = new Date()): string => new Date(ahora.getTime() - DESFASE_BOGOTA_MS).toISOString().slice(0, 10);
+
+/**
+ * El «hoy» de ESTA corrida (fase B, corte 3): playwright.config.ts lo fija una vez en E2E_HOY y lo hereda la siembra
+ * (proceso del webServer) y las pruebas. Así una corrida que cruza la medianoche de Bogotá no espera otras fechas.
+ * Sin la variable (o mal escrita), el día de hoy en Colombia. A medianoche UTC, como las columnas DATE.
+ */
+export function hoyDelE2E(): Date {
+  const fijado = process.env.E2E_HOY;
+  return new Date(`${fijado !== undefined && DIA_ISO.test(fijado) ? fijado : hoyEnBogotaIso()}T00:00:00.000Z`);
+}
+
 /** Una cuenta del E2E: todo inventado (correos `@ejemplo.invalid`, contraseñas ficticias). */
 export interface CuentaE2E {
   readonly email: string;

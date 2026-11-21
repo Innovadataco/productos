@@ -16,7 +16,7 @@ import { registrarDecision } from "../../src/plan/decisiones";
 import { enlazarOrden } from "../../src/plan/enlaces";
 import { sumarDias } from "../../src/plan/fechas";
 import { crearVersionPlan } from "../../src/plan/versiones";
-import { fechaEnBogota } from "../../src/precios/horario";
+import { hoyDelE2E } from "./base";
 
 const dia = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const CIERRES_YAHOO_FICTA = [["2024-07-22", 953], ["2024-08-21", 989], ["2024-10-18", 1063]] as const;
@@ -28,7 +28,7 @@ const regla = (instrumentoId: string | null, r: Partial<Parameters<typeof crearV
 export async function sembrarPlan(db: PrismaClient, autorId: string): Promise<void> {
   const id = async (nemo: string) => (await db.instrumento.findFirstOrThrow({ where: { nemotecnico: nemo }, select: { id: true } })).id;
   const [a, b, c] = [await id("FICTA"), await id("FICTB"), await id("FICTC")];
-  const hoy = fechaEnBogota(new Date());
+  const hoy = hoyDelE2E();
   const v1 = await crearVersionPlan(db, {
     vigenteDesde: dia("2024-07-01"), motivo: "Plan ficticio del E2E", autorId,
     reglas: [

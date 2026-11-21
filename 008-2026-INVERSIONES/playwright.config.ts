@@ -6,12 +6,14 @@
  */
 import { randomBytes } from "node:crypto";
 import { defineConfig, devices } from "@playwright/test";
-import { APP, URL_E2E_POR_DEFECTO, baseDePruebas } from "./tests/e2e/base";
+import { APP, URL_E2E_POR_DEFECTO, baseDePruebas, hoyEnBogotaIso } from "./tests/e2e/base";
 
 const base = baseDePruebas(process.env.DATABASE_URL_E2E ?? URL_E2E_POR_DEFECTO);
 // El secreto de la sesión se sortea UNA vez por corrida y viaja por el entorno: los procesos de las pruebas
 // (que vuelven a leer este archivo) heredan el mismo y pueden firmar una pre-sesión vencida (totp.spec.ts).
 const SECRETO_SESION = (process.env.E2E_AUTH_SECRET ??= randomBytes(32).toString("base64url"));
+// El «hoy» de la corrida, una sola vez: lo usan la siembra del plan y sus pruebas (tests/e2e/base.ts, hoyDelE2E).
+const HOY_E2E = (process.env.E2E_HOY ??= hoyEnBogotaIso());
 const origen = `http://${APP.host}:${APP.puerto}`;
 const SALIDA = "node_modules/.cache/playwright";
 const LIMPIAR_CACHE_DEV = `node -e "require('node:fs').rmSync('.next/dev', { recursive: true, force: true })"`;
@@ -48,6 +50,7 @@ export default defineConfig({
       DATABASE_URL: base.url,
       NEXT_TELEMETRY_DISABLED: "1",
       AUTH_SECRET: SECRETO_SESION,
+      E2E_HOY: HOY_E2E,
       CIFRADO_CLAVE_ACTIVA: "v1",
       CIFRADO_CLAVE_V1: randomBytes(32).toString("base64"),
     },
