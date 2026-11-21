@@ -18,19 +18,26 @@
 -- Sin condiciones: si faltan las tablas o las columnas del login o del TOTP, el GRANT falla y el despliegue
 -- se detiene.
 --
--- inv_precios (el servicio de precios): solo si el rol existe (lo crea crear-roles-prod.sh cuando el archivo de
--- producción trae INV_PRECIOS_DATABASE_URL); si no, se omite con un aviso y el despliegue sigue igual. Parte de cero
--- en cada corrida y vuelve a dar solo esto, todo POR COLUMNA (lista única: tests/unit/produccion/permisos-precios.ts):
+-- inv_precios (el servicio de precios): solo si el rol existe. Existe desde que Jelk corre crear-roles-prod.sh una vez
+-- (lo crea siempre, NOLOGIN y sin clave mientras el archivo de producción no traiga INV_PRECIOS_DATABASE_URL); antes,
+-- se omite con un aviso y el despliegue sigue igual (decisión del CEO: el migrador no depende de ese script). Parte
+-- de cero en cada corrida y vuelve a dar solo esto, todo POR COLUMNA (lista única: tests/unit/produccion/permisos-precios.ts):
 --   SELECT de las columnas que leen precios:actualizar (src/precios/actualizar.ts y guardar.ts) y actualizar-fondo
 --          (src/fondo/actualizar.ts y clase.ts), medidas con el SQL que genera Prisma: de lote, solo "instrumentoId"
---          (el filtro de especies con lote); de la certificación, solo la fecha de corte y el precio de valoración;
+--          (el filtro de especies con lote); de la certificación, solo la fecha de corte y el precio de valoración
+--          (las lee también el disparador precio_cierre_insercion, que es SECURITY INVOKER: sin ellas, falla cerrado);
 --          de precio_cierre, todas (create() hace RETURNING de todas);
 --   INSERT en precio_cierre y valor_unidad_fondo, sin "reemplazadoEn" (lo que inserta nace vigente);
 --   UPDATE solo de "reemplazadoEn" en esas dos tablas (versionado y retiro).
 -- Nada de usuario, órdenes, filas crudas, cantidades ni costos; sin DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL, y
 -- sin privilegios por defecto: una tabla o columna nueva no le llega hasta que se agregue aquí.
--- Riesgo conocido: quien tenga su clave puede insertar cierres o valores falsos (también VERIFICADO) y, con UPDATE de
--- "reemplazadoEn", retirar o reabrir vigentes. Ningún disparador lo acota todavía: va en una migración aparte.
+-- Lo acotan los disparadores de la migración 20261121231049_precios_integridad (para todo rol que no sea dueño): un
+-- VERIFICADO solo si cuadra con la certificación de A&V de ese día (y referencias y desviación exactas), solo la fuente
+-- del servicio, sin precios sobre el tope ni días futuros; traidoEn y reemplazadoEn los pone la base; solo se retira un
+-- vigente, nunca se reabre, se vuelve a fechar ni se borra, y al retirar no cambia otra columna.
+-- Riesgo residual: quien tenga su clave puede insertar precios falsos NO_VERIFICADO en días sin certificación,
+-- retirar vigentes (la historia queda) e insertar valores de unidad falsos: la base no puede comparar contra Yahoo
+-- ni contra la SFC.
 DO $$
 DECLARE
   t record;
@@ -70,7 +77,7 @@ BEGIN
   GRANT UPDATE ("usadoEn", "anuladoEn") ON TABLE public.codigo_recuperacion TO inv_app;
   GRANT UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") ON TABLE public.usuario TO inv_app;
 
-  -- inv_precios: opcional. Sin el rol, el despliegue sigue igual.
+  -- inv_precios: solo si el rol existe (desde la primera corrida de crear-roles-prod.sh). Sin él, el despliegue sigue igual.
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'inv_precios') THEN
     FOR t IN
       SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -103,7 +110,7 @@ BEGIN
     GRANT INSERT (id, "fondoId", "fechaValor", "valorUnidad", "valorFondo", fuente, "traidoEn") ON TABLE public.valor_unidad_fondo TO inv_precios;
     GRANT UPDATE ("reemplazadoEn") ON TABLE public.valor_unidad_fondo TO inv_precios;
   ELSE
-    RAISE NOTICE 'inv_precios no existe: se omiten sus privilegios (crear-roles-prod.sh lo crea cuando el archivo de producción trae su URL)';
+    RAISE NOTICE 'inv_precios no existe: se omiten sus privilegios (existe desde que se corre crear-roles-prod.sh una vez)';
   END IF;
 END
 $$;

@@ -13,7 +13,8 @@
 --  - cada disparador con su definición exacta (pg_get_triggerdef: tabla, BEFORE/AFTER, eventos, UPDATE OF,
 --    FOR EACH ROW, WHEN y función) y habilitado (tgenabled O o A; D es deshabilitado, R solo en réplica);
 --    ningún disparador de más en el esquema, y ninguno deshabilitado, ni siquiera los internos de las FK;
---  - las funciones escritas a mano con el md5 exacto de su código;
+--  - las funciones escritas a mano: una sola por nombre, con el md5 exacto de su código, sin SECURITY DEFINER y con su
+--    SET exacto (proconfig): un ALTER FUNCTION … SECURITY DEFINER no cambia el md5;
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 con search_path = public (sacadas de una base recién
 -- migrada); el guardián fija ese search_path para que otro no dé un falso positivo. La lista de nombres sale de
@@ -22,7 +23,8 @@
 -- real y lo rompen a propósito.
 -- Para sumar un objeto nuevo, se copia su definición de una base de pruebas recién migrada, con
 -- `SET search_path = public` y estas funciones: pg_get_indexdef(oid del índice), pg_get_constraintdef(oid de
--- la restricción; sin el sufijo ' NOT VALID'), pg_get_triggerdef(oid del disparador) y md5(prosrc) de la función.
+-- la restricción; sin el sufijo ' NOT VALID'), pg_get_triggerdef(oid del disparador), md5(prosrc) y
+-- array_to_string(proconfig, ';') de la función.
 DO $$
 DECLARE
   indices text[] := ARRAY[
@@ -223,18 +225,26 @@ DECLARE
     ['movimiento_caja', 'movimiento_caja_solo_insercion', 'CREATE TRIGGER movimiento_caja_solo_insercion BEFORE DELETE OR UPDATE ON public.movimiento_caja FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['orden', 'orden_solo_insercion', 'CREATE TRIGGER orden_solo_insercion BEFORE DELETE OR UPDATE ON public.orden FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['plan_version', 'plan_version_solo_insercion', 'CREATE TRIGGER plan_version_solo_insercion BEFORE DELETE OR UPDATE ON public.plan_version FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['precio_cierre', 'precio_cierre_insercion', 'CREATE TRIGGER precio_cierre_insercion BEFORE INSERT ON public.precio_cierre FOR EACH ROW EXECUTE FUNCTION inv_precio_cierre_insercion()'],
+    ['precio_cierre', 'precio_cierre_retiro', 'CREATE TRIGGER precio_cierre_retiro BEFORE DELETE OR UPDATE ON public.precio_cierre FOR EACH ROW EXECUTE FUNCTION inv_retiro_vigente()'],
     ['regla_plan', 'regla_plan_solo_insercion', 'CREATE TRIGGER regla_plan_solo_insercion BEFORE DELETE OR UPDATE ON public.regla_plan FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['token_acceso', 'token_acceso_un_solo_uso', 'CREATE TRIGGER token_acceso_un_solo_uso BEFORE DELETE OR UPDATE ON public.token_acceso FOR EACH ROW EXECUTE FUNCTION inv_token_un_solo_uso()'],
-    ['usuario', 'usuario_transiciones', 'CREATE TRIGGER usuario_transiciones BEFORE UPDATE ON public.usuario FOR EACH ROW EXECUTE FUNCTION inv_usuario_transiciones()']
+    ['usuario', 'usuario_transiciones', 'CREATE TRIGGER usuario_transiciones BEFORE UPDATE ON public.usuario FOR EACH ROW EXECUTE FUNCTION inv_usuario_transiciones()'],
+    ['valor_unidad_fondo', 'valor_unidad_fondo_insercion', 'CREATE TRIGGER valor_unidad_fondo_insercion BEFORE INSERT ON public.valor_unidad_fondo FOR EACH ROW EXECUTE FUNCTION inv_valor_unidad_fondo_insercion()'],
+    ['valor_unidad_fondo', 'valor_unidad_fondo_retiro', 'CREATE TRIGGER valor_unidad_fondo_retiro BEFORE DELETE OR UPDATE ON public.valor_unidad_fondo FOR EACH ROW EXECUTE FUNCTION inv_retiro_vigente()']
   ];
+  -- [nombre, md5(prosrc), proconfig unido con ';' ('' = sin SET)]. Ninguna puede ser SECURITY DEFINER.
   funciones text[] := ARRAY[
-    ['inv_asignacion_coherente', 'e102cbd2ac508ce492a6081f44c8818d'],
-    ['inv_certificacion_fondo_solo_encargo', '0c694690f57d13c0fbd819a28130c975'],
-    ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301'],
-    ['inv_lote_fijo', '6906ddebe6b9194201de631eac40241a'],
-    ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77'],
-    ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546'],
-    ['inv_usuario_transiciones', '368539024fbeaeb771669ff741aa7ed3']
+    ['inv_asignacion_coherente', 'e102cbd2ac508ce492a6081f44c8818d', ''],
+    ['inv_certificacion_fondo_solo_encargo', '0c694690f57d13c0fbd819a28130c975', ''],
+    ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301', ''],
+    ['inv_lote_fijo', '6906ddebe6b9194201de631eac40241a', ''],
+    ['inv_precio_cierre_insercion', '00651c5dd0393fa53773bf63e6911f6f', 'search_path=pg_catalog, public'],
+    ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public'],
+    ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77', ''],
+    ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546', ''],
+    ['inv_usuario_transiciones', '368539024fbeaeb771669ff741aa7ed3', ''],
+    ['inv_valor_unidad_fondo_insercion', 'bd26ab74e4430489ea0cc183edc2c6c4', 'search_path=pg_catalog, public']
   ];
   extensiones text[] := ARRAY['btree_gist', 'citext'];
   listados text[] := '{}';
@@ -247,6 +257,9 @@ DECLARE
   sano boolean;
   valida boolean;
   habilitado "char";
+  n_funciones int;
+  definidor boolean;
+  config text;
 BEGIN
   PERFORM set_config('search_path', 'public', true);
 
@@ -336,12 +349,15 @@ BEGIN
     distintos := distintos || ('disparadores deshabilitados en ' || x);
   END LOOP;
 
+  -- Una sola por nombre (una sobrecarga no se cuela), con su md5, nunca SECURITY DEFINER (dentro, current_user sería
+  -- el dueño: los disparadores de integridad de precios eximirían a todos) y con su SET exacto (el md5 no los ve).
   FOREACH fila SLICE 1 IN ARRAY funciones LOOP
-    def := NULL;
-    SELECT md5(p.prosrc) INTO def FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname = fila[1];
-    IF def IS NULL THEN
+    SELECT count(*), min(md5(p.prosrc)), bool_or(p.prosecdef), min(coalesce(array_to_string(p.proconfig, ';'), ''))
+      INTO n_funciones, def, definidor, config
+      FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname = fila[1];
+    IF n_funciones = 0 THEN
       faltan := faltan || ('función ' || fila[1]);
-    ELSIF def <> fila[2] THEN
+    ELSIF n_funciones > 1 OR def <> fila[2] OR definidor OR config <> fila[3] THEN
       distintos := distintos || ('función ' || fila[1]);
     END IF;
   END LOOP;
@@ -358,6 +374,6 @@ BEGIN
   END IF;
   RAISE NOTICE 'Guardián del esquema: % índices, % restricciones (% sin validar), % llaves, % disparadores, % funciones y % extensiones en su lugar',
     cardinality(indices) / 3, cardinality(restricciones) / 3, cardinality(sin_validar), cardinality(llaves) / 3,
-    cardinality(disparadores) / 3, cardinality(funciones) / 2, cardinality(extensiones);
+    cardinality(disparadores) / 3, cardinality(funciones) / 3, cardinality(extensiones);
 END
 $$;
