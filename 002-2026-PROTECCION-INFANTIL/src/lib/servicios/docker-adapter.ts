@@ -4,9 +4,9 @@
  * Guardas (los 3 obligatorios, verificados por tests):
  *  1. Whitelist HARD-CODED de comandos: solo `start | stop | restart`.
  *  2. Whitelist HARD-CODED de contenedores: 10 servicios (los 12 menos `db` y `pi-app`).
- *  3. Habla con la Docker Engine API por HTTP sobre `/var/run/docker.sock` —
- *     NUNCA shell, NUNCA `docker` CLI (evita interpolación y no requiere binary
- *     en la imagen `app`, que solo tenía Node/Next.js).
+ *  3. Habla por HTTP con `pi-docker-guard` (SPEC-977, I-459) vía `DOCKER_GUARD_URL` —
+ *     NUNCA el docker.sock directo (pi-app ya no lo monta), NUNCA shell ni `docker`
+ *     CLI. El guard reaplica la allowlist fuera de pi-app: defensa en dos capas.
  *
  * Excluidos absolutos:
  *  - `pi-db`  → reinicio catastrófico (pérdida de conexiones activas).
@@ -15,7 +15,6 @@
 import http from "node:http";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
-const DOCKER_SOCKET = "/var/run/docker.sock";
 const REQUEST_TIMEOUT_MS = 30_000;
 
 export const COMANDOS_SERVICIO = ["start", "stop", "restart"] as const;
@@ -55,11 +54,37 @@ export type DockerRunner = (
     path: string,
 ) => Promise<{ status: number; body: string }>;
 
+/**
+ * SPEC-977: resuelve el endpoint del guard desde `DOCKER_GUARD_URL` en CADA llamada
+ * (no al cargar el módulo). Falla CERRADO si no está configurado: el adapter nunca
+ * cae al docker.sock directo (pi-app ya no lo monta).
+ */
+function resolverGuard(): { hostname: string; port: number } {
+    const raw = process.env.DOCKER_GUARD_URL;
+    if (!raw) {
+        throw new AppError(
+            "DOCKER_GUARD_URL no configurado: el adapter habla con pi-docker-guard por HTTP (SPEC-977).",
+            ERROR_CODES.INTERNAL_ERROR,
+            500,
+        );
+    }
+    const u = new URL(raw);
+    return { hostname: u.hostname, port: Number(u.port) || 80 };
+}
+
 function defaultRunner(method: "GET" | "POST", path: string): Promise<{ status: number; body: string }> {
     return new Promise((resolve, reject) => {
+        let destino: { hostname: string; port: number };
+        try {
+            destino = resolverGuard();
+        } catch (err) {
+            reject(err);
+            return;
+        }
         const req = http.request(
             {
-                socketPath: DOCKER_SOCKET,
+                hostname: destino.hostname,
+                port: destino.port,
                 method,
                 path,
                 timeout: REQUEST_TIMEOUT_MS,
