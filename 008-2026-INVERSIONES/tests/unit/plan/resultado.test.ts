@@ -1,4 +1,4 @@
-// Resultado de una decisión a 30 y 90 días, con cierres guardados (fase B, corte 1). Datos inventados.
+// Resultado de una decisión a 30 y 90 días, con cierres guardados y dividendos (fase B, cortes 1 y 3). Datos inventados.
 import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import {
@@ -10,6 +10,7 @@ import {
   type Cierre,
   type EntradaResultado,
 } from "@/plan/resultado";
+import type { ContextoEspecie, DividendoPagado } from "@/plan/dividendos";
 
 const D = (v: string | number) => new Prisma.Decimal(v);
 const dia = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
@@ -27,12 +28,24 @@ const orden = (id: string, iso: string, cantidad: bigint, totalEstimado: string)
 
 const HOY = dia("2032-01-15");
 
+/** Especie con tenencia de sobra todo el año, cargas al día y sin dividendos: el resultado es solo de precio. */
+const especie = (cambios: Partial<ContextoEspecie> = {}): ContextoEspecie => ({
+  dividendos: [],
+  movimientos: [{ fecha: dia("2031-01-02"), cantidad: 1000n }],
+  cubiertoHasta: HOY,
+  destinoSinLote: false,
+  escisiones: [],
+  ...cambios,
+});
+const div = (id: string, iso: string, monto: string): DividendoPagado => ({ id, fechaPago: dia(iso), montoNeto: D(monto), tipo: "ORDINARIO" });
+
 const noActuar = (cierres: Cierre[], cambios: Partial<EntradaResultado> = {}): EntradaResultado => ({
   accion: "NO_ACTUAR",
   fechaDecision: dia("2031-03-03"),
   cantidad: 50n,
   ordenes: [],
   cierres,
+  especie: especie(),
   hoy: HOY,
   ...cambios,
 });
@@ -55,8 +68,8 @@ describe("cierre en una fecha", () => {
 describe("«no actuar»: cantidad × (P_h − P_0), desde la fecha de la decisión", () => {
   it("funcionó si el precio subió en el horizonte", () => {
     const r = calcularResultado(noActuar([cierre("2031-03-03", "10"), cierre("2031-04-02", "10.5")]), 30);
-    expect(r).toMatchObject({ horizonteDias: 30, estado: "CALCULADO", veredicto: "FUNCIONO", verificado: true, incluyeDividendos: false, versionCalculo: VERSION_CALCULO });
-    expect(r.resultadoPesos?.toString()).toBe("25");
+    expect(r).toMatchObject({ horizonteDias: 30, estado: "CALCULADO", veredicto: "FUNCIONO", verificado: true, incluyeDividendos: true, motivoSinDividendos: null, versionCalculo: VERSION_CALCULO });
+    expect([r.resultadoPrecio?.toString(), r.dividendosPesos?.toString(), r.resultadoPesos?.toString()]).toEqual(["25", "0", "25"]);
     expect(r.tramos).toHaveLength(1);
     expect(r.tramos[0]).toMatchObject({ ordenId: null, fechaBase: dia("2031-03-03"), fechaObjetivo: dia("2031-04-02") });
     expect(r.tramos[0]?.precioBase?.precio.toString()).toBe("10");
@@ -105,6 +118,7 @@ describe("vender y comprar: se miden con las órdenes enlazadas, desde su ejecuc
     cantidad: null,
     ordenes,
     cierres,
+    especie: especie(),
     hoy: HOY,
   });
 
@@ -128,7 +142,7 @@ describe("vender y comprar: se miden con las órdenes enlazadas, desde su ejecuc
       venta([cierre("2031-04-09", "9"), cierre("2031-04-14", "8")], [orden("o1", "2031-03-10", 100n, "993"), orden("o3", "2031-03-15", 40n, "393")]),
       30,
     );
-    expect(r.tramos.map((t) => [t.ordenId, t.fechaObjetivo.toISOString().slice(0, 10), t.resultadoPesos?.toString()])).toEqual([
+    expect(r.tramos.map((t) => [t.ordenId, t.fechaObjetivo.toISOString().slice(0, 10), t.resultadoPrecio?.toString()])).toEqual([
       ["o1", "2031-04-09", "93"],
       ["o3", "2031-04-14", "73"],
     ]);
@@ -158,5 +172,77 @@ describe("los dos horizontes", () => {
     expect(r.d30.resultadoPesos?.toString()).toBe("50");
     expect(r.d90.resultadoPesos?.toString()).toBe("-50");
     expect([r.d30.horizonteDias, r.d90.horizonteDias]).toEqual([30, 90]);
+  });
+});
+
+describe("corte 3: los dividendos entran en el resultado", () => {
+  it("la versión del cálculo es la v2", () => {
+    expect(VERSION_CALCULO).toBe("plan-resultado-v2");
+  });
+
+  it("«no actuar»: suma los dividendos que recibieron las acciones que se mantuvieron", () => {
+    // 43 acciones de 953 a 1.063 en 90 días (+4.730) y un dividendo de 1.200 netos sobre 100 acciones (12 por acción: +516).
+    const e = noActuar([cierre("2031-03-03", "953"), cierre("2031-05-30", "1063")], {
+      cantidad: 43n,
+      especie: especie({ movimientos: [{ fecha: dia("2031-01-02"), cantidad: 100n }], dividendos: [div("d1", "2031-05-15", "1200")] }),
+    });
+    const r = calcularResultado(e, 90);
+    expect(r).toMatchObject({ estado: "CALCULADO", incluyeDividendos: true, veredicto: "FUNCIONO" });
+    expect([r.resultadoPrecio?.toString(), r.dividendosPesos?.toString(), r.resultadoPesos?.toString()]).toEqual(["4730", "516", "5246"]);
+    const t = r.tramos[0]!;
+    expect(t.dividendos?.medible && t.dividendos.atribuidos.map((a) => [a.dividendoId, a.tenencia, a.porAccion.toString(), a.atribuido.toString()])).toEqual([["d1", 100n, "12", "516"]]);
+  });
+
+  it("vender: resta los dividendos que dejaron de recibir las acciones vendidas", () => {
+    // Vende 100 de 1.000 el 10-mar; la especie paga 450 netos sobre las 900 que quedan (0,5 por acción) → −50.
+    const e: EntradaResultado = {
+      accion: "VENDER", fechaDecision: dia("2031-03-07"), cantidad: null, ordenes: [orden("o1", "2031-03-10", 100n, "993")],
+      cierres: [cierre("2031-04-09", "9")], hoy: HOY,
+      especie: especie({ movimientos: [{ fecha: dia("2031-01-02"), cantidad: 1000n }, { fecha: dia("2031-03-10"), cantidad: -100n }], dividendos: [div("d", "2031-03-25", "450")] }),
+    };
+    const r = calcularResultado(e, 30);
+    expect([r.resultadoPrecio?.toString(), r.dividendosPesos?.toString(), r.resultadoPesos?.toString()]).toEqual(["93", "-50", "43"]);
+  });
+
+  it("comprar: suma los dividendos que recibieron las acciones compradas", () => {
+    const e: EntradaResultado = {
+      accion: "COMPRAR", fechaDecision: dia("2031-03-07"), cantidad: null, ordenes: [orden("o2", "2031-03-10", 100n, "1007")],
+      cierres: [cierre("2031-04-09", "11")], hoy: HOY,
+      especie: especie({ movimientos: [{ fecha: dia("2031-03-10"), cantidad: 100n }], dividendos: [div("d", "2031-03-25", "300")] }),
+    };
+    const r = calcularResultado(e, 30);
+    expect([r.resultadoPrecio?.toString(), r.dividendosPesos?.toString(), r.resultadoPesos?.toString()]).toEqual(["93", "300", "393"]);
+  });
+
+  it("si un tramo no se puede medir, el horizonte queda solo con el precio y dice por qué (nunca una mezcla)", () => {
+    // Dos ventas: después de la segunda no queda nada → la segunda no se puede medir; la primera sí, pero no se suma.
+    const e: EntradaResultado = {
+      accion: "VENDER", fechaDecision: dia("2031-03-07"), cantidad: null,
+      ordenes: [orden("o1", "2031-03-10", 100n, "993"), orden("o3", "2031-03-15", 40n, "393")],
+      cierres: [cierre("2031-04-09", "9"), cierre("2031-04-14", "8")], hoy: HOY,
+      especie: especie({ movimientos: [{ fecha: dia("2031-01-02"), cantidad: 140n }, { fecha: dia("2031-03-10"), cantidad: -100n }, { fecha: dia("2031-03-15"), cantidad: -40n }] }),
+    };
+    const r = calcularResultado(e, 30);
+    expect(r).toMatchObject({ estado: "CALCULADO", incluyeDividendos: false, motivoSinDividendos: "SIN_TENENCIA", dividendosPesos: null, veredicto: "FUNCIONO" });
+    expect([r.resultadoPrecio?.toString(), r.resultadoPesos?.toString()]).toEqual(["166", "166"]);
+  });
+
+  it("con las cargas de Trii atrasadas, queda solo con el precio y el motivo CARGA_NO_CUBRE", () => {
+    const r = calcularResultado(noActuar([cierre("2031-03-03", "10"), cierre("2031-04-02", "10.5")], { especie: especie({ cubiertoHasta: dia("2031-03-31") }) }), 30);
+    expect(r).toMatchObject({ incluyeDividendos: false, motivoSinDividendos: "CARGA_NO_CUBRE" });
+    expect(r.resultadoPesos?.toString()).toBe("25");
+  });
+
+  it("si la especie tuvo una escisión dentro de la ventana, avisa y no da veredicto (el precio cae por la escisión)", () => {
+    const r = calcularResultado(noActuar([cierre("2031-03-03", "10"), cierre("2031-04-02", "8")], { especie: especie({ escisiones: [dia("2031-03-20")] }) }), 30);
+    expect(r).toMatchObject({ estado: "CALCULADO", escisionEnVentana: true, veredicto: null });
+    expect(r.resultadoPesos?.toString()).toBe("-100");
+    const fuera = calcularResultado(noActuar([cierre("2031-03-03", "10"), cierre("2031-04-02", "8")], { especie: especie({ escisiones: [dia("2031-03-03")] }) }), 30);
+    expect(fuera).toMatchObject({ escisionEnVentana: false, veredicto: "NO_FUNCIONO" });
+  });
+
+  it("pendiente o sin precio: sin cifras de dividendos", () => {
+    const enHoy = noActuar([cierre("2031-12-16", "10")], { fechaDecision: dia("2031-12-16") });
+    expect(calcularResultado(enHoy, 30)).toMatchObject({ estado: "PENDIENTE", resultadoPrecio: null, dividendosPesos: null, incluyeDividendos: false, motivoSinDividendos: null, escisionEnVentana: false });
   });
 });
