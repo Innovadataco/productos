@@ -225,8 +225,15 @@ describe("guardián del esquema: integridad de los precios", () => {
     expect(await guardianTras(['ALTER FUNCTION "inv_solo_insercion"() SET search_path = public'])).toContain("inv_solo_insercion");
   });
 
-  it("falla si aparece otra función con el mismo nombre (una sobrecarga)", async () => {
-    const romper = ['CREATE FUNCTION "inv_retiro_vigente"(x int) RETURNS int LANGUAGE sql AS $$ SELECT x $$'];
+  // La sobrecarga trae el mismo SET y un md5 que ordena DESPUÉS del de la función real: así ni el min(md5) ni el
+  // min(proconfig) la delatan, y solo la cuenta por nombre la frena (lo mostró una mutación que quitaba esa cuenta).
+  it("falla si aparece otra función con el mismo nombre (una sobrecarga), aunque traiga el mismo SET", async () => {
+    const cuerpo = " SELECT x + 0 ";
+    const [orden] = await db.$queryRawUnsafe<Array<{ despues: boolean }>>(
+      `SELECT md5('${cuerpo}') > (SELECT md5(prosrc) FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND proname = 'inv_retiro_vigente') AS despues`,
+    );
+    expect(orden).toEqual({ despues: true });
+    const romper = [`CREATE FUNCTION "inv_retiro_vigente"(x int) RETURNS int LANGUAGE sql SET search_path = pg_catalog, public, pg_temp AS $$${cuerpo}$$`];
     expect(await guardianTras(romper)).toContain("inv_retiro_vigente");
   });
 });
