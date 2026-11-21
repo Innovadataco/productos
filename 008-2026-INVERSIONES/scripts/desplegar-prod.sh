@@ -285,25 +285,29 @@ verificar_memswap() {
 # «servicio <nombre>» y «<servicio> <ruta.clave> <valor>» para las claves de imagen, memoria y CPU a cualquier
 # profundidad (con la ruta: un límite de deploy no se confunde con una reserva). No cuentan los comentarios ni el
 # contenido de los bloques literales (| o >, como el relé de la entrada). Imprime INDETERMINADO si no hay servicios o
-# si lo que decide podría venir de otra parte: alias, fusiones (<<), etiquetas (!reset), include, extends o un límite
-# interpolado (el archivo de producción no está en git; en image solo vale ${INV_TAG:-sin-desplegar}). Awk POSIX.
+# si lo que decide podría venir de otra parte o el resumen no lo lee: alias, fusiones (<<), etiquetas (!reset), mapas
+# en línea ({…}), claves entre comillas, include, extends o un límite interpolado (el archivo de producción no está en
+# git; en image solo vale ${INV_TAG:-sin-desplegar}). Awk POSIX (mawk en el VPS): sin anclas dentro de grupos ni \t
+# entre corchetes; los tabuladores se pasan a espacios.
 resumen_compose() {
   awk '
     function sangria(s) { match(s, /^ */); return RLENGTH }
     BEGIN { bloque = -1; nivel = -1 }
     {
       linea = $0
-      sub(/\r$/, "", linea)
+      gsub("\t", " ", linea)
+      sub("\r$", "", linea)
       if (bloque >= 0) {
         if (linea ~ /^ *$/ || sangria(linea) > bloque) next
         bloque = -1
       }
-      if (linea ~ /^ *(#|$)/) next
+      if (linea ~ /^ *$/ || linea ~ /^ *#/) next
       sub(/ +#.*$/, "", linea)
       sub(/ +$/, "", linea)
       s = sangria(linea)
-      if (linea ~ /(^ *-|:) +[|>][-+0-9]*$/) bloque = s
-      if (linea ~ /^ *(- +)?(<<|include|extends) *:/ || linea ~ /(^ *-|:) +[*!]/) raro = 1
+      if (linea ~ /^ *- +[|>][-+0-9]*$/ || linea ~ /: +[|>][-+0-9]*$/) bloque = s
+      if (linea ~ /^ *(- +)?(<<|include|extends) *:/ || linea ~ /^ *- +[*!{]/ || linea ~ /: +[*!{]/) raro = 1
+      if (linea ~ /^ *(- +)?("[^"]*"|\047[^\047]*\047) *:/) raro = 1
       if (s == 0) { en = (linea == "services:"); nivel = -1; servicio = ""; next }
       if (!en) next
       if (nivel < 0) nivel = s
@@ -341,7 +345,8 @@ resumen_dockerfile() {
   awk '
     {
       linea = $0
-      sub(/\r$/, "", linea)
+      gsub("\t", " ", linea)
+      sub("\r$", "", linea)
       if (sigue) {
         if (toma) actual = actual " " linea
         sigue = (linea ~ /\\$/)
@@ -350,11 +355,11 @@ resumen_dockerfile() {
       }
       mayus = toupper(linea)
       if (!instruccion && mayus ~ /^# *ESCAPE *=/) raro = 1
-      if (linea ~ /^[ \t]*(#|$)/) next
+      if (linea ~ /^ *$/ || linea ~ /^ *#/) next
       instruccion = 1
-      es_from = (mayus ~ /^[ \t]*FROM[ \t]/)
+      es_from = (mayus ~ /^ *FROM /)
       if (es_from) hay = 1
-      toma = es_from || (!hay && mayus ~ /^[ \t]*ARG[ \t]/)
+      toma = es_from || (!hay && mayus ~ /^ *ARG /)
       sigue = (linea ~ /\\$/)
       if (toma && !sigue) { print linea; toma = 0 }
       else if (toma) actual = linea
@@ -362,18 +367,27 @@ resumen_dockerfile() {
     END { if (sigue && toma) print actual; if (raro || !hay) print "INDETERMINADO" }'
 }
 
-# Las diferencias entre dos resúmenes ($1, lo que corre; $2, lo que va a correr), en una línea y acotadas.
-diferencias() {
-  LC_ALL=C comm -3 <(printf '%s\n' "$1" | LC_ALL=C sort) <(printf '%s\n' "$2" | LC_ALL=C sort) |
-    awk -F '\t' '
-      NR <= 6 { printf "%s%s", (NR > 1 ? "; " : ""), ($1 != "" ? "antes «" $1 "»" : "ahora «" $2 "»") }
-      END { if (NR > 6) printf "; y %d más", NR - 6 }'
+# Las líneas de stdin ordenadas y sin caracteres de control (van al log).
+limpias_ordenadas() {
+  LC_ALL=C tr -d '\000-\010\013-\037\177' | LC_ALL=C sort
 }
 
-# El archivo $2 (relativo a la carpeta 008) tal como está en el commit $1 del clon. Con cat-file: sin textconv, filtros
-# ni diff externos (corre como root).
+# Las diferencias entre dos resúmenes ($1, lo que corre; $2, lo que va a correr), en una línea y acotadas: seis como
+# mucho, de 160 caracteres. Si son las mismas líneas en otro orden (FROM reordenados), lo dice.
+diferencias() {
+  local texto
+  texto="$(LC_ALL=C comm -3 <(printf '%s\n' "$1" | limpias_ordenadas) <(printf '%s\n' "$2" | limpias_ordenadas) |
+    LC_ALL=C awk -F '\t' '
+      NR <= 6 { printf "%s%s", (NR > 1 ? "; " : ""), ($1 != "" ? "antes «" substr($1, 1, 160) "»" : "ahora «" substr($2, 1, 160) "»") }
+      END { if (NR > 6) printf "; y %d más", NR - 6 }')"
+  printf '%s' "${texto:-mismas líneas en otro orden}"
+}
+
+# El archivo $2 (relativo a la carpeta 008) tal como está en el commit $1 del clon. Corre como root: con cat-file (sin
+# textconv, filtros ni diff externos), sin objetos de reemplazo, sin la configuración del sistema ni la del usuario y
+# sin las variables GIT_* del entorno (GIT_DIR cambiaría de repositorio).
 archivo_en_sha() {
-  git -C "$INV_DIR_008" cat-file blob "$1:./$2" 2>/dev/null
+  env -i PATH="$PATH" GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -C "$INV_DIR_008" cat-file blob "$1:./$2" 2>/dev/null
 }
 
 # Imprime por qué la medición necesita la espera completa, o nada si el despliegue es solo de código. Compara sin red,
