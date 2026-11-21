@@ -62,7 +62,7 @@ describe("precios:importar · como proceso, sin base", { timeout: 8 * POR_CLI_MS
     const ruta = archivo("malo.ficticio.csv", `${ENCABEZADO}\nFICTQ,2024-03-11,4321.5,1\nFICTQ,2024-03-11,0,1\n`);
     const s = correr("importar-precios.ts", ["--archivo", ruta]);
     comprobar(s, 1, "CSV_INVALIDO");
-    expect(s.stderr).toContain("línea 3 · FILA_REPETIDA");
+    expect(s.stderr).toContain("línea 3 · CIERRE_FUERA_DE_RANGO");
   });
 
   it("CSV válido con la base inalcanzable: 1 con solo el nombre del error", () => {

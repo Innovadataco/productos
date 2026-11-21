@@ -26,7 +26,7 @@ describe("importarPrecios · por el camino único", () => {
     const porCsv = baseFalsa({ especies: ESPECIES, previas });
     const directo = baseFalsa({ especies: ESPECIES, previas });
     const r = await importarPrecios(porCsv.db, lectura, { ahora: AHORA });
-    const esperado = await guardarCierresDeEspecies(directo.db, lectura.especies.map((e, i) => ({ instrumentoId: ESPECIES[i]!.id, traer: async () => ({ ok: true as const, cierres: e.cierres }) })), {
+    const esperado = await guardarCierresDeEspecies(directo.db, lectura.especies.map((e, i) => ({ instrumentoId: ESPECIES[i]!.id, traer: async () => ({ ok: true as const, cierres: [...e.cierres] }) })), {
       desde: utc("2024-03-08"), hasta: utc("2024-03-11"), ahora: AHORA,
     });
     expect(r).toEqual({ filas: 4, especiesCsv: 2, sinEspecie: [], guardado: esperado });
