@@ -44,7 +44,7 @@ async function caso() {
   const rv = CERTIFICACION_FICTICIA.rentaVariable;
   const espec: EspecCertificacion = {
     ...CERTIFICACION_FICTICIA,
-    fondos: [{ ...CERTIFICACION_FICTICIA.fondos[0]!, nit: `99600${String(k).padStart(4, "0")}-0`, encargo: ENCARGO }],
+    fondos: [{ ...CERTIFICACION_FICTICIA.fondos[0]!, nit: `99300${String(k).padStart(4, "0")}-0`, encargo: ENCARGO }],
     rentaVariable: [{ ...rv[0]!, nemo: nemos[0]! }, { ...rv[1]!, nemo: nemos[0]! }, { ...rv[2]!, nemo: nemos[1]! }],
     creadoEn: `D:${new Date(fecha.getTime() + DIA).toISOString().slice(0, 10).replace(/-/g, "")}101500-05'00'`,
   };
