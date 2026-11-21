@@ -208,10 +208,10 @@ dos --ahora a la vez → los dos bien: inv-008-20261121-043628-par y inv-008-202
 **Reinicio de Docker:** no se reinició el demonio de Docker del Mac, porque también corren ahí la base de desarrollo de Inversiones y la de PI. Que la pausa sobreviva un reinicio se demostró así: con la marca puesta, el proyecto queda con 0 contenedores, así que `restart: always` no tiene nada que levantar.
 
 ---
-> v2.5 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · respaldos: carpeta en 750, archivos 640, y `nosuid,noexec` en el montaje del host (revisado, por ahora aviso)
+> v2.7 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · respaldos: carpeta en 750, archivos 640, y `nosuid,noexec` en el montaje del host (revisado, por ahora aviso)
+> v2.6 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · referencias archivo:línea corregidas contra el código de este clon (base fd7105ad); puertos del firewall fuera del repo; candado común con sus cinco tomadores
+> v2.5 · 2026-11-21 · 06:50 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · marcadores en vez de rutas y servicios del VPS; la carpeta de respaldos sale de `inv-008.conf`; evidencias `archivo:línea` al día
 > v2.4 · 2026-11-21 · 04:55 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · ensayo local de la pausa antes del migrador, la vuelta atrás y el candado del respaldo
-> v2.5 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · referencias archivo:línea corregidas contra el código de este clon (base fd7105ad); puertos del firewall fuera del repo; candado común con sus cinco tomadores
-> v2.4 · 2026-11-21 · 06:50 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · marcadores en vez de rutas y servicios del VPS; la carpeta de respaldos sale de `inv-008.conf`; evidencias `archivo:línea` al día
 > v2.3 · 2026-11-21 · 04:42 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · capa 2: el túnel ya está aplicado (§8 de produccion.md)
 > v2.2 · 2026-11-21 · 02:30 (-05) · Inversiones · Fábrica Inversiones · rebase sobre `main` a290b7de (TOTP, productos#1000): capas 7 a 12 re-verificadas, inventario de rutas, TOTP con piezas, base del audit
 > v2.1 · 2026-11-21 · 02:08 (-05) · Inversiones · Fábrica Inversiones · capas 7 a 12 con evidencia (`archivo:línea` verificado), audit #12 y nota del TOTP
