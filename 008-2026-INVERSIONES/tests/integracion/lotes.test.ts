@@ -112,3 +112,151 @@ describe("lote de escisión", () => {
     await expect(registrarLoteEscision(db, { destino: nemo("EB"), fechaEvento: "2024-02-12", cantidad: "5", costoUnitario: "-1" })).rejects.toThrow(/costoUnitario/);
   });
 });
+
+// ───────────── Asignaciones bloqueadas (D2–D6) y aislamiento por especie ─────────────
+const idDe = async (n: string) => (await db.instrumento.findFirstOrThrow({ where: { nemotecnico: n } })).id;
+const ordenDe = async (n: string, lado: "COMPRA" | "VENTA", fecha: string) =>
+  db.orden.findFirstOrThrow({ where: { instrumento: { nemotecnico: n }, lado, fechaOperacion: new Date(`${fecha}T00:00:00Z`) } });
+const loteDe = async (n: string, fecha: string) =>
+  db.lote.findFirstOrThrow({ where: { instrumento: { nemotecnico: n }, fechaCompra: new Date(`${fecha}T00:00:00Z`) } });
+type Fija = { ordenVentaId: string; loteId: string; cantidad: bigint; costoBase: string };
+/**
+ * Simula una bloqueada YA guardada en la base del dueño (anterior a las defensas de la base): se inserta sin
+ * disparadores, solo en la base de pruebas y dentro de su propia transacción.
+ */
+const fijarComoAntes = (filas: readonly Fija[]) =>
+  db.$transaction(async (tx) => {
+    const base = (await tx.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db ?? "";
+    if (!base.endsWith("_test")) throw new Error(`fijarComoAntes se negó a correr sobre «${base}»`);
+    await tx.$executeRawUnsafe("SET LOCAL session_replication_role = replica");
+    for (const f of filas) await tx.asignacionVenta.create({ data: { ...f, metodo: "ESPECIFICA", bloqueada: true } });
+  });
+
+describe("asignaciones bloqueadas", () => {
+  it("D3: una bloqueada ya guardada mayor que su venta rechaza la especie, no la toca y no sale en posiciones", async () => {
+    const n = nemo("BV");
+    await ordenes(fila("8 ene 2024", n, "Compra", "Aprobado", 100, 10) + fila("4 mar 2024", n, "Venta", "Aprobado", 30, 15) + fila("5 mar 2024", n, "Venta", "Aprobado", 10, 15));
+    await construirLotes(db);
+    const [v, l] = [await ordenDe(n, "VENTA", "2024-03-04"), await loteDe(n, "2024-01-08")];
+    await db.asignacionVenta.deleteMany({ where: { ordenVentaId: v.id } });
+    await fijarComoAntes([{ ordenVentaId: v.id, loteId: l.id, cantidad: 80n, costoBase: "800" }]);
+    const antes = await db.asignacionVenta.findMany({ where: { loteId: l.id }, orderBy: { id: "asc" } });
+
+    const r = await construirLotes(db);
+
+    expect(await db.asignacionVenta.findMany({ where: { loteId: l.id }, orderBy: { id: "asc" } })).toEqual(antes);
+    const p = await posiciones(db);
+    expect(p.especiesIncompletas).toContain(l.instrumentoId);
+    expect(p.posiciones.find((x) => x.instrumentoId === l.instrumentoId)).toBeUndefined();
+    expect(r.especiesRechazadas).toContainEqual(expect.objectContaining({ instrumentoId: l.instrumentoId, codigo: "BLOQUEADA_EXCEDE_VENTA", ventaId: v.id }));
+  });
+
+  it("D2: una bloqueada ya guardada mayor que su lote deja la especie fuera de posiciones (nunca negativa)", async () => {
+    const n = nemo("BL");
+    await ordenes(fila("8 ene 2024", n, "Compra", "Aprobado", 100, 10) + fila("4 mar 2024", n, "Venta", "Aprobado", 150, 15));
+    await construirLotes(db);
+    const [v, l] = [await ordenDe(n, "VENTA", "2024-03-04"), await loteDe(n, "2024-01-08")];
+    await fijarComoAntes([{ ordenVentaId: v.id, loteId: l.id, cantidad: 150n, costoBase: "1500" }]);
+
+    const r = await construirLotes(db);
+
+    expect((await posiciones(db)).especiesIncompletas).toContain(l.instrumentoId);
+    expect(r.especiesRechazadas).toContainEqual(expect.objectContaining({ instrumentoId: l.instrumentoId, codigo: "BLOQUEADA_EXCEDE_LOTE", loteId: l.id }));
+  });
+
+  it("D6: una bloqueada que cruza especies rechaza las DOS (la de la venta y la del lote)", async () => {
+    const [a, b] = [nemo("XA"), nemo("XB")];
+    await ordenes(fila("8 ene 2024", a, "Compra", "Aprobado", 100, 10) + fila("4 mar 2024", a, "Venta", "Aprobado", 40, 15) + fila("8 ene 2024", b, "Compra", "Aprobado", 100, 10));
+    await construirLotes(db);
+    const [v, lb] = [await ordenDe(a, "VENTA", "2024-03-04"), await loteDe(b, "2024-01-08")];
+    await db.asignacionVenta.deleteMany({ where: { ordenVentaId: v.id } });
+    await fijarComoAntes([{ ordenVentaId: v.id, loteId: lb.id, cantidad: 40n, costoBase: "400" }]);
+
+    const r = await construirLotes(db);
+
+    expect(await db.asignacionVenta.count({ where: { ordenVentaId: v.id } })).toBe(1);
+    const p = await posiciones(db);
+    expect(p.especiesIncompletas).toEqual(expect.arrayContaining([v.instrumentoId, lb.instrumentoId]));
+    expect(r.especiesRechazadas).toContainEqual(expect.objectContaining({ instrumentoId: lb.instrumentoId, codigo: "BLOQUEADA_VENTA_AJENA" }));
+    expect(r.especiesRechazadas).toContainEqual(expect.objectContaining({ instrumentoId: v.instrumentoId, codigo: "BLOQUEADA_LOTE_AJENO" }));
+  });
+
+  it("D6: una bloqueada sobre una orden de COMPRA rechaza la especie", async () => {
+    const n = nemo("BC");
+    await ordenes(fila("8 ene 2024", n, "Compra", "Aprobado", 100, 10) + fila("5 feb 2024", n, "Compra", "Aprobado", 50, 12));
+    await construirLotes(db);
+    const [c, l] = [await ordenDe(n, "COMPRA", "2024-02-05"), await loteDe(n, "2024-01-08")];
+    await ordenes(fila("4 mar 2024", n, "Venta", "Aprobado", 10, 15));
+    await fijarComoAntes([{ ordenVentaId: c.id, loteId: l.id, cantidad: 10n, costoBase: "100" }]);
+
+    const r = await construirLotes(db);
+
+    expect((await posiciones(db)).especiesIncompletas).toContain(l.instrumentoId);
+    expect(r.especiesRechazadas).toContainEqual(expect.objectContaining({ instrumentoId: l.instrumentoId, codigo: "BLOQUEADA_VENTA_AJENA", ventaId: c.id }));
+  });
+});
+
+describe("rechazos dentro del FIFO (BLOQUEADA_INCOMPLETA, COSTO_NEGATIVO)", () => {
+  it("COSTO_NEGATIVO borra las FIFO de la especie, conserva la bloqueada y la deja fuera de posiciones", async () => {
+    const n = nemo("CN");
+    await ordenes(fila("8 ene 2024", n, "Compra", "Aprobado", 100, 10) + fila("4 mar 2024", n, "Venta", "Aprobado", 50, 15) + fila("5 mar 2024", n, "Venta", "Aprobado", 30, 15));
+    await construirLotes(db);
+    const [v1, l] = [await ordenDe(n, "VENTA", "2024-03-04"), await loteDe(n, "2024-01-08")];
+    const fifo = await db.asignacionVenta.findFirstOrThrow({ where: { ordenVentaId: v1.id } });
+    await db.asignacionVenta.update({ where: { id: fifo.id }, data: { bloqueada: true, metodo: "ESPECIFICA", costoBase: "900" } });
+
+    const r = await construirLotes(db);
+
+    expect(r.especiesRechazadas).toContainEqual({ instrumentoId: l.instrumentoId, codigo: "COSTO_NEGATIVO", ventaId: null, loteId: l.id });
+    expect(await db.asignacionVenta.findMany({ where: { loteId: l.id }, select: { ordenVentaId: true, bloqueada: true } })).toEqual([{ ordenVentaId: v1.id, bloqueada: true }]);
+    expect((await posiciones(db)).especiesIncompletas).toContain(l.instrumentoId);
+  });
+});
+
+describe("construirLotes en ensayo", () => {
+  it("con una especie que cambiaría su FIFO, no deja nada: ni lotes nuevos ni asignaciones borradas o creadas", async () => {
+    const n = nemo("EF");
+    await ordenes(fila("5 feb 2024", n, "Compra", "Aprobado", 50, 12) + fila("4 mar 2024", n, "Venta", "Aprobado", 40, 15));
+    await construirLotes(db);
+    await ordenes(fila("8 ene 2024", n, "Compra", "Aprobado", 100, 10)); // el FIFO pasaría la venta al lote de enero
+    const foto = async () => ({
+      lotes: await db.lote.count(),
+      asignaciones: (await db.asignacionVenta.findMany({ orderBy: { id: "asc" } })).map((a) => [a.id, a.loteId, a.cantidad, a.costoBase.toString()]),
+    });
+    const antes = await foto();
+    const r = await construirLotes(db, { ensayo: true });
+    expect(r).toMatchObject({ ensayo: true });
+    expect(r.lotesCreados).toBeGreaterThanOrEqual(1);
+    expect(await foto()).toEqual(antes);
+  });
+
+  it("calcula lo mismo pero no escribe nada", async () => {
+    const n = nemo("EN");
+    await ordenes(fila("8 ene 2024", n, "Compra", "Aprobado", 100, 10) + fila("4 mar 2024", n, "Venta", "Aprobado", 30, 15));
+    const r = await construirLotes(db, { ensayo: true });
+    expect(r.lotesCreados).toBeGreaterThanOrEqual(1);
+    expect(r.asignacionesRecalculadas).toBeGreaterThanOrEqual(1);
+    expect(await db.lote.count({ where: { instrumento: { nemotecnico: n } } })).toBe(0);
+  });
+});
+
+// Al final a propósito: antes del arreglo, la bloqueada parcial que deja hacía fallar con P2002 cada
+// construirLotes posterior (de cualquier especie), y la evidencia roja de las demás pruebas quedaría mezclada.
+describe("una bloqueada inválida no aborta a las demás especies", () => {
+  it("D5: una bloqueada parcial no aborta la construcción: esa especie se rechaza y las demás siguen", async () => {
+    const [n, otra] = [nemo("BP"), nemo("BQ")];
+    await ordenes(fila("8 ene 2024", n, "Compra", "Aprobado", 100, 10) + fila("4 mar 2024", n, "Venta", "Aprobado", 60, 15));
+    await construirLotes(db);
+    const [v, l] = [await ordenDe(n, "VENTA", "2024-03-04"), await loteDe(n, "2024-01-08")];
+    await db.asignacionVenta.deleteMany({ where: { ordenVentaId: v.id } });
+    await db.asignacionVenta.create({ data: { ordenVentaId: v.id, loteId: l.id, cantidad: 20n, costoBase: "200", metodo: "ESPECIFICA", bloqueada: true } });
+    await ordenes(fila("8 ene 2024", otra, "Compra", "Aprobado", 50, 10) + fila("4 mar 2024", otra, "Venta", "Aprobado", 10, 15));
+
+    const r = await construirLotes(db);
+
+    expect(r.especiesRechazadas).toContainEqual(expect.objectContaining({ instrumentoId: await idDe(n), codigo: "BLOQUEADA_INCOMPLETA" }));
+    expect(await db.asignacionVenta.findMany({ where: { ordenVentaId: v.id }, select: { cantidad: true, bloqueada: true } })).toEqual([{ cantidad: 20n, bloqueada: true }]);
+    expect(await db.asignacionVenta.count({ where: { lote: { instrumento: { nemotecnico: otra } } } })).toBe(1);
+    expect((await posiciones(db)).especiesIncompletas).toContain(await idDe(n));
+  });
+});
