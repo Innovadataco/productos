@@ -4,7 +4,7 @@
 import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SALIDA, TIC_MS, correrAhora, corridaRegistrada, crearBucle, type Dependencias } from "../../../src/servicio-precios/bucle";
 import { hacerCorrida, resultadoDe } from "../../../src/servicio-precios/corrida";
 import { leerClaveValor } from "../../../src/servicio-precios/estado";
@@ -60,10 +60,14 @@ function dependencias(extra: Partial<Dependencias> & { inicio?: number } = {}) {
   return { deps, mensajes, programados, falso, ir: (texto: string) => (t = cot(texto)), adelantar: (ms: number) => (t += ms) };
 }
 
-/** Espera a que terminen las promesas pendientes (la corrida corre sin bloquear el tic). */
-const drenar = async (): Promise<void> => {
-  for (let i = 0; i < 17; i += 1) await new Promise((ok) => setImmediate(ok));
-};
+/** Espera a que se cumpla una condición (la corrida corre sin bloquear el tic y escribe en disco). */
+const hasta = (condicion: () => boolean): Promise<void> =>
+  vi.waitFor(
+    () => {
+      if (!condicion()) throw new Error("todavía no");
+    },
+    { timeout: 5_000, interval: 5 },
+  );
 
 describe("resultadoDe y hacerCorrida", () => {
   const t = (precios: string, fondo: string): ResultadoTarea[] => [
@@ -125,10 +129,10 @@ describe("corridaRegistrada · candado y huella de la última corrida", () => {
   });
 
   it("mientras corre, el candado existe y se refresca cada minuto; al terminar se cancela el refresco", async () => {
-    const { deps, programados } = dependencias();
+    const { deps, programados, mensajes } = dependencias();
     const f = corredorFalso({}, { retener: true });
     const enCurso = corridaRegistrada({ ...deps, corredor: f.corredor }, "bucle", null);
-    await drenar();
+    await hasta(() => f.llamadas.length === 1);
     const ruta = path.join(deps.dir, "corrida.candado");
     expect(leer(deps.dir, "corrida.candado")).toMatchObject({ modo: "bucle" });
     const refresco = programados.at(-1)!;
@@ -136,10 +140,14 @@ describe("corridaRegistrada · candado y huella de la última corrida", () => {
     const viejo = new Date(Date.now() - 2 * 60_000);
     utimesSync(ruta, viejo, viejo);
     refresco.fn();
-    await drenar();
-    expect(Date.now() - statSync(ruta).mtimeMs).toBeLessThan(60_000);
+    await hasta(() => Date.now() - statSync(ruta).mtimeMs < 60_000);
+    // Si el refresco falla (no puede leer su candado), lo registra y sigue.
+    chmodSync(ruta, 0o000);
+    refresco.fn();
+    await hasta(() => mensajes.some((m) => m.startsWith("no se pudo refrescar el candado: EACCES")));
+    chmodSync(ruta, 0o600);
     f.soltar();
-    await drenar();
+    await hasta(() => f.llamadas.length === 2);
     f.soltar();
     await enCurso;
     expect(refresco.cancelado).toBe(true);
@@ -190,16 +198,16 @@ describe("crearBucle · programa, latido y sin reintentos", () => {
     expect(f.llamadas).toEqual([]);
     ir("2027-01-08 18:00");
     await b.tic();
-    await drenar();
-    expect(f.llamadas.map((l) => l.tarea)).toEqual(["precios"]);
     expect(leer(deps.dir, "bucle")).toMatchObject({ estado: "CORRIENDO", proxima: seg(cot("2027-01-11 18:00")) });
+    await hasta(() => f.llamadas.length === 1);
+    expect(f.llamadas.map((l) => l.tarea)).toEqual(["precios"]);
     ir("2027-01-08 18:01");
     await b.tic();
     expect(leer(deps.dir, "bucle")).toMatchObject({ estado: "CORRIENDO", latido: seg(cot("2027-01-08 18:01")) });
     f.soltar();
-    await drenar();
+    await hasta(() => f.llamadas.length === 2);
     f.soltar();
-    await drenar();
+    await b.esperar();
     ir("2027-01-08 18:02");
     await b.tic();
     expect(leer(deps.dir, "bucle")).toMatchObject({ estado: "ESPERANDO" });
@@ -214,13 +222,13 @@ describe("crearBucle · programa, latido y sin reintentos", () => {
     for (const hora of ["2027-01-08 18:00", "2027-01-08 18:37", "2027-01-08 23:59", "2027-01-09 18:00", "2027-01-10 18:00", "2027-01-11 17:59"]) {
       ir(hora);
       await b.tic();
-      await drenar();
+      await b.esperar();
     }
     expect(f.llamadas.map((l) => l.tarea)).toEqual(["precios", "fondo"]);
     expect(leer(deps.dir, "ultima-corrida")).toMatchObject({ resultado: "FALLO", precios: "1", fondo: "TIEMPO" });
     ir("2027-01-11 18:00");
     await b.tic();
-    await drenar();
+    await b.esperar();
     expect(f.llamadas).toHaveLength(4);
   });
 
@@ -228,7 +236,7 @@ describe("crearBucle · programa, latido y sin reintentos", () => {
     const { deps, mensajes, falso } = dependencias({ inicio: cot("2027-01-08 18:05") });
     const b = crearBucle(deps);
     await b.tic();
-    await drenar();
+    await b.esperar();
     expect(falso.llamadas).toEqual([]);
     expect(mensajes[0]).toContain("la próxima: 2027-01-11 18:00 COT");
   });
@@ -239,11 +247,11 @@ describe("crearBucle · programa, latido y sin reintentos", () => {
     const b = crearBucle(deps);
     ir("2027-01-08 18:00");
     await b.tic();
-    await drenar();
+    await b.esperar();
     rmSync(path.join(deps.dir, "corrida.candado"));
     ir("2027-01-08 18:13");
     await b.tic();
-    await drenar();
+    await b.esperar();
     expect(falso.llamadas).toEqual([]);
     expect(mensajes.join("\n")).toContain("otra corrida en curso");
   });
@@ -260,7 +268,7 @@ describe("crearBucle · programa, latido y sin reintentos", () => {
       expect(leer(deps.dir, "bucle")).toMatchObject({ estado });
       ir("2027-01-08 18:00");
       await b.tic();
-      await drenar();
+      await b.esperar();
       expect(falso.llamadas).toEqual([]);
       expect(mensajes.join("\n")).toContain(`corrida de las 2027-01-08 18:00 COT omitida: ${estado}`);
       expect(leer(deps.dir, "bucle")).toMatchObject({ estado, proxima: seg(cot("2027-01-11 18:00")) });
@@ -279,7 +287,7 @@ describe("crearBucle · programa, latido y sin reintentos", () => {
     const b = crearBucle(deps);
     ir("2027-01-08 18:00");
     await b.tic();
-    await drenar();
+    await b.esperar();
     expect(mensajes.join("\n")).toContain("la corrida no se pudo hacer: ENOENT");
     expect(falso.llamadas).toEqual([]);
   });
@@ -290,13 +298,13 @@ describe("crearBucle · programa, latido y sin reintentos", () => {
     const b = crearBucle({ ...deps, corredor: f.corredor });
     ir("2027-01-08 18:00");
     await b.tic();
-    await drenar();
+    await hasta(() => f.llamadas.length === 1);
     await b.detener();
     expect(f.detenidos()).toBe(1);
     expect(leer(deps.dir, "bucle")).toMatchObject({ estado: "DETENIDO" });
     ir("2027-01-11 18:00");
     await b.tic();
-    await drenar();
+    await b.esperar();
     expect(leer(deps.dir, "bucle")).toMatchObject({ estado: "DETENIDO" });
     expect(f.llamadas.map((l) => l.tarea)).toEqual(["precios"]);
     expect(leer(deps.dir, "ultima-corrida")).toMatchObject({ resultado: "FALLO", precios: "0", fondo: "DETENIDO" });

@@ -90,7 +90,7 @@ describe("inv-008-precios · solo la credencial de inv_precios (sin el secreto n
     const r = spawnSync("docker", ["compose", "-p", "inv-008-prueba", "-f", "-", "--env-file", vars, "config", "--format", "json", "inv-008-precios"], {
       input: texto,
       encoding: "utf8",
-      env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "" },
+      env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", NODE_ENV: "test" },
     });
     if (r.error || /unknown (shorthand )?flag|is not a docker command/.test(r.stderr)) return; // sin docker compose (p. ej. en el CI): lo cubre el texto
     expect(r.status, r.stderr).toBe(0);

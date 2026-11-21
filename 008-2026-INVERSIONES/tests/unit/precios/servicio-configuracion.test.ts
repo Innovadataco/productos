@@ -66,7 +66,7 @@ describe("leerArgumentosAhora (lo que va después de --ahora)", () => {
     ["fecha futura (en Colombia)", ["--desde", "2027-03-18"]],
     ["--desde repetido", ["--desde", "2019-08-23", "--desde", "2019-08-26"]],
     ["otra opción", ["--hasta", "2019-08-23"]],
-    ["un posicional", ["precios"]],
+    ["un posicional", ["posicional-ficticio"]],
     ["--desde=fecha", ["--desde=2019-08-23"]],
   ] as const) {
     it(`${caso}: rechazo con un mensaje que no repite lo que llegó`, () => {

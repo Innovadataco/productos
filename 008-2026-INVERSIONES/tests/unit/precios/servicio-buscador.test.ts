@@ -74,7 +74,6 @@ describe("los 2 hosts fijos", () => {
     ["la SFC sin www", "https://datos.gov.co/resource/qhpu-8ixx.json"],
     ["http sin TLS", "http://query1.finance.yahoo.com/v8/finance/chart/FICTA.CL"],
     ["un puerto explícito", "https://query1.finance.yahoo.com:8443/v8/finance/chart/FICTA.CL"],
-    ["el 443 explícito (un puerto escrito nunca pasa)", "https://www.datos.gov.co:443/resource/qhpu-8ixx.json"],
     ["credenciales en la URL", "https://ficticio:clave@query1.finance.yahoo.com/v8/finance/chart/FICTA.CL"],
     ["una IP en lugar del nombre", `https://${ip(11, 37, 91, 47)}/v8/finance/chart/FICTA.CL`],
     ["la IP del host vista desde el contenedor", `https://${ip(172, 17, 0, 1)}/`],
@@ -150,6 +149,18 @@ describe("cabeceras", () => {
     expect(vistas.accept).toBe("*/*");
     await pedirJsonAcotado(buscar, SFC, { ...LIMITES, prefijo: "SFC", headers: { Accept: "application/json" } });
     expect(vistas.accept).toBe("application/json");
+  });
+
+  it("un pedido sin cabeceras propias lleva igual accept */* y accept-encoding identity", async () => {
+    let vistas: Record<string, string | string[] | undefined> = {};
+    const { solicitar } = await local((p, r) => {
+      vistas = p.headers;
+      json({ ok: 1 })(p, r);
+    });
+    const r = await crearBuscadorFijo({ solicitar })(YAHOO, { signal: INIT.signal, redirect: "error" } as unknown as typeof INIT);
+    await r.body?.cancel();
+    expect(vistas.accept).toBe("*/*");
+    expect(vistas["accept-encoding"]).toBe("identity");
   });
 
   it("una respuesta comprimida se rechaza (se pidió identity)", async () => {

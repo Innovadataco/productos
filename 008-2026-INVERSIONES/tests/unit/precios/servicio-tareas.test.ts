@@ -26,7 +26,7 @@ const corredor = (extra: Partial<Parameters<typeof crearCorredor>[0]> = {}) =>
     ejecutable: process.execPath,
     argumentosNode: ["--max-old-space-size=64", "-e", GUION],
     script: "servicio-precios.ficticio.mjs",
-    env: { PATH: process.env.PATH ?? "", DATABASE_URL: "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones" },
+    env: { PATH: process.env.PATH ?? "", NODE_ENV: "test", DATABASE_URL: "postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones" },
     // Sin heredar la consola en las pruebas: el hijo escribe en la nada.
     lanzar: (ejecutable: string, args: readonly string[], opciones: SpawnOptions) => spawn(ejecutable, args, { ...opciones, stdio: "ignore" }),
     ...extra,

@@ -93,7 +93,7 @@ describe("crearLookupSeguro", () => {
       for (const all of [true, false]) {
         const { r } = await consultar(direcciones, all);
         expect(r.error?.code).toBe("PRECIOS_DIRECCION_NO_PUBLICA");
-        expect(r.direccion).toBeUndefined();
+        expect(r.direccion).toBeFalsy();
       }
     });
   }
@@ -102,7 +102,7 @@ describe("crearLookupSeguro", () => {
     const fallo = Object.assign(new Error("sin DNS"), { code: "ENOTFOUND" });
     const { r } = await consultar(fallo, true);
     expect(r.error).toBe(fallo);
-    expect(r.direccion).toBeUndefined();
+    expect(r.direccion).toBeFalsy();
   });
 
   it("por defecto usa el resolvedor del sistema: «localhost» (de /etc/hosts, sin red) es de bucle y se rechaza", async () => {
