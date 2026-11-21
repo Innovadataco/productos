@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { abrirDocumento, leerFechaPdf, MAX_BYTES, MAX_INFLADO_POR_STREAM, MAX_PAGINAS } from "@/importacion/av/pdf/documento";
-import { MAX_OBJETOS } from "@/importacion/av/pdf/referencias";
+import { abrirReferencias, MAX_INFLADO_TOTAL, MAX_OBJETOS } from "@/importacion/av/pdf/referencias";
 import { ErrorPdf } from "@/importacion/av/pdf/errores";
 import { CERTIFICACION_FICTICIA, generarCertificacionPdf, type OpcionesPdf } from "../../../fixtures/av/certificacion.ficticio";
 
@@ -215,6 +215,23 @@ describe("abrirDocumento: revisión de PR-A (code-reviewer A1/M2/M3 y security-r
   it("varios streams distintos que juntos pasan el tope total fallan con INFLADO_EXCESIVO", () => {
     const seis = `% ${"B".repeat(6 * 1024 * 1024)}`;
     expect(codigo(() => abrirDocumento(pdf({ comprimir: true, flujosExtra: { cuantos: 3, contenido: seis } })))).toBe("PDF_INFLADO_EXCESIVO");
+  });
+
+  it("una referencia repetida en /Contents se rechaza aunque sean pocas", () => {
+    expect(codigo(() => abrirDocumento(pdf({ repetirFlujo: 2 })))).toBe("PDF_ESTRUCTURA_INVALIDA");
+  });
+
+  it("el presupuesto de inflado es de todo el archivo: el stream que lo pasa falla, sin esperar al final", () => {
+    const seis = `% ${"B".repeat(6 * 1024 * 1024)}`;
+    const refs = abrirReferencias(pdf({ comprimir: true, flujosExtra: { cuantos: 3, contenido: seis } }));
+    const ref = (num: number) => ({ tipo: "ref" as const, num, gen: 0 });
+    expect(refs.stream(ref(200)).datos.length + refs.stream(ref(201)).datos.length).toBeLessThan(MAX_INFLADO_TOTAL);
+    expect(codigo(() => refs.stream(ref(202)))).toBe("PDF_INFLADO_EXCESIVO");
+  });
+
+  it("un mismo stream sin comprimir reusado por muchas páginas no se copia sin tope", () => {
+    const uno = `% ${"C".repeat(1024 * 1024)}`;
+    expect(codigo(() => abrirDocumento(pdf({ contenidoExtra: uno, paginasVacias: 20, vaciasReusanContenido: true })))).toBe("PDF_INFLADO_EXCESIVO");
   });
 
   it("/Contents como referencia indirecta a un arreglo se lee", () => {

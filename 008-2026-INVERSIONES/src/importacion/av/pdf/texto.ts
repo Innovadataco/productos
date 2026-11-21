@@ -162,7 +162,8 @@ class Interprete {
   /** Horizontal, sin espejo, de tamaño legible, sin Tz/Ts, visible y en color oscuro. */
   private seVe(m: Matriz): boolean {
     const { tr, tz, ts, tamano } = this.g;
-    const horizontal = Math.abs(m[1]) < EPSILON && Math.abs(m[2]) < EPSILON && m[0] > 0 && m[3] > 0;
+    // Con tamano > 0, «m[3] · tamano ≥ 1» ya exige m[3] > 0: no hay espejo vertical.
+    const horizontal = Math.abs(m[1]) < EPSILON && Math.abs(m[2]) < EPSILON && m[0] > 0;
     return horizontal && tr === 0 && tz === ESCALA_NORMAL && ts === 0 && tamano > 0 && m[3] * tamano >= TAMANO_MINIMO && this.pintura.textoLegible();
   }
 

@@ -160,6 +160,11 @@ describe("extraerCeldas: lo extraído es lo que se ve (revisión: security MEDIO
     ["escala horizontal 0 (Tz 0)", "BT /F1 9 Tf 0 Tz 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["elevación del texto (Ts)", "BT /F1 9 Tf 5000 Ts 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["tamaño de fuente negativo con matriz espejada", "BT /F1 -9 Tf 1 0 0 -1 50 10 Tm (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["texto diminuto (0.5 pt)", "BT /F1 0.5 Tf 50 10 Td (x) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un relleno dentro de BT…ET", "BT /F1 9 Tf 0 0 10 10 re f ET", "PDF_CONTENIDO_INVALIDO"],
+    ["una imagen dentro de BT…ET", "BT /I0 Do ET", "PDF_CONTENIDO_INVALIDO"],
+    ["un relleno trasladado con cm que tapa un texto", "BT /F1 9 Tf 50 10 Td (x) Tj ET q 1 0 0 1 40 0 cm 1 g 0 5 20 10 re f Q", "PDF_TEXTO_NO_SOPORTADO"],
+    ["un trazo grueso que tapa un texto", "BT /F1 9 Tf 50 10 Td (x) Tj ET 0 G 20 w 30 10 m 90 10 l S", "PDF_TEXTO_NO_SOPORTADO"],
     ["un carácter de control dentro del texto", "BT /F1 9 Tf 50 10 Td (a\\001b) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["un salto de línea escapado dentro del texto", "BT /F1 9 Tf 50 10 Td (a\\nb) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["un byte sin definir en WinAnsi (U+FFFD)", "BT /F1 9 Tf 50 10 Td (a\\201b) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
@@ -169,6 +174,10 @@ describe("extraerCeldas: lo extraído es lo que se ve (revisión: security MEDIO
       expect(codigo(() => celdas({ contenidoExtra: contenido }))).toBe(esperado);
     });
   }
+
+  it("acepta un trazo fino (separador de la tabla) que pasa por un texto", () => {
+    expect(extra("BT /F1 9 Tf 50 10 Td (x) Tj ET 0.78 G 0.28 w 30 10 m 90 10 l S").map((c) => c.texto)).toEqual(["x"]);
+  });
 
   it("acepta texto gris oscuro (0.267 g), Tz 100 y Ts 0, como el portal", () => {
     expect(extra("0.267 g BT /F1 9 Tf 100 Tz 0 Ts 50 10 Td (gris) Tj ET").map((c) => c.texto)).toEqual(["gris"]);

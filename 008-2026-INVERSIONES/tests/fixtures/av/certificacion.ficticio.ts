@@ -58,6 +58,8 @@ export interface OpcionesPdf {
   readonly decodeParmsEnContenido?: boolean;
   /** Páginas en blanco que se agregan al final de /Kids (pruebas del tope de páginas). */
   readonly paginasVacias?: number;
+  /** Las páginas «vacías» reusan el contenido de la página 1 (pruebas del tope de contenido total). */
+  readonly vaciasReusanContenido?: boolean;
   /** /Rotate en el nodo /Pages (se hereda a cada página). */
   readonly rotar?: number;
   /** /CropBox de la página 1, tal cual (p. ej. «[0 0 300 300]»). */
@@ -199,7 +201,8 @@ function flujo(contenido: string, o: OpcionesPdf): Objeto {
 
 /** Páginas en blanco (sin /Contents) numeradas desde 100. */
 function vacias(o: OpcionesPdf): [number, string][] {
-  return Array.from({ length: o.paginasVacias ?? 0 }, (_, i) => [100 + i, "<</Type /Page\n/Parent 1 0 R\n>>"]);
+  const contenido = o.vaciasReusanContenido ? "\n/Contents 4 0 R" : "";
+  return Array.from({ length: o.paginasVacias ?? 0 }, (_, i) => [100 + i, `<</Type /Page\n/Parent 1 0 R${contenido}\n>>`]);
 }
 
 const PRIMER_EXTRA = 200;
