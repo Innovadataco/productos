@@ -7,6 +7,8 @@
 // Datos inventados (tests/unit/conciliacion/ficticio.ts).
 import { Prisma } from "@prisma/client";
 import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MOTIVOS } from "@/app/conciliacion/motivos";
@@ -188,7 +190,8 @@ describe("src/app/conciliacion/page.tsx · la conciliación", () => {
 });
 
 describe("candados de src/app/conciliacion", () => {
-  const carpeta = new URL("../../../src/app/conciliacion/", import.meta.url);
+  // Rutas por texto (no `new URL`): en jsdom, URL es la del navegador simulado y node:fs no la acepta.
+  const carpeta = resolve(dirname(fileURLToPath(import.meta.url)), "../../../src/app/conciliacion");
   const archivos = readdirSync(carpeta).filter((a) => /\.tsx?$/.test(a));
 
   it("encuentra la página y su componente (si no, no probaría nada)", () => {
@@ -197,7 +200,7 @@ describe("candados de src/app/conciliacion", () => {
 
   it("todo es del servidor: sin «use client» ni HTML crudo", () => {
     for (const a of archivos) {
-      const fuente = readFileSync(new URL(a, carpeta), "utf8");
+      const fuente = readFileSync(join(carpeta, a), "utf8");
       expect(fuente, a).not.toMatch(/["']use client["']/);
       expect(fuente, a).not.toContain("dangerouslySetInnerHTML");
     }
