@@ -185,8 +185,10 @@ Después se agregan a mano con `sudo nano`, sin pegarlas en la terminal:
   - Los pone **Jelk**, o un script que él corre, sin que pasen por el chat ni por un log.
   - La Fábrica no los lee: ni en pruebas ni en scripts se toca `~/.config/odin/`.
 
-**`INV_PRECIOS_DATABASE_URL`, el rol `inv_precios` del servicio de precios.** Es opcional mientras ese servicio no esté desplegado.
-- **Sin la línea,** `crear-roles-prod.sh` omite `inv_precios` y lo avisa: no lo crea ni le cambia la clave. Con la línea vacía o mal formada, aborta sin tocar Docker (y tampoco rota las otras dos claves).
+**`INV_PRECIOS_DATABASE_URL`, el rol `inv_precios` del servicio de precios.** **El rol existe desde que Jelk corre `crear-roles-prod.sh` una vez** (decisión del CEO): el script lo crea siempre, y la línea solo decide si entra.
+- **Sin la línea,** `crear-roles-prod.sh` deja `inv_precios` **NOLOGIN y sin clave**, también si antes tenía LOGIN, y lo avisa. Quitar la línea lo desactiva; las conexiones abiertas siguen hasta que se cierren.
+- **Con la línea,** le da LOGIN y su clave en una sola sentencia, por la entrada estándar. Con la línea vacía o mal formada, aborta sin tocar Docker (y tampoco rota las otras dos claves).
+- **Mientras el rol no exista** (nadie corrió el script desde este cambio), el migrador omite sus permisos con un aviso y el despliegue sigue igual: no depende de `crear-roles-prod.sh`, que maneja secretos y solo corre Jelk.
 - **Formato:** `postgresql://inv_precios:<clave>@inv-008-db:5432/inversiones?connection_limit=2`, con una clave de `openssl rand -hex 32` distinta de las otras dos.
 - **La agrega Jelk en el VPS, sin verla,** cuando este cambio ya esté desplegado. Agrega la línea solo si no existe, con salto de línea previo si al archivo le falta; si `openssl` falla, no escribe nada. Deja el archivo en 600:
   ```sh
@@ -194,10 +196,16 @@ Después se agregan a mano con `sudo nano`, sin pegarlas en la terminal:
   ```
   - Debe imprimir `600 root` y `1`. La clave no sale en pantalla ni en el historial.
   - Si imprime `0`, la línea ya estaba con otro formato y el comando no la tocó. `crear-roles-prod.sh` abortaría con ella: corríjala con `sudo nano`, sin mostrar la pantalla.
-- **Después,** `sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-roles-prod.sh`. Debe decir «creando o actualizando inv_dueno, inv_app e inv_precios» y `roles listos: inv_app, inv_dueno, inv_precios`.
-- **Los permisos de tablas llegan con el siguiente despliegue que corra el migrador** (no con `--sin-migrar`): los da `privilegios.sql`. Hasta entonces `inv_precios` se conecta y no lee nada.
-- **Una vez creado el rol, la línea no se quita.** Los respaldos traen los permisos de `inv_precios`, y en una restauración (§6) `pg_restore --exit-on-error` se detiene en el primero si `crear-roles-prod.sh` no creó el rol (comprobado en una base de prueba con un rol temporal). Para cortarle el acceso, se rota su clave.
-  - Lo mismo en la restauración real de prueba en el Mac (§6, trimestral): su archivo ficticio debe traer una `INV_PRECIOS_DATABASE_URL` ficticia.
+- **Después,** `sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-roles-prod.sh`. Debe decir «creando o actualizando inv_dueno, inv_app e inv_precios (con su clave; claves por stdin)» y `roles listos: inv_app, inv_dueno, inv_precios`. Sin la línea dice «(sin LOGIN)» en los dos mensajes.
+- **Los permisos de tablas llegan con el siguiente despliegue que corra el migrador** (no con `--sin-migrar`): los da `privilegios.sql`. Hasta entonces `inv_precios` no lee nada.
+- **Lo que puede escribir lo acotan disparadores** (migración `20261121231049_precios_integridad`, para todo rol que no sea dueño de las tablas):
+  - un cierre VERIFICADO solo si cuadra (±1 %) con la certificación de A&V de ese día, y con su referencia y su desviación exactas;
+  - solo la fuente del servicio (`yahoo` o la SFC), sin precios ni valores fuera del rango del código (también NaN) ni días futuros;
+  - `traidoEn` y `reemplazadoEn` los pone la base; solo se retira un vigente, nunca se reabre, se vuelve a fechar ni se borra.
+  - el guardián del esquema detiene el despliegue si `inv_app` o `inv_precios` llegan a ser miembros del dueño de esas tablas (eso los eximiría).
+  - **Riesgo residual:** con su clave, un precio falso dentro del ±1 % de la valoración de A&V entra como VERIFICADO (la base lo recalcula con el precio que recibe); se pueden insertar precios falsos NO_VERIFICADO, también en días con certificación y de cualquier instrumento; retirar vigentes de cualquier fuente, también en masa y sin sucesor (la historia queda, pero la valoración se queda sin cierre), e insertar valores de unidad falsos dentro del rango de la SFC. La base no puede comparar contra Yahoo ni contra la SFC.
+- **Restauración (§6):** desde que el rol existe, los respaldos traen sus GRANT, y `pg_restore --exit-on-error` se detendría en el primero si el rol faltara. Como `crear-roles-prod.sh` lo crea siempre (NOLOGIN sin la línea), la restauración ya no depende de la línea, y la restauración trimestral del Mac no necesita una URL ficticia. Se ensayó en `inv-008-prueba`: con el rol NOLOGIN, `pg_restore` sale con 0; sin el rol, se detiene.
+- **Para cortarle el acceso:** quitar la línea y correr `crear-roles-prod.sh` (queda NOLOGIN y sin clave), o rotar su clave.
 
 **Clave de `age`.** Se genera en el Mac. La **privada** va directo al gestor de contraseñas de Jelk y **nunca** va al VPS. Al VPS solo va la **pública** (`age1…`).
 ```sh
@@ -259,12 +267,12 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
      - `token_acceso`: UPDATE de `usadoEn`;
      - `intento_ingreso`: INSERT;
      - `codigo_recuperacion`: INSERT, y UPDATE de `usadoEn` y `anuladoEn` (nunca DELETE).
-   - `inv_precios`, solo si el archivo trae `INV_PRECIOS_DATABASE_URL` (§2). Todo por columna, con lo que usan `precios:actualizar` y `actualizar-fondo`:
+   - `inv_precios`, si el rol existe (desde la primera corrida de `crear-roles-prod.sh`, §2). Todo por columna, con lo que usan `precios:actualizar` y `actualizar-fondo`:
      - lee las especies y los fondos de `instrumento`, de `lote` solo `instrumentoId` (qué especies tienen lote), los símbolos y clases, el calendario, y de la certificación solo la fecha de corte y el precio de valoración;
      - `precio_cierre` y `valor_unidad_fondo`: INSERT sin `reemplazadoEn` (lo que inserta nace vigente) y UPDATE solo de `reemplazadoEn`;
      - nada de usuario, órdenes, filas crudas, cantidades ni costos; sin DELETE ni TRUNCATE.
-     - **Riesgo conocido:** quien tenga su clave puede insertar cierres o valores falsos (también como VERIFICADO) y, con el UPDATE de `reemplazadoEn`, retirar o reabrir vigentes. Ningún disparador lo acota todavía: va en una migración aparte, antes de desplegar el servicio.
-   - Esos permisos los aplica el migrador. Los de `inv_precios` se omiten si el rol no existe.
+     - lo que escribe lo acotan los disparadores de `20261121231049_precios_integridad` (§2): un VERIFICADO solo si cuadra con la certificación del día, nada de reabrir, volver a fechar ni borrar. **Riesgo residual** (detalle en §2): un precio falso dentro del ±1 % entra como VERIFICADO; precios falsos NO_VERIFICADO de cualquier día e instrumento; retiros de vigentes, también en masa; valores de unidad falsos dentro del rango.
+   - Esos permisos los aplica el migrador. Los de `inv_precios` se omiten, con un aviso, mientras el rol no exista.
 3. **Desplegar:**
    ```sh
    sudo <raíz>/repo/008-2026-INVERSIONES/scripts/desplegar-prod.sh <id-imagen> \
@@ -371,7 +379,7 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
 **(A) Volumen nuevo, o el VPS perdido.** Con el VPS perdido, primero la §2 completa, incluida `inv-008.conf`. En el VPS:
 ```sh
 $COMPOSE up -d --wait inv-008-db                           # la base nace vacía (POSTGRES_DB)
-sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-roles-prod.sh
+sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-roles-prod.sh   # crea también inv_precios (NOLOGIN sin su línea): sin él, pg_restore se detendría en sus GRANT
 ```
 En el Mac, con el respaldo de la copia de IDC:
 ```sh
@@ -382,6 +390,9 @@ pbpaste | docker run --rm -i --network none -v ~/<copia>/inversiones:/r:ro --ent
 En el VPS:
 ```sh
 sudo env INV_TAG=<sha> $COMPOSE run --rm -T inv-008-migrador    # migraciones, guardián del esquema y privilegios
+```
+- Use la imagen del sha que corría al tomar el respaldo, o una posterior. El guardián de una imagen anterior a una migración del respaldo se detiene: ve sus objetos como sobrantes (p. ej., los disparadores de `…_precios_integridad`).
+```sh
 sudo env INV_TAG=<sha> $COMPOSE up -d --wait                    # app, entrada, vigía y respaldo (necesita $R: ver §1)
 ```
 
@@ -512,7 +523,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
    ```
    Después se despliega de nuevo, normal.
 - Nunca `migrate resolve --applied` para una migración que falló: marcaría como aplicado algo que no está.
-- Tres de las 12 migraciones toman `SET LOCAL lock_timeout = '5s'` (hoy, las del 2026-11-21). La app vieja y el respaldo diario ya están detenidos mientras migra (§4.3). El `lock_timeout` queda para lo que el despliegue no controla, por ejemplo una sesión de `psql` abierta a mano: si algo retiene una tabla, el migrador falla rápido, se deshace y se sigue este mismo procedimiento.
+- Cuatro de las 14 migraciones toman `SET LOCAL lock_timeout = '5s'`: `fk_restrict_indices`, `usuario_transiciones_checks`, `asignacion_coherente` y `precios_integridad`. La app vieja y el respaldo diario ya están detenidos mientras migra (§4.3). El `lock_timeout` queda para lo que el despliegue no controla, por ejemplo una sesión de `psql` abierta a mano: si algo retiene una tabla, el migrador falla rápido, se deshace y se sigue este mismo procedimiento.
 
 
 ## 11 · Carga de los datos del dueño: vía B, la importación fresca
@@ -688,6 +699,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.12 · 2026-11-21 · 18:32 (-05) · Inversiones · Fábrica Inversiones (frente precios-integridad) · §2: `inv_precios` existe desde la primera corrida de `crear-roles-prod.sh` (NOLOGIN y sin clave sin su línea; quitarla lo desactiva), la restauración ya no depende de la línea (ensayada), los disparadores de `20261121231049_precios_integridad` y el riesgo residual completo; §4: permisos «si el rol existe»; §6 (A): `crear-roles-prod.sh` crea `inv_precios` y el guardián de una imagen anterior ve sobrantes; §10: las 4 migraciones con `lock_timeout`
 > v2.11 · 2026-11-21 · 17:48 (-05) · Inversiones · Fábrica Inversiones (frente fondo-carga) · §11: el fondo por la vía B: paso 10 `registrar-fondo` por el sobre (lista blanca), paso 12 los valores de unidad (`fondo:exportar` en el Mac con `umask 077` → `importar-valores-fondo` por el sobre, camino único), formato exacto del CSV, la regla T−2 (solo el valor del día del corte) y el hueco de las unidades del fondo; los pasos de los precios pasan de 10–12 a 11, 13 y 14 (la numeración v2.11 sigue a la v2.10 de main)
 > v2.10 · 2026-11-21 · 17:01 (-05) · Inversiones · Fábrica Inversiones (frente precios-rol) · §2: `INV_PRECIOS_DATABASE_URL` opcional, cómo la agrega Jelk sin verla (y sin escribir nada si `openssl` falla), cuándo llegan los permisos y por qué la línea no se quita (restauración); §4: los permisos por columna de `inv_precios`
 > v2.9 · 2026-11-21 · 16:03 (-05) · Inversiones · Fábrica Inversiones (frente reglas-exportar-restauracion) · §6: frecuencias de las pruebas de restauración (mensual ligera, trimestral real del caso (A), (B) al cambiar el esquema); §11: `precios:exportar` con los símbolos del portafolio, la Fábrica solo con orden del CEO Inversiones
