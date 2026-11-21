@@ -77,6 +77,12 @@ describe("contrastarConValorUnidad (unidades × valor de unidad del mismo día, 
     expect(contrastarConValorUnidad("1031.77246", "4702113.8167", "4584.13617")).toBe("NO_CUADRA");
   });
 
+  it("en el borde exacto del 0,5 % del monto cuadra; una diezmilésima más allá, no", () => {
+    // |1237.4 − 1231.213| = 6.187 = 1237.4 × 0,005.
+    expect(contrastarConValorUnidad("1", "1237.4", "1231.213")).toBe("CUADRA");
+    expect(contrastarConValorUnidad("1", "1237.4001", "1231.213")).toBe("NO_CUADRA");
+  });
+
   it("sin el valor de unidad del día: SIN_VALOR_UNIDAD (nunca se usa el de otro día)", () => {
     expect(contrastarConValorUnidad("1031.77246", "4729785.4531", null)).toBe("SIN_VALOR_UNIDAD");
   });

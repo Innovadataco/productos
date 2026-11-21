@@ -27,6 +27,18 @@ describe("movimiento_fondo y ajuste_caja · un solo camino de escritura", () => 
     expect([...usos].sort()).toEqual(["src/fondo/movimiento.ts ajusteCaja.create", "src/fondo/movimiento.ts movimientoFondo.create"]);
   });
 
+  it("el patrón de SQL crudo reconoce el nombre con esquema y con comillas (code-reviewer, MEDIO)", () => {
+    for (const sql of [
+      "INSERT INTO ajuste_caja", 'INSERT INTO "movimiento_fondo"', "INSERT INTO public.ajuste_caja", 'INSERT INTO "public"."movimiento_fondo"',
+      'UPDATE public."ajuste_caja"', "DELETE FROM public.movimiento_fondo", 'COPY "public".ajuste_caja', "const a = tx.ajusteCaja;",
+    ]) {
+      expect(ESCRITURA_CRUDA.test(sql), sql).toBe(true);
+    }
+    for (const sql of ["SELECT * FROM public.ajuste_caja", "BEFORE DELETE OR UPDATE ON public.movimiento_fondo", "INSERT INTO ajuste_caja_viejo"]) {
+      expect(ESCRITURA_CRUDA.test(sql), sql).toBe(false);
+    }
+  });
+
   it("ningún módulo ni script los escribe con SQL crudo ni guarda el delegado en una variable", () => {
     expect(todos().filter((a) => ESCRITURA_CRUDA.test(readFileSync(a, "utf8"))).map(relativo)).toEqual([]);
   });
