@@ -205,7 +205,7 @@ dos --ahora a la vez → los dos bien: inv-008-20261121-043628-par y inv-008-202
 # pg_dump real: cada .age se descifró fuera del contenedor y pg_restore --list leyó 32 TABLE DATA (0640, sha256 bien)
 ```
 
-**Ronda app-sin-salida** (2026-11-21, Colima arm64, Docker 29.5.2, Compose 5.3.1; imágenes arm64 del sha viejo `15e6b401`, de antes de la entrada, y del nuevo `9d657741`; mismo proyecto `inv-008-prueba` con su candado; la entrada publicada en otro puerto del Mac, nunca el 5008 ni el 5438; secretos ficticios; `down -v` al final). Las direcciones se taparon. Salidas reales, recortadas:
+**Ronda app-sin-salida** (2026-11-21, Colima arm64, Docker 29.5.2, Compose 5.3.1; imágenes arm64 del sha viejo `15e6b401`, de antes de la entrada, y del nuevo `1ba6c064`; mismo proyecto `inv-008-prueba` con su candado; la entrada publicada en otro puerto del Mac, nunca el 5008 ni el 5438; secretos ficticios; `down -v` al final). Las direcciones se taparon. Salidas reales, recortadas:
 
 ```text
 # 1 · el sha viejo (la app con el puerto y en la red con salida) → DEPLOY VERIFICADO 15e6b401… · / → 307 · API → 401
@@ -217,17 +217,18 @@ LÍNEA BASE base → host: puerta de enlace de la red interna :22=LLEGA
 ❌ [desplegar-prod] control positivo caído (fuera de Inversiones): en 3 intentos la entrada no resolvió o no alcanzó api.telegram.org:443 …
 [desplegar-prod] vuelta atrás hecha: corre 15e6b401…
 sitio ARRIBA con la imagen vieja y el compose nuevo: / → 307 · API → 401 · /api/salud → ok, 15e6b401… · redes: «true isolated», las dos
-# 3 · el sha nuevo → DEPLOY VERIFICADO 9d657741… · / → 307 · API → 401 · /api/salud → ok, 9d657741…
+# 3 · el sha nuevo → DEPLOY VERIFICADO 1ba6c064… · / → 307 · API → 401 · /api/salud → ok, 1ba6c064…
 # 4 · no salida y aislamiento
 docker port: entrada [5008/tcp -> 127.0.0.1:<puerto del ensayo>] · app [] · base []
 la entrada resuelve y llega a la sonda (control positivo) · app → sonda:443 · rc 1 · «nc: <ip> (<ip>:443): Network unreachable»
 la app no resuelve nombres de internet · wget de la app a Telegram falla · la app llega a la base (5432)
 app y base → host (puerta de enlace de la red con salida, del puente por defecto e IP de la VM, en 22/80/5432): no, en todos
-  (la única respuesta fue el 5432 de la .1 de la red interna aislada, que ahora es de «inv-008-db-1»: la propia base, no el host)
+  (la dirección que era la puerta de enlace de la red interna vieja ya no es del host: tras recrear la red aislada, la .1 es
+  de «inv-008-db-1», la propia base; por eso esa dirección sale de la sonda del host)
 el vigía sale (Telegram → 302) · ni el vigía ni la entrada llegan a la base
 entrada: 9,8 MiB / 32 MiB · 12 pids
 # 5 · reversa a un sha anterior al cambio, con el clon en el nuevo
-[desplegar-prod] reversa con el compose del clon (9d657741…, desde el sha que corre 9d657741…): solo la imagen vuelve a 15e6b401…
+[desplegar-prod] reversa con el compose del clon (1ba6c064…, desde el sha que corre 1ba6c064…): solo la imagen vuelve a 15e6b401…
 DEPLOY VERIFICADO 15e6b401… · / → 307 · API → 401 · /api/salud → ok, 15e6b401… · el clon no se movió · vuelta al nuevo: DEPLOY VERIFICADO
 # 6 · pausa de PI: docker stop por etiqueta y docker start con la app y la base al final → / → 307 · entrada healthy
 # 7 · pausar-008.sh → 0 contenedores y 0 redes · reanudar-008.sh → redes «true isolated» · / → 307 · la app sigue sin llegar al host
@@ -235,7 +236,8 @@ DEPLOY VERIFICADO 15e6b401… · / → 307 · API → 401 · /api/salud → ok, 
 
 **Lo que encontró esta ronda y se corrigió antes de la GATE 2:**
 - con el compose nuevo sobre la red interna de antes, Compose no la recreaba («container … is not connected to the network»): el `up` y la vuelta atrás fallaban y el sitio quedaba caído. Ahora `desplegar-prod.sh` hace un `down` sin `-v` antes (ronda 2 arriba);
-- sin `-v`, el `nc` de busybox no dice por qué no conectó: la prueba de no salida daba un falso rojo. Ahora usa `nc -z -v`.
+- sin `-v`, el `nc` de busybox no dice por qué no conectó: la prueba de no salida daba un falso rojo. Ahora usa `nc -z -v`;
+- la retención de imágenes de `desplegar-prod.sh` (`purgar_imagenes`) también corre en el modo de prueba y, en el Docker compartido del Mac, borró las imágenes `inv-008-*` de otros frentes en la primera corrida de esta ronda. Desde la segunda, el ensayo usa un `docker` envoltorio que no borra imágenes. El script no cambió: queda como hallazgo aparte.
 
 **Lo que NO se verificó en local:**
 - el puerto en `127.0.0.1:5008` del VPS: el override de los ensayos lo quita o lo pone en otro puerto del Mac;
