@@ -40,12 +40,12 @@ function argumentos() {
 
 async function main(): Promise<SalidaCli> {
   const a = argumentos();
-  if (a === null) return salidaArgumentosInvalidos(OPCIONES_REGISTRAR);
+  if (a === null) return salidaArgumentosInvalidos(OPCIONES_REGISTRAR, opciones);
   const v = validarEscision({
     origen: a.origen ?? "", destino: a.destino ?? "", fecha: a.fecha ?? "",
     razon: a.razon, pagoFraccion: a["pago-fraccion"], montoFraccion: a["monto-fraccion"], nota: a.nota,
   });
-  if (!v.ok) return salidaDatosInvalidos(v.errores);
+  if (!v.ok) return salidaDatosInvalidos(v.errores, opciones);
   const db = new PrismaClient();
   try {
     return salidaEventoRegistrado(await registrarEscision(db, v.valor, { crearDestino: a["crear-destino"] === true }), opciones);
@@ -56,12 +56,12 @@ async function main(): Promise<SalidaCli> {
   }
 }
 
-// exitCode y no exit(): en macOS stdout por tubería es asíncrono y exit() podría cortar la salida.
-main().then(
-  (s) => {
+// exitCode y no exit(): en macOS stdout por tubería es asíncrono y exit() podría cortar la salida. El catch va
+// después del then: también atrapa un fallo al escribir la salida (no se sabe qué llegó a verse).
+main()
+  .then((s) => {
     process.exitCode = emitir(s, console);
-  },
-  (e: unknown) => {
+  })
+  .catch((e: unknown) => {
     process.exitCode = emitir(salidaInesperada(e, opciones), console);
-  },
-);
+  });
