@@ -89,6 +89,26 @@ describe("CLI importar-trii", POR_PRUEBA, () => {
     expect(await db.usuario.count({ where: { email: otro } })).toBe(0);
   });
 
+  // O1: `--email --crear-dueno a.csv` tomaba «--crear-dueno» como el correo y, sin dueño, creaba un DUENO con él.
+  // Aquí siempre hay un dueño (beforeAll): se afirma que sale por los ARGUMENTOS, no por «Ya hay un dueño».
+  it("--email seguido de una opción sale con 2 por los argumentos y no crea la cuenta «--crear-dueno»", async () => {
+    const ruta = archivo("opcion-correo-cli.ficticio.csv", `${DIVIDENDOS}2026-03-03,${nemo("OC")},,1.0\n`);
+    const s = correr("importar-trii.ts", ["--email", "--crear-dueno", ruta]);
+    comprobar(s, 2, "--email necesita un correo válido", [carpeta]);
+    expect(s.texto).not.toContain("Ya hay un dueño");
+    expect(await db.usuario.count({ where: { email: "--crear-dueno" } })).toBe(0);
+  });
+
+  it("un archivo que no existe sale con 2 antes de abrir la base: no crea el dueño ni registra la carga (G4)", async () => {
+    const otro = `archivo-mal-${corrida.toLowerCase()}@ejemplo.invalid`;
+    const nombre = `no-existe-${corrida}.ficticio.csv`;
+    const s = correr("importar-trii.ts", ["--email", otro, "--crear-dueno", join(carpeta, nombre)]);
+    comprobar(s, 2, "El archivo 1 de 1 no existe o no es un archivo", [otro, nombre, carpeta]);
+    expect(s.texto).not.toContain("Ya hay un dueño");
+    expect(await db.usuario.count({ where: { email: otro } })).toBe(0);
+    expect(await db.cargaArchivo.count({ where: { nombreArchivo: nombre } })).toBe(0);
+  });
+
   it("--crear-dueno con un dueño ya registrado sale con 2 y no crea otro", async () => {
     // El dueño de beforeAll garantiza que ya hay uno, sea cual sea el orden de los archivos.
     const otro = `segundo-dueno-${corrida.toLowerCase()}@ejemplo.invalid`;
