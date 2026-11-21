@@ -33,7 +33,7 @@ const yahoo = (cierre: number): Buscar => async () =>
 
 interface Fila { id: string; instrumentoId: string; fecha: Date; precio: Prisma.Decimal; fuente: string; reemplazadoEn: Date | null }
 interface Ganchos {
-  antesDeReemplazar?: (filas: Fila[]) => void; // otra corrida actúa entre la lectura y el reemplazo
+  antesDeReemplazar?: (filas: Fila[], intento: number) => void; // otra corrida actúa entre la lectura y el reemplazo
   antesDeCrear?: (filas: Fila[], intento: number) => void; // otra corrida guarda antes que esta, o falla la inserción
 }
 type Donde = { id?: string; instrumentoId?: string; fecha?: Date; fuente?: string; reemplazadoEn?: null };
@@ -47,7 +47,8 @@ function baseFalsa(previas: readonly Fila[], ganchos: Ganchos = {}) {
   const llamadas = { crear: 0, certificacion: 0, reemplazos: 0 };
   const vigenteDe = (w: Donde) => (f: Fila) => f.instrumentoId === w.instrumentoId && f.fecha.getTime() === w.fecha?.getTime() && f.fuente === w.fuente && f.reemplazadoEn === null;
   const reemplazar = (w: Donde, cuando: Date): number => {
-    if (llamadas.reemplazos++ === 0) ganchos.antesDeReemplazar?.(filas);
+    llamadas.reemplazos += 1;
+    ganchos.antesDeReemplazar?.(filas, llamadas.reemplazos);
     const blanco = filas.filter((f) => f.id === w.id && (!("reemplazadoEn" in w) || f.reemplazadoEn === null));
     for (const f of blanco) f.reemplazadoEn = cuando;
     return blanco.length;
@@ -84,7 +85,8 @@ const vigentes = (filas: readonly Fila[]) => filas.filter((f) => f.reemplazadoEn
 describe("actualizarPrecios · guardado ante corridas simultáneas (base falsa)", () => {
   it("si otra corrida reemplaza el vigente entre la lectura y el reemplazo, se relee: sin error y sin pisar su historia", async () => {
     const { db, filas } = baseFalsa([fila("v1", 500)], {
-      antesDeReemplazar: (fs) => {
+      antesDeReemplazar: (fs, intento) => {
+        if (intento > 1) return;
         fs.find((f) => f.id === "v1")!.reemplazadoEn = OTRA_CORRIDA;
         fs.push(fila("w1", 600));
       },
@@ -97,8 +99,8 @@ describe("actualizarPrecios · guardado ante corridas simultáneas (base falsa)"
 
   it("si el vigente deja de serlo sin sucesor entre la lectura y el reemplazo, se relee y el cierre cuenta como nuevo", async () => {
     const { db, filas } = baseFalsa([fila("v1", 500)], {
-      antesDeReemplazar: (fs) => {
-        fs.find((f) => f.id === "v1")!.reemplazadoEn = OTRA_CORRIDA;
+      antesDeReemplazar: (fs, intento) => {
+        if (intento === 1) fs.find((f) => f.id === "v1")!.reemplazadoEn = OTRA_CORRIDA;
       },
     });
     const r = await correr(db, 600);
@@ -129,6 +131,18 @@ describe("actualizarPrecios · guardado ante corridas simultáneas (base falsa)"
     expect(r.fallidas).toEqual([{ instrumentoId: ESPECIE, codigo: "GUARDADO_ERROR", detalle: "PrismaClientKnownRequestError P2002", barrasGuardadas: 0, barrasFallidas: 1 }]);
     expect(llamadas.crear).toBe(MAX_INTENTOS_GUARDADO);
     expect(JSON.stringify(r)).not.toContain("654321");
+  });
+
+  it(`si otra corrida reemplaza el vigente en cada intento, se rinde a los ${MAX_INTENTOS_GUARDADO} con GUARDADO_ERROR «ConflictoConcurrente»`, async () => {
+    const { db, llamadas } = baseFalsa([fila("v1", 500)], {
+      antesDeReemplazar: (fs, intento) => {
+        for (const f of fs) if (f.reemplazadoEn === null) f.reemplazadoEn = OTRA_CORRIDA;
+        fs.push(fila(`w${intento}`, 700 + intento));
+      },
+    });
+    const r = await correr(db, 600);
+    expect(r.fallidas).toEqual([{ instrumentoId: ESPECIE, codigo: "GUARDADO_ERROR", detalle: "ConflictoConcurrente", barrasGuardadas: 0, barrasFallidas: 1 }]);
+    expect(llamadas).toMatchObject({ reemplazos: MAX_INTENTOS_GUARDADO, crear: 0 });
   });
 
   it("un error que no es conflicto no se reintenta", async () => {
