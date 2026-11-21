@@ -380,7 +380,11 @@ sudo env INV_TAG=<sha> $COMPOSE up -d --wait                    # app, entrada, 
   - pause cualquier gestor con historial del portapapeles (Raycast, Alfred, Paste…): `pbcopy < /dev/null` solo vacía el portapapeles actual, no ese historial.
 - **La sesión:** use una pestaña nueva de la Terminal y ciérrela al terminar. Así no quedan activos `umask`, `V` ni `D`.
 - **Qué prueba:** que la clave abre el respaldo y que `pg_restore` lo lee entero. Solo imprime conteos.
-- **Lo que no prueba:** la restauración real de los casos (A) y (B) en una base, con la app respondiendo `ok`. Esa es la prueba fuerte y su frecuencia la decide el CEO.
+- **Lo que no prueba:** la restauración real en una base, con la app respondiendo `ok`. Esa es la prueba fuerte.
+- **Frecuencias** (decisión del CEO, 2026-11-21; la agenda, en `ESTADO.md` de la gestión):
+  - **Mensual:** esta prueba ligera, abrir la clave y leer el respaldo, con conteos.
+  - **Trimestral:** la restauración real del caso (A) en un proyecto de prueba del Mac, con los conteos por tabla iguales y la app respondiendo `ok`. La primera, antes de 2027-02-21.
+  - **Caso (B):** se prueba cuando cambie el esquema de respaldo.
 
 1. **Carpeta de trabajo, en el home y en 700.**
    - **Por qué en el home:** Docker Desktop no ve `/private/tmp` ni el `TMPDIR` de macOS. Si la carpeta ya existe, de un intento anterior, bórrela primero (paso 4).
@@ -560,7 +564,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 | 12 | La conciliación otra vez, con los precios ya cargados | `conciliar-certificacion` | `--fecha-corte` y la fecha | — |
 
 **Los precios (paso 11): se exportan en el Mac del dueño y viajan en el sobre.** Producción no tiene salida a internet: la app y el migrador no llegan a Yahoo.
-1. **En el Mac del dueño, que sí tiene red,** se exportan los cierres. La lista de nemotécnicos (uno por línea; `#` comenta) la crea el dueño en su carpeta privada; la Fábrica nunca la lee:
+1. **En el Mac del dueño, que sí tiene red,** se exportan los cierres. La lista de nemotécnicos (uno por línea; `#` comenta) la crea el dueño en su carpeta privada. **La Fábrica lo corre con los símbolos del portafolio solo con orden del CEO Inversiones** (decisión del CEO, 2026-11-21): saca la lista de producción (acción activa con lotes) sin imprimirla, la deja con el CSV en una carpeta 700 (`umask 077`) y la borra al terminar, junto con el CSV. Para la Fábrica, `<carpeta-privada>` es esa carpeta 700 que ella crea: nunca escribe en la carpeta privada del dueño. Con la misma orden corre también el paso 2:
    ```sh
    umask 077
    npm run -s precios:exportar -- --nemos <carpeta-privada>/nemos.txt --desde <fecha> > <carpeta-privada>/precios.csv.parcial \
@@ -568,7 +572,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
    ```
    - **`-s` es obligatorio:** sin él, npm escribe su encabezado en stdout y queda dentro del CSV (el importador lo rechaza por el encabezado). Sirve también `npx tsx scripts/exportar-precios.ts …`.
    - **El `&& mv`:** la shell crea el archivo aunque el exportador falle; con `.parcial` y `mv`, solo un CSV completo (salida 0) queda con su nombre. Con salida 3 (alguna especie quedó fuera, por su línea de la lista), el CSV de las demás es válido: se decide a conciencia si se usa (`mv` a mano) o se repite.
-   - **El CSV no es público:** el conjunto de especies es la composición del portafolio. Va en la carpeta privada, con `umask 077`; nunca al repo. El exportador se niega a escribirlo en una terminal y por stderr solo da conteos, códigos y números de línea de la lista.
+   - **El CSV no es público:** el conjunto de especies es la composición del portafolio. Va en `<carpeta-privada>`, con `umask 077`; nunca al repo. El exportador se niega a escribirlo en una terminal y por stderr solo da conteos, códigos y números de línea de la lista.
    - Pide `<NEMO>.CL` en serie, con una pausa entre pedidos; `--hasta` por defecto es hoy y el rango llega a 1830 días. Nunca deja una barra que aún no es definitiva **al exportar** (la de hoy antes de la hora).
 2. **El CSV viaja por stdin, en el sobre,** como los demás archivos: `scripts/armar-sobre.sh /dev/null <carpeta-privada>/precios.csv | ssh <vps> …/scripts/cargar-prod.sh importar-precios`. `inv-cargar` lo deja en el temporal `precios.csv` (tope 4 MiB) y `precios:importar` lo valida **entero** antes de abrir la base: con un error no guarda nada.
    - «Todo o nada» es la validación. La escritura es por barra, como en `precios:actualizar`: si la carga se corta a mitad, queda lo guardado hasta ahí y repetir el mismo paso completa sin duplicar.
@@ -613,6 +617,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.9 · 2026-11-21 · 17:05 (-05) · Inversiones · Fábrica Inversiones (frente reglas-exportar-restauracion) · §6: frecuencias de las pruebas de restauración (mensual ligera, trimestral real del caso (A), (B) al cambiar el esquema); §11: `precios:exportar` con los símbolos del portafolio, la Fábrica solo con orden del CEO Inversiones
 > v2.8 · 2026-11-21 · 16:20 (-05) · Inversiones · Fábrica Inversiones (frente runbook-restauracion) · §6: la prueba de restauración mensual con el comando que corrió Jelk (identificar la clave con `age-keygen -y`, el prefijo que falta, verificar solo con conteos en `--network none` y `--platform linux/amd64`, carpeta 700 en el home, limpieza) y sus avisos (Terminal de macOS, clave maestra compartida con PI y BI)
 > v2.7 · 2026-11-21 · 11:14 (-05) · Inversiones · Fábrica ECC (frente precios-carga) · §11: pasos 10 a 12 (certificación, precios por `precios:exportar` en el Mac y `importar-precios` por el sobre, y la conciliación otra vez); formato exacto del CSV de cierres; `-s`, `.parcial` y `&& mv`, `umask 077`; «Después de la carga» sin el pendiente de precios
 > v2.6 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · la carpeta de respaldos en 750 (la copia de IDC depende de eso); montaje del host `nosuid,noexec` revisado por los scripts (por ahora avisa): un bind de Docker no los aplica

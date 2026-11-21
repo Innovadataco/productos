@@ -71,6 +71,15 @@ describe("runbook §6 · prueba de restauración mensual", () => {
     expect(b).toContain('|| echo "FALLÓ: la prueba no pasó"');
   });
 
+  it("fija las frecuencias del CEO: la ligera mensual, la real de (A) trimestral (la primera antes de 2027-02-21) y (B) al cambiar el esquema", () => {
+    const b = pruebaMensual();
+    expect(b).toMatch(/\*\*Mensual:\*\*/);
+    expect(b).toMatch(/\*\*Trimestral:\*\*[^\n]*caso \(A\)[^\n]*`ok`/);
+    expect(b).toContain("antes de 2027-02-21");
+    expect(b).toMatch(/\*\*Caso \(B\):\*\*[^\n]*cambie el esquema de respaldo/);
+    expect(b).not.toContain("su frecuencia la decide el CEO");
+  });
+
   it("los bloques para pegar no llevan comentarios # (zsh interactivo no los reconoce por defecto)", () => {
     const bloques = [...pruebaMensual().matchAll(/```sh\n([\s\S]*?)```/g)].map((m) => m[1] ?? "");
     expect(bloques.length).toBeGreaterThanOrEqual(4);
