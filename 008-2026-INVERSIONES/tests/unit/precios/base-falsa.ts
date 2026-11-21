@@ -15,7 +15,7 @@ export interface ReferenciaFalsa { readonly instrumentoId: string; readonly fech
 export interface EspecieFalsa {
   readonly id: string;
   readonly nemotecnico: string;
-  readonly tipo?: "ACCION" | "FONDO";
+  readonly tipo?: "ACCION" | "FIC";
   readonly activo?: boolean;
   readonly conLotes?: boolean;
   /** Símbolo de Yahoo vigente registrado (simbolo_precio); sin él, `<NEMO>.CL`. */
