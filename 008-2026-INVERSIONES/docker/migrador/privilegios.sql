@@ -35,9 +35,11 @@
 -- VERIFICADO solo si cuadra con la certificación de A&V de ese día (y referencias y desviación exactas), solo la fuente
 -- del servicio, sin precios sobre el tope ni días futuros; traidoEn y reemplazadoEn los pone la base; solo se retira un
 -- vigente, nunca se reabre, se vuelve a fechar ni se borra, y al retirar no cambia otra columna.
--- Riesgo residual: quien tenga su clave puede insertar precios falsos NO_VERIFICADO en días sin certificación,
--- retirar vigentes (la historia queda) e insertar valores de unidad falsos: la base no puede comparar contra Yahoo
--- ni contra la SFC.
+-- Riesgo residual: con su clave, un precio falso dentro del ±1 % de la valoración de A&V entra como VERIFICADO (la base
+-- lo recalcula con el precio que recibe); se pueden insertar precios falsos NO_VERIFICADO, también en días con
+-- certificación, de cualquier instrumento; retirar vigentes de cualquier fuente, también en masa y sin sucesor (la
+-- historia queda, pero la valoración se queda sin cierre), e insertar valores de unidad falsos dentro del rango de la
+-- SFC: la base no puede comparar contra Yahoo ni contra la SFC.
 DO $$
 DECLARE
   t record;

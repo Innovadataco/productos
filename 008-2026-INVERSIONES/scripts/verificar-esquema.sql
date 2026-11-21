@@ -15,6 +15,8 @@
 --    ningún disparador de más en el esquema, y ninguno deshabilitado, ni siquiera los internos de las FK;
 --  - las funciones escritas a mano: una sola por nombre, con el md5 exacto de su código, sin SECURITY DEFINER y con su
 --    SET exacto (proconfig): un ALTER FUNCTION … SECURITY DEFINER no cambia el md5;
+--  - que inv_app e inv_precios no sean miembros del dueño de precio_cierre ni de valor_unidad_fondo (los disparadores
+--    de integridad eximen al dueño);
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 con search_path = public (sacadas de una base recién
 -- migrada); el guardián fija ese search_path para que otro no dé un falso positivo. La lista de nombres sale de
@@ -239,12 +241,12 @@ DECLARE
     ['inv_certificacion_fondo_solo_encargo', '0c694690f57d13c0fbd819a28130c975', ''],
     ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301', ''],
     ['inv_lote_fijo', '6906ddebe6b9194201de631eac40241a', ''],
-    ['inv_precio_cierre_insercion', '00651c5dd0393fa53773bf63e6911f6f', 'search_path=pg_catalog, public'],
-    ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public'],
+    ['inv_precio_cierre_insercion', '00651c5dd0393fa53773bf63e6911f6f', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77', ''],
     ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546', ''],
     ['inv_usuario_transiciones', '368539024fbeaeb771669ff741aa7ed3', ''],
-    ['inv_valor_unidad_fondo_insercion', 'bd26ab74e4430489ea0cc183edc2c6c4', 'search_path=pg_catalog, public']
+    ['inv_valor_unidad_fondo_insercion', '200c0ff4c9421344a810814a97568db0', 'search_path=pg_catalog, public, pg_temp']
   ];
   extensiones text[] := ARRAY['btree_gist', 'citext'];
   listados text[] := '{}';
@@ -360,6 +362,18 @@ BEGIN
     ELSIF n_funciones > 1 OR def <> fila[2] OR definidor OR config <> fila[3] THEN
       distintos := distintos || ('función ' || fila[1]);
     END IF;
+  END LOOP;
+
+  -- Los disparadores de integridad de precios eximen a quien tenga los privilegios del dueño de la tabla: si inv_app o
+  -- inv_precios fueran miembros de él (GRANT inv_dueno TO …), quedarían eximidos o, con SET ROLE, serían el dueño.
+  FOR x IN
+    SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
+    WHERE r.rolname IN ('inv_app', 'inv_precios')
+      AND c.oid IN (to_regclass('public.precio_cierre'), to_regclass('public.valor_unidad_fondo'))
+      AND pg_has_role(r.oid, c.relowner, 'MEMBER')
+    ORDER BY 1
+  LOOP
+    distintos := distintos || ('rol con privilegios del dueño ' || x);
   END LOOP;
 
   FOREACH x IN ARRAY extensiones LOOP

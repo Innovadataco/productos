@@ -10,20 +10,24 @@
 -- un disparador falta, cambia o queda deshabilitado, o si una de estas funciones cambia, pasa a SECURITY DEFINER o
 -- pierde su search_path.
 -- SECURITY INVOKER a propósito: dentro de una SECURITY DEFINER, current_user sería el dueño y la regla no se aplicaría
--- a nadie. Leen como quien escribe (privilegios.sql ya le da a inv_precios esas columnas). Sin salida de escape por
--- GUC: inv_precios podría fijar cualquiera con SET LOCAL.
+-- a nadie. search_path fijo, con pg_temp al final (así un objeto temporal nunca sombrea un tipo o una tabla). Leen
+-- como quien escribe (privilegios.sql ya le da a inv_precios esas columnas). Sin salida de escape por GUC: inv_precios
+-- podría fijar cualquiera con SET LOCAL.
 --
--- Lo que NO cierra (riesgo residual): con la clave de inv_precios se pueden insertar precios falsos NO_VERIFICADO en
--- días sin certificación, retirar vigentes (la historia queda) e insertar valores de unidad falsos. La base no puede
--- comparar contra Yahoo ni contra la SFC.
+-- Lo que NO cierra (riesgo residual): con la clave de inv_precios, un precio falso dentro del ±1 % de la valoración de
+-- A&V entra como VERIFICADO (la base lo recalcula con el precio que recibe); se pueden insertar precios falsos
+-- NO_VERIFICADO, también en días con certificación, de cualquier instrumento; retirar vigentes de cualquier fuente,
+-- también en masa y sin sucesor (la historia queda, pero la valoración se queda sin cierre), e insertar valores de
+-- unidad falsos dentro del rango de la SFC. La base no puede comparar contra Yahoo ni contra la SFC.
 SET LOCAL lock_timeout = '5s';
 
 -- Un cierre del servicio: la verificación contra la certificación de A&V del mismo día la recalcula la base con la
 -- regla de src/precios/guardar.ts (estadoDe) y se rechaza lo que no coincida (el estado y las referencias exactos; la
 -- desviación con un ulp de tolerancia por el redondeo de decimal.js). La fuente, el tope del precio y la fecha son los
--- de guardar.ts, yahoo.ts y csv-cierres.ts. traidoEn lo pone la base. Candado: tests/unit/precios/integridad-migracion.test.ts.
+-- de guardar.ts, yahoo.ts y csv-cierres.ts (el tope también frena un NaN: NaN > 10000000 es verdadero). traidoEn lo
+-- pone la base. Candado: tests/unit/precios/integridad-migracion.test.ts.
 CREATE FUNCTION "inv_precio_cierre_insercion"() RETURNS trigger LANGUAGE plpgsql
-SET search_path = pg_catalog, public AS $$
+SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   hoy date := ((now() AT TIME ZONE 'UTC') - interval '5 hours')::date;
   ref numeric;
@@ -72,10 +76,12 @@ BEGIN
 END;
 $$;
 
--- Un valor de unidad del servicio: solo de la SFC (FUENTE_SFC de src/fondo/sfc.ts), nace vigente, no es de un día
--- futuro; traidoEn lo pone la base. No hay verificación que recalcular.
+-- Un valor de unidad del servicio: solo de la SFC (FUENTE_SFC de src/fondo/sfc.ts), con el rango de leerDecimalSfc
+-- (> 0 y ≤ VALOR_UNIDAD_MAXIMO_COP; el del fondo, nulo o > 0 y ≤ VALOR_FONDO_MAXIMO_COP: así no entra un NaN, que el
+-- CHECK de la tabla deja pasar porque NaN > 0 es verdadero), nace vigente, no es de un día futuro; traidoEn lo pone
+-- la base. No hay verificación que recalcular.
 CREATE FUNCTION "inv_valor_unidad_fondo_insercion"() RETURNS trigger LANGUAGE plpgsql
-SET search_path = pg_catalog, public AS $$
+SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   hoy date := ((now() AT TIME ZONE 'UTC') - interval '5 hours')::date;
 BEGIN
@@ -88,6 +94,10 @@ BEGIN
   END IF;
   IF NEW."fuente" IS DISTINCT FROM 'sfc:qhpu-8ixx' THEN
     RAISE EXCEPTION 'valor_unidad_fondo: el servicio solo guarda valores de la SFC' USING ERRCODE = 'check_violation';
+  END IF;
+  IF NOT (NEW."valorUnidad" > 0 AND NEW."valorUnidad" <= 10000000)
+     OR (NEW."valorFondo" IS NOT NULL AND NOT (NEW."valorFondo" > 0 AND NEW."valorFondo" <= 10000000000000000)) THEN
+    RAISE EXCEPTION 'valor_unidad_fondo: valor fuera de rango' USING ERRCODE = 'check_violation';
   END IF;
   IF NEW."fechaValor" > hoy THEN
     RAISE EXCEPTION 'valor_unidad_fondo: no hay valores de días futuros' USING ERRCODE = 'check_violation';
@@ -102,7 +112,7 @@ $$;
 -- retirarVigentes y depurar-precios). Las guardas de guardar.ts y fondo (`reemplazadoEn: null` en el WHERE) hacen que
 -- una carrera nunca llegue aquí: la fila ya retirada no se selecciona.
 CREATE FUNCTION "inv_retiro_vigente"() RETURNS trigger LANGUAGE plpgsql
-SET search_path = pg_catalog, public AS $$
+SET search_path = pg_catalog, public, pg_temp AS $$
 BEGIN
   IF pg_has_role((SELECT c.relowner FROM pg_catalog.pg_class c WHERE c.oid = TG_RELID), 'USAGE') THEN
     RETURN COALESCE(NEW, OLD);
