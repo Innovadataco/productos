@@ -107,21 +107,25 @@ describe("conciliarCertificacion: fondo, efectivo e historia", () => {
   it("con las unidades del fondo y el valor de unidad del corte, el fondo cuadra; con la caja completa, el efectivo también", async () => {
     const c = await caso();
     await cierres(c, ["1000", "20", "30000"]);
-    // Compras: 150 000 + 40 000 + 300 000 = 490 000. Depósito 5 491 000, aporte al fondo −5 000 000 → caja 1 000.
+    // La caja es de toda la cuenta (en la base de pruebas, también de los otros casos): se mide la de antes y se
+    // completa con un depósito para que, junto con el aporte al fondo de −5 000 000, quede en los 1 000 certificados.
     const antes = new Date(c.fecha.getTime() - 20 * DIA);
+    const previa = (await controles((await conciliarCertificacion(db, { fechaCorte: c.fecha })).conciliacionId)).find((x) => x.tipo === "EFECTIVO")!;
+    const deposito = dec("1000").sub(previa.esperado!).add("5000000");
     const carga = await importarArchivoTrii(db, {
       nombreArchivo: `caja-${k}.ficticio.csv`, usuarioId: duenoId,
-      contenido: new TextEncoder().encode(`Fecha y hora,Tipo de movimiento,Estado,Valor total\n${trii(antes)},Depósito,Aprobado,5491000.0\n`),
+      contenido: new TextEncoder().encode(`Fecha y hora,Tipo de movimiento,Estado,Valor total\n${trii(antes)},Depósito,Aprobado,${deposito.toFixed(1)}\n`),
     });
     expect(carga.estado).toBe("CARGADO");
     const ajuste = await db.ajusteCaja.create({ data: { fecha: antes, monto: dec("-5000000"), categoria: "APORTE_FIC", fuente: "MANUAL", motivo: "aporte ficticio", creadoPorId: duenoId } });
     await db.movimientoFondo.create({ data: { fondoId: c.fic.id, fecha: antes, unidades: dec("1000"), tipo: "CONSTITUCION", fuente: "MANUAL", ajusteCajaId: ajuste.id } });
     await db.valorUnidadFondo.create({ data: { fondoId: c.fic.id, fechaValor: c.fecha, valorUnidad: dec("5000") } });
-    const r = await conciliarCertificacion(db, { fechaCorte: c.fecha });
-    const cs = await controles(r.conciliacionId);
-    expect(cs.find((x) => x.tipo === "FONDO")).toMatchObject({ resultado: "CUADRA", esperado: dec("5000000"), real: dec("5000000") });
-    expect(cs.find((x) => x.tipo === "EFECTIVO")).toMatchObject({ resultado: "CUADRA", esperado: dec("1000"), real: dec("1000"), tolerancia: dec("1") });
-    expect(r.resultado).toBe("CUADRA");
+    const cs = await controles((await conciliarCertificacion(db, { fechaCorte: c.fecha })).conciliacionId);
+    const fondo = cs.find((x) => x.tipo === "FONDO")!;
+    expect([fondo.resultado, fondo.esperado?.toString(), fondo.real?.toString()]).toEqual(["CUADRA", "5000000", "5000000"]);
+    const efectivo = cs.find((x) => x.tipo === "EFECTIVO")!;
+    expect([efectivo.resultado, efectivo.esperado?.toString(), efectivo.real?.toString(), efectivo.tolerancia?.toString(), efectivo.codigoMotivo]).toEqual(["CUADRA", "1000", "1000", "1", null]);
+    for (const id of c.ids) expect(cs.filter((x) => x.instrumentoId === id).map((x) => x.resultado)).toEqual(["CUADRA", "CUADRA"]);
   });
 
   it("conciliar otra vez guarda otra conciliación (historia); nada se edita", async () => {
