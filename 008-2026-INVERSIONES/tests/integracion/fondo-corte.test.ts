@@ -17,8 +17,11 @@ const db = new PrismaClient();
 const corrida = String(Date.now()).slice(-4);
 const DIA = 86_400_000;
 const dec = (v: string) => new Prisma.Decimal(v);
-/** Un miércoles hábil de la BVC que no usa ningún otro archivo de integración (la certificación es única por corte). */
-const CORTE = new Date(Date.UTC(2027, 5, 16));
+/**
+ * Un jueves hábil de la BVC que no usa ningún otro archivo de integración: la certificación es única por corte, y los
+ * otros archivos toman miércoles seguidos de 2026 y 2027.
+ */
+const CORTE = new Date(Date.UTC(2025, 9, 16));
 const HOY = new Date(CORTE.getTime() + 2 * DIA);
 const AHORA = new Date(HOY.getTime() + 15 * 3_600_000);
 const dias = (d: number) => new Date(CORTE.getTime() + d * DIA);
