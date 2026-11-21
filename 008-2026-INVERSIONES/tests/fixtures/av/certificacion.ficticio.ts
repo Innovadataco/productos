@@ -54,6 +54,10 @@ export interface OpcionesPdf {
   readonly contenidosEnArreglo?: boolean;
   /** Imagen como PNG de jsPDF (Flate con /DecodeParms y predictor) en vez de JPEG (DCT). */
   readonly imagenConPredictor?: boolean;
+  /** Con comprimir: los content streams llevan /DecodeParms (predictor), que el lector no soporta. */
+  readonly decodeParmsEnContenido?: boolean;
+  /** Páginas en blanco que se agregan al final de /Kids (pruebas del tope de páginas). */
+  readonly paginasVacias?: number;
 }
 
 export const CERTIFICACION_FICTICIA: EspecCertificacion = {
@@ -176,9 +180,16 @@ function filtroImagen(o: OpcionesPdf): string {
 
 type Objeto = string | { readonly dic: string; readonly datos: Buffer };
 
-function flujo(contenido: string, comprimir: boolean): Objeto {
+function flujo(contenido: string, o: OpcionesPdf): Objeto {
+  const comprimir = o.comprimir ?? false;
   const datos = comprimir ? deflateSync(Buffer.from(contenido, "latin1")) : Buffer.from(contenido, "latin1");
-  return { dic: `<<\n/Length ${datos.length}${comprimir ? "\n/Filter /FlateDecode" : ""}\n>>`, datos };
+  const parametros = comprimir && o.decodeParmsEnContenido ? "\n/DecodeParms << /Predictor 12 >>" : "";
+  return { dic: `<<\n/Length ${datos.length}${comprimir ? "\n/Filter /FlateDecode" : ""}${parametros}\n>>`, datos };
+}
+
+/** Páginas en blanco (sin /Contents) numeradas desde 100. */
+function vacias(o: OpcionesPdf): [number, string][] {
+  return Array.from({ length: o.paginasVacias ?? 0 }, (_, i) => [100 + i, "<</Type /Page\n/Parent 1 0 R\n>>"]);
 }
 
 function objetos(espec: EspecCertificacion, o: OpcionesPdf): Map<number, Objeto> {
@@ -187,8 +198,9 @@ function objetos(espec: EspecCertificacion, o: OpcionesPdf): Map<number, Objeto>
   const fuentes = FUENTES.map((base, i) => [10 + i, i === 0 && o.fuenteF1 ? o.fuenteF1 : diccionarioFuente(base)] as const);
   const info = `<<\n/Producer (jsPDF 0.0.0-ficticio)${espec.creadoEn ? `\n/CreationDate (${espec.creadoEn})` : ""}\n>>`;
   return new Map<number, Objeto>([
-    [3, pagina(4)], [4, flujo(c1, o.comprimir ?? false)], [5, pagina(6)], [6, flujo(c2, o.comprimir ?? false)],
-    [1, "<</Type /Pages\n/Kids [3 0 R 5 0 R ]\n/Count 2\n>>"],
+    [3, pagina(4)], [4, flujo(c1, o)], [5, pagina(6)], [6, flujo(c2, o)],
+    [1, `<</Type /Pages\n/Kids [3 0 R 5 0 R ${vacias(o).map(([num]) => `${num} 0 R `).join("")}]\n/Count ${2 + (o.paginasVacias ?? 0)}\n/Resources 2 0 R\n/MediaBox [0 0 ${n(ANCHO)} ${n(ALTO)}]\n>>`],
+    ...vacias(o),
     ...fuentes,
     [2, `<<\n/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]\n/Font <<\n${fuentes.map(([num], i) => `/F${i + 1} ${num} 0 R`).join("\n")}\n>>\n/XObject <<\n/I0 7 0 R\n>>\n>>`],
     [7, { dic: `<<\n/Type /XObject\n/Subtype /Image\n/Width 1\n/Height 1\n/ColorSpace /DeviceGray\n/BitsPerComponent 8\n/Length ${IMAGEN.length}\n${filtroImagen(o)}>>`, datos: IMAGEN }],

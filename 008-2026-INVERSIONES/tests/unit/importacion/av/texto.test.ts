@@ -63,6 +63,11 @@ describe("extraerCeldas: operadores de texto", () => {
     expect(r.map((c) => [c.texto, c.x, c.y])).toEqual([["x", 50, 10], ["y", 40, 11]]);
   });
 
+  it("Q restaura el modo de texto y la fuente guardados por q", () => {
+    expect(extra("q 3 Tr Q BT /F1 9 Tf 50 10 Td (visible) Tj ET").map((c) => c.texto)).toEqual(["visible"]);
+    expect(codigo(() => celdas({ contenidoExtra: "BT /F1 9 Tf q /F7 9 Tf Q 50 10 Td (x) Tj ET" }))).toBe("PDF_CONTENIDO_INVALIDO");
+  });
+
   it("TD fija el interlineado para T*", () => {
     const r = extra("BT /F1 9 Tf 50 14 Td 0 -5 TD (a) Tj T* (b) Tj ET");
     expect(r.map((c) => c.y)).toEqual([9, 4]);
@@ -85,6 +90,9 @@ describe("extraerCeldas: falla cerrado", () => {
     ["una imagen en línea (BI)", "BI /W 1 /H 1 ID x EI", "PDF_OPERADOR_NO_SOPORTADO"],
     ["una celda más larga que el tope", `BT /F1 9 Tf 50 10 Td (${"x".repeat(1100)}) Tj ET`, "PDF_DEMASIADO_TEXTO"],
     ["operandos sin operador al final", "BT /F1 9 Tf ET 1 2 3", "PDF_CONTENIDO_INVALIDO"],
+    ["un BT sin cerrar al final de la página", "BT /F1 9 Tf", "PDF_CONTENIDO_INVALIDO"],
+    ["un q sin su Q al final de la página", "q", "PDF_CONTENIDO_INVALIDO"],
+    ["ET sin BT", "ET", "PDF_CONTENIDO_INVALIDO"],
   ];
   for (const [nombre, contenido, esperado] of casos) {
     it(nombre, () => {

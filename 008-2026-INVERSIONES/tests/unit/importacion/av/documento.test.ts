@@ -3,7 +3,8 @@
  * sobre el PDF ficticio cambiando bytes del mismo largo, para no mover los offsets de la xref.
  */
 import { describe, expect, it } from "vitest";
-import { abrirDocumento, leerFechaPdf, MAX_BYTES, MAX_INFLADO_POR_STREAM } from "@/importacion/av/pdf/documento";
+import { abrirDocumento, leerFechaPdf, MAX_BYTES, MAX_INFLADO_POR_STREAM, MAX_PAGINAS } from "@/importacion/av/pdf/documento";
+import { MAX_OBJETOS } from "@/importacion/av/pdf/referencias";
 import { ErrorPdf } from "@/importacion/av/pdf/errores";
 import { CERTIFICACION_FICTICIA, generarCertificacionPdf, type OpcionesPdf } from "../../../fixtures/av/certificacion.ficticio";
 
@@ -137,6 +138,26 @@ describe("abrirDocumento: falla cerrado con un código", () => {
     ]) {
       expect(codigo(() => abrirDocumento(pdf({ fuenteF1 }))), fuenteF1).toBe("PDF_FUENTE_NO_SOPORTADA");
     }
+  });
+
+  it("un content stream en Flate con /DecodeParms (predictor) no se soporta", () => {
+    expect(codigo(() => abrirDocumento(pdf({ comprimir: true, decodeParmsEnContenido: true })))).toBe("PDF_FILTRO_NO_SOPORTADO");
+  });
+
+  it("más de MAX_PAGINAS páginas no se leen; justo MAX_PAGINAS, sí (las vacías heredan recursos y tamaño)", () => {
+    expect(abrirDocumento(pdf({ paginasVacias: MAX_PAGINAS - 2 })).paginas).toHaveLength(MAX_PAGINAS);
+    expect(codigo(() => abrirDocumento(pdf({ paginasVacias: MAX_PAGINAS - 1 })))).toBe("PDF_DEMASIADAS_PAGINAS");
+  });
+
+  it("una xref con más entradas que el tope no se lee", () => {
+    const entradas = "0000000000 65535 f \n".repeat(MAX_OBJETOS + 1);
+    const pdfGrande = deLatin1(`%PDF-1.3\nxref\n0 ${MAX_OBJETOS + 1}\n${entradas}trailer\n<< >>\nstartxref\n9\n%%EOF\n`);
+    expect(codigo(() => abrirDocumento(pdfGrande))).toBe("PDF_DEMASIADOS_OBJETOS");
+  });
+
+  it("un /MediaBox que no empieza en 0 0 o con tamaño no positivo es inválido", () => {
+    expect(codigo(() => abrirDocumento(mutar(pdf(), "/MediaBox [0 0 595.28", "/MediaBox [0 0 -95.28", true)))).toBe("PDF_ESTRUCTURA_INVALIDA");
+    expect(codigo(() => abrirDocumento(mutar(pdf(), "/MediaBox [0 0 595.28", "/MediaBox [9 0 595.28", true)))).toBe("PDF_ESTRUCTURA_INVALIDA");
   });
 
   it("un XObject que no es imagen (formulario con texto propio) no se soporta", () => {

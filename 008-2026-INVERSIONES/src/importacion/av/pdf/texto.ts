@@ -82,7 +82,9 @@ class Interprete {
     if (this.enTexto || this.pila.length > 0) throw new ErrorPdf("PDF_CONTENIDO_INVALIDO");
   }
 
+  /** q, Q y cm no van dentro de BT…ET (§8.2, figura 9): ahí se rechazan. */
   private grafico(op: string, a: readonly PdfValor[]): void {
+    if (this.enTexto) throw new ErrorPdf("PDF_CONTENIDO_INVALIDO");
     if (op === "q") {
       if (a.length !== 0 || this.pila.length >= MAX_PILA_GRAFICA) throw new ErrorPdf("PDF_CONTENIDO_INVALIDO");
       this.pila.push({ ctm: this.ctm, fuente: this.fuente, tamano: this.tamano, tl: this.tl, tr: this.tr });
