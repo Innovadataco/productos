@@ -140,7 +140,7 @@ describe("importarCertificacion: una fila inválida rechaza el archivo entero", 
     const r = await importarCertificacion(db, archivo(c, {}, mala));
     expect(r).toMatchObject({ estado: "RECHAZADO", errores: [{ pagina: 1, fila: 2, columna: "VALOR DE MERCADO", codigo: "VALOR_INCOHERENTE" }] });
     const carga = await sinNada(r.cargaId, c.fecha);
-    expect(JSON.stringify(carga.errores)).not.toMatch(/100\.700|I[A-Z0-9]{5}/);
+    expect(JSON.stringify(carga.errores)).not.toMatch(new RegExp(["100\\.700", ...c.nemos].join("|")));
     expect(await db.instrumento.count({ where: { nemotecnico: { in: c.nemos } } })).toBe(0);
   });
 
@@ -219,7 +219,7 @@ describe("importarCertificacion: quién carga y con qué llaves", () => {
     const c = caso();
     await registrarFondo(c);
     await importarCertificacion(db, archivo(c));
-    const [fila] = await db.$queryRaw<{ saldo: Prisma.Decimal }[]>`SELECT f.saldo FROM certificacion_fondo f JOIN certificacion c ON c.id = f."certificacionId" WHERE c."fechaCorte" = ${c.fecha}`;
+    const [fila] = await db.$queryRaw<{ saldo: Prisma.Decimal }[]>`SELECT f.saldo FROM certificacion_fondo f JOIN certificacion c ON c.id = f."certificacionId" WHERE c."fechaCorte" = ${c.fecha.toISOString().slice(0, 10)}::date`;
     expect(fila!.saldo.toString()).toBe("5000000");
   });
 });
