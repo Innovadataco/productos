@@ -49,6 +49,7 @@ Invariantes del producto con **prioridad absoluta**. Las fija el negocio (Jelkin
 - Worker: `npm run worker` · Migraciones: `npm run db:migrate` · Seed: `npm run db:seed` · Studio: `npm run db:studio`
 - Auditoría accesibilidad: `npm run a11y:audit`, `npm run a11y:contrast`
 - **Reinicio/deploy limpio (usar SIEMPRE tras cada cambio): `./scripts/dev-restart.sh`** — hace `rm -rf .next`, build, mata app y workers viejos, levanta app (`-H 0.0.0.0`) + UN worker, healthcheck. Nunca dejar más de un worker.
+- **Deploy a producción (en el VPS): `./scripts/deploy-prod.sh`** — **toma él mismo el candado común del VPS** (`/var/lock/despliegue-vps.lock`, SPEC-980, acordado con Inversiones): **no envolverlo con otro `flock` ni pasárselo por stdin** (ya redirige su propio stdin a `/dev/null`). Si otro deploy o carga de datos está en curso, espera hasta `DESPLIEGUE_LOCK_WAIT` s (default 900) y aborta limpio sin tocar nada (exit 3); el candado se libera solo al salir.
 
 ## Arquitectura en runtime
 
@@ -175,7 +176,7 @@ Cinco índices críticos del motor IA se crean con SQL crudo en migraciones y **
 **Guardián:** `scripts/verify-hnsw-indexes.ts` (SPEC-251 · cierra I-49) valida existencia + tipo de los 5 en `pg_indexes`. Alias: `npm run indices:check` (o `npm run db:verify:hnsw`).
 
 **Compuertas donde corre:**
-- `scripts/deploy-prod.sh:57-61` — post `prisma migrate deploy` · deploy falla si falta índice.
+- `scripts/deploy-prod.sh` (guardián de índices, post `prisma migrate deploy`) — deploy falla si falta índice.
 - `.github/workflows/ci.yml:162,303,365` — 3 ratchets CI · PR rojo si falta índice o tipo incorrecto.
 - `pi-monitor` (7ª señal SPEC-251) — vigilancia continua en producción.
 
