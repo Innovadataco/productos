@@ -12,6 +12,8 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileS
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { MAX_BYTES as MAX_BYTES_PDF } from "@/importacion/av/pdf/documento";
+import { MAX_BYTES_CSV } from "@/precios/csv-cierres";
 import { carpetaTemporal, ruta008, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
@@ -21,6 +23,8 @@ const SOBRE = ruta008("scripts/armar-sobre.sh");
 const BLOQUE = 4096;
 const CORREO = "dueno@ejemplo.ficticio";
 const CSV = Buffer.from("Fecha,Especie,Cantidad\n2026-01-02,FICTICIA,10\n", "utf8");
+const CIERRES = Buffer.from("nemotecnico,fecha,cierre,volumen\nFICTA,2024-03-11,1000.5,10\n", "utf8");
+const PDF = Buffer.from("%PDF-1.4\n% certificación ficticia\n%%EOF\n", "utf8");
 
 type Salida = { status: number | null; stdout: string; stderr: string };
 
@@ -194,6 +198,50 @@ describe("inv-cargar · los comandos con archivo", () => {
     expect(p.tsxLlamadas().find((l) => l[0] === "argv")!.slice(4)).toEqual(["--email", CORREO]);
   });
 
+  it("importar-precios: el CSV de cierres va con --archivo <temporal precios.csv> y nada más (no lleva opciones)", async () => {
+    const p = preparar();
+    const r = await p.correrCarga(["importar-precios"], conCuerpo([], CIERRES));
+    expect(r.status, r.stderr).toBe(0);
+    const ll = p.tsxLlamadas();
+    const argv = ll.find((l) => l[0] === "argv")!;
+    expect(argv.slice(1, 3)).toEqual(["scripts/importar-precios.ts", "--archivo"]);
+    expect(argv[3]).toMatch(/\/inv-carga\.[A-Za-z0-9]+\/precios\.csv$/);
+    expect(argv).toHaveLength(4);
+    expect(ll.find((l) => l[0] === "archivo")!.slice(1)).toEqual(["-rw-------", "drwx------"]);
+    expect(ll.find((l) => l[0] === "sha")![1]).toBe(sha(CIERRES));
+    expect(readdirSync(p.tmp)).toEqual([]);
+  });
+
+  it("importar-precios con el sobre de armar-sobre.sh (cabecera vacía, /dev/null) entra entero", async () => {
+    const p = preparar();
+    const sobre = await armar("", CIERRES);
+    const r = await p.correrCarga(["importar-precios"], sobre.salidaBinaria);
+    expect(r.status, r.stderr).toBe(0);
+    expect(p.tsxLlamadas().find((l) => l[0] === "sha")![1]).toBe(sha(CIERRES));
+  });
+
+  it("importar-certificacion: --email, --fecha-corte y el PDF en el temporal certificacion.pdf (al final, como pide el CLI)", async () => {
+    const p = preparar();
+    const r = await p.correrCarga(["importar-certificacion"], conCuerpo(["--fecha-corte", "2024-03-12", "--email", CORREO], PDF));
+    expect(r.status, r.stderr).toBe(0);
+    const ll = p.tsxLlamadas();
+    const argv = ll.find((l) => l[0] === "argv")!;
+    expect(argv.slice(1, 6)).toEqual(["scripts/importar-certificacion.ts", "--email", CORREO, "--fecha-corte", "2024-03-12"]);
+    expect(argv[6]).toMatch(/\/inv-carga\.[A-Za-z0-9]+\/certificacion\.pdf$/);
+    expect(argv).toHaveLength(7);
+    expect(ll.find((l) => l[0] === "sha")![1]).toBe(sha(PDF));
+    expect(readdirSync(p.tmp)).toEqual([]);
+  });
+
+  it("importar-certificacion con --fondo (la primera vez, para vincular el fondo)", async () => {
+    const p = preparar();
+    const r = await p.correrCarga(["importar-certificacion"], conCuerpo(["--email", CORREO, "--fecha-corte", "2024-03-12", "--fondo", "5550001"], PDF));
+    expect(r.status, r.stderr).toBe(0);
+    const argv = p.tsxLlamadas().find((l) => l[0] === "argv")!;
+    expect(argv.slice(1, 8)).toEqual(["scripts/importar-certificacion.ts", "--email", CORREO, "--fecha-corte", "2024-03-12", "--fondo", "5550001"]);
+    expect(argv[8]).toMatch(/\/certificacion\.pdf$/);
+  });
+
   it("el sobre de armar-sobre.sh entra entero (Mac → contenedor)", async () => {
     const p = preparar();
     const sobre = await armar(`--email\n${CORREO}\n`, CSV);
@@ -238,6 +286,7 @@ describe("inv-cargar · los comandos sin archivo pasan sus argumentos tal cual (
     ["lote-escision", ["--destino", "FICTB", "--fecha-evento", "2026-01-02", "--cantidad", "7", "--costo-unitario", "1.5"], "scripts/lote-escision.ts"],
     ["construir-lotes", ["--ensayo"], "scripts/construir-lotes.ts"],
     ["construir-lotes", [], "scripts/construir-lotes.ts"],
+    ["conciliar-certificacion", ["--fecha-corte", "2024-03-12"], "scripts/conciliar-certificacion.ts"],
   ] as const) {
     it(`${comando} ${args.join(" ") || "(sin argumentos)"}`, async () => {
       const p = preparar();
@@ -295,6 +344,24 @@ describe("inv-cargar · se niega sin tocar nada (sale con 64, sin correr el CLI,
       return sobreManual(["--email", CORREO, "--bytes", String(grande.length), "--sha256", sha(grande)], grande);
     }],
     ["un sha256 mal formado", ["importar-trii"], () => sobreManual(["--email", CORREO, "--bytes", String(CSV.length), "--sha256", "zz"], CSV)],
+    ["importar-precios con --email (no lleva opciones)", ["importar-precios"], () => conCuerpo(["--email", CORREO], CIERRES)],
+    ["importar-precios con --archivo (lo pone el contenedor)", ["importar-precios"], () => conCuerpo(["--archivo", "/proc/1/environ"], CIERRES)],
+    ["importar-precios con una posicional", ["importar-precios"], () => conCuerpo(["/proc/1/environ"], CIERRES)],
+    ["importar-precios sin --bytes ni --sha256", ["importar-precios"], () => sobreManual([], CIERRES)],
+    ["importar-precios con un cuerpo truncado", ["importar-precios"], () => sobreManual(["--bytes", String(CIERRES.length), "--sha256", sha(CIERRES)], CIERRES.subarray(0, 20))],
+    [`un CSV de cierres de más de ${MAX_BYTES_CSV} bytes (sin leer el cuerpo)`, ["importar-precios"], () => sobreManual(["--bytes", String(MAX_BYTES_CSV + 1), "--sha256", sha(CIERRES)])],
+    ["importar-certificacion sin --email", ["importar-certificacion"], () => conCuerpo(["--fecha-corte", "2024-03-12"], PDF)],
+    ["importar-certificacion sin --fecha-corte", ["importar-certificacion"], () => conCuerpo(["--email", CORREO], PDF)],
+    ["importar-certificacion con --fecha-corte que no es AAAA-MM-DD", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "12/03/2024"], PDF)],
+    ["importar-certificacion con --fecha-corte repetida", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2024-03-12", "--fecha-corte", "2024-03-13"], PDF)],
+    ["importar-certificacion con una opción como fecha", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "--fondo"], PDF)],
+    ["importar-certificacion con un --fondo que no es numérico", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2024-03-12", "--fondo", "--x"], PDF)],
+    ["importar-certificacion con un --fondo de más de 12 dígitos", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2024-03-12", "--fondo", "1234567890123"], PDF)],
+    ["importar-certificacion con --fondo repetido", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2024-03-12", "--fondo", "1", "--fondo", "2"], PDF)],
+    ["importar-certificacion con --aplicar", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2024-03-12", "--aplicar"], PDF)],
+    ["importar-certificacion con una posicional (una ruta del contenedor)", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2024-03-12", "/proc/1/environ"], PDF)],
+    [`un PDF de más de ${MAX_BYTES_PDF} bytes (sin leer el cuerpo)`, ["importar-certificacion"], () => sobreManual(["--email", CORREO, "--fecha-corte", "2024-03-12", "--bytes", String(MAX_BYTES_PDF + 1), "--sha256", sha(PDF)])],
+    ["--bytes en conciliar-certificacion (no lleva archivo)", ["conciliar-certificacion"], () => sobreManual(["--fecha-corte", "2024-03-12", "--bytes", "0", "--sha256", sha(Buffer.alloc(0))])],
     ["--bytes en un comando sin archivo", ["construir-lotes"], () => sobreManual(["--bytes", "0", "--sha256", sha(Buffer.alloc(0))])],
     ["una cabecera truncada (menos de 4096 bytes)", ["construir-lotes"], () => sobreManual(["--ensayo"], undefined, 100)],
     // Líneas cortas (no caen en el tope de largo): solo falta la línea vacía que cierra la cabecera.
@@ -332,6 +399,15 @@ describe("inv-cargar · se niega sin tocar nada (sale con 64, sin correr el CLI,
       expect(readdirSync(p.tmp)).toEqual([]);
     });
   }
+});
+
+describe("inv-cargar · los topes del cuerpo son los de cada CLI (una sola fuente: la constante del CLI)", () => {
+  const texto = readFileSync(CARGAR, "utf8");
+  const tope = (nombre: string) => Number(new RegExp(`^${nombre}=(\\d+)$`, "m").exec(texto)?.[1]);
+  it("TOPE_PRECIOS = MAX_BYTES_CSV (src/precios/csv-cierres.ts) y TOPE_CERTIFICACION = MAX_BYTES del PDF (src/importacion/av)", () => {
+    expect(tope("TOPE_PRECIOS")).toBe(MAX_BYTES_CSV);
+    expect(tope("TOPE_CERTIFICACION")).toBe(MAX_BYTES_PDF);
+  });
 });
 
 describe("inv-cargar · forma del script", () => {
