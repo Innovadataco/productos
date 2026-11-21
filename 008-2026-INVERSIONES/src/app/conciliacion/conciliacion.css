@@ -1,6 +1,6 @@
 /* Inversiones · conciliación con la certificación de A&V. Usa los tokens de tablero.css (layout). */
 .concilia-hero h1 { font-size: clamp(34px, 5vw, 60px); line-height: 1.05; }
-.concilia .resumen { font-weight: 700; font-size: 15px; margin: 0; }
+.concilia .resumen { font-weight: 700; font-size: 15px; margin: 0; white-space: normal; } /* .estado no parte la línea; el resumen sí */
 .concilia tbody tr { cursor: default; }
 .concilia tbody tr:hover { background: none; }
 .concilia table.angosta { min-width: 720px; }
