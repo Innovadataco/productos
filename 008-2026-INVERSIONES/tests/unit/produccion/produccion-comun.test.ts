@@ -332,6 +332,74 @@ describe("configuración no secreta · la carpeta de respaldos (inv-008.conf)", 
   });
 });
 
+// Hallazgo del ensayo: nosuid y noexec en un bind de Docker no se aplican (el kernel ignora esos bits en el bind
+// inicial), y además solo cubrirían la vista del contenedor. La protección real es el montaje del HOST de la carpeta
+// de respaldos, que hace el CEO de PI. Mientras no lo confirme, los scripts AVISAN (no bloquean); volverlo fatal es
+// cambiar una constante (INV_MONTAJE_RESPALDOS_FATAL=1).
+describe("montaje del host de la carpeta de respaldos · nosuid y noexec (por ahora avisa)", () => {
+  const findmntFalso = (opciones: string | null) => {
+    const dir = carpetaTemporal("findmnt");
+    const bin = path.join(dir, "bin");
+    mkdirSync(bin);
+    // null: un findmnt que falla sin imprimir nada (el VPS no puede leer el montaje).
+    const cuerpo = opciones === null ? "exit 1" : `printf '%s\\n' '${opciones}'`;
+    writeFileSync(path.join(bin, "findmnt"), `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >"${dir}/args.txt"\n${cuerpo}\n`, { mode: 0o755 });
+    return { dir, env: env({ PATH: `${bin}:/usr/bin:/bin` }) };
+  };
+  const revisar = (opciones: string | null, extra = "") => {
+    const f = findmntFalso(opciones);
+    return { ...f, r: funcion(COMUN, `${extra} revisar_montaje_respaldos /srv/respaldos-ficticios; echo sigue`, f.env) };
+  };
+
+  it("faltan_opciones_montaje: nombra solo las que faltan, por opción entera", () => {
+    const faltan = (o: string) => funcion(COMUN, `faltan_opciones_montaje "${o}"`).stdout.trim();
+    expect(faltan("rw,nosuid,nodev,noexec,relatime")).toBe("");
+    expect(faltan("rw,relatime")).toBe("nosuid noexec");
+    expect(faltan("rw,nosuid,relatime")).toBe("noexec");
+    expect(faltan("rw,noexecx,nosuidx")).toBe("nosuid noexec");
+  });
+
+  it("la constante empieza en 0 (aviso): volverla fatal es un PR de una línea", () => {
+    expect(funcion(COMUN, 'printf "%s" "$INV_MONTAJE_RESPALDOS_FATAL"').stdout).toBe("0");
+  });
+
+  it("con nosuid y noexec: no dice nada y sigue", () => {
+    const { r, dir } = revisar("rw,nosuid,nodev,noexec,relatime");
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toContain("sigue");
+    expect(r.stderr).toBe("");
+    // Lee el montaje que contiene la carpeta (findmnt -T), solo sus opciones: no toca nada.
+    expect(funcion(COMUN, `cat "${dir}/args.txt"`).stdout.trim()).toBe("-no OPTIONS -T /srv/respaldos-ficticios");
+  });
+
+  it("sin nosuid ni noexec, en modo aviso: avisa nombrando las que faltan y SIGUE (no bloquea el despliegue)", () => {
+    const { r } = revisar("rw,relatime");
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toContain("sigue");
+    expect(r.stderr).toMatch(/⚠️.*nosuid noexec/);
+  });
+
+  it("con la constante en 1: el mismo caso aborta", () => {
+    const { r } = revisar("rw,relatime", "INV_MONTAJE_RESPALDOS_FATAL=1;");
+    expect(r.status).not.toBe(0);
+    expect(r.stdout).not.toContain("sigue");
+    expect(r.stderr).toMatch(/nosuid noexec/);
+  });
+
+  it("si no se puede leer el montaje (findmnt falla): avisa y sigue en modo aviso; aborta en modo fatal", () => {
+    const aviso = revisar(null);
+    expect(aviso.r.status, aviso.r.stderr).toBe(0);
+    expect(aviso.r.stderr).toMatch(/no se pudo leer el montaje/);
+    expect(revisar(null, "INV_MONTAJE_RESPALDOS_FATAL=1;").r.status).not.toBe(0);
+  });
+
+  it("leer_respaldos_dir la llama en producción, después de dueño, grupo y permisos", () => {
+    const texto = readFileSync008("scripts/produccion-comun.sh");
+    const leer = texto.slice(texto.indexOf("leer_respaldos_dir() {"), texto.indexOf("\n}\n", texto.indexOf("leer_respaldos_dir() {")));
+    expect(leer).toMatch(/problema_permisos_respaldos[\s\S]*revisar_montaje_respaldos "\$valor"/);
+  });
+});
+
 describe("ruta_escribible · toda escritura bajo la raíz de Inversiones", () => {
   const base = carpetaTemporal("rutas");
   const afuera = carpetaTemporal("afuera");
