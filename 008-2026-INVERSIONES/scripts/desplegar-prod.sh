@@ -18,8 +18,8 @@
 # (si migra) respaldo diario detenido → migrador (migraciones, guardián del esquema y privilegios) → app,
 # entrada, vigía y respaldo → imagen, salud por la entrada, la app y la base sin puertos y solo en redes internal
 # con la puerta de enlace aislada → la app sin salida a internet (con control positivo desde la entrada) →
-# mem = memswap → medición 10 min después → salud otra vez → estado → retención → convivencia →
-# DEPLOY VERIFICADO <sha>. Si algo falla después de tocar contenedores, vuelve a la imagen que corría.
+# mem = memswap → medición 10 min después → salud otra vez → estado → retención (solo en producción) →
+# convivencia → DEPLOY VERIFICADO <sha>. Si algo falla después de tocar contenedores, vuelve a la imagen que corría.
 # Mientras migra no corre nada de Inversiones que retenga tablas: la app queda abajo desde el respaldo previo
 # hasta que el up de la versión nueva queda healthy.
 set -euo pipefail
@@ -404,8 +404,17 @@ registrar_estado() {
   escribir_atomico "$INV_ESTADO_DIR/sha-actual" "$SHA"
 }
 
+# La retención borra solo en producción. En modo prueba (en el Mac) las imágenes inv-008-*:<sha> y los .tar son
+# los que la Fábrica construye y envía al VPS: el estado de prueba no sabe cuáles son, y borrarlos rompe el envío.
+# Fail-closed: cualquier proyecto que no sea exactamente inv-008-prod (también vacío o sin definir) no borra nada.
+retencion_permitida() {
+  [ "${INV_PROYECTO_ACTIVO:-}" = "$INV_PROYECTO_PROD" ]
+}
+
+# Las guardas van con return explícito: estas funciones corren dentro de `||`, donde set -e no corta.
 purgar_imagenes() {
   local anterior ref repo
+  retencion_permitida || return 0
   anterior="$(leer_estado sha-anterior)"
   while IFS= read -r ref; do
     informar "retención: borrando $ref"
@@ -416,6 +425,7 @@ purgar_imagenes() {
 
 purgar_tars() {
   local dir anterior archivo nombre
+  retencion_permitida || return 0
   dir="$INV_RAIZ/imagenes"
   [ -d "$dir" ] || return 0
   dir="$(ruta_escribible "$dir")"
@@ -428,6 +438,17 @@ purgar_tars() {
     rm -f "$(ruta_escribible "$archivo")"
     informar "retención: borrado $nombre"
   done
+}
+
+# La retención del final del despliegue. Sus fallas no afectan el despliegue; en modo prueba no borra nada y lo
+# dice en una sola línea.
+retener() {
+  if ! retencion_permitida; then
+    informar "retención: modo prueba (${INV_PROYECTO_ACTIVO:-}), no se borra ninguna imagen ni .tar"
+    return 0
+  fi
+  purgar_imagenes || informar "⚠️  la retención de imágenes falló; no afecta el despliegue"
+  purgar_tars || informar "⚠️  la retención de los .tar falló; no afecta el despliegue"
 }
 
 # Vuelta atrás: si el despliegue falla después de tocar contenedores, vuelve a levantar los permanentes con
@@ -539,12 +560,11 @@ main() {
   "$INV_DIR_008/scripts/medir-memoria.sh" --etiqueta "10 min después de up" --salida "$medicion"
   verificar_servicio
 
-  # Recién aquí el sha nuevo queda como actual y se purga lo viejo: hasta este punto, la vuelta atrás
-  # todavía tiene la imagen que corría.
+  # Recién aquí el sha nuevo queda como actual y se purga lo viejo (solo en producción): hasta este punto, la
+  # vuelta atrás todavía tiene la imagen que corría.
   registrar_estado
   SHA_VUELTA=""
-  purgar_imagenes || informar "⚠️  la retención de imágenes falló; no afecta el despliegue"
-  purgar_tars || informar "⚠️  la retención de los .tar falló; no afecta el despliegue"
+  retener
   "$INV_DIR_008/scripts/vigilar-convivencia.sh" || {
     local rc=$?
     VERIFICADO=1
