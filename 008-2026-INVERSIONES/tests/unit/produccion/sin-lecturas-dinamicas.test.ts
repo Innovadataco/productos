@@ -7,6 +7,12 @@ import { describe, expect, it } from "vitest";
 import { ruta008 } from "./falsos";
 
 const SRC = ruta008("src");
+// Excepciones explícitas, con su razón. Nada más puede leer archivos.
+const PERMITIDOS: Record<string, string> = {
+  // Lee AUTH_SECRET_FILE solo si se define. El compose de producción pasa AUTH_SECRET (variable) y nunca
+  // define AUTH_SECRET_FILE: compose-prod.test.ts fija las variables exactas de la app.
+  [path.join("auth", "secreto.ts")]: "AUTH_SECRET_FILE",
+};
 const FS = /from\s+["'](?:node:)?fs(?:\/promises)?["']|require\(\s*["'](?:node:)?fs(?:\/promises)?["']\s*\)|process\.cwd\(\)|__dirname|import\.meta\.url/;
 
 function archivos(dir: string): string[] {
@@ -52,7 +58,14 @@ describe("la app no lee archivos en tiempo de ejecución", () => {
 
   it("ningún módulo alcanzable usa fs, process.cwd(), __dirname ni import.meta.url", () => {
     const culpables = [...modulos].filter((m) => FS.test(readFileSync(m, "utf8"))).map((m) => path.relative(SRC, m));
-    expect(culpables).toEqual([]);
+    expect(culpables.filter((m) => !(m in PERMITIDOS))).toEqual([]);
+  });
+
+  it("la excepción de auth/secreto.ts solo se usa con AUTH_SECRET_FILE, que producción nunca define", () => {
+    const codigo = readFileSync(path.join(SRC, "auth", "secreto.ts"), "utf8");
+    expect(codigo).toMatch(/AUTH_SECRET_FILE/);
+    const compose = readFileSync(ruta008("docker-compose.prod.yml"), "utf8");
+    expect(compose).not.toMatch(/AUTH_SECRET_FILE/);
   });
 
   it("control positivo: el detector reconoce una lectura de archivo", () => {

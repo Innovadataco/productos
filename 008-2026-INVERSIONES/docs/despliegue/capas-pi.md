@@ -5,7 +5,7 @@ Son los requisitos del CEO de PI para que Inversiones conviva en su VPS de produ
 - la prueba local: el comando y la salida del ensayo en el Mac, con el proyecto `inv-008-prueba`;
 - el comando que se corre en el host al desplegar.
 
-Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app: **por enlazar** a los PR del login (`work/inv-login`) y del cifrado ([#995](https://github.com/Innovadataco/productos/pull/995)) cuando estén en `main`.
+Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app y **están por enlazar**: sus PR ya están en `main`, el login ([#996](https://github.com/Innovadataco/productos/pull/996)) y el cifrado ([#995](https://github.com/Innovadataco/productos/pull/995)), y la evidencia de cada capa la pone cada frente.
 
 **Riesgo cerrado:** `pi-app` ya no monta `docker.sock` ([productos#993](https://github.com/Innovadataco/productos/pull/993)). Ninguna pieza de Inversiones usa el socket ni `/var/lib/docker`.
 
@@ -30,7 +30,7 @@ Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app:
 **Límite de la capa 6, dicho derecho:** con un solo archivo y `environment:`, los valores de cada contenedor se ven con `docker inspect <contenedor>`, para root y para el grupo `docker`. Cumple «fuera del repo y las imágenes sin secretos», pero no oculta los valores a quien administra el Docker del VPS.
 
 ## App (7 a 12): frentes login y cifrado
-**Por enlazar**, cuando sus PR estén en `main`. Este frente no conoce el texto exacto de esas capas y no lo inventa. Lo que sí deja listo:
+**Por enlazar** a la evidencia de [#996](https://github.com/Innovadataco/productos/pull/996) (login) y [#995](https://github.com/Innovadataco/productos/pull/995) (cifrado). Este frente no conoce el texto exacto de esas capas y no lo inventa. Lo que sí deja listo, y probó en el ensayo con el código de los dos:
 - **Login:**
   - `AUTH_SECRET` y `APP_ORIGEN` en la app (`docker-compose.prod.yml:66` y `:69`), obligatorios con `${…:?}`;
   - para `inv_app`, UPDATE **por columna** en `usuario` (`claveHash`, `sesionVersion`, `bloqueadoHasta`) y en `token_acceso` (`usadoEn`), e INSERT en `intento_ingreso` (`docker/migrador/privilegios.sql`);
@@ -40,7 +40,7 @@ Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app:
 
 | # | Requisito | Frente | Evidencia |
 |---|---|---|---|
-| 7 a 12 | Por enlazar | login / cifrado | Sus PR, cuando estén en `main` |
+| 7 a 12 | Por enlazar | login / cifrado | #996 y #995 (en `main`) |
 
 ## Convivencia (condiciones del CEO de PI)
 - **Pausa obligatoria en cada despliegue de PI.** El CEO de PI midió `MemAvailable` mínimo de 1.593 MB durante su build, y con los 1.152 MiB de Inversiones quedarían unos 0,4 GB.
@@ -84,7 +84,15 @@ oom_kill jerárquico (docker/): 0 → 1 · el contenedor salió con 137 y su cgr
 {"estado":"ok","base":"ok","version":"bce628493c5714243524b5d75d25c756e9416422"}
 conteos iguales en 29 tablas · inv_app ve el dato ficticio (citext) y DELETE FROM orden → permission denied · data_checksums=on
 
-# roles-base.test.ts contra PostgreSQL 16 real (ronda anterior): 12 pasan; un mutante con DML completo → 5 en rojo
+# con el login y el cifrado ya en main (después del rebase)
+roles-base.test.ts contra PostgreSQL 16 real → 21 pasan (escrituras del login por columna, token de un solo uso,
+  guardián que pasa y que se rompe con un CHECK cambiado y un disparador deshabilitado)
+DEPLOY VERIFICADO bbb5054a3676574b85bf01e2c4c8ca5617fd3a6e · /api/salud → {"estado":"ok","version":"bbb5054…"}
+GET / sin sesión → HTTP/1.1 307 · location: https://inversiones.innovadataco.com/ingresar
+crear-acceso-inicial.sh --email ficticio@ejemplo.invalid → imprime una vez https://inversiones.innovadataco.com/definir-clave#t=<token>…
+  (token_acceso=1; el token se tapó aquí)
+
+# roles-base.test.ts en la ronda anterior: un mutante con DML completo para inv_app → 5 en rojo
 ```
 
 **Lo que NO se verificó en local:**
@@ -93,7 +101,7 @@ conteos iguales en 29 tablas · inv_app ve el dato ficticio (citext) y DELETE FR
 - el driver de cgroup del VPS (se espera systemd);
 - `memswap` con swap real, porque Colima no tiene swap;
 - la llegada del aviso al Telegram de Jelk (control positivo en el VPS);
-- `crear-acceso-inicial.sh`, porque su `.ts` todavía no está en `main`.
+- el TOTP: su bloque de permisos queda preparado y comentado en `privilegios.sql`, y lo activa ese frente.
 
 **Reinicio de Docker:** no se reinició el demonio de Docker del Mac, porque también corren ahí la base de desarrollo de Inversiones y la de PI. Que la pausa sobreviva un reinicio se demostró así: con la marca puesta, el proyecto queda con 0 contenedores, así que `restart: always` no tiene nada que levantar.
 

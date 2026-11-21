@@ -3,9 +3,8 @@
 // UPDATE de "usadoEn" en token_acceso e INSERT en intento_ingreso. Nunca DELETE, TRUNCATE, REFERENCES,
 // TRIGGER ni DDL. inv_dueno es el dueño (crear-acceso-inicial.ts, en el migrador).
 //
-// Mientras la migración del login no esté en main, esas escrituras van dentro de UN solo IF atado a la
-// tabla intento_ingreso (la crea esa migración). Al hacer rebase sobre el login se quita el IF: si faltan
-// las tablas o las columnas, el GRANT falla y el despliegue se detiene (falla cerrada).
+// Sin condiciones: si faltan las tablas o las columnas del login (migración 20261121050319_login), el
+// GRANT falla y el despliegue se detiene (falla cerrada).
 import { describe, expect, it } from "vitest";
 import { leer008 } from "./falsos";
 
@@ -27,9 +26,13 @@ describe("privilegios de inv_app", () => {
     );
   });
 
-  it("las escrituras del login van en un solo bloque, atado a la migración del login (se quita en el rebase)", () => {
-    expect(sql.match(/IF to_regclass/g)).toHaveLength(1);
-    expect(sql).toMatch(/IF to_regclass\('public\.intento_ingreso'\) IS NOT NULL THEN\s+GRANT UPDATE \("claveHash"/);
+  it("las escrituras del login van sin condición (falla cerrada si faltan tablas o columnas)", () => {
+    expect(sql).not.toMatch(/to_regclass/);
+  });
+
+  it("las columnas existen en la migración del login", () => {
+    const login = leer008("prisma/migrations/20261121050319_login/migration.sql");
+    for (const columna of ['"claveHash"', '"sesionVersion"', '"bloqueadoHasta"', '"usadoEn"']) expect(login).toContain(columna);
   });
 
   it("nunca DELETE, TRUNCATE, REFERENCES, TRIGGER, ALL ni DDL, y nunca UPDATE de tabla completa", () => {
@@ -40,5 +43,23 @@ describe("privilegios de inv_app", () => {
   it("parte de cero en cada corrida y deja _prisma_migrations sin acceso", () => {
     expect(sql).toMatch(/REVOKE ALL ON TABLE public\.%I FROM inv_app/);
     expect(sql).toMatch(/IF t\.relname <> '_prisma_migrations' THEN/);
+  });
+});
+
+describe("privilegios del TOTP: bloque PREPARADO y comentado (lo activa el frente TOTP con su migración)", () => {
+  const crudo = leer008("docker/migrador/privilegios.sql");
+
+  it("trae las tres líneas preparadas, comentadas", () => {
+    for (const linea of [
+      "--   GRANT INSERT ON TABLE public.codigo_recuperacion TO inv_app;",
+      '--   GRANT UPDATE ("usadoEn", "anuladoEn") ON TABLE public.codigo_recuperacion TO inv_app;',
+      '--   GRANT UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") ON TABLE public.usuario TO inv_app;',
+    ]) {
+      expect(crudo).toContain(linea);
+    }
+  });
+
+  it("no hay ningún GRANT activo sobre codigo_recuperacion ni sobre columnas TOTP (fallaría cerrado sin la migración)", () => {
+    expect(sql).not.toMatch(/codigo_recuperacion|totpSecreto|presesionHash/);
   });
 });

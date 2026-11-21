@@ -6,7 +6,7 @@
 --  - cada CHECK y EXCLUDE con su definición exacta (pg_get_constraintdef) y validado;
 --  - cada disparador en su tabla (tgrelid), con su tipo (tgtype 27 = BEFORE UPDATE OR DELETE, por fila),
 --    su función y habilitado (tgenabled O o A; D es deshabilitado);
---  - la función de solo inserción con el md5 exacto de su código;
+--  - las funciones escritas a mano (solo inserción y token de un solo uso) con el md5 exacto de su código;
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 (sacadas de una base recién migrada). La lista de
 -- nombres sale de prisma/migrations: tests/unit/produccion/verificar-esquema.test.ts exige que coincida, y
@@ -16,6 +16,8 @@ DECLARE
   indices_parciales text[] := ARRAY[
     ['enlace_decision_orden', 'enlace_decision_orden_raiz_key', 'CREATE UNIQUE INDEX enlace_decision_orden_raiz_key ON public.enlace_decision_orden USING btree ("ordenId") WHERE ("reemplazaId" IS NULL)'],
     ['evento_corporativo', 'evento_corporativo_pago_fraccion_key', 'CREATE UNIQUE INDEX evento_corporativo_pago_fraccion_key ON public.evento_corporativo USING btree ("destinoId", "fechaPagoFraccion") WHERE ("fechaPagoFraccion" IS NOT NULL)'],
+    ['intento_ingreso', 'intento_ingreso_fallos_ip_idx', 'CREATE INDEX intento_ingreso_fallos_ip_idx ON public.intento_ingreso USING btree (ip, "ocurridoEn") WHERE (resultado <> ALL (ARRAY[''EXITO''::"ResultadoIngreso", ''CLAVE_DEFINIDA''::"ResultadoIngreso"]))'],
+    ['intento_ingreso', 'intento_ingreso_ultimo_exito_idx', 'CREATE INDEX intento_ingreso_ultimo_exito_idx ON public.intento_ingreso USING btree ("usuarioId", "ocurridoEn" DESC) WHERE (resultado = ANY (ARRAY[''EXITO''::"ResultadoIngreso", ''CLAVE_DEFINIDA''::"ResultadoIngreso"]))'],
     ['lote', 'lote_escision_evento_key', 'CREATE UNIQUE INDEX lote_escision_evento_key ON public.lote USING btree ("eventoId") WHERE (origen = ''ESCISION''::"OrigenLote")'],
     ['precio_cierre', 'precio_cierre_vigente_key', 'CREATE UNIQUE INDEX precio_cierre_vigente_key ON public.precio_cierre USING btree ("instrumentoId", fecha, fuente) WHERE ("reemplazadoEn" IS NULL)'],
     ['valor_unidad_fondo', 'valor_unidad_fondo_vigente_key', 'CREATE UNIQUE INDEX valor_unidad_fondo_vigente_key ON public.valor_unidad_fondo USING btree ("fondoId", "fechaValor") WHERE ("reemplazadoEn" IS NULL)']
@@ -36,6 +38,7 @@ DECLARE
     ['enlace_decision_orden', 'enlace_decision_orden_reemplazo_chk', 'CHECK ((("reemplazaId" IS NULL) OR (("reemplazaId" <> id) AND (motivo IS NOT NULL) AND (motivo ~ ''[^[:space:]]''::text))))'],
     ['fila_fuente', 'fila_fuente_ocurrencia_chk', 'CHECK ((ocurrencia >= 1))'],
     ['instrumento', 'instrumento_tipo_chk', 'CHECK ((((tipo = ''ACCION''::"TipoInstrumento") AND (nemotecnico IS NOT NULL)) OR ((tipo = ''FIC''::"TipoInstrumento") AND ("codigoFic" IS NOT NULL))))'],
+    ['intento_ingreso', 'intento_ingreso_usuario_chk', 'CHECK ((((resultado = ''USUARIO_INEXISTENTE''::"ResultadoIngreso") AND ("usuarioId" IS NULL)) OR (resultado = ''TOKEN_INVALIDO''::"ResultadoIngreso") OR ((resultado <> ALL (ARRAY[''USUARIO_INEXISTENTE''::"ResultadoIngreso", ''TOKEN_INVALIDO''::"ResultadoIngreso"])) AND ("usuarioId" IS NOT NULL))))'],
     ['lote', 'lote_cantidad_chk', 'CHECK (((cantidad > 0) AND ("costoUnitario" >= (0)::numeric) AND ("costoTotal" >= (0)::numeric) AND (comision >= (0)::numeric)))'],
     ['lote', 'lote_origen_chk', 'CHECK ((((origen = ''COMPRA''::"OrigenLote") AND ("ordenId" IS NOT NULL) AND ("eventoId" IS NULL) AND ("loteOrigenId" IS NULL)) OR ((origen = ''ESCISION''::"OrigenLote") AND ("ordenId" IS NULL) AND ("eventoId" IS NOT NULL) AND ("loteOrigenId" IS NOT NULL))))'],
     ['movimiento_caja', 'movimiento_caja_monto_chk', 'CHECK ((monto > (0)::numeric))'],
@@ -50,6 +53,10 @@ DECLARE
     ['regla_plan', 'regla_plan_nivel_chk', 'CHECK ((((condicion = ANY (ARRAY[''NINGUNA''::"CondicionRegla", ''LIBRE''::"CondicionRegla"])) = (nivel IS NULL)) AND ((nivel IS NULL) OR (nivel > (0)::numeric))))'],
     ['simbolo_precio', 'simbolo_precio_sin_solape_excl', 'EXCLUDE USING gist ("instrumentoId" WITH =, proveedor WITH =, daterange("vigenteDesde", "vigenteHasta", ''[)''::text) WITH &&)'],
     ['simbolo_precio', 'simbolo_precio_vigencia_chk', 'CHECK ((("vigenteHasta" IS NULL) OR ("vigenteHasta" > "vigenteDesde")))'],
+    ['token_acceso', 'token_acceso_hash_chk', 'CHECK (("tokenHash" ~ ''^[0-9a-f]{64}$''::text))'],
+    ['token_acceso', 'token_acceso_vence_chk', 'CHECK ((("venceEn" > "creadoEn") AND ("venceEn" <= ("creadoEn" + ''00:30:00''::interval))))'],
+    ['usuario', 'usuario_clave_hash_chk', 'CHECK ((("claveHash" IS NULL) OR ("claveHash" ~ ''^\$2[aby]\$12\$[./A-Za-z0-9]{53}$''::text)))'],
+    ['usuario', 'usuario_sesion_version_chk', 'CHECK (("sesionVersion" >= 1))'],
     ['valor_unidad_fondo', 'valor_unidad_fondo_valor_chk', 'CHECK (("valorUnidad" > (0)::numeric))']
   ];
   disparadores text[] := ARRAY[
@@ -58,13 +65,16 @@ DECLARE
     ['enlace_decision_orden', 'enlace_decision_orden_solo_insercion', '27', 'inv_solo_insercion'],
     ['fila_de_carga', 'fila_de_carga_solo_insercion', '27', 'inv_solo_insercion'],
     ['fila_fuente', 'fila_fuente_solo_insercion', '27', 'inv_solo_insercion'],
+    ['intento_ingreso', 'intento_ingreso_solo_insercion', '27', 'inv_solo_insercion'],
     ['movimiento_caja', 'movimiento_caja_solo_insercion', '27', 'inv_solo_insercion'],
     ['orden', 'orden_solo_insercion', '27', 'inv_solo_insercion'],
     ['plan_version', 'plan_version_solo_insercion', '27', 'inv_solo_insercion'],
-    ['regla_plan', 'regla_plan_solo_insercion', '27', 'inv_solo_insercion']
+    ['regla_plan', 'regla_plan_solo_insercion', '27', 'inv_solo_insercion'],
+    ['token_acceso', 'token_acceso_un_solo_uso', '27', 'inv_token_un_solo_uso']
   ];
   funciones text[] := ARRAY[
-    ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77']
+    ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77'],
+    ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546']
   ];
   extensiones text[] := ARRAY['btree_gist', 'citext'];
   faltan text[] := '{}';

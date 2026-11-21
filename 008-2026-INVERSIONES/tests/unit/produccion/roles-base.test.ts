@@ -78,9 +78,24 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     await expect(app.$executeRawUnsafe(sql)).rejects.toThrow(/42501|permission denied|must be owner/);
   };
 
-  it("inv_app lee las tablas, compara citext (email) y no ve funciones propias rotas por el REVOKE EXECUTE", async () => {
+  it("inv_app lee las tablas y compara citext (email) aunque PUBLIC no ejecute las funciones de inv_dueno", async () => {
     await expect(app.$queryRawUnsafe("SELECT count(*) FROM orden")).resolves.toBeDefined();
     await expect(app.$queryRawUnsafe("SELECT count(*) FROM usuario WHERE email = 'ficticio@ejemplo.invalid'")).resolves.toBeDefined();
+  });
+
+  it("inv_app hace exactamente las escrituras del login (y los disparadores corren con sus funciones)", async () => {
+    const dueno = new PrismaClient({ datasources: { db: { url: conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA) } } });
+    await dueno.$executeRawUnsafe(`INSERT INTO usuario (id, email, rol) VALUES ('u-roles', 'roles@ejemplo.invalid', 'DUENO')`);
+    await dueno.$executeRawUnsafe(
+      `INSERT INTO token_acceso (id, "usuarioId", "tokenHash", proposito, "venceEn") VALUES ('t-roles', 'u-roles', '${"a".repeat(64)}', 'INICIAL', now() + interval '10 minutes')`,
+    );
+    await dueno.$disconnect();
+    await expect(app.$executeRawUnsafe(`UPDATE usuario SET "sesionVersion" = "sesionVersion" + 1, "bloqueadoHasta" = NULL WHERE id = 'u-roles'`)).resolves.toBe(1);
+    await expect(app.$executeRawUnsafe(`INSERT INTO intento_ingreso (id, "usuarioId", resultado) VALUES ('i-roles', 'u-roles', 'EXITO')`)).resolves.toBe(1);
+    await expect(app.$queryRawUnsafe(`SELECT id FROM token_acceso WHERE id = 't-roles' FOR UPDATE`)).resolves.toBeDefined();
+    await expect(app.$executeRawUnsafe(`UPDATE token_acceso SET "usadoEn" = now() WHERE id = 't-roles'`)).resolves.toBe(1);
+    // Segundo uso: lo frena el disparador (no un permiso).
+    await expect(app.$executeRawUnsafe(`UPDATE token_acceso SET "usadoEn" = now() WHERE id = 't-roles'`)).rejects.toThrow(/un solo uso/);
   });
 
   for (const sql of [
@@ -95,6 +110,10 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     "UPDATE precio_cierre SET precio = precio WHERE false",
     "UPDATE usuario SET activo = activo WHERE false",
     "UPDATE usuario SET rol = rol WHERE false",
+    "UPDATE usuario SET email = email WHERE false",
+    "UPDATE token_acceso SET \"venceEn\" = \"venceEn\" WHERE false",
+    "UPDATE intento_ingreso SET resultado = resultado WHERE false",
+    "DELETE FROM token_acceso WHERE false",
   ]) {
     it(`inv_app NO puede: ${sql}`, async () => {
       await negado(sql);

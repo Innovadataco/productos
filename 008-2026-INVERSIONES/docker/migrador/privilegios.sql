@@ -10,9 +10,7 @@
 -- `SET LOCAL inv.reversion = 'on'` no le sirve a inv_app para saltarse sus disparadores.
 -- inv_dueno, el dueño, crea usuarios y tokens (crear-acceso-inicial.ts) y corre las cargas (Trii, precios,
 -- fondo, plan), todo en el migrador.
---
--- PENDIENTE AL REBASE SOBRE EL LOGIN: quitar el IF de abajo. Hoy la migración del login no está en main;
--- cuando esté, las escrituras van sin condición y, si faltan tablas o columnas, el GRANT falla (falla cerrada).
+-- Sin condiciones: si faltan las tablas o las columnas del login, el GRANT falla y el despliegue se detiene.
 DO $$
 DECLARE
   t record;
@@ -41,10 +39,15 @@ BEGIN
   END LOOP;
 
   -- Escrituras del login (contrato con el frente login), por columna.
-  IF to_regclass('public.intento_ingreso') IS NOT NULL THEN
-    GRANT UPDATE ("claveHash", "sesionVersion", "bloqueadoHasta") ON TABLE public.usuario TO inv_app;
-    GRANT UPDATE ("usadoEn") ON TABLE public.token_acceso TO inv_app;
-    GRANT INSERT ON TABLE public.intento_ingreso TO inv_app;
-  END IF;
+  GRANT UPDATE ("claveHash", "sesionVersion", "bloqueadoHasta") ON TABLE public.usuario TO inv_app;
+  GRANT UPDATE ("usadoEn") ON TABLE public.token_acceso TO inv_app;
+  GRANT INSERT ON TABLE public.intento_ingreso TO inv_app;
+
+  -- TOTP (contrato del frente TOTP). PREPARADO y comentado: lo descomenta ese frente en el mismo PR que
+  -- trae su migración. Hoy esas tablas y columnas no existen y un GRANT sobre ellas falla cerrado.
+  -- (SELECT de codigo_recuperacion ya lo da el bucle de arriba; inv_dueno, el dueño, tiene todo.)
+  --   GRANT INSERT ON TABLE public.codigo_recuperacion TO inv_app;
+  --   GRANT UPDATE ("usadoEn", "anuladoEn") ON TABLE public.codigo_recuperacion TO inv_app;
+  --   GRANT UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") ON TABLE public.usuario TO inv_app;
 END
 $$;
