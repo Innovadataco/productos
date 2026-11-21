@@ -3,6 +3,7 @@
  * 093-US1) y parámetros del círculo. Movimiento mecánico desde el god-module.
  */
 import { whereReporteAprobado } from "@/lib/reporte-aprobado";
+import { conExclusion, whereExcluirOcultosPorComite } from "../../oculto-por-comite";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import type { EstadoReporte, Prisma } from "@prisma/client";
 import type { DatosReporte, EstadoContacto } from "./tipos";
@@ -10,15 +11,21 @@ import { ESTADOS_REVISION, getClient } from "./tipos";
 
 // Spec 093-US1: el círculo cuenta (a) reportes APROBADOS (predicado único: sin SPAM/OTRO)
 // y (b) reportes en revisión humana ("En proceso"). POSIBLE_SPAM y DUPLICADO no cuentan.
-export function whereReportesCirculo(extra: Prisma.ReporteWhereInput = {}): Prisma.ReporteWhereInput {
-    return {
-        ...extra,
-        eliminado: false,
-        OR: [
-            whereReporteAprobado(),
-            { estado: { in: ["REVISION_MANUAL", "REQUIERE_ANONIMIZACION"] } },
-        ],
-    };
+// SPEC-937 (I-451): `excluirOcultos` es OBLIGATORIO — el círculo lo ve cualquier padre registrado,
+// así que agregar como contacto un identificador oculto por el comité (SPEC-110) no puede revelar
+// lo que la consulta pública ya no muestra. Pasá `await whereExcluirOcultosPorComite(db, valores)`.
+export function whereReportesCirculo(extra: Prisma.ReporteWhereInput, excluirOcultos: Prisma.ReporteWhereInput): Prisma.ReporteWhereInput {
+    return conExclusion(
+        {
+            ...extra,
+            eliminado: false,
+            OR: [
+                whereReporteAprobado(),
+                { estado: { in: ["REVISION_MANUAL", "REQUIERE_ANONIMIZACION"] } },
+            ],
+        },
+        excluirOcultos,
+    );
 }
 
 export function calcularEstado(reportes: DatosReporte[]): EstadoContacto {
@@ -77,7 +84,7 @@ export async function determinarEstadoContacto(
     }
 
     const reportes = (await c.reporte.findMany({
-        where: whereReportesCirculo({ identificador: { in: valores } }),
+        where: whereReportesCirculo({ identificador: { in: valores } }, await whereExcluirOcultosPorComite(c, valores)),
         select: {
             id: true,
             identificador: true,

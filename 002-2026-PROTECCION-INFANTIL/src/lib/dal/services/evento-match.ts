@@ -132,6 +132,13 @@ export async function detectarYRegistrarMatch(reporteId: string): Promise<Result
     // (FR-004), así que un reintento no puede mandar el aviso dos veces. Nunca
     // lleva identidad ni texto del otro reportante. Fail-open (FR-005): un aviso
     // caído no puede tumbar la detección del match.
+    //
+    // SPEC-937 (I-451) · NO SE GATEA por `ocultoPorComiteEn`, a propósito (decisión CEO 19-11):
+    // a diferencia de la alerta a SUSCRIPTORES (sí gateada en finalizacion.ts), estos destinatarios
+    // YA reportaron ESTE identificador —lo conocen— y el aviso dispara solo en el camino del match,
+    // que exige un reporte NUEVO real, el cual des-oculta (SPEC-110). No es superficie pública: no
+    // revela a un tercero lo que la consulta ya no muestra. La simetría con el gate de suscriptores
+    // NO es razón para cambiar la conducta. No lo «arregles» agregando un gate acá.
     await avisarPadresQueReportaronSinFallar({
         reporteNuevoId: reporteId,
         plataformaId: reporte.plataformaId,

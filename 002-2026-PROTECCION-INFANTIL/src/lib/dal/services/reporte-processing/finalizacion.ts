@@ -116,11 +116,24 @@ export async function finalizarReporte({
                 }).catch((err) => console.error("[ALERTA] Error enviando alerta de score crítico", err));
             }
 
-            enviarAlertasSuscriptores({
-                identificador: reporte.identificador,
-                plataformaId: reporte.plataformaId,
-                totalReportes: scoreResult.totalReportes,
-            }).catch((err) => console.error("[ALERTA] Error enviando alertas a suscriptores", err));
+            // SPEC-937 (I-451): la alerta a SUSCRIPTORES es superficie PÚBLICA (le cuenta a un tercero
+            // que el identificador tiene N reportes). NO se envía si el comité ocultó el identificador.
+            // Se gatea por `ocultoPorComiteEn` —la decisión del comité— y NO por `esVisiblePublicamente`:
+            // ese flag conflúa el umbral y, en este punto, está STALE (actualizarVisibilidadPublica corrió
+            // ANTES de recalcularYGuardarScore, con los contadores viejos). En el camino normal un reporte
+            // nuevo REAL des-oculta (SPEC-110) y la alerta sale; esto cierra el RE-PROCESO de un reporte de
+            // un identificador oculto, que notificaría lo que la consulta pública ya no muestra.
+            const agregado = await prisma.identificadorReportado.findUnique({
+                where: { identificador_plataformaId: { identificador: reporte.identificador, plataformaId: reporte.plataformaId } },
+                select: { ocultoPorComiteEn: true },
+            });
+            if (!agregado?.ocultoPorComiteEn) {
+                enviarAlertasSuscriptores({
+                    identificador: reporte.identificador,
+                    plataformaId: reporte.plataformaId,
+                    totalReportes: scoreResult.totalReportes,
+                }).catch((err) => console.error("[ALERTA] Error enviando alertas a suscriptores", err));
+            }
         }
     }
 

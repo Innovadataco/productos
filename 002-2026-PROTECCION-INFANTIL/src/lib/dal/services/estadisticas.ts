@@ -24,6 +24,8 @@ import { CorreccionAdminRepository } from "../repositories/correccion-admin";
 import { AuditLogRepository } from "../repositories/audit-log";
 import { UsuarioRepository } from "../repositories/usuario";
 import { EventoMatchRepository } from "../repositories/evento-match";
+import { IdentificadorReportadoRepository } from "../repositories/identificador-reportado";
+import { AGREGADO_NO_OCULTO, conExclusion } from "../oculto-por-comite";
 
 const ACCIONES_CIERRE: AccionAudit[] = ["CASO_CONFIRMADO", "CASO_CORREGIDO", "CASO_DADO_DE_BAJA"];
 
@@ -87,6 +89,7 @@ export class EstadisticasService {
     private readonly audit: AuditLogRepository;
     private readonly usuarios: UsuarioRepository;
     private readonly matches: EventoMatchRepository;
+    private readonly identificadores: IdentificadorReportadoRepository;
 
     constructor(tx?: Prisma.TransactionClient) {
         this.stats = new EstadisticasRepository(tx);
@@ -97,6 +100,7 @@ export class EstadisticasService {
         this.audit = new AuditLogRepository(tx);
         this.usuarios = new UsuarioRepository(tx);
         this.matches = new EventoMatchRepository(tx);
+        this.identificadores = new IdentificadorReportadoRepository(tx);
     }
 
     /** GET /api/estadisticas-publicas — agregados públicos (sin score, I-29). */
@@ -107,6 +111,10 @@ export class EstadisticasService {
         // incrementa (write-side); `contarIdentificadoresConMatch` lee EventoMatch, que nunca se
         // crea para un simulacro (match guardado) — ambos no necesitan filtro aquí.
         const sinPrueba = await this.reportes.whereExcluirNoReales();
+        // SPEC-937 (I-451): tampoco cuenta los pares que el comité ocultó (SPEC-110) — ni en los
+        // totales de reportes ni en los de identificadores (si no, el tablero contradice a la consulta).
+        const ocultos = await this.identificadores.whereExcluirReportesOcultos();
+        const publico = (w: Prisma.ReporteWhereInput) => conExclusion({ ...w, ...sinPrueba }, ocultos);
         const [
             totalReportes,
             identificadoresUnicos,
@@ -118,22 +126,23 @@ export class EstadisticasService {
             categoriasRaw,
             sinUbicacion,
         ] = await Promise.all([
-            this.reportes.countWhere({ ...whereReporteAprobado(), ...sinPrueba }),
-            this.stats.countIdentificadores(),
-            this.reportes.countWhere({ ...whereReporteAprobado({ esAnonimo: false }), ...sinPrueba }),
-            this.reportes.countWhere({ ...whereReporteAprobado({ esAnonimo: true }), ...sinPrueba }),
-            this.stats.groupByPlataformaId({ ...whereReporteAprobado(), ...sinPrueba }),
-            this.stats.groupByPais({ ...whereReporteAprobado(), ...sinPrueba }),
-            this.stats.groupByCiudadId({ ...whereReporteAprobado({ ciudadId: { not: null } }), ...sinPrueba }, 50),
-            this.stats.findCategoriasAprobadas(CATEGORIAS_NO_APROBADAS, { ...whereReporteEnEstados(ESTADOS_APROBADOS), ...sinPrueba }),
+            this.reportes.countWhere(publico(whereReporteAprobado())),
+            this.stats.countIdentificadores(AGREGADO_NO_OCULTO),
+            this.reportes.countWhere(publico(whereReporteAprobado({ esAnonimo: false }))),
+            this.reportes.countWhere(publico(whereReporteAprobado({ esAnonimo: true }))),
+            this.stats.groupByPlataformaId(publico(whereReporteAprobado())),
+            this.stats.groupByPais(publico(whereReporteAprobado())),
+            this.stats.groupByCiudadId(publico(whereReporteAprobado({ ciudadId: { not: null } })), 50),
+            this.stats.findCategoriasAprobadas(CATEGORIAS_NO_APROBADAS, publico(whereReporteEnEstados(ESTADOS_APROBADOS))),
             // SPEC-115 (degradación honesta del mapa): reportes aprobados que el mapa
             // NO puede pintar porque su ciudad carece de coordenadas (o no hay ciudad).
-            this.reportes.countWhere({
-                ...whereReporteAprobado({
-                    OR: [{ ciudadId: null }, { ciudadRel: { lat: null } }, { ciudadRel: { lng: null } }],
-                }),
-                ...sinPrueba,
-            }),
+            this.reportes.countWhere(
+                publico(
+                    whereReporteAprobado({
+                        OR: [{ ciudadId: null }, { ciudadRel: { lat: null } }, { ciudadRel: { lng: null } }],
+                    }),
+                ),
+            ),
         ]);
 
         const plataformaIds = porPlataforma.map((p) => p.plataformaId).filter((id): id is string => !!id);
@@ -180,7 +189,7 @@ export class EstadisticasService {
                 reportesAnonimos,
                 // SPEC-139 (F5, ZEUS D-4): el público solo ve el CONTEO agregado
                 // de identificadores con match — nunca el detalle (§1.3).
-                identificadoresConMatch: await this.matches.contarIdentificadoresConMatch(),
+                identificadoresConMatch: await this.matches.contarIdentificadoresConMatch(AGREGADO_NO_OCULTO),
                 // I-29 (SPEC-108): NUNCA scorePromedio en la API pública (D-10/§1.3/§1.5).
             },
             porPlataforma: porPlataforma.map((p) => ({

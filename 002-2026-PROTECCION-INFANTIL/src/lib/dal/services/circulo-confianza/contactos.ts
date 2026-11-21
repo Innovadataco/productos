@@ -7,6 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { getClient } from "./tipos";
 import type { DatosReporte } from "./tipos";
 import { calcularEstado, determinarEstadoContacto, obtenerTopeContactos, whereReportesCirculo } from "./estado";
+import { whereExcluirOcultosPorComite } from "../../oculto-por-comite";
 import { construirAgregado } from "./agregado";
 
 /**
@@ -53,7 +54,10 @@ export async function listarContactos(usuarioId: string, client?: Prisma.Transac
     const reportesPorValor = new Map<string, DatosReporte[]>();
     if (todosLosValores.size > 0) {
         const reportes = (await c.reporte.findMany({
-            where: whereReportesCirculo({ identificador: { in: Array.from(todosLosValores) } }),
+            where: whereReportesCirculo(
+                { identificador: { in: Array.from(todosLosValores) } },
+                await whereExcluirOcultosPorComite(c, Array.from(todosLosValores)),
+            ),
             select: {
                 id: true,
                 identificador: true,

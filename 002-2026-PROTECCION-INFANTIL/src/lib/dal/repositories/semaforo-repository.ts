@@ -4,6 +4,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { whereReportesCirculo } from "@/lib/dal/services/circulo-confianza/estado";
+import { whereExcluirOcultosPorComite } from "../oculto-por-comite";
 import type { DatosReporte } from "@/lib/dal/services/circulo-confianza/tipos";
 
 export interface SemaforoRawContacto {
@@ -37,7 +38,7 @@ export class SemaforoRepository {
     async buscarReportesVisiblesPorIdentificadores(identificadores: string[]): Promise<DatosReporte[]> {
         if (identificadores.length === 0) return [];
         return prisma.reporte.findMany({
-            where: whereReportesCirculo({ identificador: { in: identificadores } }),
+            where: whereReportesCirculo({ identificador: { in: identificadores } }, await whereExcluirOcultosPorComite(prisma, identificadores)),
             select: {
                 id: true,
                 identificador: true,
