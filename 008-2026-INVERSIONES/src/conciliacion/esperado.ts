@@ -50,15 +50,29 @@ async function destinosSinLote(db: Lector, corte: Date): Promise<Set<string>> {
   return new Set(eventos.filter((e) => e._count.lotes === 0).map((e) => e.destinoId));
 }
 
+const YAHOO = "yahoo";
+
+interface CierreVigente {
+  readonly fuente: string;
+  readonly traidoEn: Date;
+}
+
+/**
+ * Orden total entre los cierres vigentes de un mismo día: Yahoo primero; luego el traído más recientemente; con el
+ * mismo `traidoEn`, la fuente en orden alfabético (la base deja un solo vigente por fuente). Así el elegido nunca
+ * depende del orden en que la base devuelve las filas.
+ */
+const primeroElegido = (a: CierreVigente, b: CierreVigente): number =>
+  Number(b.fuente === YAHOO) - Number(a.fuente === YAHOO) || b.traidoEn.getTime() - a.traidoEn.getTime() || (a.fuente < b.fuente ? -1 : a.fuente > b.fuente ? 1 : 0);
+
 /** Cierre vigente del día exacto: Yahoo si hay; si no, el de otra fuente más reciente. */
 async function cierresDelCorte(db: Lector, corte: Date, ids: readonly string[]): Promise<Map<string, string>> {
   const filas = await db.precioCierre.findMany({
     where: { instrumentoId: { in: [...ids] }, fecha: corte, reemplazadoEn: null },
     select: { instrumentoId: true, precio: true, fuente: true, traidoEn: true },
-    orderBy: { traidoEn: "desc" },
   });
   const porEspecie = new Map<string, string>();
-  for (const f of [...filas].sort((a, b) => Number(b.fuente === "yahoo") - Number(a.fuente === "yahoo"))) {
+  for (const f of [...filas].sort(primeroElegido)) {
     if (!porEspecie.has(f.instrumentoId)) porEspecie.set(f.instrumentoId, f.precio.toString());
   }
   return porEspecie;
