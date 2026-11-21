@@ -83,7 +83,7 @@ avisar_pool_app() {
   url="$(leer_variable_env "$INV_ENV_PROD" INV_APP_DATABASE_URL)" || return 0
   case "$url" in
     *connection_limit=*) pool_app_ok "$url" ||
-      informar "⚠️  connection_limit de la URL de la app fuera de 1 a $TOPE_POOL_APP (inv_app admite 10 conexiones): se sigue; corríjalo en el archivo de producción (produccion.md §2)" ;;
+      informar "⚠️  la URL de la app no trae un único connection_limit de 1 a $TOPE_POOL_APP (inv_app admite 10 conexiones): se sigue; corríjalo en el archivo de producción (produccion.md §2)" ;;
     *) informar "⚠️  sin connection_limit en la URL de la app: Prisma abre núcleos × 2 + 1 conexiones (inv_app admite 10). Se sigue; agregue &connection_limit=5 (produccion.md §2)" ;;
   esac
 }
@@ -286,6 +286,12 @@ VERIFICADO=0
 vuelta_atras() {
   local codigo=$? sha="$SHA_VUELTA"
   [ -n "$sha" ] || [ "$DETENIDOS" = 0 ] || sha="$SHA_CORRIA"
+  if [ "$VERIFICADO" = 0 ] && [ -n "$sha" ] && ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+    informar "⚠️  estado/sha-actual no es un sha de 40 hex: no se vuelve a ninguna imagen. Revise a mano (produccion.md §5)."
+    sha=""
+  elif [ "$VERIFICADO" = 0 ] && [ -z "$sha" ] && [ "$DETENIDOS" = 1 ]; then
+    informar "⚠️  no hay imagen a la que volver (primer despliegue): lo detenido para migrar queda abajo"
+  fi
   if [ "$VERIFICADO" = 0 ] && [ -n "$sha" ]; then
     informar "vuelta atrás: levantando de nuevo la imagen que corría (sha $sha)"
     if INV_TAG="$sha" "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${PERMANENTES[@]}"; then

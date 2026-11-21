@@ -144,10 +144,16 @@ respaldar() {
     registrar "la salida no es un archivo de age: no se guardó"
     return 1
   fi
-  mv -f "$parcial" "$final"
-  (cd "$DIR" && sha256sum "$nombre" >"$nombre.sha256")
-  [ -z "$GID" ] || chgrp "$GID" "$final" "$final.sha256"
-  chmod 0640 "$final" "$final.sha256"
+  # Cada paso con su error explícito: el bucle llama a esto en contexto condicional, donde `set -e` no
+  # actúa. Si falla uno, no queda nada a medias (un respaldo sin .sha256 o sin el grupo no se cuenta).
+  if ! mv -f "$parcial" "$final" ||
+    ! (cd "$DIR" && sha256sum "$nombre" >"$nombre.sha256") ||
+    { [ -n "$GID" ] && ! chgrp "$GID" "$final" "$final.sha256"; } ||
+    ! chmod 0640 "$final" "$final.sha256"; then
+    rm -f "$parcial" "$final" "$final.sha256"
+    registrar "no se pudo dejar listo el respaldo (mover, sha256, grupo o permisos): no se guardó"
+    return 1
+  fi
   ls -1 "$DIR" | respaldos_a_borrar | while IFS= read -r viejo; do
     rm -f "$DIR/$viejo" "$DIR/$viejo.sha256"
     registrar "retención: borrado $viejo"

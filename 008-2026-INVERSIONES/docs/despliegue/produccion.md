@@ -80,7 +80,7 @@ Si algo no cumple, el script se niega y nombra las rutas. **`pausar-008.sh` solo
 
 Revisión previa, de solo lectura (no debe imprimir nada):
 ```sh
-sudo find / /opt /opt/inversiones-008 /opt/inversiones-008/repo /opt/inversiones-008/repo/008-2026-INVERSIONES -maxdepth 0 \( ! -user root -o -perm -0020 -o -perm -0002 \) -print
+sudo find / /opt /opt/inversiones-008 /opt/inversiones-008/repo /opt/inversiones-008/repo/008-2026-INVERSIONES /opt/inversiones-008/repo/.git -maxdepth 0 \( ! -user root -o -perm -0020 -o -perm -0002 -o -type l \) -print
 sudo find /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts /opt/inversiones-008/repo/008-2026-INVERSIONES/docker-compose.prod.yml /opt/inversiones-008/repo/.git/config /opt/inversiones-008/repo/.git/hooks \( ! -user root -o -perm -0020 -o -perm -0002 -o -type l \) -print
 sudo find /opt/inversiones-008/.env.inversiones.production -maxdepth 0 \( ! -user root -o -perm -0040 -o -perm -0004 -o -perm -0020 -o -perm -0002 -o -type l \) -print
 ```
@@ -187,7 +187,10 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
    - **El despliegue se niega si** existe la marca de pausa, si PI tiene el candado común o si se ve un despliegue de PI.
    - Si la app sale o se reinicia (`instrumentation.ts` sin `AUTH_SECRET` o sin `APP_ORIGEN`), falla.
    - **Si migra, la app vieja queda abajo** desde el respaldo previo hasta que la versión nueva queda healthy. Durante el migrador también se detiene el respaldo diario. Así ningún contenedor de Inversiones retiene tablas mientras migra. Con `--sin-migrar` no se detiene nada.
+   - **Ventana conocida:** entre el respaldo previo y la detención del respaldo diario, el diario podría arrancar si justo le toca. La detención lo corta antes del migrador: no queda texto plano y su `.parcial` se borra en un respaldo posterior, pasados 60 minutos. El diario se hace después, porque ese día no quedó marcado.
    - Si falla después de tocar contenedores (incluida esa pausa), **vuelve solo a la imagen que corría**: levanta app, vigía y respaldo con ese sha. Si se re-desplegaba el mismo sha, levanta otra vez ese mismo.
+     - Solo vuelve a un sha de 40 hex: si `estado/sha-actual` está dañado, lo dice y no levanta nada.
+     - En el primer despliegue no hay imagen a la que volver: lo dice, y lo detenido queda abajo.
 4. **Acceso inicial, que es también la recuperación de acceso.** Lo corre **Jelk por SSH**, no la Fábrica, y **antes de cargar los datos reales**:
    ```sh
    sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/crear-acceso-inicial.sh <argumentos que defina el frente login>
@@ -245,6 +248,7 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
   - el manual espera hasta 600 s (`RESPALDO_ESPERA_S`) y, si no lo consigue, sale con 75 sin tocar nada;
   - el diario no espera: lo intenta en el minuto siguiente, sin contarlo como fallo;
   - la marca de fallo de `pg_dump` y el `.parcial` llevan el PID, y un respaldo nunca se sobrescribe: si el nombre ya existe, toma el segundo siguiente;
+  - si falla un paso después del cifrado (mover, `.sha256`, grupo o permisos), no queda nada a medias y no cuenta como respaldo: el diario lo reintenta en 15 minutos;
   - los `.parcial` de más de 60 minutos (un respaldo cortado a mitad) se borran en el respaldo siguiente.
 - **Copia fuera del VPS:** la hace la **infraestructura de IDC**, que copia `/var/backups/idc/` completo al Mac cada día. Inversiones no configura nada para eso.
 - **Restauración, siempre con la clave privada fuera del VPS.** La clave sale del gestor de contraseñas de Jelk y entra a `age` por la entrada estándar (`age -d -i -`), nunca en un archivo. Hay dos casos.
