@@ -4,7 +4,7 @@
 
 # 03 · Pantallas por rol y transiciones
 
-161 páginas (`page.tsx`) clasificadas por quién las alcanza según la
+162 páginas (`page.tsx`) clasificadas por quién las alcanza según la
 puerta real (`proxy()` ejecutado con la sesión canónica; segmentos `[x]` evaluados
 con un valor muestra fijo — al proxy solo le importa el prefijo).
 
@@ -134,6 +134,7 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/dashboard/colegio/cursos/unificado` | SCHOOL_ADMIN | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard/padre)<br>PROFESIONAL (redirigir→/dashboard/profesional)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio/estadisticas` | SCHOOL_ADMIN | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard/padre)<br>PROFESIONAL (redirigir→/dashboard/profesional)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio/estudiantes` | SCHOOL_ADMIN | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard/padre)<br>PROFESIONAL (redirigir→/dashboard/profesional)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/colegio/mapa` | SCHOOL_ADMIN | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard/padre)<br>PROFESIONAL (redirigir→/dashboard/profesional)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio/materias` | SCHOOL_ADMIN | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard/padre)<br>PROFESIONAL (redirigir→/dashboard/profesional)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio/onboarding` | SCHOOL_ADMIN | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard/padre)<br>PROFESIONAL (redirigir→/dashboard/profesional)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio/profesores` | SCHOOL_ADMIN | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard/padre)<br>PROFESIONAL (redirigir→/dashboard/profesional)<br>ANONIMO (redirigir→/login) |
