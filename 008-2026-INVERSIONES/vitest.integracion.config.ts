@@ -16,15 +16,15 @@ export default defineConfig({
     environment: "node",
     fileParallelism: false,
     testTimeout: 20000,
-    // Cobertura de la integración (no la corre el CI; el piso solo vale con la base recién reiniciada): tras `prisma migrate reset` sobre la *_test,
-    // `vitest run --config vitest.integracion.config.ts --coverage`. Pisos = lo medido en main (fcf8e7c1,
-    // 2026-11-21) redondeado hacia abajo. Seguimiento: correrla en el CI y unirla con la de unidad.
+    // Cobertura de la integración SIN pisos: sola mide mal (el código puro lo cubre la unidad). Se corre solo
+    // por `scripts/integracion.mjs` (candado de base *_test local y `migrate reset` antes), con
+    // `npm run test:cobertura:integracion`, que escribe su blob; los pisos están en la medida unida
+    // (vitest.cobertura.config.ts, `npm run test:cobertura`). Candado: tests/unit/cobertura/configuracion.test.ts.
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
-      reporter: ["text"],
+      reporter: ["text-summary"],
       reportsDirectory: "node_modules/.cache/cobertura-integracion",
-      thresholds: { statements: 71, branches: 82, functions: 92, lines: 71 },
     },
     // Claves de cifrado (#11): la v1, aleatoria en cada corrida y nunca versionada. Se fija aquí
     // (no se toma del entorno) y las v2…v9 quedan vacías: una clave real del entorno o de la .env

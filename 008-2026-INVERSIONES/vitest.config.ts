@@ -13,16 +13,14 @@ export default defineConfig({
   test: {
     include: ["tests/unit/**/*.test.ts"],
     environment: "node",
-    // `npm run test:cobertura`. Pisos = lo medido en main fcf8e7c1 (2026-11-21), redondeado hacia abajo:
-    // solo muerden con --coverage (el CI corre `npm test` sin cobertura). Statements y lines son lo que
-    // manda: el código que solo cubre la integración cuenta aquí como no cubierto. Seguimiento: correrlo en
-    // el CI y medir unidad + integración juntas, camino al 80 % de ECC.
+    // Cobertura de la unidad SIN pisos: sola mide mal (el código con base lo cubre la integración). La usa
+    // `npm run test:cobertura:unidad` para escribir su blob; los pisos están en la medida unida
+    // (vitest.cobertura.config.ts, `npm run test:cobertura`). Candado: tests/unit/cobertura/configuracion.test.ts.
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
-      reporter: ["text"],
+      reporter: ["text-summary"],
       reportsDirectory: "node_modules/.cache/cobertura",
-      thresholds: { statements: 57, branches: 93, functions: 87, lines: 57 },
     },
   },
 });

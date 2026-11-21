@@ -14,6 +14,7 @@ tests
 playwright.config.ts
 vitest.config.ts
 vitest.integracion.config.ts
+vitest.cobertura.config.ts
 docs
 *.log
 .DS_Store
