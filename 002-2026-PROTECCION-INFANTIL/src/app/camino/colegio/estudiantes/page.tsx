@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Alerta } from "@/components/ui/Alerta";
 import { FormAgregarEstudiante } from "@/components/modules/colegio/curso/FormAgregarEstudiante";
+import { accionCompletarCaminoColegio } from "./actions";
 
 interface EstudianteItem {
     id: string;
@@ -84,8 +85,22 @@ export default function PasoEstudiantesColegio() {
             .catch(() => null);
     }, [cargarEstudiantes]);
 
+    const [terminando, setTerminando] = useState(false);
     const listo = total > 0;
-    const terminar = () => router.push("/camino/colegio/listo");
+    // SPEC-962: «Terminar» cierra el camino por SERVER ACTION (encola la bienvenida
+    // una sola vez y redirige DIRECTO al panel), no por navegación cliente a /listo.
+    const terminar = async () => {
+        setTerminando(true);
+        setError(null);
+        try {
+            await accionCompletarCaminoColegio();
+        } catch (err) {
+            // Un redirect de Next lo intercepta el framework; acá solo cae un fallo
+            // REAL (la acción no redirigió): reactivamos el botón y avisamos.
+            setTerminando(false);
+            setError(err instanceof Error ? err.message : "No pudimos terminar. Intente de nuevo.");
+        }
+    };
     const atras = () => router.push("/camino/colegio/cursos");
 
     const cursoOptions = [
@@ -168,7 +183,7 @@ export default function PasoEstudiantesColegio() {
             ) : null}
 
             <div className="flex flex-col gap-2 sm:flex-row-reverse">
-                <Button onClick={terminar} disabled={!listo} className="w-full sm:flex-1">
+                <Button onClick={terminar} disabled={!listo || terminando} isLoading={terminando} className="w-full sm:flex-1">
                     Terminar
                 </Button>
                 <button

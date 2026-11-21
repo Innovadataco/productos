@@ -395,6 +395,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/camino/colegio/estudiantes/estudiantes-inline-sin-dashboard.candado.test.tsx",
     // SPEC-957 (B.3): el paso de cursos no enlaza «Materias» a /dashboard. Lee el fuente, sin BD.
     "src/app/camino/colegio/cursos/sin-enlace-materias.candado.test.ts",
+    // SPEC-962 (#5): /listo redirige al panel y NO encola (pantalla de cierre eliminada). Mocks, sin BD.
+    "src/app/camino/colegio/listo/listo-redirige.candado.test.ts",
     // SPEC-958 (M5a): campo de correo partido con dominio institucional + voz impersonal. Puro jsdom.
     "src/components/modules/CampoCorreoDominio.candado.test.tsx",
     // SPEC-245 (002-PI-148): modal de activación / autorización manual (sin BD).
