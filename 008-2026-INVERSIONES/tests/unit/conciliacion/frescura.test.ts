@@ -69,6 +69,14 @@ describe("mismaConciliacion", () => {
     expect(mismaConciliacion({ ...guardada, controles: [...guardada.controles, guardada.controles[0]!] }, recalculada)).toBe(false);
   });
 
+  it("es distinta si un control se repite en lugar de otro (mismo largo), en lo guardado o en lo recalculado", () => {
+    const guardada = comoEnLaBase();
+    const repetida = guardada.controles.map((c, k) => (k === 1 ? guardada.controles[0]! : c));
+    expect(mismaConciliacion({ ...guardada, controles: repetida }, recalculada)).toBe(false);
+    const recalculadaRepetida = { ...recalculada, controles: recalculada.controles.map((c, k) => (k === 1 ? recalculada.controles[0]! : c)) };
+    expect(mismaConciliacion(guardada, recalculadaRepetida)).toBe(false);
+  });
+
   it.each(["esperado", "real", "diferencia", "tolerancia"] as const)("es distinta si cambia «%s» de un control", (campo) => {
     const guardada = comoEnLaBase();
     const i = guardada.controles.findIndex((c) => c[campo] !== null);
