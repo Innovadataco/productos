@@ -142,13 +142,16 @@ services:
 
   # Respaldo diario cifrado, permanente y con programación propia (sin systemd ni cron del host):
   # pg_dump -Fc (rol inv_dueno, red interna) | age -r <pública> → /var/backups/idc/inversiones/ (la carpeta
-  # que la infraestructura de IDC copia al Mac). Solo la clave PÚBLICA de age. Archivos 0640 con el grupo
-  # respaldo (INV_RESPALDO_GID, el gid numérico que el coordinador lee en el VPS).
+  # root:respaldo 750 que montó el CEO de PI y que la infraestructura de IDC copia al Mac). Solo la clave
+  # PÚBLICA de age.
+  # ÚNICA excepción a «no root» (capas-pi.md #4): corre como root DEL CONTENEDOR con el grupo respaldo
+  # (INV_RESPALDO_GID, gid numérico del host), para dejar los archivos root:respaldo 0640 sin cambiar esa
+  # carpeta. Sin ninguna capacidad (no salta permisos ni cambia dueños), sin escalar, de solo lectura y con
+  # un único bind de escritura.
   inv-008-respaldo:
     image: inv-008-vigia:${INV_TAG:-sin-desplegar}
     pull_policy: never
-    user: "10008:10008"
-    group_add: ["${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}"]
+    user: "0:${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}"
     restart: always
     init: true
     entrypoint: ["/usr/local/bin/inv-respaldo"]
@@ -167,7 +170,7 @@ services:
       - inv-008-red-interna
     read_only: true
     tmpfs:
-      - /run/respaldo:uid=10008,gid=10008,mode=0700
+      - /run/respaldo
       - /tmp
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]

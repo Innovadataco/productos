@@ -96,6 +96,23 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(s("inv-008-migrador").image).toBe("inv-008-migrador:${INV_TAG:-sin-desplegar}");
   });
 
+  it("ÚNICA excepción a «no root»: el respaldo corre como root DEL CONTENEDOR con el grupo respaldo, sin ninguna capacidad", () => {
+    // Así deja los archivos root:respaldo 0640 en la carpeta root:respaldo 750 que montó el CEO de PI, sin
+    // pedirle cambiarla. Sin capacidades, ese root no salta permisos (DAC) ni cambia dueños: solo escribe
+    // donde root ya es dueño, y su único bind de escritura es /var/backups/idc/inversiones.
+    const r = s("inv-008-respaldo");
+    expect(r.user).toBe("0:${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}");
+    expect(r.cap_drop).toEqual(["ALL"]);
+    expect(r.cap_add).toBeUndefined();
+    expect(r.security_opt).toEqual(["no-new-privileges:true"]);
+    expect(r.read_only).toBe(true);
+    expect(r.tmpfs).toEqual(["/run/respaldo", "/tmp"]);
+    expect(r.volumes).toEqual(["/var/backups/idc/inversiones:/respaldos"]);
+    expect((r as { privileged?: boolean }).privileged).toBeUndefined();
+    const usuarios = Object.entries(compose.services).filter(([, x]) => /^0(:|$)/.test(x.user ?? "")).map(([n]) => n);
+    expect(usuarios).toEqual(["inv-008-respaldo"]);
+  });
+
   it("el respaldo es permanente (programación propia, sin systemd) y va solo por la red interna", () => {
     expect(s("inv-008-respaldo").profiles).toBeUndefined();
     expect(s("inv-008-respaldo").networks).toEqual(["inv-008-red-interna"]);
@@ -132,9 +149,10 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
 
 describe("docker-compose.prod.yml · endurecimiento en cada servicio", () => {
   for (const nombre of SERVICIOS) {
-    it(`${nombre}: no root, solo lectura, sin capacidades, sin escalar, restart always y healthcheck`, () => {
+    it(`${nombre}: no root (salvo la excepción del respaldo), solo lectura, sin capacidades, sin escalar, restart y healthcheck`, () => {
       const srv = s(nombre);
-      expect(srv.user, "usuario").toMatch(/^(70:70|10008:10008)$/);
+      if (nombre === "inv-008-respaldo") expect(srv.user, "usuario").toBe("0:${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}");
+      else expect(srv.user, "usuario").toMatch(/^(70:70|10008:10008)$/);
       expect(srv.read_only).toBe(true);
       expect(srv.cap_drop).toEqual(["ALL"]);
       expect(srv.cap_add).toBeUndefined();
@@ -179,11 +197,11 @@ describe("docker-compose.prod.yml · endurecimiento en cada servicio", () => {
 });
 
 describe("docker-compose.prod.yml · variables: un solo archivo de producción, cada servicio solo lo suyo", () => {
-  it("ningún servicio usa env_file ni secrets; solo el respaldo usa group_add (lectura de la copia)", () => {
-    for (const [nombre, srv] of Object.entries(compose.services)) {
+  it("ningún servicio usa env_file, secrets ni group_add", () => {
+    for (const srv of Object.values(compose.services)) {
       expect(srv.env_file).toBeUndefined();
       expect(srv.secrets).toBeUndefined();
-      if (nombre !== "inv-008-respaldo") expect(srv.group_add, nombre).toBeUndefined();
+      expect(srv.group_add).toBeUndefined();
     }
     expect(compose.secrets).toBeUndefined();
   });
@@ -215,7 +233,6 @@ describe("docker-compose.prod.yml · variables: un solo archivo de producción, 
     expect(claves("inv-008-respaldo")).toEqual(["AGE_PUBLICA", "DATABASE_URL", "RESPALDO_GID", "RESPALDO_HORA", "TZ"]);
     expect(s("inv-008-respaldo").environment?.AGE_PUBLICA).toBe("${INV_AGE_PUBLICA:?falta INV_AGE_PUBLICA}");
     expect(s("inv-008-respaldo").environment?.DATABASE_URL).toBe("${INV_DUENO_DATABASE_URL:?falta INV_DUENO_DATABASE_URL}");
-    expect(s("inv-008-respaldo").group_add).toEqual(["${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}"]);
     expect(s("inv-008-respaldo").environment?.RESPALDO_GID).toBe("${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}");
   });
 

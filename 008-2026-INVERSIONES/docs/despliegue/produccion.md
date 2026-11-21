@@ -33,14 +33,14 @@ Documentos relacionados:
 | `inv-008-app:<sha>` | La app (Next standalone). Usuario 10008, solo lectura, escucha en 5008 y se publica en `127.0.0.1:5008`. |
 | `inv-008-migrador:<sha>` | `prisma migrate deploy`, el guardián del esquema y los privilegios de `inv_app`. Además corre las cargas y el acceso inicial (`tsx`, rol `inv_dueno`). Es de un solo uso. |
 | `inv-008-vigia:<sha>` | Imagen mínima: alpine, sin node ni prisma. Lleva `age`, `curl`, certificados y `pg_dump` 16. La usan el vigía y el respaldo. |
-| Servicios de `inv-008-prod` | Permanentes, con `restart: always`: `inv-008-db` (Postgres 16, 70:70, sin puertos, red interna), `inv-008-app`, `inv-008-vigia` (solo avisa) e `inv-008-respaldo` (respaldo diario). De un solo uso, con `restart: "no"` y `run --rm`: `inv-008-migrador`. |
+| Servicios de `inv-008-prod` | Permanentes, con `restart: always`: `inv-008-db` (Postgres 16, 70:70, sin puertos, red interna), `inv-008-app`, `inv-008-vigia` (solo avisa) e `inv-008-respaldo` (respaldo diario, `0:<gid respaldo>` sin capacidades: la excepción documentada). De un solo uso, con `restart: "no"` y `run --rm`: `inv-008-migrador`. |
 | `/opt/inversiones-008/repo` | Clon por HTTPS del repo público. De root y sin escritura para el grupo ni para otros: el despliegue lo verifica. |
 | `/opt/inversiones-008/.env.inversiones.production` | **El único archivo de producción**: root, 600, fuera de git. Plantilla sin valores: [`env-inversiones-production.example`](env-inversiones-production.example). |
 | `/opt/inversiones-008/estado/` | El sha y la imagen actuales y anteriores, las mediciones, la línea base de OOM y la **marca de pausa `pausado`**. |
 | `/opt/inversiones-008/imagenes/` | Los `.tar` que llegan del Mac. Se conservan los del sha actual y del anterior. |
 | `/opt/inversiones-008/run/despliegue-inv-008.lock` | El candado de Inversiones. |
 | `/var/lock/despliegue-vps.lock` | El candado común con PI. |
-| `/var/backups/idc/inversiones/` | Los `.dump.age` con su `.sha256`, en 0640 con el grupo `respaldo`. |
+| `/var/backups/idc/inversiones/` | Los `.dump.age` con su `.sha256`, `root:respaldo` en 0640, en la carpeta del CEO de PI (`root:respaldo`, 750). |
 
 **La variable de todo, incluida la reversa:**
 ```sh
@@ -68,13 +68,13 @@ sudo git clone https://github.com/Innovadataco/productos.git /opt/inversiones-00
 sudo chmod -R go-w /opt/inversiones-008/repo
 ```
 
-**La carpeta de respaldos** `/var/backups/idc/inversiones/` ya existe: la montó el CEO de PI y `/var/backups/idc/` es `root:respaldo`, 750.
-- El contenedor de respaldo corre como usuario 10008, no como root, así que necesita poder escribir ahí. Lo ajusta quien administra esa carpeta (el CEO de PI o Jelk), no un script de Inversiones:
+**La carpeta de respaldos** `/var/backups/idc/inversiones/` ya existe y **no se toca**: la montó el CEO de PI, como `root:respaldo` en 750.
+- Los archivos de Inversiones quedan ahí `root:respaldo` en 0640, como pidió.
+- Para eso, el contenedor `inv-008-respaldo` corre como `0:<gid de respaldo>`: root **del contenedor**, sin ninguna capacidad. Es la única excepción a «no root» (capas-pi.md #4).
+- Lo único que hace falta es el gid numérico del grupo `respaldo`:
   ```sh
-  sudo chown 10008:respaldo /var/backups/idc/inversiones && sudo chmod u=rwx,g=rxs,o= /var/backups/idc/inversiones
   getent group respaldo | cut -d: -f3      # → INV_RESPALDO_GID del archivo de producción
   ```
-- **Por confirmar con el CEO de PI:** su diseño dice archivos `root:respaldo`. Con un contenedor no root, los archivos quedan `10008:respaldo` en 0640. El grupo `respaldo` sigue leyéndolos para la copia; solo cambia el dueño.
 
 **El archivo de producción.**
 - Las claves se generan en el VPS y van directo al archivo, sin pasar por la pantalla ni por el historial.
@@ -209,7 +209,7 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
 - **El contenedor `inv-008-respaldo`** es permanente y programa el respaldo él mismo, sin systemd ni cron del host:
   - hace `pg_dump -Fc`, con el rol `inv_dueno` y la clave en las variables de libpq, nunca en los argumentos;
   - lo pasa por `age -r <pública>`, a las 02:30 COT;
-  - deja `/var/backups/idc/inversiones/inv-008-AAAAMMDD-HHMMSS[-semanal|-<motivo>].dump.age` con su `.sha256`, los dos en 0640 con el grupo `respaldo`;
+  - deja `/var/backups/idc/inversiones/inv-008-AAAAMMDD-HHMMSS[-semanal|-<motivo>].dump.age` con su `.sha256`, los dos `root:respaldo` en 0640;
   - el texto plano nunca toca el disco: si algo falla, no queda ningún archivo.
 - **Retención:** 14 diarios, 8 semanales (los del domingo) y 5 extras.
 - **Respaldo ya:** `respaldar-base.sh [--motivo x]`. Se lo pide al contenedor y verifica el archivo y su sha256. El despliegue lo corre antes de migrar.

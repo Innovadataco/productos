@@ -21,9 +21,25 @@ Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app 
 
 | # | Requisito | Evidencia en el repo | Prueba local | En el host, al desplegar |
 |---|---|---|---|---|
-| 4 | Usuario no root, como PI (`adduser` + `USER`) | `Dockerfile:23` y `:81` (`addgroup -S -g 10008` + `adduser -S -u 10008`, como PI con `nextjs`); `USER 10008:10008` en `:52`, `:72` y `:90`; la base como `70:70`. `read_only`, `cap_drop: [ALL]` y `no-new-privileges` en los 5 servicios | `dockerfile.test.ts` y `compose-prod.test.ts`; en local, `id` dio `uid=10008` y escribir en `/app` dio `Read-only file system` | `docker exec $(sudo $COMPOSE ps -q inv-008-app) id` → `uid=10008`; `docker inspect -f '{{.HostConfig.ReadonlyRootfs}} {{.HostConfig.CapDrop}}' …` → `true [ALL]` |
+| 4 | Usuario no root, como PI (`adduser` + `USER`); la única excepción es `inv-008-respaldo`, ver abajo | `Dockerfile:23` y `:81` (`addgroup -S -g 10008` + `adduser -S -u 10008`, como PI con `nextjs`); `USER 10008:10008` en `:52`, `:72` y `:90`; la base como `70:70`. `read_only`, `cap_drop: [ALL]` y `no-new-privileges` en los 5 servicios | `dockerfile.test.ts` y `compose-prod.test.ts`; en local, `id` dio `uid=10008` y escribir en `/app` dio `Read-only file system` | `docker exec $(sudo $COMPOSE ps -q inv-008-app) id` → `uid=10008`; `docker inspect -f '{{.HostConfig.ReadonlyRootfs}} {{.HostConfig.CapDrop}}' …` → `true [ALL]` |
 | 5 | Healthcheck en CADA servicio y `restart: always`, como PI | `docker-compose.prod.yml`: `restart: always` en `:18`, `:59`, `:152` y `:199` (base, app, respaldo y vigía); `healthcheck:` en `:43`, `:88`, `:132`, `:179` y `:223` | `compose-prod.test.ts` (los 5 servicios); en local, base, app, respaldo y vigía en `healthy` | `sudo $COMPOSE ps` → los 4 permanentes en `healthy`; `docker inspect -f '{{.HostConfig.RestartPolicy.Name}}'` → `always` |
 | 6 | Los secretos en el host, fuera del repo, y las imágenes sin secretos | Un solo archivo, `/opt/inversiones-008/.env.inversiones.production` (600, root), usado solo como `--env-file` para interpolar (`scripts/produccion-comun.sh`, `armar_compose`); cada servicio con solo sus variables y ningún `env_file` ni `secrets`. `.dockerignore` excluye `.env*`; el Dockerfile falla si una imagen trae un `.env` | `dockerfile.test.ts` y `compose-prod.test.ts`; en local, `docker history --no-trunc` sin secretos y `find / -name '.env*'` vacío en las 3 imágenes | `sudo stat -c '%U %a' /opt/inversiones-008/.env.inversiones.production` → `root 600`; `docker history --no-trunc inv-008-app:<sha> \| grep -Ei 'password\|secret\|clave\|token'` → vacío |
+
+**Excepción a la capa 4, documentada (la única):** `inv-008-respaldo` corre como `user: "0:${INV_RESPALDO_GID}"`, es decir, root **del contenedor** con el grupo `respaldo` del host.
+- **Por qué:** así deja los archivos `root:respaldo` en 0640 dentro de `/var/backups/idc/inversiones/`, la carpeta `root:respaldo` en 750 que montó el CEO de PI, sin pedirle cambiarla.
+- **Lo que lo limita:**
+  - `cap_drop: [ALL]` (`CapEff` en 0: no salta permisos ni cambia dueños) y `no-new-privileges`;
+  - `read_only` con `tmpfs` en `/tmp` y `/run/respaldo`;
+  - un único bind de escritura, que es esa carpeta;
+  - red interna, sin salida.
+- **La prueba:** `compose-prod.test.ts` exige que sea el único servicio con usuario 0.
+- **En local**, con un volumen de prueba `0:4242` en 750:
+  ```text
+  -rw-r-----  1 0  4242  2475  inv-008-…-prueba-root.dump.age
+  -rw-r-----  1 0  4242   111  inv-008-…-prueba-root.dump.age.sha256
+  uid=0(root) gid=4242 · CapEff 0000000000000000 · touch /etc/x → Read-only file system
+  ```
+  Un usuario fuera del grupo (10008) no puede ni listar la carpeta: `Permission denied`.
 
 **Excepción a la capa 5, documentada:** el migrador es de un solo uso (`run --rm`) y lleva `restart: "no"` (`docker-compose.prod.yml:108`). Con `always` podría volver a correr solo. Su healthcheck es nominal. Los cuatro permanentes sí llevan `restart: always`.
 
@@ -61,7 +77,7 @@ manifest.json del .tar → ["inv-008-app:<sha>","inv-008-migrador:<sha>","inv-00
 
 # despliegue (desplegar-prod.sh <id> --cargar <tar> <sha256>)
 [desplegar-prod] sha256 y etiquetas del .tar verificados; docker load
-[respaldo] respaldo listo: inv-008-20261121-002952-pre-migracion.dump.age     (-rw-r----- , 0640)
+[respaldo] respaldo listo: inv-008-20261121-002952-pre-migracion.dump.age     (0640; el dueño root:respaldo se probó aparte)
 [desplegar-prod] mem = memswap en todos los contenedores de inv-008-prueba
 [vigilar-convivencia] OK: MemAvailable 5025 MiB; sin OOM nuevos (oom_kill jerárquico 0)
 DEPLOY VERIFICADO bce628493c5714243524b5d75d25c756e9416422
