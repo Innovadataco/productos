@@ -33,9 +33,23 @@ function validar(d: DatosLoteEscision) {
   return { destino: destino.valor, fecha: fecha.valor, cantidad: cantidad.valor.completada, costoUnitario: new Prisma.Decimal(costo.valor) };
 }
 
-/** Registra el lote de la especie destino de un evento; el lote madre es el lote vivo más antiguo del origen. */
+/**
+ * Registra el lote de la especie destino de un evento. El lote madre es el más antiguo del origen
+ * que seguía vivo al corte del evento (cantidad menos lo vendido hasta esa fecha); es un enlace de
+ * trazabilidad: su costo no se ajusta. Requiere haber corrido `lotes:construir` antes.
+ */
 export async function registrarLoteEscision(db: PrismaClient, datos: DatosLoteEscision): Promise<{ loteId: string }> {
   const d = validar(datos);
+  try {
+    return await registrarEnTransaccion(db, d);
+  } catch (e) {
+    // Índice único lote_escision_evento_key: dos registros simultáneos del mismo lote.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") throw new ErrorLote("LOTE_YA_REGISTRADO");
+    throw e;
+  }
+}
+
+function registrarEnTransaccion(db: PrismaClient, d: ReturnType<typeof validar>): Promise<{ loteId: string }> {
   return db.$transaction(async (tx) => {
     const eventos = await tx.eventoCorporativo.findMany({
       where: { tipo: "ESCISION", fecha: d.fecha, destino: { OR: [{ nemotecnico: d.destino }, { simboloTrii: d.destino }] } },
@@ -45,11 +59,12 @@ export async function registrarLoteEscision(db: PrismaClient, datos: DatosLoteEs
     if (eventos.length > 1) throw new ErrorLote("EVENTO_AMBIGUO");
     const evento = eventos[0]!;
     if (evento.lotes.length > 0) throw new ErrorLote("LOTE_YA_REGISTRADO");
-    const madre = await tx.lote.findFirst({
+    const candidatos = await tx.lote.findMany({
       where: { instrumentoId: evento.origenId, fechaCompra: { lte: d.fecha } },
       orderBy: [{ fechaCompra: "asc" }, { id: "asc" }],
-      select: { id: true },
+      select: { id: true, cantidad: true, asignaciones: { where: { ordenVenta: { fechaOperacion: { lte: d.fecha } } }, select: { cantidad: true } } },
     });
+    const madre = candidatos.find((l) => l.cantidad - l.asignaciones.reduce((s, a) => s + a.cantidad, 0n) > 0n);
     if (!madre) throw new ErrorLote("SIN_LOTE_MADRE");
     const lote = await tx.lote.create({
       data: {

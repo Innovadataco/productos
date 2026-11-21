@@ -17,7 +17,7 @@ const ordenes = (filas: string) =>
   importarArchivoTrii(db, { nombreArchivo: "o.ficticio.csv", contenido: new TextEncoder().encode(ORDENES + filas), usuarioId: duenoId });
 const fila = (fecha: string, n: string, lado: string, estado: string, cant: number, precio: number) =>
   `"${fecha}, 10:00 a. m.",${n},${lado},${estado},${cant},0,${precio}.0,${cant * precio}.0,7.0,${cant * precio + (lado === "Compra" ? 7 : -7)}.0\n`;
-const posicionDe = async (n: string) => (await posiciones(db)).find((p) => p.nemotecnico === n);
+const posicionDe = async (n: string) => (await posiciones(db)).posiciones.find((p) => p.nemotecnico === n);
 
 beforeAll(async () => {
   const base = (await db.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db ?? "";
@@ -71,6 +71,9 @@ describe("lotes desde las órdenes", () => {
     const id = (await db.instrumento.findFirstOrThrow({ where: { nemotecnico: n } })).id;
     expect(r.especiesSinLotes).toContain(id);
     expect(await db.asignacionVenta.count({ where: { lote: { instrumentoId: id } } })).toBe(0);
+    const r2 = await posiciones(db);
+    expect(r2.especiesIncompletas).toContain(id);
+    expect(r2.posiciones.find((p) => p.instrumentoId === id)).toBeUndefined();
   });
 });
 
@@ -89,6 +92,18 @@ describe("lote de escisión", () => {
     expect(lote.loteOrigen?.instrumentoId).toBe((await db.instrumento.findFirstOrThrow({ where: { nemotecnico: a } })).id);
     expect(await posicionDe(b)).toMatchObject({ cantidad: 16n });
     await expect(registrarLoteEscision(db, { destino: b, fechaEvento: "2024-02-12", cantidad: "16", costoUnitario: "50.5" })).rejects.toMatchObject({ codigo: "LOTE_YA_REGISTRADO" });
+  });
+
+  it("el lote madre es el más antiguo VIVO al corte del evento (no uno ya vendido)", async () => {
+    const [a, b] = [nemo("MA"), nemo("MB")];
+    await ordenes(fila("8 ene 2024", a, "Compra", "Aprobado", 10, 10) + fila("5 feb 2024", a, "Compra", "Aprobado", 20, 11) + fila("6 feb 2024", a, "Venta", "Aprobado", 10, 12));
+    await construirLotes(db);
+    const v = validarEscision({ origen: a, destino: b, fecha: "2024-03-04" });
+    if (!v.ok) throw new Error("validación");
+    await registrarEscision(db, v.valor, { crearDestino: true });
+    const { loteId } = await registrarLoteEscision(db, { destino: b, fechaEvento: "2024-03-04", cantidad: "3", costoUnitario: "9" });
+    const lote = await db.lote.findUniqueOrThrow({ where: { id: loteId }, include: { loteOrigen: true } });
+    expect(lote.loteOrigen?.fechaCompra.toISOString().slice(0, 10)).toBe("2024-02-05");
   });
 
   it("sin evento registrado o con datos inválidos, se rechaza", async () => {

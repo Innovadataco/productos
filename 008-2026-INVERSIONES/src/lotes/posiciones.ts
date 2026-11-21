@@ -10,8 +10,25 @@ export interface Posicion {
   readonly lotesVivos: number;
 }
 
-/** Posiciones con cantidad > 0. Las especies con ventas sin lote quedan fuera hasta resolverse. */
-export async function posiciones(db: PrismaClient): Promise<Posicion[]> {
+export interface ResultadoPosiciones {
+  readonly posiciones: Posicion[];
+  /** Especies con ventas aprobadas sin asignar (VENTA_SIN_LOTES): quedan fuera hasta resolverse. */
+  readonly especiesIncompletas: readonly string[];
+}
+
+async function especiesConVentasSinAsignar(db: PrismaClient): Promise<Set<string>> {
+  const [vendido, asignado] = await Promise.all([
+    db.orden.groupBy({ by: ["instrumentoId"], where: { lado: "VENTA", estado: "APROBADO" }, _sum: { cantidadCompletada: true } }),
+    db.asignacionVenta.findMany({ select: { cantidad: true, ordenVenta: { select: { instrumentoId: true } } } }),
+  ]);
+  const porEspecie = new Map<string, bigint>();
+  for (const a of asignado) porEspecie.set(a.ordenVenta.instrumentoId, (porEspecie.get(a.ordenVenta.instrumentoId) ?? 0n) + a.cantidad);
+  return new Set(vendido.filter((v) => (v._sum.cantidadCompletada ?? 0n) > (porEspecie.get(v.instrumentoId) ?? 0n)).map((v) => v.instrumentoId));
+}
+
+/** Posiciones con cantidad > 0. Las especies con ventas sin asignar quedan fuera y se informan. */
+export async function posiciones(db: PrismaClient): Promise<ResultadoPosiciones> {
+  const incompletas = await especiesConVentasSinAsignar(db);
   const lotes = await db.lote.findMany({
     select: { id: true, instrumentoId: true, cantidad: true, costoTotal: true, instrumento: { select: { nemotecnico: true } }, asignaciones: { select: { cantidad: true, costoBase: true } } },
   });
@@ -28,8 +45,9 @@ export async function posiciones(db: PrismaClient): Promise<Posicion[]> {
       vivos: actual.vivos + (queda > 0n ? 1 : 0),
     });
   }
-  return [...porEspecie.entries()]
-    .filter(([, p]) => p.cantidad > 0n)
+  const lista = [...porEspecie.entries()]
+    .filter(([id, p]) => p.cantidad > 0n && !incompletas.has(id))
     .map(([instrumentoId, p]) => ({ instrumentoId, nemotecnico: p.nemotecnico, cantidad: p.cantidad, costoVivo: p.costo, lotesVivos: p.vivos }))
     .sort((a, b) => (a.nemotecnico ?? "").localeCompare(b.nemotecnico ?? ""));
+  return { posiciones: lista, especiesIncompletas: [...incompletas] };
 }

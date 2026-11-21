@@ -42,6 +42,12 @@ describe("asignarFifo", () => {
     expect(resumen(r)).toEqual([["v1", "a", 20n, "2074"]]);
   });
 
+  it("al agotar un lote, la suma de lo asignado iguala su costo (el residual va en la última)", () => {
+    const tres = [lote("t", "2024-01-01", 3n, "100")];
+    const r = asignarFifo(tres, [1, 2, 3].map((i) => ({ id: `v${i}`, fecha: d(`2024-02-0${i}`), cantidad: 1n })));
+    expect(resumen(r)).toEqual([["v1", "t", 1n, "33.3333"], ["v2", "t", 1n, "33.3333"], ["v3", "t", 1n, "33.3334"]]);
+  });
+
   it("el costo proporcional redondea a 4 decimales (medio al par)", () => {
     expect(costoProporcional(lote("x", "2024-01-01", 3n, "100"), 1n).toString()).toBe("33.3333");
     expect(costoProporcional(lote("x", "2024-01-01", 8n, "0.0001"), 4n).toString()).toBe("0");

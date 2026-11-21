@@ -1,8 +1,8 @@
 /**
  * Registra el lote recibido por una escisión, con el costo del portal de Acciones & Valores (INV-SPEC-12).
  *   npm run lote:escision -- --destino <NEMO> --fecha-evento AAAA-MM-DD --cantidad <N> --costo-unitario <precio de compra del portal>
- * El evento debe estar registrado (npm run escision:registrar). El lote madre es el lote vivo más
- * antiguo de la especie origen. No imprime los datos (son reales), solo el resultado.
+ * El evento debe estar registrado (npm run escision:registrar) y los lotes construidos (npm run
+ * lotes:construir). El lote madre es el más antiguo de la especie origen vivo al corte del evento. No imprime los datos (son reales), solo el resultado.
  */
 import { PrismaClient } from "@prisma/client";
 import { parseArgs } from "node:util";
