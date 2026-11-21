@@ -61,7 +61,7 @@ Checks exigidos por el ruleset **«Gate CI - main»** en todo PR a `main`:
   SPEC) → rama → PR con **candado que muere con el defecto** → revisión adversarial → el CEO
   mergea y despliega. Lo propio de PI vive en `Gestion-de-proyectos` (`EQUIPO/PROMPT-*.md`) y
   en `002-2026-PROTECCION-INFANTIL/AGENTS.md`.
-- **008 (INV):** metodología **ECC** (affaan-m/ECC), sin SPEC ni radicados. Ver
+- **008 (INV):** metodología **ECC**, sin SPEC ni radicados. Ver
   `008-2026-INVERSIONES/AGENTS.md`.
 
 ## Secretos
