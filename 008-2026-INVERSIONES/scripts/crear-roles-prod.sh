@@ -6,14 +6,17 @@
 #   sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-roles-prod.sh   (<raíz>: ver ESTADO en la gestión)
 #
 # Las claves salen del único archivo de producción (<raíz>/.env.inversiones.production,
-# 600 de root): de INV_DUENO_DATABASE_URL e INV_APP_DATABASE_URL. Nunca de una migración (el repo es
-# público).
-# inv_precios (el servicio de precios) es opcional: sin la línea INV_PRECIOS_DATABASE_URL en el archivo se omite y
-# se avisa (no se crea, ni se le cambia la clave si ya existía); con la línea presente pero vacía o mal formada,
-# aborta sin tocar Docker. Sus privilegios de tablas no salen de aquí: los da el migrador (privilegios.sql) en el
-# siguiente despliegue; hasta entonces se conecta y no lee nada. Llegan a psql SOLO por la entrada estándar: printf es interno de bash, así que no aparecen en
-# los argumentos de ningún proceso (`ps`). Antes de fijarlas se apaga el registro de sentencias con error,
-# para que una clave nunca termine en el log de PostgreSQL.
+# 600 de root): de INV_DUENO_DATABASE_URL e INV_APP_DATABASE_URL (y de INV_PRECIOS_DATABASE_URL, si está). Nunca de
+# una migración (el repo es público). Llegan a psql SOLO por la entrada estándar: printf es interno de bash, así que
+# no aparecen en los argumentos de ningún proceso (`ps`). Antes de fijarlas se apaga el registro de sentencias con
+# error, para que una clave nunca termine en el log de PostgreSQL.
+#
+# inv_precios (el servicio de precios) es opcional:
+#  - sin la línea INV_PRECIOS_DATABASE_URL en el archivo, se omite y se avisa (no se crea, ni se le cambia la clave
+#    si ya existía);
+#  - con la línea vacía, mal formada o con la clave de otro rol, aborta sin tocar Docker (ni rota las otras claves).
+# Sus privilegios de tablas no salen de aquí: los da el migrador (privilegios.sql) en el siguiente despliegue; hasta
+# entonces se conecta y no lee nada.
 set -euo pipefail
 INV_SCRIPT=crear-roles-prod
 # shellcheck source=produccion-comun.sh
@@ -33,7 +36,8 @@ clave_de_url() {
 
 # SQL puro del rol inv_precios (sin clave ni metacomandos de psql), en un heredoc entre comillas: no se expande nada.
 # Solo LOGIN, CONNECT a la base y USAGE del esquema; sin privilegios por defecto: cada permiso de tabla, por columna,
-# lo da privilegios.sql (que lo corre el migrador como inv_dueno). Lo prueba el CI contra una PostgreSQL 16 real
+# lo da privilegios.sql (que lo corre el migrador como inv_dueno). 4 conexiones: dos veces el pool de su URL
+# (connection_limit=2); con inv_dueno (5) e inv_app (10) suman 19 de las 30 de la base. Lo prueba el CI contra una PostgreSQL 16 real
 # (tests/unit/produccion/roles-base.test.ts).
 sql_rol_precios() {
   cat <<'SQL'
@@ -44,7 +48,7 @@ BEGIN
   END IF;
 END
 $$;
-ALTER ROLE inv_precios WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 3;
+ALTER ROLE inv_precios WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 4;
 DO $$
 BEGIN
   EXECUTE format('GRANT CONNECT ON DATABASE %I TO inv_precios', current_database());
