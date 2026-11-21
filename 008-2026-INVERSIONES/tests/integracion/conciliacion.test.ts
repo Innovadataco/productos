@@ -1,11 +1,17 @@
 // Conciliación por fecha de corte (PR-B) contra la base de PRUEBAS: órdenes de Trii ficticias importadas con su
 // importador, la certificación ficticia importada con el suyo y cierres del día del corte. Se guarda una
 // conciliación por corrida (historia), con un control por regla y su motivo. Datos inventados.
+// La conciliación lee TODA la cuenta (un solo dueño): en la base compartida ve también lo que dejaron los archivos
+// que corrieron antes, y vitest los ordena por la duración de la corrida anterior. Por eso cada camino del cálculo
+// (retiros, sin dividendos ni ajustes, escisión, T+2) tiene aquí un caso con datos propios: la cobertura de
+// esperado.ts no depende del orden de los archivos.
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ErrorConciliacion, conciliarCertificacion } from "@/conciliacion/conciliar";
+import { registrarEscision, validarEscision } from "@/eventos/escision";
 import { importarCertificacion } from "@/importacion/av/importar";
 import { importarArchivoTrii } from "@/importacion/trii/importar";
+import { registrarLoteEscision } from "@/lotes/escision";
 import { CERTIFICACION_FICTICIA, generarCertificacionPdf, type EspecCertificacion } from "../fixtures/av/certificacion.ficticio";
 
 const db = new PrismaClient();
@@ -21,32 +27,45 @@ const orden = (d: Date, nemo: string, lado: "Compra" | "Venta", cantidad: number
   `${trii(d)},${nemo},${lado},Aprobado,${cantidad}/${cantidad},0,${precio}.0,${cantidad * precio}.0,0,${cantidad * precio}.0`;
 const ENCABEZADO = "Fecha y hora,Símbolo de la acción,Tipo de orden,Estado,Acciones completadas,Acciones pendientes,Precio por acción,Total invertido,Valor comisión,Total estimado";
 
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+const idDe = async (nemo: string) => (await db.instrumento.findUniqueOrThrow({ where: { nemotecnico: nemo } })).id;
+
+/** Carga un CSV ficticio de Trii (órdenes, caja o dividendos) con su importador. */
+async function cargarTrii(nombreArchivo: string, csv: string) {
+  const t = await importarArchivoTrii(db, { nombreArchivo, contenido: new TextEncoder().encode(csv), usuarioId: duenoId });
+  expect(t.estado).toBe("CARGADO");
+}
+
+/** Importa la certificación ficticia del corte con esas posiciones y un fondo propio del caso `k` (datos inventados). */
+async function certificar(fecha: Date, rentaVariable: EspecCertificacion["rentaVariable"]) {
+  const fic = await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `6${String(k).padStart(3, "0")}1`, nombre: "Fondo ficticio" } });
+  const espec: EspecCertificacion = {
+    ...CERTIFICACION_FICTICIA,
+    fondos: [{ ...CERTIFICACION_FICTICIA.fondos[0]!, nit: `99800${String(k).padStart(4, "0")}-0` }],
+    rentaVariable,
+    creadoEn: `D:${iso(new Date(fecha.getTime() + DIA)).replace(/-/g, "")}101500-05'00'`,
+  };
+  const c = await importarCertificacion(db, { contenido: generarCertificacionPdf(espec), usuarioId: duenoId, fechaCorte: fecha, fondoCodigo: fic.codigoFic, hoy: new Date(fecha.getTime() + 2 * DIA) });
+  expect(c.errores).toEqual([]);
+  return fic;
+}
+
 /** Un miércoles distinto de 2026 por caso, con sus especies, su fondo y su PDF (datos inventados). */
 async function caso(opciones: { extraB?: number; cantidadB?: string; valorB?: string } = {}) {
   k += 1;
   const fecha = new Date(Date.UTC(2026, 1, 4) + (k - 1) * 7 * DIA);
   const nemos = ["A", "B", "C"].map((l) => `K${corrida}${k}${l}`);
-  const nit = `99800${String(k).padStart(4, "0")}-0`;
   const antes = new Date(fecha.getTime() - 14 * DIA);
   const filas = [orden(antes, nemos[0]!, "Compra", 100, 1000), orden(antes, nemos[0]!, "Compra", 50, 1000), orden(antes, nemos[1]!, "Compra", 2000, 20), orden(antes, nemos[2]!, "Compra", 10, 32500)];
   if (opciones.extraB) filas.push(orden(new Date(fecha.getTime() - DIA), nemos[1]!, "Compra", opciones.extraB, 20));
-  const t = await importarArchivoTrii(db, { nombreArchivo: `ordenes-${k}.ficticio.csv`, contenido: new TextEncoder().encode(`${ENCABEZADO}\n${filas.join("\n")}\n`), usuarioId: duenoId });
-  expect(t.estado).toBe("CARGADO");
-  const fic = await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `6${String(k).padStart(3, "0")}1`, nombre: "Fondo ficticio" } });
+  await cargarTrii(`ordenes-${k}.ficticio.csv`, `${ENCABEZADO}\n${filas.join("\n")}\n`);
   const rv = CERTIFICACION_FICTICIA.rentaVariable;
-  const espec: EspecCertificacion = {
-    ...CERTIFICACION_FICTICIA,
-    fondos: [{ ...CERTIFICACION_FICTICIA.fondos[0]!, nit }],
-    rentaVariable: [
-      { ...rv[0]!, nemo: nemos[0]! }, { ...rv[1]!, nemo: nemos[0]! },
-      { ...rv[2]!, nemo: nemos[1]!, cantidad: opciones.cantidadB ?? rv[2]!.cantidad, valor: opciones.valorB ?? rv[2]!.valor },
-      { ...rv[3]!, nemo: nemos[2]! },
-    ],
-    creadoEn: `D:${new Date(fecha.getTime() + DIA).toISOString().slice(0, 10).replace(/-/g, "")}101500-05'00'`,
-  };
-  const c = await importarCertificacion(db, { contenido: generarCertificacionPdf(espec), usuarioId: duenoId, fechaCorte: fecha, fondoCodigo: fic.codigoFic, hoy: new Date(fecha.getTime() + 2 * DIA) });
-  expect(c.errores).toEqual([]);
-  const ids = await Promise.all(nemos.map(async (n) => (await db.instrumento.findUniqueOrThrow({ where: { nemotecnico: n } })).id));
+  const fic = await certificar(fecha, [
+    { ...rv[0]!, nemo: nemos[0]! }, { ...rv[1]!, nemo: nemos[0]! },
+    { ...rv[2]!, nemo: nemos[1]!, cantidad: opciones.cantidadB ?? rv[2]!.cantidad, valor: opciones.valorB ?? rv[2]!.valor },
+    { ...rv[3]!, nemo: nemos[2]! },
+  ]);
+  const ids = await Promise.all(nemos.map(idDe));
   return { fecha, nemos, ids, fic };
 }
 
@@ -56,6 +75,13 @@ const cierres = (c: Caso, precios: (string | null)[]) =>
 
 const controles = async (conciliacionId: string) =>
   db.controlConciliacion.findMany({ where: { conciliacionId }, select: { tipo: true, instrumentoId: true, resultado: true, codigoMotivo: true, esperado: true, real: true, diferencia: true, tolerancia: true, detalle: true } });
+type Controles = Awaited<ReturnType<typeof controles>>;
+const conciliarYLeer = async (fechaCorte: Date) => controles((await conciliarCertificacion(db, { fechaCorte })).conciliacionId);
+/** Un control como texto (tipo, resultado, motivo, esperado, real), para comparar sin la escala de los decimales. */
+const enTexto = (cs: Controles, tipo: string, instrumentoId: string | null = null) => {
+  const c = cs.find((x) => x.tipo === tipo && x.instrumentoId === instrumentoId);
+  return c ? [c.resultado, c.codigoMotivo, c.esperado?.toString() ?? null, c.real?.toString() ?? null] : null;
+};
 
 beforeAll(async () => {
   const base = (await db.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db ?? "";
@@ -130,6 +156,14 @@ describe("conciliarCertificacion: fondo, efectivo e historia", () => {
     for (const id of c.ids) expect(cs.filter((x) => x.instrumentoId === id).map((x) => x.resultado)).toEqual(["CUADRA", "CUADRA"]);
   });
 
+  it("un dividendo pagado antes del corte suma su neto a la caja esperada", async () => {
+    const c = await caso();
+    const efectivo = async () => enTexto(await conciliarYLeer(c.fecha), "EFECTIVO")![2]!;
+    const antes = await efectivo();
+    await cargarTrii(`dividendos-${k}.ficticio.csv`, `Fecha y hora,Ticker,Estado,Valor total\n${iso(new Date(c.fecha.getTime() - 2 * DIA))},${c.nemos[0]},,123.0\n`);
+    expect(dec(await efectivo()).sub(antes).toString()).toBe("123");
+  });
+
   it("conciliar otra vez guarda otra conciliación (historia); nada se edita", async () => {
     const c = await caso();
     const a = await conciliarCertificacion(db, { fechaCorte: c.fecha });
@@ -143,5 +177,74 @@ describe("conciliarCertificacion: fondo, efectivo e historia", () => {
   it("sin certificación para esa fecha: ErrorConciliacion SIN_CERTIFICACION", async () => {
     await expect(conciliarCertificacion(db, { fechaCorte: new Date("2026-12-30T00:00:00Z") })).rejects.toBeInstanceOf(ErrorConciliacion);
     await expect(conciliarCertificacion(db, { fechaCorte: new Date("2026-12-30T00:00:00Z") })).rejects.toMatchObject({ codigo: "SIN_CERTIFICACION" });
+  });
+});
+
+describe("conciliarCertificacion: escisión y T+2 con datos propios", () => {
+  it("el lote de escisión cuenta; un destino sin lote dice escision_sin_lote; la compra del día anterior va a T+2", async () => {
+    k += 1;
+    const fecha = new Date(Date.UTC(2026, 1, 4) + (k - 1) * 7 * DIA);
+    const [a, x, y, d, e] = ["A", "X", "Y", "D", "E"].map((l) => `K${corrida}${k}${l}`) as [string, string, string, string, string];
+    const ayer = new Date(fecha.getTime() - DIA);
+    const evento = iso(new Date(fecha.getTime() - 7 * DIA));
+    // D y E se compran el día anterior al corte (liquidan después). D está certificada; E no.
+    const filas = [orden(new Date(fecha.getTime() - 14 * DIA), a, "Compra", 100, 1000), orden(ayer, d, "Compra", 10, 50), orden(ayer, e, "Compra", 5, 40)];
+    await cargarTrii(`ordenes-${k}.ficticio.csv`, `${ENCABEZADO}\n${filas.join("\n")}\n`);
+    // El lote madre del origen, armado a mano como en cli.test.ts (sin construirLotes sobre toda la base).
+    const madre = await db.orden.findFirstOrThrow({ where: { instrumento: { nemotecnico: a } } });
+    await db.lote.create({
+      data: {
+        instrumentoId: madre.instrumentoId, origen: "COMPRA", ordenId: madre.id, fuenteCosto: "TRII_ORDEN", fechaCompra: madre.fechaOperacion,
+        fechaLiquidacion: madre.fechaLiquidacion, cantidad: madre.cantidadCompletada, costoUnitario: madre.precioUnitario, costoTotal: madre.totalInvertido, comision: madre.comision,
+      },
+    });
+    for (const destino of [x, y]) {
+      const v = validarEscision({ origen: a, destino, fecha: evento });
+      if (!v.ok) throw new Error(`escisión ficticia inválida: ${JSON.stringify(v.errores)}`);
+      await registrarEscision(db, v.valor, { crearDestino: true });
+    }
+    await registrarLoteEscision(db, { destino: x, fechaEvento: evento, cantidad: "30", costoUnitario: "100" });
+    await certificar(fecha, [
+      { nemo: a, cantidad: "100", precio: "COP 1.000,00", valor: "COP 100.000,00" },
+      { nemo: x, cantidad: "30", precio: "COP 100,00", valor: "COP 3.000,00" },
+      { nemo: y, cantidad: "20", precio: "COP 100,00", valor: "COP 2.000,00" },
+      { nemo: d, cantidad: "10", precio: "COP 50,00", valor: "COP 500,00" },
+    ]);
+    const cs = await conciliarYLeer(fecha);
+    const [idA, idX, idY, idD, idE] = await Promise.all([a, x, y, d, e].map(idDe));
+    expect(enTexto(cs, "CANTIDAD", idA)).toEqual(["CUADRA", null, "100", "100"]);
+    expect(enTexto(cs, "CANTIDAD", idX)).toEqual(["CUADRA", null, "30", "30"]);
+    expect(enTexto(cs, "CANTIDAD", idY)).toEqual(["NO_CUADRA", "escision_sin_lote", "0", "20"]);
+    expect(enTexto(cs, "CANTIDAD", idD)).toEqual(["PENDIENTE_LIQUIDACION", "t_mas_2", "0", "10"]);
+    expect(cs.find((c) => c.tipo === "CANTIDAD" && c.instrumentoId === idD)?.detalle).toEqual({ pendientes: 1, operada: "10" });
+    // E (operada, sin liquidar y sin certificar) entra al cálculo por lo operado y hoy se compara contra lo
+    // liquidado: 0 contra 0. Si la certificación de A&V incluye lo no liquidado, debería salir NO_CUADRA (pregunta abierta).
+    expect(enTexto(cs, "CANTIDAD", idE)).toEqual(["CUADRA", null, "0", "0"]);
+  });
+});
+
+describe("conciliarCertificacion: corte sin historia", () => {
+  it("sin dividendos ni ajustes al corte, la caja es depósitos − retiros; una especie sin órdenes dice por qué", async () => {
+    k += 1;
+    // Miércoles hábil de 2022 (calendario BVC sembrado). Ningún archivo de integración escribe órdenes, caja,
+    // dividendos, ajustes ni escisiones antes de 2023: este corte solo ve lo suyo, en cualquier orden de archivos.
+    const fecha = new Date(Date.UTC(2022, 5, 1));
+    const alCorte = { lte: fecha };
+    const ajenas = await Promise.all([
+      db.orden.count({ where: { fechaOperacion: alCorte } }), db.movimientoCaja.count({ where: { fecha: alCorte } }),
+      db.dividendo.count({ where: { fechaPago: alCorte } }), db.ajusteCaja.count({ where: { fecha: alCorte } }),
+      db.eventoCorporativo.count({ where: { fecha: alCorte } }), db.lote.count({ where: { fechaCompra: alCorte } }),
+    ]);
+    expect(ajenas, "otro archivo escribió datos antes del corte de 2022: este caso deja de ser determinista").toEqual([0, 0, 0, 0, 0, 0]);
+    const caja = [`${trii(new Date(Date.UTC(2022, 4, 2)))},Depósito,Aprobado,500.0`, `${trii(new Date(Date.UTC(2022, 4, 3)))},Retiro,Aprobado,500.0`];
+    await cargarTrii(`caja-${k}.ficticio.csv`, `Fecha y hora,Tipo de movimiento,Estado,Valor total\n${caja.join("\n")}\n`);
+    expect(await db.movimientoCaja.count({ where: { fecha: alCorte } })).toBe(2);
+    const sola = `K${corrida}${k}S`;
+    const fic = await certificar(fecha, [{ nemo: sola, cantidad: "10", precio: "COP 1.000,00", valor: "COP 10.000,00" }]);
+    const cs = await conciliarYLeer(fecha);
+    expect(enTexto(cs, "CANTIDAD", await idDe(sola))).toEqual(["NO_CUADRA", "sin_operaciones_en_sistema", "0", "10"]);
+    // 500 − 500 = 0, sin dividendos ni ajustes (sus sumas vienen vacías de la base).
+    expect(enTexto(cs, "EFECTIVO")).toEqual(["NO_CUADRA", "aporte_fic_sin_registrar", "0", "1000"]);
+    expect(enTexto(cs, "FONDO", fic.id)).toEqual(["NO_CUADRA", "fondo_sin_unidades", null, "6250000"]);
   });
 });
