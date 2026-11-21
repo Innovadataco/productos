@@ -78,6 +78,8 @@ describe("extraerCeldas: falla cerrado", () => {
   const casos: readonly [string, string, string][] = [
     ["texto invisible (Tr 3)", "BT /F1 9 Tf 3 Tr 50 10 Td (oculto) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["texto rotado", "BT /F1 9 Tf 0 1 -1 0 50 10 Tm (girado) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["texto inclinado", "BT /F1 9 Tf 1 0.5 0 1 50 10 Tm (inclinado) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
+    ["texto espejado", "BT /F1 9 Tf -1 0 0 1 50 10 Tm (espejo) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["texto fuera de la página", "BT /F1 9 Tf 700 10 Td (afuera) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["texto de tamaño 0", "BT /F1 0 Tf 50 10 Td (enano) Tj ET", "PDF_TEXTO_NO_SOPORTADO"],
     ["una fuente que no está en la página", "BT /F99 9 Tf 50 10 Td (x) Tj ET", "PDF_FUENTE_NO_SOPORTADA"],

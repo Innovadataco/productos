@@ -101,6 +101,12 @@ describe("abrirDocumento: falla cerrado con un código", () => {
     expect(codigo(() => abrirDocumento(mutar(pdf(), `${linea} 00000 n `, `${corrida} 00000 n `)))).toBe("PDF_XREF_INVALIDA");
   });
 
+  it("una entrada de la xref con otra generación que la referencia es una xref inválida", () => {
+    const texto = latin1(pdf());
+    const linea = /\n(\d{10}) 00000 n \n/.exec(texto.slice(texto.lastIndexOf("\nxref\n")))![1]!;
+    expect(codigo(() => abrirDocumento(mutar(pdf(), `${linea} 00000 n `, `${linea} 00001 n `)))).toBe("PDF_XREF_INVALIDA");
+  });
+
   it("un /Length que no coincide con el stream lo invalida", () => {
     const texto = latin1(pdf());
     const largo = /\/Length (\d+)\n>>\nstream\n\d/.exec(texto)![1]!;

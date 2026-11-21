@@ -142,7 +142,8 @@ export function leerFechaPdf(texto: string): Date | null {
   const [anio, mes, dia, hora, minuto, segundo] = [1, 2, 3, 4, 5, 6].map((i, k) => Number(m[i] ?? (k === 1 || k === 2 ? "01" : "00")));
   const local = Date.UTC(anio!, mes! - 1, dia!, hora!, minuto!, segundo!);
   const d = new Date(local);
-  if (d.getUTCFullYear() !== anio || d.getUTCMonth() !== mes! - 1 || d.getUTCDate() !== dia || hora! > 23 || minuto! > 59 || segundo! > 59) return null;
+  // Un día que se sale del mes (30 de febrero) hace que Date cambie de mes: basta mirar año y mes.
+  if (d.getUTCFullYear() !== anio || d.getUTCMonth() !== mes! - 1 || hora! > 23 || minuto! > 59 || segundo! > 59) return null;
   const zona = m[7];
   if (!zona || zona === "Z") return d;
   const signo = zona.startsWith("-") ? -1 : 1;
