@@ -27,6 +27,10 @@ INV_CANDADO_COMUN_PROD="/var/lock/despliegue-vps.lock"
 INV_RESPALDOS_CENTINELA="/nonexistent/inv-008-respaldos-sin-configurar"
 # Criterio de corte de convivencia con PI: MemAvailable en reposo bajo 1 GiB.
 UMBRAL_CORTE_KB=1048576
+# Montaje del HOST de la carpeta de respaldos sin nosuid o noexec: 0 = solo avisa; 1 = aborta. Queda en 0 hasta
+# que el CEO de PI confirme que montó la carpeta así; entonces se cambia a 1 (un PR de una línea). Nunca por
+# variable de entorno: es una decisión del repo, no de quien corre el script.
+INV_MONTAJE_RESPALDOS_FATAL=0
 # Caracteres permitidos en las rutas que derivan los scripts (van a mensajes y a comandos de root).
 INV_RUTA_SEGURA='^/[A-Za-z0-9_./-]+$'
 INV_DIR_008="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -252,6 +256,33 @@ problema_permisos_respaldos() {
   done
 }
 
+# Imprime, separadas por un espacio, las opciones de montaje que faltan entre nosuid y noexec en la lista $1
+# (separada por comas, como la da findmnt). Compara opción por opción: «nosuidx» no cuenta como nosuid.
+faltan_opciones_montaje() {
+  local faltan=() opcion
+  for opcion in nosuid noexec; do
+    case ",$1," in *",$opcion,"*) ;; *) faltan+=("$opcion") ;; esac
+  done
+  printf '%s' "${faltan[*]:-}"
+}
+
+# Revisa, solo leyendo (findmnt -T), que el montaje del HOST que contiene la carpeta de respaldos $1 sea nosuid y
+# noexec. Es la protección real ante un archivo setuid o ejecutable que deje el contenedor de respaldo (root del
+# contenedor): las opciones de un bind de Docker no se aplican y solo cubrirían la vista del contenedor. Con
+# INV_MONTAJE_RESPALDOS_FATAL=0 avisa y sigue; con 1, aborta.
+revisar_montaje_respaldos() {
+  local dir="$1" opciones faltan mensaje
+  if ! opciones="$(findmnt -no OPTIONS -T "$dir" 2>/dev/null)" || [ -z "$opciones" ]; then
+    mensaje="no se pudo leer el montaje del host de la carpeta de respaldos (findmnt): no se sabe si es nosuid,noexec"
+  else
+    faltan="$(faltan_opciones_montaje "$opciones")"
+    [ -n "$faltan" ] || return 0
+    mensaje="el montaje del host de la carpeta de respaldos no tiene: $faltan (lo monta el CEO de PI; produccion.md §2)"
+  fi
+  [ "$INV_MONTAJE_RESPALDOS_FATAL" = 1 ] && morir "$mensaje"
+  informar "⚠️  $mensaje · se sigue (por ahora solo se avisa)"
+}
+
 # Lee la carpeta de respaldos de la configuración no secreta (INV_CONF) sin ejecutarla: el archivo existe, es
 # regular (no un enlace) y trae EXACTAMENTE una línea útil, INV_RESPALDOS_DIR=<ruta> (se admiten comentarios y
 # líneas vacías). La valida completa (forma, contenido, lugar y, en producción, dueño, grupo y permisos) y la
@@ -272,6 +303,7 @@ leer_respaldos_dir() {
     gid="$(leer_variable_env "$INV_ENV_PROD" INV_RESPALDO_GID)" || gid=""
     problema="$(problema_permisos_respaldos "$valor" root "$gid")"
     [ -z "$problema" ] || morir "la carpeta de respaldos de $INV_CONF: $problema"
+    revisar_montaje_respaldos "$valor"
     INV_RESPALDOS_PROD="$valor"
   fi
   INV_RESPALDOS_DIR="$valor"

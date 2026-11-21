@@ -161,10 +161,11 @@ services:
   # ÚNICA excepción a «no root» (capas-pi.md #4): corre como root DEL CONTENEDOR con el grupo respaldo
   # (INV_RESPALDO_GID, gid numérico del host), para dejar los archivos root:respaldo 0640 sin cambiar esa
   # carpeta. Sin ninguna capacidad (no salta permisos ni cambia dueños), sin escalar, de solo lectura y con
-  # un único montaje de escritura: el volumen inv-008-respaldos (abajo), que monta la carpeta con bind, nosuid y
-  # noexec (pedido del CEO de PI; el bind corto no admite esas opciones). Con el valor por defecto (una ruta que
-  # no existe) ningún comando falla al interpolar, y un up del respaldo sin la carpeta configurada falla cerrado:
-  # Docker no crea el origen de un volumen local de tipo none.
+  # un único bind de escritura, en sintaxis larga y sin crear la carpeta: con el valor por defecto (una ruta que
+  # no existe) ningún comando falla al interpolar, y un up del respaldo sin la carpeta configurada falla cerrado.
+  # nosuid y noexec no van aquí: Docker no los aplica a un bind (el kernel ignora esos bits en el bind inicial; el
+  # ensayo mostró rw,relatime) y solo cubrirían la vista del contenedor. Van en el montaje del HOST de la carpeta
+  # (lo hace el CEO de PI) y los scripts lo revisan (revisar_montaje_respaldos).
   inv-008-respaldo:
     image: inv-008-vigia:${INV_TAG:-sin-desplegar}
     pull_policy: never
@@ -182,7 +183,11 @@ services:
       RESPALDO_GID: ${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}
       TZ: America/Bogota
     volumes:
-      - inv-008-respaldos:/respaldos
+      - type: bind
+        source: ${INV_RESPALDOS_DIR:-/nonexistent/inv-008-respaldos-sin-configurar}
+        target: /respaldos
+        bind:
+          create_host_path: false
     networks:
       - inv-008-red-interna
     read_only: true
@@ -269,12 +274,3 @@ networks:
 
 volumes:
   inv-008-db-datos:
-  # La carpeta de respaldos del host (de la configuración no secreta, interpolada), montada con bind, nosuid y
-  # noexec. Sin uid, gid ni mode: no cambia el dueño ni los permisos (archivos 640 root:respaldo, carpeta 750; la
-  # copia diaria de IDC depende de eso). Es solo una referencia: borrar el volumen no borra los respaldos.
-  inv-008-respaldos:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${INV_RESPALDOS_DIR:-/nonexistent/inv-008-respaldos-sin-configurar}
-      o: bind,nosuid,noexec
