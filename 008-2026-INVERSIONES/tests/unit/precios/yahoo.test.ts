@@ -82,7 +82,7 @@ describe("obtenerCierres", () => {
     let pedida = "";
     const buscar: Buscar = async (url) => {
       pedida = url;
-      return { ok: true, status: 200, json: async () => respuesta([1, 2, 3]) };
+      return new Response(JSON.stringify(respuesta([1, 2, 3])));
     };
     const r = await obtenerCierres("FICTA.CL", desde, hasta, buscar);
     expect(r.ok && r.cierres).toHaveLength(3);
@@ -90,7 +90,7 @@ describe("obtenerCierres", () => {
   });
 
   it("los fallos de red o HTTP vuelven como código, sin lanzar", async () => {
-    expect(await obtenerCierres("FICTA.CL", desde, hasta, async () => ({ ok: false, status: 429, json: async () => ({}) }))).toEqual({ ok: false, codigo: "YAHOO_HTTP_429" });
+    expect(await obtenerCierres("FICTA.CL", desde, hasta, async () => new Response("{}", { status: 429 }))).toEqual({ ok: false, codigo: "YAHOO_HTTP_429" });
     expect(await obtenerCierres("FICTA.CL", desde, hasta, async () => { throw new Error("red"); })).toEqual({ ok: false, codigo: "YAHOO_RED" });
   });
 

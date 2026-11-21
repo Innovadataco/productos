@@ -11,13 +11,11 @@ let duenoId = "";
 const desde = new Date("2024-03-12T00:00:00Z");
 const hasta = new Date("2024-03-13T00:00:00Z");
 const T = [Date.UTC(2024, 2, 12, 14, 30) / 1000, Date.UTC(2024, 2, 13, 14, 30) / 1000];
-const yahoo = (closes: number[]): Buscar => async () => ({
-  ok: true, status: 200, json: async () => ({ chart: { result: [{ meta: { currency: "COP" }, timestamp: T, indicators: { quote: [{ close: closes }] } }] } }),
-});
 const vigentes = () => db.precioCierre.findMany({ where: { instrumentoId, reemplazadoEn: null }, orderBy: { fecha: "asc" } });
 /** Respuesta de /v8/finance/chart como la entrega `fetch`: un `Response` real con el JSON. */
-const respuestaChart = (timestamp: number[], close: number[], init?: ResponseInit) =>
-  new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp, indicators: { quote: [{ close }] } }] } }), init);
+const respuestaChart = (timestamp: number[], close: number[]) =>
+  new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp, indicators: { quote: [{ close }] } }] } }));
+const yahoo = (closes: number[]): Buscar => async () => respuestaChart(T, closes);
 const preciosDe = async (id: string) => (await db.precioCierre.findMany({ where: { instrumentoId: id, reemplazadoEn: null }, orderBy: { fecha: "asc" } })).map((p) => p.precio.toString());
 
 beforeAll(async () => {
@@ -63,7 +61,7 @@ describe("actualizarPrecios", () => {
 
   it("si Yahoo falla, no escribe nada y lo informa", async () => {
     const antes = await db.precioCierre.count({ where: { instrumentoId } });
-    const r = await actualizarPrecios(db, { desde, hasta, buscar: async () => ({ ok: false, status: 503, json: async () => ({}) }), instrumentoIds: [instrumentoId] });
+    const r = await actualizarPrecios(db, { desde, hasta, buscar: async () => new Response("{}", { status: 503 }), instrumentoIds: [instrumentoId] });
     expect(r.fallidas).toEqual([{ instrumentoId, codigo: "YAHOO_HTTP_503", barrasGuardadas: 0, barrasFallidas: 0 }]);
     expect(await db.precioCierre.count({ where: { instrumentoId } })).toBe(antes);
   });
@@ -77,7 +75,7 @@ describe("actualizarPrecios", () => {
     const ts = [Date.UTC(2024, 3, 2, 14, 30) / 1000, Date.UTC(2024, 3, 3, 14, 30) / 1000];
     const buscar: Buscar = async (url) => {
       const cierres = url.includes(`PRC${corrida}`) ? [100000, 150] : [200, 201];
-      return { ok: true, status: 200, json: async () => ({ chart: { result: [{ meta: { currency: "COP" }, timestamp: ts, indicators: { quote: [{ close: cierres }] } }] } }) };
+      return respuestaChart(ts, cierres);
     };
     const r = await actualizarPrecios(db, { desde: new Date("2024-04-02T00:00:00Z"), hasta: new Date("2024-04-03T00:00:00Z"), buscar, instrumentoIds: [instrumentoId, otro], ahora: new Date("2024-04-10T20:00:00Z") });
     expect(r.fallidas).toEqual([{ instrumentoId, codigo: "GUARDADO_ERROR", detalle: expect.stringMatching(/^PrismaClient/), barrasGuardadas: 1, barrasFallidas: 1 }]);
@@ -93,7 +91,7 @@ describe("actualizarPrecios", () => {
     await db.calendarioBvc.create({ data: { dia: hoy, esHabil: false, nota: "festivo ficticio de prueba" } });
     try {
       const ts = [Date.UTC(2024, 5, 4, 14, 30) / 1000, Date.UTC(2024, 5, 5, 14, 30) / 1000];
-      const buscar: Buscar = async () => ({ ok: true, status: 200, json: async () => ({ chart: { result: [{ meta: { currency: "COP" }, timestamp: ts, indicators: { quote: [{ close: [400, 401] }] } }] } }) });
+      const buscar: Buscar = async () => respuestaChart(ts, [400, 401]);
       const r = await actualizarPrecios(db, { desde: new Date("2024-06-04T00:00:00Z"), hasta: hoy, buscar, instrumentoIds: [solo], ahora: new Date("2024-06-05T23:00:00Z") }); // 18:00 COT
       expect(r.omitidasPorHorario).toBe(1);
       expect((await db.precioCierre.findMany({ where: { instrumentoId: solo, reemplazadoEn: null } })).map((p) => p.precio.toString())).toEqual(["400"]);
@@ -107,7 +105,7 @@ describe("actualizarPrecios", () => {
     const d1 = new Date("2024-05-07T00:00:00Z");
     const d2 = new Date("2024-05-08T00:00:00Z");
     const ts = [Date.UTC(2024, 4, 7, 14, 30) / 1000, Date.UTC(2024, 4, 8, 14, 30) / 1000];
-    const buscar: Buscar = async () => ({ ok: true, status: 200, json: async () => ({ chart: { result: [{ meta: { currency: "COP" }, timestamp: ts, indicators: { quote: [{ close: [300, 301] }] } }] } }) });
+    const buscar: Buscar = async () => respuestaChart(ts, [300, 301]);
     const guardadas = async () => (await db.precioCierre.findMany({ where: { instrumentoId: solo, reemplazadoEn: null }, orderBy: { fecha: "asc" } })).map((p) => p.precio.toString());
     // 8-may-2024 10:00 COT (15:00 UTC): la barra del 8 es parcial.
     const antes = await actualizarPrecios(db, { desde: d1, hasta: d2, buscar, instrumentoIds: [solo], ahora: new Date("2024-05-08T15:00:00Z") });
