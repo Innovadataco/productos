@@ -22,12 +22,17 @@ import { APP, DUENO_E2E, baseDePruebas, type BaseDePruebas } from "./base";
 
 const FIXTURES = new URL("./fixtures/", import.meta.url);
 const ESPERA_PUERTO_MS = 1000;
-/** Cierres inventados, del más viejo al más reciente: FICTA sube, FICTB baja. */
-const CIERRES: Readonly<Record<string, readonly number[]>> = {
-  FICTA: [1000, 1020, 1040, 1050, 1100],
-  FICTB: [2104, 2061, 2013, 1957, 1913],
-};
 const DIAS = ["2024-11-18", "2024-11-19", "2024-11-20", "2024-11-21", "2024-11-22"] as const;
+const enDias = (precios: readonly number[]) => precios.map((p, k) => [DIAS[k]!, p] as const);
+/**
+ * Cierres inventados [día, precio], del más viejo al más reciente: FICTA sube, FICTB baja y FICTC es
+ * ilíquida (su último cierre es del 1-nov-2024, tres semanas antes que los demás).
+ */
+const CIERRES: Readonly<Record<string, readonly (readonly [string, number])[]>> = {
+  FICTA: enDias([1000, 1020, 1040, 1050, 1100]),
+  FICTB: enDias([2104, 2061, 2013, 1957, 1913]),
+  FICTC: [["2024-10-31", 500], ["2024-11-01", 505]],
+};
 
 /** true si algo acepta conexiones en host:puerto. */
 function escucha(host: string, puerto: number): Promise<boolean> {
@@ -69,10 +74,10 @@ async function importar(db: PrismaClient, usuarioId: string, archivo: string): P
 
 async function sembrarCierres(db: PrismaClient): Promise<void> {
   const filas = await Promise.all(
-    Object.entries(CIERRES).map(async ([nemo, precios]) => {
+    Object.entries(CIERRES).map(async ([nemo, cierres]) => {
       const { id } = await db.instrumento.findFirstOrThrow({ where: { nemotecnico: nemo }, select: { id: true } });
-      return precios.map((precio, k) => ({
-        instrumentoId: id, fecha: new Date(`${DIAS[k]}T00:00:00Z`), precio: new Prisma.Decimal(precio), fuente: "e2e-ficticio", estado: "NO_VERIFICADO" as const,
+      return cierres.map(([dia, precio]) => ({
+        instrumentoId: id, fecha: new Date(`${dia}T00:00:00Z`), precio: new Prisma.Decimal(precio), fuente: "e2e-ficticio", estado: "NO_VERIFICADO" as const,
       }));
     }),
   );

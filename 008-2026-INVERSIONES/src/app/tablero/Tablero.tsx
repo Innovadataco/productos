@@ -3,7 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } fro
 import type { KeyboardEvent, MouseEvent } from "react";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { Linea, Peso } from "./Graficas";
-import type { FilaVista, Vista } from "./tipos";
+import type { FilaVista, MovimientoVista, Vista } from "./tipos";
 
 const MOVIMIENTO_REDUCIDO = "(prefers-reduced-motion: reduce)";
 const SISTEMA_CLARO = "(prefers-color-scheme: light)";
@@ -99,6 +99,15 @@ function BotonSalir() {
   );
 }
 
+/** «Cierre 20-nov-2026», o las dos puntas si las especies vivas cerraron en fechas distintas. */
+function FechaDeCierres({ vista }: { vista: Vista }) {
+  const { fechaReferencia: ref, cierreMasViejo: viejo } = vista;
+  if (ref !== null && viejo !== null && viejo !== ref) {
+    return <>Cierres de fechas distintas: del <b>{fecha(viejo)}</b> al <b>{fecha(ref)}</b></>;
+  }
+  return <>Cierre <b>{fecha(ref)}</b></>;
+}
+
 function Encabezado({ vista }: { vista: Vista }) {
   const claro = useSyncExternalStore(suscribirTema, temaClaro, claroEnServidor);
   const alternarTema = () => { document.documentElement.dataset.theme = claro ? "dark" : "light"; };
@@ -107,7 +116,7 @@ function Encabezado({ vista }: { vista: Vista }) {
       <div className="wrap fila-top">
         <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio</div>
         <div className="meta">
-          Cierre <b>{fecha(vista.ultimoCierre)}</b> · última carga <b>{fecha(vista.ultimaCarga)}</b>
+          <FechaDeCierres vista={vista} /> · última carga <b>{fecha(vista.ultimaCarga)}</b>
         </div>
         <button type="button" className="pill" onClick={alternarTema} aria-pressed={claro}>Tema claro</button>
         <BotonSalir />
@@ -118,8 +127,14 @@ function Encabezado({ vista }: { vista: Vista }) {
 
 function Avisos({ vista }: { vista: Vista }) {
   const sinCierre = vista.especiesSinPrecio;
+  const atrasadas = vista.filas.filter((f) => f.cierre?.atrasado);
   return (
     <>
+      {atrasadas.length > 0 ? (
+        <p className="nota aviso">
+          Con precio de otra fecha (entra en los totales con su último cierre): {atrasadas.map((f) => `${f.nemo}, precio del ${fecha(f.cierre?.fecha ?? null)}`).join(" · ")}.
+        </p>
+      ) : null}
       {sinCierre > 0 ? (
         <p className="nota aviso">{sinCierre} especie(s) sin cierre: su valor y su ganancia sin vender no entran en los totales.</p>
       ) : null}
@@ -132,9 +147,21 @@ function Avisos({ vista }: { vista: Vista }) {
   );
 }
 
+/**
+ * El titular no afirma a secas si el total no es completo y de un solo día:
+ * «con datos parciales» si algo queda fuera del total (sin precio o incompleta) y
+ * «con precios de fechas distintas» si todo entra pero alguna especie trae un cierre anterior.
+ */
+function condicion(vista: Vista): string {
+  if (vista.especiesSinPrecio > 0 || vista.incompletas.length > 0) return ", con datos parciales";
+  if (vista.especiesAtrasadas > 0) return ", con precios de fechas distintas";
+  return "";
+}
+
 function Respuesta({ vista }: { vista: Vista }) {
   const total = n(vista.gananciaTotal);
   const gana = total >= 0;
+  const condicionada = condicion(vista);
   const piezas = [
     { k: "Sin vender", v: n(vista.sinVender), c: "var(--gain)" },
     { k: "Por ventas", v: n(vista.porVentas), c: "var(--gold)" },
@@ -146,7 +173,7 @@ function Respuesta({ vista }: { vista: Vista }) {
     <section className="hero entra" aria-labelledby="t-hero">
       <div className="eyebrow">Su portafolio en acciones</div>
       <h1 id="t-hero">
-        <em className={gana ? "gain" : "loss"}>¿Gano?</em> {gana ? "Sí." : "Por ahora, no."}
+        <em className={condicionada ? "muted" : gana ? "gain" : "loss"}>¿Gano?</em> {gana ? "Sí" : "Por ahora, no"}{condicionada}.{" "}
         <Cifra valor={total} signo clase={`grande ${gana ? "" : "loss"}`} />
       </h1>
       <div className="desglose" role="img" aria-label="Composición de la ganancia">
@@ -167,42 +194,47 @@ function Respuesta({ vista }: { vista: Vista }) {
   );
 }
 
-interface Movimiento { readonly f: FilaVista; readonly aporte: number; readonly p: number }
-
-/** Último cierre frente al anterior; null si el anterior falta o no es positivo (nada de Infinity ni NaN). */
-function movimiento(f: FilaVista): Movimiento | null {
-  const anterior = n(f.serie.at(-2)?.precio);
-  const ultimo = n(f.serie.at(-1)?.precio);
-  if (!(anterior > 0) || !Number.isFinite(ultimo)) return null;
-  return { f, aporte: (ultimo - anterior) * n(f.cantidad), p: (ultimo / anterior - 1) * 100 };
+/** Por qué «Qué movió» no compara, o cuántas especies se quedaron fuera del par de ruedas. */
+function notaMovimiento(m: MovimientoVista): string | null {
+  if (m.motivo === "SIN_CIERRES") return "Sin cierres para comparar.";
+  if (m.motivo === "CALENDARIO_NO_CUBRE") return `El calendario de la BVC no cubre la fecha del cierre (${fecha(m.referencia)}): no se compara.`;
+  if (m.motivo === "REFERENCIA_NO_HABIL") return `El cierre más reciente (${fecha(m.referencia)}) no es día hábil de la BVC: no se compara.`;
+  if (m.motivo === "SIN_RUEDA_PREVIA") return `No se encontró la rueda anterior al ${fecha(m.referencia)} en el calendario de la BVC: no se compara.`;
+  if (m.omitidas === 1) return "Se omite 1 especie: no tiene cierre en las dos ruedas.";
+  if (m.omitidas > 1) return `Se omiten ${m.omitidas} especies: no tienen cierre en las dos ruedas.`;
+  return null;
 }
 
-function Movimientos({ filas }: { filas: FilaVista[] }) {
-  const movs = filas
-    .map(movimiento)
-    .filter((m): m is Movimiento => m !== null)
-    .sort((x, y) => Math.abs(y.aporte) - Math.abs(x.aporte));
-  const max = Math.max(1, ...movs.map((m) => Math.abs(m.aporte)));
-  const neto = movs.reduce((s, m) => s + m.aporte, 0);
+/** Solo formato: el par de ruedas, los aportes y el neto vienen calculados en Decimal desde el servidor. */
+function Movimientos({ mov }: { mov: MovimientoVista }) {
+  const max = Math.max(1, ...mov.especies.map((m) => Math.abs(n(m.aporte))));
+  const neto = mov.neto === null ? null : n(mov.neto);
+  const nota = notaMovimiento(mov);
+  const periodo = mov.previa ? `Del ${fecha(mov.previa)} al ${fecha(mov.referencia)} · sobre su cantidad actual` : "Último cierre";
   const [lleno, setLleno] = useState(false);
   useEffect(() => { const t = setTimeout(() => setLleno(true), 500); return () => clearTimeout(t); }, []);
   return (
     <section className="bloque entra d2" aria-labelledby="t-mov">
       <div className="cabeza">
-        <div><div className="eyebrow">Último cierre</div><h2 id="t-mov">Qué movió su portafolio</h2></div>
-        <div className="meta">Neto <b className={`num ${neto >= 0 ? "gain" : "loss"}`}>{cop(neto, true)}</b></div>
+        <div><div className="eyebrow">{periodo}</div><h2 id="t-mov">Qué movió su portafolio</h2></div>
+        <div className="meta">Neto {neto === null ? <b className="num">{SIN_DATO}</b> : <b className={`num ${neto >= 0 ? "gain" : "loss"}`}>{cop(neto, true)}</b>}</div>
       </div>
-      <div className="movers">
-        {movs.map((m) => (
-          <div className="mover" key={m.f.id}>
-            <span><b>{m.f.nemo}</b><br /><span className={`num chico ${m.aporte >= 0 ? "gain" : "loss"}`}>{pct(m.p)}</span></span>
-            <span className="barra" aria-hidden="true">
-              <span className={`barra-fill ${m.aporte >= 0 ? "bg-gain" : "bg-loss"}`} style={{ transform: `scaleX(${lleno ? Math.abs(m.aporte) / max : 0})` }} />
-            </span>
-            <span className={`num der ${m.aporte >= 0 ? "gain" : "loss"}`}>{cop(m.aporte, true)}</span>
-          </div>
-        ))}
+      <div className="movers" role="list">
+        {mov.especies.map((m) => {
+          const aporte = n(m.aporte);
+          const tono = aporte >= 0 ? "gain" : "loss";
+          return (
+            <div className="mover" role="listitem" key={m.id}>
+              <span><b>{m.nemo}</b><br /><span className={`num chico ${tono}`}>{pct(n(m.variacionPct))}</span></span>
+              <span className="barra" aria-hidden="true">
+                <span className={`barra-fill bg-${tono}`} style={{ transform: `scaleX(${lleno ? Math.abs(aporte) / max : 0})` }} />
+              </span>
+              <span className={`num der ${tono}`}>{cop(aporte, true)}</span>
+            </div>
+          );
+        })}
       </div>
+      {nota ? <p className="nota">{nota}</p> : null}
     </section>
   );
 }
@@ -224,7 +256,7 @@ function Detalle({ f, cerrar }: { f: FilaVista; cerrar: () => void }) {
       <dl className="pares num">
         <dt>Cantidad</dt><dd>{numero(n(f.cantidad))}</dd>
         <dt>Costo (A&amp;V o Trii, sin comisión)</dt><dd>{cop(n(f.costo))}</dd>
-        <dt>Valor al cierre</dt><dd>{f.valor ? cop(n(f.valor)) : "sin cierre"}</dd>
+        <dt>{f.cierre ? `Valor al cierre del ${fecha(f.cierre.fecha)}` : "Valor al cierre"}</dt><dd>{f.valor ? cop(n(f.valor)) : "sin cierre"}</dd>
         <dt>Ganancia sin vender</dt><dd className={n(f.sinVender) >= 0 ? "gain" : "loss"}>{f.sinVender ? `${cop(n(f.sinVender), true)} · ${pct(n(f.rentabilidadPct))}` : SIN_DATO}</dd>
         <dt>Ganancia por ventas</dt><dd>{cop(n(f.realizada), true)}</dd>
         <dt>Dividendos netos</dt><dd>{cop(n(f.dividendos))}</dd>
@@ -251,6 +283,15 @@ const porCifra = (k: OrdenCifra): Comparador => (a, b) => {
 /** Sentido del orden activo: la especie va A→Z; las cifras, de mayor a menor. */
 const sentido = (k: Orden): "ascending" | "descending" => (k === "nemo" ? "ascending" : "descending");
 
+/** El chip del cierre lleva SIEMPRE su fecha; uno atrasado se marca como aviso («precio del <fecha>»). */
+function ChipCierre({ cierre }: { cierre: FilaVista["cierre"] }) {
+  if (!cierre) return <span className="chip">sin cierre</span>;
+  const estado = cierre.verificado ? "verificado A&V" : "sin verificar";
+  const dia = fecha(cierre.fecha);
+  if (cierre.atrasado) return <span className="chip aviso">precio del {dia} · {estado}</span>;
+  return <span className={`chip ${cierre.verificado ? "ok" : ""}`}>{estado} · {dia}</span>;
+}
+
 function FilaPosicion({ f, activa, idBoton, elegir }: { f: FilaVista; activa: boolean; idBoton: string; elegir: (id: string) => void }) {
   const sube = n(f.sinVender) >= 0;
   const elegirEsta = () => elegir(f.id);
@@ -264,8 +305,7 @@ function FilaPosicion({ f, activa, idBoton, elegir }: { f: FilaVista; activa: bo
     <tr className={activa ? "sel" : ""} onClick={elegirEsta}>
       <td><button type="button" id={idBoton} className="especie" aria-pressed={activa} onClick={elegirDesdeBoton}>{f.nemo}</button></td>
       <td className="num">{numero(n(f.cantidad))}</td>
-      <td className="num">{f.cierre ? cop(n(f.cierre.precio)) : SIN_DATO}<br />
-        <span className={`chip ${f.cierre?.verificado ? "ok" : ""}`}>{f.cierre?.verificado ? "verificado A&V" : `sin verificar · ${fecha(f.cierre?.fecha ?? null)}`}</span></td>
+      <td className="num">{f.cierre ? cop(n(f.cierre.precio)) : SIN_DATO}<br /><ChipCierre cierre={f.cierre} /></td>
       <td><Linea serie={f.serie} sube={f.serie.length > 1 && n(f.serie[f.serie.length - 1]!.precio) >= n(f.serie[0]!.precio)} /></td>
       <td className="num"><b>{f.valor ? cop(n(f.valor)) : SIN_DATO}</b></td>
       <td className="num">{f.pesoPct ? <><Peso pct={n(f.pesoPct)} /> {numero(n(f.pesoPct), 1)} %</> : SIN_DATO}</td>
@@ -342,7 +382,7 @@ export function Tablero({ vista }: { vista: Vista }) {
       <Encabezado vista={vista} />
       <main className="wrap">
         <Respuesta vista={vista} />
-        <Movimientos filas={vista.filas} />
+        <Movimientos mov={vista.movimiento} />
         <Posiciones vista={vista} />
         <Falta />
         <footer className="pie">El sistema calcula y muestra; no recomienda comprar ni vender. Datos de su base local.</footer>

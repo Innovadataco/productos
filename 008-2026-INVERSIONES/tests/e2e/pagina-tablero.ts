@@ -10,6 +10,8 @@ export class PaginaTablero {
   readonly botonesDeEspecie: Locator;
   readonly avisoIncompletas: Locator;
   readonly botonTema: Locator;
+  readonly cabecera: Locator;
+  readonly queMovio: Locator;
 
   private constructor(readonly page: Page) {
     this.titulo = page.getByRole("heading", { level: 1 });
@@ -18,6 +20,8 @@ export class PaginaTablero {
     this.botonesDeEspecie = this.tabla.locator("tbody").getByRole("button");
     this.avisoIncompletas = page.getByText(/^Con datos incompletos/);
     this.botonTema = page.getByRole("button", { name: "Tema claro", exact: true });
+    this.cabecera = page.getByRole("banner");
+    this.queMovio = page.getByRole("region", { name: "Qué movió su portafolio" });
   }
 
   /**
@@ -43,6 +47,12 @@ export class PaginaTablero {
 
   botonEspecie(nemo: string): Locator {
     return this.botonesDeEspecie.filter({ hasText: new RegExp(`^${nemo}$`) });
+  }
+
+  /** La fila de la tabla de una especie. */
+  fila(nemo: string): Locator {
+    // El localizador de `has` se busca DENTRO de cada fila: va relativo, no desde la tabla.
+    return this.tabla.locator("tbody tr").filter({ has: this.page.getByRole("button", { name: nemo, exact: true }) });
   }
 
   detalle(nemo: string): Locator {

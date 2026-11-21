@@ -7,13 +7,16 @@ import "server-only";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { posiciones, type Posicion } from "../lotes/posiciones";
 import { calcularTablero, type EntradaEspecie, type Tablero } from "./calculo";
+import { calcularMovimiento, calendarioDe, type Movimiento } from "./movimiento";
 
 const D = (v: Prisma.Decimal.Value) => new Prisma.Decimal(v);
 const DIAS_SERIE = 60;
 
 export interface Resumen {
+  /** Trae la fecha de referencia de los cierres (la más reciente entre las vivas), no un máximo global. */
   readonly tablero: Tablero;
-  readonly ultimoCierre: Date | null;
+  /** «Qué movió»: todas las especies en el mismo par de ruedas (referencia y rueda previa de la BVC). */
+  readonly movimiento: Movimiento;
   readonly ultimaCarga: Date | null;
   /** Nemotécnicos de las especies con ventas sin asignar, en orden alfabético. */
   readonly incompletas: readonly string[];
@@ -75,14 +78,15 @@ function entrada(i: { readonly id: string; readonly nemotecnico: string | null }
 }
 
 export async function obtenerResumen(db: PrismaClient): Promise<Resumen> {
-  const [pos, realizada, instrumentos, divs, coms, ultimoCierre, ultimaCarga] = await Promise.all([
+  const [pos, realizada, instrumentos, divs, coms, ultimaCarga, noHabiles] = await Promise.all([
     posiciones(db),
     realizadaPorEspecie(db),
     db.instrumento.findMany({ where: { tipo: "ACCION", OR: [{ lotes: { some: {} } }, { dividendos: { some: {} } }] }, select: { id: true, nemotecnico: true } }),
     db.dividendo.groupBy({ by: ["instrumentoId"], where: { tipo: { not: "FRACCION_ESCISION" } }, _sum: { montoNeto: true } }),
     db.orden.groupBy({ by: ["instrumentoId"], where: { estado: "APROBADO", cantidadCompletada: { gt: 0n } }, _sum: { comision: true } }),
-    db.precioCierre.aggregate({ where: { reemplazadoEn: null }, _max: { fecha: true } }),
     db.cargaArchivo.aggregate({ where: { estado: "CARGADO" }, _max: { cargadoEn: true } }),
+    // Tabla sembrada y chica (festivos entre semana de 2022-2027): se lee entera, en paralelo.
+    db.calendarioBvc.findMany({ where: { esHabil: false }, select: { dia: true } }),
   ]);
   const incompletas = new Set(pos.especiesIncompletas);
   const completos = instrumentos.filter((i) => !incompletas.has(i.id));
@@ -97,9 +101,10 @@ export async function obtenerResumen(db: PrismaClient): Promise<Resumen> {
     comisiones: new Map(coms.map((c) => [c.instrumentoId, c._sum.comision ?? D(0)])),
     series,
   };
+  const tablero = calcularTablero(completos.map((i) => entrada(i, fuentes)));
   return {
-    tablero: calcularTablero(completos.map((i) => entrada(i, fuentes))),
-    ultimoCierre: ultimoCierre._max.fecha ?? null,
+    tablero,
+    movimiento: calcularMovimiento(tablero.filas, tablero.fechaReferencia, calendarioDe(noHabiles.map((d) => d.dia))),
     ultimaCarga: ultimaCarga._max.cargadoEn ?? null,
     incompletas: nemosIncompletos.map((i) => i.nemotecnico ?? "?").sort((a, b) => a.localeCompare(b)),
   };

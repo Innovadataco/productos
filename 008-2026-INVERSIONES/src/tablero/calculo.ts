@@ -2,6 +2,9 @@
  * Cálculo puro del tablero (INV-SPEC-15). Sin base de datos y en Decimal: las cifras de la
  * pantalla salen de aquí y cuadran entre sí por construcción.
  *   ganancia total = sin vender + por ventas (incluye fracciones de escisión) + dividendos − comisiones
+ * Fechas de los cierres (nunca un precio viejo como de hoy): la referencia es el cierre más reciente
+ * entre las especies vivas. Una viva con un cierre anterior queda «atrasada»: entra en el valor y en la
+ * ganancia con su último precio negociado, y la pantalla dice de qué fecha es.
  */
 import { Prisma } from "@prisma/client";
 
@@ -35,6 +38,8 @@ export interface FilaTablero {
   readonly dividendos: Decimal;
   readonly comisiones: Decimal;
   readonly cierre: EntradaEspecie["cierre"];
+  /** Viva con un cierre anterior a la fecha de referencia del tablero. */
+  readonly cierreAtrasado: boolean;
   readonly lotesVivos: number;
   readonly serie: EntradaEspecie["serie"];
 }
@@ -49,9 +54,21 @@ export interface Tablero {
   readonly comisiones: Decimal;
   readonly gananciaTotal: Decimal;
   readonly especiesSinPrecio: number;
+  /** Cierre más reciente entre las especies vivas; null si ninguna tiene cierre. */
+  readonly fechaReferencia: Date | null;
+  /** Cierre más viejo entre las especies vivas; igual a la referencia si todas cerraron el mismo día. */
+  readonly cierreMasViejo: Date | null;
+  readonly especiesAtrasadas: number;
 }
 
 const suma = (xs: readonly Decimal[]) => xs.reduce((s, x) => s.add(x), CERO);
+
+/** La fecha más reciente y la más vieja; null si no hay ninguna. */
+function extremos(fechas: readonly Date[]): { readonly max: Date | null; readonly min: Date | null } {
+  if (fechas.length === 0) return { max: null, min: null };
+  const ms = fechas.map((f) => f.getTime());
+  return { max: new Date(Math.max(...ms)), min: new Date(Math.min(...ms)) };
+}
 
 export function calcularTablero(entradas: readonly EntradaEspecie[]): Tablero {
   const base = entradas.map((e) => {
@@ -62,11 +79,15 @@ export function calcularTablero(entradas: readonly EntradaEspecie[]): Tablero {
   });
   const vivas = base.filter((f) => f.cantidad > 0n);
   const valorAcciones = suma(vivas.map((f) => f.valor ?? CERO));
+  const fechas = extremos(vivas.flatMap((f) => (f.cierre ? [f.cierre.fecha] : [])));
+  const atrasado = (f: (typeof base)[number]): boolean =>
+    f.cantidad > 0n && f.cierre !== null && fechas.max !== null && f.cierre.fecha.getTime() < fechas.max.getTime();
   const conPeso = (f: (typeof base)[number]): FilaTablero => ({
     instrumentoId: f.instrumentoId, nemotecnico: f.nemotecnico, cantidad: f.cantidad, costoVivo: f.costoVivo,
     valor: f.valor, sinVender: f.sinVender, rentabilidadPct: f.rentabilidadPct,
     pesoPct: f.valor !== null && valorAcciones.gt(0) && f.cantidad > 0n ? f.valor.div(valorAcciones).mul(100) : null,
-    realizada: f.realizada, dividendos: f.dividendos, comisiones: f.comisiones, cierre: f.cierre, lotesVivos: f.lotesVivos, serie: f.serie,
+    realizada: f.realizada, dividendos: f.dividendos, comisiones: f.comisiones, cierre: f.cierre, cierreAtrasado: atrasado(f),
+    lotesVivos: f.lotesVivos, serie: f.serie,
   });
   const filas = vivas.map(conPeso).sort((a, b) => (b.valor ?? CERO).cmp(a.valor ?? CERO));
   const cerradas = base.filter((f) => f.cantidad === 0n).map(conPeso).sort((a, b) => a.nemotecnico.localeCompare(b.nemotecnico));
@@ -79,5 +100,8 @@ export function calcularTablero(entradas: readonly EntradaEspecie[]): Tablero {
     filas, cerradas, valorAcciones, sinVender, porVentas, dividendos, comisiones,
     gananciaTotal: sinVender.add(porVentas).add(dividendos).sub(comisiones),
     especiesSinPrecio: filas.filter((f) => f.valor === null).length,
+    fechaReferencia: fechas.max,
+    cierreMasViejo: fechas.min,
+    especiesAtrasadas: filas.filter((f) => f.cierreAtrasado).length,
   };
 }
