@@ -74,6 +74,27 @@ describe("crear-acceso-inicial", () => {
     expect(emitirAcceso).not.toHaveBeenCalled();
   });
 
+  // O1: un valor con forma de correo que empieza por «-» llegaba a emitirAcceso y creaba un DUENO con ese correo.
+  it("un --email que empieza por «-» (una opción nunca es el correo) sale con 2, sin crear ni reiniciar nada", async () => {
+    for (const correo of ["--d@ejemplo.invalid", "-d@ejemplo.invalid", "--reiniciar-totp@ejemplo.invalid"]) {
+      for (const argv of [["--email", correo], ["--email", correo, "--reiniciar-totp"], ["--reiniciar-totp", "--email", correo]]) {
+        const c = consola();
+        expect(await ejecutar(argv, c, db, { NODE_ENV: "development" }), argv.join(" ")).toBe(2);
+        expect(c.error.texto).toMatch(/Uso:/);
+        expect(c.error.texto).not.toContain(correo);
+      }
+    }
+    expect(emitirAcceso).not.toHaveBeenCalled();
+    expect(reiniciarTotp).not.toHaveBeenCalled();
+  });
+
+  it("un --email con caracteres de control sale con 2 y no lo repite", async () => {
+    const c = consola();
+    expect(await ejecutar(["--email", "d\u001b[2J@ejemplo.invalid"], c, db, { NODE_ENV: "development" })).toBe(2);
+    expect(c.error.texto).not.toContain("\u001b");
+    expect(emitirAcceso).not.toHaveBeenCalled();
+  });
+
   it("si ya hay otro dueño, sale con 2 y lo dice", async () => {
     emitirAcceso.mockRejectedValueOnce(new ErrorAcceso("OTRO_DUENO"));
     const c = consola();
