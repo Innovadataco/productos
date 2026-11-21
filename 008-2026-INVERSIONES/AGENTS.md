@@ -133,7 +133,7 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
-> v1.23 · 2026-11-21 · 17:05 (-05) · INV · Fábrica Inversiones (frente reglas-exportar-restauracion) · `precios:exportar` con los símbolos del portafolio: la Fábrica solo con orden del CEO Inversiones (decisión del CEO, 2026-11-21)
+> v1.23 · 2026-11-21 · 16:03 (-05) · INV · Fábrica Inversiones (frente reglas-exportar-restauracion) · `precios:exportar` con los símbolos del portafolio: la Fábrica solo con orden del CEO Inversiones (decisión del CEO, 2026-11-21)
 > v1.22 · 2026-11-21 · 10:48 (-05) · INV · Fábrica ECC (frente precios-carga) · `precios:exportar` (Mac) y `precios:importar` (vía B, camino único de escritura); en la carga, certificación → precios → conciliación
 > v1.21 · 2026-11-21 · 09:28 (-05) · INV · Fábrica ECC (frente app-sin-salida) · la app sin salida a internet detrás de `inv-008-entrada`, redes internal con la puerta de enlace aislada; la reversa con el clon en el sha que corre
 > v1.20 · 2026-11-21 · 08:34 (-05) · INV · Fábrica Inversiones · cobertura unida (`test:cobertura` = unidad + integración con `--merge-reports`, pisos 92/93/97/92); se retiran los pisos separados
