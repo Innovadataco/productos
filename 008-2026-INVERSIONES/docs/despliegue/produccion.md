@@ -16,10 +16,10 @@ Cómo se despliega, se revierte, se respalda, se restaura y se cargan los datos 
   - `<raíz>/`, completo;
   - `/var/lock/despliegue-vps.lock`, ese archivo, que es el candado común con PI;
   - `<respaldos>/`, esa carpeta, sin subcarpetas: los respaldos cifrados.
-- **Lo que nunca se toca:** la carpeta de PI, los contenedores `pi-*` o `bi-*`, Gesmovil y Hermes.
+- **Lo que nunca se toca:** la carpeta de PI, los contenedores de PI y de BI, y los de otros proyectos del VPS.
 - **Docker:** solo con el proyecto `inv-008-prod`, siempre por la variable `COMPOSE`.
   - Nunca un comando global (`system prune`, `image prune -a`, `volume prune`, `stop $(docker ps -q)`).
-  - Ningún comando de Docker nombra `pi-*`, `bi-*`, Gesmovil ni Hermes, ni siquiera para leer.
+  - Ningún comando de Docker nombra contenedores de PI, de BI ni de otros proyectos del VPS, ni siquiera para leer.
 - **Sistema:** ningún script toca `ufw`, `systemctl`, `/etc/` ni el `crontab` de root.
   - El respaldo diario lo programa su propio contenedor.
   - El túnel **no lo configura ningún script**: se aplicó a mano (§8).
@@ -89,7 +89,7 @@ sudo chmod -R go-w "$B/repo"
 ```
 - **El clon tiene que llamarse `repo`, dentro de la raíz.** Los scripts derivan la raíz de su propia ubicación: la carpeta que contiene a `repo/008-2026-INVERSIONES`.
 - **Anclas, fatales para todo script en producción:** la raíz y sus padres hasta `/` son de root, sin escritura del grupo ni de otros y sin enlaces, y el archivo de producción es de root, 600 y regular.
-  - Si fallan, el script no corre.
+  - Si fallan, el script no corre (salvo `pausar-008.sh`, que sí corre, ver abajo).
   - `pausar-008.sh` no escribe nada: hace un `down` de último recurso por nombre de proyecto y sale con error («SIN marca»).
 
 **La configuración no secreta** (`<raíz>/inv-008.conf`):
@@ -104,7 +104,7 @@ sudo sh -c 'umask 022; f=<raíz>/inv-008.conf; printf "INV_RESPALDOS_DIR=%s\n" "
 - **La forma de la carpeta:** ruta absoluta de caracteres `[A-Za-z0-9_./-]`, sin `//`, `.` ni `..`, y sin enlaces en ningún componente.
 - **Dueño y permisos:** existe, es de root, del grupo `respaldo` (`INV_RESPALDO_GID`, nunca 0) y sin escritura del grupo ni de otros. Sus padres son solo de root.
 - **Contenido:** solo respaldos de 008.
-- **Lugar:** fuera de `<raíz>`.
+- **Lugar:** fuera de `<raíz>`, sin contenerla ni ser un ancestro suyo.
 
 La carpeta se revalida antes de cada `up` que monta el respaldo. **Revisión previa, de solo lectura** (no debe imprimir nada, y el conteo debe dar 0):
 ```sh
@@ -144,7 +144,7 @@ sudo find "$B/.env.inversiones.production" -maxdepth 0 \( ! -user root -o -perm 
 
 **El archivo de producción.**
 - Las claves se generan en el VPS y van directo al archivo, sin pasar por la pantalla ni por el historial.
-- `openssl rand -hex` deja solo letras y números, que van en la URL sin codificar. `crear-roles-prod.sh` rechaza cualquier otra cosa.
+- `openssl rand -hex` deja solo letras y números, que van en la URL sin codificar. `crear-roles-prod.sh` acepta solo letras, números y `. _ ~ -`, de 32 o más caracteres.
 ```sh
 sudo sh -c 'umask 077; f=<raíz>/.env.inversiones.production; {
   echo "INV_POSTGRES_CLAVE=$(openssl rand -hex 32)"
@@ -162,7 +162,7 @@ sudo sh -c 'umask 077; f=<raíz>/.env.inversiones.production; {
 - `desplegar-prod.sh` **avisa**, sin frenar el despliegue ni imprimir la URL, si la de la app no trae un `connection_limit` de 1 a 8.
 
 Después se agregan a mano con `sudo nano`, sin pegarlas en la terminal:
-- `INV_CIFRADO_CLAVE_ACTIVA`: su formato lo fija el frente de cifrado;
+- `INV_CIFRADO_CLAVE_ACTIVA`: `v<n>` (p. ej. `v1`), con su `INV_CIFRADO_CLAVE_V<n>` en el archivo (lo lee `src/cifrado/llavero.ts`, líneas 3-4);
 - `INV_AGE_PUBLICA`;
 - `INV_TELEGRAM_BOT_TOKEN` e `INV_TELEGRAM_CHAT_ID`: son **el mismo bot y el mismo chat de las tareas programadas** (decisión de Jelk).
   - Los pone **Jelk**, o un script que él corre, sin que pasen por el chat ni por un log.
@@ -224,9 +224,10 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
    - Levanta solo la base y le pasa las claves a `psql` por la entrada estándar.
    - `inv_dueno` queda dueño de todo. Las funciones que cree no son ejecutables por PUBLIC.
    - `inv_app` solo lee, más las escrituras del login, por columna:
-     - `usuario`: UPDATE de `claveHash`, `sesionVersion` y `bloqueadoHasta`;
+     - `usuario`: UPDATE de `claveHash`, `sesionVersion` y `bloqueadoHasta`, y del TOTP (`totpSecreto`, `totpActivadoEn`, `totpUltimoPaso`, `presesionHash`);
      - `token_acceso`: UPDATE de `usadoEn`;
-     - `intento_ingreso`: INSERT.
+     - `intento_ingreso`: INSERT;
+     - `codigo_recuperacion`: INSERT, y UPDATE de `usadoEn` y `anuladoEn` (nunca DELETE).
    - Esos permisos los aplica el migrador.
 3. **Desplegar:**
    ```sh
@@ -234,16 +235,16 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
      --cargar <raíz>/imagenes/inv-008-<sha>.tar <sha256-del-Mac>
    ```
    - Solo cuenta como desplegado si la **última línea** es `DEPLOY VERIFICADO <sha>`. Tarda unos 10 minutos.
-   - **El despliegue se niega si** existe la marca de pausa, si PI tiene el candado común o si se ve un despliegue de PI. Mientras el `deploy-prod.sh` de PI no tome el candado común (SPEC-980 de PI), se avisa antes al CEO de PI.
+   - **El despliegue se niega si** existe la marca de pausa, si PI tiene el candado común o si se ve un despliegue de PI. El `deploy-prod.sh` de PI toma el mismo candado (SPEC-980 de PI) y espera hasta 900 s.
    - Si la app sale o se reinicia (`instrumentation.ts` sin `AUTH_SECRET` o sin `APP_ORIGEN`), falla.
-   - **Si migra, la app vieja queda abajo** desde el respaldo previo hasta que la versión nueva queda healthy. Durante el migrador también se detiene el respaldo diario. Así ningún contenedor de Inversiones retiene tablas mientras migra. Con `--sin-migrar` no se detiene nada.
+   - **Si migra, la app vieja queda abajo** desde antes del respaldo previo hasta que la versión nueva queda healthy. Durante el migrador también se detiene el respaldo diario. Así ningún contenedor de Inversiones retiene tablas mientras migra. Con `--sin-migrar` no se detiene nada.
    - **Ventana conocida:** entre el respaldo previo y la detención del respaldo diario, el diario podría arrancar si justo le toca. La detención lo corta antes del migrador: no queda texto plano y su `.parcial` se borra en un respaldo posterior, pasados 60 minutos. El diario se hace después, porque ese día no quedó marcado.
    - Si falla después de tocar contenedores (incluida esa pausa), **vuelve solo a la imagen que corría**: levanta app, vigía y respaldo con ese sha. Si se re-desplegaba el mismo sha, levanta otra vez ese mismo.
      - Solo vuelve a un sha de 40 hex: si `estado/sha-actual` está dañado, lo dice y no levanta nada.
      - En el primer despliegue no hay imagen a la que volver: lo dice, y lo detenido queda abajo.
 4. **Acceso inicial, que es también la recuperación de acceso.** Lo corre **Jelk por SSH**, no la Fábrica, y **antes de cargar los datos reales**:
    ```sh
-   sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-acceso-inicial.sh <argumentos que defina el frente login>
+   sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-acceso-inicial.sh --email <correo> [--reiniciar-totp]
    ```
    - Corre `crear-acceso-inicial.ts` en el migrador, con `inv_dueno` y `APP_ORIGEN`.
    - Imprime **una vez** `${APP_ORIGEN}/definir-clave#t=<token>`. No se guarda en ningún archivo; `run --rm` borra el log del contenedor al terminar.
@@ -271,7 +272,7 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
   ```sh
   sudo <raíz>/repo/008-2026-INVERSIONES/scripts/desplegar-prod.sh "inv-008-app:$(sudo cat <raíz>/estado/sha-anterior)" --sin-migrar
   ```
-  - Una reversa a un sha de antes de la raíz derivada sigue sirviendo: esos scripts usan las mismas carpetas físicas, y `inv-008.conf` no les estorba.
+  - Una reversa a un sha de antes de la raíz derivada debería servir: esos scripts usan las mismas carpetas físicas, y `inv-008.conf` no les estorba. **Por verificar:** el código anterior no está en este clon.
 - **Bajar Inversiones sin perder datos:** `sudo $COMPOSE down`, **nunca con `-v`**. Mejor `pausar-008.sh`, que deja la marca.
 
 **Política de migraciones**, como PI:
@@ -322,7 +323,7 @@ sudo env INV_TAG=<sha> $COMPOSE run --rm -T inv-008-migrador    # migraciones, g
 sudo env INV_TAG=<sha> $COMPOSE up -d --wait                    # app, vigía y respaldo (necesita $R: ver §1)
 ```
 
-**(B) Reemplazar una base existente.**
+**(B) Reemplazar una base existente.** Antes, un respaldo previo, con la app todavía arriba: `sudo <raíz>/repo/008-2026-INVERSIONES/scripts/respaldar-base.sh --motivo pre-reemplazo`. El `DROP` no tiene vuelta atrás.
 1. `$COMPOSE stop inv-008-app inv-008-vigia inv-008-respaldo`
 2. `$COMPOSE exec -T inv-008-db psql -U postgres -c 'DROP DATABASE inversiones WITH (FORCE)' -c 'CREATE DATABASE inversiones OWNER inv_dueno'`
 3. Seguir como en (A) desde `crear-roles-prod.sh`.
@@ -367,7 +368,7 @@ Las mismas tres revisiones valen para `inv-008-migrador` e `inv-008-vigia`.
    ```sh
    sudo cloudflared tunnel route dns <id-del-túnel> inversiones.innovadataco.com
    ```
-6. **Avisar al CEO de PI ANTES** de `sudo systemctl restart <servicio-del-túnel>`, que corta unos segundos a PI, BI, piweb y Hermes.
+6. **Avisar al CEO de PI ANTES** de `sudo systemctl restart <servicio-del-túnel>`, que corta unos segundos a todo lo que pasa por el túnel (PI, BI, piweb y los demás hostnames).
 7. **Después:**
    - repetir el paso 1: si cambia cualquier código, se revierte de inmediato;
    - `curl -I https://inversiones.innovadataco.com` debe llevar a `/ingresar`.
@@ -404,7 +405,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
    ```
    Después se despliega de nuevo, normal.
 - Nunca `migrate resolve --applied` para una migración que falló: marcaría como aplicado algo que no está.
-- Las migraciones de 008 toman `SET LOCAL lock_timeout = '5s'`. La app vieja y el respaldo diario ya están detenidos mientras migra (§4.3). El `lock_timeout` queda para lo que el despliegue no controla, por ejemplo una sesión de `psql` abierta a mano: si algo retiene una tabla, el migrador falla rápido, se deshace y se sigue este mismo procedimiento.
+- Tres de las 12 migraciones toman `SET LOCAL lock_timeout = '5s'` (hoy, las del 2026-11-21). La app vieja y el respaldo diario ya están detenidos mientras migra (§4.3). El `lock_timeout` queda para lo que el despliegue no controla, por ejemplo una sesión de `psql` abierta a mano: si algo retiene una tabla, el migrador falla rápido, se deshace y se sigue este mismo procedimiento.
 
 
 ## 11 · Carga de los datos del dueño: vía B, la importación fresca
@@ -417,7 +418,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
    3. recién entonces, la carga.
 
    El dueño ya existe cuando se carga. Por eso `--crear-dueno` **no se acepta en producción**: `inv-cargar` lo rechaza, y un correo mal escrito sale con 2 sin crear nada.
-2. **Avisar al CEO de PI antes de cada carga.** Hoy el `deploy-prod.sh` de PI no toma el candado común; lo corrige PI en su SPEC-980. Hasta que eso entre, el candado no impide que un despliegue de PI se cruce con una carga.
+2. **Avisar al CEO de PI en una línea, por trazabilidad.** El candado común resuelve la exclusión: el `deploy-prod.sh` de PI lo toma (SPEC-980 de PI, activa), espera hasta 900 s y, si no lo obtiene, aborta limpio con salida 3. `cargar-prod.sh` lo toma sin esperar y se niega si PI lo tiene.
 3. **Respaldo previo:** `sudo <raíz>/repo/008-2026-INVERSIONES/scripts/respaldar-base.sh --motivo pre-carga`.
 
 **Quién y cómo.**
@@ -426,7 +427,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
   ```sh
   scripts/armar-sobre.sh <cabecera-privada> [<archivo>] | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh <comando>
   ```
-- **Si el usuario de SSH no es root,** va `sudo -n` delante de la ruta.
+- **Si el usuario de SSH no es root,** va `sudo -n` delante de la ruta. `cargar-prod.sh` no se eleva por sí mismo: no comprueba root.
 - **La cabecera** es un archivo privado del Mac, junto a los datos del dueño. Lleva un argumento del CLI por línea, por ejemplo (valores inventados):
   ```text
   --email
@@ -447,10 +448,14 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
   - deja el archivo en un temporal 600, en una carpeta 700 del tmpfs `/tmp`;
   - corre el CLI y borra el temporal **siempre**, también si el CLI falla o llega una señal;
   - sin volcados de memoria (`ulimit -c 0` y `ulimits core: 0`).
-- **Salida:** solo conteos y códigos, como los CLI. La carga sale con el código del CLI (0 bien; 1, 2 o 3 según cada CLI); con 2 si `inv-cargar` se niega.
+- **Salida:** solo conteos y códigos, como los CLI.
+  - La carga sale con el código del CLI: 0 bien; 1, 2 o 3 según cada CLI.
+  - Con **64** si `inv-cargar` se niega sin correr el CLI (uso, correo, swap, tamaño o sha256 del archivo): es distinto de los códigos de los CLI.
+  - Con **1** si `cargar-prod.sh` se niega antes de correr (marca de pausa, candado común tomado o PI desplegando, sin sha registrado, comando fuera de la lista, árbol de root). El mensaje empieza por `[cargar-prod]`.
 - **Riesgo residual aceptado por el CEO:**
   - qué: los parámetros (correo, especies, cifras de `registrar-escision` y `lote-escision`) van en el argv del CLI **dentro** del contenedor, y root los ve con `ps` mientras corre;
   - no quedan en disco salvo que se active la auditoría de `execve` del host;
+  - además, el sobre pasa por la memoria del host (sshd, el cliente de Docker y dockerd), que sí puede bajar al swap del host: el `memory.swap.max = 0` solo cubre el contenedor;
   - seguimiento: que los CLI lean sus parámetros desde stdin o desde un archivo.
 
 **Orden.** Cada paso debe salir bien: si no, se para y se avisa al CEO de 008.
@@ -489,7 +494,9 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
-> v2.3 · 2026-11-21 · 07:30 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · sin rutas ni nombres del VPS en el repo público (marcadores; raíz derivada; `inv-008.conf` para la carpeta de respaldos); §11: carga del dueño por la vía B, por stdin y sin copias en el VPS (`armar-sobre.sh`, `cargar-prod.sh`, `inv-cargar`); §12: vía A «NO USAR»
+> v2.5 · 2026-11-21 · 07:05 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · revisiones de seguridad y de código: SPEC-980 de PI activa (aviso en una línea, el candado común resuelve la exclusión); salida 64 de `inv-cargar`; el sobre en la memoria del host como riesgo residual; cita de Jelk restituida
+> v2.4 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · revisión contra el código: sin nombres de otros proyectos ni de firewall; privilegios de `inv_app` completos (TOTP y `codigo_recuperacion`); `crear-acceso-inicial.sh` con sus argumentos; salida 1 de `cargar-prod.sh`; `sudo -n` sin elevación propia; `lock_timeout` en 3 de 12 migraciones; respaldo previo antes del `DROP` de la vía (B)
+> v2.3 · 2026-11-21 · 06:50 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · sin rutas ni nombres del VPS en el repo público (marcadores; raíz derivada; `inv-008.conf` para la carpeta de respaldos); §11: carga del dueño por la vía B, por stdin y sin copias en el VPS (`armar-sobre.sh`, `cargar-prod.sh`, `inv-cargar`); §12: vía A «NO USAR»
 > v2.2 · 2026-11-21 · 04:40 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · app y respaldo diario detenidos antes del migrador, con su vuelta atrás; un respaldo a la vez; árbol de root al inicio de todo script con sudo; aviso de `connection_limit`; §8: túnel aplicado y sin el ID en el repo
 > v2.1 · 2026-11-21 · 03:27 (-05) · Inversiones · Fábrica ECC (frente base) · §5: el guardián nuevo; §10: migración fallida y P3009 (`migrate resolve` lo decide el CEO)
 > v2.0 · 2026-11-21 · 00:40 (-05) · Inversiones · Fábrica ECC (frente producción) · correcciones de la GATE 2 (VPS compartido con PI)

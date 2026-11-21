@@ -8,3 +8,7 @@
 #   sin enlaces; de root, del grupo respaldo (INV_RESPALDO_GID), sin escritura del grupo ni de otros, padres
 #   solo de root, solo con respaldos de 008 adentro, y fuera de <raíz>.
 INV_RESPALDOS_DIR=<ver ESTADO en la gestión>
+
+# ---
+# v1.1 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · sin cambios de contenido; pie de documento agregado
+
