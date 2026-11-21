@@ -2,7 +2,10 @@
 import { PrismaClient } from "@prisma/client";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { descifrarCrudo, type LlaveFilaFuente } from "@/cifrado/campos";
+import { ErrorCifrado } from "@/cifrado/errores";
+import { esSobre } from "@/cifrado/sobre";
 import { importarArchivoTrii } from "@/importacion/trii/importar";
 
 const db = new PrismaClient();
@@ -31,6 +34,11 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
+/** La llave (AAD) de una fila_fuente: el sobre de su crudo solo abre con ella. */
+const llaveDe = (f: { tipoFuente: string; claveNatural: string; ocurrencia: number }): LlaveFilaFuente => ({
+  tipoFuente: f.tipoFuente, claveNatural: f.claveNatural, ocurrencia: f.ocurrencia,
+});
+
 describe("importar los fixtures de Trii", () => {
   it("carga caja, órdenes y dividendos, con trazabilidad hasta archivo y fila", async () => {
     const caja = await importar("caja.ficticio.csv", fixture("caja.ficticio.csv"));
@@ -44,7 +52,7 @@ describe("importar los fixtures de Trii", () => {
 
     const venta = await db.orden.findFirst({ where: { lado: "VENTA", filaFuente: { primeraCargaId: ordenes.cargaId } }, include: { filaFuente: true } });
     expect(venta?.filaFuente.primeraFilaNo).toBe(4);
-    expect((venta?.filaFuente.crudo as Record<string, string>)["Tipo de orden"]).toBe("Venta");
+    expect(descifrarCrudo(venta!.filaFuente.crudo, llaveDe(venta!.filaFuente))["Tipo de orden"]).toBe("Venta");
     // 13-nov-2024 (miércoles) + 2 hábiles = 15-nov-2024 (viernes).
     expect(venta?.fechaLiquidacion.toISOString().slice(0, 10)).toBe("2024-11-15");
   });
@@ -188,5 +196,64 @@ describe("permisos y fracciones", () => {
     const [fraccion, ordinario] = await db.dividendo.findMany({ where: { instrumentoId: destino.id }, orderBy: { fechaPago: "asc" } });
     expect(fraccion).toMatchObject({ tipo: "FRACCION_ESCISION", eventoId: evento.id });
     expect(ordinario).toMatchObject({ tipo: "ORDINARIO", eventoId: null });
+  });
+});
+
+describe("cifrado del crudo (#11)", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  const archivoOrdenes = (n: string) =>
+    csv(`${ORDENES}"14 feb 2026, 10:00 a. m.",${n},Compra,Aprobado,4,0,25.5,102.0,1.25,103.25\n"14 feb 2026, 11:00 a. m.",${n},Venta,Aprobado,2,0,26.75,53.5,1.25,52.25\n`);
+
+  it("crudo queda como sobre, la base no tiene los valores en claro y descifrar devuelve la fila tal cual vino", async () => {
+    const n = nemo("CI");
+    const r = await importar("ci.ficticio.csv", archivoOrdenes(n));
+    expect(r).toMatchObject({ estado: "CARGADO", filasNuevas: 2 });
+    const filas = await db.filaFuente.findMany({ where: { primeraCargaId: r.cargaId }, orderBy: { primeraFilaNo: "asc" } });
+    expect(filas).toHaveLength(2);
+    for (const f of filas) {
+      expect(esSobre(f.crudo)).toBe(true);
+      expect((f.crudo as { kid: string }).kid).toBe(process.env.CIFRADO_CLAVE_ACTIVA);
+    }
+    const texto = await db.$queryRaw<{ t: string }[]>`SELECT crudo::text AS t FROM fila_fuente WHERE "primeraCargaId" = ${r.cargaId}`;
+    for (const { t } of texto) expect(t).not.toMatch(new RegExp(`${n}|Compra|Venta|102\\.0|26\\.75|14 feb 2026`));
+    expect(descifrarCrudo(filas[1]!.crudo, llaveDe(filas[1]!))).toEqual({
+      "Fecha y hora": "14 feb 2026, 11:00 a. m.", "Símbolo de la acción": n, "Tipo de orden": "Venta", Estado: "Aprobado",
+      "Acciones completadas": "2", "Acciones pendientes": "0", "Precio por acción": "26.75", "Total invertido": "53.5",
+      "Valor comisión": "1.25", "Total estimado": "52.25",
+    });
+  });
+
+  it("los montos y cantidades en sus columnas NO se cifran", async () => {
+    const n = nemo("MO");
+    await importar("mo.ficticio.csv", archivoOrdenes(n));
+    const compra = await db.orden.findFirstOrThrow({ where: { instrumento: { nemotecnico: n }, lado: "COMPRA" } });
+    expect(compra.totalInvertido.toString()).toBe("102");
+    expect(compra.cantidadCompletada).toBe(4n);
+  });
+
+  it("reimportar el mismo archivo no duplica: la clave natural se calcula antes de cifrar y el sobre guardado no se reescribe", async () => {
+    const n = nemo("RC");
+    const primera = await importar("rc-1.ficticio.csv", archivoOrdenes(n));
+    const antes = await db.filaFuente.findMany({ where: { primeraCargaId: primera.cargaId }, orderBy: { id: "asc" } });
+    const segunda = await importar("rc-2.ficticio.csv", archivoOrdenes(n));
+    expect(segunda).toMatchObject({ estado: "CARGADO", filasNuevas: 0, filasRepetidas: 2 });
+    expect(await db.orden.count({ where: { instrumento: { nemotecnico: n } } })).toBe(2);
+    const despues = await db.filaFuente.findMany({ where: { id: { in: antes.map((f) => f.id) } }, orderBy: { id: "asc" } });
+    expect(despues.map((f) => f.crudo)).toEqual(antes.map((f) => f.crudo));
+  });
+
+  it.each([
+    ["sin la activa", { CIFRADO_CLAVE_ACTIVA: "" }, "CLAVE_ACTIVA_AUSENTE"],
+    ["la activa sin su clave", { CIFRADO_CLAVE_ACTIVA: "v9" }, "CLAVE_AUSENTE"],
+  ])("%s: lanza ErrorCifrado antes de tocar la base; no queda ni la carga RECHAZADA", async (_caso, entorno, codigo) => {
+    for (const [k, v] of Object.entries(entorno)) vi.stubEnv(k, v);
+    const nombre = `sin-clave-${codigo}-${corrida}.ficticio.csv`;
+    const intento = importar(nombre, archivoOrdenes(nemo("SC")));
+    await expect(intento).rejects.toBeInstanceOf(ErrorCifrado);
+    await expect(intento).rejects.toMatchObject({ codigo });
+    // Ni siquiera un CSV inválido deja registro sin clave.
+    await expect(importar(nombre, csv("a,b\n1,2\n"))).rejects.toMatchObject({ codigo });
+    expect(await db.cargaArchivo.count({ where: { nombreArchivo: nombre } })).toBe(0);
   });
 });

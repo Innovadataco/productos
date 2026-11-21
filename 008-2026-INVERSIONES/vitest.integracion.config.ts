@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
@@ -15,5 +16,13 @@ export default defineConfig({
     environment: "node",
     fileParallelism: false,
     testTimeout: 20000,
+    // Claves de cifrado (#11): la v1, aleatoria en cada corrida y nunca versionada. Se fija aquí
+    // (no se toma del entorno) y las v2…v9 quedan vacías: una clave real del entorno o de la .env
+    // nunca entra al llavero de las pruebas (la .env no pisa variables que ya existen).
+    env: {
+      CIFRADO_CLAVE_ACTIVA: "v1",
+      CIFRADO_CLAVE_V1: randomBytes(32).toString("base64"),
+      ...Object.fromEntries([2, 3, 4, 5, 6, 7, 8, 9].map((v) => [`CIFRADO_CLAVE_V${v}`, ""])),
+    },
   },
 });
