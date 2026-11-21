@@ -4,7 +4,7 @@
 // de 127.0.0.1) y el entorno del hijo es mínimo. stdout y stderr se miran por separado (el CSV va a stdout).
 // Todos los casos del exportador terminan antes de pedir a la SFC. Códigos y cifras inventados.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, fchmodSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -94,6 +94,26 @@ describe("fondo:exportar · como proceso, sin red (todos los casos terminan ante
     expect(texto).toContain("SALIDA_TERMINAL");
     expect(texto).not.toContain("LISTA_ILEGIBLE");
   });
+
+  // security-reviewer MEDIO: el CSV dice qué fondo tiene el dueño. Si la salida es un archivo que otros pueden leer
+  // (umask 022 por defecto), se niega antes de leer la lista o pedir a la SFC; con un archivo 600 sigue.
+  for (const [modo, codigo, esperado] of [[0o644, 2, "SALIDA_NO_PRIVADA"], [0o640, 2, "SALIDA_NO_PRIVADA"], [0o600, 2, "LISTA_ILEGIBLE"]] as const) {
+    it(`con stdout en un archivo ${modo.toString(8)}: ${esperado}`, () => {
+      const ruta = join(carpeta, `salida-${modo.toString(8)}.ficticio.csv`);
+      const fd = openSync(ruta, "w");
+      fchmodSync(fd, modo);
+      try {
+        const r = spawnSync(TSX, [join("scripts", EXPORTAR), "--fondos", join(carpeta, "no-existe.txt"), "--desde", "2024-03-11"], {
+          cwd: RAIZ, env: entornoMinimo({ DATABASE_URL: INALCANZABLE }), encoding: "utf8", timeout: POR_CLI_MS, stdio: ["ignore", fd, "pipe"],
+        });
+        expect(r.status, r.stderr).toBe(codigo);
+        expect(r.stderr).toContain(esperado);
+        expect(readFileSync(ruta, "utf8")).toBe("");
+      } finally {
+        closeSync(fd);
+      }
+    });
+  }
 
   it("npm se quedó con --hasta: 2", () => {
     comprobar(correr(EXPORTAR, ["--fondos", join(carpeta, "l.txt"), "--desde", "2024-03-11"], { npm_config_hasta: "2024-03-12" }), 2, "npm se quedó con --hasta");

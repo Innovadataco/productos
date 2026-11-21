@@ -3,6 +3,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import { actualizarFondo, MAX_INTENTOS, TAMANO_LOTE } from "@/fondo/actualizar";
+import { TIEMPO_MAXIMO_LOTE_MS } from "@/fondo/guardar";
 import type { BuscarSfc } from "@/fondo/sfc";
 
 const MS_DIA = 86_400_000;
@@ -35,6 +36,7 @@ interface Fallas {
 function baseFalsa(falla: Fallas, previas: readonly Fila[] = []) {
   const filas: Fila[] = [...previas];
   const llamadas = { findMany: 0, createMany: 0, updateMany: 0 };
+  const opcionesTx: unknown[] = [];
   const intentosCrear = new Map<string, number>();
   let intentosReemplazo = 0;
   const vigente = (f: Fila) => f.reemplazadoEn === null;
@@ -88,9 +90,12 @@ function baseFalsa(falla: Fallas, previas: readonly Fila[] = []) {
         });
       },
     },
-    $transaction: async <T>(fn: (tx: unknown) => Promise<T>) => fn(db),
+    $transaction: async <T>(fn: (tx: unknown) => Promise<T>, opciones?: unknown) => {
+      opcionesTx.push(opciones);
+      return fn(db);
+    },
   };
-  return { db: db as unknown as PrismaClient, filas, llamadas };
+  return { db: db as unknown as PrismaClient, filas, llamadas, opcionesTx };
 }
 
 describe("actualizarFondo · guardado por lotes", () => {
@@ -132,6 +137,25 @@ describe("actualizarFondo · guardado por lotes", () => {
     const r = await actualizarFondo(db, { desde, hasta, buscar: sfc() });
     expect(r.fallidos).toEqual([{ instrumentoId: "fondo-a", codigo: "GUARDADO_ERROR", detalle: "PrismaClientKnownRequestError P2002", guardados: 0, conError: 3, descartados: 0 }]);
     expect(JSON.stringify(r)).not.toContain("123456");
+  });
+});
+
+describe("actualizarFondo · cada lote en una transacción con plazo propio (database-reviewer MEDIO)", () => {
+  it(`cada lote pide ${TIEMPO_MAXIMO_LOTE_MS} ms de plazo (no los 5 s por defecto de Prisma), en el VPS compartido`, async () => {
+    const { db, opcionesTx } = baseFalsa({});
+    const inicio = dia("2023-01-01");
+    await actualizarFondo(db, { desde: inicio, hasta: dia("2024-12-31"), buscar: sfc(inicio, TAMANO_LOTE + 1), instrumentoIds: ["fondo-a"] });
+    expect(opcionesTx).toEqual([{ timeout: TIEMPO_MAXIMO_LOTE_MS }, { timeout: TIEMPO_MAXIMO_LOTE_MS }]);
+    expect(TIEMPO_MAXIMO_LOTE_MS).toBeGreaterThan(5000);
+  });
+
+  it(`un vigente que otra corrida sigue reemplazando tras ${MAX_INTENTOS} intentos es GUARDADO_ERROR con su causa (ConflictoConcurrente), sin el mensaje`, async () => {
+    const previa: Fila = { id: "v1", fondoId: "fondo-a", fechaValor: desde, valorUnidad: new Prisma.Decimal("9999"), valorFondo: null, reemplazadoEn: null };
+    // La otra corrida deja siempre su propio valor y esta trae otro: el vigente cambia en cada intento.
+    const { db } = baseFalsa({ reemplazar: () => 0 }, [previa]);
+    const buscar: BuscarSfc = async () => new Response(JSON.stringify([{ fecha_corte: "2024-03-10T00:00:00.000", codigo_negocio: "999001", tipo_participacion: "901", valor_unidad_operaciones: "34719.6" }]));
+    const r = await actualizarFondo(db, { desde, hasta, buscar, instrumentoIds: ["fondo-a"] });
+    expect(r.fallidos).toEqual([{ instrumentoId: "fondo-a", codigo: "GUARDADO_ERROR", detalle: "ConflictoConcurrente", guardados: 0, conError: 1, descartados: 0 }]);
   });
 });
 

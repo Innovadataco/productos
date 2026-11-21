@@ -97,6 +97,17 @@ describe("importarValoresFondo · el mismo camino que actualizar-fondo", () => {
   });
 });
 
+describe("importarValoresFondo · el atraso se mide contra hoy (code-reviewer MEDIO)", () => {
+  it("un CSV viejo (último valor de hace más de 7 días) avisa ATRASADO, como actualizar-fondo; uno al día, no", async () => {
+    const a = await fondo();
+    const viejo = [{ fecha: dia("2024-02-29"), valorUnidad: "50000", valorFondo: null }, { fecha: dia("2024-03-01"), valorUnidad: "50001", valorFondo: null }];
+    const r = await importarValoresFondo(db, csv([{ codigoFic: a.codigo, participacion: "907", valores: viejo }]), { ahora: AHORA });
+    expect(r.guardado.ultimos).toEqual([{ instrumentoId: a.id, ultimaFecha: dia("2024-03-01"), atrasado: true }]);
+    const alDia = await importarValoresFondo(db, csv([{ codigoFic: a.codigo, participacion: "907", valores: valores(["50002", "50003", "50004"]) }]), { ahora: AHORA });
+    expect(alDia.guardado.ultimos).toEqual([{ instrumentoId: a.id, ultimaFecha: dia(DIAS[2]), atrasado: false }]);
+  });
+});
+
 describe("importarValoresFondo · lo que no se escribe", () => {
   it("un código sin fondo FIC activo (sin registrar o inactivo) no escribe nada y se informa por su primera línea; los demás sí", async () => {
     const a = await fondo();
