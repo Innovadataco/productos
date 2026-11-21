@@ -24,14 +24,16 @@ export function violacionesDePantalla(texto: string): string[] {
   ];
 }
 
-/** Lo que una lectura de estas pantallas nunca selecciona. */
-export const violacionesDeLectura = (texto: string): string[] => ["crudo", "encargo", "claveHash", "totpSecreto"].filter((c) => new RegExp(`\\b${c}\\b`).test(texto));
+/** Lo que una lectura de estas pantallas nunca selecciona (como clave de un `select`). */
+export const violacionesDeLectura = (texto: string): string[] => ["crudo", "encargo", "claveHash", "totpSecreto"].filter((c) => new RegExp(`\\b${c}\\s*:`).test(texto));
 
 describe("candados de las pantallas del plan y del diario", () => {
   it("los candados muerden (prueba por mutación)", () => {
     expect(violacionesDePantalla('"use client";\nexport const x = 1;')).toEqual(["use client"]);
     expect(violacionesDePantalla("<div dangerouslySetInnerHTML={{ __html: x }} />")).toEqual(["dangerouslySetInnerHTML"]);
     expect(violacionesDeLectura("select: { crudo: true }")).toEqual(["crudo"]);
+    expect(violacionesDeLectura("select: { id: true, encargo : true }")).toEqual(["encargo"]);
+    expect(violacionesDeLectura("// nunca el crudo de las filas")).toEqual([]);
   });
 
   it("existen los tres directorios y tienen archivos (si no, no probaría nada)", () => {

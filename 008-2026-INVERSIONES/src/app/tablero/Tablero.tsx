@@ -108,6 +108,24 @@ function FechaDeCierres({ vista }: { vista: Vista }) {
   return <>Cierre <b>{fecha(ref)}</b></>;
 }
 
+/** Las otras pantallas (plan, diario y conciliación); el portafolio es la actual. */
+const SECCIONES = [
+  { texto: "Portafolio", href: "/" },
+  { texto: "Plan", href: "/plan" },
+  { texto: "Decisiones", href: "/decisiones" },
+  { texto: "Conciliación", href: "/conciliacion" },
+] as const;
+
+function Secciones() {
+  return (
+    <nav aria-label="Secciones">
+      <ul className="secciones">
+        {SECCIONES.map((s) => <li key={s.href}><a href={s.href} aria-current={s.href === "/" ? "page" : undefined}>{s.texto}</a></li>)}
+      </ul>
+    </nav>
+  );
+}
+
 function Encabezado({ vista }: { vista: Vista }) {
   const claro = useSyncExternalStore(suscribirTema, temaClaro, claroEnServidor);
   const alternarTema = () => { document.documentElement.dataset.theme = claro ? "dark" : "light"; };
@@ -115,6 +133,7 @@ function Encabezado({ vista }: { vista: Vista }) {
     <header className="top">
       <div className="wrap fila-top">
         <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio</div>
+        <Secciones />
         <div className="meta">
           <FechaDeCierres vista={vista} /> · última carga <b>{fecha(vista.ultimaCarga)}</b>
         </div>
@@ -366,7 +385,6 @@ function Falta() {
     <section className="bloque entra d4" aria-labelledby="t-falta">
       <div className="cabeza"><div><div className="eyebrow">En camino</div><h2 id="t-falta">Lo que todavía no está</h2></div></div>
       <ul className="falta">
-        <li><b>Mis reglas</b> y qué tan cerca está cada nivel · con el diario de decisiones</li>
         <li><b>Dividendos que vienen</b> con fecha ex y monto esperado</li>
         <li><b>Fondo inmobiliario</b> con su valor de unidad (SFC)</li>
         <li><b>Caja oficial</b> de A&amp;V en este resumen · su cuadre ya se ve en <a href="/conciliacion">Conciliación</a></li>
