@@ -9,5 +9,6 @@ export async function GET(): Promise<Response> {
   const salud = await evaluarSalud(async () => {
     await db.$queryRaw`SELECT 1`;
   }, version);
-  return Response.json(salud, { status: salud.estado === "ok" ? 200 : 503 });
+  // Pública (D-014): solo estado y versión, y sin caché.
+  return Response.json(salud, { status: salud.estado === "ok" ? 200 : 503, headers: { "Cache-Control": "no-store" } });
 }

@@ -1,0 +1,24 @@
+/* Inversiones · páginas de acceso (ingresar y definir clave). Usa los tokens de tablero.css (layout). */
+/* Texto del botón dorado con contraste AA (medido en el E2E): oscuro sobre el dorado claro del tema
+   oscuro (≈10,5:1) y blanco sobre el dorado oscuro del tema claro (≈5,6:1). */
+:root { --tinta-boton: #141821; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --tinta-boton: #ffffff; }
+}
+:root[data-theme="light"] { --tinta-boton: #ffffff; }
+:root[data-theme="dark"] { --tinta-boton: #141821; }
+.acceso { min-height: 100dvh; display: grid; place-items: center; padding-block: 32px; }
+.acceso-caja { width: min(100%, 380px); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 28px 24px; }
+.acceso-caja h1 { font-family: var(--display); font-weight: 400; font-size: 40px; line-height: 1; margin: 18px 0 6px; }
+.acceso-caja .nota { margin-bottom: 18px; }
+.acceso-form { display: grid; gap: 6px; }
+.acceso-form label { font-size: 13px; font-weight: 600; margin-top: 10px; }
+.acceso-form input { font: inherit; color: var(--fg); background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; }
+.acceso-form input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.acceso-form button { margin-top: 16px; border: 0; border-radius: 999px; padding: 11px 16px; font-weight: 700; background: var(--gold); color: var(--tinta-boton); }
+.acceso-form button:disabled, .acceso-form button[aria-disabled="true"] { cursor: progress; }
+.acceso-form button:disabled { cursor: not-allowed; }
+.acceso-form input[aria-invalid="true"] { border-color: var(--loss); }
+.acceso-aviso { min-height: 1.5em; margin: 8px 0 0; font-size: 13px; color: var(--loss); }
+.acceso-listo { margin: 8px 0 0; font-size: 14px; color: var(--gain); }
+.acceso-listo a { color: inherit; font-weight: 700; }

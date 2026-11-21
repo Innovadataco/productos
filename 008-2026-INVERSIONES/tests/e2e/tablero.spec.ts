@@ -6,27 +6,12 @@
  *   FICTI · vendió más de lo que compró → incompleta: fuera de la tabla y de los totales
  *   ¿Gano? = 3.040 + 10.740 + 1.200 − 1.600 = +$ 13.380
  */
-import { test as base, expect } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { PaginaTablero } from "./pagina-tablero";
+import { test } from "./sesion";
 
 const TOTAL = "+$ 13.380";
 const ANCHO_MOVIL = { width: 400, height: 900 };
-
-/** Falla la prueba si el navegador registró errores (p. ej. de hidratación). El favicon no existe aún. */
-const test = base.extend<{ consolaLimpia: void }>({
-  consolaLimpia: [
-    async ({ page }, usar) => {
-      const errores: string[] = [];
-      page.on("pageerror", (e) => errores.push(e.message));
-      page.on("console", (m) => {
-        if (m.type() === "error" && !m.location().url.endsWith("/favicon.ico")) errores.push(m.text());
-      });
-      await usar();
-      expect(errores, "errores en la consola del navegador").toEqual([]);
-    },
-    { auto: true },
-  ],
-});
 
 test.describe("tablero del portafolio", () => {
   test("responde «¿Gano?» con el total de la ganancia", async ({ page }) => {
