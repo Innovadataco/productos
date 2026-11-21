@@ -1,0 +1,25 @@
+/* Inversiones · conciliación con la certificación de A&V. Usa los tokens de tablero.css (layout).
+   Todo va dentro de .concilia (el contenido) o .concilia-top (su encabezado): no toca otras pantallas. */
+.concilia .concilia-hero h1 { font-size: clamp(34px, 5vw, 60px); line-height: 1.05; }
+.concilia .resumen { font-weight: 700; font-size: 15px; margin: 0; } /* se parte en el teléfono: no lleva .estado */
+.concilia tbody tr { cursor: default; }
+.concilia tbody tr:hover { background: none; }
+.concilia table.angosta { min-width: 720px; }
+.concilia tfoot th, .concilia tfoot td { border-bottom: 0; font-weight: 700; }
+.concilia th[scope="row"] { text-align: left; font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--fg); font-weight: 700; }
+.concilia td.porque { text-align: left; max-width: 360px; font-size: 13px; }
+.concilia .frase { display: block; }
+.concilia .frase + .frase { margin-top: 4px; }
+
+/* El resultado: el color dice el estado y el texto también (nunca solo el color). */
+.concilia .estado { font-weight: 700; white-space: nowrap; }
+.concilia .tono-cuadra { color: var(--gain); }
+.concilia .tono-no-cuadra { color: var(--loss); }
+.concilia .tono-por-liquidar { color: var(--gold); }
+.concilia .tono-sin-verificar { color: var(--muted); }
+
+.concilia .cortes { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.concilia .cortes a { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 13px; color: var(--fg); text-decoration: none; }
+.concilia .cortes a:hover { background: var(--bg-2); }
+.concilia .cortes a[aria-current="page"] { border-color: var(--gold); color: var(--gold); font-weight: 700; }
+.concilia-top a.pill { color: var(--fg); text-decoration: none; }
