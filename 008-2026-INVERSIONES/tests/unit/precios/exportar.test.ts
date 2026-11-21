@@ -78,6 +78,14 @@ describe("exportarPrecios", () => {
   });
 });
 
+describe("exportarPrecios · la pausa por defecto", () => {
+  it(`sin \`esperar\` inyectado, duerme de verdad ${PAUSA_ENTRE_PEDIDOS_MS} ms entre dos pedidos`, async () => {
+    const inicio = Date.now();
+    await exportarPrecios({ lista: lista("FICTA", "FICTB"), desde: DESDE, hasta: HASTA, ahora: AHORA, buscar: yahoo({}).buscar });
+    expect(Date.now() - inicio).toBeGreaterThanOrEqual(PAUSA_ENTRE_PEDIDOS_MS - 5);
+  });
+});
+
 describe("reporteExportacion", () => {
   const base = { csv: "x", especies: 3, conCierres: 3, filas: 40, descartadas: 1, fallidas: [], codigoCsv: null } as const;
 
@@ -106,6 +114,13 @@ describe("escribirCompleto", () => {
     const salida = new Writable({ write(c, _e, listo) { trozos.push(String(c)); listo(); } });
     await escribirCompleto(salida, "a,b\n");
     expect(trozos.join("")).toBe("a,b\n");
+  });
+
+  it("rechaza si la salida emite un error antes de aceptar el texto (el tubo se cerró a mitad)", async () => {
+    const salida = new Writable({ write() { /* nunca acepta */ } });
+    const promesa = escribirCompleto(salida, "a,b\n");
+    salida.emit("error", Object.assign(new Error("tubo"), { code: "EPIPE" }));
+    await expect(promesa).rejects.toMatchObject({ code: "EPIPE" });
   });
 
   it("rechaza si la salida falla (EPIPE: el lector cerró el tubo)", async () => {
