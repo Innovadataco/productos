@@ -4,7 +4,7 @@
 # desplegar-prod.sh la corre antes de `up` y 10 minutos después, y deja las dos en estado/mediciones/.
 # Criterio de corte: MemAvailable en reposo bajo 1 GiB.
 #
-# Uso: sudo scripts/medir-memoria.sh [--etiqueta <texto>] [--salida <archivo bajo /opt/inversiones-008>]
+# Uso: sudo scripts/medir-memoria.sh [--etiqueta <texto>] [--salida <archivo bajo la raíz de Inversiones>]
 set -euo pipefail
 INV_SCRIPT=medir-memoria
 # shellcheck source=produccion-comun.sh
@@ -21,7 +21,8 @@ main() {
   done
   preparar_entorno
   revisar_arbol
-  armar_compose
+  # Solo lee (`ps -q`): no depende de la configuración de respaldos.
+  armar_compose --sin-respaldos
   if [ -n "$salida" ]; then
     salida="$(ruta_escribible "$salida")"
     mkdir -p "$(dirname "$salida")"

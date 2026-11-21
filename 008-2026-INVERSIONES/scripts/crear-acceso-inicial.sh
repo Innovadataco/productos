@@ -4,7 +4,8 @@
 # solo uso. Este script no guarda ni registra nada: el enlace solo sale en la terminal.
 #
 # Lo corre Jelk por SSH (no la Fábrica), ANTES de cargar los datos reales:
-#   sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/crear-acceso-inicial.sh [argumentos del .ts]
+#   sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-acceso-inicial.sh [argumentos del .ts]
+#   (<raíz>: ver ESTADO en la gestión)
 set -euo pipefail
 INV_SCRIPT=crear-acceso-inicial
 # shellcheck source=produccion-comun.sh
@@ -13,7 +14,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 main() {
   preparar_entorno
   revisar_arbol
-  armar_compose
+  armar_compose --sin-respaldos
   tomar_candado_propio
   tomar_candado_comun
   negarse_si_pausado

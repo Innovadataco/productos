@@ -2,9 +2,9 @@
 # Inversiones · crea o actualiza los roles inv_dueno e inv_app en la base de producción (idempotente).
 #
 # Uso (en el VPS, desde el clon, ANTES del primer despliegue y cada vez que se roten sus claves):
-#   sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/crear-roles-prod.sh
+#   sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-roles-prod.sh   (<raíz>: ver ESTADO en la gestión)
 #
-# Las claves salen del único archivo de producción (/opt/inversiones-008/.env.inversiones.production,
+# Las claves salen del único archivo de producción (<raíz>/.env.inversiones.production,
 # 600 de root): de INV_DUENO_DATABASE_URL e INV_APP_DATABASE_URL. Nunca de una migración (el repo es
 # público). Llegan a psql SOLO por la entrada estándar: printf es interno de bash, así que no aparecen en
 # los argumentos de ningún proceso (`ps`). Antes de fijarlas se apaga el registro de sentencias con error,
@@ -41,7 +41,8 @@ main() {
   [ $# -eq 0 ] || morir "no lleva argumentos"
   preparar_entorno
   revisar_arbol
-  armar_compose
+  # Solo levanta la base: no necesita la carpeta de respaldos (sirve también en una restauración).
+  armar_compose --sin-respaldos
   local url_dueno url_app
   url_dueno="$(leer_variable_env "$INV_ENV_PROD" INV_DUENO_DATABASE_URL)" || morir "falta INV_DUENO_DATABASE_URL en $INV_ENV_PROD"
   url_app="$(leer_variable_env "$INV_ENV_PROD" INV_APP_DATABASE_URL)" || morir "falta INV_APP_DATABASE_URL en $INV_ENV_PROD"

@@ -12,7 +12,7 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileS
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, ruta008 } from "./falsos";
+import { carpetaTemporal, ruta008, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -24,9 +24,9 @@ const CSV = Buffer.from("Fecha,Especie,Cantidad\n2026-01-02,FICTICIA,10\n", "utf
 
 type Salida = { status: number | null; stdout: string; stderr: string };
 
-function ejecutar(programa: string, args: string[], env: NodeJS.ProcessEnv, entrada?: Buffer, alArrancar?: (pid: number) => void): Promise<Salida & { salidaBinaria: Buffer }> {
+function ejecutar(programa: string, args: string[], env: Entorno, entrada?: Buffer, alArrancar?: (pid: number) => void): Promise<Salida & { salidaBinaria: Buffer }> {
   return new Promise((ok) => {
-    const hijo = spawn(programa, args, { env });
+    const hijo = spawn(programa, args, { env: env as NodeJS.ProcessEnv });
     const partes: Buffer[] = [];
     let stderr = "";
     const reloj = setTimeout(() => hijo.kill("SIGKILL"), 30_000);
@@ -64,7 +64,8 @@ function preparar(opciones: { swap?: string | null } = {}) {
       '  if command -v sha256sum >/dev/null 2>&1; then h="$(sha256sum "$a")"; else h="$(shasum -a 256 "$a")"; fi',
       '  printf "sha\\t%s\\n" "${h%% *}" >>"$FALSO_TSX_REGISTRO" ;;',
       "esac; done",
-      '[ -z "${FALSO_TSX_DORMIR:-}" ] || { printf "dormido\\n" >>"$FALSO_TSX_REGISTRO"; sleep "$FALSO_TSX_DORMIR"; }',
+      // exec: la señal llega al proceso que duerme (como a node), no a un bash que la difiere.
+      '[ -z "${FALSO_TSX_DORMIR:-}" ] || { printf "dormido\\n" >>"$FALSO_TSX_REGISTRO"; exec sleep "$FALSO_TSX_DORMIR"; }',
       'exit "${FALSO_TSX_RC:-0}"',
       "",
     ].join("\n"),
@@ -72,7 +73,7 @@ function preparar(opciones: { swap?: string | null } = {}) {
   chmodSync(tsx, 0o755);
   const swap = path.join(dir, "memory.swap.max");
   if (opciones.swap !== null) writeFileSync(swap, `${opciones.swap ?? "0"}\n`);
-  const env: NodeJS.ProcessEnv = {
+  const env: Entorno = {
     PATH: process.env.PATH,
     INV_CARGAR_APP: app,
     INV_CARGAR_TMP: tmp,
@@ -80,7 +81,7 @@ function preparar(opciones: { swap?: string | null } = {}) {
     FALSO_TSX_REGISTRO: registro,
   };
   const tsxLlamadas = () => (existsSync(registro) ? readFileSync(registro, "utf8").trim().split("\n").map((l) => l.split("\t")) : []);
-  const correrCarga = (comando: string[], sobre: Buffer, extra: NodeJS.ProcessEnv = {}, alArrancar?: (pid: number) => void) =>
+  const correrCarga = (comando: string[], sobre: Buffer, extra: Entorno = {}, alArrancar?: (pid: number) => void) =>
     ejecutar("sh", [CARGAR, ...comando], { ...env, ...extra }, sobre, alArrancar);
   return { dir, app, tmp, env, tsxLlamadas, correrCarga };
 }
@@ -134,7 +135,6 @@ describe("armar-sobre.sh · el sobre se arma en el Mac desde un archivo privado"
     ["--sha256 (reservado)", `--sha256\n${"a".repeat(64)}\n`],
     ["más de 30 líneas", Array.from({ length: 31 }, () => "--ensayo\n").join("")],
     ["una línea de más de 512 caracteres", `--nota\n${"x".repeat(513)}\n`],
-    ["un archivo vacío", ""],
   ] as const) {
     it(`rechaza una cabecera con ${nombre}, sin escribir nada y sin repetir sus valores`, async () => {
       const r = await armar(cabecera, CSV);
@@ -144,8 +144,14 @@ describe("armar-sobre.sh · el sobre se arma en el Mac desde un archivo privado"
     });
   }
 
+  it("una cabecera vacía es un comando sin argumentos (construir-lotes)", async () => {
+    const r = await armar("");
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.salidaBinaria.equals(Buffer.alloc(BLOQUE, "\n"))).toBe(true);
+  });
+
   it("se niega a escribir el sobre en una terminal (los datos se verían en pantalla)", () => {
-    expect(readFileSync(SOBRE, "utf8")).toMatch(/\[ -t 1 \]/);
+    expect(readFileSync(SOBRE, "utf8")).toMatch(/\[ ! -t 1 \] \|\| morir/);
   });
 });
 
@@ -277,7 +283,7 @@ describe("inv-cargar · se niega sin tocar nada (sale con 2, sin correr el CLI, 
     }],
     ["un tabulador en la cabecera", ["registrar-escision"], () => sobreManual(["--nota", "a\tb"])],
     ["una línea de la cabecera de más de 512 caracteres", ["registrar-escision"], () => sobreManual(["--nota", "x".repeat(513)])],
-    ["más de 32 líneas de cabecera", ["construir-lotes"], () => sobreManual(Array.from({ length: 33 }, () => "--ensayo"))],
+    ["más de 30 argumentos en la cabecera", ["construir-lotes"], () => sobreManual(Array.from({ length: 33 }, () => "--ensayo"))],
   ];
   for (const [nombre, comando, sobre] of casos) {
     it(nombre, async () => {

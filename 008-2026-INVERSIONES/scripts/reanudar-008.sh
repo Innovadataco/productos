@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Inversiones · reanuda después de una pausa: `up -d --wait` con el sha que estaba corriendo
 # (estado/sha-actual) y borra la marca de pausa solo si todo quedó healthy. Se niega si PI está
-# desplegando: el candado común /var/lock/despliegue-vps.lock tomado («PI desplegando») o un proceso de
-# despliegue o build de PI a la vista (segunda barrera).
+# desplegando: el candado común tomado («PI desplegando») o un proceso de despliegue o build de PI a la vista
+# (segunda barrera). Exige la configuración no secreta (inv-008.conf): el up levanta el respaldo.
 #
-# Uso: sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/reanudar-008.sh
+# Uso: sudo <raíz>/repo/008-2026-INVERSIONES/scripts/reanudar-008.sh   (<raíz>: ver ESTADO en la gestión)
 set -euo pipefail
 INV_SCRIPT=reanudar-008
 # shellcheck source=produccion-comun.sh
@@ -22,6 +22,7 @@ main() {
   tomar_candado_comun
   revisar_pi "antes de reanudar"
   export INV_TAG="$sha"
+  respaldos_siguen_validos || morir "la carpeta de respaldos dejó de pasar la validación antes del up: no se levanta nada"
   informar "levantando Inversiones con el sha $sha (up -d --wait)"
   "${COMPOSE[@]}" up -d --wait --wait-timeout 180 || morir "Inversiones no quedó healthy: la marca de pausa se mantiene"
   rm -f "$(ruta_escribible "$INV_MARCA_PAUSA")"

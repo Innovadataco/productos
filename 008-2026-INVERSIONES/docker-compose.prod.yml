@@ -1,14 +1,21 @@
 # Inversiones (008) · producción en el VPS compartido con PI (D-015). Proyecto, red y base propios.
 #
-# Una sola variable para todo, incluida la reversa (la arma scripts/produccion-comun.sh):
-#   COMPOSE="docker compose -p inv-008-prod -f /opt/inversiones-008/repo/008-2026-INVERSIONES/docker-compose.prod.yml --env-file /opt/inversiones-008/.env.inversiones.production"
+# Una sola variable para todo, incluida la reversa (la arma scripts/produccion-comun.sh; a mano, ver
+# docs/despliegue/produccion.md §1). <raíz> es la carpeta que contiene al clon: no va en este repo público (ver
+# ESTADO en la gestión).
+#   COMPOSE=(env INV_RESPALDOS_DIR=<de inv-008.conf> INV_RUTA_PAUSA=<clon>/scripts/pausar-008.sh
+#            docker compose -p inv-008-prod -f <raíz>/repo/008-2026-INVERSIONES/docker-compose.prod.yml
+#            --env-file <raíz>/.env.inversiones.production)
 #
-# El único archivo de producción (/opt/inversiones-008/.env.inversiones.production, 600 de root, fuera de
-# git) se usa SOLO para la interpolación: ningún servicio usa env_file y cada uno declara en environment:
-# solo sus variables. La imagen no trae secretos; APP_VERSION va horneada en ella.
+# El único archivo de producción (<raíz>/.env.inversiones.production, 600 de root, fuera de git) se usa SOLO
+# para la interpolación: ningún servicio usa env_file y cada uno declara en environment: solo sus variables. La
+# imagen no trae secretos; APP_VERSION va horneada en ella. Las dos variables que no son secretas las pasan los
+# scripts con `env` (mandan sobre el --env-file): la carpeta de respaldos (de la configuración no secreta
+# <raíz>/inv-008.conf, validada) y la ruta de la pausa (derivada del clon).
 # INV_TAG (el sha) lo exporta desplegar-prod.sh; sin él, las imágenes no existen y nada arranca por error.
 # Red: la base solo en la red interna, sin puertos; la app solo en 127.0.0.1:5008 del host (la entrada es
-# el túnel cloudflared-hermes de PI, ver docs/despliegue/produccion.md). cpu_shares bajo: PI tiene prioridad.
+# el túnel de PI, ver docs/despliegue/produccion.md §8). cpu_shares bajo: PI tiene prioridad.
+# Sin volcados de memoria en ningún servicio (ulimits core 0).
 name: inv-008-prod
 
 services:
@@ -40,6 +47,8 @@ services:
     cpu_shares: 256
     pids_limit: 200
     stop_grace_period: 30s
+    ulimits:
+      core: 0
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d inversiones"]
       interval: 10s
@@ -85,6 +94,8 @@ services:
     cpus: 0.5
     cpu_shares: 256
     pids_limit: 200
+    ulimits:
+      core: 0
     healthcheck:
       test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:5008/api/salud || exit 1"]
       interval: 30s
@@ -128,6 +139,9 @@ services:
     cpus: 0.5
     cpu_shares: 256
     pids_limit: 200
+    # La carga del dueño pasa por aquí (inv-cargar): sin volcados de memoria.
+    ulimits:
+      core: 0
     # Healthcheck nominal: es de un solo uso (run --rm) y nunca queda corriendo.
     healthcheck:
       test: ["CMD", "node", "--version"]
@@ -141,13 +155,14 @@ services:
         max-file: "5"
 
   # Respaldo diario cifrado, permanente y con programación propia (sin systemd ni cron del host):
-  # pg_dump -Fc (rol inv_dueno, red interna) | age -r <pública> → /var/backups/idc/inversiones/ (la carpeta
-  # root:respaldo 750 que montó el CEO de PI y que la infraestructura de IDC copia al Mac). Solo la clave
-  # PÚBLICA de age.
+  # pg_dump -Fc (rol inv_dueno, red interna) | age -r <pública> → la carpeta de respaldos (root:respaldo 750, la
+  # montó el CEO de PI y la infraestructura de IDC la copia al Mac). Su ruta no va en el repo: sale de la
+  # configuración no secreta (INV_RESPALDOS_DIR, validada por los scripts). Solo la clave PÚBLICA de age.
   # ÚNICA excepción a «no root» (capas-pi.md #4): corre como root DEL CONTENEDOR con el grupo respaldo
   # (INV_RESPALDO_GID, gid numérico del host), para dejar los archivos root:respaldo 0640 sin cambiar esa
   # carpeta. Sin ninguna capacidad (no salta permisos ni cambia dueños), sin escalar, de solo lectura y con
-  # un único bind de escritura.
+  # un único bind de escritura, en sintaxis larga y sin crear la carpeta: con el valor por defecto (una ruta que
+  # no existe) ningún comando falla al interpolar, y un up del respaldo sin la carpeta configurada falla cerrado.
   inv-008-respaldo:
     image: inv-008-vigia:${INV_TAG:-sin-desplegar}
     pull_policy: never
@@ -165,7 +180,11 @@ services:
       RESPALDO_GID: ${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}
       TZ: America/Bogota
     volumes:
-      - /var/backups/idc/inversiones:/respaldos
+      - type: bind
+        source: ${INV_RESPALDOS_DIR:-/nonexistent/inv-008-respaldos-sin-configurar}
+        target: /respaldos
+        bind:
+          create_host_path: false
     networks:
       - inv-008-red-interna
     read_only: true
@@ -179,6 +198,8 @@ services:
     cpus: 0.25
     cpu_shares: 256
     pids_limit: 20
+    ulimits:
+      core: 0
     healthcheck:
       test: ["CMD", "/usr/local/bin/inv-respaldo", "--salud"]
       interval: 60s
@@ -208,6 +229,9 @@ services:
       TELEGRAM_CHAT_ID: ${INV_TELEGRAM_CHAT_ID:?falta INV_TELEGRAM_CHAT_ID}
       VIGIA_UMBRAL_MEMAVAILABLE_MIB: ${INV_VIGIA_UMBRAL_MEMAVAILABLE_MIB:-1024}
       VIGIA_INTERVALO_S: ${INV_VIGIA_INTERVALO_S:-60}
+      # El comando de corte del aviso: la ruta de pausar-008.sh, derivada del clon por los scripts. Vacía (un
+      # vigía recreado a mano), el aviso lleva el marcador.
+      VIGIA_RUTA_PAUSA: ${INV_RUTA_PAUSA:-}
     volumes:
       - /proc/meminfo:/host/meminfo:ro
       - /sys/fs/cgroup:/host/cgroup:ro
@@ -223,6 +247,8 @@ services:
     cpus: 0.05
     cpu_shares: 256
     pids_limit: 20
+    ulimits:
+      core: 0
     healthcheck:
       test: ["CMD", "/usr/local/bin/inv-vigia", "--salud"]
       interval: 60s

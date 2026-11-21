@@ -65,7 +65,8 @@ describe("respaldar-base.sh", () => {
     const base = carpetaTemporal("respaldo-host-sin-conf");
     envProduccionFicticio(base, {}, { sinConf: true });
     const falsos = crearFalsos(base);
-    const env = entorno(falsos, { INV_PROYECTO: "inv-008-prueba", INV_BASE: base });
+    // FALSO_RESPALDOS_DIR siempre definido: si el docker falso llegara a correr, escribe en un temporal.
+    const env = entorno(falsos, { INV_PROYECTO: "inv-008-prueba", INV_BASE: base, FALSO_RESPALDOS_DIR: carpetaTemporal("sin-conf-falso") });
     const r = await correr(SCRIPT, [], env);
     expect(r.status).not.toBe(0);
     expect(r.stderr).toMatch(/inv-008\.conf/);

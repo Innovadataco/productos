@@ -4,7 +4,8 @@
 #
 #   runner   → inv-008-app: la app (Next standalone).
 #   migrador → inv-008-migrador: prisma migrate deploy + guardián del esquema + privilegios de inv_app y
-#              los comandos de carga y de acceso inicial (tsx, rol inv_dueno). Lleva el node_modules completo
+#              los comandos de carga (inv-cargar: el sobre por stdin, sin copias en el VPS) y de acceso
+#              inicial (tsx, rol inv_dueno). Lleva el node_modules completo
 #              del lockfile: prisma 5.22.0 y tsx están en devDependencies y la imagen standalone no los trae.
 #   vigia    → inv-008-vigia: imagen mínima (alpine, sin node, prisma ni devDependencies) para el vigía de
 #              convivencia y el respaldo diario cifrado: age, curl, certificados y pg_dump 16.
@@ -66,6 +67,7 @@ COPY src ./src
 COPY scripts ./scripts
 COPY docker/migrador/privilegios.sql ./docker/migrador/privilegios.sql
 COPY --chmod=0555 docker/migrar.sh /usr/local/bin/inv-migrar
+COPY --chmod=0555 docker/migrador/cargar.sh /usr/local/bin/inv-cargar
 RUN npx prisma generate
 # Ningún .env en la imagen (next build copia el .env de la carpeta al standalone): el build falla si hay uno.
 RUN if find / -xdev \( -name '.env' -o -name '.env.*' \) 2>/dev/null | grep -q .; then echo "la imagen trae archivos .env: no se construye" >&2; exit 1; fi

@@ -72,7 +72,7 @@ describe("controles positivos del candado (si dejan de morder, no sirve)", () =>
     [["", "var", "backups", "x", "y"].join("/"), "carpeta de respaldos"],
     [["", "etc", "cloudflared", "config.yml"].join("/"), "configuración del túnel"],
     [["", "root", ".ficticio", "cert.pem"].join("/"), "home de root"],
-    ["systemctl restart cloudflared-ficticio", "servicio del túnel"],
+    [`systemctl restart ${["cloudflared", "ficticio"].join("-")}`, "servicio del túnel"],
     // Las IPs se arman en ejecución: el cruce de literales de la Fábrica marca cualquier IPv4 escrita.
     [`ssh root@${[8, 8, 4, 4].join(".")}`, "IPv4 pública"],
   ] as const) {
