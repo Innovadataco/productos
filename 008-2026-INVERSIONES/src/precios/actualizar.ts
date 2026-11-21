@@ -12,7 +12,7 @@ import { barraDefinitiva } from "./horario";
 import { obtenerCierres, type Buscar, type Cierre } from "./yahoo";
 
 export const TOLERANCIA_VERIFICACION = new Prisma.Decimal("0.01");
-const FUENTE = "yahoo";
+export const FUENTE = "yahoo";
 
 export interface FalloEspecie {
   readonly instrumentoId: string;

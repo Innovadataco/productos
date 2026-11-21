@@ -146,16 +146,33 @@ enum ResultadoControl {
   PENDIENTE_LIQUIDACION
 }
 
+enum AccionPlan {
+  COMPRAR
+  VENDER
+  NO_ACTUAR // «mantener hasta…»: también se registra y se mide
+}
+
+enum CondicionRegla {
+  NINGUNA // postura sin condición («mantener hasta el dividendo», «vender N»)
+  CIERRE_BAJO // se toca si el cierre queda por debajo del nivel
+  CIERRE_SOBRE // se toca si el cierre queda por encima del nivel
+  MONTO_ORDEN_BAJO // de portafolio: no operar por debajo de un monto por orden
+  LIBRE // texto sin nivel calculable («siempre orden límite»)
+}
+
 // ───────────── Usuarios ─────────────
 model Usuario {
-  id             String         @id @default(cuid())
-  email          String         @unique @db.Citext
-  rol            RolUsuario
-  telegramChatId BigInt?
-  activo         Boolean        @default(true)
-  creadoEn       DateTime       @default(now()) @db.Timestamptz(6)
-  cargas         CargaArchivo[]
-  ajustesCaja    AjusteCaja[]
+  id              String                @id @default(cuid())
+  email           String                @unique @db.Citext
+  rol             RolUsuario
+  telegramChatId  BigInt?
+  activo          Boolean               @default(true)
+  creadoEn        DateTime              @default(now()) @db.Timestamptz(6)
+  cargas          CargaArchivo[]
+  ajustesCaja     AjusteCaja[]
+  planesAprobados PlanVersion[]
+  decisiones      Decision[]
+  enlaces         EnlaceDecisionOrden[]
 
   @@map("usuario")
 }
@@ -246,6 +263,8 @@ model Instrumento {
   controles            ControlConciliacion[]
   eventosOrigen        EventoCorporativo[]     @relation("EventoOrigen")
   eventosDestino       EventoCorporativo[]     @relation("EventoDestino")
+  reglasPlan           ReglaPlan[]
+  decisiones           Decision[]
 
   @@map("instrumento")
 }
@@ -292,26 +311,27 @@ model MovimientoCaja {
 }
 
 model Orden {
-  id                 String            @id @default(cuid())
-  filaFuenteId       String            @unique
-  filaFuente         FilaFuente        @relation(fields: [filaFuenteId], references: [id])
-  ejecutadaEn        DateTime          @db.Timestamptz(6)
-  fechaOperacion     DateTime          @db.Date
-  fechaLiquidacion   DateTime          @db.Date // T+2 hábiles según CalendarioBvc
+  id                 String                @id @default(cuid())
+  filaFuenteId       String                @unique
+  filaFuente         FilaFuente            @relation(fields: [filaFuenteId], references: [id])
+  ejecutadaEn        DateTime              @db.Timestamptz(6)
+  fechaOperacion     DateTime              @db.Date
+  fechaLiquidacion   DateTime              @db.Date // T+2 hábiles según CalendarioBvc
   instrumentoId      String
-  instrumento        Instrumento       @relation(fields: [instrumentoId], references: [id])
+  instrumento        Instrumento           @relation(fields: [instrumentoId], references: [id])
   lado               LadoOrden
   estado             EstadoOrden
   cantidadCompletada BigInt
   cantidadSolicitada BigInt?
-  cantidadPendiente  BigInt            @default(0)
-  precioUnitario     Decimal           @db.Decimal(20, 6)
-  totalInvertido     Decimal           @db.Decimal(20, 4) // SIN comisión
-  comision           Decimal           @db.Decimal(20, 4)
-  totalEstimado      Decimal           @db.Decimal(20, 4) // compra: + comisión · venta: − comisión. La caja usa este
-  moneda             Moneda            @default(COP)
+  cantidadPendiente  BigInt                @default(0)
+  precioUnitario     Decimal               @db.Decimal(20, 6)
+  totalInvertido     Decimal               @db.Decimal(20, 4) // SIN comisión
+  comision           Decimal               @db.Decimal(20, 4)
+  totalEstimado      Decimal               @db.Decimal(20, 4) // compra: + comisión · venta: − comisión. La caja usa este
+  moneda             Moneda                @default(COP)
   lote               Lote?
   asignaciones       AsignacionVenta[]
+  enlacesDecision    EnlaceDecisionOrden[]
 
   @@index([instrumentoId, fechaOperacion])
   @@map("orden")
@@ -587,4 +607,99 @@ model ControlConciliacion {
 
   @@index([conciliacionId])
   @@map("control_conciliacion")
+}
+
+// ───────────── Plan, reglas y decisiones (fase B) ─────────────
+// Cadena: versión del plan → regla → decisión → orden de Trii → resultado a 30 y 90 días.
+// Nada se edita ni se borra (disparadores de solo inserción en la migración): un cambio del plan
+// es una versión nueva; una decisión o un enlace equivocados se corrigen con otro que los reemplaza.
+// La coherencia de la cadena va en FK compuestas; los CHECK y el índice parcial, en el SQL.
+
+/// Foto completa del plan en una fecha (reemplaza entera a la anterior). Vigente en una fecha:
+/// la de mayor `version` con `vigenteDesde` ≤ esa fecha; `vigenteDesde` nunca retrocede.
+model PlanVersion {
+  id            String      @id @default(cuid())
+  version       Int         @unique
+  vigenteDesde  DateTime    @db.Date
+  motivo        String
+  aprobadaPorId String
+  aprobadaPor   Usuario     @relation(fields: [aprobadaPorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creadaEn      DateTime    @default(now()) @db.Timestamptz(6)
+  reglas        ReglaPlan[]
+  decisiones    Decision[]
+
+  @@map("plan_version")
+}
+
+/// Una fila de la foto: postura o regla de una especie, o del portafolio si `instrumentoId` es nulo.
+model ReglaPlan {
+  id            String         @id @default(cuid())
+  planVersionId String
+  planVersion   PlanVersion    @relation(fields: [planVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  instrumentoId String?
+  instrumento   Instrumento?   @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  condicion     CondicionRegla
+  nivel         Decimal?       @db.Decimal(20, 6) // precio (cierre) o pesos (monto por orden)
+  accion        AccionPlan
+  cantidad      BigInt?
+  plazoHasta    DateTime?      @db.Date
+  detalle       String
+  decisiones    Decision[]
+
+  @@unique([id, planVersionId])
+  @@index([planVersionId])
+  @@index([instrumentoId])
+  @@map("regla_plan")
+}
+
+/// Qué se decidió, por qué, quién y cuándo, bajo la versión vigente ese día. «No actuar» también.
+model Decision {
+  id             String                @id @default(cuid())
+  planVersionId  String
+  planVersion    PlanVersion           @relation(fields: [planVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reglaId        String?
+  regla          ReglaPlan?            @relation(fields: [reglaId, planVersionId], references: [id, planVersionId], onDelete: Restrict, onUpdate: Restrict)
+  instrumentoId  String
+  instrumento    Instrumento           @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  accion         AccionPlan
+  cantidad       BigInt? // obligatoria en NO_ACTUAR (lo que se mide); en compra/venta mide la orden
+  excepcion      Boolean               @default(false) // se aparta de la regla citada, con motivo
+  motivo         String
+  decididaPorId  String
+  decididaPor    Usuario               @relation(fields: [decididaPorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  fechaDecision  DateTime              @db.Date
+  registradaEn   DateTime              @default(now()) @db.Timestamptz(6)
+  reemplazaId    String?               @unique
+  reemplaza      Decision?             @relation("CorreccionDecision", fields: [reemplazaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reemplazadaPor Decision?             @relation("CorreccionDecision")
+  enlaces        EnlaceDecisionOrden[]
+
+  @@index([instrumentoId, fechaDecision])
+  @@index([planVersionId])
+  @@index([reglaId, planVersionId])
+  @@map("decision")
+}
+
+/// Orden importada → decisión que la originó. Cadena lineal por orden: un solo enlace raíz (índice
+/// parcial) y cada corrección reemplaza a uno solo de la MISMA orden (FK compuesta). Vigente = el
+/// que nadie reemplaza. Una orden APROBADO sin enlaces es «sin decisión registrada».
+model EnlaceDecisionOrden {
+  id             String               @id @default(cuid())
+  ordenId        String
+  orden          Orden                @relation(fields: [ordenId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decisionId     String
+  decision       Decision             @relation(fields: [decisionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reemplazaId    String?
+  reemplaza      EnlaceDecisionOrden? @relation("CorreccionEnlace", fields: [reemplazaId, ordenId], references: [id, ordenId], onDelete: Restrict, onUpdate: Restrict)
+  reemplazadoPor EnlaceDecisionOrden? @relation("CorreccionEnlace")
+  motivo         String? // obligatorio en una corrección
+  creadoPorId    String
+  creadoPor      Usuario              @relation(fields: [creadoPorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creadoEn       DateTime             @default(now()) @db.Timestamptz(6)
+
+  @@unique([id, ordenId])
+  @@unique([reemplazaId, ordenId])
+  @@index([ordenId])
+  @@index([decisionId])
+  @@map("enlace_decision_orden")
 }
