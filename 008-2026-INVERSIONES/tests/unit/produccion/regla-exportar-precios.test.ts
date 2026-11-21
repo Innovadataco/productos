@@ -30,7 +30,7 @@ describe("regla de precios:exportar con los símbolos del portafolio", () => {
     it(`${donde}: la Fábrica solo con orden del CEO Inversiones, lista de producción sin imprimir, carpeta 700 y borrado`, () => {
       const t = texto();
       expect(t).toContain("solo con orden del CEO Inversiones");
-      expect(t).toMatch(/de producción/);
+      expect(t).toMatch(/lista de producción/);
       expect(t).toMatch(/sin imprimirla/);
       expect(t).toMatch(/carpeta 700/);
       expect(t).toMatch(/la borra al terminar/);

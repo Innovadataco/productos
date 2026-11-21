@@ -564,7 +564,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 | 12 | La conciliación otra vez, con los precios ya cargados | `conciliar-certificacion` | `--fecha-corte` y la fecha | — |
 
 **Los precios (paso 11): se exportan en el Mac del dueño y viajan en el sobre.** Producción no tiene salida a internet: la app y el migrador no llegan a Yahoo.
-1. **En el Mac del dueño, que sí tiene red,** se exportan los cierres. La lista de nemotécnicos (uno por línea; `#` comenta) la crea el dueño en su carpeta privada. **La Fábrica lo corre con los símbolos del portafolio solo con orden del CEO Inversiones** (decisión del CEO, 2026-11-21): saca la lista de producción (acción activa con lotes) sin imprimirla, la deja con el CSV en una carpeta 700 (`umask 077`) fuera de la carpeta privada del dueño y la borra al terminar, junto con el CSV:
+1. **En el Mac del dueño, que sí tiene red,** se exportan los cierres. La lista de nemotécnicos (uno por línea; `#` comenta) la crea el dueño en su carpeta privada. **La Fábrica lo corre con los símbolos del portafolio solo con orden del CEO Inversiones** (decisión del CEO, 2026-11-21): saca la lista de producción (acción activa con lotes) sin imprimirla, la deja con el CSV en una carpeta 700 (`umask 077`) y la borra al terminar, junto con el CSV. Para la Fábrica, `<carpeta-privada>` es esa carpeta 700 que ella crea: nunca escribe en la carpeta privada del dueño. Con la misma orden corre también el paso 2:
    ```sh
    umask 077
    npm run -s precios:exportar -- --nemos <carpeta-privada>/nemos.txt --desde <fecha> > <carpeta-privada>/precios.csv.parcial \
@@ -572,7 +572,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
    ```
    - **`-s` es obligatorio:** sin él, npm escribe su encabezado en stdout y queda dentro del CSV (el importador lo rechaza por el encabezado). Sirve también `npx tsx scripts/exportar-precios.ts …`.
    - **El `&& mv`:** la shell crea el archivo aunque el exportador falle; con `.parcial` y `mv`, solo un CSV completo (salida 0) queda con su nombre. Con salida 3 (alguna especie quedó fuera, por su línea de la lista), el CSV de las demás es válido: se decide a conciencia si se usa (`mv` a mano) o se repite.
-   - **El CSV no es público:** el conjunto de especies es la composición del portafolio. Va en la carpeta privada, con `umask 077`; nunca al repo. El exportador se niega a escribirlo en una terminal y por stderr solo da conteos, códigos y números de línea de la lista.
+   - **El CSV no es público:** el conjunto de especies es la composición del portafolio. Va en `<carpeta-privada>`, con `umask 077`; nunca al repo. El exportador se niega a escribirlo en una terminal y por stderr solo da conteos, códigos y números de línea de la lista.
    - Pide `<NEMO>.CL` en serie, con una pausa entre pedidos; `--hasta` por defecto es hoy y el rango llega a 1830 días. Nunca deja una barra que aún no es definitiva **al exportar** (la de hoy antes de la hora).
 2. **El CSV viaja por stdin, en el sobre,** como los demás archivos: `scripts/armar-sobre.sh /dev/null <carpeta-privada>/precios.csv | ssh <vps> …/scripts/cargar-prod.sh importar-precios`. `inv-cargar` lo deja en el temporal `precios.csv` (tope 4 MiB) y `precios:importar` lo valida **entero** antes de abrir la base: con un error no guarda nada.
    - «Todo o nada» es la validación. La escritura es por barra, como en `precios:actualizar`: si la carga se corta a mitad, queda lo guardado hasta ahí y repetir el mismo paso completa sin duplicar.
