@@ -7,11 +7,27 @@
  * - la caja: depósitos − retiros aprobados, ventas − compras por `totalEstimado`, dividendos netos y ajustes.
  * Solo lectura, con `select` explícito: nunca se lee el encargo ni el crudo.
  */
-import { Prisma } from "@prisma/client";
+import { Prisma, type LadoOrden, type TipoMovimientoCaja } from "@prisma/client";
 import type { EntradasConciliacion, EspecieEntrada, FondoEntrada } from "./controles";
 
 type Lector = Prisma.TransactionClient;
 const D = (v: Prisma.Decimal.Value) => new Prisma.Decimal(v);
+
+/** Órdenes aprobadas con acciones operadas hasta el corte: se leen una sola vez para cantidades y caja. */
+export interface OrdenAlCorte {
+  readonly instrumentoId: string;
+  readonly lado: LadoOrden;
+  readonly cantidadCompletada: bigint;
+  readonly fechaOperacion: Date;
+  readonly fechaLiquidacion: Date;
+  readonly totalEstimado: Prisma.Decimal;
+}
+
+export const ordenesAlCorte = (db: Lector, corte: Date): Promise<OrdenAlCorte[]> =>
+  db.orden.findMany({
+    where: { estado: "APROBADO", cantidadCompletada: { gt: 0n }, fechaOperacion: { lte: corte } },
+    select: { instrumentoId: true, lado: true, cantidadCompletada: true, fechaOperacion: true, fechaLiquidacion: true, totalEstimado: true },
+  });
 
 interface Movimiento {
   readonly instrumentoId: string;
@@ -20,14 +36,8 @@ interface Movimiento {
   readonly liquida: Date;
 }
 
-async function movimientosDeAcciones(db: Lector, corte: Date): Promise<Movimiento[]> {
-  const [ordenes, lotes] = await Promise.all([
-    db.orden.findMany({
-      where: { estado: "APROBADO", cantidadCompletada: { gt: 0n }, fechaOperacion: { lte: corte } },
-      select: { instrumentoId: true, lado: true, cantidadCompletada: true, fechaOperacion: true, fechaLiquidacion: true },
-    }),
-    db.lote.findMany({ where: { origen: "ESCISION", fechaCompra: { lte: corte } }, select: { instrumentoId: true, cantidad: true, fechaCompra: true, fechaLiquidacion: true } }),
-  ]);
+async function movimientosDeAcciones(db: Lector, corte: Date, ordenes: readonly OrdenAlCorte[]): Promise<Movimiento[]> {
+  const lotes = await db.lote.findMany({ where: { origen: "ESCISION", fechaCompra: { lte: corte } }, select: { instrumentoId: true, cantidad: true, fechaCompra: true, fechaLiquidacion: true } });
   return [
     ...ordenes.map((o) => ({ instrumentoId: o.instrumentoId, cantidad: o.lado === "COMPRA" ? o.cantidadCompletada : -o.cantidadCompletada, opera: o.fechaOperacion, liquida: o.fechaLiquidacion })),
     ...lotes.map((l) => ({ instrumentoId: l.instrumentoId, cantidad: l.cantidad, opera: l.fechaCompra, liquida: l.fechaLiquidacion })),
@@ -54,8 +64,11 @@ async function cierresDelCorte(db: Lector, corte: Date, ids: readonly string[]):
   return porEspecie;
 }
 
-export async function especiesAlCorte(db: Lector, corte: Date, certificadas: ReadonlyMap<string, EspecieEntrada["certificada"]>): Promise<EspecieEntrada[]> {
-  const [movimientos, sinLote] = await Promise.all([movimientosDeAcciones(db, corte), destinosSinLote(db, corte)]);
+export async function especiesAlCorte(
+  db: Lector, corte: Date, certificadas: ReadonlyMap<string, EspecieEntrada["certificada"]>, ordenes: readonly OrdenAlCorte[],
+): Promise<EspecieEntrada[]> {
+  const movimientos = await movimientosDeAcciones(db, corte, ordenes);
+  const sinLote = await destinosSinLote(db, corte);
   const suma = new Map<string, { liquidada: bigint; operada: bigint; pendientes: number }>();
   for (const m of movimientos) {
     const s = suma.get(m.instrumentoId) ?? { liquidada: 0n, operada: 0n, pendientes: 0 };
@@ -89,15 +102,26 @@ export async function fondosAlCorte(db: Lector, corte: Date, certificados: reado
  * La caja de la cuenta al corte. `aporteFondoRegistrado`: cada fondo certificado tiene su aporte registrado (un
  * MovimientoFondo hasta el corte enlazado a su AjusteCaja), que es lo que el CSV de Trii no trae.
  */
-export async function cajaAlCorte(db: Lector, corte: Date, fondos: readonly string[]): Promise<{ liquidado: string; operado: string; aporteFondoRegistrado: boolean }> {
-  const [caja, ordenes, dividendos, ajustes, conAporte] = await Promise.all([
+/** Depósito suma y retiro resta; un tipo nuevo en el enum no compila aquí hasta decidir su signo. */
+function signoCaja(tipo: TipoMovimientoCaja): 1 | -1 {
+  switch (tipo) {
+    case "DEPOSITO":
+      return 1;
+    case "RETIRO":
+      return -1;
+  }
+}
+
+export async function cajaAlCorte(
+  db: Lector, corte: Date, fondos: readonly string[], ordenes: readonly OrdenAlCorte[],
+): Promise<{ liquidado: string; operado: string; aporteFondoRegistrado: boolean }> {
+  const [caja, dividendos, ajustes, conAporte] = await Promise.all([
     db.movimientoCaja.findMany({ where: { estado: "APROBADO", fecha: { lte: corte } }, select: { tipo: true, monto: true } }),
-    db.orden.findMany({ where: { estado: "APROBADO", cantidadCompletada: { gt: 0n }, fechaOperacion: { lte: corte } }, select: { lado: true, totalEstimado: true, fechaLiquidacion: true } }),
     db.dividendo.aggregate({ where: { fechaPago: { lte: corte } }, _sum: { montoNeto: true } }),
     db.ajusteCaja.aggregate({ where: { fecha: { lte: corte } }, _sum: { monto: true } }),
     db.movimientoFondo.groupBy({ by: ["fondoId"], where: { fondoId: { in: [...fondos] }, fecha: { lte: corte }, ajusteCajaId: { not: null } } }),
   ]);
-  const fijo = caja.reduce((s, m) => s.add(m.tipo === "DEPOSITO" ? m.monto : m.monto.neg()), D(0)).add(dividendos._sum.montoNeto ?? 0).add(ajustes._sum.monto ?? 0);
+  const fijo = caja.reduce((s, m) => s.add(m.monto.mul(signoCaja(m.tipo))), D(0)).add(dividendos._sum.montoNeto ?? 0).add(ajustes._sum.monto ?? 0);
   const neto = (o: { lado: string; totalEstimado: Prisma.Decimal }) => (o.lado === "VENTA" ? o.totalEstimado : o.totalEstimado.neg());
   const operado = ordenes.reduce((s, o) => s.add(neto(o)), fijo);
   const liquidado = ordenes.filter((o) => o.fechaLiquidacion <= corte).reduce((s, o) => s.add(neto(o)), fijo);
@@ -116,6 +140,9 @@ export async function leerEntradas(db: Lector, certificacionId: string): Promise
   });
   const corte = cert.fechaCorte;
   const certificadas = new Map(cert.posiciones.map((p) => [p.instrumentoId, { cantidad: p.cantidad, precioValoracion: p.precioValoracion.toString(), valorMercado: p.valorMercado.toString() }]));
-  const [especies, fondos, caja] = await Promise.all([especiesAlCorte(db, corte, certificadas), fondosAlCorte(db, corte, cert.fondos), cajaAlCorte(db, corte, cert.fondos.map((f) => f.instrumentoId))]);
+  const ordenes = await ordenesAlCorte(db, corte);
+  const especies = await especiesAlCorte(db, corte, certificadas, ordenes);
+  const fondos = await fondosAlCorte(db, corte, cert.fondos);
+  const caja = await cajaAlCorte(db, corte, cert.fondos.map((f) => f.instrumentoId), ordenes);
   return { fechaCorte: corte, entradas: { especies, fondos, efectivo: { certificado: cert.saldoEfectivo.toString(), ...caja, hayFondo: cert.fondos.length > 0 } } };
 }
