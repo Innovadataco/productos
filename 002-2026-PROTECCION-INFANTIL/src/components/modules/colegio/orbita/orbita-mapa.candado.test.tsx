@@ -119,4 +119,45 @@ describe("SPEC-965 · OrbitaColegioMapa", () => {
         const dotsAlumno = screen.getAllByText(/alerta alta|sin contacto/).length;
         expect(dotsAlumno).toBe(2);
     });
+
+    it("SPEC-971: ningún atributo numérico del SVG pasa de 2 decimales (anti-warning de hidratación)", async () => {
+        const DECIMALES_MAX = 2;
+        // Atributos geométricos que nacen de un cálculo (Math.cos/sin/sqrt) y disparaban el
+        // mismatch SSR↔cliente. Los constantes (viewBox, strokeWidth) son enteros.
+        const ATTRS = ["cx", "cy", "x1", "y1", "x2", "y2", "r"];
+        const decimales = (v: string): number => {
+            const punto = v.indexOf(".");
+            return punto < 0 ? 0 : v.length - punto - 1;
+        };
+        const verificarSvg = (root: ParentNode): number => {
+            let revisados = 0;
+            root.querySelectorAll("svg *").forEach((el) => {
+                for (const attr of ATTRS) {
+                    const v = el.getAttribute(attr);
+                    if (v === null || v === "") continue;
+                    expect(Number.isNaN(Number(v)), `${attr}="${v}" no es numérico`).toBe(false);
+                    expect(
+                        decimales(v),
+                        `${attr}="${v}" excede ${DECIMALES_MAX} decimales (redondeá la coordenada)`,
+                    ).toBeLessThanOrEqual(DECIMALES_MAX);
+                    revisados += 1;
+                }
+            });
+            return revisados;
+        };
+
+        // Capa 1: cursos + comité + centro (cx/cy calculados, r = radioNodo con sqrt).
+        const { container } = montar();
+        // Control positivo: si no revisó ningún atributo, el candado no vigila nada.
+        expect(verificarSvg(container)).toBeGreaterThan(0);
+
+        // Capa 2: alumnos de mirada + titular + resto (más coordenadas calculadas).
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue({ ok: true, json: async () => ({ curso: DETALLE }) }),
+        );
+        fireEvent.click(screen.getByRole("button", { name: /Curso A-1\./ }));
+        await waitFor(() => expect(screen.getByText("Juan Pérez")).toBeTruthy());
+        expect(verificarSvg(container)).toBeGreaterThan(0);
+    });
 });
