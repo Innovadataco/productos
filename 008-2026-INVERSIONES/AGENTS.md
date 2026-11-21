@@ -37,6 +37,7 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 | `npm run importar:trii -- --email <correo> <archivos.csv>` | Carga local de los CSV de Trii (INV-SPEC-8). Solo para datos del dueño en su base; en el repo, solo fixtures `.ficticio.csv` |
 | `npm run escision:registrar -- --origen <NEMO> --destino <NEMO> --fecha AAAA-MM-DD …` | Registro local de eventos de escisión (INV-SPEC-10), antes de cargar dividendos. Datos reales: solo en la base del dueño |
 | `npm run lotes:construir` · `npm run lote:escision -- …` | Lotes desde las órdenes, ventas FIFO y lote de escisión con costo del portal (INV-SPEC-12). Datos reales: solo en la base del dueño |
+| `npm run precios:actualizar [-- --desde …]` | Cierres diarios de Yahoo `.CL`, versionados y verificados contra la certificación (INV-SPEC-13). Consulta un servicio externo con los símbolos del portafolio: solo desde la máquina del dueño o el servidor |
 
 Cada SPEC que agregue código suma aquí sus guardianes y su job en `inv.yml`, con `needs` en `inv-gate`. `inv.yml` está fuera de la zona de ECC: ese cableado va en un PR aparte que mergea el CEO de PI.
 
@@ -66,6 +67,7 @@ PR con CI verde (los 5 checks obligatorios del repo) → revisión adversarial d
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.11 · 2026-11-20 · 19:39 (-05) · INV · Fábrica ECC · INV-SPEC-13: precios de Yahoo
 > v1.10 · 2026-11-20 · 19:22 (-05) · INV · Fábrica ECC · INV-SPEC-12: lotes, FIFO y lote de escisión
 > v1.9 · 2026-11-20 · 18:35 (-05) · INV · Fábrica ECC · INV-SPEC-10: comando de eventos de escisión
 > v1.8 · 2026-11-20 · 18:04 (-05) · INV · Fábrica ECC · INV-SPEC-8: comando de importación de Trii
