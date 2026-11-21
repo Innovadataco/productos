@@ -14,8 +14,9 @@ export class EstadisticasRepository {
         this.db = tx ?? prisma;
     }
 
-    countIdentificadores() {
-        return this.db.identificadorReportado.count();
+    /** SPEC-937: la superficie pública pasa `AGREGADO_NO_OCULTO` (sin los pares ocultos por el comité). */
+    countIdentificadores(where: Prisma.IdentificadorReportadoWhereInput = {}) {
+        return this.db.identificadorReportado.count({ where });
     }
 
     groupByPlataformaId(where: Prisma.ReporteWhereInput) {

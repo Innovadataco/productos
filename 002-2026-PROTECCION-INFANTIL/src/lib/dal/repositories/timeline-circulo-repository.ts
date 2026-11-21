@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { descifrarCampos } from "@/lib/reporte-texto-contenido";
 import { contenidoIdDeAnotacion } from "@/lib/dal/anotacion-texto";
 import { whereReportesCirculo } from "@/lib/dal/services/circulo-confianza/estado";
+import { whereExcluirOcultosPorComite } from "../oculto-por-comite";
 import type { DatosReporte } from "@/lib/dal/services/circulo-confianza/tipos";
 
 export interface TimelineRawContacto {
@@ -52,10 +53,13 @@ export class TimelineCirculoRepository {
     async buscarReportesVisiblesRecientes(identificadores: string[], desde: Date): Promise<DatosReporte[]> {
         if (identificadores.length === 0) return [];
         return prisma.reporte.findMany({
-            where: whereReportesCirculo({
-                identificador: { in: identificadores },
-                creadoEn: { gte: desde },
-            }),
+            where: whereReportesCirculo(
+                {
+                    identificador: { in: identificadores },
+                    creadoEn: { gte: desde },
+                },
+                await whereExcluirOcultosPorComite(prisma, identificadores),
+            ),
             select: {
                 id: true,
                 identificador: true,

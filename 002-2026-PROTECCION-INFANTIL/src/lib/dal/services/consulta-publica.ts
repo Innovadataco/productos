@@ -19,7 +19,9 @@ import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categori
 import type { EstadoReporte } from "@prisma/client";
 import { ReporteRepository } from "../repositories/reporte";
 import { ParametroRepository } from "../repositories/parametro";
+import { IdentificadorReportadoRepository } from "../repositories/identificador-reportado";
 import { normalizarIdentificador } from "../identificadores/normalizar";
+import { conExclusion } from "../oculto-por-comite";
 import { logAudit } from "@/lib/audit";
 import type {
     ConsultaDetalleDto,
@@ -115,10 +117,12 @@ function agregarPlataformas(reportes: Array<{ plataforma: { id: string; nombre: 
 export class ConsultaPublicaService {
     private readonly reportes: ReporteRepository;
     private readonly parametros: ParametroRepository;
+    private readonly identificadores: IdentificadorReportadoRepository;
 
     constructor(tx?: Prisma.TransactionClient) {
         this.reportes = new ReporteRepository(tx);
         this.parametros = new ParametroRepository(tx);
+        this.identificadores = new IdentificadorReportadoRepository(tx);
     }
 
     /**
@@ -179,8 +183,13 @@ export class ConsultaPublicaService {
         const actividadAltaMin = parseInt(paramActividad?.valor || "5", 10);
 
         // SPEC-863 (I-400): la consulta PÚBLICA nunca cuenta reportes de prueba (simulacro/demo).
+        // SPEC-937 (I-451): ni los de un par que el comité ocultó al aceptar una apelación (SPEC-110):
+        // si todos lo están, cae al MISMO camino que «sin reportes» — sin texto nuevo.
         const reportes = await this.reportes.findAprobadosPorIdentificador(
-            { ...whereReporteAprobado({ identificador }), ...(await this.reportes.whereExcluirNoReales()) }
+            conExclusion(
+                { ...whereReporteAprobado({ identificador }), ...(await this.reportes.whereExcluirNoReales()) },
+                await this.identificadores.whereExcluirReportesOcultos([identificador]),
+            )
         );
 
         if (reportes.length === 0) {
@@ -306,8 +315,12 @@ export class ConsultaPublicaService {
         identificador = normalizarIdentificador(identificador);
 
         // SPEC-863 (I-400): el detalle PÚBLICO nunca muestra reportes de prueba (simulacro/demo).
+        // SPEC-937 (I-451): mismo filtro que `resumen` — el detalle tampoco muestra un par oculto por el comité.
         const reportes = await this.reportes.findVisiblesPorIdentificador(
-            { ...whereReporteEnEstados(ESTADOS_VISIBLES, { identificador }), ...(await this.reportes.whereExcluirNoReales()) }
+            conExclusion(
+                { ...whereReporteEnEstados(ESTADOS_VISIBLES, { identificador }), ...(await this.reportes.whereExcluirNoReales()) },
+                await this.identificadores.whereExcluirReportesOcultos([identificador]),
+            )
         );
 
         if (reportes.length === 0) {

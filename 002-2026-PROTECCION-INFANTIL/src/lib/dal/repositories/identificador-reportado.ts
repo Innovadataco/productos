@@ -6,6 +6,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { DbClient } from "../unit-of-work";
+import { whereExcluirOcultosPorComite } from "../oculto-por-comite";
 
 // SPEC-181: orden cerrado de la simulación anti-abuso. El default `recientes`
 // reproduce el orden histórico del repo (ultimoReporteEn desc).
@@ -93,6 +94,15 @@ export class IdentificadorReportadoRepository {
                 ultimoReporteEn: new Date(),
             },
         });
+    }
+
+    /**
+     * SPEC-937 (I-451): fragmento WHERE sobre Reporte que excluye los pares que el comité ocultó
+     * (esta marca). Para TODA lectura PÚBLICA; componer con `conExclusion` (AND). Acotado a
+     * `identificadores` si se pasan.
+     */
+    whereExcluirReportesOcultos(identificadores?: readonly string[]): Promise<Prisma.ReporteWhereInput> {
+        return whereExcluirOcultosPorComite(this.db, identificadores);
     }
 
     /**

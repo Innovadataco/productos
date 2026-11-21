@@ -51,8 +51,9 @@ export class EventoMatchRepository {
     }
 
     /** Conteo público agregado (FR-008): identificadores distintos con match. */
-    async contarIdentificadoresConMatch(): Promise<number> {
-        const grupos = await this.db.eventoMatch.groupBy({ by: ["identificadorId"] });
+    // SPEC-937: la superficie pública pasa `AGREGADO_NO_OCULTO` (sin los pares ocultos por el comité).
+    async contarIdentificadoresConMatch(agregado: Prisma.IdentificadorReportadoWhereInput = {}): Promise<number> {
+        const grupos = await this.db.eventoMatch.groupBy({ by: ["identificadorId"], where: { identificador: agregado } });
         return grupos.length;
     }
 

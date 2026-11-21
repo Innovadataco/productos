@@ -7,6 +7,7 @@ import type { Prisma } from "@prisma/client";
 import type { DatosReporte } from "./tipos";
 import { formatFecha, getClient } from "./tipos";
 import { obtenerUmbralAgregacion, whereReportesCirculo } from "./estado";
+import { whereExcluirOcultosPorComite } from "../../oculto-por-comite";
 
 export async function construirAgregado(reportes: DatosReporte[], client?: Prisma.TransactionClient) {
     const gruposCategoria = await obtenerGruposCategoria(client);
@@ -115,7 +116,7 @@ export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.Tr
     }
 
     const reportes = (await c.reporte.findMany({
-        where: whereReportesCirculo({ identificador: { in: valoresArray } }),
+        where: whereReportesCirculo({ identificador: { in: valoresArray } }, await whereExcluirOcultosPorComite(c, valoresArray)),
         select: {
             id: true,
             identificador: true,
