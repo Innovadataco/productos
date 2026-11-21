@@ -8,6 +8,7 @@
  * - Una fuente caída o un símbolo sin datos no escribe nada para esa especie: se informa.
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
+import { barraDefinitiva } from "./horario";
 import { obtenerCierres, type Buscar, type Cierre } from "./yahoo";
 
 export const TOLERANCIA_VERIFICACION = new Prisma.Decimal("0.01");
@@ -18,6 +19,8 @@ export interface ResultadoActualizacion {
   readonly cierresNuevos: number;
   readonly cierresRevisados: number;
   readonly verificados: number;
+  /** Barras de hoy no guardadas por no haber cerrado aún la BVC. */
+  readonly omitidasPorHorario: number;
   readonly fallidas: readonly { instrumentoId: string; codigo: string }[];
 }
 
@@ -58,27 +61,40 @@ async function guardarCierre(db: PrismaClient, instrumentoId: string, c: Cierre)
   return vigente ? "revisado" : "nuevo";
 }
 
-export async function actualizarPrecios(db: PrismaClient, opciones: { desde: Date; hasta: Date; buscar: Buscar; instrumentoIds?: readonly string[] }): Promise<ResultadoActualizacion> {
+export async function actualizarPrecios(db: PrismaClient, opciones: { desde: Date; hasta: Date; buscar: Buscar; instrumentoIds?: readonly string[]; ahora?: Date }): Promise<ResultadoActualizacion> {
   const especies = await db.instrumento.findMany({
     where: { tipo: "ACCION", activo: true, nemotecnico: { not: null }, ...(opciones.instrumentoIds ? { id: { in: [...opciones.instrumentoIds] } } : { lotes: { some: {} } }) },
     select: { id: true, nemotecnico: true },
   });
+  const ahora = opciones.ahora ?? new Date();
+  const noHabiles = new Set(
+    (await db.calendarioBvc.findMany({ where: { esHabil: false, dia: { gte: opciones.desde, lte: opciones.hasta } }, select: { dia: true } })).map((d) => d.dia.toISOString().slice(0, 10)),
+  );
   let cierresNuevos = 0;
   let cierresRevisados = 0;
-  let verificados = 0;
+  let omitidasPorHorario = 0;
   const fallidas: { instrumentoId: string; codigo: string }[] = [];
   for (const e of especies) {
-    const r = await obtenerCierres(await simboloDe(db, e.id, e.nemotecnico!, opciones.hasta), opciones.desde, opciones.hasta, opciones.buscar);
-    if (!r.ok) {
-      fallidas.push({ instrumentoId: e.id, codigo: r.codigo });
-      continue;
-    }
-    for (const c of r.cierres) {
-      const cambio = await guardarCierre(db, e.id, c);
-      if (cambio === "nuevo") cierresNuevos += 1;
-      if (cambio === "revisado") cierresRevisados += 1;
+    // Un fallo en una especie no aborta las demás: se reporta y se sigue.
+    try {
+      const r = await obtenerCierres(await simboloDe(db, e.id, e.nemotecnico!, opciones.hasta), opciones.desde, opciones.hasta, opciones.buscar);
+      if (!r.ok) {
+        fallidas.push({ instrumentoId: e.id, codigo: r.codigo });
+        continue;
+      }
+      for (const c of r.cierres) {
+        if (!barraDefinitiva(c.fecha, ahora, noHabiles)) {
+          omitidasPorHorario += 1;
+          continue;
+        }
+        const cambio = await guardarCierre(db, e.id, c);
+        if (cambio === "nuevo") cierresNuevos += 1;
+        if (cambio === "revisado") cierresRevisados += 1;
+      }
+    } catch {
+      fallidas.push({ instrumentoId: e.id, codigo: "GUARDADO_ERROR" });
     }
   }
-  verificados = await db.precioCierre.count({ where: { estado: "VERIFICADO", reemplazadoEn: null, fecha: { gte: opciones.desde, lte: opciones.hasta } } });
-  return { especies: especies.length, cierresNuevos, cierresRevisados, verificados, fallidas };
+  const verificados = await db.precioCierre.count({ where: { estado: "VERIFICADO", reemplazadoEn: null, fecha: { gte: opciones.desde, lte: opciones.hasta } } });
+  return { especies: especies.length, cierresNuevos, cierresRevisados, verificados, omitidasPorHorario, fallidas };
 }

@@ -28,9 +28,9 @@ async function main(): Promise<void> {
   const db = new PrismaClient();
   try {
     const r = await actualizarPrecios(db, { desde: desde.valor, hasta: hasta.valor, buscar: fetch });
-    console.log(`✅ ${r.especies} especie(s) · cierres nuevos: ${r.cierresNuevos} · revisados: ${r.cierresRevisados} · verificados en el rango: ${r.verificados}`);
+    console.log(`✅ ${r.especies} especie(s) · cierres nuevos: ${r.cierresNuevos} · revisados: ${r.cierresRevisados} · verificados en el rango: ${r.verificados} · omitidas por no haber cerrado la BVC: ${r.omitidasPorHorario}`);
     if (r.fallidas.length > 0) {
-      console.log(`⚠️  ${r.fallidas.length} especie(s) sin datos de Yahoo: ${[...new Set(r.fallidas.map((f) => f.codigo))].join(", ")}`);
+      console.log(`⚠️  ${r.fallidas.length} especie(s) con fallo (Yahoo o guardado): ${[...new Set(r.fallidas.map((f) => f.codigo))].join(", ")}`);
       process.exitCode = 3;
     }
   } catch (e) {

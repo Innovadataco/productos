@@ -63,4 +63,34 @@ describe("actualizarPrecios", () => {
     expect(r.fallidas).toEqual([{ instrumentoId, codigo: "YAHOO_HTTP_503" }]);
     expect(await db.precioCierre.count({ where: { instrumentoId } })).toBe(antes);
   });
+
+  it("el fallo al guardar una especie no aborta a las demás y queda reportado", async () => {
+    const otro = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRD${corrida}`, nombre: "Ficticia B" } })).id;
+    const ts = [Date.UTC(2024, 3, 2, 14, 30) / 1000];
+    const respuesta = (close: number) => ({ ok: true, status: 200, json: async () => ({ chart: { result: [{ meta: { currency: "COP" }, timestamp: ts, indicators: { quote: [{ close: [close] }] } }] } }) });
+    // La primera especie trae un precio que desborda Decimal(18,6); la segunda, uno normal.
+    const buscar: Buscar = async (url) => respuesta(url.includes(`PRC${corrida}`) ? 1e15 : 200);
+    const dia = new Date("2024-04-02T00:00:00Z");
+    const r = await actualizarPrecios(db, { desde: dia, hasta: dia, buscar, instrumentoIds: [instrumentoId, otro], ahora: new Date("2024-04-10T20:00:00Z") });
+    expect(r.fallidas).toEqual([{ instrumentoId, codigo: "GUARDADO_ERROR" }]);
+    expect(r.cierresNuevos).toBe(1);
+    expect((await db.precioCierre.findMany({ where: { instrumentoId: otro, reemplazadoEn: null } })).map((p) => p.precio.toString())).toEqual(["200"]);
+  });
+
+  it("no guarda la barra de hoy antes del cierre de la BVC, y sí después", async () => {
+    const solo = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRE${corrida}`, nombre: "Ficticia C" } })).id;
+    const d1 = new Date("2024-05-07T00:00:00Z");
+    const d2 = new Date("2024-05-08T00:00:00Z");
+    const ts = [Date.UTC(2024, 4, 7, 14, 30) / 1000, Date.UTC(2024, 4, 8, 14, 30) / 1000];
+    const buscar: Buscar = async () => ({ ok: true, status: 200, json: async () => ({ chart: { result: [{ meta: { currency: "COP" }, timestamp: ts, indicators: { quote: [{ close: [300, 301] }] } }] } }) });
+    const guardadas = async () => (await db.precioCierre.findMany({ where: { instrumentoId: solo, reemplazadoEn: null }, orderBy: { fecha: "asc" } })).map((p) => p.precio.toString());
+    // 8-may-2024 10:00 COT (15:00 UTC): la barra del 8 es parcial.
+    const antes = await actualizarPrecios(db, { desde: d1, hasta: d2, buscar, instrumentoIds: [solo], ahora: new Date("2024-05-08T15:00:00Z") });
+    expect(antes.omitidasPorHorario).toBe(1);
+    expect(await guardadas()).toEqual(["300"]);
+    // 8-may-2024 16:30 COT (21:30 UTC): ya cerró.
+    const despues = await actualizarPrecios(db, { desde: d1, hasta: d2, buscar, instrumentoIds: [solo], ahora: new Date("2024-05-08T21:30:00Z") });
+    expect(despues.omitidasPorHorario).toBe(0);
+    expect(await guardadas()).toEqual(["300", "301"]);
+  });
 });
