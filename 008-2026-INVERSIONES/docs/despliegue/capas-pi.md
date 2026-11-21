@@ -173,6 +173,22 @@ crear-acceso-inicial.sh --email ficticio@ejemplo.invalid → imprime una vez htt
 # roles-base.test.ts en la ronda anterior: un mutante con DML completo para inv_app → 5 en rojo
 ```
 
+**Ronda prod-endurecer** (2026-11-21, imágenes arm64 de `0eb4462b`, mismo proyecto `inv-008-prueba`, sin puertos, secretos ficticios, `down -v` al final). Salidas reales, recortadas:
+
+```text
+# primer despliegue → DEPLOY VERIFICADO 0eb4462b317871dd1005ea7bf89bd1bca55fb902 (sin aviso de connection_limit: la URL trae =5)
+# re-despliegue del mismo sha: eventos de Docker del proyecto, en orden
+kill/stop/die inv-008-app → kill/stop/die inv-008-respaldo → create/start/die/destroy inv-008-migrador → start inv-008-respaldo → start inv-008-app
+  (la app es el mismo contenedor, otra vez healthy) → DEPLOY VERIFICADO
+# re-despliegue del mismo sha con un índice vigilado borrado (el guardián falla)
+[desplegar-prod] vuelta atrás hecha: corre 0eb4462b…  ·  /api/salud → {"estado":"ok","version":"0eb4462b…"}
+# respaldo, flock de BusyBox en el contenedor
+candado tomado y RESPALDO_ESPERA_S=0 → [respaldo] otro respaldo está en curso: este no se hace (salida 75)
+con espera → esperó 18 s y terminó bien · .parcial de más de 60 min borrado, el reciente quedó
+dos --ahora a la vez → los dos bien: inv-008-20261121-043628-par y inv-008-20261121-043629-par
+# pg_dump real: cada .age se descifró fuera del contenedor y pg_restore --list leyó 32 TABLE DATA (0640, sha256 bien)
+```
+
 **Lo que NO se verificó en local:**
 - el puerto en `127.0.0.1:5008`, porque el override lo quita;
 - el túnel;
@@ -184,6 +200,7 @@ crear-acceso-inicial.sh --email ficticio@ejemplo.invalid → imprime una vez htt
 **Reinicio de Docker:** no se reinició el demonio de Docker del Mac, porque también corren ahí la base de desarrollo de Inversiones y la de PI. Que la pausa sobreviva un reinicio se demostró así: con la marca puesta, el proyecto queda con 0 contenedores, así que `restart: always` no tiene nada que levantar.
 
 ---
+> v2.4 · 2026-11-21 · 04:55 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · ensayo local de la pausa antes del migrador, la vuelta atrás y el candado del respaldo
 > v2.3 · 2026-11-21 · 04:42 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · capa 2: el túnel ya está aplicado (§8 de produccion.md)
 > v2.2 · 2026-11-21 · 02:30 (-05) · Inversiones · Fábrica Inversiones · rebase sobre `main` a290b7de (TOTP, productos#1000): capas 7 a 12 re-verificadas, inventario de rutas, TOTP con piezas, base del audit
 > v2.1 · 2026-11-21 · 02:08 (-05) · Inversiones · Fábrica Inversiones · capas 7 a 12 con evidencia (`archivo:línea` verificado), audit #12 y nota del TOTP
