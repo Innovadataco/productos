@@ -20,6 +20,11 @@ INV_DUENO_DATABASE_URL=postgresql://inv_dueno:<clave>@inv-008-db:5432/inversione
 # Rol inv_app: la app. Clave DISTINTA de la de inv_dueno.   openssl rand -hex 32
 INV_APP_DATABASE_URL=postgresql://inv_app:<clave>@inv-008-db:5432/inversiones?schema=public&connection_limit=5
 
+# Rol inv_precios: el servicio de precios (cierres de Yahoo y valor de unidad de la SFC). Opcional mientras ese servicio
+# no esté desplegado: sin esta línea, crear-roles-prod.sh omite el rol y lo avisa; con la línea vacía o mal formada,
+# aborta. Clave DISTINTA de las otras dos.   openssl rand -hex 32   (cómo agregarla sin verla: produccion.md §2)
+# INV_PRECIOS_DATABASE_URL=postgresql://inv_precios:<clave>@inv-008-db:5432/inversiones?connection_limit=2
+
 # Secreto de sesión del login, 32 bytes o más.   openssl rand -base64 48 | tr -d '\n'
 INV_AUTH_SECRET=
 
@@ -51,4 +56,5 @@ INV_RESPALDO_GID=
 # INV_RESPALDO_HORA=0230
 
 # ---
+# v1.2 · 2026-11-21 · 16:49 (-05) · Inversiones · Fábrica Inversiones (frente precios-rol) · INV_PRECIOS_DATABASE_URL del rol inv_precios, opcional y comentada hasta el servicio de precios
 # v1.1 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · formato de CIFRADO_CLAVE_ACTIVA (v<n>) según el código; quién escribe INV_RESPALDO_GID; el respaldo diario también usa inv_dueno

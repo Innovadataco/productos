@@ -316,7 +316,7 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     });
 
     for (const sql of [
-      "SELECT cantidad FROM orden",
+      'SELECT "cantidadCompletada", "totalInvertido" FROM orden',
       "SELECT id FROM orden",
       "SELECT email FROM usuario",
       "SELECT id FROM usuario",
