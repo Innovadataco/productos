@@ -98,6 +98,16 @@ describe("pausar-008.sh · nunca se rompe por interpolación", () => {
     },
   );
 
+  it("si no se puede escribir la marca (disco lleno, ruta rota), baja igual y sale con error «SIN marca»", async () => {
+    const { base, falsos, env } = preparar();
+    // estado/ es un archivo: la marca no se puede escribir.
+    writeFileSync(path.join(base, "estado"), "no es una carpeta\n");
+    const r = await correr(PAUSAR, [], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/SIN marca/);
+    expect(docker(falsos.llamadas()).filter((l) => l.includes("down"))).toHaveLength(1);
+  });
+
   it("con otra operación de Inversiones en curso (candado propio): no deja marca ni toca Docker", async () => {
     const { base, falsos, env } = preparar({}, { FALSO_FLOCK_OCUPADO: "8" });
     expect((await correr(PAUSAR, [], env)).status).not.toBe(0);

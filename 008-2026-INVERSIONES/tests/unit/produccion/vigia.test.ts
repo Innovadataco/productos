@@ -255,7 +255,7 @@ describe("vigía · contenido del mensaje", () => {
     expect(m.cuerpo.text).toMatch(/MemAvailable: 812 MiB/);
     expect(m.cuerpo.text).toMatch(/SwapFree: 1999 MiB/);
     // Sin VIGIA_RUTA_PAUSA (un vigía recreado a mano): el comando sin ninguna ruta del VPS, con el marcador.
-    expect(m.cuerpo.text).toContain("ssh pi-vps sudo <base>/repo/008-2026-INVERSIONES/scripts/pausar-008.sh");
+    expect(m.cuerpo.text).toContain("ssh pi-vps sudo <raíz>/repo/008-2026-INVERSIONES/scripts/pausar-008.sh");
     expect(m.cuerpo.text).toContain("ver ESTADO en la gestión");
     expect(m.cuerpo.text).not.toContain(TOKEN);
     expect(m.cuerpo.text).not.toContain("TOKEN-FICTICIO");
@@ -267,7 +267,7 @@ describe("vigía · contenido del mensaje", () => {
     v.fijarMemoria(812, 1999);
     await v.pasada({ VIGIA_RUTA_PAUSA: "/srv/ficticia/repo/008-2026-INVERSIONES/scripts/pausar-008.sh" });
     expect(mensajes[0]!.cuerpo.text).toContain("ssh pi-vps sudo /srv/ficticia/repo/008-2026-INVERSIONES/scripts/pausar-008.sh");
-    expect(mensajes[0]!.cuerpo.text).not.toContain("<base>");
+    expect(mensajes[0]!.cuerpo.text).not.toContain("<raíz>");
   });
 
   for (const mala of ["relativa/pausar-008.sh", "/srv/x; reboot", "/srv/$(id)/pausar-008.sh", "/srv/a b/pausar-008.sh"]) {
@@ -277,7 +277,7 @@ describe("vigía · contenido del mensaje", () => {
       v.fijarMemoria(812, 1999);
       await v.pasada({ VIGIA_RUTA_PAUSA: mala });
       expect(mensajes[0]!.cuerpo.text).not.toContain(mala);
-      expect(mensajes[0]!.cuerpo.text).toContain("<base>/repo/008-2026-INVERSIONES/scripts/pausar-008.sh");
+      expect(mensajes[0]!.cuerpo.text).toContain("<raíz>/repo/008-2026-INVERSIONES/scripts/pausar-008.sh");
     });
   }
 

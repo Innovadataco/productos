@@ -236,6 +236,27 @@ describe("configuración no secreta · la carpeta de respaldos (inv-008.conf)", 
     expect(r.stderr).not.toContain("passwd");
   });
 
+  it("un nombre con salto de línea no se cuela por la lista blanca (se cuenta como ajeno)", () => {
+    const base = conConf();
+    writeFileSync(path.join(base, "respaldos", "inv-008-20261121-023000.dump.age\n.ultimo-diario"), "x");
+    const r = armar(base);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/1 entrada/);
+  });
+
+  it.skipIf(esRoot)("si no se puede listar la carpeta, falla cerrado (nunca «sin entradas ajenas» a ciegas)", () => {
+    const base = conConf();
+    writeFileSync(path.join(base, "respaldos", "passwd"), "x");
+    chmodSync(path.join(base, "respaldos"), 0o000);
+    try {
+      const r = armar(base);
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toMatch(/no se puede listar/);
+    } finally {
+      chmodSync(path.join(base, "respaldos"), 0o755);
+    }
+  });
+
   it("se niega si el archivo de producción define la carpeta o la ruta de la pausa (esas las pone el script)", () => {
     for (const clave of ["INV_RESPALDOS_DIR", "INV_RUTA_PAUSA"]) {
       const base = carpetaTemporal("conf");

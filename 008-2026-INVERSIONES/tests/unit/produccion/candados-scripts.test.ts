@@ -6,8 +6,9 @@
 //  3. un `docker compose` que no salga de la variable COMPOSE (proyecto inv-008-prod);
 //  4. ufw, systemctl (salvo --user), /etc/, crontab, iptables o cloudflared.
 // Cada regla tiene su control positivo: si el revisor deja de morder, la prueba se pone en rojo.
+import { readdirSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { leer008 } from "./falsos";
+import { leer008, ruta008 } from "./falsos";
 
 const SCRIPTS = [
   "scripts/produccion-comun.sh",
@@ -100,6 +101,12 @@ describe("candados de los scripts de producción", () => {
     expect(cargar.indexOf("\nulimit -c 0\n")).toBeGreaterThan(-1);
     expect(cargar.indexOf("\nulimit -c 0\n")).toBeLessThan(cargar.indexOf("source "));
     expect(leer008("docker/migrador/cargar.sh")).toMatch(/^ulimit -c 0$/m);
+  });
+
+  it("todo scripts/*.sh que se corre por su ruta tiene el bit de ejecución (el runbook los llama así; solo produccion-comun.sh se carga con source)", () => {
+    for (const nombre of readdirSync(ruta008("scripts")).filter((n) => n.endsWith(".sh") && n !== "produccion-comun.sh")) {
+      expect(statSync(ruta008(`scripts/${nombre}`)).mode & 0o111, nombre).toBe(0o111);
+    }
   });
 
   it("los scripts que escriben en el VPS pasan cada ruta por ruta_escribible", () => {

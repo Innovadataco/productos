@@ -211,21 +211,25 @@ describe("inv-cargar · los comandos con archivo", () => {
     });
   }
 
-  it("con TERM a mitad del CLI: reenvía la señal, borra el temporal y sale con 143", async () => {
-    const p = preparar();
-    let pid = 0;
-    const promesa = p.correrCarga(["importar-trii"], conCuerpo(["--email", CORREO], CSV), { FALSO_TSX_DORMIR: "20" }, (n) => (pid = n));
-    const inicio = Date.now();
-    while (!(existsSync(path.join(p.dir, "tsx.txt")) && readFileSync(path.join(p.dir, "tsx.txt"), "utf8").includes("dormido"))) {
-      if (Date.now() - inicio > 15_000) throw new Error("el CLI falso no arrancó");
-      await new Promise((ok) => setTimeout(ok, 50));
-    }
-    process.kill(pid, "SIGTERM");
-    const r = await promesa;
-    expect(r.status).toBe(143);
-    expect(readdirSync(p.tmp)).toEqual([]);
-    expect(Date.now() - inicio).toBeLessThan(15_000);
-  });
+  // INT importa aparte: en un sh sin control de trabajos, el hijo en segundo plano nace con INT ignorado, así que
+  // reenviarle INT no lo detiene. Al hijo siempre se le manda TERM.
+  for (const [senal, codigo] of [["SIGTERM", 143], ["SIGINT", 130], ["SIGHUP", 129]] as const) {
+    it(`con ${senal} a mitad del CLI: detiene el CLI, borra el temporal y sale con ${codigo}, sin esperar al CLI`, async () => {
+      const p = preparar();
+      let pid = 0;
+      const promesa = p.correrCarga(["importar-trii"], conCuerpo(["--email", CORREO], CSV), { FALSO_TSX_DORMIR: "20" }, (n) => (pid = n));
+      const inicio = Date.now();
+      while (!(existsSync(path.join(p.dir, "tsx.txt")) && readFileSync(path.join(p.dir, "tsx.txt"), "utf8").includes("dormido"))) {
+        if (Date.now() - inicio > 15_000) throw new Error("el CLI falso no arrancó");
+        await new Promise((ok) => setTimeout(ok, 50));
+      }
+      process.kill(pid, senal);
+      const r = await promesa;
+      expect(r.status).toBe(codigo);
+      expect(readdirSync(p.tmp)).toEqual([]);
+      expect(Date.now() - inicio).toBeLessThan(10_000);
+    });
+  }
 });
 
 describe("inv-cargar · los comandos sin archivo pasan sus argumentos tal cual (los CLI ya son estrictos)", () => {
@@ -245,7 +249,25 @@ describe("inv-cargar · los comandos sin archivo pasan sus argumentos tal cual (
   }
 });
 
-describe("inv-cargar · se niega sin tocar nada (sale con 2, sin correr el CLI, sin dejar temporales ni repetir valores)", () => {
+describe("inv-cargar · el borde de la cabecera", () => {
+  it("30 argumentos (el tope) pasan; el 31 no", async () => {
+    const p = preparar();
+    const treinta = Array.from({ length: 30 }, () => "--ensayo");
+    expect((await p.correrCarga(["construir-lotes"], sobreManual(treinta))).status).toBe(0);
+    expect(p.tsxLlamadas().find((l) => l[0] === "argv")!.slice(1)).toHaveLength(31);
+    expect((await preparar().correrCarga(["construir-lotes"], sobreManual([...treinta, "--ensayo"]))).status).toBe(64);
+  });
+
+  it("armar-sobre.sh: 30 líneas pasan y entran enteras en inv-cargar", async () => {
+    const sobre = await armar(Array.from({ length: 30 }, () => "--ensayo\n").join(""));
+    expect(sobre.status, sobre.stderr).toBe(0);
+    const p = preparar();
+    expect((await p.correrCarga(["construir-lotes"], sobre.salidaBinaria)).status).toBe(0);
+  });
+});
+
+// 64 (EX_USAGE): distinto de los códigos de los CLI (0 a 3), para que se sepa quién se negó.
+describe("inv-cargar · se niega sin tocar nada (sale con 64, sin correr el CLI, sin dejar temporales ni repetir valores)", () => {
   const casos: Array<[string, string[], () => Buffer]> = [
     ["un comando fuera de la lista", ["importar-av"], () => sobreManual([])],
     ["sin comando", [], () => sobreManual([])],
@@ -275,7 +297,8 @@ describe("inv-cargar · se niega sin tocar nada (sale con 2, sin correr el CLI, 
     ["un sha256 mal formado", ["importar-trii"], () => sobreManual(["--email", CORREO, "--bytes", String(CSV.length), "--sha256", "zz"], CSV)],
     ["--bytes en un comando sin archivo", ["construir-lotes"], () => sobreManual(["--bytes", "0", "--sha256", sha(Buffer.alloc(0))])],
     ["una cabecera truncada (menos de 4096 bytes)", ["construir-lotes"], () => sobreManual(["--ensayo"], undefined, 100)],
-    ["una cabecera sin la línea vacía final", ["construir-lotes"], () => Buffer.alloc(BLOQUE, "x")],
+    // Líneas cortas (no caen en el tope de largo): solo falta la línea vacía que cierra la cabecera.
+    ["una cabecera sin la línea vacía final", ["construir-lotes"], () => Buffer.from(`${Array.from({ length: 10 }, () => `${"x".repeat(399)}\n`).join("")}${"x".repeat(BLOQUE - 4000)}`)],
     ["relleno que no es solo líneas vacías", ["construir-lotes"], () => {
       const b = sobreManual(["--ensayo"]);
       b.write("oculto", BLOQUE - 8);
@@ -289,7 +312,7 @@ describe("inv-cargar · se niega sin tocar nada (sale con 2, sin correr el CLI, 
     it(nombre, async () => {
       const p = preparar();
       const r = await p.correrCarga(comando, sobre());
-      expect(r.status).toBe(2);
+      expect(r.status).toBe(64);
       expect(p.tsxLlamadas()).toEqual([]);
       expect(readdirSync(p.tmp)).toEqual([]);
       expect(r.stdout + r.stderr).not.toContain(CORREO);
@@ -303,7 +326,7 @@ describe("inv-cargar · se niega sin tocar nada (sale con 2, sin correr el CLI, 
     it(`${nombre}: no lee la entrada`, async () => {
       const p = preparar({ swap });
       const r = await p.correrCarga(["importar-trii"], conCuerpo(["--email", CORREO], CSV));
-      expect(r.status).toBe(2);
+      expect(r.status).toBe(64);
       expect(r.stderr).toMatch(/swap/);
       expect(p.tsxLlamadas()).toEqual([]);
       expect(readdirSync(p.tmp)).toEqual([]);
