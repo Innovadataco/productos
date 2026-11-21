@@ -39,6 +39,10 @@ Invariantes del producto con **prioridad absoluta**. Las fija el negocio (Jelkin
 - **Tests**: Vitest + jsdom + Testing Library (no Jest); Playwright para E2E.
 - **Lint**: ESLint 9 con `eslint-config-next` (sin Prettier).
 
+## Dependencias
+
+- **Override acotado `exceljs.uuid` (SPEC-967).** `package.json` lleva `"overrides": { "exceljs": { "uuid": "^11.1.1" } }`. Es la **excepción justificada** a «no usar overrides»: exceljs 4.4.0 (la última) depende de `uuid ^8.3.0` → 8.3.2, con una advisory moderada; el «fix» de npm baja exceljs a 3.4.0 (breaking) y no se acepta. **Condición de salida:** cuando exceljs declare `uuid ≥ 11.1.1`, **quitar el override** (y su candado + esta nota). Lo vigila `scripts/deps/exceljs-uuid-override.candado.test.ts`, que lee el **rango declarado por exceljs** (no el lock, que con el override muestra siempre el valor forzado) y se pone ROJO cuando el override ya sobra.
+
 ## Comandos
 
 - Build: `npm run build` · Tests: `npm run test` · Types: `npx tsc --noEmit` · Lint: `npm run lint` · E2E: `npm run test:e2e`
