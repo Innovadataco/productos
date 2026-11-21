@@ -20,7 +20,10 @@ const SCRIPTS = [
   "scripts/pausar-008.sh",
   "scripts/reanudar-008.sh",
   "scripts/crear-acceso-inicial.sh",
+  "scripts/cargar-prod.sh",
+  "scripts/armar-sobre.sh",
   "docker/migrar.sh",
+  "docker/migrador/cargar.sh",
 ];
 
 type Hallazgo = { regla: string; linea: number; texto: string };
@@ -81,11 +84,22 @@ describe("candados de los scripts de producción", () => {
       "scripts/respaldar-base.sh",
       "scripts/medir-memoria.sh",
       "scripts/vigilar-convivencia.sh",
+      "scripts/cargar-prod.sh",
     ];
     for (const archivo of conSudo) expect(leer008(archivo), archivo).toMatch(/^\s*preparar_entorno\n\s*revisar_arbol\n/m);
-    expect(leer008("scripts/pausar-008.sh")).toMatch(/^\s*preparar_entorno\n\s*revisar_arbol --solo-avisar\n/m);
+    // La pausa: anclas rotas → último recurso; si no, revisa el árbol solo avisando.
+    expect(leer008("scripts/pausar-008.sh")).toMatch(/^\s*preparar_entorno --pausa\n(?:.*\n){1,8}?\s*revisar_arbol --solo-avisar\n/m);
     // La revisión tardía (dentro de verificar_clon, después de docker load) ya no existe.
     expect(leer008("scripts/desplegar-prod.sh")).not.toMatch(/scripts_seguros/);
+  });
+
+  it("ningún script con privilegio deja volcados de memoria: produccion-comun.sh fija ulimit -c 0 al cargarse", () => {
+    expect(leer008("scripts/produccion-comun.sh")).toMatch(/^ulimit -c 0$/m);
+    // cargar-prod.sh maneja datos del dueño por stdin: lo fija él mismo antes de cargar nada más.
+    const cargar = leer008("scripts/cargar-prod.sh");
+    expect(cargar.indexOf("\nulimit -c 0\n")).toBeGreaterThan(-1);
+    expect(cargar.indexOf("\nulimit -c 0\n")).toBeLessThan(cargar.indexOf("source "));
+    expect(leer008("docker/migrador/cargar.sh")).toMatch(/^ulimit -c 0$/m);
   });
 
   it("los scripts que escriben en el VPS pasan cada ruta por ruta_escribible", () => {
@@ -114,8 +128,9 @@ describe("controles positivos del revisor (si dejan de morder, el candado no sir
     ["docker run --rm alpine true", "scripts/respaldar-base.sh", "docker-no-permitido"],
     ["docker compose -p otro stop", "scripts/pausar-008.sh", "compose-fuera-de-COMPOSE"],
     ["sudo ufw allow 5008", "scripts/desplegar-prod.sh", "sistema"],
-    ["systemctl restart cloudflared-hermes", "scripts/desplegar-prod.sh", "sistema"],
-    ["cp x /etc/cloudflared/config.yml", "scripts/desplegar-prod.sh", "sistema"],
+    ["systemctl restart servicio-del-tunel", "scripts/desplegar-prod.sh", "sistema"],
+    ["cp x /etc/tunel/config.yml", "scripts/desplegar-prod.sh", "sistema"],
+    ["cloudflared tunnel run", "scripts/cargar-prod.sh", "sistema"],
     ["crontab -l", "scripts/respaldar-base.sh", "sistema"],
   ];
   for (const [linea, archivo, regla] of casos) {

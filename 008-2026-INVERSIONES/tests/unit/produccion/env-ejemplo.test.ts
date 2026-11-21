@@ -12,6 +12,10 @@ const compose = leer008("docker-compose.prod.yml")
 
 const enCompose = new Set([...compose.matchAll(/\$\{([A-Z0-9_]+)[:?}-]/g)].map((m) => m[1]!));
 enCompose.delete("INV_TAG"); // lo exporta desplegar-prod.sh: es el sha, no va en el archivo
+// Las dos que pasan los scripts con `env` (armar_compose): la carpeta de respaldos sale de la configuración no
+// secreta (inv-008.conf) y la ruta de la pausa, de la ubicación del clon. Nunca van en el archivo de producción.
+const DEL_SCRIPT = ["INV_RESPALDOS_DIR", "INV_RUTA_PAUSA"];
+for (const n of DEL_SCRIPT) enCompose.delete(n);
 const activas = new Map(
   ejemplo
     .split("\n")
@@ -38,6 +42,24 @@ describe("plantilla del archivo de producción", () => {
     for (const nombre of ["INV_POSTGRES_CLAVE", "INV_DUENO_DATABASE_URL", "INV_APP_DATABASE_URL", "INV_AUTH_SECRET", "INV_CIFRADO_CLAVE_ACTIVA", "INV_CIFRADO_CLAVE_V1", "INV_AGE_PUBLICA", "INV_TELEGRAM_BOT_TOKEN", "INV_TELEGRAM_CHAT_ID", "APP_ORIGEN", "INV_RESPALDO_GID"]) {
       expect(compose, nombre).toContain(`\${${nombre}:?falta ${nombre}}`);
     }
+  });
+});
+
+describe("variables que ponen los scripts (no el archivo de producción)", () => {
+  it("el compose interpola la carpeta de respaldos y la ruta de la pausa, y la plantilla no las trae", () => {
+    for (const n of DEL_SCRIPT) {
+      expect(compose, n).toContain(`\${${n}:-`);
+      expect(ejemplo, n).not.toMatch(new RegExp(`^#? ?${n}=`, "m"));
+    }
+  });
+});
+
+describe("plantilla de la configuración no secreta (docs/despliegue/inv-008.conf.example)", () => {
+  const conf = leer008("docs/despliegue/inv-008.conf.example");
+  const activas = conf.split("\n").filter((l) => l && !l.startsWith("#"));
+
+  it("trae exactamente una clave, la carpeta de respaldos, con el marcador y sin la ruta real", () => {
+    expect(activas).toEqual(["INV_RESPALDOS_DIR=<ver ESTADO en la gestión>"]);
   });
 });
 
