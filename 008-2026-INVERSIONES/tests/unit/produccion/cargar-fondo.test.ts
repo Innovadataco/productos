@@ -1,13 +1,14 @@
-// El fondo por la vía B (produccion.md §11): `registrar-fondo` (sin archivo) por el sobre, en inv-cargar
-// (docker/migrador/cargar.sh) y en scripts/cargar-prod.sh. inv-cargar tiene lista blanca propia: arma el argv de
-// `scripts/actualizar-fondo.ts --registrar` y nunca deja pasar el modo con red (--desde, --hasta), una opción
-// repetida ni un argumento suelto. Se niega con 64 sin correr el CLI, sin temporales y sin repetir valores.
-// Códigos, clases y nombres inventados.
+// El fondo por la vía B (produccion.md §11), en inv-cargar (docker/migrador/cargar.sh) y en scripts/cargar-prod.sh:
+// - `registrar-fondo` (sin archivo): lista blanca propia; arma el argv de `scripts/actualizar-fondo.ts --registrar` y
+//   nunca deja pasar el modo con red (--desde, --hasta), una opción repetida ni un argumento suelto;
+// - `importar-valores-fondo` (el CSV de fondo:exportar): sin opciones; el CSV queda en el temporal valores-fondo.csv.
+// Se niega con 64 sin correr el CLI, sin temporales y sin repetir valores. Códigos, clases y nombres inventados.
 import { spawn } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { MAX_BYTES_CSV_FONDO } from "@/fondo/csv-valores";
 import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, ruta008, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
@@ -17,6 +18,7 @@ const CARGAR_PROD = ruta008("scripts/cargar-prod.sh");
 const BLOQUE = 4096;
 const CODIGO = "9990001";
 const NOMBRE = "Fondo ficticio uno";
+const VALORES = Buffer.from("codigo_fic,participacion,fecha,valor_unidad,valor_fondo\n9990001,907,2024-03-11,10000.5,\n", "utf8");
 
 type Salida = { status: number | null; stdout: string; stderr: string };
 
@@ -148,11 +150,56 @@ describe("inv-cargar · registrar-fondo se niega con 64 sin correr el CLI ni rep
   });
 });
 
-describe("cargar-prod.sh · el comando del fondo está en la lista cerrada y su sobre pasa intacto", () => {
+describe("inv-cargar · importar-valores-fondo: el CSV en un temporal 600 y --archivo, sin opciones", () => {
+  it("el CLI recibe solo --archivo <temporal valores-fondo.csv>, con el sha del Mac, y el temporal se borra", async () => {
+    const p = preparar();
+    const r = await p.carga("importar-valores-fondo", conCuerpo([], VALORES));
+    expect(r.status, r.stderr).toBe(0);
+    const argv = p.argv()!;
+    expect(argv.slice(0, 2)).toEqual(["scripts/importar-valores-fondo.ts", "--archivo"]);
+    expect(argv[2]).toMatch(/\/inv-carga\.[A-Za-z0-9]+\/valores-fondo\.csv$/);
+    expect(argv).toHaveLength(3);
+    expect(p.llamadas().find((l) => l[0] === "archivo")!.slice(1)).toEqual(["-rw-------", "drwx------"]);
+    expect(p.llamadas().find((l) => l[0] === "sha")![1]).toBe(sha(VALORES));
+    expect(readdirSync(p.tmp)).toEqual([]);
+  });
+
+  it("devuelve el código del CLI (3: algún fondo sin registrar) y borra el temporal igual", async () => {
+    const p = preparar();
+    expect((await p.carga("importar-valores-fondo", conCuerpo([], VALORES), { FALSO_TSX_RC: "3" })).status).toBe(3);
+    expect(readdirSync(p.tmp)).toEqual([]);
+  });
+
+  for (const [nombre, entrada] of [
+    ["con --email (no lleva opciones)", () => conCuerpo(["--email", "dueno@ejemplo.ficticio"], VALORES)],
+    ["con --archivo (lo pone el contenedor)", () => conCuerpo(["--archivo", "/proc/1/environ"], VALORES)],
+    ["con una posicional", () => conCuerpo(["/proc/1/environ"], VALORES)],
+    ["sin --bytes ni --sha256", () => sobre([], VALORES)],
+    ["con un cuerpo truncado (corte de SSH)", () => sobre(["--bytes", String(VALORES.length), "--sha256", sha(VALORES)], VALORES.subarray(0, 20))],
+    ["con un sha256 que no cuadra", () => sobre(["--bytes", String(VALORES.length), "--sha256", sha(Buffer.from("otro"))], VALORES)],
+    [`con más de ${MAX_BYTES_CSV_FONDO} bytes (sin leer el cuerpo)`, () => sobre(["--bytes", String(MAX_BYTES_CSV_FONDO + 1), "--sha256", sha(VALORES)])],
+  ] as const) {
+    it(`se niega ${nombre}: 64 sin correr el CLI`, async () => {
+      const p = preparar();
+      const r = await p.carga("importar-valores-fondo", entrada());
+      expect(r.status, r.stderr).toBe(64);
+      expect(p.llamadas()).toEqual([]);
+      expect(readdirSync(p.tmp)).toEqual([]);
+      expect(r.stdout + r.stderr).not.toContain("dueno@ejemplo.ficticio");
+    });
+  }
+
+  it("el tope del sobre es el del CLI (una sola fuente: MAX_BYTES_CSV_FONDO de src/fondo/csv-valores.ts)", () => {
+    const tope = Number(/^TOPE_VALORES_FONDO=(\d+)$/m.exec(readFileSync(CARGAR, "utf8"))?.[1]);
+    expect(tope).toBe(MAX_BYTES_CSV_FONDO);
+  });
+});
+
+describe("cargar-prod.sh · los comandos del fondo están en la lista cerrada y su sobre pasa intacto", () => {
   const SHA = "6".repeat(40);
   const SOBRE = sobre(["--codigo", CODIGO, "--nombre", NOMBRE]).toString("latin1");
 
-  for (const comando of ["registrar-fondo"]) {
+  for (const comando of ["registrar-fondo", "importar-valores-fondo"]) {
     it(`${comando}: run --rm -T --no-deps inv-008-migrador /usr/local/bin/inv-cargar ${comando}, con el sobre por stdin`, async () => {
       const base = carpetaTemporal("cargar-prod-fondo");
       envProduccionFicticio(base);
