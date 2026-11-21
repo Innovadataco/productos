@@ -1,0 +1,247 @@
+# Inversiones (008) · producción en el VPS compartido con PI (D-015). Proyecto, red y base propios.
+#
+# Una sola variable para todo, incluida la reversa (la arma scripts/produccion-comun.sh):
+#   COMPOSE="docker compose -p inv-008-prod -f /opt/inversiones-008/repo/008-2026-INVERSIONES/docker-compose.prod.yml --env-file /opt/inversiones-008/.env.inversiones.production"
+#
+# El único archivo de producción (/opt/inversiones-008/.env.inversiones.production, 600 de root, fuera de
+# git) se usa SOLO para la interpolación: ningún servicio usa env_file y cada uno declara en environment:
+# solo sus variables. La imagen no trae secretos; APP_VERSION va horneada en ella.
+# INV_TAG (el sha) lo exporta desplegar-prod.sh; sin él, las imágenes no existen y nada arranca por error.
+# Red: la base solo en la red interna, sin puertos; la app solo en 127.0.0.1:5008 del host (la entrada es
+# el túnel cloudflared-hermes de PI, ver docs/despliegue/produccion.md). cpu_shares bajo: PI tiene prioridad.
+name: inv-008-prod
+
+services:
+  inv-008-db:
+    image: postgres:16-alpine@sha256:1d5b02d3a9941fbd52437db4107f8c52d6297dac553ca1e5c299ebb3756b4857
+    user: "70:70"
+    restart: always
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "effective_cache_size=256MB", "-c", "max_connections=30"]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: inversiones
+      # Solo actúa en el primer initdb (volumen nuevo): detecta corrupción de páginas.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      POSTGRES_PASSWORD: ${INV_POSTGRES_CLAVE:?falta INV_POSTGRES_CLAVE}
+      TZ: America/Bogota
+    volumes:
+      - inv-008-db-datos:/var/lib/postgresql/data
+    networks:
+      - inv-008-red-interna
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql:uid=70,gid=70,mode=0700
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 0.5
+    cpu_shares: 256
+    pids_limit: 200
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d inversiones"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  inv-008-app:
+    image: inv-008-app:${INV_TAG:-sin-desplegar}
+    pull_policy: never
+    user: "10008:10008"
+    restart: always
+    init: true
+    depends_on:
+      inv-008-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${INV_APP_DATABASE_URL:?falta INV_APP_DATABASE_URL}
+      AUTH_SECRET: ${INV_AUTH_SECRET:?falta INV_AUTH_SECRET}
+      CIFRADO_CLAVE_ACTIVA: ${INV_CIFRADO_CLAVE_ACTIVA:?falta INV_CIFRADO_CLAVE_ACTIVA}
+      CIFRADO_CLAVE_V1: ${INV_CIFRADO_CLAVE_V1:?falta INV_CIFRADO_CLAVE_V1}
+      APP_ORIGEN: ${APP_ORIGEN:?falta APP_ORIGEN}
+      NODE_OPTIONS: --max-old-space-size=256
+      TZ: America/Bogota
+    ports:
+      - "127.0.0.1:5008:5008"
+    networks:
+      - inv-008-red-interna
+      - inv-008-red
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache:uid=10008,gid=10008,mode=0700
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 384m
+    memswap_limit: 384m
+    cpus: 0.5
+    cpu_shares: 256
+    pids_limit: 200
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:5008/api/salud || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Un solo uso (desplegar-prod.sh: `run --rm`): migraciones, guardián del esquema y privilegios de
+  # inv_app, antes de levantar la app. También corre los comandos de carga y de acceso inicial.
+  inv-008-migrador:
+    image: inv-008-migrador:${INV_TAG:-sin-desplegar}
+    pull_policy: never
+    profiles: [migrar]
+    user: "10008:10008"
+    # Excepción a restart: always (capas-pi.md #5): es de un solo uso y no debe volver a correr solo.
+    restart: "no"
+    depends_on:
+      inv-008-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${INV_DUENO_DATABASE_URL:?falta INV_DUENO_DATABASE_URL}
+      # crear-acceso-inicial.ts imprime ${APP_ORIGEN}/definir-clave#t=<token>.
+      APP_ORIGEN: ${APP_ORIGEN:?falta APP_ORIGEN}
+      CIFRADO_CLAVE_ACTIVA: ${INV_CIFRADO_CLAVE_ACTIVA:?falta INV_CIFRADO_CLAVE_ACTIVA}
+      CIFRADO_CLAVE_V1: ${INV_CIFRADO_CLAVE_V1:?falta INV_CIFRADO_CLAVE_V1}
+      TZ: America/Bogota
+    networks:
+      - inv-008-red-interna
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+    cpu_shares: 256
+    pids_limit: 200
+    # Healthcheck nominal: es de un solo uso (run --rm) y nunca queda corriendo.
+    healthcheck:
+      test: ["CMD", "node", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Respaldo diario cifrado, permanente y con programación propia (sin systemd ni cron del host):
+  # pg_dump -Fc (rol inv_dueno, red interna) | age -r <pública> → /var/backups/idc/inversiones/ (la carpeta
+  # root:respaldo 750 que montó el CEO de PI y que la infraestructura de IDC copia al Mac). Solo la clave
+  # PÚBLICA de age.
+  # ÚNICA excepción a «no root» (capas-pi.md #4): corre como root DEL CONTENEDOR con el grupo respaldo
+  # (INV_RESPALDO_GID, gid numérico del host), para dejar los archivos root:respaldo 0640 sin cambiar esa
+  # carpeta. Sin ninguna capacidad (no salta permisos ni cambia dueños), sin escalar, de solo lectura y con
+  # un único bind de escritura.
+  inv-008-respaldo:
+    image: inv-008-vigia:${INV_TAG:-sin-desplegar}
+    pull_policy: never
+    user: "0:${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}"
+    restart: always
+    init: true
+    entrypoint: ["/usr/local/bin/inv-respaldo"]
+    depends_on:
+      inv-008-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${INV_DUENO_DATABASE_URL:?falta INV_DUENO_DATABASE_URL}
+      AGE_PUBLICA: ${INV_AGE_PUBLICA:?falta INV_AGE_PUBLICA}
+      RESPALDO_HORA: ${INV_RESPALDO_HORA:-0230}
+      RESPALDO_GID: ${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}
+      TZ: America/Bogota
+    volumes:
+      - /var/backups/idc/inversiones:/respaldos
+    networks:
+      - inv-008-red-interna
+    read_only: true
+    tmpfs:
+      - /run/respaldo
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.25
+    cpu_shares: 256
+    pids_limit: 20
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/inv-respaldo", "--salud"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Vigía de convivencia con PI: SOLO AVISA por Telegram (memoria del VPS y OOM de cualquier contenedor).
+  # Sin el socket de Docker: lee /proc/meminfo y /sys/fs/cgroup del host en solo lectura. Nunca monta
+  # /var/lib/docker (tiene secretos de otros proyectos). Salida a internet solo para la API de Telegram
+  # (lo limita el código: la red no filtra por dominio).
+  inv-008-vigia:
+    image: inv-008-vigia:${INV_TAG:-sin-desplegar}
+    pull_policy: never
+    user: "10008:10008"
+    restart: always
+    # init: sh como PID 1 ignora SIGTERM; con init el vigía se detiene sin esperar al SIGKILL.
+    init: true
+    entrypoint: ["/usr/local/bin/inv-vigia"]
+    environment:
+      TELEGRAM_BOT_TOKEN: ${INV_TELEGRAM_BOT_TOKEN:?falta INV_TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${INV_TELEGRAM_CHAT_ID:?falta INV_TELEGRAM_CHAT_ID}
+      VIGIA_UMBRAL_MEMAVAILABLE_MIB: ${INV_VIGIA_UMBRAL_MEMAVAILABLE_MIB:-1024}
+      VIGIA_INTERVALO_S: ${INV_VIGIA_INTERVALO_S:-60}
+    volumes:
+      - /proc/meminfo:/host/meminfo:ro
+      - /sys/fs/cgroup:/host/cgroup:ro
+    networks:
+      - inv-008-red
+    read_only: true
+    tmpfs:
+      - /run/vigia:uid=10008,gid=10008,mode=0700
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 32m
+    memswap_limit: 32m
+    cpus: 0.05
+    cpu_shares: 256
+    pids_limit: 20
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/inv-vigia", "--salud"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  # Solo para la base (y el migrador): sin salida y sin puertos.
+  inv-008-red-interna:
+    internal: true
+  # Para publicar la app en 127.0.0.1:5008 y para que el vigía llegue a Telegram.
+  inv-008-red:
+    driver: bridge
+
+volumes:
+  inv-008-db-datos:

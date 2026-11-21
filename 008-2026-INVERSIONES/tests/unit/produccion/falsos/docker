@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# docker falso: registra la llamada y responde según variables FALSO_*.
+linea_falso="$(basename "$0")"; for a in "$@"; do linea_falso="$linea_falso"$'\t'"$a"; done; printf '%s\n' "$linea_falso" >>"$FALSO_REGISTRO" # una sola escritura: atómica entre procesos
+args=("$@")
+if [ "${1:-}" = "compose" ]; then
+  sub="" i=1
+  while [ "$i" -lt "${#args[@]}" ]; do
+    case "${args[$i]}" in
+      -p|-f|--env-file) i=$((i + 2)) ;;
+      *) sub="${args[$i]}"; break ;;
+    esac
+  done
+  todo=" $* "
+  case "$sub" in
+    up)
+      [ -z "${FALSO_TAGS:-}" ] || printf 'up %s %s\n' "${INV_TAG:-}" "$*" >>"$FALSO_TAGS"
+      case "$todo" in
+        *" inv-008-app "*) [ -z "${FALSO_UP_FALLA_TAG:-}" ] || [ "${INV_TAG:-}" != "$FALSO_UP_FALLA_TAG" ] || exit 1 ;;
+      esac
+      exit "${FALSO_UP_RC:-0}" ;;
+    down)
+      [ -z "${FALSO_TAGS:-}" ] || printf 'down %s\n' "$*" >>"$FALSO_TAGS"
+      if [ -n "${FALSO_SONDA_MARCA:-}" ]; then
+        if [ -e "$FALSO_SONDA_MARCA" ]; then echo marca-presente >"$FALSO_SONDA_SALIDA"; else echo marca-ausente >"$FALSO_SONDA_SALIDA"; fi
+      fi
+      exit 0 ;;
+    ps)
+      case "$todo" in
+        *" inv-008-app "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" ;;
+        *" inv-008-db "*) printf '%s\n' "${FALSO_CID_DB-ciddb}" ;;
+        *" -q "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" "${FALSO_CID_DB-ciddb}" ;;
+      esac
+      exit 0 ;;
+    exec)
+      case "$todo" in
+        *" inv-008-respaldo "*)
+          [ "${FALSO_RESPALDO_RC:-0}" = "0" ] || exit "${FALSO_RESPALDO_RC}"
+          motivo=""; prev=""; for a in "$@"; do [ "$prev" != "--motivo" ] || motivo="-$a"; prev="$a"; done
+          n="inv-008-20261121-023000${motivo}.dump.age"
+          if [ "${FALSO_RESPALDO_CORRUPTO:-}" = "1" ]; then printf 'no-es-age' >"$FALSO_RESPALDOS_DIR/$n"; else printf 'age-encryption.org/v1\ncifrado' >"$FALSO_RESPALDOS_DIR/$n"; fi
+          (cd "$FALSO_RESPALDOS_DIR" && shasum -a 256 "$n" >"$n.sha256")
+          [ "${FALSO_RESPALDO_SHA_MALO:-}" != "1" ] || printf '%064d  %s\n' 0 "$n" >"$FALSO_RESPALDOS_DIR/$n.sha256"
+          printf '/respaldos/%s\n' "$n"; exit 0 ;;
+        *" pg_dump "*)
+          [ "${FALSO_PGDUMP_RC:-0}" = "0" ] || exit "${FALSO_PGDUMP_RC}"
+          printf 'PGDMP-TEXTO-PLANO-%s' "${FALSO_MARCA:-marca}"; exit 0 ;;
+        *" psql "*)
+          if [ -n "${FALSO_STDIN:-}" ]; then cat >"${FALSO_STDIN}"; else cat >/dev/null; fi
+          printf '%s\n' "${FALSO_ROLES:-2}"; exit "${FALSO_PSQL_RC:-0}" ;;
+      esac
+      exit 0 ;;
+    run)
+      case "$todo" in
+        *" inv-008-respaldo "*)
+          if [ "${FALSO_AGE_RC:-0}" != "0" ]; then cat >/dev/null; exit "${FALSO_AGE_RC}"; fi
+          printf 'age-encryption.org/v1\n'; tr 'A-Za-z' 'N-ZA-Mn-za-m'; exit 0 ;;
+        *" inv-008-migrador "*) exit "${FALSO_MIGRADOR_RC:-0}" ;;
+      esac
+      exit 0 ;;
+    *) exit "${FALSO_COMPOSE_RC:-0}" ;;
+  esac
+fi
+case "${1:-} ${2:-}" in
+  "image inspect")
+    fmt="${4:-}"; ref="${5:-}"
+    [ "${FALSO_IMAGEN_FALTA:-}" != "$ref" ] || exit 1
+    case "$fmt" in
+      *.Id*) printf '%s\n' "${FALSO_ID:-sha256:0000000000000000000000000000000000000000000000000000000000000000}" ;;
+      *.Architecture*) printf '%s\n' "${FALSO_ARQ:-amd64}" ;;
+      *revision*)
+        case "$ref" in
+          inv-008-migrador:*) printf '%s\n' "${FALSO_SHA_MIGRADOR:-${FALSO_SHA:-}}" ;;
+          *) printf '%s\n' "${FALSO_SHA:-}" ;;
+        esac ;;
+    esac
+    exit 0 ;;
+  "image ls") printf '%b' "${FALSO_IMAGENES:-}"; exit 0 ;;
+  "image rm") exit 0 ;;
+esac
+case "${1:-}" in
+  inspect)
+    case "$*" in
+      *.Image*) printf '%s\n' "${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}" ;;
+      *Health.Status*) printf '%s\n' "${FALSO_SALUD_ESTADO:-healthy}" ;;
+      *State.Status*) printf '%s\n' "${FALSO_ESTADO_APP:-running 0}" ;;
+      *HostConfig.Memory*) printf '%s\n' "${FALSO_MEMSWAP:-402653184 402653184}" ;;
+      *"{{.Id}}"*) printf '%s\n' "${FALSO_ID_LARGO:-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc}" ;;
+      *OOMKilled*) printf '%b' "${FALSO_PI_ESTADO:-}" | grep -F -- "/${!#} " || true ;;
+    esac
+    exit 0 ;;
+  exec)
+    if [ -n "${FALSO_SALUD_ARCHIVO:-}" ] && [ -s "$FALSO_SALUD_ARCHIVO" ]; then cat "$FALSO_SALUD_ARCHIVO"; else printf '%s' "${FALSO_SALUD:-}"; fi
+    exit "${FALSO_EXEC_RC:-0}" ;;
+  port) printf '%b' "${FALSO_PUERTO:-}"; exit 0 ;;
+  ps) printf '%b' "${FALSO_PI_NOMBRES:-}"; exit 0 ;;
+  stats) printf 'NAME\tMEM USAGE / LIMIT\tMEM %%\tCPU %%\ninv-008-prod-inv-008-app-1\t140MiB / 384MiB\t36%%\t1%%\n'; exit 0 ;;
+  load) exit "${FALSO_LOAD_RC:-0}" ;;
+  save)
+    while [ $# -gt 0 ]; do case "$1" in -o) printf 'tar-falso' >"$2"; shift 2 ;; *) shift ;; esac; done
+    exit 0 ;;
+  buildx)
+    if [ -n "${FALSO_CONTEXTO:-}" ]; then ls -A "${!#}" >>"${FALSO_CONTEXTO}"; fi
+    exit "${FALSO_BUILD_RC:-0}" ;;
+esac
+exit 0

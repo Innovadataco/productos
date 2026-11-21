@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+linea_falso="$(basename "$0")"; for a in "$@"; do linea_falso="$linea_falso"$'\t'"$a"; done; printf '%s\n' "$linea_falso" >>"$FALSO_REGISTRO" # una sola escritura: atómica entre procesos
+# FALSO_FLOCK_OCUPADO=<fd> simula ocupado solo ese candado; FALSO_FLOCK_RC, todos.
+for a in "$@"; do [ "$a" != "${FALSO_FLOCK_OCUPADO:-ninguno}" ] || exit 1; done
+exit "${FALSO_FLOCK_RC:-0}"
