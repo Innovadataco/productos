@@ -180,12 +180,12 @@ describe("CLI · un error de la base no imprime datos (base inalcanzable)", { ti
   });
 
   it("lote-escision con datos bien formados → 1 «ERROR_BASE», sin los datos del lote", () => {
-    const s = correr("lote-escision.ts", ["--destino", "FICTLOTE", "--fecha-evento", "2024-02-26", "--cantidad", "777", "--costo-unitario", "12345.5"]);
-    comprobar(s, 1, "❌ No se registró: ERROR_BASE", ["FICTLOTE", "2024-02-26", "777", "12345"]);
+    const s = correr("lote-escision.ts", ["--destino", "FICTLOTE", "--fecha-evento", "2027-03-17", "--cantidad", "4613", "--costo-unitario", "1237.53"]);
+    comprobar(s, 1, "❌ No se pudo confirmar el registro: ERROR_BASE", ["FICTLOTE", "2027-03-17", "4613", "1237"]);
   });
 
   it("registrar-escision con datos bien formados → 1 «ERROR_BASE», sin los datos del evento", () => {
-    const args = ["--origen", "FICTORI", "--destino", "FICTDES", "--fecha", "2024-02-26", "--nota", "nota ficticia reservada"];
-    comprobar(correr("registrar-escision.ts", args), 1, "❌ No se registró: ERROR_BASE", ["FICTORI", "FICTDES", "2024-02-26", "nota ficticia"]);
+    const args = ["--origen", "FICTORI", "--destino", "FICTDES", "--fecha", "2027-03-17", "--nota", "nota ficticia reservada"];
+    comprobar(correr("registrar-escision.ts", args), 1, "❌ No se pudo confirmar el registro: ERROR_BASE", ["FICTORI", "FICTDES", "2027-03-17", "nota ficticia"]);
   });
 });

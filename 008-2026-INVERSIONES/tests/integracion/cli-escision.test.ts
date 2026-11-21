@@ -33,6 +33,8 @@ const comprobar = (s: Salida, codigo: number, esperado: string, datos: readonly 
 
 /** En producción, ni un `npm run`; en local, ni un `cargar-prod.sh`. */
 const soloDelModo = (s: Salida, produccion: boolean): void => expect(s.texto).not.toContain(produccion ? "npm run" : "cargar-prod.sh");
+/** En producción, todo fallo (salida distinta de 0) termina pidiendo parar la carga y avisar (§11). */
+const PARE = "⚠️  Vía B: pare la carga y avise al CEO de 008 (§11 del runbook).";
 
 function archivo(nombre: string, contenido: string): string {
   const ruta = join(carpeta, nombre);
@@ -117,7 +119,8 @@ describe("CLI registrar-escision · salidas (O2)", POR_PRUEBA, () => {
       comprobar(s, 3, "⚠️  Ya hay 1 dividendo(s) importado(s) como ordinario(s)", [origen, destino, FECHA, PAGO, "4613"]);
       expect(s.texto).toContain("✅ Evento de escisión registrado (");
       expect(s.texto).not.toContain("Siguiente paso");
-      expect(s.texto.includes("pare la carga y avise al CEO de 008"), s.texto).toBe(sufijo === "P");
+      expect(s.texto.includes(PARE), s.texto).toBe(sufijo === "P");
+      expect(s.texto.includes("hay que revertir esa carga"), s.texto).toBe(sufijo === "L");
     }
   });
 });
@@ -132,6 +135,8 @@ describe("CLI lote-escision · salidas (O2)", POR_PRUEBA, () => {
     const prod = correr("lote-escision.ts", loteArgs(destino), PROD);
     comprobar(prod, 1, "❌ No se registró: EVENTO_NO_ENCONTRADO", datos);
     expect(prod.texto).toContain("`cargar-prod.sh registrar-escision`");
+    expect(prod.texto).toContain(PARE);
+    expect(local.texto).not.toContain(PARE);
     soloDelModo(prod, true);
   });
 
