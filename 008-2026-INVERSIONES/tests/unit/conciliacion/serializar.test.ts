@@ -115,6 +115,22 @@ describe("aVistaCorte", () => {
     }
   });
 
+  it("con «diferencia_valor» también trae los precios; con otro motivo de valor, no", () => {
+    const valor = CONTROLES[3]!;
+    const con = (codigoMotivo: string) => aVistaCorte({ ...LECTURA, conciliacion: { ...LECTURA.conciliacion!, controles: CONTROLES.map((x) => (x === valor ? { ...x, codigoMotivo } : x)) } });
+    expect(con("diferencia_valor").conciliacion!.especies[0]!.precios).toEqual({ cierre: "1100", precioAv: "1120" });
+    expect(con("por_cantidad").conciliacion!.especies[0]!.precios).toBeNull();
+    const malPrecio = CONTROLES.map((x) => (x === valor ? { ...x, detalle: { cierre: "1100", precioValoracion: "1e3" } } : x));
+    expect(aVistaCorte({ ...LECTURA, conciliacion: { ...LECTURA.conciliacion!, controles: malPrecio } }).conciliacion!.especies[0]!.precios).toBeNull();
+  });
+
+  it("sin total ni efectivo guardados quedan en null; un fondo sin instrumento se llama «Fondo»", () => {
+    const solo = CONTROLES.filter((x) => x.tipo === "FONDO").map((x) => ({ ...x, instrumento: null }));
+    const v2 = aVistaCorte({ ...LECTURA, conciliacion: { ...LECTURA.conciliacion!, controles: solo } }).conciliacion!;
+    expect(v2).toMatchObject({ total: null, efectivo: null, especies: [] });
+    expect(v2.fondos[0]!.etiqueta).toBe("Fondo");
+  });
+
   it("A&V en cero (o sin cifra) deja el % sin calcular, nunca infinito", () => {
     const efectivoCero = CONTROLES.map((x) => (x.tipo === "EFECTIVO" ? { ...x, real: D("0"), diferencia: D("-250") } : x));
     expect(aVistaCorte({ ...LECTURA, conciliacion: { ...LECTURA.conciliacion!, controles: efectivoCero } }).conciliacion!.efectivo!.diferenciaPct).toBeNull();
