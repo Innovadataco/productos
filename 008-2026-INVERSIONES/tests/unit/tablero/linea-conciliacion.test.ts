@@ -40,7 +40,7 @@ describe("línea de la conciliación en el tablero", () => {
 
   it("sin el dato (otras pantallas que usan el tablero) no pinta la línea", () => {
     const raiz = pantalla();
-    expect(raiz.querySelector('main a[href="/conciliacion"]')).toBeNull();
+    expect(raiz.querySelector('main > p.nota > a[href="/conciliacion"]')).toBeNull();
     expect(linea(raiz)!.tagName).toBe("SECTION");
   });
 

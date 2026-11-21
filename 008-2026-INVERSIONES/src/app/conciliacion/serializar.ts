@@ -8,6 +8,7 @@
 import { Prisma, type ResultadoConciliacion } from "@prisma/client";
 import type { ControlLeido, CorteDisponible, LecturaConciliacion, PorLiquidar } from "@/conciliacion/leer";
 import { estadoDeControl, fraseDeMotivo, textoDeResultadoGlobal, type Estado, type Tono } from "./motivos";
+import type { LineaConciliacionVista } from "../tablero/tipos";
 import type { ConciliacionVista, CorteVista, CuentasVista, FilaEspecieVista, FilaMontoVista, PorLiquidarVista, VistaCorte } from "./tipos";
 
 const DESFASE_COLOMBIA_MS = 5 * 60 * 60 * 1000;
@@ -114,3 +115,6 @@ export function aVistaCorte(l: LecturaConciliacion): VistaCorte {
 export function aCortes(cortes: readonly CorteDisponible[], actual: string | null): CorteVista[] {
   return cortes.map((c) => ({ fecha: dia(c.fechaCorte), texto: c.resultado === null ? "Sin conciliar" : textoDeResultadoGlobal(c.resultado), actual: dia(c.fechaCorte) === actual }));
 }
+
+/** La línea del tablero: el corte más reciente y el resultado guardado de su última conciliación. */
+export const aLineaDelTablero = (c: CorteDisponible | null): LineaConciliacionVista => (c === null ? null : { fechaCorte: dia(c.fechaCorte), resultado: c.resultado });

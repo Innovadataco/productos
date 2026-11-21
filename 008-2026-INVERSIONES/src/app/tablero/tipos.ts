@@ -56,3 +56,9 @@ export interface Vista {
   /** Nemotécnicos con ventas que sus lotes no cubren: no entran en filas, cerradas ni totales. */
   readonly incompletas: readonly string[];
 }
+
+/**
+ * La última conciliación con la certificación de A&V, tal como quedó guardada (sin recalcular): la línea que
+ * enlaza a /conciliacion. null: todavía no hay certificación cargada.
+ */
+export type LineaConciliacionVista = { readonly fechaCorte: string; readonly resultado: "CUADRA" | "NO_CUADRA" | "PARCIAL" | null } | null;
