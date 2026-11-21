@@ -1,0 +1,70 @@
+/**
+ * Cierres diarios de Yahoo Finance (`<NEMO>.CL`, COP) — INV-SPEC-13.
+ * Endpoint no oficial (INVESTIGACION-FUENTES-DATOS de 008): uso personal y moderado; si cambia o
+ * falla, el dato no se guarda y el resultado lo informa. Se usa el cierre SIN ajustar
+ * (`indicators.quote.close`): el ajustado no cuadra con el precio de valoración de A&V.
+ */
+const DESFASE_COT_MS = 5 * 60 * 60 * 1000;
+const ESCALA_PRECIO = 6;
+const TIEMPO_MAXIMO_MS = 10_000;
+
+export interface Cierre {
+  readonly fecha: Date; // fecha de negocio en Colombia, a medianoche UTC
+  readonly precio: string; // texto decimal canónico (hasta 6 decimales)
+}
+
+export type ResultadoYahoo = { ok: true; cierres: Cierre[] } | { ok: false; codigo: string };
+
+export type Buscar = (url: string, init: { headers: Record<string, string>; signal: AbortSignal }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+
+/** Precio con a lo sumo 6 decimales, sin notación científica ni punto flotante residual. */
+function canonico(n: number): string | null {
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const t = n.toFixed(ESCALA_PRECIO).replace(/\.?0+$/, "");
+  return t === "" || t === "0" ? null : t;
+}
+
+/** Fecha de negocio en Colombia (UTC−5) de un instante en segundos Unix. */
+function fechaCot(segundos: number): Date {
+  const local = new Date(segundos * 1000 - DESFASE_COT_MS);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()));
+}
+
+interface RespuestaChart {
+  chart?: { result?: { meta?: { currency?: string }; timestamp?: number[]; indicators?: { quote?: { close?: (number | null)[] }[] } }[] | null; error?: unknown };
+}
+
+/** Puro: convierte la respuesta de /v8/finance/chart en cierres. Exige COP y descarta huecos (null). */
+export function parsearYahoo(cuerpo: unknown): ResultadoYahoo {
+  const r = (cuerpo as RespuestaChart)?.chart?.result?.[0];
+  if (!r) return { ok: false, codigo: "YAHOO_SIN_DATOS" };
+  if (r.meta?.currency !== "COP") return { ok: false, codigo: "YAHOO_MONEDA_NO_COP" };
+  const ts = r.timestamp ?? [];
+  const cierres = r.indicators?.quote?.[0]?.close ?? [];
+  if (ts.length !== cierres.length) return { ok: false, codigo: "YAHOO_FORMATO" };
+  const porFecha = new Map<number, Cierre>();
+  ts.forEach((t, i) => {
+    const valor = cierres[i];
+    const precio = typeof valor === "number" ? canonico(valor) : null;
+    if (precio) {
+      const fecha = fechaCot(t);
+      porFecha.set(fecha.getTime(), { fecha, precio }); // si hay dos barras el mismo día, gana la última
+    }
+  });
+  return { ok: true, cierres: [...porFecha.values()].sort((a, b) => a.fecha.getTime() - b.fecha.getTime()) };
+}
+
+/** Pide los cierres diarios entre dos fechas (incluidas). No lanza: los fallos vuelven como código. */
+export async function obtenerCierres(simbolo: string, desde: Date, hasta: Date, buscar: Buscar): Promise<ResultadoYahoo> {
+  if (!/^[A-Z0-9.^-]{1,20}$/.test(simbolo)) return { ok: false, codigo: "SIMBOLO_INVALIDO" };
+  const p1 = Math.floor(desde.getTime() / 1000);
+  const p2 = Math.floor(hasta.getTime() / 1000) + 24 * 60 * 60;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbolo)}?interval=1d&period1=${p1}&period2=${p2}`;
+  try {
+    const respuesta = await buscar(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS) });
+    if (!respuesta.ok) return { ok: false, codigo: `YAHOO_HTTP_${respuesta.status}` };
+    return parsearYahoo(await respuesta.json());
+  } catch {
+    return { ok: false, codigo: "YAHOO_RED" };
+  }
+}
