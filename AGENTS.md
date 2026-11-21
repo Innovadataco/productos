@@ -26,8 +26,9 @@ Además: `mockups/` (prototipos) y `.github/workflows/` (CI).
 - **`main`** es la rama canónica y de producción. **Prohibido commitear directo a `main`**:
   todo entra por PR.
 - Rama de trabajo **desde `origin/main` fresco**, en un **worktree propio**:
-  - PI, BI e INV con SPEC numerada: `work/<pi|bi|inv>-SPEC-<N>-<slug>` (N entero, sin letras).
-  - 008 (INV) con metodología ECC, sin SPEC: `work/inv-<slug>`.
+  - PI y BI con SPEC numerada: `work/<pi|bi>-SPEC-<N>-<slug>` (N entero, sin letras).
+  - INV (008) sin SPEC: `work/inv-<slug>`; el formato con SPEC (`work/inv-SPEC-<N>-<slug>`) queda
+    aceptado solo por compatibilidad con ramas viejas.
 - El check `verificar_base` (`.github/workflows/verificar-base-pr.yml`) rechaza cualquier PR
   cuya base no sea `main` o cuya rama no cumpla esta convención. La regex viva está en ese
   workflow.

@@ -24,7 +24,8 @@ Ramas, staging, metodología y los checks del ruleset «Gate CI - main» están 
 
 1. `main` es producción; todo entra por **PR** (prohibido commitear directo a `main`), con
    **CI verde + revisión adversarial**. El merge y el deploy los hace el CEO.
-2. Rama desde `origin/main` en worktree propio: `work/<pi|bi|inv>-SPEC-<N>-<slug>`.
+2. Rama desde `origin/main` en worktree propio: `work/<pi|bi>-SPEC-<N>-<slug>` (008 usa
+   `work/inv-<slug>`, ver abajo).
 3. Staging solo de rutas de tu producto; nunca `git add -A` ni `git add .`.
 4. Nunca subir secretos ni datos sensibles: solo variables de entorno.
 
