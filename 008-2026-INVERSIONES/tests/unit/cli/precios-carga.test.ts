@@ -82,6 +82,19 @@ describe("precios:exportar · como proceso, sin red (todos los casos terminan an
     }
   });
 
+  // code-reviewer MEDIO: la negativa a escribir en una terminal (el CSV muestra qué especies hay) no tenía prueba.
+  // Una terminal de verdad con script(1): BSD en macOS, util-linux en Linux (CI). Su entrada es /dev/null (libuv da
+  // sockets como stdio y el script de BSD no los acepta).
+  it("con stdout en una terminal se niega con SALIDA_TERMINAL y 2, sin leer la lista ni pedir a Yahoo", () => {
+    const comando = [TSX, join("scripts", "exportar-precios.ts"), "--nemos", join(carpeta, "no-existe.txt"), "--desde", "2024-03-11"];
+    const args = process.platform === "darwin" ? ["-q", "/dev/null", ...comando] : ["-qec", comando.map((a) => `'${a}'`).join(" "), "/dev/null"];
+    const r = spawnSync("script", args, { cwd: RAIZ, env: entornoMinimo({ DATABASE_URL: INALCANZABLE }), encoding: "utf8", timeout: POR_CLI_MS, stdio: ["ignore", "pipe", "pipe"] });
+    const texto = `${r.stdout}${r.stderr}`;
+    expect(r.status, texto).toBe(2);
+    expect(texto).toContain("SALIDA_TERMINAL");
+    expect(texto).not.toContain("LISTA_ILEGIBLE");
+  });
+
   it("npm se quedó con --hasta: 2", () => {
     comprobar(correr("exportar-precios.ts", ["--nemos", join(carpeta, "l.txt"), "--desde", "2024-03-11"], { npm_config_hasta: "2024-03-12" }), 2, "npm se quedó con --hasta");
   });

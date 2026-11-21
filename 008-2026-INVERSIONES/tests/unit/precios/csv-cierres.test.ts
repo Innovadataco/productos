@@ -3,7 +3,7 @@
 // Especies FICT, precios, volúmenes y fechas inventados.
 import { describe, expect, it } from "vitest";
 import {
-  ENCABEZADO_CSV, MAX_BYTES_CSV, MAX_ERRORES_LISTADOS, MAX_ESPECIES_CSV, MAX_FILAS_CSV,
+  ENCABEZADO_CSV, MAX_BYTES_CSV, MAX_ERRORES_CONTADOS, MAX_ERRORES_LISTADOS, MAX_ESPECIES_CSV, MAX_FILAS_CSV,
   escribirCsvCierres, leerCsvCierres, volumenExportable, type ResultadoLectura,
 } from "@/precios/csv-cierres";
 import { parsearYahoo, type Cierre } from "@/precios/yahoo";
@@ -105,6 +105,12 @@ describe("CSV de cierres · validación estricta: línea y código, nunca el val
     expect(r.ok).toBe(false);
     expect(errores(r)).toHaveLength(MAX_ERRORES_LISTADOS);
     expect(!r.ok && r.totalErrores).toBe(30);
+  });
+
+  it(`deja de leer a los ${MAX_ERRORES_CONTADOS} errores (security-reviewer MEDIO: 4 MiB de LF eran 4 millones de errores y +260 MB)`, () => {
+    const r = leerCsvCierres(new Uint8Array(MAX_BYTES_CSV).fill(0x0a));
+    expect(r.ok).toBe(false);
+    expect(!r.ok && [r.totalErrores, r.errores.length]).toEqual([MAX_ERRORES_CONTADOS, MAX_ERRORES_LISTADOS]);
   });
 
   it("una fila válida no se acepta si otra del archivo falla (todo o nada)", () => {

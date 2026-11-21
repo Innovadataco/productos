@@ -56,7 +56,7 @@ const instrumentoCumple = (w: DondeInstrumento) => (e: EspecieFalsa): boolean =>
 export function baseFalsa(o: OpcionesBaseFalsa = {}) {
   const filas: FilaFalsa[] = (o.previas ?? []).map((f) => ({ ...f }));
   const especies = o.especies ?? [];
-  const llamadas = { calendario: 0, crear: 0, conteos: [] as Donde[] };
+  const llamadas = { calendario: 0, crear: 0, conteos: [] as Donde[], opcionesTx: [] as unknown[], simbolos: [] as { instrumentoId: string; vigenteDesde?: { lte: Date } }[] };
   const precioCierre = {
     findFirst: async ({ where }: { where: Donde }) => filas.find(cumple(where)) ?? null,
     findMany: async ({ where }: { where: Donde }) => filas.filter(cumple(where)),
@@ -87,7 +87,8 @@ export function baseFalsa(o: OpcionesBaseFalsa = {}) {
       },
     },
     simboloPrecio: {
-      findFirst: async ({ where }: { where: { instrumentoId: string } }) => {
+      findFirst: async ({ where }: { where: { instrumentoId: string; vigenteDesde?: { lte: Date } } }) => {
+        llamadas.simbolos.push(where);
         if (o.errorSimbolo) throw o.errorSimbolo;
         const simbolo = especies.find((e) => e.id === where.instrumentoId)?.simbolo;
         return simbolo ? { simbolo } : null;
@@ -100,7 +101,10 @@ export function baseFalsa(o: OpcionesBaseFalsa = {}) {
       },
     },
     precioCierre,
-    $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(db),
+    $transaction: async (fn: (tx: unknown) => Promise<unknown>, opciones?: unknown) => {
+      llamadas.opcionesTx.push(opciones);
+      return fn(db);
+    },
   };
   return { db: db as unknown as PrismaClient, filas, llamadas };
 }

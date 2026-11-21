@@ -76,6 +76,14 @@ describe("guardarCierresDeEspecies · paridad con actualizarPrecios", () => {
   });
 });
 
+describe("guardarCierresDeEspecies · cada barra en una transacción con plazo propio (database-reviewer MEDIO)", () => {
+  it("pide 15 s de plazo y 10 s de espera por conexión: con el plazo por defecto (5 s) una base lenta daría P2028, que no se reintenta", async () => {
+    const b = baseFalsa();
+    await guardarCierresDeEspecies(b.db, [{ instrumentoId: "a", traer: async () => ({ ok: true, cierres: [{ fecha: utc("2024-03-11"), precio: "10", volumen: 5 }] }) }], { desde: DESDE, hasta: HASTA, ahora: AHORA });
+    expect(b.llamadas.opcionesTx).toEqual([{ timeout: 15_000, maxWait: 10_000 }]);
+  });
+});
+
 describe("guardarCierresDeEspecies · una especie que no se puede traer no escribe nada y no detiene las demás", () => {
   const una = { ok: true as const, cierres: [{ fecha: utc("2024-03-11"), precio: "10", volumen: 5 }] };
 

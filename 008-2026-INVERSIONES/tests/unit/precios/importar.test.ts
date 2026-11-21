@@ -64,6 +64,19 @@ describe("importarPrecios · especies que no se guardan", () => {
     expect(b.filas.map((f) => f.instrumentoId)).toEqual(["id-b"]);
   });
 
+  it("el símbolo se resuelve a la fecha de hoy aunque el CSV traiga una fecha futura (security-reviewer MEDIO: el CSV elegía la vigencia)", async () => {
+    const b = baseFalsa({ especies: ESPECIES });
+    const r = await importarPrecios(b.db, valido(csv("FICTA,2024-03-08,10,1", "FICTA,2099-01-05,10,1")), { ahora: AHORA });
+    expect(r.guardado).toMatchObject({ cierresNuevos: 1, omitidasPorHorario: 1 });
+    expect(b.llamadas.simbolos.map((w) => w.vigenteDesde?.lte)).toEqual([utc("2024-03-11")]);
+  });
+
+  it("con un CSV que termina antes de hoy, el símbolo se resuelve a su última fecha (como precios:actualizar con su --hasta)", async () => {
+    const b = baseFalsa({ especies: ESPECIES });
+    await importarPrecios(b.db, valido(csv("FICTA,2024-03-08,10,1")), { ahora: AHORA });
+    expect(b.llamadas.simbolos.map((w) => w.vigenteDesde?.lte)).toEqual([utc("2024-03-08")]);
+  });
+
   it("un error de la base al buscar el símbolo queda en la especie: GUARDADO_ERROR con su nombre", async () => {
     const b = baseFalsa({ especies: ESPECIES, errorSimbolo: Object.assign(new Error("valor 443322"), { name: "PrismaClientUnknownRequestError" }) });
     const r = await importarPrecios(b.db, valido(csv("FICTA,2024-03-08,10,1")), { ahora: AHORA });

@@ -362,6 +362,12 @@ describe("inv-cargar · se niega sin tocar nada (sale con 64, sin correr el CLI,
     ["importar-certificacion con una posicional (una ruta del contenedor)", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2024-03-12", "/proc/1/environ"], PDF)],
     [`un PDF de más de ${MAX_BYTES_PDF} bytes (sin leer el cuerpo)`, ["importar-certificacion"], () => sobreManual(["--email", CORREO, "--fecha-corte", "2024-03-12", "--bytes", String(MAX_BYTES_PDF + 1), "--sha256", sha(PDF)])],
     ["--bytes en conciliar-certificacion (no lleva archivo)", ["conciliar-certificacion"], () => sobreManual(["--fecha-corte", "2024-03-12", "--bytes", "0", "--sha256", sha(Buffer.alloc(0))])],
+    // security-reviewer BAJO: lista blanca también en el sh (defensa en profundidad; hoy lo frena el CLI).
+    ["conciliar-certificacion con otra opción", ["conciliar-certificacion"], () => sobreManual(["--fecha-corte", "2024-03-12", "--archivo", "/proc/1/environ"])],
+    ["conciliar-certificacion con una posicional", ["conciliar-certificacion"], () => sobreManual(["--fecha-corte", "2024-03-12", "/proc/1/environ"])],
+    ["conciliar-certificacion sin --fecha-corte", ["conciliar-certificacion"], () => sobreManual([])],
+    ["conciliar-certificacion con una fecha que no es AAAA-MM-DD", ["conciliar-certificacion"], () => sobreManual(["--fecha-corte", "--email"])],
+    ["conciliar-certificacion con --fecha-corte repetida", ["conciliar-certificacion"], () => sobreManual(["--fecha-corte", "2024-03-12", "--fecha-corte", "2024-03-13"])],
     ["--bytes en un comando sin archivo", ["construir-lotes"], () => sobreManual(["--bytes", "0", "--sha256", sha(Buffer.alloc(0))])],
     ["una cabecera truncada (menos de 4096 bytes)", ["construir-lotes"], () => sobreManual(["--ensayo"], undefined, 100)],
     // Líneas cortas (no caen en el tope de largo): solo falta la línea vacía que cierra la cabecera.
@@ -399,6 +405,17 @@ describe("inv-cargar · se niega sin tocar nada (sale con 64, sin correr el CLI,
       expect(readdirSync(p.tmp)).toEqual([]);
     });
   }
+});
+
+describe("inv-cargar · un --bytes de más de 10 dígitos (security-reviewer BAJO)", () => {
+  it("se niega con «--bytes fuera de rango», sin el ruido de test ni el engañoso «archivo vacío»", async () => {
+    const p = preparar();
+    const r = await p.correrCarga(["importar-precios"], sobreManual(["--bytes", "1".repeat(23), "--sha256", sha(CIERRES)]));
+    expect(r.status).toBe(64);
+    expect(r.stderr).toContain("--bytes fuera de rango");
+    expect(r.stderr).not.toMatch(/integer|vacío/);
+    expect(p.tsxLlamadas()).toEqual([]);
+  });
 });
 
 describe("inv-cargar · los topes del cuerpo son los de cada CLI (una sola fuente: la constante del CLI)", () => {

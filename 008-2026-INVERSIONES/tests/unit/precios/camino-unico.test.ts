@@ -27,7 +27,15 @@ function escrituras(): Record<string, string[]> {
   return Object.fromEntries(Object.entries(usos).map(([op, set]) => [op, [...set].sort()]));
 }
 
+/** SQL crudo que escriba en precio_cierre, o un alias del delegado (`const p = tx.precioCierre`): tampoco. */
+const ESCRITURA_CRUDA = /\b(INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+"?precio_cierre\b|=\s*\w+\.precioCierre\s*;/i;
+
 describe("precio_cierre · un solo camino de escritura", () => {
+  it("ningún módulo escribe en precio_cierre con SQL crudo ni guarda el delegado en una variable", () => {
+    const hallados = archivos(SRC).filter((a) => ESCRITURA_CRUDA.test(readFileSync(a, "utf8"))).map((a) => path.relative(SRC, a));
+    expect(hallados).toEqual([]);
+  });
+
   it("solo guardar.ts inserta y reemplaza; depurar.ts solo retira; nada más escribe", () => {
     expect(escrituras()).toEqual({
       create: [path.join("precios", "guardar.ts")],

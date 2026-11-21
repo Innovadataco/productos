@@ -2,6 +2,7 @@
 // más los del CSV; solo números de línea, conteos, códigos e ids internos, nunca nemotécnicos ni precios.
 // Salen con 3 si hay algo que atender. Datos inventados.
 import { describe, expect, it } from "vitest";
+import { MAX_ERRORES_CONTADOS } from "@/precios/csv-cierres";
 import type { ResultadoActualizacion } from "@/precios/guardar";
 import { SALIDA_CON_AVISOS, reporteActualizacion, reporteErroresCsv, reporteImportacion } from "@/precios/reporte";
 
@@ -43,6 +44,11 @@ describe("reporteErroresCsv", () => {
       "   · línea 9 · FILA_REPETIDA",
       "   … y 23 más",
     ]);
+  });
+
+  it(`con ${MAX_ERRORES_CONTADOS} errores (se dejó de contar), dice «al menos»`, () => {
+    const errores = [{ linea: 2, codigo: "LINEA_VACIA" }];
+    expect(reporteErroresCsv({ errores, totalErrores: MAX_ERRORES_CONTADOS }).at(-1)).toBe(`   … y al menos ${MAX_ERRORES_CONTADOS - 1} más (se dejó de leer en ${MAX_ERRORES_CONTADOS})`);
   });
 
   it("sin errores de más, sin la línea final", () => {
