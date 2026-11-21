@@ -38,6 +38,26 @@ describe("cargarYConciliar", () => {
     expect(texto).not.toContain("La importación falló");
   });
 
+  // En producción no hay red (la app y el migrador no salen a internet): el siguiente paso es la vía B del runbook
+  // (docs/despliegue/produccion.md §11), por cargar-prod.sh, nunca precios:actualizar.
+  it("en producción: el siguiente paso es importar-precios y después conciliar-certificacion por cargar-prod.sh", async () => {
+    const r = await cargarYConciliar(db, entrada, { importar: async () => cargado, conciliar: async () => resumen }, { produccion: true });
+    expect(r.codigo).toBe(0);
+    const texto = r.lineas.join("\n");
+    expect(texto).toContain("cargar-prod.sh importar-precios");
+    expect(texto).toContain("cargar-prod.sh conciliar-certificacion");
+    expect(texto).toContain("--fecha-corte 2024-01-04");
+    expect(texto).not.toContain("precios:actualizar");
+    expect(texto).not.toContain("npx tsx");
+  });
+
+  it("en producción, si la conciliación falla: corra conciliar-certificacion por cargar-prod.sh", async () => {
+    const r = await cargarYConciliar(db, entrada, { importar: async () => cargado, conciliar: async () => Promise.reject(new Error("x")) }, { produccion: true });
+    expect(r.codigo).toBe(1);
+    expect(r.lineas.join("\n")).toContain("cargar-prod.sh conciliar-certificacion");
+    expect(r.lineas.join("\n")).not.toContain("npx tsx");
+  });
+
   it("rechazada: 1, con página, fila, columna y código, y sin conciliar", async () => {
     let concilio = false;
     const rechazada: ResultadoImportacionAv = { ...cargado, estado: "RECHAZADO", certificacionId: null, filasNuevas: 0, errores: [{ pagina: 1, fila: 2, columna: "VALOR DE MERCADO", codigo: "VALOR_INCOHERENTE" }] };
