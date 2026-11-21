@@ -10,6 +10,8 @@ import { Lexico, leerValor, type PdfDic, type PdfRef, type PdfValor } from "./le
 
 export const MAX_OBJETOS = 10_000;
 export const MAX_INFLADO_POR_STREAM = 8 * 1024 * 1024;
+/** Presupuesto de bytes inflados de todo el archivo: se descuenta mientras se infla, no al final. */
+export const MAX_INFLADO_TOTAL = 16 * 1024 * 1024;
 const COLA_STARTXREF = 2048;
 const MAX_SALTOS_REF = 8;
 
@@ -99,9 +101,12 @@ function terminaEnEndstream(b: Uint8Array, fin: number): boolean {
   return ENDSTREAM.every((c, k) => b[p + k] === c);
 }
 
-function inflar(datos: Uint8Array): Uint8Array {
+/** Infla con tope: lo que queda del presupuesto total, y nunca más de MAX_INFLADO_POR_STREAM. Sin copiar. */
+function inflar(datos: Uint8Array, restante: number): Uint8Array {
+  if (restante <= 0) throw new ErrorPdf("PDF_INFLADO_EXCESIVO");
   try {
-    return new Uint8Array(inflateSync(datos, { maxOutputLength: MAX_INFLADO_POR_STREAM }));
+    const salida = inflateSync(datos, { maxOutputLength: Math.min(MAX_INFLADO_POR_STREAM, restante) });
+    return new Uint8Array(salida.buffer, salida.byteOffset, salida.byteLength);
   } catch (e) {
     const codigo = (e as { code?: unknown } | null)?.code;
     throw new ErrorPdf(codigo === "ERR_BUFFER_TOO_LARGE" ? "PDF_INFLADO_EXCESIVO" : "PDF_STREAM_INVALIDO");
@@ -121,6 +126,9 @@ function filtroFlate(dic: PdfDic): boolean {
 export function abrirReferencias(b: Uint8Array): Referencias {
   const { offsets, trailer } = leerXref(b);
   const cache = new Map<number, Objeto>();
+  /** Datos ya decodificados por número de objeto: un stream se infla una sola vez. */
+  const decodificados = new Map<number, Uint8Array>();
+  let inflados = 0;
 
   const objeto = (ref: PdfRef): Objeto => {
     const enCache = cache.get(ref.num);
@@ -156,10 +164,16 @@ export function abrirReferencias(b: Uint8Array): Referencias {
 
   const stream = (valor: PdfValor | undefined) => {
     const o = objetoStream(valor);
+    const num = (valor as PdfRef).num;
+    const enCache = decodificados.get(num);
+    if (enCache) return { dic: o.valor, datos: enCache };
     const largo = entero(resolver(o.valor.v.get("Length")) ?? null);
     if (largo === null || o.inicioStream + largo > b.length || !terminaEnEndstream(b, o.inicioStream + largo)) throw new ErrorPdf("PDF_STREAM_INVALIDO");
     const crudos = b.subarray(o.inicioStream, o.inicioStream + largo);
-    return { dic: o.valor, datos: filtroFlate(o.valor) ? inflar(crudos) : crudos };
+    const datos = filtroFlate(o.valor) ? inflar(crudos, MAX_INFLADO_TOTAL - inflados) : crudos;
+    if (datos !== crudos) inflados += datos.length;
+    decodificados.set(num, datos);
+    return { dic: o.valor, datos };
   };
 
   return { trailer, resolver, stream, dicDeStream: (valor) => objetoStream(valor).valor };

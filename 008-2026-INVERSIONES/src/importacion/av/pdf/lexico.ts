@@ -202,7 +202,8 @@ function diccionario(lex: Lexico, profundidad: number): PdfDic {
   for (let t = lex.siguiente(); ; t = lex.siguiente()) {
     if (t === null) throw new ErrorPdf("PDF_OBJETO_INVALIDO");
     if (t.t === "delim" && t.v === ">>") return { tipo: "dic", v };
-    if (t.t !== "nombre") throw new ErrorPdf("PDF_OBJETO_INVALIDO");
+    // Claves únicas (§7.3.7): con una repetida no se sabe cuál usaría el visor.
+    if (t.t !== "nombre" || v.has(t.v)) throw new ErrorPdf("PDF_OBJETO_INVALIDO");
     v.set(t.v, leerValor(lex, null, profundidad + 1));
     if (v.size > MAX_ELEMENTOS) throw new ErrorPdf("PDF_OBJETO_INVALIDO");
   }

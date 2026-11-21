@@ -48,10 +48,28 @@ export interface DocumentoPdf {
 const esDic = (v: PdfValor | undefined): v is PdfDic => typeof v === "object" && v !== null && v.tipo === "dic";
 const nombre = (v: PdfValor | undefined): string | null => (typeof v === "object" && v !== null && v.tipo === "nombre" ? v.v : null);
 
+/** Lo heredable del árbol de páginas (§7.7.3.4): la página sustituye lo que trae, no fusiona. */
 interface Heredado {
   readonly recursos: PdfValor | undefined;
   readonly caja: PdfValor | undefined;
+  readonly recorte: PdfValor | undefined;
+  readonly rotacion: PdfValor | undefined;
 }
+
+const heredar = (dic: PdfDic, h: Heredado): Heredado => ({
+  recursos: dic.v.get("Resources") ?? h.recursos,
+  caja: dic.v.get("MediaBox") ?? h.caja,
+  recorte: dic.v.get("CropBox") ?? h.recorte,
+  rotacion: dic.v.get("Rotate") ?? h.rotacion,
+});
+
+/** Bytes de contenido ya leídos en todo el documento: el tope se cobra antes de reservar memoria. */
+interface Presupuesto {
+  bytes: number;
+}
+
+/** Partes de /Contents como las pone jsPDF (una o pocas); más que esto es sospechoso. */
+const MAX_PARTES_CONTENIDO = 64;
 
 function leerFuente(refs: Referencias, valor: PdfValor | undefined): FuenteEstandar {
   const dic = refs.resolver(valor);
@@ -83,20 +101,42 @@ function validarXObjects(refs: Referencias, recursos: PdfDic): void {
   }
 }
 
-function leerCaja(refs: Referencias, valor: PdfValor | undefined): { ancho: number; alto: number } {
+function leerRectangulo(refs: Referencias, valor: PdfValor | undefined): number[] {
   const caja = refs.resolver(valor);
   const v = typeof caja === "object" && caja !== null && caja.tipo === "arreglo" ? caja.v.map((x) => refs.resolver(x)) : [];
   if (v.length !== 4 || !v.every((x) => typeof x === "number" && Number.isFinite(x))) throw new ErrorPdf("PDF_ESTRUCTURA_INVALIDA");
-  const [x0, y0, x1, y1] = v as number[];
+  return v as number[];
+}
+
+/**
+ * MediaBox desde 0 0 con tamaño positivo. Lo que cambiaría lo que se ve respecto de las coordenadas se
+ * rechaza: una página girada (/Rotate ≠ 0) o recortada (/CropBox distinto de /MediaBox).
+ */
+function leerCaja(refs: Referencias, h: Heredado): { ancho: number; alto: number } {
+  const [x0, y0, x1, y1] = leerRectangulo(refs, h.caja);
   if (x0 !== 0 || y0 !== 0 || !(x1! > 0) || !(y1! > 0)) throw new ErrorPdf("PDF_ESTRUCTURA_INVALIDA");
+  const rotacion = refs.resolver(h.rotacion);
+  if (rotacion !== undefined && rotacion !== 0) throw new ErrorPdf("PDF_ESTRUCTURA_INVALIDA");
+  if (h.recorte !== undefined && leerRectangulo(refs, h.recorte).some((v, i) => v !== [x0, y0, x1, y1][i])) throw new ErrorPdf("PDF_ESTRUCTURA_INVALIDA");
   return { ancho: x1!, alto: y1! };
 }
 
-function leerContenido(refs: Referencias, valor: PdfValor | undefined): Uint8Array {
-  if (valor === undefined) return new Uint8Array();
-  const partes = typeof valor === "object" && valor !== null && valor.tipo === "arreglo" ? valor.v : [valor];
-  const datos = partes.map((p) => refs.stream(p).datos);
-  const salida = new Uint8Array(datos.reduce((s, d) => s + d.length + 1, 0));
+/** /Contents: un stream, un arreglo de streams o una referencia a ese arreglo (§7.7.3.3). Sin repetidos. */
+function partesDeContenido(refs: Referencias, valor: PdfValor | undefined): readonly PdfValor[] {
+  if (valor === undefined) return [];
+  const directo = typeof valor === "object" && valor !== null && valor.tipo === "arreglo" ? valor : refs.resolver(valor);
+  const partes = typeof directo === "object" && directo !== null && directo.tipo === "arreglo" ? directo.v : [valor];
+  const numeros = partes.map((p) => (typeof p === "object" && p !== null && p.tipo === "ref" ? p.num : -1));
+  if (partes.length > MAX_PARTES_CONTENIDO || new Set(numeros).size !== numeros.length) throw new ErrorPdf("PDF_ESTRUCTURA_INVALIDA");
+  return partes;
+}
+
+function leerContenido(refs: Referencias, valor: PdfValor | undefined, presupuesto: Presupuesto): Uint8Array {
+  const datos = partesDeContenido(refs, valor).map((p) => refs.stream(p).datos);
+  const largo = datos.reduce((s, d) => s + d.length + 1, 0);
+  if (presupuesto.bytes + largo > MAX_CONTENIDO_TOTAL) throw new ErrorPdf("PDF_INFLADO_EXCESIVO");
+  presupuesto.bytes += largo;
+  const salida = new Uint8Array(largo);
   let p = 0;
   for (const d of datos) {
     salida.set(d, p);
@@ -106,16 +146,25 @@ function leerContenido(refs: Referencias, valor: PdfValor | undefined): Uint8Arr
   return salida;
 }
 
-function leerPagina(refs: Referencias, dic: PdfDic, heredado: Heredado, numero: number): PaginaPdf {
-  const recursos = refs.resolver(dic.v.get("Resources") ?? heredado.recursos);
+function leerPagina(refs: Referencias, dic: PdfDic, heredado: Heredado, numero: number, presupuesto: Presupuesto): PaginaPdf {
+  const propio = heredar(dic, heredado);
+  const recursos = refs.resolver(propio.recursos);
   if (!esDic(recursos)) throw new ErrorPdf("PDF_ESTRUCTURA_INVALIDA");
   validarXObjects(refs, recursos);
-  const { ancho, alto } = leerCaja(refs, dic.v.get("MediaBox") ?? heredado.caja);
-  return { numero, ancho, alto, fuentes: leerFuentes(refs, recursos), contenido: leerContenido(refs, dic.v.get("Contents")) };
+  const { ancho, alto } = leerCaja(refs, propio);
+  return { numero, ancho, alto, fuentes: leerFuentes(refs, recursos), contenido: leerContenido(refs, dic.v.get("Contents"), presupuesto) };
+}
+
+interface Recorrido {
+  readonly refs: Referencias;
+  readonly vistos: Set<number>;
+  readonly salida: PaginaPdf[];
+  readonly presupuesto: Presupuesto;
 }
 
 /** Recorre /Pages → /Kids en orden, con tope de profundidad y de páginas, y sin ciclos ni repetidos. */
-function recorrer(refs: Referencias, valor: PdfValor | undefined, heredado: Heredado, profundidad: number, vistos: Set<number>, salida: PaginaPdf[]): void {
+function recorrer(r: Recorrido, valor: PdfValor | undefined, heredado: Heredado, profundidad: number): void {
+  const { refs, vistos, salida } = r;
   if (profundidad > MAX_PROFUNDIDAD_PAGINAS) throw new ErrorPdf("PDF_PROFUNDIDAD_EXCESIVA");
   if (typeof valor !== "object" || valor === null || valor.tipo !== "ref" || vistos.has(valor.num)) throw new ErrorPdf("PDF_ESTRUCTURA_INVALIDA");
   vistos.add(valor.num);
@@ -124,13 +173,12 @@ function recorrer(refs: Referencias, valor: PdfValor | undefined, heredado: Here
   const tipo = nombre(dic.v.get("Type"));
   if (tipo === "Page") {
     if (salida.length >= MAX_PAGINAS) throw new ErrorPdf("PDF_DEMASIADAS_PAGINAS");
-    salida.push(leerPagina(refs, dic, heredado, salida.length + 1));
+    salida.push(leerPagina(refs, dic, heredado, salida.length + 1, r.presupuesto));
     return;
   }
   const hijos = refs.resolver(dic.v.get("Kids"));
   if (tipo !== "Pages" || typeof hijos !== "object" || hijos === null || hijos.tipo !== "arreglo") throw new ErrorPdf("PDF_ESTRUCTURA_INVALIDA");
-  const deEste: Heredado = { recursos: dic.v.get("Resources") ?? heredado.recursos, caja: dic.v.get("MediaBox") ?? heredado.caja };
-  for (const hijo of hijos.v) recorrer(refs, hijo, deEste, profundidad + 1, vistos, salida);
+  for (const hijo of hijos.v) recorrer(r, hijo, heredar(dic, heredado), profundidad + 1);
 }
 
 const FECHA_PDF = /^D:(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?(Z|[+-]\d{2}'?\d{2}'?)?/;
@@ -175,7 +223,7 @@ export function abrirDocumento(bytes: Uint8Array): DocumentoPdf {
   const catalogo = refs.resolver(t.get("Root"));
   if (!esDic(catalogo) || nombre(catalogo.v.get("Type")) !== "Catalog") throw new ErrorPdf("PDF_ESTRUCTURA_INVALIDA");
   const paginas: PaginaPdf[] = [];
-  recorrer(refs, catalogo.v.get("Pages"), { recursos: undefined, caja: undefined }, 0, new Set(), paginas);
-  if (paginas.reduce((s, p) => s + p.contenido.length, 0) > MAX_CONTENIDO_TOTAL) throw new ErrorPdf("PDF_INFLADO_EXCESIVO");
+  const nada: Heredado = { recursos: undefined, caja: undefined, recorte: undefined, rotacion: undefined };
+  recorrer({ refs, vistos: new Set(), salida: paginas, presupuesto: { bytes: 0 } }, catalogo.v.get("Pages"), nada, 0);
   return { paginas, creadoEn: leerCreadoEn(refs) };
 }

@@ -24,7 +24,8 @@ export type CodigoPdf =
   | "PDF_CONTENIDO_INVALIDO"
   | "PDF_TEXTO_NO_SOPORTADO"
   | "PDF_DEMASIADO_TEXTO"
-  | "PDF_SIN_TEXTO";
+  | "PDF_SIN_TEXTO"
+  | "PDF_ERROR_INTERNO";
 
 const MENSAJES: Readonly<Record<CodigoPdf, string>> = {
   PDF_DEMASIADO_GRANDE: "El PDF pasa del tamaño máximo permitido.",
@@ -46,9 +47,10 @@ const MENSAJES: Readonly<Record<CodigoPdf, string>> = {
   PDF_RECURSO_NO_SOPORTADO: "El PDF usa un recurso que el lector no soporta (formulario u otro XObject que no es imagen).",
   PDF_OPERADOR_NO_SOPORTADO: "El contenido del PDF usa un operador que el lector no soporta.",
   PDF_CONTENIDO_INVALIDO: "El contenido del PDF tiene un operador con operandos inválidos.",
-  PDF_TEXTO_NO_SOPORTADO: "El PDF tiene texto invisible, rotado o fuera de la página.",
+  PDF_TEXTO_NO_SOPORTADO: "El PDF tiene texto que no se vería como se lee: invisible, claro, tapado, rotado, desplazado, fuera de la página o con caracteres de control.",
   PDF_DEMASIADO_TEXTO: "El PDF tiene más texto del permitido.",
   PDF_SIN_TEXTO: "El PDF no tiene texto que leer.",
+  PDF_ERROR_INTERNO: "El lector de PDF falló de una forma no prevista: el archivo no se leyó.",
 };
 
 export class ErrorPdf extends Error {

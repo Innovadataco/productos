@@ -53,7 +53,13 @@ export function agruparLineas(celdas: readonly CeldaPdf[]): Linea[] {
   return lineas.map((l) => ({ pagina: l.pagina, y: l.y, celdas: [...l.celdas].sort((a, b) => a.x - b.x).map(({ x, texto }) => ({ x, texto })) }));
 }
 
+/** Cualquier error que no sea del lector sale como PDF_ERROR_INTERNO: el mensaje nunca lleva la causa. */
 export function extraerLineas(bytes: Uint8Array): LecturaPdf {
-  const doc = abrirDocumento(bytes);
-  return { lineas: agruparLineas(extraerCeldas(doc)), paginas: doc.paginas.length, creadoEn: doc.creadoEn };
+  try {
+    const doc = abrirDocumento(bytes);
+    return { lineas: agruparLineas(extraerCeldas(doc)), paginas: doc.paginas.length, creadoEn: doc.creadoEn };
+  } catch (e) {
+    if (e instanceof ErrorPdf) throw e;
+    throw new ErrorPdf("PDF_ERROR_INTERNO");
+  }
 }
