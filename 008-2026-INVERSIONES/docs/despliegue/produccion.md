@@ -263,7 +263,7 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
      - lee las especies y los fondos de `instrumento`, de `lote` solo `instrumentoId` (qué especies tienen lote), los símbolos y clases, el calendario, y de la certificación solo la fecha de corte y el precio de valoración;
      - `precio_cierre` y `valor_unidad_fondo`: INSERT sin `reemplazadoEn` (lo que inserta nace vigente) y UPDATE solo de `reemplazadoEn`;
      - nada de usuario, órdenes, filas crudas, cantidades ni costos; sin DELETE ni TRUNCATE.
-     - **Riesgo conocido:** con UPDATE de `reemplazadoEn` puede retirar o reabrir cierres vigentes. Ningún disparador lo acota todavía.
+     - **Riesgo conocido:** quien tenga su clave puede insertar cierres o valores falsos (también como VERIFICADO) y, con el UPDATE de `reemplazadoEn`, retirar o reabrir vigentes. Ningún disparador lo acota todavía: va en una migración aparte, antes de desplegar el servicio.
    - Esos permisos los aplica el migrador. Los de `inv_precios` se omiten si el rol no existe.
 3. **Desplegar:**
    ```sh

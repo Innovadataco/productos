@@ -29,7 +29,8 @@
 --   UPDATE solo de "reemplazadoEn" en esas dos tablas (versionado y retiro).
 -- Nada de usuario, órdenes, filas crudas, cantidades ni costos; sin DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL, y
 -- sin privilegios por defecto: una tabla o columna nueva no le llega hasta que se agregue aquí.
--- Riesgo conocido: con UPDATE de "reemplazadoEn" puede retirar o reabrir vigentes (no hay disparador que lo acote).
+-- Riesgo conocido: quien tenga su clave puede insertar cierres o valores falsos (también VERIFICADO) y, con UPDATE de
+-- "reemplazadoEn", retirar o reabrir vigentes. Ningún disparador lo acota todavía: va en una migración aparte.
 DO $$
 DECLARE
   t record;
