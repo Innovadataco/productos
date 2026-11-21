@@ -17,7 +17,11 @@ const yahoo = (barras: readonly Barra[]): Buscar => async () =>
     chart: { result: [{ meta: { currency: "COP" }, timestamp: barras.map((b) => ts(b.dia)), indicators: { quote: [{ close: barras.map((b) => b.close), volume: barras.map((b) => b.volume) }] } }] },
   }));
 
-interface Fila { id: string; instrumentoId: string; fecha: Date; precio: Prisma.Decimal; fuente: string; reemplazadoEn: Date | null }
+/** Como una fila real: trae su verificación (sin certificación en esta base, NO_VERIFICADO sin referencia). */
+interface Fila {
+  id: string; instrumentoId: string; fecha: Date; precio: Prisma.Decimal; fuente: string; reemplazadoEn: Date | null;
+  estado: "VERIFICADO" | "NO_VERIFICADO"; fuenteReferencia: string | null; precioReferencia: Prisma.Decimal | null; desviacionPct: Prisma.Decimal | null;
+}
 type Donde = { id?: string; instrumentoId?: string; fecha?: Date | { in: Date[] }; fuente?: string; reemplazadoEn?: null };
 const mismaFecha = (f: Date, w: Date | { in: Date[] }) => (w instanceof Date ? [w] : w.in).some((d) => d.getTime() === f.getTime());
 const cumple = (w: Donde) => (f: Fila) =>
@@ -104,7 +108,10 @@ describe("actualizarPrecios · días no hábiles y sin negociación (base falsa)
     expect(vigentes(despues.filas)).toEqual([]);
   });
 
-  const previa = (dia: string, precio = 100): Fila => ({ id: `v-${dia}`, instrumentoId: ESPECIE, fecha: utc(dia), precio: new Prisma.Decimal(precio), fuente: "yahoo", reemplazadoEn: null });
+  const previa = (dia: string, precio = 100): Fila => ({
+    id: `v-${dia}`, instrumentoId: ESPECIE, fecha: utc(dia), precio: new Prisma.Decimal(precio), fuente: "yahoo", reemplazadoEn: null,
+    estado: "NO_VERIFICADO", fuenteReferencia: null, precioReferencia: null, desviacionPct: null,
+  });
   const SEMANA: Barra[] = [
     { dia: "2024-03-26", close: 100, volume: 1500 },
     { dia: "2024-03-27", close: 100, volume: 0 },

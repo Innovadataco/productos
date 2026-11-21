@@ -6,15 +6,15 @@ import type { ResultadoDepuracion } from "@/precios/depurar";
 import { reporteActualizacion, reporteDepuracion } from "@/precios/reporte";
 
 const base: ResultadoActualizacion = {
-  especies: 2, cierresNuevos: 3, cierresRevisados: 1, cierresRetirados: 4, verificados: 0,
+  especies: 2, cierresNuevos: 3, cierresRevisados: 1, cierresReverificados: 2, cierresRetirados: 4, verificados: 0,
   omitidasPorHorario: 1, omitidasNoHabil: 5, omitidasSinNegociacion: 6, omitidasSinCalendario: 0, fallidas: [],
 };
 
 describe("reporteActualizacion", () => {
-  it("resume los cambios y cada razón de omisión; sin fallos ni años sin calendario sale con 0", () => {
+  it("resume los cambios (también los re-verificados) y cada razón de omisión; sin fallos ni años sin calendario sale con 0", () => {
     expect(reporteActualizacion(base)).toEqual({
       lineas: [
-        "✅ 2 especie(s) · cierres nuevos: 3 · revisados: 1 · retirados (día no hábil o sin negociación): 4 · verificados en el rango: 0",
+        "✅ 2 especie(s) · cierres nuevos: 3 · revisados: 1 · re-verificados (mismo cierre, cambió la certificación del día): 2 · retirados (día no hábil o sin negociación): 4 · verificados en el rango: 0",
         "   omitidas · aún no definitivas (hora, hoy no hábil o fecha futura): 1 · día no hábil: 5 · sin negociación: 6 · sin calendario: 0",
       ],
       codigoSalida: 0,

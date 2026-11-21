@@ -15,7 +15,7 @@ export interface Reporte {
 
 export function reporteActualizacion(r: ResultadoActualizacion): Reporte {
   const lineas = [
-    `✅ ${r.especies} especie(s) · cierres nuevos: ${r.cierresNuevos} · revisados: ${r.cierresRevisados} · retirados (día no hábil o sin negociación): ${r.cierresRetirados} · verificados en el rango: ${r.verificados}`,
+    `✅ ${r.especies} especie(s) · cierres nuevos: ${r.cierresNuevos} · revisados: ${r.cierresRevisados} · re-verificados (mismo cierre, cambió la certificación del día): ${r.cierresReverificados} · retirados (día no hábil o sin negociación): ${r.cierresRetirados} · verificados en el rango: ${r.verificados}`,
     `   omitidas · aún no definitivas (hora, hoy no hábil o fecha futura): ${r.omitidasPorHorario} · día no hábil: ${r.omitidasNoHabil} · sin negociación: ${r.omitidasSinNegociacion} · sin calendario: ${r.omitidasSinCalendario}`,
   ];
   const fallos = r.fallidas.length === 0 ? [] : [

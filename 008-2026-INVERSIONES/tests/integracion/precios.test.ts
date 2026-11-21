@@ -68,17 +68,17 @@ describe("actualizarPrecios", () => {
 
   it("una barra que falla al guardar no aborta ni las demás barras ni las demás especies; se reporta con conteos y sin mensaje", async () => {
     const otro = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRD${corrida}`, nombre: "Ficticia B" } })).id;
-    // Certificación del 2-abr con valoración 1: el cierre de 100000 da una desviación que desborda Decimal(9,6).
-    const carga = await db.cargaArchivo.create({ data: { tipoFuente: "AV_CERTIFICACION", nombreArchivo: "cert2.ficticio.pdf", sha256: "d".repeat(64), estado: "CARGADO", cargadoPorId: duenoId } });
-    const cert = await db.certificacion.create({ data: { cargaId: carga.id, fechaCorte: new Date("2024-04-02T00:00:00Z"), saldoEfectivo: new Prisma.Decimal(0) } });
-    await db.certificacionPosicion.create({ data: { certificacionId: cert.id, instrumentoId, cantidad: 10n, precioValoracion: new Prisma.Decimal(1), valorMercado: new Prisma.Decimal(10) } });
     const ts = [Date.UTC(2024, 3, 2, 14, 30) / 1000, Date.UTC(2024, 3, 3, 14, 30) / 1000];
     const buscar: Buscar = async (url) => {
       const cierres = url.includes(`PRC${corrida}`) ? [100000, 150] : [200, 201];
       return respuestaChart(ts, cierres);
     };
-    const r = await actualizarPrecios(db, { desde: new Date("2024-04-02T00:00:00Z"), hasta: new Date("2024-04-03T00:00:00Z"), buscar, instrumentoIds: [instrumentoId, otro], ahora: new Date("2024-04-10T20:00:00Z") });
-    expect(r.fallidas).toEqual([{ instrumentoId, codigo: "GUARDADO_ERROR", detalle: expect.stringMatching(/^PrismaClient/), barrasGuardadas: 1, barrasFallidas: 1 }]);
+    // Falla la inserción del 2-abr de la primera especie (y solo esa barra).
+    const dosAbril = new Date("2024-04-02T00:00:00Z").getTime();
+    const cliente = conInsercionFallida(db, (d) => d.instrumentoId === instrumentoId && d.fecha.getTime() === dosAbril);
+    const r = await actualizarPrecios(cliente, { desde: new Date("2024-04-02T00:00:00Z"), hasta: new Date("2024-04-03T00:00:00Z"), buscar, instrumentoIds: [instrumentoId, otro], ahora: new Date("2024-04-10T20:00:00Z") });
+    expect(r.fallidas).toEqual([{ instrumentoId, codigo: "GUARDADO_ERROR", detalle: "ErrorFicticioDeInsercion", barrasGuardadas: 1, barrasFallidas: 1 }]);
+    expect(JSON.stringify(r)).not.toContain("424242");
     expect(r.cierresNuevos).toBe(3);
     const guardados = async (id: string) => (await db.precioCierre.findMany({ where: { instrumentoId: id, reemplazadoEn: null }, orderBy: { fecha: "asc" } })).map((p) => p.precio.toString());
     expect((await guardados(instrumentoId)).slice(-1)).toEqual(["150"]);
@@ -254,3 +254,138 @@ describe("actualizarPrecios · corridas simultáneas", () => {
     expect(await db.precioCierre.count({ where: { instrumentoId: id, reemplazadoEn: { not: null } } })).toBe(2);
   });
 });
+
+/**
+ * Re-verificación de un cierre igual al vigente: la certificación de A&V de ese día llega (o cambia)
+ * después de guardar el cierre. La verificación se recalcula y, si difiere, se versiona como una revisión:
+ * el anterior queda con `reemplazadoEn` (historia) y se inserta el mismo precio con la verificación de hoy.
+ * Días hábiles inventados de septiembre de 2024 (sin festivos en calendario_bvc), uno por caso, porque
+ * `certificacion.fechaCorte` es única.
+ */
+describe("actualizarPrecios · re-verificación de un cierre igual", () => {
+  const AHORA = new Date("2024-09-30T20:00:00Z");
+  const especie = async (sufijo: string) => (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRV${sufijo}${corrida}`, nombre: "Ficticia V" } })).id;
+  const certificar = async (id: string, fechaCorte: Date, precioValoracion: string, sha: string) => {
+    const carga = await db.cargaArchivo.create({ data: { tipoFuente: "AV_CERTIFICACION", nombreArchivo: `cert-${sha}.ficticio.pdf`, sha256: sha.repeat(64), estado: "CARGADO", cargadoPorId: duenoId } });
+    const cert = await db.certificacion.create({ data: { cargaId: carga.id, fechaCorte, saldoEfectivo: new Prisma.Decimal(0) } });
+    await db.certificacionPosicion.create({ data: { certificacionId: cert.id, instrumentoId: id, cantidad: 10n, precioValoracion: new Prisma.Decimal(precioValoracion), valorMercado: new Prisma.Decimal(0) } });
+    return cert.id;
+  };
+  const correr = (id: string, dia: Date, cierre: number, cliente: PrismaClient = db) =>
+    actualizarPrecios(cliente, { desde: dia, hasta: dia, buscar: (async () => respuestaChart([dia.getTime() / 1000 + 14.5 * 3600], [cierre])) as Buscar, instrumentoIds: [id], ahora: AHORA });
+  const verificacion = (p: { precio: Prisma.Decimal; estado: string; fuenteReferencia: string | null; precioReferencia: Prisma.Decimal | null; desviacionPct: Prisma.Decimal | null }) =>
+    [p.precio.toString(), p.estado, p.fuenteReferencia, p.precioReferencia?.toString() ?? null, p.desviacionPct?.toString() ?? null];
+  const vigentesDe = async (id: string) => (await db.precioCierre.findMany({ where: { instrumentoId: id, reemplazadoEn: null } })).map(verificacion);
+  const historiaDe = async (id: string) => (await db.precioCierre.findMany({ where: { instrumentoId: id, reemplazadoEn: { not: null } } })).map(verificacion);
+
+  it("NO_VERIFICADO sin certificación; llega la certificación del día y el mismo cierre se versiona como VERIFICADO; repetir no cambia nada", async () => {
+    const id = await especie("A");
+    const dia = new Date("2024-09-10T00:00:00Z");
+    expect(await correr(id, dia, 250)).toMatchObject({ cierresNuevos: 1, fallidas: [] });
+    expect(await vigentesDe(id)).toEqual([["250", "NO_VERIFICADO", null, null, null]]);
+    await certificar(id, dia, "251", "1"); // 1/251 = 0,398406 %
+    const r = await correr(id, dia, 250);
+    expect(await vigentesDe(id)).toEqual([["250", "VERIFICADO", "certificacion:2024-09-10", "251", "0.398406"]]);
+    expect(await historiaDe(id)).toEqual([["250", "NO_VERIFICADO", null, null, null]]);
+    const otraVez = await correr(id, dia, 250);
+    expect(await db.precioCierre.count({ where: { instrumentoId: id } })).toBe(2);
+    expect(r).toMatchObject({ cierresNuevos: 0, cierresRevisados: 0, cierresReverificados: 1, fallidas: [] });
+    expect(otraVez).toMatchObject({ cierresNuevos: 0, cierresRevisados: 0, cierresReverificados: 0, fallidas: [] });
+  });
+
+  it("VERIFICADO que deja de cuadrar (la certificación del día cambió a más del 1 %): se versiona como NO_VERIFICADO con la referencia nueva", async () => {
+    const id = await especie("B");
+    const dia = new Date("2024-09-11T00:00:00Z");
+    const certificacionId = await certificar(id, dia, "250", "2");
+    expect(await correr(id, dia, 250)).toMatchObject({ cierresNuevos: 1, fallidas: [] });
+    expect(await vigentesDe(id)).toEqual([["250", "VERIFICADO", "certificacion:2024-09-11", "250", "0"]]);
+    // Simula una certificación corregida (en la app se revierte la carga y se importa otra); aquí solo se cambia el dato inventado.
+    await db.certificacionPosicion.update({ where: { certificacionId_instrumentoId: { certificacionId, instrumentoId: id } }, data: { precioValoracion: new Prisma.Decimal("260") } });
+    const r = await correr(id, dia, 250);
+    expect(await vigentesDe(id)).toEqual([["250", "NO_VERIFICADO", "certificacion:2024-09-11", "260", "3.846154"]]); // 10/260
+    expect(await historiaDe(id)).toEqual([["250", "VERIFICADO", "certificacion:2024-09-11", "250", "0"]]);
+    expect(r).toMatchObject({ cierresNuevos: 0, cierresRevisados: 0, cierresReverificados: 1, fallidas: [] });
+  });
+
+  it("si la versión re-verificada no se puede insertar, el retiro se deshace: el vigente queda intacto y se informa GUARDADO_ERROR sin el mensaje", async () => {
+    const id = await especie("D");
+    const dia = new Date("2024-09-13T00:00:00Z");
+    expect(await correr(id, dia, 250)).toMatchObject({ cierresNuevos: 1, fallidas: [] });
+    await certificar(id, dia, "251", "4");
+    const r = await correr(id, dia, 250, conInsercionFallida(db));
+    expect(await vigentesDe(id)).toEqual([["250", "NO_VERIFICADO", null, null, null]]);
+    expect(await db.precioCierre.count({ where: { instrumentoId: id } })).toBe(1);
+    expect(r.fallidas).toEqual([{ instrumentoId: id, codigo: "GUARDADO_ERROR", detalle: "ErrorFicticioDeInsercion", barrasGuardadas: 0, barrasFallidas: 1 }]);
+    expect(JSON.stringify(r)).not.toContain("424242");
+    expect(r).toMatchObject({ cierresNuevos: 0, cierresRevisados: 0, cierresReverificados: 0 });
+    // Sin la falla, la corrida siguiente re-verifica.
+    expect(await correr(id, dia, 250)).toMatchObject({ cierresReverificados: 1, fallidas: [] });
+    expect(await vigentesDe(id)).toEqual([["250", "VERIFICADO", "certificacion:2024-09-13", "251", "0.398406"]]);
+  });
+
+  it("un VERIFICADO cuya certificación queda absurda (valoración 1: 24 900 %, no cabe en Decimal(9,6)) pasa a NO_VERIFICADO con la referencia y sin desviación; no se atasca", async () => {
+    const id = await especie("E");
+    const dia = new Date("2024-09-16T00:00:00Z");
+    const certificacionId = await certificar(id, dia, "250", "5");
+    expect(await correr(id, dia, 250)).toMatchObject({ cierresNuevos: 1, fallidas: [] });
+    await db.certificacionPosicion.update({ where: { certificacionId_instrumentoId: { certificacionId, instrumentoId: id } }, data: { precioValoracion: new Prisma.Decimal("1") } });
+    const r = await correr(id, dia, 250);
+    expect(await vigentesDe(id)).toEqual([["250", "NO_VERIFICADO", "certificacion:2024-09-16", "1", null]]);
+    expect(r).toMatchObject({ cierresReverificados: 1, fallidas: [] });
+    expect(await correr(id, dia, 250)).toMatchObject({ cierresReverificados: 0, fallidas: [] });
+  });
+
+  it("un cierre nuevo con certificación de valoración 0 se guarda NO_VERIFICADO con la referencia y sin desviación (no se pierde el precio)", async () => {
+    const id = await especie("F");
+    const dia = new Date("2024-09-17T00:00:00Z");
+    await certificar(id, dia, "0", "6");
+    const r = await correr(id, dia, 250);
+    expect(await vigentesDe(id)).toEqual([["250", "NO_VERIFICADO", "certificacion:2024-09-17", "0", null]]);
+    expect(r).toMatchObject({ cierresNuevos: 1, fallidas: [] });
+  });
+
+  it("dos corridas que re-verifican a la vez dejan una sola versión nueva, sin errores (el reintento corre siempre)", async () => {
+    const id = await especie("C");
+    const dia = new Date("2024-09-12T00:00:00Z");
+    expect(await correr(id, dia, 250)).toMatchObject({ cierresNuevos: 1, fallidas: [] });
+    await certificar(id, dia, "250", "3");
+    const esperar = barreraPorClave(2);
+    const [a, b] = [conBarreraTrasLeer(db, esperar), conBarreraTrasLeer(db, esperar)];
+    const resultados = await Promise.all([correr(id, dia, 250, a.db), correr(id, dia, 250, b.db)]);
+    expect(resultados.flatMap((r) => r.fallidas)).toEqual([]);
+    expect(await vigentesDe(id)).toEqual([["250", "VERIFICADO", "certificacion:2024-09-12", "250", "0"]]);
+    expect(await db.precioCierre.count({ where: { instrumentoId: id } })).toBe(2);
+    // 2 lecturas a la vez, más 1 relectura de la corrida que pierde la carrera.
+    expect(a.lecturas() + b.lecturas()).toBe(3);
+    expect(resultados[0]!.cierresReverificados + resultados[1]!.cierresReverificados).toBe(1);
+  });
+});
+
+type DatosCierre = { readonly instrumentoId: string; readonly fecha: Date };
+type ArgsCreacion = Parameters<Delegado["create"]>[0];
+
+/**
+ * Cliente de prueba cuya inserción de cierres falla dentro de la transacción (después del retiro con guarda,
+ * si lo hay) cuando `debeFallar` lo dice; las demás inserciones pasan a la base.
+ */
+function conInsercionFallida(base: PrismaClient, debeFallar: (datos: DatosCierre) => boolean = () => true): PrismaClient {
+  const crear = (delegado: Delegado) => async (args: ArgsCreacion) => {
+    if (debeFallar(args.data as DatosCierre)) throw Object.assign(new Error("valor 424242 en la consulta"), { name: "ErrorFicticioDeInsercion" });
+    return delegado.create(args);
+  };
+  const envolver = <T extends object>(cliente: T): T =>
+    new Proxy(cliente, {
+      get(objetivo, prop) {
+        if (prop === "precioCierre") {
+          const delegado = Reflect.get(objetivo, prop) as Delegado;
+          return new Proxy(delegado, { get: (d, p) => (p === "create" ? crear(d) : Reflect.get(d, p)) });
+        }
+        if (prop === "$transaction") {
+          return (fn: (tx: Prisma.TransactionClient) => Promise<unknown>, opciones?: Parameters<PrismaClient["$transaction"]>[1]) =>
+            (objetivo as unknown as PrismaClient).$transaction((tx) => fn(envolver(tx)), opciones);
+        }
+        return Reflect.get(objetivo, prop);
+      },
+    });
+  return envolver(base);
+}
