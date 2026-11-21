@@ -25,9 +25,9 @@ const activas = new Map(
 );
 const obligatorias = new Set([...compose.matchAll(/\$\{([A-Z0-9_]+):\?/g)].map((m) => m[1]!));
 const opcionales = new Set([...ejemplo.matchAll(/^# ([A-Z0-9_]+)=/gm)].map((m) => m[1]!));
-// Las que lee un script y todavía no interpola el compose. INV_PRECIOS_DATABASE_URL: la lee crear-roles-prod.sh para
-// crear inv_precios; el servicio de precios (PR 3) la llevará al compose y entonces sale de esta lista.
-const SOLO_DE_SCRIPTS = ["INV_PRECIOS_DATABASE_URL"];
+// Las que lee un script y todavía no interpola el compose. Hoy ninguna: INV_PRECIOS_DATABASE_URL salió de esta lista
+// cuando el servicio de precios (PR 3, D-018) la llevó al compose (opcional, ${…:-}).
+const SOLO_DE_SCRIPTS: string[] = [];
 
 describe("plantilla del archivo de producción", () => {
   it("cubre exactamente las variables que interpola el compose y las que lee solo un script (las opcionales, comentadas)", () => {
@@ -40,6 +40,13 @@ describe("plantilla del archivo de producción", () => {
       expect(enCompose.has(n), `${n} ya está en el compose: sáquela de SOLO_DE_SCRIPTS`).toBe(false);
       expect(rolesSh, n).toMatch(new RegExp(`leer_variable_env "\\$INV_ENV_PROD" ${n}\\b`));
     }
+  });
+
+  it("INV_PRECIOS_DATABASE_URL: la interpola el compose (opcional, sin :?) y la sigue leyendo crear-roles-prod.sh", () => {
+    expect(enCompose.has("INV_PRECIOS_DATABASE_URL")).toBe(true);
+    expect(obligatorias.has("INV_PRECIOS_DATABASE_URL")).toBe(false);
+    expect(compose).toContain("${INV_PRECIOS_DATABASE_URL:-}");
+    expect(leer008("scripts/crear-roles-prod.sh")).toMatch(/leer_variable_env "\$INV_ENV_PROD" INV_PRECIOS_DATABASE_URL\b/);
   });
 
   it("INV_PRECIOS_DATABASE_URL va solo comentada (sin ella se omite el rol) y con el formato del ESTADO", () => {
