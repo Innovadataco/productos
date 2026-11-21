@@ -149,6 +149,28 @@ describe("leerConciliacion", () => {
   });
 });
 
+describe("leerConciliacion: el recálculo falla en la base (code-reviewer MEDIO)", () => {
+  it("un error SQL real dentro del recálculo no tumba la lectura: NO_SE_PUDO_COMPROBAR, lo guardado y lo por liquidar se muestran", async () => {
+    const c = await caso();
+    const r = await conciliarCertificacion(db, { fechaCorte: c.fecha });
+    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.mocked(esperado.leerEntradas).mockImplementationOnce(async (tx) => {
+      await tx.$queryRawUnsafe("SELECT * FROM tabla_ficticia_que_no_existe");
+      throw new Error("no se llega aquí");
+    });
+    try {
+      const l = (await leerConciliacion(db, c.fecha))!;
+      expect(l.frescura).toBe("NO_SE_PUDO_COMPROBAR");
+      expect(l.conciliacion!.id).toBe(r.conciliacionId);
+      expect(l.porLiquidar).toHaveLength(1);
+      expect(registro).toHaveBeenCalledWith(expect.stringMatching(/^\[conciliacion\] no se pudo comprobar si está al día \(error: PrismaClientKnownRequestError\/P2010\)$/));
+      expect((await leerConciliacion(db, c.fecha))!.frescura).toBe("AL_DIA");
+    } finally {
+      registro.mockRestore();
+    }
+  });
+});
+
 describe("cortesDisponibles y ultimaConciliacion", () => {
   it("lista los cortes del más reciente al más viejo, con el resultado de su última conciliación (o null), con tope", async () => {
     const sinConciliar = await caso();
