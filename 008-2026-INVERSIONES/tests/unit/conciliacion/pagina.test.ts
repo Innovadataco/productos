@@ -63,6 +63,9 @@ describe("src/app/conciliacion/page.tsx · sesión y base", () => {
     expect(texto(raiz.querySelector("h1"))).toBe("No se pudo leer la base de 008");
     expect(registro).toHaveBeenCalledTimes(1);
     expect(registro).toHaveBeenCalledWith("[conciliacion] no se pudo leer la base (código: P1001)");
+    // react-reviewer BAJO: la pantalla de base caída la ve el dueño: sin comandos.
+    expect(raiz.innerHTML).not.toMatch(/npm|npx|prisma|db:up/);
+    expect(texto(raiz)).toContain("avise a quien administra el sistema");
   });
 
   it("un error que no es de la base se propaga (lo atiende error.tsx)", async () => {
@@ -186,6 +189,29 @@ describe("src/app/conciliacion/page.tsx · la conciliación", () => {
       expect(html).not.toMatch(/\b(compre|compren|venda|vendan|recomendamos)\b/i);
       expect(html).toContain("no recomienda comprar ni vender");
     }
+  });
+});
+
+describe("src/app/conciliacion/page.tsx · revisión (react-reviewer)", () => {
+  it("cada tabla va en una caja desplazable con nombre, que el teclado puede enfocar (en el teléfono se desplaza)", async () => {
+    const raiz = await pantalla();
+    const tablas = [...raiz.querySelectorAll("table")];
+    expect(tablas).toHaveLength(3);
+    for (const tabla of tablas) {
+      const caja = tabla.parentElement!;
+      expect(caja.getAttribute("role"), tabla.getAttribute("aria-labelledby")!).toBe("region");
+      expect(caja.getAttribute("tabindex")).toBe("0");
+      expect(caja.getAttribute("aria-labelledby")).toBe(tabla.getAttribute("aria-labelledby"));
+    }
+  });
+
+  it("sin jerga: «comprobaciones» en vez de «controles» y el pie sin «base local»", async () => {
+    const raro = { tipo: "PRECIO", instrumentoId: "a", esperado: null, real: null, diferencia: null, tolerancia: null, resultado: "CUADRA", codigoMotivo: null, detalle: null, instrumento: null };
+    leerConciliacion.mockResolvedValueOnce({ ...LECTURA, conciliacion: { ...LECTURA.conciliacion!, controles: [...LECTURA.conciliacion!.controles, raro] } });
+    const todo = texto(await pantalla());
+    expect(todo).toContain("Hay 1 comprobación que esta pantalla todavía no sabe mostrar.");
+    expect(todo).toContain("Datos guardados en este sistema.");
+    expect(todo).not.toMatch(/\bcontrol(es)?\b|base local/);
   });
 });
 
