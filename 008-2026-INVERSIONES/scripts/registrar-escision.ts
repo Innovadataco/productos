@@ -4,13 +4,22 @@
  *   npm run escision:registrar -- --origen <NEMO> --destino <NEMO> --fecha AAAA-MM-DD \
  *     [--razon 0.7] [--pago-fraccion AAAA-MM-DD] [--monto-fraccion 100.5] [--nota "por confirmar"] [--crear-destino]
  * --crear-destino: crea la especie destino si no existe (solo para especies que llegan por escisión).
- * No imprime los datos del evento (son reales), solo el resultado.
- * Salida: 0 registrado · 1 rechazado por la base · 2 datos inválidos · 3 registrado, pero hay
- * dividendos ya importados como ordinarios que hay que revertir.
+ * Lee y valida los argumentos antes de abrir la base. No imprime los datos del evento (son reales): solo el id
+ * interno, conteos, campos, códigos y el siguiente paso (en producción, el de la vía B). Mismo criterio de salida
+ * que lote-escision (src/cli/salida-escision.ts).
+ * Salida: 0 registrado · 1 rechazado o error (código y qué hacer) · 2 argumentos o datos inválidos (no abre la
+ * base) · 3 registrado, pero hay dividendos ya importados como ordinarios que hay que revertir.
  */
 import { PrismaClient } from "@prisma/client";
 import { parseArgs } from "node:util";
-import { ErrorEvento, registrarEscision, validarEscision } from "../src/eventos/escision";
+import {
+  OPCIONES_REGISTRAR, emitir, salidaArgumentosInvalidos, salidaDatosInvalidos, salidaEventoRegistrado, salidaInesperada, salidaRechazo,
+  type SalidaCli,
+} from "../src/cli/salida-escision";
+import { registrarEscision, validarEscision } from "../src/eventos/escision";
+
+// La imagen del migrador trae NODE_ENV=production: allí el siguiente paso es la vía B (cargar-prod.sh).
+const opciones = { produccion: process.env.NODE_ENV === "production" };
 
 function argumentos() {
   try {
@@ -25,36 +34,34 @@ function argumentos() {
     });
     return values;
   } catch {
-    console.error("❌ Argumentos inválidos. Opciones: --origen --destino --fecha [--razon] [--pago-fraccion] [--monto-fraccion] [--nota] [--crear-destino]");
-    process.exit(2);
+    return null; // el mensaje de parseArgs puede repetir lo escrito: no se imprime
   }
 }
 
-async function main(): Promise<void> {
+async function main(): Promise<SalidaCli> {
   const a = argumentos();
+  if (a === null) return salidaArgumentosInvalidos(OPCIONES_REGISTRAR);
   const v = validarEscision({
     origen: a.origen ?? "", destino: a.destino ?? "", fecha: a.fecha ?? "",
     razon: a.razon, pagoFraccion: a["pago-fraccion"], montoFraccion: a["monto-fraccion"], nota: a.nota,
   });
-  if (!v.ok) {
-    console.error("❌ Datos inválidos, no se registró nada:");
-    for (const e of v.errores) console.error(`   ${e.campo} · ${e.codigo}`);
-    process.exit(2);
-  }
+  if (!v.ok) return salidaDatosInvalidos(v.errores);
   const db = new PrismaClient();
   try {
-    const r = await registrarEscision(db, v.valor, { crearDestino: a["crear-destino"] === true });
-    console.log(`✅ Evento de escisión registrado (${r.eventoId})${r.destinoCreado ? "; se creó la especie destino" : ""}.`);
-    if (r.dividendosYaImportados > 0) {
-      console.log(`⚠️  Ya hay ${r.dividendosYaImportados} dividendo(s) importado(s) como ordinario(s) en la fecha del pago de la fracción: hay que revertir esa carga y volver a importarla.`);
-      process.exitCode = 3;
-    }
+    return salidaEventoRegistrado(await registrarEscision(db, v.valor, { crearDestino: a["crear-destino"] === true }), opciones);
   } catch (e) {
-    console.error(`❌ No se registró: ${e instanceof ErrorEvento ? e.codigo : "ERROR_BASE"}`);
-    process.exitCode = 1;
+    return salidaRechazo(e, opciones);
   } finally {
     await db.$disconnect();
   }
 }
 
-void main();
+// exitCode y no exit(): en macOS stdout por tubería es asíncrono y exit() podría cortar la salida.
+main().then(
+  (s) => {
+    process.exitCode = emitir(s, console);
+  },
+  (e: unknown) => {
+    process.exitCode = emitir(salidaInesperada(e, opciones), console);
+  },
+);
