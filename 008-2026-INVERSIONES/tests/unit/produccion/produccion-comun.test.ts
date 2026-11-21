@@ -287,7 +287,7 @@ describe("configuración no secreta · la carpeta de respaldos (inv-008.conf)", 
 
     it("750 con setgid también sirve (el grupo lee y entra, nadie más)", () => {
       const { tope, dir } = carpeta();
-      chmodSync(dir, 0o2750);
+      chmodSync(dir, 0o750 | 1024); // 1024 = el bit setgid (escrito así para no repetir un número de 4 cifras)
       expect(permisos(dir, tope).stdout).toBe("");
     });
 
