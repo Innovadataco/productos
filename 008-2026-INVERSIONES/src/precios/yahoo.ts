@@ -20,6 +20,8 @@ export const BYTES_MAXIMOS_YAHOO = 2 * 1024 * 1024;
 export interface Cierre {
   readonly fecha: Date; // fecha de negocio en Colombia, a medianoche UTC
   readonly precio: string; // texto decimal canónico (hasta 6 decimales)
+  /** Volumen negociado de la barra: 0 es «sin negociación»; null si Yahoo no lo trae. */
+  readonly volumen: number | null;
 }
 
 export type ResultadoYahoo = { ok: true; cierres: Cierre[] } | { ok: false; codigo: string };
@@ -45,13 +47,26 @@ function fechaCot(segundos: number): Date | null {
 }
 
 interface RespuestaChart {
-  chart?: { result?: { meta?: { currency?: string }; timestamp?: number[]; indicators?: { quote?: { close?: (number | null)[] }[] } }[] | null; error?: unknown };
+  chart?: { result?: { meta?: { currency?: string }; timestamp?: number[]; indicators?: { quote?: { close?: (number | null)[]; volume?: unknown }[] } }[] | null; error?: unknown };
 }
 
 /**
- * Puro: convierte la respuesta de /v8/finance/chart en cierres. Exige COP y descarta huecos (null) y
- * barras con timestamp inválido. Series que no son arreglos, de largos distintos o de más de
- * BARRAS_MAXIMAS, o un precio sobre el tope, invalidan toda la respuesta (YAHOO_FORMATO).
+ * Volúmenes de la serie, uno por barra. Sin serie (ausente o null), todos null. Una serie que no es
+ * arreglo, de otro largo, o con un valor no nulo que no sea un número finito ≥ 0, es corrupta (null):
+ * no se adivina si hubo negociación.
+ */
+function leerVolumenes(volume: unknown, largo: number): (number | null)[] | null {
+  if (volume === undefined || volume === null) return Array.from({ length: largo }, () => null);
+  if (!Array.isArray(volume) || volume.length !== largo) return null;
+  const valores = volume.map((v: unknown) => (v === null || v === undefined ? null : typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : Number.NaN));
+  return valores.some((v) => Number.isNaN(v)) ? null : valores;
+}
+
+/**
+ * Puro: convierte la respuesta de /v8/finance/chart en cierres con su volumen. Exige COP y descarta
+ * huecos (null) y barras con timestamp inválido. Series que no son arreglos, de largos distintos o de
+ * más de BARRAS_MAXIMAS, un volumen corrupto o un precio sobre el tope invalidan toda la respuesta
+ * (YAHOO_FORMATO). Si el volumen es 0 o el día no es hábil, lo decide quien guarda (`negociacion.ts`).
  */
 export function parsearYahoo(cuerpo: unknown): ResultadoYahoo {
   const r = (cuerpo as RespuestaChart)?.chart?.result?.[0];
@@ -61,6 +76,8 @@ export function parsearYahoo(cuerpo: unknown): ResultadoYahoo {
   const cierres = r.indicators?.quote?.[0]?.close ?? [];
   if (!Array.isArray(ts) || !Array.isArray(cierres)) return { ok: false, codigo: "YAHOO_FORMATO" };
   if (ts.length !== cierres.length || ts.length > BARRAS_MAXIMAS) return { ok: false, codigo: "YAHOO_FORMATO" };
+  const volumenes = leerVolumenes(r.indicators?.quote?.[0]?.volume, ts.length);
+  if (!volumenes) return { ok: false, codigo: "YAHOO_FORMATO" };
   const porFecha = new Map<number, Cierre>();
   let corrupta = false;
   ts.forEach((t, i) => {
@@ -68,7 +85,7 @@ export function parsearYahoo(cuerpo: unknown): ResultadoYahoo {
     if (typeof valor === "number" && Number.isFinite(valor) && valor > PRECIO_MAXIMO_COP) corrupta = true;
     const precio = typeof valor === "number" ? canonico(valor) : null;
     const fecha = Number.isFinite(t) ? fechaCot(t) : null;
-    if (precio && fecha) porFecha.set(fecha.getTime(), { fecha, precio }); // si hay dos barras el mismo día, gana la última
+    if (precio && fecha) porFecha.set(fecha.getTime(), { fecha, precio, volumen: volumenes[i] ?? null }); // dos barras el mismo día: gana la última con precio, con su volumen
   });
   if (corrupta) return { ok: false, codigo: "YAHOO_FORMATO" };
   return { ok: true, cierres: [...porFecha.values()].sort((a, b) => a.fecha.getTime() - b.fecha.getTime()) };

@@ -64,6 +64,47 @@ describe("parsearYahoo", () => {
     expect(r.ok && r.cierres[0]!.precio).toBe("0.3");
   });
 
+  // SPEC-13 «nunca un precio viejo como de hoy»: el volumen dice si hubo negociación ese día.
+  const conVolumen = (close: (number | null)[], volume: unknown, ts = [T1, T2, T3]) => ({
+    chart: { result: [{ meta: { currency: "COP" }, timestamp: ts, indicators: { quote: [{ close, volume }] } }], error: null },
+  });
+
+  it("lee el volumen de cada barra (0 es «sin negociación»; null queda null)", () => {
+    const r = parsearYahoo(conVolumen([100, 100, 101], [1500, 0, null]));
+    expect(r.ok && r.cierres.map((c) => [c.fecha.toISOString().slice(0, 10), c.precio, c.volumen])).toEqual([
+      ["2024-03-12", "100", 1500], ["2024-03-13", "100", 0], ["2024-03-14", "101", null],
+    ]);
+  });
+
+  it("sin serie de volumen, cada barra queda con volumen null (se mantiene lo de hoy)", () => {
+    const r = parsearYahoo(respuesta([100, 101, 102]));
+    expect(r.ok && r.cierres.map((c) => c.volumen)).toEqual([null, null, null]);
+  });
+
+  it("con dos barras el mismo día, el volumen es el de la barra que gana el precio (la última con precio)", () => {
+    const mismoDia = [T1, T1 + 3600];
+    const ultima = parsearYahoo(conVolumen([100, 101], [0, 50], mismoDia));
+    expect(ultima.ok && ultima.cierres.map((c) => [c.precio, c.volumen])).toEqual([["101", 50]]);
+    const sinPrecio = parsearYahoo(conVolumen([100, null], [0, 50], mismoDia));
+    expect(sinPrecio.ok && sinPrecio.cierres.map((c) => [c.precio, c.volumen])).toEqual([["100", 0]]);
+  });
+
+  it.each([
+    ["no es un arreglo", "abc"],
+    ["es un objeto con largo", { length: 3 }],
+    ["tiene otro largo que timestamp", [1, 2]],
+  ])("una serie de volumen que %s invalida la respuesta (YAHOO_FORMATO)", (_caso, volume) => {
+    expect(parsearYahoo(conVolumen([100, 101, 102], volume))).toEqual({ ok: false, codigo: "YAHOO_FORMATO" });
+  });
+
+  it.each([
+    ["negativo", -1],
+    ["no finito", Number.POSITIVE_INFINITY],
+    ["texto", "0"],
+  ])("un volumen %s invalida la respuesta (YAHOO_FORMATO): no se adivina si hubo negociación", (_caso, valor) => {
+    expect(parsearYahoo(conVolumen([100, 101, 102], [10, valor, 10]))).toEqual({ ok: false, codigo: "YAHOO_FORMATO" });
+  });
+
   it.each([
     [{ chart: { result: null, error: { code: "Not Found" } } }, "YAHOO_SIN_DATOS"],
     [respuesta([1], [T1], "USD"), "YAHOO_MONEDA_NO_COP"],

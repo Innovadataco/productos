@@ -26,6 +26,18 @@ function minutosDelDiaEnBogota(ahora: Date): number {
   return local.getUTCHours() * MINUTOS_POR_HORA + local.getUTCMinutes();
 }
 
+/** Día `AAAA-MM-DD` de una fecha a medianoche UTC (la clave de `noHabiles`). */
+export const diaIso = (fecha: Date): string => fecha.toISOString().slice(0, 10);
+
+/**
+ * ¿Hay rueda en la BVC ese día? Ni fin de semana (gana aunque el calendario diga hábil) ni festivo
+ * (`esHabil = false` en calendario_bvc).
+ */
+export function esDiaHabil(fecha: Date, noHabiles: ReadonlySet<string>): boolean {
+  const diaSemana = fecha.getUTCDay();
+  return diaSemana !== 0 && diaSemana !== 6 && !noHabiles.has(diaIso(fecha));
+}
+
 /**
  * ¿La barra de `fecha` es definitiva? Días pasados, sí. Fechas futuras, no. La de hoy, solo si hoy
  * es día hábil (ni fin de semana ni festivo del calendario de la BVC) y ya pasó la hora definitiva.
@@ -34,7 +46,6 @@ export function barraDefinitiva(fecha: Date, ahora: Date, noHabiles: ReadonlySet
   const hoy = fechaEnBogota(ahora);
   if (fecha.getTime() < hoy.getTime()) return true;
   if (fecha.getTime() > hoy.getTime()) return false;
-  const diaSemana = hoy.getUTCDay();
-  if (diaSemana === 0 || diaSemana === 6 || noHabiles.has(hoy.toISOString().slice(0, 10))) return false;
+  if (!esDiaHabil(hoy, noHabiles)) return false;
   return minutosDelDiaEnBogota(ahora) >= HORA_BARRA_DEFINITIVA_COT.hora * MINUTOS_POR_HORA + HORA_BARRA_DEFINITIVA_COT.minuto;
 }

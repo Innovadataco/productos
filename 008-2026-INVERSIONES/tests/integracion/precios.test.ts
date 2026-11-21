@@ -231,11 +231,12 @@ function conBarreraTrasLeer(base: PrismaClient, esperar: (clave: string) => Prom
 describe("actualizarPrecios · corridas simultáneas", () => {
   it("dos corridas que leen a la vez dejan un solo cierre vigente por día, sin errores, al guardar y al revisar (el reintento corre siempre)", async () => {
     const id = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRG${corrida}`, nombre: "Ficticia G" } })).id;
-    const ts = [Date.UTC(2024, 7, 6, 14, 30) / 1000, Date.UTC(2024, 7, 7, 14, 30) / 1000];
+    // Martes 13 y miércoles 14 de agosto de 2024, hábiles (el 7 es festivo sembrado: Batalla de Boyacá).
+    const ts = [Date.UTC(2024, 7, 13, 14, 30) / 1000, Date.UTC(2024, 7, 14, 14, 30) / 1000];
     const ronda = async (cierres: number[]) => {
       const esperar = barreraPorClave(2);
       const [a, b] = [conBarreraTrasLeer(db, esperar), conBarreraTrasLeer(db, esperar)];
-      const opciones = { desde: new Date("2024-08-06T00:00:00Z"), hasta: new Date("2024-08-07T00:00:00Z"), buscar: (async () => respuestaChart(ts, cierres)) as Buscar, instrumentoIds: [id] };
+      const opciones = { desde: new Date("2024-08-13T00:00:00Z"), hasta: new Date("2024-08-14T00:00:00Z"), buscar: (async () => respuestaChart(ts, cierres)) as Buscar, instrumentoIds: [id] };
       const resultados = await Promise.all([actualizarPrecios(a.db, opciones), actualizarPrecios(b.db, opciones)]);
       return { resultados, lecturas: a.lecturas() + b.lecturas() };
     };
