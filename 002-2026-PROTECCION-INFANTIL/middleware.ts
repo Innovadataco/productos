@@ -86,6 +86,24 @@ async function verificarJwt(token: string | undefined): Promise<{ sub: string; r
     }
 }
 
+/**
+ * SPEC-979 (I-460): el muro de Edge devolvía los 403 de /api/** SIN dejar rastro — por eso el
+ * encierro del paso 5 del colegio (0 estudiantes → 403 CAMINO_INCOMPLETO a su propia lista) fue
+ * INVISIBLE en `docker logs` hasta que Jelk lo vio en vivo. Deja UNA línea por bloqueo de API
+ * (método · ruta · código · estado), SIN PII: ni ids, ni query string, ni datos de sesión.
+ */
+function bloqueoApi(
+    request: NextRequest,
+    pathname: string,
+    status: number,
+    code: string,
+    message: string,
+    redirectTo: string,
+): NextResponse {
+    console.warn(`[MW] ${status} ${request.method} ${pathname} code=${code}`);
+    return NextResponse.json({ error: { message, code, redirectTo } }, { status });
+}
+
 function redirect(request: NextRequest, destino: string): NextResponse {
     return NextResponse.redirect(new URL(destino, request.url));
 }
@@ -301,20 +319,17 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                 if (pathname.startsWith("/api/")) {
                 // SPEC-329: las /api/** gateadas responden JSON 403, no 302 —
                 // un fetch no puede seguir un redirect y confundiría el bloqueo
-                // con un éxito.
-                    return NextResponse.json(
-                        {
-                            error: {
-                                // Voz por rol: al rector se le habla de usted (Colombia).
-                                message:
-                                    sesion.rol === "SCHOOL_ADMIN"
-                                        ? "Termine de configurar su cuenta para continuar."
-                                        : "Termina de configurar tu cuenta para continuar.",
-                                code: "CAMINO_INCOMPLETO",
-                                redirectTo: destino,
-                            },
-                        },
-                        { status: 403 }
+                // con un éxito. SPEC-979: además se registra en el servidor.
+                    return bloqueoApi(
+                        request,
+                        pathname,
+                        403,
+                        "CAMINO_INCOMPLETO",
+                        // Voz por rol: al rector se le habla de usted (Colombia).
+                        sesion.rol === "SCHOOL_ADMIN"
+                            ? "Termine de configurar su cuenta para continuar."
+                            : "Termina de configurar tu cuenta para continuar.",
+                        destino,
                     );
                 }
                 return aplicarCspSiCorresponde(request, redirect(request, destino));
@@ -326,9 +341,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                 if (estado.vigencia !== "ACTIVA" && estado.vigencia !== "EN_GRACIA") {
                     const destino = destinoVigencia(sesion.rol);
                     if (pathname.startsWith("/api/")) {
-                        return NextResponse.json(
-                            { error: { message: "Tu servicio no está vigente. Renueva para continuar.", code: "VIGENCIA_REQUERIDA", redirectTo: destino } },
-                            { status: 403 }
+                        return bloqueoApi(
+                            request,
+                            pathname,
+                            403,
+                            "VIGENCIA_REQUERIDA",
+                            "Tu servicio no está vigente. Renueva para continuar.",
+                            destino,
                         );
                     }
                     return aplicarCspSiCorresponde(request, redirect(request, destino));
