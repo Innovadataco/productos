@@ -201,14 +201,15 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
 - en producción, solo `prisma migrate deploy`;
 - solo migraciones **aditivas**: columnas nuevas con nulos o con valor por defecto, y nunca un DROP ni un RENAME en el mismo despliegue que la quita del código;
 - antes de cualquier DROP, revisar `pg_depend`;
-- el guardián del esquema (`scripts/verificar-esquema.sql`) corre después de `migrate deploy`. Compara contra las definiciones canónicas:
-  - los índices parciales, por su definición exacta y su unicidad;
-  - los CHECK y EXCLUDE, por su definición exacta;
-  - los disparadores: tabla, tipo, función y que estén habilitados;
-  - el md5 de la función de solo inserción;
-  - las extensiones.
-  
-  Si algo falta o cambió, aborta antes de levantar la app.
+- el guardián del esquema (`scripts/verificar-esquema.sql`) corre después de `migrate deploy`, con su propio `search_path = public`. Compara contra las definiciones canónicas de PostgreSQL 16:
+  - **índices únicos y parciales** (los únicos de Prisma sostienen la idempotencia de las cargas): definición exacta, unicidad, y que estén válidos, listos y vivos. Ningún índice del esquema puede quedar a medias, aunque no esté en la lista;
+  - **llaves primarias y foráneas:** definición exacta, con su ON DELETE y ON UPDATE (todas RESTRICT/RESTRICT), y validadas. Toda FK debe tener un índice que empiece por sus columnas;
+  - **CHECK y EXCLUDE:** definición exacta y validados. Los de su lista `sin_validar` se aceptan NOT VALID hasta que una migración posterior los valide. Antes de esa migración, el dueño corre `scripts/contar-sin-validar.sql` (solo lectura, solo conteos);
+  - **disparadores:** definición exacta (`pg_get_triggerdef`: eventos, `UPDATE OF`, `WHEN` y función) y habilitados. Ninguno sobra y ninguno está deshabilitado, incluidos los internos de las FK;
+  - el **md5** del código de cada función escrita a mano;
+  - las **extensiones**.
+
+  Si algo falta o cambió, aborta antes de levantar la app. Si la migración misma falla, ver la §10.
 
 ## 6 · Respaldos
 - **El contenedor `inv-008-respaldo`** es permanente y programa el respaldo él mismo, sin systemd ni cron del host:
@@ -298,6 +299,27 @@ Lo aplica el coordinador con el CEO de PI, en una ventana acordada y **solo con 
 - **Limpieza:** al final, `docker compose -p inv-008-prueba down -v`, que borra solo ese proyecto.
 - **Resultados:** en [capas-pi.md](capas-pi.md#ensayo-local-salidas).
 
+## 10 · Si una migración falla (P3009)
+**Qué pasa.** Verificado en el Mac el 2026-11-21 con una migración de ensayo en una base `_test`:
+- Prisma corre cada `migration.sql` en **una sola transacción**: si una sentencia falla, la migración se deshace entera y la base queda como estaba antes de ella.
+- Pero la fila de esa migración queda en `_prisma_migrations` sin `finished_at`, y **el siguiente `migrate deploy` se niega con P3009** hasta que alguien la resuelva.
+- `desplegar-prod.sh` se detiene en el migrador, no levanta la app nueva y su vuelta atrás deja corriendo la imagen que había.
+
+**Qué se hace:**
+1. **No reintentar** el despliegue ni tocar la base. Se lee el error del migrador: código SQLSTATE y mensaje, que no traen valores de las filas.
+2. Se avisa al **CEO de 008** con el nombre de la migración y el error.
+3. **`prisma migrate resolve --rolled-back <nombre>` es una decisión del CEO, nunca automática.** Ningún script lo corre. Solo se decide después de confirmar dos cosas:
+   - que la migración se deshizo entera: sus objetos no existen;
+   - que la causa se corrigió. Si la migración ya entró en otra base, la corrección va en una migración **nueva**; nunca se edita la fallida.
+4. **Si el CEO lo decide**, se corre con el rol `inv_dueno` en el contenedor del migrador, con el mismo patrón de `crear-acceso-inicial.sh`. Este comando **no se ha probado contra producción**:
+   ```sh
+   sudo $COMPOSE run --rm -T inv-008-migrador node_modules/.bin/prisma migrate resolve --rolled-back <nombre> --schema prisma/schema.prisma
+   ```
+   Después se despliega de nuevo, normal.
+- Nunca `migrate resolve --applied` para una migración que falló: marcaría como aplicado algo que no está.
+- Las migraciones de 008 toman `SET LOCAL lock_timeout = '5s'`. Si la app vieja retiene una tabla, el migrador falla rápido, se deshace y se sigue este mismo procedimiento.
+
 ---
+> v2.1 · 2026-11-21 · 03:27 (-05) · Inversiones · Fábrica ECC (frente base) · §5: el guardián nuevo; §10: migración fallida y P3009 (`migrate resolve` lo decide el CEO)
 > v2.0 · 2026-11-21 · 00:40 (-05) · Inversiones · Fábrica ECC (frente producción) · correcciones de la GATE 2 (VPS compartido con PI)
 > v1.0 · 2026-11-20 · 23:59 (-05) · Inversiones · Fábrica ECC (frente producción)

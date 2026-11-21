@@ -1,6 +1,7 @@
 // Integración del esquema del login (D-014) contra la base de PRUEBAS. Datos inventados.
-// Candado: el registro de intentos es de solo inserción y los CHECK escritos a mano muerden.
-import { PrismaClient } from "@prisma/client";
+// Candado: el registro de intentos es de solo inserción, los CHECK escritos a mano muerden y las transiciones
+// de usuario (versión de sesión, clave y TOTP) solo van hacia adelante.
+import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const db = new PrismaClient();
@@ -49,16 +50,86 @@ describe("esquema del login", () => {
 
   it("claveHash solo admite bcrypt de costo 12", async () => {
     await expect(db.usuario.update({ where: { id: usuarioId }, data: { claveHash: HASH_DE_FORMA_VALIDA } })).resolves.toBeTruthy();
-    await expect(db.usuario.update({ where: { id: usuarioId }, data: { claveHash: `$2b$10$${"a".repeat(53)}` } })).rejects.toThrow(
+    // Con la versión de sesión subiendo (como cambia la clave el login): lo que frena es el CHECK.
+    const conVersion = (claveHash: string) => ({ claveHash, sesionVersion: { increment: 1 } });
+    await expect(db.usuario.update({ where: { id: usuarioId }, data: conVersion(`$2b$10$${"a".repeat(53)}`) })).rejects.toThrow(
       /usuario_clave_hash_chk/,
     );
-    await expect(db.usuario.update({ where: { id: usuarioId }, data: { claveHash: "texto-plano-ficticio" } })).rejects.toThrow(
+    await expect(db.usuario.update({ where: { id: usuarioId }, data: conVersion("texto-plano-ficticio") })).rejects.toThrow(
       /usuario_clave_hash_chk/,
     );
   });
 
-  it("sesionVersion no baja de 1", async () => {
-    await expect(db.usuario.update({ where: { id: usuarioId }, data: { sesionVersion: 0 } })).rejects.toThrow(/usuario_sesion_version_chk/);
+  it("sesionVersion no nace por debajo de 1", async () => {
+    await expect(
+      db.usuario.create({ data: { email: `esquema-${corrida}-v0@ejemplo.invalid`, rol: "DUENO", sesionVersion: 0 } }),
+    ).rejects.toThrow(/usuario_sesion_version_chk/);
+  });
+});
+
+// D2 (database-reviewer): inv_app tiene UPDATE por columna en usuario (docker/migrador/privilegios.sql). Sin
+// el disparador usuario_transiciones, una app comprometida podía bajar sesionVersion y revivir JWT revocados.
+describe("transiciones de usuario (disparador usuario_transiciones)", () => {
+  /** Hash bcrypt de costo 12 con forma válida, distinto del de arriba (no es de ninguna contraseña usada). */
+  const OTRO_HASH = `$2b$12$${"b".repeat(53)}`;
+  const SOBRE = { v: 1, kid: "v1", iv: "AAAAAAAAAAAAAAAA", tag: "AAAAAAAAAAAAAAAAAAAAAA==", ct: "AAAA" };
+  let k = 0;
+  const nuevo = async (datos: Record<string, unknown> = {}) =>
+    (await db.usuario.create({ data: { email: `transiciones-${corrida}-${(k += 1)}@ejemplo.invalid`, rol: "DUENO", ...datos } })).id;
+
+  it("sesionVersion nunca baja: cerrar sesiones no se deshace", async () => {
+    const id = await nuevo({ sesionVersion: 3 });
+    await expect(db.usuario.update({ where: { id }, data: { sesionVersion: 2 } })).rejects.toThrow(/la versión de sesión no baja/);
+    await expect(db.usuario.update({ where: { id }, data: { sesionVersion: 3, bloqueadoHasta: null } })).resolves.toBeTruthy();
+    await expect(db.usuario.update({ where: { id }, data: { sesionVersion: { increment: 1 } } })).resolves.toMatchObject({ sesionVersion: 4 });
+  });
+
+  it("sesionVersion sube de a uno: un salto no agota el entero (cerraría el acceso para siempre, porque no baja)", async () => {
+    const id = await nuevo();
+    await expect(db.usuario.update({ where: { id }, data: { sesionVersion: 3 } })).rejects.toThrow(/la versión de sesión sube de a uno/);
+    await expect(db.usuario.update({ where: { id }, data: { sesionVersion: 2_147_483_647 } })).rejects.toThrow(/la versión de sesión sube de a uno/);
+    await expect(db.usuario.update({ where: { id }, data: { sesionVersion: { increment: 1 } } })).resolves.toMatchObject({ sesionVersion: 2 });
+  });
+
+  it("con el TOTP activo, el último paso no se puede poner en NULL sin apagarlo (lo frena usuario_totp_chk)", async () => {
+    const id = await nuevo({ totpSecreto: SOBRE, totpActivadoEn: new Date(), totpUltimoPaso: 100 });
+    await expect(db.usuario.update({ where: { id }, data: { totpUltimoPaso: null } })).rejects.toThrow(/usuario_totp_chk/);
+  });
+
+  it("cambiar o quitar la clave exige subir sesionVersion en el mismo UPDATE (así lo hace definirClave)", async () => {
+    const id = await nuevo({ claveHash: HASH_DE_FORMA_VALIDA });
+    await expect(db.usuario.update({ where: { id }, data: { claveHash: OTRO_HASH } })).rejects.toThrow(/cambiar o quitar la clave/);
+    await expect(db.usuario.update({ where: { id }, data: { claveHash: null } })).rejects.toThrow(/cambiar o quitar la clave/);
+    await expect(db.usuario.update({ where: { id }, data: { claveHash: OTRO_HASH, sesionVersion: { increment: 1 } } })).resolves.toBeTruthy();
+  });
+
+  it("la primera clave (de nula a un hash) no exige subir la versión: sin clave no había sesión que cerrar", async () => {
+    const id = await nuevo();
+    await expect(db.usuario.update({ where: { id }, data: { claveHash: HASH_DE_FORMA_VALIDA } })).resolves.toMatchObject({ sesionVersion: 1 });
+  });
+
+  it("con el TOTP activo, el último paso nunca baja (antireplay)", async () => {
+    const id = await nuevo({ totpSecreto: SOBRE, totpActivadoEn: new Date(), totpUltimoPaso: 100 });
+    await expect(db.usuario.update({ where: { id }, data: { totpUltimoPaso: 99 } })).rejects.toThrow(/último paso del TOTP no baja/);
+    await expect(db.usuario.update({ where: { id }, data: { totpUltimoPaso: 100, presesionHash: null } })).resolves.toBeTruthy();
+    await expect(db.usuario.update({ where: { id }, data: { totpUltimoPaso: 101 } })).resolves.toBeTruthy();
+  });
+
+  it("apagar el TOTP (reiniciarlo) exige subir sesionVersion; después se puede enrolar de nuevo desde el paso que toque", async () => {
+    const id = await nuevo({ totpSecreto: SOBRE, totpActivadoEn: new Date(), totpUltimoPaso: 100 });
+    const apagar = { totpSecreto: Prisma.DbNull, totpActivadoEn: null, totpUltimoPaso: null };
+    await expect(db.usuario.update({ where: { id }, data: apagar })).rejects.toThrow(/apagar el TOTP/);
+    await expect(db.usuario.update({ where: { id }, data: { ...apagar, sesionVersion: { increment: 1 } } })).resolves.toBeTruthy();
+    await expect(db.usuario.update({ where: { id }, data: { totpSecreto: SOBRE, totpActivadoEn: new Date(), totpUltimoPaso: 5 } })).resolves.toBeTruthy();
+  });
+
+  it("es un disparador BEFORE UPDATE por fila, sin columnas ni WHEN (no se esquiva tocando otra columna)", async () => {
+    const filas = await db.$queryRaw<{ def: string }[]>`
+      SELECT pg_get_triggerdef(t.oid) AS def FROM pg_trigger t
+      WHERE t.tgrelid = 'public.usuario'::regclass AND t.tgname = 'usuario_transiciones'`;
+    expect(filas.map((f) => f.def)).toEqual([
+      "CREATE TRIGGER usuario_transiciones BEFORE UPDATE ON public.usuario FOR EACH ROW EXECUTE FUNCTION inv_usuario_transiciones()",
+    ]);
   });
 });
 

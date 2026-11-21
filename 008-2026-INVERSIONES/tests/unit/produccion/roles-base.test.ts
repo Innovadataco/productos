@@ -98,6 +98,17 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     await expect(app.$executeRawUnsafe(`UPDATE token_acceso SET "usadoEn" = now() WHERE id = 't-roles'`)).rejects.toThrow(/un solo uso/);
   });
 
+  it("inv_app tiene UPDATE de sesionVersion pero no la puede bajar: no revive JWT revocados (D2, disparador)", async () => {
+    // Usuario propio (no depende del caso anterior), con la versión ya subida una vez.
+    const dueno = new PrismaClient({ datasources: { db: { url: conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA) } } });
+    await dueno.$executeRawUnsafe(`INSERT INTO usuario (id, email, rol, "sesionVersion") VALUES ('u-roles-d2', 'roles-d2@ejemplo.invalid', 'DUENO', 2)`);
+    await dueno.$disconnect();
+    await expect(app.$executeRawUnsafe(`UPDATE usuario SET "sesionVersion" = "sesionVersion" - 1 WHERE id = 'u-roles-d2'`)).rejects.toThrow(/la versión de sesión no baja/);
+    await expect(app.$executeRawUnsafe(`UPDATE usuario SET "sesionVersion" = 2147483647 WHERE id = 'u-roles-d2'`)).rejects.toThrow(/sube de a uno/);
+    await expect(app.$executeRawUnsafe(`UPDATE usuario SET "claveHash" = '$2b$12$${"c".repeat(53)}' WHERE id = 'u-roles-d2'`)).resolves.toBe(1);
+    await expect(app.$executeRawUnsafe(`UPDATE usuario SET "claveHash" = NULL WHERE id = 'u-roles-d2'`)).rejects.toThrow(/cambiar o quitar la clave/);
+  });
+
   for (const sql of [
     'INSERT INTO orden ("id") VALUES (\'x\')',
     "DELETE FROM usuario WHERE false",

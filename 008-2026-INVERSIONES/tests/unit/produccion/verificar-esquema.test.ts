@@ -1,13 +1,27 @@
 // Guardián del esquema (scripts/verificar-esquema.sql): Prisma no ve lo escrito a mano en las migraciones
-// (índices parciales, CHECK, EXCLUDE, disparadores, la función de solo inserción y las extensiones). La lista
-// del guardián debe ser EXACTAMENTE la que sale de prisma/migrations: si alguien agrega uno y no lo suma,
-// esto se pone rojo. Las definiciones exactas las comprueba roles-base.test.ts contra PostgreSQL real.
+// (índices parciales, CHECK, EXCLUDE, disparadores, funciones y extensiones) y nadie vigilaba lo que Prisma sí
+// crea pero de lo que depende la integridad (índices únicos, llaves primarias y foráneas con su ON DELETE).
+// La lista del guardián debe ser EXACTAMENTE la que sale de prisma/migrations: si alguien agrega uno y no lo
+// suma, esto se pone rojo. Las definiciones exactas las comprueban contra PostgreSQL real
+// tests/integracion/guardian-esquema.test.ts (en el Mac y en el CI) y roles-base.test.ts (solo CI).
+// Límites del lector de migraciones (por regex): exige nombres entre comillas (lo hace cumplir una prueba de
+// abajo), no modela DROP TABLE, DROP COLUMN ni RENAME (hoy ninguna migración los usa) y quita los `--` de
+// comentario sin mirar si caen dentro de un literal.
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { leer008, ruta008 } from "./falsos";
 
-type Objetos = { indices: Set<string>; restricciones: Set<string>; disparadores: Set<string>; funciones: Set<string>; extensiones: Set<string> };
+interface Objetos {
+  readonly indices: Set<string>;
+  readonly restricciones: Set<string>;
+  readonly sinValidar: Set<string>;
+  readonly llaves: Set<string>;
+  readonly llavesSinValidar: Set<string>;
+  readonly disparadores: Set<string>;
+  readonly funciones: Set<string>;
+  readonly extensiones: Set<string>;
+}
 
 const migraciones = (): string[] => {
   const dir = ruta008("prisma/migrations");
@@ -18,21 +32,49 @@ const migraciones = (): string[] => {
     .map((c) => readFileSync(path.join(dir, c, "migration.sql"), "utf8").replace(/--.*$/gm, ""));
 };
 
-/** Recorre las migraciones en orden y devuelve lo escrito a mano que sigue vivo (resta los DROP). */
+type Evento = { readonly pos: number; readonly aplicar: (o: Objetos) => void };
+
+/** Los cambios de una migración, en el orden en que aparecen (un DROP seguido de un ADD del mismo nombre deja el objeto). */
+function eventos(sql: string): Evento[] {
+  const de = (re: RegExp, aplicar: (o: Objetos, m: RegExpMatchArray) => void): Evento[] =>
+    [...sql.matchAll(re)].map((m) => ({ pos: m.index ?? 0, aplicar: (o: Objetos) => aplicar(o, m) }));
+  return [
+    // Índices únicos (de Prisma o a mano) y parciales (a mano).
+    ...de(/CREATE\s+UNIQUE\s+INDEX\s+"([^"]+)"/gi, (o, m) => o.indices.add(m[1]!)),
+    ...de(/CREATE\s+INDEX\s+"([^"]+)"[^;]*?\bWHERE\b/gi, (o, m) => o.indices.add(m[1]!)),
+    // CHECK y EXCLUDE con nombre (también dentro de CREATE TABLE); los NOT VALID quedan aparte hasta su VALIDATE.
+    ...de(/CONSTRAINT\s+"([^"]+)"\s+(?:CHECK|EXCLUDE)\b([^;]*)/gi, (o, m) => {
+      o.restricciones.add(m[1]!);
+      if (/\bNOT\s+VALID\b/i.test(m[2]!)) o.sinValidar.add(m[1]!);
+    }),
+    // Llaves primarias y foráneas (Prisma las crea; su ON DELETE y ON UPDATE van en la definición).
+    ...de(/CONSTRAINT\s+"([^"]+)"\s+(?:PRIMARY\s+KEY|FOREIGN\s+KEY)\b([^;]*)/gi, (o, m) => {
+      o.llaves.add(m[1]!);
+      if (/\bNOT\s+VALID\b/i.test(m[2]!)) o.llavesSinValidar.add(m[1]!);
+    }),
+    ...de(/VALIDATE\s+CONSTRAINT\s+"([^"]+)"/gi, (o, m) => {
+      o.sinValidar.delete(m[1]!);
+      o.llavesSinValidar.delete(m[1]!);
+    }),
+    ...de(/CREATE\s+TRIGGER\s+"([^"]+)"/gi, (o, m) => o.disparadores.add(m[1]!)),
+    ...de(/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+"([^"]+)"/gi, (o, m) => o.funciones.add(m[1]!)),
+    ...de(/CREATE\s+EXTENSION\s+(?:IF\s+NOT\s+EXISTS\s+)?"([^"]+)"/gi, (o, m) => o.extensiones.add(m[1]!)),
+    ...de(/DROP\s+INDEX\s+(?:IF\s+EXISTS\s+)?"([^"]+)"/gi, (o, m) => o.indices.delete(m[1]!)),
+    ...de(/DROP\s+CONSTRAINT\s+(?:IF\s+EXISTS\s+)?"([^"]+)"/gi, (o, m) => {
+      for (const s of [o.restricciones, o.sinValidar, o.llaves, o.llavesSinValidar]) s.delete(m[1]!);
+    }),
+    ...de(/DROP\s+TRIGGER\s+(?:IF\s+EXISTS\s+)?"([^"]+)"/gi, (o, m) => o.disparadores.delete(m[1]!)),
+    ...de(/DROP\s+FUNCTION\s+(?:IF\s+EXISTS\s+)?"([^"]+)"/gi, (o, m) => o.funciones.delete(m[1]!)),
+  ].sort((a, b) => a.pos - b.pos);
+}
+
+/** Recorre las migraciones en orden y devuelve lo que sigue vivo al final. */
 function desdeMigraciones(): Objetos {
-  const o: Objetos = { indices: new Set(), restricciones: new Set(), disparadores: new Set(), funciones: new Set(), extensiones: new Set() };
-  for (const sql of migraciones()) {
-    for (const m of sql.matchAll(/CREATE\s+(?:UNIQUE\s+)?INDEX\s+"([^"]+)"[^;]*?\bWHERE\b/gi)) o.indices.add(m[1]!);
-    // También los CHECK y EXCLUDE con nombre dentro de CREATE TABLE, no solo los ADD CONSTRAINT.
-    for (const m of sql.matchAll(/(?:ADD\s+)?CONSTRAINT\s+"([^"]+)"\s+(?:CHECK|EXCLUDE)\b/gi)) o.restricciones.add(m[1]!);
-    for (const m of sql.matchAll(/CREATE\s+TRIGGER\s+"([^"]+)"/gi)) o.disparadores.add(m[1]!);
-    for (const m of sql.matchAll(/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+"([^"]+)"/gi)) o.funciones.add(m[1]!);
-    for (const m of sql.matchAll(/CREATE\s+EXTENSION\s+(?:IF\s+NOT\s+EXISTS\s+)?"([^"]+)"/gi)) o.extensiones.add(m[1]!);
-    for (const m of sql.matchAll(/DROP\s+INDEX\s+(?:IF\s+EXISTS\s+)?"([^"]+)"/gi)) o.indices.delete(m[1]!);
-    for (const m of sql.matchAll(/DROP\s+CONSTRAINT\s+(?:IF\s+EXISTS\s+)?"([^"]+)"/gi)) o.restricciones.delete(m[1]!);
-    for (const m of sql.matchAll(/DROP\s+TRIGGER\s+(?:IF\s+EXISTS\s+)?"([^"]+)"/gi)) o.disparadores.delete(m[1]!);
-    for (const m of sql.matchAll(/DROP\s+FUNCTION\s+(?:IF\s+EXISTS\s+)?"([^"]+)"/gi)) o.funciones.delete(m[1]!);
-  }
+  const o: Objetos = {
+    indices: new Set(), restricciones: new Set(), sinValidar: new Set(), llaves: new Set(), llavesSinValidar: new Set(),
+    disparadores: new Set(), funciones: new Set(), extensiones: new Set(),
+  };
+  for (const sql of migraciones()) for (const e of eventos(sql)) e.aplicar(o);
   return o;
 }
 
@@ -45,12 +87,15 @@ const bloque = (nombre: string): string => {
 /** Nombres de una lista de filas ['tabla', 'nombre', …] (columna 2) o ['nombre', …] (columna 1). */
 const nombres = (lista: string, columna: 1 | 2): string[] =>
   [...bloque(lista).matchAll(/\[\s*'((?:[^']|'')*)'\s*,\s*'((?:[^']|'')*)'/g)].map((m) => m[columna]!);
+/** Elementos de una lista plana de textos: ARRAY['a', 'b']. */
+const planos = (lista: string): string[] => [...bloque(lista).matchAll(/'((?:[^']|'')*)'/g)].map((m) => m[1]!);
 
-describe("verificar-esquema.sql coincide con lo escrito a mano en las migraciones", () => {
+describe("verificar-esquema.sql coincide con las migraciones", () => {
   const esperado = desdeMigraciones();
   const casos: Array<[string, Set<string>, 1 | 2]> = [
-    ["indices_parciales", esperado.indices, 2],
+    ["indices", esperado.indices, 2],
     ["restricciones", esperado.restricciones, 2],
+    ["llaves", esperado.llaves, 2],
     ["disparadores", esperado.disparadores, 2],
     ["funciones", esperado.funciones, 1],
   ];
@@ -63,16 +108,54 @@ describe("verificar-esquema.sql coincide con lo escrito a mano en las migracione
     });
   }
 
+  it("indices: trae cada índice único de Prisma del que depende la idempotencia, y los del TOTP", () => {
+    expect(nombres("indices", 2)).toEqual(
+      expect.arrayContaining([
+        "fila_fuente_tipoFuente_claveNatural_ocurrencia_key",
+        "orden_filaFuenteId_key",
+        "dividendo_filaFuenteId_key",
+        "movimiento_caja_filaFuenteId_key",
+        "certificacion_fechaCorte_key",
+        "lote_ordenId_key",
+        "evento_corporativo_tipo_origenId_destinoId_fecha_key",
+        "codigo_recuperacion_codigoHash_key",
+        "token_acceso_tokenHash_key",
+      ]),
+    );
+  });
+
+  it("sin_validar: justo los CHECK que nacen NOT VALID y ninguna migración valida todavía", () => {
+    const enGuardian = planos("sin_validar");
+    expect(new Set(enGuardian).size).toBe(enGuardian.length);
+    expect([...enGuardian].sort()).toEqual([...esperado.sinValidar].sort());
+    for (const nombre of enGuardian) expect(esperado.restricciones.has(nombre), nombre).toBe(true);
+  });
+
+  it("ninguna FK queda NOT VALID al final de las migraciones (el guardián las exige validadas)", () => {
+    expect([...esperado.llavesSinValidar]).toEqual([]);
+  });
+
+  it("las migraciones nombran entre comillas cada índice, disparador, función, extensión y restricción (si no, esta prueba no los vería)", () => {
+    const sinComillas = migraciones().flatMap((sql) => [
+      ...sql.matchAll(/\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(?!(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?")\S+/gi),
+      ...sql.matchAll(/\bCREATE\s+(?:CONSTRAINT\s+)?TRIGGER\s+(?!")\S+/gi),
+      ...sql.matchAll(/\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?!")\S+/gi),
+      ...sql.matchAll(/\bCREATE\s+EXTENSION\s+(?!(?:IF\s+NOT\s+EXISTS\s+)?")\S+/gi),
+      ...sql.matchAll(/\bCONSTRAINT\s+(?!")\S+\s+(?:CHECK|EXCLUDE|PRIMARY|FOREIGN|UNIQUE)\b/gi),
+    ]).map((m) => m[0]);
+    expect(sinComillas).toEqual([]);
+  });
+
   it("extensiones: las mismas que crean las migraciones (btree_gist y citext)", () => {
-    const enGuardian = [...bloque("extensiones").matchAll(/'([^']+)'/g)].map((m) => m[1]!);
+    const enGuardian = planos("extensiones");
     expect(enGuardian.sort()).toEqual([...esperado.extensiones].sort());
     expect(enGuardian).toEqual(expect.arrayContaining(["btree_gist", "citext"]));
   });
 
-  it("las migraciones no traen CHECK sin nombre (el guardián no podría seguirlos)", () => {
+  it("las migraciones no traen CHECK ni EXCLUDE sin nombre (el guardián no podría seguirlos)", () => {
     for (const sql of migraciones()) {
       for (const sentencia of sql.split(";")) {
-        for (const m of sentencia.matchAll(/\bCHECK\s*\(/gi)) {
+        for (const m of sentencia.matchAll(/\b(?:CHECK\s*\(|EXCLUDE\s+USING\b)/gi)) {
           const antes = sentencia.slice(0, m.index).trimEnd();
           expect(antes, sentencia.slice(0, 120)).toMatch(/CONSTRAINT\s+"[^"]+"$/i);
         }
@@ -80,8 +163,13 @@ describe("verificar-esquema.sql coincide con lo escrito a mano en las migracione
     }
   });
 
-  it("compara definiciones exactas, tabla, tipo, función, habilitación, unicidad y el md5 de la función", () => {
-    for (const patron of [/pg_get_indexdef/, /indisunique/, /pg_get_constraintdef/, /convalidated/, /tgrelid/, /tgtype/, /tgfoid/, /habilitado NOT IN \('O', 'A'\)/, /md5\(p\.prosrc\)/, /pg_extension/, /RAISE EXCEPTION/]) {
+  it("compara definiciones exactas, validación, índices vivos, disparadores exactos y sin sobrantes, y el md5 de las funciones", () => {
+    for (const patron of [
+      /pg_get_indexdef/, /indisunique/, /indisvalid/, /indisready/, /indislive/,
+      /pg_get_constraintdef/, /convalidated/, /contype IN \('c', 'x'\)/, /contype IN \('p', 'f'\)/,
+      /pg_get_triggerdef/, /tgisinternal/, /tgenabled/, /habilitado NOT IN \('O', 'A'\)/,
+      /md5\(p\.prosrc\)/, /pg_extension/, /RAISE EXCEPTION/,
+    ]) {
       expect(guardian).toMatch(patron);
     }
   });
