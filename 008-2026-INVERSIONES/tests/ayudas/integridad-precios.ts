@@ -99,6 +99,8 @@ export function insertarCierre(ids: Ids, c: Cierre): string {
 interface Valor {
   readonly id: string;
   readonly fecha: string;
+  readonly valorUnidad?: string;
+  readonly valorFondo?: string | null;
   readonly fuente?: string;
   readonly traidoEn?: string;
   readonly reemplazadoEn?: string;
@@ -106,7 +108,7 @@ interface Valor {
 
 export function insertarValor(ids: Ids, v: Valor): string {
   const columnas = ["id", '"fondoId"', '"fechaValor"', '"valorUnidad"', '"valorFondo"', "fuente"];
-  const valores = [`'${v.id}-${ids.sufijo}'`, `'${ids.fondo}'`, v.fecha, "13719.2213", "731946.18", `'${v.fuente ?? "sfc:qhpu-8ixx"}'`];
+  const valores = [`'${v.id}-${ids.sufijo}'`, `'${ids.fondo}'`, v.fecha, v.valorUnidad ?? "13719.2213", numero(v.valorFondo === undefined ? "731946.18" : v.valorFondo), `'${v.fuente ?? "sfc:qhpu-8ixx"}'`];
   if (v.traidoEn) (columnas.push('"traidoEn"'), valores.push(v.traidoEn));
   if (v.reemplazadoEn) (columnas.push('"reemplazadoEn"'), valores.push(v.reemplazadoEn));
   return `INSERT INTO valor_unidad_fondo (${columnas.join(", ")}) VALUES (${valores.join(", ")})`;
@@ -182,6 +184,18 @@ export const RECHAZOS: readonly Rechazo[] = [
     sql: (i) => [insertarValor(i, { id: "f1", fecha: dia(SIN_CERTIFICACION), fuente: "otra" })] },
   { nombre: "fondo: un valor de mañana (en Colombia)", error: /valor_unidad_fondo: no hay valores de días futuros/,
     sql: (i) => [insertarValor(i, { id: "f2", fecha: `${HOY_COT} + 1` })] },
+  { nombre: "fondo: valor de unidad NaN (NaN > 0 es verdadero: el CHECK de la tabla no lo frena)", error: /valor_unidad_fondo: valor fuera de rango/,
+    sql: (i) => [insertarValor(i, { id: "f6a", fecha: dia(SIN_CERTIFICACION), valorUnidad: "'NaN'" })] },
+  { nombre: "fondo: valor de unidad sobre el tope de cordura (VALOR_UNIDAD_MAXIMO_COP)", error: /valor_unidad_fondo: valor fuera de rango/,
+    sql: (i) => [insertarValor(i, { id: "f6b", fecha: dia(SIN_CERTIFICACION), valorUnidad: "10000000.00000001" })] },
+  { nombre: "fondo: valor del fondo NaN", error: /valor_unidad_fondo: valor fuera de rango/,
+    sql: (i) => [insertarValor(i, { id: "f6c", fecha: dia(SIN_CERTIFICACION), valorFondo: "'NaN'" })] },
+  { nombre: "fondo: valor del fondo negativo", error: /valor_unidad_fondo: valor fuera de rango/,
+    sql: (i) => [insertarValor(i, { id: "f6d", fecha: dia(SIN_CERTIFICACION), valorFondo: "-731946.18" })] },
+  { nombre: "fondo: valor del fondo sobre el tope de cordura (VALOR_FONDO_MAXIMO_COP)", error: /valor_unidad_fondo: valor fuera de rango/,
+    sql: (i) => [insertarValor(i, { id: "f6e", fecha: dia(SIN_CERTIFICACION), valorFondo: "10000000000000000.0001" })] },
+  { nombre: "precio NaN (NaN > 0 es verdadero: el CHECK de la tabla no lo frena)", error: /precio_cierre: precio fuera de rango/,
+    sql: (i) => [insertarCierre(i, { id: "a7d", fecha: dia(SIN_CERTIFICACION), precio: "'NaN'", estado: "NO_VERIFICADO" })] },
   { nombre: "fondo: insertar un valor ya retirado", deMas: true, error: /valor_unidad_fondo: lo que se inserta nace vigente/,
     sql: (i) => [insertarValor(i, { id: "f5c", fecha: dia(SIN_CERTIFICACION), reemplazadoEn: "now()" })] },
   { nombre: "fondo: reabrir un valor retirado", error: /valor_unidad_fondo: lo retirado no se reabre ni se vuelve a fechar/,
@@ -234,6 +248,9 @@ export const ACEPTADOS: readonly Aceptado[] = [
   { nombre: "retirar un vigente con una fecha inventada: queda la hora de la base",
     sql: (i) => [`UPDATE precio_cierre SET "reemplazadoEn" = TIMESTAMPTZ '2003-07-19 08:41:13+00' WHERE id = '${i.vigente2}'`],
     verificar: (i) => `SELECT (${reciente("reemplazadoEn")}) AS ok FROM precio_cierre WHERE id = '${i.vigente2}'` },
+  { nombre: "fondo: sin valor del fondo (la SFC no lo trajo) entra",
+    sql: (i) => [insertarValor(i, { id: "okf4", fecha: dia("2018-05-11"), valorFondo: null })],
+    verificar: (i) => `SELECT ("valorFondo" IS NULL) AS ok FROM valor_unidad_fondo WHERE id = 'okf4-${i.sufijo}'` },
   { nombre: "fondo: un traidoEn inventado entra con la hora de la base",
     sql: (i) => [insertarValor(i, { id: "okf3", fecha: dia("2018-05-10"), traidoEn: "TIMESTAMPTZ '2003-07-19 08:41:13+00'" })],
     verificar: (i) => `SELECT (${reciente("traidoEn")}) AS ok FROM valor_unidad_fondo WHERE id = 'okf3-${i.sufijo}'` },

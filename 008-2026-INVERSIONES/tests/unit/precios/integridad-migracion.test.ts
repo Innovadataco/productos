@@ -6,7 +6,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { FUENTE_SFC } from "@/fondo/sfc";
+import { FUENTE_SFC, VALOR_FONDO_MAXIMO_COP, VALOR_UNIDAD_MAXIMO_COP } from "@/fondo/sfc";
 import { DESVIACION_PCT_MAXIMA, FUENTE, TOLERANCIA_VERIFICACION } from "@/precios/guardar";
 import { fechaEnBogota } from "@/precios/horario";
 import { PRECIO_MAXIMO_COP } from "@/precios/yahoo";
@@ -39,9 +39,20 @@ describe("migración *_precios_integridad", () => {
   it("cada función: SECURITY INVOKER (nunca DEFINER), search_path fijo, sin salida por GUC y exime solo al dueño", () => {
     expect(codigo).not.toMatch(/SECURITY\s+DEFINER/i);
     for (const f of funciones) {
-      expect(f.cuerpo, f.nombre).toMatch(/LANGUAGE plpgsql\s+SET search_path = pg_catalog, public AS \$\$/);
+      expect(f.cuerpo, f.nombre).toMatch(/LANGUAGE plpgsql\s+SET search_path = pg_catalog, public, pg_temp AS \$\$/);
       expect(f.cuerpo, f.nombre).not.toMatch(/current_setting|set_config|session_user|current_user\s*=/i);
       expect(f.cuerpo, f.nombre).toMatch(/IF pg_has_role\(\(SELECT c\.relowner FROM pg_catalog\.pg_class c WHERE c\.oid = TG_RELID\), 'USAGE'\) THEN/);
+    }
+  });
+
+  it("dice el riesgo residual completo (lo mismo que privilegios.sql)", () => {
+    const privilegios = readFileSync(path.join(raiz, "docker/migrador/privilegios.sql"), "utf8").replace(/\s*--\s*/g, " ");
+    const cabecera = sql.replace(/\s*--\s*/g, " ");
+    for (const texto of [cabecera, privilegios]) {
+      expect(texto).toMatch(/un precio falso dentro del ±1 % de la valoración de A&V entra como VERIFICADO/);
+      expect(texto).toMatch(/precios falsos NO_VERIFICADO, también en días con certificación/);
+      expect(texto).toMatch(/retirar vigentes de cualquier fuente, también en masa y sin sucesor/);
+      expect(texto).toMatch(/de cualquier instrumento/);
     }
   });
 
@@ -71,6 +82,11 @@ describe("la regla del disparador es la misma de src/precios y src/fondo", () =>
 
   it("el tope de cordura del precio: PRECIO_MAXIMO_COP (yahoo.ts y csv-cierres.ts)", () => {
     expect(codigo).toContain(`IF NEW."precio" > ${PRECIO_MAXIMO_COP} THEN`);
+  });
+
+  it("el rango del valor de unidad y del valor del fondo: el de leerDecimalSfc (> 0 y ≤ VALOR_*_MAXIMO_COP; frena NaN)", () => {
+    expect(codigo).toContain(`IF NOT (NEW."valorUnidad" > 0 AND NEW."valorUnidad" <= ${VALOR_UNIDAD_MAXIMO_COP.toFixed()})`);
+    expect(codigo).toContain(`OR (NEW."valorFondo" IS NOT NULL AND NOT (NEW."valorFondo" > 0 AND NEW."valorFondo" <= ${VALOR_FONDO_MAXIMO_COP.toFixed()})) THEN`);
   });
 
   it("la referencia se escribe como en guardar.ts: certificacion:AAAA-MM-DD", () => {

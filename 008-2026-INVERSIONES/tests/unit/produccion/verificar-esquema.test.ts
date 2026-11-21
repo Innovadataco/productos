@@ -182,9 +182,17 @@ describe("verificar-esquema.sql coincide con las migraciones", () => {
     expect(filas.length).toBe(nombres("funciones", 1).length);
     const config = new Map(filas.map((m) => [m[1]!, m[3]!]));
     for (const nombre of ["inv_precio_cierre_insercion", "inv_retiro_vigente", "inv_valor_unidad_fondo_insercion"]) {
-      expect(config.get(nombre), nombre).toBe("search_path=pg_catalog, public");
+      expect(config.get(nombre), nombre).toBe("search_path=pg_catalog, public, pg_temp");
     }
     for (const [nombre, valor] of config) if (!nombre.startsWith("inv_precio_") && !nombre.startsWith("inv_valor_") && nombre !== "inv_retiro_vigente") expect(valor, nombre).toBe("");
+  });
+
+  // La exención de los disparadores de integridad es «tener los privilegios del dueño»: si inv_precios o inv_app
+  // fueran miembros del dueño de esas tablas (GRANT inv_dueno TO …), quedarían eximidos (o con SET ROLE, dueños).
+  it("exige que inv_app e inv_precios no sean miembros del dueño de precio_cierre ni de valor_unidad_fondo", () => {
+    expect(guardian).toMatch(/WHERE r\.rolname IN \('inv_app', 'inv_precios'\)/);
+    expect(guardian).toMatch(/pg_has_role\(r\.oid, c\.relowner, 'MEMBER'\)/);
+    expect(guardian).toMatch(/to_regclass\('public\.precio_cierre'\), to_regclass\('public\.valor_unidad_fondo'\)/);
   });
 
   it("ninguna migración crea una función SECURITY DEFINER", () => {

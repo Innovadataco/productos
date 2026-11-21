@@ -205,7 +205,7 @@ describe("guardián del esquema: integridad de los precios", () => {
 
   it("falla si cambia el código de una función (deja pasar todo)", async () => {
     const romper = [
-      `CREATE OR REPLACE FUNCTION "inv_precio_cierre_insercion"() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, public AS $$ BEGIN RETURN NEW; END; $$`,
+      `CREATE OR REPLACE FUNCTION "inv_precio_cierre_insercion"() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$ BEGIN RETURN NEW; END; $$`,
     ];
     expect(await guardianTras(romper)).toContain("inv_precio_cierre_insercion");
   });
@@ -214,7 +214,8 @@ describe("guardián del esquema: integridad de los precios", () => {
     "falla si %s pasa a SECURITY DEFINER (eximiría a todos) o cambia su search_path",
     async (funcion) => {
       expect(await guardianTras([`ALTER FUNCTION "${funcion}"() SECURITY DEFINER`])).toContain(funcion);
-      expect(await guardianTras([`ALTER FUNCTION "${funcion}"() SET search_path = public, pg_catalog`])).toContain(funcion);
+      expect(await guardianTras([`ALTER FUNCTION "${funcion}"() SET search_path = public, pg_catalog, pg_temp`])).toContain(funcion);
+      expect(await guardianTras([`ALTER FUNCTION "${funcion}"() SET search_path = pg_catalog, public`])).toContain(funcion);
       expect(await guardianTras([`ALTER FUNCTION "${funcion}"() RESET search_path`])).toContain(funcion);
     },
   );
