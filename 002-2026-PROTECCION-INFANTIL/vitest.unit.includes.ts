@@ -900,4 +900,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-967: el override exceljs.uuid sigue justificado mientras exceljs DECLARE uuid < 11.1.1 (lee el
     // rango del package.json de exceljs, no el lock). Puro (filesystem + semver).
     "scripts/deps/exceljs-uuid-override.candado.test.ts",
+    // SPEC-976: el AGENTS.md RAÍZ describe la estructura real — no cita carpetas derogadas, y toda carpeta
+    // de producto NNN-AAAA-* y todo workflow *.yml que menciona EXISTE en disco. Puro (lee texto + fs).
+    "scripts/ci/agents-raiz.candado.test.ts",
 ];

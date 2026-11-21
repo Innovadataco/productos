@@ -1,58 +1,79 @@
 # AGENTS.md — productos
 
-## Proposito
+Monorepo oficial de **código** de los productos de IDC (Innovadataco). Repositorio
+**público**: nunca negocio, legal, secretos ni datos personales. La gestión de
+proyectos (actas, estado, decisiones) vive aparte, en `Innovadataco/Gestion-de-proyectos`.
 
-Reglas especificas para operar el repo `Innovadataco/productos`.
+Este archivo cubre solo **lo común del repo**. El detalle de cada producto manda en su
+propio `AGENTS.md`.
 
-## Estructura del repo
+## Estructura
 
-- `fabrica-de-software/`: codigo fuente de productos.
-- `documentacion-tecnica/`: arquitectura, ADRs, guias.
+Una carpeta por producto, `NNN-AAAA-<NOMBRE>`:
 
-## Reglas
+- `002-2026-PROTECCION-INFANTIL/` — Protección Infantil (PI): reportes comunitarios de
+  riesgos para menores. Next.js + Prisma + PostgreSQL. Con `AGENTS.md`.
+- `006-2026-BI-INTELIGENCIA-NEGOCIO/` — Inteligencia de Negocio (BI). Con `AGENTS.md`.
+- `007-2026-PIWEB/` — sitio de marketing de PI, **estático** (HTML/CSS/JS, sin build ni
+  backend). Solo `README.md`; no entra en el ruleset de CI.
+- `008-2026-INVERSIONES/` — Inversiones (INV): seguimiento de portafolio, solo lectura.
+  Con `AGENTS.md`. Metodología ECC (ver abajo).
 
-1. Cada producto tiene su propia carpeta.
-2. Todo PR requiere revision de codigo.
-3. Los secrets se manejan via variables de entorno, nunca en el codigo.
-4. Preferir modelos locales para revision de codigo sensible.
-
-## Responsable
-
-- **CEO** — sesión de IA que radica, revisa, mergea y despliega, bajo decisión de negocio de **Jelkin** (dueño). «ZEUS» era el nombre viejo del CEO.
-
-## Flujo de trabajo
-
-- Cada frente trabaja su SPEC en una rama `work/<producto>-SPEC-<N>-<slug>` y abre PR; **el merge y el deploy los hace el CEO** tras CI verde + revisión adversarial.
-- «ODIN» era el nombre viejo de Desarrollo; «ACTA-VALIDACION» era ceremonia de la metodología anterior, hoy retirada.
+Además: `mockups/` (prototipos) y `.github/workflows/` (CI).
 
 ## Ramas (INQUEBRANTABLE)
 
-- **`main` — rama canónica y de producción.** Recibe merges vía PR con CI verde. **Prohibido commitear directo a `main`.**
-- **Ramas de trabajo — dependen del producto.** PI y BI usan `work/<producto>-SPEC-<NNN>-<slug>` (A-47, una rama por spec). Otros productos pueden tener su propia convención; consultá el `AGENTS.md` de cada carpeta.
+- **`main`** es la rama canónica y de producción. **Prohibido commitear directo a `main`**:
+  todo entra por PR.
+- Rama de trabajo **desde `origin/main` fresco**, en un **worktree propio**:
+  - PI, BI e INV con SPEC numerada: `work/<pi|bi|inv>-SPEC-<N>-<slug>` (N entero, sin letras).
+  - 008 (INV) con metodología ECC, sin SPEC: `work/inv-<slug>`.
+- El check `verificar_base` (`.github/workflows/verificar-base-pr.yml`) rechaza cualquier PR
+  cuya base no sea `main` o cuya rama no cumpla esta convención. La regex viva está en ese
+  workflow.
 
-Ante la duda sobre qué rama usar: **consultá el `AGENTS.md` del producto y detente si hay ambigüedad**.
+## Staging (INQUEBRANTABLE)
 
-## Staging (INQUEBRANTABLE, todos los frentes)
+Cada frente stagea **solo rutas de su producto** (p. ej.
+`git add 002-2026-PROTECCION-INFANTIL/...`). **Prohibido `git add -A` y `git add .`**: varios
+frentes comparten el repo, y un staging global arrastra el trabajo de otro y arruina la
+trazabilidad del commit.
 
-Prohibido `git add -A` y `git add .`. Cada frente stagea SOLO rutas de su producto:
-`git add 002-2026-PROTECCION-INFANTIL/...`. Varios frentes trabajan en la misma rama: un staging
-global se lleva el trabajo de otro y arruina la trazabilidad del commit.
+## Merge y CI
 
-## Metodología y estándares (fábrica IDC)
+El **merge y el deploy los hace el CEO**, de a uno, dejando `main` en verde; nunca se mergea
+con el CI de `main` en rojo. Un PR entra con **CI verde + revisión adversarial**.
 
-- **Flujo vigente:** **radicado del CEO** (con el número de SPEC que él asigna) → **rama `work/<producto>-SPEC-<N>-<slug>`** desde `main` fresco → **PR con CI verde + revisión adversarial**; el CEO mergea y despliega. La metodología ceremonial (Spec Kit / Spec-Driven con set obligatorio de artefactos, `constitution.md`, `.specify/`) **quedó atrás**; `specs/NNN/` es home OPCIONAL de notas. La gestión (PM2) vive en el repo `Gestion-de-proyectos`.
-- **Roles (sesiones de IA, bajo Jelkin):** CEO (radica/revisa/mergea/despliega) · Dev (implementa) · Datos (modelo de datos) · Calidad (recorre) · Diseño (la forma) · Estrategia (lo comercial). «ZEUS/ODIN» eran los nombres viejos de CEO/Dev.
-- **5 reglas de oro:** SPEC numerada por el CEO + candado que muere con el defecto · subir a GitHub · pruebas · validar despliegue · documentar.
-- **Índice de specs (opcional):** si usás `002-2026-PROTECCION-INFANTIL/specs/`, mantené su `README.md` al día.
+Checks exigidos por el ruleset **«Gate CI - main»** en todo PR a `main`:
 
-## Reporte al CEO (handoff post-commit)
+| Check | Workflow | Cubre |
+|---|---|---|
+| `verificar_base` | `verificar-base-pr.yml` | Base `main` + convención de rama |
+| `pi-gate` | `ci.yml` | 002 · Protección Infantil |
+| `bi-gate` | `bi.yml` | 006 · BI |
+| `inv-gate` | `inv.yml` | 008 · Inversiones |
+| `frontera-008-main` | `inv-frontera.yml` | Encierra los PR `work/inv-` dentro de `008-2026-INVERSIONES/` (corre sobre `main` con `pull_request_target`, no desde la rama del PR) |
 
-Al terminar, Desarrollo NO pega reportes largos. Reporta compacto (el CEO lee el diff del repo):
+## Metodología
 
-```
-commit <hash> — <qué hizo, 1 línea>
-hallazgos/pendientes: <lista corta, o "ninguno">
-push: sí/no
-```
+- **PI (002) y BI (006):** manual 02 de ODIN — repo `Innovadataco/odin`,
+  `manuales-operativos/02-metodologia-desarrollo/`. Flujo: radicado del CEO (con el número de
+  SPEC) → rama → PR con **candado que muere con el defecto** → revisión adversarial → el CEO
+  mergea y despliega. Lo propio de PI vive en `Gestion-de-proyectos` (`EQUIPO/PROMPT-*.md`) y
+  en `002-2026-PROTECCION-INFANTIL/AGENTS.md`.
+- **008 (INV):** metodología **ECC** (affaan-m/ECC), sin SPEC ni radicados. Ver
+  `008-2026-INVERSIONES/AGENTS.md`.
 
-Solo se cuenta lo que NO se ve en el código: hallazgos, decisiones, deuda técnica.
+## Secretos
+
+Nunca en el código ni en el chat: solo por variables de entorno (dev en la máquina, prod en
+el VPS) y en el gestor de contraseñas. Si una clave se expone, se rota de inmediato.
+
+---
+> **📋 Control del documento** · v2.0 · 2026-11-20 · Autor: Dev 2 (PI) · SPEC-976 — reescrito a
+> la estructura real: 4 productos `NNN-AAAA-*` (se retiran dos carpetas ficticias que el texto
+> anterior citaba y que no existen en el repo); ramas pi/bi/inv + 008 ECC; ruleset «Gate CI -
+> main»; metodología = manual 02 / ECC. Se retiran las «5 reglas de oro» (derogadas) y la
+> referencia a la gestión como metodología del repo. Candado:
+> `002-2026-PROTECCION-INFANTIL/scripts/ci/agents-raiz.candado.test.ts`.
+> La versión anterior queda en el historial de git.
