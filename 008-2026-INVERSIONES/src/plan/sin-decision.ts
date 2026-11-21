@@ -8,9 +8,12 @@ import type { Db } from "./acceso";
 
 export interface OrdenSinDecision {
   readonly id: string;
-  /** Fila importada de donde salió (trazabilidad hasta el archivo). */
+  /** Fila importada de donde salió (trazabilidad hasta el archivo): su número y cuándo se cargó. */
   readonly filaFuenteId: string;
+  readonly filaNo: number;
+  readonly cargadaEn: Date;
   readonly instrumentoId: string;
+  readonly nemotecnico: string | null;
   readonly fechaOperacion: Date;
   readonly lado: LadoOrden;
   readonly cantidadCompletada: bigint;
@@ -25,11 +28,18 @@ export interface OrdenesSinDecision {
 
 export async function listarOrdenesSinDecision(db: Db): Promise<OrdenesSinDecision> {
   const primera = await db.planVersion.findFirst({ orderBy: { version: "asc" }, select: { vigenteDesde: true } });
-  const ordenes = await db.orden.findMany({
+  const filas = await db.orden.findMany({
     where: { estado: "APROBADO", enlacesDecision: { none: {} } },
-    select: { id: true, filaFuenteId: true, instrumentoId: true, fechaOperacion: true, lado: true, cantidadCompletada: true },
+    select: {
+      id: true, filaFuenteId: true, instrumentoId: true, fechaOperacion: true, lado: true, cantidadCompletada: true,
+      instrumento: { select: { nemotecnico: true } },
+      filaFuente: { select: { primeraFilaNo: true, primeraCarga: { select: { cargadoEn: true } } } },
+    },
     orderBy: [{ fechaOperacion: "asc" }, { id: "asc" }],
   });
+  const ordenes = filas.map(({ instrumento, filaFuente, ...o }): OrdenSinDecision => ({
+    ...o, nemotecnico: instrumento.nemotecnico, filaNo: filaFuente.primeraFilaNo, cargadaEn: filaFuente.primeraCarga.cargadoEn,
+  }));
   const inicioPlan = primera?.vigenteDesde ?? null;
   const anterior = (o: OrdenSinDecision) => inicioPlan === null || o.fechaOperacion < inicioPlan;
   return { inicioPlan, sinDecision: ordenes.filter((o) => !anterior(o)), anterioresAlPlan: ordenes.filter(anterior) };

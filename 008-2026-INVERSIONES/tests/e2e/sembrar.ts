@@ -20,6 +20,7 @@ import { importarArchivoTrii } from "../../src/importacion/trii/importar";
 import { construirLotes } from "../../src/lotes/construir";
 import { APP, DUENO_E2E, baseDePruebas, type BaseDePruebas } from "./base";
 import { sembrarConciliacion } from "./sembrar-conciliacion";
+import { sembrarPlan } from "./sembrar-plan";
 
 const FIXTURES = new URL("./fixtures/", import.meta.url);
 const ESPERA_PUERTO_MS = 1000;
@@ -105,6 +106,7 @@ async function sembrar(base: BaseDePruebas): Promise<void> {
     if (lotes.especiesSinLotes.length !== 1) throw new Error("La siembra esperaba exactamente una especie incompleta (FICTI).");
     await sembrarCierres(db);
     await sembrarConciliacion(db, id);
+    await sembrarPlan(db, id);
   } finally {
     await db.$disconnect();
   }
