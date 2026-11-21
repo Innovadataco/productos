@@ -68,7 +68,7 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 | `scripts/construir-imagen.sh <sha> [--guardar <carpeta>]` | Mac | Construye las tres imágenes desde `git archive <sha>`, corre `npm audit --omit=dev --audit-level=high` y verifica el sha de cada imagen |
 | `sudo scripts/desplegar-prod.sh <inv-008-app:<sha>> [--cargar <tar> <sha256>] [--sin-migrar]` | VPS, con sudo | Despliega con respaldo previo, migraciones, healthcheck y convivencia. Sin «DEPLOY VERIFICADO <sha>» como última línea, no se dio por desplegado |
 | `scripts/respaldar-base.sh [--motivo <x>]` | VPS | Respaldo cifrado ya (lo pide al contenedor `inv-008-respaldo`) |
-| `scripts/crear-roles-prod.sh` | VPS, con sudo | Crea los roles de la base de producción (claves desde el único archivo de secretos): `inv_dueno`, `inv_app` y, solo si el archivo trae `INV_PRECIOS_DATABASE_URL`, `inv_precios` (servicio de precios; sin la línea lo omite y avisa, mal formada aborta). Sus permisos, por columna, los da el migrador (`docker/migrador/privilegios.sql`) |
+| `scripts/crear-roles-prod.sh` | VPS, con sudo | Crea los roles de la base de producción (claves desde el único archivo de secretos): `inv_dueno`, `inv_app` e `inv_precios` (servicio de precios), siempre; `inv_precios` recibe LOGIN y clave solo si el archivo trae `INV_PRECIOS_DATABASE_URL` (sin la línea queda NOLOGIN y sin clave, mal formada aborta). Sus permisos, por columna, los da el migrador (`docker/migrador/privilegios.sql`), y lo que escribe lo acotan los disparadores de `20261121231049_precios_integridad` |
 | `scripts/pausar-008.sh` · `scripts/reanudar-008.sh` | VPS, con sudo | Pausa (`down` sin `-v`, con marca) y reanudación de Inversiones |
 | `scripts/medir-memoria.sh` · `scripts/vigilar-convivencia.sh` | VPS | Medición de memoria y revisión de convivencia con PI. Solo informan: el corte es manual |
 
@@ -135,6 +135,7 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.26 · 2026-11-21 · 18:32 (-05) · INV · Fábrica Inversiones (frente precios-integridad) · `crear-roles-prod.sh` crea siempre `inv_precios` (LOGIN solo con su URL) y los disparadores de integridad acotan lo que escribe
 > v1.25 · 2026-11-21 · 17:48 (-05) · INV · Fábrica Inversiones (frente fondo-carga) · el fondo por la vía B: `registrar-fondo` por el sobre, `fondo:exportar` (Mac) e `importar-valores-fondo` (camino único); en la carga, fondo → certificación → valores del fondo → precios → conciliación (la numeración v1.25 sigue a la v1.24 de main)
 > v1.24 · 2026-11-21 · 16:53 (-05) · INV · Fábrica Inversiones (frente precios-rol) · `crear-roles-prod.sh` también crea `inv_precios` si el archivo trae su URL
 > v1.23 · 2026-11-21 · 16:03 (-05) · INV · Fábrica Inversiones (frente reglas-exportar-restauracion) · `precios:exportar` con los símbolos del portafolio: la Fábrica solo con orden del CEO Inversiones (decisión del CEO, 2026-11-21)
