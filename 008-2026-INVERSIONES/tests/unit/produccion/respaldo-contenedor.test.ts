@@ -62,16 +62,23 @@ exec perl -e 'use Fcntl qw(:flock); open(my $fh, ">&=", $ARGV[0]) or exit 2; my 
     spawnSync("sh", [SCRIPT, ...args], { env: { ...env, ...mas } as unknown as NodeJS.ProcessEnv, encoding: "utf8" });
   const funcion = (codigo: string, entrada?: string) =>
     spawnSync("sh", ["-c", `. "$1"; ${codigo}`, "sh", SCRIPT], { env: { ...env, RESPALDO_CARGAR_SOLO: "1" } as unknown as NodeJS.ProcessEnv, input: entrada, encoding: "utf8" });
-  /** Como correr, pero sin bloquear: para dos respaldos a la vez. */
-  const lanzar = (args: string[], mas: Record<string, string> = {}) =>
+  /** Corre sh con esos argumentos sin bloquear el hilo de la prueba (con muchas corridas seguidas, un
+   *  spawnSync deja al worker de vitest sin responder: «Timeout calling onTaskUpdate»). */
+  const sinBloquear = (argumentos: string[], entorno: Record<string, string>, entrada?: string) =>
     new Promise<{ status: number | null; stdout: string; stderr: string }>((ok) => {
-      const hijo = spawn("sh", [SCRIPT, ...args], { env: { ...env, ...mas } as unknown as NodeJS.ProcessEnv });
+      const hijo = spawn("sh", argumentos, { env: entorno as unknown as NodeJS.ProcessEnv });
       let stdout = "";
       let stderr = "";
       hijo.stdout.on("data", (c: Buffer) => (stdout += c));
       hijo.stderr.on("data", (c: Buffer) => (stderr += c));
       hijo.on("close", (status) => ok({ status, stdout, stderr }));
+      if (entrada !== undefined) hijo.stdin.end(entrada);
     });
+  /** Como correr, pero sin bloquear: para dos respaldos a la vez y para las pruebas largas. */
+  const lanzar = (args: string[], mas: Record<string, string> = {}) => sinBloquear([SCRIPT, ...args], { ...env, ...mas });
+  /** Como funcion, pero sin bloquear. */
+  const funcionSinBloquear = (codigo: string, entrada = "") =>
+    sinBloquear(["-c", `. "$1"; ${codigo}`, "sh", SCRIPT], { ...env, RESPALDO_CARGAR_SOLO: "1" }, entrada);
   const candado = path.join(dir, "estado", "respaldo.candado");
   /** Toma el candado del respaldo desde fuera (como haría otro respaldo en curso) hasta que se suelte. */
   const sostener = () =>
@@ -86,7 +93,7 @@ exec perl -e 'use Fcntl qw(:flock); open(my $fh, ">&=", $ARGV[0]) or exit 2; my 
       });
       hijo.on("close", (codigo) => mal(new Error(`no se tomó el candado (${codigo})`)));
     });
-  return { dir, respaldos, registro, correr, funcion, lanzar, sostener, candado };
+  return { dir, respaldos, registro, correr, funcion, lanzar, funcionSinBloquear, sostener, candado };
 }
 
 const archivosDe = (dir: string) => readdirSync(dir).sort();
@@ -385,10 +392,10 @@ const extra = (ms: number, motivo: string) => `inv-008-${horaCot(ms)}-${motivo}.
 const AHORA = Date.UTC(2027, 8, 17, 17, 23, 41);
 
 /** Lo que respaldos_a_borrar borraría de `nombres` con «ahora» inyectado (y el recién escrito, si se da), ordenado. */
-function aBorrar(nombres: string[], ahoraMs: number, nuevo?: string) {
+async function aBorrar(nombres: string[], ahoraMs: number, nuevo?: string) {
   const r = preparar();
   const llamada = `respaldos_a_borrar ${horaCot(ahoraMs)}${nuevo === undefined ? "" : ` "${nuevo}"`}`;
-  const res = r.funcion(llamada, nombres.join("\n") + "\n");
+  const res = await r.funcionSinBloquear(llamada, nombres.join("\n") + "\n");
   expect(res.status, res.stderr).toBe(0);
   return res.stdout.split("\n").filter(Boolean).sort();
 }
@@ -396,44 +403,44 @@ function aBorrar(nombres: string[], ahoraMs: number, nuevo?: string) {
 // Lectura de la regla de los extras: un extra de las últimas 48 h y el más reciente de cada motivo nunca se
 // borran (son «protegidos»); de los demás se conservan los 10 más nuevos. Los protegidos no ocupan esos 10.
 describe("respaldo.sh · retención de extras (48 h, el último de cada motivo y 10 más)", () => {
-  it("el caso de hoy: 7 extras el mismo día (cargas y despliegues) y ninguno se borra", () => {
+  it("el caso de hoy: 7 extras el mismo día (cargas y despliegues) y ninguno se borra", async () => {
     const motivos = ["pre-migracion", "pre-carga", "post-carga", "pre-migracion", "post-precios", "pre-carga", "post-carga"];
     const nombres = [diario(AHORA - 10 * H), ...motivos.map((m, i) => extra(AHORA - i * 50 * 60_000, m))];
-    expect(aBorrar(nombres, AHORA)).toEqual([]);
+    expect(await aBorrar(nombres, AHORA)).toEqual([]);
   });
 
-  it("14 extras de las últimas 48 h: ninguno se borra (el tope de 10 no los toca)", () => {
+  it("14 extras de las últimas 48 h: ninguno se borra (el tope de 10 no los toca)", async () => {
     const nombres = Array.from({ length: 14 }, (_, k) => extra(AHORA - k * 3 * H, "pre-migracion"));
-    expect(aBorrar(nombres, AHORA)).toEqual([]);
+    expect(await aBorrar(nombres, AHORA)).toEqual([]);
   });
 
-  it("el más reciente de cada motivo sobrevive aunque sea viejo (carga y pre-carga son motivos distintos)", () => {
+  it("el más reciente de cada motivo sobrevive aunque sea viejo (carga y pre-carga son motivos distintos)", async () => {
     const viejos = Array.from({ length: 12 }, (_, k) => extra(AHORA - 72 * H - k * H, "pre-migracion"));
     const otros = [extra(AHORA - 30 * DIA, "pre-carga"), extra(AHORA - 31 * DIA, "carga"), extra(AHORA - 40 * DIA, "post-carga")];
     const postCargaVieja = extra(AHORA - 41 * DIA, "post-carga");
-    const borra = aBorrar([...viejos, ...otros, postCargaVieja], AHORA);
+    const borra = await aBorrar([...viejos, ...otros, postCargaVieja], AHORA);
     for (const n of otros) expect(borra, n).not.toContain(n);
     expect(borra).toEqual([viejos[11]!, postCargaVieja].sort());
   });
 
-  it("fuera de los protegidos, se conservan los 10 extras más nuevos y se borra el resto", () => {
+  it("fuera de los protegidos, se conservan los 10 extras más nuevos y se borra el resto", async () => {
     const quince = Array.from({ length: 15 }, (_, k) => extra(AHORA - 72 * H - k * H, "pre-migracion"));
     // quince[0] es el último de su motivo; de los otros 14 quedan los 10 más nuevos.
-    expect(aBorrar(quince, AHORA)).toEqual(quince.slice(11).sort());
+    expect(await aBorrar(quince, AHORA)).toEqual(quince.slice(11).sort());
     const recientes = [0, 1, 2].map((k) => extra(AHORA - k * H, "pre-migracion"));
     const doce = Array.from({ length: 12 }, (_, k) => extra(AHORA - 72 * H - k * H, "pre-migracion"));
     // Los 3 de 48 h no ocupan el tope: de los 12 viejos quedan 10.
-    expect(aBorrar([...recientes, ...doce], AHORA)).toEqual(doce.slice(10).sort());
+    expect(await aBorrar([...recientes, ...doce], AHORA)).toEqual(doce.slice(10).sort());
   });
 
-  it("diarios y semanales sin cambios: 14 y 8, aunque sean de las últimas 48 h y haya extras intercalados", () => {
+  it("diarios y semanales sin cambios: 14 y 8, aunque sean de las últimas 48 h y haya extras intercalados", async () => {
     const diarios = Array.from({ length: 20 }, (_, k) => diario(AHORA - k * H));
     const semanales = Array.from({ length: 10 }, (_, k) => semanal(AHORA - k * H - 60_000));
     const extras = [0, 5, 10].map((k) => extra(AHORA - k * H - 120_000, "pre-carga"));
-    expect(aBorrar([...diarios, ...semanales, ...extras], AHORA)).toEqual([...diarios.slice(14), ...semanales.slice(8)].sort());
+    expect(await aBorrar([...diarios, ...semanales, ...extras], AHORA)).toEqual([...diarios.slice(14), ...semanales.slice(8)].sort());
   });
 
-  it("a 48 h exactas un extra es reciente; a 48 h y 1 s, ya no (fin de mes, de año, 29 de febrero, 2000 y 2100)", () => {
+  it("a 48 h exactas un extra es reciente; a 48 h y 1 s, ya no (fin de mes, de año, 29 de febrero, 2000 y 2100)", async () => {
     const fechas = [
       Date.UTC(2020, 2, 1, 5),
       Date.UTC(2000, 2, 1, 5),
@@ -449,39 +456,39 @@ describe("respaldo.sh · retención de extras (48 h, el último de cada motivo y
         extra(ahora - H, "m"),
         ...Array.from({ length: 11 }, (_, i) => extra(ahora - 48 * H - corrimiento - i * 60_000, "m")),
       ];
-      expect(aBorrar(bloque(0), ahora), horaCot(ahora)).toEqual([]);
+      expect(await aBorrar(bloque(0), ahora), horaCot(ahora)).toEqual([]);
       const fuera = bloque(1000);
-      expect(aBorrar(fuera, ahora), horaCot(ahora)).toEqual([fuera[11]!]);
+      expect(await aBorrar(fuera, ahora), horaCot(ahora)).toEqual([fuera[11]!]);
     }
   });
 
-  it("un extra con fecha futura (reloj corrido) cuenta como reciente", () => {
+  it("un extra con fecha futura (reloj corrido) cuenta como reciente", async () => {
     const futuros = Array.from({ length: 12 }, (_, k) => extra(AHORA + (k + 1) * DIA, "pre-migracion"));
-    expect(aBorrar(futuros, AHORA)).toEqual([]);
+    expect(await aBorrar(futuros, AHORA)).toEqual([]);
   });
 
-  it("el recién escrito nunca se imprime, pero cuenta en el tope: 15 diarios viejos más el nuevo dejan 14", () => {
+  it("el recién escrito nunca se imprime, pero cuenta en el tope: 15 diarios viejos más el nuevo dejan 14", async () => {
     const viejos = Array.from({ length: 15 }, (_, k) => diario(AHORA - (k + 1) * DIA));
     const nuevo = diario(AHORA);
-    expect(aBorrar([nuevo, ...viejos], AHORA, nuevo)).toEqual(viejos.slice(13).sort());
+    expect(await aBorrar([nuevo, ...viejos], AHORA, nuevo)).toEqual(viejos.slice(13).sort());
   });
 
-  it("el recién escrito no se borra aunque haya 14 diarios u 8 semanales con fecha futura", () => {
+  it("el recién escrito no se borra aunque haya 14 diarios u 8 semanales con fecha futura", async () => {
     const diariosFuturos = Array.from({ length: 14 }, (_, k) => diario(AHORA + (k + 1) * DIA));
     const nuevoDiario = diario(AHORA);
-    expect(aBorrar([...diariosFuturos, nuevoDiario], AHORA, nuevoDiario)).toEqual([]);
+    expect(await aBorrar([...diariosFuturos, nuevoDiario], AHORA, nuevoDiario)).toEqual([]);
     const semanalesFuturos = Array.from({ length: 8 }, (_, k) => semanal(AHORA + (k + 1) * 7 * DIA));
     const nuevoSemanal = semanal(AHORA);
-    expect(aBorrar([...semanalesFuturos, nuevoSemanal], AHORA, nuevoSemanal)).toEqual([]);
+    expect(await aBorrar([...semanalesFuturos, nuevoSemanal], AHORA, nuevoSemanal)).toEqual([]);
   });
 
-  it("un motivo que termina en «-semanal» es un extra: no desplaza a los semanales ni pierde su protección", () => {
+  it("un motivo que termina en «-semanal» es un extra: no desplaza a los semanales ni pierde su protección", async () => {
     const semanales = Array.from({ length: 9 }, (_, k) => semanal(AHORA - (k + 1) * 7 * DIA));
     const raro = extra(AHORA - 100 * DIA, "x-semanal");
-    expect(aBorrar([...semanales, raro], AHORA)).toEqual([semanales[8]!]);
+    expect(await aBorrar([...semanales, raro], AHORA)).toEqual([semanales[8]!]);
   });
 
-  it("con «ahora» ausente, vacío, corto, largo, con letras o con un salto de línea: no imprime nada y falla", () => {
+  it("con «ahora» ausente, vacío, corto, largo, con letras o con un salto de línea: no imprime nada y falla", async () => {
     const r = preparar();
     const entrada = Array.from({ length: 20 }, (_, k) => extra(AHORA - 100 * DIA - k * H, "pre-migracion")).join("\n") + "\n";
     const llamadas = [
@@ -493,7 +500,7 @@ describe("respaldo.sh · retención de extras (48 h, el último de cada motivo y
       `respaldos_a_borrar "$(printf '20270917-120000\\nx')"`,
     ];
     for (const llamada of llamadas) {
-      const res = r.funcion(llamada, entrada);
+      const res = await r.funcionSinBloquear(llamada, entrada);
       expect(res.stdout, llamada).toBe("");
       expect(res.status, llamada).not.toBe(0);
     }
@@ -501,19 +508,19 @@ describe("respaldo.sh · retención de extras (48 h, el último de cada motivo y
 });
 
 describe("respaldo.sh · retención al guardar un respaldo (de punta a punta)", () => {
-  it("el caso de hoy: 6 extras de hoy y un --ahora --motivo post-carga; quedan los 7, cada uno con su .sha256", () => {
+  it("el caso de hoy: 6 extras de hoy y un --ahora --motivo post-carga; quedan los 7, cada uno con su .sha256", async () => {
     const r = preparar();
     const ahora = Date.now();
     const motivos = ["pre-migracion", "pre-carga", "post-carga", "pre-migracion", "pre-carga", "post-precios"];
     motivos.forEach((m, i) => escribirRespaldo(r.respaldos, extra(ahora - (i + 1) * 30 * 60_000, m)));
-    const res = r.correr(["--ahora", "--motivo", "post-carga"]);
+    const res = await r.lanzar(["--ahora", "--motivo", "post-carga"]);
     expect(res.status, res.stderr).toBe(0);
     expect(conAge(r.respaldos)).toHaveLength(7);
     for (const n of conAge(r.respaldos)) expect(existsSync(path.join(r.respaldos, `${n}.sha256`)), n).toBe(true);
     expect(res.stderr).not.toMatch(/retención: borrado/);
   });
 
-  it("el respaldo recién escrito nunca se borra, aunque 14 diarios y 8 semanales tengan fecha futura", () => {
+  it("el respaldo recién escrito nunca se borra, aunque 14 diarios y 8 semanales tengan fecha futura", async () => {
     const r = preparar();
     const ahora = Date.now();
     const futuros = [
@@ -521,7 +528,7 @@ describe("respaldo.sh · retención al guardar un respaldo (de punta a punta)", 
       ...Array.from({ length: 8 }, (_, k) => semanal(ahora + (k + 1) * 7 * DIA)),
     ];
     for (const n of futuros) escribirRespaldo(r.respaldos, n);
-    const res = r.correr(["--ahora"]);
+    const res = await r.lanzar(["--ahora"]);
     expect(res.status, res.stderr).toBe(0);
     const nuevo = res.stdout.trim();
     expect(existsSync(nuevo), nuevo).toBe(true);
@@ -529,12 +536,12 @@ describe("respaldo.sh · retención al guardar un respaldo (de punta a punta)", 
     for (const n of futuros) expect(existsSync(path.join(r.respaldos, n)), n).toBe(true);
   });
 
-  it("un .sha256 que no cuadra o que falta: ese respaldo no se borra y queda en el registro; los demás sí", () => {
+  it("un .sha256 que no cuadra o que falta: ese respaldo no se borra y queda en el registro; los demás sí", async () => {
     const r = preparar();
     const ahora = Date.now();
     const viejos = Array.from({ length: 15 }, (_, k) => extra(ahora - 72 * H - k * H, "pre-migracion"));
     viejos.forEach((n, k) => escribirRespaldo(r.respaldos, n, k === 12 ? "malo" : k === 13 ? "falta" : "bueno"));
-    const res = r.correr(["--ahora", "--motivo", "otro"]);
+    const res = await r.lanzar(["--ahora", "--motivo", "otro"]);
     expect(res.status, res.stderr).toBe(0);
     const quedan = new Set(archivosDe(r.respaldos));
     for (const k of [11, 14]) {
@@ -549,12 +556,12 @@ describe("respaldo.sh · retención al guardar un respaldo (de punta a punta)", 
     for (const n of viejos.slice(0, 11)) expect(quedan.has(n), n).toBe(true);
   });
 
-  it("si el cálculo de la retención muere a mitad (awk), no se borra nada y el respaldo nuevo queda bien", () => {
+  it("si el cálculo de la retención muere a mitad (awk), no se borra nada y el respaldo nuevo queda bien", async () => {
     const r = preparar();
     const ahora = Date.now();
     const viejos = Array.from({ length: 15 }, (_, k) => extra(ahora - 72 * H - k * H, "pre-migracion"));
     for (const n of viejos) escribirRespaldo(r.respaldos, n);
-    const res = r.correr(["--ahora", "--motivo", "x"], { FALSO_AWK_MUERE: "1" });
+    const res = await r.lanzar(["--ahora", "--motivo", "x"], { FALSO_AWK_MUERE: "1" });
     expect(res.status, res.stderr).toBe(0);
     const nuevo = res.stdout.trim();
     expect(existsSync(nuevo) && existsSync(`${nuevo}.sha256`), nuevo).toBe(true);
@@ -563,19 +570,19 @@ describe("respaldo.sh · retención al guardar un respaldo (de punta a punta)", 
     expect(res.stderr).toMatch(/respaldo listo/);
   });
 
-  it("pasada: si la retención falla, el diario igual cuenta (marca el día, sin castigo) y no se borra nada", () => {
+  it("pasada: si la retención falla, el diario igual cuenta (marca el día, sin castigo) y no se borra nada", async () => {
     const r = preparar({ RESPALDO_HORA: "0000", FALSO_AWK_MUERE: "1" });
     const ahora = Date.now();
     const viejos = Array.from({ length: 15 }, (_, k) => extra(ahora - 72 * H - k * H, "pre-migracion"));
     for (const n of viejos) escribirRespaldo(r.respaldos, n);
-    const res = r.funcion('preparar_conexion; proximo_intento=0; pasada; echo "proximo=$proximo_intento"');
+    const res = await r.funcionSinBloquear('preparar_conexion; proximo_intento=0; pasada; echo "proximo=$proximo_intento"');
     expect(res.status, res.stderr).toBe(0);
     expect(res.stdout).toMatch(/proximo=0/);
     expect(existsSync(path.join(r.respaldos, ".ultimo-diario"))).toBe(true);
     for (const n of viejos) expect(existsSync(path.join(r.respaldos, n)), n).toBe(true);
   });
 
-  it("un enlace simbólico con nombre de respaldo no se borra (ni lo que apunta)", () => {
+  it("un enlace simbólico con nombre de respaldo no se borra (ni lo que apunta)", async () => {
     const r = preparar();
     const ahora = Date.now();
     const viejos = Array.from({ length: 12 }, (_, k) => extra(ahora - 72 * H - k * H, "pre-migracion"));
@@ -583,19 +590,19 @@ describe("respaldo.sh · retención al guardar un respaldo (de punta a punta)", 
     const objetivo = path.join(r.dir, "objetivo.ficticio.txt");
     writeFileSync(objetivo, "no es un respaldo\n");
     symlinkSync(objetivo, path.join(r.respaldos, viejos[11]!));
-    const res = r.correr(["--ahora", "--motivo", "x"]);
+    const res = await r.lanzar(["--ahora", "--motivo", "x"]);
     expect(res.status, res.stderr).toBe(0);
     expect(lstatSync(path.join(r.respaldos, viejos[11]!)).isSymbolicLink()).toBe(true);
     expect(readFileSync(objetivo, "utf8")).toBe("no es un respaldo\n");
   });
 
-  it("si no se puede borrar el .age, el par queda entero; si falla el .sha256, queda suelto; los dos se registran", () => {
+  it("si no se puede borrar el .age, el par queda entero; si falla el .sha256, queda suelto; los dos se registran", async () => {
     const ahora = Date.now();
     const viejos = Array.from({ length: 12 }, (_, k) => extra(ahora - 72 * H - k * H, "pre-migracion"));
     for (const [falla, quedaAge] of [[`${viejos[11]}`, true], [`${viejos[11]}.sha256`, false]] as const) {
       const r = preparar();
       for (const n of viejos) escribirRespaldo(r.respaldos, n);
-      const res = r.correr(["--ahora", "--motivo", "x"], { FALSO_RM_FALLA: falla });
+      const res = await r.lanzar(["--ahora", "--motivo", "x"], { FALSO_RM_FALLA: falla });
       expect(res.status, res.stderr).toBe(0);
       expect(existsSync(path.join(r.respaldos, viejos[11]!)), falla).toBe(quedaAge);
       expect(existsSync(path.join(r.respaldos, `${viejos[11]}.sha256`)), falla).toBe(true);
