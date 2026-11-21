@@ -7,7 +7,7 @@ Sistema personal de seguimiento de un portafolio de inversiones: importa las exp
 - Datos: Prisma + PostgreSQL 16 en **contenedor propio** (`docker-compose.yml` del producto, sobre Colima). Puerto local **5438**.
 - Tareas programadas (precios al cierre, valor del fondo, reporte diario): pg-boss sobre la misma PostgreSQL.
 - Reportes: bot de Telegram.
-- App local en el puerto **5008**. Producción: `docker-compose.prod.yml` (copiar repo + `.env` + `docker compose up`).
+- App local en el puerto **5008**. Producción: `docker-compose.prod.yml` en el VPS compartido con PI, proyecto `inv-008-prod`. Procedimiento en la sección «Producción» de abajo.
 - **No crear otras bases de datos ni otros servicios** fuera del compose del producto.
 
 ## Cómo se trabaja: solo ECC (orden de Jelk, 2026-11-20)
@@ -47,6 +47,25 @@ Workflow: `.github/workflows/inv.yml` · check agregado: `inv-gate`.
 | `npm run escision:registrar -- --origen <NEMO> --destino <NEMO> --fecha AAAA-MM-DD …` | Registro local de eventos de escisión, antes de cargar dividendos. Datos reales: solo en la base del dueño |
 | `npm run lotes:construir` · `npm run lote:escision -- …` | Lotes desde las órdenes, ventas FIFO y lote de escisión con costo del portal. Datos reales: solo en la base del dueño |
 | `npm run precios:actualizar [-- --desde …]` | Cierres diarios de Yahoo `.CL`, versionados y verificados contra la certificación. Consulta un servicio externo con los símbolos del portafolio: solo desde la máquina del dueño o el servidor |
+| `npm run test:e2e` | Playwright (`playwright.config.ts`): flujos de punta a punta (ingreso, definir clave, tablero, cabeceras). Levanta `next dev` y siembra la base e2e (`tests/e2e/sembrar.ts`). Por verificar si requiere `npm run db:up` antes |
+| `npm run test:cobertura` | Vitest con cobertura (`@vitest/coverage-v8`). `vitest.config.ts` no fija umbral: el mínimo de 80% de ECC no está automatizado (por verificar) |
+
+**Datos y producción** (comandos fuera de `npm test`):
+
+| Comando | Dónde se corre | Qué hace |
+|---|---|---|
+| `npx tsx scripts/importar-plan.ts --ficha <ruta.md> --email <correo-del-dueño> [--aplicar]` | Mac, con la base del dueño | Carga el plan desde la ficha. Sin `--aplicar` no escribe. Datos reales: solo en la base del dueño |
+| `npx tsx scripts/actualizar-fondo.ts [--desde AAAA-MM-DD] [--hasta AAAA-MM-DD]` · `--registrar --codigo <n> [--participacion <n>] --nombre <texto>` | Mac o servidor del dueño | Valor de unidad diario de los fondos desde la SFC (consulta un servicio externo). Imprime solo conteos y códigos |
+| `npx tsx scripts/cifrar-existentes.ts` · `--aplicar --base <nombre>` · `--re-cifrar --base <nombre>` | Mac o servidor, con la base del dueño | Cifrado de lo existente (#11). Sin flags es ensayo y no escribe. Se corre con los importadores detenidos, con respaldo previo, y dos veces (la segunda debe dar 0 cambios). Datos reales: solo en la base del dueño |
+| `scripts/crear-acceso-inicial.sh` (VPS, por SSH) · `crear-acceso-inicial.ts` | VPS, lo corre el dueño (no la Fábrica) | Crea el acceso inicial con `inv_dueno`; imprime una sola vez el enlace de definir clave. Se corre antes de cargar datos reales |
+| `scripts/construir-imagen.sh <sha> [--guardar <carpeta>]` | Mac | Construye las tres imágenes desde `git archive <sha>`, corre `npm audit --omit=dev --audit-level=high` y verifica el sha de cada imagen |
+| `sudo scripts/desplegar-prod.sh <inv-008-app:<sha>> [--cargar <tar> <sha256>] [--sin-migrar]` | VPS, con sudo | Despliega con respaldo previo, migraciones, healthcheck y convivencia. Sin «DEPLOY VERIFICADO <sha>» como última línea, no se dio por desplegado |
+| `scripts/respaldar-base.sh [--motivo <x>]` | VPS | Respaldo cifrado ya (lo pide al contenedor `inv-008-respaldo`) |
+| `scripts/crear-roles-prod.sh` | VPS, con sudo | Crea los roles de la base de producción (claves desde el único archivo de secretos) |
+| `scripts/pausar-008.sh` · `scripts/reanudar-008.sh` | VPS, con sudo | Pausa (`down` sin `-v`, con marca) y reanudación de Inversiones |
+| `scripts/medir-memoria.sh` · `scripts/vigilar-convivencia.sh` | VPS | Medición de memoria y revisión de convivencia con PI. Solo informan: el corte es manual |
+
+En los comandos de datos reales: **solo con la base del dueño, y nunca datos reales en el repo.**
 
 Cada cambio que agregue código suma aquí sus guardianes y su job en `inv.yml`, con `needs` en `inv-gate`. `inv.yml` está fuera de la zona de ECC: ese cableado va en un PR aparte que mergea el CEO de PI.
 
@@ -78,12 +97,26 @@ Cada cambio que agregue código suma aquí sus guardianes y su job en `inv.yml`,
 4. `ESTADO.md` de la gestión al día.
 5. Auditoría del CEO de 008.
 
+## Producción (VPS compartido con PI, D-015)
+Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produccion.md) (piezas, primer despliegue, despliegues siguientes y reversa, respaldos, túnel) y [`docs/despliegue/convivencia-pi.md`](docs/despliegue/convivencia-pi.md) (pausa obligatoria en cada despliegue de PI, medición de memoria, corte manual, vigía).
+
+- **Proyecto Docker:** `inv-008-prod` (en el Mac, `inv-008-prueba`), siempre por la variable `COMPOSE`. Ningún comando global de Docker ni nombre de contenedor de PI, Gesmovil ni Hermes.
+- **Secretos:** un solo archivo, `/opt/inversiones-008/.env.inversiones.production` (root, 600, fuera de git). Plantilla sin valores: `docs/despliegue/env-inversiones-production.example`. Ningún agente escribe, copia ni imprime sus valores.
+- **Flujo:** sha de `main` con CI `inv` en verde (`inv-gate` y `app-008` en success) → `scripts/construir-imagen.sh <sha> --guardar <carpeta>` en el Mac → envío del `.tar` a `/opt/inversiones-008/imagenes/` → `scripts/desplegar-prod.sh` en el VPS.
+- **Verificación:** se da por desplegado solo con **«DEPLOY VERIFICADO <sha>»** como última línea de `desplegar-prod.sh`. Después, `/api/salud` debe devolver `version` igual al sha desplegado.
+- **Reversa:** `desplegar-prod.sh inv-008-app:<sha anterior> --sin-migrar` (sin consultar GitHub).
+- **Prohibido:** `docker compose down -v` y borrar volúmenes. Para bajar la app, `pausar-008.sh`.
+- **Escritura y sistema:** los scripts solo escriben en `/opt/inversiones-008/`, el candado `/var/lock/despliegue-vps.lock` y `/var/backups/idc/inversiones/`. No tocan ufw, systemctl, `/etc/` ni el crontab de root.
+- El estado del despliegue lo lleva `ESTADO.md` de la gestión (fuera de este repo).
+- **Gastos:** cualquier servidor, dominio o servicio pago necesita el sí del dueño antes.
+
 ## Prohibido
 - Secretos, datos personales, negocio o legal en el repo (es público).
 - Cambios a mano sobre la base de producción.
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.13 · 2026-11-21 · 02:08 (-05) · INV · Fábrica Inversiones · producción con su procedimiento real (`produccion.md`, `convivencia-pi.md`, `inv-008-prod`, `.env` 600, `DEPLOY VERIFICADO`); guardianes de e2e y cobertura; comandos de datos y de producción verificados en `package.json` y `scripts/`
 > v1.12 · 2026-11-20 · 21:16 (-05) · INV · Fábrica ECC · solo ECC por orden de Jelk: sin SPEC, radicados ni manual 02; ramas `work/inv-<nombre-corto>`; «ECC usado» en cada PR
 > v1.11 · 2026-11-20 · 19:39 (-05) · INV · Fábrica ECC · INV-SPEC-13: precios de Yahoo
 > v1.10 · 2026-11-20 · 19:22 (-05) · INV · Fábrica ECC · INV-SPEC-12: lotes, FIFO y lote de escisión
