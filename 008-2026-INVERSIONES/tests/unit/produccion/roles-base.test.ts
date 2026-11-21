@@ -1,8 +1,9 @@
 // Roles de producción contra una PostgreSQL 16 real: crear-roles-prod.sql + migraciones como inv_dueno +
 // guardián del esquema + privilegios.sql, y luego inv_app intenta lo que nunca debe poder hacer. Después, inv_precios
-// (servicio de precios, PR 3): privilegios.sql pasa sin el rol (el despliegue de hoy), el rol se crea con el SQL de
-// crear-roles-prod.sh, privilegios.sql se reaplica, precios:actualizar y actualizar-fondo corren con él (buscadores
-// simulados) y lo prohibido falla. Todo en este archivo: los roles son globales del clúster.
+// (servicio de precios): privilegios.sql pasa sin el rol (mientras Jelk no corra crear-roles-prod.sh), el rol se crea
+// con el SQL de crear-roles-prod.sh (NOLOGIN y sin clave hasta su secreto), privilegios.sql se reaplica,
+// precios:actualizar y actualizar-fondo corren con él (buscadores simulados) y lo prohibido falla. Todo en este
+// archivo: los roles son globales del clúster.
 //
 // Corre SOLO en GitHub Actions (GITHUB_ACTIONS=true), contra la base efímera del job `app-008`
 // (DATABASE_URL_TEST, superusuario, nombre terminado en _test). Nunca en el Mac: los roles son globales
@@ -182,7 +183,21 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     let fondo = "";
     const creaciones: Array<ReturnType<typeof ejecutarSql>> = [];
     let antesDelMigrador: unknown = null;
+    let sinSecreto: Array<Record<string, unknown>> = [];
+    let entrarSinSecreto = "";
     const urlPrecios = () => `${conBase("inv_precios", CLAVE_PRECIOS, BASE_PRUEBA)}&connection_limit=2`;
+    /** Abre una conexión nueva como inv_precios: «entró» o el error (sin la clave). */
+    const entrarComoPrecios = async (): Promise<string> => {
+      const intento = new PrismaClient({ datasources: { db: { url: urlPrecios() } } });
+      try {
+        await intento.$queryRawUnsafe("SELECT 1");
+        return "entró";
+      } catch (e) {
+        return String(e).replaceAll(CLAVE_PRECIOS, "<clave>");
+      } finally {
+        await intento.$disconnect();
+      }
+    };
     const negado = async (sql: string) => {
       await expect(precios.$executeRawUnsafe(sql)).rejects.toThrow(/42501|permission denied|must be owner/);
     };
@@ -219,8 +234,14 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       const archivo = path.join(carpetaTemporal("rol-precios"), "rol-precios.sql");
       writeFileSync(archivo, sqlRol.stdout);
       for (let i = 0; i < 2; i += 1) creaciones.push(ejecutarSql(archivo, superusuario(BASE_PRUEBA)));
+      // Sin su secreto (como lo deja el script cuando el archivo no trae la línea): NOLOGIN y sin clave, no entra.
+      sinSecreto = await admin.$queryRawUnsafe<Array<Record<string, unknown>>>(
+        "SELECT rolcanlogin, rolpassword IS NULL AS sin_clave FROM pg_authid WHERE rolname = 'inv_precios'",
+      );
+      entrarSinSecreto = await entrarComoPrecios();
+      // Con su secreto: la sentencia que emite el script (LOGIN y clave juntos), con la clave inventada en el texto.
       const enPrueba = new PrismaClient({ datasources: { db: { url: superusuario(BASE_PRUEBA) } } });
-      await enPrueba.$executeRawUnsafe(`ALTER ROLE inv_precios PASSWORD '${CLAVE_PRECIOS}'`);
+      await enPrueba.$executeRawUnsafe(`ALTER ROLE inv_precios WITH LOGIN PASSWORD '${CLAVE_PRECIOS}'`);
       await enPrueba.$disconnect();
       precios = new PrismaClient({ datasources: { db: { url: urlPrecios() } } });
       // Recién creado, antes del migrador: se conecta pero no lee nada (falla cerrada).
@@ -243,6 +264,12 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     it("el SQL de crear-roles-prod.sh crea el rol y es idempotente; recién creado no lee nada hasta el migrador", () => {
       expect(creaciones.map((c) => c.status), creaciones.map((c) => c.stderr).join("\n")).toEqual([0, 0]);
       expect(String(antesDelMigrador)).toMatch(/42501|permission denied/);
+    });
+
+    it("sin su secreto el rol existe NOLOGIN y sin clave, y no entra (así los GRANT de un respaldo siempre lo encuentran)", () => {
+      expect(sinSecreto).toEqual([{ rolcanlogin: false, sin_clave: true }]);
+      expect(entrarSinSecreto).not.toBe("entró");
+      expect(entrarSinSecreto).toMatch(/not permitted to log in|denied access|P1010|P1000/i);
     });
 
     it("atributos del rol: LOGIN, NOINHERIT, sin superusuario, sin crear bases ni roles, sin replicación ni BYPASSRLS, 4 conexiones", async () => {
@@ -348,6 +375,26 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
         await negado(sql);
       });
     }
+
+    // Último del bloque: deja el rol como estaba (con LOGIN) para lo que sigue.
+    it("quitar la línea del secreto y volver a correr el script lo deja NOLOGIN y sin clave: ya no entra; con la línea vuelve", async () => {
+      const sinLogin = funcion(ruta008("scripts/crear-roles-prod.sh"), "sql_precios_sin_login", { PATH: process.env.PATH });
+      expect(sinLogin.status, sinLogin.stderr).toBe(0);
+      expect(sinLogin.stdout.trim()).toBe("ALTER ROLE inv_precios WITH NOLOGIN PASSWORD NULL;");
+      const archivo = path.join(carpetaTemporal("rol-precios-sin-login"), "sin-login.sql");
+      writeFileSync(archivo, sinLogin.stdout);
+      expect(ejecutarSql(archivo, superusuario(BASE_PRUEBA)).status).toBe(0);
+      try {
+        const estado = await admin.$queryRawUnsafe<Array<Record<string, unknown>>>(
+          "SELECT rolcanlogin, rolpassword IS NULL AS sin_clave FROM pg_authid WHERE rolname = 'inv_precios'",
+        );
+        expect(estado).toEqual([{ rolcanlogin: false, sin_clave: true }]);
+        expect(await entrarComoPrecios()).toMatch(/not permitted to log in|denied access|P1010|P1000/i);
+      } finally {
+        await admin.$executeRawUnsafe(`ALTER ROLE inv_precios WITH LOGIN PASSWORD '${CLAVE_PRECIOS}'`);
+      }
+      expect(await entrarComoPrecios()).toBe("entró");
+    });
   });
 
   it("el guardián del esquema pasa en la base recién migrada (definiciones exactas de PostgreSQL 16)", () => {
