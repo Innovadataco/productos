@@ -8,6 +8,8 @@ const MILES = /\B(?=(\d{3})+(?!\d))/g;
 const DIA_ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MENOS = "−";
 const SIN_DATO = "—";
+/** Desde aquí `toFixed` escribe en notación exponencial («1e+21»): no hay cifra que pintar. */
+const LIMITE_TOFIXED = 1e21;
 
 export const n = (s: string | null | undefined): number => (s == null ? 0 : Number(s));
 
@@ -25,21 +27,24 @@ function signo(v: number, decimales: number, conMas: boolean): string {
   return conMas ? "+" : "";
 }
 
+/** Solo se pinta lo que `toFixed` escribe con todos sus dígitos; lo demás queda «—». */
+const pintable = (v: number): boolean => Number.isFinite(v) && Math.abs(v) < LIMITE_TOFIXED;
+
 /** Número con miles en punto y `decimales` en coma: numero(1234.5, 1) → «1.234,5». */
 export function numero(v: number, decimales = 0): string {
-  if (!Number.isFinite(v)) return SIN_DATO;
+  if (!pintable(v)) return SIN_DATO;
   return `${signo(v, decimales, false)}${absoluto(v, decimales)}`;
 }
 
 /** Pesos sin decimales: cop(1234567) → «$ 1.234.567»; cop(-0.4) → «$ 0». */
 export function cop(v: number, conSigno = false): string {
-  if (!Number.isFinite(v)) return SIN_DATO;
+  if (!pintable(v)) return SIN_DATO;
   return `${signo(v, 0, conSigno)}$ ${absoluto(v, 0)}`;
 }
 
 /** Porcentaje con un decimal y signo: pct(12.34) → «+12,3 %»; pct(-0.04) → «0,0 %». */
 export function pct(v: number): string {
-  if (!Number.isFinite(v)) return SIN_DATO;
+  if (!pintable(v)) return SIN_DATO;
   return `${signo(v, 1, true)}${absoluto(v, 1)} %`;
 }
 

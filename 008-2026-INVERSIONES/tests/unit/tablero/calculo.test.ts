@@ -77,3 +77,47 @@ describe("calcularTablero en los bordes", () => {
     expect(t.gananciaTotal.toString()).toBe("-170"); // −100 − 50 − 20
   });
 });
+
+describe("calcularTablero · fecha de los cierres (nunca un precio viejo como de hoy)", () => {
+  const el = (precio: number, iso: string, verificado = false) => ({ precio: D(precio), fecha: new Date(`${iso}T00:00:00Z`), verificado });
+  const dias = (t: ReturnType<typeof calcularTablero>) => [t.fechaReferencia?.toISOString().slice(0, 10) ?? null, t.cierreMasViejo?.toISOString().slice(0, 10) ?? null];
+
+  it("una viva con un cierre más viejo que la referencia queda atrasada y se cuenta; una cerrada más reciente no mueve la referencia", () => {
+    const t = calcularTablero([
+      especie({ nemotecnico: "FICT1", cantidad: 10n, costoVivo: D(1000), cierre: el(120, "2027-10-29", true) }),
+      especie({ nemotecnico: "FICT2", cantidad: 5n, costoVivo: D(500), cierre: el(110, "2027-11-19") }),
+      especie({ nemotecnico: "FICT8", cantidad: 0n, realizada: D(5), cierre: el(50, "2027-11-22") }),
+    ]);
+    expect(dias(t)).toEqual(["2027-11-19", "2027-10-29"]);
+    expect(t.filas.map((f) => [f.nemotecnico, f.cierreAtrasado])).toEqual([["FICT1", true], ["FICT2", false]]);
+    expect(t.cerradas.map((f) => f.cierreAtrasado)).toEqual([false]);
+    expect(t.especiesAtrasadas).toBe(1);
+  });
+
+  it("la atrasada sigue en el valor y en la ganancia con su último precio negociado (se divulga, no se excluye)", () => {
+    const t = calcularTablero([
+      especie({ nemotecnico: "FICT1", cantidad: 10n, costoVivo: D(1000), cierre: el(120, "2027-10-29") }),
+      especie({ nemotecnico: "FICT2", cantidad: 5n, costoVivo: D(500), cierre: el(110, "2027-11-19") }),
+    ]);
+    expect([t.valorAcciones.toString(), t.sinVender.toString(), t.gananciaTotal.toString(), t.especiesSinPrecio]).toEqual([D(10).mul(120).add(D(5).mul(110)).toString(), "250", "250", 0]); // 10 × 120 + 5 × 110
+  });
+
+  it("todas del mismo día: ninguna atrasada y la más vieja es la referencia", () => {
+    const t = calcularTablero([
+      especie({ nemotecnico: "FICT1", cantidad: 1n, cierre: el(1, "2027-11-19") }),
+      especie({ nemotecnico: "FICT2", cantidad: 1n, cierre: el(2, "2027-11-19") }),
+    ]);
+    expect([t.especiesAtrasadas, ...dias(t)]).toEqual([0, "2027-11-19", "2027-11-19"]);
+  });
+
+  it("una viva sin cierre no es atrasada ni mueve las fechas; sin vivas con cierre no hay referencia", () => {
+    const t = calcularTablero([
+      especie({ nemotecnico: "FICT1", cantidad: 1n }),
+      especie({ nemotecnico: "FICT2", cantidad: 1n, cierre: el(2, "2027-11-18") }),
+    ]);
+    expect([t.especiesAtrasadas, ...dias(t)]).toEqual([0, "2027-11-18", "2027-11-18"]);
+    expect(t.filas.find((f) => f.nemotecnico === "FICT1")!.cierreAtrasado).toBe(false);
+    const vacio = calcularTablero([especie({ nemotecnico: "FICT1", cantidad: 1n }), especie({ nemotecnico: "FICT8", cantidad: 0n, cierre: el(5, "2027-11-19") })]);
+    expect([vacio.especiesAtrasadas, ...dias(vacio)]).toEqual([0, null, null]);
+  });
+});
