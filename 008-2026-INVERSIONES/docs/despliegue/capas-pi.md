@@ -5,7 +5,7 @@ Son los requisitos del CEO de PI para que Inversiones conviva en su VPS de produ
 - la prueba local: el comando y la salida del ensayo en el Mac, con el proyecto `inv-008-prueba`;
 - el comando que se corre en el host al desplegar.
 
-Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app y **están por enlazar**: sus PR ya están en `main`, el login ([#996](https://github.com/Innovadataco/productos/pull/996)) y el cifrado ([#995](https://github.com/Innovadataco/productos/pull/995)), y la evidencia de cada capa la pone cada frente.
+Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app: login ([#996](https://github.com/Innovadataco/productos/pull/996)), cifrado ([#995](https://github.com/Innovadataco/productos/pull/995)) y TOTP del dueño ([#1000](https://github.com/Innovadataco/productos/pull/1000)), ya en `main`. Su evidencia está en la sección «App (7 a 12)», verificada en el código de `main` (base a290b7de) el 2026-11-21.
 
 **Riesgo cerrado:** `pi-app` ya no monta `docker.sock` ([productos#993](https://github.com/Innovadataco/productos/pull/993)). Ninguna pieza de Inversiones usa el socket ni `/var/lib/docker`.
 
@@ -45,18 +45,80 @@ Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app 
 
 **Límite de la capa 6, dicho derecho:** con un solo archivo y `environment:`, los valores de cada contenedor se ven con `docker inspect <contenedor>`, para root y para el grupo `docker`. Cumple «fuera del repo y las imágenes sin secretos», pero no oculta los valores a quien administra el Docker del VPS.
 
-## App (7 a 12): frentes login y cifrado
-**Por enlazar** a la evidencia de [#996](https://github.com/Innovadataco/productos/pull/996) (login) y [#995](https://github.com/Innovadataco/productos/pull/995) (cifrado). Este frente no conoce el texto exacto de esas capas y no lo inventa. Lo que sí deja listo, y probó en el ensayo con el código de los dos:
-- **Login:**
-  - `AUTH_SECRET` y `APP_ORIGEN` en la app (`docker-compose.prod.yml:66` y `:69`), obligatorios con `${…:?}`;
-  - para `inv_app`, UPDATE **por columna** en `usuario` (`claveHash`, `sesionVersion`, `bloqueadoHasta`) y en `token_acceso` (`usadoEn`), e INSERT en `intento_ingreso` (`docker/migrador/privilegios.sql`);
-  - si la app sale o se reinicia (`instrumentation.ts`), el despliegue falla.
-- **Acceso inicial:** `scripts/crear-acceso-inicial.sh`, en el migrador con `inv_dueno` y `APP_ORIGEN`.
-- **Cifrado (#11):** `CIFRADO_CLAVE_ACTIVA` y `CIFRADO_CLAVE_V1` en la app y en el migrador (`docker-compose.prod.yml:67-68` y `:116-117`).
+## App (7 a 12): login, TOTP y cifrado
 
-| # | Requisito | Frente | Evidencia |
-|---|---|---|---|
-| 7 a 12 | Por enlazar | login / cifrado | #996 y #995 (en `main`) |
+Evidencia verificada en el código de la base `main` a290b7de (productos#1000, con el TOTP ya mergeado) el 2026-11-21, línea por línea. Las pruebas locales de esta sección son de código (`npm test`, `npm run test:integracion`, `npm run test:e2e`); **no se ejecutó nada contra el VPS**.
+
+| # | Requisito | Evidencia en el repo | Prueba local | En el host, al desplegar |
+|---|---|---|---|---|
+| 7 | Cabeceras de seguridad: CSP con nonce, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy y Permissions-Policy | `next.config.ts:13-20` (X-Frame-Options `DENY`, `nosniff`, Referrer-Policy `no-referrer`, Permissions-Policy, HSTS `max-age=63072000; includeSubDomains; preload`, `X-Robots-Tag`), aplicadas a `/:path*` en `next.config.ts:28-29`. CSP por pedido con nonce: `src/auth/cabeceras.ts:34-36` (`politicaCsp`; `frame-ancestors 'none'` en `:19`; `upgrade-insecure-requests` fuera de desarrollo), puesta por `src/proxy.ts:30-39` (`pasar`) | `tests/unit/auth/cabeceras.test.ts:44` («lleva las de PI y las de la spec») y los de CSP de producción; `tests/e2e/sesion.spec.ts:210` (cabeceras y sin caché en las páginas) | `curl -sI https://inversiones.innovadataco.com/ingresar \| grep -iE 'content-security\|strict-transport\|x-frame\|x-content\|referrer\|permissions'`: deben salir las seis. Por verificar en el host: no se ejecutó contra el VPS |
+| 8 | Cookie de sesión httpOnly, secure y sameSite strict | `src/auth/cookie.ts:11` (`__Host-sesion`), `:14` (`Path=/; HttpOnly; Secure; SameSite=Strict`), `:24` (`cookieDeSesion`, Max-Age de 8 h: `src/auth/limites.ts:7`), `:25` (`cookieDeBorrado`, mismos atributos). Se emite en `src/app/api/sesion/totp/route.ts:35`, tras el segundo paso, y se borra en `src/app/api/sesion/salir/route.ts:24`. La cookie previa al segundo paso, `__Host-presesion` (`src/auth/cookie.ts:12`, `:27-28`, 5 min), usa los mismos atributos | `tests/unit/auth/cookie.test.ts:17` (nombre), `:21` (atributos al crear), `:28` (al borrar), `:55` (presesión distinta de la sesión); `tests/e2e/sesion.spec.ts:31` (la cookie en el navegador) | Entrar con la cuenta del dueño en el navegador y revisar en DevTools, Application, Cookies, que `__Host-sesion` lleve HttpOnly, Secure, SameSite Strict y Path `/`, y que dure 8 h. Por verificar en el host: no hay comando sin credenciales que muestre el `Set-Cookie` |
+| 9 | Login obligatorio en TODA ruta, con guardia en el servidor (página y API) | Proxy: `src/proxy.ts:73` (`esPublica`: solo pasan las rutas de `src/auth/rutas.ts:15-22`); `:82-84` (firma y vencimiento de la cookie; sin sesión, `sinSesion` en `:46-52`: página → 307 a `/ingresar`, API → 401 JSON). Matcher `src/proxy.ts:90`: solo se excluyen los estáticos de Next y el favicon. Revalidación en la base: `src/auth/sesion.ts:25` (`validarSesion`: activo, con clave, DUENO y `sesionVersion` vigente), `:49` (`exigirSesion`), `:56` (`validarSesionApi`), `:61` (`exigirSesionApi`). Pre-sesión: `src/auth/presesion-servidor.ts:28` (`exigirPresesion`) y `:35` (`exigirPresesionApi`). Inventario en el nuevo `main`, abajo | `tests/unit/auth/proxy.test.ts`, `tests/unit/auth/rutas.test.ts`, `tests/unit/auth/candados.test.ts` (cada página y API del segundo paso llama a su guardia), `tests/integracion/auth-sesion.test.ts`, `tests/integracion/auth-api.test.ts`; `tests/e2e/sesion.spec.ts:179` (sin sesión, el tablero lleva a `/ingresar`) y `:184-187` (API sin sesión: 401; la prueba pide `/api/plan`, que no existe en `main`) | `curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://inversiones.innovadataco.com/` → `307 https://inversiones.innovadataco.com/ingresar`; `curl -s -w ' %{http_code}\n' https://inversiones.innovadataco.com/api/no-existe` → `{"error":"No autenticado"} 401`. Por verificar en el host |
+| 10 | Límite de peticiones en el login y en las API | API: `src/proxy.ts:23` (limitador), `:54-59` (`topeDeApi`: 60 por minuto por IP, 429 con `Retry-After`); `src/auth/limites.ts:18-19`; contador `src/auth/limite-api.ts:25` (ventana fija, en memoria del proceso). IP solo desde `Cf-Connecting-IP`: `src/auth/ip.ts:10`, `:39`. Login: 5 fallos por cuenta bloquean 15 min (`src/auth/limites.ts:11,14`; `src/auth/ingreso.ts:106-107`); 20 fallos por IP en la base (`src/auth/limites.ts:15`; `src/auth/ingreso.ts:99`, `:122`); tope global de 60 ingresos por minuto (`src/auth/carga.ts:47`, `:61`, `:70`; usado en `src/app/api/sesion/ingresar/route.ts:33-34`). Segundo paso TOTP: 5 fallos (`src/auth/limites.ts:56`) con bloqueo progresivo (`src/auth/fallos-segundo-paso.ts:46-49`) | `tests/unit/auth/limite-api.test.ts:9` (deja pasar 60 y frena el 61); `tests/unit/auth/carga.test.ts`; `tests/unit/auth/tope-global.test.ts`; `tests/unit/auth/bloqueo-segundo-paso.test.ts`; `tests/integracion/auth-ingreso.test.ts`; `tests/e2e/sesion.spec.ts:52` (5 fallos bloquean la cuenta) | Desde fuera del VPS (por ejemplo, el Mac), porque sin `Cf-Connecting-IP` todo cuenta en el balde «sin IP»: `for i in $(seq 61); do curl -s -o /dev/null -w '%{http_code}\n' https://inversiones.innovadataco.com/api/salud; done \| sort \| uniq -c`. Esperado: 60 respuestas 200 (o 503 si la base está caída) y 1 con 429. Por verificar en el host |
+| 11 | Cifrado de campos sensibles (AES-256-GCM, claves versionadas) | AES-256-GCM: `src/cifrado/sobre.ts:13` (`aes-256-gcm`), `:14-15` (IV de 12 bytes, etiqueta de 16), `:50` (`cifrar`), `:61` (`descifrar`, con la clave de la versión que dice el sobre). Claves versionadas: `src/cifrado/llavero.ts:3-4` (`CIFRADO_CLAVE_ACTIVA`, `CIFRADO_CLAVE_V<n>`), `:15`, `:54` (`obtenerLlavero`); en el compose, `docker-compose.prod.yml:67-68` (app) y `:116-117` (migrador). `fila_fuente.crudo`: se cifra al crear en `src/importacion/trii/guardar.ts:124` (`cifrarCrudo`) y `:125` (`filaFuente.create`); helper en `src/cifrado/campos.ts:35`. `certificacion_fondo.encargo`: helper en `src/cifrado/campos.ts:57`; cifrado de lo existente en `src/cifrado/migracion.ts:191-212` y `scripts/cifrar-existentes.ts`. Documentos: no se guardan (`prisma/schema.prisma:288`, comentario «El archivo original NO se guarda»; modelo `CargaArchivo` en `prisma/schema.prisma:277`). Montos: sin cifrar (`prisma/schema.prisma:402` y tipos `Decimal`; CHECK de montos en `prisma/migrations/20261120222014_inicial/migration.sql:633-638`) | `tests/unit/cifrado/sobre.test.ts`, `tests/unit/cifrado/llavero.test.ts`, `tests/unit/cifrado/campos.test.ts`, `tests/unit/cifrado/migracion.test.ts`, `tests/unit/cifrado/candado-reversion.test.ts`; `tests/integracion/cifrado.test.ts`; `tests/integracion/cifrado-importacion.test.ts`; `tests/unit/esquema.test.ts:67-71` (candado: ningún campo de `CargaArchivo` guarda el archivo original) | `sudo $COMPOSE run --rm inv-008-migrador npx tsx scripts/cifrar-existentes.ts` (ensayo: solo cuenta, no escribe). Esperado: `enClaro` en 0 para `fila_fuente` y `certificacion_fondo`. Por verificar en el host: el comando exacto dentro del migrador y el formato de la salida |
+| 12 | `npm audit --omit=dev` con 0 críticas y 0 altas | `scripts/construir-imagen.sh:50` (`npm audit --omit=dev --audit-level=high` sobre el código del commit; con una alta no construye); `docs/despliegue/produccion.md:132` | Local, 2026-11-21, en `008-2026-INVERSIONES/` tras `npm ci`. Resultado en «Resultado del audit» abajo. Prueba automática: `tests/unit/produccion/construir-imagen.test.ts` (contiene 4 referencias a `audit`; por verificar qué cubre exactamente) | En el Mac, `scripts/construir-imagen.sh <sha>` corre el audit antes de construir; o `npm audit --omit=dev` en la copia del commit. Esperado: 0 críticas y 0 altas |
+
+### Inventario de rutas protegidas en `main` (a290b7de)
+
+Páginas (`src/app/**/page.tsx`):
+
+| Ruta | Guardia | Dónde |
+|---|---|---|
+| `/` | sesión completa | `exigirSesion()` en `src/app/page.tsx:30` |
+| `/totp/codigos` | sesión completa | `exigirSesion()` en `src/app/totp/codigos/page.tsx:15` |
+| `/totp` | pre-sesión (segundo paso) | `exigirPresesion()` en `src/app/totp/page.tsx:19` |
+| `/totp/enrolar` | pre-sesión (segundo paso) | `exigirPresesion()` en `src/app/totp/enrolar/page.tsx:51` |
+| `/ingresar`, `/definir-clave` | públicas | `src/auth/rutas.ts:16-17`; `/ingresar` manda a `/` si hay sesión (`src/app/ingresar/page.tsx:27`) |
+
+APIs (`src/app/api/**/route.ts`):
+
+| Ruta | Guardia | Dónde |
+|---|---|---|
+| `/api/sesion/salir` | sesión (`validarSesionApi`) | `src/app/api/sesion/salir/route.ts:26` |
+| `/api/sesion/totp/codigos` | sesión completa (`exigirSesionApi`) | `src/app/api/sesion/totp/codigos/route.ts:21` |
+| `/api/sesion/totp` | pre-sesión (`exigirPresesionApi`) | `src/app/api/sesion/totp/route.ts:29` |
+| `/api/sesion/totp/enrolar` | pre-sesión (`exigirPresesionApi`) | `src/app/api/sesion/totp/enrolar/route.ts:28` |
+| `/api/salud`, `/api/sesion/ingresar`, `/api/sesion/definir-clave` | públicas | `src/auth/rutas.ts:18-20` |
+
+Las pre-sesión «`/totp`», «`/totp/enrolar`» y sus dos APIs pasan el proxy sin sesión (`src/auth/rutas.ts:8-13` y `:21`) porque exigen la pre-sesión en el servidor, con su candado en `tests/unit/auth/candados.test.ts`.
+
+**Rutas inexistentes:** una `/api/*` que no existe también responde 401 sin sesión. El proxy decide antes del enrutado: `src/proxy.ts:73` no la reconoce como pública, `:82-84` no encuentra sesión y `sinSesion` (`:46-52`) contesta 401 para `esApi`. Con una sesión válida, la petición sí llega al enrutado y Next responde 404. Por verificar en el host con el `curl` de la fila 9.
+
+
+### Decisión del CEO sobre el #11 (texto de la decisión)
+
+- Se cifran `fila_fuente.crudo` y `certificacion_fondo.encargo` con AES-256-GCM y claves versionadas.
+- Los documentos de extractos no se guardan (`prisma/schema.prisma`, comentario «El archivo original NO se guarda», más el candado en `tests/unit/esquema.test.ts`).
+- Los montos NO se cifran: conservan los CHECK y las sumas, y los protegen la base sin puertos, los roles y el respaldo cifrado.
+- El cifrado de disco del host queda como opción futura.
+
+**Hueco abierto del #11:** en `main` no hay ningún escritor de `certificacion_fondo` fuera de la migración (búsqueda en `src/` y `scripts/`). Hasta que entre el importador de fondo, un encargo nuevo no se cifra al escribirse. Por verificar cuando ese importador entre a `main`.
+
+### Resultado del audit (#12)
+
+Comando: `npm audit --omit=dev` en `008-2026-INVERSIONES/`, después de `npm ci`, el 2026-11-21. Salida real:
+
+```text
+found 0 vulnerabilities
+```
+
+### TOTP del dueño (segundo factor, productos#1000)
+
+El TOTP del dueño ya está en `main` como `a290b7de` (productos#1000). Piezas clave:
+
+- **Código RFC 6238** (SHA-1, pasos de 30 s, 6 dígitos, ±1 paso): `src/auth/limites.ts:39-44`; `src/auth/totp.ts:80` (`hotp`) y `:111` (`verificarTotp`). Anti-repetición de códigos con `totpUltimoPaso`: `src/auth/cuenta-totp.ts:63`.
+- **Secreto cifrado** con AES-256-GCM, atado a la cuenta (AAD `usuario.totp` + id): `src/auth/secreto-totp.ts:15-24`. Columnas en `prisma/schema.prisma:177-184` (`totpSecreto`, `totpActivadoEn`, `totpUltimoPaso`, `presesionHash`).
+- **Pre-sesión** de 5 min, distinta de la sesión (audiencia `inv008:presesion`): `src/auth/presesion.ts:21`, `:39` (firmar), `:54` (verificar); `src/auth/limites.ts:47`.
+- **Segundo paso**: `src/auth/segundo-paso.ts:88` (`verificarSegundoPaso`), llamado desde `src/app/api/sesion/totp/route.ts:32`.
+- **Bloqueo progresivo** tras 5 fallos: `src/auth/limites.ts:56`; `src/auth/fallos-segundo-paso.ts:46-49`.
+- **Códigos de recuperación** (10, de un solo uso, guardados como hash SHA-256): `src/auth/limites.ts:61-62`; `src/auth/recuperacion.ts:25`, `:39`; `src/auth/codigos.ts:36` (`gastarCodigo`); tabla `prisma/schema.prisma:263` (`CodigoRecuperacion`).
+- **Regenerar códigos** exige sesión completa y un código TOTP: `src/auth/regenerar.ts:57`; `src/app/api/sesion/totp/codigos/route.ts:21`, `:25`.
+- **Reinicio por el operador** (perdió el teléfono y los códigos): `src/auth/reinicio-totp.ts:14`; `scripts/crear-acceso-inicial.ts` con `--reiniciar-totp`.
+- **Privilegios de `inv_app`** del TOTP, activos desde la migración: `docker/migrador/privilegios.sql:52-54`; prueba `tests/unit/produccion/privilegios.test.ts:54`.
+- **Pruebas:** `tests/unit/auth/totp.test.ts`, `presesion.test.ts`, `recuperacion.test.ts`, `qr.test.ts`, `bloqueo-segundo-paso.test.ts`, `esquema-auth.test.ts`; `tests/integracion/auth-totp-api.test.ts`, `auth-totp-codigos.test.ts`, `auth-totp-enrolar.test.ts`, `auth-totp-esquema.test.ts`, `auth-totp-ingreso.test.ts`, `auth-totp-reinicio.test.ts`, `auth-totp-segundo-paso.test.ts`; `tests/e2e/totp.spec.ts`.
+
+Lo que exige el TOTP antes de cargar datos es crear la cuenta del dueño y cargar sus datos. Por decisión D-017 la app se publica con 0 usuarios.
+
 
 ## Convivencia (condiciones del CEO de PI)
 - **Pausa obligatoria en cada despliegue de PI.** El CEO de PI midió `MemAvailable` mínimo de 1.593 MB durante su build, y con los 1.152 MiB de Inversiones quedarían unos 0,4 GB.
@@ -117,10 +179,12 @@ crear-acceso-inicial.sh --email ficticio@ejemplo.invalid → imprime una vez htt
 - el driver de cgroup del VPS (se espera systemd);
 - `memswap` con swap real, porque Colima no tiene swap;
 - la llegada del aviso al Telegram de Jelk (control positivo en el VPS);
-- el TOTP: su bloque de permisos queda preparado y comentado en `privilegios.sql`, y lo activa ese frente.
+- el TOTP del dueño: sus pruebas corren en CI (`tests/integracion/auth-totp-*.test.ts`, `tests/e2e/totp.spec.ts`); en este ensayo local no se probó contra el proyecto `inv-008-prueba`.
 
 **Reinicio de Docker:** no se reinició el demonio de Docker del Mac, porque también corren ahí la base de desarrollo de Inversiones y la de PI. Que la pausa sobreviva un reinicio se demostró así: con la marca puesta, el proyecto queda con 0 contenedores, así que `restart: always` no tiene nada que levantar.
 
 ---
+> v2.2 · 2026-11-21 · 02:30 (-05) · Inversiones · Fábrica Inversiones · rebase sobre `main` a290b7de (TOTP, productos#1000): capas 7 a 12 re-verificadas, inventario de rutas, TOTP con piezas, base del audit
+> v2.1 · 2026-11-21 · 02:08 (-05) · Inversiones · Fábrica Inversiones · capas 7 a 12 con evidencia (`archivo:línea` verificado), audit #12 y nota del TOTP
 > v2.0 · 2026-11-21 · 00:50 (-05) · Inversiones · Fábrica ECC (frente producción) · correcciones de la GATE 2
 > v1.0 · 2026-11-20 · 23:59 (-05) · Inversiones · Fábrica ECC (frente producción)
