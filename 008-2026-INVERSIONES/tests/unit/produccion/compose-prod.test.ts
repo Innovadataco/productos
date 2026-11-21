@@ -1,6 +1,7 @@
-// Candado del docker-compose.prod.yml de Inversiones en el VPS compartido con PI: proyecto, red y base
-// propios, la app solo en 127.0.0.1:5008, endurecimiento, límites con mem = memswap, cpu_shares bajo y
-// cada servicio con solo sus variables (el archivo de producción es solo para interpolar).
+// Candado del docker-compose.prod.yml de Inversiones en el VPS compartido con PI: proyecto, redes y base
+// propios, la app SIN salida a internet (solo redes internal) detrás de la entrada, que es la única con el puerto
+// 127.0.0.1:5008, endurecimiento, límites con mem = memswap, cpu_shares bajo y cada servicio con solo sus
+// variables (el archivo de producción es solo para interpolar). El relé de la entrada se ejecuta en entrada.test.ts.
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { funcion, leer008, ruta008 } from "./falsos";
@@ -28,6 +29,7 @@ type Servicio = {
   memswap_limit?: string;
   cpu_shares?: number;
   cpus?: number;
+  pids_limit?: number;
   ports?: string[];
   networks?: string[];
   network_mode?: string;
@@ -36,6 +38,9 @@ type Servicio = {
   volumes?: Array<string | Bind>;
   ulimits?: Record<string, number>;
   healthcheck?: { test: string[] };
+  entrypoint?: string[];
+  init?: boolean;
+  depends_on?: Record<string, { condition: string }>;
   logging?: { driver: string; options?: Record<string, string> };
   profiles?: string[];
   privileged?: boolean;
@@ -47,7 +52,7 @@ type Bind = { type: string; source: string; target: string; read_only?: boolean;
 type Compose = {
   name: string;
   services: Record<string, Servicio>;
-  networks: Record<string, { internal?: boolean; external?: boolean }>;
+  networks: Record<string, { internal?: boolean; external?: boolean; driver?: string; driver_opts?: Record<string, string> }>;
   volumes: Record<string, unknown>;
   secrets?: unknown;
 };
@@ -59,14 +64,20 @@ const s = (nombre: string): Servicio => {
   if (!srv) throw new Error(`falta el servicio ${nombre}`);
   return srv;
 };
-const SERVICIOS = ["inv-008-db", "inv-008-app", "inv-008-migrador", "inv-008-respaldo", "inv-008-vigia"];
+const SERVICIOS = ["inv-008-db", "inv-008-app", "inv-008-entrada", "inv-008-migrador", "inv-008-respaldo", "inv-008-vigia"];
+const internal = (red: string) => compose.networks[red]?.internal === true;
+const quienes = (red: string) =>
+  Object.entries(compose.services)
+    .filter(([, srv]) => (srv.networks ?? []).includes(red))
+    .map(([nombre]) => nombre)
+    .sort();
 
 describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
   it("es el proyecto inv-008-prod, distinto del de desarrollo (inv-008)", () => {
     expect(compose.name).toBe("inv-008-prod");
   });
 
-  it("tiene exactamente sus 5 servicios", () => {
+  it("tiene exactamente sus 6 servicios (la entrada es el relé del túnel hacia la app)", () => {
     expect(Object.keys(compose.services).sort()).toEqual([...SERVICIOS].sort());
   });
 
@@ -76,11 +87,63 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(compose.networks["inv-008-red-interna"]?.internal).toBe(true);
   });
 
-  it("la app publica solo 127.0.0.1:5008 (nunca 0.0.0.0)", () => {
-    expect(s("inv-008-app").ports).toEqual(["127.0.0.1:5008:5008"]);
+  it("solo la entrada publica un puerto, y solo 127.0.0.1:5008 (nunca 0.0.0.0); la app no publica nada", () => {
+    expect(s("inv-008-entrada").ports).toEqual(["127.0.0.1:5008:5008"]);
     for (const [nombre, srv] of Object.entries(compose.services)) {
-      if (nombre !== "inv-008-app") expect(srv.ports, nombre).toBeUndefined();
+      if (nombre !== "inv-008-entrada") expect(srv.ports, nombre).toBeUndefined();
     }
+  });
+
+  it("la app vive solo en redes internal (sin salida a internet): la interna, con la base, y la de la entrada", () => {
+    expect(s("inv-008-app").networks).toEqual(["inv-008-red-interna", "inv-008-red-entrada"]);
+    for (const red of s("inv-008-app").networks ?? []) expect(internal(red), red).toBe(true);
+  });
+
+  it("inv-008-red-entrada es internal y solo la comparten la app y la entrada", () => {
+    expect(compose.networks["inv-008-red-entrada"]?.internal).toBe(true);
+    expect(quienes("inv-008-red-entrada")).toEqual(["inv-008-app", "inv-008-entrada"]);
+  });
+
+  it("la única red con salida (inv-008-red) la usan solo la entrada (para publicar) y el vigía (Telegram)", () => {
+    const conSalida = Object.keys(compose.networks).filter((red) => !internal(red));
+    expect(conSalida).toEqual(["inv-008-red"]);
+    expect(quienes("inv-008-red")).toEqual(["inv-008-entrada", "inv-008-vigia"]);
+    expect(s("inv-008-entrada").networks).toEqual(["inv-008-red", "inv-008-red-entrada"]);
+  });
+
+  it("toda red internal aísla la puerta de enlace (gateway_mode_ipv4: isolated): desde ella no se llega al host", () => {
+    const internas = Object.keys(compose.networks).filter(internal);
+    expect(internas.sort()).toEqual(["inv-008-red-entrada", "inv-008-red-interna"]);
+    for (const red of internas) {
+      expect(compose.networks[red]?.driver_opts, red).toEqual({ "com.docker.network.bridge.gateway_mode_ipv4": "isolated" });
+    }
+  });
+
+  it("la red con salida (inv-008-red) no se aísla: por su puerta de enlace publica la entrada y sale el vigía", () => {
+    expect(compose.networks["inv-008-red"]?.driver_opts?.["com.docker.network.bridge.gateway_mode_ipv4"]).toBeUndefined();
+  });
+
+  it("quien publica un puerto tiene una red con salida (Docker no publica desde una red internal)", () => {
+    for (const [nombre, srv] of Object.entries(compose.services)) {
+      if (srv.ports) expect((srv.networks ?? []).some((red) => !internal(red)), nombre).toBe(true);
+    }
+  });
+
+  it("la entrada: la imagen de la app (toda imagen anterior trae node, así sirve la vuelta atrás), sin variables, sin volúmenes y sin tmpfs", () => {
+    const e = s("inv-008-entrada");
+    expect(e.image).toBe("inv-008-app:${INV_TAG:-sin-desplegar}");
+    expect(e.pull_policy).toBe("never");
+    expect(e.environment).toBeUndefined();
+    expect(e.volumes).toBeUndefined();
+    expect(e.tmpfs).toBeUndefined();
+    expect(e.entrypoint?.slice(0, 3)).toEqual(["node", "--max-old-space-size=16", "-e"]);
+  });
+
+  it("la entrada espera a la app healthy (entrega ordenada del puerto) y su healthcheck pasa por el relé con wget, nunca con un segundo node", () => {
+    const e = s("inv-008-entrada");
+    expect(e.depends_on).toEqual({ "inv-008-app": { condition: "service_healthy" } });
+    expect(e.healthcheck?.test).toEqual(["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:5008/api/salud"]);
+    expect(JSON.stringify(e.healthcheck)).not.toMatch(/\bnode\b/);
   });
 
   it("ninguna red es externa (no se une a las redes de PI) y nadie usa links ni nombra a PI, BI, Gesmovil o Hermes", () => {
@@ -152,9 +215,10 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect((s("inv-008-respaldo") as { init?: boolean }).init).toBe(true);
   });
 
-  it("app y vigía corren con init (las señales llegan y se detienen sin SIGKILL)", () => {
-    expect((s("inv-008-app") as { init?: boolean }).init).toBe(true);
-    expect((s("inv-008-vigia") as { init?: boolean }).init).toBe(true);
+  it("app, entrada y vigía corren con init (las señales llegan y se detienen sin SIGKILL)", () => {
+    expect(s("inv-008-app").init).toBe(true);
+    expect(s("inv-008-entrada").init).toBe(true);
+    expect(s("inv-008-vigia").init).toBe(true);
   });
 
   it("el migrador y el respaldo solo usan la red interna (sin salida a internet)", () => {
@@ -167,8 +231,8 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(s("inv-008-db").volumes).toEqual(["inv-008-db-datos:/var/lib/postgresql/data"]);
   });
 
-  it("app, migrador y respaldo usan imágenes locales de Inversiones, nunca descargadas", () => {
-    for (const nombre of ["inv-008-app", "inv-008-migrador", "inv-008-respaldo", "inv-008-vigia"]) {
+  it("app, entrada, migrador, respaldo y vigía usan imágenes locales de Inversiones, nunca descargadas", () => {
+    for (const nombre of ["inv-008-app", "inv-008-entrada", "inv-008-migrador", "inv-008-respaldo", "inv-008-vigia"]) {
       expect(s(nombre).image).toMatch(/^inv-008-(app|migrador|vigia):\$\{INV_TAG:-sin-desplegar\}$/);
       expect(s(nombre).pull_policy).toBe("never");
     }
@@ -203,8 +267,10 @@ describe("docker-compose.prod.yml · endurecimiento en cada servicio", () => {
     });
   }
 
-  it("límites medidos: app 384m, base 512m, migrador 256m, respaldo 128m, vigía 32m", () => {
+  it("límites medidos: app 384m, base 512m, migrador 256m, respaldo 128m, vigía 32m y entrada 32m con 32 pids", () => {
     expect(s("inv-008-vigia").mem_limit).toBe("32m");
+    expect(s("inv-008-entrada").mem_limit).toBe("32m");
+    expect(s("inv-008-entrada").pids_limit).toBe(32);
     expect(s("inv-008-app").mem_limit).toBe("384m");
     expect(s("inv-008-db").mem_limit).toBe("512m");
     expect(s("inv-008-migrador").mem_limit).toBe("256m");

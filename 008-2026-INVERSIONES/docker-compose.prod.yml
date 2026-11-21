@@ -13,8 +13,11 @@
 # scripts con `env` (mandan sobre el --env-file): la carpeta de respaldos (de la configuración no secreta
 # <raíz>/inv-008.conf, validada) y la ruta de la pausa (derivada del clon).
 # INV_TAG (el sha) lo exporta desplegar-prod.sh; sin él, las imágenes no existen y nada arranca por error.
-# Red: la base solo en la red interna, sin puertos; la app solo en 127.0.0.1:5008 del host (la entrada es
-# el túnel de PI, ver docs/despliegue/produccion.md §8). cpu_shares bajo: PI tiene prioridad.
+# Redes: la base solo en la red interna, sin puertos. La app SIN salida a internet: solo en redes internal (la
+# interna, con la base, y la de la entrada). La única pieza con el puerto 127.0.0.1:5008 del host (por donde entra
+# el túnel de PI, ver docs/despliegue/produccion.md §8) es inv-008-entrada, un relé TCP en node con la imagen de la
+# app. Lo que sale a internet (la entrada para publicar y el vigía para Telegram) va en inv-008-red.
+# cpu_shares bajo: PI tiene prioridad.
 # Sin volcados de memoria en ningún servicio (ulimits core 0).
 name: inv-008-prod
 
@@ -78,11 +81,10 @@ services:
       APP_ORIGEN: ${APP_ORIGEN:?falta APP_ORIGEN}
       NODE_OPTIONS: --max-old-space-size=256
       TZ: America/Bogota
-    ports:
-      - "127.0.0.1:5008:5008"
+    # Sin puertos y sin salida a internet: solo redes internal. Del túnel la separa inv-008-entrada.
     networks:
       - inv-008-red-interna
-      - inv-008-red
+      - inv-008-red-entrada
     read_only: true
     tmpfs:
       - /tmp
@@ -98,6 +100,102 @@ services:
       core: 0
     healthcheck:
       test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:5008/api/salud || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Relé TCP (capa 4) entre el puerto del túnel y la app: copia bytes sin leer ni tocar el HTTP, así que
+  # Cf-Connecting-IP (los topes por IP), el Host y las cabeceras de seguridad de la app pasan tal cual. Una red
+  # internal no publica puertos: por eso la app (sin salida) necesita esta pieza en inv-008-red. Va con la imagen de
+  # la app (toda imagen anterior trae node: la vuelta atrás con el sha anterior la levanta igual) y su código vive
+  # aquí, no en la imagen; tests/unit/produccion/entrada.test.ts lo ejecuta. Destino fijo (no es un relé abierto),
+  # sin variables ni secretos, sin volúmenes y sin log de los clientes. Argumentos: destino, puerto del destino,
+  # puerto propio, inactividad en segundos y máximo de conexiones. Medido en el Mac: ~9 MiB en reposo y 14,7 MiB de
+  # pico con 60 conexiones quietas.
+  inv-008-entrada:
+    image: inv-008-app:${INV_TAG:-sin-desplegar}
+    pull_policy: never
+    user: "10008:10008"
+    restart: always
+    init: true
+    depends_on:
+      inv-008-app:
+        condition: service_healthy
+    entrypoint:
+      - node
+      - --max-old-space-size=16
+      - -e
+      - |
+        "use strict";
+        const net = require("node:net");
+        const [destino, textoDestino, textoPuerto, textoInactivo, textoMaximo] = process.argv.slice(1);
+        // Sin el signo de dólar en todo el script: Compose lo interpolaría.
+        const entero = (t, min, max) => {
+          const n = Number.parseInt(t || "", 10);
+          return String(n) === t && n >= min && n <= max ? n : NaN;
+        };
+        const puertoDestino = entero(textoDestino, 1, 65535);
+        const puerto = entero(textoPuerto, 1, 65535);
+        const inactivoMs = entero(textoInactivo, 1, 3600) * 1000;
+        const maximo = entero(textoMaximo, 1, 1024);
+        const destinoValido = typeof destino === "string" && destino.length > 0 && destino.length <= 253 && !/[^a-z0-9.-]/.test(destino);
+        if (!destinoValido || [puertoDestino, puerto, inactivoMs, maximo].some(Number.isNaN)) {
+          process.stderr.write("[entrada] argumentos inválidos: destino puerto-destino puerto inactividad-s máximo\n");
+          process.exit(64);
+        }
+        const CONECTAR_MS = 5000;
+        const servidor = net.createServer({ allowHalfOpen: true }, (cliente) => {
+          const app = net.connect({ host: destino, port: puertoDestino, allowHalfOpen: true });
+          const cortar = () => {
+            clearTimeout(espera);
+            cliente.destroy();
+            app.destroy();
+          };
+          const espera = setTimeout(cortar, CONECTAR_MS);
+          app.once("connect", () => clearTimeout(espera));
+          for (const lado of [cliente, app]) {
+            lado.setTimeout(inactivoMs, cortar);
+            lado.on("error", cortar);
+          }
+          cliente.pipe(app);
+          app.pipe(cliente);
+        });
+        servidor.maxConnections = maximo;
+        servidor.on("error", (error) => {
+          process.stderr.write("[entrada] no se pudo escuchar: " + error.code + "\n");
+          process.exit(1);
+        });
+        servidor.listen(puerto, "0.0.0.0", () => process.stdout.write("[entrada] relé TCP listo: " + puerto + " hacia " + destino + ":" + puertoDestino + "\n"));
+      - inv-008-app
+      - "5008"
+      - "5008"
+      - "120"
+      - "64"
+    ports:
+      - "127.0.0.1:5008:5008"
+    networks:
+      - inv-008-red
+      - inv-008-red-entrada
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 32m
+    memswap_limit: 32m
+    cpus: 0.25
+    cpu_shares: 256
+    # node cuenta sus hilos (libuv, V8) como pids; el healthcheck suma uno.
+    pids_limit: 32
+    ulimits:
+      core: 0
+    # De punta a punta por el relé, con el wget de la imagen. Nunca un segundo node: no cabe en 32m.
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:5008/api/salud"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -264,11 +362,21 @@ services:
         max-size: "10m"
         max-file: "5"
 
+# Las dos redes internal aíslan además la puerta de enlace (gateway_mode_ipv4: isolated, Docker 28 o más): el puente
+# no tiene dirección del host, así que desde ellas no se llega ni a internet ni al HOST (sin aislar se llegaba a los
+# servicios del host por su puerta de enlace). El DNS de Docker y los vecinos de la misma red siguen funcionando.
 networks:
-  # Solo para la base (y el migrador): sin salida y sin puertos.
+  # La base, el migrador, el respaldo y la app: sin salida, sin puertos y sin llegar al host.
   inv-008-red-interna:
     internal: true
-  # Para publicar la app en 127.0.0.1:5008 y para que el vigía llegue a Telegram.
+    driver_opts:
+      com.docker.network.bridge.gateway_mode_ipv4: isolated
+  # Solo la app y la entrada: sin salida (la app no llega a internet por aquí) y sin llegar al host.
+  inv-008-red-entrada:
+    internal: true
+    driver_opts:
+      com.docker.network.bridge.gateway_mode_ipv4: isolated
+  # Con salida: la entrada (para publicar 127.0.0.1:5008) y el vigía (Telegram). Ni la app ni la base.
   inv-008-red:
     driver: bridge
 

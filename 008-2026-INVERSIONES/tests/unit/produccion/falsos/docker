@@ -31,8 +31,11 @@ if [ "${1:-}" = "compose" ]; then
       case "$todo" in *" -f "*) ;; *) [ -z "${FALSO_DOWN_SIN_F_RC:-}" ] || exit "$FALSO_DOWN_SIN_F_RC" ;; esac
       exit "${FALSO_DOWN_RC:-0}" ;;
     ps)
+      # FALSO_BORRAR_EN_PS: borra una ruta en el primer `compose ps` (la medición de memoria, antes de levantar nada).
+      if [ -n "${FALSO_BORRAR_EN_PS:-}" ] && [ -e "$FALSO_BORRAR_EN_PS" ]; then rm -rf "$FALSO_BORRAR_EN_PS"; fi
       case "$todo" in
         *" inv-008-app "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" ;;
+        *" inv-008-entrada "*) printf '%s\n' "${FALSO_CID_ENTRADA-cidentrada}" ;;
         *" inv-008-db "*) printf '%s\n' "${FALSO_CID_DB-ciddb}" ;;
         *" -q "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" "${FALSO_CID_DB-ciddb}" ;;
       esac
@@ -89,21 +92,81 @@ case "${1:-} ${2:-}" in
   "image ls") printf '%b' "${FALSO_IMAGENES:-}"; exit 0 ;;
   "image rm") exit 0 ;;
 esac
+# El contenedor (o la red) del que se pregunta: el último argumento.
+objeto="${!#}"
+es_entrada() { [ "$objeto" = "${FALSO_CID_ENTRADA-cidentrada}" ]; }
 case "${1:-}" in
   inspect)
     case "$*" in
-      *.Image*) printf '%s\n' "${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}" ;;
+      *NetworkSettings.Networks*)
+        case "$objeto" in
+          "${FALSO_CID_DB-ciddb}") printf '%s \n' "${FALSO_REDES_DB-inv-008-prueba_inv-008-red-interna}" ;;
+          *) printf '%s \n' "${FALSO_REDES_APP-inv-008-prueba_inv-008-red-entrada inv-008-prueba_inv-008-red-interna}" ;;
+        esac ;;
+      *.Internal*)
+        # «internal modo»: las redes con salida se nombran en FALSO_REDES_CON_SALIDA; las internal sin aislar la puerta
+        # de enlace, en FALSO_REDES_SIN_AISLAR. El resto, internal y aisladas.
+        # «internal|modo|puerta de enlace»: una red aislada no tiene puerta de enlace del host («invalid IP», medido en
+        # Docker 29). FALSO_REDES_CON_GW: dicen isolated pero el demonio les dio puerta de enlace (no lo aplicó).
+        case " ${FALSO_REDES_CON_SALIDA:-} " in
+          *" $objeto "*) echo "false||203.0.113.1" ;;
+          *) case " ${FALSO_REDES_SIN_AISLAR:-} " in
+               *" $objeto "*) echo "true||203.0.113.1" ;;
+               *) case " ${FALSO_REDES_CON_GW:-} " in *" $objeto "*) echo "true|isolated|203.0.113.1" ;; *) echo "true|isolated|invalid IP" ;; esac ;;
+             esac ;;
+        esac ;;
+      *gateway_mode_ipv4*)
+        # ¿La red ya existe y con qué modo? FALSO_REDES_VIEJAS: redes de una versión anterior (sin aislar). Las demás no
+        # existen todavía (inspect falla), salvo que FALSO_REDES_AL_DIA las nombre (existen y aisladas).
+        case " ${FALSO_REDES_VIEJAS:-} " in *" $objeto "*) echo "<no value>"; exit 0 ;; esac
+        case " ${FALSO_REDES_AL_DIA:-} " in *" $objeto "*) echo "isolated"; exit 0 ;; esac
+        exit 1 ;;
+      *.Image*) if es_entrada; then printf '%s\n' "${FALSO_IMAGEN_ENTRADA:-${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}}"; else printf '%s\n' "${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}"; fi ;;
       *Health.Status*) printf '%s\n' "${FALSO_SALUD_ESTADO:-healthy}" ;;
-      *State.Status*) printf '%s\n' "${FALSO_ESTADO_APP:-running 0}" ;;
+      *State.Status*) if es_entrada; then printf '%s\n' "${FALSO_ESTADO_ENTRADA:-running 0}"; else printf '%s\n' "${FALSO_ESTADO_APP:-running 0}"; fi ;;
       *HostConfig.Memory*) printf '%s\n' "${FALSO_MEMSWAP:-402653184 402653184}" ;;
       *"{{.Id}}"*) printf '%s\n' "${FALSO_ID_LARGO:-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc}" ;;
       *OOMKilled*) printf '%b' "${FALSO_PI_ESTADO:-}" | grep -F -- "/${!#} " || true ;;
     esac
     exit 0 ;;
   exec)
+    # La prueba de no salida: nslookup y nc dentro de la entrada (con salida) o de la app (sin salida). Los textos
+    # por defecto van en variables: un apóstrofo dentro de ${x-…} entre comillas dobles rompe el análisis de bash.
+    cid_exec="${2:-}"
+    resuelve_entrada="Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\nNon-authoritative answer:\nName:\tapi.telegram.org\nAddress: 203.0.113.7\n"
+    no_resuelve_app="Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\n** server can't find api.telegram.org: SERVFAIL\n"
+    # El texto real del nc de busybox 1.37 (imagen de la app) con -z -v; SIN -v no imprime nada (medido).
+    sin_ruta="nc: 203.0.113.7 (203.0.113.7:443): Network unreachable"
+    case " $* " in
+      *" nslookup "*)
+        if [ "$cid_exec" = "${FALSO_CID_ENTRADA-cidentrada}" ]; then
+          printf '%b' "${FALSO_NSLOOKUP_ENTRADA-$resuelve_entrada}"
+          exit "${FALSO_NSLOOKUP_ENTRADA_RC:-0}"
+        fi
+        printf '%b' "${FALSO_NSLOOKUP_APP-$no_resuelve_app}"
+        exit "${FALSO_NSLOOKUP_APP_RC:-1}" ;;
+      *" nc "*)
+        if [ "$cid_exec" = "${FALSO_CID_ENTRADA-cidentrada}" ]; then
+          # FALSO_NC_ENTRADA_FALLAS=n: las primeras n veces la entrada no llega (red pasajera), después sí.
+          if [ -n "${FALSO_NC_ENTRADA_FALLAS:-}" ]; then
+            n="$(cat "$FALSO_CONTADOR_NC" 2>/dev/null || echo 0)"; n=$((n + 1)); printf '%s\n' "$n" >"$FALSO_CONTADOR_NC"
+            [ "$n" -gt "$FALSO_NC_ENTRADA_FALLAS" ] || exit 1
+          fi
+          exit "${FALSO_NC_ENTRADA_RC:-0}"
+        fi
+        case " $* " in *" -v "*) printf '%s\n' "${FALSO_NC_APP_MSG-$sin_ruta}" >&2 ;; esac
+        exit "${FALSO_NC_APP_RC:-1}" ;;
+    esac
+    [ -z "${FALSO_EXECS:-}" ] || printf '%s\n' "$cid_exec" >>"$FALSO_EXECS"
     if [ -n "${FALSO_SALUD_ARCHIVO:-}" ] && [ -s "$FALSO_SALUD_ARCHIVO" ]; then cat "$FALSO_SALUD_ARCHIVO"; else printf '%s' "${FALSO_SALUD:-}"; fi
     exit "${FALSO_EXEC_RC:-0}" ;;
-  port) printf '%b' "${FALSO_PUERTO:-}"; exit 0 ;;
+  port)
+    case "${2:-}" in
+      "${FALSO_CID_APP-cidapp}") printf '%b' "${FALSO_PUERTO_APP:-}" ;;
+      "${FALSO_CID_ENTRADA-cidentrada}") printf '%b' "${FALSO_PUERTO_ENTRADA:-}" ;;
+      *) printf '%b' "${FALSO_PUERTO:-}" ;;
+    esac
+    exit 0 ;;
   ps) printf '%b' "${FALSO_PI_NOMBRES:-}"; exit 0 ;;
   stats) printf 'NAME\tMEM USAGE / LIMIT\tMEM %%\tCPU %%\ninv-008-prod-inv-008-app-1\t140MiB / 384MiB\t36%%\t1%%\n'; exit 0 ;;
   load) exit "${FALSO_LOAD_RC:-0}" ;;

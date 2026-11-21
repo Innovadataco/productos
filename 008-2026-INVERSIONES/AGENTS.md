@@ -112,8 +112,9 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - **Secretos:** un solo archivo, `<raíz>/.env.inversiones.production` (root, 600, fuera de git). Plantilla sin valores: `docs/despliegue/env-inversiones-production.example`. Ningún agente escribe, copia ni imprime sus valores.
 - **Configuración no secreta:** `<raíz>/inv-008.conf` (root, 644). Lleva una sola línea, `INV_RESPALDOS_DIR`. Plantilla: `docs/despliegue/inv-008.conf.example`.
 - **Flujo:** sha de `main` con CI `inv` en verde (`inv-gate` y `app-008` en success) → `scripts/construir-imagen.sh <sha> --guardar <carpeta>` en el Mac → envío del `.tar` a `<raíz>/imagenes/` → `scripts/desplegar-prod.sh` en el VPS.
-- **Verificación:** se da por desplegado solo con **«DEPLOY VERIFICADO <sha>»** como última línea de `desplegar-prod.sh`. Después, `/api/salud` debe devolver `version` igual al sha desplegado.
-- **Reversa:** con el clon ya puesto en el sha anterior, `desplegar-prod.sh inv-008-app:<sha anterior> --sin-migrar` (sin consultar GitHub).
+- **Red:** la app **sin salida a internet**, solo en redes `internal` y sin puertos. El único puerto, `127.0.0.1:5008`, lo publica `inv-008-entrada`, un relé TCP en node con la imagen de la app (capa 4: `Cf-Connecting-IP` y las cabeceras pasan tal cual). La base, solo en la red interna. Las redes `internal` aíslan la puerta de enlace (`gateway_mode_ipv4: isolated`): ni la app ni la base llegan al host. El vigía conserva su salida para Telegram. Su alcance y su límite, en `produccion.md` («Red»).
+- **Verificación:** se da por desplegado solo con **«DEPLOY VERIFICADO <sha>»** como última línea de `desplegar-prod.sh`. Antes de esa línea verifica la salud por la entrada, la app y la base solo en redes `internal` y la app sin salida, con control positivo desde la entrada. Después, `/api/salud` debe devolver `version` igual al sha desplegado.
+- **Reversa:** el clon **se queda** en el sha que corre; `desplegar-prod.sh inv-008-app:<sha anterior> --sin-migrar` (sin consultar GitHub) vuelve solo la imagen, con el compose actual, y nunca a una topología vieja (`produccion.md` §5).
 - **Carga de los datos del dueño:** vía B, la importación fresca (`produccion.md` §11).
   - Va por stdin y sin copias en el VPS: `scripts/armar-sobre.sh` en el Mac → `ssh` → `scripts/cargar-prod.sh` → `inv-cargar` en el migrador.
   - La corre Jelk o quien él designe; nunca la Fábrica sola.
@@ -129,6 +130,7 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.21 · 2026-11-21 · 09:28 (-05) · INV · Fábrica ECC (frente app-sin-salida) · la app sin salida a internet detrás de `inv-008-entrada`, redes internal con la puerta de enlace aislada; la reversa con el clon en el sha que corre
 > v1.20 · 2026-11-21 · 08:34 (-05) · INV · Fábrica Inversiones · cobertura unida (`test:cobertura` = unidad + integración con `--merge-reports`, pisos 92/93/97/92); se retiran los pisos separados
 > v1.19 · 2026-11-21 · 06:57 (-05) · INV · Fábrica ECC (frente infra-literales) · sin nombres de otros proyectos del VPS en la sección de producción; reversa con el clon en el sha anterior
 > v1.18 · 2026-11-21 · 06:50 (-05) · INV · Fábrica ECC (frente infra-literales) · sin rutas ni nombres del VPS (marcadores, raíz derivada, `inv-008.conf`); carga del dueño por la vía B, por stdin y sin copias en el VPS
