@@ -81,6 +81,14 @@ describe("parsearYahoo", () => {
     expect(r.ok && r.cierres.map((c) => c.volumen)).toEqual([null, null, null]);
   });
 
+  it("con dos barras el mismo día, el volumen es el de la barra que gana el precio (la última con precio)", () => {
+    const mismoDia = [T1, T1 + 3600];
+    const ultima = parsearYahoo(conVolumen([100, 101], [0, 50], mismoDia));
+    expect(ultima.ok && ultima.cierres.map((c) => [c.precio, c.volumen])).toEqual([["101", 50]]);
+    const sinPrecio = parsearYahoo(conVolumen([100, null], [0, 50], mismoDia));
+    expect(sinPrecio.ok && sinPrecio.cierres.map((c) => [c.precio, c.volumen])).toEqual([["100", 0]]);
+  });
+
   it.each([
     ["no es un arreglo", "abc"],
     ["es un objeto con largo", { length: 3 }],
