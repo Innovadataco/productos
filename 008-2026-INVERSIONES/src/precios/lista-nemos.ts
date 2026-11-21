@@ -5,7 +5,7 @@
  * Solo ASCII imprimible. A lo sumo MAX_NEMOS_LISTA (las especies que caben en el CSV). Errores con línea y código,
  * nunca el nemotécnico.
  */
-import { MAX_ERRORES_LISTADOS, MAX_ESPECIES_CSV } from "./csv-cierres";
+import { MAX_ERRORES_CONTADOS, MAX_ERRORES_LISTADOS, MAX_ESPECIES_CSV } from "./csv-cierres";
 
 export const MAX_BYTES_LISTA = 4096;
 export const MAX_NEMOS_LISTA = MAX_ESPECIES_CSV;
@@ -48,6 +48,7 @@ export function leerListaNemos(bytes: Uint8Array): ResultadoLista {
     }
     totalErrores += 1;
     if (errores.length < MAX_ERRORES_LISTADOS) errores.push({ linea: i + 1, codigo });
+    if (totalErrores >= MAX_ERRORES_CONTADOS) break;
   }
   if (totalErrores === 0 && nemos.length === 0) return { ok: false, errores: [{ linea: 1, codigo: "SIN_NEMOS" }], totalErrores: 1 };
   return totalErrores > 0 ? { ok: false, errores, totalErrores } : { ok: true, nemos };

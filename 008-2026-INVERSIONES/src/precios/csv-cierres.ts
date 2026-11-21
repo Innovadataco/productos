@@ -16,7 +16,8 @@
  * Si un día es hábil, si ya es definitivo o si tuvo negociación no lo decide el CSV: lo decide quien guarda
  * (`motivoOmision`, en `guardar.ts`), igual que con Yahoo directo.
  * La lectura es todo o nada: con un error no se entrega ninguna fila. Los errores traen solo número de línea
- * y código, nunca la especie, la fecha ni el precio.
+ * y código, nunca la especie, la fecha ni el precio. Se deja de leer al pasar el tope de filas o al llegar a
+ * MAX_ERRORES_CONTADOS errores: lo que queda después no se valida (el archivo ya está rechazado).
  */
 import { leerFechaIso } from "../importacion/trii/valores";
 import { PRECIO_MAXIMO_COP, type Cierre } from "./yahoo";
@@ -28,6 +29,8 @@ export const MAX_FILAS_CSV = 60_000;
 export const MAX_ESPECIES_CSV = 40;
 export const MAX_LARGO_LINEA = 80;
 export const MAX_ERRORES_LISTADOS = 20;
+/** Con tantos errores se deja de leer: un archivo de 4 MiB de LF no arma millones de errores (el informe dice «al menos»). */
+export const MAX_ERRORES_CONTADOS = 1000;
 
 const NEMOTECNICO = /^[A-Z0-9]{2,20}$/;
 const FECHA = /^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/;
@@ -100,28 +103,40 @@ function leerFila(linea: string): Campo<{ readonly nemotecnico: string; readonly
 
 const esImprimible = (b: number): boolean => b >= IMPRIMIBLE_MIN && b <= IMPRIMIBLE_MAX;
 
-/** Las líneas del archivo (sin su LF) con el código de forma que ya las descarta, si lo hay. */
-function partirLineas(bytes: Uint8Array): { readonly lineas: readonly { texto: string; codigo: CodigoLinea | null }[]; readonly terminaEnLf: boolean } {
-  const lineas: { texto: string; codigo: CodigoLinea | null }[] = [];
-  let inicio = 0;
-  for (let i = 0; i <= bytes.length; i += 1) {
-    if (i < bytes.length && bytes[i] !== LF) continue;
-    if (i === bytes.length && inicio === bytes.length) break; // terminó en LF: no hay una línea más
-    const trozo = bytes.subarray(inicio, i);
-    const codigo = !trozo.every(esImprimible) ? "NO_ASCII" : trozo.length === 0 ? "LINEA_VACIA" : trozo.length > MAX_LARGO_LINEA ? "LINEA_DEMASIADO_LARGA" : null;
-    lineas.push({ texto: codigo === null ? String.fromCharCode(...trozo) : "", codigo });
-    inicio = i + 1;
-  }
-  return { lineas, terminaEnLf: bytes.length > 0 && bytes[bytes.length - 1] === LF };
+interface Linea {
+  readonly numero: number;
+  readonly texto: string;
+  /** El código de forma que ya la descarta (no ASCII, vacía o larga), o null. */
+  readonly codigo: CodigoLinea | null;
+  /** La última línea del archivo, sin LF al final. */
+  readonly sinLf: boolean;
 }
 
-/** Acumula errores: guarda los primeros MAX_ERRORES_LISTADOS y cuenta todos. */
+/** Las líneas del archivo de una en una (sin su LF), sin armar un arreglo: la memoria no crece con el número de líneas. */
+function* lineasDe(bytes: Uint8Array): Generator<Linea> {
+  let inicio = 0;
+  let numero = 0;
+  while (inicio < bytes.length) {
+    const lf = bytes.indexOf(LF, inicio);
+    const fin = lf === -1 ? bytes.length : lf;
+    const trozo = bytes.subarray(inicio, fin);
+    const codigo = !trozo.every(esImprimible) ? "NO_ASCII" : trozo.length === 0 ? "LINEA_VACIA" : trozo.length > MAX_LARGO_LINEA ? "LINEA_DEMASIADO_LARGA" : null;
+    numero += 1;
+    yield { numero, texto: codigo === null ? String.fromCharCode(...trozo) : "", codigo, sinLf: lf === -1 };
+    inicio = fin + 1;
+  }
+}
+
+/** Acumula errores: guarda los primeros MAX_ERRORES_LISTADOS y cuenta hasta MAX_ERRORES_CONTADOS (ahí se deja de leer). */
 class Errores {
   readonly lista: ErrorLinea[] = [];
   total = 0;
   agregar(linea: number, codigo: CodigoLinea): void {
     this.total += 1;
     if (this.lista.length < MAX_ERRORES_LISTADOS) this.lista.push({ linea, codigo });
+  }
+  get colmado(): boolean {
+    return this.total >= MAX_ERRORES_CONTADOS;
   }
 }
 
@@ -178,17 +193,18 @@ export function leerCsvCierres(bytes: Uint8Array): ResultadoLectura {
   if (bytes.length > MAX_BYTES_CSV) return { ok: false, codigo: "CSV_DEMASIADO_GRANDE", errores: [], totalErrores: 0 };
   const errores = new Errores();
   if (bytes.length === 0) return (errores.agregar(1, "VACIO"), invalido(errores));
-  const { lineas, terminaEnLf } = partirLineas(bytes);
   const acc: Acumulado = { especies: new Map(), vistas: new Set(), filas: 0 };
-  for (const [i, l] of lineas.entries()) {
-    const numero = i + 1;
-    if (l.codigo !== null) errores.agregar(numero, l.codigo);
-    else if (numero === 1) {
-      if (l.texto !== ENCABEZADO_CSV) errores.agregar(numero, "ENCABEZADO");
-    } else if (!sumarFila(l.texto, numero, acc, errores)) break;
+  let ultima = 0;
+  for (const l of lineasDe(bytes)) {
+    ultima = l.numero;
+    if (l.codigo !== null) errores.agregar(l.numero, l.codigo);
+    else if (l.numero === 1) {
+      if (l.texto !== ENCABEZADO_CSV) errores.agregar(l.numero, "ENCABEZADO");
+    } else if (!sumarFila(l.texto, l.numero, acc, errores)) break;
+    if (l.sinLf) errores.agregar(l.numero, "SIN_FIN_DE_LINEA");
+    if (errores.colmado) break;
   }
-  if (!terminaEnLf) errores.agregar(lineas.length, "SIN_FIN_DE_LINEA");
-  if (errores.total === 0 && acc.filas === 0) errores.agregar(lineas.length + 1, "SIN_FILAS");
+  if (errores.total === 0 && acc.filas === 0) errores.agregar(ultima + 1, "SIN_FILAS");
   return errores.total > 0 ? invalido(errores) : resultado(acc);
 }
 

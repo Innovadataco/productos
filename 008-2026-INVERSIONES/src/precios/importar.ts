@@ -5,12 +5,16 @@
  * re-verificación contra la certificación. Recibe el CSV ya leído y validado (csv-cierres.ts): todo o nada.
  * - Un nemotécnico del CSV sin esa especie no escribe nada y se informa por su primera línea (ESPECIE_NO_REGISTRADA).
  * - El exportador pide `<NEMO>.CL`: si la especie tiene registrado otro símbolo de Yahoo vigente, sus cierres no
- *   son los que usaría `precios:actualizar` y no se escriben (SIMBOLO_DISTINTO, como fallo de la especie).
+ *   son los que usaría `precios:actualizar` y no se escriben (SIMBOLO_DISTINTO, como fallo de la especie). La
+ *   vigencia se mira a la última fecha del CSV, pero nunca después de hoy: el CSV no elige con qué fecha se resuelve.
+ * - «Todo o nada» es la VALIDACIÓN del CSV. La escritura es por barra (como en precios:actualizar): si el proceso
+ *   muere a mitad, queda lo guardado hasta ahí, y volver a correr el mismo CSV completa sin duplicar.
  */
 import type { PrismaClient } from "@prisma/client";
 import { dondeEspecies, simboloDe } from "./actualizar";
 import type { EspecieCsv, ResultadoLectura } from "./csv-cierres";
 import { guardarCierresDeEspecies, type EspecieAGuardar, type ResultadoActualizacion } from "./guardar";
+import { fechaEnBogota } from "./horario";
 import type { ResultadoYahoo } from "./yahoo";
 
 export type LecturaValida = Extract<ResultadoLectura, { readonly ok: true }>;
@@ -38,9 +42,11 @@ export async function importarPrecios(db: PrismaClient, csv: LecturaValida, opci
   const instrumentos = await db.instrumento.findMany({ where: { ...dondeEspecies(), nemotecnico: { in: nemos } }, select: { id: true, nemotecnico: true } });
   const idDe = new Map(instrumentos.map((i) => [i.nemotecnico, i.id]));
   const sinEspecie = csv.especies.filter((e) => !idDe.has(e.nemotecnico)).map((e) => ({ linea: e.primeraLinea, codigo: "ESPECIE_NO_REGISTRADA" as const }));
+  const hoy = fechaEnBogota(opciones.ahora);
+  const vigenciaSimbolo = csv.hasta < hoy ? csv.hasta : hoy;
   const fuentes: EspecieAGuardar[] = csv.especies.flatMap((e) => {
     const instrumentoId = idDe.get(e.nemotecnico);
-    return instrumentoId ? [{ instrumentoId, traer: () => delCsv(db, instrumentoId, e, csv.hasta) }] : [];
+    return instrumentoId ? [{ instrumentoId, traer: () => delCsv(db, instrumentoId, e, vigenciaSimbolo) }] : [];
   });
   const guardado = await guardarCierresDeEspecies(db, fuentes, { desde: csv.desde, hasta: csv.hasta, ahora: opciones.ahora });
   return { filas: csv.filas, especiesCsv: csv.especies.length, sinEspecie, guardado };

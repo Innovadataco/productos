@@ -34,6 +34,11 @@ export const DESVIACION_PCT_MAXIMA = new Prisma.Decimal("999.999999");
 export const FUENTE = "yahoo";
 /** Intentos de guardar una barra cuando choca con otra corrida simultánea. */
 export const MAX_INTENTOS_GUARDADO = 3;
+/**
+ * Plazo de la transacción de cada barra y espera de una conexión libre. El de Prisma por defecto (5 s y 2 s) daría
+ * P2028 con una base lenta o con `connection_limit` bajo, y P2028 no se reintenta (no es una carrera).
+ */
+const OPCIONES_TRANSACCION = { timeout: 15_000, maxWait: 10_000 } as const;
 
 export interface FalloEspecie {
   readonly instrumentoId: string;
@@ -168,7 +173,7 @@ async function guardarCierreUnaVez(db: PrismaClient, instrumentoId: string, c: C
     }
     await tx.precioCierre.create({ data: { instrumentoId, fecha: c.fecha, precio: new Prisma.Decimal(c.precio), fuente: FUENTE, ...verificacion } });
     return cambio;
-  });
+  }, OPCIONES_TRANSACCION);
 }
 
 /** Devuelve "nuevo", "revisado", "reverificado" o null (sin cambios). Ante una carrera con otra corrida, relee y reintenta. */

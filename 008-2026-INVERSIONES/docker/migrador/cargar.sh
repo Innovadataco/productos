@@ -140,6 +140,8 @@ fondo_valido() {
 # Los comandos con archivo: lista blanca de opciones por comando; el contenedor agrega la ruta del temporal.
 if [ -n "$archivo" ]; then
   case "$bytes" in '' | *[!0-9]*) falla "falta --bytes <N> del archivo (entero)" ;; esac
+  # Antes de compararlo: un entero de más de 10 dígitos no cabe en `test` (y ningún tope llega a 10 dígitos).
+  [ "${#bytes}" -le 10 ] || falla "--bytes fuera de rango"
   case "$sha" in *[!0-9a-f]*) falla "--sha256 debe ser de 64 hex en minúscula" ;; esac
   [ "${#sha}" = 64 ] || falla "falta --sha256 <H> del archivo (64 hex)"
   [ "$bytes" -gt 0 ] || falla "el archivo está vacío"
@@ -199,6 +201,13 @@ if [ -n "$archivo" ]; then
   esac
 else
   [ -z "$bytes$sha" ] || falla "$comando no lleva archivo (sobran --bytes o --sha256)"
+  # conciliar-certificacion: lista blanca también aquí (defensa en profundidad; su CLI ya es estricto). Los otros
+  # comandos sin archivo pasan sus argumentos tal cual a su CLI estricto.
+  if [ "$comando" = conciliar-certificacion ]; then
+    if [ $# -ne 2 ] || [ "$1" != --fecha-corte ] || ! fecha_valida "$2"; then
+      falla "conciliar-certificacion lleva solo --fecha-corte AAAA-MM-DD"
+    fi
+  fi
 fi
 
 # El CLI en segundo plano con su entrada en /dev/null: el trap corre aunque llegue una señal, y la reenvía.

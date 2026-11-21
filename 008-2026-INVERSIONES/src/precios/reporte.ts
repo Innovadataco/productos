@@ -4,6 +4,7 @@
  * internos y el nombre de la base: nunca precios ni nemotécnicos. Salen con 3 si hay algo que atender (fallos,
  * falta de calendario, especies que quedaron fuera…).
  */
+import { MAX_ERRORES_CONTADOS } from "./csv-cierres";
 import type { ResultadoDepuracion } from "./depurar";
 import type { ResultadoExportacion } from "./exportar";
 import type { ResultadoActualizacion } from "./guardar";
@@ -76,10 +77,12 @@ export function reporteImportacion(r: ResultadoImportacion): Reporte {
 /** Un CSV (o una lista) rechazado: cuántos errores, los listados con línea y código, y cuántos quedaron sin listar. */
 export function reporteErroresCsv(r: { readonly errores: readonly { readonly linea: number; readonly codigo: string }[]; readonly totalErrores: number }, que = "CSV_INVALIDO"): string[] {
   const resto = r.totalErrores - r.errores.length;
+  const cortado = r.totalErrores >= MAX_ERRORES_CONTADOS;
+  const mas = cortado ? `   … y al menos ${resto} más (se dejó de leer en ${MAX_ERRORES_CONTADOS})` : `   … y ${resto} más`;
   return [
     `❌ ${que} · ${r.totalErrores} error(es); no se guardó nada:`,
     ...r.errores.map((e) => `   · línea ${e.linea} · ${e.codigo}`),
-    ...(resto > 0 ? [`   … y ${resto} más`] : []),
+    ...(resto > 0 ? [mas] : []),
   ];
 }
 
