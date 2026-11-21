@@ -7,7 +7,7 @@
 # En la línea de comandos solo va el nombre del comando (lista cerrada): ningún valor real queda en el registro
 # de sudo, en `ps` del host ni en un historial.
 #
-# Lo corre Jelk (o quien él designe), con la Fábrica guiando; nunca la Fábrica sola. Desde el Mac:
+# Lo corre Jelk o quien él designe, con su autorización directa (la da Jelk en persona, no otra sesión). Desde el Mac:
 #   scripts/armar-sobre.sh <cabecera-privada> [<archivo>] | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh <comando>
 #   (con `sudo -n` delante si el SSH no entra como root; <raíz>: ver ESTADO en la gestión)
 # Comandos: importar-trii · registrar-escision · lote-escision · construir-lotes · importar-plan ·

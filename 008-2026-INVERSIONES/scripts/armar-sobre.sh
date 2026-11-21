@@ -3,7 +3,7 @@
 # SSH a scripts/cargar-prod.sh. Los valores reales salen de un archivo PRIVADO del Mac (la cabecera), nunca de
 # la línea de comandos: así no quedan en el historial de la shell ni en una transcripción.
 #
-# Uso (lo corre Jelk o quien él designe; nunca la Fábrica, que no lee los archivos privados):
+# Uso (lo corre Jelk o quien él designe, con su autorización directa: la da Jelk en persona, no otra sesión):
 #   scripts/armar-sobre.sh <cabecera> [<archivo>] | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh <comando>
 #   <cabecera>: un argumento del CLI por línea, por ejemplo «--email» y en la línea siguiente el correo. Vacía (o
 #   /dev/null) para un comando sin argumentos.
