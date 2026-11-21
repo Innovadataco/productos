@@ -3,7 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } fro
 import type { KeyboardEvent, MouseEvent } from "react";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { Linea, Peso } from "./Graficas";
-import type { FilaVista, MovimientoVista, Vista } from "./tipos";
+import type { FilaVista, LineaConciliacionVista, MovimientoVista, Vista } from "./tipos";
 
 const MOVIMIENTO_REDUCIDO = "(prefers-reduced-motion: reduce)";
 const SISTEMA_CLARO = "(prefers-color-scheme: light)";
@@ -369,18 +369,39 @@ function Falta() {
         <li><b>Mis reglas</b> y qué tan cerca está cada nivel · con el diario de decisiones</li>
         <li><b>Dividendos que vienen</b> con fecha ex y monto esperado</li>
         <li><b>Fondo inmobiliario</b> con su valor de unidad (SFC)</li>
-        <li><b>Caja oficial</b> de la certificación de A&amp;V y su cuadre</li>
+        <li><b>Caja oficial</b> de A&amp;V en este resumen · su cuadre ya se ve en <a href="/conciliacion">Conciliación</a></li>
         <li><b>Rentabilidad TWR</b> y escenarios</li>
       </ul>
     </section>
   );
 }
 
-export function Tablero({ vista }: { vista: Vista }) {
+const RESULTADO_CONCILIACION: Readonly<Record<"CUADRA" | "NO_CUADRA" | "PARCIAL", string>> = {
+  CUADRA: "cuadra",
+  NO_CUADRA: "no cuadra",
+  PARCIAL: "cuadra, con operaciones por liquidar",
+};
+
+/** La última conciliación con A&V, tal como quedó guardada; el detalle (y si sigue al día) está en /conciliacion. */
+function LineaConciliacion({ linea }: { linea: LineaConciliacionVista }) {
+  const texto = linea === null
+    ? "Conciliación con A&V: todavía no hay certificación de A&V cargada"
+    : `Conciliación con A&V al ${fecha(linea.fechaCorte)}: ${linea.resultado === null ? "todavía sin conciliar" : RESULTADO_CONCILIACION[linea.resultado]}`;
+  return <p className="nota"><a href="/conciliacion">{texto}</a></p>;
+}
+
+interface PropsTablero {
+  readonly vista: Vista;
+  /** Opcional: sin el dato (pruebas de otras partes del tablero) no se pinta la línea. */
+  readonly conciliacion?: LineaConciliacionVista;
+}
+
+export function Tablero({ vista, conciliacion }: PropsTablero) {
   return (
     <>
       <Encabezado vista={vista} />
       <main className="wrap">
+        {conciliacion === undefined ? null : <LineaConciliacion linea={conciliacion} />}
         <Respuesta vista={vista} />
         <Movimientos mov={vista.movimiento} />
         <Posiciones vista={vista} />
