@@ -273,7 +273,7 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     it("sin su secreto el rol existe NOLOGIN y sin clave, y no entra (así los GRANT de un respaldo siempre lo encuentran)", () => {
       expect(sinSecreto).toEqual([{ rolcanlogin: false, sin_clave: true }]);
       expect(entrarSinSecreto).not.toBe("entró");
-      expect(entrarSinSecreto).toMatch(/not permitted to log in|denied access|P1010|P1000/i);
+      expect(entrarSinSecreto).toMatch(/Authentication failed|not permitted to log in|credentials for `inv_precios` are not valid/i);
     });
 
     it("atributos del rol: LOGIN, NOINHERIT, sin superusuario, sin crear bases ni roles, sin replicación ni BYPASSRLS, 4 conexiones", async () => {
@@ -518,7 +518,7 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
           "SELECT rolcanlogin, rolpassword IS NULL AS sin_clave FROM pg_authid WHERE rolname = 'inv_precios'",
         );
         expect(estado).toEqual([{ rolcanlogin: false, sin_clave: true }]);
-        expect(await entrarComoPrecios()).toMatch(/not permitted to log in|denied access|P1010|P1000/i);
+        expect(await entrarComoPrecios()).toMatch(/Authentication failed|not permitted to log in|credentials for `inv_precios` are not valid/i);
       } finally {
         await admin.$executeRawUnsafe(`ALTER ROLE inv_precios WITH LOGIN PASSWORD '${CLAVE_PRECIOS}'`);
       }
