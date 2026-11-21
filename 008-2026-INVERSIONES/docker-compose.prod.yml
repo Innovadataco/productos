@@ -362,13 +362,20 @@ services:
         max-size: "10m"
         max-file: "5"
 
+# Las dos redes internal aíslan además la puerta de enlace (gateway_mode_ipv4: isolated, Docker 28 o más): el puente
+# no tiene dirección del host, así que desde ellas no se llega ni a internet ni al HOST (sin aislar se llegaba a los
+# servicios del host por su puerta de enlace). El DNS de Docker y los vecinos de la misma red siguen funcionando.
 networks:
-  # La base, el migrador, el respaldo y la app: sin salida y sin puertos.
+  # La base, el migrador, el respaldo y la app: sin salida, sin puertos y sin llegar al host.
   inv-008-red-interna:
     internal: true
-  # Solo la app y la entrada: sin salida (la app no llega a internet por aquí).
+    driver_opts:
+      com.docker.network.bridge.gateway_mode_ipv4: isolated
+  # Solo la app y la entrada: sin salida (la app no llega a internet por aquí) y sin llegar al host.
   inv-008-red-entrada:
     internal: true
+    driver_opts:
+      com.docker.network.bridge.gateway_mode_ipv4: isolated
   # Con salida: la entrada (para publicar 127.0.0.1:5008) y el vigía (Telegram). Ni la app ni la base.
   inv-008-red:
     driver: bridge

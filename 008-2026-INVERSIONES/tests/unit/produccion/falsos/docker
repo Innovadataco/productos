@@ -102,8 +102,12 @@ case "${1:-}" in
           *) printf '%s \n' "${FALSO_REDES_APP-inv-008-prueba_inv-008-red-entrada inv-008-prueba_inv-008-red-interna}" ;;
         esac ;;
       *.Internal*)
-        # Las redes con salida (no internal) se nombran en FALSO_REDES_CON_SALIDA.
-        case " ${FALSO_REDES_CON_SALIDA:-} " in *" $objeto "*) echo false ;; *) echo true ;; esac ;;
+        # «internal modo»: las redes con salida se nombran en FALSO_REDES_CON_SALIDA; las internal sin aislar la puerta
+        # de enlace, en FALSO_REDES_SIN_AISLAR. El resto, internal y aisladas.
+        case " ${FALSO_REDES_CON_SALIDA:-} " in
+          *" $objeto "*) echo "false <no value>" ;;
+          *) case " ${FALSO_REDES_SIN_AISLAR:-} " in *" $objeto "*) echo "true <no value>" ;; *) echo "true isolated" ;; esac ;;
+        esac ;;
       *.Image*) if es_entrada; then printf '%s\n' "${FALSO_IMAGEN_ENTRADA:-${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}}"; else printf '%s\n' "${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}"; fi ;;
       *Health.Status*) printf '%s\n' "${FALSO_SALUD_ESTADO:-healthy}" ;;
       *State.Status*) if es_entrada; then printf '%s\n' "${FALSO_ESTADO_ENTRADA:-running 0}"; else printf '%s\n' "${FALSO_ESTADO_APP:-running 0}"; fi ;;
@@ -118,7 +122,8 @@ case "${1:-}" in
     cid_exec="${2:-}"
     resuelve_entrada="Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\nNon-authoritative answer:\nName:\tapi.telegram.org\nAddress: 203.0.113.7\n"
     no_resuelve_app="Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\n** server can't find api.telegram.org: SERVFAIL\n"
-    sin_ruta="nc: can't connect to remote host (203.0.113.7): Network unreachable"
+    # El texto real del nc de busybox 1.37 (imagen de la app) con -z -v; SIN -v no imprime nada (medido).
+    sin_ruta="nc: 203.0.113.7 (203.0.113.7:443): Network unreachable"
     case " $* " in
       *" nslookup "*)
         if [ "$cid_exec" = "${FALSO_CID_ENTRADA-cidentrada}" ]; then
@@ -128,8 +133,15 @@ case "${1:-}" in
         printf '%b' "${FALSO_NSLOOKUP_APP-$no_resuelve_app}"
         exit "${FALSO_NSLOOKUP_APP_RC:-1}" ;;
       *" nc "*)
-        if [ "$cid_exec" = "${FALSO_CID_ENTRADA-cidentrada}" ]; then exit "${FALSO_NC_ENTRADA_RC:-0}"; fi
-        printf '%s\n' "${FALSO_NC_APP_MSG-$sin_ruta}" >&2
+        if [ "$cid_exec" = "${FALSO_CID_ENTRADA-cidentrada}" ]; then
+          # FALSO_NC_ENTRADA_FALLAS=n: las primeras n veces la entrada no llega (red pasajera), después sí.
+          if [ -n "${FALSO_NC_ENTRADA_FALLAS:-}" ]; then
+            n="$(cat "$FALSO_CONTADOR_NC" 2>/dev/null || echo 0)"; n=$((n + 1)); printf '%s\n' "$n" >"$FALSO_CONTADOR_NC"
+            [ "$n" -gt "$FALSO_NC_ENTRADA_FALLAS" ] || exit 1
+          fi
+          exit "${FALSO_NC_ENTRADA_RC:-0}"
+        fi
+        case " $* " in *" -v "*) printf '%s\n' "${FALSO_NC_APP_MSG-$sin_ruta}" >&2 ;; esac
         exit "${FALSO_NC_APP_RC:-1}" ;;
     esac
     [ -z "${FALSO_EXECS:-}" ] || printf '%s\n' "$cid_exec" >>"$FALSO_EXECS"

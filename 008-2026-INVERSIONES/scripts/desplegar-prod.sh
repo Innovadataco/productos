@@ -17,7 +17,7 @@
 # PI otra vez → (si migra) app vieja detenida → respaldo cifrado → (si migra) respaldo diario detenido →
 # migrador (migraciones, guardián del esquema y privilegios) → app, entrada, vigía y respaldo → imagen,
 # salud por la entrada, la app sin puertos y solo en redes internal → la app sin salida a internet (con control
-# positivo desde la entrada) → mem = memswap → medición 10 min después → salud otra vez → estado → retención →
+# positivo desde la entrada), las redes internal con la puerta de enlace aislada → mem = memswap → medición 10 min después → salud otra vez → estado → retención →
 # convivencia → DEPLOY VERIFICADO <sha>. Si algo falla después de tocar contenedores, vuelve a la imagen que corría.
 # Mientras migra no corre nada de Inversiones que retenga tablas: la app queda abajo desde el respaldo previo
 # hasta que el up de la versión nueva queda healthy.
@@ -33,6 +33,9 @@ PERMANENTES=(inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo)
 # resuelve y lo alcanza la ENTRADA (control positivo); desde la app no debe haber ruta.
 SONDA_SALIDA_DESTINO="api.telegram.org"
 SONDA_SALIDA_PUERTO=443
+# El control positivo depende de un tercero (el DNS y la sonda): se reintenta antes de dar el despliegue por caído.
+INTENTOS_CONTROL=3
+PAUSA_CONTROL_S=2
 # inv_app tiene CONNECTION LIMIT 10 (crear-roles-prod.sql): el pool de la app deja margen para una sesión a mano.
 TOPE_POOL_APP=8
 
@@ -185,22 +188,25 @@ verificar_ci() {
 }
 
 # El clon (su compose y sus scripts) tiene que ser el del sha de la imagen. Única excepción, la reversa
-# (--sin-migrar): el clon se queda en el sha QUE CORRE (estado/sha-actual) y la imagen es anterior (su sha es
-# ancestro del clon). Es la misma combinación que ya usa la vuelta atrás automática: la imagen vieja con el compose
-# nuevo. Así una reversa nunca vuelve a una topología vieja (la entrada huérfana con el puerto dejaba el sitio
-# caído con éxito aparente; produccion.md §5).
+# (--sin-migrar): el clon se queda en el sha QUE CORRE (estado/sha-actual) o más adelante (un despliegue que falló
+# dejó el clon en su sha), y la imagen es anterior (su sha es ancestro del clon). Es la misma combinación que ya usa
+# la vuelta atrás automática: la imagen vieja con el compose nuevo. Así una reversa nunca vuelve a una topología
+# vieja (la entrada huérfana con el puerto dejaba el sitio caído con éxito aparente; produccion.md §5). Qué imagen
+# acepta lo decide verificar_sentido: solo la actual o la anterior.
 verificar_clon() {
   local sha="$1" sin_migrar="${2:-0}" cabeza corre
   cabeza="$(git -C "$INV_DIR_008" rev-parse HEAD)"
   [ -z "$(git -C "$INV_DIR_008" status --porcelain --untracked-files=no)" ] || morir "el clon tiene cambios sin commit: no se despliega"
   [ "$cabeza" != "$sha" ] || return 0
   corre="$(leer_estado sha-actual)"
-  if [ "$sin_migrar" = 1 ] && [ -n "$corre" ] && [ "$cabeza" = "$corre" ] && git -C "$INV_DIR_008" merge-base --is-ancestor "$sha" "$cabeza" 2>/dev/null; then
-    informar "reversa con el compose del sha que corre ($corre): solo la imagen vuelve a $sha"
+  if [ "$sin_migrar" = 1 ] && [[ "$corre" =~ ^[0-9a-f]{40}$ ]] &&
+    git -C "$INV_DIR_008" merge-base --is-ancestor "$corre" "$cabeza" 2>/dev/null &&
+    git -C "$INV_DIR_008" merge-base --is-ancestor "$sha" "$cabeza" 2>/dev/null; then
+    informar "reversa con el compose del clon ($cabeza, desde el sha que corre $corre): solo la imagen vuelve a $sha"
     return 0
   fi
   if [ "$sin_migrar" = 1 ]; then
-    morir "reversa: el clon está en $cabeza; debe estar en el sha que corre (${corre:-ninguno}), con la imagen $sha anterior a él. No mueva el clon para una reversa"
+    morir "reversa: el clon está en $cabeza; debe estar en el sha que corre (${corre:-ninguno}) o más adelante, con la imagen $sha anterior a él. No mueva el clon a un sha viejo para una reversa"
   fi
   morir "el clon está en $cabeza, no en $sha: git -C $(dirname "$INV_DIR_008") fetch && git -C $(dirname "$INV_DIR_008") checkout $sha"
 }
@@ -275,16 +281,20 @@ verificar_corriendo() {
   [ "$imagen" = "$ID" ] || morir "$quien corre $imagen y no la imagen enviada $ID"
 }
 
-# Sin puertos y solo en redes internal (sin salida a internet): cada red del contenedor $2, una por una.
+# Sin puertos y solo en redes internal (sin salida a internet) con la puerta de enlace aislada (sin dirección del
+# host en el puente: desde ahí no se llega al host): cada red del contenedor $2, una por una.
 verificar_aislado() {
-  local quien="$1" cid="$2" puertos redes red interna
+  local quien="$1" cid="$2" puertos redes red datos interna modo
   puertos="$(docker port "$cid")"
   [ -z "$puertos" ] || morir "$quien publica puertos ($puertos): debe quedar solo en redes internas"
   redes="$(docker inspect -f '{{range $nombre, $_ := .NetworkSettings.Networks}}{{$nombre}} {{end}}' "$cid")" || morir "no se pudieron leer las redes de $quien"
   [ -n "${redes// /}" ] || morir "$quien no está en ninguna red"
   for red in $redes; do
-    interna="$(docker inspect --type network -f '{{.Internal}}' "$red")" || morir "no se pudo leer la red $red"
+    datos="$(docker inspect --type network -f '{{.Internal}} {{index .Options "com.docker.network.bridge.gateway_mode_ipv4"}}' "$red")" ||
+      morir "no se pudo leer la red $red"
+    read -r interna modo <<<"$datos"
     [ "$interna" = "true" ] || morir "$quien está en la red $red, que tiene salida a internet (no es internal)"
+    [ "$modo" = "isolated" ] || morir "$quien está en la red $red, internal pero sin aislar la puerta de enlace (gateway_mode_ipv4: ${modo:-ninguno}): llegaría al host"
   done
 }
 
@@ -311,22 +321,40 @@ verificar_servicio() {
   informar "la app corre la imagen enviada, sin puertos y solo en redes internal; /api/salud por la entrada responde ok con la versión $SHA"
 }
 
+# La IPv4 de la sonda, resuelta DENTRO del contenedor $1 (vacío y falla si no resolvió).
+ipv4_resuelta_en() {
+  local cid="$1"
+  { docker exec "$cid" nslookup -type=a "$SONDA_SALIDA_DESTINO" 2>/dev/null || true; } | ipv4_de_nslookup
+}
+
+# Control positivo: el contenedor $1 (la entrada) resuelve la sonda y llega a su IP. Imprime la IP. Se reintenta.
+# `nc -z -v`: sin -v, el nc de busybox no dice por qué no conectó (medido en la imagen de la app).
+control_positivo() {
+  local cid="$1" intento ip
+  for ((intento = 1; intento <= INTENTOS_CONTROL; intento++)); do
+    if ip="$(ipv4_resuelta_en "$cid")" && docker exec "$cid" nc -z -v -w 5 "$ip" "$SONDA_SALIDA_PUERTO" >/dev/null 2>&1; then
+      printf '%s\n' "$ip"
+      return 0
+    fi
+    [ "$intento" = "$INTENTOS_CONTROL" ] || sleep "$PAUSA_CONTROL_S"
+  done
+  return 1
+}
+
 # La app no tiene salida a internet. La sonda la resuelve y la alcanza la ENTRADA (control positivo: sin él, una
 # falla de la app no probaría nada); desde la app, la misma IP debe fallar por FALTA DE RUTA (no por tiempo agotado
 # ni rechazo) y el nombre no debe resolver (sin DNS externo). Por IP: el resultado no depende del DNS de la app.
 verificar_sin_salida() {
   local cid ip salida rc=0
   cid="$("${COMPOSE[@]}" ps -q inv-008-entrada)"
-  ip="$({ docker exec "$cid" nslookup -type=a "$SONDA_SALIDA_DESTINO" 2>/dev/null || true; } | ipv4_de_nslookup)" ||
-    morir "la entrada no resolvió $SONDA_SALIDA_DESTINO: sin control positivo, la prueba de no salida no prueba nada"
-  docker exec "$cid" nc -z -w 5 "$ip" "$SONDA_SALIDA_PUERTO" >/dev/null 2>&1 ||
-    morir "control positivo fallido: la entrada no llega a $SONDA_SALIDA_DESTINO ($ip:$SONDA_SALIDA_PUERTO); sin eso, la prueba de no salida no prueba nada"
+  ip="$(control_positivo "$cid")" ||
+    morir "control positivo caído (fuera de Inversiones): en $INTENTOS_CONTROL intentos la entrada no resolvió o no alcanzó $SONDA_SALIDA_DESTINO:$SONDA_SALIDA_PUERTO. Sin él, la no salida de la app no queda probada: el despliegue se detiene; reintente cuando haya red"
   cid="$("${COMPOSE[@]}" ps -q inv-008-app)"
-  salida="$(docker exec "$cid" nc -z -w 5 "$ip" "$SONDA_SALIDA_PUERTO" 2>&1)" || rc=$?
+  salida="$(docker exec "$cid" nc -z -v -w 5 "$ip" "$SONDA_SALIDA_PUERTO" 2>&1)" || rc=$?
   [ "$rc" != 0 ] || morir "LA APP TIENE SALIDA A INTERNET: llegó a $SONDA_SALIDA_DESTINO ($ip:$SONDA_SALIDA_PUERTO)"
   falla_sin_ruta "$salida" ||
     morir "la app no llegó a $ip:$SONDA_SALIDA_PUERTO, pero no por falta de ruta («${salida:-sin mensaje}», código $rc): la no salida no queda probada"
-  if { docker exec "$cid" nslookup -type=a "$SONDA_SALIDA_DESTINO" 2>/dev/null || true; } | ipv4_de_nslookup >/dev/null; then
+  if ipv4_resuelta_en "$cid" >/dev/null; then
     morir "la app resuelve nombres de internet ($SONDA_SALIDA_DESTINO): no debe tener DNS externo"
   fi
   informar "la app no tiene salida a internet: sin ruta a $ip:$SONDA_SALIDA_PUERTO ni DNS externo; la entrada sí llega (control positivo)"

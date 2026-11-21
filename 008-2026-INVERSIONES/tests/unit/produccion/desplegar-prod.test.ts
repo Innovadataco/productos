@@ -179,13 +179,15 @@ describe("desplegar-prod.sh · guardas que abortan sin DEPLOY VERIFICADO", () =>
     ["la salud cae durante la espera de 10 minutos", { FALSO_SLEEP_ROMPE_SALUD: JSON.stringify({ estado: "degradado", version: "x" }) }],
     ["LA APP TIENE SALIDA a internet (llega a la IP de la sonda)", { FALSO_NC_APP_RC: "0", FALSO_NC_APP_MSG: "" }],
     ["la app no llega, pero por tiempo agotado y no por falta de ruta (ambiguo)", { FALSO_NC_APP_MSG: "nc: timed out" }],
-    ["la app no llega porque el destino rechaza (Connection refused: sí hay ruta)", { FALSO_NC_APP_MSG: "nc: can't connect to remote host (203.0.113.7): Connection refused" }],
-    ["falla el control positivo (la entrada tampoco llega): la prueba no probaría nada", { FALSO_NC_ENTRADA_RC: "1" }],
+    ["la app no llega porque el destino rechaza (Connection refused: sí hay ruta)", { FALSO_NC_APP_MSG: "nc: 203.0.113.7 (203.0.113.7:443): Connection refused" }],
+    ["falla el control positivo en los tres intentos (la entrada tampoco llega): la prueba no probaría nada", { FALSO_NC_ENTRADA_RC: "1" }],
     ["la entrada no resuelve el destino de la sonda (sin control positivo)", { FALSO_NSLOOKUP_ENTRADA: "** server can't find api.telegram.org: SERVFAIL\\n", FALSO_NSLOOKUP_ENTRADA_RC: "1" }],
     ["la app resuelve nombres de internet (DNS externo)", { FALSO_NSLOOKUP_APP: "Name:\\tapi.telegram.org\\nAddress: 203.0.113.9\\n", FALSO_NSLOOKUP_APP_RC: "0" }],
     ["la app publica un puerto (debe quedar solo detrás de la entrada)", { FALSO_PUERTO_APP: "5008/tcp -> 127.0.0.1:5008" }],
     ["la app está en una red con salida", { FALSO_REDES_APP: "inv-008-prueba_inv-008-red inv-008-prueba_inv-008-red-interna", FALSO_REDES_CON_SALIDA: "inv-008-prueba_inv-008-red" }],
     ["la base está en una red con salida", { FALSO_REDES_DB: "inv-008-prueba_inv-008-red-interna inv-008-prueba_inv-008-red", FALSO_REDES_CON_SALIDA: "inv-008-prueba_inv-008-red" }],
+    ["la red interna de la base, internal pero sin aislar la puerta de enlace (llegaría al host)", { FALSO_REDES_SIN_AISLAR: "inv-008-prueba_inv-008-red-interna" }],
+    ["la red de la entrada, internal pero sin aislar la puerta de enlace (la app llegaría al host)", { FALSO_REDES_SIN_AISLAR: "inv-008-prueba_inv-008-red-entrada" }],
     ["no hay contenedor de la entrada", { FALSO_CID_ENTRADA: "" }],
     ["la entrada se reinició (no quedó corriendo de una vez)", { FALSO_ESTADO_ENTRADA: "running 1" }],
     ["la entrada corre otra imagen que la enviada", { FALSO_IMAGEN_ENTRADA: `sha256:${"e".repeat(64)}` }],
@@ -458,7 +460,8 @@ describe("desplegar-prod.sh · la app sin salida a internet, detrás de la entra
     const r = await correr(script, [ID], env);
     expect(r.status, r.stderr).toBe(0);
     const ll = falsos.llamadas();
-    const sonda = ["nc", "-z", "-w", "5", "203.0.113.7", "443"];
+    // -v: sin él, el nc de busybox no dice POR QUÉ no conectó (medido en la imagen de la app).
+    const sonda = ["nc", "-z", "-v", "-w", "5", "203.0.113.7", "443"];
     expect(execs(ll)).toContainEqual(["docker", "exec", "cidentrada", ...sonda]);
     expect(execs(ll)).toContainEqual(["docker", "exec", "cidapp", ...sonda]);
     expect(execs(ll)).toContainEqual(["docker", "exec", "cidentrada", "nslookup", "-type=a", "api.telegram.org"]);
@@ -468,11 +471,38 @@ describe("desplegar-prod.sh · la app sin salida a internet, detrás de la entra
     expect(r.stderr).toMatch(/la app no tiene salida a internet/);
   });
 
-  it("revisa una por una las redes de la app y de la base: todas internal", async () => {
+  it("revisa una por una las redes de la app y de la base: todas internal y con la puerta de enlace aislada", async () => {
     const { falsos, env, script } = preparar();
     expect((await correr(script, [ID], env)).status).toBe(0);
-    const internas = falsos.llamadas().filter((l) => l[0] === "docker" && l[1] === "inspect" && l.join(" ").includes(".Internal")).map((l) => l.at(-1));
-    expect(new Set(internas)).toEqual(new Set(["inv-008-prueba_inv-008-red-entrada", "inv-008-prueba_inv-008-red-interna"]));
+    const redes = falsos.llamadas().filter((l) => l[0] === "docker" && l[1] === "inspect" && l.join(" ").includes(".Internal"));
+    expect(new Set(redes.map((l) => l.at(-1)))).toEqual(new Set(["inv-008-prueba_inv-008-red-entrada", "inv-008-prueba_inv-008-red-interna"]));
+    for (const l of redes) expect(l.join(" ")).toContain('{{index .Options "com.docker.network.bridge.gateway_mode_ipv4"}}');
+  });
+
+  it("una red internal sin aislar la puerta de enlace detiene el despliegue y lo dice", async () => {
+    const { env, script } = preparar({ FALSO_REDES_SIN_AISLAR: "inv-008-prueba_inv-008-red-entrada" });
+    const r = await correr(script, [ID], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
+    expect(r.stderr).toMatch(/sin aislar la puerta de enlace/);
+  });
+
+  it("el control positivo se reintenta (depende de un tercero): si la entrada llega al segundo intento, el despliegue sigue", async () => {
+    const { base, falsos, env, script } = preparar({ FALSO_NC_ENTRADA_FALLAS: "1" });
+    const r = await correr(script, [ID], { ...env, FALSO_CONTADOR_NC: path.join(base, "contador-nc.txt") });
+    expect(r.status, r.stderr).toBe(0);
+    expect(execs(falsos.llamadas()).filter((l) => l[2] === "cidentrada" && l[3] === "nc")).toHaveLength(2);
+  });
+
+  it("si el control positivo nunca llega, lo dice como caída externa (no como salida de la app) y no hay DEPLOY VERIFICADO", async () => {
+    const { falsos, env, script } = preparar({ FALSO_NC_ENTRADA_RC: "1" });
+    const r = await correr(script, [ID], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
+    expect(r.stderr).toMatch(/control positivo caído/);
+    expect(execs(falsos.llamadas()).filter((l) => l[2] === "cidentrada" && l[3] === "nc")).toHaveLength(3);
+    // Sin control positivo, la prueba de la app ni se intenta.
+    expect(execs(falsos.llamadas()).some((l) => l[2] === "cidapp" && l[3] === "nc")).toBe(false);
   });
 
   it("si la app tiene salida, no hay DEPLOY VERIFICADO y lo dice en mayúsculas", async () => {
@@ -510,12 +540,23 @@ describe("desplegar-prod.sh · reversa con el compose del sha que corre (el clon
     expect(falsos.llamadas().some((l) => l[0] === "docker" && l[1] === "compose" && (l.includes("rm") || l.includes("down")))).toBe(false);
     expect(git(repo.dir, ["rev-parse", "HEAD"])).toBe(nuevo);
     expect(readFileSync(path.join(base, "estado", "sha-actual"), "utf8").trim()).toBe(viejo);
-    expect(r.stderr).toMatch(/compose del sha que corre/);
+    expect(r.stderr).toMatch(/reversa con el compose del clon .*desde el sha que corre/);
   });
 
-  it("la reversa con el clon en un sha que no es ni el de la imagen ni el que corre: aborta sin tocar contenedores", async () => {
+  it("la reversa con el clon más adelante que el sha que corre (un despliegue que falló) usa ese compose y deja el sitio arriba", async () => {
+    const { repo, base, env, script, viejo } = conCambio();
+    git(repo.dir, ["commit", "-q", "--allow-empty", "-m", "despliegue que falló: el clon quedó aquí"]);
+    const r = await correr(script, [`inv-008-app:${viejo}`, "--sin-migrar"], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${viejo}`);
+    const ups = readFileSync(path.join(base, "tags.txt"), "utf8").trim().split("\n");
+    expect(ups.at(-1)).toMatch(new RegExp(`^up ${viejo} .*inv-008-app.*inv-008-entrada`));
+  });
+
+  it("la reversa con el clon en un sha que no desciende del que corre (otra rama): aborta sin tocar contenedores", async () => {
     const { repo, falsos, env, script, viejo } = conCambio();
-    git(repo.dir, ["commit", "-q", "--allow-empty", "-m", "otro sha, no desplegado"]);
+    git(repo.dir, ["checkout", "-q", "-b", "otra", viejo]);
+    git(repo.dir, ["commit", "-q", "--allow-empty", "-m", "otra rama, que no trae el sha que corre"]);
     const r = await correr(script, [`inv-008-app:${viejo}`, "--sin-migrar"], env);
     expect(r.status).not.toBe(0);
     expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
@@ -607,9 +648,10 @@ describe("desplegar-prod.sh · funciones puras", () => {
 
   it("falla_sin_ruta: solo «Network unreachable» o «No route to host»; nunca un tiempo agotado, un rechazo o un mensaje vacío", async () => {
     const ok = (msg: string) => funcion(script, `falla_sin_ruta "${msg}"`).status;
+    expect(ok("nc: 203.0.113.7 (203.0.113.7:443): Network unreachable")).toBe(0);
     expect(ok("nc: can't connect to remote host (203.0.113.7): Network unreachable")).toBe(0);
     expect(ok("nc: can't connect to remote host (203.0.113.7): No route to host")).toBe(0);
-    for (const malo of ["nc: timed out", "nc: can't connect to remote host (203.0.113.7): Connection refused", "", "wget: bad address 'x'"]) expect(ok(malo), malo).not.toBe(0);
+    for (const malo of ["nc: timed out", "nc: 203.0.113.7 (203.0.113.7:443): Connection refused", "", "wget: bad address 'x'"]) expect(ok(malo), malo).not.toBe(0);
   });
 
   it("salud_ok: estado ok con la versión exacta; degradado, otra versión o algo ilegible no", async () => {

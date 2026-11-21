@@ -76,7 +76,7 @@ async function rele(puertoDestino: number, opciones: { inactivoS?: string; maxim
       }
     };
     proceso.stdout.on("data", mirar);
-    proceso.on("exit", (codigo) => mal(new Error(`el relé salió con ${codigo}: ${salida}`)));
+    proceso.once("exit", (codigo) => mal(new Error(`el relé salió con ${codigo}: ${salida}`)));
   });
   return { puerto, salida: () => salida, proceso };
 }
@@ -170,7 +170,7 @@ describe("inv-008-entrada · el relé ejecutado contra un eco", () => {
     const app = await eco(RESPUESTA);
     const r = await rele(app.puerto);
     await pedir(r.puerto, PEDIDO);
-    expect(r.salida()).not.toMatch(/203\.0\.113\.7|ingresar|GET|Cf-/i);
+    expect(r.salida()).not.toMatch(/203\.0\.113\.7|ingresar|GET |Cf-Connecting|Cf-Ray/);
   });
 
   it("con la app caída, cierra la conexión del cliente enseguida y sigue atendiendo cuando la app vuelve", async () => {

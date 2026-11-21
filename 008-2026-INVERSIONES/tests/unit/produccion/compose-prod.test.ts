@@ -52,7 +52,7 @@ type Bind = { type: string; source: string; target: string; read_only?: boolean;
 type Compose = {
   name: string;
   services: Record<string, Servicio>;
-  networks: Record<string, { internal?: boolean; external?: boolean }>;
+  networks: Record<string, { internal?: boolean; external?: boolean; driver?: string; driver_opts?: Record<string, string> }>;
   volumes: Record<string, unknown>;
   secrets?: unknown;
 };
@@ -109,6 +109,18 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(conSalida).toEqual(["inv-008-red"]);
     expect(quienes("inv-008-red")).toEqual(["inv-008-entrada", "inv-008-vigia"]);
     expect(s("inv-008-entrada").networks).toEqual(["inv-008-red", "inv-008-red-entrada"]);
+  });
+
+  it("toda red internal aísla la puerta de enlace (gateway_mode_ipv4: isolated): desde ella no se llega al host", () => {
+    const internas = Object.keys(compose.networks).filter(internal);
+    expect(internas.sort()).toEqual(["inv-008-red-entrada", "inv-008-red-interna"]);
+    for (const red of internas) {
+      expect(compose.networks[red]?.driver_opts, red).toEqual({ "com.docker.network.bridge.gateway_mode_ipv4": "isolated" });
+    }
+  });
+
+  it("la red con salida (inv-008-red) no se aísla: por su puerta de enlace publica la entrada y sale el vigía", () => {
+    expect(compose.networks["inv-008-red"]?.driver_opts?.["com.docker.network.bridge.gateway_mode_ipv4"]).toBeUndefined();
   });
 
   it("quien publica un puerto tiene una red con salida (Docker no publica desde una red internal)", () => {
