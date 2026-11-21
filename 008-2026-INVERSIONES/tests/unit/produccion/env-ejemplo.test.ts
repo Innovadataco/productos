@@ -1,7 +1,8 @@
 // La plantilla del archivo de producción (docs/despliegue/env-inversiones-production.example) declara
 // exactamente las variables que interpola docker-compose.prod.yml, y no trae ningún valor secreto.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { leer008 } from "./falsos";
+import { carpetaTemporal, envProduccionFicticio, leer008 } from "./falsos";
 
 const ejemplo = leer008("docs/despliegue/env-inversiones-production.example");
 const compose = leer008("docker-compose.prod.yml")
@@ -17,6 +18,7 @@ const activas = new Map(
     .filter((l) => /^[A-Z0-9_]+=/.test(l))
     .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)] as const),
 );
+const obligatorias = new Set([...compose.matchAll(/\$\{([A-Z0-9_]+):\?/g)].map((m) => m[1]!));
 const opcionales = new Set([...ejemplo.matchAll(/^# ([A-Z0-9_]+)=/gm)].map((m) => m[1]!));
 
 describe("plantilla del archivo de producción", () => {
@@ -36,5 +38,18 @@ describe("plantilla del archivo de producción", () => {
     for (const nombre of ["INV_POSTGRES_CLAVE", "INV_DUENO_DATABASE_URL", "INV_APP_DATABASE_URL", "INV_AUTH_SECRET", "INV_CIFRADO_CLAVE_ACTIVA", "INV_CIFRADO_CLAVE_V1", "INV_AGE_PUBLICA", "INV_TELEGRAM_BOT_TOKEN", "INV_TELEGRAM_CHAT_ID", "APP_ORIGEN", "INV_RESPALDO_GID"]) {
       expect(compose, nombre).toContain(`\${${nombre}:?falta ${nombre}}`);
     }
+  });
+});
+
+describe("archivo de producción ficticio de las pruebas (falsos.ts)", () => {
+  // Si se desfasa del compose, las pruebas de los scripts corren con un archivo que en el VPS no arrancaría.
+  it("trae todas las variables obligatorias del compose y ninguna que el compose no use", () => {
+    const archivo = envProduccionFicticio(carpetaTemporal("env-ficticio"));
+    const nombres = readFileSync(archivo, "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((l) => l.slice(0, l.indexOf("=")));
+    expect(nombres.filter((n) => !enCompose.has(n))).toEqual([]);
+    expect([...obligatorias].filter((n) => !nombres.includes(n))).toEqual([]);
   });
 });

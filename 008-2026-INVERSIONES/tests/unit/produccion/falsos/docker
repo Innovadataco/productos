@@ -23,7 +23,7 @@ if [ "${1:-}" = "compose" ]; then
       if [ -n "${FALSO_SONDA_MARCA:-}" ]; then
         if [ -e "$FALSO_SONDA_MARCA" ]; then echo marca-presente >"$FALSO_SONDA_SALIDA"; else echo marca-ausente >"$FALSO_SONDA_SALIDA"; fi
       fi
-      exit 0 ;;
+      exit "${FALSO_DOWN_RC:-0}" ;;
     ps)
       case "$todo" in
         *" inv-008-app "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" ;;
@@ -50,6 +50,8 @@ if [ "${1:-}" = "compose" ]; then
       esac
       exit 0 ;;
     run)
+      # Aparte de FALSO_TAGS (que solo lleva los up y down): el sha con que corre cada `run`.
+      [ -z "${FALSO_RUN_TAGS:-}" ] || printf 'run %s %s\n' "${INV_TAG:-}" "$*" >>"$FALSO_RUN_TAGS"
       case "$todo" in
         *" inv-008-respaldo "*)
           if [ "${FALSO_AGE_RC:-0}" != "0" ]; then cat >/dev/null; exit "${FALSO_AGE_RC}"; fi
