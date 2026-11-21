@@ -27,12 +27,13 @@ Cómo se despliega, se revierte, se respalda, se restaura y se cargan los datos 
   - desde internet solo se llega a los puertos que deja pasar ufw: <ver ESTADO en la gestión>;
   - el único puerto de Inversiones es `127.0.0.1:5008`, nunca `0.0.0.0`, y lo publica `inv-008-entrada`;
   - **la app no tiene salida a internet:** vive solo en redes `internal` (`inv-008-red-interna`, con la base, e `inv-008-red-entrada`, con la entrada) y no publica puertos;
+  - **las dos redes `internal` aíslan la puerta de enlace** (`driver_opts: com.docker.network.bridge.gateway_mode_ipv4: isolated`): el puente no tiene dirección del host, así que ni la app ni la base llegan al **host** por ahí. Sin aislar, una red `internal` sí llegaba a los servicios del host por su puerta de enlace (lo verificó el coordinador en el VPS, en 22, 80 y 5432; la aislada no llega a nada). Necesita Docker 28 o más;
   - la base no publica ningún puerto y vive solo en `inv-008-red-interna`;
   - con salida a internet, en `inv-008-red`, solo la entrada (para publicar) y el vigía (Telegram).
 - **Alcance de «la app sin salida»** (decisión del CEO, dicho tal cual):
   - si alguien compromete la app, no puede abrir conexiones hacia internet ni resolver nombres de afuera. Pero **sí puede sacar datos por la respuesta del túnel**: responder lo que quiera a quien le pide. «Sin salida» no impide eso;
   - `Cf-Connecting-IP` (los topes por IP) lo pone Cloudflare y la entrada lo pasa tal cual. En `127.0.0.1:5008` solo lo puede falsificar quien ya está en el host; dentro del proyecto, también un contenedor de 008 que llegue a `inv-008-entrada:5008` (hoy, el vigía, que no expone nada). Es aceptable: la barrera principal es el bloqueo por cuenta;
-  - **límite conocido, frente siguiente:** desde una red `internal` un contenedor todavía llega al **host** por la puerta de enlace del puente (medido en el Mac). No es salida a internet, pero sí un camino lateral a lo que el host escuche en esa dirección. Se cierra en otro cambio (aislamiento de la puerta de enlace).
+  - **el camino lateral al host por la puerta de enlace del puente** quedó cerrado en este mismo cambio (alcance ampliado por el CEO): las redes `internal` van aisladas. La red con salida (`inv-008-red`) no se aísla: por su puerta de enlace publica la entrada y sale el vigía.
 - **Construcción:** se construye en el Mac, nunca en el VPS.
 
 Documentos relacionados:
@@ -258,7 +259,7 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
    - **Después del `up`** exige, antes de dar nada por bueno:
      - la app y la entrada corriendo de una vez y con la imagen enviada;
      - `/api/salud` con la versión del sha, pedido **dentro de la entrada** (el camino del túnel) y, en producción, también en `127.0.0.1:5008` del host;
-     - la app y la base sin puertos y solo en redes `internal` (revisa cada red);
+     - la app y la base sin puertos y solo en redes `internal` con la puerta de enlace aislada (revisa cada red);
      - **la app sin salida a internet**: la entrada resuelve la sonda (`api.telegram.org`, el único destino de 008 hacia afuera) y llega a su IP por el 443 (control positivo); desde la app, la misma IP falla por **falta de ruta** y el nombre no resuelve. Un tiempo agotado o un rechazo no cuentan como prueba: el despliegue se detiene.
    - Si falla después de tocar contenedores (incluida esa pausa), **vuelve solo a la imagen que corría**: levanta app, entrada, vigía y respaldo con ese sha, con el compose del clon. Si se re-desplegaba el mismo sha, levanta otra vez ese mismo.
      - Solo vuelve a un sha de 40 hex: si `estado/sha-actual` está dañado, lo dice y no levanta nada.
@@ -300,11 +301,15 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
 - **El primer despliegue con la entrada** (la app sale de `inv-008-red`):
   - **Antes:** quien tiene acceso al VPS confirma que el pool de direcciones de Docker tiene una subred libre: la red nueva `inv-008-red-entrada` toma una. Si no hay, falla el `up` y también la vuelta atrás, que usa el mismo compose. Dato: <ver ESTADO en la gestión>.
   - El `up` recrea la app (sin puerto y con sus redes nuevas) y crea la entrada después de que la app queda `healthy`. En el Mac, el corte del cambio fue de unos 4 s. Si migra, la app ya estaba abajo desde el respaldo previo.
+  - **Las redes de antes se recrean con un `down` SIN `-v`.** `inv-008-red-interna` cambia sus `driver_opts` (el aislamiento), y Compose no recrea en su lugar una red con contenedores conectados: en el ensayo, el `up` falló («container … is not connected to the network»), la vuelta atrás también, y el sitio quedó caído. Por eso `desplegar-prod.sh` detecta las redes internal que ya existen sin aislar y hace primero `$COMPOSE down` (sin `-v`: el volumen de la base y los respaldos quedan); el `up` las crea nuevas. Ese despliegue baja todo Inversiones, la base incluida, hasta que la versión nueva queda `healthy`, y desde ahí la vuelta atrás levanta todo otra vez.
+  - **Después del `checkout`, lo primero es `desplegar-prod.sh`.** Los otros scripts que levantan contenedores (`crear-roles-prod.sh`, `crear-acceso-inicial.sh`, `cargar-prod.sh`) se corren después de ese despliegue, con las redes ya nuevas.
+  - La versión de Compose del VPS: **por verificar** (<ver ESTADO en la gestión>); el ensayo usó la 5.3.1.
   - El túnel no cambia: sigue entrando a `127.0.0.1:5008`. No se reinicia nada del host.
   - **Verificación a mano después** (además de lo que verifica el script):
     ```sh
     docker port $(sudo $COMPOSE ps -q inv-008-entrada) 5008   # 127.0.0.1:5008
     docker port $(sudo $COMPOSE ps -q inv-008-app)            # vacío
+    for r in inv-008-red-interna inv-008-red-entrada; do sudo docker network inspect -f '{{.Internal}} {{index .Options "com.docker.network.bridge.gateway_mode_ipv4"}}' inv-008-prod_$r; done   # true isolated, las dos
     sudo docker exec $(sudo $COMPOSE ps -q inv-008-app) nslookup -type=a api.telegram.org   # sin respuesta (SERVFAIL)
     sudo docker exec $(sudo $COMPOSE ps -q inv-008-vigia) curl -sS -o /dev/null -w '%{http_code}\n' --max-time 10 https://api.telegram.org/   # 302: el vigía sí sale
     curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://<dominio de la app>/              # 307 …/ingresar
@@ -533,7 +538,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 ---
 > v2.6 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · la carpeta de respaldos en 750 (la copia de IDC depende de eso); montaje del host `nosuid,noexec` revisado por los scripts (por ahora avisa): un bind de Docker no los aplica
 > v2.5 · 2026-11-21 · 07:05 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · revisiones de seguridad y de código: SPEC-980 de PI activa (aviso en una línea, el candado común resuelve la exclusión); salida 64 de `inv-cargar`; el sobre en la memoria del host como riesgo residual; cita de Jelk restituida
-> v2.5 · 2026-11-21 · 08:42 (-05) · Inversiones · Fábrica ECC (frente app-sin-salida) · la app sin salida a internet: solo redes internal detrás de `inv-008-entrada` (relé TCP en node, el único con 127.0.0.1:5008); verificación de no salida con control positivo; reversa con el clon en el sha que corre (cambio de contrato de `verificar_clon`); alcance de «sin salida»; primer despliegue con la entrada
+> v2.5 · 2026-11-21 · 09:28 (-05) · Inversiones · Fábrica ECC (frente app-sin-salida) · la app sin salida a internet: solo redes internal, con la puerta de enlace aislada, detrás de `inv-008-entrada` (relé TCP en node, el único con 127.0.0.1:5008); verificación de no salida con control positivo; reversa con el clon en el sha que corre (cambio de contrato de `verificar_clon`); alcance de «sin salida»; primer despliegue con la entrada (down sin -v para recrear las redes)
 > v2.4 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · revisión contra el código: sin nombres de otros proyectos ni de firewall; privilegios de `inv_app` completos (TOTP y `codigo_recuperacion`); `crear-acceso-inicial.sh` con sus argumentos; salida 1 de `cargar-prod.sh`; `sudo -n` sin elevación propia; `lock_timeout` en 3 de 12 migraciones; respaldo previo antes del `DROP` de la vía (B)
 > v2.3 · 2026-11-21 · 06:50 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · sin rutas ni nombres del VPS en el repo público (marcadores; raíz derivada; `inv-008.conf` para la carpeta de respaldos); §11: carga del dueño por la vía B, por stdin y sin copias en el VPS (`armar-sobre.sh`, `cargar-prod.sh`, `inv-cargar`); §12: vía A «NO USAR»
 > v2.2 · 2026-11-21 · 04:40 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · app y respaldo diario detenidos antes del migrador, con su vuelta atrás; un respaldo a la vez; árbol de root al inicio de todo script con sudo; aviso de `connection_limit`; §8: túnel aplicado y sin el ID en el repo

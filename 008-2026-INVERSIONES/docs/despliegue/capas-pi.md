@@ -15,15 +15,16 @@ Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app:
 
 | # | Requisito | Evidencia en el repo | Prueba local | En el host, al desplegar |
 |---|---|---|---|---|
-| 1 | Un solo puerto, solo en `127.0.0.1:5008` del host, nada en `0.0.0.0`; lo publica `inv-008-entrada` y la app no publica nada | `docker-compose.prod.yml:180` (los `ports` de la entrada, el único servicio con puertos); la app sin `ports` (`:84`); `scripts/desplegar-prod.sh:304` (la llamada a `puerto_publicado_ok` sobre la entrada; la función, en `:55`) y `:279` (`verificar_aislado`: la app y la base sin puertos) | `compose-prod.test.ts` («solo la entrada publica un puerto…»), `desplegar-prod.test.ts` (rechaza `0.0.0.0` y `[::]`; «la app publica un puerto» aborta) | `docker port $(sudo $COMPOSE ps -q inv-008-entrada) 5008` → `127.0.0.1:5008`; `docker port $(sudo $COMPOSE ps -q inv-008-app)` → vacío; `ss -ltnp \| grep 5008` → solo `127.0.0.1:5008` |
+| 1 | Un solo puerto, solo en `127.0.0.1:5008` del host, nada en `0.0.0.0`; lo publica `inv-008-entrada` y la app no publica nada | `docker-compose.prod.yml:180` (los `ports` de la entrada, el único servicio con puertos); la app sin `ports` (`:84`); `scripts/desplegar-prod.sh:317` (la llamada a `puerto_publicado_ok` sobre la entrada; la función, en `:61`) y `:289` (`verificar_aislado`: la app y la base sin puertos) | `compose-prod.test.ts` («solo la entrada publica un puerto…»), `desplegar-prod.test.ts` (rechaza `0.0.0.0` y `[::]`; «la app publica un puerto» aborta) | `docker port $(sudo $COMPOSE ps -q inv-008-entrada) 5008` → `127.0.0.1:5008`; `docker port $(sudo $COMPOSE ps -q inv-008-app)` → vacío; `ss -ltnp \| grep 5008` → solo `127.0.0.1:5008` |
 | 2 | La entrada es solo por el túnel `<servicio-del-túnel>` → `inversiones.innovadataco.com` → `127.0.0.1:5008` | `produccion.md` §8: aplicado el 2026-11-21 por el coordinador con el CEO de PI (ingress y CNAME); ningún script lo configura. Ningún script nombra a cloudflared, `systemctl` ni `/etc/` (`candados-scripts.test.ts`) | `candados-scripts.test.ts`, regla «sistema», con su control positivo | `curl -I https://inversiones.innovadataco.com` → lleva a `/ingresar`; desde fuera, el 5008 cerrado (los puertos abiertos en el firewall: ver ESTADO en la gestión) |
-| 3 | La base en un contenedor propio, sin puertos y en una red propia | `docker-compose.prod.yml:25` (el servicio), `:40` (solo `inv-008-red-interna`) y `:368` (`internal: true`). Sin `ports:`, sin redes `external` y sin `links`; `scripts/desplegar-prod.sh:310` (la base sin puertos y solo en redes internal, al desplegar) | `compose-prod.test.ts`; `desplegar-prod.test.ts` («la base está en una red con salida» aborta); en local, `docker port` de la base salió vacío | `docker port $(sudo $COMPOSE ps -q inv-008-db)` → vacío; `docker network inspect inv-008-prod_inv-008-red-interna` → solo `inv-008-*` |
+| 3 | La base en un contenedor propio, sin puertos y en una red propia | `docker-compose.prod.yml:25` (el servicio), `:40` (solo `inv-008-red-interna`), `:371` (`internal: true`) y `:373` (la puerta de enlace aislada). Sin `ports:`, sin redes `external` y sin `links`; `scripts/desplegar-prod.sh:323` (la base sin puertos y solo en redes internal aisladas, al desplegar) | `compose-prod.test.ts`; `desplegar-prod.test.ts` («la base está en una red con salida» aborta); en local, `docker port` de la base salió vacío | `docker port $(sudo $COMPOSE ps -q inv-008-db)` → vacío; `docker network inspect inv-008-prod_inv-008-red-interna` → solo `inv-008-*` |
 
 **Capa propia de Inversiones (no es de las 12 de PI): la app sin salida a internet** (frente app-sin-salida).
 - **Qué:** la app vive solo en redes `internal` (`inv-008-red-interna` e `inv-008-red-entrada`): no abre conexiones hacia internet ni resuelve nombres de afuera. Del túnel la separa `inv-008-entrada`, un relé TCP en node con la imagen de la app, que es lo único en `inv-008-red` junto al vigía.
-- **Evidencia en el repo:** `docker-compose.prod.yml:85` (las redes de la app), `:121` (la entrada) y `:367`–`:374` (las redes); `scripts/desplegar-prod.sh:317` (`verificar_sin_salida`: la sonda la resuelve y la alcanza la entrada, control positivo; desde la app, la misma IP falla por falta de ruta y el nombre no resuelve) y `:279` (cada red de la app y de la base, `internal`).
+- **Evidencia en el repo:** `docker-compose.prod.yml:85` (las redes de la app), `:121` (la entrada) y `:370`–`:381` (las redes, con `gateway_mode_ipv4: isolated` en las dos `internal`, `:373` y `:378`); `scripts/desplegar-prod.sh:373` (`verificar_sin_salida` (la sonda la resuelve y la alcanza la entrada, control positivo con reintentos; desde la app, la misma IP falla por falta de ruta y el nombre no resuelve) y `:289` (`verificar_aislado`: cada red de la app y de la base, `internal` y aislada).
 - **Pruebas:** `compose-prod.test.ts` (la app solo en redes internal; `inv-008-red` solo para entrada y vigía), `entrada.test.ts` (el relé del compose, ejecutado: byte a byte, sin log de clientes, app caída, inactividad y máximo de conexiones), `desplegar-prod.test.ts` (la app con salida, un tiempo agotado, un rechazo, el control positivo fallido o el DNS externo: abortan sin DEPLOY VERIFICADO).
-- **Alcance, dicho derecho:** no impide sacar datos por la respuesta del túnel; `Cf-Connecting-IP` en `127.0.0.1:5008` lo puede falsificar quien ya está en el host; y desde una red `internal` todavía se llega al host por la puerta de enlace del puente (frente siguiente). Ver [produccion.md](produccion.md) («Alcance de la app sin salida»).
+- **Puerta de enlace aislada:** las dos redes `internal` llevan `gateway_mode_ipv4: isolated`, así que ni la app ni la base llegan al host por el puente (sin aislar sí llegaban; lo verificó el coordinador en el VPS y el ensayo en el Mac).
+- **Alcance, dicho derecho:** no impide sacar datos por la respuesta del túnel, y `Cf-Connecting-IP` en `127.0.0.1:5008` lo puede falsificar quien ya está en el host. Ver [produccion.md](produccion.md) («Alcance de la app sin salida»).
 - **En el host, al desplegar:** lo verifica `desplegar-prod.sh`; a mano, los comandos del primer despliegue con la entrada en [produccion.md](produccion.md) §5.
 
 ## Contenedor (4 a 6)
@@ -204,6 +205,38 @@ dos --ahora a la vez → los dos bien: inv-008-20261121-043628-par y inv-008-202
 # pg_dump real: cada .age se descifró fuera del contenedor y pg_restore --list leyó 32 TABLE DATA (0640, sha256 bien)
 ```
 
+**Ronda app-sin-salida** (2026-11-21, Colima arm64, Docker 29.5.2, Compose 5.3.1; imágenes arm64 del sha viejo `15e6b401`, de antes de la entrada, y del nuevo `9d657741`; mismo proyecto `inv-008-prueba` con su candado; la entrada publicada en otro puerto del Mac, nunca el 5008 ni el 5438; secretos ficticios; `down -v` al final). Las direcciones se taparon. Salidas reales, recortadas:
+
+```text
+# 1 · el sha viejo (la app con el puerto y en la red con salida) → DEPLOY VERIFICADO 15e6b401… · / → 307 · API → 401
+LÍNEA BASE: la app vieja resuelve y llega a Telegram:443 (tiene salida)
+LÍNEA BASE app → host: puerta de enlace de la red interna, de la red con salida, del puente por defecto e IP de la VM: :22=LLEGA
+LÍNEA BASE base → host: puerta de enlace de la red interna :22=LLEGA
+# 2 · vuelta atrás forzada (el nuevo, con la entrada sin DNS externo a propósito)
+[desplegar-prod] redes de una versión anterior, sin aislar la puerta de enlace (…_inv-008-red-interna): down SIN -v para que el up las cree nuevas
+❌ [desplegar-prod] control positivo caído (fuera de Inversiones): en 3 intentos la entrada no resolvió o no alcanzó api.telegram.org:443 …
+[desplegar-prod] vuelta atrás hecha: corre 15e6b401…
+sitio ARRIBA con la imagen vieja y el compose nuevo: / → 307 · API → 401 · /api/salud → ok, 15e6b401… · redes: «true isolated», las dos
+# 3 · el sha nuevo → DEPLOY VERIFICADO 9d657741… · / → 307 · API → 401 · /api/salud → ok, 9d657741…
+# 4 · no salida y aislamiento
+docker port: entrada [5008/tcp -> 127.0.0.1:<puerto del ensayo>] · app [] · base []
+la entrada resuelve y llega a la sonda (control positivo) · app → sonda:443 · rc 1 · «nc: <ip> (<ip>:443): Network unreachable»
+la app no resuelve nombres de internet · wget de la app a Telegram falla · la app llega a la base (5432)
+app y base → host (puerta de enlace de la red con salida, del puente por defecto e IP de la VM, en 22/80/5432): no, en todos
+  (la única respuesta fue el 5432 de la .1 de la red interna aislada, que ahora es de «inv-008-db-1»: la propia base, no el host)
+el vigía sale (Telegram → 302) · ni el vigía ni la entrada llegan a la base
+entrada: 9,8 MiB / 32 MiB · 12 pids
+# 5 · reversa a un sha anterior al cambio, con el clon en el nuevo
+[desplegar-prod] reversa con el compose del clon (9d657741…, desde el sha que corre 9d657741…): solo la imagen vuelve a 15e6b401…
+DEPLOY VERIFICADO 15e6b401… · / → 307 · API → 401 · /api/salud → ok, 15e6b401… · el clon no se movió · vuelta al nuevo: DEPLOY VERIFICADO
+# 6 · pausa de PI: docker stop por etiqueta y docker start con la app y la base al final → / → 307 · entrada healthy
+# 7 · pausar-008.sh → 0 contenedores y 0 redes · reanudar-008.sh → redes «true isolated» · / → 307 · la app sigue sin llegar al host
+```
+
+**Lo que encontró esta ronda y se corrigió antes de la GATE 2:**
+- con el compose nuevo sobre la red interna de antes, Compose no la recreaba («container … is not connected to the network»): el `up` y la vuelta atrás fallaban y el sitio quedaba caído. Ahora `desplegar-prod.sh` hace un `down` sin `-v` antes (ronda 2 arriba);
+- sin `-v`, el `nc` de busybox no dice por qué no conectó: la prueba de no salida daba un falso rojo. Ahora usa `nc -z -v`.
+
 **Lo que NO se verificó en local:**
 - el puerto en `127.0.0.1:5008` del VPS: el override de los ensayos lo quita o lo pone en otro puerto del Mac;
 - el túnel;
@@ -215,6 +248,7 @@ dos --ahora a la vez → los dos bien: inv-008-20261121-043628-par y inv-008-202
 **Reinicio de Docker:** no se reinició el demonio de Docker del Mac, porque también corren ahí la base de desarrollo de Inversiones y la de PI. Que la pausa sobreviva un reinicio se demostró así: con la marca puesta, el proyecto queda con 0 contenedores, así que `restart: always` no tiene nada que levantar.
 
 ---
+> v2.8 · 2026-11-21 · 09:28 (-05) · Inversiones · Fábrica ECC (frente app-sin-salida) · capas 1, 3 y 5 con la entrada; capa propia «app sin salida» con la puerta de enlace aislada; ronda de ensayo app-sin-salida
 > v2.7 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · respaldos: carpeta en 750, archivos 640, y `nosuid,noexec` en el montaje del host (revisado, por ahora aviso)
 > v2.6 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · referencias archivo:línea corregidas contra el código de este clon (base fd7105ad); puertos del firewall fuera del repo; candado común con sus cinco tomadores
 > v2.5 · 2026-11-21 · 06:50 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · marcadores en vez de rutas y servicios del VPS; la carpeta de respaldos sale de `inv-008.conf`; evidencias `archivo:línea` al día
