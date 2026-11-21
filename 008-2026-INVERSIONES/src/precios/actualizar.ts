@@ -1,10 +1,15 @@
 /**
  * Guarda los cierres de Yahoo de las especies con posición (INV-SPEC-13).
  * - Versionado: si Yahoo revisa un cierre, el anterior queda con `reemplazadoEn` (historia) y se
- *   inserta el nuevo; un cierre igual no se toca.
+ *   inserta el nuevo.
  * - Candado: si hay certificación de A&V con fecha de corte igual, el cierre se compara con su
  *   precio de valoración: VERIFICADO si difiere ≤ 1 %, si no NO_VERIFICADO. Sin referencia oficial
- *   ese día, NO_VERIFICADO (nunca se presenta como verificado lo que no se comparó).
+ *   ese día, NO_VERIFICADO (nunca se presenta como verificado lo que no se comparó). Con una valoración
+ *   ≤ 0 o una desviación que no cabe en `desviacionPct`, NO_VERIFICADO con la referencia y sin desviación.
+ * - Re-verificación: la verificación (estado y referencia) se recalcula en cada corrida, también si el
+ *   cierre es igual. Si con el mismo precio difiere de la guardada (llegó, cambió o ya no está la
+ *   certificación de ese día), se versiona como una revisión y cuenta como re-verificado; en las dos
+ *   direcciones (NO_VERIFICADO → VERIFICADO y al revés). Mismo precio y misma verificación: no se escribe.
  * - SPEC-13 «nunca un precio viejo como de hoy»: una barra que no es el cierre de su día (aún no
  *   definitiva, día no hábil, sin negociación o año sin calendario; ver `negociacion.ts`) no se guarda
  *   y se cuenta por su razón. Si la razón es día no hábil o sin negociación y ya había un cierre
@@ -15,11 +20,13 @@
  *   Ante una carrera con otra corrida (el vigente ya fue reemplazado, o P2002 por el índice parcial
  *   único) se deshace y se reintenta releyendo: lo que la otra corrida ya guardó igual queda «sin cambios».
  */
-import { Prisma, type PrismaClient } from "@prisma/client";
+import { Prisma, type EstadoPrecio, type PrismaClient } from "@prisma/client";
 import { aniosDelRango, leerCalendario, motivoOmision, retiraElVigente, type CalendarioBvc, type MotivoOmision } from "./negociacion";
 import { obtenerCierres, type Buscar, type Cierre } from "./yahoo";
 
 export const TOLERANCIA_VERIFICACION = new Prisma.Decimal("0.01");
+/** Lo más que cabe en `precio_cierre.desviacionPct` (Decimal(9,6)). */
+export const DESVIACION_PCT_MAXIMA = new Prisma.Decimal("999.999999");
 export const FUENTE = "yahoo";
 /** Intentos de guardar una barra cuando choca con otra corrida simultánea. */
 export const MAX_INTENTOS_GUARDADO = 3;
@@ -44,6 +51,8 @@ export interface ResultadoActualizacion {
   readonly especies: number;
   readonly cierresNuevos: number;
   readonly cierresRevisados: number;
+  /** Mismo cierre con otra verificación (llegó, cambió o ya no está la certificación del día): nueva versión. */
+  readonly cierresReverificados: number;
   /** Vigentes retirados (reemplazadoEn, sin sucesor) porque su día ahora se omite por no hábil o sin negociación. */
   readonly cierresRetirados: number;
   readonly verificados: number;
@@ -62,15 +71,16 @@ type Omitidas = Readonly<Record<MotivoOmision, number>>;
 interface Conteo {
   readonly nuevos: number;
   readonly revisados: number;
+  readonly reverificados: number;
   readonly retirados: number;
   readonly omitidas: Omitidas;
 }
-const CONTEO_CERO: Conteo = { nuevos: 0, revisados: 0, retirados: 0, omitidas: { HORARIO: 0, NO_HABIL: 0, SIN_NEGOCIACION: 0, SIN_CALENDARIO: 0 } };
+const CONTEO_CERO: Conteo = { nuevos: 0, revisados: 0, reverificados: 0, retirados: 0, omitidas: { HORARIO: 0, NO_HABIL: 0, SIN_NEGOCIACION: 0, SIN_CALENDARIO: 0 } };
 
 function sumar(a: Conteo, b: Conteo): Conteo {
   const o = (m: MotivoOmision) => a.omitidas[m] + b.omitidas[m];
   return {
-    nuevos: a.nuevos + b.nuevos, revisados: a.revisados + b.revisados, retirados: a.retirados + b.retirados,
+    nuevos: a.nuevos + b.nuevos, revisados: a.revisados + b.revisados, reverificados: a.reverificados + b.reverificados, retirados: a.retirados + b.retirados,
     omitidas: { HORARIO: o("HORARIO"), NO_HABIL: o("NO_HABIL"), SIN_NEGOCIACION: o("SIN_NEGOCIACION"), SIN_CALENDARIO: o("SIN_CALENDARIO") },
   };
 }
@@ -101,40 +111,72 @@ class ConflictoConcurrente extends Error {
 
 const esConflicto = (e: unknown): boolean => e instanceof ConflictoConcurrente || (e as { code?: unknown } | null)?.code === "P2002";
 
-async function estadoDe(db: Pick<Prisma.TransactionClient, "certificacionPosicion">, instrumentoId: string, c: Cierre) {
+/** El resultado del candado que se guarda con el cierre: su estado y la referencia que lo sustenta. */
+export interface Verificacion {
+  readonly estado: EstadoPrecio;
+  readonly fuenteReferencia: string | null;
+  readonly precioReferencia: Prisma.Decimal | null;
+  readonly desviacionPct: Prisma.Decimal | null;
+}
+
+const SIN_REFERENCIA: Verificacion = { estado: "NO_VERIFICADO", fuenteReferencia: null, precioReferencia: null, desviacionPct: null };
+
+async function estadoDe(db: Pick<Prisma.TransactionClient, "certificacionPosicion">, instrumentoId: string, c: Cierre): Promise<Verificacion> {
   const ref = await db.certificacionPosicion.findFirst({
     where: { instrumentoId, certificacion: { fechaCorte: c.fecha } },
     select: { precioValoracion: true, certificacion: { select: { fechaCorte: true } } },
   });
-  if (!ref) return { estado: "NO_VERIFICADO" as const, fuenteReferencia: null, precioReferencia: null, desviacionPct: null };
-  const precio = new Prisma.Decimal(c.precio);
-  const desviacion = precio.sub(ref.precioValoracion).abs().div(ref.precioValoracion);
-  return {
-    estado: desviacion.lte(TOLERANCIA_VERIFICACION) ? ("VERIFICADO" as const) : ("NO_VERIFICADO" as const),
-    fuenteReferencia: `certificacion:${ref.certificacion.fechaCorte.toISOString().slice(0, 10)}`,
-    precioReferencia: ref.precioValoracion,
-    desviacionPct: desviacion.mul(100).toDecimalPlaces(6),
-  };
+  if (!ref) return SIN_REFERENCIA;
+  const referencia = { fuenteReferencia: `certificacion:${ref.certificacion.fechaCorte.toISOString().slice(0, 10)}`, precioReferencia: ref.precioValoracion };
+  // Valoración absurda (≤ 0) o desviación que no cabe en la columna: se comparó y no cuadra. Nunca VERIFICADO,
+  // y sin desviación (no se guarda Infinity ni un desborde que deje la especie con GUARDADO_ERROR en cada corrida).
+  const noCuadra: Verificacion = { estado: "NO_VERIFICADO", ...referencia, desviacionPct: null };
+  if (ref.precioValoracion.lte(0)) return noCuadra;
+  const desviacion = new Prisma.Decimal(c.precio).sub(ref.precioValoracion).abs().div(ref.precioValoracion);
+  const desviacionPct = desviacion.mul(100).toDecimalPlaces(6);
+  if (desviacionPct.gt(DESVIACION_PCT_MAXIMA)) return noCuadra;
+  return { estado: desviacion.lte(TOLERANCIA_VERIFICACION) ? "VERIFICADO" : "NO_VERIFICADO", ...referencia, desviacionPct };
 }
 
-type Cambio = "nuevo" | "revisado" | null;
+/** Por valor (0 = 0.000000); null solo es igual a null. */
+const mismoDecimal = (a: Prisma.Decimal | null, b: Prisma.Decimal | null): boolean => (a === null || b === null ? a === b : a.equals(b));
+
+/** Puro: ¿las dos verificaciones dicen lo mismo, con la misma referencia? Compara los 4 campos. */
+export function mismaVerificacion(a: Verificacion, b: Verificacion): boolean {
+  return a.estado === b.estado && a.fuenteReferencia === b.fuenteReferencia && mismoDecimal(a.precioReferencia, b.precioReferencia) && mismoDecimal(a.desviacionPct, b.desviacionPct);
+}
+
+type Cambio = "nuevo" | "revisado" | "reverificado" | null;
+
+/** Lo que se lee del vigente: el precio y la verificación completa, para compararlos. */
+const SELECCION_VIGENTE = {
+  id: true, precio: true, estado: true, fuenteReferencia: true, precioReferencia: true, desviacionPct: true,
+} as const satisfies Prisma.PrecioCierreSelect;
+
+/** Puro. Sin vigente: nuevo; otro precio: revisado; mismo precio y otra verificación: re-verificado; si no, nada. */
+function clasificar(vigente: (Verificacion & { readonly precio: Prisma.Decimal }) | null, precio: string, calculada: Verificacion): Cambio {
+  if (!vigente) return "nuevo";
+  if (!vigente.precio.equals(precio)) return "revisado";
+  return mismaVerificacion(vigente, calculada) ? null : "reverificado";
+}
 
 /** Un intento, en una transacción: leer el vigente, compararlo, reemplazarlo con guarda e insertar. Todo o nada. */
 async function guardarCierreUnaVez(db: PrismaClient, instrumentoId: string, c: Cierre): Promise<Cambio> {
   return db.$transaction(async (tx) => {
-    const vigente = await tx.precioCierre.findFirst({ where: { instrumentoId, fecha: c.fecha, fuente: FUENTE, reemplazadoEn: null }, select: { id: true, precio: true } });
-    if (vigente?.precio.equals(c.precio)) return null;
+    const vigente = await tx.precioCierre.findFirst({ where: { instrumentoId, fecha: c.fecha, fuente: FUENTE, reemplazadoEn: null }, select: SELECCION_VIGENTE });
     const verificacion = await estadoDe(tx, instrumentoId, c);
+    const cambio = clasificar(vigente, c.precio, verificacion);
+    if (cambio === null) return null;
     if (vigente) {
       const { count } = await tx.precioCierre.updateMany({ where: { id: vigente.id, reemplazadoEn: null }, data: { reemplazadoEn: new Date() } });
       if (count !== 1) throw new ConflictoConcurrente();
     }
     await tx.precioCierre.create({ data: { instrumentoId, fecha: c.fecha, precio: new Prisma.Decimal(c.precio), fuente: FUENTE, ...verificacion } });
-    return vigente ? "revisado" : "nuevo";
+    return cambio;
   });
 }
 
-/** Devuelve "nuevo", "revisado" o null (sin cambios). Ante una carrera con otra corrida, relee y reintenta. */
+/** Devuelve "nuevo", "revisado", "reverificado" o null (sin cambios). Ante una carrera con otra corrida, relee y reintenta. */
 async function guardarCierre(db: PrismaClient, instrumentoId: string, c: Cierre): Promise<Cambio> {
   for (let intento = 1; ; intento += 1) {
     try {
@@ -156,7 +198,12 @@ export async function retirarVigentes(db: Pick<PrismaClient, "precioCierre">, in
   return count;
 }
 
-const conCambio = (c: Conteo, cambio: Cambio): Conteo => ({ ...c, nuevos: c.nuevos + (cambio === "nuevo" ? 1 : 0), revisados: c.revisados + (cambio === "revisado" ? 1 : 0) });
+const conCambio = (c: Conteo, cambio: Cambio): Conteo => ({
+  ...c,
+  nuevos: c.nuevos + (cambio === "nuevo" ? 1 : 0),
+  revisados: c.revisados + (cambio === "revisado" ? 1 : 0),
+  reverificados: c.reverificados + (cambio === "reverificado" ? 1 : 0),
+});
 
 interface ResultadoEspecie {
   readonly conteo: Conteo;
@@ -234,7 +281,7 @@ export async function actualizarPrecios(db: PrismaClient, opciones: OpcionesActu
   }
   const verificados = await db.precioCierre.count({ where: { estado: "VERIFICADO", reemplazadoEn: null, fecha: { gte: opciones.desde, lte: opciones.hasta } } });
   return {
-    especies: especies.length, cierresNuevos: total.nuevos, cierresRevisados: total.revisados, cierresRetirados: total.retirados, verificados,
+    especies: especies.length, cierresNuevos: total.nuevos, cierresRevisados: total.revisados, cierresReverificados: total.reverificados, cierresRetirados: total.retirados, verificados,
     omitidasPorHorario: total.omitidas.HORARIO, omitidasNoHabil: total.omitidas.NO_HABIL, omitidasSinNegociacion: total.omitidas.SIN_NEGOCIACION, omitidasSinCalendario: total.omitidas.SIN_CALENDARIO,
     fallidas,
   };
