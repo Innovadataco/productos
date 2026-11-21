@@ -52,7 +52,7 @@ describe("interpretarFilas: el PDF ficticio", () => {
     const r = interpretarFilas(tabla());
     if (!r.ok) throw new Error(JSON.stringify(r.errores));
     expect(r.valor.lotes.map((l) => [l.nemo, l.cantidad, l.precio, l.valor, l.pagina, l.numero])).toEqual([
-      ["FICT1", 100n, "1000", "100000", 1, 2], ["FICT1", 50n, "1000", "50000", 1, 3], ["FICT2", 2000n, "20", "40000", 1, 4], ["FICT3", 10n, "32500", "325000", 1, 5],
+      ["FICT1", 100n, "1000", "100000", 1, 2], ["FICT1", 50n, "1000", "50000.01", 1, 3], ["FICT2", 2000n, "20", "40000", 1, 4], ["FICT3", 10n, "32500", "325000", 1, 5],
     ]);
     expect(r.valor.fondos.map((f) => [f.nit, f.encargo, f.saldo, f.pagina, f.numero])).toEqual([["999000111-0", "000000001", "6250000", 1, 1]]);
     expect([r.valor.efectivo.saldo, r.valor.efectivo.pagina, r.valor.efectivo.numero]).toEqual(["1000", 2, 6]);

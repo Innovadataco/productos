@@ -76,7 +76,9 @@ export const CERTIFICACION_FICTICIA: EspecCertificacion = {
   fondos: [{ descripcion: "FONDO FICTICIO UNO", nit: "999000111-0", encargo: "000000001", saldo: "COP 6.250.000,00" }],
   rentaVariable: [
     { nemo: "FICT1", cantidad: "100", precio: "COP 1.000,00", valor: "COP 100.000,00" },
-    { nemo: "FICT1", cantidad: "50", precio: "COP 1.000,00", valor: "COP 50.000,00" },
+    // Un centavo de redondeo (dentro del medio centavo por acción que admite filas.ts): valor inventado que no
+    // coincide con datos reales (cruce de coincidencias v2, formato colombiano).
+    { nemo: "FICT1", cantidad: "50", precio: "COP 1.000,00", valor: "COP 50.000,01" },
     { nemo: "FICT2", cantidad: "2000", precio: "COP 20,00", valor: "COP 40.000,00" },
     { nemo: "FICT3", cantidad: "10", precio: "COP 32.500,00", valor: "COP 325.000,00" },
   ],

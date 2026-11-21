@@ -242,7 +242,7 @@ describe("conciliarCertificacion: corte sin historia", () => {
     await cargarTrii(`caja-${k}.ficticio.csv`, `Fecha y hora,Tipo de movimiento,Estado,Valor total\n${caja.join("\n")}\n`);
     expect(await db.movimientoCaja.count({ where: { fecha: alCorte } })).toBe(2);
     const sola = `K${corrida}${k}S`;
-    const fic = await certificar(fecha, [{ nemo: sola, cantidad: "10", precio: "COP 1.000,00", valor: "COP 10.000,00" }]);
+    const fic = await certificar(fecha, [{ nemo: sola, cantidad: "10", precio: "COP 1.237,00", valor: "COP 12.370,00" }]);
     const cs = await conciliarYLeer(fecha);
     expect(enTexto(cs, "CANTIDAD", await idDe(sola))).toEqual(["NO_CUADRA", "sin_operaciones_en_sistema", "0", "10"]);
     // 500 − 500 = 0, sin dividendos ni ajustes (sus sumas vienen vacías de la base).
