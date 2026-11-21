@@ -103,7 +103,10 @@ services:
     tmpfs:
       - /tmp
     volumes:
-      # Socket en SOLO LECTURA; es el ÚNICO montaje del docker.sock en todo el stack.
+      # ÚNICO montaje del docker.sock en todo el stack. OJO: el `:ro` NO limita la API de
+      # Docker (por un socket se escribe igual, aunque el montaje sea de solo lectura). La
+      # protección REAL es la allowlist del guard (docker/pi-docker-guard.conf); el `:ro`
+      # queda solo como endurecimiento del montaje (no reemplazar el archivo del socket).
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./docker/pi-docker-guard.conf:/etc/nginx/nginx.conf:ro
     # Sin `ports:` — no se publica al host; solo la red interna de PI lo alcanza.
