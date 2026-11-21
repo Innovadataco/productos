@@ -1,0 +1,36 @@
+// @vitest-environment jsdom
+// Navegación del tablero a las otras pantallas (fase B, corte 3): el encabezado lleva a Plan, Decisiones y
+// Conciliación, y «Lo que todavía no está» ya no promete las reglas ni el diario. Datos inventados.
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { aVista } from "@/app/tablero/serializar";
+import { Tablero } from "@/app/tablero/Tablero";
+import { D, especie, resumenDe } from "./ficticio";
+
+const VISTA = aVista(resumenDe([especie({ nemotecnico: "FICT1", cantidad: 10n, costoVivo: D(1000) })]));
+const texto = (el: Element | null | undefined) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
+
+function pantalla(): HTMLElement {
+  const raiz = document.createElement("div");
+  raiz.innerHTML = renderToStaticMarkup(createElement(Tablero, { vista: VISTA }));
+  return raiz;
+}
+
+describe("navegación del tablero", () => {
+  it("el encabezado lleva a las otras pantallas, con nombre y el portafolio como actual", () => {
+    const nav = pantalla().querySelector('header nav[aria-label="Secciones"]');
+    expect([...(nav?.querySelectorAll("a") ?? [])].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")])).toEqual([
+      ["Portafolio", "/", "page"],
+      ["Plan", "/plan", null],
+      ["Decisiones", "/decisiones", null],
+      ["Conciliación", "/conciliacion", null],
+    ]);
+  });
+
+  it("«Lo que todavía no está» ya no promete las reglas ni el diario", () => {
+    const falta = pantalla().querySelector("ul.falta")!;
+    expect(texto(falta)).not.toContain("Mis reglas");
+    expect(texto(falta)).not.toContain("diario de decisiones");
+  });
+});
