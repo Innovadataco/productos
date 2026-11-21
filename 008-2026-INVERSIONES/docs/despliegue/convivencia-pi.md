@@ -38,19 +38,22 @@ Al final, si la lista guardada está vacía o existe la marca de pausa, no se ha
 | Reanudar | `sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/reanudar-008.sh` |
 
 **Pausar:**
-1. Toma el candado de Inversiones.
-2. Escribe la **marca `/opt/inversiones-008/estado/pausado`** (ruta fija) **antes** de bajar.
-3. Hace `$COMPOSE down` **sin `-v`**: no queda ningún contenedor, y la base y los respaldos quedan intactos.
+1. Revisa el árbol de root ([produccion.md](produccion.md) §2), pero **solo avisa**: un permiso mal puesto no frena el corte.
+2. Toma el candado de Inversiones. Solo ese: no espera el común, así que sirve aunque PI esté desplegando.
+3. Escribe la **marca `/opt/inversiones-008/estado/pausado`** (ruta fija) **antes** de bajar.
+4. Hace `$COMPOSE down` **sin `-v`**: no queda ningún contenedor, y la base y los respaldos quedan intactos. Si el `down` falla, sale con error y la marca queda: la pausa se mantiene.
 
 **Por qué con `down`:** con `stop`, `restart: always` volvería a levantar Inversiones al reiniciar el VPS o Docker. Con `down` no hay contenedores que reiniciar, así que la pausa sobrevive a un reinicio. Mientras exista la marca:
 - `desplegar-prod.sh` se niega;
 - PI no reanuda Inversiones.
 
 **Reanudar:**
-1. Toma el candado de Inversiones y el común **sin esperar**. Si el común está tomado, se niega con «PI desplegando».
-2. Revisa además que no haya un proceso de despliegue o de build de PI, como segunda barrera.
-3. Hace `up -d --wait` con el sha de `estado/sha-actual`.
-4. Borra la marca solo si todo quedó healthy.
+1. Revisa el árbol de root: si no es solo de root, se niega.
+2. Exige que `estado/sha-actual` sea un sha de 40 hex.
+3. Toma el candado de Inversiones y el común **sin esperar**. Si el común está tomado, se niega con «PI desplegando».
+4. Revisa además que no haya un proceso de despliegue o de build de PI, como segunda barrera.
+5. Hace `up -d --wait` con ese sha.
+6. Borra la marca solo si todo quedó healthy.
 
 **Los mismos pasos a mano:**
 ```sh
@@ -146,9 +149,10 @@ Lo ejecuta el coordinador con Jelk después del primer despliegue (condición de
 ## 6 · Reglas del VPS para Inversiones
 - Se escribe SOLO en los tres destinos permitidos: `/opt/inversiones-008/`, `/var/lock/despliegue-vps.lock` y `/var/backups/idc/inversiones/`.
 - Nunca se toca `/opt/proteccion-infantil/`, ni los contenedores `pi-*` o `bi-*`, ni Gesmovil ni Hermes.
-- Antes de reiniciar `cloudflared-hermes` se avisa al CEO de PI: [produccion.md](produccion.md#8--túnel-de-cloudflare-documentado-no-configurado).
+- Antes de reiniciar `cloudflared-hermes` se avisa al CEO de PI: [produccion.md](produccion.md#8--túnel-de-cloudflare-aplicado-el-2026-11-21).
 - `desplegar-prod.sh` toma los dos candados y revisa los procesos de PI en tres momentos: antes de empezar, antes de migrar y antes de `up`.
 
 ---
+> v2.1 · 2026-11-21 · 04:40 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · pausa y reanudación con el árbol de root y el sha validado; enlace al §8 nuevo
 > v2.0 · 2026-11-21 · 00:45 (-05) · Inversiones · Fábrica ECC (frente producción) · correcciones de la GATE 2
 > v1.0 · 2026-11-20 · 23:59 (-05) · Inversiones · Fábrica ECC (frente producción)

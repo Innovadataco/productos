@@ -15,7 +15,7 @@ Cómo se despliega, se revierte, se respalda y se restaura Inversiones en el **V
   - Ningún comando de Docker nombra `pi-*`, `bi-*`, Gesmovil ni Hermes, ni siquiera para leer.
 - **Sistema:** ningún script toca `ufw`, `systemctl`, `/etc/` ni el `crontab` de root.
   - El respaldo diario lo programa su propio contenedor.
-  - El túnel solo está documentado aquí: **no lo configura ningún script**.
+  - El túnel **no lo configura ningún script**: se aplicó a mano (§8).
 - **Red:**
   - desde internet solo se llega a los puertos 22, 80 y 5432 (ufw filtra el resto);
   - la app va en `127.0.0.1:5008`, nunca en `0.0.0.0`;
@@ -34,7 +34,7 @@ Documentos relacionados:
 | `inv-008-migrador:<sha>` | `prisma migrate deploy`, el guardián del esquema y los privilegios de `inv_app`. Además corre las cargas y el acceso inicial (`tsx`, rol `inv_dueno`). Es de un solo uso. |
 | `inv-008-vigia:<sha>` | Imagen mínima: alpine, sin node ni prisma. Lleva `age`, `curl`, certificados y `pg_dump` 16. La usan el vigía y el respaldo. |
 | Servicios de `inv-008-prod` | Permanentes, con `restart: always`: `inv-008-db` (Postgres 16, 70:70, sin puertos, red interna), `inv-008-app`, `inv-008-vigia` (solo avisa) e `inv-008-respaldo` (respaldo diario, `0:<gid respaldo>` sin capacidades: la excepción documentada). De un solo uso, con `restart: "no"` y `run --rm`: `inv-008-migrador`. |
-| `/opt/inversiones-008/repo` | Clon por HTTPS del repo público. De root y sin escritura para el grupo ni para otros: el despliegue lo verifica. |
+| `/opt/inversiones-008/repo` | Clon por HTTPS del repo público. De root y sin escritura para el grupo ni para otros: todo script con sudo lo revisa al empezar (§2, «Árbol de root»). |
 | `/opt/inversiones-008/.env.inversiones.production` | **El único archivo de producción**: root, 600, fuera de git. Plantilla sin valores: [`env-inversiones-production.example`](env-inversiones-production.example). |
 | `/opt/inversiones-008/estado/` | El sha y la imagen actuales y anteriores, las mediciones, la línea base de OOM y la **marca de pausa `pausado`**. |
 | `/opt/inversiones-008/imagenes/` | Los `.tar` que llegan del Mac. Se conservan los del sha actual y del anterior. |
@@ -68,6 +68,23 @@ sudo git clone https://github.com/Innovadataco/productos.git /opt/inversiones-00
 sudo chmod -R go-w /opt/inversiones-008/repo
 ```
 
+**Árbol de root.** Todo script con sudo, justo después de fijar el proyecto, revisa que lo que corre como root (o decide qué corre) sea solo de root (`revisar_arbol` en `produccion-comun.sh`):
+- los padres de `008-2026-INVERSIONES/` hasta `/`, sin recursión: quien escribe en un padre puede cambiar la carpeta entera;
+- `scripts/` completo y `docker-compose.prod.yml`: sin otro dueño, sin escritura del grupo ni de otros y sin enlaces simbólicos;
+- `.git`, `.git/config` y `.git/hooks`: el despliegue corre `git status` como root, y git puede ejecutar `core.fsmonitor` o el hook `post-index-change`;
+- el archivo de producción: de root y en 600.
+
+Si algo no cumple, el script se niega y nombra las rutas. **`pausar-008.sh` solo avisa**, para no frenar un corte de emergencia.
+
+**Límite:** un script no responde por sí mismo. Cuando la revisión corre, bash ya leyó ese script y `produccion-comun.sh`; si alguien pudo cambiarlos, también pudo quitar la revisión. Lo que sí cuida es lo que se lee después (los otros scripts, el compose y el SQL de roles), la cadena de padres y la configuración de git, ante un permiso mal puesto. La garantía de fondo es la misma de siempre: el clon lo escribe solo root.
+
+Revisión previa, de solo lectura (no debe imprimir nada):
+```sh
+sudo find / /opt /opt/inversiones-008 /opt/inversiones-008/repo /opt/inversiones-008/repo/008-2026-INVERSIONES -maxdepth 0 \( ! -user root -o -perm -0020 -o -perm -0002 \) -print
+sudo find /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts /opt/inversiones-008/repo/008-2026-INVERSIONES/docker-compose.prod.yml /opt/inversiones-008/repo/.git/config /opt/inversiones-008/repo/.git/hooks \( ! -user root -o -perm -0020 -o -perm -0002 -o -type l \) -print
+sudo find /opt/inversiones-008/.env.inversiones.production -maxdepth 0 \( ! -user root -o -perm -0040 -o -perm -0004 -o -perm -0020 -o -perm -0002 -o -type l \) -print
+```
+
 **La carpeta de respaldos** `/var/backups/idc/inversiones/` ya existe y **no se toca**: la montó el CEO de PI, como `root:respaldo` en 750.
 - Los archivos de Inversiones quedan ahí `root:respaldo` en 0640, como pidió.
 - Para eso, el contenedor `inv-008-respaldo` corre como `0:<gid de respaldo>`: root **del contenedor**, sin ninguna capacidad. Es la única excepción a «no root» (capas-pi.md #4).
@@ -90,6 +107,10 @@ sudo sh -c 'umask 077; f=/opt/inversiones-008/.env.inversiones.production; {
   echo "INV_RESPALDO_GID=$(getent group respaldo | cut -d: -f3)"
 } > "$f"; chown root:root "$f"; chmod 600 "$f"'
 ```
+
+**Tamaño del pool de la app.** La URL de la app lleva `connection_limit=5` y la del dueño `=3`.
+- Sin él, Prisma 5 abre núcleos × 2 + 1 conexiones: con 2 núcleos son 5; con 5 o más pasarían de las 10 que admite `inv_app`. Se midió en el Mac: 29 conexiones sin el parámetro (14 núcleos) y 5 con él.
+- `desplegar-prod.sh` **avisa**, sin frenar el despliegue ni imprimir la URL, si la de la app no trae un `connection_limit` de 1 a 8.
 
 Después se agregan a mano con `sudo nano`, sin pegarlas en la terminal:
 - `INV_CIFRADO_CLAVE_ACTIVA`: su formato lo fija el frente de cifrado;
@@ -165,7 +186,8 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
    - Solo cuenta como desplegado si la **última línea** es `DEPLOY VERIFICADO <sha>`. Tarda unos 10 minutos.
    - **El despliegue se niega si** existe la marca de pausa, si PI tiene el candado común o si se ve un despliegue de PI.
    - Si la app sale o se reinicia (`instrumentation.ts` sin `AUTH_SECRET` o sin `APP_ORIGEN`), falla.
-   - Si falla después de recrear contenedores, **vuelve solo a la imagen que corría**.
+   - **Si migra, la app vieja queda abajo** desde el respaldo previo hasta que la versión nueva queda healthy. Durante el migrador también se detiene el respaldo diario. Así ningún contenedor de Inversiones retiene tablas mientras migra. Con `--sin-migrar` no se detiene nada.
+   - Si falla después de tocar contenedores (incluida esa pausa), **vuelve solo a la imagen que corría**: levanta app, vigía y respaldo con ese sha. Si se re-desplegaba el mismo sha, levanta otra vez ese mismo.
 4. **Acceso inicial, que es también la recuperación de acceso.** Lo corre **Jelk por SSH**, no la Fábrica, y **antes de cargar los datos reales**:
    ```sh
    sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/crear-acceso-inicial.sh <argumentos que defina el frente login>
@@ -219,6 +241,11 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
   - el texto plano nunca toca el disco: si algo falla, no queda ningún archivo.
 - **Retención:** 14 diarios, 8 semanales (los del domingo) y 5 extras.
 - **Respaldo ya:** `respaldar-base.sh [--motivo x]`. Se lo pide al contenedor y verifica el archivo y su sha256. El despliegue lo corre antes de migrar.
+- **Un respaldo a la vez.** El manual (`exec … --ahora`) y el diario corren en el mismo contenedor y comparten un candado (`flock` sobre `/run/respaldo/respaldo.candado`, que se suelta solo si el proceso muere):
+  - el manual espera hasta 600 s (`RESPALDO_ESPERA_S`) y, si no lo consigue, sale con 75 sin tocar nada;
+  - el diario no espera: lo intenta en el minuto siguiente, sin contarlo como fallo;
+  - la marca de fallo de `pg_dump` y el `.parcial` llevan el PID, y un respaldo nunca se sobrescribe: si el nombre ya existe, toma el segundo siguiente;
+  - los `.parcial` de más de 60 minutos (un respaldo cortado a mitad) se borran en el respaldo siguiente.
 - **Copia fuera del VPS:** la hace la **infraestructura de IDC**, que copia `/var/backups/idc/` completo al Mac cada día. Inversiones no configura nada para eso.
 - **Restauración, siempre con la clave privada fuera del VPS.** La clave sale del gestor de contraseñas de Jelk y entra a `age` por la entrada estándar (`age -d -i -`), nunca en un archivo. Hay dos casos.
 
@@ -257,15 +284,16 @@ docker run --rm --entrypoint sh inv-008-app:<sha> -c 'find / -xdev \( -name ".en
 ```
 Las mismas tres revisiones valen para `inv-008-migrador` e `inv-008-vigia`.
 
-## 8 · Túnel de Cloudflare (documentado, NO configurado)
-Lo aplica el coordinador con el CEO de PI, en una ventana acordada y **solo con el login verificado**.
+## 8 · Túnel de Cloudflare (aplicado el 2026-11-21)
+**Estado:** lo aplicó el coordinador con el CEO de PI el 2026-11-21: el ingress de `inversiones` y el CNAME. Lo reportó el coordinador; ningún script de Inversiones toca el túnel. El respaldo de la configuración anterior es `/etc/cloudflared/config.yml.bak-inv-20261121`.
 
 | Dato | Valor |
 |---|---|
-| Túnel | `970b8bb9-3931-42a3-a452-67329a56bae8` |
+| Túnel | `<id-del-túnel>` (lo tiene el coordinador; no va en este repo público) |
 | Servicio | `cloudflared-hermes` (`ExecStart=/usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml run`) |
 | Configuración | `/etc/cloudflared/config.yml` |
 
+**Cómo se aplicó** (para repetirlo en un VPS nuevo), siempre en una ventana acordada con el CEO de PI y **solo con el login verificado**:
 1. **Antes:** guardar el código HTTP de PI, BI y piweb:
    ```sh
    for h in pi bi piweb; do printf '%s ' $h; curl -sI https://$h.innovadataco.com | head -1; done
@@ -280,17 +308,18 @@ Lo aplica el coordinador con el CEO de PI, en una ventana acordada y **solo con 
 4. **Validar:** `sudo cloudflared tunnel ingress validate --config /etc/cloudflared/config.yml`
 5. **DNS:** con `/root/.cloudflared/cert.pem`, y después de verificar que no exista un registro `inversiones`:
    ```sh
-   sudo cloudflared tunnel route dns 970b8bb9-3931-42a3-a452-67329a56bae8 inversiones.innovadataco.com
+   sudo cloudflared tunnel route dns <id-del-túnel> inversiones.innovadataco.com
    ```
 6. **Avisar al CEO de PI ANTES** de `sudo systemctl restart cloudflared-hermes`, que corta unos segundos a PI, BI, piweb y Hermes.
 7. **Después:**
    - repetir el paso 1: si cambia cualquier código, se revierte de inmediato;
    - `curl -I https://inversiones.innovadataco.com` debe llevar a `/ingresar`.
-8. **Reversa:**
-   ```sh
-   sudo cp /etc/cloudflared/config.yml.bak-inv-<fecha> /etc/cloudflared/config.yml && sudo systemctl restart cloudflared-hermes
-   ```
-   Repetir el paso 1.
+
+**Reversa** (con el CEO de PI avisado, por el mismo corte de unos segundos):
+```sh
+sudo cp /etc/cloudflared/config.yml.bak-inv-20261121 /etc/cloudflared/config.yml && sudo systemctl restart cloudflared-hermes
+```
+Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que se borre aparte.
 
 ## 9 · Ensayo local (cómo se probó sin el VPS)
 - **Proyecto:** `inv-008-prueba`, que solo corre en el Mac o en el CI y nunca donde exista `/opt/inversiones-008`.
@@ -303,7 +332,7 @@ Lo aplica el coordinador con el CEO de PI, en una ventana acordada y **solo con 
 **Qué pasa.** Verificado en el Mac el 2026-11-21 con una migración de ensayo en una base `_test`:
 - Prisma corre cada `migration.sql` en **una sola transacción**: si una sentencia falla, la migración se deshace entera y la base queda como estaba antes de ella.
 - Pero la fila de esa migración queda en `_prisma_migrations` sin `finished_at`, y **el siguiente `migrate deploy` se niega con P3009** hasta que alguien la resuelva.
-- `desplegar-prod.sh` se detiene en el migrador, no levanta la app nueva y su vuelta atrás deja corriendo la imagen que había.
+- `desplegar-prod.sh` se detiene en el migrador, no levanta la app nueva y su vuelta atrás vuelve a levantar la imagen que había (estaba detenida para migrar).
 
 **Qué se hace:**
 1. **No reintentar** el despliegue ni tocar la base. Se lee el error del migrador: código SQLSTATE y mensaje, que no traen valores de las filas.
@@ -317,9 +346,10 @@ Lo aplica el coordinador con el CEO de PI, en una ventana acordada y **solo con 
    ```
    Después se despliega de nuevo, normal.
 - Nunca `migrate resolve --applied` para una migración que falló: marcaría como aplicado algo que no está.
-- Las migraciones de 008 toman `SET LOCAL lock_timeout = '5s'`. Si la app vieja retiene una tabla, el migrador falla rápido, se deshace y se sigue este mismo procedimiento.
+- Las migraciones de 008 toman `SET LOCAL lock_timeout = '5s'`. La app vieja y el respaldo diario ya están detenidos mientras migra (§4.3). El `lock_timeout` queda para lo que el despliegue no controla, por ejemplo una sesión de `psql` abierta a mano: si algo retiene una tabla, el migrador falla rápido, se deshace y se sigue este mismo procedimiento.
 
 ---
+> v2.2 · 2026-11-21 · 04:40 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · app y respaldo diario detenidos antes del migrador, con su vuelta atrás; un respaldo a la vez; árbol de root al inicio de todo script con sudo; aviso de `connection_limit`; §8: túnel aplicado y sin el ID en el repo
 > v2.1 · 2026-11-21 · 03:27 (-05) · Inversiones · Fábrica ECC (frente base) · §5: el guardián nuevo; §10: migración fallida y P3009 (`migrate resolve` lo decide el CEO)
 > v2.0 · 2026-11-21 · 00:40 (-05) · Inversiones · Fábrica ECC (frente producción) · correcciones de la GATE 2 (VPS compartido con PI)
 > v1.0 · 2026-11-20 · 23:59 (-05) · Inversiones · Fábrica ECC (frente producción)
