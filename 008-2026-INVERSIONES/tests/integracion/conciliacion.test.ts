@@ -156,11 +156,12 @@ describe("conciliarCertificacion: fondo, efectivo e historia", () => {
     for (const id of c.ids) expect(cs.filter((x) => x.instrumentoId === id).map((x) => x.resultado)).toEqual(["CUADRA", "CUADRA"]);
   });
 
-  it("un dividendo pagado antes del corte suma su neto a la caja esperada", async () => {
+  it("un dividendo pagado hasta el corte suma su neto a la caja esperada; uno pagado después, no", async () => {
     const c = await caso();
     const efectivo = async () => enTexto(await conciliarYLeer(c.fecha), "EFECTIVO")![2]!;
     const antes = await efectivo();
-    await cargarTrii(`dividendos-${k}.ficticio.csv`, `Fecha y hora,Ticker,Estado,Valor total\n${iso(new Date(c.fecha.getTime() - 2 * DIA))},${c.nemos[0]},,123.0\n`);
+    const pagos = [`${iso(new Date(c.fecha.getTime() - 2 * DIA))},${c.nemos[0]},,123.0`, `${iso(new Date(c.fecha.getTime() + DIA))},${c.nemos[1]},,7.0`];
+    await cargarTrii(`dividendos-${k}.ficticio.csv`, `Fecha y hora,Ticker,Estado,Valor total\n${pagos.join("\n")}\n`);
     expect(dec(await efectivo()).sub(antes).toString()).toBe("123");
   });
 
@@ -228,6 +229,7 @@ describe("conciliarCertificacion: corte sin historia", () => {
     k += 1;
     // Miércoles hábil de 2022 (calendario BVC sembrado). Ningún archivo de integración escribe órdenes, caja,
     // dividendos, ajustes ni escisiones antes de 2023: este corte solo ve lo suyo, en cualquier orden de archivos.
+    // Si un archivo nuevo escribe antes de 2023, la guarda de abajo falla: mueva este corte antes de esos datos.
     const fecha = new Date(Date.UTC(2022, 5, 1));
     const alCorte = { lte: fecha };
     const ajenas = await Promise.all([
