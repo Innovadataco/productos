@@ -23,7 +23,7 @@ interface Salida {
 function correr(script: string, args: readonly string[]): Salida {
   const r = spawnSync(TSX, [join("scripts", script), ...args], {
     cwd: RAIZ,
-    env: { PATH: process.env.PATH ?? "", DATABASE_URL: INALCANZABLE, NO_COLOR: "1" },
+    env: { PATH: process.env.PATH ?? "", NODE_ENV: "test", DATABASE_URL: INALCANZABLE, NO_COLOR: "1" },
     encoding: "utf8",
     timeout: POR_CLI_MS,
   });
