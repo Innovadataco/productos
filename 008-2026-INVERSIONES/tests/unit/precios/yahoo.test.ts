@@ -94,8 +94,17 @@ describe("obtenerCierres", () => {
     expect(await obtenerCierres("FICTA.CL", desde, hasta, async () => { throw new Error("red"); })).toEqual({ ok: false, codigo: "YAHOO_RED" });
   });
 
-  it("rechaza símbolos raros antes de pedir nada", async () => {
-    expect(await obtenerCierres("x/../y", desde, hasta, async () => { throw new Error("no debía llamarse"); })).toEqual({ ok: false, codigo: "SIMBOLO_INVALIDO" });
+  it.each(["x/../y", "..", ".", ".CL", "-FICT1.CL", "", "A".repeat(21)])("rechaza el símbolo raro «%s» antes de pedir nada", async (simbolo) => {
+    expect(await obtenerCierres(simbolo, desde, hasta, async () => { throw new Error("no debía llamarse"); })).toEqual({ ok: false, codigo: "SIMBOLO_INVALIDO" });
+  });
+
+  it.each(["FICT1.CL", "^FICTX", "FICT-1.CL", "A".repeat(20)])("acepta el símbolo «%s»", async (simbolo) => {
+    let pedida = "";
+    await obtenerCierres(simbolo, desde, hasta, async (url) => {
+      pedida = url;
+      return new Response("{}", { status: 503 });
+    });
+    expect(new URL(pedida).pathname).toBe(`/v8/finance/chart/${encodeURIComponent(simbolo)}`);
   });
 
   it("pide sin seguir redirecciones, con el User-Agent y una señal de aborto", async () => {

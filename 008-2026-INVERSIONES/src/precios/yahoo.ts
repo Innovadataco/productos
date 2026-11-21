@@ -24,6 +24,9 @@ export interface Cierre {
 
 export type ResultadoYahoo = { ok: true; cierres: Cierre[] } | { ok: false; codigo: string };
 
+/** Símbolo de Yahoo: hasta 20 caracteres, sin empezar por «.» ni «-» (así «..» no puede tocar la ruta). */
+const SIMBOLO_RE = /^[A-Z0-9^][A-Z0-9.^-]{0,19}$/;
+
 /** `fetch` inyectable: en las pruebas nunca hay red real. Se pide sin seguir redirecciones. */
 export type Buscar = BuscarHttp;
 
@@ -73,7 +76,7 @@ export function parsearYahoo(cuerpo: unknown): ResultadoYahoo {
 
 /** Pide los cierres diarios entre dos fechas (incluidas). No lanza: los fallos vuelven como código. */
 export async function obtenerCierres(simbolo: string, desde: Date, hasta: Date, buscar: Buscar): Promise<ResultadoYahoo> {
-  if (!/^[A-Z0-9.^-]{1,20}$/.test(simbolo)) return { ok: false, codigo: "SIMBOLO_INVALIDO" };
+  if (!SIMBOLO_RE.test(simbolo)) return { ok: false, codigo: "SIMBOLO_INVALIDO" };
   const p1 = Math.floor(desde.getTime() / 1000);
   const p2 = Math.floor(hasta.getTime() / 1000) + 24 * 60 * 60;
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbolo)}?interval=1d&period1=${p1}&period2=${p2}`;
