@@ -12,8 +12,8 @@
  */
 import type { PrismaClient } from "@prisma/client";
 import type { Writable } from "node:stream";
+import { correoDeCli } from "../cli/correo";
 import { ErrorAcceso, emitirAcceso } from "./acceso";
-import { EMAIL_MAX } from "./limites";
 import { ErrorOrigen, origenesPermitidos, type FuenteOrigen } from "./origen";
 import { reiniciarTotp } from "./reinicio-totp";
 
@@ -33,7 +33,6 @@ class ErrorRol extends Error {
 
 const USO = "Uso: npx tsx scripts/crear-acceso-inicial.ts --email <correo> [--reiniciar-totp]";
 const BANDERA_TOTP = "--reiniciar-totp";
-const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SALIDA_USO = 2;
 
 interface Orden {
@@ -41,13 +40,16 @@ interface Orden {
   readonly reiniciarTotp: boolean;
 }
 
-/** `--email <correo>`, y opcionalmente `--reiniciar-totp` (antes o después), nada más. */
+/**
+ * `--email <correo>`, y opcionalmente `--reiniciar-totp` (antes o después), nada más. El correo pasa por
+ * correoDeCli (O1): un valor que empieza por «-» nunca es el correo, aunque tenga su forma.
+ */
 function leerOrden(argv: readonly string[]): Orden {
   const reiniciar = argv.filter((a) => a === BANDERA_TOTP).length;
   const resto = argv.filter((a) => a !== BANDERA_TOTP);
   if (reiniciar > 1 || resto.length !== 2 || resto[0] !== "--email") throw new ErrorUso(`Se espera --email <correo> y, si acaso, ${BANDERA_TOTP}.`);
-  const email = (resto[1] ?? "").trim();
-  if (!email || email.length > EMAIL_MAX || !CORREO.test(email)) throw new ErrorUso("El --email no parece un correo.");
+  const email = correoDeCli(resto[1]);
+  if (email === null) throw new ErrorUso("El --email no parece un correo (ni puede empezar por «-»).");
   return { email, reiniciarTotp: reiniciar === 1 };
 }
 
