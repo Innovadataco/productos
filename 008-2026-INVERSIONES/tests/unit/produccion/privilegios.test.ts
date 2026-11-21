@@ -7,8 +7,9 @@
 //
 // Sin condiciones: si faltan las tablas o las columnas del login (20261121050319_login) o del TOTP
 // (20261121060000_totp), el GRANT falla y el despliegue se detiene (falla cerrada).
+import { readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { leer008 } from "./falsos";
+import { leer008, ruta008 } from "./falsos";
 
 const sql = leer008("docker/migrador/privilegios.sql").replace(/--.*$/gm, "");
 const grants = [...sql.matchAll(/GRANT\s+([A-Z]+(?:\s*\([^)]*\))?(?:\s*,\s*[A-Z]+(?:\s*\([^)]*\))?)*)\s+ON\s+(?:TABLE|SEQUENCE)\s+public\.(%I|[a-z_]+)\s+TO\s+inv_app/g)].map(
@@ -43,6 +44,13 @@ describe("privilegios de inv_app", () => {
   it("nunca DELETE, TRUNCATE, REFERENCES, TRIGGER, ALL ni DDL, y nunca UPDATE de tabla completa", () => {
     expect(sql).not.toMatch(/GRANT[^;]*(DELETE|TRUNCATE|REFERENCES|TRIGGER|ALL|CREATE)/);
     expect(sql).not.toMatch(/GRANT\s+UPDATE\s+ON/);
+  });
+
+  it("cada migración que citan sus comentarios existe con ese nombre (antes citaba un login que no existía)", () => {
+    const existentes = new Set(readdirSync(ruta008("prisma/migrations"), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name));
+    const citadas = [...leer008("docker/migrador/privilegios.sql").matchAll(/\b\d{14}_[a-z0-9_]+/g)].map((m) => m[0]);
+    expect(citadas.length).toBeGreaterThan(0);
+    for (const citada of citadas) expect(existentes.has(citada), citada).toBe(true);
   });
 
   it("parte de cero en cada corrida y deja _prisma_migrations sin acceso", () => {
