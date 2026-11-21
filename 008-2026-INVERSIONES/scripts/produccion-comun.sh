@@ -209,6 +209,12 @@ tomar_candado_comun() {
   flock -n 9 || morir "PI desplegando: el candado común $comun está tomado. Reintente cuando termine."
 }
 
+# Aborta si Inversiones está en pausa (la marca /opt/inversiones-008/estado/pausado). Se llama DESPUÉS de
+# tomar el candado propio, para que nadie ponga o quite la marca entre la lectura y la acción.
+negarse_si_pausado() {
+  [ ! -e "$INV_MARCA_PAUSA" ] || morir "Inversiones está en pausa ($INV_MARCA_PAUSA): reanude antes con scripts/reanudar-008.sh"
+}
+
 # Suma de oom_kill JERÁRQUICO bajo el cgroup de los contenedores ($1 = raíz del cgroup v2): sirve aunque
 # el scope del contenedor muerto ya no exista. Driver systemd (system.slice) y cgroupfs (docker).
 oom_total() {

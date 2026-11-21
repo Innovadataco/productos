@@ -47,6 +47,9 @@ main() {
   clave_dueno="$(clave_de_url "$url_dueno" inv_dueno)"
   clave_app="$(clave_de_url "$url_app" inv_app)"
   [ "$clave_dueno" != "$clave_app" ] || morir "inv_dueno e inv_app deben tener claves distintas"
+  tomar_candado_propio
+  tomar_candado_comun
+  negarse_si_pausado
 
   informar "levantando solo la base de $INV_PROYECTO_ACTIVO"
   "${COMPOSE[@]}" up -d --wait inv-008-db

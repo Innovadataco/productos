@@ -1,6 +1,6 @@
 // crear-roles-prod.sh: crea inv_dueno e inv_app leyendo sus claves del archivo de producción y se las
 // pasa a psql SOLO por la entrada estándar (nunca por argumentos, que se ven en `ps`).
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, leer008, ruta008 } from "./falsos";
@@ -80,6 +80,29 @@ describe("crear-roles-prod.sh", () => {
     envProduccionFicticio(base, { INV_DUENO_DATABASE_URL: "" });
     expect((await correr(SCRIPT, [], env)).status).not.toBe(0);
     expect(falsos.llamadas().filter((l) => l[0] === "docker")).toEqual([]);
+  });
+
+  it("con la marca de pausa se niega, sin tocar Docker", async () => {
+    const { base, falsos, env } = preparar();
+    mkdirSync(path.join(base, "estado"), { recursive: true });
+    writeFileSync(path.join(base, "estado", "pausado"), "pausa\n");
+    const r = await correr(SCRIPT, [], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/pausa/);
+    expect(falsos.llamadas().filter((l) => l[0] === "docker")).toEqual([]);
+  });
+
+  it("toma el candado propio y el común sin esperar; con el común ocupado dice «PI desplegando»", async () => {
+    const { falsos, env } = preparar();
+    expect((await correr(SCRIPT, [], env)).status).toBe(0);
+    expect(falsos.llamadas().filter((l) => l[0] === "flock")).toHaveLength(2);
+    for (const fd of ["8", "9"]) {
+      const p = preparar({});
+      const r = await correr(SCRIPT, [], { ...p.env, FALSO_FLOCK_OCUPADO: fd });
+      expect(r.status).not.toBe(0);
+      if (fd === "9") expect(r.stderr).toMatch(/PI desplegando/);
+      expect(p.falsos.llamadas().filter((l) => l[0] === "docker")).toEqual([]);
+    }
   });
 
   it("nunca corre contra el proyecto de desarrollo inv-008", async () => {

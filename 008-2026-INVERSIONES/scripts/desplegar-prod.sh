@@ -295,10 +295,9 @@ main() {
   armar_compose
   local espera="${INV_ESPERA_MEDICION_S:-$ESPERA_MEDICION_S_POR_DEFECTO}"
   [[ "$espera" =~ ^[0-9]+$ ]] || morir "INV_ESPERA_MEDICION_S debe ser un entero"
-  [ ! -e "$INV_MARCA_PAUSA" ] || morir "Inversiones está en pausa ($INV_MARCA_PAUSA): reanude antes con scripts/reanudar-008.sh"
-
   tomar_candado_propio
   tomar_candado_comun
+  negarse_si_pausado
   guarda_disco
   revisar_pi "antes de empezar"
   [ -z "$tar" ] || cargar_tar "$tar" "$tar_sha"

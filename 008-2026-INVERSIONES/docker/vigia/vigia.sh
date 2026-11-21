@@ -50,7 +50,9 @@ validar() {
   done
 }
 
-# oom_kill jerárquico: system.slice (systemd) + docker (cgroupfs). Sin ninguno, la suma de los scopes.
+# oom_kill jerárquico: system.slice (driver systemd, el del VPS) o docker (cgroupfs, el de Colima).
+# Sin ninguno de los dos, falla (código 1): el vigía NUNCA vuelve en silencio a sumar los scopes, porque
+# un scope borrado tras un OOM se llevaría su contador.
 oom_jerarquico() {
   total=0 hay=0
   for archivo in "$CGROUP/system.slice/memory.events" "$CGROUP/docker/memory.events"; do
@@ -59,7 +61,20 @@ oom_jerarquico() {
     entero "$n" || continue
     total=$((total + n)) hay=1
   done
-  if [ "$hay" = 1 ]; then echo "$total"; else awk '{ s += $2 } END { print s + 0 }' "$1"; fi
+  [ "$hay" = 1 ] || return 1
+  echo "$total"
+}
+
+# Sin contador jerárquico: avisa UNA vez («vigía sin contador OOM»), deja el healthcheck en rojo y sale con
+# error en cada pasada hasta que el contador vuelva.
+sin_contador() {
+  : >"$ESTADO_DIR/sin-contador"
+  if [ ! -e "$ESTADO_DIR/sin-contador.avisado" ]; then
+    texto="$(printf '🛑 Inversiones · vigía sin contador OOM\\nHora: %s\\nNo existe %s/system.slice/memory.events (ni docker/memory.events): el vigía no puede ver los OOM y su healthcheck queda en rojo. Revise el montaje de /sys/fs/cgroup.\\nEl vigía no actúa: solo avisa.' "$(hora_cot)" "$CGROUP")"
+    if enviar "$texto"; then : >"$ESTADO_DIR/sin-contador.avisado"; fi
+  fi
+  registrar "SIN CONTADOR OOM: no existe el memory.events jerárquico en $CGROUP; healthcheck en rojo"
+  return 1
 }
 
 # Escribe en $1 «id oom_kill» de cada contenedor (docker-<id>.scope o docker/<id>), ordenado.
@@ -142,7 +157,8 @@ pasada() {
   disponible=$((disponible_kb / 1024)) swap=$((swap_kb / 1024)) ahora="$(date +%s)"
 
   contar_scopes "$ESTADO_DIR/oom.scopes.actual"
-  oom_ahora="$(oom_jerarquico "$ESTADO_DIR/oom.scopes.actual")"
+  oom_ahora="$(oom_jerarquico)" || { sin_contador; return 1; }
+  rm -f "$ESTADO_DIR/sin-contador" "$ESTADO_DIR/sin-contador.avisado"
   primera=0
   if [ -f "$ESTADO_DIR/oom.total" ]; then oom_antes="$(cat "$ESTADO_DIR/oom.total")"; else oom_antes="$oom_ahora" primera=1; fi
   # Un contador más bajo (reinicio del VPS o del cgroup) no es un OOM: se toma como nueva línea base.
@@ -192,6 +208,7 @@ pasada() {
 
 salud() {
   minutos=$(((3 * INTERVALO_S + 59) / 60 + 1))
+  [ ! -e "$ESTADO_DIR/sin-contador" ] || return 1
   [ -n "$(find "$ESTADO_DIR/latido" -mmin "-$minutos" 2>/dev/null)" ]
 }
 

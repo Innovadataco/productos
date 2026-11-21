@@ -6,7 +6,7 @@
 // se borre. El token va a curl por stdin (-K -), nunca en sus argumentos.
 // El Telegram falso escucha en un socket Unix (sin puertos TCP).
 import { spawn } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync, existsSync, utimesSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, utimesSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -278,6 +278,26 @@ describe("vigía · contenido del mensaje", () => {
     await v.pasada({ VIGIA_UMBRAL_MEMAVAILABLE_MIB: "7168" });
     expect(textos()).toHaveLength(1);
     expect(textos()[0]).toMatch(/umbral de 7168 MiB/);
+  });
+});
+
+describe("vigía · sin contador OOM jerárquico falla ruidosamente (nunca suma scopes en silencio)", () => {
+  it("avisa «vigía sin contador OOM» una vez, sale con error y el healthcheck queda en rojo; se recupera al volver el archivo", async () => {
+    mensajes = [];
+    const v = preparar();
+    const jerarquico = path.join(v.env.VIGIA_CGROUP!, "system.slice", "memory.events");
+    rmSync(jerarquico);
+    const r1 = await v.pasada();
+    expect(r1.status).not.toBe(0);
+    expect(textos()).toHaveLength(1);
+    expect(textos()[0]).toMatch(/vigía sin contador OOM/);
+    const salud = () => new Promise<number | null>((ok) => spawn("sh", [VIGIA, "--salud"], { env: v.env as NodeJS.ProcessEnv }).on("close", ok));
+    expect(await salud()).not.toBe(0);
+    expect((await v.pasada()).status).not.toBe(0);
+    expect(textos()).toHaveLength(1);
+    writeFileSync(jerarquico, "oom 0\noom_kill 0\n");
+    expect((await v.pasada()).status).toBe(0);
+    expect(await salud()).toBe(0);
   });
 });
 

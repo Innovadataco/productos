@@ -203,6 +203,8 @@ describe("desplegar-prod.sh · guardas que abortan sin DEPLOY VERIFICADO", () =>
     expect(r.status).not.toBe(0);
     expect(r.stderr).toMatch(/pausa/);
     expect(llamadasCompose(falsos.llamadas())).toEqual([]);
+    // La marca se lee DESPUÉS de tomar el candado (nadie la puede poner o quitar entre medio).
+    expect(falsos.llamadas().filter((l) => l[0] === "flock").length).toBeGreaterThanOrEqual(1);
   });
 
   it("CI rojo, disco o PI: aborta antes de cualquier docker compose", async () => {

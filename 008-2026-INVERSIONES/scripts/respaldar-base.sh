@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Inversiones · respaldo cifrado YA (por ejemplo, antes de migrar). Le pide el respaldo al contenedor
 # permanente inv-008-respaldo, que es quien vuelca y cifra (pg_dump | age -r <pública>, sin texto plano en
-# disco) y escribe en /opt/inversiones-008/respaldos/. Este script solo verifica el resultado en el host:
+# disco) y escribe en /var/backups/idc/inversiones/. Este script solo verifica el resultado en el host:
 # que el archivo exista bajo la raíz, que sea de age y que cuadre con su .sha256.
 # El respaldo DIARIO lo programa el mismo contenedor (sin systemd ni cron del host).
 #

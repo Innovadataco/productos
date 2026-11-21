@@ -216,6 +216,27 @@ describe("crear-acceso-inicial.sh · recuperación de acceso (lo corre Jelk por 
     );
   });
 
+  it("con la marca de pausa se niega, sin tocar Docker", async () => {
+    const { base, falsos, env } = preparar({ INV_TAG: "1".repeat(40) });
+    mkdirSync(path.join(base, "estado"), { recursive: true });
+    writeFileSync(path.join(base, "estado", "pausado"), "pausa\n");
+    const r = await correr(ACCESO, ["--email", "dueno@ejemplo.invalid"], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/pausa/);
+    expect(docker(falsos.llamadas())).toEqual([]);
+  });
+
+  it("toma los dos candados sin esperar; con el común ocupado dice «PI desplegando»", async () => {
+    const ok = preparar({ INV_TAG: "1".repeat(40) });
+    expect((await correr(ACCESO, [], ok.env)).status).toBe(0);
+    expect(ok.falsos.llamadas().filter((l) => l[0] === "flock")).toHaveLength(2);
+    const ocupado = preparar({ INV_TAG: "1".repeat(40), FALSO_FLOCK_OCUPADO: "9" });
+    const r = await correr(ACCESO, [], ocupado.env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/PI desplegando/);
+    expect(docker(ocupado.falsos.llamadas())).toEqual([]);
+  });
+
   it("sin despliegue registrado ni INV_TAG, no corre", async () => {
     const { falsos, env } = preparar();
     expect((await correr(ACCESO, [], env)).status).not.toBe(0);

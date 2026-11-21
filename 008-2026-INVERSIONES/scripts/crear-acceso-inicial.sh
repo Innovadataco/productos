@@ -13,6 +13,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 main() {
   preparar_entorno
   armar_compose
+  tomar_candado_propio
+  tomar_candado_comun
+  negarse_si_pausado
   if [ -z "${INV_TAG:-}" ]; then
     [ -r "$INV_ESTADO_DIR/sha-actual" ] || morir "no hay despliegue registrado: despliegue primero"
     INV_TAG="$(tr -d '[:space:]' <"$INV_ESTADO_DIR/sha-actual")"

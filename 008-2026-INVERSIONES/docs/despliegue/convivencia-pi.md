@@ -22,7 +22,14 @@ Inversiones comparte el VPS de producción con PI (D-015). **PI tiene prioridad*
 **La pausa la hace PI, con su propio código, en su `deploy-prod.sh`.** No llama a `pausar-008.sh`. Su procedimiento (lo hace PI, no Inversiones):
 1. **Al inicio:** `docker stop` de los contenedores con la etiqueta `com.docker.compose.project=inv-008-prod`. Compose la pone en todos los permanentes de Inversiones; en el ensayo, lo comprobó `docker ps --filter label=…`. PI guarda esos IDs.
 2. **Al final**, con una trampa aunque falle, `docker start` de esos mismos IDs, **salvo que exista la marca de pausa** `/opt/inversiones-008/estado/pausado`. Si existe, PI no reanuda.
-3. **Mientras despliega,** PI tiene el candado común `/var/lock/despliegue-vps.lock`. Inversiones no despliega ni reanuda mientras esté tomado.
+3. **Mientras despliega,** PI tiene el candado común `/var/lock/despliegue-vps.lock`. Inversiones no despliega, ni reanuda, ni crea roles, ni corre el acceso inicial mientras esté tomado.
+
+**Para el código de PI (lo escribe PI, no Inversiones):** el `docker stop` por etiqueta tiene que aceptar una **lista vacía**. Con Inversiones en pausa (`pausar-008.sh` hace `down`), no hay ningún contenedor de `inv-008-prod`, y `docker stop` sin argumentos falla. Por ejemplo:
+```sh
+ids=$(docker ps -q --filter label=com.docker.compose.project=inv-008-prod)
+[ -z "$ids" ] || docker stop $ids
+```
+Al final, si la lista guardada está vacía o existe la marca de pausa, no se hace `start`.
 
 ## 2 · Pausa manual o corte (Inversiones)
 | | Comando |
