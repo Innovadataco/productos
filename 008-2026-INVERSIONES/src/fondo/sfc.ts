@@ -10,6 +10,7 @@
  */
 import { Prisma } from "@prisma/client";
 import { leerFechaIso } from "../importacion/trii/valores";
+import { pedirJsonAcotado, type BuscarHttp, type RespuestaHttp } from "../lib/http-acotado";
 
 export const FUENTE_SFC = "sfc:qhpu-8ixx";
 const URL_SFC = "https://www.datos.gov.co/resource/qhpu-8ixx.json";
@@ -44,16 +45,11 @@ export type ResultadoSfc = { ok: true; valores: ValorDia[]; descartados: number 
 
 type FilaSfc = Readonly<Record<string, unknown>>;
 
-/** Lo que se usa de la respuesta de `fetch`: estado, encabezados y el cuerpo como flujo (para ponerle tope). */
-export interface RespuestaSfc {
-  readonly ok: boolean;
-  readonly status: number;
-  readonly headers: { get(nombre: string): string | null };
-  readonly body: ReadableStream<Uint8Array> | null;
-}
+/** Lo que se usa de la respuesta de `fetch` (ver `src/lib/http-acotado.ts`). */
+export type RespuestaSfc = RespuestaHttp;
 
-/** `fetch` inyectable: en las pruebas nunca hay red real. */
-export type BuscarSfc = (url: string, init: { headers: Record<string, string>; signal: AbortSignal; redirect: "error" }) => Promise<RespuestaSfc>;
+/** `fetch` inyectable: en las pruebas nunca hay red real. Se pide sin seguir redirecciones. */
+export type BuscarSfc = BuscarHttp;
 
 /** Fecha de negocio (medianoche UTC) como AAAA-MM-DD. */
 export const isoDia = (d: Date): string => d.toISOString().slice(0, 10);
@@ -144,52 +140,11 @@ function consultaInvalida(consulta: ConsultaSfc): string | null {
   return null;
 }
 
-type Cuerpo = { ok: true; texto: string } | { ok: false; codigo: string };
-
-/** Lee el cuerpo con tope de bytes: rechaza por el content-length declarado y corta el flujo si lo pasa. */
-async function leerCuerpo(respuesta: RespuestaSfc): Promise<Cuerpo> {
-  const declarado = Number(respuesta.headers.get("content-length"));
-  if (declarado > BYTES_MAXIMOS || !respuesta.body) return { ok: false, codigo: "SFC_FORMATO" };
-  const lector = respuesta.body.getReader();
-  const partes: Uint8Array[] = [];
-  let total = 0;
-  try {
-    for (let parte = await lector.read(); !parte.done; parte = await lector.read()) {
-      total += parte.value.byteLength;
-      if (total > BYTES_MAXIMOS) {
-        await lector.cancel().catch(() => undefined);
-        return { ok: false, codigo: "SFC_FORMATO" };
-      }
-      partes.push(parte.value);
-    }
-  } catch {
-    return { ok: false, codigo: "SFC_RED" };
-  }
-  try {
-    return { ok: true, texto: new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(partes)) };
-  } catch {
-    return { ok: false, codigo: "SFC_FORMATO" };
-  }
-}
-
 /** Pide los valores de unidad del fondo entre dos fechas (incluidas). No lanza. */
 export async function obtenerValores(consulta: ConsultaSfc, buscar: BuscarSfc): Promise<ResultadoSfc> {
   const invalida = consultaInvalida(consulta);
   if (invalida) return { ok: false, codigo: invalida };
-  let respuesta: RespuestaSfc;
-  try {
-    respuesta = await buscar(urlConsulta(consulta), { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS), redirect: "error" });
-  } catch {
-    return { ok: false, codigo: "SFC_RED" };
-  }
-  if (!respuesta.ok) return { ok: false, codigo: `SFC_HTTP_${respuesta.status}` };
-  const cuerpo = await leerCuerpo(respuesta);
-  if (!cuerpo.ok) return cuerpo;
-  let datos: unknown;
-  try {
-    datos = JSON.parse(cuerpo.texto);
-  } catch {
-    return { ok: false, codigo: "SFC_FORMATO" };
-  }
-  return parsearSfc(datos, consulta);
+  // Sin redirecciones, con plazo total y tope de bytes; los fallos vuelven como SFC_RED, SFC_HTTP_<n> o SFC_FORMATO.
+  const r = await pedirJsonAcotado(buscar, urlConsulta(consulta), { prefijo: "SFC", headers: { Accept: "application/json" }, bytesMaximos: BYTES_MAXIMOS, tiempoMaximoMs: TIEMPO_MAXIMO_MS });
+  return r.ok ? parsearSfc(r.datos, consulta) : r;
 }

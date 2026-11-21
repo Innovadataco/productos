@@ -6,6 +6,9 @@
  *   precio de valoración: VERIFICADO si difiere ≤ 1 %, si no NO_VERIFICADO. Sin referencia oficial
  *   ese día, NO_VERIFICADO (nunca se presenta como verificado lo que no se comparó).
  * - Una fuente caída o un símbolo sin datos no escribe nada para esa especie: se informa.
+ * - Cada barra se guarda en una transacción (lectura del vigente, reemplazo con guarda e inserción).
+ *   Ante una carrera con otra corrida (el vigente ya fue reemplazado, o P2002 por el índice parcial
+ *   único) se deshace y se reintenta releyendo: lo que la otra corrida ya guardó igual queda «sin cambios».
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { barraDefinitiva } from "./horario";
@@ -13,6 +16,8 @@ import { obtenerCierres, type Buscar, type Cierre } from "./yahoo";
 
 export const TOLERANCIA_VERIFICACION = new Prisma.Decimal("0.01");
 export const FUENTE = "yahoo";
+/** Intentos de guardar una barra cuando choca con otra corrida simultánea. */
+export const MAX_INTENTOS_GUARDADO = 3;
 
 export interface FalloEspecie {
   readonly instrumentoId: string;
@@ -49,7 +54,17 @@ async function simboloDe(db: PrismaClient, instrumentoId: string, nemotecnico: s
   return mapa?.simbolo ?? `${nemotecnico}.CL`;
 }
 
-async function estadoDe(db: PrismaClient, instrumentoId: string, c: Cierre) {
+/** Otra corrida reemplazó el vigente entre la lectura y el reemplazo: hay que releer. */
+class ConflictoConcurrente extends Error {
+  constructor() {
+    super("conflicto");
+    this.name = "ConflictoConcurrente";
+  }
+}
+
+const esConflicto = (e: unknown): boolean => e instanceof ConflictoConcurrente || (e as { code?: unknown } | null)?.code === "P2002";
+
+async function estadoDe(db: Pick<Prisma.TransactionClient, "certificacionPosicion">, instrumentoId: string, c: Cierre) {
   const ref = await db.certificacionPosicion.findFirst({
     where: { instrumentoId, certificacion: { fechaCorte: c.fecha } },
     select: { precioValoracion: true, certificacion: { select: { fechaCorte: true } } },
@@ -65,16 +80,32 @@ async function estadoDe(db: PrismaClient, instrumentoId: string, c: Cierre) {
   };
 }
 
-/** Devuelve "nuevo", "revisado" o null (sin cambios). */
-async function guardarCierre(db: PrismaClient, instrumentoId: string, c: Cierre): Promise<"nuevo" | "revisado" | null> {
-  const vigente = await db.precioCierre.findFirst({ where: { instrumentoId, fecha: c.fecha, fuente: FUENTE, reemplazadoEn: null } });
-  if (vigente?.precio.equals(c.precio)) return null;
-  const verificacion = await estadoDe(db, instrumentoId, c);
-  await db.$transaction(async (tx) => {
-    if (vigente) await tx.precioCierre.update({ where: { id: vigente.id }, data: { reemplazadoEn: new Date() } });
+type Cambio = "nuevo" | "revisado" | null;
+
+/** Un intento, en una transacción: leer el vigente, compararlo, reemplazarlo con guarda e insertar. Todo o nada. */
+async function guardarCierreUnaVez(db: PrismaClient, instrumentoId: string, c: Cierre): Promise<Cambio> {
+  return db.$transaction(async (tx) => {
+    const vigente = await tx.precioCierre.findFirst({ where: { instrumentoId, fecha: c.fecha, fuente: FUENTE, reemplazadoEn: null }, select: { id: true, precio: true } });
+    if (vigente?.precio.equals(c.precio)) return null;
+    const verificacion = await estadoDe(tx, instrumentoId, c);
+    if (vigente) {
+      const { count } = await tx.precioCierre.updateMany({ where: { id: vigente.id, reemplazadoEn: null }, data: { reemplazadoEn: new Date() } });
+      if (count !== 1) throw new ConflictoConcurrente();
+    }
     await tx.precioCierre.create({ data: { instrumentoId, fecha: c.fecha, precio: new Prisma.Decimal(c.precio), fuente: FUENTE, ...verificacion } });
+    return vigente ? "revisado" : "nuevo";
   });
-  return vigente ? "revisado" : "nuevo";
+}
+
+/** Devuelve "nuevo", "revisado" o null (sin cambios). Ante una carrera con otra corrida, relee y reintenta. */
+async function guardarCierre(db: PrismaClient, instrumentoId: string, c: Cierre): Promise<Cambio> {
+  for (let intento = 1; ; intento += 1) {
+    try {
+      return await guardarCierreUnaVez(db, instrumentoId, c);
+    } catch (err) {
+      if (!esConflicto(err) || intento >= MAX_INTENTOS_GUARDADO) throw err;
+    }
+  }
 }
 
 export async function actualizarPrecios(db: PrismaClient, opciones: { desde: Date; hasta: Date; buscar: Buscar; instrumentoIds?: readonly string[]; ahora?: Date }): Promise<ResultadoActualizacion> {
