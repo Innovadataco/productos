@@ -60,24 +60,45 @@ describe("actualizarPrecios", () => {
   it("si Yahoo falla, no escribe nada y lo informa", async () => {
     const antes = await db.precioCierre.count({ where: { instrumentoId } });
     const r = await actualizarPrecios(db, { desde, hasta, buscar: async () => ({ ok: false, status: 503, json: async () => ({}) }), instrumentoIds: [instrumentoId] });
-    expect(r.fallidas).toEqual([{ instrumentoId, codigo: "YAHOO_HTTP_503" }]);
+    expect(r.fallidas).toEqual([{ instrumentoId, codigo: "YAHOO_HTTP_503", barrasGuardadas: 0, barrasFallidas: 0 }]);
     expect(await db.precioCierre.count({ where: { instrumentoId } })).toBe(antes);
   });
 
-  it("el fallo al guardar una especie no aborta a las demás y queda reportado", async () => {
+  it("una barra que falla al guardar no aborta ni las demás barras ni las demás especies; se reporta con conteos y sin mensaje", async () => {
     const otro = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRD${corrida}`, nombre: "Ficticia B" } })).id;
-    const ts = [Date.UTC(2024, 3, 2, 14, 30) / 1000];
-    const respuesta = (close: number) => ({ ok: true, status: 200, json: async () => ({ chart: { result: [{ meta: { currency: "COP" }, timestamp: ts, indicators: { quote: [{ close: [close] }] } }] } }) });
-    // La primera especie trae un precio que desborda Decimal(18,6); la segunda, uno normal.
-    const buscar: Buscar = async (url) => respuesta(url.includes(`PRC${corrida}`) ? 1e15 : 200);
-    const dia = new Date("2024-04-02T00:00:00Z");
-    const r = await actualizarPrecios(db, { desde: dia, hasta: dia, buscar, instrumentoIds: [instrumentoId, otro], ahora: new Date("2024-04-10T20:00:00Z") });
-    expect(r.fallidas).toEqual([{ instrumentoId, codigo: "GUARDADO_ERROR" }]);
-    expect(r.cierresNuevos).toBe(1);
-    expect((await db.precioCierre.findMany({ where: { instrumentoId: otro, reemplazadoEn: null } })).map((p) => p.precio.toString())).toEqual(["200"]);
+    // Certificación del 2-abr con valoración 1: el cierre de 100000 da una desviación que desborda Decimal(9,6).
+    const carga = await db.cargaArchivo.create({ data: { tipoFuente: "AV_CERTIFICACION", nombreArchivo: "cert2.ficticio.pdf", sha256: "d".repeat(64), estado: "CARGADO", cargadoPorId: duenoId } });
+    const cert = await db.certificacion.create({ data: { cargaId: carga.id, fechaCorte: new Date("2024-04-02T00:00:00Z"), saldoEfectivo: new Prisma.Decimal(0) } });
+    await db.certificacionPosicion.create({ data: { certificacionId: cert.id, instrumentoId, cantidad: 10n, precioValoracion: new Prisma.Decimal(1), valorMercado: new Prisma.Decimal(10) } });
+    const ts = [Date.UTC(2024, 3, 2, 14, 30) / 1000, Date.UTC(2024, 3, 3, 14, 30) / 1000];
+    const buscar: Buscar = async (url) => {
+      const cierres = url.includes(`PRC${corrida}`) ? [100000, 150] : [200, 201];
+      return { ok: true, status: 200, json: async () => ({ chart: { result: [{ meta: { currency: "COP" }, timestamp: ts, indicators: { quote: [{ close: cierres }] } }] } }) };
+    };
+    const r = await actualizarPrecios(db, { desde: new Date("2024-04-02T00:00:00Z"), hasta: new Date("2024-04-03T00:00:00Z"), buscar, instrumentoIds: [instrumentoId, otro], ahora: new Date("2024-04-10T20:00:00Z") });
+    expect(r.fallidas).toEqual([{ instrumentoId, codigo: "GUARDADO_ERROR", detalle: expect.stringMatching(/^PrismaClient/), barrasGuardadas: 1, barrasFallidas: 1 }]);
+    expect(r.cierresNuevos).toBe(3);
+    const guardados = async (id: string) => (await db.precioCierre.findMany({ where: { instrumentoId: id, reemplazadoEn: null }, orderBy: { fecha: "asc" } })).map((p) => p.precio.toString());
+    expect((await guardados(instrumentoId)).slice(-1)).toEqual(["150"]);
+    expect(await guardados(otro)).toEqual(["200", "201"]);
   });
 
-  it("no guarda la barra de hoy antes del cierre de la BVC, y sí después", async () => {
+  it("un festivo de hoy en calendario_bvc: pasada la hora tampoco se guarda la barra de hoy", async () => {
+    const solo = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRF${corrida}`, nombre: "Ficticia D" } })).id;
+    const hoy = new Date("2024-06-05T00:00:00Z"); // miércoles inventado como no hábil
+    await db.calendarioBvc.create({ data: { dia: hoy, esHabil: false, nota: "festivo ficticio de prueba" } });
+    try {
+      const ts = [Date.UTC(2024, 5, 4, 14, 30) / 1000, Date.UTC(2024, 5, 5, 14, 30) / 1000];
+      const buscar: Buscar = async () => ({ ok: true, status: 200, json: async () => ({ chart: { result: [{ meta: { currency: "COP" }, timestamp: ts, indicators: { quote: [{ close: [400, 401] }] } }] } }) });
+      const r = await actualizarPrecios(db, { desde: new Date("2024-06-04T00:00:00Z"), hasta: hoy, buscar, instrumentoIds: [solo], ahora: new Date("2024-06-05T23:00:00Z") }); // 18:00 COT
+      expect(r.omitidasPorHorario).toBe(1);
+      expect((await db.precioCierre.findMany({ where: { instrumentoId: solo, reemplazadoEn: null } })).map((p) => p.precio.toString())).toEqual(["400"]);
+    } finally {
+      await db.calendarioBvc.delete({ where: { dia: hoy } });
+    }
+  });
+
+  it("no guarda la barra de hoy antes de la hora definitiva, y sí después", async () => {
     const solo = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRE${corrida}`, nombre: "Ficticia C" } })).id;
     const d1 = new Date("2024-05-07T00:00:00Z");
     const d2 = new Date("2024-05-08T00:00:00Z");
@@ -88,8 +109,8 @@ describe("actualizarPrecios", () => {
     const antes = await actualizarPrecios(db, { desde: d1, hasta: d2, buscar, instrumentoIds: [solo], ahora: new Date("2024-05-08T15:00:00Z") });
     expect(antes.omitidasPorHorario).toBe(1);
     expect(await guardadas()).toEqual(["300"]);
-    // 8-may-2024 16:30 COT (21:30 UTC): ya cerró.
-    const despues = await actualizarPrecios(db, { desde: d1, hasta: d2, buscar, instrumentoIds: [solo], ahora: new Date("2024-05-08T21:30:00Z") });
+    // 8-may-2024 17:30 COT (22:30 UTC): ya pasó la hora definitiva.
+    const despues = await actualizarPrecios(db, { desde: d1, hasta: d2, buscar, instrumentoIds: [solo], ahora: new Date("2024-05-08T22:30:00Z") });
     expect(despues.omitidasPorHorario).toBe(0);
     expect(await guardadas()).toEqual(["300", "301"]);
   });

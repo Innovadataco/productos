@@ -7,6 +7,8 @@
 const DESFASE_COT_MS = 5 * 60 * 60 * 1000;
 const ESCALA_PRECIO = 6;
 const TIEMPO_MAXIMO_MS = 10_000;
+/** Tope de cordura de un precio en COP: por encima, la respuesta se considera corrupta. */
+export const PRECIO_MAXIMO_COP = 10_000_000;
 
 export interface Cierre {
   readonly fecha: Date; // fecha de negocio en Colombia, a medianoche UTC
@@ -19,7 +21,7 @@ export type Buscar = (url: string, init: { headers: Record<string, string>; sign
 
 /** Precio con a lo sumo 6 decimales, sin notación científica ni punto flotante residual. */
 function canonico(n: number): string | null {
-  if (!Number.isFinite(n) || n <= 0) return null;
+  if (!Number.isFinite(n) || n <= 0 || n > PRECIO_MAXIMO_COP) return null;
   const t = n.toFixed(ESCALA_PRECIO).replace(/\.?0+$/, "");
   return t === "" || t === "0" ? null : t;
 }
@@ -43,14 +45,17 @@ export function parsearYahoo(cuerpo: unknown): ResultadoYahoo {
   const cierres = r.indicators?.quote?.[0]?.close ?? [];
   if (ts.length !== cierres.length) return { ok: false, codigo: "YAHOO_FORMATO" };
   const porFecha = new Map<number, Cierre>();
+  let corrupta = false;
   ts.forEach((t, i) => {
     const valor = cierres[i];
+    if (typeof valor === "number" && Number.isFinite(valor) && valor > PRECIO_MAXIMO_COP) corrupta = true;
     const precio = typeof valor === "number" ? canonico(valor) : null;
-    if (precio) {
+    if (precio && Number.isFinite(t)) {
       const fecha = fechaCot(t);
       porFecha.set(fecha.getTime(), { fecha, precio }); // si hay dos barras el mismo día, gana la última
     }
   });
+  if (corrupta) return { ok: false, codigo: "YAHOO_FORMATO" };
   return { ok: true, cierres: [...porFecha.values()].sort((a, b) => a.fecha.getTime() - b.fecha.getTime()) };
 }
 
