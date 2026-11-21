@@ -554,7 +554,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 - **`construir-lotes` con salida 3:** son avisos, no un error. En el paso 5 puede dar 3 por la escisión; en el 7 debe dar 0, o 3 con los avisos explicados.
 - **`importar-plan` con salida 3:** había otra importación en curso: se reintenta.
 - **`importar-certificacion` (paso 10):** concilia al cargar; sin los cierres del día de corte, el valor sale `sin_precio_al_corte`. Es lo esperado: lo resuelven los pasos 11 y 12. Su «siguiente paso» en producción ya es este (vía B), no `precios:actualizar`.
-- **`importar-precios` (paso 11):** imprime `CSV de cierres · filas · especies` y el reporte de `precios:actualizar`. Debe dar «verificados en el rango» de al menos las especies certificadas el día de corte. Con salida 3: especies sin acción activa con lotes (`ESPECIE_NO_REGISTRADA`, por su línea del CSV), otro símbolo de Yahoo registrado (`SIMBOLO_DISTINTO`), un fallo del guardado o un año sin calendario: se para y se avisa.
+- **`importar-precios` (paso 11):** imprime `CSV de cierres · filas · especies` y el reporte de `precios:actualizar`. Si el CSV cubre el día de corte, «verificados en el rango» cuenta los cierres de ese día que cuadran (±1 %) con la certificación; uno que no cuadra queda NO_VERIFICADO y lo muestra la conciliación del paso 12. Con salida 3: especies sin acción activa con lotes (`ESPECIE_NO_REGISTRADA`, por su línea del CSV), otro símbolo de Yahoo registrado (`SIMBOLO_DISTINTO`), un fallo del guardado o un año sin calendario: se para y se avisa.
 - **`conciliar-certificacion` (paso 12):** guarda una conciliación nueva, ahora con los precios; la anterior queda en la historia.
 
 **Después de la carga:**
