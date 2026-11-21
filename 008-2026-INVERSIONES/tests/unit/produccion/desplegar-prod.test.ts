@@ -540,7 +540,8 @@ describe("desplegar-prod.sh · redes de una versión anterior (sin aislar): down
   });
 
   it("con las redes al día o sin redes todavía, no baja nada", async () => {
-    for (const extra of [{}, { FALSO_REDES_AL_DIA: `${VIEJA} inv-008-prueba_inv-008-red-entrada` }]) {
+    const extras: Array<Record<string, string>> = [{}, { FALSO_REDES_AL_DIA: `${VIEJA} inv-008-prueba_inv-008-red-entrada` }];
+    for (const extra of extras) {
       const { falsos, env, script } = preparar(extra);
       expect((await correr(script, [ID], env)).status).toBe(0);
       expect(falsos.llamadas().some(compose("down"))).toBe(false);
