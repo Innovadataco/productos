@@ -102,9 +102,18 @@ sudo sh -c 'umask 022; f=<raíz>/inv-008.conf; printf "INV_RESPALDOS_DIR=%s\n" "
 **Lo que validan los scripts** (si algo no cumple, se niegan antes de tocar nada y dicen qué):
 - **El archivo:** regular, de root, sin escritura del grupo ni de otros, y con exactamente una línea útil.
 - **La forma de la carpeta:** ruta absoluta de caracteres `[A-Za-z0-9_./-]`, sin `//`, `.` ni `..`, y sin enlaces en ningún componente.
-- **Dueño y permisos:** existe, es de root, del grupo `respaldo` (`INV_RESPALDO_GID`, nunca 0) y sin escritura del grupo ni de otros. Sus padres son solo de root.
+- **Dueño y permisos:** existe, es de root, del grupo `respaldo` (`INV_RESPALDO_GID`, nunca 0) y en **750**: el grupo lee y entra sin escribir, y nadie más. La copia diaria de IDC la baja con el usuario del grupo `respaldo`: si cambian el dueño o los permisos, esa copia se corta en silencio. Sus padres son solo de root.
 - **Contenido:** solo respaldos de 008.
 - **Lugar:** fuera de `<raíz>`, sin contenerla ni ser un ancestro suyo.
+
+**El montaje del host, `nosuid,noexec`** (lo hace el CEO de PI; por ahora los scripts **solo avisan**):
+- **Por qué en el host:**
+  - El contenedor de respaldo escribe como root del contenedor. Un archivo setuid o ejecutable que dejara ahí, un usuario del grupo `respaldo` podría correrlo en el host.
+  - Docker no aplica `nosuid` ni `noexec` a un bind: el kernel ignora esos bits en el bind inicial. El ensayo lo mostró: `rw,relatime` dentro del contenedor.
+  - Aunque los aplicara, solo cubrirían la vista del contenedor.
+- **Qué revisan los scripts:** `revisar_montaje_respaldos` lee con `findmnt -no OPTIONS -T <respaldos>` las opciones del montaje que contiene la carpeta, sin tocar nada.
+  - Hoy, si faltan, avisa y sigue (`INV_MONTAJE_RESPALDOS_FATAL=0`).
+  - Cuando el CEO de PI confirme el montaje, se cambia a 1 en un PR de una línea, y desde ahí aborta.
 
 La carpeta se revalida antes de cada `up` que monta el respaldo. **Revisión previa, de solo lectura** (no debe imprimir nada, y el conteo debe dar 0):
 ```sh
@@ -494,6 +503,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.6 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · la carpeta de respaldos en 750 (la copia de IDC depende de eso); montaje del host `nosuid,noexec` revisado por los scripts (por ahora avisa): un bind de Docker no los aplica
 > v2.5 · 2026-11-21 · 07:05 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · revisiones de seguridad y de código: SPEC-980 de PI activa (aviso en una línea, el candado común resuelve la exclusión); salida 64 de `inv-cargar`; el sobre en la memoria del host como riesgo residual; cita de Jelk restituida
 > v2.4 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · revisión contra el código: sin nombres de otros proyectos ni de firewall; privilegios de `inv_app` completos (TOTP y `codigo_recuperacion`); `crear-acceso-inicial.sh` con sus argumentos; salida 1 de `cargar-prod.sh`; `sudo -n` sin elevación propia; `lock_timeout` en 3 de 12 migraciones; respaldo previo antes del `DROP` de la vía (B)
 > v2.3 · 2026-11-21 · 06:50 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · sin rutas ni nombres del VPS en el repo público (marcadores; raíz derivada; `inv-008.conf` para la carpeta de respaldos); §11: carga del dueño por la vía B, por stdin y sin copias en el VPS (`armar-sobre.sh`, `cargar-prod.sh`, `inv-cargar`); §12: vía A «NO USAR»

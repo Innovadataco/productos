@@ -31,7 +31,9 @@ Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app:
 - **Por qué:** así deja los archivos `root:respaldo` en 0640 dentro de `<respaldos>/`, la carpeta `root:respaldo` en 750 que montó el CEO de PI, sin pedirle cambiarla.
 - **La carpeta no está escrita en el repo:**
   - sale de la configuración no secreta `<raíz>/inv-008.conf`;
-  - los scripts la validan antes de cada `up`: forma, enlaces, root y el grupo `respaldo`, padres solo de root, solo respaldos de 008 adentro y fuera de `<raíz>`;
+  - los scripts la validan antes de cada `up`: forma, enlaces, root y el grupo `respaldo` en 750, padres solo de root, solo respaldos de 008 adentro y fuera de `<raíz>`;
+  - el contenedor no cambia la carpeta ni sus permisos: archivos 640 `root:respaldo`, carpeta 750 (la copia diaria de IDC depende de eso; `respaldo-contenedor.test.ts` y el ensayo lo comprueban);
+  - `nosuid,noexec` va en el montaje del **host**, que hace el CEO de PI. Docker no lo aplica a un bind: el ensayo mostró `rw,relatime` dentro del contenedor. Los scripts lo revisan con `findmnt` y por ahora solo avisan;
   - el bind va en sintaxis larga con `create_host_path: false`: sin la carpeta configurada, el `up` del respaldo falla cerrado.
 - **Lo que lo limita:**
   - `cap_drop: [ALL]` (`CapEff` en 0: no salta permisos ni cambia dueños) y `no-new-privileges`;
@@ -206,6 +208,7 @@ dos --ahora a la vez → los dos bien: inv-008-20261121-043628-par y inv-008-202
 **Reinicio de Docker:** no se reinició el demonio de Docker del Mac, porque también corren ahí la base de desarrollo de Inversiones y la de PI. Que la pausa sobreviva un reinicio se demostró así: con la marca puesta, el proyecto queda con 0 contenedores, así que `restart: always` no tiene nada que levantar.
 
 ---
+> v2.5 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · respaldos: carpeta en 750, archivos 640, y `nosuid,noexec` en el montaje del host (revisado, por ahora aviso)
 > v2.4 · 2026-11-21 · 04:55 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · ensayo local de la pausa antes del migrador, la vuelta atrás y el candado del respaldo
 > v2.5 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · referencias archivo:línea corregidas contra el código de este clon (base fd7105ad); puertos del firewall fuera del repo; candado común con sus cinco tomadores
 > v2.4 · 2026-11-21 · 06:50 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · marcadores en vez de rutas y servicios del VPS; la carpeta de respaldos sale de `inv-008.conf`; evidencias `archivo:línea` al día
