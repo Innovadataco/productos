@@ -174,6 +174,17 @@ describe("solo inserción: certificación y conciliación", () => {
     ).toMatch(/solo inserción/);
   });
 
+  it("la posición certificada no se edita ni se borra (database-reviewer ALTO: la conciliación guardada debe poder reproducirse)", async () => {
+    const preparar = async (tx: Tx) => {
+      const cert = await certificacion(tx);
+      const especie = await accion(tx);
+      return tx.certificacionPosicion.create({ data: { certificacionId: cert.id, instrumentoId: especie.id, cantidad: 10n, precioValoracion: dec("5"), valorMercado: dec("50"), referenciaPdf: "p1:f2" } });
+    };
+    const llave = (p: { certificacionId: string; instrumentoId: string }) => ({ certificacionId_instrumentoId: { certificacionId: p.certificacionId, instrumentoId: p.instrumentoId } });
+    expect(await enTransaccionDeshecha(async (tx) => void (await tx.certificacionPosicion.update({ where: llave(await preparar(tx)), data: { cantidad: 11n } })))).toMatch(/solo inserción/);
+    expect(await enTransaccionDeshecha(async (tx) => void (await tx.certificacionPosicion.delete({ where: llave(await preparar(tx)) })))).toMatch(/solo inserción/);
+  });
+
   it("la conciliación y sus controles no se editan ni se borran", async () => {
     const enConciliacion = await enTransaccionDeshecha(async (tx) => {
       const cert = await certificacion(tx);
