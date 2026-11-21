@@ -36,10 +36,9 @@ const COPIA = new RegExp(`^COPY --from=builder --chmod=0444 /app/(\\S+) \\./${BU
 describe("Dockerfile · bundle de precios", () => {
   it("builder: corre build:precios después de npm run build (next build vacía .next al empezar)", () => {
     const cuerpo = etapa("builder").cuerpo.join("\n");
-    const build = cuerpo.indexOf("npm run build &&");
-    const precios = cuerpo.indexOf("npm run build:precios");
-    expect(build).toBeGreaterThanOrEqual(0);
-    expect(precios).toBeGreaterThan(build);
+    // Por el orden de los dos comandos, se escriban en un RUN o en dos.
+    expect(cuerpo).toMatch(/\bnpm run build(?!:)\b[\s\S]*\bnpm run build:precios\b/);
+    expect(cuerpo).not.toMatch(/\bnpm run build:precios\b[\s\S]*\bnpm run build(?!:)\b/);
   });
 
   it("runner: copia el bundle desde la salida de build:precios a ./precios/, de root y de solo lectura (0444)", () => {
@@ -58,6 +57,31 @@ describe("Dockerfile · bundle de precios", () => {
     expect(copia).toBeGreaterThanOrEqual(0);
     expect(usuario).toBeGreaterThan(copia);
     expect(humo).toBeGreaterThan(usuario);
+  });
+
+  it("runner: crea /app/precios con 0755 ANTES de copiar (COPY --chmod=0444 dejaría en 0444 la carpeta que crea y 10008 no podría entrar)", () => {
+    const cuerpo = etapa("runner").cuerpo;
+    const carpeta = cuerpo.indexOf("RUN mkdir -p -m 0755 /app/precios");
+    expect(carpeta, "falta crear /app/precios con 0755").toBeGreaterThanOrEqual(0);
+    expect(cuerpo.findIndex((l) => COPIA.test(l))).toBeGreaterThan(carpeta);
+  });
+
+  it("runner: el build mismo verifica carpeta (root, 0755) y bundle (root, 0444), y que no hay tsx ni esbuild, antes del USER 10008", () => {
+    const cuerpo = etapa("runner").cuerpo;
+    const copia = cuerpo.findIndex((l) => COPIA.test(l));
+    const usuario = cuerpo.lastIndexOf("USER 10008:10008");
+    const control = cuerpo.findIndex((l) => l.startsWith(`RUN test "$(stat -c '%u:%g %a' precios)" = "0:0 755" && test "$(stat -c '%u:%g %a' ${BUNDLE})" = "0:0 444"`));
+    expect(control, "falta el control de dueño y permisos del bundle").toBeGreaterThan(copia);
+    expect(usuario).toBeGreaterThan(control);
+    for (const paquete of ["tsx", "esbuild", "@esbuild"]) expect(cuerpo[control]).toContain(`test ! -e node_modules/${paquete}`);
+    expect(cuerpo[control]).toMatch(/\|\| \{ echo .+ >&2; exit 1; \}$/);
+  });
+
+  it("runner: con el usuario 10008, el build falla si puede escribir el bundle", () => {
+    const cuerpo = etapa("runner").cuerpo;
+    const usuario = cuerpo.lastIndexOf("USER 10008:10008");
+    const escritura = cuerpo.findIndex((l) => l.startsWith(`RUN test ! -w ${BUNDLE} || {`));
+    expect(escritura, "falta el control de escritura con el usuario 10008").toBeGreaterThan(usuario);
   });
 
   it("solo la imagen de la app lleva el bundle; ninguna etapa final lleva tsx ni esbuild para él", () => {
