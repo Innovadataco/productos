@@ -162,11 +162,13 @@ describe("CLI actualizar-fondo --registrar (sin red)", POR_PRUEBA, () => {
 });
 
 describe("CLI cifrar-existentes", POR_PRUEBA, () => {
-  /** El total y los «en claro» de fila_fuente que informa el ensayo. */
-  function filaFuente(s: Salida): { total: number; enClaro: number } {
-    const m = /fila_fuente: (\d+) filas · en claro (\d+)/.exec(s.texto);
+  /** Los números del resumen de fila_fuente que imprime el ensayo. */
+  const PATRONES = { filas: /^fila_fuente: (\d+) filas/, "en claro": / · en claro (\d+)/, anómalas: / · anómalas (\d+)/ } as const;
+  function conteo(s: Salida, campo: keyof typeof PATRONES): number {
+    const linea = s.texto.split("\n").find((l) => l.startsWith("fila_fuente: ")) ?? "";
+    const m = PATRONES[campo].exec(linea);
     expect(m, s.texto).not.toBeNull();
-    return { total: Number(m![1]), enClaro: Number(m![2]) };
+    return Number(m![1]);
   }
 
   it("--aplicar con un --base que no es la conectada sale con 1 «BASE_NO_COINCIDE» y no escribe", () => {
@@ -177,19 +179,33 @@ describe("CLI cifrar-existentes", POR_PRUEBA, () => {
 
   it("el ensayo no escribe (dos corridas iguales) y ve cifrada la fila que se acaba de importar", () => {
     const base = new URL(URL_BASE).pathname.slice(1);
-    const antes = filaFuente(correr("cifrar-existentes.ts", []));
+    const antes = correr("cifrar-existentes.ts", []);
     const n = nemo("EN");
     const ruta = archivo("ensayo-cli.ficticio.csv", `${DIVIDENDOS}2026-05-05,${n},,6543.21\n`);
     expect(correr("importar-trii.ts", ["--email", duenoEmail, ruta]).codigo).toBe(0);
 
     const s = correr("cifrar-existentes.ts", []);
     expect(s.texto).toContain(`Base: ${base} · versión activa: v1 · modo: ENSAYO (no escribe)`);
-    expect(filaFuente(s)).toEqual({ total: antes.total + 1, enClaro: antes.enClaro });
+    expect([conteo(s, "filas"), conteo(s, "en claro")]).toEqual([conteo(antes, "filas") + 1, conteo(antes, "en claro")]);
     expect(s.texto).not.toContain("Siguiente: corra el mismo comando otra vez");
     for (const d of [n, "6543.21", "2026-05-05", duenoEmail]) expect(s.texto, d).not.toContain(d);
     expect(correr("cifrar-existentes.ts", []).texto).toBe(s.texto);
-    // Coherencia, no resultado: la base compartida puede traer alertas de otras pruebas (sin su clave,
-    // anómalas). Con alertas sale 1 y lo avisa; sin ellas, 0.
-    expect(s.codigo).toBe(s.texto.includes("⚠️  Hay valores anómalos") ? 1 : 0);
+  });
+
+  it("con una alerta propia (un crudo anómalo FICT) el ensayo la cuenta, sale con 1 y lo avisa, sin imprimir el valor", async () => {
+    const antes = conteo(correr("cifrar-existentes.ts", []), "anómalas");
+    const usuario = await db.usuario.findUniqueOrThrow({ where: { email: duenoEmail } });
+    const carga = await db.cargaArchivo.create({
+      data: { tipoFuente: "TRII_CAJA", nombreArchivo: `anomala-${corrida}.ficticio.csv`, sha256: "f".repeat(64), estado: "CARGADO", cargadoPorId: usuario.id },
+    });
+    // Ni crudo en claro (los valores no son texto) ni sobre: anómalo. La fila es de solo inserción y se queda.
+    const crudo = { "Valor total": 987654.321, FICT: corrida };
+    await db.filaFuente.create({
+      data: { tipoFuente: "TRII_CAJA", claveNatural: `anomala-${corrida}`.padStart(64, "0"), ocurrencia: 1, primeraCargaId: carga.id, primeraFilaNo: 2, crudo },
+    });
+
+    const s = correr("cifrar-existentes.ts", []);
+    comprobar(s, 1, "⚠️  Hay valores anómalos", ["987654", corrida]);
+    expect(conteo(s, "anómalas")).toBe(antes + 1);
   });
 });
