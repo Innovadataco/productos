@@ -2,7 +2,7 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { actualizarPrecios } from "@/precios/actualizar";
-import type { Buscar } from "@/precios/yahoo";
+import { PRECIO_MAXIMO_COP, type Buscar } from "@/precios/yahoo";
 
 const db = new PrismaClient();
 const corrida = Date.now().toString(36).toUpperCase().slice(-5);
@@ -15,6 +15,10 @@ const yahoo = (closes: number[]): Buscar => async () => ({
   ok: true, status: 200, json: async () => ({ chart: { result: [{ meta: { currency: "COP" }, timestamp: T, indicators: { quote: [{ close: closes }] } }] } }),
 });
 const vigentes = () => db.precioCierre.findMany({ where: { instrumentoId, reemplazadoEn: null }, orderBy: { fecha: "asc" } });
+/** Respuesta de /v8/finance/chart como la entrega `fetch`: un `Response` real con el JSON. */
+const respuestaChart = (timestamp: number[], close: number[], init?: ResponseInit) =>
+  new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp, indicators: { quote: [{ close }] } }] } }), init);
+const preciosDe = async (id: string) => (await db.precioCierre.findMany({ where: { instrumentoId: id, reemplazadoEn: null }, orderBy: { fecha: "asc" } })).map((p) => p.precio.toString());
 
 beforeAll(async () => {
   const base = (await db.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db ?? "";
@@ -113,5 +117,52 @@ describe("actualizarPrecios", () => {
     const despues = await actualizarPrecios(db, { desde: d1, hasta: d2, buscar, instrumentoIds: [solo], ahora: new Date("2024-05-08T22:30:00Z") });
     expect(despues.omitidasPorHorario).toBe(0);
     expect(await guardadas()).toEqual(["300", "301"]);
+  });
+});
+
+describe("actualizarPrecios · símbolo de Yahoo (SimboloPrecio vigente a la fecha «hasta»)", () => {
+  const dHasta = new Date("2024-03-13T00:00:00Z");
+  const dSiguiente = new Date("2024-03-14T00:00:00Z");
+  const dEnero = new Date("2024-01-01T00:00:00Z");
+  const NEMO = "<NEMO>.CL";
+  type Equivalencia = { proveedor: string; simbolo: string; vigenteDesde: Date; vigenteHasta: Date | null } | null;
+  const yahooFicticio = (vigenteDesde: Date, vigenteHasta: Date | null): Equivalencia => ({ proveedor: "yahoo", simbolo: "FICT1.CL", vigenteDesde, vigenteHasta });
+  const casos: [string, Equivalencia, string][] = [
+    ["sin equivalencia registrada, cae a <NEMO>.CL", null, NEMO],
+    ["equivalencia vigente sin fecha de fin", yahooFicticio(dEnero, null), "FICT1.CL"],
+    ["vence el día después de «hasta»: sigue vigente", yahooFicticio(dEnero, dSiguiente), "FICT1.CL"],
+    ["vence justo en «hasta»: ya no vale (vigenteHasta es exclusivo)", yahooFicticio(dEnero, dHasta), NEMO],
+    ["empieza justo en «hasta»: ya vale", yahooFicticio(dHasta, null), "FICT1.CL"],
+    ["empieza después de «hasta»: todavía no vale", yahooFicticio(dSiguiente, null), NEMO],
+    ["es de otro proveedor (la clase del fondo): no cuenta", { proveedor: "sfc:qhpu-8ixx", simbolo: "901", vigenteDesde: dEnero, vigenteHasta: null }, NEMO],
+  ];
+
+  it.each(casos.map((c, i) => [...c, i] as const))("%s", async (_nombre, equivalencia, esperado, i) => {
+    const nemotecnico = `PRS${corrida}${i}`;
+    const id = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico, nombre: "Ficticia S" } })).id;
+    if (equivalencia) await db.simboloPrecio.create({ data: { instrumentoId: id, ...equivalencia } });
+    const pedidas: string[] = [];
+    const buscar: Buscar = async (url) => {
+      pedidas.push(url);
+      return new Response("{}", { status: 503 });
+    };
+    await actualizarPrecios(db, { desde: new Date("2024-03-12T00:00:00Z"), hasta: dHasta, buscar, instrumentoIds: [id] });
+    const simbolo = esperado === NEMO ? `${nemotecnico}.CL` : esperado;
+    expect(pedidas.map((u) => new URL(u).pathname)).toEqual([`/v8/finance/chart/${simbolo}`]);
+  });
+});
+
+describe("actualizarPrecios · barra corrupta", () => {
+  it("una barra corrupta invalida toda la serie: no se pierde ni se revisa el cierre ya guardado", async () => {
+    const id = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `PRX${corrida}`, nombre: "Ficticia X" } })).id;
+    const ts = [Date.UTC(2024, 6, 2, 14, 30) / 1000, Date.UTC(2024, 6, 3, 14, 30) / 1000];
+    const opciones = (cierres: number[]) => ({ desde: new Date("2024-07-02T00:00:00Z"), hasta: new Date("2024-07-03T00:00:00Z"), buscar: (async () => respuestaChart(ts, cierres)) as Buscar, instrumentoIds: [id] });
+    expect(await actualizarPrecios(db, opciones([700, 701]))).toMatchObject({ cierresNuevos: 2, fallidas: [] });
+    // El 710 del primer día es válido: si la serie no se invalidara entera, se guardaría como revisión.
+    const r = await actualizarPrecios(db, opciones([710, PRECIO_MAXIMO_COP + 1]));
+    expect(r).toMatchObject({ cierresNuevos: 0, cierresRevisados: 0 });
+    expect(r.fallidas).toEqual([{ instrumentoId: id, codigo: "YAHOO_FORMATO", barrasGuardadas: 0, barrasFallidas: 0 }]);
+    expect(await preciosDe(id)).toEqual(["700", "701"]);
+    expect(await db.precioCierre.count({ where: { instrumentoId: id } })).toBe(2);
   });
 });
