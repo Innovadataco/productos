@@ -892,4 +892,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "prisma/correos-canonicos.candado.test.ts",
     // SPEC-922: el corrector data-driven del registro es idempotente, fila-por-fila y aborta ante flag desconocido (db falsa). Puro.
     "scripts/corregir-correos-canonicos.candado.test.ts",
+    // SPEC-965: overview Órbita — capa 1 nunca rubí, rubí SOLO en alumno de alerta alta, nunca dibuja
+    // todos los alumnos, y la órbita tiene equivalente en lista accesible. Puro (fetch mockeado, jsdom).
+    "src/components/modules/colegio/orbita/orbita-mapa.candado.test.tsx",
 ];

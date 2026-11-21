@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import Link from "next/link";
 import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { resolverEstado, colorDeEstadoColegio } from "@/lib/colegio/semaforo";
@@ -131,6 +132,15 @@ export function HomeRectorPage({ nombreUsuario, datos, cobertura }: HomeRectorPa
 
                 <div className="anim-entrada" style={retardo(350)}>
                     <CursosQueMerecenMirada cursos={datos.cursosMirada} />
+                    <div className="mt-3 text-right">
+                        {/* SPEC-965: entrada al overview radial (vista aparte, no toca esta home). */}
+                        <Link
+                            href="/dashboard/colegio/mapa"
+                            className="ring-accent text-sm font-medium text-pino-700 hover:underline"
+                        >
+                            Ver el mapa del colegio →
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="anim-entrada" style={retardo(420)}>
