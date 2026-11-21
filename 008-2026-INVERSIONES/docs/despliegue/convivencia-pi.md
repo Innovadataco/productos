@@ -2,6 +2,10 @@
 
 Inversiones comparte el VPS de producción con PI (D-015). **PI tiene prioridad** y Inversiones no le quita recursos ni toca nada suyo.
 
+**Marcadores** (repo público; los valores, en el ESTADO de la gestión): `<raíz>` es la carpeta base de Inversiones en el VPS, la que contiene al clon `<raíz>/repo`; `<respaldos>`, la carpeta de los respaldos cifrados. Ver [produccion.md](produccion.md).
+
+**Lo único compartido con PI:** el candado común y la marca de pausa `<raíz>/estado/pausado`. PI no usa `pausar-008.sh`: ese script es de las operaciones de 008.
+
 **Cómo se garantiza:**
 - `mem_limit` igual a `memswap_limit` en cada contenedor, y `cpu_shares: 256`;
 - la **pausa obligatoria** en cada despliegue de PI;
@@ -21,8 +25,10 @@ Inversiones comparte el VPS de producción con PI (D-015). **PI tiene prioridad*
 
 **La pausa la hace PI, con su propio código, en su `deploy-prod.sh`.** No llama a `pausar-008.sh`. Su procedimiento (lo hace PI, no Inversiones):
 1. **Al inicio:** `docker stop` de los contenedores con la etiqueta `com.docker.compose.project=inv-008-prod`. Compose la pone en todos los permanentes de Inversiones; en el ensayo, lo comprobó `docker ps --filter label=…`. PI guarda esos IDs.
-2. **Al final**, con una trampa aunque falle, `docker start` de esos mismos IDs, **salvo que exista la marca de pausa** `/opt/inversiones-008/estado/pausado`. Si existe, PI no reanuda.
-3. **Mientras despliega,** PI tiene el candado común `/var/lock/despliegue-vps.lock`. Inversiones no despliega, ni reanuda, ni crea roles, ni corre el acceso inicial mientras esté tomado.
+2. **Al final**, con una trampa aunque falle, `docker start` de esos mismos IDs, **salvo que exista la marca de pausa** `<raíz>/estado/pausado`. Si existe, PI no reanuda.
+3. **Mientras despliega,** PI va a tomar el candado común (`/var/lock/despliegue-vps.lock`). Inversiones no despliega, ni reanuda, ni crea roles, ni corre el acceso inicial ni la carga mientras esté tomado.
+   - **Hoy el `deploy-prod.sh` de PI todavía no lo toma.** Lo corrige PI en su SPEC-980.
+   - Hasta entonces, antes de cada despliegue, reanudación o carga de Inversiones se avisa al CEO de PI ([produccion.md](produccion.md) §11).
 
 **Para el código de PI (lo escribe PI, no Inversiones):** el `docker stop` por etiqueta tiene que aceptar una **lista vacía**. Con Inversiones en pausa (`pausar-008.sh` hace `down`), no hay ningún contenedor de `inv-008-prod`, y `docker stop` sin argumentos falla. Por ejemplo:
 ```sh
@@ -34,14 +40,21 @@ Al final, si la lista guardada está vacía o existe la marca de pausa, no se ha
 ## 2 · Pausa manual o corte (Inversiones)
 | | Comando |
 |---|---|
-| Pausar | `sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/pausar-008.sh [motivo]` |
-| Reanudar | `sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/reanudar-008.sh` |
+| Pausar | `sudo <raíz>/repo/008-2026-INVERSIONES/scripts/pausar-008.sh [motivo]` |
+| Reanudar | `sudo <raíz>/repo/008-2026-INVERSIONES/scripts/reanudar-008.sh` |
 
-**Pausar:**
-1. Revisa el árbol de root ([produccion.md](produccion.md) §2), pero **solo avisa**: un permiso mal puesto no frena el corte.
-2. Toma el candado de Inversiones. Solo ese: no espera el común, así que sirve aunque PI esté desplegando.
-3. Escribe la **marca `/opt/inversiones-008/estado/pausado`** (ruta fija) **antes** de bajar.
-4. Hace `$COMPOSE down` **sin `-v`**: no queda ningún contenedor, y la base y los respaldos quedan intactos. Si el `down` falla, sale con error y la marca queda: la pausa se mantiene.
+**Pausar** (nunca se rompe por interpolación):
+1. **Anclas de la raíz** ([produccion.md](produccion.md) §2). Si están rotas:
+   - no escribe nada;
+   - hace un `down` de último recurso solo con el nombre del proyecto;
+   - sale con error: «Inversiones abajo SIN marca de pausa».
+2. Revisa el árbol de root, pero **solo avisa**: un permiso mal puesto no frena el corte.
+3. Toma el candado de Inversiones. Solo ese: no espera el común, así que sirve aunque PI esté desplegando.
+4. Escribe la **marca `<raíz>/estado/pausado`** **antes** de bajar.
+5. **El `down`, siempre sin `-v`:** no queda ningún contenedor, y la base y los respaldos quedan intactos.
+   - Va solo con el nombre del proyecto (`docker compose -p inv-008-prod down`, sin `-f` ni `--env-file`). Así no interpola nada ni lee la configuración no secreta, y una variable que falte no lo frena.
+   - Si ese `down` falla, prueba con el compose del clon, con la carpeta de respaldos en el valor por defecto.
+   - Si los dos fallan, sale con error y la marca queda: la pausa se mantiene.
 
 **Por qué con `down`:** con `stop`, `restart: always` volvería a levantar Inversiones al reiniciar el VPS o Docker. Con `down` no hay contenedores que reiniciar, así que la pausa sobrevive a un reinicio. Mientras exista la marca:
 - `desplegar-prod.sh` se niega;
@@ -49,31 +62,31 @@ Al final, si la lista guardada está vacía o existe la marca de pausa, no se ha
 
 **Reanudar:**
 1. Revisa el árbol de root: si no es solo de root, se niega.
-2. Exige que `estado/sha-actual` sea un sha de 40 hex.
+2. Exige que `estado/sha-actual` sea un sha de 40 hex, y la configuración no secreta válida, porque el `up` levanta el respaldo.
 3. Toma el candado de Inversiones y el común **sin esperar**. Si el común está tomado, se niega con «PI desplegando».
 4. Revisa además que no haya un proceso de despliegue o de build de PI, como segunda barrera.
-5. Hace `up -d --wait` con ese sha.
+5. Hace `up -d --wait` con ese sha, después de revalidar la carpeta de respaldos.
 6. Borra la marca solo si todo quedó healthy.
 
-**Los mismos pasos a mano:**
+**La pausa a mano** (no interpola nada):
 ```sh
-COMPOSE="docker compose -p inv-008-prod -f /opt/inversiones-008/repo/008-2026-INVERSIONES/docker-compose.prod.yml --env-file /opt/inversiones-008/.env.inversiones.production"
-# Pausar:
-sudo sh -c 'date > /opt/inversiones-008/estado/pausado'
-sudo $COMPOSE down
-# Reanudar (sin PI desplegando):
-sudo env INV_TAG=$(sudo cat /opt/inversiones-008/estado/sha-actual) $COMPOSE up -d --wait
-sudo rm /opt/inversiones-008/estado/pausado
+B='<raíz>'   # <ver ESTADO en la gestión>
+sudo sh -c "date > $B/estado/pausado"
+sudo docker compose -p inv-008-prod down
+```
+**La reanudación,** solo con `reanudar-008.sh`: valida la carpeta de respaldos antes del `up`. A mano, con el `$COMPOSE` de [produccion.md](produccion.md) §1 (lleva la carpeta), sin PI desplegando:
+```sh
+sudo env INV_TAG=$(sudo cat "$B/estado/sha-actual") $COMPOSE up -d --wait && sudo rm "$B/estado/pausado"
 ```
 
 **Ojo:** mientras Inversiones está en pausa, no hay respaldo diario, porque su contenedor también está abajo. Después de reanudar, conviene correr `respaldar-base.sh`.
 
 ## 3 · Medición de memoria
 `scripts/medir-memoria.sh` lee `MemAvailable` y `SwapFree` de `/proc/meminfo`, más `docker stats --no-stream` **solo de los contenedores de `inv-008-prod`**.
-- **En el despliegue:** `desplegar-prod.sh` lo corre antes de `up` y 10 minutos después. Las dos mediciones quedan en `/opt/inversiones-008/estado/mediciones/<sha>-<fecha>.txt`.
+- **En el despliegue:** `desplegar-prod.sh` lo corre antes de `up` y 10 minutos después. Las dos mediciones quedan en `<raíz>/estado/mediciones/<sha>-<fecha>.txt`.
 - **A mano:**
   ```sh
-  sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/medir-memoria.sh --etiqueta "en reposo"
+  sudo <raíz>/repo/008-2026-INVERSIONES/scripts/medir-memoria.sh --etiqueta "en reposo"
   ```
 
 **Referencia** (coordinador, 2026-11-20, en reposo):
@@ -127,16 +140,18 @@ Se detiene Inversiones, con `pausar-008.sh`, si se da cualquiera de estas condic
 - **El aviso trae:**
   - la hora COT, `MemAvailable`, `SwapFree` y el umbral;
   - si hubo OOM: el id corto del contenedor (o «recreado») y `docker ps --no-trunc | grep <id>`;
-  - el comando de corte: `ssh pi-vps sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/pausar-008.sh`.
+  - el comando de corte: `ssh pi-vps sudo <raíz>/repo/008-2026-INVERSIONES/scripts/pausar-008.sh`.
+    - El vigía lo arma con la ruta real del clon, `VIGIA_RUTA_PAUSA`, que le pasan los scripts.
+    - Si se recrea a mano sin esa variable, el aviso lleva el marcador `<base>` y remite al ESTADO.
   - No lleva el token ni datos de Inversiones.
 - **El vigía nunca actúa.**
 
 ### Control positivo en el VPS
 Lo ejecuta el coordinador con Jelk después del primer despliegue (condición del CEO de PI).
-1. Anotar la hora. Poner a propósito `INV_VIGIA_UMBRAL_MEMAVAILABLE_MIB=7168` en `/opt/inversiones-008/.env.inversiones.production` (con `sudo nano`).
+1. Anotar la hora. Poner a propósito `INV_VIGIA_UMBRAL_MEMAVAILABLE_MIB=7168` en `<raíz>/.env.inversiones.production` (con `sudo nano`).
 2. Recrear **solo el vigía:**
    ```sh
-   sudo env INV_TAG=$(sudo cat /opt/inversiones-008/estado/sha-actual) $COMPOSE up -d --no-deps inv-008-vigia
+   sudo env INV_TAG=$(sudo cat <raíz>/estado/sha-actual) $COMPOSE up -d --no-deps inv-008-vigia
    ```
 3. En menos de 2 minutos debe llegar al Telegram de Jelk un «⚠️ ALERTA» con la hora COT, el umbral de 7168 MiB y el comando de corte. Se comprueba en el log, que no trae el token:
    ```sh
@@ -147,12 +162,13 @@ Lo ejecuta el coordinador con Jelk después del primer despliegue (condición de
 5. **Evidencia:** la hora y la línea del log, sin el token, van al PR o a `ESTADO.md`.
 
 ## 6 · Reglas del VPS para Inversiones
-- Se escribe SOLO en los tres destinos permitidos: `/opt/inversiones-008/`, `/var/lock/despliegue-vps.lock` y `/var/backups/idc/inversiones/`.
-- Nunca se toca `/opt/proteccion-infantil/`, ni los contenedores `pi-*` o `bi-*`, ni Gesmovil ni Hermes.
-- Antes de reiniciar `cloudflared-hermes` se avisa al CEO de PI: [produccion.md](produccion.md#8--túnel-de-cloudflare-aplicado-el-2026-11-21).
+- Se escribe SOLO en los tres destinos permitidos: `<raíz>/`, `/var/lock/despliegue-vps.lock` (el candado común) y `<respaldos>/` (de `inv-008.conf`).
+- Nunca se toca la carpeta de PI, ni los contenedores `pi-*` o `bi-*`, ni Gesmovil ni Hermes.
+- Antes de reiniciar `<servicio-del-túnel>` se avisa al CEO de PI: [produccion.md](produccion.md#8--túnel-de-cloudflare-aplicado-el-2026-11-21).
 - `desplegar-prod.sh` toma los dos candados y revisa los procesos de PI en tres momentos: antes de empezar, antes de migrar y antes de `up`.
 
 ---
+> v2.2 · 2026-11-21 · 07:30 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · marcadores en vez de rutas del VPS; la pausa no interpola (down por nombre de proyecto, marca antes, anclas); lo compartido con PI es solo el candado común y la marca; el deploy de PI aún no toma el candado común (SPEC-980): avisar al CEO de PI
 > v2.1 · 2026-11-21 · 04:40 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · pausa y reanudación con el árbol de root y el sha validado; enlace al §8 nuevo
 > v2.0 · 2026-11-21 · 00:45 (-05) · Inversiones · Fábrica ECC (frente producción) · correcciones de la GATE 2
 > v1.0 · 2026-11-20 · 23:59 (-05) · Inversiones · Fábrica ECC (frente producción)

@@ -1,0 +1,10 @@
+# Inversiones · configuración NO secreta de producción: plantilla sin valores (repo público).
+# En el VPS va en <raíz>/inv-008.conf (la carpeta que contiene al clon <raíz>/repo; el valor real de <raíz> y de
+# la carpeta, en el ESTADO de la gestión): dueño root, 644, fuera de git. La escribe quien despliega, con sudo
+# (no lleva secretos). Los scripts la leen línea por línea, nunca con `source`, y la validan antes de usarla.
+#
+# Exactamente una línea útil (se admiten comentarios y líneas vacías):
+#   INV_RESPALDOS_DIR: carpeta de los respaldos cifrados en el host. Ruta absoluta de caracteres [A-Za-z0-9_./-],
+#   sin enlaces; de root, del grupo respaldo (INV_RESPALDO_GID), sin escritura del grupo ni de otros, padres
+#   solo de root, solo con respaldos de 008 adentro, y fuera de <raíz>.
+INV_RESPALDOS_DIR=<ver ESTADO en la gestión>

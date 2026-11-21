@@ -103,13 +103,23 @@ Cada cambio que agregue código suma aquí sus guardianes y su job en `inv.yml`,
 ## Producción (VPS compartido con PI, D-015)
 Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produccion.md) (piezas, primer despliegue, despliegues siguientes y reversa, respaldos, túnel) y [`docs/despliegue/convivencia-pi.md`](docs/despliegue/convivencia-pi.md) (pausa obligatoria en cada despliegue de PI, medición de memoria, corte manual, vigía).
 
+- **Sin rutas ni nombres del VPS en el repo (es público).**
+  - Se escriben marcadores: `<raíz>` es la carpeta base, la que contiene al clon `<raíz>/repo`; `<respaldos>`, la de los respaldos cifrados; `<servicio-del-túnel>`, el servicio del túnel.
+  - Sus valores, «<ver ESTADO en la gestión>».
+  - Los scripts derivan la raíz de su ubicación y leen la carpeta de respaldos de la configuración no secreta `<raíz>/inv-008.conf`.
+  - Lo cuida `tests/unit/produccion/sin-literales-infra.test.ts`, con patrones genéricos.
 - **Proyecto Docker:** `inv-008-prod` (en el Mac, `inv-008-prueba`), siempre por la variable `COMPOSE`. Ningún comando global de Docker ni nombre de contenedor de PI, Gesmovil ni Hermes.
-- **Secretos:** un solo archivo, `/opt/inversiones-008/.env.inversiones.production` (root, 600, fuera de git). Plantilla sin valores: `docs/despliegue/env-inversiones-production.example`. Ningún agente escribe, copia ni imprime sus valores.
-- **Flujo:** sha de `main` con CI `inv` en verde (`inv-gate` y `app-008` en success) → `scripts/construir-imagen.sh <sha> --guardar <carpeta>` en el Mac → envío del `.tar` a `/opt/inversiones-008/imagenes/` → `scripts/desplegar-prod.sh` en el VPS.
+- **Secretos:** un solo archivo, `<raíz>/.env.inversiones.production` (root, 600, fuera de git). Plantilla sin valores: `docs/despliegue/env-inversiones-production.example`. Ningún agente escribe, copia ni imprime sus valores.
+- **Configuración no secreta:** `<raíz>/inv-008.conf` (root, 644). Lleva una sola línea, `INV_RESPALDOS_DIR`. Plantilla: `docs/despliegue/inv-008.conf.example`.
+- **Flujo:** sha de `main` con CI `inv` en verde (`inv-gate` y `app-008` en success) → `scripts/construir-imagen.sh <sha> --guardar <carpeta>` en el Mac → envío del `.tar` a `<raíz>/imagenes/` → `scripts/desplegar-prod.sh` en el VPS.
 - **Verificación:** se da por desplegado solo con **«DEPLOY VERIFICADO <sha>»** como última línea de `desplegar-prod.sh`. Después, `/api/salud` debe devolver `version` igual al sha desplegado.
 - **Reversa:** `desplegar-prod.sh inv-008-app:<sha anterior> --sin-migrar` (sin consultar GitHub).
+- **Carga de los datos del dueño:** vía B, la importación fresca (`produccion.md` §11).
+  - Va por stdin y sin copias en el VPS: `scripts/armar-sobre.sh` en el Mac → `ssh` → `scripts/cargar-prod.sh` → `inv-cargar` en el migrador.
+  - La corre Jelk o quien él designe; nunca la Fábrica sola.
+  - La vía A (volcado de solo datos) no se usa.
 - **Prohibido:** `docker compose down -v` y borrar volúmenes. Para bajar la app, `pausar-008.sh`.
-- **Escritura y sistema:** los scripts solo escriben en `/opt/inversiones-008/`, el candado `/var/lock/despliegue-vps.lock` y `/var/backups/idc/inversiones/`. No tocan ufw, systemctl, `/etc/` ni el crontab de root.
+- **Escritura y sistema:** los scripts solo escriben en `<raíz>/`, el candado común `/var/lock/despliegue-vps.lock` (contrato con PI) y `<respaldos>/`. No tocan ufw, systemctl, `/etc/` ni el crontab de root.
 - El estado del despliegue lo lleva `ESTADO.md` de la gestión (fuera de este repo).
 - **Gastos:** cualquier servidor, dominio o servicio pago necesita el sí del dueño antes.
 
@@ -119,6 +129,7 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.18 · 2026-11-21 · 07:30 (-05) · INV · Fábrica ECC (frente infra-literales) · sin rutas ni nombres del VPS (marcadores, raíz derivada, `inv-008.conf`); carga del dueño por la vía B, por stdin y sin copias en el VPS
 > v1.17 · 2026-11-21 · 05:38 (-05) · INV · Fábrica Inversiones · certificación de A&V: `importar-certificacion` y `conciliar-certificacion` (hito 1, PR-B)
 > v1.16 · 2026-11-21 · 04:38 (-05) · INV · Fábrica Inversiones · `precios:actualizar` re-verifica los cierres iguales contra la certificación (`--desde <corte>`)
 > v1.15 · 2026-11-21 · 04:24 (-05) · INV · Fábrica Inversiones · pisos de cobertura en `test:cobertura` (solo muerden con `--coverage`)
