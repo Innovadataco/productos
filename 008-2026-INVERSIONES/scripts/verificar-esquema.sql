@@ -6,7 +6,8 @@
 --  - cada CHECK y EXCLUDE con su definición exacta (pg_get_constraintdef) y validado;
 --  - cada disparador en su tabla (tgrelid), con su tipo (tgtype 27 = BEFORE UPDATE OR DELETE, por fila),
 --    su función y habilitado (tgenabled O o A; D es deshabilitado);
---  - las funciones escritas a mano (solo inserción y token de un solo uso) con el md5 exacto de su código;
+--  - las funciones escritas a mano (solo inserción, token y código de recuperación de un solo uso) con el
+--    md5 exacto de su código;
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 (sacadas de una base recién migrada). La lista de
 -- nombres sale de prisma/migrations: tests/unit/produccion/verificar-esquema.test.ts exige que coincida, y
@@ -14,9 +15,11 @@
 DO $$
 DECLARE
   indices_parciales text[] := ARRAY[
+    ['codigo_recuperacion', 'codigo_recuperacion_vigentes_idx', 'CREATE INDEX codigo_recuperacion_vigentes_idx ON public.codigo_recuperacion USING btree ("usuarioId") WHERE (("usadoEn" IS NULL) AND ("anuladoEn" IS NULL))'],
     ['enlace_decision_orden', 'enlace_decision_orden_raiz_key', 'CREATE UNIQUE INDEX enlace_decision_orden_raiz_key ON public.enlace_decision_orden USING btree ("ordenId") WHERE ("reemplazaId" IS NULL)'],
     ['evento_corporativo', 'evento_corporativo_pago_fraccion_key', 'CREATE UNIQUE INDEX evento_corporativo_pago_fraccion_key ON public.evento_corporativo USING btree ("destinoId", "fechaPagoFraccion") WHERE ("fechaPagoFraccion" IS NOT NULL)'],
     ['intento_ingreso', 'intento_ingreso_fallos_ip_idx', 'CREATE INDEX intento_ingreso_fallos_ip_idx ON public.intento_ingreso USING btree (ip, "ocurridoEn") WHERE (resultado <> ALL (ARRAY[''EXITO''::"ResultadoIngreso", ''CLAVE_DEFINIDA''::"ResultadoIngreso"]))'],
+    ['intento_ingreso', 'intento_ingreso_reinicio_totp_idx', 'CREATE INDEX intento_ingreso_reinicio_totp_idx ON public.intento_ingreso USING btree ("usuarioId", "ocurridoEn" DESC) WHERE (resultado = ANY (ARRAY[''TOTP_EXITO''::"ResultadoIngreso", ''RECUPERACION_USADA''::"ResultadoIngreso", ''TOTP_ENROLADO''::"ResultadoIngreso", ''CODIGOS_REGENERADOS''::"ResultadoIngreso", ''TOTP_REINICIADO''::"ResultadoIngreso", ''CLAVE_DEFINIDA''::"ResultadoIngreso"]))'],
     ['intento_ingreso', 'intento_ingreso_ultimo_exito_idx', 'CREATE INDEX intento_ingreso_ultimo_exito_idx ON public.intento_ingreso USING btree ("usuarioId", "ocurridoEn" DESC) WHERE (resultado = ANY (ARRAY[''EXITO''::"ResultadoIngreso", ''CLAVE_DEFINIDA''::"ResultadoIngreso"]))'],
     ['lote', 'lote_escision_evento_key', 'CREATE UNIQUE INDEX lote_escision_evento_key ON public.lote USING btree ("eventoId") WHERE (origen = ''ESCISION''::"OrigenLote")'],
     ['precio_cierre', 'precio_cierre_vigente_key', 'CREATE UNIQUE INDEX precio_cierre_vigente_key ON public.precio_cierre USING btree ("instrumentoId", fecha, fuente) WHERE ("reemplazadoEn" IS NULL)'],
@@ -26,6 +29,9 @@ DECLARE
     ['ajuste_caja', 'ajuste_caja_fraccion_chk', 'CHECK (((categoria = ''FRACCION_ESCISION''::"CategoriaAjusteCaja") = ("eventoId" IS NOT NULL)))'],
     ['ajuste_caja', 'ajuste_caja_monto_chk', 'CHECK ((monto <> (0)::numeric))'],
     ['asignacion_venta', 'asignacion_venta_cantidad_chk', 'CHECK (((cantidad > 0) AND ("costoBase" >= (0)::numeric)))'],
+    ['codigo_recuperacion', 'codigo_recuperacion_fechas_chk', 'CHECK (((("usadoEn" IS NULL) OR ("usadoEn" >= "creadoEn")) AND (("anuladoEn" IS NULL) OR ("anuladoEn" >= "creadoEn"))))'],
+    ['codigo_recuperacion', 'codigo_recuperacion_hash_chk', 'CHECK (("codigoHash" ~ ''^[0-9a-f]{64}$''::text))'],
+    ['codigo_recuperacion', 'codigo_recuperacion_marca_chk', 'CHECK ((("usadoEn" IS NULL) OR ("anuladoEn" IS NULL)))'],
     ['decision', 'decision_cantidad_chk', 'CHECK ((((cantidad IS NULL) OR (cantidad > 0)) AND ((accion <> ''NO_ACTUAR''::"AccionPlan") OR (cantidad IS NOT NULL))))'],
     ['decision', 'decision_excepcion_chk', 'CHECK (((NOT excepcion) OR ("reglaId" IS NOT NULL)))'],
     ['decision', 'decision_motivo_chk', 'CHECK (((motivo ~ ''[^[:space:]]''::text) AND (char_length(motivo) <= 2000)))'],
@@ -56,10 +62,15 @@ DECLARE
     ['token_acceso', 'token_acceso_hash_chk', 'CHECK (("tokenHash" ~ ''^[0-9a-f]{64}$''::text))'],
     ['token_acceso', 'token_acceso_vence_chk', 'CHECK ((("venceEn" > "creadoEn") AND ("venceEn" <= ("creadoEn" + ''00:30:00''::interval))))'],
     ['usuario', 'usuario_clave_hash_chk', 'CHECK ((("claveHash" IS NULL) OR ("claveHash" ~ ''^\$2[aby]\$12\$[./A-Za-z0-9]{53}$''::text)))'],
+    ['usuario', 'usuario_presesion_hash_chk', 'CHECK ((("presesionHash" IS NULL) OR ("presesionHash" ~ ''^[0-9a-f]{64}$''::text)))'],
     ['usuario', 'usuario_sesion_version_chk', 'CHECK (("sesionVersion" >= 1))'],
+    ['usuario', 'usuario_totp_chk', 'CHECK (((("totpActivadoEn" IS NULL) AND ("totpUltimoPaso" IS NULL)) OR (("totpActivadoEn" IS NOT NULL) AND ("totpUltimoPaso" IS NOT NULL) AND ("totpSecreto" IS NOT NULL))))'],
+    ['usuario', 'usuario_totp_paso_chk', 'CHECK ((("totpUltimoPaso" IS NULL) OR ("totpUltimoPaso" >= 0)))'],
+    ['usuario', 'usuario_totp_secreto_chk', 'CHECK ((("totpSecreto" IS NULL) OR ((jsonb_typeof("totpSecreto") = ''object''::text) AND ("totpSecreto" ?& ARRAY[''ct''::text, ''iv''::text, ''kid''::text, ''tag''::text, ''v''::text]) AND (("totpSecreto" - ARRAY[''ct''::text, ''iv''::text, ''kid''::text, ''tag''::text, ''v''::text]) = ''{}''::jsonb))))'],
     ['valor_unidad_fondo', 'valor_unidad_fondo_valor_chk', 'CHECK (("valorUnidad" > (0)::numeric))']
   ];
   disparadores text[] := ARRAY[
+    ['codigo_recuperacion', 'codigo_recuperacion_un_solo_uso', '27', 'inv_codigo_un_solo_uso'],
     ['decision', 'decision_solo_insercion', '27', 'inv_solo_insercion'],
     ['dividendo', 'dividendo_solo_insercion', '27', 'inv_solo_insercion'],
     ['enlace_decision_orden', 'enlace_decision_orden_solo_insercion', '27', 'inv_solo_insercion'],
@@ -73,6 +84,7 @@ DECLARE
     ['token_acceso', 'token_acceso_un_solo_uso', '27', 'inv_token_un_solo_uso']
   ];
   funciones text[] := ARRAY[
+    ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301'],
     ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77'],
     ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546']
   ];

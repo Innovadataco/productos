@@ -109,6 +109,11 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
 - **Cuándo:** todas las claves una vez al año y ante cualquier sospecha.
 - **Claves de los roles:** se cambian en el archivo y se corre `crear-roles-prod.sh`.
 - **`INV_AUTH_SECRET`:** rotarlo cierra las sesiones.
+- **Claves de cifrado (`INV_CIFRADO_CLAVE_V<n>`) y el TOTP:**
+  - `scripts/cifrar-existentes.ts` re-cifra `crudo` y `encargo`, pero no conoce `usuario.totpSecreto`.
+  - El secreto TOTP del dueño se re-cifra con la clave activa cada vez que entra con el código de la app (y cuando enrola o regenera los códigos). Entrar con un código de recuperación no lo re-cifra.
+  - Por eso **una clave vieja no se retira hasta que el dueño haya entrado con el código de la app después de rotar**.
+  - Si se retira antes, el segundo factor deja de verificar. La salida es `crear-acceso-inicial.sh --email <correo> --reiniciar-totp` y enrolar de nuevo antes de 30 minutos.
 - **Token de Telegram:** si se rota, se actualiza en el Mac (`~/.config/odin/`, lo hace Jelk) y en el VPS. Después se recrea solo el vigía:
   ```sh
   sudo env INV_TAG=$(sudo cat /opt/inversiones-008/estado/sha-actual) $COMPOSE up -d --no-deps inv-008-vigia

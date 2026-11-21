@@ -8,6 +8,10 @@
  * Después, una transacción corta serializa por IP (advisory lock) y por cuenta (FOR UPDATE), en ese
  * orden siempre, vuelve a contar y decide: dos intentos simultáneos no pasan los dos el tope.
  *
+ * Con TOTP (segundo factor del dueño), EXITO es «clave correcta»: no abre la sesión. En la misma
+ * transacción queda el hash de una pre-sesión nueva (`jti`) y, si toca, el secreto pendiente del
+ * enrolamiento (src/auth/enrolamiento.ts); la ruta firma la pre-sesión y el segundo paso da la sesión.
+ *
  * RIESGO ACEPTADO (security-reviewer y code-reviewer, GATE 2): cualquiera que conozca el correo del dueño
  * puede mantener su cuenta bloqueada con 5 fallos cada 15 min desde IP que rotan. Se acota así: el
  * bloqueo no se alarga con más intentos (los de durante el bloqueo no cuentan) y la recuperación es
@@ -15,8 +19,10 @@
  */
 import type { Prisma, PrismaClient, ResultadoIngreso } from "@prisma/client";
 import { compararClave } from "./clave";
+import { prepararSegundoPaso, type PasoSiguiente } from "./enrolamiento";
 import { redDeIp } from "./ip";
 import { BLOQUEO_MS, FALLOS_POR_IP, FALLOS_POR_USUARIO, VENTANA_FALLOS_MS } from "./limites";
+import { generarJti } from "./presesion";
 import { OPCIONES_TX, bloquearRed, fallosDeIp } from "./topes";
 
 export interface DatosIngreso {
@@ -28,7 +34,14 @@ export interface DatosIngreso {
 }
 
 export type Ingreso =
-  | { readonly ok: true; readonly usuarioId: string; readonly sesionVersion: number }
+  | {
+      readonly ok: true;
+      readonly usuarioId: string;
+      readonly sesionVersion: number;
+      /** Identificador de la pre-sesión nueva (en la base queda su sha256). */
+      readonly jti: string;
+      readonly paso: PasoSiguiente;
+    }
   | { readonly ok: false; readonly motivo: ResultadoIngreso | "IP_LIMITADA" };
 
 interface FilaUsuario {
@@ -38,6 +51,8 @@ interface FilaUsuario {
   readonly claveHash: string | null;
   readonly bloqueadoHasta: Date | null;
   readonly sesionVersion: number;
+  readonly totpActivadoEn: Date | null;
+  readonly conSecreto: boolean;
 }
 
 type Tx = Prisma.TransactionClient;
@@ -46,7 +61,8 @@ const ROL_PERMITIDO = "DUENO";
 
 async function bloquearFila(tx: Tx, email: string): Promise<FilaUsuario | null> {
   const filas = await tx.$queryRaw<FilaUsuario[]>`
-    SELECT "id", "rol"::text AS "rol", "activo", "claveHash", "bloqueadoHasta", "sesionVersion"
+    SELECT "id", "rol"::text AS "rol", "activo", "claveHash", "bloqueadoHasta", "sesionVersion", "totpActivadoEn",
+      ("totpSecreto" IS NOT NULL) AS "conSecreto"
     FROM "usuario" WHERE "email" = ${email}::citext FOR UPDATE`;
   return filas[0] ?? null;
 }
@@ -90,7 +106,11 @@ async function registrar(tx: Tx, datos: DatosIngreso, hashComparado: string | nu
   if (fila && resultado === "CLAVE_INCORRECTA" && (await fallosDeCuenta(tx, fila, datos.ahora)) >= FALLOS_POR_USUARIO) {
     await tx.usuario.update({ where: { id: fila.id }, data: { bloqueadoHasta: new Date(datos.ahora.getTime() + BLOQUEO_MS) } });
   }
-  if (fila && resultado === "EXITO") return { ok: true, usuarioId: fila.id, sesionVersion: fila.sesionVersion };
+  if (fila && resultado === "EXITO") {
+    const jti = generarJti();
+    const paso = await prepararSegundoPaso(tx, fila, jti, datos.ip, datos.ahora);
+    return { ok: true, usuarioId: fila.id, sesionVersion: fila.sesionVersion, jti, paso };
+  }
   return { ok: false, motivo: resultado };
 }
 

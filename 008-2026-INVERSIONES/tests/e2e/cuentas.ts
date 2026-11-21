@@ -24,11 +24,28 @@ export async function cerrarBaseE2E(): Promise<void> {
 export const sufijo = (info: TestInfo): string =>
   `${info.testId}-r${info.repeatEachIndex}-${info.retry}-${Date.now().toString(36)}`.toLowerCase().replace(/[^a-z0-9-]/g, "");
 
-/** Crea un dueño ficticio con correo único; con clave (ficticia) o sin ella (para el enlace de un solo uso). */
-export async function crearCuenta(info: TestInfo, prefijo: string, conClave: boolean): Promise<CuentaE2E> {
+export interface OpcionesCuenta {
+  /**
+   * Hace cuántos minutos «se definió la clave con el enlace» (un CLAVE_DEFINIDA en el registro): abre la
+   * ventana de 30 min para enrolar el TOTP. Por defecto, ahora mismo; null, nunca (clave puesta a mano).
+   */
+  readonly claveDefinidaHaceMin?: number | null;
+}
+
+const MIN_MS = 60_000;
+
+/**
+ * Crea un dueño ficticio con correo único; con clave (ficticia) o sin ella (para el enlace de un solo uso).
+ * Con clave, simula que la definió con el enlace: así puede enrolar el TOTP en su primer ingreso.
+ */
+export async function crearCuenta(info: TestInfo, prefijo: string, conClave: boolean, opciones: OpcionesCuenta = {}): Promise<CuentaE2E> {
   const cuenta = { email: `${prefijo}-${sufijo(info)}@ejemplo.invalid`, clave: `clave-ficticia-${prefijo}-e2e` };
-  await baseE2E().usuario.create({
+  const u = await baseE2E().usuario.create({
     data: { email: cuenta.email, rol: "DUENO", claveHash: conClave ? await hashClave(cuenta.clave) : null },
   });
+  const hace = opciones.claveDefinidaHaceMin === undefined ? 0 : opciones.claveDefinidaHaceMin;
+  if (conClave && hace !== null) {
+    await baseE2E().intentoIngreso.create({ data: { usuarioId: u.id, resultado: "CLAVE_DEFINIDA", ocurridoEn: new Date(Date.now() - hace * MIN_MS) } });
+  }
   return cuenta;
 }

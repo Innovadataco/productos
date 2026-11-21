@@ -1,8 +1,9 @@
 import "server-only";
 /**
  * Revalidación de la sesión en cada página y API (D-014). El proxy solo verifica la firma del JWT; aquí
- * se lee la base: la cuenta existe, está activa, tiene clave, es DUENO y su `sesionVersion` es la del
- * token. El rol nunca sale del JWT. (El rol FAMILIA de solo lectura va en otro cambio: hoy no entra.)
+ * se lee la base: la cuenta existe, está activa, tiene clave, es DUENO, tiene el TOTP activo y su
+ * `sesionVersion` es la del token. El rol nunca sale del JWT. Sin TOTP activo no hay sesión: la sesión solo
+ * nace del segundo paso, y reiniciar el TOTP las cierra todas. (El rol FAMILIA va en otro cambio.)
  */
 import type { PrismaClient } from "@prisma/client";
 import { cookies } from "next/headers";
@@ -31,9 +32,10 @@ export async function validarSesion(
   if (!datos) return null;
   const u = await base.usuario.findUnique({
     where: { id: datos.sub },
-    select: { id: true, email: true, rol: true, activo: true, sesionVersion: true, claveHash: true },
+    select: { id: true, email: true, rol: true, activo: true, sesionVersion: true, claveHash: true, totpActivadoEn: true },
   });
-  if (!u || !u.activo || u.claveHash === null || u.rol !== "DUENO" || u.sesionVersion !== datos.sesionVersion) return null;
+  if (!u || !u.activo || u.claveHash === null || u.rol !== "DUENO" || u.totpActivadoEn === null) return null;
+  if (u.sesionVersion !== datos.sesionVersion) return null;
   return { id: u.id, email: u.email, rol: u.rol };
 }
 

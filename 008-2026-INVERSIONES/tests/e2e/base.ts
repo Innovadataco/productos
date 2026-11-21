@@ -66,6 +66,13 @@ export function baseDePruebas(valor: string): BaseDePruebas {
   return { nombre, url: conexion(u, nombre), urlMantenimiento: conexion(u, "postgres") };
 }
 
+/**
+ * El secreto de la sesión de ESTA corrida (aleatorio, nunca real): playwright.config.ts lo sortea una vez y
+ * lo pasa a la app y a los procesos de las pruebas por el entorno, para que una prueba pueda firmar una
+ * pre-sesión vencida. Se lee al usarse (no al importar). Fuera de Playwright queda vacío y nada firma.
+ */
+export const secretoSesionE2E = (): string => process.env.E2E_AUTH_SECRET ?? "";
+
 /** Una cuenta del E2E: todo inventado (correos `@ejemplo.invalid`, contraseñas ficticias). */
 export interface CuentaE2E {
   readonly email: string;

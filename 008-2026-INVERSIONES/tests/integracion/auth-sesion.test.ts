@@ -1,10 +1,13 @@
 // Revalidación de la sesión contra la base (D-014): el JWT solo dice quién y qué versión de sesión;
-// el rol, si la cuenta está activa y la versión vigente salen de la base en cada página y API.
+// el rol, si la cuenta está activa, la versión vigente y que tenga el TOTP activo salen de la base en
+// cada página y API (la sesión solo nace del segundo paso; una pre-sesión nunca la reemplaza).
 // Datos inventados contra la base de PRUEBAS.
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { firmarPresesion, generarJti } from "@/auth/presesion";
 import { firmarToken } from "@/auth/token";
 import { exigirSesionApi, validarSesion } from "@/auth/sesion";
+import { activarTotp } from "./auth-totp-ayudas";
 
 const db = new PrismaClient();
 const corrida = Date.now().toString(36);
@@ -15,8 +18,16 @@ const HASH = `$2b$12$${"b".repeat(53)}`;
 const AHORA = Date.now();
 let n = 0;
 
-async function cuenta(datos: { rol?: "DUENO" | "FAMILIA"; activo?: boolean; claveHash?: string | null; sesionVersion?: number } = {}) {
-  return db.usuario.create({
+interface DatosCuenta {
+  readonly rol?: "DUENO" | "FAMILIA";
+  readonly activo?: boolean;
+  readonly claveHash?: string | null;
+  readonly sesionVersion?: number;
+  readonly totp?: boolean;
+}
+
+async function cuenta(datos: DatosCuenta = {}) {
+  const u = await db.usuario.create({
     data: {
       email: `sesion-${corrida}-${(n += 1)}@ejemplo.invalid`,
       rol: datos.rol ?? "DUENO",
@@ -25,6 +36,8 @@ async function cuenta(datos: { rol?: "DUENO" | "FAMILIA"; activo?: boolean; clav
       sesionVersion: datos.sesionVersion ?? 1,
     },
   });
+  if (datos.totp !== false) await activarTotp(db, u.id, new Date(AHORA));
+  return u;
 }
 
 const token = (sub: string, sesionVersion = 1, clave = CLAVE) => firmarToken({ sub, sesionVersion }, clave, AHORA);
@@ -49,6 +62,7 @@ describe("validarSesion", () => {
     ["la versión de sesión cambió (clave cambiada o «cerrar todas»)", { sesionVersion: 2 }, 1],
     ["el rol es FAMILIA (todavía no entra)", { rol: "FAMILIA" as const }, 1],
     ["la cuenta ya no tiene clave", { claveHash: null }, 1],
+    ["la cuenta no tiene el TOTP activo (sin enrolar o reiniciado)", { totp: false }, 1],
   ])("no hay sesión si %s", async (_caso, datos, version) => {
     const u = await cuenta(datos);
     expect(await validarSesion(db, await token(u.id, version), CLAVE, AHORA)).toBeNull();
@@ -59,6 +73,12 @@ describe("validarSesion", () => {
     expect(await validarSesion(db, await token(u.id, 1, OTRA), CLAVE, AHORA)).toBeNull();
     expect(await validarSesion(db, await token(`no-existe-${corrida}`), CLAVE, AHORA)).toBeNull();
     expect(await validarSesion(db, undefined, CLAVE, AHORA)).toBeNull();
+  });
+
+  it("una pre-sesión no sirve como sesión, ni siquiera con la versión y el secreto correctos", async () => {
+    const u = await cuenta();
+    const pre = await firmarPresesion({ sub: u.id, sesionVersion: 1, jti: generarJti() }, CLAVE, AHORA);
+    expect(await validarSesion(db, pre, CLAVE, AHORA)).toBeNull();
   });
 
   it("exigirSesionApi da el usuario con sesión, y 401 JSON sin caché sin ella", async () => {

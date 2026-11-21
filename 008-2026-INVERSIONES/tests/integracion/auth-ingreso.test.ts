@@ -42,11 +42,11 @@ afterAll(async () => {
 });
 
 describe("resultado de un intento", () => {
-  it("clave correcta: entra y registra EXITO con su IP", async () => {
+  it("clave correcta: pasa el primer paso (pre-sesión y paso siguiente) y registra EXITO con su IP", async () => {
     const u = await usuario();
     const ip = ipNueva();
     const r = await ingresar(db, { email: u.email, clave: CLAVE, ip, ahora: reloj(1)() });
-    expect(r).toEqual({ ok: true, usuarioId: u.id, sesionVersion: 1 });
+    expect(r).toEqual({ ok: true, usuarioId: u.id, sesionVersion: 1, jti: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/), paso: "enrolar" });
     const [i] = await intentos(u.id);
     expect(i).toMatchObject({ resultado: "EXITO", ip });
   });

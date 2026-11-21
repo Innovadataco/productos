@@ -162,31 +162,40 @@ enum CondicionRegla {
 
 // ───────────── Usuarios ─────────────
 model Usuario {
-  id              String                @id @default(cuid())
-  email           String                @unique @db.Citext
-  rol             RolUsuario
-  telegramChatId  BigInt?
-  activo          Boolean               @default(true)
-  creadoEn        DateTime              @default(now()) @db.Timestamptz(6)
+  id                  String                @id @default(cuid())
+  email               String                @unique @db.Citext
+  rol                 RolUsuario
+  telegramChatId      BigInt?
+  activo              Boolean               @default(true)
+  creadoEn            DateTime              @default(now()) @db.Timestamptz(6)
   // Login (D-014). Hash bcrypt de costo 12; null = la cuenta no puede entrar.
-  claveHash       String?
+  claveHash           String?
   // Va en el JWT: subirla cierra todas las sesiones abiertas (cambio de clave, «cerrar todas»).
-  sesionVersion   Int                   @default(1)
-  // 5 fallos en 15 min bloquean la cuenta 15 min.
-  bloqueadoHasta  DateTime?             @db.Timestamptz(6)
-  cargas          CargaArchivo[]
-  ajustesCaja     AjusteCaja[]
-  planesAprobados PlanVersion[]
-  decisiones      Decision[]
-  enlaces         EnlaceDecisionOrden[]
-  intentos        IntentoIngreso[]
-  tokensAcceso    TokenAcceso[]
+  sesionVersion       Int                   @default(1)
+  // 5 fallos de clave en 15 min bloquean la cuenta 15 min; los del segundo paso, cada vez el doble (hasta 24 h).
+  bloqueadoHasta      DateTime?             @db.Timestamptz(6)
+  // TOTP del dueño. Sobre AES-256-GCM del secreto (src/cifrado, AAD «usuario.totp» + id); null = sin secreto.
+  // Con secreto y sin activar, el secreto está pendiente de confirmar en el enrolamiento.
+  totpSecreto         Json?
+  totpActivadoEn      DateTime?             @db.Timestamptz(6)
+  // Antireplay: el último paso de 30 s aceptado; uno menor o igual ya no entra.
+  totpUltimoPaso      Int?
+  // sha256 del `jti` de la pre-sesión vigente: solo vale la más reciente y se borra al pasar el segundo paso.
+  presesionHash       String?               @db.Char(64)
+  cargas              CargaArchivo[]
+  ajustesCaja         AjusteCaja[]
+  planesAprobados     PlanVersion[]
+  decisiones          Decision[]
+  enlaces             EnlaceDecisionOrden[]
+  intentos            IntentoIngreso[]
+  tokensAcceso        TokenAcceso[]
+  codigosRecuperacion CodigoRecuperacion[]
 
   @@map("usuario")
 }
 
 enum ResultadoIngreso {
-  EXITO
+  EXITO // la clave es correcta (primer paso): con TOTP abre la pre-sesión, no la sesión
   CLAVE_INCORRECTA
   USUARIO_INEXISTENTE
   SIN_CLAVE
@@ -195,6 +204,17 @@ enum ResultadoIngreso {
   ROL_NO_PERMITIDO
   CLAVE_DEFINIDA // la clave se fijó con un enlace de un solo uso
   TOKEN_INVALIDO // enlace inexistente, vencido, ya usado o reemplazado
+  // Segundo paso (TOTP). Los fallos cuentan para el bloqueo de la cuenta y para el tope por IP.
+  TOTP_EXITO // código TOTP correcto: se abre la sesión
+  TOTP_INCORRECTO
+  TOTP_REPETIDO // código de un paso ya usado (antireplay)
+  RECUPERACION_USADA // código de recuperación correcto (se gasta)
+  RECUPERACION_INVALIDA
+  TOTP_ENROLADO // el dueño confirmó el secreto nuevo
+  TOTP_REINICIADO // `crear-acceso-inicial --reiniciar-totp` (lo corre Jelk)
+  CODIGOS_REGENERADOS
+  BLOQUEO_SEGUNDO_PASO // marca de un bloqueo por fallos del segundo paso (si sigue a otro, dura el doble)
+  TOTP_PENDIENTE // se generó un secreto pendiente de enrolar (uno por ventana de enrolamiento)
 }
 
 enum PropositoToken {
@@ -235,6 +255,22 @@ model TokenAcceso {
 
   @@index([usuarioId, creadoEn])
   @@map("token_acceso")
+}
+
+/// Códigos de recuperación del TOTP: 10 por generación, de 80 bits; se muestran una vez y aquí va solo
+/// su sha256. Un disparador admite un único UPDATE por fila: marcar `usadoEn` (se gastó) o `anuladoEn` (se
+/// regeneraron o se reinició el TOTP). No se borran. Vigente = sin las dos marcas (índice parcial en SQL).
+model CodigoRecuperacion {
+  id         String    @id @default(cuid())
+  usuarioId  String
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  codigoHash String    @unique @db.Char(64)
+  creadoEn   DateTime  @default(now()) @db.Timestamptz(6)
+  usadoEn    DateTime? @db.Timestamptz(6)
+  anuladoEn  DateTime? @db.Timestamptz(6)
+
+  @@index([usuarioId])
+  @@map("codigo_recuperacion")
 }
 
 // ───────────── Importación y trazabilidad ─────────────

@@ -15,11 +15,12 @@ import { redDeIp } from "./ip";
 import { FALLOS_POR_IP, TOKEN_BYTES, VIDA_TOKEN_MS } from "./limites";
 import { OPCIONES_TX, bloquearRed, fallosDeIp } from "./topes";
 
-export type CodigoAcceso = "OTRO_DUENO" | "ROL_DISTINTO";
+export type CodigoAcceso = "OTRO_DUENO" | "ROL_DISTINTO" | "NO_EXISTE";
 
 const MENSAJES: Readonly<Record<CodigoAcceso, string>> = {
   OTRO_DUENO: "Ya hay un dueño registrado con otro correo: revise --email. No se crea otro.",
-  ROL_DISTINTO: "Ese correo es de una cuenta que no es DUENO: no se le emite un enlace.",
+  ROL_DISTINTO: "Ese correo es de una cuenta que no es DUENO: no se toca.",
+  NO_EXISTE: "No hay una cuenta con ese correo: revise --email. No se reinicia nada.",
 };
 
 export class ErrorAcceso extends Error {

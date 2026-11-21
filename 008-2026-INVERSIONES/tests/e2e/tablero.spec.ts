@@ -14,14 +14,14 @@ const TOTAL = "+$ 13.380";
 const ANCHO_MOVIL = { width: 400, height: 900 };
 
 test.describe("tablero del portafolio", () => {
-  test("responde «¿Gano?» con el total de la ganancia", async ({ page }) => {
-    const t = await PaginaTablero.abrir(page);
+  test("responde «¿Gano?» con el total de la ganancia", async ({ page }, info) => {
+    const t = await PaginaTablero.abrir(page, info);
     await expect(t.titulo).toHaveAccessibleName(/^¿Gano\? Sí\.\s*\+\$ 13\.380$/);
     await expect(t.cifraDelTotal).toHaveText(TOTAL);
   });
 
-  test("ordenar por una columna cambia aria-sort y el orden de las filas", async ({ page }) => {
-    const t = await PaginaTablero.abrir(page);
+  test("ordenar por una columna cambia aria-sort y el orden de las filas", async ({ page }, info) => {
+    const t = await PaginaTablero.abrir(page, info);
     await expect(t.columna("Valor")).toHaveAttribute("aria-sort", "descending");
     await expect(t.columna("Especie")).not.toHaveAttribute("aria-sort");
     await expect(t.botonesDeEspecie).toHaveText(["FICTB", "FICTA"]);
@@ -33,8 +33,8 @@ test.describe("tablero del portafolio", () => {
     await expect(t.botonesDeEspecie).toHaveText(["FICTA", "FICTB"]);
   });
 
-  test("el detalle se abre con el teclado y Escape lo cierra y devuelve el foco", async ({ page }) => {
-    const t = await PaginaTablero.abrir(page);
+  test("el detalle se abre con el teclado y Escape lo cierra y devuelve el foco", async ({ page }, info) => {
+    const t = await PaginaTablero.abrir(page, info);
     const boton = t.botonEspecie("FICTA");
     await boton.focus();
     await page.keyboard.press("Enter");
@@ -51,8 +51,8 @@ test.describe("tablero del portafolio", () => {
     await expect(boton).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("una especie incompleta se lista aparte y no aparece en la tabla ni como vendida", async ({ page }) => {
-    const t = await PaginaTablero.abrir(page);
+  test("una especie incompleta se lista aparte y no aparece en la tabla ni como vendida", async ({ page }, info) => {
+    const t = await PaginaTablero.abrir(page, info);
     await expect(t.avisoIncompletas).toContainText("FICTI");
     await expect(t.botonesDeEspecie).toHaveCount(2);
     await expect(t.tabla.getByText("FICTI")).toHaveCount(0);
@@ -63,14 +63,14 @@ test.describe("tablero del portafolio", () => {
   test.describe("tema", () => {
     test.use({ colorScheme: "dark" });
 
-    test("oscuro y claro cambian el fondo, sin errores, y el botón «Tema claro» lo alterna", async ({ page }) => {
-      const t = await PaginaTablero.abrir(page);
+    test("oscuro y claro cambian el fondo, sin errores, y el botón «Tema claro» lo alterna", async ({ page }, info) => {
+      const t = await PaginaTablero.abrir(page, info);
       await expect(t.botonTema).toHaveText("Tema claro");
       await expect(t.botonTema).toHaveAttribute("aria-pressed", "false");
       const oscuro = await t.fondo();
 
       await page.emulateMedia({ colorScheme: "light" });
-      await PaginaTablero.abrir(page);
+      await PaginaTablero.abrir(page, info);
       await expect(t.botonTema).toHaveAttribute("aria-pressed", "true");
       const claro = await t.fondo();
       expect(claro).not.toBe(oscuro);
@@ -84,8 +84,8 @@ test.describe("tablero del portafolio", () => {
   test.describe("a 400 px", () => {
     test.use({ viewport: ANCHO_MOVIL });
 
-    test("no hay desborde horizontal, con y sin el panel de detalle", async ({ page }) => {
-      const t = await PaginaTablero.abrir(page);
+    test("no hay desborde horizontal, con y sin el panel de detalle", async ({ page }, info) => {
+      const t = await PaginaTablero.abrir(page, info);
       await expect.poll(() => t.desbordeHorizontal()).toBeLessThanOrEqual(0);
 
       await t.botonEspecie("FICTA").click();

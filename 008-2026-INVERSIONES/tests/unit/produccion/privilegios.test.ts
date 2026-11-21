@@ -1,10 +1,12 @@
-// docker/migrador/privilegios.sql: inv_app solo lee, más las escrituras exactas del login (contrato del
-// frente login), por COLUMNA: UPDATE de "claveHash", "sesionVersion" y "bloqueadoHasta" en usuario,
-// UPDATE de "usadoEn" en token_acceso e INSERT en intento_ingreso. Nunca DELETE, TRUNCATE, REFERENCES,
-// TRIGGER ni DDL. inv_dueno es el dueño (crear-acceso-inicial.ts, en el migrador).
+// docker/migrador/privilegios.sql: inv_app solo lee, más las escrituras exactas del login y del TOTP
+// (contratos de esos frentes), por COLUMNA: UPDATE de "claveHash", "sesionVersion" y "bloqueadoHasta" en
+// usuario, UPDATE de "usadoEn" en token_acceso, INSERT en intento_ingreso y, del TOTP, UPDATE de
+// "totpSecreto", "totpActivadoEn", "totpUltimoPaso" y "presesionHash" en usuario, más INSERT y UPDATE de
+// "usadoEn" y "anuladoEn" en codigo_recuperacion. Nunca DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL.
+// inv_dueno es el dueño (crear-acceso-inicial.ts y --reiniciar-totp, en el migrador).
 //
-// Sin condiciones: si faltan las tablas o las columnas del login (migración 20261121050319_login), el
-// GRANT falla y el despliegue se detiene (falla cerrada).
+// Sin condiciones: si faltan las tablas o las columnas del login (20261121050319_login) o del TOTP
+// (20261121060000_totp), el GRANT falla y el despliegue se detiene (falla cerrada).
 import { describe, expect, it } from "vitest";
 import { leer008 } from "./falsos";
 
@@ -14,7 +16,7 @@ const grants = [...sql.matchAll(/GRANT\s+([A-Z]+(?:\s*\([^)]*\))?(?:\s*,\s*[A-Z]
 );
 
 describe("privilegios de inv_app", () => {
-  it("lectura en cada tabla, uso de secuencias y solo las escrituras del login, por columna", () => {
+  it("lectura en cada tabla, uso de secuencias y solo las escrituras del login y del TOTP, por columna", () => {
     expect(grants.sort()).toEqual(
       [
         "SELECT %I",
@@ -22,11 +24,14 @@ describe("privilegios de inv_app", () => {
         'UPDATE ("claveHash", "sesionVersion", "bloqueadoHasta") usuario',
         'UPDATE ("usadoEn") token_acceso',
         "INSERT intento_ingreso",
+        "INSERT codigo_recuperacion",
+        'UPDATE ("usadoEn", "anuladoEn") codigo_recuperacion',
+        'UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") usuario',
       ].sort(),
     );
   });
 
-  it("las escrituras del login van sin condición (falla cerrada si faltan tablas o columnas)", () => {
+  it("las escrituras del login y del TOTP van sin condición (falla cerrada si faltan tablas o columnas)", () => {
     expect(sql).not.toMatch(/to_regclass/);
   });
 
@@ -46,20 +51,20 @@ describe("privilegios de inv_app", () => {
   });
 });
 
-describe("privilegios del TOTP: bloque PREPARADO y comentado (lo activa el frente TOTP con su migración)", () => {
-  const crudo = leer008("docker/migrador/privilegios.sql");
-
-  it("trae las tres líneas preparadas, comentadas", () => {
-    for (const linea of [
-      "--   GRANT INSERT ON TABLE public.codigo_recuperacion TO inv_app;",
-      '--   GRANT UPDATE ("usadoEn", "anuladoEn") ON TABLE public.codigo_recuperacion TO inv_app;',
-      '--   GRANT UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") ON TABLE public.usuario TO inv_app;',
-    ]) {
-      expect(crudo).toContain(linea);
-    }
+describe("privilegios del TOTP: activos desde su migración", () => {
+  it("las columnas y la tabla existen en la migración del TOTP", () => {
+    const totp = leer008("prisma/migrations/20261121060000_totp/migration.sql");
+    expect(totp).toContain('CREATE TABLE "codigo_recuperacion"');
+    for (const columna of ['"totpSecreto"', '"totpActivadoEn"', '"totpUltimoPaso"', '"presesionHash"', '"usadoEn"', '"anuladoEn"']) expect(totp).toContain(columna);
   });
 
-  it("no hay ningún GRANT activo sobre codigo_recuperacion ni sobre columnas TOTP (fallaría cerrado sin la migración)", () => {
-    expect(sql).not.toMatch(/codigo_recuperacion|totpSecreto|presesionHash/);
+  it("no hay ningún GRANT comentado: lo preparado quedó activo", () => {
+    const crudo = leer008("docker/migrador/privilegios.sql");
+    expect(crudo).not.toMatch(/^\s*--\s*GRANT/m);
+  });
+
+  it("los códigos de recuperación no se borran: ni DELETE ni UPDATE de su hash", () => {
+    expect(sql).not.toMatch(/GRANT[^;]*DELETE[^;]*codigo_recuperacion/);
+    expect(sql).not.toMatch(/GRANT UPDATE \([^)]*"codigoHash"/);
   });
 });

@@ -22,3 +22,14 @@
 .acceso-aviso { min-height: 1.5em; margin: 8px 0 0; font-size: 13px; color: var(--loss); }
 .acceso-listo { margin: 8px 0 0; font-size: 14px; color: var(--gain); }
 .acceso-listo a { color: inherit; font-weight: 700; }
+/* Segundo paso (TOTP): QR siempre oscuro sobre blanco (lo lee la cámara en cualquier tema), la clave en
+   base32 y los códigos de recuperación en monoespaciada, y el cambio de modo como enlace. */
+.acceso-qr { display: block; width: min(100%, 232px); height: auto; margin: 6px auto 10px; border-radius: 8px; }
+.acceso-secreto { font-family: var(--mono); font-size: 14px; letter-spacing: 0.04em; word-break: break-word; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 4px 0 8px; }
+.acceso-codigos { font-family: var(--mono); font-size: 15px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; padding-left: 1.6em; margin: 10px 0 14px; }
+.acceso-pasos { padding-left: 1.2em; margin: 0 0 12px; font-size: 14px; display: grid; gap: 4px; }
+.acceso-form .acceso-enlace, .acceso-enlace { margin-top: 6px; background: transparent; color: var(--fg); text-decoration: underline; font-weight: 600; padding: 6px 0; border-radius: 4px; }
+.acceso-boton { display: inline-block; margin-top: 8px; border: 0; border-radius: 999px; padding: 11px 16px; font-weight: 700; background: var(--gold); color: var(--tinta-boton); text-decoration: none; }
+@media (max-width: 360px) { .acceso-codigos { grid-template-columns: 1fr; } }
+.acceso-copiar { margin: 0 0 8px; }
+.acceso-copiar .nota { min-height: 1.4em; margin: 2px 0 0; }
