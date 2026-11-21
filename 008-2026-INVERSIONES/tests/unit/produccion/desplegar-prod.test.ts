@@ -75,6 +75,9 @@ function crearTar(dir: string, etiquetas: string[], relleno = 0) {
 const tresEtiquetas = (sha: string) => [`inv-008-app:${sha}`, `inv-008-migrador:${sha}`, `inv-008-vigia:${sha}`];
 
 const ultimaLinea = (s: string) => s.trim().split("\n").at(-1);
+/** La única línea que la retención imprime en modo prueba (con el prefijo de informar). */
+const MENSAJE_RETENCION_PRUEBA = "[desplegar-prod] retención: modo prueba (inv-008-prueba), no se borra ninguna imagen ni .tar";
+const lineasDeRetencion = (stderr: string) => stderr.split("\n").filter((l) => l.includes("retención"));
 const indice = (ll: Llamada[], pred: (l: Llamada) => boolean) => ll.findIndex(pred);
 const compose = (sub: string, ...mas: string[]) => (l: Llamada) => l[0] === "docker" && l[1] === "compose" && l.includes(sub) && mas.every((m) => l.includes(m));
 const llamadasCompose = (ll: Llamada[]) => ll.filter((l) => l[0] === "docker" && l[1] === "compose");
@@ -142,13 +145,19 @@ describe("desplegar-prod.sh · camino feliz", () => {
     expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${repo.sha}`);
   });
 
-  it("purga solo imágenes inv-008-* viejas (también inv-008-vigia): nunca la desplegada ni imágenes ajenas", async () => {
+  // Defecto reproducido: en un ensayo en el Mac (inv-008-prueba) la retención borró imágenes inv-008-*:<sha> que eran
+  // las de producción (la Fábrica las construye en el Mac y las envía al VPS). La purga en producción, más abajo.
+  it("modo prueba: la retención no lista ni borra ninguna imagen y lo dice en una sola línea", async () => {
     const viejo = "9".repeat(40);
     const { repo, falsos, env, script } = preparar();
     env.FALSO_IMAGENES = [`inv-008-app:${viejo}`, `inv-008-app:${repo.sha}`, `inv-008-migrador:${viejo}`, `inv-008-vigia:${viejo}`, "pi-app:latest", ""].join("\\n");
-    expect((await correr(script, [ID], env)).status).toBe(0);
-    const borradas = falsos.llamadas().filter((l) => l[0] === "docker" && l[1] === "image" && l[2] === "rm").map((l) => l[3]);
-    expect(borradas.sort()).toEqual([`inv-008-app:${viejo}`, `inv-008-migrador:${viejo}`, `inv-008-vigia:${viejo}`]);
+    const r = await correr(script, [ID], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${repo.sha}`);
+    const deImagen = falsos.llamadas().filter((l) => l[0] === "docker" && l[1] === "image");
+    expect(deImagen.some((l) => l[2] === "inspect"), "control positivo: el registro ve las llamadas de imagen").toBe(true);
+    expect(deImagen.filter((l) => l[2] === "rm" || l[2] === "ls")).toEqual([]);
+    expect(lineasDeRetencion(r.stderr)).toEqual([MENSAJE_RETENCION_PRUEBA]);
   });
 });
 
@@ -335,7 +344,7 @@ describe("desplegar-prod.sh · reversa (--sin-migrar) y carga del .tar", () => {
     expect(falsos.llamadas().some((l) => l[1] === "load")).toBe(false);
   });
 
-  it("purga los .tar viejos de imagenes/: conserva los del sha actual y del anterior", async () => {
+  it("modo prueba: la retención no borra ningún .tar de imagenes/, tampoco los de shas viejos", async () => {
     const { repo, base, env, script } = preparar();
     const dir = path.join(base, "imagenes");
     mkdirSync(dir);
@@ -346,10 +355,23 @@ describe("desplegar-prod.sh · reversa (--sin-migrar) y carga del .tar", () => {
     writeFileSync(path.join(dir, "otro-archivo.txt"), "x");
     mkdirSync(path.join(base, "estado"), { recursive: true });
     writeFileSync(path.join(base, "estado", "sha-anterior"), `${"2".repeat(40)}\n`);
-    expect((await correr(script, [ID], env)).status).toBe(0);
-    expect(readdirSync(dir).sort()).toEqual(
-      ["otro-archivo.txt", `inv-008-${"2".repeat(40)}.tar`, `inv-008-${"2".repeat(40)}.tar.sha256`, `inv-008-${repo.sha}.tar`, `inv-008-${repo.sha}.tar.sha256`].sort(),
-    );
+    const antes = readdirSync(dir).sort();
+    expect(antes).toHaveLength(7);
+    const r = await correr(script, [ID], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(readdirSync(dir).sort()).toEqual(antes);
+    expect(lineasDeRetencion(r.stderr)).toEqual([MENSAJE_RETENCION_PRUEBA]);
+  });
+
+  it("modo prueba: la reversa (--sin-migrar) tampoco borra imágenes", async () => {
+    const { base, falsos, env, script } = preparar();
+    env.FALSO_IMAGENES = [...tresEtiquetas("9".repeat(40)), ""].join("\\n");
+    mkdirSync(path.join(base, "estado"), { recursive: true });
+    writeFileSync(path.join(base, "estado", "imagen-actual"), `${ID}\n`);
+    const r = await correr(script, [ID, "--sin-migrar"], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(falsos.llamadas().filter((l) => l[0] === "docker" && l[1] === "image" && (l[2] === "rm" || l[2] === "ls"))).toEqual([]);
+    expect(lineasDeRetencion(r.stderr)).toEqual([MENSAJE_RETENCION_PRUEBA]);
   });
 });
 
@@ -683,6 +705,89 @@ describe("desplegar-prod.sh · tamaño del pool de la app (connection_limit): so
     expect(r.status, r.stderr).toBe(0);
     expect(r.stderr).not.toMatch(/connection_limit/);
   });
+});
+
+// La retención borra solo en producción. El modo producción no corre entero como usuario (exige las anclas de root),
+// así que aquí se prueban las funciones con `funcion` y el proyecto fijado DESPUÉS del source. Cinturón: antes de
+// nada, el docker que resuelve el PATH tiene que ser el falso (si no, sale 97 sin llamar a nada); y el control
+// positivo de producción exige ver los `docker image ls` en el registro del falso.
+describe("desplegar-prod.sh · retención: borra solo en producción", () => {
+  const script = ruta008("scripts/desplegar-prod.sh");
+  const actual = "a".repeat(40);
+  const anterior = "b".repeat(40);
+  const viejo = "c".repeat(40);
+  const CINTURON = '[ "$(command -v docker)" = "$FALSO_BIN/docker" ] || exit 97';
+  const fijar = (proyecto: string | null) =>
+    [
+      CINTURON,
+      proyecto === null ? "unset INV_PROYECTO_ACTIVO" : `INV_PROYECTO_ACTIVO='${proyecto}'`,
+      'INV_RAIZ="$T_BASE"',
+      'INV_ESTADO_DIR="$T_BASE/estado"',
+      `SHA='${actual}'`,
+    ].join("; ");
+  const borradas = (ll: Llamada[]) => ll.filter((l) => l[0] === "docker" && l[1] === "image" && l[2] === "rm").map((l) => l[3]);
+
+  /** Raíz temporal con el sha anterior en estado/, .tar de tres shas y un archivo ajeno; el docker falso lista imágenes de los tres y una ajena. */
+  function prepararRetencion() {
+    const base = carpetaTemporal("retencion");
+    const falsos = crearFalsos(base);
+    mkdirSync(path.join(base, "estado"));
+    writeFileSync(path.join(base, "estado", "sha-anterior"), `${anterior}\n`);
+    const dir = path.join(base, "imagenes");
+    mkdirSync(dir);
+    for (const s of [actual, anterior, viejo]) {
+      writeFileSync(path.join(dir, `inv-008-${s}.tar`), "x");
+      writeFileSync(path.join(dir, `inv-008-${s}.tar.sha256`), "x");
+    }
+    writeFileSync(path.join(dir, "otro-archivo.txt"), "x");
+    const imagenes = [...tresEtiquetas(actual), ...tresEtiquetas(anterior), ...tresEtiquetas(viejo), "pi-app:latest", ""];
+    const env = entorno(falsos, { FALSO_BIN: falsos.bin, FALSO_IMAGENES: imagenes.join("\\n"), T_BASE: base });
+    return { dir, falsos, env };
+  }
+  const conservados = [`inv-008-${actual}.tar`, `inv-008-${actual}.tar.sha256`, `inv-008-${anterior}.tar`, `inv-008-${anterior}.tar.sha256`, "otro-archivo.txt"].sort();
+
+  it("retencion_permitida: verdadera solo con inv-008-prod (cualquier otro valor, vacío o sin definir: falsa)", () => {
+    expect(funcion(script, "INV_PROYECTO_ACTIVO=inv-008-prod; retencion_permitida").status).toBe(0);
+    for (const otro of ["inv-008-prueba", "inv-008", "", "INV-008-PROD", "inv-008-prod "]) {
+      expect(funcion(script, `INV_PROYECTO_ACTIVO='${otro}'; retencion_permitida`).status, `«${otro}»`).not.toBe(0);
+    }
+    expect(funcion(script, "unset INV_PROYECTO_ACTIVO; retencion_permitida").status).not.toBe(0);
+  });
+
+  it("producción (retener, como lo llama main): borra solo las imágenes y los .tar de shas que no son el actual ni el anterior", () => {
+    const { dir, falsos, env } = prepararRetencion();
+    const r = funcion(script, `${fijar("inv-008-prod")}; retener`, env);
+    expect(r.status, r.stderr).toBe(0);
+    const ll = falsos.llamadas();
+    expect(ll.filter((l) => l[0] === "docker" && l[1] === "image" && l[2] === "ls"), "control positivo: corrió el docker falso").toHaveLength(3);
+    expect(borradas(ll).sort()).toEqual(tresEtiquetas(viejo).sort());
+    expect(readdirSync(dir).sort()).toEqual(conservados);
+    expect(r.stderr).not.toContain("modo prueba");
+  });
+
+  it("producción (purgar_imagenes y purgar_tars): igual que antes de la corrección", () => {
+    const { dir, falsos, env } = prepararRetencion();
+    const r = funcion(script, `${fijar("inv-008-prod")}; purgar_imagenes; purgar_tars`, env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(borradas(falsos.llamadas()).sort()).toEqual(tresEtiquetas(viejo).sort());
+    expect(readdirSync(dir).sort()).toEqual(conservados);
+  });
+
+  for (const [nombre, proyecto] of [
+    ["inv-008-prueba", "inv-008-prueba"],
+    ["inv-008 (desarrollo)", "inv-008"],
+    ["proyecto vacío", ""],
+    ["proyecto sin definir", null],
+  ] as const) {
+    it(`${nombre}: purgar_imagenes y purgar_tars no llaman a docker ni borran ningún .tar`, () => {
+      const { dir, falsos, env } = prepararRetencion();
+      const antes = readdirSync(dir).sort();
+      const r = funcion(script, `${fijar(proyecto)}; purgar_imagenes; purgar_tars`, env);
+      expect(r.status, r.stderr).toBe(0);
+      expect(falsos.llamadas().filter((l) => l[0] === "docker")).toEqual([]);
+      expect(readdirSync(dir).sort()).toEqual(antes);
+    });
+  }
 });
 
 describe("desplegar-prod.sh · funciones puras", () => {
