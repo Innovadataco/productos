@@ -48,5 +48,32 @@ describe("runbook §6 · prueba de restauración mensual", () => {
     expect(b).toContain("Terminal de macOS");
     expect(b).toMatch(/nunca en una sesión de Claude/);
     expect(b).toMatch(/PI y BI/);
+    expect(b).toContain("Portapapeles Universal");
+    expect(b).toMatch(/historial del portapapeles/);
+  });
+
+  it("todo docker run pasa por D, que va sin red; los montajes son de solo lectura y la clave nunca va en un archivo", () => {
+    const b = pruebaMensual();
+    const comandos = [...b.matchAll(/```sh\n([\s\S]*?)```/g)].map((m) => m[1] ?? "").join("\n");
+    expect(comandos.match(/docker run/g)).toHaveLength(1);
+    expect(comandos).toMatch(/D=\(docker run --rm -i --network none --platform linux\/amd64\)/);
+    const montajes = [...b.matchAll(/-v (\S+)/g)].map((m) => m[1]);
+    expect(montajes.length).toBeGreaterThan(0);
+    for (const m of montajes) expect(m).toMatch(/:ro$/);
+    expect(b).not.toMatch(/age -d -i (?!- )/);
+    expect(b).toContain("shasum -a 256 -c");
+  });
+
+  it("un fallo de age o de pg_restore no sale como un resultado (sin pipefail, el awk imprimía ceros)", () => {
+    const b = pruebaMensual();
+    expect(b).toContain("set -o pipefail");
+    expect(b).toContain('FALLÓ: no se leyó ninguna tabla');
+    expect(b).toContain('|| echo "FALLÓ: la prueba no pasó"');
+  });
+
+  it("los bloques para pegar no llevan comentarios # (zsh interactivo no los reconoce por defecto)", () => {
+    const bloques = [...pruebaMensual().matchAll(/```sh\n([\s\S]*?)```/g)].map((m) => m[1] ?? "");
+    expect(bloques.length).toBeGreaterThanOrEqual(4);
+    for (const bloque of bloques) expect(bloque).not.toMatch(/\s#\s/);
   });
 });
