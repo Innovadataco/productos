@@ -30,7 +30,19 @@ PASADAS_OK="${VIGIA_PASADAS_OK:-3}"
 OOM_CALMA_S="${VIGIA_OOM_CALMA_S:-900}"
 INTERVALO_S="${VIGIA_INTERVALO_S:-60}"
 API="${TELEGRAM_API:-https://api.telegram.org}"
-CORTE="${VIGIA_COMANDO_CORTE:-ssh pi-vps sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/pausar-008.sh}"
+# El comando de corte: la ruta de pausar-008.sh la pasan los scripts (derivada del clon). Si falta o no es una
+# ruta absoluta de caracteres [A-Za-z0-9_./-], el aviso lleva el marcador: la ruta real no va en el repo.
+RUTA_PAUSA="${VIGIA_RUTA_PAUSA:-}"
+case "$RUTA_PAUSA" in
+  /*[!A-Za-z0-9_./-]* | *..*) RUTA_PAUSA="" ;;
+  /*) ;;
+  *) RUTA_PAUSA="" ;;
+esac
+if [ -n "$RUTA_PAUSA" ]; then
+  CORTE="ssh pi-vps sudo $RUTA_PAUSA"
+else
+  CORTE="ssh pi-vps sudo <raíz>/repo/008-2026-INVERSIONES/scripts/pausar-008.sh (<raíz>: ver ESTADO en la gestión)"
+fi
 
 # Hora de Colombia (UTC-5, sin horario de verano) sin depender de tzdata.
 hora_cot() { TZ=COT5 date '+%Y-%m-%d %H:%M COT'; }

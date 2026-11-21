@@ -11,8 +11,12 @@ if [ "${1:-}" = "compose" ]; then
     esac
   done
   todo=" $* "
+  # El entorno con que llegó cada compose (las dos variables que pasan los scripts con `env`): archivo aparte,
+  # para no correr las columnas del registro.
+  [ -z "${FALSO_ENTORNO:-}" ] || printf '%s\t%s\t%s\n' "$sub" "${INV_RESPALDOS_DIR-<sin>}" "${INV_RUTA_PAUSA-<sin>}" >>"$FALSO_ENTORNO"
   case "$sub" in
     up)
+      if [ -n "${FALSO_BORRAR_EN_UP:-}" ] && [ -e "$FALSO_BORRAR_EN_UP" ]; then rm -rf "$FALSO_BORRAR_EN_UP"; fi
       [ -z "${FALSO_TAGS:-}" ] || printf 'up %s %s\n' "${INV_TAG:-}" "$*" >>"$FALSO_TAGS"
       case "$todo" in
         *" inv-008-app "*) [ -z "${FALSO_UP_FALLA_TAG:-}" ] || [ "${INV_TAG:-}" != "$FALSO_UP_FALLA_TAG" ] || exit 1 ;;
@@ -23,6 +27,8 @@ if [ "${1:-}" = "compose" ]; then
       if [ -n "${FALSO_SONDA_MARCA:-}" ]; then
         if [ -e "$FALSO_SONDA_MARCA" ]; then echo marca-presente >"$FALSO_SONDA_SALIDA"; else echo marca-ausente >"$FALSO_SONDA_SALIDA"; fi
       fi
+      # FALSO_DOWN_SIN_F_RC: el código del down solo con el nombre del proyecto (sin -f), p. ej. un compose viejo.
+      case "$todo" in *" -f "*) ;; *) [ -z "${FALSO_DOWN_SIN_F_RC:-}" ] || exit "$FALSO_DOWN_SIN_F_RC" ;; esac
       exit "${FALSO_DOWN_RC:-0}" ;;
     ps)
       case "$todo" in
@@ -56,6 +62,10 @@ if [ "${1:-}" = "compose" ]; then
         *" inv-008-respaldo "*)
           if [ "${FALSO_AGE_RC:-0}" != "0" ]; then cat >/dev/null; exit "${FALSO_AGE_RC}"; fi
           printf 'age-encryption.org/v1\n'; tr 'A-Za-z' 'N-ZA-Mn-za-m'; exit 0 ;;
+        *" /usr/local/bin/inv-cargar "*)
+          # La carga: el sobre llega por stdin; se guarda tal cual (FALSO_RUN_STDIN) para compararlo.
+          if [ -n "${FALSO_RUN_STDIN:-}" ]; then cat >"$FALSO_RUN_STDIN"; else cat >/dev/null; fi
+          exit "${FALSO_CARGA_RC:-0}" ;;
         *" inv-008-migrador "*) exit "${FALSO_MIGRADOR_RC:-0}" ;;
       esac
       exit 0 ;;

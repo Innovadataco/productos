@@ -5,7 +5,7 @@
 --     psql "postgresql://…/inversiones" -X -v ON_ERROR_STOP=1 -f scripts/contar-sin-validar.sql
 --   VPS (con $COMPOSE como en docs/despliegue/produccion.md):
 --     sudo $COMPOSE exec -T inv-008-db psql -X -v ON_ERROR_STOP=1 -U inv_dueno -d inversiones \
---       < /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/contar-sin-validar.sql
+--       < <raíz>/repo/008-2026-INVERSIONES/scripts/contar-sin-validar.sql   (<raíz>: ver ESTADO en la gestión)
 -- Si todas dan 0, el VALIDATE CONSTRAINT entra en una migración posterior (nunca a mano: AGENTS.md lo
 -- prohíbe) y el nombre sale de `sin_validar` en scripts/verificar-esquema.sql. Si alguna no da 0, esas filas
 -- se revisan antes con el CEO; mientras tanto el CHECK protege igual cada fila nueva o modificada.

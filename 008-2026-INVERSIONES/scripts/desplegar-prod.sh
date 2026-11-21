@@ -3,7 +3,7 @@
 # de PI: candado, guarda de disco, migraciones ANTES de servir (contenedor de un solo uso), healthcheck y
 # «DEPLOY VERIFICADO <sha>» como ÚLTIMA línea solo si todo pasó. Las imágenes se construyen en el Mac.
 #
-# Uso (en el VPS, con sudo, desde el clon /opt/inversiones-008/repo puesto en el sha):
+# Uso (en el VPS, con sudo, desde el clon <raíz>/repo puesto en el sha; <raíz>: ver ESTADO en la gestión):
 #   sudo scripts/desplegar-prod.sh <id-imagen | inv-008-app:<sha>> [--cargar <archivo.tar> <sha256>]
 #   sudo scripts/desplegar-prod.sh inv-008-app:<sha> --sin-migrar     (reversa a la imagen actual o anterior;
 #                                                                     no consulta GitHub)
@@ -151,7 +151,7 @@ verificar_ci() {
 verificar_clon() {
   local sha="$1" cabeza
   cabeza="$(git -C "$INV_DIR_008" rev-parse HEAD)"
-  [ "$cabeza" = "$sha" ] || morir "el clon está en $cabeza, no en $sha: git -C /opt/inversiones-008/repo fetch && git checkout $sha"
+  [ "$cabeza" = "$sha" ] || morir "el clon está en $cabeza, no en $sha: git -C $(dirname "$INV_DIR_008") fetch && git -C $(dirname "$INV_DIR_008") checkout $sha"
   [ -z "$(git -C "$INV_DIR_008" status --porcelain --untracked-files=no)" ] || morir "el clon tiene cambios sin commit: no se despliega"
 }
 
@@ -292,6 +292,10 @@ vuelta_atras() {
   elif [ "$VERIFICADO" = 0 ] && [ -z "$sha" ] && [ "$DETENIDOS" = 1 ]; then
     informar "⚠️  no hay imagen a la que volver (primer despliegue): lo detenido para migrar queda abajo"
   fi
+  if [ "$VERIFICADO" = 0 ] && [ -n "$sha" ] && ! respaldos_siguen_validos; then
+    informar "⚠️  la carpeta de respaldos dejó de pasar la validación: no se vuelve a levantar nada. Revise a mano (produccion.md §5)."
+    sha=""
+  fi
   if [ "$VERIFICADO" = 0 ] && [ -n "$sha" ]; then
     informar "vuelta atrás: levantando de nuevo la imagen que corría (sha $sha)"
     if INV_TAG="$sha" "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${PERMANENTES[@]}"; then
@@ -344,6 +348,7 @@ main() {
   trap vuelta_atras EXIT
 
   informar "base y respaldo: up --wait"
+  respaldos_siguen_validos || morir "la carpeta de respaldos dejó de pasar la validación antes del up"
   "${COMPOSE[@]}" up -d --wait --wait-timeout 180 inv-008-db inv-008-respaldo
   verificar_roles
   if [ "$sin_migrar" = 0 ]; then
@@ -364,6 +369,7 @@ main() {
   fi
 
   revisar_pi "antes de up"
+  respaldos_siguen_validos || morir "la carpeta de respaldos dejó de pasar la validación antes del up"
   informar "app, vigía y respaldo: up --wait"
   "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${PERMANENTES[@]}"
   # La app y el respaldo ya están arriba: si algo falla después, se vuelve solo si hay otra imagen.

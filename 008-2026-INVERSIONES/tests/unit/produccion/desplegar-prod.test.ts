@@ -34,7 +34,7 @@ function preparar(extra: Record<string, string> = {}) {
   const repo = crearRepo(COPIAR);
   const base = carpetaTemporal("desplegar");
   envProduccionFicticio(base);
-  mkdirSync(path.join(base, "respaldos"));
+  mkdirSync(path.join(base, "respaldos"), { recursive: true });
   const cgroup = path.join(base, "cgroup");
   mkdirSync(path.join(cgroup, "system.slice"), { recursive: true });
   writeFileSync(path.join(cgroup, "system.slice", "memory.events"), "oom 0\noom_kill 0\n");

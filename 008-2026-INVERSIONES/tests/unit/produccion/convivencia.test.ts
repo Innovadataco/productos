@@ -1,9 +1,9 @@
 // Convivencia con PI en el VPS compartido: medir-memoria.sh, vigilar-convivencia.sh (una pasada: detecta
 // y detiene solo Inversiones), pausar-008.sh / reanudar-008.sh (sin tocar datos) y crear-acceso-inicial.sh.
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, ruta008, type Llamada } from "./falsos";
+import { carpetaTemporal, correr, crearFalsos, DIR_008, entorno, envProduccionFicticio, ruta008, type Llamada } from "./falsos";
 
 // Cada prueba corre scripts de bash con varios procesos: con la suite en paralelo puede pasar de 5 s.
 vi.setConfig({ testTimeout: 60_000 });
@@ -124,7 +124,8 @@ describe("vigilar-convivencia.sh · una pasada: solo detecta e informa (el corte
     const r = await correr(VIGILAR, [], env);
     expect(r.status).toBe(3);
     expect(r.stderr).toMatch(/OOM/);
-    expect(r.stderr).toContain("/opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/pausar-008.sh");
+    // El comando sale de la ubicación real del clon, nunca de una ruta escrita en el repo.
+    expect(r.stderr).toContain(`sudo ${path.join(realpathSync(DIR_008), "scripts/pausar-008.sh")}`);
     expect(docker(falsos.llamadas())).toEqual([]);
   });
 

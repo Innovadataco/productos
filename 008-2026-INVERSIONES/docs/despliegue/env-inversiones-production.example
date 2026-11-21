@@ -1,5 +1,8 @@
 # Inversiones · plantilla del ÚNICO archivo de producción, SIN VALORES.
-# En el VPS va en /opt/inversiones-008/.env.inversiones.production: dueño root, permisos 600, fuera de git.
+# En el VPS va en <raíz>/.env.inversiones.production: dueño root, permisos 600, fuera de git. <raíz> es la carpeta
+# que contiene al clon <raíz>/repo (el valor, en el ESTADO de la gestión).
+# NO lleva INV_RESPALDOS_DIR ni INV_RUTA_PAUSA: las ponen los scripts (la carpeta de respaldos sale de la
+# configuración no secreta <raíz>/inv-008.conf; ver inv-008.conf.example). Si estuvieran aquí, los scripts se niegan.
 # (En el repo se llama así y no .env.*: el candado de datos reales rechaza cualquier .env versionado.)
 #
 # Se usa SOLO como --env-file de Compose para la interpolación: ningún servicio lo carga con env_file y cada
@@ -10,7 +13,7 @@
 # Superusuario de PostgreSQL. Solo lo usa la imagen de la base al crearse.   openssl rand -hex 32
 INV_POSTGRES_CLAVE=
 
-# Rol inv_dueno: migrador, comandos de carga y acceso inicial.   clave: openssl rand -hex 32
+# Rol inv_dueno: migrador, comandos de carga, acceso inicial y respaldo diario.   clave: openssl rand -hex 32
 # (solo letras y números: va dentro de la URL sin codificar)
 INV_DUENO_DATABASE_URL=postgresql://inv_dueno:<clave>@inv-008-db:5432/inversiones?schema=public&connection_limit=3
 
@@ -21,7 +24,7 @@ INV_APP_DATABASE_URL=postgresql://inv_app:<clave>@inv-008-db:5432/inversiones?sc
 INV_AUTH_SECRET=
 
 # Cifrado (contrato del frente cifrado): la clave activa y la clave v1 (32 bytes en base64:
-# openssl rand -base64 32). El formato de CIFRADO_CLAVE_ACTIVA lo fija ese frente (por confirmar).
+# openssl rand -base64 32). CIFRADO_CLAVE_ACTIVA tiene el formato v<n> (p. ej. v1), que lee src/cifrado/llavero.ts.
 INV_CIFRADO_CLAVE_ACTIVA=
 INV_CIFRADO_CLAVE_V1=
 
@@ -40,9 +43,12 @@ INV_TELEGRAM_CHAT_ID=
 # INV_VIGIA_UMBRAL_MEMAVAILABLE_MIB=1024
 # INV_VIGIA_INTERVALO_S=60
 
-# Respaldo diario: gid NUMÉRICO del grupo «respaldo» del VPS (getent group respaldo), dueño de lectura de
-# /var/backups/idc/. Lo lee el coordinador en el VPS al desplegar.
+# Respaldo diario: gid NUMÉRICO del grupo «respaldo» del VPS (getent group respaldo). Los respaldos quedan legibles
+# para ese grupo (la copia de IDC). Lo escribe quien despliega (produccion.md §2). Nunca 0: los scripts lo rechazan.
 INV_RESPALDO_GID=
 
 # Opcional: hora del respaldo diario (HHMM, COT).
 # INV_RESPALDO_HORA=0230
+
+# ---
+# v1.1 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · formato de CIFRADO_CLAVE_ACTIVA (v<n>) según el código; quién escribe INV_RESPALDO_GID; el respaldo diario también usa inv_dueno

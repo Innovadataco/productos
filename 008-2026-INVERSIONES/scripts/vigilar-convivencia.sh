@@ -35,7 +35,7 @@ main() {
 
   if [ "${#motivos[@]}" -gt 0 ]; then
     informar "CRITERIO DE CORTE: ${motivos[*]}"
-    informar "el corte es MANUAL: sudo /opt/inversiones-008/repo/008-2026-INVERSIONES/scripts/pausar-008.sh"
+    informar "el corte es MANUAL: sudo $INV_DIR_008/scripts/pausar-008.sh"
     exit 3
   fi
   informar "OK: MemAvailable $((disponible / 1024)) MiB; sin OOM nuevos (oom_kill jerárquico $total)"

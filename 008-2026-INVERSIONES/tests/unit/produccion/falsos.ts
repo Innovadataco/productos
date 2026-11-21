@@ -109,8 +109,35 @@ export function crearRepo(copiar: string[], archivos: Record<string, string> = {
   return { dir, dir008, sha: git(dir, ["rev-parse", "HEAD"]) };
 }
 
-/** Archivo de producción ficticio (`.env.inversiones.production`) para el proyecto de prueba. */
-export function envProduccionFicticio(base: string, cambios: Record<string, string> = {}): string {
+/**
+ * Configuración no secreta ficticia (`<base>/inv-008.conf`): una sola línea con la carpeta de respaldos, que por
+ * defecto queda dentro de la base de prueba (la carpeta se crea). `contenido` reemplaza el archivo entero.
+ */
+export function confFicticia(base: string, respaldos = path.join(base, "respaldos"), contenido?: string): string {
+  mkdirSync(respaldos, { recursive: true });
+  const archivo = path.join(base, "inv-008.conf");
+  writeFileSync(archivo, contenido ?? `INV_RESPALDOS_DIR=${respaldos}\n`, { mode: 0o644 });
+  return archivo;
+}
+
+/**
+ * Árbol de producción falso: `<raíz>/<clon>/008-2026-INVERSIONES/` con copias de los scripts pedidos (siempre
+ * produccion-comun.sh) y, salvo `sinEnv`, el archivo de producción y la configuración ficticios en la raíz.
+ * La raíz de producción se deriva de la ubicación del script: así se prueba sin rutas reales.
+ */
+export function arbolProduccionFalso(opciones: { clon?: string; sinEnv?: boolean; copiar?: string[] } = {}) {
+  const raiz = carpetaTemporal("raiz-prod");
+  const dir008 = path.join(raiz, opciones.clon ?? "repo", "008-2026-INVERSIONES");
+  for (const relativa of ["scripts/produccion-comun.sh", ...(opciones.copiar ?? [])]) {
+    mkdirSync(path.dirname(path.join(dir008, relativa)), { recursive: true });
+    copyFileSync(ruta008(relativa), path.join(dir008, relativa));
+  }
+  if (!opciones.sinEnv) envProduccionFicticio(raiz);
+  return { raiz, dir008, comun: path.join(dir008, "scripts", "produccion-comun.sh") };
+}
+
+/** Archivo de producción ficticio (`.env.inversiones.production`) para el proyecto de prueba, con su configuración. */
+export function envProduccionFicticio(base: string, cambios: Record<string, string> = {}, opciones: { sinConf?: boolean } = {}): string {
   const valores: Record<string, string> = {
     INV_POSTGRES_CLAVE: "a".repeat(64),
     INV_DUENO_DATABASE_URL: `postgresql://inv_dueno:${"b".repeat(64)}@inv-008-db:5432/inversiones?schema=public&connection_limit=3`,
@@ -133,5 +160,6 @@ export function envProduccionFicticio(base: string, cambios: Record<string, stri
       .join("\n") + "\n",
     { mode: 0o600 },
   );
+  if (!opciones.sinConf) confFicticia(base);
   return archivo;
 }

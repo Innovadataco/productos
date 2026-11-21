@@ -1,10 +1,11 @@
 // respaldar-base.sh (en el host): le pide un respaldo ya al contenedor inv-008-respaldo (exec --ahora) y
-// verifica en /opt/inversiones-008/respaldos que el archivo exista, sea de age y cuadre con su sha256.
+// verifica en la carpeta de respaldos de la configuración (inv-008.conf) que el archivo exista, sea de age y
+// cuadre con su sha256.
 // El cifrado y la retención los prueba respaldo-contenedor.test.ts.
-import { mkdirSync, symlinkSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, ruta008 } from "./falsos";
+import { carpetaTemporal, confFicticia, correr, crearFalsos, entorno, envProduccionFicticio, ruta008 } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -14,7 +15,7 @@ function preparar(extra: Record<string, string> = {}) {
   const base = carpetaTemporal("respaldo-host");
   envProduccionFicticio(base);
   const respaldos = path.join(base, "respaldos");
-  mkdirSync(respaldos);
+  mkdirSync(respaldos, { recursive: true });
   const falsos = crearFalsos(base);
   const env = entorno(falsos, { INV_PROYECTO: "inv-008-prueba", INV_BASE: base, FALSO_RESPALDOS_DIR: respaldos, ...extra });
   return { base, respaldos, falsos, env };
@@ -48,9 +49,34 @@ describe("respaldar-base.sh", () => {
     expect(falsos.llamadas().filter((l) => l[0] === "docker")).toEqual([]);
   });
 
+  it("verifica en la carpeta que dice la configuración, no en una fija", async () => {
+    const base = carpetaTemporal("respaldo-host-conf");
+    envProduccionFicticio(base, {}, { sinConf: true });
+    const otra = path.join(base, "otra", "carpeta");
+    confFicticia(base, otra);
+    const falsos = crearFalsos(base);
+    const env = entorno(falsos, { INV_PROYECTO: "inv-008-prueba", INV_BASE: base, FALSO_RESPALDOS_DIR: otra });
+    const r = await correr(SCRIPT, [], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout.trim()).toBe(path.join(otra, "inv-008-20261121-023000.dump.age"));
+  });
+
+  it("sin la configuración no verifica nada ni llama a Docker", async () => {
+    const base = carpetaTemporal("respaldo-host-sin-conf");
+    envProduccionFicticio(base, {}, { sinConf: true });
+    const falsos = crearFalsos(base);
+    // FALSO_RESPALDOS_DIR siempre definido: si el docker falso llegara a correr, escribe en un temporal.
+    const env = entorno(falsos, { INV_PROYECTO: "inv-008-prueba", INV_BASE: base, FALSO_RESPALDOS_DIR: carpetaTemporal("sin-conf-falso") });
+    const r = await correr(SCRIPT, [], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/inv-008\.conf/);
+    expect(falsos.llamadas().filter((l) => l[0] === "docker")).toEqual([]);
+  });
+
   it("candado de rutas: si respaldos es un enlace que sale de la raíz, no sigue", async () => {
     const base = carpetaTemporal("respaldo-host-enlace");
-    envProduccionFicticio(base);
+    envProduccionFicticio(base, {}, { sinConf: true });
+    writeFileSync(path.join(base, "inv-008.conf"), `INV_RESPALDOS_DIR=${base}/respaldos\n`);
     const afuera = carpetaTemporal("afuera");
     symlinkSync(afuera, path.join(base, "respaldos"));
     const falsos = crearFalsos(base);

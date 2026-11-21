@@ -91,6 +91,8 @@ describe("Dockerfile de producción", () => {
     expect(cuerpo).toMatch(/COPY scripts \.\/scripts/);
     expect(cuerpo).toMatch(/docker\/migrador\/privilegios\.sql/);
     expect(cuerpo).toMatch(/CMD \["\/usr\/local\/bin\/inv-migrar"\]/);
+    // La carga sin copias en el VPS: el sobre por stdin, el temporal en el tmpfs del migrador.
+    expect(cuerpo).toMatch(/^COPY --chmod=0555 docker\/migrador\/cargar\.sh \/usr\/local\/bin\/inv-cargar$/m);
     const lock = JSON.parse(leer008("package-lock.json")) as { packages: Record<string, { version?: string }> };
     expect(lock.packages["node_modules/prisma"]?.version).toBe("5.22.0");
     expect(lock.packages["node_modules/tsx"]?.version).toBeDefined();

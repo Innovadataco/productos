@@ -3,7 +3,16 @@
 // cada servicio con solo sus variables (el archivo de producción es solo para interpolar).
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
-import { leer008 } from "./falsos";
+import { funcion, leer008, ruta008 } from "./falsos";
+
+// El valor por defecto de la carpeta de respaldos: una ruta que no existe (el script la define en un solo lugar).
+const CENTINELA = funcion(ruta008("scripts/produccion-comun.sh"), 'printf "%s" "$INV_RESPALDOS_CENTINELA"').stdout;
+const BIND_RESPALDOS: Bind = {
+  type: "bind",
+  source: `\${INV_RESPALDOS_DIR:-${CENTINELA}}`,
+  target: "/respaldos",
+  bind: { create_host_path: false },
+};
 
 type Servicio = {
   image: string;
@@ -24,7 +33,8 @@ type Servicio = {
   network_mode?: string;
   environment?: Record<string, string>;
   env_file?: unknown;
-  volumes?: string[];
+  volumes?: Array<string | Bind>;
+  ulimits?: Record<string, number>;
   healthcheck?: { test: string[] };
   logging?: { driver: string; options?: Record<string, string> };
   profiles?: string[];
@@ -33,6 +43,7 @@ type Servicio = {
   group_add?: unknown;
   secrets?: unknown;
 };
+type Bind = { type: string; source: string; target: string; read_only?: boolean; bind?: { create_host_path?: boolean } };
 type Compose = {
   name: string;
   services: Record<string, Servicio>;
@@ -83,7 +94,7 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(s("inv-008-vigia").volumes).toEqual(["/proc/meminfo:/host/meminfo:ro", "/sys/fs/cgroup:/host/cgroup:ro"]);
     expect(s("inv-008-vigia").networks).toEqual(["inv-008-red"]);
     expect((s("inv-008-vigia") as { cpus?: number }).cpus).toBe(0.05);
-    expect(s("inv-008-respaldo").volumes).toEqual(["/var/backups/idc/inversiones:/respaldos"]);
+    expect(s("inv-008-respaldo").volumes).toEqual([BIND_RESPALDOS]);
     for (const [nombre, srv] of Object.entries(compose.services)) {
       if (!["inv-008-vigia", "inv-008-db", "inv-008-respaldo"].includes(nombre)) expect(srv.volumes, nombre).toBeUndefined();
     }
@@ -99,7 +110,7 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
   it("ÚNICA excepción a «no root»: el respaldo corre como root DEL CONTENEDOR con el grupo respaldo, sin ninguna capacidad", () => {
     // Así deja los archivos root:respaldo 0640 en la carpeta root:respaldo 750 que montó el CEO de PI, sin
     // pedirle cambiarla. Sin capacidades, ese root no salta permisos (DAC) ni cambia dueños: solo escribe
-    // donde root ya es dueño, y su único bind de escritura es /var/backups/idc/inversiones.
+    // donde root ya es dueño, y su único bind de escritura es la carpeta de respaldos (de la configuración).
     const r = s("inv-008-respaldo");
     expect(r.user).toBe("0:${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}");
     expect(r.cap_drop).toEqual(["ALL"]);
@@ -107,10 +118,31 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(r.security_opt).toEqual(["no-new-privileges:true"]);
     expect(r.read_only).toBe(true);
     expect(r.tmpfs).toEqual(["/run/respaldo", "/tmp"]);
-    expect(r.volumes).toEqual(["/var/backups/idc/inversiones:/respaldos"]);
+    expect(r.volumes).toEqual([BIND_RESPALDOS]);
     expect((r as { privileged?: boolean }).privileged).toBeUndefined();
     const usuarios = Object.entries(compose.services).filter(([, x]) => /^0(:|$)/.test(x.user ?? "")).map(([n]) => n);
     expect(usuarios).toEqual(["inv-008-respaldo"]);
+  });
+
+  it("la carpeta de respaldos no está escrita en el compose: viene de la configuración por interpolación", () => {
+    expect(CENTINELA).toMatch(/^\/nonexistent\/[a-z0-9-]+$/);
+    // Sintaxis larga sin crear la carpeta: sin la variable, el up del respaldo falla cerrado (no crea nada).
+    const [bind] = s("inv-008-respaldo").volumes as Bind[];
+    expect(bind?.bind?.create_host_path).toBe(false);
+    // Con el valor por defecto ningún comando falla al interpolar (la pausa y lo que se corre a mano).
+    expect(texto).not.toMatch(/INV_RESPALDOS_DIR:\?/);
+  });
+
+  it("las únicas rutas del host son /proc/meminfo y /sys/fs/cgroup (vigía, solo lectura) y la carpeta de respaldos", () => {
+    const delHost = Object.values(compose.services)
+      .flatMap((srv) => srv.volumes ?? [])
+      .map((v) => (typeof v === "string" ? v.split(":")[0]! : v.source))
+      .filter((origen) => origen.startsWith("/") || origen.startsWith("$"));
+    expect(delHost.sort()).toEqual(["/proc/meminfo", "/sys/fs/cgroup", BIND_RESPALDOS.source].sort());
+  });
+
+  it("ningún servicio deja volcados de memoria (ulimits core 0): el host los escribiría en disco", () => {
+    for (const nombre of SERVICIOS) expect(s(nombre).ulimits, nombre).toEqual({ core: 0 });
   });
 
   it("el respaldo es permanente (programación propia, sin systemd) y va solo por la red interna", () => {
@@ -236,9 +268,10 @@ describe("docker-compose.prod.yml · variables: un solo archivo de producción, 
     expect(s("inv-008-respaldo").environment?.RESPALDO_GID).toBe("${INV_RESPALDO_GID:?falta INV_RESPALDO_GID}");
   });
 
-  it("el vigía recibe solo Telegram, su umbral (1024 MiB por defecto) y su intervalo", () => {
+  it("el vigía recibe solo Telegram, su umbral (1024 MiB por defecto), su intervalo y la ruta de la pausa (la pasan los scripts)", () => {
     const env = s("inv-008-vigia").environment ?? {};
-    expect(claves("inv-008-vigia")).toEqual(["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "VIGIA_INTERVALO_S", "VIGIA_UMBRAL_MEMAVAILABLE_MIB"]);
+    expect(claves("inv-008-vigia")).toEqual(["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "VIGIA_INTERVALO_S", "VIGIA_RUTA_PAUSA", "VIGIA_UMBRAL_MEMAVAILABLE_MIB"]);
+    expect(env.VIGIA_RUTA_PAUSA).toBe("${INV_RUTA_PAUSA:-}");
     expect(env.VIGIA_UMBRAL_MEMAVAILABLE_MIB).toBe("${INV_VIGIA_UMBRAL_MEMAVAILABLE_MIB:-1024}");
     expect(env.VIGIA_INTERVALO_S).toBe("${INV_VIGIA_INTERVALO_S:-60}");
   });
