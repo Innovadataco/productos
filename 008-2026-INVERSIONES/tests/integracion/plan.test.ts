@@ -199,20 +199,21 @@ describe("decisiones", () => {
   });
 
   it("una decisión espera a la versión que se está creando y queda bajo ella (no se cuela)", async () => {
-    let decision: Promise<{ planVersionId: string }> = Promise.reject(new Error("no arrancó"));
+    const enCurso: { decision?: Promise<{ planVersionId: string }> } = {};
     let nuevaId = "";
     await db.$transaction(
       async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inv008.plan_version'))`;
         const ultima = await tx.planVersion.findFirstOrThrow({ orderBy: { version: "desc" } });
         nuevaId = (await tx.planVersion.create({ data: { version: ultima.version + 1, vigenteDesde: mas(40), motivo: "Versión en curso", aprobadaPorId: duenoId } })).id;
-        decision = registrarDecision(db, { fechaDecision: mas(45), instrumentoId: instA, accion: "VENDER", motivo: "Durante la versión", autorId: duenoId });
-        decision.catch(() => undefined);
+        enCurso.decision = registrarDecision(db, { fechaDecision: mas(45), instrumentoId: instA, accion: "VENDER", motivo: "Durante la versión", autorId: duenoId });
+        enCurso.decision.catch(() => undefined); // se espera abajo; evita el aviso de rechazo sin manejar mientras tanto
         await esperar(RETENCION_MS);
       },
       { timeout: 15_000 },
     );
-    expect((await decision).planVersionId).toBe(nuevaId);
+    if (!enCurso.decision) throw new Error("la decisión no arrancó");
+    expect((await enCurso.decision).planVersionId).toBe(nuevaId);
   });
 
   it("una excepción a una regla de portafolio cita la regla, con motivo", async () => {
@@ -272,18 +273,19 @@ describe("enlace de órdenes a decisiones", () => {
   it("corregir espera a un enlace en curso de la decisión y también lo mueve", async () => {
     const d = await registrarDecision(db, { fechaDecision: mas(14), instrumentoId: instA, accion: "VENDER", motivo: "Vender", autorId: duenoId });
     const venta = await nuevaOrden({ instrumentoId: instA, lado: "VENTA", fecha: mas(15) });
-    let correccion: Promise<{ id: string }> = Promise.reject(new Error("no arrancó"));
+    const enCurso: { correccion?: Promise<{ id: string }> } = {};
     await db.$transaction(
       async (tx) => {
         await tx.$queryRaw`SELECT "id" FROM "decision" WHERE "id" = ${d.id} FOR UPDATE`;
         await tx.enlaceDecisionOrden.create({ data: { ordenId: venta.id, decisionId: d.id, creadoPorId: duenoId } });
-        correccion = corregirDecision(db, d.id, { fechaDecision: mas(14), instrumentoId: instA, accion: "VENDER", motivo: "Vender (corregida)", autorId: duenoId });
-        correccion.catch(() => undefined);
+        enCurso.correccion = corregirDecision(db, d.id, { fechaDecision: mas(14), instrumentoId: instA, accion: "VENDER", motivo: "Vender (corregida)", autorId: duenoId });
+        enCurso.correccion.catch(() => undefined); // se espera abajo
         await esperar(RETENCION_MS);
       },
       { timeout: 15_000 },
     );
-    const nueva = await correccion;
+    if (!enCurso.correccion) throw new Error("la corrección no arrancó");
+    const nueva = await enCurso.correccion;
     const vigente = await db.enlaceDecisionOrden.findFirstOrThrow({ where: { ordenId: venta.id, reemplazadoPor: { is: null } } });
     expect(vigente.decisionId).toBe(nueva.id);
   });
