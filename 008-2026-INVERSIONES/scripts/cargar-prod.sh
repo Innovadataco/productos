@@ -10,7 +10,8 @@
 # Lo corre Jelk (o quien él designe), con la Fábrica guiando; nunca la Fábrica sola. Desde el Mac:
 #   scripts/armar-sobre.sh <cabecera-privada> [<archivo>] | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh <comando>
 #   (con `sudo -n` delante si el SSH no entra como root; <raíz>: ver ESTADO en la gestión)
-# Comandos: importar-trii · registrar-escision · lote-escision · construir-lotes · importar-plan
+# Comandos: importar-trii · registrar-escision · lote-escision · construir-lotes · importar-plan ·
+#   importar-certificacion · importar-precios · conciliar-certificacion
 # Sale con el código del CLI (0, 1, 2 o 3), o con 1 si se niega antes de correrlo.
 
 # Sin volcados de memoria ANTES de todo: este script maneja datos del dueño por stdin.
@@ -20,7 +21,7 @@ INV_SCRIPT=cargar-prod
 # shellcheck source=produccion-comun.sh
 source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 
-COMANDOS_CARGA=(importar-trii registrar-escision lote-escision construir-lotes importar-plan)
+COMANDOS_CARGA=(importar-trii registrar-escision lote-escision construir-lotes importar-plan importar-certificacion importar-precios conciliar-certificacion)
 
 main() {
   # La entrada del sobre queda en el descriptor 3; nada más del script la puede consumir.
