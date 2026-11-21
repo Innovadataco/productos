@@ -33,6 +33,7 @@ if [ "${1:-}" = "compose" ]; then
     ps)
       case "$todo" in
         *" inv-008-app "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" ;;
+        *" inv-008-entrada "*) printf '%s\n' "${FALSO_CID_ENTRADA-cidentrada}" ;;
         *" inv-008-db "*) printf '%s\n' "${FALSO_CID_DB-ciddb}" ;;
         *" -q "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" "${FALSO_CID_DB-ciddb}" ;;
       esac
@@ -89,21 +90,54 @@ case "${1:-} ${2:-}" in
   "image ls") printf '%b' "${FALSO_IMAGENES:-}"; exit 0 ;;
   "image rm") exit 0 ;;
 esac
+# El contenedor (o la red) del que se pregunta: el último argumento.
+objeto="${!#}"
+es_entrada() { [ "$objeto" = "${FALSO_CID_ENTRADA-cidentrada}" ]; }
 case "${1:-}" in
   inspect)
     case "$*" in
-      *.Image*) printf '%s\n' "${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}" ;;
+      *NetworkSettings.Networks*)
+        case "$objeto" in
+          "${FALSO_CID_DB-ciddb}") printf '%s \n' "${FALSO_REDES_DB-inv-008-prueba_inv-008-red-interna}" ;;
+          *) printf '%s \n' "${FALSO_REDES_APP-inv-008-prueba_inv-008-red-entrada inv-008-prueba_inv-008-red-interna}" ;;
+        esac ;;
+      *.Internal*)
+        # Las redes con salida (no internal) se nombran en FALSO_REDES_CON_SALIDA.
+        case " ${FALSO_REDES_CON_SALIDA:-} " in *" $objeto "*) echo false ;; *) echo true ;; esac ;;
+      *.Image*) if es_entrada; then printf '%s\n' "${FALSO_IMAGEN_ENTRADA:-${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}}"; else printf '%s\n' "${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}"; fi ;;
       *Health.Status*) printf '%s\n' "${FALSO_SALUD_ESTADO:-healthy}" ;;
-      *State.Status*) printf '%s\n' "${FALSO_ESTADO_APP:-running 0}" ;;
+      *State.Status*) if es_entrada; then printf '%s\n' "${FALSO_ESTADO_ENTRADA:-running 0}"; else printf '%s\n' "${FALSO_ESTADO_APP:-running 0}"; fi ;;
       *HostConfig.Memory*) printf '%s\n' "${FALSO_MEMSWAP:-402653184 402653184}" ;;
       *"{{.Id}}"*) printf '%s\n' "${FALSO_ID_LARGO:-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc}" ;;
       *OOMKilled*) printf '%b' "${FALSO_PI_ESTADO:-}" | grep -F -- "/${!#} " || true ;;
     esac
     exit 0 ;;
   exec)
+    # La prueba de no salida: nslookup y nc dentro de la entrada (con salida) o de la app (sin salida).
+    cid_exec="${2:-}"
+    case " $* " in
+      *" nslookup "*)
+        if [ "$cid_exec" = "${FALSO_CID_ENTRADA-cidentrada}" ]; then
+          printf '%b' "${FALSO_NSLOOKUP_ENTRADA-Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\nNon-authoritative answer:\nName:\tapi.telegram.org\nAddress: 203.0.113.7\n}"
+          exit "${FALSO_NSLOOKUP_ENTRADA_RC:-0}"
+        fi
+        printf '%b' "${FALSO_NSLOOKUP_APP-Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\n** server can't find api.telegram.org: SERVFAIL\n}"
+        exit "${FALSO_NSLOOKUP_APP_RC:-1}" ;;
+      *" nc "*)
+        if [ "$cid_exec" = "${FALSO_CID_ENTRADA-cidentrada}" ]; then exit "${FALSO_NC_ENTRADA_RC:-0}"; fi
+        printf '%s\n' "${FALSO_NC_APP_MSG-nc: can't connect to remote host (203.0.113.7): Network unreachable}" >&2
+        exit "${FALSO_NC_APP_RC:-1}" ;;
+    esac
+    [ -z "${FALSO_EXECS:-}" ] || printf '%s\n' "$cid_exec" >>"$FALSO_EXECS"
     if [ -n "${FALSO_SALUD_ARCHIVO:-}" ] && [ -s "$FALSO_SALUD_ARCHIVO" ]; then cat "$FALSO_SALUD_ARCHIVO"; else printf '%s' "${FALSO_SALUD:-}"; fi
     exit "${FALSO_EXEC_RC:-0}" ;;
-  port) printf '%b' "${FALSO_PUERTO:-}"; exit 0 ;;
+  port)
+    case "${2:-}" in
+      "${FALSO_CID_APP-cidapp}") printf '%b' "${FALSO_PUERTO_APP:-}" ;;
+      "${FALSO_CID_ENTRADA-cidentrada}") printf '%b' "${FALSO_PUERTO_ENTRADA:-}" ;;
+      *) printf '%b' "${FALSO_PUERTO:-}" ;;
+    esac
+    exit 0 ;;
   ps) printf '%b' "${FALSO_PI_NOMBRES:-}"; exit 0 ;;
   stats) printf 'NAME\tMEM USAGE / LIMIT\tMEM %%\tCPU %%\ninv-008-prod-inv-008-app-1\t140MiB / 384MiB\t36%%\t1%%\n'; exit 0 ;;
   load) exit "${FALSO_LOAD_RC:-0}" ;;

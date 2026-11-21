@@ -2,7 +2,9 @@
 // «DEPLOY VERIFICADO <sha>» como última línea solo si todo pasó), más las guardas de Inversiones:
 // candado propio y común con PI, marca de pausa, CI en verde en GitHub, clon en el sha, .tar verificado
 // (sha256, etiquetas y disco), las tres imágenes del mismo sha, respaldo antes de migrar, mem = memswap,
-// versión verificada antes y después de la espera, y vuelta atrás automática si falla después de migrar.
+// versión verificada antes y después de la espera (por la entrada, el camino del túnel), la app sin salida a
+// internet (con control positivo desde la entrada) y vuelta atrás automática si falla después de migrar. La
+// reversa (--sin-migrar) corre con el compose del sha que corre: nunca cruza a una topología vieja.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -175,6 +177,18 @@ describe("desplegar-prod.sh · guardas que abortan sin DEPLOY VERIFICADO", () =>
     ["/api/salud degradado", { FALSO_SALUD_DEGRADADO: "1" }],
     ["memoria con swap (Memory ≠ MemorySwap)", { FALSO_MEMSWAP: "402653184 805306368" }],
     ["la salud cae durante la espera de 10 minutos", { FALSO_SLEEP_ROMPE_SALUD: JSON.stringify({ estado: "degradado", version: "x" }) }],
+    ["LA APP TIENE SALIDA a internet (llega a la IP de la sonda)", { FALSO_NC_APP_RC: "0", FALSO_NC_APP_MSG: "" }],
+    ["la app no llega, pero por tiempo agotado y no por falta de ruta (ambiguo)", { FALSO_NC_APP_MSG: "nc: timed out" }],
+    ["la app no llega porque el destino rechaza (Connection refused: sí hay ruta)", { FALSO_NC_APP_MSG: "nc: can't connect to remote host (203.0.113.7): Connection refused" }],
+    ["falla el control positivo (la entrada tampoco llega): la prueba no probaría nada", { FALSO_NC_ENTRADA_RC: "1" }],
+    ["la entrada no resuelve el destino de la sonda (sin control positivo)", { FALSO_NSLOOKUP_ENTRADA: "** server can't find api.telegram.org: SERVFAIL\\n", FALSO_NSLOOKUP_ENTRADA_RC: "1" }],
+    ["la app resuelve nombres de internet (DNS externo)", { FALSO_NSLOOKUP_APP: "Name:\\tapi.telegram.org\\nAddress: 203.0.113.9\\n", FALSO_NSLOOKUP_APP_RC: "0" }],
+    ["la app publica un puerto (debe quedar solo detrás de la entrada)", { FALSO_PUERTO_APP: "5008/tcp -> 127.0.0.1:5008" }],
+    ["la app está en una red con salida", { FALSO_REDES_APP: "inv-008-prueba_inv-008-red inv-008-prueba_inv-008-red-interna", FALSO_REDES_CON_SALIDA: "inv-008-prueba_inv-008-red" }],
+    ["la base está en una red con salida", { FALSO_REDES_DB: "inv-008-prueba_inv-008-red-interna inv-008-prueba_inv-008-red", FALSO_REDES_CON_SALIDA: "inv-008-prueba_inv-008-red" }],
+    ["no hay contenedor de la entrada", { FALSO_CID_ENTRADA: "" }],
+    ["la entrada se reinició (no quedó corriendo de una vez)", { FALSO_ESTADO_ENTRADA: "running 1" }],
+    ["la entrada corre otra imagen que la enviada", { FALSO_IMAGEN_ENTRADA: `sha256:${"e".repeat(64)}` }],
     ["id inválido", {}, ["no-es-un-id"]],
     ["opción desconocida", {}, ["--forzar"]],
   ];
@@ -357,12 +371,12 @@ describe("desplegar-prod.sh · pausa antes del migrador (la app vieja no retiene
     expect(ps).toBeLessThan(stopApp);
   });
 
-  it("después del migrador levanta los tres permanentes: app, vigía y respaldo", async () => {
+  it("después del migrador levanta los cuatro permanentes: app, entrada, vigía y respaldo", async () => {
     const { falsos, env, script } = preparar();
     expect((await correr(script, [ID], env)).status).toBe(0);
     const ll = falsos.llamadas();
     const final = ll.slice(indice(ll, compose("run", "inv-008-migrador"))).find(compose("up"));
-    expect(final).toEqual(expect.arrayContaining(["up", "-d", "--wait", "inv-008-app", "inv-008-vigia", "inv-008-respaldo"]));
+    expect(final).toEqual(expect.arrayContaining(["up", "-d", "--wait", "inv-008-app", "inv-008-entrada", "inv-008-vigia", "inv-008-respaldo"]));
   });
 
   it("con --sin-migrar no detiene nada (no hay migración que proteger)", async () => {
@@ -381,7 +395,7 @@ describe("desplegar-prod.sh · pausa antes del migrador (la app vieja no retiene
     expect(r.status).not.toBe(0);
     expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
     expect(r.stderr).toMatch(/vuelta atrás/i);
-    expect(ups(base).at(-1)).toMatch(new RegExp(`^up ${repo.sha} .*inv-008-app.*inv-008-vigia.*inv-008-respaldo`));
+    expect(ups(base).at(-1)).toMatch(new RegExp(`^up ${repo.sha} .*inv-008-app.*inv-008-entrada.*inv-008-vigia.*inv-008-respaldo`));
   });
 
   for (const [nombre, falla] of [
@@ -397,7 +411,7 @@ describe("desplegar-prod.sh · pausa antes del migrador (la app vieja no retiene
       writeFileSync(path.join(base, "estado", "imagen-actual"), `sha256:${"a".repeat(64)}\n`);
       const r = await correr(script, [ID], { ...env, ...falla, FALSO_SHA: nuevo, FALSO_SALUD: JSON.stringify({ estado: "ok", version: nuevo }) });
       expect(r.status).not.toBe(0);
-      expect(ups(base).at(-1)).toMatch(new RegExp(`^up ${repo.sha} .*inv-008-app.*inv-008-vigia.*inv-008-respaldo`));
+      expect(ups(base).at(-1)).toMatch(new RegExp(`^up ${repo.sha} .*inv-008-app.*inv-008-entrada.*inv-008-vigia.*inv-008-respaldo`));
       expect(readFileSync(path.join(base, "estado", "sha-actual"), "utf8").trim()).toBe(repo.sha);
     });
   }
@@ -424,6 +438,103 @@ describe("desplegar-prod.sh · pausa antes del migrador (la app vieja no retiene
     expect(r.status).not.toBe(0);
     expect(ups(base).some((l) => l.startsWith("up latest "))).toBe(false);
     expect(r.stderr).toMatch(/no se vuelve/);
+  });
+});
+
+describe("desplegar-prod.sh · la app sin salida a internet, detrás de la entrada", () => {
+  const execs = (ll: Llamada[]) => ll.filter((l) => l[0] === "docker" && l[1] === "exec");
+  const posicion = (ll: Llamada[], cid: string, programa: string) => execs(ll).findIndex((l) => l[2] === cid && l[3] === programa);
+
+  it("la salud con la versión se pide DENTRO de la entrada (el camino del túnel), nunca en la app", async () => {
+    const { base, env, script } = preparar();
+    const registro = path.join(base, "execs.txt");
+    const r = await correr(script, [ID], { ...env, FALSO_EXECS: registro });
+    expect(r.status, r.stderr).toBe(0);
+    expect(readFileSync(registro, "utf8").trim().split("\n")).toEqual(["cidentrada", "cidentrada"]);
+  });
+
+  it("prueba la no salida con control positivo: la entrada resuelve la sonda y llega; la app no llega (sin ruta) ni resuelve", async () => {
+    const { falsos, env, script } = preparar();
+    const r = await correr(script, [ID], env);
+    expect(r.status, r.stderr).toBe(0);
+    const ll = falsos.llamadas();
+    const sonda = ["nc", "-z", "-w", "5", "203.0.113.7", "443"];
+    expect(execs(ll)).toContainEqual(["docker", "exec", "cidentrada", ...sonda]);
+    expect(execs(ll)).toContainEqual(["docker", "exec", "cidapp", ...sonda]);
+    expect(execs(ll)).toContainEqual(["docker", "exec", "cidentrada", "nslookup", "-type=a", "api.telegram.org"]);
+    expect(execs(ll)).toContainEqual(["docker", "exec", "cidapp", "nslookup", "-type=a", "api.telegram.org"]);
+    // El control positivo va ANTES: si la entrada no llega, la prueba de la app no prueba nada.
+    expect(posicion(ll, "cidentrada", "nc")).toBeLessThan(posicion(ll, "cidapp", "nc"));
+    expect(r.stderr).toMatch(/la app no tiene salida a internet/);
+  });
+
+  it("revisa una por una las redes de la app y de la base: todas internal", async () => {
+    const { falsos, env, script } = preparar();
+    expect((await correr(script, [ID], env)).status).toBe(0);
+    const internas = falsos.llamadas().filter((l) => l[0] === "docker" && l[1] === "inspect" && l.join(" ").includes(".Internal")).map((l) => l.at(-1));
+    expect(new Set(internas)).toEqual(new Set(["inv-008-prueba_inv-008-red-entrada", "inv-008-prueba_inv-008-red-interna"]));
+  });
+
+  it("si la app tiene salida, no hay DEPLOY VERIFICADO y lo dice en mayúsculas", async () => {
+    const { env, script } = preparar({ FALSO_NC_APP_RC: "0", FALSO_NC_APP_MSG: "" });
+    const r = await correr(script, [ID], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
+    expect(r.stderr).toMatch(/LA APP TIENE SALIDA A INTERNET/);
+  });
+});
+
+describe("desplegar-prod.sh · reversa con el compose del sha que corre (el clon no se mueve)", () => {
+  // viejo = repo.sha: la imagen anterior, de antes del cambio de topología. nuevo = el sha que corre, y donde está el clon.
+  const conCambio = () => {
+    const p = preparar();
+    git(p.repo.dir, ["commit", "-q", "--allow-empty", "-m", "cambio de topología"]);
+    const nuevo = git(p.repo.dir, ["rev-parse", "HEAD"]);
+    const estado = path.join(p.base, "estado");
+    mkdirSync(estado, { recursive: true });
+    writeFileSync(path.join(estado, "sha-actual"), `${nuevo}\n`);
+    writeFileSync(path.join(estado, "imagen-actual"), `sha256:${"a".repeat(64)}\n`);
+    writeFileSync(path.join(estado, "sha-anterior"), `${p.repo.sha}\n`);
+    writeFileSync(path.join(estado, "imagen-anterior"), `${ID}\n`);
+    return { ...p, viejo: p.repo.sha, nuevo };
+  };
+
+  it("ALTO reproducido: la reversa a un sha anterior al cambio deja el sitio ARRIBA (app y entrada con el sha anterior, salud por la entrada)", async () => {
+    const { repo, base, falsos, env, script, viejo, nuevo } = conCambio();
+    const r = await correr(script, [`inv-008-app:${viejo}`, "--sin-migrar"], env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${viejo}`);
+    const ups = readFileSync(path.join(base, "tags.txt"), "utf8").trim().split("\n");
+    expect(ups.at(-1)).toMatch(new RegExp(`^up ${viejo} .*inv-008-app.*inv-008-entrada.*inv-008-vigia.*inv-008-respaldo`));
+    // Nada se baja ni se borra a mano: la topología (la del compose que corre) no cambia en la reversa.
+    expect(falsos.llamadas().some((l) => l[0] === "docker" && l[1] === "compose" && (l.includes("rm") || l.includes("down")))).toBe(false);
+    expect(git(repo.dir, ["rev-parse", "HEAD"])).toBe(nuevo);
+    expect(readFileSync(path.join(base, "estado", "sha-actual"), "utf8").trim()).toBe(viejo);
+    expect(r.stderr).toMatch(/compose del sha que corre/);
+  });
+
+  it("la reversa con el clon en un sha que no es ni el de la imagen ni el que corre: aborta sin tocar contenedores", async () => {
+    const { repo, falsos, env, script, viejo } = conCambio();
+    git(repo.dir, ["commit", "-q", "--allow-empty", "-m", "otro sha, no desplegado"]);
+    const r = await correr(script, [`inv-008-app:${viejo}`, "--sin-migrar"], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
+    expect(llamadasCompose(falsos.llamadas())).toEqual([]);
+  });
+
+  it("la reversa a una imagen que no es anterior al clon (su sha no es ancestro del que corre): aborta", async () => {
+    const { falsos, env, script } = conCambio();
+    const r = await correr(script, [ID, "--sin-migrar"], { ...env, FALSO_SHA: "e".repeat(40) });
+    expect(r.status).not.toBe(0);
+    expect(llamadasCompose(falsos.llamadas())).toEqual([]);
+  });
+
+  it("sin --sin-migrar el clon tiene que estar en el sha de la imagen (las migraciones van con su código)", async () => {
+    const { falsos, env, script, viejo } = conCambio();
+    const r = await correr(script, [`inv-008-app:${viejo}`], env);
+    expect(r.status).not.toBe(0);
+    expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
+    expect(falsos.llamadas().some(compose("run", "inv-008-migrador"))).toBe(false);
   });
 });
 
@@ -480,6 +591,32 @@ describe("desplegar-prod.sh · funciones puras", () => {
     expect(funcion(script, `puerto_publicado_ok "127.0.0.1:5008
 [::]:5008"`).status).not.toBe(0);
     expect(funcion(script, 'puerto_publicado_ok ""').status).not.toBe(0);
+  });
+
+  it("ipv4_de_nslookup: la primera IPv4 de la respuesta, nunca la del servidor DNS; nada (y falla) si no resolvió", async () => {
+    const leer = (texto: string) => funcion(script, "ipv4_de_nslookup", process.env, texto);
+    const busybox = "Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\nNon-authoritative answer:\nName:\tapi.telegram.org\nAddress: 203.0.113.7\nAddress: 203.0.113.8\n";
+    expect(leer(busybox).stdout.trim()).toBe("203.0.113.7");
+    expect(leer("Name:      api.telegram.org\nAddress 1: 203.0.113.8 api.telegram.org\n").stdout.trim()).toBe("203.0.113.8");
+    for (const sin of ["Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\n** server can't find api.telegram.org: SERVFAIL\n", "", "Name:\tx\nAddress: 999.1.1\n"]) {
+      const r = leer(sin);
+      expect(r.status, sin).not.toBe(0);
+      expect(r.stdout.trim()).toBe("");
+    }
+  });
+
+  it("falla_sin_ruta: solo «Network unreachable» o «No route to host»; nunca un tiempo agotado, un rechazo o un mensaje vacío", async () => {
+    const ok = (msg: string) => funcion(script, `falla_sin_ruta "${msg}"`).status;
+    expect(ok("nc: can't connect to remote host (203.0.113.7): Network unreachable")).toBe(0);
+    expect(ok("nc: can't connect to remote host (203.0.113.7): No route to host")).toBe(0);
+    for (const malo of ["nc: timed out", "nc: can't connect to remote host (203.0.113.7): Connection refused", "", "wget: bad address 'x'"]) expect(ok(malo), malo).not.toBe(0);
+  });
+
+  it("salud_ok: estado ok con la versión exacta; degradado, otra versión o algo ilegible no", async () => {
+    const sha = "a".repeat(40);
+    const ok = (json: string) => funcion(script, `salud_ok '${json}' "${sha}"`).status;
+    expect(ok(JSON.stringify({ estado: "ok", version: sha }))).toBe(0);
+    for (const malo of [JSON.stringify({ estado: "degradado", version: sha }), JSON.stringify({ estado: "ok", version: "b".repeat(40) }), "no es json", ""]) expect(ok(malo), malo).not.toBe(0);
   });
 
   it("imagenes_a_purgar: solo inv-008-app/migrador/vigia:<sha> que no son la actual ni la anterior", async () => {
