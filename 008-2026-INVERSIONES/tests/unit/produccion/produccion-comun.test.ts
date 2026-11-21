@@ -285,9 +285,20 @@ describe("configuración no secreta · la carpeta de respaldos (inv-008.conf)", 
       expect(r.stdout).toBe("");
     });
 
+    it("750 con setgid también sirve (el grupo lee y entra, nadie más)", () => {
+      const { tope, dir } = carpeta();
+      chmodSync(dir, 0o2750);
+      expect(permisos(dir, tope).stdout).toBe("");
+    });
+
     const casos: Array<[string, (c: { tope: string; dir: string }) => void, string?]> = [
       ["escribible por el grupo", ({ dir }) => chmodSync(dir, 0o770)],
       ["escribible por otros", ({ dir }) => chmodSync(dir, 0o757)],
+      // La copia diaria de IDC baja los respaldos con el usuario del grupo respaldo: sin r-x del grupo se corta.
+      ["sin lectura del grupo (la copia de IDC no podría listarla)", ({ dir }) => chmodSync(dir, 0o710)],
+      ["sin entrada del grupo", ({ dir }) => chmodSync(dir, 0o740)],
+      ["legible por otros (debe ser 750: nadie más que el grupo)", ({ dir }) => chmodSync(dir, 0o754)],
+      ["con entrada para otros", ({ dir }) => chmodSync(dir, 0o751)],
       ["un padre escribible por el grupo", ({ tope }) => chmodSync(path.join(tope, "idc"), 0o770)],
       ["el tope escribible por otros", ({ tope }) => chmodSync(tope, 0o757)],
     ];

@@ -123,6 +123,18 @@ describe("respaldo.sh --ahora", () => {
     }
   });
 
+  it("la carpeta de respaldos no cambia: sigue en 750 con su dueño y su grupo (la copia de IDC depende de eso)", () => {
+    const gid = String(process.getgid!());
+    const r = preparar({ RESPALDO_GID: gid });
+    chmodSync(r.respaldos, 0o750);
+    const antes = statSync(r.respaldos);
+    expect(r.correr(["--ahora"]).status).toBe(0);
+    expect(r.correr(["--ahora", "--motivo", "otro"]).status).toBe(0);
+    const despues = statSync(r.respaldos);
+    expect((despues.mode & 0o7777).toString(8)).toBe("750");
+    expect([despues.uid, despues.gid]).toEqual([antes.uid, antes.gid]);
+  });
+
   for (const [nombre, falla] of [
     ["pg_dump", { FALSO_PGDUMP_RC: "2" }],
     ["age", { FALSO_AGE_RC: "3" }],

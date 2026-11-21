@@ -7,12 +7,11 @@ import { funcion, leer008, ruta008 } from "./falsos";
 
 // El valor por defecto de la carpeta de respaldos: una ruta que no existe (el script la define en un solo lugar).
 const CENTINELA = funcion(ruta008("scripts/produccion-comun.sh"), 'printf "%s" "$INV_RESPALDOS_CENTINELA"').stdout;
-const BIND_RESPALDOS: Bind = {
-  type: "bind",
-  source: `\${INV_RESPALDOS_DIR:-${CENTINELA}}`,
-  target: "/respaldos",
-  bind: { create_host_path: false },
-};
+// La carpeta de respaldos entra por un volumen local que la monta con bind, nosuid y noexec (pedido del CEO de PI):
+// el bind corto no acepta esas opciones. Su origen es la carpeta de la configuración, interpolada.
+const VOLUMEN_RESPALDOS = "inv-008-respaldos";
+const DEVICE_RESPALDOS = `\${INV_RESPALDOS_DIR:-${CENTINELA}}`;
+const MONTAJE_RESPALDOS = `${VOLUMEN_RESPALDOS}:/respaldos`;
 
 type Servicio = {
   image: string;
@@ -43,12 +42,13 @@ type Servicio = {
   group_add?: unknown;
   secrets?: unknown;
 };
-type Bind = { type: string; source: string; target: string; read_only?: boolean; bind?: { create_host_path?: boolean } };
+type Bind = { type: string; source: string; target: string; read_only?: boolean };
+type Volumen = { driver?: string; driver_opts?: Record<string, string>; external?: boolean; name?: string };
 type Compose = {
   name: string;
   services: Record<string, Servicio>;
   networks: Record<string, { internal?: boolean; external?: boolean }>;
-  volumes: Record<string, unknown>;
+  volumes: Record<string, Volumen | null>;
   secrets?: unknown;
 };
 
@@ -94,7 +94,7 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(s("inv-008-vigia").volumes).toEqual(["/proc/meminfo:/host/meminfo:ro", "/sys/fs/cgroup:/host/cgroup:ro"]);
     expect(s("inv-008-vigia").networks).toEqual(["inv-008-red"]);
     expect((s("inv-008-vigia") as { cpus?: number }).cpus).toBe(0.05);
-    expect(s("inv-008-respaldo").volumes).toEqual([BIND_RESPALDOS]);
+    expect(s("inv-008-respaldo").volumes).toEqual([MONTAJE_RESPALDOS]);
     for (const [nombre, srv] of Object.entries(compose.services)) {
       if (!["inv-008-vigia", "inv-008-db", "inv-008-respaldo"].includes(nombre)) expect(srv.volumes, nombre).toBeUndefined();
     }
@@ -118,7 +118,7 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(r.security_opt).toEqual(["no-new-privileges:true"]);
     expect(r.read_only).toBe(true);
     expect(r.tmpfs).toEqual(["/run/respaldo", "/tmp"]);
-    expect(r.volumes).toEqual([BIND_RESPALDOS]);
+    expect(r.volumes).toEqual([MONTAJE_RESPALDOS]);
     expect((r as { privileged?: boolean }).privileged).toBeUndefined();
     const usuarios = Object.entries(compose.services).filter(([, x]) => /^0(:|$)/.test(x.user ?? "")).map(([n]) => n);
     expect(usuarios).toEqual(["inv-008-respaldo"]);
@@ -126,9 +126,12 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
 
   it("la carpeta de respaldos no está escrita en el compose: viene de la configuración por interpolación", () => {
     expect(CENTINELA).toMatch(/^\/nonexistent\/[a-z0-9-]+$/);
-    // Sintaxis larga sin crear la carpeta: sin la variable, el up del respaldo falla cerrado (no crea nada).
-    const [bind] = s("inv-008-respaldo").volumes as Bind[];
-    expect(bind?.bind?.create_host_path).toBe(false);
+    // Volumen local que monta la carpeta con bind,nosuid,noexec: sin la variable (o sin la carpeta), el mount
+    // falla y el respaldo no arranca (Docker no crea el origen de un volumen local de tipo none).
+    expect(compose.volumes[VOLUMEN_RESPALDOS]).toEqual({
+      driver: "local",
+      driver_opts: { type: "none", device: DEVICE_RESPALDOS, o: "bind,nosuid,noexec" },
+    });
     // Con el valor por defecto ningún comando falla al interpolar (la pausa y lo que se corre a mano).
     expect(texto).not.toMatch(/INV_RESPALDOS_DIR:\?/);
   });
@@ -138,7 +141,13 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
       .flatMap((srv) => srv.volumes ?? [])
       .map((v) => (typeof v === "string" ? v.split(":")[0]! : v.source))
       .filter((origen) => origen.startsWith("/") || origen.startsWith("$"));
-    expect(delHost.sort()).toEqual(["/proc/meminfo", "/sys/fs/cgroup", BIND_RESPALDOS.source].sort());
+    expect(delHost.sort()).toEqual(["/proc/meminfo", "/sys/fs/cgroup"].sort());
+    const dispositivos = Object.values(compose.volumes).flatMap((v) => (v?.driver_opts?.device ? [v.driver_opts.device] : []));
+    expect(dispositivos).toEqual([DEVICE_RESPALDOS]);
+  });
+
+  it("el volumen de respaldos no cambia dueño ni permisos (sin uid, gid ni mode): la copia de IDC los necesita intactos", () => {
+    expect(compose.volumes[VOLUMEN_RESPALDOS]?.driver_opts?.o).not.toMatch(/uid|gid|mode|umask/);
   });
 
   it("ningún servicio deja volcados de memoria (ulimits core 0): el host los escribiría en disco", () => {
