@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PRECIO_MAXIMO_COP, obtenerCierres, parsearYahoo, type Buscar } from "@/precios/yahoo";
+import { BARRAS_MAXIMAS, PRECIO_MAXIMO_COP, obtenerCierres, parsearYahoo, type Buscar } from "@/precios/yahoo";
 
 // 2024-03-12 14:30 UTC = 09:30 en Colombia (apertura); 2024-03-13 04:30 UTC = 23:30 del 12 en Colombia.
 const T1 = Date.UTC(2024, 2, 12, 14, 30) / 1000;
@@ -37,6 +37,26 @@ describe("parsearYahoo", () => {
   it("descarta la barra cuyo timestamp no es finito", () => {
     const r = parsearYahoo(respuesta([100, 200, 300], [Number.NaN, T2, Number.POSITIVE_INFINITY]));
     expect(r.ok && r.cierres.map((c) => c.precio)).toEqual(["200"]);
+  });
+
+  it("descarta la barra cuyo timestamp es finito pero cae fuera del rango de fechas (no inventa una fecha inválida)", () => {
+    const r = parsearYahoo(respuesta([100, 200, 300], [1e13, T2, -1e13]));
+    expect(r.ok && r.cierres.map((c) => [c.fecha.toISOString().slice(0, 10), c.precio])).toEqual([["2024-03-13", "200"]]);
+  });
+
+  it("acepta hasta BARRAS_MAXIMAS barras; una más invalida la respuesta (YAHOO_FORMATO)", () => {
+    const serie = (n: number) => respuesta(Array.from({ length: n }, () => 100), Array.from({ length: n }, (_, i) => T1 + i * 86_400));
+    const justo = parsearYahoo(serie(BARRAS_MAXIMAS));
+    expect(justo.ok && justo.cierres).toHaveLength(BARRAS_MAXIMAS);
+    expect(parsearYahoo(serie(BARRAS_MAXIMAS + 1))).toEqual({ ok: false, codigo: "YAHOO_FORMATO" });
+  });
+
+  it.each([
+    ["timestamp no es un arreglo", { timestamp: "abc", indicators: { quote: [{ close: [1, 2, 3] }] } }],
+    ["close no es un arreglo", { timestamp: [T1, T2, T3], indicators: { quote: [{ close: "abc" }] } }],
+    ["timestamp es un objeto con largo", { timestamp: { length: 1 }, indicators: { quote: [{ close: [1] }] } }],
+  ])("una serie con forma rara (%s) es YAHOO_FORMATO, sin lanzar", (_caso, serie) => {
+    expect(parsearYahoo({ chart: { result: [{ meta: { currency: "COP" }, ...serie }] } })).toEqual({ ok: false, codigo: "YAHOO_FORMATO" });
   });
 
   it("redondea a 6 decimales sin notación científica", () => {

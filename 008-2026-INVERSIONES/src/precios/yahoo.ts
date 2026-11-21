@@ -9,6 +9,8 @@ const ESCALA_PRECIO = 6;
 const TIEMPO_MAXIMO_MS = 10_000;
 /** Tope de cordura de un precio en COP: por encima, la respuesta se considera corrupta. */
 export const PRECIO_MAXIMO_COP = 10_000_000;
+/** Tope de barras por respuesta (~40 años de ruedas): por encima, la respuesta se considera corrupta. */
+export const BARRAS_MAXIMAS = 10_000;
 
 export interface Cierre {
   readonly fecha: Date; // fecha de negocio en Colombia, a medianoche UTC
@@ -26,9 +28,10 @@ function canonico(n: number): string | null {
   return t === "" || t === "0" ? null : t;
 }
 
-/** Fecha de negocio en Colombia (UTC−5) de un instante en segundos Unix. */
-function fechaCot(segundos: number): Date {
+/** Fecha de negocio en Colombia (UTC−5) de un instante en segundos Unix; null si cae fuera del rango de fechas. */
+function fechaCot(segundos: number): Date | null {
   const local = new Date(segundos * 1000 - DESFASE_COT_MS);
+  if (Number.isNaN(local.getTime())) return null;
   return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()));
 }
 
@@ -36,24 +39,27 @@ interface RespuestaChart {
   chart?: { result?: { meta?: { currency?: string }; timestamp?: number[]; indicators?: { quote?: { close?: (number | null)[] }[] } }[] | null; error?: unknown };
 }
 
-/** Puro: convierte la respuesta de /v8/finance/chart en cierres. Exige COP y descarta huecos (null). */
+/**
+ * Puro: convierte la respuesta de /v8/finance/chart en cierres. Exige COP y descarta huecos (null) y
+ * barras con timestamp inválido. Series que no son arreglos, de largos distintos o de más de
+ * BARRAS_MAXIMAS, o un precio sobre el tope, invalidan toda la respuesta (YAHOO_FORMATO).
+ */
 export function parsearYahoo(cuerpo: unknown): ResultadoYahoo {
   const r = (cuerpo as RespuestaChart)?.chart?.result?.[0];
   if (!r) return { ok: false, codigo: "YAHOO_SIN_DATOS" };
   if (r.meta?.currency !== "COP") return { ok: false, codigo: "YAHOO_MONEDA_NO_COP" };
   const ts = r.timestamp ?? [];
   const cierres = r.indicators?.quote?.[0]?.close ?? [];
-  if (ts.length !== cierres.length) return { ok: false, codigo: "YAHOO_FORMATO" };
+  if (!Array.isArray(ts) || !Array.isArray(cierres)) return { ok: false, codigo: "YAHOO_FORMATO" };
+  if (ts.length !== cierres.length || ts.length > BARRAS_MAXIMAS) return { ok: false, codigo: "YAHOO_FORMATO" };
   const porFecha = new Map<number, Cierre>();
   let corrupta = false;
   ts.forEach((t, i) => {
     const valor = cierres[i];
     if (typeof valor === "number" && Number.isFinite(valor) && valor > PRECIO_MAXIMO_COP) corrupta = true;
     const precio = typeof valor === "number" ? canonico(valor) : null;
-    if (precio && Number.isFinite(t)) {
-      const fecha = fechaCot(t);
-      porFecha.set(fecha.getTime(), { fecha, precio }); // si hay dos barras el mismo día, gana la última
-    }
+    const fecha = Number.isFinite(t) ? fechaCot(t) : null;
+    if (precio && fecha) porFecha.set(fecha.getTime(), { fecha, precio }); // si hay dos barras el mismo día, gana la última
   });
   if (corrupta) return { ok: false, codigo: "YAHOO_FORMATO" };
   return { ok: true, cierres: [...porFecha.values()].sort((a, b) => a.fecha.getTime() - b.fecha.getTime()) };
