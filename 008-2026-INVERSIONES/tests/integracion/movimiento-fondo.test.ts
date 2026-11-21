@@ -5,7 +5,8 @@
 //   del MISMO día o si falta ese valor;
 // - de punta a punta con la conciliación: el fondo deja «fondo_sin_unidades» y cuadra, y el efectivo deja
 //   «aporte_fic_sin_registrar», con la diferencia (real − esperado) exactamente +monto.
-// Las filas no se pueden borrar (solo inserción): cada caso usa su propio fondo. Cifras y fechas inventadas (2027).
+// Las filas no se pueden borrar (solo inserción): cada caso usa su propio fondo, y scripts/integracion.mjs resetea la
+// base de pruebas en cada corrida (no se acumulan). Cifras y fechas inventadas (2027).
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { conciliarCertificacion } from "@/conciliacion/conciliar";

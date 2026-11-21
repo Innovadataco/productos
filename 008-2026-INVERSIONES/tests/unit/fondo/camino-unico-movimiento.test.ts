@@ -8,7 +8,8 @@ import { describe, expect, it } from "vitest";
 
 const RAIZ = path.join(__dirname, "..", "..", "..");
 const ESCRITURA = /\b(movimientoFondo|ajusteCaja)\s*\.\s*(create|createMany|createManyAndReturn|update|updateMany|upsert|delete|deleteMany)\b/g;
-const ESCRITURA_CRUDA = /\b(INSERT\s+INTO|UPDATE|DELETE\s+FROM|COPY)\s+"?(movimiento_fondo|ajuste_caja)\b|=\s*\w+\.(movimientoFondo|ajusteCaja)\s*;/i;
+/** INSERT, UPDATE, DELETE o COPY sobre las tablas, con o sin el esquema y las comillas; o el delegado en una variable. */
+const ESCRITURA_CRUDA = /\b(INSERT\s+INTO|UPDATE|DELETE\s+FROM|COPY)\s+(?:"?public"?\s*\.\s*)?"?(movimiento_fondo|ajuste_caja)\b|=\s*\w+\.(movimientoFondo|ajusteCaja)\s*;/i;
 
 function archivos(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {

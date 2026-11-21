@@ -12,7 +12,12 @@
 -- - El ajuste se lee FOR SHARE: con la tabla de solo inserción no cambia, pero así un cambio por la salida de
 --   reversión y una inserción no pasan los dos. La salida `inv.reversion` sigue siendo la de siempre (freno contra
 --   errores, no contra un usuario de la base malintencionado); un cambio del movimiento por ella vuelve a pasar por
---   la coherencia.
+--   la coherencia, uno del ajuste no (aceptado: no hay disparador en ajuste_caja).
+-- - Las inserta solo inv_dueno, el dueño de las tablas (el migrador). FOR SHARE pide el privilegio UPDATE sobre
+--   ajuste_caja a quien inserta: inv_app e inv_precios no insertan en movimiento_fondo (docker/migrador/privilegios.sql
+--   y scripts/crear-roles-prod.sql), así que no les hace falta.
+-- - «Nada del fondo antes de su constitución» lo exige la app (src/fondo/movimiento.ts, bajo el candado por fondo),
+--   no la base: es el único escritor (candado de camino único). Deuda para cuando haya un escritor de APORTE.
 SET LOCAL lock_timeout = '5s';
 
 ALTER TABLE "movimiento_fondo" ADD CONSTRAINT "movimiento_fondo_unidades_chk"
