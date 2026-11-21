@@ -13,8 +13,8 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { ErrorCifrado } from "../../cifrado/errores";
 import { obtenerLlavero, type Llavero } from "../../cifrado/llavero";
-import { analizarCertificacion, type CertificacionAnalizada } from "./analisis";
-import { isoDia, validarFechaCorte } from "./fecha-corte";
+import { analizarCertificacion, errorDeDocumento as documento, type CertificacionAnalizada } from "./analisis";
+import { aniosSembrados, isoDia, validarFechaCorte } from "./fecha-corte";
 import type { ErrorFilaAv } from "./filas";
 import {
   ErrorImportacionAv, TIPO_FUENTE, filasSiCoinciden, guardarCertificacion, guardarFilas, registrarVistas, resolverEspecies, resolverFondos,
@@ -22,6 +22,8 @@ import {
 import { MAX_BYTES } from "./pdf/documento";
 
 export const MAX_ERRORES_REGISTRADOS = 100;
+const MAX_INTENTOS = 2;
+const esChoque = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
 export { MAX_BYTES };
 
 export interface ArchivoCertificacion {
@@ -49,7 +51,6 @@ export interface ResultadoImportacionAv {
 }
 
 const sinNada = { repetida: false, certificacionId: null, filasNuevas: 0, filasRepetidas: 0, instrumentosCreados: 0, fondoVinculado: false } as const;
-const documento = (codigo: string): ErrorFilaAv => ({ pagina: 0, fila: 0, columna: null, codigo });
 
 async function registrarRechazo(db: PrismaClient, base: Base, filasTotal: number, errores: readonly ErrorFilaAv[]): Promise<ResultadoImportacionAv> {
   const registrados = errores.slice(0, MAX_ERRORES_REGISTRADOS);
@@ -71,13 +72,13 @@ interface Base {
 }
 
 async function contextoCalendario(db: PrismaClient) {
-  const calendario = await db.calendarioBvc.findMany({ select: { dia: true, esHabil: true } });
-  return { noHabiles: new Set(calendario.filter((c) => !c.esHabil).map((c) => isoDia(c.dia))), aniosSembrados: new Set(calendario.map((c) => c.dia.getUTCFullYear())) };
+  const noHabiles = (await db.calendarioBvc.findMany({ where: { esHabil: false }, select: { dia: true } })).map((c) => c.dia);
+  return { noHabiles: new Set(noHabiles.map(isoDia)), aniosSembrados: aniosSembrados(noHabiles) };
 }
 
 /** La misma fecha ya tiene certificación: o es el mismo contenido (repetida) o es un conflicto. */
-async function repetida(tx: Prisma.TransactionClient, base: Base, a: CertificacionAnalizada, existente: { id: string; cargaId: string }): Promise<ResultadoImportacionAv> {
-  const porLlave = await filasSiCoinciden(tx, existente.cargaId, a.registros);
+async function repetida(tx: Prisma.TransactionClient, base: Base, a: CertificacionAnalizada, existente: { id: string; cargaId: string }, llavero: Llavero): Promise<ResultadoImportacionAv> {
+  const porLlave = await filasSiCoinciden(tx, existente.cargaId, a.registros, llavero);
   if (!porLlave) throw new ErrorImportacionAv("CONFLICTO_CERTIFICACION");
   const n = a.registros.length;
   const carga = await tx.cargaArchivo.create({
@@ -91,7 +92,8 @@ async function nueva(tx: Prisma.TransactionClient, base: Base, a: CertificacionA
   const carga = await tx.cargaArchivo.create({
     data: { tipoFuente: TIPO_FUENTE, nombreArchivo: base.nombre, sha256: base.sha256, fechaCorte: base.fecha, estado: "VALIDANDO", cargadoPorId: base.usuarioId },
   });
-  const especies = await resolverEspecies(tx, a.posiciones.map((p) => p.nemo));
+  const ubicaciones = new Map([...a.leida.lotes].reverse().map((l) => [l.nemo, { pagina: l.pagina, fila: l.numero, columna: "NEMOTÉCNICO" }] as const));
+  const especies = await resolverEspecies(tx, a.posiciones.map((p) => p.nemo), ubicaciones);
   const fondos = await resolverFondos(tx, a.leida.fondos, base.fondoCodigo);
   await guardarFilas(tx, carga.id, a.registros, llavero);
   const certificacionId = await guardarCertificacion(tx, { cargaId: carga.id, fechaCorte: base.fecha, analizada: a, especies: especies.ids, fondos: fondos.ids }, llavero);
@@ -108,7 +110,7 @@ async function enTransaccion(db: PrismaClient, base: Base, a: CertificacionAnali
       const mismoArchivo = await tx.cargaArchivo.findFirst({ where: { tipoFuente: TIPO_FUENTE, sha256: base.sha256, estado: "CARGADO", NOT: { fechaCorte: base.fecha } }, select: { id: true } });
       if (mismoArchivo) throw new ErrorImportacionAv("ARCHIVO_YA_CARGADO");
       const existente = await tx.certificacion.findUnique({ where: { fechaCorte: base.fecha }, select: { id: true, cargaId: true } });
-      return existente ? repetida(tx, base, a, existente) : nueva(tx, base, a, llavero);
+      return existente ? repetida(tx, base, a, existente, llavero) : nueva(tx, base, a, llavero);
     },
     { timeout: 60_000, maxWait: 10_000 },
   );
@@ -136,9 +138,13 @@ export async function importarCertificacion(db: PrismaClient, archivo: ArchivoCe
   const n = analisis.valor.registros.length;
   const fecha = validarFechaCorte(archivo.fechaCorte, { ...(await contextoCalendario(db)), hoy: archivo.hoy ?? new Date(), creadoEn: analisis.valor.creadoEn });
   if (fecha) return registrarRechazo(db, base, n, [documento(fecha)]);
-  try {
-    return await enTransaccion(db, base, analisis.valor, llavero);
-  } catch (e) {
-    return registrarRechazo(db, base, n, [errorDe(e)]);
+  for (let intento = 1; ; intento += 1) {
+    try {
+      return await enTransaccion(db, base, analisis.valor, llavero);
+    } catch (e) {
+      // Otro importador creó la misma especie a la vez (P2002): se relee y se reintenta una sola vez.
+      if (esChoque(e) && intento < MAX_INTENTOS) continue;
+      return registrarRechazo(db, base, n, [errorDe(e)]);
+    }
   }
 }

@@ -7,7 +7,7 @@
  * Los errores llevan un código y la ubicación de la fila, nunca valores.
  */
 import type { Prisma } from "@prisma/client";
-import { cifrarCrudo, cifrarEncargo } from "../../cifrado/campos";
+import { cifrarCrudo, cifrarEncargo, descifrarCrudo } from "../../cifrado/campos";
 import type { Llavero } from "../../cifrado/llavero";
 import { referencia } from "./agregar";
 import type { CertificacionAnalizada } from "./analisis";
@@ -26,13 +26,25 @@ export class ErrorImportacionAv extends Error {
 
 const enFondo = (f: FondoCertificado) => ({ pagina: f.pagina, fila: f.numero, columna: "NIT DEL FONDO" });
 
-export async function resolverEspecies(tx: Tx, nemos: readonly string[]): Promise<{ ids: Map<string, string>; creadas: number }> {
+/**
+ * Cada nemotécnico → su acción (por símbolo de Trii o por nemotécnico, como el importador de Trii), en una sola
+ * consulta y solo entre acciones. Si dos acciones distintas lo reclaman, no se elige: ESPECIE_AMBIGUA.
+ * Si ninguna, se crea. `ubicaciones` dice en qué fila del PDF aparece cada nemotécnico (para el error).
+ */
+export async function resolverEspecies(
+  tx: Tx, nemos: readonly string[], ubicaciones: ReadonlyMap<string, Omit<ErrorFilaAv, "codigo">>,
+): Promise<{ ids: Map<string, string>; creadas: number }> {
+  const candidatas = await tx.instrumento.findMany({
+    where: { tipo: "ACCION", OR: [{ simboloTrii: { in: [...nemos] } }, { nemotecnico: { in: [...nemos] } }] },
+    select: { id: true, simboloTrii: true, nemotecnico: true },
+  });
   const ids = new Map<string, string>();
   let creadas = 0;
   for (const nemo of nemos) {
-    const existente = await tx.instrumento.findFirst({ where: { OR: [{ simboloTrii: nemo }, { nemotecnico: nemo }] }, select: { id: true } });
-    const id = existente?.id ?? (await tx.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo, nombre: nemo }, select: { id: true } })).id;
-    if (!existente) creadas += 1;
+    const propias = new Set(candidatas.filter((c) => c.simboloTrii === nemo || c.nemotecnico === nemo).map((c) => c.id));
+    if (propias.size > 1) throw new ErrorImportacionAv("ESPECIE_AMBIGUA", ubicaciones.get(nemo));
+    const id = [...propias][0] ?? (await tx.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo, nombre: nemo }, select: { id: true } })).id;
+    if (propias.size === 0) creadas += 1;
     ids.set(nemo, id);
   }
   return { ids, creadas };
@@ -79,16 +91,29 @@ export async function guardarFilas(tx: Tx, cargaId: string, registros: readonly 
 
 const llaveDe = (clave: string, ocurrencia: number) => `${clave}|${ocurrencia}`;
 
+const mismoCrudo = (a: Readonly<Record<string, string>>, b: Readonly<Record<string, string>>) => {
+  const ka = Object.keys(a).sort();
+  return ka.length === Object.keys(b).length && ka.every((k) => a[k] === b[k]);
+};
+
 /**
  * ¿La certificación ya guardada para esa fecha tiene EXACTAMENTE las mismas filas? Se compara el conjunto
- * (clave, ocurrencia) en los dos sentidos: una fila de más o de menos también es otra certificación.
+ * (clave, ocurrencia) en los dos sentidos —una fila de más o de menos también es otra certificación— y el crudo
+ * descifrado de cada fila: así cuenta también lo que la clave no lleva (el encargo y la descripción del fondo).
  * Devuelve las filas existentes por llave, o null si difieren.
  */
-export async function filasSiCoinciden(tx: Tx, cargaExistente: string, registros: readonly RegistroAvConClave[]): Promise<Map<string, string> | null> {
-  const previas = await tx.filaFuente.findMany({ where: { primeraCargaId: cargaExistente, tipoFuente: TIPO_FUENTE }, select: { id: true, claveNatural: true, ocurrencia: true } });
-  const porLlave = new Map(previas.map((p) => [llaveDe(p.claveNatural, p.ocurrencia), p.id]));
-  const iguales = previas.length === registros.length && registros.every((r) => porLlave.has(llaveDe(r.clave, r.ocurrencia)));
-  return iguales ? porLlave : null;
+export async function filasSiCoinciden(tx: Tx, cargaExistente: string, registros: readonly RegistroAvConClave[], llavero: Llavero): Promise<Map<string, string> | null> {
+  const previas = await tx.filaFuente.findMany({
+    where: { primeraCargaId: cargaExistente, tipoFuente: TIPO_FUENTE },
+    select: { id: true, tipoFuente: true, claveNatural: true, ocurrencia: true, crudo: true },
+  });
+  const porLlave = new Map(previas.map((p) => [llaveDe(p.claveNatural, p.ocurrencia), p]));
+  if (previas.length !== registros.length) return null;
+  for (const r of registros) {
+    const p = porLlave.get(llaveDe(r.clave, r.ocurrencia));
+    if (!p || !mismoCrudo(descifrarCrudo(p.crudo, p, llavero), r.crudo)) return null;
+  }
+  return new Map([...porLlave].map(([llave, p]) => [llave, p.id]));
 }
 
 /** Reimportar: la carga nueva deja constancia de que vio cada fila, sin crear ningún hecho. */

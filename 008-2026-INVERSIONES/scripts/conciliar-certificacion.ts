@@ -8,6 +8,7 @@
 import { PrismaClient } from "@prisma/client";
 import { conciliarCertificacion } from "../src/conciliacion/conciliar";
 import { ErrorArgumentosAv, leerArgumentosConciliar, type ArgumentosConciliar } from "../src/importacion/av/argumentos";
+import { lineaDeConciliacion } from "../src/importacion/av/salida";
 
 const USO = "Uso: npx tsx scripts/conciliar-certificacion.ts --fecha-corte AAAA-MM-DD";
 
@@ -25,7 +26,7 @@ async function main(): Promise<void> {
   const db = new PrismaClient();
   try {
     const c = await conciliarCertificacion(db, { fechaCorte: a.fechaCorte });
-    console.log(`🧮 Conciliación al ${c.fechaCorte}: ${c.resultado} · ${c.cuentas.CUADRA} cuadran, ${c.cuentas.NO_CUADRA} no cuadran, ${c.cuentas.PENDIENTE_LIQUIDACION} pendientes de liquidación${c.motivos.length ? ` · motivos: ${c.motivos.join(", ")}` : ""}`);
+    console.log(lineaDeConciliacion(c));
   } finally {
     await db.$disconnect();
   }

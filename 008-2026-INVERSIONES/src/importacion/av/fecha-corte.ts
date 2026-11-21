@@ -16,6 +16,17 @@ export interface ContextoFechaCorte {
 }
 
 export const isoDia = (d: Date): string => d.toISOString().slice(0, 10);
+
+/**
+ * Años con el calendario de la BVC sembrado ENTERO. La siembra guarda solo los festivos entre semana: un año cuenta
+ * si trae alguno de enero y alguno de diciembre. Siempre los hay: Reyes Magos pasa a un lunes de enero, y de los
+ * fijos 8 y 25 de diciembre al menos uno cae entre semana. Así un año sembrado a medias no pasa.
+ */
+export function aniosSembrados(diasNoHabiles: readonly Date[]): Set<number> {
+  const meses = new Set(diasNoHabiles.map((d) => `${d.getUTCFullYear()}-${d.getUTCMonth()}`));
+  const anios = new Set(diasNoHabiles.map((d) => d.getUTCFullYear()));
+  return new Set([...anios].filter((a) => meses.has(`${a}-0`) && meses.has(`${a}-11`)));
+}
 /** Un instante → su fecha en Colombia (UTC−5, sin horario de verano). */
 const diaEnColombia = (instante: Date): string => isoDia(new Date(instante.getTime() - COLOMBIA_MS));
 

@@ -14,13 +14,12 @@
  * corte que usted dio; nunca montos, especies, cuentas ni el correo. El archivo original no se guarda.
  */
 import { PrismaClient } from "@prisma/client";
-import { readFileSync, statSync } from "node:fs";
-import { conciliarCertificacion } from "../src/conciliacion/conciliar";
+import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { ErrorArgumentosAv, leerArgumentosImportar, type ArgumentosImportarCertificacion } from "../src/importacion/av/argumentos";
-import { importarCertificacion, MAX_BYTES, type ResultadoImportacionAv } from "../src/importacion/av/importar";
+import { MAX_BYTES } from "../src/importacion/av/importar";
+import { cargarYConciliar } from "../src/importacion/av/salida";
 
 const USO = "Uso: npx tsx scripts/importar-certificacion.ts --email <correo-del-dueño> --fecha-corte AAAA-MM-DD [--fondo <codigoFic>] <certificacion.pdf>";
-const dia = (d: Date) => d.toISOString().slice(0, 10);
 
 function argumentos(): ArgumentosImportarCertificacion {
   try {
@@ -31,27 +30,33 @@ function argumentos(): ArgumentosImportarCertificacion {
   }
 }
 
-function leerPdf(ruta: string): Uint8Array {
+function salir(mensaje: string): never {
+  console.error(mensaje);
+  process.exit(1);
+}
+
+/** Lee como mucho `tope` bytes de un archivo REGULAR (un FIFO o un dispositivo no pasan); null si no se puede. */
+function leerAcotado(ruta: string, tope: number): Uint8Array | null {
+  let fd: number | null = null;
   try {
-    if (statSync(ruta).size > MAX_BYTES) {
-      console.error("❌ PDF_DEMASIADO_GRANDE · el archivo pasa de 15 MB y no se importa.");
-      process.exit(1);
-    }
-    return new Uint8Array(readFileSync(ruta));
+    fd = openSync(ruta, "r");
+    if (!fstatSync(fd).isFile()) return null;
+    const buffer = Buffer.alloc(tope);
+    let leidos = 0;
+    for (let n = 1; n > 0 && leidos < tope; leidos += n) n = readSync(fd, buffer, leidos, tope - leidos, null);
+    return new Uint8Array(buffer.subarray(0, leidos));
   } catch {
-    console.error("❌ ARCHIVO_ILEGIBLE · no se pudo leer el PDF indicado.");
-    process.exit(1);
+    return null;
+  } finally {
+    if (fd !== null) closeSync(fd);
   }
 }
 
-function informar(r: ResultadoImportacionAv): void {
-  if (r.estado === "RECHAZADO") {
-    console.log(`❌ RECHAZADO (nada se guardó) · ${r.errores.length} error(es):`);
-    for (const e of r.errores) console.log(`   página ${e.pagina} · fila ${e.fila}${e.columna ? ` · ${e.columna}` : ""} · ${e.codigo}`);
-    return;
-  }
-  const detalle = r.repetida ? "la misma certificación ya estaba cargada: 0 filas nuevas" : `${r.filasNuevas} filas nuevas, ${r.instrumentosCreados} especies nuevas${r.fondoVinculado ? ", fondo vinculado por su NIT" : ""}`;
-  console.log(`✅ CARGADO · ${r.filasTotal} filas: ${detalle}`);
+function leerPdf(ruta: string): Uint8Array {
+  const contenido = leerAcotado(ruta, MAX_BYTES + 1);
+  if (contenido === null) return salir("❌ ARCHIVO_ILEGIBLE · no se pudo leer el PDF indicado.");
+  if (contenido.byteLength > MAX_BYTES) return salir("❌ PDF_DEMASIADO_GRANDE · el archivo pasa de 15 MB y no se importa.");
+  return contenido;
 }
 
 async function main(): Promise<void> {
@@ -60,16 +65,10 @@ async function main(): Promise<void> {
   const db = new PrismaClient();
   try {
     const usuario = await db.usuario.findUnique({ where: { email: a.email }, select: { id: true } });
-    if (!usuario) {
-      console.error("❌ USUARIO_NO_REGISTRADO · ese correo no está registrado (este comando no crea usuarios).");
-      process.exit(1);
-    }
-    const r = await importarCertificacion(db, { contenido, usuarioId: usuario.id, fechaCorte: a.fechaCorte, fondoCodigo: a.fondo });
-    informar(r);
-    if (r.estado === "RECHAZADO") process.exit(1);
-    const c = await conciliarCertificacion(db, { fechaCorte: a.fechaCorte });
-    console.log(`🧮 Conciliación al ${c.fechaCorte}: ${c.resultado} · ${c.cuentas.CUADRA} cuadran, ${c.cuentas.NO_CUADRA} no cuadran, ${c.cuentas.PENDIENTE_LIQUIDACION} pendientes de liquidación${c.motivos.length ? ` · motivos: ${c.motivos.join(", ")}` : ""}`);
-    console.log(`➡️  Siguiente paso: corra \`npm run precios:actualizar -- --desde ${dia(a.fechaCorte)}\` para verificar los cierres de ese día, y después \`npx tsx scripts/conciliar-certificacion.ts --fecha-corte ${dia(a.fechaCorte)}\`.`);
+    if (!usuario) return salir("❌ USUARIO_NO_REGISTRADO · ese correo no está registrado (este comando no crea usuarios).");
+    const r = await cargarYConciliar(db, { contenido, usuarioId: usuario.id, fechaCorte: a.fechaCorte, fondoCodigo: a.fondo });
+    for (const linea of r.lineas) console.log(linea);
+    process.exitCode = r.codigo;
   } finally {
     await db.$disconnect();
   }

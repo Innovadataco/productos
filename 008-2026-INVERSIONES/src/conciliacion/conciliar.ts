@@ -4,7 +4,8 @@
  * queda (las tablas son de solo inserción). Un candado consultivo por fecha de corte serializa las corridas
  * de la misma fecha. Devuelve un resumen con conteos y códigos de motivo, nunca cifras.
  */
-import type { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
+import { isoDia as dia } from "../importacion/av/fecha-corte";
 import { calcularConciliacion, VERSION_CALCULO, type Control } from "./controles";
 import { leerEntradas } from "./esperado";
 
@@ -24,8 +25,6 @@ export interface ResumenConciliacion {
   /** Códigos de motivo distintos, en orden alfabético. */
   readonly motivos: readonly string[];
 }
-
-const dia = (d: Date) => d.toISOString().slice(0, 10);
 
 function filaDeControl(conciliacionId: string, c: Control): Prisma.ControlConciliacionCreateManyInput {
   return {
@@ -53,6 +52,7 @@ export async function conciliarCertificacion(db: PrismaClient, opciones: { reado
       await tx.controlConciliacion.createMany({ data: controles.map((c) => filaDeControl(conciliacion.id, c)) });
       return resumen(conciliacion.id, fechaCorte, resultado, controles);
     },
-    { timeout: 60_000, maxWait: 10_000 },
+    // Una sola instantánea para todas las lecturas: una importación que confirma en medio no mezcla el resultado.
+    { timeout: 60_000, maxWait: 10_000, isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
   );
 }

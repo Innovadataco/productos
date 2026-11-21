@@ -107,7 +107,7 @@ describe("validarFechaCorte", () => {
     expect(validarFechaCorte(dia("2024-01-09"), { ...ctx, creadoEn: new Date("2024-01-06T02:00:00Z") })).toBe("FECHA_CORTE_POSTERIOR_AL_PDF");
   });
 
-  it("un año cuenta como sembrado solo si trae su 1 de enero y su 25 de diciembre (code-reviewer MEDIO: no a medias)", () => {
+  it("un año cuenta como sembrado solo si trae festivos de enero y de diciembre (code-reviewer MEDIO: no a medias)", () => {
     const dias = ["2025-01-01", "2025-12-25", "2026-01-01", "2026-06-29", "2027-12-25"].map((d) => new Date(`${d}T00:00:00Z`));
     expect([...aniosSembrados(dias)].sort()).toEqual([2025]);
   });

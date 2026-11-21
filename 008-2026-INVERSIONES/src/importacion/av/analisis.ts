@@ -18,7 +18,9 @@ export interface CertificacionAnalizada {
 
 export type Analisis = { readonly ok: true; readonly valor: CertificacionAnalizada } | { readonly ok: false; readonly errores: ErrorFilaAv[] };
 
-const documento = (codigo: string): ErrorFilaAv => ({ pagina: 0, fila: 0, columna: null, codigo });
+/** Un error del documento entero (sin página ni fila). */
+export const errorDeDocumento = (codigo: string): ErrorFilaAv => ({ pagina: 0, fila: 0, columna: null, codigo });
+const documento = errorDeDocumento;
 
 function leerTabla(bytes: Uint8Array): { ok: true; creadoEn: Date | null; filas: ReturnType<typeof leerTablaCertificacion> } | { ok: false; errores: ErrorFilaAv[] } {
   try {
