@@ -11,9 +11,12 @@
 # Orden: marca de pausa → candados (Inversiones y común con PI) → disco → PI sin desplegar → (.tar:
 # etiquetas, sha256 y disco; docker load) → las tres imágenes del mismo sha, amd64 → CI en verde y sha en
 # main → clon en el sha, limpio y de root → solo hacia adelante → medición → base y respaldo → roles →
-# respaldo cifrado → migrador (migraciones, guardián del esquema y privilegios) → app y vigía → imagen,
-# salud, mem = memswap → estado → retención → medición 10 min después → salud otra vez → convivencia →
-# DEPLOY VERIFICADO <sha>. Si algo falla después de recrear contenedores, vuelve a la imagen que corría.
+# PI otra vez → (si migra) app vieja detenida → respaldo cifrado → (si migra) respaldo diario detenido →
+# migrador (migraciones, guardián del esquema y privilegios) → app, vigía y respaldo → imagen, salud,
+# mem = memswap → estado → retención → medición 10 min después → salud otra vez → convivencia →
+# DEPLOY VERIFICADO <sha>. Si algo falla después de tocar contenedores, vuelve a la imagen que corría.
+# Mientras migra no corre nada de Inversiones que retenga tablas: la app queda abajo desde el respaldo previo
+# hasta que el up de la versión nueva queda healthy.
 set -euo pipefail
 INV_SCRIPT=desplegar-prod
 # shellcheck source=produccion-comun.sh
@@ -22,6 +25,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 MIN_DISCO_GB_POR_DEFECTO=15
 ESPERA_MEDICION_S_POR_DEFECTO=600
 PERMANENTES=(inv-008-app inv-008-vigia inv-008-respaldo)
+# inv_app tiene CONNECTION LIMIT 10 (crear-roles-prod.sql): el pool de la app deja margen para una sesión a mano.
+TOPE_POOL_APP=8
 
 # «ABORTAR» si los GB libres ($1) están bajo el umbral ($2); «SEGUIR» si no (el umbral es el mínimo).
 decidir_disco() {
@@ -63,10 +68,24 @@ etiquetas_del_tar_ok() {
   [ "$actual" = "$esperado" ]
 }
 
-# Verdadero si ningún archivo de $@ (y lo que contengan) es de otro dueño que root o lo puede escribir
-# el grupo u otros: nadie más que root puede cambiar lo que corre con sudo.
-scripts_seguros() {
-  [ -z "$(find "$@" \( ! -user root -o -perm -0020 -o -perm -0002 \) -print 2>/dev/null | head -n 1)" ]
+# Verdadero si la URL de la app ($1) fija el pool de Prisma: un único connection_limit, entero de 1 a
+# TOPE_POOL_APP. Sin él, Prisma abre núcleos × 2 + 1 conexiones. No imprime nada (la URL lleva la clave).
+pool_app_ok() {
+  local consulta n
+  case "$1" in *\?*) consulta="${1#*\?}" ;; *) return 1 ;; esac
+  n="$(printf '%s\n' "$consulta" | tr '&' '\n' | sed -n 's/^connection_limit=//p')"
+  [[ "$n" =~ ^[1-9][0-9]*$ ]] && [ "$n" -le "$TOPE_POOL_APP" ]
+}
+
+# Solo avisa (no bloquea): el despliegue sigue. Lee el archivo de producción sin ejecutarlo.
+avisar_pool_app() {
+  local url
+  url="$(leer_variable_env "$INV_ENV_PROD" INV_APP_DATABASE_URL)" || return 0
+  case "$url" in
+    *connection_limit=*) pool_app_ok "$url" ||
+      informar "⚠️  connection_limit de la URL de la app fuera de 1 a $TOPE_POOL_APP (inv_app admite 10 conexiones): se sigue; corríjalo en el archivo de producción (produccion.md §2)" ;;
+    *) informar "⚠️  sin connection_limit en la URL de la app: Prisma abre núcleos × 2 + 1 conexiones (inv_app admite 10). Se sigue; agregue &connection_limit=5 (produccion.md §2)" ;;
+  esac
 }
 
 normalizar_id() {
@@ -134,10 +153,6 @@ verificar_clon() {
   cabeza="$(git -C "$INV_DIR_008" rev-parse HEAD)"
   [ "$cabeza" = "$sha" ] || morir "el clon está en $cabeza, no en $sha: git -C /opt/inversiones-008/repo fetch && git checkout $sha"
   [ -z "$(git -C "$INV_DIR_008" status --porcelain --untracked-files=no)" ] || morir "el clon tiene cambios sin commit: no se despliega"
-  if [ "$INV_PROYECTO_ACTIVO" = "$INV_PROYECTO_PROD" ]; then
-    scripts_seguros "$INV_DIR_008/scripts" "$INV_DIR_008/docker-compose.prod.yml" ||
-      morir "hay scripts o compose que no son de root o que otros pueden escribir: no se corren con sudo"
-  fi
 }
 
 verificar_imagenes() {
@@ -261,16 +276,20 @@ purgar_tars() {
   done
 }
 
-# Vuelta atrás: si el despliegue falla después de recrear contenedores con el sha nuevo, vuelve a levantar
-# los permanentes con el sha que corría (las migraciones son aditivas: la imagen vieja sirve con la base nueva).
+# Vuelta atrás: si el despliegue falla después de tocar contenedores, vuelve a levantar los permanentes con
+# el sha que corría (las migraciones son aditivas: la imagen vieja sirve con la base nueva). Si se
+# re-despliega el mismo sha, no hay otra imagen; pero si la app ya se detuvo para migrar, se levanta otra vez.
+SHA_CORRIA=""
 SHA_VUELTA=""
+DETENIDOS=0
 VERIFICADO=0
 vuelta_atras() {
-  local codigo=$?
-  if [ "$VERIFICADO" = 0 ] && [ -n "$SHA_VUELTA" ]; then
-    informar "vuelta atrás: levantando de nuevo la imagen que corría (sha $SHA_VUELTA)"
-    if INV_TAG="$SHA_VUELTA" "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${PERMANENTES[@]}"; then
-      informar "vuelta atrás hecha: corre $SHA_VUELTA. Revise la causa antes de reintentar."
+  local codigo=$? sha="$SHA_VUELTA"
+  [ -n "$sha" ] || [ "$DETENIDOS" = 0 ] || sha="$SHA_CORRIA"
+  if [ "$VERIFICADO" = 0 ] && [ -n "$sha" ]; then
+    informar "vuelta atrás: levantando de nuevo la imagen que corría (sha $sha)"
+    if INV_TAG="$sha" "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${PERMANENTES[@]}"; then
+      informar "vuelta atrás hecha: corre $sha. Revise la causa antes de reintentar."
     else
       informar "⚠️  la vuelta atrás también falló: revise a mano (docs/despliegue/produccion.md, reversa)"
     fi
@@ -292,7 +311,9 @@ main() {
     morir "uso: desplegar-prod.sh <id-imagen | inv-008-app:<sha>> [--cargar <archivo.tar> <sha256>] [--sin-migrar]"
 
   preparar_entorno
+  revisar_arbol
   armar_compose
+  avisar_pool_app
   local espera="${INV_ESPERA_MEDICION_S:-$ESPERA_MEDICION_S_POR_DEFECTO}"
   [[ "$espera" =~ ^[0-9]+$ ]] || morir "INV_ESPERA_MEDICION_S debe ser un entero"
   tomar_candado_propio
@@ -311,25 +332,36 @@ main() {
   medicion="$(ruta_escribible "$INV_ESTADO_DIR/mediciones/$SHA-$(date +%Y%m%d-%H%M%S).txt")"
   "$INV_DIR_008/scripts/medir-memoria.sh" --etiqueta "antes de up" --salida "$medicion"
 
-  SHA_VUELTA="$(leer_estado sha-actual)"
+  SHA_CORRIA="$(leer_estado sha-actual)"
+  SHA_VUELTA="$SHA_CORRIA"
   [ "$SHA_VUELTA" != "$SHA" ] || SHA_VUELTA=""
   trap vuelta_atras EXIT
 
   informar "base y respaldo: up --wait"
   "${COMPOSE[@]}" up -d --wait --wait-timeout 180 inv-008-db inv-008-respaldo
   verificar_roles
+  if [ "$sin_migrar" = 0 ]; then
+    revisar_pi "antes de migrar"
+    # Desde aquí la vuelta atrás vuelve a levantar la app aunque el sha sea el mismo.
+    DETENIDOS=1
+    informar "deteniendo la app vieja: no atiende ni retiene tablas durante el respaldo previo y la migración"
+    "${COMPOSE[@]}" stop inv-008-app
+  fi
   informar "respaldo cifrado antes de migrar"
   "$INV_DIR_008/scripts/respaldar-base.sh" --motivo pre-migracion >/dev/null
 
   if [ "$sin_migrar" = 0 ]; then
-    revisar_pi "antes de migrar"
+    informar "deteniendo el respaldo diario: su pg_dump no se cruza con la migración"
+    "${COMPOSE[@]}" stop inv-008-respaldo
     informar "migrador (un solo uso, antes de servir): migraciones, guardián del esquema y privilegios"
     "${COMPOSE[@]}" run --rm -T inv-008-migrador
   fi
 
   revisar_pi "antes de up"
-  informar "app y vigía: up --wait"
-  "${COMPOSE[@]}" up -d --wait --wait-timeout 180 inv-008-app inv-008-vigia
+  informar "app, vigía y respaldo: up --wait"
+  "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${PERMANENTES[@]}"
+  # La app y el respaldo ya están arriba: si algo falla después, se vuelve solo si hay otra imagen.
+  DETENIDOS=0
   verificar_servicio
   verificar_memswap
 

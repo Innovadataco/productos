@@ -17,6 +17,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 main() {
   [ $# -eq 0 ] || morir "no lleva argumentos"
   preparar_entorno
+  revisar_arbol
   local meminfo disponible motivos=() total base anterior
   meminfo="$(archivo_meminfo)"
   disponible="$(leer_meminfo_kb MemAvailable "$meminfo")" || morir "no se pudo leer MemAvailable de $meminfo"

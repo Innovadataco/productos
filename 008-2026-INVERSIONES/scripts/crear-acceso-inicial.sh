@@ -12,6 +12,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 
 main() {
   preparar_entorno
+  revisar_arbol
   armar_compose
   tomar_candado_propio
   tomar_candado_comun
@@ -20,6 +21,9 @@ main() {
     [ -r "$INV_ESTADO_DIR/sha-actual" ] || morir "no hay despliegue registrado: despliegue primero"
     INV_TAG="$(tr -d '[:space:]' <"$INV_ESTADO_DIR/sha-actual")"
   fi
+  # Como en desplegar-prod.sh: solo un sha completo elige la imagen del migrador (nunca latest ni otra cosa).
+  # No se imprime el valor recibido.
+  [[ "$INV_TAG" =~ ^[0-9a-f]{40}$ ]] || morir "INV_TAG (o estado/sha-actual) no es un sha de 40 hex: no se corre el migrador"
   export INV_TAG
   "${COMPOSE[@]}" run --rm -T inv-008-migrador node_modules/.bin/tsx scripts/crear-acceso-inicial.ts "$@"
 }

@@ -27,6 +27,7 @@ main() {
     esac
   done
   preparar_entorno
+  revisar_arbol
   armar_compose
   local dir
   dir="$(ruta_escribible "$INV_RESPALDOS_DIR")"

@@ -20,6 +20,7 @@ main() {
     esac
   done
   preparar_entorno
+  revisar_arbol
   armar_compose
   if [ -n "$salida" ]; then
     salida="$(ruta_escribible "$salida")"

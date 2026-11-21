@@ -17,6 +17,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 main() {
   local motivo="${*:-pausa manual}"
   preparar_entorno
+  revisar_arbol --solo-avisar
   armar_compose
   tomar_candado_propio
   escribir_atomico "$INV_MARCA_PAUSA" "$(date '+%Y-%m-%d %H:%M:%S %z') · ${motivo//[^[:alnum:] ._:-]/}"
