@@ -35,6 +35,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .chip.ok { color: var(--gain); border-color: var(--gain); }
 .chip.aviso, .nota.aviso { color: var(--loss); }
 .nota { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+/* Enlaces dentro del texto (la línea de la conciliación, «Lo que todavía no está»): color de la marca, con contraste. */
+.nota a, .falta a { color: var(--gold); text-underline-offset: 3px; }
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* Contador: oculto hasta su primer cuadro (no se ve el valor final y luego el 0). Si el script no arranca, aparece a los 3 s. */
 @media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
