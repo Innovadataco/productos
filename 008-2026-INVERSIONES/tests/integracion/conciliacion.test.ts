@@ -92,6 +92,8 @@ describe("conciliarCertificacion: acciones", () => {
     expect(cs.find((x) => x.tipo === "CANTIDAD" && x.instrumentoId === c.ids[1])).toMatchObject({
       resultado: "PENDIENTE_LIQUIDACION", codigoMotivo: "t_mas_2", esperado: dec("2000"), real: dec("2010"), diferencia: dec("10"), detalle: { pendientes: 1, operada: "2010" },
     });
+    const valor = cs.find((x) => x.tipo === "VALOR" && x.instrumentoId === c.ids[1])!;
+    expect([valor.resultado, valor.codigoMotivo, valor.esperado?.toString(), valor.real?.toString()]).toEqual(["PENDIENTE_LIQUIDACION", "t_mas_2", "40200", "40200"]);
   });
 
   it("sin el cierre del día del corte de una especie: VALOR sin_precio_al_corte (no se usa el día anterior)", async () => {

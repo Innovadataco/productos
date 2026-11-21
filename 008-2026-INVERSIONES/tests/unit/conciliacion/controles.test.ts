@@ -49,11 +49,17 @@ describe("CANTIDAD por especie", () => {
     expect(r.resultado).toBe("NO_CUADRA");
   });
 
-  it("si la certificación cuadra con lo operado (no con lo liquidado): PENDIENTE_LIQUIDACION t_mas_2 y el global PARCIAL", () => {
-    const r = calcularConciliacion(base({ especies: [especie("A", { liquidada: 80n, operada: 100n, pendientes: 1 })] }));
+  it("si la certificación cuadra con lo operado (no con lo liquidado): cantidad y valor PENDIENTE_LIQUIDACION t_mas_2 y el global PARCIAL (code-reviewer ALTO)", () => {
+    const r = calcularConciliacion(base({ especies: [especie("A", { liquidada: 80n, operada: 100n, pendientes: 1 }), especie("B", { certificada: { cantidad: 20n, precioValoracion: "50", valorMercado: "1000" }, liquidada: 20n, operada: 20n, cierre: "50" })] }));
     expect(uno(r, "CANTIDAD", "A")).toMatchObject({ resultado: "PENDIENTE_LIQUIDACION", codigoMotivo: "t_mas_2", detalle: { pendientes: 1, operada: "100" } });
-    expect(r.resultado).toBe("NO_CUADRA"); // el valor de A sale por cantidad
-    expect(uno(r, "VALOR", "A")).toMatchObject({ resultado: "NO_CUADRA", codigoMotivo: "por_cantidad" });
+    expect(uno(r, "VALOR", "A")).toMatchObject({ resultado: "PENDIENTE_LIQUIDACION", codigoMotivo: "t_mas_2", esperado: "1000", real: "1000" });
+    expect(uno(r, "VALOR")).toMatchObject({ resultado: "PENDIENTE_LIQUIDACION", codigoMotivo: "t_mas_2", esperado: "2000" });
+    expect(r.resultado).toBe("PARCIAL");
+  });
+
+  it("con T+2 en la cantidad pero el precio fuera del 0,5 %: el valor dice precio_distinto (se valora con lo operado)", () => {
+    const r = calcularConciliacion(base({ especies: [especie("A", { liquidada: 80n, operada: 100n, pendientes: 1, cierre: "12" })] }));
+    expect(uno(r, "VALOR", "A")).toMatchObject({ resultado: "NO_CUADRA", codigoMotivo: "precio_distinto", esperado: "1200" });
   });
 
   it("solo con T+2 pendiente (y el resto cuadra) el global es PARCIAL", () => {
