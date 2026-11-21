@@ -52,6 +52,11 @@ describe("abrirDocumento: el PDF ficticio", () => {
     expect(inflado).toEqual(plano);
   });
 
+  it("no decodifica las imágenes (JPEG en DCT ni PNG en Flate con predictor): solo mira su diccionario", () => {
+    expect(abrirDocumento(pdf()).paginas).toHaveLength(2);
+    expect(abrirDocumento(pdf({ imagenConPredictor: true })).paginas).toHaveLength(2);
+  });
+
   it("acepta /Contents como arreglo de referencias", () => {
     expect(latin1(abrirDocumento(pdf({ contenidosEnArreglo: true })).paginas[0]!.contenido)).toContain("(RENTA VARIABLE) Tj");
   });
@@ -90,7 +95,7 @@ describe("abrirDocumento: falla cerrado con un código", () => {
 
   it("una entrada de la xref que no apunta a su objeto es una xref inválida", () => {
     const texto = latin1(pdf());
-    const linea = /\n(\d{10}) 00000 n \n/.exec(texto.slice(texto.lastIndexOf("xref\n")))![1]!;
+    const linea = /\n(\d{10}) 00000 n \n/.exec(texto.slice(texto.lastIndexOf("\nxref\n")))![1]!;
     const corrida = String(Number(linea) + 1).padStart(10, "0");
     expect(codigo(() => abrirDocumento(mutar(pdf(), `${linea} 00000 n `, `${corrida} 00000 n `)))).toBe("PDF_XREF_INVALIDA");
   });

@@ -52,6 +52,8 @@ export interface OpcionesPdf {
   readonly trailerExtra?: string;
   /** /Contents como arreglo de referencias («[4 0 R]») en vez de una referencia sola. */
   readonly contenidosEnArreglo?: boolean;
+  /** Imagen como PNG de jsPDF (Flate con /DecodeParms y predictor) en vez de JPEG (DCT). */
+  readonly imagenConPredictor?: boolean;
 }
 
 export const CERTIFICACION_FICTICIA: EspecCertificacion = {
@@ -165,6 +167,13 @@ function diccionarioFuente(base: string): string {
 /** Bytes «binarios» de la imagen falsa: incluyen `)`, `obj` y `endstream` para probar que se respeta /Length. */
 const IMAGEN = Buffer.from([0xff, 0x29, 0x28, 0x5c, ...Buffer.from(" obj endstream BT (x) Tj ET "), 0x00, 0x96, 0xd3]);
 
+/** Los datos de la imagen son falsos: el lector no debe decodificarlos nunca (ni DCT ni Flate con predictor). */
+function filtroImagen(o: OpcionesPdf): string {
+  return o.imagenConPredictor
+    ? "/Filter /FlateDecode\n/DecodeParms <<\n/Predictor 15\n/Colors 1\n/BitsPerComponent 8\n/Columns 1\n>>\n"
+    : "/Filter /DCTDecode\n";
+}
+
 type Objeto = string | { readonly dic: string; readonly datos: Buffer };
 
 function flujo(contenido: string, comprimir: boolean): Objeto {
@@ -182,7 +191,7 @@ function objetos(espec: EspecCertificacion, o: OpcionesPdf): Map<number, Objeto>
     [1, "<</Type /Pages\n/Kids [3 0 R 5 0 R ]\n/Count 2\n>>"],
     ...fuentes,
     [2, `<<\n/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]\n/Font <<\n${fuentes.map(([num], i) => `/F${i + 1} ${num} 0 R`).join("\n")}\n>>\n/XObject <<\n/I0 7 0 R\n>>\n>>`],
-    [7, { dic: `<<\n/Type /XObject\n/Subtype /Image\n/Width 1\n/Height 1\n/ColorSpace /DeviceGray\n/BitsPerComponent 8\n/Length ${IMAGEN.length}\n>>`, datos: IMAGEN }],
+    [7, { dic: `<<\n/Type /XObject\n/Subtype /Image\n/Width 1\n/Height 1\n/ColorSpace /DeviceGray\n/BitsPerComponent 8\n/Length ${IMAGEN.length}\n${filtroImagen(o)}>>`, datos: IMAGEN }],
     [8, info],
     [9, "<<\n/Type /Catalog\n/Pages 1 0 R\n/OpenAction [3 0 R /FitH null]\n/PageLayout /OneColumn\n>>"],
   ]);
