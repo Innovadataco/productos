@@ -61,28 +61,31 @@ describe("cada dato con su procedencia", () => {
     expect(notas(fila("FICTD"))).toEqual([]);
   });
 
-  it("el panel de detalle dice de qué cierre es, cuándo se trajo y de dónde", async () => {
+  it("el panel de detalle: cuándo se trajo y de dónde, en el mismo par que «Valor al cierre del …» (revisión a11y, MEDIO)", async () => {
     await m.pintar(createElement(Tablero, { vista: MEZCLADAS }));
     const boton = fila("FICTB").querySelector("button")!;
     await act(async () => boton.click());
     const panel = m.contenedor.querySelector('aside[aria-label="Detalle de FICTB"]')!;
-    expect(notas(panel)).toEqual([`Cierre del 31-mar-2027 · ${TRAIDO_B}`]);
+    expect(notas(panel)).toEqual([TRAIDO_B]);
+    // Una segunda definición del mismo término: el lector la oye como parte del valor al cierre.
+    const dd = panel.querySelector(".fecha-dato")!.closest("dd")!;
+    expect(texto(dd.previousElementSibling?.previousElementSibling)).toBe("Valor al cierre del 31-mar-2027");
+    expect(dd.previousElementSibling?.tagName).toBe("DD");
   });
 
-  it("cada barra de la rentabilidad lleva la procedencia de su cierre", async () => {
+  it("cada barra conserva su detalle corto, sin la procedencia: el nombre del botón no se alarga ni se sale a 375 px (revisión a11y, ALTO y MEDIO)", async () => {
     await m.pintar(createElement(Tablero, { vista: MEZCLADAS }));
     const barras = [...seccion("t-foto").querySelectorAll("button.g-barra")];
-    const detalle = (nemo: string) => texto(barras.find((b) => texto(b.querySelector(".g-barra-nombre")) === nemo)!.querySelector(".g-barra-detalle"));
-    expect(detalle("FICTC")).toMatch(new RegExp(`· ${TRAIDO_C.replace(/[()]/g, "\\$&")}$`));
-    expect(detalle("FICTA")).toContain(TRAIDO_A);
+    expect(barras.length).toBe(3);
+    for (const b of barras) expect(texto(b)).not.toMatch(/traído|hora de Colombia|BVC por Yahoo|bvc-ficticia/);
   });
 
-  it("cada tarjeta de «Qué movió» dice el cierre de la referencia, cuándo se trajo y de dónde", async () => {
+  it("cada tarjeta de «Qué movió»: cuándo se trajo su cierre y de dónde (la fecha la dice el periodo de la sección)", async () => {
     await m.pintar(createElement(Tablero, { vista: MEZCLADAS }));
     const tarjetas = [...seccion("t-mov").querySelectorAll('[role="listitem"]')];
     const de = (nemo: string) => notas(tarjetas.find((t) => texto(t.querySelector("b")) === nemo)!);
-    expect(de("FICTA")).toEqual([`Cierre del 31-mar-2027 · ${TRAIDO_A}`]);
-    expect(de("FICTB")).toEqual([`Cierre del 31-mar-2027 · ${TRAIDO_B}`]);
+    expect(de("FICTA")).toEqual([TRAIDO_A]);
+    expect(de("FICTB")).toEqual([TRAIDO_B]);
   });
 });
 
@@ -97,11 +100,12 @@ describe("los valores que suman cierres", () => {
     expect(texto(kpi("Valor en acciones").querySelector(".fecha-dato time"))).toBe(fecha(MEZCLADAS.cierreMasViejo));
   });
 
-  it("el total «¿Gano?» también, fuera del título (que no cambia)", async () => {
+  it("en la portada va una sola vez, junto a «Valor en acciones», y nunca dentro del título (revisión react y a11y, MEDIO)", async () => {
     await m.pintar(createElement(Tablero, { vista: MEZCLADAS }));
     const hero = seccion("t-hero");
     expect(hero.querySelector("h1 .fecha-dato")).toBeNull();
-    expect(notas(hero).filter((t) => t.startsWith("Con el cierre más antiguo"))).toEqual([`${COMPUESTA} ${AVISO}`, `${COMPUESTA} ${AVISO}`]);
+    expect(notas(hero)).toEqual([`${COMPUESTA} ${AVISO}`]);
+    expect(hero.querySelector(".fecha-dato")!.closest(".kpi")).toBe(kpi("Valor en acciones"));
   });
 
   it("la composición del portafolio (debajo de las gráficas, no en su centro)", async () => {

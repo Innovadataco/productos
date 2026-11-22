@@ -46,16 +46,15 @@ describe("Cómo está repartido", () => {
     expect(texto(seccion())).toContain("Sin cierre (no entra aquí): FICTC");
   });
 
-  it("rentabilidad sin vender de mayor a menor; cada barra dice lo mismo que la columna % de la tabla y su origen (con cuándo se trajo su cierre y de dónde)", async () => {
+  it("rentabilidad sin vender de mayor a menor; cada barra dice lo mismo que la columna % de la tabla y su origen", async () => {
     await m.pintar(createElement(Tablero, { vista: tres }));
     expect(barras().map((b) => texto(b.querySelector(".g-barra-nombre")))).toEqual(["FICTB", "FICTA"]);
     for (const b of barras()) {
       const nemo = texto(b.querySelector(".g-barra-nombre"));
       expect(texto(b.querySelector(".g-barra-valor"))).toBe(celdaPct(nemo));
     }
-    expect(texto(barras()[0]!.querySelector(".g-barra-detalle"))).toBe(
-      "costo $ 7.919 · valor $ 8.478 · sin verificar · 31-mar-2027 · traído el 31-mar-2027 a las 18:04 (hora de Colombia) · BVC por Yahoo",
-    );
+    // La procedencia va en la fila, el detalle y bajo las gráficas: aquí alargaría el nombre del botón (revisión a11y).
+    expect(texto(barras()[0]!.querySelector(".g-barra-detalle"))).toBe("costo $ 7.919 · valor $ 8.478 · sin verificar · 31-mar-2027");
   });
 
   it("el clic en una barra abre el detalle de la especie; Escape lo cierra y devuelve el foco a la barra", async () => {

@@ -57,14 +57,15 @@ for (const tema of ["light", "dark"] as const) {
       const compuesta = `Con el cierre más antiguo del 1-nov-2024 · ${traido(c)} ${AVISO}`;
       const kpi = page.locator(".kpi").filter({ has: page.getByText("Valor en acciones", { exact: true }) });
       expect(await notas(kpi)).toEqual([compuesta]);
+      expect(await notas(page.getByRole("region", { name: /¿Gano\?/ }))).toEqual([compuesta]);
       await expect(kpi.locator(".fecha-dato-aviso")).toBeVisible();
       expect(await notas(page.getByRole("region", { name: "Cómo está repartido" }))).toContain(compuesta);
 
       const tarjetaA = t.queMovio.getByRole("listitem").filter({ hasText: "FICTA" });
-      expect(await notas(tarjetaA)).toEqual([`Cierre del 22-nov-2024 · ${traido(a)}`]);
+      expect(await notas(tarjetaA)).toEqual([traido(a)]);
 
       await t.botonEspecie("FICTC").click();
-      expect(await notas(t.detalle("FICTC"))).toEqual([`Cierre del 1-nov-2024 · ${traido(c)}`]);
+      expect(await notas(t.detalle("FICTC"))).toEqual([traido(c)]);
 
       const r = await revisarNotas(page);
       expect(r.cuantas).toBeGreaterThan(5);
