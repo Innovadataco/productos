@@ -11,8 +11,9 @@
 #   scripts/armar-sobre.sh <cabecera-privada> [<archivo>] | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh <comando>
 #   (con `sudo -n` delante si el SSH no entra como root; <raíz>: ver ESTADO en la gestión)
 # Comandos: importar-trii · registrar-escision · lote-escision · construir-lotes · importar-plan · registrar-fondo ·
-#   importar-certificacion · importar-valores-fondo · importar-precios · conciliar-certificacion · corregir-corte-certificacion
-# Sale con el código del CLI (0, 1, 2 o 3), o con 1 si se niega antes de correrlo.
+#   importar-certificacion · importar-valores-fondo · importar-precios · conciliar-certificacion ·
+#   corregir-corte-certificacion · registrar-movimiento-fondo · importar-series · importar-decretos
+# Sale con el código del CLI (0, 1, 2 o 3), con 64 si inv-cargar se niega sin correrlo, o con 1 si se niega este script.
 
 # Sin volcados de memoria ANTES de todo: este script maneja datos del dueño por stdin.
 ulimit -c 0
@@ -25,6 +26,10 @@ COMANDOS_CARGA=(importar-trii registrar-escision lote-escision construir-lotes i
 
 # La constitución del fondo (unidades y aporte del extracto; sin archivo): scripts/registrar-movimiento-fondo.ts.
 COMANDOS_CARGA+=(registrar-movimiento-fondo)
+
+# Las series oficiales (el CSV canónico de los exportadores del Mac) y los decretos de dividendos (el CSV del dueño;
+# ensayo por defecto): scripts/importar-series.ts y scripts/importar-decretos.ts.
+COMANDOS_CARGA+=(importar-series importar-decretos)
 
 main() {
   # La entrada del sobre queda en el descriptor 3; nada más del script la puede consumir.
