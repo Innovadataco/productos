@@ -55,6 +55,20 @@ npx tsx scripts/registrar-movimiento-fondo.ts … --aplicar   # registra
 - Después, `conciliar-certificacion`: el fondo deja `fondo_sin_unidades` y el efectivo, `aporte_fic_sin_registrar`.
 - En producción va por la vía B (`cargar-prod.sh registrar-movimiento-fondo`, [runbook §11](docs/despliegue/produccion.md)).
 
+## Rendimientos del fondo (pagados en efectivo) y su retención
+```bash
+npx tsx scripts/registrar-rendimientos-fondo.ts --archivo <rendimientos.csv> --email <su-correo> \
+  --fondo <código del fondo en la SFC>             # ensayo: no escribe
+npx tsx scripts/registrar-rendimientos-fondo.ts … --aplicar   # registra
+```
+- El CSV es suyo y privado (nunca al repo): `fecha,tipo,valor`, una fila por operación del encargo del FIC. `RENDIMIENTO` es el «PAGO DE RDTOS» y `RETENCION`, la «RTE/FTE»; valor con punto decimal, sin miles, hasta 4 decimales. Ejemplo inventado: `2027-03-17,RENDIMIENTO,48213.3719`.
+- El rendimiento entra a la caja (ajuste `RENDIMIENTO_FIC`); la retención queda como hecho del fondo y no mueve la caja: el pago ya llega neto.
+- Antes: el fondo registrado y su constitución. Ninguna fila puede ser anterior a ella ni posterior a hoy, y cada fecha y tipo va una sola vez.
+- Repetir el mismo CSV no escribe nada; uno con meses nuevos solo agrega esos. Lo registrado no se corrige: una fecha y tipo ya registrados con otro valor rechazan el archivo (`VALOR_DISTINTO`).
+- Imprime solo el modo, conteos, códigos y números de línea; nunca valores, fechas, el código del fondo ni el correo. Salidas: 0 bien · 1 error de la base o del cifrado · 2 uso o archivo ilegible · 3 rechazado (no escribió nada).
+- Después, `conciliar-certificacion`: el efectivo cuenta cada rendimiento hasta el corte. Si falta registrarlos dice `rendimientos_fic_sin_registrar`; si queda otra diferencia, `partida_sin_fuente`, y la pantalla dice cuántos rendimientos contó y el último día.
+- En producción va por la vía B (`cargar-prod.sh registrar-rendimientos-fondo`, paso 12 ter del [runbook §11](docs/despliegue/produccion.md)).
+
 ## Precios de cierre (INV-SPEC-13)
 ```bash
 npm run precios:actualizar                       # últimos 10 días de las especies con lotes
@@ -89,6 +103,7 @@ Este repo es público: aquí no hay datos reales. Los datos de prueba están inv
 - Pruebas: `npx vitest run tests/unit/proyecciones` (incluye `rendimiento.test.ts`) y el e2e `tests/e2e/proyecciones.spec.ts`.
 
 ---
+> v1.4 · 2026-11-22 · 08:52 (-05) · INV · Fábrica Inversiones (frente fondo-rendimientos) · rendimientos del fondo y su retención: `registrar-rendimientos-fondo` (CSV, ensayo y `--aplicar`, la retención no mueve la caja, no se corrige) y los motivos del efectivo (v1.4 sobre la v1.3 de main)
 > v1.3 · 2026-11-22 · 06:28 (-05) · INV · Fábrica Inversiones (frente datos-oficiales-docs, C8) · la sección de proyecciones: hay pantalla `/proyecciones` y su e2e (v1.3 sobre la v1.2 de main)
 > v1.2 · 2026-11-21 · 23:28 (-05) · INV · Fábrica Inversiones (frente docs-tanda-21nov) · salidas de `escision:registrar` y `lote:escision` con el siguiente paso; sección de proyecciones (motor, sin pantalla) (v1.2 sobre la v1.1)
 > v1.1 · 2026-11-21 · 20:26 (-05) · INV · Fábrica Inversiones (frente certificacion-corte-real) · primer pie de versión · certificación de A&V: el corte real (FECHA_CORTE_ANTES_DEL_CIERRE, CORTE_NO_COINCIDE, fecha_corte_dudosa) y su corrección con `corregir-corte-certificacion`
