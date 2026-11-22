@@ -5,16 +5,17 @@
  * cerrarlo el foco vuelve aquí). Las cifras vienen del servidor (src/tablero/composicion.ts y calculo.ts).
  */
 import { FechaDatoCompuesta } from "@/app/_comun/fecha-dato/FechaDato";
-import { textoProcedencia } from "@/app/_comun/fecha-dato/textos";
 import { Barras, Dona, type FilaBarra, type Segmento } from "@/app/_graficas";
 import { cop, fecha, n, numero, pct } from "./formato";
-import { procedenciaDeCierre, procedenciaDeFilas } from "./procedencia";
+import { procedenciaDeFilas } from "./procedencia";
 import type { FilaVista, Vista } from "./tipos";
 
-/** El estado y la fecha del cierre y, desde frente fecha-hora-datos, cuándo lo trajo 008 y de dónde. */
-const estadoCierre = (f: FilaVista) => (f.cierre
-  ? `${f.cierre.verificado ? "verificado A&V" : "sin verificar"} · ${fecha(f.cierre.fecha)} · ${textoProcedencia(procedenciaDeCierre(f.cierre), { sinFecha: true })}`
-  : "sin cierre");
+/**
+ * El estado y la fecha del cierre. Cuándo lo trajo 008 y de dónde (frente fecha-hora-datos) NO van aquí: alargarían el
+ * nombre del botón de cada barra y no se parten a 375 px (revisión a11y). Están en su fila, en su detalle (al que lleva
+ * el clic) y bajo las gráficas.
+ */
+const estadoCierre = (f: FilaVista) => (f.cierre ? `${f.cierre.verificado ? "verificado A&V" : "sin verificar"} · ${fecha(f.cierre.fecha)}` : "sin cierre");
 const detalle = (f: FilaVista) => `costo ${cop(n(f.costo))} · valor ${f.valor ? cop(n(f.valor)) : "—"} · ${estadoCierre(f)}`;
 
 function segmentos(vista: Vista): Segmento[] {

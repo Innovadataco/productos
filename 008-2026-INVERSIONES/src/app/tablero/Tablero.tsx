@@ -187,9 +187,9 @@ function Respuesta({ vista }: { vista: Vista }) {
     { k: "Comisiones", v: -n(vista.comisiones), c: "var(--loss)" },
   ];
   const abs = piezas.reduce((s, p) => s + Math.abs(p.v), 0) || 1;
-  // De cuándo son los cierres que suman el total y el valor en acciones: el más viejo (frente fecha-hora-datos).
+  // De cuándo son los cierres que suman el valor en acciones (y la ganancia sin vender del total): el más viejo
+  // (frente fecha-hora-datos). Una sola nota en la portada, junto a la cifra que suma los cierres (revisión a11y y React).
   const compuesta = procedenciaDeFilas(vista.filas);
-  const procedencia = compuesta ? <FechaDatoCompuesta compuesta={compuesta} /> : null;
   return (
     <section className="hero entra" aria-labelledby="t-hero">
       <div className="eyebrow">Su portafolio en acciones</div>
@@ -203,9 +203,8 @@ function Respuesta({ vista }: { vista: Vista }) {
       <div className="leyenda num">
         {piezas.map((p) => <span key={p.k}><i style={{ background: p.c }} />{p.k} {cop(p.v, true)}</span>)}
       </div>
-      {procedencia}
       <div className="kpis">
-        <div className="kpi"><div className="eyebrow">Valor en acciones</div><Cifra valor={n(vista.valorAcciones)} />{procedencia}</div>
+        <div className="kpi"><div className="eyebrow">Valor en acciones</div><Cifra valor={n(vista.valorAcciones)} />{compuesta ? <FechaDatoCompuesta compuesta={compuesta} /> : null}</div>
         <div className="kpi"><div className="eyebrow">Caja</div><span className="muted">llega con la certificación de A&amp;V</span>
           <div className="nota">Los CSV de Trii no traen el aporte al fondo ni sus rendimientos: la caja calculada con ellos no es real.</div></div>
         <div className="kpi"><div className="eyebrow">Especies vivas</div><span className="num">{vista.filas.length}</span></div>
@@ -229,8 +228,9 @@ function notaMovimiento(m: MovimientoVista): string | null {
 
 /**
  * Solo formato: el par de ruedas, los aportes y el neto vienen calculados en Decimal desde el servidor. Cada tarjeta
- * dice el cierre de la referencia (el último de su fila: el cálculo exige que sea ese), cuándo se trajo y de dónde; el
- * neto, el más viejo de los que entraron.
+ * dice cuándo se trajo el cierre de la referencia (el último de su fila: el cálculo exige que sea ese) y de dónde; su
+ * fecha ya la dice el periodo de la sección. El neto, el más viejo de los que entraron: todos son del día de la
+ * referencia y sus cierres previos, del día de la rueda anterior (movimiento.ts solo admite ese par).
  */
 function Movimientos({ mov, filas }: { mov: MovimientoVista; filas: readonly FilaVista[] }) {
   const max = Math.max(1, ...mov.especies.map((m) => Math.abs(n(m.aporte))));
@@ -240,7 +240,8 @@ function Movimientos({ mov, filas }: { mov: MovimientoVista; filas: readonly Fil
   const [lleno, setLleno] = useState(false);
   useEffect(() => { const t = setTimeout(() => setLleno(true), 500); return () => clearTimeout(t); }, []);
   const cierreDe = new Map(filas.flatMap((f) => (f.cierre ? [[f.id, procedenciaDeCierre(f.cierre)] as const] : [])));
-  const compuesta = procedenciaDeFilas(filas.filter((f) => mov.especies.some((m) => m.id === f.id)));
+  const entraron = new Set(mov.especies.map((m) => m.id));
+  const compuesta = procedenciaDeFilas(filas.filter((f) => entraron.has(f.id)));
   return (
     <section className="bloque entra d2" aria-labelledby="t-mov">
       <div className="cabeza">
@@ -251,6 +252,7 @@ function Movimientos({ mov, filas }: { mov: MovimientoVista; filas: readonly Fil
         {mov.especies.map((m) => {
           const aporte = n(m.aporte);
           const tono = aporte >= 0 ? "gain" : "loss";
+          const procedencia = cierreDe.get(m.id);
           return (
             <div className="mover" role="listitem" key={m.id}>
               <span><b>{m.nemo}</b><br /><span className={`num chico ${tono}`}>{pct(n(m.variacionPct))}</span></span>
@@ -258,7 +260,7 @@ function Movimientos({ mov, filas }: { mov: MovimientoVista; filas: readonly Fil
                 <span className={`barra-fill bg-${tono}`} style={{ transform: `scaleX(${lleno ? Math.abs(aporte) / max : 0})` }} />
               </span>
               <span className={`num der ${tono}`}>{cop(aporte, true)}</span>
-              {cierreDe.has(m.id) ? <FechaDato procedencia={cierreDe.get(m.id)!} etiqueta="Cierre" ancho /> : null}
+              {procedencia ? <FechaDato procedencia={procedencia} sinFecha ancho /> : null}
             </div>
           );
         })}
@@ -287,12 +289,13 @@ function Detalle({ f, cerrar }: { f: FilaVista; cerrar: () => void }) {
         <dt>Cantidad</dt><dd>{numero(n(f.cantidad))}</dd>
         <dt>Costo (A&amp;V o Trii, sin comisión)</dt><dd>{cop(n(f.costo))}</dd>
         <dt>{f.cierre ? `Valor al cierre del ${fecha(f.cierre.fecha)}` : "Valor al cierre"}</dt><dd>{f.valor ? cop(n(f.valor)) : "sin cierre"}</dd>
+        {/* Otra definición del mismo término: cuándo se trajo ese cierre y de dónde (la fecha ya la dice el término). */}
+        {f.cierre ? <dd className="pares-ancho"><FechaDato procedencia={procedenciaDeCierre(f.cierre)} sinFecha /></dd> : null}
         <dt>Ganancia sin vender</dt><dd className={n(f.sinVender) >= 0 ? "gain" : "loss"}>{f.sinVender ? `${cop(n(f.sinVender), true)} · ${pct(n(f.rentabilidadPct))}` : SIN_DATO}</dd>
         <dt>Ganancia por ventas</dt><dd>{cop(n(f.realizada), true)}</dd>
         <dt>Dividendos netos</dt><dd>{cop(n(f.dividendos))}</dd>
         <dt>Comisiones pagadas</dt><dd>{cop(n(f.comisiones))}</dd>
       </dl>
-      {f.cierre ? <FechaDato procedencia={procedenciaDeCierre(f.cierre)} etiqueta="Cierre" /> : null}
     </aside>
   );
 }

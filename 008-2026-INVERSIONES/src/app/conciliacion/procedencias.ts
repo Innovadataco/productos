@@ -15,23 +15,9 @@ import "server-only";
 import type { PrismaClient } from "@prisma/client";
 import { primeroElegido } from "@/conciliacion/esperado";
 import { enSoloLectura, type LecturaConciliacion } from "@/conciliacion/leer";
-import { idsCalculados } from "./calculados";
+import { idsCalculados, SIN_PROCEDENCIAS, type LecturaProcedencias, type Origen } from "./calculados";
 
-export { idsCalculados } from "./calculados";
-
-export interface Origen {
-  readonly fuente: string;
-  readonly traidoEn: Date;
-}
-
-export interface LecturaProcedencias {
-  /** Por especie (instrumentoId): el cierre del corte con que se calculó su valor. */
-  readonly cierres: ReadonlyMap<string, Origen>;
-  /** Por fondo (instrumentoId): el valor de unidad del corte con que se calculó. */
-  readonly fondos: ReadonlyMap<string, Origen>;
-}
-
-export const SIN_PROCEDENCIAS: LecturaProcedencias = Object.freeze({ cierres: new Map(), fondos: new Map() });
+export { idsCalculados, SIN_PROCEDENCIAS, type LecturaProcedencias, type Origen } from "./calculados";
 
 interface Pedido {
   readonly corte: Date;

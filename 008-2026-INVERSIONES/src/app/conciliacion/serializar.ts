@@ -11,8 +11,7 @@ import { componer } from "@/app/_comun/fecha-dato/componer";
 import { horaColombia } from "@/app/_comun/fecha-dato/hora";
 import type { Procedencia } from "@/app/_comun/fecha-dato/tipos";
 import type { ConciliacionLeida, ControlLeido, CorteDisponible, LecturaConciliacion, PorLiquidar } from "@/conciliacion/leer";
-import { idsCalculados } from "./calculados";
-import type { LecturaProcedencias, Origen } from "./procedencias";
+import { idsCalculados, SIN_PROCEDENCIAS, type LecturaProcedencias, type Origen } from "./calculados";
 import { estadoDeControl, fraseDeMotivo, textoDeResultadoGlobal, type Estado, type Tono } from "./motivos";
 import type { LineaConciliacionVista } from "../tablero/tipos";
 import type { ConciliacionVista, CorteVista, CuentasVista, FilaEspecieVista, FilaMontoVista, PorLiquidarVista, ProcedenciasVista, VistaCorte } from "./tipos";
@@ -99,8 +98,6 @@ function cuentas(controles: readonly ControlLeido[]): CuentasVista {
 const reconocido = (c: ControlLeido): boolean =>
   c.tipo === "EFECTIVO" || c.tipo === "FONDO" || c.tipo === "CANTIDAD" || (c.tipo === "VALOR" && (c.instrumentoId !== null || alcance(c) === "total_acciones"));
 
-const NINGUNA: LecturaProcedencias = { cierres: new Map(), fondos: new Map() };
-
 /**
  * Solo de lo que se calculó (frente fecha-hora-datos): una procedencia de una especie o un fondo sin cifra del sistema
  * no se muestra. El total, por el cierre más viejo de sus especies, solo si el total se calculó.
@@ -135,7 +132,7 @@ function conciliacion(l: LecturaConciliacion, leidas: LecturaProcedencias): Conc
 }
 
 /** `leidas`: de dónde y de cuándo es cada valor del sistema (src/app/conciliacion/procedencias.ts); sin ellas, ninguna. */
-export function aVistaCorte(l: LecturaConciliacion, leidas: LecturaProcedencias = NINGUNA): VistaCorte {
+export function aVistaCorte(l: LecturaConciliacion, leidas: LecturaProcedencias = SIN_PROCEDENCIAS): VistaCorte {
   return {
     fechaCorte: dia(l.fechaCorte),
     conciliacion: conciliacion(l, leidas),
