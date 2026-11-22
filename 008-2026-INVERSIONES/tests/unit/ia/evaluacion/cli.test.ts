@@ -23,6 +23,18 @@ describe("ia-evaluar · como proceso, sin red", { timeout: 10 * POR_CLI_MS }, ()
     comprobar(correr(SCRIPT, ["casos"], entornoMinimo({})), 0, "DIARIO 15", ["FICTICIA"]);
   });
 
+  it("casos con el archivo exportado (.ficticio.json): 0, tres casos revalidados con su hash, sin nombres ni cifras", () => {
+    const ficticio = path.join(RAIZ, "tests", "fixtures", "ia", "evaluacion", "paquetes.ficticio.json");
+    comprobar(correr(SCRIPT, ["casos", "--paquetes", ficticio], entornoMinimo({})), 0, "3 casos (PAQUETES): DIARIO 1 · REGLAS 1 · ESCENARIOS 1", ["FICTICIA", "37.911"]);
+  });
+
+  it("correr con el portafolio y la salida en el temporal: 2 EN_CARPETA_PROHIBIDA, sin crearla", () => {
+    const ficticio = path.join(RAIZ, "tests", "fixtures", "ia", "evaluacion", "paquetes.ficticio.json");
+    const salida = salidaNueva();
+    comprobar(correr(SCRIPT, ["correr", "--modelo", "qwen2.5:14b", "--salida", salida, "--paquetes", ficticio], entornoMinimo({ INV_IA_LOCAL_DESTINO: "no-es-un-destino" })), 2, "EN_CARPETA_PROHIBIDA", []);
+    expect(existsSync(salida)).toBe(false);
+  });
+
   it("correr sin la variable del destino: 2 DESTINO_AUSENTE y no crea la carpeta", () => {
     const salida = salidaNueva();
     comprobar(correr(SCRIPT, ["correr", "--modelo", "qwen2.5:14b", "--salida", salida], entornoMinimo({})), 2, "DESTINO_AUSENTE", []);

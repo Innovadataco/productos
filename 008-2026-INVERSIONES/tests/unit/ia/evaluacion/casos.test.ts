@@ -65,7 +65,9 @@ describe("casosInventados", () => {
     expect(distancias.some((h) => h.cercania === "LEJOS")).toBe(true);
     expect(hechos().some((h) => h.frescura === "ATRASADO")).toBe(true);
     expect(casos.filter((c) => c.paquete.avisos.includes("HECHOS_RECORTADOS")).length).toBeGreaterThanOrEqual(2);
-    expect(Math.max(...casos.map((c) => c.paquete.hechos.length))).toBe(99);
+    // Los grupos entran enteros: el tope es 99 y el más grande queda cerca de él, sin pasarlo.
+    expect(Math.max(...casos.map((c) => c.paquete.hechos.length))).toBeGreaterThanOrEqual(90);
+    expect(Math.max(...casos.map((c) => c.paquete.hechos.length))).toBeLessThanOrEqual(99);
     expect(Math.min(...casos.map((c) => c.paquete.hechos.length))).toBeLessThan(25);
   });
 

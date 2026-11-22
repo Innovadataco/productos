@@ -3,7 +3,7 @@
  * pedidos a la vez), la pausa entre pedidos, el corte tras N fallos seguidos y la señal del operador (PARA).
  */
 import { describe, expect, it } from "vitest";
-import { crearGeneradorFalso, type ConductaFalsa } from "@/ia/generador-falso";
+import { crearGeneradorFalso, type ConductaFalsa, type ConductaInmediata } from "@/ia/generador-falso";
 import type { Generador, PedidoGeneracion, ResultadoGeneracion } from "@/ia/generador";
 import type { ResultadoSondaLocal } from "@/ia/local/sonda";
 import { salidaDePlantilla } from "@/ia/validador/plantilla";
@@ -15,7 +15,7 @@ const casos = limitarCasos(casosInventados(), 3);
 const SONDA_OK: ResultadoSondaLocal = { ok: true, smoke: "NO_PEDIDO", latenciaMs: 13 };
 
 /** Responde con la plantilla del caso de la vista recibida (el falso no ve el paquete: lo busca por la vista). */
-function respuestaPara(pedido: PedidoGeneracion): ConductaFalsa {
+function respuestaPara(pedido: PedidoGeneracion): ConductaInmediata {
   const c = casos.find((x) => JSON.stringify(x.paquete.hechos.map((h) => h.clave)) === JSON.stringify(pedido.vista.hechos.map((h) => h.clave)));
   return { tipo: "RESPONDER", salidaCruda: c === undefined ? "{}" : salidaDePlantilla(c.paquete), latenciaMs: 37 };
 }

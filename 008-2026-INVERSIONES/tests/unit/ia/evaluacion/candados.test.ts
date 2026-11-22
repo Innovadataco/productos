@@ -97,7 +97,8 @@ describe("candados de los scripts", () => {
     expect(tieneIpv4(texto)).toBe(false);
     expect(rutasEscritas(texto)).toEqual([]);
     expect(texto).toMatch(/vigilarRed\(\s*fetch\s*,/);
-    expect([...texto.matchAll(/\bfetch\b/g)]).toHaveLength(1);
+    // El fetch global se usa una sola vez (la clave `fetch:` de las dependencias de la puerta local no cuenta).
+    expect([...texto.matchAll(/(?<![.\w])fetch\b(?!\s*:)/g)]).toHaveLength(1);
   });
 
   it("exportar-hechos-ia.ts: sin pruebas, sin nube, sin red y sin escribir archivos", () => {
