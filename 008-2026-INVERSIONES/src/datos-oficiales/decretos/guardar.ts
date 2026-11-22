@@ -5,14 +5,12 @@
  *   versión; la CADENA la garantiza este módulo: `planificar` solo acepta versiones 1..n con la n como única vigente
  *   (si no, CADENA_ROTA: una v2 sin v1, un número que no sigue al anterior o un retiro sin sucesor), y un cambio retira
  *   la vigente e inserta la n+1 en la misma transacción. Anular es una versión nueva `anulada` con su nota (P10).
- * - Una sola transacción para todo el archivo: la guarda del cruce, el candado de REGISTRO_DECRETOS, se releen y se
- *   vuelven a planificar las versiones, y por cada cambio se retira la vigente (debe contar 1), se guarda la fila cruda
- *   cifrada y se inserta la versión siguiente. Si algo falla, no queda nada (tampoco la carga). Sin cambios, no se
- *   escribe nada.
- * - Guarda del cruce (condición de C1): hasta que el motor de proyecciones cruce los decretos con los pagos de Trii por
- *   ventana (C5b), solo se escribe en una base de pruebas (nombre terminado en `_test`, el de la conexión que escribe):
- *   si no, el motor contaría dos veces un pago de Trii que llega otro día. En otra base: CRUCE_PENDIENTE. C5b la quita
- *   (exigirCruce, basePermiteAplicar y el aviso de la ayuda en argumentos.ts, juntos).
+ * - Una sola transacción para todo el archivo: el candado de REGISTRO_DECRETOS, se releen y se vuelven a planificar las
+ *   versiones, y por cada cambio se retira la vigente (debe contar 1), se guarda la fila cruda cifrada y se inserta la
+ *   versión siguiente. Si algo falla, no queda nada (tampoco la carga). Sin cambios, no se escribe nada.
+ * - Escribe en cualquier base: la condición de C1 (no cargar decretos reales hasta que el motor de proyecciones cruzara
+ *   los decretos con los pagos de Trii por ventana) se cumplió en C5b (src/proyecciones/dividendos.ts con ventana.ts),
+ *   que retiró la guarda de C4a (candado tests/unit/datos-oficiales/decretos/sin-guarda.test.ts).
  * - Después del candado consultivo, la transacción fija lock_timeout (10 s): con la tabla tomada por una migración no
  *   espera los 60 s; la espera de otra carga de decretos la acota el timeout de la transacción. El orden
  *   de lectura es dividendo_decretado y después fila_fuente; la migración de C1 toma fila_fuente primero: una migración
@@ -36,7 +34,7 @@ export const TIPO_FUENTE = "REGISTRO_DECRETOS" as const;
 const TRANSACCION = { timeout: 60_000, maxWait: 10_000 } as const;
 export const NOMBRE_ARCHIVO = "decretos.csv";
 
-export type CodigoDecretos = "CRUCE_PENDIENTE" | "CADENA_ROTA" | "ANULACION_SIN_DECRETO" | "CONFLICTO_CONCURRENTE";
+export type CodigoDecretos = "CADENA_ROTA" | "ANULACION_SIN_DECRETO" | "CONFLICTO_CONCURRENTE";
 
 export class ErrorDecretos extends Error {
   constructor(readonly codigo: CodigoDecretos, readonly linea = 0) {
@@ -173,19 +171,6 @@ export async function leerVersiones(db: Db, instrumentoIds: readonly string[]): 
   return porClave;
 }
 
-/** Solo una base de pruebas (nombre en minúsculas terminado en `_test`) admite escribir decretos hasta C5b. */
-export const basePermiteAplicar = (nombre: string): boolean => /^[a-z0-9_]+_test$/.test(nombre);
-
-/** El nombre de la base de esa conexión (no el de la URL). */
-export async function nombreDeLaBase(db: Db): Promise<string> {
-  const filas = await db.$queryRaw<{ nombre: string }[]>`SELECT current_database() AS nombre`;
-  return filas[0]?.nombre ?? "";
-}
-
-async function exigirCruce(tx: Tx): Promise<void> {
-  if (!basePermiteAplicar(await nombreDeLaBase(tx))) throw new ErrorDecretos("CRUCE_PENDIENTE");
-}
-
 async function escribir(tx: Tx, cargaId: string, p: Planificado, llavero: Llavero): Promise<void> {
   const { fila, instrumentoId } = p.resuelto;
   const d = fila.decreto;
@@ -229,7 +214,6 @@ export type ResultadoGuardar =
   | { readonly estado: "RECHAZADO"; readonly hallazgos: readonly Hallazgo[] };
 
 async function enTransaccion(tx: Tx, e: EntradaGuardar): Promise<ResultadoGuardar> {
-  await exigirCruce(tx);
   // Primero el candado consultivo, sin lock_timeout (que también lo cortaría): otra carga de decretos puede tardar más
   // de 10 s (2.000 cambios, unos 21 s); esa espera la acota el timeout de la transacción. Después, lo más que se espera
   // por un candado de tabla (una migración) son 10 s.
@@ -249,8 +233,7 @@ async function enTransaccion(tx: Tx, e: EntradaGuardar): Promise<ResultadoGuarda
 }
 
 /**
- * Aplica las filas ya leídas y resueltas. Los rechazos (CRUCE_PENDIENTE, CADENA_ROTA, ANULACION_SIN_DECRETO y
- * CONFLICTO_CONCURRENTE) vuelven como RECHAZADO sin haber escrito nada; cualquier otro error sube (puede haber ocurrido
+ * Aplica las filas ya leídas y resueltas. Los rechazos (CADENA_ROTA, ANULACION_SIN_DECRETO y CONFLICTO_CONCURRENTE) vuelven como RECHAZADO sin haber escrito nada; cualquier otro error sube (puede haber ocurrido
  * al confirmar).
  */
 export async function guardarDecretos(db: PrismaClient, e: EntradaGuardar): Promise<ResultadoGuardar> {

@@ -5,8 +5,6 @@
  * - El llavero va primero, en los dos modos: sin claves de cifrado no se toca la base.
  * - Solo el dueño activo. Una especie que no es una acción registrada (por nemotécnico o símbolo de Trii) sale con
  *   ESPECIE_NO_REGISTRADA: no se crean instrumentos.
- * - Hasta C5b, `aplicar` solo escribe en una base de pruebas (CRUCE_PENDIENTE, guardar.ts); el ensayo dice si esta base
- *   lo admitiría.
  * La salida (`salidaDecretos`) lleva solo el modo, conteos, códigos, números de línea y el id de la carga: nunca
  * especies, valores, fechas, referencias, notas ni el correo.
  */
@@ -18,8 +16,7 @@ import { enTodoElArchivo, recortar, type Hallazgo } from "../registro/hallazgos"
 import { bien, fallo, lineasHallazgos, type OpcionesSalida, type SalidaCli } from "../registro/reporte";
 import { MAX_BYTES_DECRETOS, leerCsvDecretos, type FilaDecreto } from "./csv";
 import {
-  basePermiteAplicar, claveDecreto, contar, guardarDecretos, hayCambios, leerVersiones, nombreDeLaBase, planificarTodos,
-  type ConteosDecretos, type DecretoResuelto,
+  claveDecreto, contar, guardarDecretos, hayCambios, leerVersiones, planificarTodos, type ConteosDecretos, type DecretoResuelto,
 } from "./guardar";
 
 export interface EntradaDecretos {
@@ -44,8 +41,6 @@ export type ResultadoDecretos =
       readonly estado: "LISTO" | "SIN_CAMBIOS" | "APLICADO";
       readonly conteos: ConteosDecretos;
       readonly cargaId: string | null;
-      /** Si esta base admite --aplicar (CRUCE_PENDIENTE hasta C5b). */
-      readonly aplicarPermitido: boolean;
     };
 
 /** Lo que resuelve el texto de una especie: el id de la acción, o AMBIGUA si nombra a dos. */
@@ -96,8 +91,7 @@ async function ensayo(db: PrismaClient, resueltos: readonly DecretoResuelto[]): 
   const { planes, hallazgos } = planificarTodos(resueltos, await leerVersiones(db, resueltos.map((r) => r.instrumentoId)));
   if (hallazgos.length > 0) return { modo: "ENSAYO", estado: "RECHAZADO", ...recortar(hallazgos) };
   const conteos = contar(planes);
-  const aplicarPermitido = basePermiteAplicar(await nombreDeLaBase(db));
-  return { modo: "ENSAYO", estado: hayCambios(conteos) ? "LISTO" : "SIN_CAMBIOS", conteos, cargaId: null, aplicarPermitido };
+  return { modo: "ENSAYO", estado: hayCambios(conteos) ? "LISTO" : "SIN_CAMBIOS", conteos, cargaId: null };
 }
 
 export async function importarDecretos(db: PrismaClient, e: EntradaDecretos, o: OpcionesDecretos = {}): Promise<ResultadoDecretos> {
@@ -114,12 +108,10 @@ export async function importarDecretos(db: PrismaClient, e: EntradaDecretos, o: 
   if (!e.aplicar) return ensayo(db, resueltos);
   const r = await guardarDecretos(db, { usuarioId, sha256: csv.sha256, resueltos, llavero });
   if (r.estado === "RECHAZADO") return rechazo(r.hallazgos);
-  return { modo, estado: r.estado, conteos: r.conteos, cargaId: r.estado === "APLICADO" ? r.cargaId : null, aplicarPermitido: true };
+  return { modo, estado: r.estado, conteos: r.conteos, cargaId: r.estado === "APLICADO" ? r.cargaId : null };
 }
 
 // ───────────── Salida del CLI ─────────────
-
-const CRUCE = "los decretos reales no se cargan hasta que el motor de proyecciones cruce por ventana (C5b): contaría dos veces un pago de Trii que llega otro día";
 
 const QUE_REVISAR: Readonly<Record<string, string>> = {
   USUARIO_NO_AUTORIZADO: "el correo no es el de un dueño activo",
@@ -131,7 +123,6 @@ const QUE_REVISAR: Readonly<Record<string, string>> = {
   ANULACION_SIN_DECRETO: "no hay un decreto registrado con esa clave que anular",
   CADENA_ROTA: "las versiones guardadas de ese decreto no son 1..n con la última vigente: avise al CEO de 008 antes de seguir",
   CONFLICTO_CONCURRENTE: "otra carga de decretos se adelantó",
-  CRUCE_PENDIENTE: `esta base no es de pruebas: ${CRUCE}`,
 };
 
 function explicaciones(hallazgos: readonly Hallazgo[]): string[] {
@@ -145,7 +136,6 @@ const lineaConteos = (c: ConteosDecretos, modo: ModoDecretos): string =>
 function resultado(r: Extract<ResultadoDecretos, { readonly conteos: ConteosDecretos }>, o: OpcionesSalida): string {
   if (r.estado === "APLICADO") return `Resultado: aplicado · carga ${r.cargaId}`;
   if (r.estado === "SIN_CAMBIOS") return "Resultado: ya estaba todo registrado; no se escribió nada";
-  if (!r.aplicarPermitido) return `Resultado: el archivo es válido, pero --aplicar está bloqueado en esta base (CRUCE_PENDIENTE: ${CRUCE}). No se escribió nada`;
   return o.produccion
     ? "Resultado: listo; no se escribió nada. Para registrarlo, repita por la vía B con --aplicar en la cabecera del sobre"
     : "Resultado: listo para --aplicar; no se escribió nada";

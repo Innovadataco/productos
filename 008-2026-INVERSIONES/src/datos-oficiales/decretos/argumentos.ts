@@ -10,11 +10,8 @@ import { parseArgs } from "node:util";
 import { correoDeCli } from "../../cli/correo";
 import { fallo, type OpcionesSalida, type SalidaCli } from "../registro/reporte";
 
-/** La condición que dejó C1, dicha en la ayuda (local y vía B). */
-const AVISO_CRUCE = [
-  "  ⚠️  NO cargue decretos reales todavía: hasta que el motor de proyecciones cruce los decretos con los pagos de Trii",
-  "  por ventana (C5b), contaría dos veces un pago que Trii acredita otro día. Por eso --aplicar solo escribe en una base",
-  "  de pruebas (nombre terminado en _test); en cualquier otra sale CRUCE_PENDIENTE. El ensayo funciona en todas.",
+/** Qué queda en claro en la base, dicho en la ayuda (local y vía B). */
+const AVISO_NOTA = [
   "  Solo el crudo de cada fila va cifrado: la nota y la referencia quedan en claro en la base. No ponga en la nota",
   "  cantidades, montos ni datos de la cuenta.",
 ];
@@ -25,14 +22,14 @@ export const USO_IMPORTAR_DECRETOS = [
   "  cuota y con su referencia oficial (SFC o BVC). Sin --aplicar es ensayo: valida y cuenta, no escribe nada.",
   "  Una fila distinta de lo registrado es la versión siguiente, que retira a la anterior; anular es la misma fila con",
   "  anulada=SI y una nota (borrar la fila del archivo no anula). Solo en pesos y en dinero: moneda=COP, forma=DINERO.",
-  ...AVISO_CRUCE,
+  ...AVISO_NOTA,
   "  Salida: 0 bien · 1 error de la base o del cifrado · 2 uso o archivo ilegible · 3 rechazado (no escribió nada).",
 ].join("\n");
 
 export const USO_VIA_B_DECRETOS = [
   "Uso (vía B, §11 del runbook): el CSV va en el sobre; la cabecera privada lleva --email y el correo del dueño, y",
   "  --aplicar para escribir (sin él, ensayo).",
-  ...AVISO_CRUCE,
+  ...AVISO_NOTA,
   "  Salida: 0 bien · 1 error de la base o del cifrado · 2 uso o archivo ilegible · 3 rechazado (no escribió nada).",
 ].join("\n");
 

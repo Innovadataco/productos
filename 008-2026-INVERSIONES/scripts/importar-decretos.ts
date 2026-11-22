@@ -5,9 +5,8 @@
  * - Sin --aplicar es ensayo: valida, resuelve las especies y cuenta, sin escribir. Con --aplicar escribe por el camino
  *   único (src/datos-oficiales/decretos/guardar.ts): un cambio es la versión siguiente, que retira a la anterior, y
  *   anular es una versión nueva `anulada` con su nota. Reimportar el mismo CSV no escribe nada.
- * - ⚠️ NO cargue decretos reales todavía (condición de C1): hasta que el motor de proyecciones cruce los decretos con
- *   los pagos de Trii por ventana (C5b), contaría dos veces un pago que Trii acredita otro día. Por eso --aplicar solo
- *   escribe en una base de pruebas (nombre terminado en _test); en cualquier otra sale CRUCE_PENDIENTE.
+ * - El motor de proyecciones cruza los decretos con los pagos de Trii por ventana (C5b): un pago que Trii acredita otro
+ *   día no se cuenta dos veces. --aplicar escribe en la base de DATABASE_URL.
  * - Lee un archivo REGULAR con tope (src/lib/archivo-acotado.ts). Usa DATABASE_URL y las claves de cifrado del entorno
  *   (el crudo de cada fila se guarda cifrado). Imprime solo el modo, conteos, códigos, números de línea y el id de la
  *   carga: nunca especies, valores, fechas, referencias, notas ni el correo. El archivo original no se guarda, ni su
