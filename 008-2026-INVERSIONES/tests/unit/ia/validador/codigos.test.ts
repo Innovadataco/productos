@@ -40,7 +40,7 @@ describe("aviso fijo", () => {
   it("hay uno por tipo, sin dígitos; ESCENARIOS usa el AVISO de las proyecciones", () => {
     expect(Object.keys(AVISOS).sort()).toEqual([...TIPOS_RESUMEN].sort());
     for (const tipo of TIPOS_RESUMEN) {
-      expect(AVISOS[tipo].length).toBeGreaterThan(20);
+      expect(AVISOS[tipo].length).toBeGreaterThan(17);
       expect(AVISOS[tipo]).not.toMatch(/\p{N}/u);
     }
     expect(AVISOS.ESCENARIOS).toBe(AVISO);

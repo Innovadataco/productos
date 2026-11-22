@@ -20,9 +20,9 @@ import { ENTRADAS_FICTICIAS } from "../apoyo/hechos.ficticio";
 
 /** Historia de los prompts: cada versión, con el sha256 de su texto. Una versión nueva se agrega; nunca se edita una. */
 const HISTORIAL: Readonly<Record<string, string>> = {
-  "resumen-diario-v1": "POR_FIJAR",
-  "resumen-reglas-v1": "POR_FIJAR",
-  "resumen-escenarios-v1": "POR_FIJAR",
+  "resumen-diario-v1": "b48fcd384110f3d6b716d83701773de4611ca6b001b150e91f6a601a8a2c0442",
+  "resumen-reglas-v1": "118fb40ff2c682fc98aa0a77c0f4c4c9027cc7df2513ebb2d5207f408aebf5d7",
+  "resumen-escenarios-v1": "5bf0ecbd1ffb7f59281d0cb96109022f7a26c71ed6517b094f96700a65f95541",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */
@@ -140,7 +140,7 @@ describe("armarPedido acepta cada prompt con el esquema (sin datos del paquete e
 
   it.each(TIPOS_RESUMEN)("%s: con paquetes al azar (semilla fija)", (tipo) => {
     const prng = crearPrng(37_911);
-    for (let i = 0; i < 200; i += 1) {
+    for (let i = 0; i < 211; i += 1) {
       const paquete = paqueteAlAzar(prng, tipo);
       expect(() => armarPedido({ paquete, prompt: PROMPTS[tipo], esquemaSalida: ESQUEMA_SALIDA, limiteMs: LIMITE_MS })).not.toThrow();
     }

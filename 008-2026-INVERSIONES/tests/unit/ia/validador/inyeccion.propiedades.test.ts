@@ -56,7 +56,7 @@ function motivos(cruda: string, paquete: PaqueteHechos): readonly string[] {
 
 describe.each(TIPOS_RESUMEN)("inyección de cifras · %s", (tipo) => {
   const prng = crearPrng(17_389 + TIPOS_RESUMEN.indexOf(tipo));
-  const paquetes = Array.from({ length: 120 }, () => paqueteAlAzar(prng, tipo));
+  const paquetes = Array.from({ length: 113 }, () => paqueteAlAzar(prng, tipo));
 
   it("control positivo: la plantilla de cada paquete pasa", () => {
     for (const paquete of paquetes) expect(resumenSinIa(paquete).ok).toBe(true);

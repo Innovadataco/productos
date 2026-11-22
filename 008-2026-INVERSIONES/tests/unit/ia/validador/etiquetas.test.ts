@@ -22,6 +22,11 @@ describe("palabras clave", () => {
     expect(palabrasClave("caída máxima mediana")).toEqual(["caida", "maxim", "media"]);
   });
 
+  it("un texto sin letras no tiene palabras clave", () => {
+    expect(palabrasClave("")).toEqual([]);
+    expect(palabrasClave("(); .")).toEqual([]);
+  });
+
   it("la negación se pega a la palabra que sigue", () => {
     expect(palabrasClave("corte de la conciliación que no cuadra")).toEqual(["corte", "conci", "nocuadr"]);
     expect(palabrasClave("ganancia sin vender")).toEqual(["ganan", "sinvende"]);
@@ -65,6 +70,13 @@ describe("claveCoincide sobre el catálogo", () => {
         expect([citada, escrita, claveCoincide(tipo, citada, new Set(palabrasClave(etiqueta(tipo, escrita))))]).toEqual([citada, escrita, false]);
       }
     }
+  });
+
+  it("cierra en fallo: un tipo que no existe, una clave de otro tipo o el nombre de la especie no coinciden", () => {
+    const delValor = new Set(palabrasClave(etiqueta("DIARIO", "VALOR_ACCIONES")));
+    expect(claveCoincide("SEMANAL" as TipoResumen, "VALOR_ACCIONES", delValor)).toBe(false);
+    expect(claveCoincide("REGLAS", "VALOR_ACCIONES", delValor)).toBe(false);
+    expect(claveCoincide("DIARIO", "ESPECIE_NOMBRE", new Set(palabrasClave(etiqueta("DIARIO", "ESPECIE_NOMBRE"))))).toBe(false);
   });
 
   it("sin ninguna palabra clave, no coincide", () => {

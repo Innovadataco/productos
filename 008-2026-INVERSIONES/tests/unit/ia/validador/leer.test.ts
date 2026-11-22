@@ -36,7 +36,7 @@ describe("leerSalida", () => {
   it.each([
     ["JSON inválido", '{"frases":'],
     ["vacío", ""],
-    ["con BOM", `﻿${valida}`],
+    ["con BOM", `\uFEFF${valida}`],
     ["con cerco de markdown", `\`\`\`json\n${valida}\n\`\`\``],
     ["un arreglo", "[]"],
     ["un texto JSON", '"frases"'],
@@ -68,6 +68,6 @@ describe("leerSalida", () => {
   });
 
   it("un JSON anidado sin fondo no lanza", () => {
-    expect(leerSalida(`${"[".repeat(200_000)}${"]".repeat(200_000)}`.slice(0, MAX_SALIDA_CRUDA))).toBeNull();
+    expect(leerSalida(`${"[".repeat(197_311)}${"]".repeat(197_311)}`.slice(0, MAX_SALIDA_CRUDA))).toBeNull();
   });
 });

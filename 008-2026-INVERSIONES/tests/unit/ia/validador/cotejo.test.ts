@@ -56,6 +56,10 @@ describe("cotejarCifras", () => {
     expect(cotejarCifras(texto, citas, p)).toBe(false);
   });
 
+  it("con un paquete que no salió de construirPaquete, no coteja nada (cierra en fallo)", () => {
+    expect(cotejarCifras(`El valor de las acciones subió a ${pVa}.`, [va], { ...p })).toBe(false);
+  });
+
   it("toma la presentación del paquete, no la que traiga quien llama", () => {
     const h = hechoDe(p, "VALOR_ACCIONES");
     expect(cotejarCifras(`Vale ${h.presentacion}.`, [h.id], p)).toBe(true);

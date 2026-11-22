@@ -5,12 +5,13 @@
  */
 import { describe, expect, it } from "vitest";
 import { TIPOS_RESUMEN, type Hecho, type IdHecho, type PaqueteHechos } from "@/ia/contrato";
-import { LIMITES_SALIDA } from "@/ia/validador/codigos";
+import { ErrorValidador, LIMITES_SALIDA } from "@/ia/validador/codigos";
+import { construirPaquete } from "@/ia/paquete";
 import { leerSalida } from "@/ia/validador/leer";
 import { resumenSinIa, salidaDePlantilla } from "@/ia/validador/plantilla";
 import { validarSalida } from "@/ia/validador/validar";
 import { crearPrng } from "@/proyecciones/prng";
-import { paqueteAlAzar } from "../apoyo/aleatorio.ficticio";
+import { entradaAlAzar, paqueteAlAzar } from "../apoyo/aleatorio.ficticio";
 import { paqueteFicticio } from "./apoyo/salidas.ficticio";
 
 /** El nombre de la especie al final de la cadena de sujetos (o nada). */
@@ -78,8 +79,28 @@ describe("plantilla sin IA", () => {
     }
   });
 
+  it("con un paquete que no salió de construirPaquete lanza ErrorValidador", () => {
+    expect(() => salidaDePlantilla({ ...paqueteFicticio("DIARIO") })).toThrow(ErrorValidador);
+  });
+
+  it("si los obligatorios no caben, la plantilla no pasa los límites y el validador la rechaza (HECHO_NO_CITADO)", () => {
+    const prng = crearPrng(4_613);
+    let rechazos = 0;
+    for (let i = 0; i < 113; i += 1) {
+      const entrada = entradaAlAzar(prng, "DIARIO");
+      const paquete = construirPaquete({ ...entrada, hechos: entrada.hechos.map((h) => ({ ...h, obligatorio: true })) });
+      const frases = leerSalida(salidaDePlantilla(paquete))?.frases ?? [];
+      expect(frases.length).toBeLessThanOrEqual(LIMITES_SALIDA.maxFrases);
+      const resultado = resumenSinIa(paquete);
+      if (resultado.ok) continue;
+      expect(resultado.motivos).toEqual(["HECHO_NO_CITADO"]);
+      rechazos += 1;
+    }
+    expect(rechazos).toBeGreaterThan(0);
+  });
+
   it.each(TIPOS_RESUMEN)("%s: paquetes al azar con semilla pasan el mismo validador", (tipo) => {
     const prng = crearPrng(41_377);
-    for (let i = 0; i < 300; i += 1) revisar(paqueteAlAzar(prng, tipo));
+    for (let i = 0; i < 307; i += 1) revisar(paqueteAlAzar(prng, tipo));
   });
 });
