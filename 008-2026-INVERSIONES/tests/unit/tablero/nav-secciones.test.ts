@@ -27,6 +27,7 @@ describe("navegación del tablero", () => {
       ["Decisiones", "/decisiones", null],
       ["Conciliación", "/conciliacion", null],
       ["Proyecciones", "/proyecciones", null],
+      ["Datos oficiales", "/datos-oficiales", null],
     ]);
   });
 
