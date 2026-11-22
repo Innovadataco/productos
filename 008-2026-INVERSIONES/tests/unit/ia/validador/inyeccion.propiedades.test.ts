@@ -72,13 +72,16 @@ describe.each(TIPOS_RESUMEN)("inyección de cifras · %s", (tipo) => {
   });
 
   it("la presentación exacta de un hecho, escrita por el modelo: CIFRA_SUELTA y RENDER_CIFRA", () => {
+    let probados = 0;
     for (const paquete of paquetes) {
       const conCifra = paquete.hechos.filter((h) => h.unidad !== "NOMBRE");
       if (conCifra.length === 0) continue;
+      probados += 1;
       const presentacion = elegir(prng, conCifra).presentacion;
       const cruda = insertar(frasesDe(salidaDePlantilla(paquete)), prng, entrePalabras(prng, presentacion));
       expect(motivos(cruda, paquete)).toEqual(expect.arrayContaining(["CIFRA_SUELTA", "RENDER_CIFRA"]));
     }
+    expect(probados).toBeGreaterThan(paquetes.length / 2);
   });
 
   it("una cifra en palabras entre dos palabras: siempre CIFRA_EN_PALABRAS", () => {
@@ -88,11 +91,11 @@ describe.each(TIPOS_RESUMEN)("inyección de cifras · %s", (tipo) => {
     }
   });
 
-  it("un signo pegado a una cita: siempre rechazo", () => {
+  it("un signo pegado a una cita: FORMATO (cita pegada) y RENDER_CIFRA (el signo cambia la cifra)", () => {
     for (const paquete of paquetes) {
       const signo = elegir(prng, SIGNOS);
       const cruda = insertar(frasesDe(salidaDePlantilla(paquete)), prng, (texto) => texto.replace(/\{H[0-9]{2}\}/u, (cita) => `${signo}${cita}`));
-      expect(motivos(cruda, paquete).length).toBeGreaterThan(0);
+      expect(motivos(cruda, paquete)).toEqual(expect.arrayContaining(["FORMATO", "RENDER_CIFRA"]));
     }
   });
 });

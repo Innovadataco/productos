@@ -26,6 +26,11 @@ function raiz(hecho: Hecho, paquete: PaqueteHechos): IdHecho | undefined {
 
 function revisar(paquete: PaqueteHechos): void {
   const resultado = resumenSinIa(paquete);
+  // Sin ningún dato que no sea un nombre no hay frase que citar: la plantilla se rechaza (cierra en fallo).
+  if (paquete.hechos.every((h) => h.unidad === "NOMBRE")) {
+    expect(resultado.ok).toBe(false);
+    return;
+  }
   expect(resultado.ok, resultado.ok ? "" : resultado.motivos.join(",")).toBe(true);
   if (!resultado.ok) return;
   const { frases, citados, texto } = resultado.resumen;
@@ -39,7 +44,6 @@ function revisar(paquete: PaqueteHechos): void {
   const noNombres = paquete.hechos.filter((h) => h.unidad !== "NOMBRE");
   const base = obligatorios.some((h) => h.unidad !== "NOMBRE") || noNombres.length === 0 ? obligatorios : [...obligatorios, noNombres[0] as Hecho];
   const permitidos = new Set(base.flatMap((h) => [h.id, raiz(h, paquete)]).filter((x): x is IdHecho => x !== undefined));
-  if (base.length === 0) for (const h of paquete.hechos.slice(0, 1)) permitidos.add(h.id);
   for (const id of citados) expect(permitidos.has(id)).toBe(true);
   expect(texto).toBe(frases.map((f) => f.texto).join(" "));
 }
@@ -54,6 +58,31 @@ describe("plantilla sin IA", () => {
     const cruda = salidaDePlantilla(paquete);
     expect(leerSalida(cruda)).not.toBeNull();
     expect(validarSalida(cruda, paquete)).toEqual(resumenSinIa(paquete));
+  });
+
+  it("los nombres obligatorios sueltos van en una frase que cita un dato, nunca solos", () => {
+    const prng = crearPrng(29_573);
+    let conSueltos = 0;
+    for (let i = 0; i < 307; i += 1) {
+      const paquete = paqueteAlAzar(prng, "DIARIO");
+      const conSujeto = new Set(paquete.hechos.filter((h) => h.obligatorio && h.unidad !== "NOMBRE").map((h) => h.sujeto));
+      if (!paquete.hechos.some((h) => h.unidad === "NOMBRE" && h.obligatorio && !conSujeto.has(h.id))) continue;
+      conSueltos += 1;
+      revisar(paquete);
+    }
+    expect(conSueltos).toBeGreaterThan(0);
+  });
+
+  it("un paquete con solo nombres de especie no tiene plantilla válida", () => {
+    const prng = crearPrng(31_337);
+    let soloNombres = 0;
+    for (let i = 0; i < 2_311 && soloNombres === 0; i += 1) {
+      const paquete = paqueteAlAzar(prng);
+      if (!paquete.hechos.every((h) => h.unidad === "NOMBRE")) continue;
+      soloNombres += 1;
+      expect(resumenSinIa(paquete).ok).toBe(false);
+    }
+    expect(soloNombres).toBeGreaterThan(0);
   });
 
   it("es determinista y no lleva dígitos fuera de las citas", () => {

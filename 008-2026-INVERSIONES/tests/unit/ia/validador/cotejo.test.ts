@@ -63,6 +63,7 @@ describe("cotejarCifras", () => {
   it("toma la presentación del paquete, no la que traiga quien llama", () => {
     const h = hechoDe(p, "VALOR_ACCIONES");
     expect(cotejarCifras(`Vale ${h.presentacion}.`, [h.id], p)).toBe(true);
-    expect(cotejarCifras(`Vale ${h.valor}.`, [h.id], p)).toBe(h.valor === h.presentacion);
+    expect(h.valor).not.toBe(h.presentacion);
+    expect(cotejarCifras(`Vale ${h.valor}.`, [h.id], p)).toBe(false);
   });
 });
