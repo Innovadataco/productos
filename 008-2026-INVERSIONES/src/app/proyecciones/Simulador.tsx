@@ -130,16 +130,16 @@ export function Simulador({ datos }: { readonly datos: DatosProyecciones }) {
       <div className="proy-cuerpo">
         <Controles controles={controles} alCambiar={cambiar} alReiniciar={() => cambiar(CONTROLES_INICIALES)} />
         <div className="proy-columna">
-        {fallo ? <p className="nota aviso proy-fallo" role="alert">{TEXTO_FALLO[fallo]}</p> : null}
-        <section className="proy-resultado" aria-labelledby="t-resultado" aria-busy={calculando} data-hidratado={hidratado ? "" : undefined}>
-          <div className="proy-resultado-cabeza">
-            <div><div className="eyebrow">A {textoHorizonte(controles.horizonteMeses)}</div><h2 id="t-resultado">El escenario</h2></div>
-            <p className="proy-calculando" data-activo={calculando ? "" : undefined} aria-hidden="true">{CALCULANDO}</p>
-          </div>
-          <Indicadores vista={vista} calculando={calculando} />
-          {vista ? <Abanico historia={datos.historia} vista={vista} /> : <p className="nota proy-vacio">El abanico aparece con el primer cálculo.</p>}
-          <p className="nota">{AVISO} Lo aportado es el valor de hoy más los aportes del escenario, no el costo histórico.</p>
-        </section>
+          {fallo ? <p className="nota aviso proy-fallo" role="alert">{TEXTO_FALLO[fallo]}</p> : null}
+          <section className="proy-resultado" aria-labelledby="t-resultado" aria-busy={calculando} data-hidratado={hidratado ? "" : undefined}>
+            <div className="proy-resultado-cabeza">
+              <div><div className="eyebrow">A {textoHorizonte(controles.horizonteMeses)}</div><h2 id="t-resultado">El escenario</h2></div>
+              <p className="proy-calculando" data-activo={calculando ? "" : undefined} aria-hidden="true">{CALCULANDO}</p>
+            </div>
+            <Indicadores vista={vista} calculando={calculando} />
+            {vista ? <Abanico historia={datos.historia} vista={vista} /> : <p className="nota proy-vacio">El abanico aparece con el primer cálculo.</p>}
+            <p className="nota">{AVISO} Lo aportado es el valor de hoy más los aportes del escenario, no el costo histórico.</p>
+          </section>
         </div>
       </div>
       <Supuestos vista={vista} nota={vista ? notaDeSalto(datos.historia, vista) : null} />

@@ -60,6 +60,7 @@
 .g-banda-degradada.g-banda-suave { opacity: 1; fill-opacity: 0.3; } .g-banda-degradada.g-banda-media { opacity: 1; fill-opacity: 0.5; stroke-opacity: 0.4; }
 .g-parada-ini { stop-color: var(--tono); stop-opacity: 1; } .g-parada-fin { stop-color: var(--tono); stop-opacity: 0.4; }
 .g-clave-degradada { background: linear-gradient(90deg, var(--tono), color-mix(in srgb, var(--tono) 40%, transparent)); }
+.g-clave-banda.g-clave-degradada.g-banda-suave { opacity: 0.55; } .g-clave-banda.g-clave-degradada.g-banda-media { opacity: 0.85; }
 .g-base { stroke: var(--muted); stroke-width: 1; opacity: 0.7; }
 .g-mira, .g-corte-linea { stroke: var(--muted); stroke-width: 1; }
 .g-corte-linea { stroke-dasharray: 2 4; }
