@@ -32,6 +32,5 @@ export function concentracionDe(especies: readonly ValorEspecie[]): Concentracio
     primera: { instrumentoId: con[0]!.instrumentoId, peso: redondear(pesos[0]!.toNumber()) },
     tresPrimeras: { instrumentoIds: tres.map((e) => e.instrumentoId), peso: redondear(pesos.slice(0, TRES).reduce((s, w) => s.add(w), new Prisma.Decimal(0)).toNumber()) },
     hhi: redondear(hhi.toNumber()),
-    especiesEfectivas: redondear(new Prisma.Decimal(1).div(hhi).toNumber()),
   };
 }

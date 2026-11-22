@@ -1,6 +1,6 @@
 // Análisis INVENTADOS armados a mano para probar las observaciones: ids FICTICIA-*, días de 2021 y números raros. Nada
 // sale de una base. No es una prueba.
-import type { Analisis, AnalisisEspecie, EstadoCierre, ReglaParaAnalisis, ResumenHorizonte } from "@/analisis/tipos";
+import type { Analisis, EspecieConValor, EspecieSinValor, EstadoCierre, ReglaParaAnalisis, ResumenHorizonte, RiesgoConValor } from "@/analisis/tipos";
 import { VERSION_ANALISIS } from "@/analisis/tipos";
 import { D, dia, sumar } from "./portafolio.ficticio";
 
@@ -13,8 +13,15 @@ export const vacio = (h: 30 | 90): ResumenHorizonte => ({
   sinDividendosEnTotal: 0, noVerificadasEnTotal: 0,
 });
 
-export const especie = (id: string, cambios: Partial<AnalisisEspecie> = {}): AnalisisEspecie => ({
+/** Una especie con valor que no dispara nada: al día, cubierta y sin riesgo que repartir. */
+export const especie = (id: string, cambios: Partial<EspecieConValor> = {}): EspecieConValor => ({
   instrumentoId: id, valor: D("4613.27"), peso: 0.2, cierre: AL_DIA, historia: { estado: "SIN_CIERRES" }, dividendo12m: null,
+  riesgo: { estado: "CUBIERTA", volatilidadAnual: 0.3, pesoEnCubiertas: 0.2, contribucion: null }, efectoCaida: null, proximaEx: null, ...cambios,
+});
+
+/** Una especie sin cierre en el tablero. */
+export const sinValor = (id: string, cambios: Partial<Pick<EspecieSinValor, "historia" | "proximaEx">> = {}): EspecieSinValor => ({
+  instrumentoId: id, valor: null, peso: null, cierre: { estado: "SIN_CIERRE" }, historia: { estado: "SIN_CIERRES" }, dividendo12m: null,
   riesgo: { estado: "SIN_VALOR" }, efectoCaida: null, proximaEx: null, ...cambios,
 });
 
@@ -38,7 +45,7 @@ export const riesgo = (ids: readonly string[], valores: (number | null)[][]): An
   fraccionCubierta: 1, correlacion: { ids, valores },
 });
 
-export const cubierta = (pesoEnCubiertas: number, contribucionPct: number | null): AnalisisEspecie["riesgo"] => ({
+export const cubierta = (pesoEnCubiertas: number, contribucionPct: number | null): RiesgoConValor => ({
   estado: "CUBIERTA", volatilidadAnual: 0.3, pesoEnCubiertas, contribucion: contribucionPct === null ? null : { marginal: 0.27, contribucion: 0.1, contribucionPct },
 });
 
@@ -50,8 +57,9 @@ export function analisisConTodo(): { readonly a: Analisis; readonly reglas: read
     riesgo: riesgo(["FICTICIA-A", "FICTICIA-B"], [[1, 0.93], [0.93, 1]]),
     especies: [
       especie("FICTICIA-B", { riesgo: cubierta(0.3, 0.7), proximaEx: { dia: MAS(3), decretoId: "FICTICIA-DEC-1" } }),
-      especie("FICTICIA-A", { riesgo: { estado: "SIN_HISTORIA", motivo: "SIN_CIERRES", dias: 0 }, cierre: { estado: "SIN_CIERRE" } }),
+      sinValor("FICTICIA-A"),
       especie("FICTICIA-C"),
+      especie("FICTICIA-D", { riesgo: { estado: "SIN_HISTORIA", motivo: "SIN_CIERRES", dias: 0 } }),
     ],
     decisiones: { d30: vacio(30), d90: vacio(90), medidas: [{ decisionId: "FICTICIA-DEC-A", horizonteDias: 90, veredicto: "NO_FUNCIONO", resultadoPesos: D("-4613.27"), conocidoEl: MAS(-2) }] },
   });

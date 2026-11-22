@@ -2,6 +2,7 @@
  * Validación en el borde del motor: lo que llega de los lectores se revisa antes de calcular. Cualquier violación del
  * contrato es un RangeError con el campo; el motor no corrige ni completa datos. Puro.
  */
+import { Prisma } from "@prisma/client";
 import { esFechaDeNegocio } from "../plan/fechas";
 import { diaIso } from "../precios/horario";
 import type { EntradasAnalisis, PlanParaAnalisis } from "./tipos";
@@ -22,8 +23,10 @@ export function validarEntradas(e: EntradasAnalisis): void {
   sinRepetidos(e.historia.posiciones.map((p) => p.instrumentoId), "historia");
   const futura = filas.find((f) => f.cierre !== null && f.cierre.fecha > e.hoy);
   if (futura) throw new RangeError(`El cierre de ${futura.instrumentoId} (${diaIso(futura.cierre!.fecha)}) es posterior a hoy.`);
-  const sinPrecio = filas.find((f) => f.cierre !== null && !f.cierre.precio.gt(0));
-  if (sinPrecio) throw new RangeError(`El cierre de ${sinPrecio.instrumentoId} debe tener un precio positivo.`);
+  const sinPrecio = filas.find((f) => f.cierre !== null && !(f.cierre.precio.isFinite() && f.cierre.precio.gt(0)));
+  if (sinPrecio) throw new RangeError(`El cierre de ${sinPrecio.instrumentoId} debe tener un precio positivo y finito.`);
+  const suma = e.tablero.filas.reduce((s, f) => s.add(f.valor ?? 0), new Prisma.Decimal(0));
+  if (!suma.eq(e.tablero.valorAcciones)) throw new RangeError("El valor de las acciones del tablero no es la suma de sus filas.");
 }
 
 export function validarPlan(plan: PlanParaAnalisis): void {

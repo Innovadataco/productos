@@ -36,20 +36,26 @@ function efectoDe(valor: Prisma.Decimal, caida: CaidaMaxima, total: Prisma.Decim
   return { pesos, fraccionPortafolio: redondear(pesos.div(total).toNumber()) };
 }
 
+const SIN_HISTORIA_PROPIA = { historia: { estado: "SIN_CIERRES" }, avisos: [] } as const;
+
 function especieDe(f: FilaTablero, c: Contexto): { readonly especie: AnalisisEspecie; readonly avisos: readonly AvisoCrudo[] } {
   const { e, acciones, comun, calendario } = c;
   const accion = acciones.get(f.instrumentoId);
-  const propia = accion ? historiaPropia(e.historia, accion) : { historia: { estado: "SIN_CIERRES" } as const, avisos: [] };
+  const propia = accion ? historiaPropia(e.historia, accion) : SIN_HISTORIA_PROPIA;
+  const base = { instrumentoId: f.instrumentoId, historia: propia.historia, proximaEx: accion ? proximaFechaEx(accion, e.hoy) : null };
+  // En una viva, valor y cierre son null a la vez (src/tablero/calculo.ts).
+  if (f.cierre === null || f.valor === null) {
+    const especie = { ...base, valor: null, peso: null, cierre: { estado: "SIN_CIERRE" }, dividendo12m: null, riesgo: { estado: "SIN_VALOR" }, efectoCaida: null } as const;
+    return { especie, avisos: propia.avisos };
+  }
   const especie: AnalisisEspecie = {
-    instrumentoId: f.instrumentoId,
+    ...base,
     valor: f.valor,
-    peso: f.valor === null ? null : redondear(f.valor.div(e.tablero.valorAcciones).toNumber()),
+    peso: redondear(f.valor.div(e.tablero.valorAcciones).toNumber()),
     cierre: estadoCierre(f.cierre, e.tablero.fechaReferencia, calendario),
-    historia: propia.historia,
-    dividendo12m: accion && f.cierre ? rendimientoDividendo12m(accion, e.hoy, f.cierre.precio) : null,
-    riesgo: f.valor === null ? { estado: "SIN_VALOR" } : comun.porEspecie.get(f.instrumentoId)!,
-    efectoCaida: f.valor !== null && propia.historia.estado === "CON_HISTORIA" ? efectoDe(f.valor, propia.historia.caidaMaxima, e.tablero.valorAcciones) : null,
-    proximaEx: accion ? proximaFechaEx(accion, e.hoy) : null,
+    dividendo12m: accion ? rendimientoDividendo12m(accion, e.hoy, f.cierre.precio) : null,
+    riesgo: comun.porEspecie.get(f.instrumentoId)!,
+    efectoCaida: propia.historia.estado === "CON_HISTORIA" ? efectoDe(f.valor, propia.historia.caidaMaxima, e.tablero.valorAcciones) : null,
   };
   return { especie, avisos: propia.avisos };
 }

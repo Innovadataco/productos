@@ -80,6 +80,11 @@ export type VentanaRendimiento =
     }
   | { readonly meses: VentanaMeses; readonly estado: "HISTORIA_NO_ALCANZA" };
 
+/** La ventana de `meses` meses. */
+export type VentanaDe<M extends VentanaMeses> = VentanaRendimiento & { readonly meses: M };
+/** Las cuatro ventanas de VENTANAS_MESES, en ese orden. */
+export type Ventanas = readonly [VentanaDe<1>, VentanaDe<3>, VentanaDe<6>, VentanaDe<12>];
+
 /** La mayor caída del precio ajustado desde un máximo previo, en toda la historia propia. */
 export type CaidaMaxima =
   | { readonly estado: "SIN_CAIDA" }
@@ -98,8 +103,7 @@ export type HistoriaPropia =
       readonly hasta: Dia;
       /** Días con cierre propio en la historia. */
       readonly dias: number;
-      /** Una por cada mes de VENTANAS_MESES, en ese orden. */
-      readonly ventanas: readonly VentanaRendimiento[];
+      readonly ventanas: Ventanas;
       readonly caidaMaxima: CaidaMaxima;
     }
   /** Menos de MINIMO_DIAS días con cierre (src/proyecciones/metodo.ts): no se calcula nada. */
@@ -131,20 +135,22 @@ export interface ContribucionRiesgo {
 
 export type MotivoSinHistoria = "HISTORIA_CORTA" | "HISTORIA_CORTA_EN_VENTANA" | "SIN_CIERRES";
 
-export type RiesgoEspecie =
+/** El riesgo de una especie con valor. */
+export type RiesgoConValor =
   | {
       readonly estado: "CUBIERTA";
       /** De los retornos diarios de precio de la ventana común. */
       readonly volatilidadAnual: number;
-      /** Su valor sobre el de las especies cubiertas. */
-      readonly pesoCubierto: number;
+      /** Su valor sobre el de las especies CUBIERTAS (no sobre el de las acciones, que es `peso`). */
+      readonly pesoEnCubiertas: number;
       /** null si la volatilidad del portafolio es cero: no hay riesgo que repartir. */
       readonly contribucion: ContribucionRiesgo | null;
     }
   /** Sin historia suficiente en la ventana común: ni correlación ni contribución. No se inventan. */
-  | { readonly estado: "SIN_HISTORIA"; readonly motivo: MotivoSinHistoria; readonly dias: number }
-  /** Sin valor en el tablero (sin cierre): no tiene peso. */
-  | { readonly estado: "SIN_VALOR" };
+  | { readonly estado: "SIN_HISTORIA"; readonly motivo: MotivoSinHistoria; readonly dias: number };
+
+/** Sin valor en el tablero (sin cierre): no tiene peso. */
+export type RiesgoEspecie = RiesgoConValor | { readonly estado: "SIN_VALOR" };
 
 export interface MatrizCorrelacion {
   /** Las especies cubiertas, en el orden de la matriz. */
@@ -183,22 +189,38 @@ export interface EfectoCaida {
 }
 
 // ───────────── Resultado ─────────────
-export interface AnalisisEspecie {
+interface EspecieBase {
   readonly instrumentoId: string;
-  /** Del tablero; null si no tiene cierre. */
-  readonly valor: Prisma.Decimal | null;
-  /** valor / valor de las acciones; null si no tiene valor. */
-  readonly peso: number | null;
-  readonly cierre: EstadoCierre;
   readonly historia: HistoriaPropia;
-  /** null sin cierre o sin historia de dividendos (la especie no está en la historia). */
-  readonly dividendo12m: RendimientoDividendo | null;
-  readonly riesgo: RiesgoEspecie;
-  /** null sin valor o sin historia propia. */
-  readonly efectoCaida: EfectoCaida | null;
   /** El decreto que cuenta con la fecha ex más próxima, hoy o después. */
   readonly proximaEx: { readonly dia: Dia; readonly decretoId: string } | null;
 }
+
+/** Con cierre en el tablero: valor, peso y riesgo. */
+export interface EspecieConValor extends EspecieBase {
+  /** Del tablero: cantidad viva × último cierre (positivo). */
+  readonly valor: Prisma.Decimal;
+  /** valor / valor de las acciones. */
+  readonly peso: number;
+  readonly cierre: Exclude<EstadoCierre, { readonly estado: "SIN_CIERRE" }>;
+  /** null: la historia no trae la especie (no hay de dónde sacar sus dividendos). */
+  readonly dividendo12m: RendimientoDividendo | null;
+  readonly riesgo: RiesgoConValor;
+  /** null: sin historia propia (`historia` lo dice). */
+  readonly efectoCaida: EfectoCaida | null;
+}
+
+/** Sin cierre en el tablero: nada que dependa del valor. */
+export interface EspecieSinValor extends EspecieBase {
+  readonly valor: null;
+  readonly peso: null;
+  readonly cierre: { readonly estado: "SIN_CIERRE" };
+  readonly dividendo12m: null;
+  readonly riesgo: { readonly estado: "SIN_VALOR" };
+  readonly efectoCaida: null;
+}
+
+export type AnalisisEspecie = EspecieConValor | EspecieSinValor;
 
 export interface Concentracion {
   /** Especies con valor positivo. */
@@ -206,14 +228,14 @@ export interface Concentracion {
   readonly primera: { readonly instrumentoId: string; readonly peso: number };
   /** Hasta tres, de mayor a menor valor. */
   readonly tresPrimeras: { readonly instrumentoIds: readonly string[]; readonly peso: number };
-  /** Índice de Herfindahl-Hirschman: Σ peso². Queda en [1/n, 1]. */
+  /** Índice de Herfindahl-Hirschman: Σ peso². Queda en [1/n, 1]; 1/HHI son las especies de igual peso equivalentes. */
   readonly hhi: number;
-  /** 1 / HHI: cuántas especies de igual peso tendrían el mismo HHI. */
-  readonly especiesEfectivas: number;
 }
 
 export interface ResumenHorizonte {
   readonly horizonteDias: HorizonteDias;
+  /** Todas: los veredictos, sinVeredicto, pendientes, sinPrecio y sinOrden suman este número. */
+  readonly decisiones: number;
   readonly veredictos: Readonly<Record<Veredicto, number>>;
   /** Calculadas sin veredicto (escisión en la ventana): su resultado en pesos no entra al total. */
   readonly sinVeredicto: number;
@@ -222,9 +244,10 @@ export interface ResumenHorizonte {
   readonly sinOrden: number;
   /** Suma de los resultados en pesos de las que tienen veredicto. */
   readonly totalPesos: Prisma.Decimal;
-  /** De las que entran al total: sin dividendos medidos (solo el precio) y con algún cierre sin verificar. */
-  readonly sinDividendos: number;
-  readonly noVerificadas: number;
+  /** De las que entran al total: sin dividendos medidos (solo el precio). */
+  readonly sinDividendosEnTotal: number;
+  /** De las que entran al total: con algún cierre sin verificar. */
+  readonly noVerificadasEnTotal: number;
 }
 
 export interface MedidaDecision {

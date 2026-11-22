@@ -13,6 +13,10 @@ export function calendarioDe(noHabiles: readonly Date[]): CalendarioBvc {
   return { noHabiles: new Set(noHabiles.map(diaIso)), aniosCubiertos: new Set(noHabiles.map((d) => d.getUTCFullYear())) };
 }
 
+type ConCierre = Exclude<EstadoCierre, { readonly estado: "SIN_CIERRE" }>;
+
+export function estadoCierre(cierre: NonNullable<FilaTablero["cierre"]>, referencia: Date | null, calendario: CalendarioBvc): ConCierre;
+export function estadoCierre(cierre: FilaTablero["cierre"], referencia: Date | null, calendario: CalendarioBvc): EstadoCierre;
 export function estadoCierre(cierre: FilaTablero["cierre"], referencia: Date | null, calendario: CalendarioBvc): EstadoCierre {
   if (cierre === null) return { estado: "SIN_CIERRE" };
   const base = { dia: diaIso(cierre.fecha), precio: cierre.precio };

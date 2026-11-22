@@ -6,7 +6,7 @@ import { CLAVES_OBSERVACION, CRITERIOS, type ClaveObservacion, type Observacion 
 import { diasEntre } from "@/analisis/dias";
 import { observaciones } from "@/analisis/observaciones";
 import { VERSION_ANALISIS, type Analisis, type ReglaParaAnalisis } from "@/analisis/tipos";
-import { AL_DIA, analisis, analisisConTodo, concentracion, cubierta, especie, HOY, MAS, regla, riesgo, vacio } from "./fixtures/analisis.ficticio";
+import { AL_DIA, analisis, analisisConTodo, concentracion, cubierta, especie, HOY, MAS, regla, riesgo, sinValor, vacio } from "./fixtures/analisis.ficticio";
 import { D, dia, diasHabiles, portafolio, serieDeRetornos } from "./fixtures/portafolio.ficticio";
 
 const obs = (a: Analisis, reglas: readonly ReglaParaAnalisis[] = []) => observaciones(a, { reglas }, dia(HOY));
@@ -127,7 +127,7 @@ describe("precios", () => {
   it("PRECIO_ATRASADO: sin negociación o sin cierre; ni al día ni sin calendario", () => {
     const especies = [
       especie("FICTICIA-A", { cierre: { estado: "SIN_NEGOCIACION", dia: "2021-06-04", precio: D("1237"), desde: "2021-06-07" } }),
-      especie("FICTICIA-B", { cierre: { estado: "SIN_CIERRE" } }),
+      sinValor("FICTICIA-B"),
       especie("FICTICIA-C", { cierre: { estado: "SIN_CALENDARIO", dia: "2021-06-04", precio: D("1237"), anio: 2021 } }),
       especie("FICTICIA-D"),
     ];
@@ -175,7 +175,7 @@ describe("el catálogo entero", () => {
   });
 
   it("dentro de una clave, por sus ids", () => {
-    const especies = ["FICTICIA-C", "FICTICIA-A", "FICTICIA-B"].map((id) => especie(id, { cierre: { estado: "SIN_CIERRE" } }));
+    const especies = ["FICTICIA-C", "FICTICIA-A", "FICTICIA-B"].map((id) => sinValor(id));
     expect(de(obs(analisis({ especies })), "PRECIO_ATRASADO").map((o) => o.datos.instrumentoId)).toEqual(["FICTICIA-A", "FICTICIA-B", "FICTICIA-C"]);
   });
 

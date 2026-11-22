@@ -114,7 +114,7 @@ export type Observacion =
   | ObservacionDe<"CORRELACION_ALTA", { readonly instrumentoIds: readonly [string, string]; readonly correlacion: number }>
   | ObservacionDe<
       "CONTRIBUCION_RIESGO_DESPROPORCIONADA",
-      { readonly instrumentoId: string; readonly pesoCubierto: number; readonly contribucionPct: number; readonly veces: number }
+      { readonly instrumentoId: string; readonly pesoEnCubiertas: number; readonly contribucionPct: number; readonly veces: number }
     >
   | ObservacionDe<"REGLA_CUMPLIDA", { readonly reglaId: string; readonly instrumentoId: string; readonly lado: "BAJO" | "SOBRE" }>
   | ObservacionDe<"REGLA_CERCANA", { readonly reglaId: string; readonly instrumentoId: string; readonly distanciaPct: number }>

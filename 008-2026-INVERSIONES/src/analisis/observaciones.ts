@@ -50,11 +50,11 @@ function correlacion(a: Analisis): Observacion[] {
 function contribucion(a: Analisis): Observacion[] {
   return a.especies.flatMap((e): Observacion[] => {
     if (e.riesgo.estado !== "CUBIERTA" || e.riesgo.contribucion === null) return [];
-    const { pesoCubierto } = e.riesgo;
+    const { pesoEnCubiertas } = e.riesgo;
     const pct = e.riesgo.contribucion.contribucionPct;
     // El producto se redondea como las métricas: 1,5 × 0,4 es 0,6000000000000001 en coma flotante.
-    if (pct < CONTRIBUCION_MINIMA || pct < redondear(FACTOR_CONTRIBUCION_DESPROPORCIONADA * pesoCubierto)) return [];
-    const datos = { instrumentoId: e.instrumentoId, pesoCubierto, contribucionPct: pct, veces: redondear(pct / pesoCubierto) };
+    if (pct < CONTRIBUCION_MINIMA || pct < redondear(FACTOR_CONTRIBUCION_DESPROPORCIONADA * pesoEnCubiertas)) return [];
+    const datos = { instrumentoId: e.instrumentoId, pesoEnCubiertas, contribucionPct: pct, veces: redondear(pct / pesoEnCubiertas) };
     return [{ clave: "CONTRIBUCION_RIESGO_DESPROPORCIONADA", umbral: CRITERIOS.CONTRIBUCION_RIESGO_DESPROPORCIONADA.umbral, datos }];
   });
 }

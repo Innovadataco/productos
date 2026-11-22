@@ -31,14 +31,15 @@ function resumirHorizonte(h: HorizonteDias, rs: readonly ResultadoHorizonte[]): 
   const cuenta = (v: Veredicto) => contados.filter((r) => r.veredicto === v).length;
   return {
     horizonteDias: h,
+    decisiones: rs.length,
     veredictos: { FUNCIONO: cuenta("FUNCIONO"), NO_FUNCIONO: cuenta("NO_FUNCIONO"), NEUTRO: cuenta("NEUTRO") },
     sinVeredicto: rs.filter((r) => r.estado === "CALCULADO" && r.veredicto === null).length,
     pendientes: rs.filter((r) => r.estado === "PENDIENTE").length,
     sinPrecio: rs.filter((r) => r.estado === "SIN_PRECIO").length,
     sinOrden: rs.filter((r) => r.estado === "SIN_ORDEN").length,
     totalPesos: contados.reduce((s, r) => s.add(r.resultadoPesos), new Prisma.Decimal(0)),
-    sinDividendos: contados.filter((r) => !r.incluyeDividendos).length,
-    noVerificadas: contados.filter((r) => !r.verificado).length,
+    sinDividendosEnTotal: contados.filter((r) => !r.incluyeDividendos).length,
+    noVerificadasEnTotal: contados.filter((r) => !r.verificado).length,
   };
 }
 

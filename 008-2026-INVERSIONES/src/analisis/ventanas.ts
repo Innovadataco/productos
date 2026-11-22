@@ -10,7 +10,7 @@ import { primerIndiceDesde } from "../proyecciones/ajustes";
 import type { Historia } from "../proyecciones/tipos";
 import { restarMeses } from "./dias";
 import { redondear } from "./numeros";
-import { VENTANAS_MESES, type VentanaMeses, type VentanaRendimiento } from "./tipos";
+import type { VentanaDe, VentanaMeses, Ventanas } from "./tipos";
 
 function unaColumna(h: Historia): void {
   if (h.K !== 1) throw new RangeError("La historia propia tiene una sola columna.");
@@ -29,12 +29,13 @@ export function indicePrecio(h: Historia): number[] {
   return acumular(h, (t) => h.factores[t]!);
 }
 
-export function rendimientosEnVentanas(h: Historia): readonly VentanaRendimiento[] {
+/** Las cuatro ventanas de VENTANAS_MESES (tipos.ts), en ese orden. */
+export function rendimientosEnVentanas(h: Historia): Ventanas {
   const precio = indicePrecio(h);
   const total = acumular(h, (t) => h.factores[t]! + h.rendimientos[t]!);
   const fin = h.dias.length - 1;
   const hasta = h.dias[fin]!;
-  return VENTANAS_MESES.map((meses: VentanaMeses): VentanaRendimiento => {
+  const ventana = <M extends VentanaMeses>(meses: M): VentanaDe<M> => {
     // La última rueda ≤ objetivo: la anterior a la primera > objetivo.
     const base = primerIndiceDesde(h.dias, restarMeses(hasta, meses) + "\u0000") - 1;
     if (base < 0) return { meses, estado: "HISTORIA_NO_ALCANZA" };
@@ -42,5 +43,6 @@ export function rendimientosEnVentanas(h: Historia): readonly VentanaRendimiento
       meses, estado: "CALCULADA", desde: h.dias[base]!, hasta, ruedas: fin - base,
       precio: redondear(precio[fin]! / precio[base]! - 1), total: redondear(total[fin]! / total[base]! - 1),
     };
-  });
+  };
+  return [ventana(1), ventana(3), ventana(6), ventana(12)];
 }

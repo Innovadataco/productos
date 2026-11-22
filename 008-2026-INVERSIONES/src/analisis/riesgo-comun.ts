@@ -14,7 +14,7 @@ import { MINIMO_DIAS } from "../proyecciones/metodo";
 import type { AccionEntrada, AvisoCrudo, EntradasProyeccion, Historia, PosicionSupuesta } from "../proyecciones/tipos";
 import { compararTexto, redondear } from "./numeros";
 import { correlacionDe, covarianzaMuestral, descomponerRiesgo, type RiesgoColumna } from "./riesgo";
-import type { RiesgoEspecie, RiesgoPortafolio } from "./tipos";
+import type { RiesgoConValor, RiesgoPortafolio } from "./tipos";
 
 const MESES_POR_ANIO = 12;
 
@@ -27,12 +27,12 @@ export interface EspecieCubierta {
 export interface ResultadoRiesgoComun {
   readonly portafolio: RiesgoPortafolio;
   /** Por id, de cada especie pedida. */
-  readonly porEspecie: ReadonlyMap<string, RiesgoEspecie>;
+  readonly porEspecie: ReadonlyMap<string, RiesgoConValor>;
   readonly avisos: readonly AvisoCrudo[];
 }
 
 /** Por qué una especie no entra en la ventana común (la regla de historia.ts: 250 días en total y en la ventana). */
-function sinHistoria(p: PosicionSupuesta | undefined): RiesgoEspecie {
+function sinHistoria(p: PosicionSupuesta | undefined): RiesgoConValor {
   if (p === undefined || p.estado === "EXCLUIDA_SIN_VALOR") return { estado: "SIN_HISTORIA", motivo: "SIN_CIERRES", dias: p?.diasTotales ?? 0 };
   return p.diasTotales >= MINIMO_DIAS
     ? { estado: "SIN_HISTORIA", motivo: "HISTORIA_CORTA_EN_VENTANA", dias: p.diasEnVentana }
@@ -42,10 +42,10 @@ function sinHistoria(p: PosicionSupuesta | undefined): RiesgoEspecie {
 /** K columnas de T retornos de precio. */
 const retornosPrecio = (h: Historia): number[][] => Array.from({ length: h.K }, (_, k) => Array.from({ length: h.T }, (_, t) => h.factores[t * h.K + k]! - 1));
 
-const aEspecie = (c: RiesgoColumna, pesoCubierto: number): RiesgoEspecie => ({
+const aEspecie = (c: RiesgoColumna, pesoEnCubiertas: number): RiesgoConValor => ({
   estado: "CUBIERTA",
   volatilidadAnual: redondear(c.volatilidad),
-  pesoCubierto: redondear(pesoCubierto),
+  pesoEnCubiertas: redondear(pesoEnCubiertas),
   contribucion: c.contribucion === null ? null : { marginal: redondear(c.marginal!), contribucion: redondear(c.contribucion), contribucionPct: redondear(c.contribucionPct!) },
 });
 
