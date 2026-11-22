@@ -11,23 +11,19 @@
  * Salida: 0 bien · 3 filas descartadas o días sin vigencia (el CSV trae el resto) · 2 uso o terminal · 1 la SFC falló,
  * sin filas, catálogo o CSV inválido, o la salida se cerró.
  *
- * Los argumentos siguen las reglas de la vía B de los precios y del fondo (src/precios/argumentos-carga.ts y
- * src/fondo/argumentos-carga.ts, que este frente no toca: de ahí que la forma se repita aquí).
+ * Los argumentos siguen las reglas de la vía B de los precios y del fondo: el lector común de src/cli/opciones.ts. Lo
+ * propio: «Falta --desde AAAA-MM-DD.» (sin «<>») y el tope de --hasta, hoy + el adelanto de la TRM.
  */
 import { ADELANTO_TRM_DIAS, CATALOGO, type SerieCatalogo } from "../catalogo";
 import { escribirCsvSeries, type ValorSerie } from "../series/csv-series";
-import { leerFechaIso } from "../../importacion/trii/valores";
+import { ErrorArgumentosCarga, exigirRango, fechaDeOpcion, leerOpciones, type Entorno } from "../../cli/opciones";
 import type { BuscarHttp } from "../../lib/http-acotado";
-import { ErrorArgumentosCarga } from "../../precios/argumentos-carga";
 import { escribirCompleto } from "../../precios/exportar";
 import { diaIso, fechaEnBogota } from "../../precios/horario";
 import { CODIGO_TRM, MAX_DIAS_RANGO_TRM, TIEMPO_MAXIMO_TRM_MS, obtenerTrm, trmDelCatalogo } from "./trm-sfc";
 
 const DIA_MS = 86_400_000;
-const FECHA = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
-/** Solo se repite el nombre de una opción con esta forma: nunca una ruta, una fecha ni caracteres de control. */
-const NOMBRE_REPETIBLE = /^--?[a-z][a-z0-9-]{0,30}$/;
-const OPCIONES: readonly string[] = ["--desde", "--hasta"];
+const OPCIONES = { "--desde": "una fecha AAAA-MM-DD", "--hasta": "una fecha AAAA-MM-DD" } as const;
 
 export const USO_EXPORTAR_TRM = [
   "Uso: npx tsx scripts/exportar-trm.ts --desde AAAA-MM-DD [--hasta AAAA-MM-DD] > <trm.csv.parcial>",
@@ -39,42 +35,9 @@ export const USO_EXPORTAR_TRM = [
   "  Salida: 0 bien · 3 filas descartadas o días sin vigencia (el CSV trae el resto) · 2 uso o terminal · 1 la SFC falló, sin filas o error.",
 ].join("\n");
 
-type Entorno = Readonly<Record<string, string | undefined>>;
-
 export interface ArgumentosExportarTrm {
   readonly desde: Date;
   readonly hasta: Date;
-}
-
-const variableDeNpm = (opcion: string): string => `npm_config_${opcion.slice(2)}`;
-
-function desconocida(argumento: string): ErrorArgumentosCarga {
-  const nombre = argumento.split("=", 1)[0] ?? "";
-  return new ErrorArgumentosCarga(NOMBRE_REPETIBLE.test(nombre) ? `Opción desconocida: «${nombre}».` : "Opción desconocida.");
-}
-
-/** Las opciones con su valor; lanza ante cualquier forma no admitida. */
-function leerOpciones(argv: readonly string[], entorno: Entorno): ReadonlyMap<string, string> {
-  const tomada = OPCIONES.find((o) => entorno[variableDeNpm(o)] !== undefined && !argv.includes(o));
-  if (tomada) throw new ErrorArgumentosCarga(`npm se quedó con ${tomada}: escriba «npm run -s <comando> -- ${tomada} …» (con «--»).`);
-  const valores = new Map<string, string>();
-  for (let i = 0; i < argv.length; i += 2) {
-    const opcion = argv[i]!;
-    if (!opcion.startsWith("-")) throw new ErrorArgumentosCarga("Argumento suelto: no se admiten argumentos sueltos (cada valor va después de su opción).");
-    if (!OPCIONES.includes(opcion)) throw desconocida(opcion);
-    if (valores.has(opcion)) throw new ErrorArgumentosCarga(`${opcion} está repetida.`);
-    const valor = argv[i + 1];
-    if (valor === undefined || valor.startsWith("-")) throw new ErrorArgumentosCarga(`${opcion} necesita una fecha AAAA-MM-DD (no una opción ni algo que empiece por «-»).`);
-    valores.set(opcion, valor);
-  }
-  return valores;
-}
-
-function fecha(texto: string | undefined, opcion: string): Date | undefined {
-  if (texto === undefined) return undefined;
-  const r = FECHA.test(texto) ? leerFechaIso(texto) : null;
-  if (!r?.ok) throw new ErrorArgumentosCarga(`${opcion} debe ser una fecha AAAA-MM-DD válida.`);
-  return r.valor;
 }
 
 /**
@@ -82,13 +45,12 @@ function fecha(texto: string | undefined, opcion: string): Date | undefined {
  * máximo: hoy + el adelanto. Lanza ErrorArgumentosCarga ante cualquier otra forma; los mensajes no repiten fechas.
  */
 export function leerArgumentosExportarTrm(argv: readonly string[], entorno: Entorno, hoy: Date, adelantoDias: number): ArgumentosExportarTrm {
-  const valores = leerOpciones(argv, entorno);
-  const desde = fecha(valores.get("--desde"), "--desde");
+  const valores = leerOpciones(argv, OPCIONES, entorno);
+  const desde = fechaDeOpcion(valores.get("--desde"), "--desde");
   if (desde === undefined) throw new ErrorArgumentosCarga("Falta --desde AAAA-MM-DD.");
   const tope = new Date(hoy.getTime() + adelantoDias * DIA_MS);
-  const hasta = fecha(valores.get("--hasta"), "--hasta") ?? tope;
-  if (desde > hasta || hasta > tope) throw new ErrorArgumentosCarga(`Rango inválido: --desde ≤ --hasta ≤ hoy + ${adelantoDias} día(s).`);
-  if (hasta.getTime() - desde.getTime() > MAX_DIAS_RANGO_TRM * DIA_MS) throw new ErrorArgumentosCarga(`Rango inválido: más de ${MAX_DIAS_RANGO_TRM} días (pídalo por tramos).`);
+  const hasta = fechaDeOpcion(valores.get("--hasta"), "--hasta") ?? tope;
+  exigirRango(desde, hasta, tope, MAX_DIAS_RANGO_TRM, `hoy + ${adelantoDias} día(s)`);
   return { desde, hasta };
 }
 

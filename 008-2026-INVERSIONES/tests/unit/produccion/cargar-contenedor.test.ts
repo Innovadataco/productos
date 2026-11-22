@@ -9,13 +9,13 @@
 // el nombre del comando: los parámetros nunca pasan por la línea de comandos del host.
 // Todos los datos son inventados.
 import { spawn } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { MAX_BYTES as MAX_BYTES_PDF } from "@/importacion/av/pdf/documento";
 import { MAX_BYTES_CSV } from "@/precios/csv-cierres";
-import { carpetaTemporal, ruta008, type Entorno } from "./falsos";
+import { appCargarFalsa, carpetaTemporal, idArchivo, ruta008, TSX_CARGAR_FALSO, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -48,34 +48,13 @@ function ejecutar(programa: string, args: string[], env: Entorno, entrada?: Buff
   });
 }
 
-/** Un /app falso con un tsx que registra su argv, los permisos del temporal y su sha256, y sale con FALSO_TSX_RC. */
+/** Un /app falso propio de la prueba, con el tsx versionado (falsos-cargar/tsx), que registra su argv, el cwd, los permisos y el sha del temporal. */
 function preparar(opciones: { swap?: string | null } = {}) {
   const dir = carpetaTemporal("cargar");
-  const app = path.join(dir, "app");
+  const app = appCargarFalsa(dir);
   const tmp = path.join(dir, "tmp");
-  mkdirSync(path.join(app, "node_modules", ".bin"), { recursive: true });
   mkdirSync(tmp);
   const registro = path.join(dir, "tsx.txt");
-  const tsx = path.join(app, "node_modules", ".bin", "tsx");
-  writeFileSync(
-    tsx,
-    [
-      "#!/usr/bin/env bash",
-      'printf "argv" >>"$FALSO_TSX_REGISTRO"; for a in "$@"; do printf "\\t%s" "$a" >>"$FALSO_TSX_REGISTRO"; done; printf "\\n" >>"$FALSO_TSX_REGISTRO"',
-      'printf "cwd\\t%s\\n" "$PWD" >>"$FALSO_TSX_REGISTRO"',
-      'printf "stdin\\t%s\\n" "$(wc -c | tr -d " ")" >>"$FALSO_TSX_REGISTRO"',
-      'for a in "$@"; do case "$a" in */inv-carga.*/*)',
-      '  printf "archivo\\t%s\\t%s\\n" "$(ls -l "$a" | cut -c1-10)" "$(ls -ld "$(dirname "$a")" | cut -c1-10)" >>"$FALSO_TSX_REGISTRO"',
-      '  if command -v sha256sum >/dev/null 2>&1; then h="$(sha256sum "$a")"; else h="$(shasum -a 256 "$a")"; fi',
-      '  printf "sha\\t%s\\n" "${h%% *}" >>"$FALSO_TSX_REGISTRO" ;;',
-      "esac; done",
-      // exec: la señal llega al proceso que duerme (como a node), no a un bash que la difiere.
-      '[ -z "${FALSO_TSX_DORMIR:-}" ] || { printf "dormido\\n" >>"$FALSO_TSX_REGISTRO"; exec sleep "$FALSO_TSX_DORMIR"; }',
-      'exit "${FALSO_TSX_RC:-0}"',
-      "",
-    ].join("\n"),
-  );
-  chmodSync(tsx, 0o755);
   const swap = path.join(dir, "memory.swap.max");
   if (opciones.swap !== null) writeFileSync(swap, `${opciones.swap ?? "0"}\n`);
   const env: Entorno = {
@@ -113,6 +92,15 @@ async function armar(lineasCabecera: string, archivo?: Buffer) {
   }
   return ejecutar("bash", args, { PATH: process.env.PATH });
 }
+
+describe("inv-cargar · el tsx falso del /app", () => {
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo. Por eso el tsx es un archivo fijo del repo
+  // (falsos-cargar/tsx), el mismo en todas las pruebas; el /app sí es propio de cada una.
+  it("el tsx del /app es el versionado, el mismo archivo en todas las pruebas: no se crea uno nuevo", () => {
+    for (const p of [preparar(), preparar()]) expect(idArchivo(path.join(p.app, "node_modules", ".bin", "tsx"))).toBe(idArchivo(TSX_CARGAR_FALSO));
+  });
+});
 
 describe("armar-sobre.sh · el sobre se arma en el Mac desde un archivo privado", () => {
   it("cabecera de 4096 bytes exactos con los argumentos, --bytes y --sha256, y después el cuerpo tal cual", async () => {

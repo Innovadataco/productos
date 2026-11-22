@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# findmnt falso (produccion-comun.test.ts lo antepone al PATH): registra la llamada en FALSO_REGISTRO (sin registro,
+# sale con 97) e imprime FALSO_FINDMNT_OPCIONES. FALSO_FINDMNT_RC distinto de 0: falla sin imprimir nada.
+[ -n "${FALSO_REGISTRO:-}" ] || { echo "findmnt falso: falta FALSO_REGISTRO" >&2; exit 97; }
+linea_falso="$(basename "$0")"; for a in "$@"; do linea_falso="$linea_falso"$'\t'"$a"; done; printf '%s\n' "$linea_falso" >>"$FALSO_REGISTRO" # una sola escritura: atómica entre procesos
+[ "${FALSO_FINDMNT_RC:-0}" = 0 ] || exit "$FALSO_FINDMNT_RC"
+printf '%s\n' "${FALSO_FINDMNT_OPCIONES:-}"

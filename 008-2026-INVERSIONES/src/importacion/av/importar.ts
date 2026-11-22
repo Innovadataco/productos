@@ -26,6 +26,7 @@ import { corteReal } from "../../conciliacion/corte-real";
 import { cierresDelDia } from "../../conciliacion/esperado";
 import { ConflictoConcurrente } from "../../precios/guardar";
 import { corteOcupado } from "../../conciliacion/vigente";
+import { CODIGO_UNICIDAD, esErrorPrisma } from "../../lib/choques";
 import { obtenerLlavero, type Llavero } from "../../cifrado/llavero";
 import { analizarCertificacion, errorDeDocumento as documento, type CertificacionAnalizada } from "./analisis";
 import { isoDia, leerCalendarioCorte, ultimoCorteDefinitivo, ultimoHabilAnterior, validarFechaCorte, type CalendarioCorte, type PistaCorte } from "./fecha-corte";
@@ -38,7 +39,6 @@ import { MAX_BYTES } from "./pdf/documento";
 export type { PistaCorte };
 export const MAX_ERRORES_REGISTRADOS = 100;
 const MAX_INTENTOS = 2;
-const esChoque = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
 export { MAX_BYTES };
 
 export interface ArchivoCertificacion {
@@ -225,7 +225,7 @@ export async function importarCertificacion(db: PrismaClient, archivo: ArchivoCe
       return await enTransaccion(db, base, analisis.valor, llavero, calendario);
     } catch (e) {
       // Otro importador creó la misma especie a la vez (P2002): se relee y se reintenta una sola vez.
-      if (esChoque(e) && intento < MAX_INTENTOS) continue;
+      if (esErrorPrisma(e, CODIGO_UNICIDAD) && intento < MAX_INTENTOS) continue;
       return registrarRechazo(db, base, n, [errorDe(e)], e instanceof ErrorCorte && e.pista !== null ? { pistaCorte: e.pista } : {});
     }
   }

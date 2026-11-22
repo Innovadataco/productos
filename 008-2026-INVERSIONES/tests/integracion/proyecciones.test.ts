@@ -12,6 +12,7 @@ import { cifrarCrudo } from "@/cifrado/campos";
 import { importarArchivoTrii } from "@/importacion/trii/importar";
 import { construirLotes } from "@/lotes/construir";
 import { calcularProyeccion } from "@/proyecciones/calcular";
+import { dividendosPorAccion } from "@/proyecciones/dividendos";
 import { leerEntradas } from "@/proyecciones/leer";
 import { proyectar } from "@/proyecciones/proyectar";
 import type { AccionEntrada, EntradasProyeccion, FondoEntrada, ParametrosProyeccion } from "@/proyecciones/tipos";
@@ -107,6 +108,11 @@ beforeAll(async () => {
   // el enlace (dividendo."decretadoId" es siempre nulo: el cruce se calcula al leer), así que la fila va sin él, a mano
   // y cifrada.
   await decreto({ valor: "0.0391", anuncio: "2027-03-17", cuota: 1, ex: "2027-12-15", pago: "2027-12-22" });
+  // El borde de la cota de los decretos: los pagos se leen desde hoy − 10 años (2017-12-31) y un pago de Trii cabe en
+  // la ventana de un decreto con pago hasta VENTANA_PAGO_DESPUES_DIAS (10) días antes. El de 2017-12-21 se lee; el del
+  // 20, no.
+  await decreto({ valor: "2.17", anuncio: "2017-11-08", cuota: 1, ex: "2017-12-14", pago: "2017-12-21" });
+  await decreto({ valor: "2.19", anuncio: "2017-11-08", cuota: 2, ex: "2017-12-13", pago: "2017-12-20" });
   const carga = await db.cargaArchivo.create({
     data: { tipoFuente: "TRII_DIVIDENDOS", nombreArchivo: "enlazado.ficticio.csv", sha256: "e".repeat(64), estado: "CARGADO", cargadoPorId: duenoId },
   });
@@ -185,12 +191,27 @@ describe("leerEntradas", () => {
       { fechaPago: dia("2027-12-20"), montoNeto: 733.19, decretadoId: null },
       { fechaPago: dia("2027-12-22"), montoNeto: 47.93, decretadoId: null },
     ]);
-    // Solo las versiones vigentes y no anuladas, con su valor.
-    expect(a.decretos.map((x) => [iso(x.fechaPago), x.valorPorAccion, x.recibido])).toEqual([["2020-07-15", 3.47, false], ["2027-12-22", 0.0391, false], ["2028-04-12", 3.13, false]]);
+    // El del 20 queda fuera de la cota (su ventana termina un día antes del primer día leído).
+    expect(a.decretos.some((x) => iso(x.fechaPago) === "2017-12-20")).toBe(false);
+    // Solo las versiones vigentes y no anuladas, con su fecha ex y su valor, desde el borde de la cota.
+    expect(a.decretos.map((x) => [iso(x.fechaPago), iso(x.fechaEx), x.valorPorAccion, x.recibido])).toEqual([
+      ["2017-12-21", "2017-12-14", 2.17, false], ["2020-07-15", "2020-07-08", 3.47, false], ["2027-12-22", "2027-12-15", 0.0391, false], ["2028-04-12", "2028-04-05", 3.13, false],
+    ]);
     expect(e.escisiones).toContainEqual({ origenId: ids["o"], destinoId: ids["d"], fecha: EVENTO, razon: 0.37 });
     expect(e.cierresDestino[ids["d"]!]).toHaveLength(120);
     expect(accionDe(e, ids["d"]!)).toBeUndefined();
     expect(e.noHabiles.length).toBeGreaterThan(0);
+  });
+
+  it("la fecha ex leída manda en los pagos de Trii: una compra entre la ex y el pago no los saca (la regla del plan)", async () => {
+    const a = accionDe(await leerEntradas(db, HOY), ids["a"]!)!;
+    // Una compra ficticia el 17, después de la ex del 15 y antes de los dos pagos del grupo del 22 (el 20 y el 22).
+    const r = dividendosPorAccion({ ...a, movimientos: [...a.movimientos, { fecha: dia("2027-12-17"), cantidad: 113n }] }, HOY);
+    expect(r.pagos.filter((p) => p.origen === "PAGO")).toEqual([
+      { dia: "2027-12-20", porAccion: 733.19 / 1237, origen: "PAGO" },
+      { dia: "2027-12-22", porAccion: 47.93 / 1237, origen: "PAGO" },
+    ]);
+    expect(r.avisos.filter((x) => x.codigo.startsWith("DIVIDENDO"))).toEqual([]);
   });
 
   it("el fondo con sus unidades netas hasta hoy (el retiro resta) y sus valores vigentes; el que no tiene valores también", async () => {
@@ -226,6 +247,8 @@ describe("la proyección sobre lo leído", () => {
     expect(await db.calendarioBvc.count({ where: { dia: { gte: dia("2019-01-01"), lt: dia("2021-01-01") } } }), "2019-2020 no deben estar sembrados").toBe(0);
     const codigos = r.supuestos.avisos.map((x) => [x.codigo, x.dia ?? x.dato]);
     expect(codigos).toContainEqual(["DECRETO_BRUTO", "2020-07-15"]);
+    // El decreto de 2017 se lee (para cruzar los pagos del borde) pero queda antes de la ventana: no entra ni se avisa.
+    expect(codigos.filter(([c]) => c === "DECRETO_BRUTO")).toEqual([["DECRETO_BRUTO", "2020-07-15"]]);
     expect(codigos).toContainEqual(["ANIO_SIN_CALENDARIO", 2019]);
     // La escisión de 2027 cae después del último cierre del origen: no mueve ningún retorno de la ventana.
     expect(codigos.some(([c]) => c === "SALTO_SIN_EVENTO" || String(c).startsWith("ESCISION") || String(c).startsWith("DIVIDENDO"))).toBe(false);
