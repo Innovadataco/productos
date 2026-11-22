@@ -11,6 +11,6 @@ export { Dona } from "./Dona";
 export { GraficaTiempo } from "./GraficaTiempo";
 export { Selector } from "./Selector";
 export type {
-  Banda, Contra, DiaIso, EtiquetaTiempo, FilaBarra, Formato, OpcionSelector, PropsBarras, PropsDona, PropsGraficaTiempo, PropsSelector,
+  Banda, Contra, DiaIso, DibujoTiempo, EtiquetaTiempo, FilaBarra, Formato, OpcionSelector, PropsBarras, PropsDona, PropsGraficaTiempo, PropsSelector,
   Relleno, Segmento, SerieTiempo, Tono, Ventana,
 } from "./tipos";

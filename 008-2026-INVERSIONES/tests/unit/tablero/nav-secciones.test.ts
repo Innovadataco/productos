@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Navegación del tablero a las otras pantallas (fase B, corte 3): el encabezado lleva a Plan, Decisiones y
-// Conciliación, y «Lo que todavía no está» ya no promete las reglas ni el diario. Datos inventados.
+// Conciliación (y Proyecciones, frente proyecciones-pantalla), y «Lo que todavía no está» ya no promete las reglas, el
+// diario ni las proyecciones. Datos inventados.
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -25,6 +26,7 @@ describe("navegación del tablero", () => {
       ["Plan", "/plan", null],
       ["Decisiones", "/decisiones", null],
       ["Conciliación", "/conciliacion", null],
+      ["Proyecciones", "/proyecciones", null],
     ]);
   });
 
@@ -32,5 +34,9 @@ describe("navegación del tablero", () => {
     const falta = pantalla().querySelector("ul.falta")!;
     expect(texto(falta)).not.toContain("Mis reglas");
     expect(texto(falta)).not.toContain("diario de decisiones");
+  });
+
+  it("«Lo que todavía no está» ya no promete las proyecciones: ya tienen su pantalla (frente proyecciones-pantalla)", () => {
+    expect(texto(pantalla().querySelector("ul.falta"))).not.toContain("Proyecciones");
   });
 });

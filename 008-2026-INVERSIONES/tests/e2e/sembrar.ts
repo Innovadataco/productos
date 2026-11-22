@@ -22,6 +22,7 @@ import { APP, DUENO_E2E, baseDePruebas, type BaseDePruebas } from "./base";
 import { sembrarConciliacion } from "./sembrar-conciliacion";
 import { sembrarGraficas } from "./sembrar-graficas";
 import { sembrarPlan } from "./sembrar-plan";
+import { sembrarProyecciones } from "./sembrar-proyecciones";
 
 const FIXTURES = new URL("./fixtures/", import.meta.url);
 const ESPERA_PUERTO_MS = 1000;
@@ -110,6 +111,8 @@ async function sembrar(base: BaseDePruebas): Promise<void> {
     await sembrarPlan(db, id);
     // Al final: cierres generados para la evolución del tablero, sin tocar lo que miran las demás pantallas.
     await sembrarGraficas(db);
+    // Cierres yahoo de 2019-2021 para que el motor de proyecciones tenga historia (sin tocar lo de las demás pantallas).
+    await sembrarProyecciones(db);
   } finally {
     await db.$disconnect();
   }

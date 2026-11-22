@@ -8,8 +8,14 @@
  * - Detalle con el puntero y con el teclado: la capa enfocable es un deslizador por los días (src/app/_graficas/mira.ts)
  *   cuyo aria-valuetext dice el día y sus cifras. La tabla de datos está en «Ver los datos».
  * - La leyenda y la tabla no se vuelven a pintar en los cuadros de la animación (memo con la ventana en primitivos).
+ * - Con `dibujo` (proyecciones: un resultado que se interpola hacia el siguiente), el SVG y los puntos trazan los
+ *   valores del cuadro; el dominio, la leyenda, el detalle, el deslizador y la tabla usan los finales. Esos reciben
+ *   unas props «finales» que solo cambian si cambia lo que leen (título, días, series, bandas y formatos): un cuadro
+ *   que solo trae otro `dibujo` no los vuelve a armar.
+ * - Una banda con `degradado` se rellena con un linearGradient horizontal propio, por la variable --g-relleno-banda
+ *   (así la regla de alto contraste de graficas.css sigue mandando).
  */
-import { Fragment, memo, useId, useMemo } from "react";
+import { Fragment, memo, useId, useMemo, type CSSProperties } from "react";
 import { useHidratado, useTransicion, useVisible } from "./animacion";
 import { DetalleDia, textoDelDia } from "./DetalleDia";
 import { ticksBonitos } from "./escalas";
@@ -18,7 +24,7 @@ import { idSeguro } from "./ids";
 import { useMira } from "./mira";
 import { TablaDatos } from "./TablaDatos";
 import { diaANumero, ticksTiempo } from "./tiempo";
-import type { PropsGraficaTiempo, Ventana } from "./tipos";
+import type { Banda, PropsGraficaTiempo, Ventana } from "./tipos";
 
 const ALTO = 220;
 const MARCAS_X = 6;
@@ -34,7 +40,7 @@ const Leyenda = memo(function Leyenda({ p, desde, hasta }: { readonly p: PropsGr
         const u = ultimoEnVentana(s.valores, v);
         return <li key={s.id}><i className={`g-clave t-${s.tono}${s.trazo === "punteado" ? " g-clave-punteada" : ""}`} aria-hidden="true" /><b>{u === null ? "—" : p.formatoY(u)}</b> {s.nombre}</li>;
       })}
-      {(p.bandas ?? []).map((b) => <li key={b.id}><i className={`g-clave-banda g-banda-${b.intensidad} t-${b.tono}`} aria-hidden="true" /> {b.nombre}</li>)}
+      {(p.bandas ?? []).map((b) => <li key={b.id}><i className={`g-clave-banda g-banda-${b.intensidad} t-${b.tono}${b.degradado ? " g-clave-degradada" : ""}`} aria-hidden="true" /> {b.nombre}</li>)}
     </ul>
   );
 });
@@ -55,9 +61,23 @@ function Puntos({ p, xs, e, indice, clase }: { readonly p: PropsGraficaTiempo; r
 
 interface PropsDibujo { readonly p: PropsGraficaTiempo; readonly xs: readonly number[]; readonly e: Escalas; readonly alto: number; readonly ticksY: readonly number[]; readonly base: string; readonly xActivo: number | null; readonly xCorte: number | null }
 
+/** El degradado horizontal de una banda: el tono entero al principio y más tenue al final (lo pinta graficas.css). */
+function Degradado({ id, b }: { readonly id: string; readonly b: Banda }) {
+  return (
+    <linearGradient id={id} className={`t-${b.tono}`} x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" className="g-parada-ini" />
+      <stop offset="1" className="g-parada-fin" />
+    </linearGradient>
+  );
+}
+
+const rellenoDegradado = (id: string): CSSProperties => ({ ["--g-relleno-banda" as string]: `url(#${id})` });
+
 /** El SVG decorativo: rejilla, bandas, rellenos recortados arriba/abajo, corte, líneas y la mira. */
 function Dibujo({ p, xs, e, alto, ticksY, base, xActivo, xCorte }: PropsDibujo) {
   const capas = rellenos(p.rellenos ?? [], p.series, xs, e, alto);
+  const lista = p.bandas ?? [];
+  const idDegradado = (k: number) => `${base}-g${k}`;
   const vertical = (clase: string, x: number) => <line className={clase} x1={x} x2={x} y1={0} y2={alto} vectorEffect="non-scaling-stroke" />;
   return (
     <svg className="g-svg" viewBox={`0 0 ${ANCHO} ${alto}`} preserveAspectRatio="none" aria-hidden="true" focusable="false">
@@ -68,9 +88,15 @@ function Dibujo({ p, xs, e, alto, ticksY, base, xActivo, xCorte }: PropsDibujo) 
             <clipPath id={`${base}-b${k}`}><path d={r.recorteAbajo} /></clipPath>
           </Fragment>
         ))}
+        {lista.map((b, k) => (b.degradado ? <Degradado key={b.id} id={idDegradado(k)} b={b} /> : null))}
       </defs>
       {ticksY.map((t) => <line key={t} className="g-grid" x1={0} x2={ANCHO} y1={e.y.a(t)} y2={e.y.a(t)} vectorEffect="non-scaling-stroke" />)}
-      {bandas(p.bandas ?? [], xs, e).map((b) => <path key={b.id} className={`g-banda g-banda-${b.intensidad} t-${b.tono}`} d={b.d} />)}
+      {bandas(lista, xs, e).map((b, k) => (
+        <path
+          key={b.id} className={`g-banda g-banda-${b.intensidad} t-${b.tono}${b.degradado ? " g-banda-degradada" : ""}`} d={b.d}
+          style={b.degradado ? rellenoDegradado(idDegradado(k)) : undefined}
+        />
+      ))}
       {capas.map((r, k) => (
         <Fragment key={k}>
           <path className={`g-relleno t-${r.arriba}`} d={r.d} clipPath={`url(#${base}-a${k})`} />
@@ -109,7 +135,19 @@ function EjeX({ p, e, desde, hasta }: { readonly p: PropsGraficaTiempo; readonly
   );
 }
 
+/** Las props con lo que se traza en este cuadro: las de `dibujo` si las hay (las bandas, si no trae, las finales). */
+const conDibujo = (p: PropsGraficaTiempo): PropsGraficaTiempo =>
+  p.dibujo ? { ...p, series: p.dibujo.series, bandas: p.dibujo.bandas ?? p.bandas } : p;
+
 export function GraficaTiempo(p: PropsGraficaTiempo) {
+  const trazo = conDibujo(p);
+  // Lo que leen la leyenda, la tabla y el texto del deslizador (memo): estable mientras solo cambie `dibujo`.
+  const { titulo, dias, series, bandas: lasBandas, formatoY, formatoDia, extraDetalle } = p;
+  const finales = useMemo(
+    () => ({ ...p, dibujo: undefined }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a propósito: solo los campos que leen.
+    [titulo, dias, series, lasBandas, formatoY, formatoDia, extraDetalle],
+  );
   const alto = p.alto ?? ALTO;
   const base = idSeguro(useId());
   const xs = useMemo(() => p.dias.map(diaANumero), [p.dias]);
@@ -120,7 +158,7 @@ export function GraficaTiempo(p: PropsGraficaTiempo) {
   const hidratado = useHidratado();
   const { activo, manejadores } = useMira(xs, v, e.x);
   const indiceValor = activo ?? v.hasta;
-  const valorTexto = useMemo(() => textoDelDia(p, indiceValor), [p, indiceValor]);
+  const valorTexto = useMemo(() => textoDelDia(finales, indiceValor), [finales, indiceValor]);
   const ticksY = ticksBonitos(objetivo[2], objetivo[3], MARCAS_Y);
   const xActivo = activo === null ? null : e.x.a(xs[activo]!);
   const corte = p.corte && xs[p.corte.indice] !== undefined ? { nombre: p.corte.nombre, x: e.x.a(xs[p.corte.indice]!) } : null;
@@ -130,14 +168,14 @@ export function GraficaTiempo(p: PropsGraficaTiempo) {
         <span className="g-titulo" id={`${base}-t`}>{p.titulo}</span>
         {p.encabezado ? <span className="g-encabezado">{p.encabezado}</span> : null}
       </figcaption>
-      <Leyenda p={p} desde={v.desde} hasta={v.hasta} />
+      <Leyenda p={finales} desde={v.desde} hasta={v.hasta} />
       <div className="g-marco">
         <EjeY p={p} e={e} ticks={ticksY} alto={alto} />
         <div className="g-plot" ref={ref} data-visible={visible ? "" : undefined} data-hidratado={hidratado ? "" : undefined} style={{ height: `${alto}px` }}>
-          <Dibujo p={p} xs={xs} e={e} alto={alto} ticksY={ticksY} base={base} xActivo={xActivo} xCorte={corte?.x ?? null} />
+          <Dibujo p={trazo} xs={xs} e={e} alto={alto} ticksY={ticksY} base={base} xActivo={xActivo} xCorte={corte?.x ?? null} />
           {corte ? <span className="g-corte" aria-hidden="true" style={{ left: `${pct(corte.x)}%` }}>{corte.nombre}</span> : null}
-          <Puntos p={p} xs={xs} e={e} clase="g-fin" indice={(valores) => ultimoIndice(valores, v)} />
-          {activo === null ? null : <Puntos p={p} xs={xs} e={e} clase="g-punto" indice={() => activo} />}
+          <Puntos p={trazo} xs={xs} e={e} clase="g-fin" indice={(valores) => ultimoIndice(valores, v)} />
+          {activo === null ? null : <Puntos p={trazo} xs={xs} e={e} clase="g-punto" indice={() => activo} />}
           {activo === null || xActivo === null ? null : <DetalleDia p={p} indice={activo} posicion={pct(xActivo)} />}
           <div
             className="g-toque" role="slider" tabIndex={0} aria-orientation="horizontal" aria-labelledby={`${base}-t`} aria-describedby={`${base}-r`}
@@ -147,7 +185,7 @@ export function GraficaTiempo(p: PropsGraficaTiempo) {
         <EjeX p={p} e={e} desde={objetivo[0]} hasta={objetivo[1]} />
       </div>
       <p id={`${base}-r`} className="g-sr">{p.resumen}</p>
-      <TablaDatos p={p} desde={v.desde} hasta={v.hasta} />
+      <TablaDatos p={finales} desde={v.desde} hasta={v.hasta} />
     </figure>
   );
 }

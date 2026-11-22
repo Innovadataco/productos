@@ -272,6 +272,17 @@ describe("GraficaTiempo · trabajo por cuadro (hallazgos MEDIOS de react-reviewe
   });
 });
 
+describe("GraficaTiempo · datos con el teclado (hallazgo MEDIO de a11y-architect, frente proyecciones-pantalla)", () => {
+  it("la caja de la tabla, que se desplaza, es una región enfocable con el nombre de la gráfica", async () => {
+    await m.pintar(createElement(GraficaTiempo, base()));
+    await alternar(m.contenedor.querySelector("details")!, true);
+    const caja = m.contenedor.querySelector<HTMLElement>(".g-datos-caja")!;
+    expect(caja.getAttribute("role")).toBe("region");
+    expect(caja.tabIndex).toBe(0);
+    expect(caja.getAttribute("aria-label")).toBe("Datos de Valor frente al costo");
+  });
+});
+
 describe("GraficaTiempo · datos", () => {
   it("la tabla aparece solo al abrir «Ver los datos», con una fila por día de la ventana", async () => {
     await m.pintar(createElement(GraficaTiempo, base({ ventana: { desde: 1, hasta: 4 } })));

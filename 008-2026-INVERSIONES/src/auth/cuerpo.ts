@@ -7,8 +7,9 @@ import { CUERPO_MAX_BYTES, EMAIL_MAX } from "./limites";
 /** Una clave de más de 72 bytes ya no entra; este tope solo evita valores absurdos. */
 const TEXTO_MAX = 1024;
 
-async function textoAcotado(pedido: Request): Promise<string | null> {
-  if (Number(pedido.headers.get("content-length") ?? "0") > CUERPO_MAX_BYTES) return null;
+/** El cuerpo como texto, cortado al pasar `maxBytes` (null); lo usa también POST /api/proyecciones con su tope. */
+export async function textoAcotado(pedido: Request, maxBytes: number = CUERPO_MAX_BYTES): Promise<string | null> {
+  if (Number(pedido.headers.get("content-length") ?? "0") > maxBytes) return null;
   if (!pedido.body) return "";
   const lector = pedido.body.getReader();
   const trozos: Uint8Array[] = [];
@@ -17,7 +18,7 @@ async function textoAcotado(pedido: Request): Promise<string | null> {
     const { done, value } = await lector.read();
     if (done) break;
     total += value.byteLength;
-    if (total > CUERPO_MAX_BYTES) {
+    if (total > maxBytes) {
       await lector.cancel();
       return null;
     }
