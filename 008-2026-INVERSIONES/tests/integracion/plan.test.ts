@@ -423,9 +423,13 @@ describe("reglas del plan escritas a mano en la migración", () => {
     const disparadores = await db.$queryRaw<{ tgname: string }[]>`
       SELECT t.tgname FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
       WHERE c.relname IN ('plan_version', 'regla_plan', 'decision', 'enlace_decision_orden') AND NOT t.tgisinternal`;
+    // Más los de los instantes (migración *_instantes_base): la hora del registro la pone la base.
     expect(disparadores.map((d) => d.tgname).sort()).toEqual([
+      "decision_instante",
       "decision_solo_insercion",
+      "enlace_decision_orden_instante",
       "enlace_decision_orden_solo_insercion",
+      "plan_version_instante",
       "plan_version_solo_insercion",
       "regla_plan_solo_insercion",
     ]);
