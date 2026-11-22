@@ -62,6 +62,11 @@ describe("sondaLocal · ping", () => {
     expect(falso.llamadas()).toHaveLength(1);
   });
 
+  it("con una señal viva del llamador, responde igual", async () => {
+    const { local } = generador(() => json(tagsDelFicticio()));
+    expect(await local.sondaLocal({ smoke: false, limiteMs: LIMITE_MS }, new AbortController().signal)).toMatchObject({ ok: true, smoke: "NO_PEDIDO" });
+  });
+
   it("una señal ya abortada → PING TIEMPO_AGOTADO SENAL_ABORTADA, sin red", async () => {
     const { local, falso } = generador(() => json(tagsDelFicticio()));
     const control = new AbortController();

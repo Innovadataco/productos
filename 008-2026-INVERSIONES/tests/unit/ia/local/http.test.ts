@@ -189,12 +189,12 @@ describe("pedirJsonLocal · el plazo", () => {
     expect(falso.llamadas()).toHaveLength(0);
   });
 
-  it("un rechazo del fetch con el plazo abortado es TIEMPO_AGOTADO, no un fallo de red", async () => {
+  it("un rechazo del fetch que llega después del aborto es TIEMPO_AGOTADO, no un fallo de red", async () => {
     const afuera = new AbortController();
     const llega = diferido<never>();
     const falso = crearOllamaFalso(() => ({ tipo: "PROMESA", promesa: llega.promesa }));
-    const p = plazo(afuera.signal);
-    const espera = pedirJsonLocal(falso.fetch, URL_TAGS, GET, TOPE, p);
+    const espera = pedirJsonLocal(falso.fetch, URL_TAGS, GET, TOPE, plazo(afuera.signal));
+    await Promise.resolve();
     afuera.abort();
     llega.rechazar(new DOMException("This operation was aborted", "AbortError"));
     await expect(espera).resolves.toMatchObject({ motivo: "TIEMPO_AGOTADO", detalle: "SENAL_ABORTADA" });
