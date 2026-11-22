@@ -107,11 +107,54 @@ describe("candado de pureza · control positivo", () => {
   });
 });
 
+describe("candado de pureza · control positivo de las formas que se saltaban el detector (revisión de seguridad)", () => {
+  it("import x = require(...) también es un import de ejecución", () => {
+    expect(importsDeEjecucion(analizar('import fs = require("node:fs");\nimport type T = require("./tipos");')).filter(prohibido)).toEqual(["node:fs"]);
+  });
+
+  it("el reloj, el azar, la red y el entorno por alias, por desestructuración o por globalThis", () => {
+    const codigo = [
+      "const D = Date; const a = new D();", "const { now } = Date;", "const b = Date();", "const c = globalThis.fetch(u);",
+      'const d = process["env"];', "const { env } = process;", "const e = eval(x);", "const f = new Function(x);", "const g = Reflect.get(o, k);",
+      "const { random } = Math;", "const ok = Date.parse(t) + Date.UTC(2027, 2, 17) + Math.abs(n) + Math.max(n, m); const tipo: Date = new Date(t);",
+    ].join("\n");
+    expect(usosImpuros(analizar(codigo))).toEqual([
+      "Date", "Date", "Date", "globalThis", "process", "process", "eval", "Function", "Reflect", "Math",
+    ]);
+  });
+
+  it("las lecturas con plantilla, y los volcados de un objeto entero (Object.values, JSON.stringify, structuredClone)", () => {
+    const codigo = [
+      "const a = r[`cantidad`];", "const b = Object.values(r);", "const c = Object.entries(r);", "const d = JSON.stringify(r);", "const e = structuredClone(r);",
+      "const f = Object.assign({}, r);", "const g = r.costoVivo;", "const h = r.decisiones;", "const ok = Object.freeze([]);",
+    ].join("\n");
+    expect(lecturasProhibidas(analizar(codigo))).toEqual([
+      "cantidad", "Object.values", "Object.entries", "JSON.stringify", "structuredClone", "Object.assign", "costoVivo", "decisiones",
+    ]);
+  });
+
+  it("el grafo de imports: lo prohibido se ve también si llega de forma transitiva", () => {
+    const archivos: Readonly<Record<string, string>> = {
+      "/raiz/src/ia/hechos/a.ts": 'import { b } from "./b";\nimport type { T } from "../../lib/db";',
+      "/raiz/src/ia/hechos/b.ts": 'import { c } from "@/plan/c";\nimport { Prisma } from "@prisma/client";',
+      "/raiz/src/plan/c.ts": 'import { t } from "./tenencia";\nimport "server-only";',
+      "/raiz/src/plan/tenencia.ts": "export const t = 1;",
+    };
+    const sistema = { raiz: "/raiz", leer: (ruta: string) => archivos[ruta] ?? null };
+    expect(prohibidosAlcanzados(["/raiz/src/ia/hechos/a.ts"], sistema)).toEqual(["src/plan/c.ts → ./tenencia", "src/plan/c.ts → server-only"]);
+  });
+});
+
 describe("candado de pureza · los armadores y presentar", () => {
   it("existen los archivos que vigila (si no, la prueba no vigilaría nada)", () => {
     const vigilados = archivos();
     expect(vigilados.length).toBeGreaterThanOrEqual(8);
     for (const nombre of ["diario.ts", "reglas.ts", "escenarios.ts", "grupos.ts", "derivar.ts"]) expect(vigilados.some((p) => p.endsWith(nombre)), nombre).toBe(true);
+  });
+
+  it("ningún armador alcanza, ni de forma transitiva, la base, la red, server-only, los clientes de las puertas ni el cálculo de tenencias", () => {
+    const sistema = { raiz: RAIZ, leer: (ruta: string) => (existsSync(ruta) ? readFileSync(ruta, "utf8") : null) };
+    expect(prohibidosAlcanzados(archivos(), sistema)).toEqual([]);
   });
 
   it.each(archivos().map((p) => [path.relative(RAIZ, p), p] as const))("%s: sin base, red, reloj, azar ni campos prohibidos", (_nombre, ruta) => {
