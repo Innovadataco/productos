@@ -13,7 +13,8 @@ import { afterAll, describe, expect, it } from "vitest";
 
 const RAIZ = path.join(__dirname, "..", "..", "..");
 const LECTORES = ["xml-acotado", "zip-acotado"] as const;
-const CODIGO = /\.(ts|tsx|mts|mjs|js)$/;
+/** Módulos de código: .ts, .tsx, .js, .jsx y sus variantes .c* y .m* (cts, mts, cjs, mjs). */
+const CODIGO = /\.[cm]?[jt]sx?$/;
 
 interface Recorrido {
   readonly modulos: ReadonlySet<string>;
@@ -72,6 +73,11 @@ describe("candado: la app y los scripts (salvo los exportadores) no alcanzan los
   const SRC = path.join(RAIZ, "src");
   const scripts = archivos(path.join(RAIZ, "scripts")).filter((p) => !/^exportar-/.test(path.basename(p)));
   const app = [...archivos(path.join(SRC, "app")), path.join(SRC, "proxy.ts"), path.join(SRC, "instrumentation.ts")];
+
+  it("reconoce como código todas las extensiones de módulo (también .cjs, .cts, .mjs, .jsx)", () => {
+    for (const n of ["a.ts", "a.tsx", "a.mts", "a.cts", "a.js", "a.jsx", "a.mjs", "a.cjs"]) expect(CODIGO.test(n), n).toBe(true);
+    for (const n of ["a.sh", "a.css", "a.json", "a.sql"]) expect(CODIGO.test(n), n).toBe(false);
+  });
 
   it("los dos lectores existen donde el candado los busca", () => {
     for (const l of LECTORES) expect(existsSync(path.join(SRC, "lib", `${l}.ts`))).toBe(true);
