@@ -25,3 +25,5 @@ html:has(main.operar) { scroll-padding-top: 176px; }
 .operar .op-fecha { font-size: 14px; overflow-wrap: anywhere; padding-left: 12px; border-left: 2px solid var(--line); }
 .operar .op-fecha time { font-weight: 700; }
 .operar tfoot th, .operar tfoot td { font-weight: 700; border-bottom: 0; }
+/* Las cifras no se parten («$» en una línea y el número en otra): la tabla se desplaza en su caja. */
+.operar td.num, .operar th.num { white-space: nowrap; }
