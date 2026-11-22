@@ -13,7 +13,7 @@ import { APIConnectionError, APIConnectionTimeoutError, APIError, APIUserAbortEr
 import { esObjetoPlano, type Registro } from "../formas";
 import { MAX_SALIDA_CRUDA, PATRON_MODELO, type ExitoGeneracion, type FalloGeneracion, type MotivoFalloGenerador } from "../generador";
 import { CODIGOS_APAGADO_NUBE } from "./config";
-import { MODELO_NUBE } from "./peticion";
+import { MODELO_NUBE, type ModeloNube } from "./peticion";
 import { ErrorTransporteNube } from "./transporte";
 
 /** Todos los detalles que puede dar la puerta nube (lista cerrada; cumplen `PATRON_DETALLE`). */
@@ -64,8 +64,11 @@ export interface ExitoNube extends ExitoGeneracion {
   readonly tokensSalida: number;
 }
 
-/** Una respuesta 200 del SDK (lo que resolvió `messages.create`), con la latencia medida por el generador. */
-export function leerRespuesta(crudo: unknown, latenciaMs: number): ExitoNube | FalloGeneracion {
+/**
+ * Una respuesta 200 del SDK (lo que resolvió `messages.create`), con la latencia medida por el generador. `modelo` es el
+ * pedido (E8: el de la configuración; por omisión, opus); el digest es el `model` que devolvió la API.
+ */
+export function leerRespuesta(crudo: unknown, latenciaMs: number, modelo: ModeloNube = MODELO_NUBE): ExitoNube | FalloGeneracion {
   if (!esObjetoPlano(crudo) || crudo.type !== "message") return falloNube("ERROR_PROVEEDOR", "RESPUESTA_INVALIDA");
   const { model } = crudo;
   const tokens = tokensDe(crudo.usage);
@@ -74,7 +77,7 @@ export function leerRespuesta(crudo: unknown, latenciaMs: number): ExitoNube | F
     ok: true,
     puerta: "nube",
     salidaCruda: salidaDe(crudo),
-    modelo: MODELO_NUBE,
+    modelo,
     modeloDigest: model,
     latenciaMs: Number.isFinite(latenciaMs) && latenciaMs > 0 ? latenciaMs : 0,
     tokensEntrada: tokens.entrada,

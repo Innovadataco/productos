@@ -1,0 +1,23 @@
+/* Inversiones · /edicion/ia (E8). Usa los tokens de tablero.css (claro y oscuro) y las piezas de edicion.css; todo va
+   dentro de .edicion. Los estados se leen por el texto («Listo», «Falta», «Por verificar»), no solo por el color. */
+.edicion .ia-bloque { display: grid; gap: 10px; margin: 0 0 22px; max-width: 980px; }
+.edicion .ia-bloque h2, .edicion .edicion-form h2 { font-family: var(--display); font-weight: 400; font-size: 28px; margin: 6px 0 4px; }
+.edicion .ia-bloque h3, .edicion .ia-ollama h3 { font-size: 16px; margin: 8px 0 4px; }
+.edicion .ia-resumen, .edicion .ia-fijos, .edicion .ia-requisitos, .edicion .ia-instalados { margin: 0; padding-left: 18px; display: grid; gap: 6px; overflow-wrap: anywhere; }
+.edicion .ia-puertas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.edicion .ia-puerta { border: 1px solid var(--line); border-left-width: 4px; border-radius: 14px; background: var(--panel); padding: 12px 16px; min-width: 0; }
+.edicion .ia-puerta.ia-falta { border-left-color: var(--loss); }
+.edicion .ia-puerta.ia-por_verificar { border-left-color: var(--gold); }
+.edicion .ia-puerta.ia-listo { border-left-color: var(--gain); }
+.edicion .ia-requisitos { list-style: none; padding-left: 0; }
+.edicion .ia-requisitos li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }
+.edicion .ia-marca { font-size: 12px; font-weight: 800; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); white-space: nowrap; }
+.edicion .ia-marca.ia-falta { color: var(--loss); border-color: var(--loss); }
+.edicion .ia-marca.ia-por_verificar { color: var(--fg); border-color: var(--gold); }
+.edicion .ia-marca.ia-listo { color: var(--fg); border-color: var(--gain); }
+.edicion .ia-ollama { display: grid; gap: 8px; border-top: 1px dashed var(--line); padding-top: 10px; min-width: 0; }
+.edicion .ia-instalados li.ia-falta { color: var(--muted); }
+.edicion .ia-historia { margin: 0; padding-left: 22px; display: grid; gap: 10px; overflow-wrap: anywhere; }
+.edicion .ia-historia p { margin: 2px 0 0; color: var(--muted); }
+.edicion .ia-guardada { font-weight: 700; color: var(--fg); }
+.edicion .edicion-form select option:disabled { color: var(--muted); }

@@ -42,6 +42,15 @@ export const PERMISOS_IA: readonly Permiso[] = [
   { tabla: "carga_archivo", privilegio: "SELECT", columnas: ["tipoFuente", "estado", "cargadoEn", "revertidaEn"] },
   { tabla: "certificacion", privilegio: "SELECT", columnas: ["id", "fechaCorte", "retiradaEn"] },
   { tabla: "conciliacion", privilegio: "SELECT", columnas: ["id", "certificacionId", "fechaCorte", "calculadaEn", "resultado"] },
+  // E8: la configuración vigente de la IA (leerConfigIa, src/ia/config/leer.ts), sin el motivo ni el autor.
+  {
+    tabla: "config_ia",
+    privilegio: "SELECT",
+    columnas: [
+      "id", "version", "modo", "ollamaHost", "ollamaPuerto", "temperaturaLocal", "tareas", "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos",
+      "esfuerzoNube", "creadaEn",
+    ],
+  },
   { tabla: "dividendo", privilegio: "SELECT", columnas: ["id", "instrumentoId", "tipo", "fechaPago", "montoNeto", "decretadoId"] },
   {
     tabla: "dividendo_decretado",
@@ -71,6 +80,7 @@ export const PERMISOS_IA: readonly Permiso[] = [
  * acción y la cantidad de las reglas y de las decisiones. Las tablas que no están en PERMISOS_IA quedan enteras fuera.
  */
 export const PROHIBIDAS_IA: Readonly<Record<string, readonly string[]>> = {
+  config_ia: ["motivo", "autorId"],
   plan_version: ["motivo", "aprobadaPorId"],
   regla_plan: ["accion", "cantidad", "detalle"],
   carga_archivo: ["nombreArchivo", "sha256", "cargadoPorId", "revertidaPorId"],

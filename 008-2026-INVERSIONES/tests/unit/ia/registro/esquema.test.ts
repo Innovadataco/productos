@@ -64,9 +64,12 @@ describe("modelo ResumenIa en prisma/schema.prisma", () => {
 });
 
 describe("migración *_resumen_ia", () => {
-  it("es una sola, posterior a todas las de main, y aditiva (no borra ni altera nada que ya exista)", () => {
+  // E8: «posterior a todas» se volvía rojo con cualquier migración nueva (config_ia); lo que importa es que vaya después de
+  // la de los instantes, cuyo disparador copia.
+  it("es una sola, posterior a la de los instantes que copia, y aditiva (no borra ni altera nada que ya exista)", () => {
     expect(carpetas.filter((c) => c.endsWith("_resumen_ia"))).toHaveLength(1);
-    expect(carpetas.at(-1)).toBe(carpeta);
+    expect(carpetas.indexOf(carpeta!)).toBeGreaterThan(carpetas.indexOf("20261122152704_instantes_base"));
+    expect(carpetas.indexOf("20261122152704_instantes_base")).toBeGreaterThanOrEqual(0);
     expect(sinComentarios).not.toMatch(/\bDROP\b|\bALTER\s+(TYPE|COLUMN)\b|\bRENAME\b|\bTRUNCATE\b|\bDELETE\s+FROM\b|\bUPDATE\s+"/i);
     for (const m of sinComentarios.matchAll(/ALTER TABLE "(\w+)"/g)) expect(m[1]).toBe("resumen_ia");
   });
