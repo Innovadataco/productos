@@ -169,3 +169,71 @@ describe("guardián del esquema: CHECK nuevos con NOT VALID", () => {
     expect(await guardianTras(romper)).toContain("orden_montos_chk");
   });
 });
+
+// Integridad de los precios frente a inv_precios (migración *_precios_integridad): los 4 disparadores y sus 3
+// funciones. Una función que pase a SECURITY DEFINER eximiría a todos (dentro, current_user sería el dueño), y el md5
+// del código no lo ve: el guardián mira también prosecdef y proconfig, y que haya una sola función con cada nombre.
+describe("guardián del esquema: integridad de los precios", () => {
+  const disparadores: ReadonlyArray<readonly [string, string]> = [
+    ["precio_cierre", "precio_cierre_insercion"],
+    ["precio_cierre", "precio_cierre_retiro"],
+    ["valor_unidad_fondo", "valor_unidad_fondo_insercion"],
+    ["valor_unidad_fondo", "valor_unidad_fondo_retiro"],
+  ];
+
+  it.each(disparadores)("falla si falta %s.%s", async (tabla, disparador) => {
+    expect(await guardianTras([`DROP TRIGGER "${disparador}" ON "${tabla}"`])).toContain(disparador);
+  });
+
+  it.each(disparadores)("falla si %s.%s queda deshabilitado o solo para réplica", async (tabla, disparador) => {
+    expect(await guardianTras([`ALTER TABLE "${tabla}" DISABLE TRIGGER "${disparador}"`])).toContain(disparador);
+    expect(await guardianTras([`ALTER TABLE "${tabla}" ENABLE REPLICA TRIGGER "${disparador}"`])).toContain(disparador);
+  });
+
+  it("falla si el retiro pasa a UPDATE OF una columna (dejaría reabrir con las demás)", async () => {
+    const romper = [
+      'DROP TRIGGER "precio_cierre_retiro" ON "precio_cierre"',
+      'CREATE TRIGGER "precio_cierre_retiro" BEFORE UPDATE OF "precio" OR DELETE ON "precio_cierre" FOR EACH ROW EXECUTE FUNCTION "inv_retiro_vigente"()',
+    ];
+    expect(await guardianTras(romper)).toContain("precio_cierre_retiro");
+  });
+
+  it("falla si a valor_unidad_fondo le sobra un disparador", async () => {
+    const romper = ['CREATE TRIGGER "intruso_fondo" BEFORE INSERT ON "valor_unidad_fondo" FOR EACH ROW EXECUTE FUNCTION "inv_valor_unidad_fondo_insercion"()'];
+    expect(await guardianTras(romper)).toContain("intruso_fondo");
+  });
+
+  it("falla si cambia el código de una función (deja pasar todo)", async () => {
+    const romper = [
+      `CREATE OR REPLACE FUNCTION "inv_precio_cierre_insercion"() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$ BEGIN RETURN NEW; END; $$`,
+    ];
+    expect(await guardianTras(romper)).toContain("inv_precio_cierre_insercion");
+  });
+
+  it.each(["inv_precio_cierre_insercion", "inv_valor_unidad_fondo_insercion", "inv_retiro_vigente"])(
+    "falla si %s pasa a SECURITY DEFINER (eximiría a todos) o cambia su search_path",
+    async (funcion) => {
+      expect(await guardianTras([`ALTER FUNCTION "${funcion}"() SECURITY DEFINER`])).toContain(funcion);
+      expect(await guardianTras([`ALTER FUNCTION "${funcion}"() SET search_path = public, pg_catalog, pg_temp`])).toContain(funcion);
+      expect(await guardianTras([`ALTER FUNCTION "${funcion}"() SET search_path = pg_catalog, public`])).toContain(funcion);
+      expect(await guardianTras([`ALTER FUNCTION "${funcion}"() RESET search_path`])).toContain(funcion);
+    },
+  );
+
+  it("falla si una función de antes gana un SET o pasa a SECURITY DEFINER", async () => {
+    expect(await guardianTras(['ALTER FUNCTION "inv_solo_insercion"() SECURITY DEFINER'])).toContain("inv_solo_insercion");
+    expect(await guardianTras(['ALTER FUNCTION "inv_solo_insercion"() SET search_path = public'])).toContain("inv_solo_insercion");
+  });
+
+  // La sobrecarga trae el mismo SET y un md5 que ordena DESPUÉS del de la función real: así ni el min(md5) ni el
+  // min(proconfig) la delatan, y solo la cuenta por nombre la frena (lo mostró una mutación que quitaba esa cuenta).
+  it("falla si aparece otra función con el mismo nombre (una sobrecarga), aunque traiga el mismo SET", async () => {
+    const cuerpo = " SELECT x + 0 ";
+    const [orden] = await db.$queryRawUnsafe<Array<{ despues: boolean }>>(
+      `SELECT md5('${cuerpo}') > (SELECT md5(prosrc) FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND proname = 'inv_retiro_vigente') AS despues`,
+    );
+    expect(orden).toEqual({ despues: true });
+    const romper = [`CREATE FUNCTION "inv_retiro_vigente"(x int) RETURNS int LANGUAGE sql SET search_path = pg_catalog, public, pg_temp AS $$${cuerpo}$$`];
+    expect(await guardianTras(romper)).toContain("inv_retiro_vigente");
+  });
+});
