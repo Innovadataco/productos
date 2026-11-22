@@ -345,7 +345,7 @@ describe("cargar-prod.sh · importar-series e importar-decretos están en la lis
     expect(r.stdout + r.stderr).toContain("importar-decretos");
   });
 
-  it("importar-relevante no entra (P2 aplazada): cargar-prod.sh lo rechaza sin llamar a Docker e inv-cargar, con 64", async () => {
+  it("importar-relevante no entra (P2 aplazada): cargar-prod.sh lo rechaza con 1 sin llamar a Docker, e inv-cargar con 64", async () => {
     const { falsos, env } = preparado();
     const r = await correr(CARGAR_PROD, ["importar-relevante"], env, "");
     expect(r.status).toBe(1);
