@@ -49,4 +49,16 @@ npm run precios:actualizar -- --desde 2025-01-01 # carga histórica
 - Verificación: si hay certificación de A&V de ese día, el cierre debe quedar a ±1 % de su precio de valoración (`VERIFICADO`). Si no hay referencia oficial, queda `NO_VERIFICADO`.
 - Si Yahoo falla, no se guarda nada de esa especie y el comando lo informa (salida 3).
 
+## Constitución del fondo (unidades y aporte)
+```bash
+npx tsx scripts/registrar-movimiento-fondo.ts --email <su-correo> --fondo <código del fondo en la SFC> \
+  --fecha AAAA-MM-DD --unidades <n> --monto <n>             # ensayo: no escribe
+npx tsx scripts/registrar-movimiento-fondo.ts … --aplicar   # registra
+```
+- Las unidades y el aporte salen del extracto del FIC: ningún archivo los trae. Tal cual el extracto, con punto decimal y sin miles; nada se redondea (`NUMERO_PRECISION`).
+- Antes: el fondo registrado y el valor de unidad de la SFC **de ese día** cargado. El monto debe ser unidades × ese valor (±0,5 %); si no cuadra o falta, se niega sin escribir y dice qué revisar en el extracto.
+- Es una sola por fondo y no se edita: repetirla con los mismos datos no escribe nada; con otros, `CONSTITUCION_DISTINTA`.
+- Después, `conciliar-certificacion`: el fondo deja `fondo_sin_unidades` y el efectivo, `aporte_fic_sin_registrar`.
+- En producción va por la vía B (`cargar-prod.sh registrar-movimiento-fondo`, [runbook §11](docs/despliegue/produccion.md)).
+
 Este repo es público: aquí no hay datos reales. Los datos de prueba están inventados y marcados `.ficticio.`.
