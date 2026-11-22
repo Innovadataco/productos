@@ -2,7 +2,7 @@
 // 0 (ensayo, aplicado, sin cambios), 1 (sin claves de cifrado), 2 (uso, archivo inexistente o que no es regular) y 3
 // (CSV inválido o fondo sin constitución), y que la consola NUNCA lleve el correo, el código del fondo, los valores, las
 // fechas ni la URL de la base. En producción (NODE_ENV=production, la vía B) los fallos terminan pidiendo parar la
-// carga. El hijo recibe un entorno mínimo. El CSV se escribe en una carpeta temporal propia; datos inventados (2027).
+// carga. El hijo recibe un entorno mínimo. El CSV se escribe en una carpeta temporal propia; datos inventados.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,7 +18,9 @@ const CODIGO = `57${corrida}`;
 const CODIGO_SIN_CONSTITUCION = `58${corrida}`;
 const VALOR = "37911.4713";
 const RETENCION = "1374.0219";
-const FECHA = "2027-06-17";
+// El CLI corre con el reloj real: las fechas van en el pasado, después del corte «sin historia» de 2022
+// (tests/integracion/conciliacion.test.ts) y antes de la historia real del dueño, como en cli-movimiento-fondo.
+const FECHA = "2022-08-17";
 const SCRIPT = "registrar-rendimientos-fondo.ts";
 const PARE = "Vía B: pare la carga y avise al CEO de 008";
 const NUNCA = [email, CODIGO, CODIGO_SIN_CONSTITUCION, VALOR, "37911", RETENCION, "1374.02", FECHA, URL_BASE, "postgresql://"];
@@ -47,10 +49,10 @@ beforeAll(async () => {
   fondoId = (await db.instrumento.create({ data: { tipo: "FIC", codigoFic: CODIGO, nombre: "Fondo ficticio del CLI" } })).id;
   await db.instrumento.create({ data: { tipo: "FIC", codigoFic: CODIGO_SIN_CONSTITUCION, nombre: "Fondo ficticio sin constitución" } });
   const ajuste = await db.ajusteCaja.create({
-    data: { fecha: new Date("2027-04-14T00:00:00Z"), monto: new Prisma.Decimal("-2713946.2817"), categoria: "APORTE_FIC", fuente: "EXTRACTO", motivo: "aporte ficticio", creadoPorId: dueno.id },
+    data: { fecha: new Date("2022-07-13T00:00:00Z"), monto: new Prisma.Decimal("-2713946.2817"), categoria: "APORTE_FIC", fuente: "EXTRACTO", motivo: "aporte ficticio", creadoPorId: dueno.id },
   });
   await db.movimientoFondo.create({
-    data: { fondoId, fecha: new Date("2027-04-14T00:00:00Z"), unidades: new Prisma.Decimal("947.31277"), monto: new Prisma.Decimal("2713946.2817"), tipo: "CONSTITUCION", fuente: "EXTRACTO", ajusteCajaId: ajuste.id },
+    data: { fondoId, fecha: new Date("2022-07-13T00:00:00Z"), unidades: new Prisma.Decimal("947.31277"), monto: new Prisma.Decimal("2713946.2817"), tipo: "CONSTITUCION", fuente: "EXTRACTO", ajusteCajaId: ajuste.id },
   });
   carpeta = mkdtempSync(join(tmpdir(), "rendimientos-cli-"));
 });
@@ -101,7 +103,7 @@ describe("registrar-rendimientos-fondo como proceso", { timeout: 12 * POR_CLI_MS
     const uso = correr(["--email", email], prod);
     comprobar(uso, 2, PARE);
     expect(uso.texto).not.toContain("npx tsx");
-    const ensayo = correr(base(archivo("prod.csv", ["2027-07-19,RENDIMIENTO,37913.0461"])), prod);
+    const ensayo = correr(base(archivo("prod.csv", ["2022-09-21,RENDIMIENTO,37913.0461"])), prod);
     comprobar(ensayo, 0, "vía B con --aplicar");
     expect(ensayo.texto).not.toContain(PARE);
   });
