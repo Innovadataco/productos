@@ -14,7 +14,7 @@ import { MODELO_NUBE, armarCuerpoNube } from "@/ia/nube/peticion";
 import { costoMaximoMicroUsd, costoMicroUsd, type GastoDelMes } from "@/ia/nube/tope";
 import { generarConPuertas } from "@/ia/puertas";
 import { LIMITE_FICTICIO_MS } from "../apoyo/pedido.ficticio";
-import { crearClienteDoble, type ConductaCliente } from "./apoyo/cliente-doble";
+import { crearClienteDoble, esperarTurnos, type ConductaCliente } from "./apoyo/cliente-doble";
 import {
   GASTO_FICTICIO, LLAVE_FICTICIA, MENSAJE_DEL_PROVEEDOR, OTRO_MES_FICTICIO, SALIDA_FICTICIA, cuerpoErrorFicticio, mensajeFicticio, pedidoFicticio,
 } from "./apoyo/datos.ficticio";
@@ -69,7 +69,7 @@ describe("apagada: sin intentar nada", () => {
   });
 
   it.each([
-    ["una llave imitada", { lista: true, llave: { revelar: () => LLAVE_FICTICIA }, topeMicroUsd: JUSTO }, "LLAVE_INVALIDA"],
+    ["una llave imitada", { lista: true, llave: { revelar: (): string => LLAVE_FICTICIA }, topeMicroUsd: JUSTO }, "LLAVE_INVALIDA"],
     ["un tope cero", { lista: true, llave: LLAVE, topeMicroUsd: 0n }, "TOPE_INVALIDO"],
     ["un tope negativo", { lista: true, llave: LLAVE, topeMicroUsd: -4613n }, "TOPE_INVALIDO"],
     ["un tope en número", { lista: true, llave: LLAVE, topeMicroUsd: 4613 }, "TOPE_INVALIDO"],
@@ -187,6 +187,8 @@ describe("el tope del mes, antes de llamar", () => {
     });
     const control = new AbortController();
     const promesa = generador.generar(pedidoFicticio().pedido, control.signal);
+    await esperarTurnos();
+    expect(typeof rechazar).toBe("function");
     control.abort();
     expect(await promesa).toEqual(fallo("TIEMPO_AGOTADO", "ABORTADO"));
     rechazar(new Error("tarde"));
@@ -194,10 +196,28 @@ describe("el tope del mes, antes de llamar", () => {
     expect(doble.llamadas()).toHaveLength(0);
   });
 
+  it("si la señal se aborta justo después de leer el gasto: TIEMPO_AGOTADO · ABORTADO, sin llamar", async () => {
+    const control = new AbortController();
+    // Un thenable que entrega el gasto y aborta en la microtarea siguiente: después de la lectura, antes de la llamada.
+    const gastoQueAborta = { then(resolver: (g: GastoDelMes) => void) { resolver(GASTO_FICTICIO); queueMicrotask(() => control.abort()); } };
+    const doble = crearClienteDoble(() => Promise.resolve(mensajeFicticio()));
+    const generador = crearGeneradorNube(configLista(TECHO_TOPE_MICRO_USD), { gastoDelMes: () => gastoQueAborta as unknown as Promise<GastoDelMes>, crearCliente: doble.crearCliente });
+    expect(await generador.generar(pedidoFicticio().pedido, control.signal)).toEqual(fallo("TIEMPO_AGOTADO", "ABORTADO"));
+    expect(doble.llamadas()).toHaveLength(0);
+  });
+
   it("con la señal ya abortada: TIEMPO_AGOTADO · ABORTADO, sin pedir el gasto", async () => {
     const m = montar(configLista(JUSTO));
     expect(await generar(m, pedidoFicticio().pedido, AbortSignal.abort())).toEqual(fallo("TIEMPO_AGOTADO", "ABORTADO"));
     expect(m.gastoDelMes).not.toHaveBeenCalled();
+  });
+});
+
+describe("una señal que no es AbortSignal (defecto del llamador)", () => {
+  it("ERROR_PROVEEDOR · EXCEPCION_INTERNA, sin rechazar, y la fila sigue", async () => {
+    const m = montar(configLista(JUSTO));
+    expect(await m.generador.generar(pedidoFicticio().pedido, undefined as unknown as AbortSignal)).toEqual(fallo("ERROR_PROVEEDOR", "EXCEPCION_INTERNA"));
+    expect(await generar(m)).toMatchObject({ ok: true });
   });
 });
 
@@ -260,6 +280,15 @@ describe("la reserva: lo que pudo cobrarse sin saberse cuenta en el tope del mis
     const m = montar(configLista(TOPE_DOS_MENOS_UNO), conducta);
     await generar(m);
     expect(await generar(m)).toMatchObject({ ok: true });
+  });
+
+  it("las reservas del mismo mes se suman", async () => {
+    const doble = crearClienteDoble((_l, indice) => (indice < 2 ? Promise.reject(new APIUserAbortError()) : Promise.resolve(mensajeFicticio())));
+    const generador = crearGeneradorNube(configLista(GASTADO + 3n * MAXIMO - 1n), { gastoDelMes: () => Promise.resolve(GASTO_FICTICIO), crearCliente: doble.crearCliente });
+    await generador.generar(pedidoFicticio().pedido, viva());
+    await generador.generar(pedidoFicticio().pedido, viva());
+    expect(await generador.generar(pedidoFicticio().pedido, viva())).toEqual(fallo("TOPE_MENSUAL", "TOPE_DEL_MES"));
+    expect(doble.llamadas()).toHaveLength(2);
   });
 
   it("la reserva es del mes: en el mes siguiente no cuenta", async () => {

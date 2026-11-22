@@ -111,6 +111,7 @@ describe("armarCuerpoNube · cierra en fallo sin lanzar", () => {
     ["un objeto anidado con una clave prohibida", (p: PedidoGeneracion) => conHecho(p, (h) => ({ ...h, etiqueta: { correo: "a" } }))],
     ["un número en lugar de texto", (p: PedidoGeneracion) => conHecho(p, (h) => ({ ...h, obligatorio: 1 }))],
     ["un hecho que no es objeto", (p: PedidoGeneracion) => conHecho(p, () => "H01")],
+    ["un hecho sin un campo exigido", (p: PedidoGeneracion) => conHecho(p, ({ clave: _clave, ...resto }) => resto)],
     ["hechos que no es arreglo", (p: PedidoGeneracion) => ({ ...p, vista: { ...p.vista, hechos: { H01: "x" } } })],
     ["una vista sin tipo", (p: PedidoGeneracion) => ({ ...p, vista: { hechos: p.vista.hechos } })],
     ["una vista nula", (p: PedidoGeneracion) => ({ ...p, vista: null })],

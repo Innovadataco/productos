@@ -80,6 +80,13 @@ describe("envolverFetch · lo que sale", () => {
     expect(base.llamadas()[0]?.cabeceras.authorization).toBe(`Bearer ${LLAVE_FICTICIA}`);
   });
 
+  it("un POST sin cuerpo ni señal sale sin cuerpo", async () => {
+    const base = crearFetchFalso({ tipo: "JSON", cuerpo: {} });
+    await envolverFetch(base.fetch, LLAVE)(URL_MENSAJES_NUBE, { method: "POST" });
+    expect(base.llamadas()[0]?.cuerpo).toBeUndefined();
+    expect(base.llamadas()[0]?.senal).toBeUndefined();
+  });
+
   it("acepta el destino como URL", async () => {
     const base = crearFetchFalso({ tipo: "JSON", cuerpo: {} });
     await envolverFetch(base.fetch, LLAVE)(new URL(URL_MENSAJES_NUBE), init());
@@ -131,8 +138,8 @@ describe("envolverFetch · lo que vuelve", () => {
     const trozo = new Uint8Array(4613).fill(0x7b);
     let enviados = 0;
     const cuerpo = new ReadableStream<Uint8Array>({
+      // Un cuerpo sin fin: solo la cancelación lo para.
       pull(control) {
-        if (enviados > MAX_BYTES_RESPUESTA_NUBE) return control.close();
         enviados += trozo.byteLength;
         control.enqueue(trozo);
       },
@@ -141,7 +148,7 @@ describe("envolverFetch · lo que vuelve", () => {
     const base = (() => Promise.resolve(new Response(cuerpo, { status: 200 }))) as unknown as typeof fetch;
     expect(await codigoDe(envolverFetch(base, LLAVE)(URL_MENSAJES_NUBE, init()))).toBe("RESPUESTA_DEMASIADO_GRANDE");
     expect(cancelar).toHaveBeenCalledTimes(1);
-    expect(enviados).toBeLessThanOrEqual(MAX_BYTES_RESPUESTA_NUBE + trozo.byteLength);
+    expect(enviados).toBeLessThanOrEqual(MAX_BYTES_RESPUESTA_NUBE + 2 * trozo.byteLength);
   });
 
   it("un cuerpo nulo da una respuesta vacía", async () => {
