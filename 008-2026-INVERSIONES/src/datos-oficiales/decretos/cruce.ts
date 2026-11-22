@@ -16,8 +16,8 @@
  * - Dos decretos del grupo con el mismo tipo y cuota (otro anuncio) son un decreto repetido: REVISAR, porque el bruto
  *   saldría doble (la base no lo impide: su clave lleva la fecha de anuncio).
  * - Un grupo entra si su ex ya pasó (la menor de sus ex < hoy) o si tiene pagos; si no, es un próximo (proximos.ts,
- *   ex ≥ hoy): un decreto no sale en las dos listas. En un grupo con ex distintas y alguna aún por venir, la tenencia de
- *   esa ex es la de hoy: su bruto es provisional.
+ *   ex ≥ hoy). Un decreto con ex desde hoy sale en las dos listas solo si su grupo tiene un pago (adelantado) o mezcla
+ *   ex pasadas y por venir; en ese grupo la tenencia de la ex por venir es la de hoy: su bruto es provisional.
  * - La diferencia se llama «diferencia bruto − neto»: no se le da otro nombre mientras el extracto no diga qué es. No
  *   hay umbral sobre ella (sería una tasa supuesta): solo un neto mayor que el bruto es REVISAR.
  * - Los montos se cuentan en millonésimas de peso (bigint): exactos, sin el redondeo a 20 dígitos de Decimal.
@@ -112,7 +112,7 @@ export interface EntradaCruce {
   readonly movimientos: ReadonlyMap<string, readonly MovimientoTenencia[]>;
   /** El día de la última carga de Trii de órdenes Y de dividendos, el menor de los dos; null si falta alguna. */
   readonly cubiertoHasta: Date | null;
-  /** La fecha del último pago de Trii guardado (de cualquier especie); null si no hay ninguno. */
+  /** La fecha de la última fila de dividendos de Trii guardada (cualquier especie y tipo); null si no hay ninguna. */
   readonly ultimoPagoTrii: Date | null;
   /** Fecha de negocio en Colombia: lo posterior no cuenta. */
   readonly hoy: Date;

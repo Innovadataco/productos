@@ -112,11 +112,13 @@ describe("dividendosPorAccion · un decreto ya cruzado con su pago de Trii no se
 
   it("propiedad (semilla): sin ambigüedad, ni doble conteo ni pérdida; y un pago nunca descarta más de una fecha de pago", () => {
     const azar = azarDePrueba(1237);
-    // Fechas apretadas (150 días) para que las ventanas se toquen a menudo.
-    const fecha = () => iso(sumar(dia("2019-02-01"), Math.floor(azar() * 150)));
+    // Fechas apretadas (150 días, las últimas 29 después de HOY) para que las ventanas se toquen a menudo y haya
+    // decretos de pago futuro; los pagos de Trii, hasta HOY (el lector no trae los posteriores).
+    const fecha = () => iso(sumar(dia("2020-03-01"), Math.floor(azar() * 150)));
+    const fechaTrii = () => iso(sumar(dia("2020-03-01"), Math.floor(azar() * 122)));
     for (let caso = 0; caso < 500; caso += 1) {
       const decretos = Array.from({ length: 1 + Math.floor(azar() * 5) }, (_, i) => decreto(`d${i}`, fecha(), 1 + azar()));
-      const dividendos = Array.from({ length: Math.floor(azar() * 6) }, () => pagoDe(fecha(), 100 + azar() * 900));
+      const dividendos = Array.from({ length: Math.floor(azar() * 6) }, () => pagoDe(fechaTrii(), 100 + azar() * 900));
       const movimientos = [...COMPRA, ...(azar() < 0.5 ? [{ fecha: dia(fecha()), cantidad: 113n }] : [])];
       const r = dividendosPorAccion(conDividendos({ dividendos, decretos, movimientos }), HOY);
       const entrados = r.pagos.filter((p) => p.origen === "PAGO").map((p) => dia(p.dia));
@@ -134,6 +136,11 @@ describe("dividendosPorAccion · un decreto ya cruzado con su pago de Trii no se
       // (iii) Cada pago de la historia descarta a lo sumo una fecha de pago de decretos.
       const descartadas = pasados.filter((g) => !entroComoDecreto.has(iso(g)));
       expect(descartadas.length, `caso ${caso}`).toBeLessThanOrEqual(entrados.length);
+      // (iv) Los de pago futuro: cuenta todos los que no tienen un pago de la historia en su ventana, y nunca más que los futuros.
+      const futuros = decretos.filter((d) => d.fechaPago > HOY);
+      const futurosSinPago = futuros.filter((d) => !entrados.some((f) => enVentanaDePago(d.fechaPago, f)));
+      expect(r.decretosFuturos, `caso ${caso}`).toBeGreaterThanOrEqual(futurosSinPago.length);
+      expect(r.decretosFuturos, `caso ${caso}`).toBeLessThanOrEqual(futuros.length);
     }
   });
 });

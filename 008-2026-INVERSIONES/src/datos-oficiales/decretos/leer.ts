@@ -10,8 +10,9 @@ import "server-only";
  *   el menor de los dos; null si falta alguna. Es la regla de `cubiertoHasta` de src/plan/resultados-lote.ts, que no se
  *   exporta (ese archivo es de otro frente): si cambia allá, cambia aquí. Es una APROXIMACIÓN: mide cuándo se cargó, no
  *   hasta qué fecha llega el archivo.
- * - ultimoPagoTrii: la fecha del último pago de Trii guardado (cualquier especie): sin un pago posterior a la ventana de
- *   un decreto no hay prueba de que el archivo cargado la cubra, y el cruce no dice NO_RECIBIDO.
+ * - ultimoPagoTrii: la fecha de la última fila de dividendos de Trii guardada (cualquier especie, también una fracción de
+ *   escisión: es prueba de hasta dónde llega el archivo, no un dividendo): sin una fila posterior a la ventana de un
+ *   decreto no hay prueba de que el archivo cargado la cubra, y el cruce no dice NO_RECIBIDO.
  * - leerDecretos da el cruce y los próximos en una sola foto (la pantalla los muestra juntos).
  * - Las consultas van una tras otra: dentro de la transacción Prisma usa una sola conexión.
  * - `hoy` y `desde` son fechas de negocio (medianoche UTC) y `desde` ≤ `hoy`: si no, RangeError sin tocar la base.
