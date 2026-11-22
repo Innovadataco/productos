@@ -95,6 +95,9 @@ ALTER ROLE inv_ia WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPAS
 -- sentencia o su transacción quieta (el pedido al modelo va fuera de toda transacción).
 ALTER ROLE inv_ia SET statement_timeout = '60s';
 ALTER ROLE inv_ia SET idle_in_transaction_session_timeout = '30s';
+-- Una fila que la base le rechaza trae en el DETAIL la fila entera (el texto y los hechos, con cifras del portafolio):
+-- con terse, el registro de PostgreSQL no guarda el DETAIL de sus errores.
+ALTER ROLE inv_ia SET log_error_verbosity = 'terse';
 DO $$
 BEGIN
   EXECUTE format('GRANT CONNECT ON DATABASE %I TO inv_ia', current_database());

@@ -66,7 +66,9 @@
 --          la última conciliación, las series oficiales, los cierres, el calendario, los decretos, las proyecciones y la
 --          historia del fondo), medidas con el SQL que genera Prisma, y de la versión vigente del plan y sus reglas SIN la
 --          acción, la cantidad, el detalle ni el motivo (los lectores de la página del plan sí los leen: con inv_ia dan
---          42501, y el servicio lee con su propio `select`); de resumen_ia, todas (ultimoPublicado y el RETURNING);
+--          42501, y el servicio lee con su propio `select`); de resumen_ia, solo lo de yaPublicado (la clave),
+--          gastoDelMes (la puerta, la hora y los tokens) y el RETURNING (id y hora): ni el texto, ni la salida, ni los
+--          hechos guardados (los lee la pantalla, inv_app, con ultimoPublicado);
 --   INSERT en resumen_ia de todas sus columnas menos "generadoEn" (la pone la base: migración 20261122175656_resumen_ia).
 -- Nada de usuario, filas crudas (crudo), el encargo, la certificación por especie, la caja, los símbolos ni el diario;
 -- sin UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL, y sin privilegios por defecto: una tabla o columna nueva no le
@@ -188,7 +190,7 @@ BEGIN
     GRANT SELECT (id, version, "vigenteDesde", "creadaEn") ON TABLE public.plan_version TO inv_ia;
     GRANT SELECT (id, "instrumentoId", fecha, precio, fuente, estado, "traidoEn", "reemplazadoEn") ON TABLE public.precio_cierre TO inv_ia;
     GRANT SELECT (id, "planVersionId", "instrumentoId", condicion, nivel, "plazoHasta") ON TABLE public.regla_plan TO inv_ia;
-    GRANT SELECT (id, tipo, "fechaNegocio", estado, puerta, texto, "salidaModelo", hechos, "hechosHash", "hechosVersion", modelo, "modeloDigest", opciones, "promptVersion", "promptHash", "validadorVersion", motivos, "latenciaMs", "tokensEntrada", "tokensSalida", "generadoEn") ON TABLE public.resumen_ia TO inv_ia;
+    GRANT SELECT (id, tipo, "fechaNegocio", estado, puerta, "hechosHash", "promptHash", "modeloDigest", "tokensEntrada", "tokensSalida", "generadoEn") ON TABLE public.resumen_ia TO inv_ia;
     GRANT INSERT (id, tipo, "fechaNegocio", estado, puerta, texto, "salidaModelo", hechos, "hechosHash", "hechosVersion", modelo, "modeloDigest", opciones, "promptVersion", "promptHash", "validadorVersion", motivos, "latenciaMs", "tokensEntrada", "tokensSalida") ON TABLE public.resumen_ia TO inv_ia;
     GRANT SELECT (id, serie, desde, hasta, valor, fuente, "traidoEn", "reemplazadoEn") ON TABLE public.valor_serie_oficial TO inv_ia;
     GRANT SELECT (id, "fondoId", "fechaValor", "valorUnidad", "reemplazadoEn") ON TABLE public.valor_unidad_fondo TO inv_ia;

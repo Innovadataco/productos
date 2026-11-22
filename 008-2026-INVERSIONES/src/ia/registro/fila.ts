@@ -14,7 +14,7 @@ import type { Prisma } from "@prisma/client";
 import { TIPOS_RESUMEN, type DiaIso, type PaqueteHechos, type TipoResumen } from "../contrato";
 import { esDe, esDiaIso, esObjetoPlano, soloCampos, sonDatosPuros, type Registro } from "../formas";
 import {
-  MAX_SALIDA_CRUDA, MOTIVOS_FALLO, PATRON_MODELO, PATRON_VERSION_PROMPT, PUERTAS,
+  MAX_SALIDA_CRUDA, MOTIVOS_FALLO, PATRON_DETALLE, PATRON_MODELO, PATRON_VERSION_PROMPT, PUERTAS,
   type ExitoGeneracion, type MotivoFallo, type Puerta,
 } from "../generador";
 import { PATRON_HASH } from "../hash";
@@ -25,8 +25,13 @@ export type EstadoResumen = (typeof ESTADOS_RESUMEN)[number];
 
 /** Tope de códigos por fila (motivos del validador, o el motivo de fallo y sus detalles). */
 export const MAX_MOTIVOS = 32;
-/** Un código: mayúsculas y guion bajo, sin dígitos (nunca datos), como PATRON_DETALLE. */
-export const PATRON_MOTIVO = /^[A-Z]+(?:_[A-Z]+)*$/;
+/** Un código: mayúsculas y guion bajo, sin dígitos (nunca datos): el mismo patrón del `detalle` de un fallo. */
+export const PATRON_MOTIVO = PATRON_DETALLE;
+/**
+ * El motivo de un PUBLICADO que llegó cuando ya había otro con la misma clave (dos corridas a la vez): se registra como
+ * RECHAZADO con este código, con sus tokens, para que el gasto no se pierda. Lo pone `registrarResumen`, nunca el validador.
+ */
+export const MOTIVO_YA_PUBLICADO = "YA_PUBLICADO";
 export const MAX_LARGO_MOTIVO = 64;
 /** Tope del texto renderizado (las frases, las presentaciones, el aviso y la lista «fuente · fecha»). */
 export const MAX_LARGO_TEXTO = 16_384;
@@ -38,7 +43,7 @@ export const MAX_ENTERO_COLUMNA = 2_147_483_647;
 export const CODIGOS_ERROR_REGISTRO = Object.freeze([
   "PAQUETE_NO_CONSTRUIDO", "ESTADO_INVALIDO", "CAMPO_DESCONOCIDO", "PROMPT_INVALIDO", "VALIDADOR_INVALIDO", "OPCIONES_INVALIDAS",
   "TEXTO_INVALIDO", "EXITO_INVALIDO", "MOTIVOS_INVALIDOS", "PUERTA_INVALIDA", "MODELO_INVALIDO", "LATENCIA_INVALIDA",
-  "CLAVE_INVALIDA", "RANGO_INVALIDO", "YA_PUBLICADO", "GUARDADO_INVALIDO",
+  "CLAVE_INVALIDA", "RANGO_INVALIDO", "GUARDADO_INVALIDO", "BASE_RECHAZADA",
 ] as const);
 export type CodigoErrorRegistro = (typeof CODIGOS_ERROR_REGISTRO)[number];
 
@@ -174,8 +179,15 @@ function revisarPrompt(prompt: unknown): PromptRegistrado {
   return { version: version as string, hash: hash as string };
 }
 
+/** ¿Algún texto (clave o valor, a todo nivel) que la base no guarda en jsonb: un NUL o un sustituto suelto? */
+function hayTextoNoGuardable(valor: unknown): boolean {
+  if (typeof valor === "string") return !valor.isWellFormed() || valor.includes("\u0000");
+  if (typeof valor !== "object" || valor === null) return false;
+  return Object.entries(valor).some(([clave, dentro]) => hayTextoNoGuardable(clave) || hayTextoNoGuardable(dentro));
+}
+
 function revisarOpciones(opciones: unknown): Prisma.InputJsonObject {
-  exigir(sonDatosPuros(opciones) && esObjetoPlano(opciones), "OPCIONES_INVALIDAS");
+  exigir(sonDatosPuros(opciones) && esObjetoPlano(opciones) && !hayTextoNoGuardable(opciones), "OPCIONES_INVALIDAS");
   const texto = JSON.stringify(opciones);
   exigir(Buffer.byteLength(texto, "utf8") <= MAX_LARGO_OPCIONES, "OPCIONES_INVALIDAS");
   return Object.freeze(JSON.parse(texto) as Prisma.InputJsonObject);
@@ -197,11 +209,14 @@ function revisarExito(exito: unknown): ExitoGeneracion {
   return e as unknown as ExitoGeneracion;
 }
 
-/** Códigos únicos, con forma y con tope; `sinFallos`: ninguno de MOTIVOS_FALLO. */
+/**
+ * Códigos con forma y con tope, una vez cada uno y en el orden en que llegaron (un repetido no es un error de quien los
+ * produce: rechazarlo perdería el registro); `sinFallos`: ninguno de MOTIVOS_FALLO.
+ */
 function revisarCodigos(codigos: unknown, minimo: number, sinFallos: boolean): readonly string[] {
   exigir(Array.isArray(codigos) && sonDatosPuros(codigos), "MOTIVOS_INVALIDOS");
-  const lista = Array.from(codigos as readonly unknown[]);
-  const valido = lista.length >= minimo && lista.length <= MAX_MOTIVOS && new Set(lista).size === lista.length
+  const lista = [...new Set(Array.from(codigos as readonly unknown[]))];
+  const valido = lista.length >= minimo && lista.length <= MAX_MOTIVOS
     && lista.every((c) => typeof c === "string" && c.length <= MAX_LARGO_MOTIVO && PATRON_MOTIVO.test(c) && !(sinFallos && esDe(MOTIVOS_FALLO, c)));
   exigir(valido, "MOTIVOS_INVALIDOS");
   return lista as string[];
@@ -215,9 +230,17 @@ function camposDelPaquete(paquete: unknown): Pick<FilaResumen, "tipo" | "fechaNe
 
 type Resto = Pick<FilaResumen, "puerta" | "texto" | "salidaModelo" | "modelo" | "modeloDigest" | "latenciaMs" | "tokensEntrada" | "tokensSalida"> & { readonly motivos: readonly string[] };
 
+/**
+ * La salida cruda tal como la puede guardar la base: un NUL o un sustituto suelto pasan a U+FFFD (PostgreSQL no los
+ * admite en text). Solo para el registro: el validador ya vio la salida original, y rechazarla perdería sus tokens.
+ */
+export function salidaGuardable(salida: string): string {
+  return salida.toWellFormed().replaceAll("\u0000", "\uFFFD");
+}
+
 function restoConExito(exito: unknown, texto: string | null, motivos: readonly string[]): Resto {
   const e = revisarExito(exito);
-  return { puerta: e.puerta, texto, salidaModelo: e.salidaCruda, modelo: e.modelo, modeloDigest: e.modeloDigest, motivos, latenciaMs: e.latenciaMs, tokensEntrada: e.tokensEntrada, tokensSalida: e.tokensSalida };
+  return { puerta: e.puerta, texto, salidaModelo: salidaGuardable(e.salidaCruda), modelo: e.modelo, modeloDigest: e.modeloDigest, motivos, latenciaMs: e.latenciaMs, tokensEntrada: e.tokensEntrada, tokensSalida: e.tokensSalida };
 }
 
 function restoDeFallo(r: Registro): Resto {

@@ -308,9 +308,12 @@ describe("guardián del esquema: resumen_ia", () => {
     expect(await guardianTras(romper)).toContain(nombre);
   });
 
-  it("falla si el índice de los PUBLICADO deja de ser parcial (un RECHAZADO repetido bloquearía el registro)", async () => {
-    const romper = ['DROP INDEX "resumen_ia_publicado_key"', 'CREATE UNIQUE INDEX "resumen_ia_publicado_key" ON "resumen_ia" ("tipo", "fechaNegocio", "hechosHash", "promptHash", "modeloDigest")'];
-    expect(await guardianTras(romper)).toContain("resumen_ia_publicado_key");
+  // Sin depender de las filas que dejaron otras pruebas: el índice cambia de predicado o deja de ser único.
+  it.each([
+    ["cambia de predicado", 'CREATE UNIQUE INDEX "resumen_ia_publicado_key" ON "resumen_ia" ("tipo", "fechaNegocio", "hechosHash", "promptHash", "modeloDigest") WHERE false'],
+    ["deja de ser único", 'CREATE INDEX "resumen_ia_publicado_key" ON "resumen_ia" ("tipo", "fechaNegocio", "hechosHash", "promptHash", "modeloDigest") WHERE "estado" = \'PUBLICADO\''],
+  ])("falla si el índice de los PUBLICADO %s", async (_n, recrear) => {
+    expect(await guardianTras(['DROP INDEX "resumen_ia_publicado_key"', recrear])).toContain("resumen_ia_publicado_key");
   });
 
   it("falla si la función del instante cambia de código o pasa a SECURITY DEFINER", async () => {

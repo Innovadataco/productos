@@ -79,7 +79,9 @@ ALTER TABLE "resumen_ia" ADD CONSTRAINT "resumen_ia_estado_chk" CHECK (
 );
 
 -- Los motivos son códigos (mayúsculas y guion bajo, sin dígitos: nunca datos), sin nulos y con tope. Un PUBLICADO no
--- trae; un RECHAZADO trae los del validador y ninguno de fallo; un FALLIDO empieza por uno de MOTIVOS_FALLO.
+-- trae; un RECHAZADO trae los del validador y ninguno de fallo; un FALLIDO empieza por uno de MOTIVOS_FALLO. Cada
+-- elemento es un código entero: ni vacío ni con coma (las comas del texto unido son exactamente las que separan), así
+-- un «LONGITUD,TIEMPO_AGOTADO» no esconde un motivo de fallo dentro de un solo elemento.
 ALTER TABLE "resumen_ia" ADD CONSTRAINT "resumen_ia_motivos_chk" CHECK (
   "motivos" IS NOT NULL
   AND array_position("motivos", NULL) IS NULL
@@ -87,6 +89,8 @@ ALTER TABLE "resumen_ia" ADD CONSTRAINT "resumen_ia_motivos_chk" CHECK (
   AND (cardinality("motivos") = 0 OR array_ndims("motivos") = 1)
   AND char_length(array_to_string("motivos", ',')) <= 2079
   AND array_to_string("motivos", ',') ~ '^([A-Z]+(_[A-Z]+)*(,[A-Z]+(_[A-Z]+)*)*)?$'
+  AND NOT ('' = ANY ("motivos"))
+  AND char_length(array_to_string("motivos", ',')) - char_length(replace(array_to_string("motivos", ','), ',', '')) = GREATEST(cardinality("motivos") - 1, 0)
   AND (("estado" = 'PUBLICADO') = (cardinality("motivos") = 0))
   AND ("estado" <> 'FALLIDO' OR "motivos"[1] = ANY (ARRAY['MODELO_NO_DISPONIBLE', 'TIEMPO_AGOTADO', 'TOPE_MENSUAL', 'PUERTA_APAGADA', 'ERROR_PROVEEDOR', 'VISTA_NO_CIEGA']))
   AND ("estado" <> 'RECHAZADO' OR NOT ("motivos" && ARRAY['MODELO_NO_DISPONIBLE', 'TIEMPO_AGOTADO', 'TOPE_MENSUAL', 'PUERTA_APAGADA', 'ERROR_PROVEEDOR', 'VISTA_NO_CIEGA']))
@@ -100,13 +104,14 @@ ALTER TABLE "resumen_ia" ADD CONSTRAINT "resumen_ia_puerta_chk" CHECK (
 
 -- Las columnas de la clave son las del paquete guardado: el hash, la versión, el tipo y el día (`hoy`). El día se compara
 -- como texto con to_char sobre un timestamp SIN zona (ni el locale ni el TimeZone de la sesión lo cambian), así un `hoy` mal formado no
--- rompe la sentencia con un error de conversión: solo no cuadra.
+-- rompe la sentencia con un error de conversión: solo no cuadra. IS NOT DISTINCT FROM y no `=`: una clave que falta (o es
+-- null) en el JSON da NULL, y un CHECK que da NULL deja pasar la fila; las columnas son NOT NULL, así que falta = no cuadra.
 ALTER TABLE "resumen_ia" ADD CONSTRAINT "resumen_ia_hechos_chk" CHECK (
   jsonb_typeof("hechos") = 'object'
-  AND ("hechos" ->> 'hash') = "hechosHash"
-  AND ("hechos" ->> 'version') = "hechosVersion"
-  AND ("hechos" ->> 'tipo') = ("tipo")::text
-  AND ("hechos" ->> 'hoy') = to_char("fechaNegocio"::timestamp, 'YYYY-MM-DD')
+  AND ("hechos" ->> 'hash') IS NOT DISTINCT FROM "hechosHash"
+  AND ("hechos" ->> 'version') IS NOT DISTINCT FROM "hechosVersion"
+  AND ("hechos" ->> 'tipo') IS NOT DISTINCT FROM ("tipo")::text
+  AND ("hechos" ->> 'hoy') IS NOT DISTINCT FROM to_char("fechaNegocio"::timestamp, 'YYYY-MM-DD')
 );
 
 -- Las formas de src/ia: el sha256 de PATRON_HASH, las versiones de PATRON_VERSION_PROMPT, el modelo y el digest de
