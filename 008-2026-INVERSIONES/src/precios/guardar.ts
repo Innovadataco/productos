@@ -5,7 +5,7 @@
  * tests/unit/precios/camino-unico.test.ts (nada más inserta en precio_cierre).
  * - Versionado: si Yahoo revisa un cierre, el anterior queda con `reemplazadoEn` (historia) y se
  *   inserta el nuevo.
- * - Candado: si hay certificación de A&V con fecha de corte igual, el cierre se compara con su
+ * - Candado: si hay certificación de A&V VIGENTE con fecha de corte igual, el cierre se compara con su
  *   precio de valoración: VERIFICADO si difiere ≤ 1 %, si no NO_VERIFICADO. Sin referencia oficial
  *   ese día, NO_VERIFICADO (nunca se presenta como verificado lo que no se comparó). Con una valoración
  *   ≤ 0 o una desviación que no cabe en `desviacionPct`, NO_VERIFICADO con la referencia y sin desviación.
@@ -123,7 +123,8 @@ const SIN_REFERENCIA: Verificacion = { estado: "NO_VERIFICADO", fuenteReferencia
 
 async function estadoDe(db: Pick<Prisma.TransactionClient, "certificacionPosicion">, instrumentoId: string, c: Cierre): Promise<Verificacion> {
   const ref = await db.certificacionPosicion.findFirst({
-    where: { instrumentoId, certificacion: { fechaCorte: c.fecha } },
+    // Solo la certificación vigente: una retirada (corte equivocado) ya no es referencia de ese día.
+    where: { instrumentoId, certificacion: { fechaCorte: c.fecha, retiradaEn: null } },
     select: { precioValoracion: true, certificacion: { select: { fechaCorte: true } } },
   });
   if (!ref) return SIN_REFERENCIA;

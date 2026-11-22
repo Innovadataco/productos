@@ -7,7 +7,7 @@
  * conteos y códigos de motivo, nunca cifras ni especies.
  */
 import { PrismaClient } from "@prisma/client";
-import { conciliarCertificacion } from "../src/conciliacion/conciliar";
+import { conciliarCertificacion, ErrorConciliacion } from "../src/conciliacion/conciliar";
 import { ErrorArgumentosAv, leerArgumentosConciliar, type ArgumentosConciliar } from "../src/importacion/av/argumentos";
 import { lineasDeConciliacion } from "../src/importacion/av/salida";
 
@@ -35,6 +35,10 @@ async function main(): Promise<void> {
 }
 
 main().catch((e: unknown) => {
+  if (e instanceof ErrorConciliacion && e.codigo === "CERTIFICACION_RETIRADA") {
+    console.error(`❌ CERTIFICACION_RETIRADA · la certificación de esa fecha se retiró (se cargó con otro corte): su corte real es ${e.reemplazo}. Concilie con \`--fecha-corte ${e.reemplazo}\`.`);
+    process.exit(1);
+  }
   const codigo = e instanceof Error && "codigo" in e ? ` (${String((e as { codigo: unknown }).codigo)})` : "";
   console.error(`❌ La conciliación falló: ${e instanceof Error ? e.name : "error"}${codigo}`);
   process.exit(1);

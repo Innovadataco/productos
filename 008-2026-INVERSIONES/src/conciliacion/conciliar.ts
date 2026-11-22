@@ -8,10 +8,12 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { isoDia as dia } from "../importacion/av/fecha-corte";
 import { calcularConciliacion, VERSION_CALCULO, type Control } from "./controles";
 import { leerEntradas } from "./esperado";
+import { corteOcupado } from "./vigente";
 
 export class ErrorConciliacion extends Error {
-  constructor(readonly codigo: "SIN_CERTIFICACION") {
-    super(codigo === "SIN_CERTIFICACION" ? "No hay certificación con esa fecha de corte." : codigo);
+  /** Con CERTIFICACION_RETIRADA: la fecha de corte (AAAA-MM-DD) de la certificación que la reemplazó. */
+  constructor(readonly codigo: "SIN_CERTIFICACION" | "CERTIFICACION_RETIRADA", readonly reemplazo: string | null = null) {
+    super(codigo === "SIN_CERTIFICACION" ? "No hay certificación con esa fecha de corte." : `La certificación de esa fecha se retiró: su corte real es ${reemplazo}.`);
     this.name = "ErrorConciliacion";
   }
 }
@@ -53,8 +55,10 @@ export async function conciliarCertificacion(db: PrismaClient, opciones: { reado
   return db.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`inv008-conciliar-${dia(opciones.fechaCorte)}`}))`;
-      const cert = await tx.certificacion.findUnique({ where: { fechaCorte: opciones.fechaCorte }, select: { id: true } });
+      const cert = await corteOcupado(tx, opciones.fechaCorte);
       if (!cert) throw new ErrorConciliacion("SIN_CERTIFICACION");
+      // Retirada (corte equivocado): no se concilia sobre ella; la base tampoco lo admitiría.
+      if (cert.reemplazo !== null) throw new ErrorConciliacion("CERTIFICACION_RETIRADA", cert.reemplazo);
       const { fechaCorte, entradas } = await leerEntradas(tx, cert.id);
       const { resultado, controles } = calcularConciliacion(entradas);
       const conciliacion = await tx.conciliacion.create({ data: { certificacionId: cert.id, fechaCorte, versionCalculo: VERSION_CALCULO, resultado }, select: { id: true } });

@@ -6,7 +6,8 @@
  *   (con códigos y ubicaciones, nunca valores) y no se guarda ningún hecho.
  * - Reimportar el mismo PDF con la misma fecha no duplica: carga CARGADO «repetida», 0 filas nuevas.
  *   La misma fecha con otras filas es CONFLICTO_CERTIFICACION: lo importado no se edita (se revierte la carga).
- * - El mismo archivo (sha256) con otra fecha de corte es ARCHIVO_YA_CARGADO.
+ * - El mismo archivo (sha256) con otra fecha de corte es ARCHIVO_YA_CARGADO. La fecha de una certificación retirada
+ *   (corte equivocado, corregida a su corte real) queda ocupada por su historia: CORTE_RETIRADO.
  * - El archivo original no se guarda: solo su sha256, un nombre fijo y las filas cifradas.
  * - Corte real (frente certificacion-corte-real): si la fecha de corte no puede ser la de la certificación (el PDF se
  *   generó antes del cierre definitivo de ese día, o después del corte pedido), el rechazo lleva `pistaCorte` (el día
@@ -22,6 +23,7 @@ import { createHash } from "node:crypto";
 import { ErrorCifrado } from "../../cifrado/errores";
 import { corteReal } from "../../conciliacion/corte-real";
 import { cierresDelDia } from "../../conciliacion/esperado";
+import { corteOcupado } from "../../conciliacion/vigente";
 import { obtenerLlavero, type Llavero } from "../../cifrado/llavero";
 import { analizarCertificacion, errorDeDocumento as documento, type CertificacionAnalizada } from "./analisis";
 import { isoDia, leerCalendarioCorte, ultimoCorteDefinitivo, ultimoHabilAnterior, validarFechaCorte, type CalendarioCorte, type PistaCorte } from "./fecha-corte";
@@ -159,7 +161,9 @@ async function enTransaccion(db: PrismaClient, base: Base, a: CertificacionAnali
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`inv008-importar-${TIPO_FUENTE}`}))`;
       const mismoArchivo = await tx.cargaArchivo.findFirst({ where: { tipoFuente: TIPO_FUENTE, sha256: base.sha256, estado: "CARGADO", NOT: { fechaCorte: base.fecha } }, select: { id: true } });
       if (mismoArchivo) throw new ErrorImportacionAv("ARCHIVO_YA_CARGADO");
-      const existente = await tx.certificacion.findUnique({ where: { fechaCorte: base.fecha }, select: { id: true, cargaId: true } });
+      const existente = await corteOcupado(tx, base.fecha);
+      // La fecha de una certificación retirada (corte equivocado) queda ocupada por su historia.
+      if (existente?.reemplazo) throw new ErrorImportacionAv("CORTE_RETIRADO");
       if (existente) return repetida(tx, base, a, existente, llavero);
       await exigirCorteReal(tx, base.fecha, a, calendario);
       return nueva(tx, base, a, llavero);

@@ -189,7 +189,9 @@ describe("cortesDisponibles y ultimaConciliacion", () => {
 
   it("la última conciliación es la del corte más reciente, con el resultado de su última corrida", async () => {
     const u = await ultimaConciliacion(db);
+    // La más reciente VIGENTE: una retirada (corte equivocado) no cuenta (frente certificacion-corte-real).
     const reciente = await db.certificacion.findFirstOrThrow({
+      where: { retiradaEn: null },
       orderBy: { fechaCorte: "desc" },
       select: { fechaCorte: true, conciliaciones: { select: { resultado: true }, orderBy: [{ calculadaEn: "desc" }, { id: "desc" }], take: 1 } },
     });

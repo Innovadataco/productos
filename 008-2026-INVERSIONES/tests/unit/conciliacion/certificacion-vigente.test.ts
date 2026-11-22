@@ -20,7 +20,8 @@ const fuentes = () => archivos(SRC).map((a) => ({ ruta: path.relative(SRC, a), t
 
 describe("certificación vigente · un solo lugar la busca por fecha de corte", () => {
   it("solo vigente.ts consulta certificacion por fechaCorte", () => {
-    const POR_FECHA = /\bcertificacion\s*\.\s*(findUnique|findUniqueOrThrow|findFirst|findFirstOrThrow|findMany|count)\s*\(\s*\{[^;]*?\bfechaCorte\b/;
+    // Solo el `where` cuenta: leer la fecha en el `select` o pedir por id no es buscar por fecha.
+    const POR_FECHA = /\bcertificacion\s*\.\s*(findUnique|findUniqueOrThrow|findFirst|findFirstOrThrow|findMany|count)\s*\(\s*\{\s*where\s*:\s*\{[^}]*\bfechaCorte\b/;
     const hallados = fuentes().filter((f) => f.ruta !== UNICO && POR_FECHA.test(f.texto)).map((f) => f.ruta);
     expect(hallados).toEqual([]);
   });
