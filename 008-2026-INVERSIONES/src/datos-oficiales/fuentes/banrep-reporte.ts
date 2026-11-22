@@ -3,8 +3,8 @@
  * la serie (públicas) y la URL pública de la descarga. Nunca valores ni rutas. Ante un fallo de BanRep dice qué hacer:
  * abrir la URL en el navegador, resolver usted el desafío si lo hay y repetir con --archivo. Nada se evade.
  * Salida: 1 si no hay CSV (fallo de BanRep o del archivo, sin filas o fila inválida) · 3 si hay avisos (descartes, inicio
- * tardío, serie atrasada o días faltantes; el CSV sale entero, pero `&& mv` no lo mueve: se dice) · 0 si no. El 1 gana
- * sobre el 3.
+ * tardío, serie atrasada o un hueco largo; el CSV sale entero, pero `&& mv` no lo mueve: se dice) · 0 si no (días sueltos
+ * que BanRep no publicó solo se informan). El 1 gana sobre el 3.
  */
 import { diaIso } from "../../precios/horario";
 import { SALIDA_CON_AVISOS, SALIDA_FALLIDA } from "../../precios/reporte";
@@ -71,8 +71,17 @@ function avisos(r: ResultadoExportarBanrep): string[] {
   const atrasada = r.atrasada && r.ultimoDia
     ? [`⚠️  ATRASADA · el último valor es del ${diaIso(r.ultimoDia)}: más de ${r.umbralFrescuraDias} días antes de --hasta (${diaIso(r.hasta)}). BanRep puede no haber publicado todavía.`]
     : [];
-  const faltantes = r.diasFaltantes > 0 ? [`⚠️  faltan ${r.diasFaltantes} día(s) entre el primero y el último: la ${r.serie} es diaria de calendario.`] : [];
+  const faltantes = r.huecoMayor > r.umbralFrescuraDias
+    ? [`⚠️  faltan ${r.diasFaltantes} día(s) entre el primero y el último, con un hueco de ${r.huecoMayor} días seguidos (más de ${r.umbralFrescuraDias}): la ${r.serie} es diaria de calendario; revise si la descarga está completa.`]
+    : [];
   return [...descartes, ...tardio, ...atrasada, ...faltantes];
+}
+
+/** Lo que se dice sin pedir nada: días sueltos que BanRep no publicó en una serie diaria de calendario. */
+function informes(r: ResultadoExportarBanrep): string[] {
+  return r.diasFaltantes > 0 && r.huecoMayor <= r.umbralFrescuraDias
+    ? [`ℹ️  faltan ${r.diasFaltantes} día(s) entre el primero y el último (ningún hueco de más de ${r.umbralFrescuraDias} días seguidos): la ${r.serie} es diaria de calendario y BanRep no publicó esos días.`]
+    : [];
 }
 
 export function reporteExportacionBanrep(r: ResultadoExportarBanrep): ReporteBanrep {
@@ -88,7 +97,7 @@ export function reporteExportacionBanrep(r: ResultadoExportarBanrep): ReporteBan
   const sinCsv = r.codigoCsv === null ? [] : [`❌ ${r.codigoCsv} · no se escribió el CSV (${SIN_CSV[r.codigoCsv]}).`];
   const codigoSalida = sinCsv.length > 0 ? SALIDA_FALLIDA : lista.length > 0 ? SALIDA_CON_AVISOS : 0;
   const parcial = codigoSalida === SALIDA_CON_AVISOS ? [PARCIAL_SIN_MOVER] : [];
-  return { lineas: [resumen, ...lista, ...sinCsv, ...parcial], codigoSalida };
+  return { lineas: [resumen, ...informes(r), ...lista, ...sinCsv, ...parcial], codigoSalida };
 }
 
 /** El --archivo no se pudo leer: 2 si no se puede abrir o no es un archivo regular; 1 si pasa del tope. Nunca la ruta. */

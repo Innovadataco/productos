@@ -7,11 +7,13 @@
  *   con un startPeriod posterior, o BanRep que no tiene esos días).
  * - ATRASADA: el último valor queda más de `umbralFrescuraDias` antes de --hasta (BanRep no ha publicado).
  * - Días faltantes entre el primero y el último, solo en una serie diaria de calendario (la TPM); la IBR es de días
- *   hábiles y sus huecos no se pueden juzgar sin el calendario bancario.
+ *   hábiles y sus huecos no se pueden juzgar sin el calendario bancario. Días sueltos son lo que BanRep publicó (en la
+ *   descarga pública de la TPM de 2026 falta uno): se informan. Un hueco de más de `umbralFrescuraDias` días seguidos
+ *   hace pensar en una descarga incompleta: se avisa.
  * El CSV se entrega entero al final (el script lo escribe con escribirCompleto): nunca uno a medias.
  */
 import type { BuscarHttp } from "../../lib/http-acotado";
-import { escribirCsvSeries, type EscrituraCsvSeries } from "../series/csv-series";
+import { escribirCsvSeries, type EscrituraCsvSeries, type ValorSerie } from "../series/csv-series";
 import { pedirSdmxBanrep } from "./banrep-pedido";
 import { leerSdmxBanrep, type ConteosBanrep } from "./banrep-sdmx";
 import { urlBanrep, type FalloBanrep, type SerieBanrep } from "./banrep-series";
@@ -44,6 +46,8 @@ export interface ResultadoExportarBanrep {
   readonly primerDia: Date | null;
   readonly ultimoDia: Date | null;
   readonly diasFaltantes: number;
+  /** El hueco más largo (días seguidos sin valor) entre el primero y el último; 0 si no aplica. */
+  readonly huecoMayor: number;
   readonly inicioTardio: boolean;
   readonly atrasada: boolean;
   readonly codigoCsv: Extract<EscrituraCsvSeries, { ok: false }>["codigo"] | null;
@@ -55,11 +59,22 @@ async function bytesDe(o: OpcionesExportarBanrep): Promise<{ readonly ok: true; 
 
 const diasEntre = (a: Date, b: Date): number => Math.round((b.getTime() - a.getTime()) / DIA_MS);
 
+/** Los días que faltan entre el primero y el último y el hueco más largo, en una serie diaria de calendario. */
+function huecos(valores: readonly ValorSerie[]): { readonly diasFaltantes: number; readonly huecoMayor: number } {
+  let [diasFaltantes, huecoMayor] = [0, 0];
+  for (let i = 1; i < valores.length; i += 1) {
+    const hueco = diasEntre(valores[i - 1]!.hasta, valores[i]!.desde) - 1;
+    diasFaltantes += hueco;
+    huecoMayor = Math.max(huecoMayor, hueco);
+  }
+  return { diasFaltantes, huecoMayor };
+}
+
 export async function exportarBanrep(o: OpcionesExportarBanrep): Promise<ResultadoExportarBanrep> {
   const base = {
     serie: o.serie.codigo, origen: o.origen.tipo, url: urlBanrep(o.serie, o.desde), desde: o.desde, hasta: o.hasta, umbralFrescuraDias: o.serie.catalogo.umbralFrescuraDias,
   };
-  const vacio = { csv: null, filas: 0, conteos: null, primerDia: null, ultimoDia: null, diasFaltantes: 0, inicioTardio: false, atrasada: false, codigoCsv: null };
+  const vacio = { csv: null, filas: 0, conteos: null, primerDia: null, ultimoDia: null, diasFaltantes: 0, huecoMayor: 0, inicioTardio: false, atrasada: false, codigoCsv: null };
   const bytes = await bytesDe(o);
   if (!bytes.ok) return { ...base, ...vacio, fallo: bytes };
   const leido = leerSdmxBanrep(bytes.bytes, o.serie, o.desde, o.hasta);
@@ -70,7 +85,7 @@ export async function exportarBanrep(o: OpcionesExportarBanrep): Promise<Resulta
   const cobertura = {
     primerDia: primero,
     ultimoDia: ultimo,
-    diasFaltantes: primero && ultimo && deCalendario ? diasEntre(primero, ultimo) + 1 - leido.valores.length : 0,
+    ...(deCalendario ? huecos(leido.valores) : { diasFaltantes: 0, huecoMayor: 0 }),
     inicioTardio: primero !== null && diasEntre(o.desde, primero) > umbral,
     atrasada: ultimo !== null && diasEntre(ultimo, o.hasta) > umbral,
   };
