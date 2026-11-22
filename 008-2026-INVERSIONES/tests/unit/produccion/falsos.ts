@@ -1,7 +1,7 @@
 // Apoyo de las pruebas de producción: ejecutables falsos en PATH (docker, curl, flock, df, ps, npm, sleep)
 // que registran cada llamada, y repos git temporales. No es una prueba (no termina en .test.ts).
 import { spawn, spawnSync, type SpawnSyncReturns } from "node:child_process";
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,25 +17,28 @@ export function carpetaTemporal(prefijo: string): string {
 }
 
 // Los ejecutables falsos viven en ./falsos/ (bash): registran cada llamada y responden según variables FALSO_*.
-const DIR_FALSOS = fileURLToPath(new URL("./falsos/", import.meta.url));
+// Se usan en su sitio, sin copiarlos: en macOS la primera ejecución de cada ejecutable NUEVO pasa por la revisión del
+// sistema, en una sola fila para todo el Mac (con la máquina cargada, segundos por archivo). Candado: falsos.test.ts.
+const DIR_FALSOS = fileURLToPath(new URL("./falsos", import.meta.url));
 
 export type Llamada = string[];
 /** Variables de entorno para los scripts (sin las que Next exige en ProcessEnv). */
 export type Entorno = Record<string, string | undefined>;
-export type Falsos = { bin: string; registro: string; llamadas: () => Llamada[] };
+/**
+ * `bin`: carpeta propia de la prueba, vacía, primera en el PATH; un falso propio que se escriba ahí tapa al de `fijos`.
+ * `fijos`: los falsos versionados (./falsos/), detrás en el PATH. Solo lectura: nunca se escribe ahí.
+ */
+export type Falsos = { bin: string; fijos: string; registro: string; llamadas: () => Llamada[] };
 
-/** Crea los ejecutables falsos en `dir/bin`. Cada llamada queda en el registro: nombre y argumentos separados por tabulador. */
+/** Prepara los falsos de una prueba en `dir`. Cada llamada queda en el registro: nombre y argumentos separados por tabulador. */
 export function crearFalsos(dir: string): Falsos {
   const bin = path.join(dir, "bin");
   const registro = path.join(dir, "registro.txt");
   mkdirSync(bin, { recursive: true });
   writeFileSync(registro, "");
-  for (const nombre of readdirSync(DIR_FALSOS)) {
-    copyFileSync(path.join(DIR_FALSOS, nombre), path.join(bin, nombre));
-    chmodSync(path.join(bin, nombre), 0o755);
-  }
   return {
     bin,
+    fijos: DIR_FALSOS,
     registro,
     llamadas: () =>
       readFileSync(registro, "utf8")
@@ -45,12 +48,12 @@ export function crearFalsos(dir: string): Falsos {
   };
 }
 
-/** Entorno limpio: sin variables INV_* ni FALSO_* heredadas, con los falsos primero en PATH. */
+/** Entorno limpio: sin variables INV_* ni FALSO_* heredadas, con los falsos primero en PATH (los propios, luego los fijos). */
 export function entorno(falsos: Falsos, extra: Record<string, string> = {}): Entorno {
   const limpio = Object.fromEntries(
     Object.entries(process.env).filter(([k]) => !k.startsWith("INV_") && !k.startsWith("FALSO_") && k !== "DATABASE_URL"),
   );
-  return { ...limpio, PATH: `${falsos.bin}:${process.env.PATH}`, FALSO_REGISTRO: falsos.registro, ...extra };
+  return { ...limpio, PATH: `${falsos.bin}:${falsos.fijos}:${process.env.PATH}`, FALSO_REGISTRO: falsos.registro, ...extra };
 }
 
 export type Resultado = { status: number | null; stdout: string; stderr: string };
