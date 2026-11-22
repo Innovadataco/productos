@@ -51,12 +51,15 @@ describe("migración de datos oficiales", () => {
     expect(guardia).not.toMatch(/public\./);
   });
 
-  it("inv_solo_retiro: sin exención del dueño, sin salida por inv.reversion y sin SECURITY DEFINER", () => {
+  it("inv_solo_retiro: sin exención del dueño, sin salida por inv.reversion, sin SECURITY DEFINER y con search_path fijo", () => {
     const funcion = /CREATE FUNCTION "inv_solo_retiro"\(\)[\s\S]*?\$\$;/.exec(codigo)?.[0] ?? "";
-    expect(funcion).toMatch(/RETURNS trigger LANGUAGE plpgsql AS \$\$/);
-    expect(funcion).not.toMatch(/pg_has_role|current_setting|inv\.reversion|SECURITY|SET search_path/);
-    expect(codigo).toMatch(/CREATE TRIGGER "valor_serie_oficial_retiro" BEFORE INSERT OR UPDATE OR DELETE ON "valor_serie_oficial" FOR EACH ROW EXECUTE FUNCTION "inv_solo_retiro"\(\)/);
-    expect(codigo).toMatch(/CREATE TRIGGER "dividendo_decretado_retiro" BEFORE INSERT OR UPDATE OR DELETE ON "dividendo_decretado" FOR EACH ROW EXECUTE FUNCTION "inv_solo_retiro"\(\)/);
+    // search_path fijo, solo pg_catalog (no lee tablas) y pg_temp al final: el día que otro rol escriba estas tablas
+    // (C7), un objeto suyo no puede sombrear to_jsonb, now() ni los operadores.
+    expect(funcion).toMatch(/RETURNS trigger LANGUAGE plpgsql\nSET search_path = pg_catalog, pg_temp AS \$\$/);
+    expect(funcion).not.toMatch(/pg_has_role|current_setting|inv\.reversion|SECURITY/);
+    // La hora del registro la pone la base: el disparador le pasa la columna.
+    expect(codigo).toMatch(/CREATE TRIGGER "valor_serie_oficial_retiro" BEFORE INSERT OR UPDATE OR DELETE ON "valor_serie_oficial" FOR EACH ROW EXECUTE FUNCTION "inv_solo_retiro"\('traidoEn'\)/);
+    expect(codigo).toMatch(/CREATE TRIGGER "dividendo_decretado_retiro" BEFORE INSERT OR UPDATE OR DELETE ON "dividendo_decretado" FOR EACH ROW EXECUTE FUNCTION "inv_solo_retiro"\('registradoEn'\)/);
   });
 
   it("la columna fuente se renombra (no se borra) y las columnas viejas de dividendo no se borran", () => {

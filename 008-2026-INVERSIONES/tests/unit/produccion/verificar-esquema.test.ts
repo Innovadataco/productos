@@ -194,7 +194,10 @@ describe("verificar-esquema.sql coincide con las migraciones", () => {
     for (const nombre of ["inv_precio_cierre_insercion", "inv_retiro_vigente", "inv_valor_unidad_fondo_insercion"]) {
       expect(config.get(nombre), nombre).toBe("search_path=pg_catalog, public, pg_temp");
     }
-    for (const [nombre, valor] of config) if (!nombre.startsWith("inv_precio_") && !nombre.startsWith("inv_valor_") && nombre !== "inv_retiro_vigente") expect(valor, nombre).toBe("");
+    // inv_solo_retiro (datos oficiales) no lee tablas: solo pg_catalog, con pg_temp al final.
+    expect(config.get("inv_solo_retiro")).toBe("search_path=pg_catalog, pg_temp");
+    const conSet = new Set(["inv_retiro_vigente", "inv_solo_retiro"]);
+    for (const [nombre, valor] of config) if (!nombre.startsWith("inv_precio_") && !nombre.startsWith("inv_valor_") && !conSet.has(nombre)) expect(valor, nombre).toBe("");
   });
 
   // La exención de los disparadores de integridad es «tener los privilegios del dueño»: si inv_precios o inv_app

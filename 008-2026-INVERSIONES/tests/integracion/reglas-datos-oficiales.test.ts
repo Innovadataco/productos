@@ -142,6 +142,20 @@ describe("valor_serie_oficial: lo que entra", () => {
     expect(fila).toEqual([{ hoy: true, vigente: true }]);
   });
 
+  it("traidoEn lo pone la base aunque el cliente mande otro (no se fecha hacia atrás)", async () => {
+    let fila: unknown = null;
+    const error = await enTransaccionDeshecha(async (tx) => {
+      const id = `vs-${unico()}`;
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "valor_serie_oficial" ("id", "serie", "desde", "hasta", "valor", "fuente", "traidoEn")
+         VALUES ('${id}', 'FICTA_TASA', '2027-03-08', '2027-03-08', 4613.27, 'sfc:32sa-8pi3', '2019-01-02T00:00:00Z')`,
+      );
+      fila = await tx.$queryRawUnsafe(`SELECT "traidoEn" = now() AS hoy FROM "valor_serie_oficial" WHERE "id" = '${id}'`);
+    });
+    expect(error).toBeNull();
+    expect(fila).toEqual([{ hoy: true }]);
+  });
+
   it("el nombre de la serie: mayúsculas, dígitos y _, de 2 a 40, empezando por letra", async () => {
     const con = (s: string) => enTransaccionDeshecha(async (tx) => void (await serie(tx, { serie: s })));
     expect(await con("AB")).toBeNull();
@@ -158,6 +172,9 @@ describe("valor_serie_oficial: lo que entra", () => {
     expect(await con("2027-01-01", "2027-02-01")).toBeNull();
     expect(await con("2027-01-01", "2027-02-02")).toMatch(/valor_serie_oficial_vigencia_chk/);
     expect(await con("2027-03-09", "2027-03-08")).toMatch(/valor_serie_oficial_vigencia_chk/);
+    // Sin fechas infinitas (infinity ≤ infinity + 31 es verdadero).
+    expect(await con("infinity", "infinity")).toMatch(/valor_serie_oficial_vigencia_chk/);
+    expect(await con("-infinity", "-infinity")).toMatch(/valor_serie_oficial_vigencia_chk/);
   });
 
   it("el valor: positivo, sin NaN (que pasa `> 0`) y sin infinito (no cabe en Decimal(20,8))", async () => {
@@ -236,16 +253,30 @@ describe("dividendo_decretado reformado: lo que entra", () => {
     expect(fila).toEqual([{ moneda: "COP", version: 1, anulada: false, hoy: true, vigente: true }]);
   });
 
+  it("registradoEn lo pone la base aunque el cliente mande otro", async () => {
+    let fila: unknown = null;
+    const error = await enTransaccionDeshecha(async (tx) => {
+      const b = await base(tx);
+      const id = await decreto(tx, b);
+      const otro = `dd-${unico()}`;
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "dividendo_decretado" SELECT * FROM jsonb_populate_record(NULL::"dividendo_decretado",
+           (SELECT to_jsonb(d) || jsonb_build_object('id', '${otro}', 'filaFuenteId', '${await b.fila()}', 'cuota', 2, 'registradoEn', '2019-01-02T00:00:00Z')
+            FROM "dividendo_decretado" d WHERE d."id" = '${id}'))`,
+      );
+      fila = await tx.$queryRawUnsafe(`SELECT "registradoEn" = now() AS hoy FROM "dividendo_decretado" WHERE "id" = '${otro}'`);
+    });
+    expect(error).toBeNull();
+    expect(fila).toEqual([{ hoy: true }]);
+  });
+
   it("la columna fuente pasó a llamarse referenciaOficial, y existe el tipo de fuente REGISTRO_DECRETOS", async () => {
-    const columnas = await db.$queryRaw<{ column_name: string }[]>`
-      SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'dividendo_decretado' ORDER BY 1`;
-    expect(columnas.map((c) => c.column_name).sort()).toEqual([
-      "anulada", "cuota", "fechaAnuncio", "fechaEx", "fechaPago", "filaFuenteId", "id", "instrumentoId", "moneda", "nota",
-      "reemplazadoEn", "referenciaOficial", "registradoEn", "tipo", "valorPorAccion", "version",
-    ]);
+    const columnas = (await db.$queryRaw<{ column_name: string }[]>`
+      SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'dividendo_decretado'`).map((c) => c.column_name);
+    expect(columnas).toEqual(expect.arrayContaining(["referenciaOficial", "filaFuenteId", "fechaAnuncio", "cuota", "fechaEx", "version", "anulada", "registradoEn", "reemplazadoEn"]));
+    expect(columnas).not.toContain("fuente");
     const tipos = await db.$queryRaw<{ v: string }[]>`SELECT unnest(enum_range(NULL::"TipoFuente"))::text AS v`;
     expect(tipos.map((t) => t.v)).toContain("REGISTRO_DECRETOS");
-    expect(tipos.map((t) => t.v)).not.toContain("REGISTRO_RELEVANTE");
   });
 
   it("la fracción de escisión no es un decreto", async () => {
@@ -259,6 +290,8 @@ describe("dividendo_decretado reformado: lo que entra", () => {
     expect(await con("2027-05-12", "2027-05-12", "2027-05-12")).toBeNull();
     expect(await con("2027-05-13", "2027-05-12", "2027-05-19")).toMatch(/dividendo_decretado_fechas_chk/);
     expect(await con("2027-03-17", "2027-05-20", "2027-05-19")).toMatch(/dividendo_decretado_fechas_chk/);
+    expect(await con("2027-03-17", "2027-05-12", "infinity")).toMatch(/dividendo_decretado_fechas_chk/);
+    expect(await con("-infinity", "2027-05-12", "2027-05-19")).toMatch(/dividendo_decretado_fechas_chk/);
   });
 
   it("la cuota va de 1 a 12 y la versión empieza en 1", async () => {
@@ -380,7 +413,7 @@ describe("inv_solo_retiro: para todos los roles (aquí, el superusuario), sin sa
       expect(await enTransaccionDeshecha(async (tx) => void (await crear(tx, true)))).toMatch(/nace vigente/);
     });
 
-    it(`${tabla}: no se borra, ni con SET LOCAL inv.reversion = 'on'`, async () => {
+    it(`${tabla}: no se borra ni se modifica, ni con SET LOCAL inv.reversion = 'on'`, async () => {
       expect(await enTransaccionDeshecha(async (tx) => {
         const id = await crear(tx);
         await tx.$executeRawUnsafe(`DELETE FROM "${tabla}" WHERE "id" = '${id}'`);
@@ -468,6 +501,12 @@ describe("dividendo: las columnas viejas quedan nulas (dividendo_viejas_nulas_ch
 });
 
 describe("la guardia de la migración (falla cerrada)", () => {
+  /** La consulta de scripts/contar-datos-oficiales.sql (sin su BEGIN READ ONLY ni su ROLLBACK, que pone el script). */
+  const conteo = (): string =>
+    readFileSync(fileURLToPath(new URL("../../scripts/contar-datos-oficiales.sql", import.meta.url)), "utf8")
+      .replace(/--.*$/gm, "")
+      .split(";")[1]!;
+
   /** El bloque de la guardia, tal cual está en la migración (entre sus marcadores). */
   const guardia = (): string => {
     const sql = readFileSync(fileURLToPath(new URL("../../prisma/migrations/20261122030100_datos_oficiales/migration.sql", import.meta.url)), "utf8");
@@ -487,6 +526,28 @@ describe("la guardia de la migración (falla cerrada)", () => {
 
   it("pasa con las dos tablas vacías", async () => {
     expect(await guardiaCon([])).toBeNull();
+  });
+
+  // El conteo previo al despliegue (solo lectura) cuenta lo mismo que la guardia: si da todo 0, la guardia pasa.
+  it("contar-datos-oficiales.sql da 0 con las tablas vacías y cuenta cada causa, sin mostrar valores", async () => {
+    type Conteo = Record<string, bigint>;
+    let vacias: Conteo[] = [];
+    let sembradas: Conteo[] = [];
+    const error = await enTransaccionDeshecha(async (tx) => {
+      await tx.$executeRawUnsafe('CREATE TEMP TABLE "dividendo_decretado" ON COMMIT DROP AS SELECT * FROM public."dividendo_decretado" WITH NO DATA');
+      await tx.$executeRawUnsafe('CREATE TEMP TABLE "dividendo" ON COMMIT DROP AS SELECT * FROM public."dividendo" WITH NO DATA');
+      vacias = await tx.$queryRawUnsafe<Conteo[]>(conteo());
+      await tx.$executeRawUnsafe(`INSERT INTO pg_temp."dividendo_decretado" ("id") VALUES ('x1'), ('x2')`);
+      await tx.$executeRawUnsafe(
+        `INSERT INTO pg_temp."dividendo" ("id", "montoBruto", "retencion", "tasaRetencion", "decretadoId")
+         VALUES ('y1', 73.71, NULL, NULL, NULL), ('y2', NULL, 25.78, 0.35, NULL), ('y3', NULL, NULL, NULL, 'dd-ficticio')`,
+      );
+      sembradas = await tx.$queryRawUnsafe<Conteo[]>(conteo());
+    });
+    expect(error).toBeNull();
+    const numeros = (filas: Conteo[]) => Object.fromEntries(Object.entries(filas[0] ?? {}).map(([k, v]) => [k, Number(v)]));
+    expect(numeros(vacias)).toEqual({ decretos: 0, con_monto_bruto: 0, con_retencion: 0, con_tasa_retencion: 0, con_decreto_enlazado: 0 });
+    expect(numeros(sembradas)).toEqual({ decretos: 2, con_monto_bruto: 1, con_retencion: 1, con_tasa_retencion: 1, con_decreto_enlazado: 1 });
   });
 
   it("muerde si dividendo_decretado tiene filas (y solo da el conteo)", async () => {

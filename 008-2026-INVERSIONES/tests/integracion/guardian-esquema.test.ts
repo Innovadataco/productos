@@ -252,10 +252,19 @@ describe("guardián del esquema: datos oficiales", () => {
     expect(await guardianTras([`ALTER TABLE "${tabla}" DISABLE TRIGGER "${disparador}"`])).toContain(disparador);
   });
 
-  it("falla si inv_solo_retiro cambia de código, pasa a SECURITY DEFINER o gana un SET", async () => {
-    expect(await guardianTras([`CREATE OR REPLACE FUNCTION "inv_solo_retiro"() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN COALESCE(NEW, OLD); END; $$`])).toContain("inv_solo_retiro");
+  it("falla si inv_solo_retiro cambia de código, pasa a SECURITY DEFINER o cambia su search_path", async () => {
+    expect(await guardianTras([`CREATE OR REPLACE FUNCTION "inv_solo_retiro"() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$ BEGIN RETURN COALESCE(NEW, OLD); END; $$`])).toContain("inv_solo_retiro");
     expect(await guardianTras(['ALTER FUNCTION "inv_solo_retiro"() SECURITY DEFINER'])).toContain("inv_solo_retiro");
-    expect(await guardianTras(['ALTER FUNCTION "inv_solo_retiro"() SET search_path = public'])).toContain("inv_solo_retiro");
+    expect(await guardianTras(['ALTER FUNCTION "inv_solo_retiro"() SET search_path = public, pg_catalog'])).toContain("inv_solo_retiro");
+    expect(await guardianTras(['ALTER FUNCTION "inv_solo_retiro"() RESET search_path'])).toContain("inv_solo_retiro");
+  });
+
+  it("falla si el disparador deja de pasarle la columna de la hora del registro", async () => {
+    const romper = [
+      'DROP TRIGGER "valor_serie_oficial_retiro" ON "valor_serie_oficial"',
+      'CREATE TRIGGER "valor_serie_oficial_retiro" BEFORE INSERT OR UPDATE OR DELETE ON "valor_serie_oficial" FOR EACH ROW EXECUTE FUNCTION "inv_solo_retiro"(\'otra\')',
+    ];
+    expect(await guardianTras(romper)).toContain("valor_serie_oficial_retiro");
   });
 
   it.each([
