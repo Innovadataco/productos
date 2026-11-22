@@ -36,6 +36,10 @@ export const AVISOS_IA = {
   GUARDE_DESTINO: "Guarde primero la dirección y el puerto: identificar y probar usan solo lo guardado.",
   SIN_LISTA: "Sin la lista de modelos de PI no se puede elegir un modelo local.",
   SIN_TOPE: "Sin tope mensual, la nube no corre.",
+  YA_NO_EN_LISTA: "ya no está en la lista de PI",
+  SIN_IDENTIFICAR: "sin identificar como instalado",
+  NO_SELECCIONABLE: "no instalado o con otro digest",
+  AYUDA_MODELO: "Solo se elige un modelo de la lista de PI que «Identificar modelos» encontró instalado con su digest; el guardado se conserva.",
 } as const;
 
 /** Lo que NO se configura, y por qué (como en PI, más lo propio de 008). */

@@ -1,27 +1,38 @@
 import "server-only";
 /**
- * El límite de frecuencia de las acciones de /edicion/ia (E8), por usuario y en memoria del proceso (la app es un solo
- * contenedor), además del tope general de las API por IP del proxy: «Identificar modelos» y «Probar» comparten uno (un
- * pedido cada pocos segundos: cada uno puede llegar al Mac de PI), y guardar tiene el suyo. Como en PI.
+ * El límite de las acciones al Mac de /edicion/ia (E8), en memoria del proceso (la app es un solo contenedor), además del
+ * tope general de las API por IP del proxy. «Identificar modelos» y «Probar» (cada una puede llegar al Mac de PI):
+ * - un pedido cada pocos segundos por usuario, como en PI;
+ * - una sola acción a la vez en el proceso (revisión de seguridad, M2: «Probar» puede tardar minutos).
+ * Guardar no tiene límite propio: tras un error se corrige y se reenvía enseguida, y un doble envío no duplica (la
+ * versión de partida da 409).
  */
 import { crearLimitador, type Decision, type Limitador } from "@/auth/limite-api";
 
 /** Una acción al Mac (identificar o probar) cada 5 s por usuario. */
 export const VENTANA_OLLAMA_MS = 5000;
-/** Una versión nueva cada 3 s por usuario (un doble clic no crea dos). */
-export const VENTANA_GUARDAR_MS = 3_000;
 /** Pocos usuarios: solo el dueño (y quien lo intente). */
 const MAX_USUARIOS = 100;
 
-const crear = (ventanaMs: number): Limitador => crearLimitador({ maximo: 1, ventanaMs, maxRedes: MAX_USUARIOS });
-let ollama = crear(VENTANA_OLLAMA_MS);
-let guardar = crear(VENTANA_GUARDAR_MS);
+const crear = (): Limitador => crearLimitador({ maximo: 1, ventanaMs: VENTANA_OLLAMA_MS, maxRedes: MAX_USUARIOS });
+let ollama = crear();
+let enCurso = false;
 
 export const permitidoOllama = (usuarioId: string, ahoraMs: number): Decision => ollama.registrar(usuarioId, ahoraMs);
-export const permitidoGuardar = (usuarioId: string, ahoraMs: number): Decision => guardar.registrar(usuarioId, ahoraMs);
 
-/** Solo para las pruebas: parte de cero. */
+/** El turno de la única acción al Mac a la vez: una función para soltarlo, o null si ya hay una en curso. */
+export function tomarTurnoOllama(): (() => void) | null {
+  if (enCurso) return null;
+  enCurso = true;
+  let suelto = false;
+  return () => {
+    if (suelto) return;
+    suelto = true;
+    enCurso = false;
+  };
+}
+
+/** Solo para las pruebas: el límite por usuario parte de cero (el turno lo suelta la acción al terminar). */
 export function reiniciarFrecuenciasIa(): void {
-  ollama = crear(VENTANA_OLLAMA_MS);
-  guardar = crear(VENTANA_GUARDAR_MS);
+  ollama = crear();
 }

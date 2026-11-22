@@ -43,13 +43,18 @@ function Tareas({ datos, tareas, instalados, errorDe, onCambio }: PropsTareas) {
       {sinLista ? <p className="nota aviso">{AVISOS_IA.SIN_LISTA}</p> : null}
       {datos.opciones.tareas.map((t) => {
         const valor = tareas[t.valor] ?? { activo: false, modeloLocal: "" };
+        const guardado = datos.guardado.modelos[t.valor] ?? "";
         const opciones = [
           { valor: "", texto: TEXTOS_IA.SIN_MODELO },
-          ...modelosLocales.map((m) => ({
-            valor: m.nombre,
-            texto: `${m.nombre}${m.recomendado ? ` (${TEXTOS_IA.RECOMENDADO})` : ""}${m.aviso32b ? ` · ${AVISOS_IA.RECARGA_32B}` : ""}`,
-            deshabilitada: !(instalados?.has(m.nombre) ?? false) && datos.guardado.modelos[t.valor] !== m.nombre,
-          })),
+          ...modelosLocales.map((m) => {
+            const deshabilitada = !(instalados?.has(m.nombre) ?? false) && guardado !== m.nombre;
+            const porQue = deshabilitada ? ` (${instalados === null ? AVISOS_IA.SIN_IDENTIFICAR : AVISOS_IA.NO_SELECCIONABLE})` : "";
+            return { valor: m.nombre, texto: `${m.nombre}${m.recomendado ? ` (${TEXTOS_IA.RECOMENDADO})` : ""}${m.aviso32b ? ` · ${AVISOS_IA.RECARGA_32B}` : ""}${porQue}`, deshabilitada };
+          }),
+          // Lo guardado que ya no está en la lista se ve (y no se pierde en silencio), pero no se puede volver a elegir.
+          ...(valor.modeloLocal !== "" && !modelosLocales.some((m) => m.nombre === valor.modeloLocal)
+            ? [{ valor: valor.modeloLocal, texto: `${valor.modeloLocal} (${AVISOS_IA.YA_NO_EN_LISTA})`, deshabilitada: true }]
+            : []),
         ];
         return (
           <div className="edicion-rejilla" key={t.valor}>
@@ -57,12 +62,11 @@ function Tareas({ datos, tareas, instalados, errorDe, onCambio }: PropsTareas) {
               <input id={`ia-tarea-${t.valor}-activo`} type="checkbox" checked={valor.activo} onChange={(e) => onCambio(t.valor, { activo: e.target.checked })} />
               <label htmlFor={`ia-tarea-${t.valor}-activo`}>{`${t.texto}: activa`}</label>
             </div>
-            <Seleccion id={`ia-tarea-${t.valor}-modelo`} etiqueta={`${t.texto}: modelo local`} valor={valor.modeloLocal} opciones={opciones} deshabilitada={sinLista}
+            <Seleccion id={`ia-tarea-${t.valor}-modelo`} etiqueta={`${t.texto}: modelo local`} valor={valor.modeloLocal} opciones={opciones} deshabilitada={sinLista} ayuda={AVISOS_IA.AYUDA_MODELO}
               onCambio={(v) => onCambio(t.valor, { modeloLocal: v })} error={errorDe(`tareas.${t.valor}.modeloLocal`)} />
           </div>
         );
       })}
-      <p className="nota">{instalados === null ? "Identifique los modelos para elegir uno instalado con el digest de la lista de PI." : ""}</p>
     </fieldset>
   );
 }
@@ -109,7 +113,7 @@ export function FormularioIa({ datos }: { readonly datos: DatosEdicionIa }) {
 
       <fieldset className="edicion-regla" aria-describedby="ia-destino-aviso">
         <legend>Puerta local (Ollama del Mac)</legend>
-        <div className="edicion-rejilla" id="ia-destino">
+        <div className="edicion-rejilla" id="ia-destino" role="group" aria-label="Dirección y puerto del Ollama">
           <Texto id="ia-host" modo="decimal" etiqueta={ETIQUETAS_IA.ollamaHost!} valor={valores.ollamaHost} onCambio={(v) => cambiar({ ollamaHost: v })} error={errorDe("ollamaHost")} />
           <Texto id="ia-puerto" modo="numeric" etiqueta={ETIQUETAS_IA.ollamaPuerto!} valor={valores.ollamaPuerto} onCambio={(v) => cambiar({ ollamaPuerto: v })} error={errorDe("ollamaPuerto")} />
           <p className="nota aviso" id="ia-destino-aviso">{AVISOS_IA.FIREWALL}</p>

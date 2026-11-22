@@ -5,7 +5,7 @@
  * el aviso de los 32B, la latencia de cada prueba, la sonda pendiente en producción y «Ollama inalcanzable» con la
  * posibilidad del firewall. Un pedido a la vez; el servidor pone además un límite de frecuencia.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { pedirOllama, type AccionOllama, type RespuestaOllama, type ResultadoIdentificarVista, type ResultadoProbarVista } from "./acciones";
 import { AVISOS_IA, TEXTOS_IA, digestCorto, mensajeIa, tamanoTexto } from "./textos-ia";
 import type { ModeloIdentificadoVista, PruebaVista } from "./tipos-ia";
@@ -73,14 +73,21 @@ function Pruebas({ pruebas }: { readonly pruebas: readonly PruebaVista[] }) {
 export function PanelOllama({ hayDestino, onIdentificados }: Props) {
   const [enCurso, setEnCurso] = useState(false);
   const [respuesta, setRespuesta] = useState<RespuestaOllama | null>(null);
+  // La guarda del doble clic es una ref: dos clics antes de pintar de nuevo verían el mismo estado.
+  const ocupado = useRef(false);
 
   async function pedir(accion: AccionOllama) {
-    if (enCurso) return;
+    if (ocupado.current) return;
+    ocupado.current = true;
     setEnCurso(true);
-    const r = await pedirOllama(accion);
-    setEnCurso(false);
-    setRespuesta(r);
-    if (r.tipo === "identificar" && r.resultado.estado === "OK") onIdentificados(r.resultado.modelos);
+    try {
+      const r = await pedirOllama(accion);
+      setRespuesta(r);
+      if (r.tipo === "identificar" && r.resultado.estado === "OK") onIdentificados(r.resultado.modelos);
+    } finally {
+      ocupado.current = false;
+      setEnCurso(false);
+    }
   }
 
   const identificado: ResultadoIdentificarVista | null = respuesta?.tipo === "identificar" ? respuesta.resultado : null;
@@ -90,8 +97,8 @@ export function PanelOllama({ hayDestino, onIdentificados }: Props) {
       <p className="nota">{TEXTOS_IA.FLUJO}</p>
       {hayDestino ? null : <p className="nota aviso">{AVISOS_IA.GUARDE_DESTINO}</p>}
       <div className="edicion-enviar">
-        <button type="button" className="edicion-agregar" disabled={!hayDestino} aria-busy={enCurso} onClick={() => void pedir("identificar")}>{TEXTOS_IA.IDENTIFICAR}</button>
-        <button type="button" className="edicion-agregar" disabled={!hayDestino} aria-busy={enCurso} onClick={() => void pedir("probar")}>{TEXTOS_IA.PROBAR}</button>
+        <button type="button" className="edicion-agregar" disabled={!hayDestino || enCurso} aria-busy={enCurso} onClick={() => void pedir("identificar")}>{TEXTOS_IA.IDENTIFICAR}</button>
+        <button type="button" className="edicion-agregar" disabled={!hayDestino || enCurso} aria-busy={enCurso} onClick={() => void pedir("probar")}>{TEXTOS_IA.PROBAR}</button>
       </div>
       <p className="edicion-estado ia-sonda" role="status">{enCurso ? TEXTOS_IA.CONSULTANDO : respuesta === null ? "" : estadoTexto(respuesta)}</p>
       {identificado?.estado === "OK" ? <Instalados modelos={identificado.modelos} /> : null}

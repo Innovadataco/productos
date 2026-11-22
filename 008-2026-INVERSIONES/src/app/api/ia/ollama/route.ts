@@ -1,6 +1,6 @@
 import { exigirDuenoApi } from "@/auth/sesion";
 import { respuestaJson } from "@/auth/respuestas";
-import { permitidoOllama } from "@/ia/config/frecuencia";
+import { permitidoOllama, tomarTurnoOllama } from "@/ia/config/frecuencia";
 import { leerConfigIa } from "@/ia/config/leer";
 import { identificarGuardado, probarGuardado, sondaDelEntorno, type ResultadoIdentificar, type ResultadoProbar } from "@/ia/config/sonda-ollama";
 import { LISTA_MODELOS_PI } from "@/ia/local/modelos";
@@ -28,7 +28,7 @@ function respuestaDe(accion: Accion, resultado: ResultadoIdentificar | Resultado
 
 /**
  * POST /api/ia/ollama · «Identificar modelos» o «Probar» de /edicion/ia, solo del dueño (E8), con la protección de envío
- * de /edicion/plan y un pedido cada pocos segundos por usuario. Usa SOLO el destino GUARDADO en la configuración
+ * de /edicion/plan, un pedido cada pocos segundos por usuario y una sola acción al Mac a la vez en el proceso. Usa SOLO el destino GUARDADO en la configuración
  * vigente (I-24 de PI, un SSRF): del cuerpo se lee únicamente la acción; cualquier destino que venga ahí se ignora y no
  * llega a la sonda. Un Ollama inalcanzable es un 503 ESTRUCTURADO, nunca un 500. En producción la sonda es la pendiente:
  * la app no llega a la tailnet y la conexión la hará el servicio de IA (E6). Sin caché.
@@ -44,10 +44,16 @@ export async function POST(pedido: Request): Promise<Response> {
     const cuerpo = await leerCuerpoJson(pedido, MAX_CUERPO);
     const accion = cuerpo.ok ? accionDe(cuerpo.valor) : null;
     if (accion === null) return respuestaSolicitudInvalida();
-    const config = await leerConfigIa(db);
-    const sonda = sondaDelEntorno(process.env);
-    const resultado = accion === "identificar" ? await identificarGuardado(config, sonda, LISTA_MODELOS_PI) : await probarGuardado(config, sonda);
-    return respuestaDe(accion, resultado);
+    const soltar = tomarTurnoOllama();
+    if (soltar === null) return respuestaJson({ error: "Demasiadas solicitudes" }, 429, { "Retry-After": "5" });
+    try {
+      const config = await leerConfigIa(db);
+      const sonda = sondaDelEntorno(process.env);
+      const resultado = accion === "identificar" ? await identificarGuardado(config, sonda, LISTA_MODELOS_PI) : await probarGuardado(config, sonda);
+      return respuestaDe(accion, resultado);
+    } finally {
+      soltar();
+    }
   } catch (error) {
     console.error(`[edicion:ia-ollama] la sonda no se pudo completar (${error instanceof Error ? error.name : "desconocido"})`);
     return respuestaJson({ error: "No se pudo completar la sonda de Ollama", resultado: { estado: "ERROR", detalle: "EXCEPCION_INTERNA" } }, 502);

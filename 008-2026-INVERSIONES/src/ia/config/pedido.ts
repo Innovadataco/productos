@@ -13,7 +13,7 @@ import { Errores, numeroDeVersion, objetoConClaves } from "@/plan/edicion/comun"
 import { esDe } from "../formas";
 import { leerDestinoLocal } from "../local/destino";
 import { ErrorLocal } from "../local/errores";
-import type { ListaModelosPi } from "../local/modelos";
+import { PATRON_NOMBRE_MODELO_LOCAL, type ListaModelosPi } from "../local/modelos";
 import { ESFUERZOS_NUBE, MODELOS_NUBE, type EsfuerzoNube, type ModeloNube } from "../nube/peticion";
 import { MODOS_PUERTAS, type ModoPuertas } from "../puertas";
 import type { ErrorCampoConfig } from "./errores";
@@ -121,32 +121,47 @@ function destino(e: Errores, host: unknown, v: unknown): Destino | undefined {
 
 const nombresDe = (lista: ListaModelosPi): ReadonlySet<string> => new Set(lista.estado === "LISTA" ? lista.modelos.map((m) => m.nombre) : []);
 
-function tarea(e: Errores, t: TareaIa, v: unknown, lista: ListaModelosPi): TareaConfig | undefined {
+/** La forma de una tarea; la pertenencia del modelo a la lista se revisa con el modo (`reglasDelModo`). */
+function tarea(e: Errores, t: TareaIa, v: unknown): TareaConfig | undefined {
   const r = objetoConClaves(v, CLAVES_TAREA);
   const modelo = r?.modeloLocal;
   if (r === null || typeof r.activo !== "boolean" || !(modelo === null || typeof modelo === "string")) return e.anotar("tareas", "FORMATO_INVALIDO");
   const modeloLocal = vacio(modelo) ? null : (modelo as string);
-  const campo = `tareas.${t}.modeloLocal`;
-  if (modeloLocal !== null && lista.estado !== "LISTA") return e.anotar(campo, "SIN_LISTA_DE_PI");
-  if (modeloLocal !== null && !nombresDe(lista).has(modeloLocal)) return e.anotar(campo, "MODELO_FUERA_DE_LISTA");
+  if (modeloLocal !== null && !PATRON_NOMBRE_MODELO_LOCAL.test(modeloLocal)) return e.anotar(`tareas.${t}.modeloLocal`, "FORMATO_INVALIDO");
   return Object.freeze({ activo: r.activo, modeloLocal });
 }
 
-function tareas(e: Errores, v: unknown, lista: ListaModelosPi): TareasConfig | undefined {
+function tareas(e: Errores, v: unknown): TareasConfig | undefined {
   const r = objetoConClaves(v, TAREAS_IA);
   if (r === null) return e.anotar("tareas", "FORMATO_INVALIDO");
-  const leidas = TAREAS_IA.map((t) => [t, tarea(e, t, r[t], lista)] as const);
+  const leidas = TAREAS_IA.map((t) => [t, tarea(e, t, r[t])] as const);
   if (leidas.some(([, x]) => x === undefined)) return undefined;
   return Object.freeze(Object.fromEntries(leidas) as Record<TareaIa, TareaConfig>);
 }
 
-/** Las reglas de cada modo: con la local, la lista de PI, el destino y un modelo por tarea activa; con la nube, el tope. */
+/** Cada tarea activa con la local: su modelo, y que esté en la lista de PI. */
+function modelosDeLaLocal(e: Errores, v: Partial<EntradaConfigIa>, lista: ListaModelosPi): void {
+  const nombres = nombresDe(lista);
+  for (const t of TAREAS_IA) {
+    const tarea = v.tareas?.[t];
+    if (tarea === undefined || !tarea.activo) continue;
+    const campo = `tareas.${t}.modeloLocal`;
+    if (tarea.modeloLocal === null) e.anotar(campo, "MODELO_LOCAL_FALTA");
+    else if (lista.estado !== "LISTA") e.anotar(campo, "SIN_LISTA_DE_PI");
+    else if (!nombres.has(tarea.modeloLocal)) e.anotar(campo, "MODELO_FUERA_DE_LISTA");
+  }
+}
+
+/**
+ * Las reglas de cada modo: con la local, la lista de PI, el destino y un modelo de la lista en cada tarea activa; con la
+ * nube, el tope. Un modelo viejo en una tarea que la local no usa no impide guardar (PI pudo retirarlo).
+ */
 function reglasDelModo(e: Errores, v: Partial<EntradaConfigIa>, lista: ListaModelosPi, topeLeido: boolean): void {
   if (v.modo === undefined) return;
   if (usaLocal(v.modo)) {
     if (lista.estado !== "LISTA") e.anotar("modo", "SIN_LISTA_DE_PI");
     if (v.ollamaHost === null) e.anotar("ollamaHost", "DESTINO_FALTA");
-    for (const t of TAREAS_IA) if (v.tareas?.[t].activo === true && v.tareas[t].modeloLocal === null) e.anotar(`tareas.${t}.modeloLocal`, "MODELO_LOCAL_FALTA");
+    modelosDeLaLocal(e, v, lista);
   }
   if (usaNube(v.modo) && topeLeido && v.topeMicroUsd === null) e.anotar("topeMensualUsd", "TOPE_FALTA");
 }
@@ -163,7 +178,7 @@ export function leerPedidoConfig(cuerpo: unknown, lista: ListaModelosPi): Lectur
     modo: enumerado(e, "modo", MODOS_PUERTAS, r.modo, "MODO_INVALIDO"),
     ollamaHost: d?.host, ollamaPuerto: d?.puerto,
     temperaturaCentesimas: temperatura(e, r.temperatura),
-    tareas: tareas(e, r.tareas, lista),
+    tareas: tareas(e, r.tareas),
     modeloNube: enumerado(e, "modeloNube", MODELOS_NUBE, r.modeloNube, "MODELO_NUBE_INVALIDO"),
     esfuerzoNube: enumerado(e, "esfuerzoNube", ESFUERZOS_NUBE, r.esfuerzoNube, "ESFUERZO_INVALIDO"),
     topeMicroUsd,

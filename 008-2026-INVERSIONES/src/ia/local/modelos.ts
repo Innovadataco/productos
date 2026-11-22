@@ -24,7 +24,10 @@ import { esDiaIso, esObjetoPlano, soloCampos } from "../formas";
 
 export interface ModeloAprobado {
   readonly nombre: string;
-  /** sha256 en hexadecimal (64, minúsculas). De la lista de PI siempre viene; null solo en listas simuladas de prueba. */
+  /**
+   * sha256 en hexadecimal (64, minúsculas). La lista de PI lo exige (nunca null); el tipo admite null por compatibilidad
+   * con la puerta local de E4a, que con null responde DIGEST_POR_VERIFICAR sin tocar la red.
+   */
   readonly digest: string | null;
   /** La nota de PI, si la trae (texto corto, sin direcciones). */
   readonly nota?: string;
@@ -61,8 +64,11 @@ export type LecturaArchivo = { readonly ok: true; readonly texto: string } | { r
 export const PATRON_NOMBRE_MODELO_LOCAL = /^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$/;
 const PATRON_NOMBRE = PATRON_NOMBRE_MODELO_LOCAL;
 const PATRON_PUBLICADO_POR = /^[\p{L}\p{N}][\p{L}\p{N} ().,_-]*$/u;
-/** Una dirección escrita: una IPv4, un puerto («:47213» suelto), una IPv6 entre corchetes o un esquema de URL. */
-const DIRECCION = /\d{1,3}(?:\.\d{1,3}){3}|:\d{1,5}(?![\w.])|\[[0-9a-f:]*:[0-9a-f:]*\]|:\/\//i;
+/**
+ * Una dirección escrita: una IPv4, un puerto («:47213» suelto, no pegado a una palabra: «1:1» o «10:30» no lo son), una
+ * IPv6 entre corchetes o un esquema de URL.
+ */
+const DIRECCION = /\d{1,3}(?:\.\d{1,3}){3}|(?<![\w.]):\d{1,5}(?![\w.])|\[[0-9a-f:]*:[0-9a-f:]*\]|:\/\//i;
 /** Control, formato invisible, sustitutos sueltos, uso privado y separadores de línea. */
 const CARACTER_NO_PERMITIDO = /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/u;
 const CAMPOS_LISTA: readonly string[] = Object.freeze(["version", "publicadoPor", "fecha", "modelos"]);

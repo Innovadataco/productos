@@ -38,9 +38,12 @@ export async function pedirOllama(accion: AccionOllama): Promise<RespuestaOllama
   try {
     const r = await fetch("/api/ia/ollama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accion }), cache: "no-store" });
     if (!CON_RESULTADO.has(r.status)) return error(codigoDeEstado(r.status));
-    const cuerpo = (await r.json().catch(() => null)) as { resultado?: { estado?: unknown } } | null;
+    const cuerpo = (await r.json().catch(() => null)) as { resultado?: { estado?: unknown; modelos?: unknown; pruebas?: unknown } } | null;
     const resultado = cuerpo?.resultado;
     if (typeof resultado !== "object" || resultado === null || !ESTADOS.has(String(resultado.estado))) return error("DESCONOCIDO");
+    // Un OK o un FALLO traen su lista: sin ella, no se pinta nada a medias.
+    const lista = accion === "identificar" ? resultado.modelos : resultado.pruebas;
+    if ((resultado.estado === "OK" || resultado.estado === "FALLO") && !Array.isArray(lista)) return error("DESCONOCIDO");
     return accion === "identificar"
       ? { tipo: "identificar", resultado: resultado as ResultadoIdentificarVista }
       : { tipo: "probar", resultado: resultado as ResultadoProbarVista };

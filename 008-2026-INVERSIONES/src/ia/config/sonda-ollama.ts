@@ -73,10 +73,15 @@ export function sondaDirecta(fetch: BuscarLocal): SondaOllama {
   });
 }
 
+/** La directa del proceso: una sola (un solo turno al Mac para todas las acciones). */
+let directaDelProceso: SondaOllama | null = null;
+
 /** La sonda del entorno: la directa solo fuera de producción y con la variable exacta; si no, la pendiente. */
 export function sondaDelEntorno(entorno: Readonly<Record<string, string | undefined>>): SondaOllama {
   const directa = entorno.NODE_ENV !== "production" && entorno[VARIABLE_SONDA_OLLAMA] === "directa";
-  return directa ? sondaDirecta(globalThis.fetch as unknown as BuscarLocal) : SONDA_PENDIENTE;
+  if (!directa) return SONDA_PENDIENTE;
+  directaDelProceso ??= sondaDirecta(globalThis.fetch as unknown as BuscarLocal);
+  return directaDelProceso;
 }
 
 export interface ModeloIdentificado extends ModeloInstalado {
