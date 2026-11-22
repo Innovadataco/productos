@@ -73,6 +73,15 @@ export function esValorOficial(texto: string): boolean {
   return VALOR_OFICIAL.test(texto) && texto !== "0";
 }
 
+/**
+ * El texto decimal de la base en su forma canónica (sin los ceros sobrantes de la fracción ni un punto final), o null
+ * si no es un valor oficial (cero, signo, exponente, más de 12 enteros u 8 decimales).
+ */
+export function aValorOficial(texto: string): string | null {
+  const sinCeros = texto.includes(".") ? texto.replace(/0+$/, "").replace(/\.$/, "") : texto;
+  return esValorOficial(sinCeros) ? sinCeros : null;
+}
+
 const decimalesDe = (texto: string): number => (texto.split(".")[1] ?? "").length;
 
 /** El valor (ya validado) como entero escalado a `escala` decimales. */
@@ -94,7 +103,9 @@ function porcentaje(base: string, final: string): string {
 }
 
 const esInstante = (d: Date): boolean => d instanceof Date && Number.isFinite(d.getTime());
-const fechasValidas = (c: CifraOficial): boolean => esFechaDeNegocio(c.desde) && esFechaDeNegocio(c.hasta) && esInstante(c.traidoEn);
+/** Días a medianoche UTC, la vigencia al derecho (desde ≤ hasta) y un instante válido. */
+const fechasValidas = (c: CifraOficial): boolean =>
+  esFechaDeNegocio(c.desde) && esFechaDeNegocio(c.hasta) && c.desde.getTime() <= c.hasta.getTime() && esInstante(c.traidoEn);
 
 function validarParaVariacion(base: CifraOficial, final: CifraOficial): void {
   if (base.origen !== "OFICIAL" || final.origen !== "OFICIAL") throw new ErrorLecturaSeries("NO_ES_OFICIAL");

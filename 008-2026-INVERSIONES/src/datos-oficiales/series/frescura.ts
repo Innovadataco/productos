@@ -10,7 +10,8 @@
  * Así nunca se muestra un dato viejo como si fuera de hoy.
  * `hoy` es la fecha de negocio en Colombia a medianoche UTC (fechaEnBogota de src/precios/horario.ts), como en el CSV
  * de series. Nunca adivina: una entrada que no cuadra (otra serie, una cifra CALCULADA, una vigencia que todavía no
- * empieza, una fecha que no es un día) es un error tipado.
+ * empieza, una vigencia al revés, una fecha que no es un día) es un error tipado. Para leer el último y su frescura con
+ * un mismo hoy, `estadoSerie` de leer.ts.
  */
 import { CATALOGO, type SerieCatalogo } from "../catalogo";
 import { esFechaDeNegocio, MS_POR_DIA } from "../../plan/fechas";
@@ -31,7 +32,9 @@ export interface Frescura {
 function validarUltimo(codigo: string, ultimo: CifraOficial, hoy: Date): void {
   if (ultimo.serie !== codigo) throw new ErrorLecturaSeries("OTRA_SERIE");
   if (ultimo.origen !== "OFICIAL") throw new ErrorLecturaSeries("NO_ES_OFICIAL");
-  if (!esFechaDeNegocio(ultimo.desde) || !esFechaDeNegocio(ultimo.hasta)) throw new ErrorLecturaSeries("FECHA_INVALIDA");
+  if (!esFechaDeNegocio(ultimo.desde) || !esFechaDeNegocio(ultimo.hasta) || ultimo.desde.getTime() > ultimo.hasta.getTime()) {
+    throw new ErrorLecturaSeries("FECHA_INVALIDA");
+  }
   if (ultimo.desde.getTime() > hoy.getTime()) throw new ErrorLecturaSeries("VIGENCIA_FUTURA");
 }
 

@@ -15,11 +15,17 @@
 //   una búsqueda que corta a la mitad (findIndex) da unas 20 y NO muerde a este tamaño, porque el costo fijo de cada
 //   fila (Prisma) pesa más. Un tope absoluto de 60 s atrapa además una caída catastrófica. Con SERIES_MEDIR=1 imprime
 //   las medidas (así se miden para el PR).
+// - Dispersión (database-reviewer, MEDIO): la serie medida va contigua en el heap, como queda una historia cargada por
+//   guardar.ts (por serie y en lotes de TAMANO_LOTE_SERIES). SERIE_DISPERSA va intercalada día a día con el ruido (el
+//   peor caso: muchas cargas chicas de varias series): 31 días leen a lo sumo una página del heap por fila más
+//   MARGEN_INDICE páginas de índice.
 // Volumen: la serie (12 000 días seguidos desde 1931) y el ruido (otras series iguales, hasta que la tabla crezca 8
 // veces) se siembran con un INSERT … SELECT generate_series: el camino único (guardar.ts) tardaría minutos con este
 // volumen y no es lo que se mide (lo prueba tests/integracion/series-importar.test.ts). Las filas nacen vigentes
 // (inv_solo_retiro pone traidoEn) y pasan los CHECK de la tabla; nada se puede borrar, así que el volumen queda para los
-// archivos que corren después (cada uno lee sus propias series, por índice). Fechas anteriores a 1965; cifras inventadas.
+// archivos que corren después (cada uno lee sus propias series, por índice). Por eso, antes de sembrar, exige una base
+// de pruebas (nombre terminado en _test) que llegue casi vacía (security-reviewer, MEDIO): scripts/integracion.mjs la
+// reinicia. Fechas anteriores a 1965; cifras inventadas.
 import { type Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { serieDelCatalogo, type SerieCatalogo } from "@/datos-oficiales/catalogo";
@@ -48,7 +54,8 @@ const CORRIDAS = 3;
 const TOPE_CATASTROFICO_MS = 60_000;
 /**
  * El ruido es 7 veces la tabla de antes: con la base recién reiniciada (scripts/integracion.mjs hace migrate reset)
- * antes hay la serie y lo poco que dejan los demás archivos. Una base sin reiniciar lo haría crecer sin tope.
+ * antes hay la serie y lo poco que dejan los demás archivos. Una base sin reiniciar lo haría crecer sin tope: antes de
+ * sembrar se exige que traiga a lo sumo MAX_TABLA_ANTES − DIAS_SERIE filas.
  */
 const MAX_TABLA_ANTES = 60_000;
 const medir = process.env["SERIES_MEDIR"] === "1";
@@ -94,10 +101,17 @@ async function medirConsulta(desde: number, hasta: number, serie = SERIE): Promi
   });
 }
 
-/** ESQUEMA DEL ROJO (security-reviewer, MEDIO): solo se siembra en una base de pruebas que llega casi vacía. */
+/** Solo se siembra en una base de pruebas (nombre terminado en _test) que llega casi vacía: nada se puede borrar. */
 function exigirBaseDescartable(nombreBase: string, filasPrevias: number): void {
-  void nombreBase;
-  void filasPrevias;
+  if (!nombreBase.endsWith("_test")) throw new Error("el volumen de rendimiento solo se siembra en una base de pruebas (nombre terminado en _test)");
+  if (filasPrevias > MAX_TABLA_ANTES - DIAS_SERIE) {
+    throw new Error(`valor_serie_oficial ya trae ${filasPrevias} filas: corra la integración por scripts/integracion.mjs (reinicia la base)`);
+  }
+}
+
+async function nombreDeLaBase(): Promise<string> {
+  const [f] = await db.$queryRaw<{ nombre: string }[]>`SELECT current_database() AS nombre`;
+  return f!.nombre;
 }
 
 async function contar(): Promise<number> {
@@ -110,21 +124,28 @@ async function paginasDeLaTabla(): Promise<number> {
   return Number(f!.n);
 }
 
-/** `cuantas` series de DIAS_SERIE días seguidos (de un día cada vigencia), con códigos `<prefijo>` o `<prefijo>_R<k>`. */
-async function sembrar(prefijo: string, cuantas: number | null): Promise<void> {
-  const ultimo = DIAS_SERIE - 1;
-  if (cuantas === null) {
-    await db.$executeRaw`
-      INSERT INTO "valor_serie_oficial" ("id", "serie", "desde", "hasta", "valor", "fuente")
-      SELECT ${prefijo} || '-' || g, ${prefijo}, DATE '1931-01-05' + g, DATE '1931-01-05' + g, round((7.13 + (g % 97) * 0.0371)::numeric, 4), 'sfc:ficticia'
-      FROM generate_series(0, ${ultimo}::int) AS g`;
-  } else {
-    await db.$executeRaw`
-      INSERT INTO "valor_serie_oficial" ("id", "serie", "desde", "hasta", "valor", "fuente")
-      SELECT ${prefijo} || '_R' || k || '-' || g, ${prefijo} || '_R' || k, DATE '1931-01-05' + g, DATE '1931-01-05' + g, round((3.71 + (g % 89) * 0.0413)::numeric, 4), 'sfc:ficticia'
-      FROM generate_series(0, ${ultimo}::int) AS g, generate_series(1, ${cuantas}::int) AS k`;
-  }
-  await db.$executeRawUnsafe('ANALYZE "valor_serie_oficial"');
+const ULTIMO_DIA = DIAS_SERIE - 1;
+const analizar = () => db.$executeRawUnsafe('ANALYZE "valor_serie_oficial"');
+
+/** SERIE: DIAS_SERIE días seguidos (de un día cada vigencia), contiguos en el heap. */
+async function sembrarSerie(): Promise<void> {
+  await db.$executeRaw`
+    INSERT INTO "valor_serie_oficial" ("id", "serie", "desde", "hasta", "valor", "fuente")
+    SELECT ${SERIE} || '-' || g, ${SERIE}, DATE '1931-01-05' + g, DATE '1931-01-05' + g, round((7.13 + (g % 97) * 0.0371)::numeric, 4), 'sfc:ficticia'
+    FROM generate_series(0, ${ULTIMO_DIA}::int) AS g`;
+  await analizar();
+}
+
+/** El ruido (`cuantas` series `<SERIE>_R<k>`) y SERIE_DISPERSA, intercalados día a día en el heap (ORDER BY día, serie). */
+async function sembrarRuidoIntercalado(cuantas: number): Promise<void> {
+  await db.$executeRaw`
+    INSERT INTO "valor_serie_oficial" ("id", "serie", "desde", "hasta", "valor", "fuente")
+    SELECT (CASE WHEN k = 0 THEN ${SERIE_DISPERSA} ELSE ${SERIE} || '_R' || k END) || '-' || g,
+           CASE WHEN k = 0 THEN ${SERIE_DISPERSA} ELSE ${SERIE} || '_R' || k END,
+           DATE '1931-01-05' + g, DATE '1931-01-05' + g, round((3.71 + (g % 89) * 0.0413 + k * 0.0007)::numeric, 4), 'sfc:ficticia'
+    FROM generate_series(0, ${ULTIMO_DIA}::int) AS g, generate_series(0, ${cuantas}::int) AS k
+    ORDER BY g, k`;
+  await analizar();
 }
 
 function msDe(desde: number, hasta: number): Promise<number> {
@@ -144,21 +165,21 @@ let despues: Medida;
 let dispersa: Medida;
 
 beforeAll(async () => {
-  await sembrar(SERIE, null);
+  exigirBaseDescartable(await nombreDeLaBase(), await contar());
+  await sembrarSerie();
   tamanoAntes = await contar();
-  if (tamanoAntes > MAX_TABLA_ANTES) throw new Error(`valor_serie_oficial ya trae ${tamanoAntes} filas: corra la integración por scripts/integracion.mjs (reinicia la base)`);
   antes = {
     medio: await medirConsulta(MEDIO, MEDIO + 30),
     principio: await medirConsulta(0, 30),
     final: await medirConsulta(DIAS_SERIE - 31, DIAS_SERIE - 1),
   };
-  await sembrar(SERIE, Math.ceil(((CRECIMIENTO_MINIMO - 1) * tamanoAntes + 1) / DIAS_SERIE));
+  await sembrarRuidoIntercalado(Math.ceil(((CRECIMIENTO_MINIMO - 1) * tamanoAntes + 1) / DIAS_SERIE));
   tamanoDespues = await contar();
   despues = await medirConsulta(MEDIO, MEDIO + 30);
   dispersa = await medirConsulta(MEDIO, MEDIO + 30, SERIE_DISPERSA);
   paginas = await paginasDeLaTabla();
   if (medir) {
-    process.stdout.write(`[series] tabla ${tamanoAntes} → ${tamanoDespues} filas (${paginas} páginas); bloques de 31 días: medio ${antes.medio.bloques} → ${despues.bloques}, principio ${antes.principio.bloques}, final ${antes.final.bloques}\n`);
+    process.stdout.write(`[series] tabla ${tamanoAntes} → ${tamanoDespues} filas (${paginas} páginas); bloques de 31 días: medio ${antes.medio.bloques} → ${despues.bloques}, principio ${antes.principio.bloques}, final ${antes.final.bloques}, dispersa ${dispersa.bloques}\n`);
   }
 }, 180_000);
 
