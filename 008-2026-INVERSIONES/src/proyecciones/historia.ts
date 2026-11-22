@@ -159,11 +159,13 @@ function matriz(e: EntradasProyeccion, preparadas: readonly Preparada[], s: Sele
   proyectadas.forEach((p, k) => {
     if (p.entrada.tipo !== "ACCION") return;
     const d = dividendosPorAccion(p.entrada, hoy);
-    avisosDiv.push(...d.avisos);
     decretosFuturos += d.decretosFuturos;
     // Con el precio del día anterior en 0 o inválido no hay rendimiento que calcular: el pago no se usa.
     const previo = (dia: Dia) => precios[(primerIndiceDesde(dias, dia) - 1) * K + k]!;
     const dentro = d.pagos.filter((x) => x.dia > dias[0]! && x.dia <= dias[T]! && previo(x.dia) > 0 && Number.isFinite(previo(x.dia)));
+    // El bruto de un decreto que no entra a la ventana no se suma: tampoco se avisa que entra.
+    const brutosDentro = new Set(dentro.filter((x) => x.origen === "DECRETO").map((x) => x.dia));
+    avisosDiv.push(...d.avisos.filter((x) => x.codigo !== "DECRETO_BRUTO" || (x.dia !== null && brutosDentro.has(x.dia))));
     dentro.forEach((x) => {
       const j = primerIndiceDesde(dias, x.dia);
       rendimientos[(j - 1) * K + k] = rendimientos[(j - 1) * K + k]! + x.porAccion / previo(x.dia);

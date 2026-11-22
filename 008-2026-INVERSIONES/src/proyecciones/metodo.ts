@@ -14,8 +14,8 @@ export const MINIMO_DIAS = 250;
 /** Un factor diario fuera de [SALTO_MIN, SALTO_MAX] sin escisión que lo explique se toma como evento no registrado. */
 export const SALTO_MIN = 0.5;
 export const SALTO_MAX = 2;
-/** Días calendario antes de un pago en que la tenencia debe quedar quieta (la misma aproximación de la fecha ex que
- * usa src/plan/dividendos.ts; una prueba fija que coincidan). */
+/** Días calendario antes de un pago SIN decreto en que la tenencia debe quedar quieta (la misma aproximación de la fecha
+ * ex que usa src/plan/dividendos.ts; una prueba fija que coincidan). Con decreto manda su fecha ex. */
 export const VENTANA_EX_DIAS = 10;
 /** Años de historia que se leen como máximo. */
 export const ANIOS_HISTORIA_MAX = 10;
@@ -33,5 +33,6 @@ export const MAX_SEMILLA = 4_294_967_295;
 export const DIAS_POR_MES = 365.25 / 12;
 /** Tolerancia relativa al comparar el valor final con lo aportado (ruido de coma flotante). */
 export const TOLERANCIA_RELATIVA = 1e-9;
-/** Cambia si cambia el método: la pantalla lo muestra y permite comparar resultados. */
-export const VERSION_METODO = "bootstrap-circular-v1";
+/** Cambia si cambia el método: la pantalla lo muestra y permite comparar resultados. v2: los pagos de Trii con decreto
+ * se miden con su fecha ex, como el plan (src/proyecciones/dividendos.ts); sin decretos, los números son los de la v1. */
+export const VERSION_METODO = "bootstrap-circular-v2";
