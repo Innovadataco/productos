@@ -1,7 +1,7 @@
 /**
  * Importa el CSV de series oficiales (TRM, TPM, IBR_3M_EA, IPC_INDICE) que escriben los exportadores del Mac (fase C:
- * C2b, C2c y C2d). En producción lo correrá inv-cargar con el temporal del sobre (vía B, `cargar-prod.sh importar-series`:
- * lo cablea C3); en local:
+ * C2b, C2c y C2d). En producción lo corre inv-cargar con el temporal del sobre (vía B: `cargar-prod.sh importar-series`,
+ * sin opciones); en local:
  *   npx tsx scripts/importar-series.ts --archivo <series.csv>
  * Lee un archivo REGULAR con tope, valida el CSV entero ANTES de abrir la base (todo o nada; el adelanto se mide contra
  * hoy en Colombia) y guarda por el camino único (src/datos-oficiales/series/guardar.ts). Imprime conteos, códigos de

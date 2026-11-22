@@ -7,8 +7,10 @@
 #   scripts/armar-sobre.sh <cabecera> [<archivo>] | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh <comando>
 #   <cabecera>: un argumento del CLI por línea, por ejemplo «--email» y en la línea siguiente el correo. Vacía (o
 #   /dev/null) para un comando sin argumentos.
-#   <archivo>: el CSV de Trii, la ficha, el PDF de la certificación o el CSV de cierres (importar-trii, importar-plan,
-#   importar-certificacion y corregir-corte-certificacion, e importar-precios).
+#   <archivo>: el CSV de Trii, la ficha, el PDF de la certificación, el CSV de cierres, el de valores del fondo, el de
+#   series o el de decretos (importar-trii, importar-plan, importar-certificacion, corregir-corte-certificacion,
+#   importar-precios, importar-valores-fondo, importar-series e importar-decretos). Los comandos sin archivo van con la
+#   cabecera vacía (/dev/null) o solo con sus opciones.
 #
 # Formato (lo lee docker/migrador/cargar.sh): una cabecera de EXACTAMENTE 4096 bytes (los argumentos, uno por
 # línea; con archivo, además --bytes <N> y --sha256 <H>; una línea vacía; relleno de líneas vacías) y después el
