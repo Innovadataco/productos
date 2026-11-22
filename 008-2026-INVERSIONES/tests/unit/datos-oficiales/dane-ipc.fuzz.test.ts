@@ -62,6 +62,15 @@ describe("fuzz · el lector del anexo del IPC nunca lanza ni esconde un error in
     expect(leidos).toBeLessThan(CORRIDAS);
   });
 
+  // code-reviewer B3: el libro y sus relaciones también (ahí se resuelve qué parte es la hoja y cuál los textos).
+  it(`${CORRIDAS} anexos con el libro mutado y ${CORRIDAS} con sus relaciones mutadas`, () => {
+    for (let semilla = 1; semilla <= CORRIDAS; semilla += 1) {
+      const r = azar(30_000 + semilla);
+      comprobar(leerAnexoIpc(anexoIpc({ libro: (x) => mutarTexto(x, r) }), HOY), `libro, semilla ${semilla}`);
+      comprobar(leerAnexoIpc(anexoIpc({ rels: (x) => mutarTexto(x, r) }), HOY), `relaciones, semilla ${semilla}`);
+    }
+  });
+
   it(`${CORRIDAS} anexos con los textos compartidos mutados`, () => {
     for (let semilla = 1; semilla <= CORRIDAS; semilla += 1) {
       const r = azar(20_000 + semilla);

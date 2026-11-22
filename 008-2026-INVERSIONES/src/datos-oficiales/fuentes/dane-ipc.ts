@@ -17,7 +17,8 @@
  * - La hoja dice «Total, Índice de Precios al Consumidor (IPC)», «Número Índice» y «Base Diciembre de 2018 = 100,00»:
  *   otro anexo del DANE (variaciones, divisiones, ciudades) u otra base no pasan. Las etiquetas y los meses se comparan
  *   normalizados (NFC, espacios colapsados, minúsculas).
- * - Estricto solo en lo que se lee: fuera de la tabla, una celda solo necesita una referencia válida y un tipo de OOXML.
+ * - Estricto solo en lo que se lee: fuera de la tabla, una celda solo necesita una referencia válida (de su fila, sin
+ *   repetir, con las filas en orden ascendente), un tipo de OOXML y, si es t="s", un texto compartido que exista.
  * Los valores: texto decimal (hasta 6 enteros y 20 decimales) redondeado a la escala del catálogo con tolerancia de
  * 1e-9, en BigInt y nunca con Number (65.510000000000005 es un artefacto del float del xlsx; 65.515 no lo es y se
  * rechaza); después, el rango de cordura del catálogo.
@@ -49,13 +50,13 @@ const DECIMALES_MAX = 20;
 const EXPONENTE_TOLERANCIA = 9;
 
 /** Etiquetas y meses del anexo, copiados de la descarga pública del 2026-11-21. */
-export const ETIQUETAS_ANEXO_IPC = Object.freeze({
+const ETIQUETAS_ANEXO_IPC = Object.freeze({
   mes: "Mes",
   titulo: "Total, Índice de Precios al Consumidor (IPC)",
   numero: "Número Índice",
   base: "Base Diciembre de 2018 = 100,00",
 });
-export const MESES_ANEXO_IPC: readonly string[] = Object.freeze([
+const MESES_ANEXO_IPC: readonly string[] = Object.freeze([
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ]);
 
@@ -363,7 +364,9 @@ function leer(bytes: Uint8Array, hoy: Date, serie: SerieCatalogo): readonly Valo
   const zip = abrirZipAcotado(bytes);
   const id = idDeLaHoja(parte(zip, PARTE_LIBRO));
   const { hoja, textos } = destinos(parte(zip, PARTE_RELACIONES), id);
-  const celdas = leerCeldas(parte(zip, hoja), leerTextos(parte(zip, textos)));
+  // Los textos antes que la hoja (la precedencia del encabezado): JavaScript evalúa los argumentos en orden.
+  const textosCompartidos = leerTextos(parte(zip, textos));
+  const celdas = leerCeldas(parte(zip, hoja), textosCompartidos);
   const mes = ubicarMes(celdas);
   const anios = leerAnios(celdas, mes);
   comprobarMesesYBordes(celdas, mes, mes.columna + anios.length);
