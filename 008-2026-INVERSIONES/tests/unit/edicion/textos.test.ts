@@ -18,10 +18,16 @@ function archivos(dir: string): string[] {
   });
 }
 
-/** Los códigos que el dominio del plan y el borde pueden devolver: `new ErrorPlan("X"…)` y `codigo: "X"`. */
+/**
+ * Los códigos que el dominio del plan y el borde pueden devolver: `new ErrorPlan("X"…)`, `codigo: "X"`, los del borde
+ * (`anotar(campo, "X")`) y los de los choques de unicidad (`CHOQUES_… = { clave: "X" }`).
+ */
 function codigosDelCodigo(): string[] {
   const fuentes = [...archivos(join(SRC, "plan")).filter((r) => !r.includes("/importar/"))].map((r) => readFileSync(r, "utf8"));
-  const codigos = fuentes.flatMap((t) => [...t.matchAll(/new ErrorPlan\("([A-Z_]+)"/g), ...t.matchAll(/codigo: "([A-Z_]+)"/g)].map((m) => m[1]!));
+  const choques = (t: string) => [...t.matchAll(/CHOQUES_\w+[^=]*=\s*\{([^}]*)\}/g)].flatMap((m) => [...m[1]!.matchAll(/"([A-Z_]+)"/g)]);
+  const codigos = fuentes.flatMap((t) =>
+    [...t.matchAll(/new ErrorPlan\("([A-Z_]+)"/g), ...t.matchAll(/codigo: "([A-Z_]+)"/g), ...t.matchAll(/anotar\([^,()]+, "([A-Z_]+)"\)/g), ...choques(t)].map((m) => m[1]!),
+  );
   return [...new Set(codigos)].sort();
 }
 

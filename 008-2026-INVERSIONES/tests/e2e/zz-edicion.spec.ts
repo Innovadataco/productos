@@ -1,7 +1,7 @@
 /**
  * E2E del área de edición (fase B, PR-B) contra la base e2e sembrada (tests/e2e/sembrar.ts y sembrar-plan.ts: v1 desde
  * el 1-jul-2024 con cinco reglas, v2 programada para hoy+30, la venta de FICTI del 14-nov-2024 sin decisión).
- *  - El dueño crea la versión 3 desde la vigente (cambia un nivel, quita una regla y agrega otra), registra la decisión
+ *  - El dueño crea la versión 3 desde la vigente (cambia un nivel, quita la vencida y otra, agrega una), registra la decisión
  *    de la venta de FICTI con su orden y la corrige; a 375 px no hay desborde, y en claro y en oscuro el botón se lee.
  *  - Un familiar no puede: las páginas de edición le dan 404, no ve las entradas y las tres API le responden 403
  *    «Solo lectura» sin cambiar la base.
@@ -43,6 +43,14 @@ const contrasteDelBoton = (page: Page, nombre: string) =>
     return (l1! + 0.05) / (l2! + 0.05);
   });
 
+/** Quita la regla cuyo detalle es `detalle` (el valor de un textarea no es texto de la página). */
+async function quitarPorDetalle(page: Page, detalle: string): Promise<void> {
+  const grupos = page.getByRole("group", { name: /^Regla \d+$/ });
+  const i = await grupos.evaluateAll((gs, d) => gs.findIndex((g) => g.querySelector("textarea")?.value === d), detalle);
+  expect(i, detalle).toBeGreaterThanOrEqual(0);
+  await grupos.nth(i).getByRole("button", { name: /^Quitar la regla \d+$/ }).click();
+}
+
 /** Cada control de los formularios tiene su etiqueta (nombre accesible). */
 const controlesSinEtiqueta = (page: Page) =>
   page.locator("main form").evaluate((f) => [...f.querySelectorAll("input, select, textarea")].filter((c) => (c as HTMLInputElement).labels?.length === 0).map((c) => c.id || c.tagName));
@@ -61,11 +69,14 @@ test.describe("el dueño edita el plan y el diario", () => {
     await expect(control(ficta, "Nivel")).toHaveValue("1.200");
     await control(ficta, "Nivel").fill("1.300");
     await control(page, "Motivo del cambio").fill("Ajuste ficticio desde la web (e2e)");
+    // La de FICTB venció (31-dic-2024, antes de la fecha de la versión): el formulario lo avisa y se quita.
+    const fictb = page.getByRole("group", { name: /^Regla \d+$/ }).filter({ has: page.locator("select option:checked", { hasText: /^FICTB$/ }) });
+    await expect(fictb.getByText("Su plazo es anterior a la fecha de la versión", { exact: false })).toBeVisible();
+    await fictb.getByRole("button", { name: /^Quitar la regla \d+$/ }).click();
     // Se quita la regla escrita (la de «Siempre orden límite») y se agrega una para FICTC.
-    const escrita = page.getByRole("group", { name: /^Regla \d+$/ }).filter({ has: page.getByText("Siempre orden límite (ficticia)") });
-    await escrita.getByRole("button", { name: /^Quitar la regla \d+$/ }).click();
+    await quitarPorDetalle(page, "Siempre orden límite (ficticia)");
     await page.getByRole("button", { name: "Agregar una regla", exact: true }).click();
-    const nueva = regla(page, 5);
+    const nueva = regla(page, 4);
     await expect(control(nueva, "Especie")).toBeFocused();
     await control(nueva, "Especie").selectOption({ label: "FICTC" });
     await control(nueva, "Detalle").fill("Mantener FICTC (ficticia, e2e)");
@@ -73,9 +84,10 @@ test.describe("el dueño edita el plan y el diario", () => {
     await expect(page).toHaveURL("/plan?version=3");
     const p = new PaginaPlan(page);
     await expect(p.titulo).toHaveText("Versión 3 del plan");
-    await expect(p.reglas.getByRole("row")).toHaveCount(6);
+    await expect(p.reglas.getByRole("row")).toHaveCount(5);
     expect((await p.celdas(p.fila(p.reglas, "FICTA")))[1]).toBe("$ 1.300");
-    await expect(p.fila(p.reglas, "FICTC")).toContainText("Mantener FICTC (ficticia, e2e)");
+    // FICTC ya tenía su regla (comprar bajo el nivel); la nueva se suma.
+    await expect(p.reglas).toContainText("Mantener FICTC (ficticia, e2e)");
     await expect(p.reglas).not.toContainText("Siempre orden límite");
 
     await page.goto("/decisiones");
@@ -138,6 +150,10 @@ const conteos = async () => {
 };
 
 test.describe("la familia no puede editar", () => {
+  // Las páginas de edición le responden 404 y las API 403 (el navegador lo registra en la consola): es lo que se prueba.
+  // Una sola expresión: con dos elementos, test.use leería el arreglo como [valor, opciones] del fixture.
+  test.use({ erroresEsperados: [/\/edicion\/|\/api\/(plan\/versiones|decisiones(\/enlaces)?)$/] });
+
   test("las páginas de edición le dan 404, no ve las entradas y las API le responden 403 sin cambiar la base", async ({ page }, info) => {
     await altaDeFamiliar(page, info);
     const antes = await conteos();
@@ -149,16 +165,19 @@ test.describe("la familia no puede editar", () => {
       await page.goto(ruta);
       await expect(page.locator('a[href^="/edicion"]'), ruta).toHaveCount(0);
     }
-    const origen = new URL(page.url()).origin;
     const pedidos = [
       ["/api/plan/versiones", { vigenteDesde: "2027-03-17", motivo: "Intento ficticio", versionBase: 0, reglas: [] }],
       ["/api/decisiones", { fechaDecision: "2024-11-14", instrumentoId: "x", accion: "VENDER", cantidad: "", reglaId: null, excepcion: false, motivo: "Intento ficticio", ordenId: null, corrige: null }],
       ["/api/decisiones/enlaces", { decisionId: "x", ordenId: "y" }],
     ] as const;
+    // Desde la página, con su cookie de sesión y su Origin reales (como lo haría un formulario).
     for (const [ruta, cuerpo] of pedidos) {
-      const r = await page.request.post(ruta, { data: cuerpo, headers: { origin: origen } });
-      expect(r.status(), ruta).toBe(403);
-      expect(await r.json(), ruta).toEqual({ error: MENSAJE_SOLO_LECTURA });
+      const r = await page.evaluate(async ({ ruta: url, cuerpo: datos }) => {
+        const respuesta = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(datos) });
+        return { estado: respuesta.status, cuerpo: (await respuesta.json()) as unknown };
+      }, { ruta, cuerpo });
+      expect(r.estado, ruta).toBe(403);
+      expect(r.cuerpo, ruta).toEqual({ error: MENSAJE_SOLO_LECTURA });
     }
     expect(await conteos()).toEqual(antes);
   });

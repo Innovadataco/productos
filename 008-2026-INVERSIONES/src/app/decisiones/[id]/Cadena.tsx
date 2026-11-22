@@ -142,7 +142,19 @@ function Resultados({ v }: { readonly v: VistaDecision }) {
   );
 }
 
-function Contenido({ datos }: { readonly datos: DatosDecision }) {
+/** Las entradas al área de edición: solo el dueño, solo en una decisión vigente; enlaces, no formularios. */
+function Entradas({ v }: { readonly v: VistaDecision }) {
+  if (v.decision.corregidaPor) return null;
+  const id = encodeURIComponent(v.decision.id);
+  return (
+    <p className="entradas-edicion">
+      <a className="entrada-edicion" href={`/edicion/decision?corrige=${id}`}>Corregir esta decisión</a>
+      {v.decision.accion === "NO_ACTUAR" ? null : <a className="entrada-edicion" href={`/edicion/enlace?decision=${id}`}>Enlazar una orden de Trii</a>}
+    </p>
+  );
+}
+
+function Contenido({ datos, soloLectura }: { readonly datos: DatosDecision; readonly soloLectura: boolean }) {
   if (datos.estado === "NO_EXISTE") {
     return (
       <section className="hero plan-hero" aria-labelledby="t-hero">
@@ -158,6 +170,7 @@ function Contenido({ datos }: { readonly datos: DatosDecision }) {
       <section className="hero plan-hero" aria-labelledby="t-hero">
         <div className="eyebrow">Diario de decisiones</div>
         <h1 id="t-hero">{`${textoAccionDecision(v.decision.accion, false)} · ${v.decision.especie} · ${fecha(v.decision.fecha)}`}</h1>
+        {soloLectura ? null : <Entradas v={v} />}
       </section>
       <Pasos v={v} />
       <Decision v={v} />
@@ -172,7 +185,7 @@ export function Cadena({ datos, soloLectura = false }: { readonly datos: DatosDe
     <>
       <Encabezado actual="decisiones" soloLectura={soloLectura} />
       <main className="wrap plan">
-        <Contenido datos={datos} />
+        <Contenido datos={datos} soloLectura={soloLectura} />
         <footer className="pie"><p>{PIE_DIARIO}</p></footer>
       </main>
     </>

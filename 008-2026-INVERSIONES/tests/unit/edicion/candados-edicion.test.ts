@@ -26,8 +26,13 @@ function archivos(dir: string): string[] {
 const PERMITIDOS_CLIENTE = /^(react|\.\/[\w-]+|\.\.\/(textos|enviar|tipos|campos)|@\/app\/edicion\/(textos|enviar|tipos|campos))$/;
 
 const esCliente = (t: string) => /^\s*["']use client["']/m.test(t);
+/** Lo que el módulo trae en valor: `import … from`, `import "…"` y `export … from` (una re-exportación también trae). */
 const importacionesDeValor = (t: string): string[] =>
-  [...t.matchAll(/^import\s+(?!type\b)[^"';]*?from\s+["']([^"']+)["']/gm), ...t.matchAll(/^import\s+["']([^"']+)["']/gm)].map((m) => m[1]!);
+  [
+    ...t.matchAll(/^import\s+(?!type\b)[^"';]*?from\s+["']([^"']+)["']/gm),
+    ...t.matchAll(/^import\s+["']([^"']+)["']/gm),
+    ...t.matchAll(/^export\s+(?!type\b)[^"';]*?from\s+["']([^"']+)["']/gm),
+  ].map((m) => m[1]!);
 
 export function violacionesDeCliente(t: string): string[] {
   if (!esCliente(t)) return [];
@@ -51,6 +56,7 @@ describe("candados del área de edición · controles positivos", () => {
     expect(violacionesDeCliente(fuente('import { exigirDueno } from "@/auth/sesion";'))).toEqual(["@/auth/sesion"]);
     expect(violacionesDeCliente(fuente('import { useState } from "react";\nimport type { X } from "@/plan/versiones";\nimport { MENSAJES } from "../textos";\nimport { Campo } from "./Campo";'))).toEqual([]);
     expect(violacionesDeCliente('import { db } from "@/lib/db";')).toEqual([]);
+    expect(violacionesDeCliente(fuente('export { guardar } from "@/plan/versiones";'))).toEqual(["@/plan/versiones"]);
   });
 
   it("el común muerde", () => {
@@ -83,8 +89,10 @@ describe("candados del área de edición · el árbol real", () => {
       const ruta = join(EDICION, nombre);
       if (!existsSync(ruta)) continue;
       const t = leer(ruta);
-      expect(t, nombre).not.toMatch(/["']server-only["']|@\/lib\/db|@prisma\/client["'];?\s*$|@\/auth\/sesion|next\/headers/m);
-      for (const m of importacionesDeValor(t)) expect(m, `${nombre} → ${m}`).toMatch(/^(\.\.\/_plan\/textos|\.\/[\w-]+)$/);
+      // Los tipos de Prisma (`import type`) no traen nada al cliente; lo que se importa en valor lo mira la regla de abajo.
+      expect(t, nombre).not.toMatch(/["']server-only["']|@\/lib\/db|@\/auth\/sesion|next\/headers/m);
+      // Solo los textos y los formatos deterministas de las pantallas (puros: sin base, sin Intl ni Date).
+      for (const m of importacionesDeValor(t)) expect(m, `${nombre} → ${m}`).toMatch(/^(\.\.\/_plan\/textos|\.\.\/_plan\/formato|\.\.\/tablero\/formato|\.\/[\w-]+)$/);
     }
   });
 

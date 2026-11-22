@@ -205,13 +205,13 @@ describe("el candado de una decisión (consultivo, sin FOR UPDATE)", () => {
     await db.$transaction(
       async (tx) => {
         expect(await bloquearDecision(tx, d.id)).toBe(true);
-        const segundo = db.$transaction(async (tx2) => {
+        // El segundo no se espera aquí (esperaría al candado que esta transacción tiene): se mira después.
+        void db.$transaction(async (tx2) => {
           await bloquearDecision(tx2, d.id);
           orden.push("segundo");
         });
         await new Promise((r) => setTimeout(r, 300));
         orden.push("primero");
-        return segundo.catch(() => undefined) && undefined;
       },
       { timeout: 10_000 },
     );

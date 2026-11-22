@@ -32,7 +32,8 @@ describe("origenRechazado", () => {
   it("el origen de la lista pasa; otro, ninguno o un Sec-Fetch-Site ajeno dan 403 sin caché", async () => {
     vi.stubEnv("NODE_ENV", "development");
     expect(origenRechazado(pedido("{}"))).toBeNull();
-    for (const cabeceras of [{ origin: "https://otro.ejemplo.invalid" }, { origin: "null" }, { "sec-fetch-site": "cross-site" }]) {
+    const casos: readonly Record<string, string>[] = [{ origin: "https://otro.ejemplo.invalid" }, { origin: "null" }, { "sec-fetch-site": "cross-site" }];
+    for (const cabeceras of casos) {
       const r = origenRechazado(pedido("{}", cabeceras));
       expect(r?.status).toBe(403);
       expect(r?.headers.get("cache-control")).toBe("no-store");

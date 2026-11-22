@@ -149,6 +149,14 @@ describe("FormularioPlan", () => {
     expect(texto(m.contenedor.querySelector("[role=alert]"))).toContain(MENSAJES.DESCONOCIDO);
   });
 
+  it("avisa en la regla cuyo plazo es anterior a la fecha de la versión (el dominio la rechazaría)", async () => {
+    await m.pintar(createElement(FormularioPlan, { datos: { ...DATOS, reglas: [{ ...DATOS.reglas[0]!, plazoHasta: "2027-01-31" }, DATOS.reglas[1]!] } }));
+    expect(texto(reglas()[0])).toContain("Su plazo es anterior a la fecha de la versión");
+    expect(texto(reglas()[1])).not.toContain("Su plazo es anterior");
+    await escribir(porEtiqueta("Rige desde"), "2027-01-20");
+    expect(texto(reglas()[0])).not.toContain("Su plazo es anterior");
+  });
+
   it("avisa si la base no es la vigente y si la fecha elegida ya pasó (no la cambia)", async () => {
     await m.pintar(createElement(FormularioPlan, { datos: { ...DATOS, base: { numero: 2, desde: "2021-06-01", tipo: "HISTORICA" } } }));
     expect(texto(m.contenedor)).toContain("versión 2");

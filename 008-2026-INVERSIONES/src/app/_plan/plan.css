@@ -33,3 +33,8 @@
 /* Encabezados de columna alineados con su dato: texto a la izquierda, cifras a la derecha. */
 .plan th[scope="col"] { text-align: left; }
 .plan th[scope="col"].num { text-align: right; }
+/* Las entradas al área de edición (fase B, PR-B): enlaces que solo ve el dueño, nunca formularios. */
+.plan .entradas-edicion { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; }
+.plan .entrada-edicion { display: inline-block; border: 1px solid var(--gold); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; text-decoration: none; }
+.plan .entrada-edicion:hover { background: var(--bg-2); }
+.plan .entrada-edicion:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
