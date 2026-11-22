@@ -3,11 +3,11 @@
 // inventadas (trm.ficticio.ts).
 import { Writable } from "node:stream";
 import { describe, expect, it } from "vitest";
-import { CATALOGO } from "@/datos-oficiales/catalogo";
+import { ADELANTO_TRM_DIAS, CATALOGO } from "@/datos-oficiales/catalogo";
 import {
   USO_EXPORTAR_TRM, correrExportarTrm, exportarTrm, leerArgumentosExportarTrm, reporteExportacionTrm, type EntornoExportarTrm, type ResultadoExportacionTrm,
 } from "@/datos-oficiales/fuentes/exportar-trm";
-import { MAX_DIAS_RANGO_TRM } from "@/datos-oficiales/fuentes/trm-sfc";
+import { MAX_DIAS_RANGO_TRM, trmDelCatalogo } from "@/datos-oficiales/fuentes/trm-sfc";
 import { ENCABEZADO_CSV_SERIES, leerCsvSeries } from "@/datos-oficiales/series/csv-series";
 import type { BuscarHttp } from "@/lib/http-acotado";
 import { ErrorArgumentosCarga } from "@/precios/argumentos-carga";
@@ -86,6 +86,12 @@ describe("leerArgumentosExportarTrm", () => {
     expect(argumentos(["--desde", "2027-03-10"], { npm_config_desde: "2027-03-10" })).toEqual({ desde: dia("2027-03-10"), hasta: dia("2027-03-13") });
   });
 
+  // code-reviewer BAJO: el uso imprime ADELANTO_TRM_DIAS y la lógica usa el adelanto de la serie: son el mismo.
+  it("el adelanto del uso es el de la TRM del catálogo", () => {
+    expect(trmDelCatalogo()!.serie.adelantoMaximoDias).toBe(ADELANTO_TRM_DIAS);
+    expect(USO_EXPORTAR_TRM).toContain(`hoy + ${ADELANTO_TRM_DIAS} día(s)`);
+  });
+
   it("el uso dice el comando, el adelanto, el tope del rango y las salidas", () => {
     expect(USO_EXPORTAR_TRM).toContain("Uso: npx tsx scripts/exportar-trm.ts --desde AAAA-MM-DD [--hasta AAAA-MM-DD]");
     expect(USO_EXPORTAR_TRM).toContain(String(MAX_DIAS_RANGO_TRM));
@@ -126,6 +132,44 @@ describe("exportarTrm · el CSV canónico de series", () => {
     const { buscar } = buscarQueResponde([fila("2027-03-10", "2027-03-10", "4127.39"), fila("2027-03-13", "2027-03-15", "4108.53"), fila("2027-03-16", "2027-03-16", "4122.6")]);
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
     expect(r).toMatchObject({ codigo: null, filas: 3, descartadas: 0, diasSinVigencia: 2, primerDiaSinVigencia: dia("2027-03-11") });
+  });
+
+  // code-reviewer MEDIO: varios huecos separados se suman y el primero es el más temprano.
+  it("tres huecos separados (11, 13 y 15): suma 3 y el primero es el 11", async () => {
+    const { buscar } = buscarQueResponde([fila("2027-03-10", "2027-03-10", "4127.39"), fila("2027-03-12", "2027-03-12", "4119.07"), fila("2027-03-14", "2027-03-14", "4113.29"), fila("2027-03-16", "2027-03-16", "4122.6")]);
+    const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
+    expect(r).toMatchObject({ codigo: null, filas: 4, diasSinVigencia: 3, primerDiaSinVigencia: dia("2027-03-11") });
+  });
+
+  // code-reviewer MEDIO y security-reviewer BAJO-1: una respuesta corta por la cola o por la cabeza no salía 0 en silencio.
+  it("la fuente no trae los últimos días del rango (ya pasados): los cuenta desde el primero que falta", async () => {
+    const { buscar } = buscarQueResponde(SEMANA_FICTICIA.slice(0, 3));
+    const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
+    expect(r).toMatchObject({ codigo: null, filas: 3, diasSinVigencia: 4, primerDiaSinVigencia: dia("2027-03-13") });
+  });
+
+  it("la fuente no trae los primeros días del rango: los cuenta desde --desde", async () => {
+    const { buscar } = buscarQueResponde(SEMANA_FICTICIA.slice(2));
+    const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
+    expect(r).toMatchObject({ codigo: null, filas: 3, diasSinVigencia: 2, primerDiaSinVigencia: dia("2027-03-10") });
+  });
+
+  it("la vigencia de mañana aún sin publicar no es un hueco (el viernes sin la de sábado a lunes): 0", async () => {
+    const { buscar } = buscarQueResponde(SEMANA_FICTICIA.slice(0, 3));
+    const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: dia("2027-03-13"), hoy: VIERNES, buscar });
+    expect(r).toMatchObject({ codigo: null, filas: 3, diasSinVigencia: 0, primerDiaSinVigencia: null });
+  });
+
+  it("una vigencia que empieza antes de --desde lo cubre: sin hueco al inicio", async () => {
+    const { buscar } = buscarQueResponde(SEMANA_FICTICIA.slice(3));
+    const r = await exportarTrm({ desde: dia("2027-03-14"), hasta: MARTES, hoy: MARTES, buscar });
+    expect(r).toMatchObject({ codigo: null, filas: 2, diasSinVigencia: 0, primeraDesde: dia("2027-03-13") });
+  });
+
+  it("un descartado en el borde final también cuenta como día sin vigencia", async () => {
+    const { buscar } = buscarQueResponde([...SEMANA_FICTICIA.slice(0, 4), fila("2027-03-16", "2027-03-16", "4122,6")]);
+    const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
+    expect(r).toMatchObject({ codigo: null, filas: 4, descartadas: 1, diasSinVigencia: 1, primerDiaSinVigencia: MARTES });
   });
 
   it.each<[string, unknown, string, number]>([
@@ -172,7 +216,7 @@ describe("reporteExportacionTrm · stderr: conteos, códigos y fechas, nunca val
     const rep = reporteExportacionTrm({ ...base, filas: 4, descartadas: 1, diasSinVigencia: 1, primerDiaSinVigencia: dia("2027-03-11") });
     expect(rep.codigoSalida).toBe(3);
     expect(rep.lineas.join("\n")).toContain("⚠️  TRM · 1 fila(s) descartada(s) (TRM_VALOR_INVALIDO)");
-    expect(rep.lineas.join("\n")).toContain("⚠️  TRM · 1 día(s) sin vigencia entre filas (el primero: 2027-03-11)");
+    expect(rep.lineas.join("\n")).toContain("⚠️  TRM · 1 día(s) del rango sin vigencia (el primero: 2027-03-11)");
   });
 
   it("días sin vigencia sin descartes: 3", () => {
