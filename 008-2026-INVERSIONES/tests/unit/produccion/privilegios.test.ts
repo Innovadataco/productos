@@ -151,4 +151,19 @@ describe("privilegios de inv_precios", () => {
     expect(secuencias).toBeGreaterThan(guarda);
     expect(primerGrant).toBeGreaterThan(Math.max(tablas, secuencias));
   });
+
+  // El disparador precio_cierre_insercion es SECURITY INVOKER: lee la certificación con los privilegios de quien
+  // inserta. Si se le quitaran a inv_precios, cada cierre fallaría (falla cerrada), pero el servicio dejaría de guardar.
+  it("le da las columnas que lee el disparador de integridad (precio de valoración del día de corte)", () => {
+    const migracion = readdirSync(ruta008("prisma/migrations")).find((c) => c.endsWith("_precios_integridad"));
+    expect(migracion).toBeDefined();
+    const disparador = leer008(`prisma/migrations/${migracion}/migration.sql`);
+    expect(disparador).toContain('SELECT p."precioValoracion" INTO ref');
+    expect(disparador).toContain('FROM public."certificacion_posicion" p JOIN public."certificacion" c ON c."id" = p."certificacionId"');
+    expect(disparador).toContain('WHERE p."instrumentoId" = NEW."instrumentoId" AND c."fechaCorte" = NEW."fecha";');
+    const filas = filasPermisos(PERMISOS_PRECIOS);
+    for (const f of ["certificacion.id", "certificacion.fechaCorte", "certificacion_posicion.certificacionId", "certificacion_posicion.instrumentoId", "certificacion_posicion.precioValoracion"]) {
+      expect(filas).toContain(`${f} SELECT`);
+    }
+  });
 });

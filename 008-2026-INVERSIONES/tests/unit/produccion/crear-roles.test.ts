@@ -1,7 +1,9 @@
 // crear-roles-prod.sh: crea inv_dueno e inv_app leyendo sus claves del archivo de producción y se las
 // pasa a psql SOLO por la entrada estándar (nunca por argumentos, que se ven en `ps`). inv_precios (el servicio
-// de precios, PR 3) es opcional: sin INV_PRECIOS_DATABASE_URL en el archivo se omite y se avisa; con ella, se crea
-// y se le fija la clave igual que a los otros dos; presente pero mal formada, aborta sin tocar Docker.
+// de precios) existe SIEMPRE desde la primera corrida (decisión del CEO): sin INV_PRECIOS_DATABASE_URL en el archivo
+// queda NOLOGIN y sin clave (también si antes tenía LOGIN: quitar la línea lo desactiva); con ella, recibe LOGIN y su
+// clave por stdin; presente pero mal formada, aborta sin tocar Docker. Así los GRANT de inv_precios que traiga un
+// respaldo siempre encuentran el rol en la restauración (pg_restore --exit-on-error).
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -158,50 +160,65 @@ function sqlRolPrecios(): string {
   return r.stdout;
 }
 
-describe("crear-roles-prod.sh · inv_precios (opcional hasta el servicio de precios)", () => {
+describe("crear-roles-prod.sh · inv_precios (existe siempre; LOGIN solo con su secreto)", () => {
   const sinDocker = (falsos: ReturnType<typeof preparar>["falsos"]) => falsos.llamadas().filter((l) => l[0] === "docker");
+  const SIN_LOGIN = "ALTER ROLE inv_precios WITH NOLOGIN PASSWORD NULL;";
+  const CON_LOGIN = "ALTER ROLE inv_precios WITH LOGIN PASSWORD :'clave_precios';";
+  /** Las posiciones de los trozos en el SQL, en el orden dado: todas presentes y crecientes. */
+  const enOrden = (sql: string, trozos: readonly string[]) => {
+    const posiciones = trozos.map((trozo) => sql.indexOf(trozo));
+    expect(posiciones.every((p) => p >= 0), JSON.stringify(posiciones)).toBe(true);
+    expect([...posiciones].sort((a, b) => a - b)).toEqual(posiciones);
+  };
 
-  it("sin INV_PRECIOS_DATABASE_URL no falla: omite inv_precios, lo avisa y no le crea rol ni clave", async () => {
+  it("sin INV_PRECIOS_DATABASE_URL crea inv_precios NOLOGIN y sin clave (después de los otros dos) y lo avisa", async () => {
     const { falsos, stdin, env } = preparar();
     const r = await correr(SCRIPT, [], env);
     expect(r.status, r.stderr).toBe(0);
     expect(r.stderr).toMatch(/INV_PRECIOS_DATABASE_URL/);
-    expect(r.stderr).toMatch(/se omite inv_precios/);
+    expect(r.stderr).toMatch(/inv_precios queda sin LOGIN y sin clave/);
+    expect(r.stderr).not.toMatch(/se omite inv_precios/);
     const sql = readFileSync(stdin, "utf8");
-    expect(sql).not.toContain("CREATE ROLE inv_precios");
+    enOrden(sql, ["ALTER ROLE inv_app PASSWORD :'clave_app';", sqlRolPrecios(), SIN_LOGIN]);
     expect(sql).not.toContain("clave_precios");
-    expect(sql).not.toMatch(/ALTER ROLE inv_precios/);
-    expect(sql).toContain("ALTER ROLE inv_app PASSWORD :'clave_app';");
+    expect(sql).not.toContain(CON_LOGIN);
     expect(sinDocker(falsos)).toHaveLength(2);
   });
 
-  it("la línea comentada de la plantilla cuenta como ausente: omite y avisa", async () => {
+  it("la línea comentada de la plantilla cuenta como ausente: NOLOGIN y sin clave", async () => {
     const { base, stdin, env } = preparar();
     appendFileSync(path.join(base, ".env.inversiones.production"), "# INV_PRECIOS_DATABASE_URL=postgresql://inv_precios:<clave>@inv-008-db:5432/inversiones?connection_limit=2\n");
     const r = await correr(SCRIPT, [], env);
     expect(r.status, r.stderr).toBe(0);
-    expect(r.stderr).toMatch(/se omite inv_precios/);
-    expect(readFileSync(stdin, "utf8")).not.toContain("clave_precios");
+    expect(r.stderr).toMatch(/inv_precios queda sin LOGIN y sin clave/);
+    const sql = readFileSync(stdin, "utf8");
+    expect(sql).toContain(SIN_LOGIN);
+    expect(sql).not.toContain("clave_precios");
   });
 
-  it("con la URL (formato del ESTADO) crea el rol y le fija la clave por stdin, después de los otros dos", async () => {
+  it("con la URL (formato del ESTADO) le da LOGIN y la clave en una sola sentencia, por stdin, después de los otros dos", async () => {
     const { falsos, stdin, env } = preparar({ INV_PRECIOS_DATABASE_URL: URL_PRECIOS });
     const r = await correr(SCRIPT, [], env);
     expect(r.status, r.stderr).toBe(0);
-    expect(r.stderr).not.toMatch(/se omite inv_precios/);
+    expect(r.stderr).not.toMatch(/queda sin LOGIN/);
     const sql = readFileSync(stdin, "utf8");
-    const posiciones = [
-      "ALTER ROLE inv_app PASSWORD :'clave_app';",
-      sqlRolPrecios(),
-      `\\set clave_precios '${CLAVE_PRECIOS}'`,
-      "ALTER ROLE inv_precios PASSWORD :'clave_precios';",
-      "\\unset clave_precios",
-    ].map((trozo) => sql.indexOf(trozo));
-    expect(posiciones.every((p) => p >= 0), JSON.stringify(posiciones)).toBe(true);
-    expect([...posiciones].sort((a, b) => a - b)).toEqual(posiciones);
+    enOrden(sql, ["ALTER ROLE inv_app PASSWORD :'clave_app';", sqlRolPrecios(), `\\set clave_precios '${CLAVE_PRECIOS}'`, CON_LOGIN, "\\unset clave_precios"]);
+    expect(sql).not.toContain(SIN_LOGIN);
     expect(sql.indexOf("SET log_min_error_statement = 'panic';")).toBeLessThan(sql.indexOf("\\set clave_precios"));
-    expect(sql).toMatch(/SELECT 'roles listos: '[^\n]*'inv_precios'/);
     expect(sinDocker(falsos)).toHaveLength(2);
+  });
+
+  it("con o sin la URL, el aviso y el «roles listos» nombran a inv_precios y dicen si quedó sin LOGIN", async () => {
+    const casos: ReadonlyArray<Record<string, string>> = [{}, { INV_PRECIOS_DATABASE_URL: URL_PRECIOS }];
+    for (const cambios of casos) {
+      const { stdin, env } = preparar(cambios);
+      const r = await correr(SCRIPT, [], env);
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.stderr).toMatch(/creando o actualizando inv_dueno, inv_app e inv_precios/);
+      const listos = readFileSync(stdin, "utf8").split("\n").find((l) => l.startsWith("SELECT 'roles listos: '")) ?? "";
+      expect(listos).toContain("'inv_precios'");
+      expect(listos).toMatch(/NOT rolcanlogin THEN ' \(sin LOGIN\)'/);
+    }
   });
 
   it("la clave de inv_precios nunca aparece en los argumentos de ningún comando ni en la salida", async () => {
@@ -247,8 +264,9 @@ describe("sql_rol_precios (SQL puro, sin claves)", () => {
     expect(sql).not.toMatch(/\$\{|\$\(/);
   });
 
-  it("crea inv_precios solo si no existe, con LOGIN y sin clave", () => {
-    expect(sinComentarios).toMatch(/IF NOT EXISTS \(SELECT 1 FROM pg_roles WHERE rolname = 'inv_precios'\) THEN\s+CREATE ROLE inv_precios LOGIN;/);
+  it("crea inv_precios solo si no existe, NOLOGIN y sin clave; nunca le da LOGIN (eso va solo con su secreto)", () => {
+    expect(sinComentarios).toMatch(/IF NOT EXISTS \(SELECT 1 FROM pg_roles WHERE rolname = 'inv_precios'\) THEN\s+CREATE ROLE inv_precios NOLOGIN;/);
+    expect(sinComentarios.replace(/NOLOGIN/g, "")).not.toMatch(/LOGIN/);
     expect(sinComentarios).not.toMatch(/PASSWORD/i);
     expect(sinComentarios).not.toMatch(/^\s*\\/m);
   });
@@ -256,7 +274,13 @@ describe("sql_rol_precios (SQL puro, sin claves)", () => {
   // 4 conexiones: el pool de su URL (connection_limit=2) dos veces, p. ej. precios:actualizar y actualizar-fondo a la
   // vez (revisión de base, M2). Con inv_dueno (5) e inv_app (10) suman 19 de las 30 de la base.
   it("sin superusuario, sin crear bases ni roles, sin replicación, sin BYPASSRLS, NOINHERIT y 4 conexiones", () => {
-    expect(sinComentarios).toMatch(/ALTER ROLE inv_precios WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 4;/);
+    expect(sinComentarios).toMatch(/ALTER ROLE inv_precios WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 4;/);
+  });
+
+  it("sql_precios_sin_login (sin el secreto) le quita el LOGIN y la clave, también si ya los tenía", () => {
+    const r = funcion(SCRIPT, "sql_precios_sin_login", { PATH: process.env.PATH });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toBe("ALTER ROLE inv_precios WITH NOLOGIN PASSWORD NULL;\n");
   });
 
   it("solo se conecta a la base y usa el esquema: los privilegios de tablas los da privilegios.sql", () => {
