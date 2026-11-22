@@ -8,19 +8,24 @@
  *   La misma fecha con otras filas es CONFLICTO_CERTIFICACION: lo importado no se edita (se revierte la carga).
  * - El mismo archivo (sha256) con otra fecha de corte es ARCHIVO_YA_CARGADO.
  * - El archivo original no se guarda: solo su sha256, un nombre fijo y las filas cifradas.
+ * - Corte real (frente certificacion-corte-real): si la fecha de corte no puede ser la de la certificación (el PDF se
+ *   generó antes del cierre definitivo de ese día, o después del corte pedido), el rechazo lleva `pistaCorte` (el día
+ *   que el CLI sugiere) y `yaCargadaEn` (el corte con que ya está cargado ese mismo PDF, si lo está): así el CLI manda
+ *   a corregir el corte en vez de reimportar. Nada de eso se guarda en la base.
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { ErrorCifrado } from "../../cifrado/errores";
 import { obtenerLlavero, type Llavero } from "../../cifrado/llavero";
 import { analizarCertificacion, errorDeDocumento as documento, type CertificacionAnalizada } from "./analisis";
-import { aniosSembrados, isoDia, validarFechaCorte } from "./fecha-corte";
+import { isoDia, leerCalendarioCorte, ultimoCorteDefinitivo, validarFechaCorte, type CalendarioCorte, type PistaCorte } from "./fecha-corte";
 import type { ErrorFilaAv } from "./filas";
 import {
   ErrorImportacionAv, TIPO_FUENTE, filasSiCoinciden, guardarCertificacion, guardarFilas, registrarVistas, resolverEspecies, resolverFondos,
 } from "./guardar";
 import { MAX_BYTES } from "./pdf/documento";
 
+export type { PistaCorte };
 export const MAX_ERRORES_REGISTRADOS = 100;
 const MAX_INTENTOS = 2;
 const esChoque = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
@@ -48,11 +53,17 @@ export interface ResultadoImportacionAv {
   readonly instrumentosCreados: number;
   readonly fondoVinculado: boolean;
   readonly errores: readonly ErrorFilaAv[];
+  /** Solo en un rechazo porque la fecha de corte no es el corte real: el día que se sugiere y por qué. */
+  readonly pistaCorte?: PistaCorte | null;
+  /** Solo junto con `pistaCorte`: el corte con que ese mismo PDF ya está cargado (AAAA-MM-DD), o null. */
+  readonly yaCargadaEn?: string | null;
 }
 
-const sinNada = { repetida: false, certificacionId: null, filasNuevas: 0, filasRepetidas: 0, instrumentosCreados: 0, fondoVinculado: false } as const;
+const sinNada = { repetida: false, certificacionId: null, filasNuevas: 0, filasRepetidas: 0, instrumentosCreados: 0, fondoVinculado: false, pistaCorte: null, yaCargadaEn: null } as const;
 
-async function registrarRechazo(db: PrismaClient, base: Base, filasTotal: number, errores: readonly ErrorFilaAv[]): Promise<ResultadoImportacionAv> {
+type Pista = Pick<ResultadoImportacionAv, "pistaCorte" | "yaCargadaEn">;
+
+async function registrarRechazo(db: PrismaClient, base: Base, filasTotal: number, errores: readonly ErrorFilaAv[], pista: Pista = {}): Promise<ResultadoImportacionAv> {
   const registrados = errores.slice(0, MAX_ERRORES_REGISTRADOS);
   const carga = await db.cargaArchivo.create({
     data: {
@@ -60,7 +71,7 @@ async function registrarRechazo(db: PrismaClient, base: Base, filasTotal: number
       errores: { total: errores.length, errores: registrados } as unknown as Prisma.InputJsonValue, cargadoPorId: base.usuarioId,
     },
   });
-  return { ...sinNada, cargaId: carga.id, estado: "RECHAZADO", filasTotal, errores: registrados };
+  return { ...sinNada, ...pista, cargaId: carga.id, estado: "RECHAZADO", filasTotal, errores: registrados };
 }
 
 interface Base {
@@ -71,9 +82,18 @@ interface Base {
   readonly fondoCodigo: string | null;
 }
 
-async function contextoCalendario(db: PrismaClient) {
-  const noHabiles = (await db.calendarioBvc.findMany({ where: { esHabil: false }, select: { dia: true } })).map((c) => c.dia);
-  return { noHabiles: new Set(noHabiles.map(isoDia)), aniosSembrados: aniosSembrados(noHabiles) };
+const POR_EL_PDF = new Set(["FECHA_CORTE_ANTES_DEL_CIERRE", "FECHA_CORTE_POSTERIOR_AL_PDF"]);
+
+/** El corte con que ese mismo archivo ya está cargado (una carga CARGADO de certificación con su sha256), o null. */
+async function cargadaEn(db: PrismaClient, sha256: string): Promise<string | null> {
+  const carga = await db.cargaArchivo.findFirst({ where: { tipoFuente: TIPO_FUENTE, sha256, estado: "CARGADO" }, orderBy: { cargadoEn: "asc" }, select: { fechaCorte: true } });
+  return carga?.fechaCorte ? isoDia(carga.fechaCorte) : null;
+}
+
+/** Si el rechazo fue por la CreationDate del PDF: el día con cierre definitivo a esa hora y si ese PDF ya está cargado. */
+async function pistaDeFecha(db: PrismaClient, codigo: string, creadoEn: Date | null, calendario: CalendarioCorte, sha256: string): Promise<Pista> {
+  if (!POR_EL_PDF.has(codigo) || creadoEn === null) return {};
+  return { pistaCorte: { tipo: "PDF", generadoEn: creadoEn, sugerido: ultimoCorteDefinitivo(creadoEn, calendario) }, yaCargadaEn: await cargadaEn(db, sha256) };
 }
 
 /** La misma fecha ya tiene certificación: o es el mismo contenido (repetida) o es un conflicto. */
@@ -136,8 +156,10 @@ export async function importarCertificacion(db: PrismaClient, archivo: ArchivoCe
   const analisis = analizarCertificacion(archivo.contenido, dia);
   if (!analisis.ok) return registrarRechazo(db, base, 0, analisis.errores);
   const n = analisis.valor.registros.length;
-  const fecha = validarFechaCorte(archivo.fechaCorte, { ...(await contextoCalendario(db)), hoy: archivo.hoy ?? new Date(), creadoEn: analisis.valor.creadoEn });
-  if (fecha) return registrarRechazo(db, base, n, [documento(fecha)]);
+  const calendario = await leerCalendarioCorte(db);
+  const creadoEn = analisis.valor.creadoEn;
+  const fecha = validarFechaCorte(archivo.fechaCorte, { ...calendario, hoy: archivo.hoy ?? new Date(), creadoEn });
+  if (fecha) return registrarRechazo(db, base, n, [documento(fecha)], await pistaDeFecha(db, fecha, creadoEn, calendario, base.sha256));
   for (let intento = 1; ; intento += 1) {
     try {
       return await enTransaccion(db, base, analisis.valor, llavero);

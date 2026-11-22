@@ -5,6 +5,10 @@
  *   no posterior a la fecha de generación del PDF y de hasta 7 días antes. Si no es hábil (por ejemplo, la de un PDF
  *   generado en fin de semana o festivo), se rechaza, nunca se ajusta sola, y se indica el último día hábil anterior
  *   según calendario_bvc con el comando para correrlo de nuevo.
+ * - Si el PDF se generó ese mismo día antes de que el cierre fuera definitivo (17:00, la hora de los precios), no es
+ *   la certificación al cierre de ese día: se rechaza (FECHA_CORTE_ANTES_DEL_CIERRE) y se sugiere el último día hábil
+ *   con el cierre ya definitivo a esa hora, como con una fecha posterior a la del PDF. Si ese PDF ya está cargado con
+ *   otro corte, indica `scripts/corregir-corte-certificacion.ts` en vez de reimportar.
  * - `--fondo <codigoFic>` (el código de la SFC del fondo ya registrado con actualizar-fondo) solo hace falta la
  *   primera vez, para vincular el NIT del fondo que trae la certificación.
  * - El correo debe ser el de un DUENO ya registrado (este comando no crea usuarios).
