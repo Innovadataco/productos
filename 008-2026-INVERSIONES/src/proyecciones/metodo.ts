@@ -33,5 +33,6 @@ export const MAX_SEMILLA = 4_294_967_295;
 export const DIAS_POR_MES = 365.25 / 12;
 /** Tolerancia relativa al comparar el valor final con lo aportado (ruido de coma flotante). */
 export const TOLERANCIA_RELATIVA = 1e-9;
-/** Cambia si cambia el método: la pantalla lo muestra y permite comparar resultados. */
-export const VERSION_METODO = "bootstrap-circular-v1";
+/** Cambia si cambia el método: la pantalla lo muestra y permite comparar resultados. v2: los pagos de Trii con decreto
+ * se miden con su fecha ex, como el plan (src/proyecciones/dividendos.ts); sin decretos, los números son los de la v1. */
+export const VERSION_METODO = "bootstrap-circular-v2";

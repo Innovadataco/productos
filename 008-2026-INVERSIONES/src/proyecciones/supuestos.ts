@@ -31,7 +31,7 @@ const TEXTO_AVISO: Readonly<Record<CodigoAviso, (a: AvisoCrudo, n: string) => st
   DIVIDENDO_TENENCIA_CAMBIA: (a, n) =>
     `${n}: la tenencia cambió en los ${VENTANA_EX_DIAS} días previos al dividendo del ${a.dia}, un pago sin decreto registrado; no se sabe qué acciones lo cobraron y no se usa.`,
   DIVIDENDO_DECRETO_EN_DUDA: (a, n) =>
-    `${n}: el dividendo del ${a.dia} cabe en la ventana de dos decretos o llegó antes de la fecha ex de su decreto; no se sabe qué acciones lo cobraron y no se usa.`,
+    `${n}: el dividendo del ${a.dia} cabe en las ventanas de decretos con dos fechas de pago o llegó antes de la fecha ex de su decreto; no se sabe qué acciones lo cobraron y no se usa.`,
   DIVIDENDO_EX_DISTINTAS: (a, n) =>
     `${n}: el dividendo del ${a.dia} junta decretos con fechas ex distintas y la tenencia cambió entre ellas; no se puede repartir y no se usa.`,
   DECRETO_BRUTO: (a, n) => `${n}: el decreto con pago el ${a.dia} entra con su valor bruto por acción (sin la retención).`,

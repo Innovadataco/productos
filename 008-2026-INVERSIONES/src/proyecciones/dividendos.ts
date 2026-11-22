@@ -11,13 +11,15 @@
  *     grupo (DIVIDENDO_DECRETO_EN_DUDA), si el grupo junta ex distintas y la tenencia cambió entre ellas
  *     (DIVIDENDO_EX_DISTINTAS) o si antes de la ex no había tenencia (DIVIDENDO_SIN_TENENCIA);
  *   - SIN grupo, la aproximación de siempre: la tenencia del día del pago, que debe ser positiva
- *     (DIVIDENDO_SIN_TENENCIA) y quedar quieta en los VENTANA_EX_DIAS anteriores (DIVIDENDO_TENENCIA_CAMBIA).
+ *     (DIVIDENDO_SIN_TENENCIA, que va primero, como antes; en el plan la tenencia positiva es un motivo del tramo) y
+ *     quedar quieta en los VENTANA_EX_DIAS anteriores (DIVIDENDO_TENENCIA_CAMBIA).
  *   Lo del plan que depende del tramo (la base de la decisión) no aplica: el motor mide la especie, no un tramo.
  * - Decretos: un grupo con un pago que ENTRÓ a la historia no se suma: ese pago ya es el dividendo y sumarlo lo contaría
  *   dos veces. Es por pago, como el plan: si otra fila del mismo grupo no entró, se pierde con su aviso. Un grupo sin
  *   pago que entró (no tiene, o sus pagos no entraron) entra con el valor por acción de sus decretos (BRUTO, con aviso):
- *   así no se pierden. Los de pago futuro solo se cuentan: la tasa histórica ya los representa. `recibido` y el enlace
- *   (`decretadoId`) son de las columnas viejas, siempre vacías.
+ *   así no se pierden (historia.ts solo avisa el bruto de los que caen en la ventana). Los de pago futuro solo se
+ *   cuentan: la tasa histórica ya los representa. `recibido` y el enlace (`decretadoId`) son de las columnas viejas,
+ *   siempre vacías.
  */
 import { agruparPorFechaDePago, asignarPagos, claveDePago, type GrupoDePago } from "../datos-oficiales/decretos/ventana";
 import { sumarDias } from "../plan/fechas";

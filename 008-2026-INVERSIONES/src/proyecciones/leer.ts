@@ -16,7 +16,7 @@ import "server-only";
  *   de la tenencia, las escisiones y los días no hábiles de calendario_bvc. De cada decreto, su fecha ex (con ella se
  *   mide el pago de Trii que cruza, como en el plan). Los decretos se leen desde rangoDeDecretos de los pagos (desde
  *   VENTANA_PAGO_DESPUES_DIAS antes del primer día de la historia): así todo pago leído ve los decretos cuya ventana
- *   lo contiene.
+ *   lo contiene. Sin cota superior a propósito: los de pago futuro se leen para contarlos (una fila por cuota).
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { enSoloLectura } from "../conciliacion/leer";
