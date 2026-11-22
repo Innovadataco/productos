@@ -1,6 +1,6 @@
 // Historia propia de una especie con armarHistoria: con y sin historia suficiente, la caída conocida y la escisión
 // cuyo destino también se tiene. Puro.
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { historiaPropia } from "@/analisis/historia-propia";
 import type { EntradasProyeccion } from "@/proyecciones/tipos";
 import { accion, diasHabiles, FESTIVOS_FICTICIOS, iso, serieDePrecios, serieDeRetornos, sumar } from "./fixtures/portafolio.ficticio";
@@ -17,6 +17,8 @@ describe("historia propia", () => {
     if (historia.estado !== "CON_HISTORIA") throw new Error("debía tener historia");
     expect(historia).toMatchObject({ desde: iso(dias[0]!), hasta: iso(dias.at(-1)!), dias: 300, caidaMaxima: { estado: "SIN_CAIDA" } });
     expect(historia.ventanas.map((v) => v.estado)).toEqual(["CALCULADA", "CALCULADA", "CALCULADA", "CALCULADA"]);
+    expectTypeOf(historia.ventanas[3].meses).toEqualTypeOf<12>();
+    expectTypeOf(historia.ventanas).toHaveProperty("length").toEqualTypeOf<4>();
   });
 
   it("con 249 días es corta; sin cierres, sin cierres", () => {

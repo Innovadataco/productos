@@ -9,7 +9,8 @@ export const MAS = (n: number) => sumar(dia(HOY), n).toISOString().slice(0, 10);
 export const AL_DIA: EstadoCierre = { estado: "AL_DIA", dia: "2021-06-14", precio: D("1237") };
 
 export const vacio = (h: 30 | 90): ResumenHorizonte => ({
-  horizonteDias: h, veredictos: { FUNCIONO: 0, NO_FUNCIONO: 0, NEUTRO: 0 }, sinVeredicto: 0, pendientes: 0, sinPrecio: 0, sinOrden: 0, totalPesos: D(0), sinDividendos: 0, noVerificadas: 0,
+  horizonteDias: h, decisiones: 0, veredictos: { FUNCIONO: 0, NO_FUNCIONO: 0, NEUTRO: 0 }, sinVeredicto: 0, pendientes: 0, sinPrecio: 0, sinOrden: 0, totalPesos: D(0),
+  sinDividendosEnTotal: 0, noVerificadasEnTotal: 0,
 });
 
 export const especie = (id: string, cambios: Partial<AnalisisEspecie> = {}): AnalisisEspecie => ({
@@ -29,7 +30,7 @@ export const regla = (id: string, cambios: Partial<ReglaParaAnalisis> = {}): Reg
 
 export const concentracion = (primera: number, tres: number, especies: number) => ({
   especies, primera: { instrumentoId: "FICTICIA-A", peso: primera }, tresPrimeras: { instrumentoIds: ["FICTICIA-A", "FICTICIA-B", "FICTICIA-C"].slice(0, especies), peso: tres },
-  hhi: 0.3, especiesEfectivas: 3.33333333,
+  hhi: 0.3,
 });
 
 export const riesgo = (ids: readonly string[], valores: (number | null)[][]): Analisis["riesgo"] => ({
@@ -37,8 +38,8 @@ export const riesgo = (ids: readonly string[], valores: (number | null)[][]): An
   fraccionCubierta: 1, correlacion: { ids, valores },
 });
 
-export const cubierta = (pesoCubierto: number, contribucionPct: number | null): AnalisisEspecie["riesgo"] => ({
-  estado: "CUBIERTA", volatilidadAnual: 0.3, pesoCubierto, contribucion: contribucionPct === null ? null : { marginal: 0.27, contribucion: 0.1, contribucionPct },
+export const cubierta = (pesoEnCubiertas: number, contribucionPct: number | null): AnalisisEspecie["riesgo"] => ({
+  estado: "CUBIERTA", volatilidadAnual: 0.3, pesoEnCubiertas, contribucion: contribucionPct === null ? null : { marginal: 0.27, contribucion: 0.1, contribucionPct },
 });
 
 /** Un análisis que dispara todas las claves del catálogo. */

@@ -56,7 +56,7 @@ describe("riesgo", () => {
       especie("FICTICIA-D", { riesgo: cubierta(0.15, null) }),
     ];
     expect(de(obs(analisis({ especies })), "CONTRIBUCION_RIESGO_DESPROPORCIONADA")).toEqual([
-      { clave: "CONTRIBUCION_RIESGO_DESPROPORCIONADA", umbral: 1.5, datos: { instrumentoId: "FICTICIA-A", pesoCubierto: 0.4, contribucionPct: 0.6, veces: 1.5 } },
+      { clave: "CONTRIBUCION_RIESGO_DESPROPORCIONADA", umbral: 1.5, datos: { instrumentoId: "FICTICIA-A", pesoEnCubiertas: 0.4, contribucionPct: 0.6, veces: 1.5 } },
     ]);
   });
 

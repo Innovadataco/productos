@@ -16,15 +16,15 @@ describe("resumen de decisiones", () => {
 
   it("a 30 días: un FUNCIONO, un NO_FUNCIONO, un NEUTRO y uno sin veredicto por escisión, que no suma", () => {
     expect(r.d30).toEqual({
-      horizonteDias: 30, veredictos: { FUNCIONO: 1, NO_FUNCIONO: 1, NEUTRO: 1 }, sinVeredicto: 1, pendientes: 0, sinPrecio: 0, sinOrden: 0,
-      totalPesos: D("4008.96"), sinDividendos: 1, noVerificadas: 1,
+      horizonteDias: 30, decisiones: 4, veredictos: { FUNCIONO: 1, NO_FUNCIONO: 1, NEUTRO: 1 }, sinVeredicto: 1, pendientes: 0, sinPrecio: 0, sinOrden: 0,
+      totalPesos: D("4008.96"), sinDividendosEnTotal: 1, noVerificadasEnTotal: 1,
     });
   });
 
   it("a 90 días: el total es solo del horizonte (nunca entre horizontes)", () => {
     expect(r.d90).toEqual({
-      horizonteDias: 90, veredictos: { FUNCIONO: 0, NO_FUNCIONO: 1, NEUTRO: 0 }, sinVeredicto: 0, pendientes: 1, sinPrecio: 1, sinOrden: 1,
-      totalPesos: D("-4613.27"), sinDividendos: 0, noVerificadas: 0,
+      horizonteDias: 90, decisiones: 4, veredictos: { FUNCIONO: 0, NO_FUNCIONO: 1, NEUTRO: 0 }, sinVeredicto: 0, pendientes: 1, sinPrecio: 1, sinOrden: 1,
+      totalPesos: D("-4613.27"), sinDividendosEnTotal: 0, noVerificadasEnTotal: 0,
     });
   });
 
@@ -35,6 +35,13 @@ describe("resumen de decisiones", () => {
       { decisionId: "FICTICIA-DEC-B", horizonteDias: 90, veredicto: "NO_FUNCIONO", resultadoPesos: D("-4613.27"), conocidoEl: "2021-04-29" },
       { decisionId: "FICTICIA-DEC-C", horizonteDias: 30, veredicto: "NEUTRO", resultadoPesos: D("0"), conocidoEl: "2021-03-17" },
     ]);
+  });
+
+  it("los conteos de cada horizonte suman todas las decisiones", () => {
+    for (const h of [r.d30, r.d90]) {
+      const suma = h.veredictos.FUNCIONO + h.veredictos.NO_FUNCIONO + h.veredictos.NEUTRO + h.sinVeredicto + h.pendientes + h.sinPrecio + h.sinOrden;
+      expect(suma).toBe(h.decisiones);
+    }
   });
 
   it("el orden de entrada no cambia el resumen", () => {

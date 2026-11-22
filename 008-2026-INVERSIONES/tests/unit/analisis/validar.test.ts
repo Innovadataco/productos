@@ -32,6 +32,13 @@ describe("validarEntradas", () => {
     expect(() => validarEntradas({ ...e, tablero: calcularTablero([entradaTablero(cero)]) })).toThrow(RangeError);
   });
 
+  it("un precio infinito, o un valor de las acciones que no es la suma de las filas, violan el contrato", () => {
+    const e = base();
+    const infinito = { id: "FICTICIA-A", cantidad: 37, cierres: [], cierreTablero: { precio: D(Number.POSITIVE_INFINITY), fecha: dias[3]! } };
+    expect(() => validarEntradas({ ...e, tablero: calcularTablero([entradaTablero(infinito)]) })).toThrow(RangeError);
+    expect(() => validarEntradas({ ...e, tablero: { ...e.tablero, valorAcciones: e.tablero.valorAcciones.add("0.01") } })).toThrow(RangeError);
+  });
+
   it("ni ids repetidos en el tablero ni en la historia", () => {
     const e = base();
     expect(() => validarEntradas({ ...e, tablero: { ...e.tablero, filas: [...e.tablero.filas, ...e.tablero.filas] } })).toThrow(RangeError);

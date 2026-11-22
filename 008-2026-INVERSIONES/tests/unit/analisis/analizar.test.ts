@@ -1,7 +1,7 @@
 // El análisis de punta a punta con portafolios inventados: versión, orden, pesos del tablero, riesgo en la ventana común
 // (correlación +1 y −1, una sola especie, pesos iguales), especies sin historia o sin valor, el fondo fuera, el efecto
 // de la caída máxima, la referencia, los avisos, el JSON y el determinismo. Puro.
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { analizar } from "@/analisis/analizar";
 import { resumirDecisiones } from "@/analisis/decisiones";
 import { redondear } from "@/analisis/numeros";
@@ -93,6 +93,14 @@ describe("análisis · identidad y orden", () => {
     expect(w.valor!.eq(D("905.61").mul(13))).toBe(true);
   });
 
+  it("sin valor no hay ni peso, ni riesgo, ni efecto, ni dividendo (se verifica también al compilar)", () => {
+    type SinValor = Extract<AnalisisEspecie, { valor: null }>;
+    expectTypeOf<SinValor["peso"]>().toEqualTypeOf<null>();
+    expectTypeOf<SinValor["riesgo"]>().toEqualTypeOf<{ readonly estado: "SIN_VALOR" }>();
+    expectTypeOf<SinValor["cierre"]>().toEqualTypeOf<{ readonly estado: "SIN_CIERRE" }>();
+    expectTypeOf<Exclude<AnalisisEspecie, { valor: null }>["riesgo"]["estado"]>().toEqualTypeOf<"CUBIERTA" | "SIN_HISTORIA">();
+  });
+
   it("una especie sin cierre en el tablero: sin valor, sin peso y sin riesgo", () => {
     const sin = portafolio([especie("FICTICIA-A", 37, 1237.4, 1), { ...especie("FICTICIA-N", 13, 905.61, 1), cierreTablero: null }]);
     expect(de(analizar(sin), "FICTICIA-N")).toMatchObject({ valor: null, peso: null, cierre: { estado: "SIN_CIERRE" }, riesgo: { estado: "SIN_VALOR" }, efectoCaida: null, dividendo12m: null });
@@ -115,7 +123,7 @@ describe("análisis · riesgo en la ventana común", () => {
     cerca(ra.contribucion!.contribucion + rb.contribucion!.contribucion, r.volatilidadAnual, toleranciaSuma(2));
     cerca(ra.contribucion!.contribucionPct + rb.contribucion!.contribucionPct, 1, toleranciaSuma(2));
     expect(r.fraccionCubierta).toBe(1);
-    expect(ra.pesoCubierto).toBe(de(a, "FICTICIA-A").peso);
+    expect(ra.pesoEnCubiertas).toBe(de(a, "FICTICIA-A").peso);
   });
 
   it("el factor de anualización es 12 × ruedasPorMes de la ventana común de armarHistoria", () => {
@@ -139,7 +147,8 @@ describe("análisis · riesgo en la ventana común", () => {
     ]);
     const a = analizar(e);
     expect(a.especies.map((x) => x.peso)).toEqual([0.5, 0.5]);
-    expect(a.concentracion).toMatchObject({ hhi: 0.5, especiesEfectivas: 2 });
+    expect(a.concentracion).toMatchObject({ hhi: 0.5 });
+    expect(a.concentracion).not.toHaveProperty("especiesEfectivas");
     expect(calculado(a).volatilidadAnual).toBe(0);
     expect(a.especies.map((x) => cubierta(x).contribucion)).toEqual([null, null]);
   });
@@ -150,7 +159,7 @@ describe("análisis · riesgo en la ventana común", () => {
     expect(r.contribucion!.contribucionPct).toBe(1);
     cerca(r.contribucion!.contribucion, calculado(a).volatilidadAnual);
     expect(r.volatilidadAnual).toBe(calculado(a).volatilidadAnual);
-    expect(a.concentracion).toMatchObject({ especies: 1, hhi: 1, especiesEfectivas: 1 });
+    expect(a.concentracion).toEqual({ especies: 1, primera: { instrumentoId: "FICTICIA-A", peso: 1 }, tresPrimeras: { instrumentoIds: ["FICTICIA-A"], peso: 1 }, hhi: 1 });
   });
 
   it("una especie con 100 días queda sin historia en la ventana y fuera de la correlación; los pesos se renormalizan", () => {
@@ -164,7 +173,7 @@ describe("análisis · riesgo en la ventana común", () => {
     const valor = (id: string) => e.tablero.filas.find((f) => f.instrumentoId === id)!.valor!;
     const cubiertas = valor("FICTICIA-A").add(valor("FICTICIA-B"));
     expect(r.fraccionCubierta).toBe(redondear(cubiertas.div(e.tablero.valorAcciones).toNumber()));
-    expect(cubierta(de(a, "FICTICIA-A")).pesoCubierto).toBe(redondear(valor("FICTICIA-A").div(cubiertas).toNumber()));
+    expect(cubierta(de(a, "FICTICIA-A")).pesoEnCubiertas).toBe(redondear(valor("FICTICIA-A").div(cubiertas).toNumber()));
   });
 
   it("sin ninguna especie con historia suficiente, el riesgo del portafolio no se calcula", () => {

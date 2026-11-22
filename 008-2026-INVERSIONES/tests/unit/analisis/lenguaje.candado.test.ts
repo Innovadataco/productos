@@ -17,7 +17,7 @@ const PLANTADAS = [
   "es hora de", "punto de entrada", "hold", "trim", "rebalance",
   "con\u200bviene", "ｃｏｍｐｒｅ",
 ];
-const NEUTRAS = ["la ventana común", "pesoCubierto", "DECIMALES_METRICA", "normalizar", "comprobar", "el mínimo", "contribución", "malla", "DECIMALES", "acumular", "aumenta", "reduce", "la hora"];
+const NEUTRAS = ["la ventana común", "pesoEnCubiertas", "DECIMALES_METRICA", "normalizar", "comprobar", "el mínimo", "contribución", "malla", "DECIMALES", "acumular", "aumenta", "reduce", "la hora"];
 
 describe("candado de lenguaje · control positivo", () => {
   it.each(PLANTADAS)("«%s» plantada se detecta", (palabra) => {
