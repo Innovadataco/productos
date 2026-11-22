@@ -3,12 +3,12 @@
  * la posición del hecho y el campo, y sin datos en el mensaje.
  */
 import { describe, expect, it } from "vitest";
-import { CATALOGO } from "@/ia/catalogo";
+import { CATALOGO, CLAVE_ANCLA_REGLA } from "@/ia/catalogo";
 import type { EntradaPaquete, PaqueteHechos } from "@/ia/contrato";
 import { hashPaquete } from "@/ia/hash";
 import { CODIGOS_ERROR_PAQUETE, ErrorPaquete, construirPaquete, esPaqueteConstruido, idDeHecho, leerPaquete, type CodigoErrorPaquete } from "@/ia/paquete";
 import { vistaCiega } from "@/ia/vista-ciega";
-import { ENTRADAS_FICTICIAS, ESPECIE_ALFA, HOY_FICTICIO, entradaDiario, hecho } from "./apoyo/hechos.ficticio";
+import { ENTRADAS_FICTICIAS, ESPECIE_ALFA, HOY_FICTICIO, entradaDiario, entradaReglasConAnclas, hecho } from "./apoyo/hechos.ficticio";
 
 type Crudo = Record<string, unknown> & { hechos: Record<string, unknown>[] };
 const copia = (): Crudo => structuredClone(entradaDiario()) as unknown as Crudo;
@@ -32,7 +32,8 @@ function conHechos(n: number): Crudo {
     const id = idDeHecho(i + 1);
     if (i % 2 === 1) return { ...hecho(id, "VALOR_ESPECIE", "4613.27", "$ 4.613", { sujeto: idDeHecho(i) }) };
     const k = i / 2;
-    return { ...hecho(id, "ESPECIE_NOMBRE", `FICTICIA-${LETRAS[Math.floor(k / 26)]}${LETRAS[k % 26]}`, "nombre") };
+    const nombre = `FICTICIA-${LETRAS[Math.floor(k / 26)]}${LETRAS[k % 26]}`;
+    return { ...hecho(id, "ESPECIE_NOMBRE", nombre, nombre) };
   });
   return crudo;
 }
@@ -93,6 +94,12 @@ const CASOS: readonly Caso[] = [
   ["PRESENTACION_INVALIDA", "una presentación sin cifra (sin dato)", (c) => (h(c, 2).presentacion = "—", c), "H03", "presentacion"],
   ["PRESENTACION_INVALIDA", "una presentación con espacio al borde", (c) => (h(c, 2).presentacion = " $ 37.911", c), "H03", "presentacion"],
   ["PRESENTACION_INVALIDA", "una presentación demasiado larga", (c) => (h(c, 2).presentacion = `$ ${"7".repeat(63)}`, c), "H03", "presentacion"],
+  ["PRESENTACION_NO_COINCIDE", "una presentación que no sale del valor (un peso de más)", (c) => (h(c, 2).presentacion = "$ 37.912", c), "H03", "presentacion"],
+  ["PRESENTACION_NO_COINCIDE", "una presentación con otro formato (con centavos)", (c) => (h(c, 2).presentacion = "$ 37.911,47", c), "H03", "presentacion"],
+  ["PRESENTACION_NO_COINCIDE", "un porcentaje con «+»", (c) => (h(c, 6).presentacion = "+12,4 %", c), "H07", "presentacion"],
+  ["PRESENTACION_NO_COINCIDE", "un conteo con su palabra", (c) => (h(c, 5).presentacion = "7 especies", c), "H06", "presentacion"],
+  ["PRESENTACION_NO_COINCIDE", "un nombre que no es el valor", (c) => (h(c, 0).presentacion = "FICTICIA-BETA", c), "H01", "presentacion"],
+  ["PRESENTACION_NO_COINCIDE", "una fecha con otro formato", (c) => (h(c, 4).presentacion = "16/03/2027", c), "H05", "presentacion"],
   ["FUENTE_INVALIDA", "una fuente vacía", (c) => (h(c, 2).fuente = "", c), "H03", "fuente"],
   ["FUENTE_INVALIDA", "una fuente con salto de línea", (c) => (h(c, 2).fuente = "fuente\nficticia", c), "H03", "fuente"],
   ["FECHA_INVALIDA", "una fecha sin ceros", (c) => (h(c, 2).fecha = "2027-3-16", c), "H03", "fecha"],
@@ -115,7 +122,8 @@ const CASOS_LEER: readonly Caso[] = [
   ["VERSION_DISTINTA", "lo guardado es de otra versión del contrato", (c) => ({ ...c, version: "hechos-v2" }), null, "version"],
   ["GUARDADO_NO_COINCIDE", "la etiqueta guardada no es la del catálogo de hoy", (c) => (h(c, 2).etiqueta = "otra etiqueta", c), "H03", "etiqueta"],
   ["GUARDADO_NO_COINCIDE", "la unidad guardada no es la del catálogo de hoy", (c) => (h(c, 2).unidad = "DIAS", c), "H03", "unidad"],
-  ["GUARDADO_NO_COINCIDE", "un valor cambiado con el hash viejo", (c) => (h(c, 2).valor = "41377.19", c), null, "hash"],
+  ["GUARDADO_NO_COINCIDE", "un valor cambiado con el hash viejo", (c) => (Object.assign(h(c, 2), { valor: "41377.19", presentacion: "$ 41.377" }), c), null, "hash"],
+  ["PRESENTACION_NO_COINCIDE", "un valor cambiado sin su presentación", (c) => (h(c, 2).valor = "41377.19", c), "H03", "presentacion"],
   ["CAMPO_FALTANTE", "un hecho guardado sin etiqueta", (c) => (delete h(c, 2).etiqueta, c), "H03", "etiqueta"],
   ["FORMA_INVALIDA", "un hecho guardado que no es objeto", (c) => ({ ...c, hechos: [c.hechos[0], c.hechos[1], "H03"] }), "H03", null],
 ];
@@ -247,5 +255,59 @@ describe("leerPaquete · un paquete guardado vuelve a entrar validado (TIPOS-ALT
     const crudo = guardado();
     h(crudo, 2).valor = "37.911,47";
     expect(errorAlLeer(crudo).codigo).toBe("VALOR_NO_DECIMAL");
+  });
+});
+
+describe("construirPaquete · el ancla de cada regla (REGLA_DEL_PLAN): varias reglas por especie", () => {
+  const base = (): Crudo => structuredClone(entradaReglasConAnclas()) as unknown as Crudo;
+  const errorEn = (crudo: Crudo): ErrorPaquete => errorDe(crudo);
+
+  it("arma un paquete con dos reglas de la misma especie y una de portafolio, cada una con su ancla", () => {
+    const paquete = construir(base());
+    const anclas = paquete.hechos.filter((x) => x.clave === CLAVE_ANCLA_REGLA);
+    expect(anclas.map((x) => x.sujeto ?? null)).toEqual(["H01", "H01", null]);
+    const niveles = paquete.hechos.filter((x) => x.clave === "REGLA_NIVEL");
+    expect(niveles.map((x) => x.sujeto)).toEqual(["H02", "H05"]);
+    expect(vistaCiega(paquete).hechos.find((x) => x.id === "H03")?.sujeto).toBe("H02");
+  });
+
+  it("sigue aceptando un hecho de regla que cita directo a la especie (compatibilidad de hechos-v1)", () => {
+    expect(construir(structuredClone(ENTRADAS_FICTICIAS.REGLAS()) as unknown as Crudo).hechos[1]?.sujeto).toBe("H01");
+  });
+
+  it.each<readonly [string, (c: Crudo) => void, string]>([
+    ["un ancla que cita a otra ancla", (c) => { h(c, 4).sujeto = "H02"; }, "H05"],
+    ["un ancla que cita a un hecho de regla", (c) => { h(c, 4).sujeto = "H03"; }, "H05"],
+    ["un dividendo que cita a un ancla", (c) => { h(c, 10).sujeto = "H02"; }, "H11"],
+  ])("SUJETO_NO_ES_ESPECIE: %s", (_caso, mutar, hechoEsperado) => {
+    const crudo = base();
+    mutar(crudo);
+    const error = errorEn(crudo);
+    expect([error.codigo, error.hecho, error.campo]).toEqual(["SUJETO_NO_ES_ESPECIE", hechoEsperado, "sujeto"]);
+  });
+
+  it("HECHO_REPETIDO: dos niveles de la misma regla (la misma ancla)", () => {
+    const crudo = base();
+    h(crudo, 5).sujeto = "H02";
+    const error = errorEn(crudo);
+    expect([error.codigo, error.hecho, error.campo]).toEqual(["HECHO_REPETIDO", "H06", "clave"]);
+  });
+
+  it("el ancla no admite dirección ni cercanía, y su valor es un día", () => {
+    const conDireccion = base();
+    h(conDireccion, 1).direccion = "SUBE";
+    expect(errorEn(conDireccion).codigo).toBe("DIRECCION_NO_APLICA");
+    const conCercania = base();
+    h(conCercania, 1).cercania = "CERCA";
+    expect(errorEn(conCercania).codigo).toBe("CERCANIA_NO_APLICA");
+    const conDecimal = base();
+    Object.assign(h(conDecimal, 1), { valor: "37911.47", presentacion: "$ 37.911" });
+    expect(errorEn(conDecimal).codigo).toBe("VALOR_NO_FECHA");
+  });
+
+  it("un ancla fuera de REGLAS es una clave fuera del catálogo", () => {
+    const crudo = copia();
+    crudo.hechos.push(hecho("H08", CLAVE_ANCLA_REGLA as never, "2027-02-03", "3-feb-2027"));
+    expect(errorDe(crudo).codigo).toBe("CLAVE_FUERA_DE_CATALOGO");
   });
 });
