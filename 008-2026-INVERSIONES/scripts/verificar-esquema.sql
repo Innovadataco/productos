@@ -284,7 +284,7 @@ DECLARE
     ['inv_precio_cierre_insercion', '6bdf12a80eeee52cff6a412139ffe5c1', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77', ''],
-    ['inv_solo_retiro', 'fa039cef28a3f175cfd7639ead0e8f62', 'search_path=pg_catalog, pg_temp'],
+    ['inv_solo_retiro', 'cabe3b51e599c2a5c6cdf4c16aadcb83', 'search_path=pg_catalog, pg_temp'],
     ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546', ''],
     ['inv_usuario_transiciones', '368539024fbeaeb771669ff741aa7ed3', ''],
     ['inv_valor_unidad_fondo_insercion', '200c0ff4c9421344a810814a97568db0', 'search_path=pg_catalog, public, pg_temp']

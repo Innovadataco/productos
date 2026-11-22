@@ -155,7 +155,7 @@ ALTER TABLE "dividendo" VALIDATE CONSTRAINT "dividendo_viejas_nulas_chk";
 -- ───────────── Escrito a mano · solo inserción y retiro ─────────────
 -- Para TODOS los roles, también el dueño y el superusuario: lo que se inserta nace vigente y con la hora del registro
 -- de la base (la columna la pasa el disparador: traidoEn o registradoEn; la del cliente se ignora, así nada se fecha
--- hacia atrás), nada se borra, y lo único que cambia es el retiro, una vez, de nulo a la hora de la base (el retirado y
+-- hacia atrás; si el disparador no nombra una columna de la tabla, falla cerrada), nada se borra, y lo único que cambia es el retiro, una vez, de nulo a la hora de la base (el retirado y
 -- su sucesor, en la misma transacción, quedan con el mismo instante), sin tocar ninguna otra columna (se compara la
 -- fila entera: una columna futura también queda protegida). Lo retirado no se reabre ni se vuelve a fechar. TRUNCATE
 -- no pasa por aquí (disparador por fila): lo tienen solo el dueño y el superusuario.
@@ -172,6 +172,9 @@ BEGIN
   IF TG_OP = 'INSERT' THEN
     IF NEW."reemplazadoEn" IS NOT NULL THEN
       RAISE EXCEPTION '%: lo que se inserta nace vigente', TG_TABLE_NAME USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_NARGS <> 1 OR TG_ARGV[0] = 'reemplazadoEn' OR NOT (to_jsonb(NEW) ? TG_ARGV[0]) THEN
+      RAISE EXCEPTION '%: el disparador no nombra la columna de la hora del registro', TG_TABLE_NAME USING ERRCODE = 'invalid_parameter_value';
     END IF;
     NEW := jsonb_populate_record(NEW, jsonb_build_object(TG_ARGV[0], now()));
     RETURN NEW;
