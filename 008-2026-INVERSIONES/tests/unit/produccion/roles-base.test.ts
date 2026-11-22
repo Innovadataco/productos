@@ -178,6 +178,11 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     `INSERT INTO plan_version (id, "creadaEn") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`,
     `INSERT INTO decision (id, "registradaEn") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`,
     `INSERT INTO enlace_decision_orden (id, "creadoEn") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`,
+    // E8: la configuración de la IA, solo INSERT y sin su instante.
+    "UPDATE config_ia SET motivo = motivo WHERE false",
+    "DELETE FROM config_ia WHERE false",
+    "TRUNCATE config_ia",
+    `INSERT INTO config_ia (id, "creadaEn") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`,
     // Sin objetos temporales: las funciones de los instantes no fijan search_path (todo va calificado con pg_catalog).
     "CREATE TEMP TABLE intruso (id int)",
   ]) {
@@ -797,6 +802,10 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       'SELECT "detalle" FROM regla_plan LIMIT 1',
       'SELECT "accion", "cantidad" FROM regla_plan LIMIT 1',
       'SELECT "motivo" FROM plan_version LIMIT 1',
+      // E8: de config_ia, ni el motivo ni el autor; y no escribe.
+      'SELECT "motivo" FROM config_ia LIMIT 1',
+      'SELECT "autorId" FROM config_ia LIMIT 1',
+      "INSERT INTO config_ia (id) VALUES ('x')",
       'SELECT "precioValoracion" FROM certificacion_posicion LIMIT 1',
       "SELECT * FROM instrumento LIMIT 1",
       "UPDATE resumen_ia SET texto = 'x' WHERE false",

@@ -244,3 +244,23 @@ describe("guardián del esquema: inv_ia y resumen_ia", () => {
     expect(guardian).toMatch(/\['inv_resumen_ia_instante', '[0-9a-f]{32}', ''\]/);
   });
 });
+
+// Fase E (E8): config_ia. El disparador de su instante exime al dueño, como los demás: ni inv_app (la pantalla que la
+// escribe), ni inv_ia (el servicio que la lee), ni inv_precios pueden ser miembros del dueño de config_ia. Bloque propio.
+describe("guardián del esquema: config_ia", () => {
+  const guardian = leer008("scripts/verificar-esquema.sql");
+
+  it("revisa que inv_app, inv_ia e inv_precios no sean miembros del dueño de config_ia", () => {
+    expect(guardian).toMatch(/WHERE r\.rolname IN \('inv_app', 'inv_ia', 'inv_precios'\)\s+AND c\.oid = to_regclass\('public\.config_ia'\)\s+AND pg_has_role\(r\.oid, c\.relowner, 'MEMBER'\)/);
+  });
+
+  it("exige la solo inserción, el instante, su función y la unicidad de la versión de config_ia", () => {
+    expect(guardian).toMatch(/\['config_ia', 'config_ia_solo_insercion', 'CREATE TRIGGER config_ia_solo_insercion BEFORE DELETE OR UPDATE ON public\.config_ia FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion\(\)'\]/);
+    expect(guardian).toMatch(/\['config_ia', 'config_ia_instante', 'CREATE TRIGGER config_ia_instante BEFORE INSERT ON public\.config_ia FOR EACH ROW EXECUTE FUNCTION inv_config_ia_instante\(\)'\]/);
+    expect(guardian).toMatch(/\['config_ia', 'config_ia_version_key', 'CREATE UNIQUE INDEX config_ia_version_key ON public\.config_ia USING btree \(version\)'\]/);
+    // El mismo código que la del plan (fija "creadaEn"): el mismo md5.
+    const md5 = (f: string) => new RegExp(`\\['${f}', '([0-9a-f]{32})', ''\\]`).exec(guardian)?.[1];
+    expect(md5("inv_config_ia_instante")).toBeDefined();
+    expect(md5("inv_config_ia_instante")).toBe(md5("inv_plan_version_instante"));
+  });
+});

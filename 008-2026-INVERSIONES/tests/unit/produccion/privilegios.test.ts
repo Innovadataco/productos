@@ -32,6 +32,8 @@ describe("privilegios de inv_app", () => {
         'UPDATE ("usadoEn", "anuladoEn") codigo_recuperacion',
         'UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") usuario',
         ...Object.entries(INSERT_DEL_PLAN).map(([t, cs]) => `INSERT (${cs.map((c) => (/[A-Z]/.test(c) ? `"${c}"` : c)).join(", ")}) ${t}`),
+        // E8: la configuración de la IA, por columna y sin "creadaEn" (bloque «config_ia» de abajo).
+        'INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "modeloLocal", "modeloNube", "topeMensualUsd", "horaResumen", "resumenDiario", "resumenReglas", "resumenEscenarios", "limiteSegundos", "esfuerzoNube", motivo, "autorId") config_ia',
       ].sort(),
     );
   });
@@ -122,7 +124,7 @@ describe("privilegios del plan y del diario (área de edición)", () => {
 
   it("ningún otro INSERT de inv_app fuera del login, del TOTP y del plan", () => {
     const inserts = grants.filter((g) => g.startsWith("INSERT ")).map((g) => g.split(" ").at(-1)!).sort();
-    expect(inserts).toEqual(["codigo_recuperacion", "intento_ingreso", ...TABLAS_DEL_PLAN].sort());
+    expect(inserts).toEqual(["codigo_recuperacion", "config_ia", "intento_ingreso", ...TABLAS_DEL_PLAN].sort());
   });
 
   it("las cuatro tablas son de solo inserción en su migración (el disparador manda aunque alguien diera UPDATE)", () => {
@@ -245,3 +247,36 @@ describe("privilegios de inv_precios", () => {
     }
   });
 });
+
+// Fase E (E8): la configuración de la IA. El dueño la escribe desde /edicion/ia, que corre como inv_app: solo INSERT,
+// POR COLUMNA con todas las de config_ia MENOS "creadaEn" (la pone la base, como en el plan), y nada más. Es de solo
+// inserción por su disparador: un cambio es una versión nueva.
+describe("privilegios de la configuración de la IA (config_ia)", () => {
+  const grantsConfig = [...sql.matchAll(/GRANT\s+([A-Z]+)\s*(?:\(([^)]*)\))?\s+ON\s+TABLE\s+public\.config_ia\s+TO\s+inv_app\s*;/g)];
+
+  it("un solo GRANT a inv_app: INSERT por columna, con todas las columnas del esquema menos creadaEn", () => {
+    expect(grantsConfig).toHaveLength(1);
+    expect(grantsConfig[0]![1]).toBe("INSERT");
+    const columnas = grantsConfig[0]![2]!.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    const delEsquema = columnasDe("config_ia");
+    expect(delEsquema).toContain("creadaEn");
+    expect([...columnas].sort()).toEqual(delEsquema.filter((c) => c !== "creadaEn").sort());
+    expect(sql).not.toMatch(/GRANT\s+(?!INSERT\s*\()[^;]*\bpublic\.config_ia\b[^;]*TO\s+inv_app/);
+  });
+
+  it("va después del REVOKE ALL de cada corrida", () => {
+    const revoke = sql.indexOf("EXECUTE format('REVOKE ALL ON TABLE public.%I FROM inv_app', t.relname);");
+    expect(sql.search(/GRANT INSERT \([^)]*\) ON TABLE public\.config_ia TO inv_app;/)).toBeGreaterThan(revoke);
+  });
+
+  it("su migración la hace de solo inserción", () => {
+    const sqls = migracionesTexto();
+    expect(sqls).toMatch(/CREATE TRIGGER "config_ia_solo_insercion" BEFORE UPDATE OR DELETE ON "config_ia"/);
+  });
+});
+
+/** El texto de todas las migraciones, juntas. */
+function migracionesTexto(): string {
+  const dir = ruta008("prisma/migrations");
+  return readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => leer008(`prisma/migrations/${d.name}/migration.sql`)).join("\n");
+}
