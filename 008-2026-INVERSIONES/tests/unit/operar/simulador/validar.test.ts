@@ -30,7 +30,7 @@ describe("errores de la operación (datos para el usuario)", () => {
 
   it("cantidad desde el tope (diez billones de acciones): CANTIDAD_FUERA_DE_RANGO, sin repetir la cifra gigante", () => {
     expect(codigos(operacion(A, "COMPRAR", 10n ** 13n, "0.000001"))).toEqual(["CANTIDAD_FUERA_DE_RANGO"]);
-    expect(codigos(operacion(A, "COMPRAR", 10n ** 13n - 1n, "0.000001"))).toEqual([]);
+    expect(codigos(operacion(A, "COMPRAR", 10n ** 13n - 1n, "0.000001"), [posicion(A, 0n, "0.000001")])).toEqual([]);
     const r = revisarOperacion(operacion(B, "VENDER", 10n ** 100_000n, "1.37"), ESTADO.posiciones);
     expect(r).toEqual({ ok: false, errores: [{ codigo: "CANTIDAD_FUERA_DE_RANGO" }] });
   });

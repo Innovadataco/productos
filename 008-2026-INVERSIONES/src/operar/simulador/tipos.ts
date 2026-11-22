@@ -6,16 +6,22 @@
  * Valoración: las acciones se valoran a su último cierre (como el tablero) y la orden mueve la caja a su precio
  * límite. Por eso una compra a un precio distinto del cierre cambia el patrimonio en (cierre − precio) × cantidad,
  * menos la comisión.
+ *
+ * Las entradas encajan sin mapeo con lo que ya se lee: las filas del tablero (`[...tablero.filas,
+ * ...tablero.cerradas]`) son posiciones, `leerReglas` da las reglas y un `select` de `orden` da la historia.
  */
 import type { AccionPlan, CondicionRegla, EstadoOrden, LadoOrden, Prisma } from "@prisma/client";
 import type { EstadoNivel } from "@/plan/niveles";
 
 type Decimal = Prisma.Decimal;
 
+/** Una lista con al menos un elemento. */
+export type NoVacia<T> = readonly [T, ...T[]];
+
 /** El lado de la operación, con las palabras del plan. */
 export type LadoSimulado = Extract<AccionPlan, "COMPRAR" | "VENDER">;
 
-/** Decimales del precio límite y de los cierres: la escala de `orden.precioUnitario` y `precio_cierre.precio`. */
+/** Decimales del precio límite, los cierres, los niveles y la caja: la escala de `orden.precioUnitario`. */
 export const DECIMALES_PRECIO = 6;
 /** Decimales de la comisión estimada: la escala de `orden.comision` (redondeo mitad hacia arriba). */
 export const DECIMALES_COMISION = 4;
@@ -25,13 +31,16 @@ export const DECIMALES_COMISION = 4;
  */
 export const TOLERANCIA_PESOS_POR_ESPECIE = "1e-16";
 
-export interface PosicionSimulada {
+export interface EspecieNombrada {
   readonly instrumentoId: string;
   readonly nemotecnico: string;
+}
+
+export interface PosicionSimulada extends EspecieNombrada {
   /** Acciones de hoy; 0 si ya no tiene (se puede simular comprarla otra vez). */
   readonly cantidad: bigint;
-  /** Último cierre guardado; null si no hay (la especie queda fuera de los pesos). */
-  readonly cierre: Decimal | null;
+  /** Último cierre guardado (basta su precio: la forma de `FilaTablero.cierre`); null si no hay. */
+  readonly cierre: { readonly precio: Decimal } | null;
 }
 
 /** Una fila del plan vigente, con los campos de `regla_plan` (los de `leerReglas` encajan tal cual). */
@@ -46,17 +55,22 @@ export interface ReglaSimulada {
   readonly cantidad: bigint | null;
   /** Último día en que rige (medianoche UTC, como `@db.Date`); null = sin plazo. */
   readonly plazoHasta: Date | null;
-  /** Lo que el dueño escribió en su plan. */
+  /** Lo que el dueño escribió en su plan (hasta 2000 caracteres, como `regla_plan_detalle_chk`). */
   readonly detalle: string;
 }
 
 export interface EstadoSimulado {
+  /** Todas las especies que se pueden simular: las vivas y las ya vendidas (cantidad 0). Una que no está es desconocida. */
   readonly posiciones: readonly PosicionSimulada[];
   /** Caja disponible registrada; puede estar atrasada (por eso pasarla es un aviso y no un error). */
   readonly caja: Decimal;
   readonly reglas: readonly ReglaSimulada[];
 }
 
+/**
+ * Lo que el dueño escribe. Llega de un formulario: quien conecte la pantalla convierte el texto a bigint y Decimal (con
+ * un tope de largo antes de convertir) y el motor revisa igual, en ejecución, lado, cantidad y precio.
+ */
 export interface OperacionSimulada {
   readonly instrumentoId: string;
   readonly lado: LadoSimulado;
@@ -79,60 +93,57 @@ export interface ContextoSimulacion {
   readonly hoy: Date;
 }
 
-export interface EfectoEspecie {
-  readonly instrumentoId: string;
-  readonly nemotecnico: string;
-  readonly cantidadAntes: bigint;
-  readonly cantidadDespues: bigint;
-  /** cantidad × cierre; 0 sin acciones; null con acciones y sin cierre. */
-  readonly valorAntes: Decimal | null;
-  readonly valorDespues: Decimal | null;
-  /** valor / valor de las acciones × 100, sin redondear; null sin valor o si el valor de las acciones es 0. */
-  readonly pesoAntesPct: Decimal | null;
-  readonly pesoDespuesPct: Decimal | null;
+/**
+ * Cómo se valora una tenencia: sin cierre (con acciones y sin precio: no tiene valor ni peso) o valorada (cantidad ×
+ * cierre, 0 sin acciones) con su peso sobre el valor de las acciones, sin redondear; el peso es null solo si ese valor
+ * es 0.
+ */
+export type Valoracion =
+  | { readonly estado: "SIN_CIERRE" }
+  | { readonly estado: "VALORADA"; readonly valor: Decimal; readonly pesoPct: Decimal | null };
+
+export interface Tenencia {
+  readonly cantidad: bigint;
+  readonly valoracion: Valoracion;
 }
 
-/** Lo que dice la historia de órdenes de un lado: Σ comisión / Σ valor sin comisión. */
+export interface EfectoEspecie extends EspecieNombrada {
+  readonly antes: Tenencia;
+  readonly despues: Tenencia;
+}
+
+/** Lo que dice la historia de órdenes de un lado: la suma de sus comisiones y la de sus valores sin comisión. */
 export type TasaComision =
-  | {
-      readonly estado: "ESTIMABLE";
-      readonly sumaComisiones: Decimal;
-      readonly sumaValor: Decimal;
-      /** sumaComisiones / sumaValor, sin redondear (para mostrarla). */
-      readonly tasa: Decimal;
-      readonly ordenesBase: number;
-    }
+  | { readonly estado: "ESTIMABLE"; readonly lado: LadoOrden; readonly sumaComisiones: Decimal; readonly sumaValor: Decimal; readonly ordenesBase: number }
   | { readonly estado: "SIN_HISTORIA" };
 
+/** La comisión estimada lleva el lado de la historia en que se basa y cuántas órdenes de ese lado contó. */
 export type ComisionEstimada =
-  | { readonly estado: "ESTIMADA"; readonly valor: Decimal; readonly tasa: Decimal; readonly ordenesBase: number }
+  | { readonly estado: "ESTIMADA"; readonly lado: LadoOrden; readonly valor: Decimal; readonly ordenesBase: number }
   | { readonly estado: "SIN_HISTORIA" };
 
 /** El precio de la orden frente al nivel de una regla de cierre, cuando queda del lado que la toca. */
-export type FrenteAlNivel = Extract<EstadoNivel, { readonly estado: "TOCADA" | "EN_EL_NIVEL" }>;
+export type FrenteAlNivel = Extract<EstadoNivel, { estado: "TOCADA" | "EN_EL_NIVEL" }>;
 
+/** Lo que toca la orden en una regla. Los datos (nivel, acción, cantidad) se leen de la regla: no se copian. */
 export type Afectacion =
-  | { readonly tipo: "MONTO_ORDEN_BAJO"; readonly montoMinimo: Decimal }
+  | { readonly tipo: "MONTO_ORDEN_BAJO" }
   | { readonly tipo: "PRECIO_DEL_LADO_DEL_NIVEL"; readonly frente: FrenteAlNivel }
-  | { readonly tipo: "OTRA_ACCION"; readonly accionDelPlan: AccionPlan };
+  | { readonly tipo: "OTRA_ACCION" };
 
 export interface ReglaAfectada {
   readonly regla: ReglaSimulada;
-  readonly afectaciones: readonly [Afectacion, ...Afectacion[]];
-}
-
-export interface EspecieNombrada {
-  readonly instrumentoId: string;
-  readonly nemotecnico: string;
+  readonly afectaciones: NoVacia<Afectacion>;
 }
 
 export type AvisoSimulacion =
   | { readonly codigo: "COMPRA_SUPERA_CAJA"; readonly caja: Decimal; readonly necesario: Decimal; readonly conComision: boolean }
-  | { readonly codigo: "ESPECIES_SIN_CIERRE"; readonly especies: readonly [EspecieNombrada, ...EspecieNombrada[]] };
+  | { readonly codigo: "ESPECIES_SIN_CIERRE"; readonly especies: NoVacia<EspecieNombrada> };
 
 export type ErrorSimulacion =
   | { readonly codigo: "LADO_INVALIDO" }
   | { readonly codigo: "CANTIDAD_NO_POSITIVA" }
+  | { readonly codigo: "CANTIDAD_FUERA_DE_RANGO" }
   | { readonly codigo: "PRECIO_NO_POSITIVO" }
   | { readonly codigo: "PRECIO_FUERA_DE_ESCALA" }
   | { readonly codigo: "ESPECIE_DESCONOCIDA" }
@@ -157,4 +168,4 @@ export interface Simulacion {
 
 export type ResultadoSimulacion =
   | { readonly ok: true; readonly simulacion: Simulacion }
-  | { readonly ok: false; readonly errores: readonly [ErrorSimulacion, ...ErrorSimulacion[]] };
+  | { readonly ok: false; readonly errores: NoVacia<ErrorSimulacion> };

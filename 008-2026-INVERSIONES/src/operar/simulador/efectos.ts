@@ -1,14 +1,15 @@
 /**
  * Los efectos de una orden ya validada sobre el portafolio. Puro y sin mutar la entrada.
  * - Cantidades: la operada sube (compra) o baja (venta); las demás, igual.
- * - Valor: cantidad × último cierre; 0 sin acciones; null con acciones y sin cierre (como el tablero).
+ * - Valoración: cantidad × último cierre; 0 sin acciones; «sin cierre» con acciones y sin precio (como el tablero).
  * - Peso: valor / valor de las acciones × 100, sin redondear (la misma cuenta del tablero, para que «antes» cuadre
- *   con él). Las especies sin cierre quedan fuera del total y sin peso; si el total es 0, no hay pesos.
+ *   con él). Las especies sin cierre quedan fuera del total y sin peso; si el total es 0, ninguna tiene peso.
  * - Caja: compra, caja − valor − comisión; venta, caja + valor − comisión; sin historia, sin comisión.
  * - Avisos: comprar por más de la caja (no es error: la caja puede estar atrasada) y las especies sin cierre.
  */
 import { Prisma } from "@prisma/client";
-import type { AvisoSimulacion, ComisionEstimada, EfectoEspecie, EspecieNombrada, EstadoSimulado, OperacionSimulada } from "./tipos";
+import type { AvisoSimulacion, ComisionEstimada, EfectoEspecie, EspecieNombrada, EstadoSimulado, OperacionSimulada, PosicionSimulada, Tenencia, Valoracion } from "./tipos";
+import { noVacia } from "./validar";
 
 type Decimal = Prisma.Decimal;
 const CERO = new Prisma.Decimal(0);
@@ -22,25 +23,32 @@ export interface EfectosDeLaOrden {
   readonly avisos: readonly AvisoSimulacion[];
 }
 
-const valorDe = (cantidad: bigint, cierre: Decimal | null): Decimal | null => (cantidad === 0n ? CERO : cierre === null ? null : cierre.mul(cantidad.toString()));
+/** El valor de una tenencia, o null si tiene acciones y no tiene cierre. */
+const valorDe = (cantidad: bigint, cierre: PosicionSimulada["cierre"]): Decimal | null =>
+  cantidad === 0n ? CERO : cierre === null ? null : cierre.precio.mul(cantidad.toString());
 const total = (valores: readonly (Decimal | null)[]): Decimal => valores.reduce<Decimal>((t, v) => (v === null ? t : t.add(v)), CERO);
-const pesoDe = (valor: Decimal | null, totalAcciones: Decimal): Decimal | null => (valor === null || !totalAcciones.gt(0) ? null : valor.div(totalAcciones).mul(CIEN));
+
+function tenencia(cantidad: bigint, valor: Decimal | null, totalAcciones: Decimal): Tenencia {
+  const valoracion: Valoracion =
+    valor === null ? { estado: "SIN_CIERRE" } : { estado: "VALORADA", valor, pesoPct: totalAcciones.gt(0) ? valor.div(totalAcciones).mul(CIEN) : null };
+  return { cantidad, valoracion };
+}
 
 function cantidadesYValores(estado: EstadoSimulado, op: OperacionSimulada) {
   const delta = op.lado === "COMPRAR" ? op.cantidad : -op.cantidad;
   return estado.posiciones
     .map((p) => {
-      const cantidadDespues = p.instrumentoId === op.instrumentoId ? p.cantidad + delta : p.cantidad;
-      return { p, cantidadDespues, valorAntes: valorDe(p.cantidad, p.cierre), valorDespues: valorDe(cantidadDespues, p.cierre) };
+      const despues = p.instrumentoId === op.instrumentoId ? p.cantidad + delta : p.cantidad;
+      return { p, despues, valorAntes: valorDe(p.cantidad, p.cierre), valorDespues: valorDe(despues, p.cierre) };
     })
-    .filter((f) => f.p.cantidad > 0n || f.cantidadDespues > 0n);
+    .filter((f) => f.p.cantidad > 0n || f.despues > 0n);
 }
 
 function avisosDe(op: OperacionSimulada, caja: Decimal, necesario: Decimal, comision: ComisionEstimada, sinCierre: readonly EspecieNombrada[]): AvisoSimulacion[] {
-  const [primera, ...resto] = sinCierre;
+  const especies = noVacia(sinCierre);
   return [
     ...(op.lado === "COMPRAR" && necesario.gt(caja) ? [{ codigo: "COMPRA_SUPERA_CAJA", caja, necesario, conComision: comision.estado === "ESTIMADA" } as const] : []),
-    ...(primera === undefined ? [] : [{ codigo: "ESPECIES_SIN_CIERRE", especies: [primera, ...resto] } as const]),
+    ...(especies === null ? [] : [{ codigo: "ESPECIES_SIN_CIERRE", especies } as const]),
   ];
 }
 
@@ -50,9 +58,10 @@ export function calcularEfectos(estado: EstadoSimulado, op: OperacionSimulada, v
   const valorAccionesDespues = total(filas.map((f) => f.valorDespues));
   const especies = filas.map(
     (f): EfectoEspecie => ({
-      instrumentoId: f.p.instrumentoId, nemotecnico: f.p.nemotecnico, cantidadAntes: f.p.cantidad, cantidadDespues: f.cantidadDespues,
-      valorAntes: f.valorAntes, valorDespues: f.valorDespues,
-      pesoAntesPct: pesoDe(f.valorAntes, valorAccionesAntes), pesoDespuesPct: pesoDe(f.valorDespues, valorAccionesDespues),
+      instrumentoId: f.p.instrumentoId,
+      nemotecnico: f.p.nemotecnico,
+      antes: tenencia(f.p.cantidad, f.valorAntes, valorAccionesAntes),
+      despues: tenencia(f.despues, f.valorDespues, valorAccionesDespues),
     }),
   );
   const valorComision = comision.estado === "ESTIMADA" ? comision.valor : CERO;

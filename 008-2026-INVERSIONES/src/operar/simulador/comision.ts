@@ -1,7 +1,8 @@
 /**
- * La comisión de una orden, estimada con la historia del dueño: Σ comisión / Σ valor sin comisión de sus órdenes
- * aprobadas del mismo lado (todas las especies). 008 no tiene la tarifa de la casa de bolsa: sin órdenes de ese lado
- * no se estima nada, en lugar de inventar una tarifa. La estimación dice en cuántas órdenes se basa. Puro.
+ * La comisión de una orden, estimada con la historia del dueño: la suma de las comisiones sobre la suma de los valores
+ * sin comisión de sus órdenes aprobadas del mismo lado (todas las especies). 008 no tiene la tarifa de la casa de
+ * bolsa: sin órdenes de ese lado no se estima nada, en lugar de inventar una tarifa. La estimación dice de qué lado es
+ * y en cuántas órdenes se basa. Puro.
  */
 import { Prisma, type LadoOrden } from "@prisma/client";
 import { DECIMALES_COMISION, type ComisionEstimada, type OrdenHistorica, type TasaComision } from "./tipos";
@@ -15,14 +16,15 @@ export function tasaComisionHistorica(ordenes: readonly OrdenHistorica[], lado: 
   validarOrdenes(ordenes);
   const base = ordenes.filter((o) => o.lado === lado && o.estado === "APROBADO" && o.totalInvertido.gt(0));
   if (base.length === 0) return { estado: "SIN_HISTORIA" };
-  const sumaComisiones = suma(base.map((o) => o.comision));
-  const sumaValor = suma(base.map((o) => o.totalInvertido));
-  return { estado: "ESTIMABLE", sumaComisiones, sumaValor, tasa: sumaComisiones.div(sumaValor), ordenesBase: base.length };
+  return { estado: "ESTIMABLE", lado, sumaComisiones: suma(base.map((o) => o.comision)), sumaValor: suma(base.map((o) => o.totalInvertido)), ordenesBase: base.length };
 }
 
-/** valor × Σ comisión / Σ valor, con un solo redondeo al final (4 decimales, mitad hacia arriba). */
+/**
+ * valor × comisiones / valores, redondeado una sola vez al final (4 decimales, mitad hacia arriba): no se redondea una
+ * tasa intermedia. El producto y la división llevan las 20 cifras del Decimal de Prisma.
+ */
 export function estimarComision(valorOrden: Prisma.Decimal, tasa: TasaComision): ComisionEstimada {
   if (tasa.estado === "SIN_HISTORIA") return { estado: "SIN_HISTORIA" };
   const valor = valorOrden.mul(tasa.sumaComisiones).div(tasa.sumaValor).toDecimalPlaces(DECIMALES_COMISION, Prisma.Decimal.ROUND_HALF_UP);
-  return { estado: "ESTIMADA", valor, tasa: tasa.tasa, ordenesBase: tasa.ordenesBase };
+  return { estado: "ESTIMADA", lado: tasa.lado, valor, ordenesBase: tasa.ordenesBase };
 }
