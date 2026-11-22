@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MOTIVOS } from "@/app/conciliacion/motivos";
-import { CORTES, LECTURA } from "./ficticio";
+import { CORTES, D, LECTURA } from "./ficticio";
 
 const exigirSesion = vi.hoisted(() => vi.fn());
 const cortesDisponibles = vi.hoisted(() => vi.fn());
@@ -20,6 +20,8 @@ const leerConciliacion = vi.hoisted(() => vi.fn());
 vi.mock("@/auth/sesion", () => ({ exigirSesion }));
 vi.mock("@/lib/db", () => ({ db: {} }));
 vi.mock("@/conciliacion/leer", () => ({ cortesDisponibles, leerConciliacion }));
+const procedenciasDeLaLectura = vi.hoisted(() => vi.fn());
+vi.mock("@/app/conciliacion/procedencias", async (original) => ({ ...(await original<typeof import("@/app/conciliacion/procedencias")>()), procedenciasDeLaLectura }));
 
 import Pagina from "@/app/conciliacion/page";
 
@@ -38,6 +40,7 @@ beforeEach(() => {
   exigirSesion.mockResolvedValue({ id: "u1", email: "dueno@ejemplo.invalid", rol: "DUENO" });
   cortesDisponibles.mockResolvedValue(CORTES);
   leerConciliacion.mockResolvedValue(LECTURA);
+  procedenciasDeLaLectura.mockResolvedValue({ cierres: new Map(), fondos: new Map() });
   registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
@@ -46,6 +49,7 @@ afterEach(() => {
   exigirSesion.mockReset();
   cortesDisponibles.mockReset();
   leerConciliacion.mockReset();
+  procedenciasDeLaLectura.mockReset();
 });
 
 describe("src/app/conciliacion/page.tsx · sesión y base", () => {
@@ -230,5 +234,53 @@ describe("candados de src/app/conciliacion", () => {
       expect(fuente, a).not.toMatch(/["']use client["']/);
       expect(fuente, a).not.toContain("dangerouslySetInnerHTML");
     }
+  });
+});
+
+describe("src/app/conciliacion/page.tsx · de dónde y de cuándo es cada «Valor sistema» (frente fecha-hora-datos)", () => {
+  // Con el total y el fondo calculados (en la lectura de siempre no lo están: sin precio y sin unidades).
+  const calculada = {
+    ...LECTURA,
+    conciliacion: {
+      ...LECTURA.conciliacion!,
+      controles: LECTURA.conciliacion!.controles.map((c) =>
+        c.tipo === "FONDO" ? { ...c, esperado: D("6250000"), diferencia: D("0"), resultado: "CUADRA" as const, codigoMotivo: null }
+          : c.tipo === "VALOR" && c.instrumentoId === null ? { ...c, esperado: D("115050"), diferencia: D("0"), resultado: "CUADRA" as const, codigoMotivo: null } : c),
+    },
+  };
+  const procedencias = {
+    cierres: new Map([["a", { fuente: "yahoo", traidoEn: new Date("2027-01-13T23:41:00Z") }]]),
+    fondos: new Map([["f", { fuente: "sfc:qhpu-8ixx", traidoEn: new Date("2027-01-14T12:07:00Z") }]]),
+  };
+  const notas = (tr: Element | undefined) => [...(tr?.querySelectorAll(".fecha-dato") ?? [])].map(texto);
+
+  beforeEach(() => {
+    leerConciliacion.mockResolvedValue(calculada);
+    procedenciasDeLaLectura.mockResolvedValue(procedencias);
+  });
+
+  it("lee las procedencias de la conciliación que muestra", async () => {
+    await pantalla();
+    expect(procedenciasDeLaLectura).toHaveBeenCalledWith({}, calculada);
+  });
+
+  it("cada especie: el cierre del corte, cuándo lo trajo 008 (hora de Colombia) y la fuente, en su «Valor sistema»", async () => {
+    const raiz = await pantalla();
+    const celdas = [...fila(raiz, "FICTA")!.querySelectorAll("th, td")];
+    expect(notas(celdas[5])).toEqual(["Cierre del 22-nov-2024 · traído el 13-ene-2027 a las 18:41 (hora de Colombia) · BVC por Yahoo"]);
+    expect(texto(celdas[5])).toMatch(/^\$ 110\.000Cierre del/);
+    expect(notas(fila(raiz, "FICTC"))).toEqual([]);
+  });
+
+  it("el total de acciones, con el cierre más viejo que lo compone; el fondo, con su valor de unidad", async () => {
+    const raiz = await pantalla();
+    expect(notas(fila(raiz, "Total de acciones"))).toEqual(["Cierre del 22-nov-2024 · traído el 13-ene-2027 a las 18:41 (hora de Colombia) · BVC por Yahoo"]);
+    expect(notas(fila(raiz, "Fondo ficticio uno"))).toEqual(["Valor de unidad del 22-nov-2024 · traído el 14-ene-2027 a las 07:07 (hora de Colombia) · SFC"]);
+    expect(notas(fila(raiz, "Efectivo"))).toEqual([]);
+  });
+
+  it("sin conciliar no hay valores del sistema ni procedencias", async () => {
+    leerConciliacion.mockResolvedValueOnce({ ...LECTURA, conciliacion: null, frescura: null });
+    expect((await pantalla()).querySelector(".fecha-dato")).toBeNull();
   });
 });

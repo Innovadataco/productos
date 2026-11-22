@@ -17,7 +17,18 @@ export interface EntradaEspecie {
   readonly nemotecnico: string;
   readonly cantidad: bigint; // viva (0 si se vendió toda)
   readonly costoVivo: Decimal; // costo de lo que queda, sin comisiones
-  readonly cierre: { readonly precio: Decimal; readonly fecha: Date; readonly verificado: boolean } | null;
+  /**
+   * El último cierre vigente. `traidoEn` (cuándo lo trajo 008) y `fuente` (frente fecha-hora-datos) son opcionales a
+   * propósito: el cambio es aditivo y quien arma un cierre sin ellos (pruebas de otros frentes) sigue compilando; la
+   * lectura de src/tablero/datos.ts siempre los trae.
+   */
+  readonly cierre: {
+    readonly precio: Decimal;
+    readonly fecha: Date;
+    readonly verificado: boolean;
+    readonly traidoEn?: Date;
+    readonly fuente?: string;
+  } | null;
   readonly realizada: Decimal; // ventas − costo FIFO + fracciones de escisión
   readonly dividendos: Decimal; // netos, sin fracciones
   readonly comisiones: Decimal; // de compras y ventas aprobadas

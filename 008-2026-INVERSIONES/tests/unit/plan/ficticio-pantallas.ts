@@ -41,10 +41,11 @@ export const REGLAS_V1: readonly ReglaLeida[] = [
   regla({ id: "r-libre", condicion: "LIBRE", detalle: "Siempre orden límite (ficticia)" }),
 ];
 
+/** Con cuándo los trajo 008 y de qué fuente (frente fecha-hora-datos). Las horas son inventadas, de 2027 (fuera de la historia real). */
 export const CIERRES = new Map([
-  ["a", { fecha: dia("2024-11-22"), precio: D("1100"), estado: "NO_VERIFICADO" as const }],
-  ["b", { fecha: dia("2024-11-22"), precio: D("1913"), estado: "VERIFICADO" as const }],
-  ["c", { fecha: dia("2024-11-01"), precio: D("505"), estado: "NO_VERIFICADO" as const }],
+  ["a", { fecha: dia("2024-11-22"), precio: D("1100"), estado: "NO_VERIFICADO" as const, traidoEn: new Date("2027-01-13T23:41:00Z"), fuente: "yahoo" }],
+  ["b", { fecha: dia("2024-11-22"), precio: D("1913"), estado: "VERIFICADO" as const, traidoEn: new Date("2027-01-14T12:07:00Z"), fuente: "yahoo" }],
+  ["c", { fecha: dia("2024-11-01"), precio: D("505"), estado: "NO_VERIFICADO" as const, traidoEn: new Date("2027-01-13T23:41:00Z"), fuente: "bvc-ficticia" }],
 ]);
 
 export const REFERENCIA = dia("2024-11-22");

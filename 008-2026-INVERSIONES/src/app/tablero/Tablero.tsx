@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
+import { FechaDato, FechaDatoCompuesta } from "@/app/_comun/fecha-dato/FechaDato";
 import { Evolucion } from "./Evolucion";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { Foto } from "./Foto";
+import { procedenciaDeCierre, procedenciaDeFilas } from "./procedencia";
 import { MarcaSoloLectura } from "./SoloLectura";
 import { Linea, Peso } from "./Graficas";
 import { SECCIONES } from "./secciones";
@@ -185,6 +187,9 @@ function Respuesta({ vista }: { vista: Vista }) {
     { k: "Comisiones", v: -n(vista.comisiones), c: "var(--loss)" },
   ];
   const abs = piezas.reduce((s, p) => s + Math.abs(p.v), 0) || 1;
+  // De cuándo son los cierres que suman el valor en acciones (y la ganancia sin vender del total): el más viejo
+  // (frente fecha-hora-datos). Una sola nota en la portada, junto a la cifra que suma los cierres (revisión a11y y React).
+  const compuesta = procedenciaDeFilas(vista.filas);
   return (
     <section className="hero entra" aria-labelledby="t-hero">
       <div className="eyebrow">Su portafolio en acciones</div>
@@ -199,7 +204,7 @@ function Respuesta({ vista }: { vista: Vista }) {
         {piezas.map((p) => <span key={p.k}><i style={{ background: p.c }} />{p.k} {cop(p.v, true)}</span>)}
       </div>
       <div className="kpis">
-        <div className="kpi"><div className="eyebrow">Valor en acciones</div><Cifra valor={n(vista.valorAcciones)} /></div>
+        <div className="kpi"><div className="eyebrow">Valor en acciones</div><Cifra valor={n(vista.valorAcciones)} />{compuesta ? <FechaDatoCompuesta compuesta={compuesta} /> : null}</div>
         <div className="kpi"><div className="eyebrow">Caja</div><span className="muted">llega con la certificación de A&amp;V</span>
           <div className="nota">Los CSV de Trii no traen el aporte al fondo ni sus rendimientos: la caja calculada con ellos no es real.</div></div>
         <div className="kpi"><div className="eyebrow">Especies vivas</div><span className="num">{vista.filas.length}</span></div>
@@ -221,14 +226,22 @@ function notaMovimiento(m: MovimientoVista): string | null {
   return null;
 }
 
-/** Solo formato: el par de ruedas, los aportes y el neto vienen calculados en Decimal desde el servidor. */
-function Movimientos({ mov }: { mov: MovimientoVista }) {
+/**
+ * Solo formato: el par de ruedas, los aportes y el neto vienen calculados en Decimal desde el servidor. Cada tarjeta
+ * dice cuándo se trajo el cierre de la referencia (el último de su fila: el cálculo exige que sea ese) y de dónde; su
+ * fecha ya la dice el periodo de la sección. El neto, el más viejo de los que entraron: todos son del día de la
+ * referencia y sus cierres previos, del día de la rueda anterior (movimiento.ts solo admite ese par).
+ */
+function Movimientos({ mov, filas }: { mov: MovimientoVista; filas: readonly FilaVista[] }) {
   const max = Math.max(1, ...mov.especies.map((m) => Math.abs(n(m.aporte))));
   const neto = mov.neto === null ? null : n(mov.neto);
   const nota = notaMovimiento(mov);
   const periodo = mov.previa ? `Del ${fecha(mov.previa)} al ${fecha(mov.referencia)} · sobre su cantidad actual` : "Último cierre";
   const [lleno, setLleno] = useState(false);
   useEffect(() => { const t = setTimeout(() => setLleno(true), 500); return () => clearTimeout(t); }, []);
+  const cierreDe = new Map(filas.flatMap((f) => (f.cierre ? [[f.id, procedenciaDeCierre(f.cierre)] as const] : [])));
+  const entraron = new Set(mov.especies.map((m) => m.id));
+  const compuesta = procedenciaDeFilas(filas.filter((f) => entraron.has(f.id)));
   return (
     <section className="bloque entra d2" aria-labelledby="t-mov">
       <div className="cabeza">
@@ -239,6 +252,7 @@ function Movimientos({ mov }: { mov: MovimientoVista }) {
         {mov.especies.map((m) => {
           const aporte = n(m.aporte);
           const tono = aporte >= 0 ? "gain" : "loss";
+          const procedencia = cierreDe.get(m.id);
           return (
             <div className="mover" role="listitem" key={m.id}>
               <span><b>{m.nemo}</b><br /><span className={`num chico ${tono}`}>{pct(n(m.variacionPct))}</span></span>
@@ -246,10 +260,12 @@ function Movimientos({ mov }: { mov: MovimientoVista }) {
                 <span className={`barra-fill bg-${tono}`} style={{ transform: `scaleX(${lleno ? Math.abs(aporte) / max : 0})` }} />
               </span>
               <span className={`num der ${tono}`}>{cop(aporte, true)}</span>
+              {procedencia ? <FechaDato procedencia={procedencia} sinFecha ancho /> : null}
             </div>
           );
         })}
       </div>
+      {compuesta ? <FechaDatoCompuesta compuesta={compuesta} /> : null}
       {nota ? <p className="nota">{nota}</p> : null}
     </section>
   );
@@ -273,6 +289,8 @@ function Detalle({ f, cerrar }: { f: FilaVista; cerrar: () => void }) {
         <dt>Cantidad</dt><dd>{numero(n(f.cantidad))}</dd>
         <dt>Costo (A&amp;V o Trii, sin comisión)</dt><dd>{cop(n(f.costo))}</dd>
         <dt>{f.cierre ? `Valor al cierre del ${fecha(f.cierre.fecha)}` : "Valor al cierre"}</dt><dd>{f.valor ? cop(n(f.valor)) : "sin cierre"}</dd>
+        {/* Otra definición del mismo término: cuándo se trajo ese cierre y de dónde (la fecha ya la dice el término). */}
+        {f.cierre ? <dd className="pares-ancho"><FechaDato procedencia={procedenciaDeCierre(f.cierre)} sinFecha /></dd> : null}
         <dt>Ganancia sin vender</dt><dd className={n(f.sinVender) >= 0 ? "gain" : "loss"}>{f.sinVender ? `${cop(n(f.sinVender), true)} · ${pct(n(f.rentabilidadPct))}` : SIN_DATO}</dd>
         <dt>Ganancia por ventas</dt><dd>{cop(n(f.realizada), true)}</dd>
         <dt>Dividendos netos</dt><dd>{cop(n(f.dividendos))}</dd>
@@ -321,7 +339,10 @@ function FilaPosicion({ f, activa, idBoton, elegir }: { f: FilaVista; activa: bo
     <tr className={activa ? "sel" : ""} onClick={elegirEsta}>
       <td><button type="button" id={idBoton} className="especie" aria-pressed={activa} onClick={elegirDesdeBoton}>{f.nemo}</button></td>
       <td className="num">{numero(n(f.cantidad))}</td>
-      <td className="num">{f.cierre ? cop(n(f.cierre.precio)) : SIN_DATO}<br /><ChipCierre cierre={f.cierre} /></td>
+      <td className="num">
+        {f.cierre ? cop(n(f.cierre.precio)) : SIN_DATO}<br /><ChipCierre cierre={f.cierre} />
+        {f.cierre ? <FechaDato procedencia={procedenciaDeCierre(f.cierre)} sinFecha /> : null}
+      </td>
       <td><Linea serie={f.serie} sube={f.serie.length > 1 && n(f.serie[f.serie.length - 1]!.precio) >= n(f.serie[0]!.precio)} /></td>
       <td className="num"><b>{f.valor ? cop(n(f.valor)) : SIN_DATO}</b></td>
       <td className="num">{f.pesoPct ? <><Peso pct={n(f.pesoPct)} /> {numero(n(f.pesoPct), 1)} %</> : SIN_DATO}</td>
@@ -437,7 +458,7 @@ export function Tablero({ vista, conciliacion, evolucion, soloLectura = false }:
         {conciliacion === undefined ? null : <LineaConciliacion linea={conciliacion} />}
         <Respuesta vista={vista} />
         {evolucion === undefined ? null : <Evolucion evolucion={evolucion} />}
-        <Movimientos mov={vista.movimiento} />
+        <Movimientos mov={vista.movimiento} filas={vista.filas} />
         <Foto vista={vista} elegir={elegir} />
         <Posiciones vista={vista} elegida={elegida} elegir={elegir} alCerrar={() => setElegida(null)} />
         <Falta />

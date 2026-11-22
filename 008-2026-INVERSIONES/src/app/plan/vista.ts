@@ -9,6 +9,8 @@ import type { CierreLeido, ReglaLeida, VersionLeida } from "@/plan/lectura";
 import { frescuraDelCierre, preciosAtrasados } from "@/plan/cierre-frescura";
 import { estadoDelNivel } from "@/plan/niveles";
 import type { CalendarioBvc } from "@/precios/negociacion";
+import { horaColombia } from "../_comun/fecha-dato/hora";
+import type { Procedencia } from "../_comun/fecha-dato/tipos";
 import { dia, diaColombia } from "../_plan/serializar";
 import type { CierreVista, NivelVista, ReglaVista, VersionVista, VistaPlan } from "../_plan/tipos";
 
@@ -38,6 +40,13 @@ function cierreDe(r: ReglaLeida, c: Cierres): CierreVista {
   return { estado: "AL_DIA", ...base };
 }
 
+/** El último cierre de la especie: su día, cuándo lo trajo 008 (hora de Colombia) y la fuente. */
+function procedenciaDe(r: ReglaLeida, c: Cierres): Procedencia | null {
+  const ultimo = r.instrumentoId === null ? undefined : c.porEspecie.get(r.instrumentoId);
+  if (!ultimo) return null;
+  return { dia: dia(ultimo.fecha), traidoEn: ultimo.traidoEn ? horaColombia(ultimo.traidoEn) : null, fuente: ultimo.fuente ?? null };
+}
+
 function frenteDe(r: ReglaLeida, cierre: CierreVista, c: Cierres): NivelVista {
   if (r.instrumentoId === null) return { estado: "SIN_NIVEL" };
   const alDia = cierre.estado === "AL_DIA" ? (c.porEspecie.get(r.instrumentoId)?.precio ?? null) : null;
@@ -60,6 +69,7 @@ function aReglaVista(r: ReglaLeida, cierres: Cierres | null, hoy: Date): ReglaVi
     decisiones: r.decisiones,
     cierre,
     frente: cierres && cierre ? frenteDe(r, cierre, cierres) : null,
+    procedencia: cierres ? procedenciaDe(r, cierres) : null,
   };
 }
 

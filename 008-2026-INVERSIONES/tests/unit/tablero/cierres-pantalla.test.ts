@@ -85,9 +85,13 @@ describe("una especie ilíquida con el cierre de hace tres semanas", () => {
     expect(bloque).toContain("Se omite 1 especie: no tiene cierre en las dos ruedas.");
   });
 
-  it("los aportes de «Qué movió» son una lista: el lector anuncia cuántos hay", () => {
+  it("los aportes de «Qué movió» son una lista: el lector anuncia cuántos hay (cada uno con la procedencia de su cierre)", () => {
     const lista = region(html, "Qué movió su portafolio")?.querySelector('[role="list"]');
-    expect([...(lista?.querySelectorAll('[role="listitem"]') ?? [])].map(texto)).toEqual([expect.stringMatching(/^FICT2\s*\+10,0 %\s*\+\$ 50$/)]);
+    // Desde el frente fecha-hora-datos cada tarjeta dice además el cierre de la referencia; aquí la lectura no trae
+    // cuándo se trajo ni la fuente, y la pantalla lo dice en vez de inventarlos.
+    expect([...(lista?.querySelectorAll('[role="listitem"]') ?? [])].map(texto)).toEqual([
+      expect.stringMatching(/^FICT2\s*\+10,0 %\s*\+\$ 50\s*sin la hora en que se trajo · fuente sin dato$/),
+    ]);
   });
 
   it("el titular se condiciona: el total lleva un precio de otra fecha", () => {

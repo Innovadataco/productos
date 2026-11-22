@@ -3,6 +3,7 @@
  * historial de versiones son enlaces. Las acciones de la tabla son las de las reglas del dueño, nunca una sugerencia.
  */
 import type { ReactNode } from "react";
+import { FechaDato } from "../_comun/fecha-dato/FechaDato";
 import { fecha, n, numero } from "../tablero/formato";
 import { Encabezado } from "../_plan/Encabezado";
 import { precio } from "../_plan/formato";
@@ -34,6 +35,8 @@ function CeldaCierre({ regla }: { readonly regla: ReglaVista }) {
     <td className="texto">
       <span className={t.aviso ? "dato aviso" : "dato"}>{t.principal}</span>
       {t.detalle ? <span className={`chip${t.aviso ? " aviso" : ""}`}>{t.detalle}</span> : null}
+      {/* Cuándo lo trajo 008 y de dónde (frente fecha-hora-datos); la fecha del cierre ya la dice la celda. */}
+      {regla.procedencia ? <FechaDato procedencia={regla.procedencia} sinFecha /> : null}
     </td>
   );
 }

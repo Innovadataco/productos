@@ -1,4 +1,5 @@
 /** Datos del tablero ya serializados (texto decimal), listos para cruzar del servidor al cliente. */
+import type { InstanteColombia } from "@/app/_comun/fecha-dato/tipos";
 import type { ClaveRango } from "@/tablero/evolucion";
 import type { MotivoSinComparar } from "@/tablero/movimiento";
 
@@ -31,8 +32,19 @@ export interface FilaVista {
   readonly realizada: string;
   readonly dividendos: string;
   readonly comisiones: string;
-  /** `atrasado`: el cierre es anterior a la fecha de referencia del tablero (se pinta «precio del <fecha>»). */
-  readonly cierre: { readonly precio: string; readonly fecha: string; readonly verificado: boolean; readonly atrasado: boolean } | null;
+  /**
+   * `atrasado`: el cierre es anterior a la fecha de referencia del tablero (se pinta «precio del <fecha>»).
+   * `traidoEn` (en hora de Colombia, «AAAA-MM-DD HH:MM») y `fuente` (su código): de dónde y de cuándo es el cierre
+   * (frente fecha-hora-datos); null si la lectura no los trae.
+   */
+  readonly cierre: {
+    readonly precio: string;
+    readonly fecha: string;
+    readonly verificado: boolean;
+    readonly atrasado: boolean;
+    readonly traidoEn: InstanteColombia | null;
+    readonly fuente: string | null;
+  } | null;
   readonly lotesVivos: number;
   readonly serie: readonly { readonly fecha: string; readonly precio: string }[];
 }

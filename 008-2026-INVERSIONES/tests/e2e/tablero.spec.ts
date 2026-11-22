@@ -58,9 +58,11 @@ test.describe("tablero del portafolio", () => {
     const t = await PaginaTablero.abrir(page, info);
     await expect(t.avisoIncompletas).toContainText("FICTI");
     await expect(t.botonesDeEspecie).toHaveCount(3);
-    await expect(t.tabla.getByText("FICTI")).toHaveCount(0);
+    // Con mayúsculas exactas: getByText con texto ignora mayúsculas, y la fuente de los cierres del e2e («e2e-ficticio»)
+    // se ve en cada fila desde el frente fecha-hora-datos.
+    await expect(t.tabla.getByText(/FICTI/)).toHaveCount(0);
     // Ni en «Vendidas por completo» ni en «Qué movió su portafolio»: solo en el aviso.
-    await expect(page.getByText("FICTI")).toHaveCount(1);
+    await expect(page.getByText(/FICTI/)).toHaveCount(1);
   });
 
   test("nunca un precio viejo como de hoy: la ilíquida dice su fecha en la fila, la cabecera y los avisos", async ({ page }, info) => {
