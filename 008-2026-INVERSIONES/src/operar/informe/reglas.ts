@@ -25,6 +25,7 @@ function cierreAlDia(cierre: CierreLeido | undefined, referencia: Date | null): 
 function estadoDe(r: ReglaLeida, cierre: CierreLeido | undefined, referencia: Date | null): EstadoRegla {
   if (r.condicion === "NINGUNA" || r.condicion === "LIBRE") return { tipo: "POSTURA" };
   if (r.condicion === "MONTO_ORDEN_BAJO") return { tipo: "POR_ORDEN" };
+  if (r.instrumentoId === null) return { tipo: "SIN_ESPECIE" };
   if (r.nivel === null) return { tipo: "SIN_NIVEL" };
   const alDia = cierreAlDia(cierre, referencia);
   const sinCierre: EstadoRegla = { tipo: "SIN_CIERRE_AL_DIA", ultimo: cierre ? { precio: cierre.precio, fecha: cierre.fecha } : null };

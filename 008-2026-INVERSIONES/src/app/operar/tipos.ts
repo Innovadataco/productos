@@ -15,7 +15,7 @@ export interface EspecieVista {
   readonly id: string;
   readonly nemo: string;
   readonly cantidad: string;
-  readonly cierre: (CierreVista & { readonly verificado: boolean }) | null;
+  readonly cierre: CierreVista | null;
   readonly valor: string | null;
   readonly pesoPct: string | null;
   readonly sinVender: string | null;
@@ -27,7 +27,6 @@ export interface EstadoVista {
   readonly especies: readonly EspecieVista[];
   readonly valorAcciones: string;
   readonly sinVender: string;
-  readonly especiesSinPrecio: number;
   readonly especiesAtrasadas: number;
   readonly incompletas: readonly string[];
 }
@@ -39,6 +38,7 @@ export type EstadoReglaVista =
   | { readonly tipo: "SIN_CIERRE_AL_DIA"; readonly ultimo: CierreVista | null }
   | { readonly tipo: "POR_ORDEN" }
   | { readonly tipo: "POSTURA" }
+  | { readonly tipo: "SIN_ESPECIE" }
   | { readonly tipo: "SIN_NIVEL" };
 
 export interface ReglaOperarVista {

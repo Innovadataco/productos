@@ -7,14 +7,14 @@
 import { SECCIONES } from "../tablero/secciones";
 import { MarcaSoloLectura } from "../tablero/SoloLectura";
 
-interface Seccion {
+interface EnlaceSeccion {
   readonly clave: string;
   readonly texto: string;
   readonly href: string;
 }
 
-const OPERAR: Seccion = { clave: "operar", texto: "Operar", href: "/operar" };
-const SECCIONES_OPERAR: readonly Seccion[] = SECCIONES.flatMap((s): Seccion[] => (s.clave === "plan" ? [s, OPERAR] : [s]));
+const OPERAR: EnlaceSeccion = { clave: "operar", texto: "Operar", href: "/operar" };
+const SECCIONES_OPERAR: readonly EnlaceSeccion[] = SECCIONES.flatMap((s): EnlaceSeccion[] => (s.clave === "plan" ? [s, OPERAR] : [s]));
 
 export function EncabezadoOperar({ soloLectura }: { readonly soloLectura: boolean }) {
   return (

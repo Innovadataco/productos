@@ -7,12 +7,12 @@ import { sumarDias } from "@/plan/fechas";
 import { cierre, cierreLeido, D, dia, entradas, especie, HOY, plan, proximo, regla, reglaDe } from "./ficticio";
 
 describe("aVistaOperar", () => {
-  it("el estado en texto: cantidad, cierre con su verificación, valor exacto y peso con dos decimales", () => {
+  it("el estado en texto: cantidad, cierre y su fecha, valor exacto y peso con dos decimales", () => {
     const v = aVistaOperar(armarInforme(entradas({
       especies: [especie({ nemotecnico: "FICTICIA-A", cantidad: 37n, costoVivo: D("158917.31"), cierre: cierre("4597.31", dia("2027-03-16"), true) })],
     }), HOY));
     expect(v.estado.especies).toEqual([{
-      id: "FICTICIA-A", nemo: "FICTICIA-A", cantidad: "37", cierre: { precio: "4597.31", fecha: "2027-03-16", verificado: true },
+      id: "FICTICIA-A", nemo: "FICTICIA-A", cantidad: "37", cierre: { precio: "4597.31", fecha: "2027-03-16" },
       valor: "170100.47", pesoPct: "100.00", sinVender: "11183.16", sinVenderPct: "7.04", atrasado: false,
     }]);
     expect([v.hoy, v.hasta, v.referencia, v.preciosAtrasados]).toEqual(["2027-03-17", "2027-04-16", "2027-03-16", false]);

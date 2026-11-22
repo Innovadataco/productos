@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { esSoloLectura } from "@/auth/roles";
 import { exigirSesion } from "@/auth/sesion";
 import { db } from "@/lib/db";
@@ -9,6 +10,8 @@ import type { VistaOperar } from "./tipos";
 
 // Lee la base en cada visita: el portafolio, el plan, los cierres y los decretos cambian con cada carga.
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Informe para operar" };
 
 /**
  * /operar (frente operar-informe, hito O1): el informe para el día de operar, calculado con el plan del dueño. Revalida

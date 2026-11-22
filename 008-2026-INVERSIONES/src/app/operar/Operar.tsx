@@ -7,7 +7,7 @@ import { EncabezadoOperar } from "./EncabezadoOperar";
 import { Estado } from "./Estado";
 import { Fechas } from "./Fechas";
 import { Reglas } from "./Reglas";
-import { AVISO_DECISION, PIE_OPERAR, textoPrecios, textoPreciosAtrasados } from "./textos";
+import { AVISO_DECISION, PIE_OPERAR, textoDelDia, textoPrecios, textoPreciosAtrasados } from "./textos";
 import type { VistaOperar } from "./tipos";
 import "../_plan/plan.css";
 import "./operar.css";
@@ -15,14 +15,15 @@ import "./operar.css";
 function Portada({ vista }: { readonly vista: VistaOperar }) {
   return (
     <section className="hero plan-hero" aria-labelledby="t-hero">
-      <div className="eyebrow">Operar</div>
+      <div className="eyebrow">{textoDelDia(vista.hoy)}</div>
       <h1 id="t-hero">Informe para operar</h1>
       <p>Lo que dice su plan frente a los últimos cierres, el estado de sus especies y las fechas que se acercan.</p>
+      {/* Contenido del servidor, presente al cargar: sin región viva (role=status solo anuncia cambios posteriores). */}
       <div className="op-aviso" role="note" aria-label="Aviso">
         <p>{AVISO_DECISION}</p>{" "}
-        <p>{textoPrecios(vista.referencia)}</p>
+        <p className="op-precios">{textoPrecios(vista.referencia)}</p>
+        {vista.preciosAtrasados && vista.referencia ? <>{" "}<p className="aviso">{textoPreciosAtrasados(vista.referencia)}</p></> : null}
       </div>
-      {vista.preciosAtrasados && vista.referencia ? <p className="nota aviso" role="status">{textoPreciosAtrasados(vista.referencia)}</p> : null}
     </section>
   );
 }
@@ -44,7 +45,7 @@ export function Operar({ vista, soloLectura = false }: { readonly vista: VistaOp
         <Portada vista={vista} />
         <Estado estado={vista.estado} referencia={vista.referencia} />
         <Reglas reglas={vista.reglas} preciosAtrasados={vista.preciosAtrasados} />
-        <Fechas fechas={vista.fechas} />
+        <Fechas fechas={vista.fechas} hoy={vista.hoy} hasta={vista.hasta} />
         <Escenarios />
         <footer className="pie"><p>{PIE_OPERAR}</p></footer>
       </main>

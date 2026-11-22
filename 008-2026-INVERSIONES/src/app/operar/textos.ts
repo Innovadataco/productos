@@ -5,6 +5,7 @@
  * pantalla la ve también la familia. Reusa el formato del tablero y del plan.
  */
 import type { AccionPlan, CondicionRegla } from "@prisma/client";
+import { DIAS_FECHAS, UMBRAL_CERCANA_PCT } from "@/operar/informe/armar";
 import { TEXTO_TIPO } from "../datos-oficiales/formato-decretos";
 import { fecha, n, numero } from "../tablero/formato";
 import { precio } from "../_plan/formato";
@@ -14,22 +15,29 @@ import type { CierreVista, EstadoReglaVista, FechaVista, ReglaOperarVista, Regla
 export const AVISO_DECISION = "Información calculada por 008 con su plan. La decisión es suya. 008 no recomienda comprar ni vender.";
 export const PIE_OPERAR = "Esta pantalla solo muestra: no registra órdenes ni decisiones.";
 
+const UMBRAL = `${UMBRAL_CERCANA_PCT.toString()} %`;
+
 export const TITULOS_GRUPO = {
   seCumplen: "Se cumplen o están en el nivel",
-  cercanas: "Cerca de su nivel (a menos del 3 %)",
+  cercanas: `Cerca de su nivel (a menos del ${UMBRAL})`,
   resto: "El resto de sus reglas",
 } as const;
 
 export const VACIOS_GRUPO = {
   seCumplen: "Hoy ninguna regla se cumple ni está en su nivel.",
-  cercanas: "Ninguna regla está a menos del 3 % de su nivel.",
+  cercanas: `Ninguna regla está a menos del ${UMBRAL} de su nivel.`,
   resto: "No hay más reglas.",
 } as const;
+
+export const textoTituloFechas = (): string => `Fechas de los próximos ${DIAS_FECHAS} días`;
+export const textoSinFechas = (): string => `No hay ex-dividendos ni plazos de reglas en los próximos ${DIAS_FECHAS} días.`;
+export const textoVentana = (hoy: string, hasta: string): string => `Del ${fecha(hoy)} al ${fecha(hasta)}.`;
+export const textoDelDia = (hoy: string): string => `Informe del ${fecha(hoy)}`;
 
 export const textoPrecios = (referencia: string | null): string =>
   referencia === null ? "Precios: todavía no hay cierres de las especies del portafolio." : `Precios: último cierre disponible (${fecha(referencia)}).`;
 
-export const textoPreciosAtrasados = (referencia: string): string => `Los precios no se han actualizado desde el ${fecha(referencia)}.`;
+export const textoPreciosAtrasados = (referencia: string): string => `Atención: los precios no se han actualizado desde el ${fecha(referencia)}.`;
 
 export const textoVersion = (v: ReglasVista["version"]): string =>
   v === null ? "Hoy no rige ninguna versión del plan." : `Plan vigente: versión ${v.numero}, desde el ${fecha(v.desde)}.`;
@@ -94,13 +102,20 @@ export interface TextoEstado {
 const delCierre = (c: CierreVista): string => `el cierre del ${fecha(c.fecha)}`;
 const LADO = { BAJO: "por debajo del nivel", SOBRE: "por encima del nivel" } as const;
 
+/** Una regla tocada con el plazo vencido: la condición se da, pero la regla ya no rige; nunca «se cumple». */
+const tocadaVencida = (c: CierreVista, lado: keyof typeof LADO): TextoEstado => ({
+  principal: `La condición se da con ${delCierre(c)} (${precio(c.precio)}, ${LADO[lado]}), pero su plazo venció.`,
+  aviso: true,
+});
+
 /**
- * Cómo está la regla hoy. Solo una regla tocada dice «se cumple»; si la carga de precios se detuvo, no dice «Hoy»: dice
- * con qué cierre se cumple.
+ * Cómo está la regla hoy. Solo una regla tocada y en plazo dice «se cumple»; si la carga de precios se detuvo, no dice
+ * «Hoy»: dice con qué cierre se cumple.
  */
-export function textoEstadoRegla(e: EstadoReglaVista, preciosAtrasados: boolean): TextoEstado {
+export function textoEstadoRegla(e: EstadoReglaVista, preciosAtrasados: boolean, plazoVencido = false): TextoEstado {
   switch (e.tipo) {
     case "TOCADA":
+      if (plazoVencido) return tocadaVencida(e.cierre, e.lado);
       return {
         principal: preciosAtrasados
           ? `Se cumple con el último cierre disponible, del ${fecha(e.cierre.fecha)}: ${precio(e.cierre.precio)}, ${LADO[e.lado]}.`
@@ -122,6 +137,8 @@ export function textoEstadoRegla(e: EstadoReglaVista, preciosAtrasados: boolean)
       return { principal: "008 no la mide con los cierres: aplica al monto de cada orden.", aviso: false };
     case "POSTURA":
       return { principal: "Es una postura del plan: no depende de un nivel de precio.", aviso: false };
+    case "SIN_ESPECIE":
+      return { principal: "Es de portafolio y su condición es un cierre: 008 no la mide sin una especie.", aviso: true };
     case "SIN_NIVEL":
       return { principal: "El plan no trae un nivel para medirla.", aviso: true };
   }
@@ -148,5 +165,5 @@ export function textoFecha(f: FechaVista): TextoFecha {
       detalle: `${TEXTO_TIPO[f.tipoDividendo].toLowerCase()}, cuota ${f.cuota}: ${precio(f.valorPorAccion)} por acción; pago el ${fecha(f.fechaPago)}; ${textoTenencia(f.tenencia)}.`,
     };
   }
-  return { cuando: fecha(f.fecha), que: `Último día del plazo de ${deLaRegla(f.especie)}`, detalle: `${accionYCantidad(f)}${condicionYNivel(f)}.` };
+  return { cuando: fecha(f.fecha), que: `Último día del plazo de ${deLaRegla(f.especie)}, que dice`, detalle: `${accionYCantidad(f)}${condicionYNivel(f)}.` };
 }

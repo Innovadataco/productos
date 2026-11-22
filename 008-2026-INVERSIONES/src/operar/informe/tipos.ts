@@ -65,6 +65,7 @@ export interface EstadoInforme {
  * - TOCADA, EN_EL_NIVEL y A_DISTANCIA salen de `estadoDelNivel` con un cierre al día;
  * - SIN_CIERRE_AL_DIA: la especie no tiene cierre, el suyo es anterior a la referencia o no hay referencia;
  * - POR_ORDEN: MONTO_ORDEN_BAJO (pesos por orden, no un precio); POSTURA: NINGUNA o LIBRE;
+ * - SIN_ESPECIE: una regla de cierre de portafolio (sin especie): no hay un cierre con qué medirla (como en /plan);
  * - SIN_NIVEL: una regla de cierre sin nivel (la validación del plan no lo deja; se informa en vez de inventar).
  */
 export type EstadoRegla =
@@ -74,6 +75,7 @@ export type EstadoRegla =
   | { readonly tipo: "SIN_CIERRE_AL_DIA"; readonly ultimo: CierreDia | null }
   | { readonly tipo: "POR_ORDEN" }
   | { readonly tipo: "POSTURA" }
+  | { readonly tipo: "SIN_ESPECIE" }
   | { readonly tipo: "SIN_NIVEL" };
 
 export type GrupoRegla = "SE_CUMPLE" | "CERCANA" | "RESTO";

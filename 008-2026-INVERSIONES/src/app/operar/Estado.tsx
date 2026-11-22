@@ -8,7 +8,13 @@ import type { EspecieVista, EstadoVista } from "./tipos";
 
 const SIN_DATO = "—";
 const DECIMALES_PESO = 1;
-const signo = (s: string | null): string => (s === null || n(s) === 0 ? "" : n(s) > 0 ? "gain" : "loss");
+const CAPTION = "Estado por especie: cantidad, último cierre, valor, peso y ganancia o pérdida sin vender";
+
+/** La celda de una ganancia o pérdida: el color sigue al signo del TEXTO (lo que redondea a cero no lleva color). */
+function CeldaSigno({ texto }: { readonly texto: string }) {
+  const tono = texto.startsWith("+") ? " gain" : texto.startsWith("−") ? " loss" : "";
+  return <td className={`num${tono}`}>{texto}</td>;
+}
 
 function CeldaCierre({ e }: { readonly e: EspecieVista }) {
   if (e.cierre === null) return <td className="texto">sin cierre</td>;
@@ -28,8 +34,8 @@ function Fila({ e }: { readonly e: EspecieVista }) {
       <CeldaCierre e={e} />
       <td className="num">{e.valor === null ? SIN_DATO : cop(n(e.valor))}</td>
       <td className="num">{e.pesoPct === null ? SIN_DATO : `${numero(n(e.pesoPct), DECIMALES_PESO)} %`}</td>
-      <td className={`num ${signo(e.sinVender)}`}>{e.sinVender === null ? SIN_DATO : cop(n(e.sinVender), true)}</td>
-      <td className={`num ${signo(e.sinVenderPct)}`}>{e.sinVenderPct === null ? SIN_DATO : pct(n(e.sinVenderPct))}</td>
+      <CeldaSigno texto={e.sinVender === null ? SIN_DATO : cop(n(e.sinVender), true)} />
+      <CeldaSigno texto={e.sinVenderPct === null ? SIN_DATO : pct(n(e.sinVenderPct))} />
     </tr>
   );
 }
@@ -37,11 +43,12 @@ function Fila({ e }: { readonly e: EspecieVista }) {
 function Tabla({ estado }: { readonly estado: EstadoVista }) {
   return (
     <div className="tabla" role="region" aria-label="Estado por especie" tabIndex={0}>
-      <table className="angosta" aria-labelledby="t-estado">
+      <table className="angosta">
+        <caption className="sr">{CAPTION}</caption>
         <thead>
           <tr>
             <th scope="col">Especie</th><th scope="col" className="num">Cantidad</th><th scope="col">Último cierre</th><th scope="col" className="num">Valor</th>
-            <th scope="col" className="num">Peso</th><th scope="col" className="num">Ganancia o pérdida sin vender</th><th scope="col" className="num">Sobre el costo</th>
+            <th scope="col" className="num">Peso</th><th scope="col" className="num">Ganancia o pérdida sin vender</th><th scope="col" className="num">Sobre el costo (%)</th>
           </tr>
         </thead>
         <tbody>{estado.especies.map((e) => <Fila key={e.id} e={e} />)}</tbody>
@@ -49,7 +56,7 @@ function Tabla({ estado }: { readonly estado: EstadoVista }) {
           <tr>
             <th scope="row">Total</th><td /><td />
             <td className="num">{cop(n(estado.valorAcciones))}</td><td />
-            <td className={`num ${signo(estado.sinVender)}`}>{cop(n(estado.sinVender), true)}</td><td />
+            <CeldaSigno texto={cop(n(estado.sinVender), true)} /><td />
           </tr>
         </tfoot>
       </table>
