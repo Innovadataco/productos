@@ -55,7 +55,7 @@ async function sembrar(instrumentoId: string, cuota: number, version: number, re
   const ff = await db.filaFuente.create({ data: { tipoFuente: "REGISTRO_DECRETOS", claveNatural: claveNaturalDecreto(instrumentoId, d, version), ocurrencia: 1, primeraCargaId: carga.id, primeraFilaNo: 2, crudo: {} } });
   const { id } = await db.dividendoDecretado.create({
     data: {
-      filaFuenteId: ff.id, instrumentoId, ...d, valorPorAccion: new Prisma.Decimal("4.61"), fechaEx: dia("2021-04-14"), fechaPago: dia("2021-04-21"),
+      filaFuenteId: ff.id, instrumentoId, ...d, valorPorAccion: new Prisma.Decimal("4.6137"), fechaEx: dia("2021-04-14"), fechaPago: dia("2021-04-21"),
       referenciaOficial: "sfc:FICT-4613", version,
     },
   });
@@ -275,7 +275,7 @@ describe("importar-decretos · la cadena de versiones y la atomicidad", () => {
   it("un archivo con nuevos, cambios y anulaciones de varias especies queda en una sola carga, con sus conteos", async () => {
     expect(await importar([fila(nemo("Y")), fila(nemo("Y"), { cuota: "2" })], true)).toMatchObject({ estado: "APLICADO" });
     const r = await importar([
-      fila(nemo("Y"), { valor_por_accion: "3.47" }), fila(nemo("Y"), { cuota: "2", anulada: "SI", nota: "anulada en la prueba" }),
+      fila(nemo("Y"), { valor_por_accion: "3.4719" }), fila(nemo("Y"), { cuota: "2", anulada: "SI", nota: "anulada en la prueba" }),
       fila(nemo("Y"), { cuota: "3" }), fila(nemo("S"), { tipo: "EXTRAORDINARIO" }),
     ], true);
     expect(r).toMatchObject({ estado: "APLICADO", conteos: { filas: 4, nuevos: 2, versiones: 1, anulaciones: 1, sinCambios: 0 } });

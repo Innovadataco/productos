@@ -62,7 +62,7 @@ describe("importar-decretos como proceso", { timeout: 12 * POR_CLI_MS }, () => {
   });
 
   it("rechazado (3): CSV inválido o especie no registrada, con la línea y el código; no escribe nada", async () => {
-    comprobar(correr(["--archivo", archivo("invalido.csv", [fila(NEMO, "-1.37")]), "--email", email, "--aplicar"]), 3, "línea 2 · valor_por_accion · VALOR_NO_POSITIVO");
+    comprobar(correr(["--archivo", archivo("invalido.csv", [fila(NEMO, "-1.3719")]), "--email", email, "--aplicar"]), 3, "línea 2 · valor_por_accion · VALOR_NO_POSITIVO");
     comprobar(correr(["--archivo", archivo("sin-especie.csv", [fila(NEMO_SIN_REGISTRAR)]), "--email", email, "--aplicar"]), 3, "línea 2 · especie · ESPECIE_NO_REGISTRADA");
     expect(await decretos()).toBe(0);
   });

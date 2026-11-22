@@ -30,7 +30,7 @@ describe("decretos · planificar", () => {
   });
 
   it("igual a la vigente (el valor como decimal: 1873.2045170 = 1873.204517): sin cambios, con la fila cruda de la vigente", () => {
-    const v = [guardada(1, false, { valorPorAccion: new Prisma.Decimal("1.37") }), guardada(2, true, { valorPorAccion: new Prisma.Decimal("1873.2045170") })];
+    const v = [guardada(1, false, { valorPorAccion: new Prisma.Decimal("1.3719") }), guardada(2, true, { valorPorAccion: new Prisma.Decimal("1873.2045170") })];
     expect(planificar(v, DECRETO)).toEqual({ accion: "SIN_CAMBIOS", filaFuenteId: "fila-2" });
   });
 
@@ -102,7 +102,7 @@ describe("decretos · planificar el archivo y contar", () => {
       [claveDecreto("ins-a", "ORDINARIO", DECRETO.fechaAnuncio, 3), [guardada(1, true, { cuota: 3 })]],
     ]);
     const { planes } = planificarTodos([
-      resuelto("ins-a", { linea: 2 }), resuelto("ins-a", { linea: 3, cuota: 2, valorPorAccion: "4.61" }),
+      resuelto("ins-a", { linea: 2 }), resuelto("ins-a", { linea: 3, cuota: 2, valorPorAccion: "4.6137" }),
       resuelto("ins-a", { linea: 4, cuota: 3, anulada: true, nota: "x" }), resuelto("ins-a", { linea: 5, cuota: 4 }),
     ], versiones);
     const conteos = contar(planes);
@@ -116,7 +116,7 @@ describe("decretos · clave natural de la fila cruda y guarda del cruce", () => 
   it("la clave natural: sha256 de la clave del decreto y la versión; otra versión u otra clave dan otra; el contenido no cuenta", () => {
     const k = claveNaturalDecreto("ins-a", DECRETO, 1);
     expect(k).toMatch(/^[0-9a-f]{64}$/);
-    expect(claveNaturalDecreto("ins-a", con({ valorPorAccion: "4.61", nota: "x" }), 1)).toBe(k);
+    expect(claveNaturalDecreto("ins-a", con({ valorPorAccion: "4.6137", nota: "x" }), 1)).toBe(k);
     expect(new Set([k, claveNaturalDecreto("ins-a", DECRETO, 2), claveNaturalDecreto("ins-b", DECRETO, 1), claveNaturalDecreto("ins-a", con({ cuota: 2 }), 1),
       claveNaturalDecreto("ins-a", con({ tipo: "EXTRAORDINARIO" }), 1), claveNaturalDecreto("ins-a", con({ fechaAnuncio: dia("2021-03-18") }), 1)]).size).toBe(6);
   });

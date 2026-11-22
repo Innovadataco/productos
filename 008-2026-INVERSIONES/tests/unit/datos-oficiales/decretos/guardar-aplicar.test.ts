@@ -67,7 +67,7 @@ function baseFalsa(o: Opciones = {}) {
 
 const vigente = (cambios: Record<string, unknown> = {}) => ({
   id: "dec-1", instrumentoId: "ins-a", tipo: "ORDINARIO", fechaAnuncio: DECRETO.fechaAnuncio, cuota: 1, version: 1, reemplazadoEn: null,
-  valorPorAccion: new Prisma.Decimal("4.61"), fechaEx: DECRETO.fechaEx, fechaPago: DECRETO.fechaPago, referenciaOficial: DECRETO.referencia,
+  valorPorAccion: new Prisma.Decimal("4.6137"), fechaEx: DECRETO.fechaEx, fechaPago: DECRETO.fechaPago, referenciaOficial: DECRETO.referencia,
   nota: null, anulada: false, filaFuenteId: "fila-1", ...cambios,
 });
 

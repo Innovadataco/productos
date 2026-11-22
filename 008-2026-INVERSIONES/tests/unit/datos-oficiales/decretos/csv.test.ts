@@ -83,7 +83,7 @@ describe("decretos · una fila", () => {
     expect(codigos({ valor_por_accion: "1.87e3" })).toEqual(["valor_por_accion:NUMERO_FORMATO"]);
     expect(codigos({ valor_por_accion: "123456789012345" })).toEqual(["valor_por_accion:NUMERO_RANGO"]);
     expect(codigos({ valor_por_accion: "12345678901234" })).toEqual([]);
-    for (const malo of ["0", "0.000", "-3.71"]) expect(codigos({ valor_por_accion: malo }), malo).toEqual(["valor_por_accion:VALOR_NO_POSITIVO"]);
+    for (const malo of ["0", "0.000", "-3.7139"]) expect(codigos({ valor_por_accion: malo }), malo).toEqual(["valor_por_accion:VALOR_NO_POSITIVO"]);
   });
 
   it("P11: solo en pesos (COP) y en dinero (DINERO); un decreto en USD o en acciones no entra", () => {
@@ -138,7 +138,7 @@ describe("decretos · el archivo", () => {
   });
 
   it("los hallazgos nunca llevan valores: ni la especie, ni el valor, ni la referencia, ni la nota", () => {
-    const r = leer({ especie: "FICTA4613", valor_por_accion: "-4613.37", referencia: "https://ejemplo.invalid/4613", nota: "nota secreta 4613" });
+    const r = leer({ especie: "FICTA4613", valor_por_accion: "-4613.3719", referencia: "https://ejemplo.invalid/4613", nota: "nota secreta 4613" });
     expect(r.ok).toBe(false);
     expect(JSON.stringify(r)).not.toMatch(/FICTA|4613|ejemplo|secreta/);
   });
