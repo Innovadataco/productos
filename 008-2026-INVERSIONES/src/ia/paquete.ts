@@ -4,13 +4,14 @@
  * repite un valor, una presentación, un nombre ni una clave recibida: solo el código, el hecho y el campo.
  *
  * Valida la entrada como `unknown` (los tipos de TypeScript no llegan al tiempo de ejecución), toma la etiqueta y la
- * unidad del catálogo, copia campo por campo (nada de `...entrada`), congela todo y calcula el hash.
+ * unidad del catálogo, copia campo por campo (nada de `...entrada`), congela todo, calcula el hash y registra el
+ * paquete: la vista ciega y las puertas solo aceptan paquetes construidos aquí (`esPaqueteConstruido`), no copias.
  */
 import { CALIDADES, CERCANIAS, DIRECCIONES, FRESCURAS, MAX_AVISOS, MAX_HECHOS, MAX_LARGO_FUENTE, MAX_LARGO_PRESENTACION,
   MAX_VERSIONES_CALCULO, PATRON_ID_HECHO, TIPOS_RESUMEN, VERSION_HECHOS,
   type EntradaPaquete, type Hecho, type IdHecho, type PaqueteHechos, type TipoResumen } from "./contrato";
 import { CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, type ClaveDe, type EntradaCatalogo } from "./catalogo";
-import { esDecimalCanonico, esDiaIso, esNombreEspecie, esObjetoPlano, esTextoSeguro, type Registro } from "./formas";
+import { esDe, esDecimalCanonico, esDiaIso, esNombreEspecie, esObjetoPlano, esTextoSeguro, type Registro } from "./formas";
 import { hashPaquete } from "./hash";
 import { esClaveProhibida } from "./prohibidas";
 
@@ -21,6 +22,7 @@ export const CODIGOS_ERROR_PAQUETE = Object.freeze([
   "VALOR_NO_DECIMAL", "VALOR_NO_FECHA", "VALOR_NO_ENTERO", "VALOR_NEGATIVO", "NOMBRE_INVALIDO", "ESPECIE_REPETIDA",
   "PRESENTACION_INVALIDA", "FUENTE_INVALIDA", "FECHA_INVALIDA", "FECHA_FUTURA", "CALIDAD_INVALIDA", "DIRECCION_INVALIDA",
   "CERCANIA_INVALIDA", "FRESCURA_INVALIDA", "DIRECCION_NO_APLICA", "CERCANIA_NO_APLICA", "OBLIGATORIO_INVALIDO",
+  "HECHO_REPETIDO", "VERSION_DISTINTA", "GUARDADO_NO_COINCIDE",
 ] as const);
 export type CodigoErrorPaquete = (typeof CODIGOS_ERROR_PAQUETE)[number];
 
@@ -51,8 +53,6 @@ export function idDeHecho(posicion: number): IdHecho {
   if (!Number.isInteger(posicion) || posicion < 1 || posicion > MAX_HECHOS) throw new RangeError("La posición de un hecho va de 1 a 99.");
   return `H${String(posicion).padStart(2, "0")}` as IdHecho;
 }
-
-const esDe = <T extends string>(lista: readonly T[], valor: unknown): valor is T => typeof valor === "string" && (lista as readonly string[]).includes(valor);
 
 /** Solo los campos del contrato: los demás son CLAVE_PROHIBIDA o CAMPO_DESCONOCIDO (sin repetir su nombre). */
 function exigirCampos(registro: Registro, exigidos: readonly string[], opcional: string | null, hecho: IdHecho | null): void {
@@ -98,10 +98,10 @@ interface Contexto {
 function validarSujeto(registro: Registro, catalogo: EntradaCatalogo, id: IdHecho, previos: readonly Hecho[]): IdHecho | undefined {
   const sujeto = registro[CAMPO_OPCIONAL_HECHO];
   if (sujeto === undefined) {
-    if (catalogo.sujeto === "EXIGIDO") throw new ErrorPaquete("SUJETO_FALTANTE", id, "sujeto");
+    if (catalogo.politicaSujeto === "EXIGIDO") throw new ErrorPaquete("SUJETO_FALTANTE", id, "sujeto");
     return undefined;
   }
-  if (catalogo.sujeto === "NINGUNO") throw new ErrorPaquete("SUJETO_NO_PERMITIDO", id, "sujeto");
+  if (catalogo.politicaSujeto === "NINGUNO") throw new ErrorPaquete("SUJETO_NO_PERMITIDO", id, "sujeto");
   const apuntado = typeof sujeto === "string" && PATRON_ID_HECHO.test(sujeto) ? previos.find((h) => h.id === sujeto) : undefined;
   if (apuntado === undefined) throw new ErrorPaquete("SUJETO_INEXISTENTE", id, "sujeto");
   if (apuntado.clave !== CLAVE_NOMBRE_ESPECIE) throw new ErrorPaquete("SUJETO_NO_ES_ESPECIE", id, "sujeto");
@@ -171,12 +171,19 @@ function validarHecho(crudo: unknown, posicion: number, contexto: Contexto): Hec
   });
 }
 
+/** Un hecho por (clave, sujeto): dos «valor de las acciones», o dos «valor de la especie» de la misma especie, no. */
 function validarHechos(crudos: readonly unknown[], tipo: TipoResumen, hoy: string): readonly Hecho[] {
   const hechos: Hecho[] = [];
   const especies = new Set<string>();
+  const pares = new Set<string>();
   crudos.forEach((crudo, i) => {
     const hecho = validarHecho(crudo, i + 1, { tipo, hoy, previos: hechos, especies });
     if (hecho.clave === CLAVE_NOMBRE_ESPECIE) especies.add(hecho.valor.toLowerCase());
+    else {
+      const par = `${hecho.clave}|${hecho.sujeto ?? ""}`;
+      if (pares.has(par)) throw new ErrorPaquete("HECHO_REPETIDO", hecho.id, "clave");
+      pares.add(par);
+    }
     hechos.push(hecho);
   });
   return Object.freeze(hechos);
@@ -186,6 +193,14 @@ function validarHechos(crudos: readonly unknown[], tipo: TipoResumen, hoy: strin
  * El paquete validado, congelado y con su hash. Orden de las validaciones: la raíz (campos, tipo, hoy, versiones de
  * cálculo, avisos, hechos) y después hecho por hecho, campo por campo.
  */
+/** Los paquetes que salieron de `construirPaquete` (o de `leerPaquete`). Congelados: no cambian después. */
+const CONSTRUIDOS = new WeakSet<object>();
+
+/** ¿Salió este objeto (el mismo, no una copia) de `construirPaquete` o de `leerPaquete`? */
+export function esPaqueteConstruido(valor: unknown): valor is PaqueteHechos {
+  return typeof valor === "object" && valor !== null && CONSTRUIDOS.has(valor);
+}
+
 export function construirPaquete<T extends TipoResumen>(entrada: EntradaPaquete<T>): PaqueteHechos<T> {
   const crudo: unknown = entrada;
   if (!esObjetoPlano(crudo)) throw new ErrorPaquete("FORMA_INVALIDA");
@@ -196,5 +211,41 @@ export function construirPaquete<T extends TipoResumen>(entrada: EntradaPaquete<
   const avisos = validarAvisos(crudo.avisos);
   const hechos = validarHechos(validarHechosCrudos(crudo.hechos), crudo.tipo, crudo.hoy);
   const sinHash: Omit<PaqueteHechos<T>, "hash"> = { version: VERSION_HECHOS, tipo: crudo.tipo as T, hoy: crudo.hoy, versionesCalculo, avisos, hechos: hechos as readonly Hecho<ClaveDe<T>>[] };
-  return Object.freeze({ ...sinHash, hash: hashPaquete(sinHash) });
+  const paquete: PaqueteHechos<T> = Object.freeze({ ...sinHash, hash: hashPaquete(sinHash) });
+  CONSTRUIDOS.add(paquete);
+  return paquete;
+}
+
+const CAMPOS_GUARDADOS_RAIZ: readonly string[] = Object.freeze([...CAMPOS_RAIZ, "version", "hash"]);
+const CAMPOS_GUARDADOS_HECHO: readonly string[] = Object.freeze([...CAMPOS_HECHO, "etiqueta", "unidad"]);
+
+/** El hecho guardado sin lo que pone el catálogo (etiqueta y unidad), para volver a construirlo. */
+function sinCatalogo(crudo: unknown, posicion: number): Registro {
+  const id = idDeHecho(posicion);
+  if (!esObjetoPlano(crudo)) throw new ErrorPaquete("FORMA_INVALIDA", id);
+  exigirCampos(crudo, CAMPOS_GUARDADOS_HECHO, CAMPO_OPCIONAL_HECHO, id);
+  const { etiqueta: _etiqueta, unidad: _unidad, ...resto } = crudo;
+  return resto;
+}
+
+/**
+ * Un paquete guardado (p. ej. el JSON de `resumen_ia`) que vuelve a entrar: se reconstruye con `construirPaquete` y
+ * tiene que dar exactamente lo guardado (la versión, la etiqueta y la unidad del catálogo de hoy, y el hash). Si el
+ * catálogo cambió desde que se guardó, da GUARDADO_NO_COINCIDE: cambiar el catálogo es otra versión del contrato.
+ */
+export function leerPaquete(guardado: unknown): PaqueteHechos {
+  if (!esObjetoPlano(guardado)) throw new ErrorPaquete("FORMA_INVALIDA");
+  exigirCampos(guardado, CAMPOS_GUARDADOS_RAIZ, null, null);
+  if (guardado.version !== VERSION_HECHOS) throw new ErrorPaquete("VERSION_DISTINTA", null, "version");
+  const hechosGuardados = validarHechosCrudos(guardado.hechos);
+  const hechos = hechosGuardados.map((crudo, i) => sinCatalogo(crudo, i + 1));
+  const { tipo, hoy, versionesCalculo, avisos } = guardado;
+  const paquete = construirPaquete({ tipo, hoy, versionesCalculo, avisos, hechos } as unknown as EntradaPaquete);
+  paquete.hechos.forEach((hecho, i) => {
+    const original = hechosGuardados[i] as Registro;
+    if (original.etiqueta !== hecho.etiqueta) throw new ErrorPaquete("GUARDADO_NO_COINCIDE", hecho.id, "etiqueta");
+    if (original.unidad !== hecho.unidad) throw new ErrorPaquete("GUARDADO_NO_COINCIDE", hecho.id, "unidad");
+  });
+  if (guardado.hash !== paquete.hash) throw new ErrorPaquete("GUARDADO_NO_COINCIDE", null, "hash");
+  return paquete;
 }

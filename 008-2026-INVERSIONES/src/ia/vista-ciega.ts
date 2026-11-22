@@ -6,24 +6,28 @@
  *
  * La guarda (`fugasDeVistaCiega` y `asegurarVistaCiega`) prueba la CONDUCTA sobre el JSON que saldría, contra el
  * paquete completo, sin confiar en cómo se armó la vista. Cierra en fallo y junta todos los códigos:
- * - FORMA_INVALIDA: no es JSON de objetos planos con datos (sin getters, prototipos raros, ciclos ni bigint);
+ * - PAQUETE_NO_CONSTRUIDO: el paquete de referencia no salió de `construirPaquete` (una copia o uno armado a mano);
+ * - FORMA_INVALIDA: no son datos puros (`sonDatosPuros`: sin Proxy, getters, `toJSON`, símbolos ni propiedades de más
+ *   en los arreglos), o no tiene la forma de una vista. Se revisa sin ejecutar código de la vista: lo revisado es lo que
+ *   se lee después;
  * - CAMPO_NO_PERMITIDO: un campo fuera de la lista cerrada (`CAMPOS_PAQUETE_CIEGO` y `CAMPOS_HECHO_CIEGO`);
  * - DIGITO_FUERA_DE_REFERENCIA: un dígito (de cualquier sistema de numeración) fuera de los ids «H» con dos dígitos;
  * - VALOR_DEL_PAQUETE, PRESENTACION_DEL_PAQUETE y NOMBRE_DE_ESPECIE: aparece un valor, una presentación o un nombre;
  * - CLAVE_PROHIBIDA: una clave de `CLAVES_PROHIBIDAS` a cualquier profundidad;
  * - NO_CORRESPONDE: no es la vista de ESE paquete (tipo, ids, claves, sujetos, marcas o etiqueta del catálogo);
- * - HASH_NO_COINCIDE: el paquete de referencia no cuadra con su hash.
+ * - DATOS_EN_EL_PEDIDO (`fugasDelPedido`): el prompt o el esquema llevan un nombre, un valor o una presentación del
+ *   paquete (los valores y presentaciones de menos de cuatro caracteres no se cotejan: el prompt lleva cifras propias).
  * Ningún mensaje lleva datos: solo los códigos.
  */
 import { CAMPOS_HECHO_CIEGO, CAMPOS_PAQUETE_CIEGO, type Hecho, type HechoCiego, type PaqueteCiego, type PaqueteHechos, type TipoResumen } from "./contrato";
 import { entradaDeCatalogo, type ClaveHecho } from "./catalogo";
-import { esObjetoPlano, type Registro } from "./formas";
-import { hashPaquete } from "./hash";
+import { esObjetoPlano, soloCampos, sonDatosPuros, type Registro } from "./formas";
+import { esPaqueteConstruido } from "./paquete";
 import { clavesProhibidasEn } from "./prohibidas";
 
 export const CODIGOS_FUGA_VISTA = Object.freeze([
-  "FORMA_INVALIDA", "CAMPO_NO_PERMITIDO", "DIGITO_FUERA_DE_REFERENCIA", "VALOR_DEL_PAQUETE", "PRESENTACION_DEL_PAQUETE",
-  "NOMBRE_DE_ESPECIE", "CLAVE_PROHIBIDA", "NO_CORRESPONDE", "HASH_NO_COINCIDE",
+  "PAQUETE_NO_CONSTRUIDO", "FORMA_INVALIDA", "CAMPO_NO_PERMITIDO", "DIGITO_FUERA_DE_REFERENCIA", "VALOR_DEL_PAQUETE",
+  "PRESENTACION_DEL_PAQUETE", "NOMBRE_DE_ESPECIE", "CLAVE_PROHIBIDA", "NO_CORRESPONDE", "DATOS_EN_EL_PEDIDO",
 ] as const);
 export type CodigoFugaVista = (typeof CODIGOS_FUGA_VISTA)[number];
 
@@ -40,9 +44,7 @@ export class ErrorVistaCiega extends Error {
 }
 
 
-const soloCampos = (registro: Registro, permitidos: readonly string[]): boolean => Object.keys(registro).every((clave) => permitidos.includes(clave));
-
-/** La forma: objetos planos de datos, y si sobra algún campo. null si no se puede ni leer. */
+/** La forma (sobre datos puros): objetos planos, los campos exigidos y si sobra alguno. null si no es una vista. */
 function revisarForma(vista: unknown): { readonly hechos: readonly Registro[]; readonly sobran: boolean } | null {
   if (!esObjetoPlano(vista) || !Array.isArray(vista.hechos) || !Object.hasOwn(vista, "tipo")) return null;
   const hechos = Array.from(vista.hechos as unknown[], (hecho: unknown) => hecho);
@@ -84,38 +86,38 @@ function corresponde(vista: Registro, hechos: readonly Registro[], paquete: Paqu
   });
 }
 
-function serializar(vista: unknown): string | null {
-  try {
-    return JSON.stringify(vista) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/** CLAVE_PROHIBIDA si hay alguna; FORMA_INVALIDA si no se puede recorrer (demasiado profunda). */
-function codigoDeClaves(vista: unknown): CodigoFugaVista | null {
-  try {
-    return clavesProhibidasEn(vista).length > 0 ? "CLAVE_PROHIBIDA" : null;
-  } catch {
-    return "FORMA_INVALIDA";
-  }
-}
-
 /** Todos los códigos de fuga de la vista frente al paquete; vacío si la vista es ciega y es la de ese paquete. */
 export function fugasDeVistaCiega(vista: unknown, paquete: PaqueteHechos): readonly CodigoFugaVista[] {
+  if (!esPaqueteConstruido(paquete)) return Object.freeze(["PAQUETE_NO_CONSTRUIDO"]);
+  const forma = sonDatosPuros(vista) ? revisarForma(vista) : null;
+  if (forma === null) return Object.freeze(["FORMA_INVALIDA"]);
   const codigos: CodigoFugaVista[] = [];
-  if (hashPaquete(paquete) !== paquete.hash) codigos.push("HASH_NO_COINCIDE");
-  const json = serializar(vista);
-  const forma = json === null ? null : revisarForma(vista);
-  if (json === null || forma === null) return Object.freeze([...codigos, "FORMA_INVALIDA"]);
   if (forma.sobran) codigos.push("CAMPO_NO_PERMITIDO");
-  const sinIds = minusculas(json.replace(ID_COMO_TEXTO, '""'));
+  const sinIds = minusculas(JSON.stringify(vista).replace(ID_COMO_TEXTO, '""'));
   if (CUALQUIER_DIGITO.test(sinIds)) codigos.push("DIGITO_FUERA_DE_REFERENCIA");
   codigos.push(...fugasDeDatos(sinIds, paquete));
-  const deClaves = codigoDeClaves(vista);
-  if (deClaves !== null) codigos.push(deClaves);
+  if (clavesProhibidasEn(vista).length > 0) codigos.push("CLAVE_PROHIBIDA");
   if (!corresponde(vista as Registro, forma.hechos, paquete)) codigos.push("NO_CORRESPONDE");
   return Object.freeze(codigos);
+}
+
+/** Valores y presentaciones más cortos no se cotejan en el prompt ni en el esquema: allí hay cifras propias («seis frases»). */
+export const MIN_LARGO_COTEJO_TEXTO = 4;
+
+/** ¿Lleva el texto (un prompt, un esquema en JSON) un nombre, un valor o una presentación del paquete? */
+export function hayDatosDelPaqueteEn(texto: string, paquete: PaqueteHechos): boolean {
+  const enMinusculas = minusculas(texto);
+  const aparece = (dato: string): boolean => dato.length >= MIN_LARGO_COTEJO_TEXTO && enMinusculas.includes(minusculas(dato));
+  return paquete.hechos.some((hecho) => (hecho.unidad === "NOMBRE"
+    ? apareceNombre(enMinusculas, hecho.valor) || apareceNombre(enMinusculas, hecho.presentacion)
+    : aparece(hecho.valor) || aparece(hecho.presentacion)));
+}
+
+/** La guarda del pedido entero: la vista (`fugasDeVistaCiega`) y los textos que la acompañan (prompt y esquema). */
+export function fugasDelPedido(vista: unknown, textos: readonly string[], paquete: PaqueteHechos): readonly CodigoFugaVista[] {
+  const deLaVista = fugasDeVistaCiega(vista, paquete);
+  if (!esPaqueteConstruido(paquete) || !textos.some((texto) => hayDatosDelPaqueteEn(texto, paquete))) return deLaVista;
+  return Object.freeze([...deLaVista, "DATOS_EN_EL_PEDIDO"]);
 }
 
 /** Cierra en fallo: si la vista no es ciega o no es la de ese paquete, lanza `ErrorVistaCiega` con sus códigos. */
@@ -142,6 +144,7 @@ function proyectar<C extends ClaveHecho>(hecho: Hecho<C>): HechoCiego<C> {
 
 /** La vista ciega del paquete, ya pasada por la guarda (si la proyección filtrara algo, lanza). Congelada. */
 export function vistaCiega<T extends TipoResumen>(paquete: PaqueteHechos<T>): PaqueteCiego<T> {
+  if (!esPaqueteConstruido(paquete)) throw new ErrorVistaCiega(["PAQUETE_NO_CONSTRUIDO"]);
   const vista: PaqueteCiego<T> = Object.freeze({ tipo: paquete.tipo, hechos: Object.freeze(paquete.hechos.map(proyectar)) });
   asegurarVistaCiega(vista, paquete);
   return vista;

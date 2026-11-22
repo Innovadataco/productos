@@ -3,7 +3,7 @@
  * objeto plano de datos.
  */
 import { describe, expect, it } from "vitest";
-import { esDecimalCanonico, esDiaIso, esNombreEspecie, esObjetoPlano, esTextoSeguro } from "@/ia/formas";
+import { esDe, esDecimalCanonico, esDiaIso, esNombreEspecie, esObjetoPlano, esTextoSeguro, soloCampos, sonDatosPuros } from "@/ia/formas";
 
 describe("esDecimalCanonico", () => {
   it.each(["0", "7", "0.5", "-0.5", "-37911.47", "4613.27", "1237", "-1", "0.01", "12.3"])("acepta «%s»", (texto) => {
@@ -86,6 +86,40 @@ describe("esObjetoPlano", () => {
       readonly a = 1;
     }
     const conGetter = Object.defineProperty({}, "a", { get: () => 1, enumerable: true });
-    for (const valor of [null, [], new Clase(), new Date(0), new Map(), "a", 7, conGetter]) expect(esObjetoPlano(valor)).toBe(false);
+    for (const valor of [null, [], new Clase(), new Date(0), new Map(), "a", 7, conGetter, new Proxy({ a: 1 }, {})]) expect(esObjetoPlano(valor)).toBe(false);
+  });
+});
+
+describe("sonDatosPuros", () => {
+  it("acepta texto, booleanos, null, undefined, números finitos, arreglos densos y objetos planos anidados", () => {
+    for (const valor of ["x", true, null, undefined, 7, -4613.27, [], [1, "a", [null]], { a: { b: [{ c: false }] } }, Object.create(null)]) expect(sonDatosPuros(valor)).toBe(true);
+  });
+
+  it("rechaza Proxy, getters, símbolos, propiedades de más o huecos en arreglos, subclases y valores sin forma JSON", () => {
+    class SubArreglo extends Array<number> {}
+    const conGetter = Object.defineProperty({}, "a", { get: () => 1, enumerable: true });
+    const indiceAccesor = Object.defineProperty(["a", "b"], 1, { get: () => "c", enumerable: true });
+    const conExtra = Object.assign(["a"], { extra: "b" });
+    const conToJson = Object.assign(["a"], { toJSON: () => [] });
+    const conSimbolo = { a: 1, [Symbol("s")]: 2 };
+    let profundo: unknown = "x";
+    for (let i = 0; i < 70; i += 1) profundo = [profundo];
+    const malos = [
+      new Proxy({}, {}), new Proxy([], {}), conGetter, indiceAccesor, conExtra, conToJson, conSimbolo, [1, , 3], SubArreglo.from([1]),
+      new Date(0), new Map(), () => 1, Symbol("s"), 7n, Number.NaN, Number.POSITIVE_INFINITY, profundo, { a: [() => 1] },
+    ];
+    malos.forEach((valor, i) => expect(sonDatosPuros(valor), `caso ${i}`).toBe(false));
+  });
+});
+
+describe("esDe y soloCampos", () => {
+  it("esDe: solo textos de la lista", () => {
+    expect(esDe(["A", "B"], "A")).toBe(true);
+    for (const valor of ["C", 7, null, undefined]) expect(esDe(["A", "B"], valor)).toBe(false);
+  });
+
+  it("soloCampos: ningún campo fuera de la lista", () => {
+    expect(soloCampos({ a: 1 }, ["a", "b"])).toBe(true);
+    expect(soloCampos({ a: 1, c: 2 }, ["a", "b"])).toBe(false);
   });
 });

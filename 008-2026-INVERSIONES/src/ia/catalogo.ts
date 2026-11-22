@@ -46,13 +46,13 @@ export type ClaveHecho = ClaveDiario | ClaveReglas | ClaveEscenarios;
 /** Las claves del catálogo de un tipo. */
 export type ClaveDe<T extends TipoResumen> = { readonly DIARIO: ClaveDiario; readonly REGLAS: ClaveReglas; readonly ESCENARIOS: ClaveEscenarios }[T];
 
-/** Si un hecho se refiere a una especie (su `sujeto`, el id de un hecho ESPECIE_NOMBRE anterior). */
-export type SujetoCatalogo = "EXIGIDO" | "OPCIONAL" | "NINGUNO";
+/** Si un hecho de la clave se refiere a una especie (su `sujeto`, el id de un hecho ESPECIE_NOMBRE anterior). */
+export type PoliticaSujeto = "EXIGIDO" | "OPCIONAL" | "NINGUNO";
 
 export interface EntradaCatalogo {
   readonly etiqueta: string;
   readonly unidad: Unidad;
-  readonly sujeto: SujetoCatalogo;
+  readonly politicaSujeto: PoliticaSujeto;
   /** Si no, la dirección del hecho es NO_APLICA. */
   readonly admiteDireccion: boolean;
   /** Si no, la cercanía del hecho es NO_APLICA. */
@@ -62,7 +62,7 @@ export interface EntradaCatalogo {
 export type Catalogo = { readonly [T in TipoResumen]: Readonly<Record<ClaveDe<T>, EntradaCatalogo>> };
 
 interface Opciones {
-  readonly sujeto?: SujetoCatalogo;
+  readonly sujeto?: PoliticaSujeto;
   readonly direccion?: boolean;
   readonly cercania?: boolean;
 }
@@ -71,7 +71,7 @@ function entrada(etiqueta: string, unidad: Unidad, opciones: Opciones = {}): Ent
   return Object.freeze({
     etiqueta,
     unidad,
-    sujeto: opciones.sujeto ?? "NINGUNO",
+    politicaSujeto: opciones.sujeto ?? "NINGUNO",
     admiteDireccion: opciones.direccion ?? false,
     admiteCercania: opciones.cercania ?? false,
   });

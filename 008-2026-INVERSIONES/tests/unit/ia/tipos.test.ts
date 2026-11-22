@@ -7,7 +7,7 @@
  */
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { CATALOGO, type ClaveDiario, type ClaveReglas } from "@/ia/catalogo";
-import { PATRON_ID_HECHO, esIdHecho, type HechoCiego, type IdHecho, type PaqueteCiego, type PaqueteDeAlgunTipo } from "@/ia/contrato";
+import { PATRON_ID_HECHO, esIdHecho, type HechoCiego, type IdHecho, type PaqueteCiego, type PaqueteDeAlgunTipo, type PaqueteHechos } from "@/ia/contrato";
 import type { PedidoGeneracion } from "@/ia/generador";
 import { construirPaquete } from "@/ia/paquete";
 import { vistaCiega } from "@/ia/vista-ciega";
@@ -34,8 +34,9 @@ describe("TIPOS-MEDIO-8 · PaqueteDeAlgunTipo estrecha por tipo", () => {
   it("al comprobar el tipo, las claves quedan las de ese tipo", () => {
     const paquetes: readonly PaqueteDeAlgunTipo[] = [construirPaquete(entradaDiario()), construirPaquete(entradaReglas())];
     for (const p of paquetes) {
-      if (p.tipo === "DIARIO") expectTypeOf(p.hechos[0]?.clave).toEqualTypeOf<ClaveDiario | undefined>();
-      if (p.tipo === "REGLAS") expectTypeOf(p.hechos[0]?.clave).toEqualTypeOf<ClaveReglas | undefined>();
+      if (p.tipo === "DIARIO") expectTypeOf(p.hechos).toEqualTypeOf<PaqueteHechos<"DIARIO">["hechos"]>();
+      if (p.tipo === "DIARIO") expectTypeOf<(typeof p.hechos)[number]["clave"]>().toEqualTypeOf<ClaveDiario>();
+      if (p.tipo === "REGLAS") expectTypeOf<(typeof p.hechos)[number]["clave"]>().toEqualTypeOf<ClaveReglas>();
     }
     expect(paquetes.map((p) => p.tipo)).toEqual(["DIARIO", "REGLAS"]);
   });

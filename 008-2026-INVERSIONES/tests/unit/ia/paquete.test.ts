@@ -117,6 +117,7 @@ const CASOS_LEER: readonly Caso[] = [
   ["GUARDADO_NO_COINCIDE", "la unidad guardada no es la del catálogo de hoy", (c) => (h(c, 2).unidad = "DIAS", c), "H03", "unidad"],
   ["GUARDADO_NO_COINCIDE", "un valor cambiado con el hash viejo", (c) => (h(c, 2).valor = "41377.19", c), null, "hash"],
   ["CAMPO_FALTANTE", "un hecho guardado sin etiqueta", (c) => (delete h(c, 2).etiqueta, c), "H03", "etiqueta"],
+  ["FORMA_INVALIDA", "un hecho guardado que no es objeto", (c) => ({ ...c, hechos: [c.hechos[0], c.hechos[1], "H03"] }), "H03", null],
 ];
 
 describe("construirPaquete · casos felices", () => {

@@ -2,7 +2,11 @@
  * Formas de los campos de `hechos-v1`, puras y sin excepciones. Las usan el paquete, la vista ciega y los armadores.
  * No se reusa `canonizarValor` de las series (no admite signo) ni `leerFechaIso` de Trii (recorta espacios).
  */
+import { types } from "node:util";
 import { MAX_LARGO_DECIMAL, MAX_LARGO_NOMBRE_ESPECIE } from "./contrato";
+
+/** El mismo tope de anidamiento que el JSON canónico y las claves prohibidas. */
+const MAX_PROFUNDIDAD = 64;
 
 /** Con signo opcional, sin «-0», sin ceros sobrantes, sin exponente ni separador de miles: «-37911.47», «0», «0.5». */
 const DECIMAL_CANONICO = /^-?(0|[1-9][0-9]*)(\.[0-9]*[1-9])?$/;
@@ -39,10 +43,42 @@ export function esNombreEspecie(texto: unknown): texto is string {
 
 export type Registro = Readonly<Record<string, unknown>>;
 
-/** Objeto plano (prototipo Object o null, no arreglo) cuyas propiedades propias son todas datos: sin getters ni setters. */
+/**
+ * Objeto plano (prototipo Object o null, no arreglo, no Proxy) cuyas propiedades propias son todas datos: sin getters
+ * ni setters. No ejecuta código del objeto: un Proxy se reconoce sin tocar sus trampas.
+ */
 export function esObjetoPlano(valor: unknown): valor is Registro {
-  if (typeof valor !== "object" || valor === null || Array.isArray(valor)) return false;
+  if (typeof valor !== "object" || valor === null || Array.isArray(valor) || types.isProxy(valor)) return false;
   const prototipo: unknown = Object.getPrototypeOf(valor);
   if (prototipo !== Object.prototype && prototipo !== null) return false;
   return Object.values(Object.getOwnPropertyDescriptors(valor)).every((descriptor) => "value" in descriptor);
 }
+
+function esArregloDeDatos(valor: readonly unknown[], profundidad: number): boolean {
+  if (Object.getPrototypeOf(valor) !== Array.prototype) return false;
+  const descriptores = Object.getOwnPropertyDescriptors(valor) as Record<string, PropertyDescriptor>;
+  const claves = Object.keys(descriptores).filter((clave) => clave !== "length");
+  if (claves.length !== valor.length) return false;
+  return claves.every((clave, i) => clave === String(i) && "value" in (descriptores[clave] as PropertyDescriptor) && sonDatosPuros(descriptores[clave]?.value, profundidad + 1));
+}
+
+/**
+ * Datos puros, a todo nivel: texto, booleanos, null, undefined, números finitos, arreglos densos sin propiedades de más
+ * y objetos planos; sin Proxy, getters, setters, símbolos, `toJSON` heredado ni más de 64 niveles. Se revisa por
+ * descriptores, sin ejecutar código del valor: lo que pasa se lee igual cada vez (no hay lectura doble que engañe).
+ */
+export function sonDatosPuros(valor: unknown, profundidad = 0): boolean {
+  if (valor === null || valor === undefined || typeof valor === "string" || typeof valor === "boolean") return true;
+  if (typeof valor === "number") return Number.isFinite(valor);
+  if (typeof valor !== "object" || profundidad > MAX_PROFUNDIDAD || types.isProxy(valor)) return false;
+  if (Object.getOwnPropertySymbols(valor).length > 0) return false;
+  if (Array.isArray(valor)) return esArregloDeDatos(valor, profundidad);
+  if (!esObjetoPlano(valor)) return false;
+  return Object.values(Object.getOwnPropertyDescriptors(valor)).every((descriptor) => sonDatosPuros(descriptor.value, profundidad + 1));
+}
+
+/** ¿Es el valor un texto de la lista? */
+export const esDe = <T extends string>(lista: readonly T[], valor: unknown): valor is T => typeof valor === "string" && (lista as readonly string[]).includes(valor);
+
+/** ¿Tiene el registro solo campos de la lista? */
+export const soloCampos = (registro: Registro, permitidos: readonly string[]): boolean => Object.keys(registro).every((clave) => permitidos.includes(clave));

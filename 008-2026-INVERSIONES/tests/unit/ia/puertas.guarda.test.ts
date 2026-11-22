@@ -61,7 +61,7 @@ describe("guarda en generarConPuertas · control positivo", () => {
   it.each(["local", "nube"] as const)("con una sola puerta (%s) también corta antes de llamar", async (modo: ModoPuertas) => {
     const { paquete, pedido, local, nube } = preparar();
     const resultado = await generarConPuertas([local, nube], modo, conVista(pedido, (v) => { v.hechos[2]!.valor = "37911.47"; }), paquete);
-    expect(resultado).toEqual({ estado: "VISTA_NO_CIEGA", ok: false, motivo: "VISTA_NO_CIEGA", codigos: ["CAMPO_NO_PERMITIDO", "DIGITO_FUERA_DE_REFERENCIA", "VALOR_DEL_PAQUETE"] });
+    expect(resultado).toEqual({ estado: "VISTA_NO_CIEGA", ok: false, motivo: "VISTA_NO_CIEGA", codigos: ["CAMPO_NO_PERMITIDO", "DIGITO_FUERA_DE_REFERENCIA", "VALOR_DEL_PAQUETE", "PRESENTACION_DEL_PAQUETE"] });
     expect(local.llamadas().length + nube.llamadas().length).toBe(0);
   });
 

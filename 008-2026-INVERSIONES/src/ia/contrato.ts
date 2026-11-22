@@ -1,6 +1,6 @@
 /**
  * Contrato `hechos-v1` de los resúmenes con IA (fase E): las constantes cerradas y los tipos que comparten los armadores
- * de hechos, el validador, el esquema y los clientes de las dos puertas. Solo tipos y constantes, sin lógica.
+ * de hechos, el validador, el esquema y los clientes de las dos puertas. Solo tipos, constantes y `esIdHecho`.
  *
  * Regla de fondo: el código calcula y presenta cada cifra; el modelo, local o en la nube, solo recibe la vista ciega
  * (`vista-ciega.ts`) y cita los hechos por su id (`{H01}`). Cambiar una lista o un campo es un cambio de contrato:
@@ -40,9 +40,14 @@ export const UNIDADES = Object.freeze(["PESOS", "PESOS_POR_DOLAR", "PORCENTAJE",
 export type Unidad = (typeof UNIDADES)[number];
 
 type Digito = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
-/** Id de un hecho: «H» y dos dígitos, consecutivo desde H01 en el orden del paquete. */
-export type IdHecho = `H${Digito}${Digito}`;
-export const PATRON_ID_HECHO = /^H[0-9]{2}$/;
+/** Id de un hecho: «H» y dos dígitos, de H01 a H99, consecutivo en el orden del paquete. */
+export type IdHecho = Exclude<`H${Digito}${Digito}`, "H00">;
+export const PATRON_ID_HECHO = /^H(?:0[1-9]|[1-9][0-9])$/;
+
+/** ¿Es el texto un id de hecho (H01 a H99)? Lo usa, p. ej., quien lee las citas «{Hnn}» de la salida del modelo. */
+export function esIdHecho(texto: string): texto is IdHecho {
+  return PATRON_ID_HECHO.test(texto);
+}
 
 /** Día «AAAA-MM-DD» que existe en el calendario (lo valida `esDiaIso`). */
 export type DiaIso = string;
@@ -112,10 +117,20 @@ export const CAMPOS_HECHO_CIEGO = Object.freeze(["id", "clave", "etiqueta", "suj
 /** Los campos de la vista: sin `version` (lleva un dígito), sin `hoy`, `avisos`, `versionesCalculo` ni `hash`. */
 export const CAMPOS_PAQUETE_CIEGO = Object.freeze(["tipo", "hechos"] as const);
 
-export type HechoCiego<C extends ClaveHecho = ClaveHecho> = Pick<Hecho<C>, (typeof CAMPOS_HECHO_CIEGO)[number]>;
+type CampoCiego = (typeof CAMPOS_HECHO_CIEGO)[number];
+type CampoCiegoDelPaquete = (typeof CAMPOS_PAQUETE_CIEGO)[number];
+
+/**
+ * Un hecho tal como lo ve el modelo. Los demás campos del hecho quedan como `never`: un `Hecho` completo NO es
+ * asignable a un `HechoCiego` (el compilador ve la fuga, no solo la guarda en ejecución).
+ */
+export type HechoCiego<C extends ClaveHecho = ClaveHecho> = Pick<Hecho<C>, CampoCiego> & { readonly [K in Exclude<keyof Hecho, CampoCiego>]?: never };
 
 /** Lo ÚNICO que recibe un modelo: ni valores, ni presentaciones, ni nombres, ni fechas, ni fuentes. */
-export interface PaqueteCiego<T extends TipoResumen = TipoResumen> {
+export type PaqueteCiego<T extends TipoResumen = TipoResumen> = {
   readonly tipo: T;
   readonly hechos: readonly HechoCiego<ClaveDe<T>>[];
-}
+} & { readonly [K in Exclude<keyof PaqueteHechos, CampoCiegoDelPaquete>]?: never };
+
+/** Un paquete de cualquier tipo que se estrecha al comprobar `tipo` (las claves quedan las de ese tipo). */
+export type PaqueteDeAlgunTipo = { readonly [T in TipoResumen]: PaqueteHechos<T> }[TipoResumen];

@@ -3,22 +3,34 @@
  * los clientes; aquí no hay red. Un generador recibe SOLO el pedido: la vista ciega, el prompt versionado con su hash,
  * el esquema de salida y el límite de tiempo. Nunca el paquete completo.
  *
- * El pedido lo arma `armarPedido` desde el paquete completo: la vista la calcula `vistaCiega` (con su guarda) y el
- * hash del prompt lo calcula el código. Así nadie arma un pedido con una vista a mano ni con un hash que no cuadre.
+ * El pedido lo arma `armarPedido` desde el paquete completo: la vista la calcula `vistaCiega` (con su guarda), el
+ * prompt y el esquema se cotejan contra los datos del paquete y el hash del prompt lo calcula el código. Así nadie
+ * arma un pedido con una vista a mano, con datos en el prompt ni con un hash que no cuadre.
  */
 import type { PaqueteCiego, PaqueteHechos, TipoResumen } from "./contrato";
-import { esObjetoPlano, type Registro } from "./formas";
+import { esObjetoPlano, soloCampos, sonDatosPuros } from "./formas";
 import { clonCongelado, jsonCanonico, sha256Hex } from "./hash";
-import { vistaCiega } from "./vista-ciega";
+import { ErrorVistaCiega, hayDatosDelPaqueteEn, vistaCiega } from "./vista-ciega";
 
 export const PUERTAS = Object.freeze(["local", "nube"] as const);
 export type Puerta = (typeof PUERTAS)[number];
 
-/** Lista cerrada. VISTA_NO_CIEGA la pone `generarConPuertas` cuando la guarda rechaza la vista: no se llamó a nadie. */
-export const MOTIVOS_FALLO = Object.freeze(["MODELO_NO_DISPONIBLE", "TIEMPO_AGOTADO", "TOPE_MENSUAL", "PUERTA_APAGADA", "ERROR_PROVEEDOR", "VISTA_NO_CIEGA"] as const);
+/** Lo que puede responder un generador (o el orquestador por esa puerta) cuando falla. Lista cerrada. */
+export const MOTIVOS_FALLO_GENERADOR = Object.freeze(["MODELO_NO_DISPONIBLE", "TIEMPO_AGOTADO", "TOPE_MENSUAL", "PUERTA_APAGADA", "ERROR_PROVEEDOR"] as const);
+export type MotivoFalloGenerador = (typeof MOTIVOS_FALLO_GENERADOR)[number];
+
+/**
+ * Todos los motivos de fallo de una corrida (los que se registran). VISTA_NO_CIEGA lo pone solo `generarConPuertas`,
+ * cuando la guarda rechaza el pedido: no se llamó a ningún generador. Un generador que lo devuelva es un error suyo.
+ */
+export const MOTIVOS_FALLO = Object.freeze([...MOTIVOS_FALLO_GENERADOR, "VISTA_NO_CIEGA"] as const);
 export type MotivoFallo = (typeof MOTIVOS_FALLO)[number];
 
-/** El detalle de un fallo es un código, nunca datos: mayúsculas y guion bajo, sin dígitos. */
+/**
+ * El detalle de un fallo es un código, nunca datos ni mensajes del proveedor: mayúsculas y guion bajo, SIN dígitos.
+ * Un cliente traduce, p. ej., un estado HTTP a un código propio («HTTP_LIMITE_DE_PEDIDOS», no «HTTP_429»); lo que no
+ * cumpla el patrón lo reemplaza el orquestador por DETALLE_NO_VALIDO.
+ */
 export const PATRON_DETALLE = /^[A-Z]+(?:_[A-Z]+)*$/;
 export const MAX_LARGO_DETALLE = 64;
 /** «resumen-diario-v1»: minúsculas con guiones y la versión al final. */
@@ -41,7 +53,11 @@ export interface PromptConHash extends PromptVersionado {
   readonly hash: string;
 }
 
-/** Un objeto JSON Schema (p. ej. `{ type: "object", … }`). Solo admite lo que admite el JSON canónico. */
+/**
+ * Un objeto JSON Schema (p. ej. `{ type: "object", … }`). Solo admite lo que admite el JSON canónico: números
+ * ENTEROS (un `minimum: 0.5` o un `multipleOf: 0.01` dan ESQUEMA_INVALIDO). Ni el esquema ni el prompt pueden llevar
+ * un nombre, un valor o una presentación del paquete (DATOS_EN_EL_PEDIDO).
+ */
 export type EsquemaSalida = Readonly<Record<string, unknown>>;
 
 export interface PedidoGeneracion<T extends TipoResumen = TipoResumen> {
@@ -54,10 +70,14 @@ export interface PedidoGeneracion<T extends TipoResumen = TipoResumen> {
 export interface ExitoGeneracion {
   readonly ok: true;
   readonly puerta: Puerta;
-  /** La salida del modelo tal cual: la valida y la renderiza el validador, nunca se publica sin él. */
+  /**
+   * La salida del modelo tal cual: la valida y la renderiza el validador, nunca se publica sin él. Tope:
+   * MAX_SALIDA_CRUDA; el cliente debe cortar la lectura en ese tope, no después de leerla entera.
+   */
   readonly salidaCruda: string;
   readonly modelo: string;
   readonly modeloDigest: string;
+  /** Milisegundos, no negativo. Si el cliente la mide con fracción, el orquestador la redondea. */
   readonly latenciaMs: number;
   readonly tokensEntrada: number | null;
   readonly tokensSalida: number | null;
@@ -66,7 +86,7 @@ export interface ExitoGeneracion {
 export interface FalloGeneracion {
   readonly ok: false;
   readonly puerta: Puerta;
-  readonly motivo: MotivoFallo;
+  readonly motivo: MotivoFalloGenerador;
   /** Un código (PATRON_DETALLE), sin datos ni mensajes del proveedor. */
   readonly detalle: string;
 }
@@ -104,45 +124,56 @@ function promptValido(prompt: unknown): prompt is PromptVersionado {
     && typeof version === "string" && PATRON_VERSION_PROMPT.test(version);
 }
 
-function esquemaValido(esquema: unknown): esquema is EsquemaSalida {
-  if (!esObjetoPlano(esquema) || esquema.type !== "object") return false;
-  try {
-    return jsonCanonico(esquema).length <= MAX_LARGO_ESQUEMA;
-  } catch {
-    return false;
-  }
-}
-
 const limiteValido = (limiteMs: unknown): limiteMs is number =>
   typeof limiteMs === "number" && Number.isInteger(limiteMs) && limiteMs >= LIMITE_MIN_MS && limiteMs <= LIMITE_MAX_MS;
 
 const CAMPOS_PEDIDO: readonly string[] = Object.freeze(["vista", "prompt", "esquemaSalida", "limiteMs"]);
 const CAMPOS_PROMPT: readonly string[] = Object.freeze(["texto", "version", "hash"]);
-const soloCampos = (registro: Registro, permitidos: readonly string[]): boolean => Object.keys(registro).every((clave) => permitidos.includes(clave));
 
 /**
- * Revisa la forma de un pedido (sin campos de más, en el pedido ni en el prompt), el prompt con su hash, el esquema y
- * el límite. Devuelve una copia con solo los campos del contrato. La vista la revisa la guarda, contra el paquete.
+ * El esquema copiado UNA sola vez (datos puros, sin Proxy ni getters, por el JSON canónico) y congelado; null si no es
+ * un objeto JSON Schema de tipo object, si no tiene forma canónica o si pasa del tope.
+ */
+function copiaDelEsquema(esquema: unknown): EsquemaSalida | null {
+  if (!sonDatosPuros(esquema) || !esObjetoPlano(esquema)) return null;
+  let copia: EsquemaSalida;
+  try {
+    copia = clonCongelado(esquema);
+  } catch {
+    return null;
+  }
+  return copia.type === "object" && jsonCanonico(copia).length <= MAX_LARGO_ESQUEMA ? copia : null;
+}
+
+/**
+ * Revisa la forma de un pedido (objetos planos de datos, sin Proxy ni campos de más, en el pedido ni en el prompt), el
+ * prompt con su hash, el esquema y el límite. Lee cada campo UNA sola vez y devuelve una copia con solo los campos del
+ * contrato, hecha de esas lecturas: lo revisado es lo que sigue. La vista la revisa la guarda, contra el paquete.
  */
 export function revisarPedido(pedido: PedidoGeneracion): PedidoGeneracion {
   const crudo: unknown = pedido;
-  if (!esObjetoPlano(crudo) || !esObjetoPlano(crudo.prompt)) throw new ErrorPedido("PROMPT_INVALIDO");
-  if (!soloCampos(crudo, CAMPOS_PEDIDO) || !soloCampos(crudo.prompt, CAMPOS_PROMPT)) throw new ErrorPedido("CAMPO_DESCONOCIDO");
-  const { prompt } = crudo;
-  if (!promptValido({ texto: prompt.texto, version: prompt.version })) throw new ErrorPedido("PROMPT_INVALIDO");
-  if (prompt.hash !== sha256Hex(prompt.texto as string)) throw new ErrorPedido("PROMPT_HASH_NO_COINCIDE");
-  if (!esquemaValido(crudo.esquemaSalida)) throw new ErrorPedido("ESQUEMA_INVALIDO");
-  if (!limiteValido(crudo.limiteMs)) throw new ErrorPedido("LIMITE_INVALIDO");
-  const { texto, version, hash } = pedido.prompt;
-  return { vista: pedido.vista, prompt: { texto, version, hash }, esquemaSalida: pedido.esquemaSalida, limiteMs: pedido.limiteMs };
+  if (!esObjetoPlano(crudo)) throw new ErrorPedido("PROMPT_INVALIDO");
+  const { vista, prompt, esquemaSalida, limiteMs } = crudo;
+  if (!esObjetoPlano(prompt)) throw new ErrorPedido("PROMPT_INVALIDO");
+  if (!soloCampos(crudo, CAMPOS_PEDIDO) || !soloCampos(prompt, CAMPOS_PROMPT)) throw new ErrorPedido("CAMPO_DESCONOCIDO");
+  const { texto, version, hash } = prompt;
+  if (!promptValido({ texto, version })) throw new ErrorPedido("PROMPT_INVALIDO");
+  if (hash !== sha256Hex(texto as string)) throw new ErrorPedido("PROMPT_HASH_NO_COINCIDE");
+  const esquema = copiaDelEsquema(esquemaSalida);
+  if (esquema === null) throw new ErrorPedido("ESQUEMA_INVALIDO");
+  if (!limiteValido(limiteMs)) throw new ErrorPedido("LIMITE_INVALIDO");
+  return { vista: vista as PaqueteCiego, prompt: { texto: texto as string, version: version as string, hash }, esquemaSalida: esquema, limiteMs };
 }
 
 /** El pedido para los generadores: la vista ciega del paquete, el prompt con su hash, el esquema y el límite. Congelado. */
 export function armarPedido<T extends TipoResumen>(entrada: EntradaPedido<T>): PedidoGeneracion<T> {
   const { prompt, esquemaSalida, limiteMs } = entrada;
   if (!promptValido(prompt)) throw new ErrorPedido("PROMPT_INVALIDO");
-  if (!esquemaValido(esquemaSalida)) throw new ErrorPedido("ESQUEMA_INVALIDO");
+  const esquema = copiaDelEsquema(esquemaSalida);
+  if (esquema === null) throw new ErrorPedido("ESQUEMA_INVALIDO");
   if (!limiteValido(limiteMs)) throw new ErrorPedido("LIMITE_INVALIDO");
+  const vista = vistaCiega(entrada.paquete);
+  if ([prompt.texto, jsonCanonico(esquema)].some((texto) => hayDatosDelPaqueteEn(texto, entrada.paquete))) throw new ErrorVistaCiega(["DATOS_EN_EL_PEDIDO"]);
   const conHash: PromptConHash = Object.freeze({ texto: prompt.texto, version: prompt.version, hash: sha256Hex(prompt.texto) });
-  return Object.freeze({ vista: vistaCiega(entrada.paquete), prompt: conHash, esquemaSalida: clonCongelado(esquemaSalida), limiteMs });
+  return Object.freeze({ vista, prompt: conHash, esquemaSalida: esquema, limiteMs });
 }

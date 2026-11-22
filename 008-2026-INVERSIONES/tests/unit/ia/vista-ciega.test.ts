@@ -45,14 +45,14 @@ describe("vistaCiega", () => {
     expect(Object.isFrozen(vista) && Object.isFrozen(vista.hechos) && vista.hechos.every((h) => Object.isFrozen(h))).toBe(true);
   });
 
-  it("un paquete alterado después de construido (el hash no cuadra) no da vista", () => {
+  it("una copia alterada del paquete (no salió de construirPaquete) no da vista", () => {
     const paquete = paqueteDiario();
     const alterado = { ...paquete, hechos: paquete.hechos.map((h, i) => (i === 2 ? { ...h, calidad: "ESTIMADO" as const } : h)) };
     expect(() => vistaCiega(alterado)).toThrow(ErrorVistaCiega);
     try {
       vistaCiega(alterado);
     } catch (e) {
-      expect((e as ErrorVistaCiega).codigos).toContain("HASH_NO_COINCIDE");
+      expect((e as ErrorVistaCiega).codigos).toEqual(["PAQUETE_NO_CONSTRUIDO"]);
     }
   });
 });
@@ -116,7 +116,7 @@ describe("guarda de la vista ciega · control positivo", () => {
     let profundo: unknown = "x";
     for (let i = 0; i < 70; i += 1) profundo = { a: profundo };
     vista.extra = profundo;
-    expect(fugasDeVistaCiega(vista, paquete)).toEqual(["CAMPO_NO_PERMITIDO", "FORMA_INVALIDA"]);
+    expect(fugasDeVistaCiega(vista, paquete)).toEqual(["FORMA_INVALIDA"]);
   });
 
   it("rechaza un getter que cambiaría lo que sale después de revisado", () => {
@@ -126,12 +126,12 @@ describe("guarda de la vista ciega · control positivo", () => {
     expect(fugasDeVistaCiega(vista, paquete)).toContain("FORMA_INVALIDA");
   });
 
-  it("rechaza la vista de otro paquete y un paquete de referencia alterado", () => {
+  it("rechaza la vista de otro paquete y un paquete de referencia que es una copia alterada", () => {
     const paquete = paqueteDiario();
     const otro = construirPaquete({ ...entradaDiario(), hechos: entradaDiario().hechos.slice(0, 3) });
     expect(fugasDeVistaCiega(vistaCiega(otro), paquete)).toContain("NO_CORRESPONDE");
     const alterado = { ...paquete, hoy: "2027-03-18" };
-    expect(fugasDeVistaCiega(vistaCiega(paquete), alterado)).toContain("HASH_NO_COINCIDE");
+    expect(fugasDeVistaCiega(vistaCiega(paquete), alterado)).toEqual(["PAQUETE_NO_CONSTRUIDO"]);
   });
 
   it("el error lleva solo códigos: ni datos plantados ni del paquete", () => {

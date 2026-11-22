@@ -3,7 +3,7 @@
  * las puertas, del validador y de los clientes. Guarda cada pedido que recibe (`llamadas()`) para contar llamadas y
  * revisar qué le llegó. No es para producción: ningún punto de entrada de la app debe importarlo.
  */
-import type { Generador, MotivoFallo, PedidoGeneracion, Puerta, ResultadoGeneracion } from "./generador";
+import type { Generador, MotivoFalloGenerador, PedidoGeneracion, Puerta, ResultadoGeneracion } from "./generador";
 
 export const MODELO_FICTICIO = "modelo-ficticio";
 export const DIGEST_FICTICIO = "digest-ficticio";
@@ -18,7 +18,7 @@ export type ConductaInmediata =
     readonly tokensEntrada?: number | null;
     readonly tokensSalida?: number | null;
   }
-  | { readonly tipo: "FALLAR"; readonly motivo: MotivoFallo; readonly detalle?: string }
+  | { readonly tipo: "FALLAR"; readonly motivo: MotivoFalloGenerador; readonly detalle?: string }
   /** Lanza (en la llamada misma si `sincrono`, o rechazando la promesa) con un mensaje que no debe salir de la puerta. */
   | { readonly tipo: "LANZAR"; readonly sincrono?: boolean; readonly mensaje?: string }
   /** Devuelve tal cual algo que puede no cumplir el contrato. */
