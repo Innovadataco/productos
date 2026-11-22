@@ -1,11 +1,13 @@
 /**
  * Puntos para revisar: las observaciones del catálogo cerrado (catalogo.ts) que se cumplen en el análisis y en las
  * reglas vigentes del plan. Puro. Cada una dice qué dato cruzó qué umbral, con los ids que la sostienen.
- * - `hoy` debe ser el día del análisis: un análisis de otro día daría frescuras y plazos falsos.
+ * - `hoy` debe ser el día del análisis: un análisis de otro día daría frescuras y plazos falsos. Y el análisis debe venir de
+ *   `analizar` en memoria: uno reconstruido desde JSON trae el dinero en texto y se rechaza.
  * - Las reglas se miden como en /plan: `estadoDelNivel` (src/plan/niveles.ts) solo con el cierre AL_DIA.
  * - De una regla solo se leen su id, su especie, su condición, su nivel y su plazo: la salida se arma con objetos nuevos.
  * - Orden: el del catálogo y, dentro de cada clave, por sus ids.
  */
+import { Prisma } from "@prisma/client";
 import { esFechaDeNegocio } from "../plan/fechas";
 import { estadoDelNivel } from "../plan/niveles";
 import { diaIso } from "../precios/horario";
@@ -53,7 +55,7 @@ function contribucion(a: Analisis): Observacion[] {
     const { pesoEnCubiertas } = e.riesgo;
     const pct = e.riesgo.contribucion.contribucionPct;
     // El producto se redondea como las métricas: 1,5 × 0,4 es 0,6000000000000001 en coma flotante.
-    if (pct < CONTRIBUCION_MINIMA || pct < redondear(FACTOR_CONTRIBUCION_DESPROPORCIONADA * pesoEnCubiertas)) return [];
+    if (pesoEnCubiertas <= 0 || pct < CONTRIBUCION_MINIMA || pct < redondear(FACTOR_CONTRIBUCION_DESPROPORCIONADA * pesoEnCubiertas)) return [];
     const datos = { instrumentoId: e.instrumentoId, pesoEnCubiertas, contribucionPct: pct, veces: redondear(pct / pesoEnCubiertas) };
     return [{ clave: "CONTRIBUCION_RIESGO_DESPROPORCIONADA", umbral: CRITERIOS.CONTRIBUCION_RIESGO_DESPROPORCIONADA.umbral, datos }];
   });
@@ -117,16 +119,31 @@ function especies(a: Analisis): Observacion[] {
 }
 
 const ORDEN = new Map(CLAVES_OBSERVACION.map((c, i) => [c, i]));
-/** Dentro de una clave, por sus datos en texto (los ids van primero en cada clave). */
-const claveDe = (o: Observacion): string => JSON.stringify(o.datos);
-const porCatalogo = (x: Observacion, y: Observacion): number => ORDEN.get(x.clave)! - ORDEN.get(y.clave)! || compararTexto(claveDe(x), claveDe(y));
+
+/** Por el catálogo y, dentro de una clave, por sus datos en texto (los ids van primero en cada clave); la clave de cada una se arma una sola vez. */
+function ordenar(lista: readonly Observacion[]): readonly Observacion[] {
+  return lista
+    .map((o) => ({ o, orden: ORDEN.get(o.clave)!, texto: JSON.stringify(o.datos) }))
+    .sort((x, y) => x.orden - y.orden || compararTexto(x.texto, y.texto))
+    .map((x) => x.o);
+}
+
+const esDecimal = (x: unknown): boolean => x instanceof Prisma.Decimal;
+
+/** El dinero del análisis sigue en Decimal: viene de `analizar`, no de un JSON (donde sería texto). */
+function vieneDeAnalizar(a: Analisis): boolean {
+  const precios = [...a.especies.map((e) => e.cierre), ...a.sinTenencia.map((s) => s.cierre)].flatMap((c) => (c.estado === "SIN_CIERRE" ? [] : [c.precio]));
+  const dinero: unknown[] = [a.valorAcciones, ...a.especies.flatMap((e) => (e.valor === null ? [] : [e.valor])), ...precios, ...a.decisiones.medidas.map((m) => m.resultadoPesos)];
+  return dinero.every(esDecimal);
+}
 
 export function observaciones(analisis: Analisis, plan: PlanParaAnalisis, hoy: Date): readonly Observacion[] {
   if (!esFechaDeNegocio(hoy)) throw new RangeError("hoy debe ser una fecha de negocio (medianoche UTC).");
   if (diaIso(hoy) !== analisis.hoy) throw new RangeError("hoy debe ser el día del análisis.");
   if (analisis.version !== VERSION_ANALISIS) throw new RangeError(`El análisis es de otra versión (${analisis.version}).`);
+  if (!vieneDeAnalizar(analisis)) throw new RangeError("El análisis debe venir de analizar: el dinero llegó sin Decimal (¿desde un JSON?).");
   validarPlan(plan);
   const porEspecie = cierres(analisis);
   const reglas = plan.reglas.flatMap((r) => [...nivel(r, porEspecie), ...plazo(r, analisis.hoy)]);
-  return [...concentracion(analisis), ...correlacion(analisis), ...contribucion(analisis), ...reglas, ...precios(analisis), ...decisiones(analisis), ...especies(analisis)].sort(porCatalogo);
+  return ordenar([...concentracion(analisis), ...correlacion(analisis), ...contribucion(analisis), ...reglas, ...precios(analisis), ...decisiones(analisis), ...especies(analisis)]);
 }
