@@ -514,15 +514,15 @@ raiz_cgroup() {
 }
 
 # Límites de memoria de los contenedores de 008: mem_limit = memswap_limit, el invariante acordado con PI. Cada noche un
-# `daemon-reload` de systemd en el host (lo dispara una tarea del agente qemu-ga del proveedor) deja memory.swap.max en
-# max en el cgroup de todo contenedor que esté corriendo, mientras docker inspect sigue diciendo Memory = MemorySwap: el
-# tope deja de ser real sin que Docker lo vea. Los contenedores creados después del reload quedan bien. La solución de
-# fondo, en el host, la decide PI (produccion.md §5); mientras tanto, reaplicar_limites los vuelve a poner sin reiniciar.
+# `daemon-reload` de systemd que dispara una tarea del host deja memory.swap.max en max en el cgroup de todo contenedor
+# que esté corriendo, mientras docker inspect sigue diciendo Memory = MemorySwap: el tope deja de ser real sin que Docker
+# lo vea. Los contenedores creados después del reload quedan bien. La causa y la solución de fondo (en el host, la decide
+# PI): produccion.md §5. Mientras tanto, reaplicar_limites los vuelve a poner sin reiniciar.
 
 # Los datos que deciden los límites del contenedor $1, en una línea «proyecto|nombre|memory|memoryswap|id»: la etiqueta
 # del proyecto de Compose, el nombre, HostConfig.Memory y HostConfig.MemorySwap (lo declarado) y el id largo.
 datos_limites() {
-  docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}|{{.Name}}|{{.HostConfig.Memory}}|{{.HostConfig.MemorySwap}}|{{.Id}}' "$1"
+  docker inspect --type container -f '{{index .Config.Labels "com.docker.compose.project"}}|{{.Name}}|{{.HostConfig.Memory}}|{{.HostConfig.MemorySwap}}|{{.Id}}' "$1"
 }
 
 # La carpeta del cgroup v2 del contenedor de id largo $1 (64 hex) bajo la raíz $2: el scope del driver systemd (el del
@@ -538,7 +538,8 @@ cgroup_de_contenedor() {
   return 1
 }
 
-# El valor de un archivo del cgroup ($1) sin espacios, o «ilegible».
+# El valor de un archivo del cgroup ($1) sin espacios, o «ilegible». memory.max sale en páginas enteras: los límites del
+# compose van en MiB, así que coincide con HostConfig.Memory.
 valor_cgroup() {
   local valor
   valor="$( { tr -d '[:space:]' <"$1"; } 2>/dev/null)" || valor=""
@@ -550,14 +551,33 @@ limpio() {
   printf '%s' "$1" | LC_ALL=C tr -cd 'A-Za-z0-9_.-'
 }
 
+# Por qué reponer el tope a un contenedor (carpeta del cgroup $1, límite $2 en bytes) podría matarlo por OOM, o nada.
+# Poner memory.swap.max en 0 no saca lo que ya está en swap: vuelve a la memoria al usarse, y lo que no se puede soltar
+# sin swap (anon y shmem de memory.stat; shmem son los shared_buffers de PostgreSQL) más lo que está en swap tiene que
+# caber en el límite. Sin nada en swap no hay riesgo; con swap y sin memory.stat legible, no se sabe: cuenta como riesgo.
+# La memoria del kernel no se suma (es una cota por abajo).
+riesgo_oom() {
+  local en_swap anon shmem total
+  en_swap="$(valor_cgroup "$1/memory.swap.current")"
+  [[ "$en_swap" =~ ^[0-9]+$ ]] || { echo "no deja leer memory.swap.current: no se sabe cuánto tiene en swap"; return 0; }
+  [ "$en_swap" != 0 ] || return 0
+  anon="$( { awk '$1 == "anon" { print $2; exit }' "$1/memory.stat"; } 2>/dev/null)" || anon=""
+  shmem="$( { awk '$1 == "shmem" { print $2; exit }' "$1/memory.stat"; } 2>/dev/null)" || shmem=""
+  [[ "$anon" =~ ^[0-9]+$ && "$shmem" =~ ^[0-9]+$ ]] ||
+    { echo "tiene $en_swap bytes en swap y no deja leer memory.stat: no se sabe si cabe en su límite"; return 0; }
+  total=$((anon + shmem + en_swap))
+  [ "$total" -le "$2" ] || echo "tiene $en_swap bytes en swap y no cabría en su límite: anon $anon + shmem $shmem + swap $en_swap = $total > $2"
+}
+
 # Fase 1 de reaplicar_limites: solo lee. Deja en LIMITES_PENDIENTES («cid|nombre|mem|swap.max|memory.max|MemorySwap|
 # carpeta del cgroup») los contenedores que corren y están fuera de lo declarado: memory.swap.max distinto de 0,
 # memory.max distinto de HostConfig.Memory o MemorySwap distinto de Memory. Aborta sin tocar ninguno si `ps` falla, si un
 # contenedor no lleva la etiqueta del proyecto activo, si no tiene un límite declarado (no se inventa uno) o, en
-# producción, si su cgroup no se puede leer. En el proyecto de prueba (en el Mac el cgroup está en la máquina virtual de
-# Colima) un cgroup ilegible solo se avisa y se mira HostConfig.
+# producción, si su cgroup no se puede leer. También si a uno pendiente no le cabría en su límite lo que tiene en swap
+# (riesgo_oom). En el proyecto de prueba (en el Mac el cgroup está en la máquina virtual de Colima) un cgroup ilegible solo
+# se avisa y se mira HostConfig.
 revisar_limites() {
-  local raiz ids cid datos proyecto nombre mem swap largo dir swap_max mem_max
+  local raiz ids cid datos proyecto nombre mem swap largo dir swap_max mem_max riesgo
   LIMITES_PENDIENTES=()
   LIMITES_REVISADOS=0
   raiz="$(raiz_cgroup)"
@@ -575,13 +595,18 @@ revisar_limites() {
       swap_max="$(valor_cgroup "$dir/memory.swap.max")"
       mem_max="$(valor_cgroup "$dir/memory.max")"
     else
+      # En producción falla cerrado: sin memory.swap.max no hay cómo saber (ni poner) el tope de swap del contenedor.
       [ "$INV_PROYECTO_ACTIVO" = "$INV_PROYECTO_PRUEBA" ] ||
-        morir "no se pudo leer el cgroup de $nombre (memory.swap.max y memory.max bajo $raiz): no se sabe si usa swap; no se toca ningún contenedor"
+        morir "no se pudo leer el cgroup de $nombre (memory.swap.max y memory.max bajo $raiz): no se sabe si usa swap; no se toca ningún contenedor. Si se estaba reiniciando, reintente; si persiste, ver produccion.md §5"
       informar "⚠️  sin el cgroup de $nombre bajo $raiz (proyecto de prueba): solo se revisa HostConfig"
       dir="" swap_max=0 mem_max="$mem"
     fi
     LIMITES_REVISADOS=$((LIMITES_REVISADOS + 1))
     [ "$swap_max" = 0 ] && [ "$mem_max" = "$mem" ] && [ "$swap" = "$mem" ] && continue
+    riesgo=""
+    [ -z "$dir" ] || riesgo="$(riesgo_oom "$dir" "$mem")"
+    [ -z "$riesgo" ] ||
+      morir "no se reaplican los límites: $nombre $riesgo. Con el tope repuesto podría morir por OOM al traer de vuelta lo que tiene en swap. No se toca ningún contenedor; lo decide una persona (produccion.md §5)"
     LIMITES_PENDIENTES+=("$cid|$nombre|$mem|$(limpio "$swap_max")|$(limpio "$mem_max")|$(limpio "$swap")|$dir")
   done <<<"$ids"
 }

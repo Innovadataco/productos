@@ -831,8 +831,8 @@ main() {
     informar "⚠️  la imagen no trae el servicio de precios (es anterior a él): se baja inv-008-precios (--scale 0) y se levanta lo demás"
   fi
   # Antes de tocar nada (el respaldo previo, la migración) y antes de la trampa: los límites que un daemon-reload del
-  # host dejó sin efecto en lo que corre (la base casi nunca se recrea). Si no se pueden reaplicar, sale sin tocar nada
-  # más y sin vuelta atrás.
+  # host dejó sin efecto en lo que corre (la base casi nunca se recrea). Si no se pueden reaplicar, sale sin vuelta atrás
+  # y sin tocar nada más que los límites que ya haya corregido (que quedan en lo declarado).
   reaplicar_limites
 
   local medicion

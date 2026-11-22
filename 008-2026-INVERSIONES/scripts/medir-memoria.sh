@@ -17,7 +17,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 # legible (en el Mac, el de Colima), no dice nada.
 avisos_swap() {
   local raiz cid datos nombre largo dir swap_max
-  raiz="$(raiz_cgroup)" || return 0
+  raiz="$(raiz_cgroup 2>/dev/null)" || return 0
   for cid in "$@"; do
     datos="$(datos_limites "$cid" 2>/dev/null)" || continue
     IFS='|' read -r _ nombre _ _ largo <<<"$datos"
