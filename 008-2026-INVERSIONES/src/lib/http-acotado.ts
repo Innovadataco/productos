@@ -1,10 +1,11 @@
 /**
- * Pedido HTTP de JSON con topes, común a las fuentes externas (Yahoo y SFC).
+ * Pedidos HTTP con topes, comunes a las fuentes externas: JSON (Yahoo y SFC) y bytes (XML y xlsx de las fuentes oficiales).
  * - No sigue redirecciones (`redirect: "error"`).
  * - Plazo total (pedido + cuerpo) con reloj propio: vale aunque `buscar` o el flujo ignoren la señal.
  * - Tope de bytes del cuerpo: rechaza por el content-length declarado y corta el flujo si lo pasa.
- * - UTF-8 estricto y JSON.
- * - Nunca lanza: los fallos vuelven como `<PREFIJO>_RED`, `<PREFIJO>_HTTP_<estado>` o `<PREFIJO>_FORMATO`.
+ * - JSON: UTF-8 estricto y JSON. Bytes: lista de content-type aceptados y los bytes tal cual (no decodifica).
+ * - Nunca lanza: los fallos vuelven como `<PREFIJO>_RED`, `<PREFIJO>_HTTP_<estado>`, `<PREFIJO>_FORMATO` o (solo los
+ *   bytes) `<PREFIJO>_TIPO`.
  */
 
 /** Lo que se usa de la respuesta de `fetch`: estado, encabezados y el cuerpo como flujo (para ponerle tope). */
@@ -31,12 +32,30 @@ export interface LimitesPedido {
   readonly tiempoMaximoMs: number;
 }
 
-export type ResultadoPedido = { readonly ok: true; readonly datos: unknown } | { readonly ok: false; readonly codigo: string };
+export interface LimitesPedidoBytes extends LimitesPedido {
+  /** Tipos de contenido aceptados (`tipo/subtipo`, sin parámetros); se comparan exactos, sin mayúsculas. */
+  readonly tiposAceptados: readonly string[];
+}
 
-type Falla = "RED" | "FORMATO";
-type Lectura = { readonly ok: true; readonly texto: string } | { readonly ok: false; readonly falla: Falla };
+type Fallo = { readonly ok: false; readonly codigo: string };
+export type ResultadoPedido = { readonly ok: true; readonly datos: unknown } | Fallo;
+export type ResultadoBytes = { readonly ok: true; readonly bytes: Uint8Array } | Fallo;
 
-const fallo = (prefijo: string, falla: Falla): ResultadoPedido => ({ ok: false, codigo: `${prefijo}_${falla}` });
+type Falla = "RED" | "FORMATO" | "TIPO";
+type Lectura = { readonly ok: true; readonly bytes: Uint8Array } | { readonly ok: false; readonly falla: Falla };
+
+const fallo = (prefijo: string, falla: Falla): Fallo => ({ ok: false, codigo: `${prefijo}_${falla}` });
+
+/** Une los trozos en un Uint8Array propio (nunca un Buffer del pool compartido de Node). */
+function unir(partes: readonly Uint8Array[], total: number): Uint8Array {
+  const salida = new Uint8Array(total);
+  let p = 0;
+  for (const parte of partes) {
+    salida.set(parte, p);
+    p += parte.byteLength;
+  }
+  return salida;
+}
 
 /** Lee el cuerpo con tope de bytes: rechaza por el content-length declarado y corta el flujo si lo pasa. */
 async function leerCuerpoAcotado(respuesta: RespuestaHttp, bytesMaximos: number, senal: AbortSignal): Promise<Lectura> {
@@ -67,15 +86,25 @@ async function leerCuerpoAcotado(respuesta: RespuestaHttp, bytesMaximos: number,
     senal.removeEventListener("abort", cancelar);
   }
   if (senal.aborted) return { ok: false, falla: "RED" };
-  try {
-    return { ok: true, texto: new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(partes)) };
-  } catch {
-    return { ok: false, falla: "FORMATO" };
-  }
+  return { ok: true, bytes: unir(partes, total) };
 }
 
-/** Pedido y lectura, sin plazo propio: la señal la pone `pedirJsonAcotado`. No lanza. */
-async function pedir(buscar: BuscarHttp, url: string, limites: LimitesPedido, senal: AbortSignal): Promise<ResultadoPedido> {
+/** ¿El content-type está en la lista? Solo `tipo/subtipo` exacto; un charset, si viene, tiene que ser UTF-8. */
+function tipoAceptado(valor: string | null, aceptados: readonly string[]): boolean {
+  if (valor === null) return false;
+  const [tipo, ...parametros] = valor.split(";").map((p) => p.trim().toLowerCase());
+  if (!tipo || !aceptados.some((a) => a.toLowerCase() === tipo)) return false;
+  return parametros.every((p) => {
+    const [clave, ...resto] = p.split("=");
+    return clave?.trim() !== "charset" || resto.join("=").trim().replace(/^"(.*)"$/, "$1") === "utf-8";
+  });
+}
+
+/**
+ * Pedido y lectura, sin plazo propio: la señal la pone `conPlazo`. Con `aceptados`, el content-type se mira antes de
+ * leer el cuerpo (y si no sirve, el cuerpo se cancela sin leerlo). No lanza.
+ */
+async function pedirCuerpo(buscar: BuscarHttp, url: string, limites: LimitesPedido, senal: AbortSignal, aceptados: readonly string[] | null): Promise<ResultadoBytes> {
   let respuesta: RespuestaHttp;
   try {
     respuesta = await buscar(url, { headers: limites.headers, signal: senal, redirect: "error" });
@@ -83,33 +112,57 @@ async function pedir(buscar: BuscarHttp, url: string, limites: LimitesPedido, se
     return fallo(limites.prefijo, "RED");
   }
   if (!respuesta.ok) return { ok: false, codigo: `${limites.prefijo}_HTTP_${respuesta.status}` };
-  const cuerpo = await leerCuerpoAcotado(respuesta, limites.bytesMaximos, senal);
-  if (!cuerpo.ok) return fallo(limites.prefijo, cuerpo.falla);
-  try {
-    return { ok: true, datos: JSON.parse(cuerpo.texto) as unknown };
-  } catch {
-    return fallo(limites.prefijo, "FORMATO");
+  if (aceptados !== null && !tipoAceptado(respuesta.headers.get("content-type"), aceptados)) {
+    void respuesta.body?.cancel().catch(() => undefined);
+    return fallo(limites.prefijo, "TIPO");
   }
+  const cuerpo = await leerCuerpoAcotado(respuesta, limites.bytesMaximos, senal);
+  return cuerpo.ok ? cuerpo : fallo(limites.prefijo, cuerpo.falla);
 }
 
 /**
- * Pide `url` y devuelve el JSON del cuerpo, todo dentro de `tiempoMaximoMs`. Al vencer el plazo se aborta
- * la señal (que corta `fetch` y su cuerpo) y se responde `<PREFIJO>_RED` sin esperar más. No lanza.
+ * Corre `trabajo` dentro de `tiempoMaximoMs`. Al vencer el plazo se aborta la señal (que corta `fetch` y su cuerpo)
+ * y se responde `<PREFIJO>_RED` sin esperar más. No lanza.
  */
-export async function pedirJsonAcotado(buscar: BuscarHttp, url: string, limites: LimitesPedido): Promise<ResultadoPedido> {
+async function conPlazo<T extends { readonly ok: boolean }>(limites: LimitesPedido, trabajo: (senal: AbortSignal) => Promise<T | Fallo>): Promise<T | Fallo> {
   const controlador = new AbortController();
   let reloj: ReturnType<typeof setTimeout> | undefined;
-  const vencido = new Promise<ResultadoPedido>((resolver) => {
+  const vencido = new Promise<Fallo>((resolver) => {
     reloj = setTimeout(() => {
       controlador.abort();
       resolver(fallo(limites.prefijo, "RED"));
     }, limites.tiempoMaximoMs);
   });
   try {
-    return await Promise.race([pedir(buscar, url, limites, controlador.signal), vencido]);
+    return await Promise.race([trabajo(controlador.signal), vencido]);
   } catch {
     return fallo(limites.prefijo, "RED");
   } finally {
     clearTimeout(reloj);
   }
+}
+
+/** Pide `url` y devuelve el JSON del cuerpo (UTF-8 estricto), todo dentro de `tiempoMaximoMs`. No lanza. */
+export async function pedirJsonAcotado(buscar: BuscarHttp, url: string, limites: LimitesPedido): Promise<ResultadoPedido> {
+  return conPlazo(limites, async (senal): Promise<ResultadoPedido> => {
+    const cuerpo = await pedirCuerpo(buscar, url, limites, senal, null);
+    if (!cuerpo.ok) return cuerpo;
+    try {
+      return { ok: true, datos: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(cuerpo.bytes)) as unknown };
+    } catch {
+      return fallo(limites.prefijo, "FORMATO");
+    }
+  });
+}
+
+/**
+ * Pide `url` y devuelve los bytes del cuerpo tal cual (sin decodificar), todo dentro de `tiempoMaximoMs`. El
+ * content-type tiene que estar en `tiposAceptados` (si no, `<PREFIJO>_TIPO`, sin leer el cuerpo). Un cuerpo ausente o
+ * vacío es `<PREFIJO>_FORMATO`. No lanza. Lo que se haga con los bytes (XML, zip) lo validan sus lectores acotados.
+ */
+export async function pedirBytesAcotado(buscar: BuscarHttp, url: string, limites: LimitesPedidoBytes): Promise<ResultadoBytes> {
+  return conPlazo(limites, async (senal): Promise<ResultadoBytes> => {
+    const cuerpo = await pedirCuerpo(buscar, url, limites, senal, limites.tiposAceptados);
+    return cuerpo.ok && cuerpo.bytes.byteLength === 0 ? fallo(limites.prefijo, "FORMATO") : cuerpo;
+  });
 }

@@ -354,6 +354,17 @@ describe("zip-acotado · tramos y directorio central", () => {
     expect(alAbrir(conCampo(base, inicioCentral + 32, 0x7fff, 2))).toBe("ZIP_ESTRUCTURA_INVALIDA");
   });
 
+  it("un hueco después de la ÚLTIMA entrada (antes del directorio) o bytes sueltos en un zip sin entradas: ZIP_ESTRUCTURA_INVALIDA", () => {
+    par(zip(DOS), zip(DOS, { hueco: { indice: 1, bytes: ascii("FICT") } }), "ZIP_ESTRUCTURA_INVALIDA");
+    par(zip([]), zip([], { antes: ascii("FICT") }), "ZIP_ESTRUCTURA_INVALIDA");
+  });
+
+  it("bytes sueltos al final del directorio central (dentro del tamaño declarado): ZIP_ESTRUCTURA_INVALIDA", () => {
+    const base = zip(UNA);
+    const tamanoCentral = new DataView(base.buffer).getUint32(base.length - 10, true);
+    par(base, zip(UNA, { antesDelFin: ascii("FICT"), fin: { tamanoCentral: tamanoCentral + 4 } }), "ZIP_ESTRUCTURA_INVALIDA");
+  });
+
   it("un zip vacío (sin entradas) abre y no lista nada", () => {
     expect(abrirZipAcotado(zip([])).nombres).toEqual([]);
   });
