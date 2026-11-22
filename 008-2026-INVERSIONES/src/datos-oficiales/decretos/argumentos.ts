@@ -6,8 +6,8 @@
  * - El correo pasa por src/cli/correo.ts. Sin --aplicar es ensayo.
  * - Los códigos nunca repiten lo que se escribió (la ruta o el correo del dueño).
  */
-import { parseArgs } from "node:util";
 import { correoDeCli } from "../../cli/correo";
+import { leerConParseArgs } from "../../cli/opciones";
 import { fallo, type OpcionesSalida, type SalidaCli } from "../registro/reporte";
 
 /** Qué queda en claro en la base, dicho en la ayuda (local y vía B). */
@@ -41,22 +41,13 @@ export type ArgumentosDecretos =
 
 const OPCIONES = { archivo: { type: "string" }, email: { type: "string" }, aplicar: { type: "boolean" } } as const;
 
-function leer(argv: readonly string[]) {
-  try {
-    return parseArgs({ args: [...argv], strict: true, allowPositionals: false, tokens: true, options: OPCIONES });
-  } catch {
-    return null;
-  }
-}
-
 const no = (codigo: CodigoArgumentos): ArgumentosDecretos => ({ ok: false, codigo });
 
 export function leerArgumentosDecretos(argv: readonly string[]): ArgumentosDecretos {
-  const r = leer(argv);
-  if (!r || r.tokens.some((t) => t.kind === "option-terminator")) return no("ARGUMENTOS_INVALIDOS");
-  const nombres = r.tokens.flatMap((t) => (t.kind === "option" ? [t.name] : []));
-  if (new Set(nombres).size !== nombres.length) return no("OPCION_REPETIDA");
-  const { archivo, email, aplicar } = r.values;
+  const r = leerConParseArgs(argv, OPCIONES);
+  if (!r) return no("ARGUMENTOS_INVALIDOS");
+  if (r.repetidas.length > 0) return no("OPCION_REPETIDA");
+  const { archivo, email, aplicar } = r.valores;
   if (archivo === undefined || archivo.trim() === "") return no("FALTA_ARCHIVO");
   if (archivo.startsWith("-")) return no("ARGUMENTOS_INVALIDOS");
   if (!archivo.toLowerCase().endsWith(".csv")) return no("ARCHIVO_NO_CSV");

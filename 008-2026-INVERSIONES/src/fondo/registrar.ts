@@ -7,6 +7,7 @@
  *   consultivo de transacción por código de negocio (sin migración). Los datos reales solo viven en la base del dueño.
  */
 import type { PrismaClient } from "@prisma/client";
+import { esExclusion, esUnicidad } from "../lib/choques";
 import { claseVigente } from "./clase";
 import { CODIGO_FIC_RE, FUENTE_SFC, PARTICIPACION_RE } from "./sfc";
 
@@ -82,12 +83,8 @@ async function claseDe(tx: Transaccion, instrumentoId: string, participacion: st
   return "creada";
 }
 
-/** Choque con otra escritura: código único (P2002) o vigencias solapadas (exclusión, SQLSTATE 23P01). */
-function esConflicto(e: unknown): boolean {
-  if ((e as { code?: unknown } | null)?.code === "P2002") return true;
-  // Prisma no le da código a la violación de exclusión: solo se mira el SQLSTATE, nunca se muestra el mensaje.
-  return e instanceof Error && e.name === "PrismaClientUnknownRequestError" && /\b23P01\b/.test(e.message);
-}
+/** Choque con otra escritura: código único (P2002) o vigencias solapadas (exclusión, SQLSTATE 23P01; src/lib/choques.ts). */
+const esConflicto = (e: unknown): boolean => esUnicidad(e) || esExclusion(e);
 
 async function registrarEnTransaccion(db: PrismaClient, datos: DatosRegistroFondo, hoy: Date): Promise<ResultadoRegistro> {
   return db.$transaction(async (tx) => {
