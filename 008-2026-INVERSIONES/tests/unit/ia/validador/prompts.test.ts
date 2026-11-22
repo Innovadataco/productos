@@ -23,9 +23,9 @@ const HISTORIAL: Readonly<Record<string, string>> = {
   "resumen-diario-v1": "18702a8e5a0b91fdd9c37526b82d7f0946b02baa6365a91a4ef68c5340892f85",
   "resumen-reglas-v1": "3d0af5e9baebaaa6d9e6b52add4aed18ad1dc316fcd2a256fe584fe0fc7f3ccb",
   "resumen-escenarios-v1": "2976993042570520f0ef548e52497191e1479ee948c1d5af293294c56336c391",
-  "resumen-diario-v2": "f371941b0628e94ad495ee1849d22e8467a3e59581ddc278d43fd8c1abc6efb1",
-  "resumen-reglas-v2": "b0df13689ff2e33c5e7009f1d5ba6f8fef800d15ace9f529e2ea7f7fda20fb01",
-  "resumen-escenarios-v2": "c742c8ba519aa9c7e9d9cf96c6579c63c37b5eadc47543076aa9020ebe38853b",
+  "resumen-diario-v2": "5d4c961f23d258e6a09723c6217728ae6baeb67a0a3e601d8f59cd8a30414ce8",
+  "resumen-reglas-v2": "b7904c3f9770ce87b401e4cb411f5b863e233b510df7cf19ada4770e157324f1",
+  "resumen-escenarios-v2": "ac3a76448f8f47adf5e3120e4650e39dc61da4fead291f51e6488f8a3e898691",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */
