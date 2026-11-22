@@ -27,6 +27,17 @@ import type { Buscar, Cierre } from "@/precios/yahoo";
 import { ACEPTADOS, RECHAZOS, VERIFICACION_FALSA, idsDe, insertarCierre, sembrar as sembrarIntegridad, type Ids } from "../../ayudas/integridad-precios";
 import { carpetaTemporal, funcion, ruta008 } from "./falsos";
 import { filasPermisos, PERMISOS_PRECIOS } from "./permisos-precios";
+import { ultimaConciliacion } from "@/conciliacion/leer";
+import { leerProximos } from "@/datos-oficiales/decretos/leer";
+import { sha256Hex } from "@/ia/hash";
+import { construirPaquete } from "@/ia/paquete";
+import { gastoDelMes, registrarResumen, ultimoPublicado, yaPublicado } from "@/ia/registro/registro";
+import { leerReglas, leerVersiones, ultimosCierres } from "@/plan/lectura";
+import { leerEntradas } from "@/proyecciones/leer";
+import { obtenerResumen } from "@/tablero/datos";
+import { obtenerEvolucion } from "@/tablero/datos-evolucion";
+import { ENTRADAS_FICTICIAS } from "../ia/apoyo/hechos.ficticio";
+import { filasPermisos as filasIa, PERMISOS_IA } from "../ia/registro/permisos-ia";
 
 const URL_BASE = process.env.DATABASE_URL_TEST ?? "";
 const EN_CI = process.env.GITHUB_ACTIONS === "true";
@@ -34,7 +45,8 @@ const BASE_PRUEBA = "inv_roles_test";
 const CLAVE_DUENO = "d".repeat(48);
 const CLAVE_APP = "e".repeat(48);
 const CLAVE_PRECIOS = "f".repeat(48);
-const ROLES = "('inv_dueno','inv_app','inv_precios')";
+const CLAVE_IA = "7c".repeat(24);
+const ROLES = "('inv_dueno','inv_app','inv_precios','inv_ia')";
 
 const conBase = (usuario: string, clave: string | null, base: string) => {
   const u = new URL(URL_BASE);
@@ -92,6 +104,7 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     await app?.$disconnect();
     if (admin) {
       await admin.$executeRawUnsafe(`DROP DATABASE IF EXISTS ${BASE_PRUEBA} WITH (FORCE)`);
+      await admin.$executeRawUnsafe("DROP ROLE IF EXISTS inv_ia");
       await admin.$executeRawUnsafe("DROP ROLE IF EXISTS inv_precios");
       await admin.$executeRawUnsafe("DROP ROLE IF EXISTS inv_app");
       await admin.$executeRawUnsafe("DROP ROLE IF EXISTS inv_dueno");
@@ -674,6 +687,156 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
         await admin.$executeRawUnsafe(`ALTER ROLE inv_precios WITH LOGIN PASSWORD '${CLAVE_PRECIOS}'`);
       }
       expect(await entrarComoPrecios()).toBe("entró");
+    });
+  });
+
+  // inv_ia (el servicio de los resúmenes con IA, fase E): con el SQL de crear-roles-prod.sh (NOLOGIN y sin clave hasta su
+  // secreto), los permisos de privilegios.sql (lista única tests/unit/ia/registro/permisos-ia.ts), los lectores reales y
+  // el registro como inv_ia, y lo prohibido falla. Usa lo que sembró el bloque de inv_precios (especies, órdenes y lote).
+  describe("inv_ia: el rol del servicio de los resúmenes con IA", () => {
+    let ia: PrismaClient;
+    let dueno: PrismaClient;
+    let sinSecreto: Array<Record<string, unknown>> = [];
+    let antesDelMigrador: unknown = null;
+    const creaciones: Array<ReturnType<typeof ejecutarSql>> = [];
+    const urlIa = () => `${conBase("inv_ia", CLAVE_IA, BASE_PRUEBA)}&connection_limit=1`;
+    const negadoIa = async (sql: string) => {
+      await expect(ia.$executeRawUnsafe(sql), sql).rejects.toThrow(/42501|permission denied|must be owner/);
+    };
+
+    beforeAll(async () => {
+      const sqlRol = funcion(ruta008("scripts/crear-roles-prod.sh"), "sql_rol_ia", { PATH: process.env.PATH });
+      if (sqlRol.status !== 0) throw new Error(`sql_rol_ia: ${sqlRol.stderr}`);
+      const archivo = path.join(carpetaTemporal("rol-ia"), "rol-ia.sql");
+      writeFileSync(archivo, sqlRol.stdout);
+      for (let i = 0; i < 2; i += 1) creaciones.push(ejecutarSql(archivo, superusuario(BASE_PRUEBA)));
+      sinSecreto = await admin.$queryRawUnsafe<Array<Record<string, unknown>>>("SELECT rolcanlogin, rolpassword IS NULL AS sin_clave FROM pg_authid WHERE rolname = 'inv_ia'");
+      const enPrueba = new PrismaClient({ datasources: { db: { url: superusuario(BASE_PRUEBA) } } });
+      await enPrueba.$executeRawUnsafe(`ALTER ROLE inv_ia WITH LOGIN PASSWORD '${CLAVE_IA}'`);
+      await enPrueba.$disconnect();
+      ia = new PrismaClient({ datasources: { db: { url: urlIa() } } });
+      antesDelMigrador = await ia.$queryRawUnsafe("SELECT id FROM instrumento LIMIT 1").then(() => "leyó", (e: unknown) => String(e));
+      dueno = new PrismaClient({ datasources: { db: { url: conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA) } } });
+      const r = ejecutarSql(ruta008("docker/migrador/privilegios.sql"), conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA));
+      if (r.status !== 0) throw new Error(`privilegios.sql con inv_ia: ${r.stderr}`);
+    }, 120_000);
+
+    afterAll(async () => {
+      await ia?.$disconnect();
+      await dueno?.$disconnect();
+    });
+
+    it("privilegios.sql pasó sin el rol, y el SQL del script lo crea NOLOGIN, sin clave e idempotente; recién creado no lee nada", () => {
+      expect(privilegiosSinPrecios?.status, privilegiosSinPrecios?.stderr).toBe(0);
+      for (const c of creaciones) expect(c.status, c.stderr).toBe(0);
+      expect(sinSecreto).toEqual([{ rolcanlogin: false, sin_clave: true }]);
+      expect(String(antesDelMigrador)).toMatch(/42501|permission denied/);
+    });
+
+    it("atributos: NOINHERIT, sin superusuario, sin crear bases ni roles, sin replicación ni BYPASSRLS, 2 conexiones y sus topes", async () => {
+      const filas = await admin.$queryRawUnsafe<Array<Record<string, unknown>>>(
+        "SELECT rolinherit, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls, rolconnlimit FROM pg_roles WHERE rolname = 'inv_ia'",
+      );
+      expect(filas).toEqual([{ rolinherit: false, rolsuper: false, rolcreatedb: false, rolcreaterole: false, rolreplication: false, rolbypassrls: false, rolconnlimit: 2 }]);
+      const ajustes = await admin.$queryRawUnsafe<Array<{ ajuste: string }>>("SELECT unnest(rolconfig) AS ajuste FROM pg_roles WHERE rolname = 'inv_ia' ORDER BY 1");
+      expect(ajustes.map((a) => a.ajuste)).toEqual(["idle_in_transaction_session_timeout=30s", "statement_timeout=60s"]);
+    });
+
+    it("el catálogo tiene exactamente los permisos de la lista, por columna; nada de tabla, secuencia, por defecto, TEMP ni CREATE", async () => {
+      const columnas = await dueno.$queryRawUnsafe<Array<{ fila: string }>>(
+        `SELECT c.relname || '.' || a.attname || ' ' || x.privilege_type AS fila
+           FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid JOIN pg_namespace n ON n.oid = c.relnamespace,
+                aclexplode(a.attacl) x
+          WHERE n.nspname = 'public' AND x.grantee = 'inv_ia'::regrole ORDER BY 1`,
+      );
+      expect(columnas.map((f) => f.fila).sort()).toEqual(filasIa(PERMISOS_IA));
+      const deTabla = await dueno.$queryRawUnsafe<Array<{ n: bigint }>>("SELECT count(*) AS n FROM pg_class c, aclexplode(c.relacl) x WHERE x.grantee = 'inv_ia'::regrole");
+      expect(Number(deTabla[0]!.n)).toBe(0);
+      const porDefecto = await dueno.$queryRawUnsafe<Array<{ n: bigint }>>("SELECT count(*) AS n FROM pg_default_acl d, aclexplode(d.defaclacl) x WHERE x.grantee = 'inv_ia'::regrole");
+      expect(Number(porDefecto[0]!.n)).toBe(0);
+      const base = await dueno.$queryRawUnsafe<Array<Record<string, boolean>>>(
+        `SELECT has_database_privilege('inv_ia', current_database(), 'CONNECT') AS conecta,
+                has_database_privilege('inv_ia', current_database(), 'CREATE') AS crea,
+                has_database_privilege('inv_ia', current_database(), 'TEMP') AS temporal,
+                has_schema_privilege('inv_ia', 'public', 'USAGE') AS usa,
+                has_schema_privilege('inv_ia', 'public', 'CREATE') AS crea_en_esquema`,
+      );
+      expect(base).toEqual([{ conecta: true, crea: false, temporal: false, usa: true, crea_en_esquema: false }]);
+    });
+
+    it("los lectores de los armadores corren como inv_ia (control positivo); los de la página del plan, no", async () => {
+      const hoy = new Date("2024-06-20T00:00:00Z");
+      const resumen = await obtenerResumen(ia);
+      expect(resumen.tablero.filas.length).toBeGreaterThan(0);
+      await expect(obtenerEvolucion(ia, resumen)).resolves.toBeDefined();
+      await expect(ultimaConciliacion(ia)).resolves.not.toBeUndefined();
+      await expect(leerEntradas(ia, hoy)).resolves.toBeDefined();
+      await expect(leerProximos(ia, hoy)).resolves.toBeDefined();
+      await expect(ultimosCierres(ia, resumen.tablero.filas.map((f) => f.instrumentoId))).resolves.toBeDefined();
+      await expect(leerVersiones(ia)).rejects.toThrow(/42501|permission denied/);
+      await expect(leerReglas(ia, "version-ficticia")).rejects.toThrow(/42501|permission denied/);
+    });
+
+    it("el registro corre como inv_ia: registra con la hora de la base, no repite, lee el último y suma el gasto", async () => {
+      const paquete = construirPaquete({ ...ENTRADAS_FICTICIAS.REGLAS(), avisos: ["ROLES_BASE_IA"] });
+      const prompt = { version: "resumen-reglas-v1", hash: sha256Hex("prompt ficticio de roles-base") };
+      const exito = { ok: true, puerta: "local", salidaCruda: "{}", modelo: "ornith:9b", modeloDigest: "digest-ficticio-roles", latenciaMs: 2311, tokensEntrada: 1931, tokensSalida: 287 } as const;
+      const entrada = { paquete, prompt, opciones: { temperature: 0, seed: 42 }, validadorVersion: "validador-v1", estado: "PUBLICADO", exito, texto: "Resumen ficticio." } as const;
+      const r = await registrarResumen(ia, entrada);
+      await expect(registrarResumen(ia, entrada)).rejects.toThrow(expect.objectContaining({ codigo: "YA_PUBLICADO" }));
+      expect(await yaPublicado(ia, { tipo: "REGLAS", fechaNegocio: paquete.hoy, hechosHash: paquete.hash, promptHash: prompt.hash, modeloDigest: exito.modeloDigest })).toBe(true);
+      expect((await ultimoPublicado(ia, "REGLAS", paquete.hoy))?.id).toBe(r.id);
+      expect((await gastoDelMes(ia, "local", new Date(r.generadoEn.getTime() - 1), new Date(r.generadoEn.getTime() + 1))).tokensEntrada).toBe(1931);
+    });
+
+    for (const sql of [
+      'SELECT "crudo" FROM fila_fuente LIMIT 1',
+      'SELECT "encargo" FROM certificacion_fondo LIMIT 1',
+      'SELECT "email" FROM usuario LIMIT 1',
+      'SELECT "detalle" FROM regla_plan LIMIT 1',
+      'SELECT "accion", "cantidad" FROM regla_plan LIMIT 1',
+      'SELECT "motivo" FROM plan_version LIMIT 1',
+      'SELECT "precioValoracion" FROM certificacion_posicion LIMIT 1',
+      "SELECT * FROM instrumento LIMIT 1",
+      "UPDATE resumen_ia SET texto = 'x' WHERE false",
+      "DELETE FROM resumen_ia WHERE false",
+      "TRUNCATE resumen_ia",
+      'INSERT INTO resumen_ia ("generadoEn") VALUES (now())',
+      "INSERT INTO orden (id) VALUES ('x')",
+      "SET ROLE inv_dueno",
+      "CREATE TEMP TABLE ia_intrusa (x int)",
+      "CREATE TABLE ia_intrusa (x int)",
+    ]) {
+      it(`inv_ia NO puede: ${sql}`, async () => {
+        await negadoIa(sql);
+      });
+    }
+
+    it("inv_ia NO puede saltarse la solo inserción con SET LOCAL inv.reversion (no tiene UPDATE ni DELETE)", async () => {
+      await expect(ia.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe("SET LOCAL inv.reversion = 'on'");
+        await tx.$executeRawUnsafe("DELETE FROM resumen_ia");
+      })).rejects.toThrow(/42501|permission denied/);
+    });
+
+    it("inv_app lee resumen_ia y no escribe en ella", async () => {
+      await expect(app.$queryRawUnsafe("SELECT count(*) FROM resumen_ia")).resolves.toBeDefined();
+      for (const sql of ["INSERT INTO resumen_ia (id) VALUES ('x')", "UPDATE resumen_ia SET texto = 'x' WHERE false", "DELETE FROM resumen_ia WHERE false"]) {
+        await expect(app.$executeRawUnsafe(sql), sql).rejects.toThrow(/42501|permission denied/);
+      }
+    });
+
+    it("el guardián falla si inv_ia es miembro del dueño (de resumen_ia y de las tablas con disparadores que eximen al dueño)", async () => {
+      const guardian = () => ejecutarSql(ruta008("scripts/verificar-esquema.sql"), conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA));
+      expect(guardian().status).toBe(0);
+      await admin.$executeRawUnsafe("GRANT inv_dueno TO inv_ia");
+      try {
+        const r = guardian();
+        expect(r.status).not.toBe(0);
+        for (const t of ["resumen_ia", "precio_cierre", "decision"]) expect(r.stderr + r.stdout).toMatch(new RegExp(`rol con privilegios del dueño inv_ia en ${t}\\b`));
+      } finally {
+        await admin.$executeRawUnsafe("REVOKE inv_dueno FROM inv_ia");
+      }
     });
   });
 
