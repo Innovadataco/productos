@@ -8,7 +8,9 @@
 # - Solo la clave PÚBLICA de age está en el VPS; la privada vive en el gestor de contraseñas de Jelk.
 # - Archivos 0640, con el grupo RESPALDO_GID si se define (lectura para el usuario de la copia fuera del VPS).
 # - Programación propia (sin systemd ni cron del host): un respaldo diario a RESPALDO_HORA (HHMM, COT);
-#   el del domingo queda como semanal. Retención: 14 diarios, 8 semanales y 5 extras (con motivo).
+#   el del domingo queda como semanal. Retención: 14 diarios y 8 semanales; de los extras (con motivo), los de
+#   las últimas 48 h y el más reciente de cada motivo nunca se borran, y de los demás quedan 10. Nunca se borra
+#   el recién escrito ni uno cuyo .sha256 falte o no cuadre; si el cálculo falla, no se borra nada.
 # - Un solo respaldo a la vez en el contenedor (el manual de `exec --ahora` y el del bucle): candado con
 #   flock -n sobre $ESTADO_DIR/respaldo.candado (tmpfs del contenedor; se suelta solo si el proceso muere).
 #   El manual espera hasta RESPALDO_ESPERA_S segundos (600 por defecto) y si no, sale con 75; el bucle no
@@ -27,7 +29,8 @@ HORA="${RESPALDO_HORA:-0230}"
 GID="${RESPALDO_GID:-}"
 RETENER_DIARIOS=14
 RETENER_SEMANALES=8
-RETENER_EXTRAS=5
+RETENER_EXTRAS=10
+EXTRAS_INTOCABLES_S=172800 # 48 h: un extra más nuevo que esto nunca se borra por retención
 REINTENTO_S=900
 ESPERA_CANDADO_S="${RESPALDO_ESPERA_S:-600}"
 OCUPADO=75
@@ -43,14 +46,92 @@ nombre_respaldo() {
   printf 'inv-008-%s%s.dump.age\n' "$1" "$sufijo"
 }
 
-# Lee nombres por stdin e imprime los que sobran según la retención (los más viejos de cada grupo).
+# Lee nombres por stdin e imprime los que sobran según la retención. $1 = ahora (AAAAMMDD-HHMMSS, COT);
+# $2 = el respaldo recién escrito, que nunca se imprime (pero cuenta en su grupo).
+# - Diarios y semanales: quedan los RETENER_DIARIOS y RETENER_SEMANALES más nuevos.
+# - Extras (con motivo): nunca sobran los de las últimas 48 h (una fecha futura cuenta como reciente) ni el más
+#   reciente de cada motivo; de los demás quedan los RETENER_EXTRAS más nuevos.
+# Con «ahora» inválido no imprime nada y sale con 2. Una entrada incompleta (un grep o un sort cortados) solo
+# puede borrar menos, nunca más: el puesto de cada uno baja, «el más reciente de su motivo» solo se gana y las
+# 48 h no dependen del resto. Por eso no hace falta pipefail (que dash no tiene).
 respaldos_a_borrar() {
-  grep -E '^inv-008-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.dump\.age$' | sort -r | awk \
-    -v d="$RETENER_DIARIOS" -v s="$RETENER_SEMANALES" -v e="$RETENER_EXTRAS" '
-      /-semanal\.dump\.age$/ { if (++ns > s) print; next }
-      /^inv-008-[0-9]{8}-[0-9]{6}\.dump\.age$/ { if (++nd > d) print; next }
-      { if (++ne > e) print }'
+  case "${1:-}" in
+    [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]) ;;
+    *) registrar "retención: la hora de referencia no es AAAAMMDD-HHMMSS"; return 2 ;;
+  esac
+  grep -E '^inv-008-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.dump\.age$' | LC_ALL=C sort -r | awk \
+    -v max_diarios="$RETENER_DIARIOS" -v max_semanales="$RETENER_SEMANALES" -v max_extras="$RETENER_EXTRAS" \
+    -v ventana="$EXTRAS_INTOCABLES_S" -v ahora="$1" -v nuevo="${2:-}" '
+      # Segundos de un AAAAMMDD-HHMMSS contados desde una fecha fija (días civiles, algoritmo de H. Hinnant):
+      # solo sirve para restar dos. Sin mktime ni strftime, que no están en todos los awk.
+      function segundos(t,   anio, mes, dia, era, anio_era, dia_anio, dia_era) {
+        anio = substr(t, 1, 4) + 0; mes = substr(t, 5, 2) + 0; dia = substr(t, 7, 2) + 0
+        if (mes <= 2) anio--
+        era = int(anio / 400); anio_era = anio - era * 400
+        dia_anio = int((153 * (mes > 2 ? mes - 3 : mes + 9) + 2) / 5) + dia - 1
+        dia_era = anio_era * 365 + int(anio_era / 4) - int(anio_era / 100) + dia_anio
+        return ((era * 146097 + dia_era) * 24 + substr(t, 10, 2)) * 3600 + substr(t, 12, 2) * 60 + substr(t, 14, 2)
+      }
+      BEGIN { corte = segundos(ahora) - ventana }
+      {
+        # Por posición (el grep ya filtró la forma): «inv-008-» (8) + AAAAMMDD-HHMMSS (15) + [-motivo] +
+        # «.dump.age» (9). Un motivo como «x-semanal» es un extra, no un semanal.
+        if (length($0) == 32) sobra = (++diarios > max_diarios)
+        else if (substr($0, 24) == "-semanal.dump.age") sobra = (++semanales > max_semanales)
+        else {
+          motivo = substr($0, 25, length($0) - 33)
+          primero = !(motivo in visto)
+          visto[motivo] = 1
+          if (primero || segundos(substr($0, 9, 15)) >= corte) next
+          sobra = (++extras > max_extras)
+        }
+        if (sobra && $0 != nuevo) print
+      }'
 }
+
+# Verdadero si el .sha256 de $1 (en DIR) existe, empieza con 64 hex y cuadra con el archivo.
+sha256_cuadra() {
+  [ -f "$DIR/$1.sha256" ] || return 1
+  esperado="$(cut -d' ' -f1 <"$DIR/$1.sha256")" || return 1
+  case "$esperado" in '' | *[!0-9a-f]*) return 1 ;; esac
+  [ "${#esperado}" -eq 64 ] || return 1
+  calculado="$(cd "$DIR" && sha256sum "$1")" || return 1
+  [ "${calculado%% *}" = "$esperado" ]
+}
+
+# La retención después de un respaldo nuevo ($1, su nombre). En un subshell: no pisa las variables de respaldar.
+# Primero calcula la lista completa; si algo falla (listar, la hora o el cálculo), no borra nada. Nunca borra el
+# recién escrito ni un respaldo cuyo .sha256 falte o no cuadre (queda para revisarlo a mano, y sigue ocupando su
+# puesto). Borra el .age y solo después su .sha256: si falla el primero, el par queda entero; si falla el segundo,
+# queda un .sha256 suelto (sin respaldo) y se registra. Sale con 1 si algo no se pudo hacer.
+retener() (
+  set -f
+  listado="$(ls -1 -- "$DIR")" || { registrar "retención: no se pudo listar la carpeta: no se borra nada"; exit 1; }
+  ahora="$(hora_cot +%Y%m%d-%H%M%S)" || { registrar "retención: no se pudo leer la hora: no se borra nada"; exit 1; }
+  sobran="$(printf '%s\n' "$listado" | respaldos_a_borrar "$ahora" "$1")" ||
+    { registrar "retención: falló el cálculo: no se borra nada"; exit 1; }
+  fallo=0
+  for viejo in $sobran; do
+    # Defensa en profundidad: respaldos_a_borrar ya filtra la forma y excluye el recién escrito.
+    case "$viejo" in
+      inv-008-*.dump.age) ;;
+      *) registrar "retención: nombre inesperado, no se borra: $viejo"; fallo=1; continue ;;
+    esac
+    [ "$viejo" != "$1" ] || continue
+    { [ -f "$DIR/$viejo" ] && [ ! -L "$DIR/$viejo" ]; } || continue
+    if ! sha256_cuadra "$viejo"; then
+      registrar "retención: no se borra $viejo: su .sha256 falta o no cuadra (revisarlo a mano)"
+      continue
+    fi
+    if rm -f "$DIR/$viejo" && rm -f "$DIR/$viejo.sha256"; then
+      registrar "retención: borrado $viejo"
+    else
+      registrar "retención: no se pudo borrar $viejo o su .sha256"
+      fallo=1
+    fi
+  done
+  exit "$fallo"
+)
 
 # Verdadero si toca el respaldo diario: la hora actual ($1, HHMM) ya llegó a HORA y hoy ($2) no se hizo
 # todavía (el último diario fue $3).
@@ -154,10 +235,8 @@ respaldar() {
     registrar "no se pudo dejar listo el respaldo (mover, sha256, grupo o permisos): no se guardó"
     return 1
   fi
-  ls -1 "$DIR" | respaldos_a_borrar | while IFS= read -r viejo; do
-    rm -f "$DIR/$viejo" "$DIR/$viejo.sha256"
-    registrar "retención: borrado $viejo"
-  done
+  # El respaldo ya quedó bien: si la retención falla, se registra y el respaldo cuenta igual.
+  retener "$nombre" || registrar "retención: no se completó (el respaldo nuevo quedó bien)"
   registrar "respaldo listo: $nombre"
   printf '%s\n' "$final"
 }

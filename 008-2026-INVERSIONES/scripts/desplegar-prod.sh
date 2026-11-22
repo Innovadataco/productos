@@ -13,13 +13,15 @@
 #
 # Orden: marca de pausa → candados (Inversiones y común con PI) → disco → PI sin desplegar → (.tar:
 # etiquetas, sha256 y disco; docker load) → las tres imágenes del mismo sha, amd64 → CI en verde y sha en
-# main → clon en el sha, limpio y de root → solo hacia adelante → medición → (redes de una versión anterior:
-# down sin -v) → base y respaldo → roles → PI otra vez → (si migra) app vieja detenida → respaldo cifrado →
+# main → clon en el sha, limpio y de root → solo hacia adelante → espera de la medición (120 s si es solo código;
+# 600 s si cambian los servicios, los límites o la imagen base, o si no se sabe) → medición → (redes de una versión
+# anterior: down sin -v) → base y respaldo → roles → PI otra vez → (si migra) app vieja detenida → respaldo cifrado →
 # (si migra) respaldo diario detenido → migrador (migraciones, guardián del esquema y privilegios) → app,
 # entrada, vigía y respaldo → imagen, salud por la entrada, la app y la base sin puertos y solo en redes internal
 # con la puerta de enlace aislada → la app sin salida a internet (con control positivo desde la entrada) →
-# mem = memswap → medición 10 min después → salud otra vez → estado → retención (solo en producción) →
-# convivencia → DEPLOY VERIFICADO <sha>. Si algo falla después de tocar contenedores, vuelve a la imagen que corría.
+# mem = memswap → la espera y la medición (en la corta, piso de memoria: bajo él, se extiende a 600 s) → salud otra
+# vez → estado → retención (solo en producción) → convivencia y piso → DEPLOY VERIFICADO <sha>. Si algo falla
+# después de tocar contenedores, vuelve a la imagen que corría.
 # Mientras migra no corre nada de Inversiones que retenga tablas: la app queda abajo desde el respaldo previo
 # hasta que el up de la versión nueva queda healthy.
 set -euo pipefail
@@ -28,7 +30,13 @@ INV_SCRIPT=desplegar-prod
 source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 
 MIN_DISCO_GB_POR_DEFECTO=15
-ESPERA_MEDICION_S_POR_DEFECTO=600
+# La espera entre el up y la medición de memoria (acuerdo con el CEO de PI): la corta si el despliegue es solo de
+# código; la completa si cambian los servicios, los límites o la imagen base, o si no se puede saber.
+ESPERA_CORTA_S=120
+ESPERA_COMPLETA_S=600
+# El piso de la espera corta: MemAvailable bajo UMBRAL_CORTE_KB (1 GiB, el criterio de corte) o SwapFree bajo
+# 512 MiB, el mismo par del preflight de memoria de PI (convivencia-pi.md §1).
+PISO_SWAPFREE_KB=524288
 PERMANENTES=(inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo)
 # La sonda de la prueba de no salida: el único destino de internet de 008 en producción (el vigía, Telegram). Lo
 # resuelve y lo alcanza la ENTRADA (control positivo); desde la app no debe haber ruta.
@@ -273,6 +281,201 @@ verificar_memswap() {
   informar "mem = memswap en todos los contenedores de $INV_PROYECTO_ACTIVO"
 }
 
+# Resume por stdin un docker-compose en lo que decide los contenedores y su memoria, una línea por dato y ordenado:
+# «servicio <nombre>» y «<servicio> <ruta.clave> <valor>» para las claves de imagen, memoria y CPU a cualquier
+# profundidad (con la ruta: un límite de deploy no se confunde con una reserva). No cuentan los comentarios ni el
+# contenido de los bloques literales (| o >, como el relé de la entrada). Imprime INDETERMINADO si no hay servicios o
+# si lo que decide podría venir de otra parte o el resumen no lo lee: alias, fusiones (<<), etiquetas (!reset), mapas
+# en línea ({…}), claves entre comillas, include, extends o un límite interpolado (el archivo de producción no está en
+# git; en image solo vale ${INV_TAG:-sin-desplegar}). Awk POSIX (mawk en el VPS): sin anclas dentro de grupos ni \t
+# entre corchetes; los tabuladores se pasan a espacios.
+resumen_compose() {
+  awk '
+    function sangria(s) { match(s, /^ */); return RLENGTH }
+    BEGIN { bloque = -1; nivel = -1 }
+    {
+      linea = $0
+      gsub("\t", " ", linea)
+      sub("\r$", "", linea)
+      if (bloque >= 0) {
+        if (linea ~ /^ *$/ || sangria(linea) > bloque) next
+        bloque = -1
+      }
+      if (linea ~ /^ *$/ || linea ~ /^ *#/) next
+      sub(/ +#.*$/, "", linea)
+      sub(/ +$/, "", linea)
+      s = sangria(linea)
+      if (linea ~ /^ *- +[|>][-+0-9]*$/ || linea ~ /: +[|>][-+0-9]*$/) bloque = s
+      if (linea ~ /^ *(- +)?(<<|include|extends) *:/ || linea ~ /^ *- +[*!{]/ || linea ~ /: +[*!{]/) raro = 1
+      if (linea ~ /^ *(- +)?("[^"]*"|\047[^\047]*\047) *:/) raro = 1
+      if (s == 0) { en = (linea == "services:"); nivel = -1; servicio = ""; next }
+      if (!en) next
+      if (nivel < 0) nivel = s
+      if (s <= nivel) {
+        servicio = linea
+        sub(/^ +/, "", servicio)
+        sub(/ *:.*$/, "", servicio)
+        print "servicio " servicio
+        hay = 1
+        n = 0
+        next
+      }
+      if (linea !~ /^ *(- +)?[A-Za-z0-9_.-]+ *:/) next
+      clave = linea
+      sub(/^ *(- +)?/, "", clave)
+      valor = clave
+      sub(/ *:.*$/, "", clave)
+      sub(/^[^:]*: */, "", valor)
+      while (n > 0 && pila_s[n] >= s) n--
+      ruta = ""
+      for (i = 1; i <= n; i++) ruta = ruta pila_k[i] "."
+      if (clave ~ /^(image|mem_limit|memswap_limit|mem_reservation|mem_swappiness|memory|shm_size|cpus|cpu_shares|cpu_quota|cpu_period|cpuset|scale|replicas|oom_kill_disable|oom_score_adj)$/) {
+        if (valor ~ /\$/ && !(clave == "image" && valor ~ /^inv-008-[a-z]+:\$\{INV_TAG:-sin-desplegar\}$/)) raro = 1
+        print servicio " " ruta clave " " valor
+      }
+      if (valor == "") { n++; pila_s[n] = s; pila_k[n] = clave }
+    }
+    END { if (raro || !hay) print "INDETERMINADO" }' | LC_ALL=C sort
+}
+
+# Resume por stdin un Dockerfile en lo que decide la imagen base: sus FROM en orden y los ARG globales (los de antes
+# del primer FROM, los únicos que un FROM puede usar), con sus continuaciones (\) unidas. Lo que continúa otra
+# instrucción (un LABEL, un RUN) no cuenta. INDETERMINADO si no hay FROM o si cambia el carácter de escape.
+resumen_dockerfile() {
+  awk '
+    {
+      linea = $0
+      gsub("\t", " ", linea)
+      sub("\r$", "", linea)
+      if (sigue) {
+        if (toma) actual = actual " " linea
+        sigue = (linea ~ /\\$/)
+        if (!sigue && toma) { print actual; toma = 0 }
+        next
+      }
+      mayus = toupper(linea)
+      if (!instruccion && mayus ~ /^# *ESCAPE *=/) raro = 1
+      if (linea ~ /^ *$/ || linea ~ /^ *#/) next
+      instruccion = 1
+      es_from = (mayus ~ /^ *FROM /)
+      if (es_from) hay = 1
+      toma = es_from || (!hay && mayus ~ /^ *ARG /)
+      sigue = (linea ~ /\\$/)
+      if (toma && !sigue) { print linea; toma = 0 }
+      else if (toma) actual = linea
+    }
+    END { if (sigue && toma) print actual; if (raro || !hay) print "INDETERMINADO" }'
+}
+
+# Las líneas de stdin ordenadas y sin caracteres de control (van al log).
+limpias_ordenadas() {
+  LC_ALL=C tr -d '\000-\010\013-\037\177' | LC_ALL=C sort
+}
+
+# Las diferencias entre dos resúmenes ($1, lo que corre; $2, lo que va a correr), en una línea y acotadas: seis como
+# mucho, de 160 caracteres. Si son las mismas líneas en otro orden (FROM reordenados), lo dice.
+diferencias() {
+  local texto
+  texto="$(LC_ALL=C comm -3 <(printf '%s\n' "$1" | limpias_ordenadas) <(printf '%s\n' "$2" | limpias_ordenadas) |
+    LC_ALL=C awk -F '\t' '
+      NR <= 6 { printf "%s%s", (NR > 1 ? "; " : ""), ($1 != "" ? "antes «" substr($1, 1, 160) "»" : "ahora «" substr($2, 1, 160) "»") }
+      END { if (NR > 6) printf "; y %d más", NR - 6 }')"
+  printf '%s' "${texto:-mismas líneas en otro orden}"
+}
+
+# El archivo $2 (relativo a la carpeta 008) tal como está en el commit $1 del clon. Corre como root: con cat-file (sin
+# textconv, filtros ni diff externos), sin objetos de reemplazo, sin la configuración del sistema ni la del usuario y
+# sin las variables GIT_* del entorno (GIT_DIR cambiaría de repositorio).
+archivo_en_sha() {
+  env -i PATH="$PATH" GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -C "$INV_DIR_008" cat-file blob "$1:./$2" 2>/dev/null
+}
+
+# Imprime por qué la medición necesita la espera completa, o nada si el despliegue es solo de código. Compara sin red,
+# solo con el clon, lo que corre ($1, estado/sha-actual) con lo que va a correr: los servicios, límites e imágenes del
+# compose del clon (el que usa COMPOSE) y los FROM del Dockerfile del sha de la imagen ($2). En un despliegue normal el
+# clon está en el sha de la imagen; en la reversa, en el que corre o más adelante (verificar_clon): la regla es la
+# misma. Lo que no se puede leer o comparar da la espera completa.
+motivo_espera_completa() {
+  local corre="$1" imagen="$2" texto antes despues
+  [[ "$corre" =~ ^[0-9a-f]{40}$ ]] || { echo "sin un sha que corre en estado/sha-actual (primer despliegue o estado dañado)"; return 0; }
+  [[ "$imagen" =~ ^[0-9a-f]{40}$ ]] || { echo "la imagen no trae un sha de 40 hex"; return 0; }
+  texto="$(archivo_en_sha "$corre" docker-compose.prod.yml)" || { echo "no se pudo leer el compose de $corre en el clon"; return 0; }
+  antes="$(printf '%s\n' "$texto" | resumen_compose)" && despues="$(resumen_compose <"$INV_DIR_008/docker-compose.prod.yml")" ||
+    { echo "no se pudo leer o resumir el compose del clon"; return 0; }
+  case "$antes$despues" in
+    *INDETERMINADO*) echo "el compose no se puede comparar (sin servicios, o con alias, <<, etiquetas, include, extends o límites interpolados)"; return 0 ;;
+  esac
+  [ "$antes" = "$despues" ] || { echo "cambian servicios, límites o imágenes del compose respecto de $corre: $(diferencias "$antes" "$despues")"; return 0; }
+  antes="$(archivo_en_sha "$corre" Dockerfile)" && despues="$(archivo_en_sha "$imagen" Dockerfile)" ||
+    { echo "no se pudo leer el Dockerfile de $corre o de $imagen en el clon"; return 0; }
+  antes="$(printf '%s\n' "$antes" | resumen_dockerfile)"
+  despues="$(printf '%s\n' "$despues" | resumen_dockerfile)"
+  case "$antes$despues" in
+    *INDETERMINADO*) echo "el Dockerfile no se puede comparar (sin FROM o con # escape=)"; return 0 ;;
+  esac
+  [ "$antes" = "$despues" ] || echo "cambia la imagen base (FROM o ARG globales del Dockerfile) respecto de $corre: $(diferencias "$antes" "$despues")"
+}
+
+# Fija ESPERA (los segundos entre el up y la medición) e imprime en UNA línea cuál y por qué. $1: INV_ESPERA_MEDICION_S
+# ya validado, o vacío; si viene, manda como antes. $2: el sha que corre.
+decidir_espera() {
+  local explicita="$1" motivo base porque
+  motivo="$(motivo_espera_completa "$2" "$SHA" | tr '\n' ' ')"
+  motivo="${motivo% }"
+  if [ -n "$motivo" ]; then
+    base="$ESPERA_COMPLETA_S"
+    porque="$motivo"
+  else
+    base="$ESPERA_CORTA_S"
+    porque="solo código: mismos servicios, límites e imágenes del compose y mismos FROM del Dockerfile que el sha que corre ($2)"
+  fi
+  if [ -n "$explicita" ]; then
+    ESPERA="$explicita"
+    informar "espera de la medición: $ESPERA s · INV_ESPERA_MEDICION_S explícito (la comparación daba $base s: $porque)"
+  else
+    ESPERA="$base"
+    informar "espera de la medición: $ESPERA s · $porque"
+  fi
+}
+
+# Por qué la memoria del VPS está bajo el piso de la espera corta (MemAvailable < 1 GiB o SwapFree < 512 MiB), o nada.
+# Lee el meminfo como medir-memoria.sh y vigilar-convivencia.sh. Si no lo puede leer, cuenta como bajo el piso: no se
+# da por buena una memoria sin medir. Sin swap (SwapFree 0), también: es la regla del acuerdo.
+memoria_bajo_piso() {
+  local meminfo disponible swap motivo=""
+  meminfo="$(archivo_meminfo)" || { echo "no se pudo ubicar el meminfo"; return 0; }
+  disponible="$(leer_meminfo_kb MemAvailable "$meminfo")" || { echo "no se pudo leer MemAvailable de $meminfo"; return 0; }
+  swap="$(leer_meminfo_kb SwapFree "$meminfo")" || { echo "no se pudo leer SwapFree de $meminfo"; return 0; }
+  [ "$disponible" -ge "$UMBRAL_CORTE_KB" ] || motivo="MemAvailable $((disponible / 1024)) MiB < $((UMBRAL_CORTE_KB / 1024)) MiB"
+  [ "$swap" -ge "$PISO_SWAPFREE_KB" ] || motivo="${motivo:+$motivo y }SwapFree $((swap / 1024)) MiB < $((PISO_SWAPFREE_KB / 1024)) MiB"
+  [ -z "$motivo" ] || printf '%s\n' "$motivo"
+}
+
+# La espera después del up y su medición. Si la espera es menor que la completa (la corta, o una explícita) y la memoria
+# queda bajo el piso, se extiende hasta completar ESPERA_COMPLETA_S y se mide otra vez. Todo corre dentro de este
+# proceso: los candados (descriptores 8 y 9) siguen tomados hasta que sale. Deja en BAJO_PISO el motivo si la memoria
+# sigue bajo el piso, o nada.
+esperar_y_medir() {
+  local espera="$1" medicion="$2" resto
+  BAJO_PISO=""
+  informar "esperando ${espera}s para la medición después de up"
+  sleep "$espera"
+  "$INV_DIR_008/scripts/medir-memoria.sh" --etiqueta "$espera s después de up" --salida "$medicion"
+  [ "$espera" -lt "$ESPERA_COMPLETA_S" ] || return 0
+  BAJO_PISO="$(memoria_bajo_piso)"
+  [ -n "$BAJO_PISO" ] || return 0
+  resto=$((ESPERA_COMPLETA_S - espera))
+  informar "⚠️  memoria bajo el piso a los $espera s ($BAJO_PISO): se extiende la espera $resto s, hasta $ESPERA_COMPLETA_S s, y se mide otra vez. Los candados siguen tomados."
+  sleep "$resto"
+  "$INV_DIR_008/scripts/medir-memoria.sh" --etiqueta "$ESPERA_COMPLETA_S s después de up (espera extendida)" --salida "$medicion"
+  BAJO_PISO="$(memoria_bajo_piso)"
+  if [ -n "$BAJO_PISO" ]; then
+    informar "⚠️  la memoria sigue bajo el piso a los $ESPERA_COMPLETA_S s ($BAJO_PISO)"
+  else
+    informar "la memoria volvió sobre el piso a los $ESPERA_COMPLETA_S s: se sigue"
+  fi
+}
+
 # El contenedor $2 del servicio $1: corriendo DE UNA VEZ (un contenedor que sale o se reinicia es un fallo, no algo
 # pasajero: instrumentation.ts hace process.exit(1) sin AUTH_SECRET o sin APP_ORIGEN, y restart: always lo vuelve a
 # levantar) y con la imagen enviada. La entrada usa la misma imagen que la app.
@@ -458,6 +661,8 @@ SHA_CORRIA=""
 SHA_VUELTA=""
 DETENIDOS=0
 VERIFICADO=0
+ESPERA=""
+BAJO_PISO=""
 vuelta_atras() {
   local codigo=$? sha="$SHA_VUELTA"
   [ -n "$sha" ] || [ "$DETENIDOS" = 0 ] || sha="$SHA_CORRIA"
@@ -482,6 +687,22 @@ vuelta_atras() {
   exit "$codigo"
 }
 
+# El cierre, con el sha nuevo ya registrado: la revisión de convivencia y el piso de memoria de la espera corta. Si
+# cualquiera falla, sale sin DEPLOY VERIFICADO y sin vuelta atrás (el sha nuevo corre y respondió sano): el corte es
+# manual. Sale con el código de la convivencia o, si solo falló el piso, con 3 (el del criterio de corte).
+cerrar() {
+  local medicion="$1" rc=0
+  "$INV_DIR_008/scripts/vigilar-convivencia.sh" || rc=$?
+  VERIFICADO=1
+  [ "$rc" = 0 ] || informar "la revisión de convivencia encontró el criterio de corte (código $rc): sin DEPLOY VERIFICADO. El corte es manual."
+  [ -z "$BAJO_PISO" ] ||
+    informar "MEMORIA BAJO EL PISO después de $ESPERA_COMPLETA_S s ($BAJO_PISO): sin DEPLOY VERIFICADO. Corre $SHA, quedó registrado y no se detuvo nada; el corte es manual: sudo $INV_DIR_008/scripts/pausar-008.sh (convivencia-pi.md §4)"
+  [ "$rc" = 0 ] || exit "$rc"
+  [ -z "$BAJO_PISO" ] || exit 3
+  informar "mediciones en $medicion · anote el sha en ESTADO.md de la gestión"
+  echo "DEPLOY VERIFICADO $SHA"
+}
+
 main() {
   local referencia="" tar="" tar_sha="" sin_migrar=0
   while [ $# -gt 0 ]; do
@@ -499,8 +720,12 @@ main() {
   revisar_arbol
   armar_compose
   avisar_pool_app
-  local espera="${INV_ESPERA_MEDICION_S:-$ESPERA_MEDICION_S_POR_DEFECTO}"
-  [[ "$espera" =~ ^[0-9]+$ ]] || morir "INV_ESPERA_MEDICION_S debe ser un entero"
+  # Si se define, manda sobre la comparación (como antes); se lee en base 10 (0613 son 613 s, no octal).
+  local espera_explicita="${INV_ESPERA_MEDICION_S:-}"
+  if [ -n "$espera_explicita" ]; then
+    [[ "$espera_explicita" =~ ^[0-9]{1,5}$ ]] || morir "INV_ESPERA_MEDICION_S debe ser un entero de 0 a 99999 (segundos)"
+    espera_explicita="$((10#$espera_explicita))"
+  fi
   tomar_candado_propio
   tomar_candado_comun
   negarse_si_pausado
@@ -512,6 +737,7 @@ main() {
   verificar_clon "$SHA" "$sin_migrar"
   verificar_sentido "$sin_migrar"
   export INV_TAG="$SHA"
+  decidir_espera "$espera_explicita" "$(leer_estado sha-actual)"
 
   local medicion
   medicion="$(ruta_escribible "$INV_ESTADO_DIR/mediciones/$SHA-$(date +%Y%m%d-%H%M%S).txt")"
@@ -555,9 +781,7 @@ main() {
   verificar_sin_salida
   verificar_memswap
 
-  informar "esperando ${espera}s para la medición después de up"
-  sleep "$espera"
-  "$INV_DIR_008/scripts/medir-memoria.sh" --etiqueta "10 min después de up" --salida "$medicion"
+  esperar_y_medir "$ESPERA" "$medicion"
   verificar_servicio
 
   # Recién aquí el sha nuevo queda como actual y se purga lo viejo (solo en producción): hasta este punto, la
@@ -565,15 +789,7 @@ main() {
   registrar_estado
   SHA_VUELTA=""
   retener
-  "$INV_DIR_008/scripts/vigilar-convivencia.sh" || {
-    local rc=$?
-    VERIFICADO=1
-    informar "la revisión de convivencia encontró el criterio de corte (código $rc): sin DEPLOY VERIFICADO. El corte es manual."
-    exit "$rc"
-  }
-  VERIFICADO=1
-  informar "mediciones en $medicion · anote el sha en ESTADO.md de la gestión"
-  echo "DEPLOY VERIFICADO $SHA"
+  cerrar "$medicion"
 }
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
