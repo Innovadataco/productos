@@ -747,7 +747,7 @@ describe("desplegar-prod.sh · retención: borra solo en producción", () => {
     }
     writeFileSync(path.join(dir, "otro-archivo.txt"), "x");
     const imagenes = [...tresEtiquetas(actual), ...tresEtiquetas(anterior), ...tresEtiquetas(viejo), "pi-app:latest", ""];
-    const env = entorno(falsos, { FALSO_BIN: falsos.bin, FALSO_IMAGENES: imagenes.join("\\n"), T_BASE: base });
+    const env = entorno(falsos, { FALSO_BIN: falsos.fijos, FALSO_IMAGENES: imagenes.join("\\n"), T_BASE: base });
     return { dir, falsos, env };
   }
   const conservados = [`inv-008-${actual}.tar`, `inv-008-${actual}.tar.sha256`, `inv-008-${anterior}.tar`, `inv-008-${anterior}.tar.sha256`, "otro-archivo.txt"].sort();
@@ -915,7 +915,7 @@ describe("desplegar-prod.sh · espera de la medición: 120 s si es solo código,
   }
 
   /**
-   * Un sleep falso propio de la prueba (reemplaza el de falsos/ solo en su carpeta temporal): registra la llamada igual,
+   * Un sleep falso propio de la prueba (en su carpeta temporal, primera en el PATH: tapa al de falsos/ sin tocarlo): registra la llamada igual,
    * anota qué descriptores de los candados (8, el propio; 9, el común con PI) siguen abiertos y, en el sleep de
    * `enSegundos`, cambia el meminfo o la salud.
    */
