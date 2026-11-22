@@ -7,12 +7,15 @@
  *   FIC queda fuera en la v1.
  * - Dinero en `Prisma.Decimal`; métricas estadísticas en `number`, redondeadas a DECIMALES_METRICA (numeros.ts); días
  *   `AAAA-MM-DD`. El motor no da formato: eso es de la pantalla.
+ * - Sin nombres: solo ids (la pantalla los cruza con el tablero). Aun así, el análisis NO es un paquete de hechos para la
+ *   IA: sus claves (instrumentoId, especies, reglaId, decisionId…) son las que prohíbe src/ia/prohibidas.ts, y la guarda
+ *   lo rechaza entero. La vista ciega se arma aparte desde aquí, con ids opacos; nunca se afloja esa lista.
  */
 import type { Prisma } from "@prisma/client";
 import type { ReglaLeida } from "../plan/lectura";
 import type { HorizonteDias, Veredicto } from "../plan/resultado";
 import type { ResultadoDecision } from "../plan/resultados-lote";
-import type { AvisoCrudo, Dia, EntradasProyeccion, Ventana } from "../proyecciones/tipos";
+import type { AvisoCrudo, Dia, EntradasProyeccion } from "../proyecciones/tipos";
 import type { Tablero } from "../tablero/calculo";
 
 /** Cambia si cambia el cálculo: la pantalla la muestra y permite comparar análisis. */
@@ -150,10 +153,18 @@ export interface MatrizCorrelacion {
   readonly valores: readonly (readonly (number | null)[])[];
 }
 
+/** La ventana común de armarHistoria, sin el nombre de la especie que la limita (es la cubierta de historia más corta). */
+export interface VentanaComun {
+  readonly desde: Dia;
+  readonly hasta: Dia;
+  /** Días de la rejilla en la ventana. */
+  readonly ruedas: number;
+}
+
 export type RiesgoPortafolio =
   | {
       readonly estado: "CALCULADO";
-      readonly ventana: Ventana;
+      readonly ventana: VentanaComun;
       /** A en √A: 12 × ruedasPorMes de la ventana común, el factor de la volatilidad histórica de las proyecciones. */
       readonly factorAnualizacion: number;
       readonly volatilidadAnual: number;
@@ -174,7 +185,6 @@ export interface EfectoCaida {
 // ───────────── Resultado ─────────────
 export interface AnalisisEspecie {
   readonly instrumentoId: string;
-  readonly nemotecnico: string;
   /** Del tablero; null si no tiene cierre. */
   readonly valor: Prisma.Decimal | null;
   /** valor / valor de las acciones; null si no tiene valor. */
@@ -233,6 +243,9 @@ export interface ResumenDecisiones {
   readonly medidas: readonly MedidaDecision[];
 }
 
+/** Un aviso de la historia (src/proyecciones/tipos.ts) sin el nombre de la especie. */
+export type AvisoAnalisis = Omit<AvisoCrudo, "nombre">;
+
 export interface Analisis {
   readonly version: typeof VERSION_ANALISIS;
   readonly hoy: Dia;
@@ -251,6 +264,6 @@ export interface Analisis {
   readonly concentracion: Concentracion | null;
   readonly riesgo: RiesgoPortafolio;
   readonly decisiones: ResumenDecisiones;
-  /** Los de la historia (src/proyecciones/tipos.ts), sin repetir y ordenados. */
-  readonly avisos: readonly AvisoCrudo[];
+  /** Los de las historias, sin el nombre, sin repetir y ordenados. */
+  readonly avisos: readonly AvisoAnalisis[];
 }

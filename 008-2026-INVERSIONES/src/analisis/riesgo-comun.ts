@@ -68,7 +68,7 @@ export function riesgoComun(e: EntradasProyeccion, especies: readonly EspecieCub
   const d = descomponerRiesgo(cov, pesos, factor);
   const porEspecie = new Map([...fuera, ...ids.map((id, k) => [id, aEspecie(d.columnas[k]!, pesos[k]!)] as const)]);
   const portafolio: RiesgoPortafolio = {
-    estado: "CALCULADO", ventana: armado.ventana!, factorAnualizacion: redondear(factor), volatilidadAnual: redondear(d.volatilidad),
+    estado: "CALCULADO", ventana: { desde: armado.ventana!.desde, hasta: armado.ventana!.hasta, ruedas: armado.ventana!.ruedas }, factorAnualizacion: redondear(factor), volatilidadAnual: redondear(d.volatilidad),
     fraccionCubierta: redondear(cubierto.div(valorAcciones).toNumber()),
     correlacion: { ids, valores: correlacionDe(cov).map((fila) => fila.map((r) => (r === null ? null : redondear(r)))) },
   };

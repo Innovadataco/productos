@@ -17,7 +17,7 @@ import { historiaPropia } from "./historia-propia";
 import { compararTexto, redondear } from "./numeros";
 import { riesgoComun, type ResultadoRiesgoComun } from "./riesgo-comun";
 import { validarEntradas } from "./validar";
-import { VERSION_ANALISIS, type Analisis, type AnalisisEspecie, type CaidaMaxima, type EfectoCaida, type EntradasAnalisis } from "./tipos";
+import { VERSION_ANALISIS, type Analisis, type AnalisisEspecie, type AvisoAnalisis, type CaidaMaxima, type EfectoCaida, type EntradasAnalisis } from "./tipos";
 
 /** Sin valor ordena después de cualquier valor (los del tablero son positivos). */
 const SIN_VALOR = new Prisma.Decimal(-1);
@@ -42,7 +42,6 @@ function especieDe(f: FilaTablero, c: Contexto): { readonly especie: AnalisisEsp
   const propia = accion ? historiaPropia(e.historia, accion) : { historia: { estado: "SIN_CIERRES" } as const, avisos: [] };
   const especie: AnalisisEspecie = {
     instrumentoId: f.instrumentoId,
-    nemotecnico: f.nemotecnico,
     valor: f.valor,
     peso: f.valor === null ? null : redondear(f.valor.div(e.tablero.valorAcciones).toNumber()),
     cierre: estadoCierre(f.cierre, e.tablero.fechaReferencia, calendario),
@@ -57,9 +56,9 @@ function especieDe(f: FilaTablero, c: Contexto): { readonly especie: AnalisisEsp
 
 const claveAviso = (a: AvisoCrudo): string => `${a.codigo}|${a.instrumentoId}|${a.dia}|${a.dato}`;
 
-/** Una vez cada uno (por código, especie, día y dato), ordenados por esa clave. */
-function unicos(avisos: readonly AvisoCrudo[]): readonly AvisoCrudo[] {
-  const porClave = new Map(avisos.map((a) => [claveAviso(a), a]));
+/** Una vez cada uno (por código, especie, día y dato), sin el nombre, ordenados por esa clave. */
+function unicos(avisos: readonly AvisoCrudo[]): readonly AvisoAnalisis[] {
+  const porClave = new Map(avisos.map((a): [string, AvisoAnalisis] => [claveAviso(a), { codigo: a.codigo, instrumentoId: a.instrumentoId, dia: a.dia, dato: a.dato }]));
   return [...porClave.keys()].sort(compararTexto).map((k) => porClave.get(k)!);
 }
 
