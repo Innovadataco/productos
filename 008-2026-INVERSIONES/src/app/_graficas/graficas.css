@@ -1,0 +1,162 @@
+/*
+ * 008 · módulo de gráficas. Usa los tokens del diseño del tablero (tablero.css: --panel, --line, --fg, --muted,
+ * --gain, --loss, --gold, --bg-2, --glow, --mono) y solo clases propias (g-*, t-*). Valor y «gana» = --gain,
+ * costo = --gold, «pierde» = --loss. La paleta categórica (dona) es la de referencia, rotada para empezar en aqua (en
+ * esta app el azul y el naranja dicen «gana» y «pierde») y, en claro, con aqua, amarillo, magenta y naranja un paso
+ * más oscuros para dar ≥ 3:1 sobre #ffffff (WCAG 1.4.11). Validada como anillo (con el par que cierra la vuelta):
+ * oscuro sobre #131a2a, CVD adyacente ≥ 8,4, visión normal ≥ 19,3, contraste ≥ 3:1; claro sobre #ffffff, CVD ≥ 8,5,
+ * visión normal ≥ 17,7, contraste ≥ 3:1. Candado: tests/unit/graficas/estilos.test.ts. Movimiento: transform, opacity y clip-path; nada con
+ * «reducir movimiento» (la regla global de tablero.css apaga animaciones y transiciones).
+ */
+:root {
+  --g-valor: var(--gain); --g-costo: var(--gold); --g-gana: var(--gain); --g-pierde: var(--loss); --g-neutro: var(--muted);
+  --g-c1: #199e70; --g-c2: #c98500; --g-c3: #d55181; --g-c4: #0ca30c; --g-c5: #9085e9; --g-c6: #e66767; --g-c7: #3987e5; --g-c8: #d95926;
+  --g-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --g-c1: #139a6a; --g-c2: #b47c00; --g-c3: #d4558a; --g-c4: #008300; --g-c5: #6250d6; --g-c6: #e34948; --g-c7: #2a78d6; --g-c8: #d9562a;
+  }
+}
+:root[data-theme="light"] {
+  --g-c1: #139a6a; --g-c2: #b47c00; --g-c3: #d4558a; --g-c4: #008300; --g-c5: #6250d6; --g-c6: #e34948; --g-c7: #2a78d6; --g-c8: #d9562a;
+}
+
+.t-valor { --tono: var(--g-valor); } .t-costo { --tono: var(--g-costo); } .t-gana { --tono: var(--g-gana); }
+.t-pierde { --tono: var(--g-pierde); } .t-neutro { --tono: var(--g-neutro); }
+.t-c1 { --tono: var(--g-c1); } .t-c2 { --tono: var(--g-c2); } .t-c3 { --tono: var(--g-c3); } .t-c4 { --tono: var(--g-c4); }
+.t-c5 { --tono: var(--g-c5); } .t-c6 { --tono: var(--g-c6); } .t-c7 { --tono: var(--g-c7); } .t-c8 { --tono: var(--g-c8); }
+
+/* ── Marco común ── */
+.g-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.g-nota { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+.g-figura {
+  margin: 0; min-width: 0; position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+  padding: 16px 16px 12px; background-image: radial-gradient(120% 80% at 0% 0%, var(--glow), transparent 60%);
+}
+.g-cabeza { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.g-titulo { font-weight: 800; font-size: 15px; letter-spacing: -0.01em; }
+.g-encabezado { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.g-encabezado b { font-family: var(--mono); font-size: 14px; font-weight: 600; }
+.g-leyenda { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 10px; padding: 0; font-size: 12px; color: var(--muted); }
+.g-leyenda b, .g-tip b { color: var(--fg); font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.g-clave { display: inline-block; width: 14px; height: 2px; border-radius: 1px; background: var(--tono); vertical-align: middle; margin-right: 6px; }
+.g-clave-punteada { background: repeating-linear-gradient(90deg, var(--tono) 0 4px, transparent 4px 7px); }
+.g-clave-banda, .g-clave-caja { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--tono); vertical-align: -1px; margin-right: 6px; }
+.g-clave-banda { opacity: 0.35; }
+
+/* ── Gráfica de tiempo ── */
+.g-plot { position: relative; }
+.g-svg { display: block; width: 100%; height: 100%; overflow: hidden; }
+.g-grid { stroke: var(--line); stroke-width: 1; }
+.g-linea { fill: none; stroke: var(--tono); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.g-punteado { stroke-dasharray: 5 5; }
+.g-relleno { fill: var(--tono); opacity: 0.18; }
+.g-banda { fill: var(--tono); }
+.g-banda-suave { opacity: 0.14; } .g-banda-media { opacity: 0.28; }
+.g-base { stroke: var(--muted); stroke-width: 1; opacity: 0.7; }
+.g-mira, .g-corte-linea { stroke: var(--muted); stroke-width: 1; }
+.g-corte-linea { stroke-dasharray: 2 4; }
+.g-corte { position: absolute; top: 2px; transform: translateX(6px); font-size: 11px; color: var(--muted); pointer-events: none; }
+/* El eje Y en su columna (a la izquierda) y el dibujo y el eje X en la de al lado. */
+.g-marco { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 8px; }
+.g-ticks-y { position: relative; pointer-events: none; font-size: 11px; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+.g-tick-medida { display: block; height: 0; overflow: hidden; visibility: hidden; white-space: nowrap; }
+.g-tick-y { position: absolute; right: 0; transform: translateY(-50%); white-space: nowrap; }
+.g-eje-x { grid-column: 2; position: relative; height: 18px; margin-top: 6px; font-size: 11px; color: var(--muted); }
+.g-tick-x { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.g-tick-x[data-borde="ini"] { transform: none; } .g-tick-x[data-borde="fin"] { transform: translateX(-100%); }
+.g-fin, .g-punto { position: absolute; border-radius: 50%; background: var(--tono); transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 0 2px var(--panel); }
+.g-fin { width: 8px; height: 8px; }
+.g-punto { width: 11px; height: 11px; z-index: 1; }
+.g-toque { position: absolute; inset: 0; z-index: 2; touch-action: pan-y; cursor: crosshair; border-radius: 10px; -webkit-tap-highlight-color: transparent; }
+.g-toque:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+.g-tip {
+  position: absolute; top: 6px; z-index: 3; min-width: 150px; max-width: 230px; padding: 8px 10px; border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-2) 92%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); font-size: 12px; color: var(--muted); pointer-events: none; overflow-wrap: anywhere;
+}
+.g-tip[data-lado="der"] { transform: translateX(14px); } .g-tip[data-lado="izq"] { transform: translateX(calc(-100% - 14px)); }
+.g-tip-dia { color: var(--fg); font-weight: 700; margin-bottom: 4px; }
+.g-tip-fila { display: flex; align-items: center; gap: 6px; line-height: 1.6; }
+.g-tip-fila .g-clave, .g-tip-fila .g-clave-banda { margin-right: 0; }
+.g-tip-extra { margin-top: 4px; color: var(--loss); }
+.g-datos { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.g-datos summary { cursor: pointer; width: fit-content; min-height: 24px; line-height: 24px; }
+.g-datos-caja { max-height: 320px; overflow: auto; margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; }
+.g-datos table { min-width: 0; font-size: 12px; }
+.g-datos caption { text-align: left; padding: 8px 10px; color: var(--fg); font-weight: 700; }
+.g-datos th, .g-datos td { padding: 6px 10px; }
+.g-datos tbody tr { cursor: default; }
+
+/* ── Dona ── */
+.g-dona-cuerpo { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 18px; align-items: center; }
+.g-dona-dibujo { position: relative; aspect-ratio: 1; width: 100%; max-width: 220px; margin-inline: auto; }
+.g-dona-dibujo svg { display: block; width: 100%; height: 100%; }
+.g-dona-pista { fill: none; stroke: var(--bg-2); }
+.g-tajada { fill: none; stroke: var(--tono); cursor: pointer; transition: stroke-dasharray 1s var(--g-ease), opacity 0.2s, stroke-width 0.2s; }
+.g-dona-dibujo:has(.g-tajada[data-activo]) .g-tajada:not([data-activo]) { opacity: 0.35; }
+.g-centro { position: absolute; inset: 22%; display: grid; place-content: center; text-align: center; gap: 2px; pointer-events: none; }
+.g-centro b { font-size: clamp(15px, 4.4vw, 19px); font-weight: 800; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.g-centro span { font-size: 11px; color: var(--muted); }
+.g-centro .g-centro-etiqueta { letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+.g-leyenda-dona { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
+.g-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 2px 10px; align-items: center; width: 100%; padding: 7px 10px; border-radius: 10px; background: none; border: 0; text-align: left; color: inherit; font: inherit; }
+.g-item .g-clave-caja { margin: 0; }
+.g-item b { font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.g-item-pct { color: var(--muted); font-family: var(--mono); font-variant-numeric: tabular-nums; min-width: 4.6em; text-align: right; }
+.g-item-detalle { grid-column: 2 / -1; font-size: 11px; color: var(--muted); }
+button.g-item:hover, .g-leyenda-dona li[data-activo] .g-item { background: var(--bg-2); }
+
+/* ── Barras ── */
+.g-barras { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.g-barra { display: grid; grid-template-columns: 74px minmax(0, 1fr) 76px; gap: 2px 12px; align-items: center; width: 100%; padding: 8px 10px; border-radius: 10px; background: none; border: 0; text-align: left; color: inherit; font: inherit; font-size: 13px; }
+button.g-barra:hover, button.g-barra:focus-visible { background: var(--bg-2); }
+.g-barra-nombre { font-weight: 700; }
+.g-barra-pista { position: relative; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--bg-2) 70%, transparent); }
+.g-barra-cero { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--muted); opacity: 0.6; }
+.g-barra-relleno { position: absolute; top: 0; height: 100%; background: var(--tono); }
+.g-barra-relleno[data-signo="gana"] { border-radius: 0 4px 4px 0; transform-origin: left center; }
+.g-barra-relleno[data-signo="pierde"] { border-radius: 4px 0 0 4px; transform-origin: right center; }
+.g-barra-valor { text-align: right; font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.g-barra-detalle { grid-column: 2 / -1; font-size: 11px; color: var(--muted); }
+.g-sin-corte { white-space: nowrap; }
+.g-selector { display: flex; flex-wrap: wrap; gap: 6px; }
+.g-opcion { min-height: 32px; min-width: 44px; border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; color: inherit; cursor: pointer; }
+.g-opcion:hover { background: var(--bg-2); }
+.g-opcion[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); font-weight: 700; }
+.g-opcion[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; background: transparent; }
+
+/*
+ * ── Entrada ── El servidor pinta todo completo (sin JS se ve igual). Ya hidratada y fuera de pantalla, cada gráfica
+ * queda oculta y se dibuja al entrar: la línea y sus rellenos de izquierda a derecha, las barras desde el cero y las
+ * tajadas en el sentido del reloj.
+ */
+@media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+  .g-plot .g-svg, .g-plot .g-fin { clip-path: inset(0 0 0 0); transition: clip-path 1.3s var(--g-ease); }
+  .g-plot .g-relleno, .g-plot .g-banda { transition: opacity 0.9s ease 0.45s; }
+  .g-plot[data-hidratado]:not([data-visible]) .g-svg, .g-plot[data-hidratado]:not([data-visible]) .g-fin { clip-path: inset(0 100% 0 0); }
+  .g-plot[data-hidratado]:not([data-visible]) .g-relleno, .g-plot[data-hidratado]:not([data-visible]) .g-banda { opacity: 0; }
+  .g-barra-relleno { transition: transform 1s var(--g-ease); }
+  .g-barras[data-hidratado]:not([data-visible]) .g-barra-relleno { transform: scaleX(0); }
+  .g-barras li:nth-child(2) .g-barra-relleno { transition-delay: 60ms; } .g-barras li:nth-child(3) .g-barra-relleno { transition-delay: 120ms; }
+  .g-barras li:nth-child(4) .g-barra-relleno { transition-delay: 180ms; } .g-barras li:nth-child(n + 5) .g-barra-relleno { transition-delay: 240ms; }
+  .g-dona-dibujo[data-hidratado]:not([data-visible]) .g-tajada { stroke-dasharray: 0 600; }
+  .g-dona-dibujo[data-hidratado]:not([data-visible]) .g-centro { opacity: 0; }
+  .g-centro { transition: opacity 0.6s ease 0.5s; }
+}
+
+/* ── Celular: dona en una columna; el detalle del día ocupa el ancho del dibujo (nunca se sale de la pantalla) ── */
+@media (max-width: 620px) {
+  .g-figura { padding: 14px 12px 10px; border-radius: 16px; }
+  .g-dona-cuerpo { grid-template-columns: minmax(0, 1fr); }
+  .g-dona-dibujo { max-width: 200px; }
+  .g-tip { left: 4px !important; right: 4px; max-width: none; transform: none !important; }
+  .g-barra { grid-template-columns: 64px minmax(0, 1fr) 64px; gap: 2px 8px; padding: 8px 6px; }
+  /* Con 5 marcas o más, una sí y otra no: nunca se montan. */
+  .g-eje-x:has(> .g-tick-x:nth-child(5)) .g-tick-x:nth-child(even) { display: none; }
+}
+@media (forced-colors: active) {
+  .g-linea, .g-mira, .g-base { stroke: CanvasText; } .g-relleno, .g-banda { fill: Highlight; }
+  .g-tajada { stroke: CanvasText; } .g-barra-relleno, .g-fin, .g-punto, .g-clave, .g-clave-caja { background: CanvasText; forced-color-adjust: none; }
+}

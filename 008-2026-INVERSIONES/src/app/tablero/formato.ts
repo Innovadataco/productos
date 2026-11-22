@@ -56,3 +56,37 @@ export function fecha(dia: string | null): string {
   if (!partes || !mes) return "fecha no válida";
   return `${Number(partes[3])}-${mes}-${partes[1]}`;
 }
+
+/** Hasta `decimales`, sin ceros a la derecha: 1,250 → «1,25»; 12,00 → «12». */
+function sinCeros(v: number, decimales: number): string {
+  const texto = absoluto(v, decimales);
+  return texto.includes(",") ? texto.replace(/,?0+$/, "") : texto;
+}
+
+const MIL = 1e3;
+const MILLON = 1e6;
+
+/** Pesos para un eje: «$ 947», «$ 4,6 mil», «$ 262,5 mil», «$ 1,25 M»; el signo, como en `cop`. */
+export function copCompacto(v: number): string {
+  if (!pintable(v)) return SIN_DATO;
+  const a = Math.abs(v);
+  const cuerpo = a < MIL ? absoluto(a, 0) : a < MILLON ? `${sinCeros(a / MIL, 1)} mil` : `${sinCeros(a / MILLON, 2)} M`;
+  const s = cuerpo === "0" ? "" : v < 0 ? MENOS : "";
+  return `${s}$ ${cuerpo}`;
+}
+
+/** Porcentaje de eje: hasta un decimal y con signo: «+2,5 %», «0 %», «−1 %». */
+export function pctEje(v: number): string {
+  if (!pintable(v)) return SIN_DATO;
+  const cuerpo = sinCeros(v, 1);
+  return cuerpo === "0" ? "0 %" : `${v < 0 ? MENOS : "+"}${cuerpo} %`;
+}
+
+/** Marca del eje de tiempo: «mar», «ene 2027», «15 mar», «15 mar 2027». */
+export function etiquetaTick(dia: string, e: { readonly tipo: "dia" | "mes"; readonly conAnio: boolean }): string {
+  const partes = DIA_ISO.exec(dia);
+  const mes = partes ? MESES[Number(partes[2]) - 1] : undefined;
+  if (!partes || !mes) return SIN_DATO;
+  const base = e.tipo === "mes" ? mes : `${Number(partes[3])} ${mes}`;
+  return e.conAnio ? `${base} ${partes[1]}` : base;
+}
