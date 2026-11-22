@@ -13,8 +13,11 @@ const PLANTADAS = [
   "compre", "venda", "Compre ya", "comprar", "vender", "mantenga", "recomendamos", "recomienda", "recomendación", "conviene", "noConviene",
   "debería", "deberia", "oportunidad", "buen momento", "aconsejamos", "consejo", "sugerimos", "sugiere", "aprovechar", "buena", "mala",
   "es la MEJOR", "ES_MEJOR", "barata", "atractiva", "sobrevalorada", "venta", "Buy now", "sell",
+  "invierta", "adquiera", "liquide", "reduzca", "aumente", "rebalancee", "acumule", "conserve", "retenga", "excesiva", "oportuno",
+  "es hora de", "punto de entrada", "hold", "trim", "rebalance",
+  "con\u200bviene", "ｃｏｍｐｒｅ",
 ];
-const NEUTRAS = ["la ventana común", "pesoCubierto", "DECIMALES_METRICA", "normalizar", "comprobar", "el mínimo", "contribución", "malla", "DECIMALES"];
+const NEUTRAS = ["la ventana común", "pesoCubierto", "DECIMALES_METRICA", "normalizar", "comprobar", "el mínimo", "contribución", "malla", "DECIMALES", "acumular", "aumenta", "reduce", "la hora"];
 
 describe("candado de lenguaje · control positivo", () => {
   it.each(PLANTADAS)("«%s» plantada se detecta", (palabra) => {
@@ -24,6 +27,11 @@ describe("candado de lenguaje · control positivo", () => {
   it("un archivo plantado en una copia de la zona la pone en rojo, con su ruta y su línea", () => {
     const copia = new Map([...leerZona(), ["plantado.ts", "export const NOTA = 1;\n// le conviene revisar\n"]]);
     expect(prohibidasEnZona(copia)).toEqual(["plantado.ts:2: conviene"]);
+  });
+
+  it("una frase partida entre dos líneas de comentario también se detecta", () => {
+    const copia = new Map([["plantado.ts", "export const NOTA = 1;\n// ya es hora\n// de revisar\n"]]);
+    expect(prohibidasEnZona(copia)).toEqual(["plantado.ts: es hora de (entre líneas)"]);
   });
 
   it("los textos neutros no se detectan", () => {
