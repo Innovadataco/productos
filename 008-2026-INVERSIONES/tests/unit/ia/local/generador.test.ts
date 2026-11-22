@@ -12,7 +12,7 @@ import { crearGeneradorLocal, type ConfigLocal, type DependenciasLocal } from "@
 import type { BuscarLocal } from "@/ia/local/http";
 import { ESQUEMA_FICTICIO, PROMPT_FICTICIO } from "../apoyo/pedido.ficticio";
 import { crearOllamaFalso, diferido, generacionFicticia, guionFeliz, json, tagsCon, tagsDelFicticio, vigilarFalsos, type Guion } from "./apoyo/ollama-falso";
-import { CONFIG_FICTICIA, DIGEST_LOCAL_FICTICIO, MODELO_LOCAL_FICTICIO, MODELO_PENDIENTE_FICTICIO, ORIGEN_FICTICIO, OTRO_DIGEST_FICTICIO, SALIDA_FICTICIA, URL_GENERAR, URL_TAGS, ip, pedidoFicticio } from "./apoyo/red.ficticio";
+import { CONFIG_FICTICIA, DIGEST_LOCAL_FICTICIO, MODELO_DIGEST_ROTO_FICTICIO, MODELO_LOCAL_FICTICIO, MODELO_PENDIENTE_FICTICIO, ORIGEN_FICTICIO, OTRO_DIGEST_FICTICIO, SALIDA_FICTICIA, URL_GENERAR, URL_TAGS, ip, pedidoFicticio } from "./apoyo/red.ficticio";
 
 vi.mock("@/ia/local/modelos", async (original) => {
   const real = await original<typeof import("@/ia/local/modelos")>();
@@ -149,6 +149,11 @@ describe("generar · respaldo de thinking (como PI)", () => {
     expect(await local.generar(pedidoFicticio().pedido, vivo())).toMatchObject({ ok: true, salidaCruda: SALIDA_FICTICIA });
   });
 
+  it("un `thinking` que no es JSON (razonamiento suelto) no se acepta → ERROR_PROVEEDOR PENSAMIENTO_SIN_JSON", async () => {
+    const { local } = generador(guionFeliz(generacionFicticia({ response: "", thinking: "Primero miro los hechos y después redacto." })));
+    expect(await local.generar(pedidoFicticio().pedido, vivo())).toEqual({ ok: false, puerta: "local", motivo: "ERROR_PROVEEDOR", detalle: "PENSAMIENTO_SIN_JSON" });
+  });
+
   it("sin nada en `response` ni en `thinking` → ERROR_PROVEEDOR RESPUESTA_VACIA", async () => {
     const { local } = generador(guionFeliz(generacionFicticia({ response: "", thinking: "" })));
     expect(await local.generar(pedidoFicticio().pedido, vivo())).toEqual({ ok: false, puerta: "local", motivo: "ERROR_PROVEEDOR", detalle: "RESPUESTA_VACIA" });
@@ -190,6 +195,16 @@ describe("generar · lo que el modelo devuelve", () => {
   it("cortada por largo (done_reason «length») → ERROR_PROVEEDOR SALIDA_CORTADA", async () => {
     const { local } = generador(guionFeliz(generacionFicticia({ done_reason: "length" })));
     expect(await local.generar(pedidoFicticio().pedido, vivo())).toMatchObject({ motivo: "ERROR_PROVEEDOR", detalle: "SALIDA_CORTADA" });
+  });
+
+  it.each(["load", "unload", "una-razon-nueva"])("una finalización que no es stop ni length («%s») → ERROR_PROVEEDOR FINALIZACION_INESPERADA", async (doneReason) => {
+    const { local } = generador(guionFeliz(generacionFicticia({ done_reason: doneReason })));
+    expect(await local.generar(pedidoFicticio().pedido, vivo())).toMatchObject({ motivo: "ERROR_PROVEEDOR", detalle: "FINALIZACION_INESPERADA" });
+  });
+
+  it("sin done_reason (versiones viejas de Ollama), con done:true, se acepta", async () => {
+    const { local } = generador(guionFeliz(generacionFicticia({ done_reason: undefined })));
+    expect(await local.generar(pedidoFicticio().pedido, vivo())).toMatchObject({ ok: true });
   });
 
   it("una salida de más de MAX_SALIDA_CRUDA → ERROR_PROVEEDOR SALIDA_DEMASIADO_LARGA", async () => {
@@ -273,7 +288,7 @@ describe("generar · un pedido a la vez", () => {
     });
     const { pedido } = pedidoFicticio();
     const resultados = await Promise.all([local.generar(pedido, vivo()), local.generar(pedido, vivo()), local.generar(pedido, vivo())]);
-    expect(resultados.map((r) => (r.ok ? "OK" : r.detalle))).toEqual(["HTTP_ERROR_SERVIDOR", "FALLO_DE_RED", "OK"]);
+    expect(resultados.map((r) => (r.ok ? "OK" : r.detalle))).toEqual(["HTTP_ERROR_SERVIDOR", "EXCEPCION_INTERNA", "OK"]);
     expect(falso.llamadas()).toHaveLength(4);
   });
 
@@ -302,6 +317,7 @@ describe("crearGeneradorLocal · configuración (cierra en fallo al crear, sin r
     ["un modelo no aprobado", { destino: ORIGEN_FICTICIO, modelo: "otro-ficticio:1b" }, "MODELO_NO_APROBADO"],
     ["un modelo de 32B", { destino: ORIGEN_FICTICIO, modelo: "ornith:32b" }, "MODELO_NO_APROBADO"],
     ["sin modelo", { destino: ORIGEN_FICTICIO }, "MODELO_NO_APROBADO"],
+    ["un aprobado con el digest mal formado", { destino: ORIGEN_FICTICIO, modelo: MODELO_DIGEST_ROTO_FICTICIO }, "MODELO_NO_APROBADO"],
     ["un campo de más", { ...CONFIG_FICTICIA, digest: DIGEST_LOCAL_FICTICIO }, "CONFIGURACION_INVALIDA"],
     ["null", null, "CONFIGURACION_INVALIDA"],
     ["un Proxy", new Proxy({ ...CONFIG_FICTICIA }, {}), "CONFIGURACION_INVALIDA"],

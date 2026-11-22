@@ -70,16 +70,24 @@ describe("pedirJsonLocal · red", () => {
     ["host inalcanzable", hostInalcanzable()],
     ["un TypeError sin causa", new TypeError("fetch failed")],
     ["una causa que no es objeto", new TypeError("fetch failed", { cause: "ECONNREFUSED" })],
-    ["algo que no es un Error", "ficticio"],
-    ["null", null],
   ])("%s → MODELO_NO_DISPONIBLE FALLO_DE_RED", async (_n, error) => {
     const { resultado } = await pedir({ tipo: "RECHAZAR", error });
     expect(resultado).toEqual({ ok: false, puerta: "local", motivo: "MODELO_NO_DISPONIBLE", detalle: "FALLO_DE_RED" });
   });
 
-  it("un fetch que lanza en la llamada misma → MODELO_NO_DISPONIBLE FALLO_DE_RED, sin lanzar", async () => {
-    const { resultado } = await pedir({ tipo: "LANZAR", error: new Error("síncrono FICTICIA-ALFA") });
-    expect(resultado).toEqual({ ok: false, puerta: "local", motivo: "MODELO_NO_DISPONIBLE", detalle: "FALLO_DE_RED" });
+  it.each([
+    ["un Error que no es TypeError", new Error("defecto propio FICTICIA-ALFA")],
+    ["un RangeError", new RangeError("defecto propio")],
+    ["algo que no es un Error", "ficticio"],
+    ["null", null],
+  ])("un rechazo que no es de red (%s) es un defecto del cliente → ERROR_PROVEEDOR EXCEPCION_INTERNA", async (_n, error) => {
+    const { resultado } = await pedir({ tipo: "RECHAZAR", error });
+    expect(resultado).toEqual({ ok: false, puerta: "local", motivo: "ERROR_PROVEEDOR", detalle: "EXCEPCION_INTERNA" });
+  });
+
+  it("un fetch que lanza en la llamada misma (el estándar nunca lo hace) → ERROR_PROVEEDOR EXCEPCION_INTERNA, sin lanzar", async () => {
+    const { resultado } = await pedir({ tipo: "LANZAR", error: new TypeError("síncrono FICTICIA-ALFA") });
+    expect(resultado).toEqual({ ok: false, puerta: "local", motivo: "ERROR_PROVEEDOR", detalle: "EXCEPCION_INTERNA" });
   });
 
   it("el flujo se corta a mitad del cuerpo → MODELO_NO_DISPONIBLE CONEXION_CORTADA", async () => {

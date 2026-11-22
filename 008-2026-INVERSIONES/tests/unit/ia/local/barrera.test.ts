@@ -83,6 +83,40 @@ describe("barreraLocal · rechaza un pedido que no es ciego (PEDIDO_NO_CIEGO)", 
     ["un hecho que no es objeto", (v: { hechos: unknown[] }) => {
       v.hechos[0] = "H01";
     }],
+    ["una etiqueta en letras que no es la del catálogo (un nombre)", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[1] as HechoAbierto).etiqueta = "Acciones de la persona ficticia";
+    }],
+    ["una clave que no es del catálogo", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[1] as HechoAbierto).clave = "CLAVE_INVENTADA";
+    }],
+    ["una clave del catálogo de otro tipo", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[1] as HechoAbierto).clave = "REGLA_NIVEL";
+    }],
+    ["un sujeto en letras", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[1] as HechoAbierto).sujeto = "HAB";
+    }],
+    ["un id que no empieza por H", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[0] as HechoAbierto).id = "X01";
+    }],
+    ["una dirección fuera de la lista", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[1] as HechoAbierto).direccion = "SUBIO_MUCHO";
+    }],
+    ["una cercanía fuera de la lista", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[1] as HechoAbierto).cercania = "PEGADO";
+    }],
+    ["una frescura fuera de la lista", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[1] as HechoAbierto).frescura = "AYER";
+    }],
+    ["una calidad fuera de la lista", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[1] as HechoAbierto).calidad = "SEGURA";
+    }],
+    ["obligatorio que no es booleano", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[1] as HechoAbierto).obligatorio = "si";
+    }],
+    ["más hechos que el máximo del contrato", (v: { hechos: HechoAbierto[] }) => {
+      const primero = v.hechos[0] as HechoAbierto;
+      v.hechos = Array.from({ length: 100 }, () => ({ ...primero }));
+    }],
   ] as const)("%s", (_n, cambiar) => {
     expect(barreraLocal(conVista(cambiar as (v: unknown) => void))).toEqual(noCiego);
   });

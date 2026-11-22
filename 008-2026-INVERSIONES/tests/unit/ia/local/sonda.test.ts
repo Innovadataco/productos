@@ -120,6 +120,7 @@ describe("sondaLocal · smoke", () => {
     ["un 500", json({ error: "FICTICIA" }, 500), "ERROR_PROVEEDOR", "HTTP_ERROR_SERVIDOR"],
     ["una respuesta vacía", json(generacionFicticia({ response: "", thinking: "" })), "ERROR_PROVEEDOR", "RESPUESTA_VACIA"],
     ["otro modelo", json(generacionFicticia({ ...SMOKE, model: "otro-ficticio:1b" })), "ERROR_PROVEEDOR", "MODELO_DISTINTO"],
+    ["una finalización inesperada", json(generacionFicticia({ ...SMOKE, done_reason: "unload" })), "ERROR_PROVEEDOR", "FINALIZACION_INESPERADA"],
     ["la conexión rechazada", { tipo: "RECHAZAR", error: conexionRechazada() }, "MODELO_NO_DISPONIBLE", "CONEXION_RECHAZADA"],
   ] as const)("el smoke con %s falla en la etapa SMOKE: %s %s", async (_n, respuesta, motivo, detalle) => {
     const { local } = generador((_l, i) => (i === 0 ? json(tagsDelFicticio()) : respuesta));

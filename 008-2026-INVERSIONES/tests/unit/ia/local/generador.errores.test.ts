@@ -37,7 +37,8 @@ const errorHttp = (estado: number): RespuestaFalsa => ({ tipo: "TEXTO", texto: `
 const COMUNES: ReadonlyArray<readonly [string, () => RespuestaFalsa, string, string]> = [
   ["conexión rechazada", () => ({ tipo: "RECHAZAR", error: conexionRechazada() }), "MODELO_NO_DISPONIBLE", "CONEXION_RECHAZADA"],
   ["host inalcanzable", () => ({ tipo: "RECHAZAR", error: hostInalcanzable() }), "MODELO_NO_DISPONIBLE", "FALLO_DE_RED"],
-  ["fetch que lanza", () => ({ tipo: "LANZAR", error: new Error(DATO_DEL_PROVEEDOR) }), "MODELO_NO_DISPONIBLE", "FALLO_DE_RED"],
+  ["fetch que lanza", () => ({ tipo: "LANZAR", error: new Error(DATO_DEL_PROVEEDOR) }), "ERROR_PROVEEDOR", "EXCEPCION_INTERNA"],
+  ["un rechazo que no es de red", () => ({ tipo: "RECHAZAR", error: new Error(DATO_DEL_PROVEEDOR) }), "ERROR_PROVEEDOR", "EXCEPCION_INTERNA"],
   ["corte a mitad del cuerpo", () => ({ tipo: "FLUJO", flujo: flujoVigilado([bytes('{"a":')], "FALLAR").flujo }), "MODELO_NO_DISPONIBLE", "CONEXION_CORTADA"],
   ["redirección", () => errorHttp(307), "ERROR_PROVEEDOR", "HTTP_REDIRECCION"],
   ["prohibido (el proxy de la tailnet)", () => errorHttp(403), "ERROR_PROVEEDOR", "HTTP_PROHIBIDO"],
@@ -61,6 +62,8 @@ const DE_GENERAR: ReadonlyArray<readonly [string, () => RespuestaFalsa, string, 
   ["la generación no terminó", () => json(generacionFicticia({ done: false })), "ERROR_PROVEEDOR", "GENERACION_INCOMPLETA"],
   ["la salida se cortó por largo", () => json(generacionFicticia({ done_reason: "length" })), "ERROR_PROVEEDOR", "SALIDA_CORTADA"],
   ["sin salida", () => json(generacionFicticia({ response: "", thinking: "" })), "ERROR_PROVEEDOR", "RESPUESTA_VACIA"],
+  ["una finalización inesperada", () => json(generacionFicticia({ done_reason: "unload" })), "ERROR_PROVEEDOR", "FINALIZACION_INESPERADA"],
+  ["un pensamiento sin JSON", () => json(generacionFicticia({ response: "", thinking: DATO_DEL_PROVEEDOR })), "ERROR_PROVEEDOR", "PENSAMIENTO_SIN_JSON"],
   ["una salida demasiado larga", () => json(generacionFicticia({ response: "w".repeat(65_537) })), "ERROR_PROVEEDOR", "SALIDA_DEMASIADO_LARGA"],
 ];
 

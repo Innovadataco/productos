@@ -21,6 +21,8 @@ export const URL_GENERAR = `${ORIGEN_FICTICIO}/api/generate`;
 
 export const MODELO_LOCAL_FICTICIO = "ficticio-local:7b";
 export const MODELO_PENDIENTE_FICTICIO = "ficticio-pendiente:3b";
+/** Un aprobado con un digest mal formado (defecto de quien edite la lista): la puerta no debe aceptarlo. */
+export const MODELO_DIGEST_ROTO_FICTICIO = "ficticio-roto:5b";
 export const DIGEST_LOCAL_FICTICIO = sha256Hex("digest inventado del modelo local ficticio");
 export const OTRO_DIGEST_FICTICIO = sha256Hex("otro digest inventado, de un modelo cambiado");
 
@@ -28,6 +30,7 @@ export const OTRO_DIGEST_FICTICIO = sha256Hex("otro digest inventado, de un mode
 export const MODELOS_FICTICIOS: readonly ModeloAprobado[] = Object.freeze([
   Object.freeze({ nombre: MODELO_LOCAL_FICTICIO, digest: DIGEST_LOCAL_FICTICIO }),
   Object.freeze({ nombre: MODELO_PENDIENTE_FICTICIO, digest: null }),
+  Object.freeze({ nombre: MODELO_DIGEST_ROTO_FICTICIO, digest: "NO-ES-UN-DIGEST" }),
 ]);
 
 export function modeloAprobadoFicticio(nombre: unknown): ModeloAprobado | null {

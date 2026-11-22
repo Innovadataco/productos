@@ -126,13 +126,18 @@ describe("leerGeneracion · /api/generate", () => {
   it("lee la salida de `response` y los tokens", () => {
     expect(leerGeneracion(generacionFicticia(), MODELO_LOCAL_FICTICIO)).toEqual({
       ok: true,
-      generacion: { salida: SALIDA_FICTICIA, tokensEntrada: 613, tokensSalida: 271, cortada: false },
+      generacion: { salida: SALIDA_FICTICIA, origen: "RESPONSE", tokensEntrada: 613, tokensSalida: 271, finalizacion: "COMPLETA" },
     });
   });
 
-  it.each([["vacía", ""], ["solo espacios", " \n\t "], ["ausente", undefined], ["que no es texto", 4613]])("con `response` %s toma `thinking` (como PI)", (_n, response) => {
+  it.each([["vacía", ""], ["solo espacios", " \n\t "], ["ausente", undefined]])("con `response` %s toma `thinking` (como PI) y lo marca", (_n, response) => {
     const datos = generacionFicticia({ response, thinking: SALIDA_FICTICIA });
-    expect(leerGeneracion(datos, MODELO_LOCAL_FICTICIO)).toMatchObject({ ok: true, generacion: { salida: SALIDA_FICTICIA } });
+    expect(leerGeneracion(datos, MODELO_LOCAL_FICTICIO)).toMatchObject({ ok: true, generacion: { salida: SALIDA_FICTICIA, origen: "THINKING" } });
+  });
+
+  it.each([["un número", 4613], ["null", null], ["un objeto", { frases: [] }]])("un `response` presente que no es texto (%s) no cae a `thinking`: ERROR_PROVEEDOR CUERPO_INVALIDO", (_n, response) => {
+    const datos = generacionFicticia({ response, thinking: SALIDA_FICTICIA });
+    expect(leerGeneracion(datos, MODELO_LOCAL_FICTICIO)).toEqual(falloProveedor("CUERPO_INVALIDO"));
   });
 
   it("con las dos, manda `response`", () => {
@@ -145,12 +150,12 @@ describe("leerGeneracion · /api/generate", () => {
     expect(leerGeneracion(generacionFicticia({ response: conEspacios }), MODELO_LOCAL_FICTICIO)).toMatchObject({ ok: true, generacion: { salida: conEspacios } });
   });
 
-  it.each([["vacías", "", ""], ["solo espacios", " ", "\n"], ["ausentes", undefined, undefined], ["que no son texto", 7, { a: 1 }]])("con `response` y `thinking` %s → ERROR_PROVEEDOR RESPUESTA_VACIA", (_n, response, thinking) => {
+  it.each([["vacías", "", ""], ["solo espacios", " ", "\n"], ["ausentes", undefined, undefined], ["sin texto en thinking", undefined, { a: 1 }]])("con `response` y `thinking` %s → ERROR_PROVEEDOR RESPUESTA_VACIA", (_n, response, thinking) => {
     expect(leerGeneracion(generacionFicticia({ response, thinking }), MODELO_LOCAL_FICTICIO)).toEqual(falloProveedor("RESPUESTA_VACIA"));
   });
 
-  it("done_reason «length» se marca como cortada (lo decide quien llama)", () => {
-    expect(leerGeneracion(generacionFicticia({ done_reason: "length" }), MODELO_LOCAL_FICTICIO)).toMatchObject({ ok: true, generacion: { cortada: true } });
+  it.each([["stop", "COMPLETA"], [undefined, "COMPLETA"], ["length", "POR_LARGO"], ["load", "OTRA"], ["unload", "OTRA"], ["STOP", "OTRA"], [7, "OTRA"]] as const)("done_reason %s → finalización %s (lo decide quien llama)", (doneReason, finalizacion) => {
+    expect(leerGeneracion(generacionFicticia({ done_reason: doneReason }), MODELO_LOCAL_FICTICIO)).toMatchObject({ ok: true, generacion: { finalizacion } });
   });
 
   it.each([["ausentes", undefined, undefined], ["negativos", -3, -1], ["con fracción", 61.3, 27.1], ["en texto", "613", "271"]])("tokens %s → null", (_n, entrada, salida) => {
@@ -158,8 +163,12 @@ describe("leerGeneracion · /api/generate", () => {
     expect(leerGeneracion(datos, MODELO_LOCAL_FICTICIO)).toMatchObject({ ok: true, generacion: { tokensEntrada: null, tokensSalida: null } });
   });
 
-  it.each([["otro modelo", "otro-ficticio:1b"], ["sin modelo", undefined], ["el nombre en mayúsculas", MODELO_LOCAL_FICTICIO.toUpperCase()]])("%s en la respuesta → ERROR_PROVEEDOR MODELO_DISTINTO", (_n, model) => {
+  it.each([["otro modelo", "otro-ficticio:1b"], ["el nombre en mayúsculas", MODELO_LOCAL_FICTICIO.toUpperCase()]])("%s en la respuesta → ERROR_PROVEEDOR MODELO_DISTINTO", (_n, model) => {
     expect(leerGeneracion(generacionFicticia({ model }), MODELO_LOCAL_FICTICIO)).toEqual(falloProveedor("MODELO_DISTINTO"));
+  });
+
+  it.each([["sin model", undefined], ["un model que no es texto", 7]])("%s no es una respuesta de Ollama → ERROR_PROVEEDOR CUERPO_INVALIDO", (_n, model) => {
+    expect(leerGeneracion(generacionFicticia({ model }), MODELO_LOCAL_FICTICIO)).toEqual(falloProveedor("CUERPO_INVALIDO"));
   });
 
   it.each([["false", false], ["ausente", undefined], ["en texto", "true"]])("done %s → ERROR_PROVEEDOR GENERACION_INCOMPLETA", (_n, done) => {
