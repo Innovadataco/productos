@@ -23,6 +23,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 
 COMANDOS_CARGA=(importar-trii registrar-escision lote-escision construir-lotes importar-plan registrar-fondo importar-certificacion importar-valores-fondo importar-precios conciliar-certificacion)
 
+# La constitución del fondo (unidades y aporte del extracto; sin archivo): scripts/registrar-movimiento-fondo.ts.
+COMANDOS_CARGA+=(registrar-movimiento-fondo)
+
 main() {
   # La entrada del sobre queda en el descriptor 3; nada más del script la puede consumir.
   exec 3<&0 0</dev/null
