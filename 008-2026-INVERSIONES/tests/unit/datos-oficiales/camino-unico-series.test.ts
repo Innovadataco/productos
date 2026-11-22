@@ -2,9 +2,12 @@
 // inserta (createMany) y retira (updateMany); lo usan `importar-series` (el CSV de la vía B) y, después, los demás
 // caminos de la fase C. Un segundo camino saltaría la comparación con el vigente (reimportar no escribe), el retiro de
 // lo que se solapa en la misma transacción que su reemplazo o el reintento ante otra corrida (P2002 y 23P01). Recorre
-// src/ Y scripts/ (el de precios solo recorre src/), en lista blanca: fuera de guardar.ts el delegado solo se puede
-// leer (find*, count, groupBy, aggregate), y ningún archivo lo guarda en una variable, lo desestructura, lo nombra entre
-// corchetes ni escribe la tabla con SQL crudo (INSERT, UPDATE, DELETE, TRUNCATE, COPY, ALTER).
+// src/ Y scripts/ (el de precios solo recorre src/), y también docker/ y prisma/init/ (por el migrador correrá la vía B;
+// security-reviewer, MEDIO); prisma/migrations/ no, porque allí se crea la tabla. En lista blanca: fuera de guardar.ts
+// el delegado solo se puede leer (find*, count, groupBy, aggregate), y ningún archivo lo guarda en una variable, lo
+// desestructura, lo nombra entre corchetes ni escribe o rehace la tabla con SQL crudo (INSERT, UPDATE, DELETE, MERGE,
+// TRUNCATE, COPY, ALTER, DROP TABLE, DROP TRIGGER … ON). El candado es de buena fe: la defensa de fondo es la base
+// (inv_solo_retiro y los permisos de docker/migrador/privilegios.sql).
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -54,6 +57,12 @@ describe("valor_serie_oficial · un solo camino de escritura (src y scripts)", (
     expect(todos().filter((a) => SQL_CRUDO.test(readFileSync(a, "utf8"))).map(relativo)).toEqual([]);
   });
 
+  it("recorre también docker/ y prisma/init/, y no prisma/migrations/ (security-reviewer, MEDIO)", () => {
+    const vistos = todos().map(relativo);
+    expect(vistos).toEqual(expect.arrayContaining(["docker/migrador/cargar.sh", "docker/migrador/privilegios.sql", "docker/migrar.sh", "prisma/init/01-base-de-pruebas.sql", GUARDAR]));
+    expect(vistos.filter((a) => a.startsWith("prisma/migrations/"))).toEqual([]);
+  });
+
   it("control positivo: los detectores reconocen cada forma de escribir", () => {
     for (const codigo of [
       "tx.valorSerieOficial.create({", "db.valorSerieOficial.upsert({", "tx.valorSerieOficial.delete({", "db.valorSerieOficial.deleteMany({",
@@ -66,6 +75,8 @@ describe("valor_serie_oficial · un solo camino de escritura (src y scripts)", (
       'INSERT INTO "valor_serie_oficial" ("id") VALUES', "INSERT INTO public.valor_serie_oficial", 'UPDATE "public"."valor_serie_oficial" SET',
       "DELETE FROM valor_serie_oficial", "TRUNCATE valor_serie_oficial", "TRUNCATE TABLE ONLY public.valor_serie_oficial", "COPY valor_serie_oficial FROM",
       'ALTER TABLE "valor_serie_oficial" DISABLE TRIGGER ALL', "update valor_serie_oficial set",
+      'MERGE INTO "valor_serie_oficial" AS v USING', "DROP TABLE IF EXISTS public.valor_serie_oficial",
+      'DROP TRIGGER "valor_serie_oficial_retiro" ON "valor_serie_oficial"', "drop trigger if exists x on public.valor_serie_oficial",
     ]) {
       expect(SQL_CRUDO.test(sql), sql).toBe(true);
     }

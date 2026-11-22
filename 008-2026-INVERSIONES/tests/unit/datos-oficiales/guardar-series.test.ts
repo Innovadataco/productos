@@ -54,6 +54,13 @@ describe("guardarSeries · lo que escribe", () => {
     ]);
   });
 
+  it("cada lote toma primero el candado de su serie (pg_advisory_xact_lock): dos corridas de la misma serie no se cruzan (database-reviewer, MEDIO)", async () => {
+    const b = baseFalsaSeries({ previas: [{ serie: "FICTA", desde: "2021-01-01", hasta: "2021-01-01", valor: "7.11" }] });
+    await guardarSeries(b.db, [serie(diarios("2021-01-01", TAMANO_LOTE_SERIES + 2)), serie([fila("2027-03-08", "2027-03-08", "9.37")], "FICTB")]);
+    expect(b.llamadas.candados).toEqual(["008:serie-oficial:FICTA", "008:serie-oficial:FICTA", "008:serie-oficial:FICTB"]);
+    expect(b.llamadas.orden).toEqual(["candado", "leer", "retirar", "crear", "candado", "leer", "crear", "candado", "leer", "crear"]);
+  });
+
   it("lee los vigentes en la ventana justa: desde entre el primer desde − 31 días y el último hasta, y hasta desde el primer desde", async () => {
     const b = baseFalsaSeries();
     await guardarSeries(b.db, [serie([fila("2027-03-08", "2027-03-08", "9.37"), fila("2027-03-05", "2027-03-07", "9.41")])]);

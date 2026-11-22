@@ -85,6 +85,10 @@ export function baseFalsaSeries(o: OpcionesBaseFalsaSeries = {}) {
     creadas: [] as DatoNuevo[][],
     retiros: [] as { where: Donde; data: unknown }[],
     intentosCrear: 0,
+    /** Las claves de pg_advisory_xact_lock que tomó cada transacción, en orden. */
+    candados: [] as unknown[],
+    /** El orden de lo que hace cada transacción: candado, leer, retirar, crear. */
+    orden: [] as string[],
   };
   let retiros = 0;
   /** Lo que deshace la transacción en curso si su función lanza, en orden inverso. */
@@ -110,11 +114,13 @@ export function baseFalsaSeries(o: OpcionesBaseFalsaSeries = {}) {
   const valorSerieOficial = {
     async findMany(a: { where: Donde; select?: object; orderBy?: object }) {
       llamadas.lecturas.push(a.where);
+      llamadas.orden.push("leer");
       return filas.filter(cumple(a.where)).sort((x, y) => x.desde.getTime() - y.desde.getTime()).map((f) => ({ id: f.id, desde: f.desde, hasta: f.hasta, valor: f.valor }));
     },
     async updateMany(a: { where: Donde; data: { reemplazadoEn: Date } }) {
       o.antesDeRetirar?.(filas, retiros);
       retiros += 1;
+      llamadas.orden.push("retirar");
       llamadas.retiros.push({ where: a.where, data: a.data });
       const retiradas = filas.filter(cumple(a.where));
       for (const f of retiradas) {
@@ -124,6 +130,7 @@ export function baseFalsaSeries(o: OpcionesBaseFalsaSeries = {}) {
       return { count: retiradas.length };
     },
     async createMany(a: { data: DatoNuevo[] }) {
+      llamadas.orden.push("crear");
       return insertar(a.data);
     },
     async findFirst(a: { where: Donde; orderBy: { desde: "desc" }; select: { hasta: true } }) {
@@ -139,8 +146,14 @@ export function baseFalsaSeries(o: OpcionesBaseFalsaSeries = {}) {
       llamadas.transacciones += 1;
       llamadas.opcionesTx.push(opciones);
       deshacer = [];
+      const $queryRaw = async (partes: TemplateStringsArray, ...valores: unknown[]) => {
+        if (!partes.join("?").includes("pg_advisory_xact_lock(hashtext(?))")) throw new Error("SQL crudo inesperado en la base falsa");
+        llamadas.candados.push(valores[0]);
+        llamadas.orden.push("candado");
+        return [{ ok: 1 }];
+      };
       try {
-        return await fn({ valorSerieOficial });
+        return await fn({ valorSerieOficial, $queryRaw });
       } catch (e) {
         for (const paso of deshacer.reverse()) paso();
         throw e;
