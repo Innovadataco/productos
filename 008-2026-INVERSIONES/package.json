@@ -32,7 +32,8 @@
     "precios:exportar": "tsx scripts/exportar-precios.ts",
     "precios:importar": "tsx scripts/importar-precios.ts",
     "fondo:exportar": "tsx scripts/exportar-valores-fondo.ts",
-    "fondo:importar": "tsx scripts/importar-valores-fondo.ts"
+    "fondo:importar": "tsx scripts/importar-valores-fondo.ts",
+    "ia:evaluar": "tsx scripts/ia-evaluar.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.6.0",

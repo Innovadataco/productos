@@ -10,7 +10,8 @@
 # mem = memswap no baja al disco. El archivo queda en un temporal 600 dentro de una carpeta 700 con nombre fijo
 # (trii.csv, ficha.md, certificacion.pdf, precios.csv, valores-fondo.csv, series.csv, decretos.csv o
 # rendimientos-fondo.csv: el nombre real no llega a la base), corre el CLI y lo borra SIEMPRE (trap), también si el
-# CLI falla o llega una señal. El tmpfs muere con el contenedor.
+# CLI falla o llega una señal. El tmpfs muere con el contenedor. `exportar-hechos-ia` no lleva archivo ni opciones: su
+# CLI (solo lectura) imprime el JSON por stdout, que este script no toca (sus mensajes van a stderr).
 # Nunca imprime la cabecera ni el archivo: solo errores sin valores. Sale con 64 (EX_USAGE, distinto de los
 # códigos de los CLI, de 0 a 3) si se niega sin correr el CLI, o con el código del CLI.
 # Solo POSIX (busybox en la imagen; dash o bash en las pruebas). INV_CARGAR_* solo los usan las pruebas.
@@ -49,6 +50,7 @@ comando="$1"
 shift
 archivo=""
 tope=0
+condiciones=""
 case "$comando" in
   importar-trii) cli=scripts/importar-trii.ts archivo=trii.csv tope=$TOPE_TRII ;;
   importar-plan) cli=scripts/importar-plan.ts archivo=ficha.md tope=$TOPE_FICHA ;;
@@ -65,6 +67,9 @@ case "$comando" in
   lote-escision) cli=scripts/lote-escision.ts ;;
   construir-lotes) cli=scripts/construir-lotes.ts ;;
   conciliar-certificacion) cli=scripts/conciliar-certificacion.ts ;;
+  # El export de hechos de la IA (E7): solo lectura, sin archivo ni opciones; su JSON sale por stdout. Sus lectores
+  # importan "server-only", que fuera de Next solo carga con la condición react-server.
+  exportar-hechos-ia) cli=scripts/exportar-hechos-ia.ts condiciones=--conditions=react-server ;;
   *) falla "comando no permitido" ;;
 esac
 
@@ -361,6 +366,10 @@ else
     set -- --email "$correo" --fondo "$fondo" --fecha "$fecha" --unidades "$unidades" --monto "$monto"
     [ "$aplicar" = 0 ] || set -- "$@" --aplicar
   fi
+  # exportar-hechos-ia: ni opciones ni argumentos (nunca --aplicar: no escribe).
+  if [ "$comando" = exportar-hechos-ia ] && [ $# -ne 0 ]; then
+    falla "exportar-hechos-ia no lleva opciones ni argumentos"
+  fi
   # conciliar-certificacion: lista blanca también aquí (defensa en profundidad; su CLI ya es estricto). Los otros
   # comandos sin archivo pasan sus argumentos tal cual a su CLI estricto.
   if [ "$comando" = conciliar-certificacion ]; then
@@ -372,7 +381,7 @@ fi
 
 # El CLI en segundo plano con su entrada en /dev/null: el trap corre aunque llegue una señal, y la reenvía.
 cd "$APP_DIR"
-node_modules/.bin/tsx "$cli" "$@" </dev/null &
+node_modules/.bin/tsx ${condiciones:+"$condiciones"} "$cli" "$@" </dev/null &
 hijo=$!
 rc=0
 wait "$hijo" || rc=$?

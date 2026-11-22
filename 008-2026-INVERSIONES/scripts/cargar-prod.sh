@@ -13,7 +13,9 @@
 # Comandos: importar-trii · registrar-escision · lote-escision · construir-lotes · importar-plan · registrar-fondo ·
 #   importar-certificacion · importar-valores-fondo · importar-precios · conciliar-certificacion ·
 #   corregir-corte-certificacion · registrar-movimiento-fondo · importar-series · importar-decretos ·
-#   registrar-rendimientos-fondo
+#   registrar-rendimientos-fondo · exportar-hechos-ia
+# exportar-hechos-ia (solo lectura, sin archivo ni opciones) devuelve por stdout el JSON de los paquetes de hechos de la
+# IA: «… | ssh … cargar-prod.sh exportar-hechos-ia > <archivo.json>» (este script solo escribe en stderr).
 # Sale con el código del CLI (0, 1, 2 o 3), con 64 si inv-cargar se niega sin correrlo, o con 1 si se niega este script.
 
 # Sin volcados de memoria ANTES de todo: este script maneja datos del dueño por stdin.
@@ -34,6 +36,9 @@ COMANDOS_CARGA+=(importar-series importar-decretos)
 
 # Los rendimientos del fondo y su retención (el CSV del dueño; ensayo por defecto): scripts/registrar-rendimientos-fondo.ts.
 COMANDOS_CARGA+=(registrar-rendimientos-fondo)
+
+# El export de hechos de la IA (E7), de solo lectura: los paquetes salen por stdout (scripts/exportar-hechos-ia.ts).
+COMANDOS_CARGA+=(exportar-hechos-ia)
 
 main() {
   # La entrada del sobre queda en el descriptor 3; nada más del script la puede consumir.
