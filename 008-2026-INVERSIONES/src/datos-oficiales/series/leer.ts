@@ -17,7 +17,7 @@ import "server-only";
  * (la vigencia más larga que admite la base) y su take es días + 1: sin solapes, a lo sumo una fila por día; más es
  * DEMASIADAS_FILAS, nunca un recorte en silencio.
  * Una serie fuera del catálogo o una fecha que no es un día (medianoche UTC; `hoy` es fechaEnBogota de
- * src/precios/horario.ts) o que cae fuera de DIA_MINIMO_LECTURA…DIA_MAXIMO_LECTURA es un error tipado y no consulta la
+ * src/precios/horario.ts) o que cae fuera de DIA_MINIMO_LECTURA_MS…DIA_MAXIMO_LECTURA_MS es un error tipado y no consulta la
  * base. `catalogo` se inyecta solo en las pruebas.
  * `db` puede ser el cliente o una transacción. Quien combine varias lecturas (C6a: la base y el final de una variación)
  * debe hacerlo en UNA transacción REPEATABLE READ de solo lectura (enSoloLectura de src/conciliacion/leer.ts): guardar.ts
@@ -47,8 +47,8 @@ export const MAX_DIAS_RANGO_SERIES = 40 * 366;
  * La ventana de fechas que se aceptan (los dos extremos incluidos). Una fecha absurda pero válida como Date (el año
  * 275760) llegaría a Prisma y su error saldría sin tipar (security-reviewer, BAJO). El CSV de series ya exige 19AA o 20AA.
  */
-export const DIA_MINIMO_LECTURA = new Date(Date.UTC(1902, 0, 1));
-export const DIA_MAXIMO_LECTURA = new Date(Date.UTC(2199, 11, 31));
+export const DIA_MINIMO_LECTURA_MS = Date.UTC(1902, 0, 1);
+export const DIA_MAXIMO_LECTURA_MS = Date.UTC(2199, 11, 31);
 
 const SELECCION = { desde: true, hasta: true, valor: true, fuente: true, traidoEn: true } as const satisfies Prisma.ValorSerieOficialSelect;
 
@@ -67,7 +67,7 @@ function serieConocida(codigo: string, catalogo: readonly SerieCatalogo[]): Seri
 }
 
 function exigirDia(fecha: Date): void {
-  const dentro = esFechaDeNegocio(fecha) && fecha.getTime() >= DIA_MINIMO_LECTURA.getTime() && fecha.getTime() <= DIA_MAXIMO_LECTURA.getTime();
+  const dentro = esFechaDeNegocio(fecha) && fecha.getTime() >= DIA_MINIMO_LECTURA_MS && fecha.getTime() <= DIA_MAXIMO_LECTURA_MS;
   if (!dentro) throw new ErrorLecturaSeries("FECHA_INVALIDA");
 }
 

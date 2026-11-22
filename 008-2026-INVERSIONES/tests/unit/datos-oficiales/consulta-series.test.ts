@@ -61,7 +61,7 @@ const codigoDe = (f: () => unknown): string | null => {
 
 describe("esValorOficial · lo que guarda la base, canónico", () => {
   it("acepta decimales canónicos positivos de hasta 12 enteros y 8 decimales", () => {
-    for (const v of ["137.41", "4613", "0.5", "9.53", "0.00000001", "999999999999.99999999", "4613.27"]) expect(esValorOficial(v), v).toBe(true);
+    for (const v of ["137.41", "4619", "0.53", "9.53", "0.00000001", "999999999999.99999999", "4613.27"]) expect(esValorOficial(v), v).toBe(true);
   });
 
   it("rechaza el cero, el signo, ceros sobrantes, exponentes, espacios y lo que no cabe en DECIMAL(20,8)", () => {

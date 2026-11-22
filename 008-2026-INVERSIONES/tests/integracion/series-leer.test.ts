@@ -91,12 +91,12 @@ describe("lectura de series contra la base · solo vigentes", () => {
   it("el valor sale canónico de DECIMAL(20,8) y se lee dentro de una transacción de solo lectura", async () => {
     const s = nuevaSerie();
     const cat = [ficticia(s)];
-    await sembrar(s, [fila("2027-05-03", "2027-05-03", "9.5"), fila("2027-05-04", "2027-05-04", "4613"), fila("2027-05-05", "2027-05-05", "0.00000371")]);
+    await sembrar(s, [fila("2027-05-03", "2027-05-03", "7.31"), fila("2027-05-04", "2027-05-04", "4619"), fila("2027-05-05", "2027-05-05", "0.00000371")]);
     const leidos = await db.$transaction(async (tx) => {
       await tx.$executeRaw`SET TRANSACTION READ ONLY`;
       return serieEnRango(tx, s, dia("2027-05-03"), dia("2027-05-05"), cat);
     });
-    expect(leidos.map((c) => c.valor)).toEqual(["9.5", "4613", "0.00000371"]);
+    expect(leidos.map((c) => c.valor)).toEqual(["7.31", "4619", "0.00000371"]);
   });
 });
 

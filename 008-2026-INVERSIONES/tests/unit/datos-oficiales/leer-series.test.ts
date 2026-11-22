@@ -65,9 +65,9 @@ describe("ultimoValor · el último YA en vigor (desde ≤ hoy), solo vigentes",
   });
 
   it("un Prisma.Decimal de la base (que ya normaliza) sale canónico y la cifra queda congelada", async () => {
-    const { db } = baseFalsaLectura([{ serie: "TPM", desde: "2027-03-10", hasta: "2027-03-10", valor: "9.50000000" }]);
+    const { db } = baseFalsaLectura([{ serie: "TPM", desde: "2027-03-10", hasta: "2027-03-10", valor: "7.31000000" }]);
     const c = await ultimoValor(db, "TPM", dia("2027-03-10"));
-    expect(c?.valor).toBe("9.5");
+    expect(c?.valor).toBe("7.31");
     expect(Object.isFrozen(c)).toBe(true);
   });
 });
@@ -210,7 +210,7 @@ describe("hallazgos de la revisión (C5a)", () => {
   });
 
   it("los ceros sobrantes que traiga el decimal se quitan (antes la prueba pasaba sola: Prisma.Decimal ya normaliza) (code-reviewer, BAJO)", async () => {
-    for (const [crudo, canonico] of [["9.50000000", "9.5"], ["4613.00000000", "4613"], ["4613.", "4613"], ["0.00000371", "0.00000371"]] as const) {
+    for (const [crudo, canonico] of [["7.31000000", "7.31"], ["4619.00000000", "4619"], ["4619.", "4619"], ["0.00000371", "0.00000371"]] as const) {
       const { db } = baseFalsaLectura([trm("2027-03-05", "2027-03-05", { toFixed: () => crudo } as never)]);
       expect((await ultimoValor(db, "TRM", dia("2027-03-05")))?.valor, crudo).toBe(canonico);
     }
