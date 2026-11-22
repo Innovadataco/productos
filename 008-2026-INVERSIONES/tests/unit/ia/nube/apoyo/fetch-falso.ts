@@ -9,7 +9,9 @@ export type ConductaFetch =
   | { readonly tipo: "BYTES"; readonly n: number }
   | { readonly tipo: "RECHAZAR" }
   | { readonly tipo: "COLGAR" }
-  | { readonly tipo: "COLGAR_CUERPO" };
+  | { readonly tipo: "COLGAR_CUERPO" }
+  /** Empieza el cuerpo y lo corta con un error de red (sin aborto). */
+  | { readonly tipo: "CORTAR_CUERPO" };
 
 export interface LlamadaFetch {
   readonly url: string;
@@ -41,6 +43,16 @@ function respuestaColgada(senal: AbortSignal | undefined): Response {
   return new Response(cuerpo, { status: 200, headers: { "content-type": "application/json" } });
 }
 
+function respuestaCortada(): Response {
+  const cuerpo = new ReadableStream<Uint8Array>({
+    start(control) {
+      control.enqueue(new TextEncoder().encode('{"type":'));
+      control.error(new TypeError("terminated", { cause: new Error("other side closed") }));
+    },
+  });
+  return new Response(cuerpo, { status: 200, headers: { "content-type": "application/json" } });
+}
+
 function responder(conducta: ConductaFetch, senal: AbortSignal | undefined): Promise<Response> {
   switch (conducta.tipo) {
     case "JSON":
@@ -58,6 +70,8 @@ function responder(conducta: ConductaFetch, senal: AbortSignal | undefined): Pro
       });
     case "COLGAR_CUERPO":
       return Promise.resolve(respuestaColgada(senal));
+    case "CORTAR_CUERPO":
+      return Promise.resolve(respuestaCortada());
   }
 }
 

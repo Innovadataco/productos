@@ -9,7 +9,7 @@ import { crearGeneradorFalso } from "@/ia/generador-falso";
 import { LlaveNube, TECHO_TOPE_MICRO_USD, VARIABLE_TOPE_NUBE, leerConfigNube, type ConfigNube } from "@/ia/nube/config";
 import { crearGeneradorNube } from "@/ia/nube/generador-nube";
 import { MODELO_NUBE } from "@/ia/nube/peticion";
-import { generarConPuertas, type ModoPuertas } from "@/ia/puertas";
+import { MODOS_PUERTAS, generarConPuertas, ordenDePuertas, type ModoPuertas } from "@/ia/puertas";
 import { hayDigitosFueraDeIds } from "../apoyo/detectores";
 import { FUENTE_FICTICIA } from "../apoyo/hechos.ficticio";
 import { PROMPT_FICTICIO } from "../apoyo/pedido.ficticio";
@@ -63,6 +63,20 @@ describe("éxito por la puerta nube", () => {
   });
 });
 
+describe("una respuesta cobrada pero inservible (decisión fijada en la revisión)", () => {
+  it("un rechazo del modelo es EXITO con la salida vacía y sus tokens: el validador lo rechaza y el registro lo cuenta", async () => {
+    const { resultado } = await correr({ tipo: "JSON", cuerpo: mensajeFicticio({ stop_reason: "refusal", stop_details: { type: "refusal", category: null, explanation: null } }) });
+    expect(resultado).toMatchObject({ estado: "EXITO", exito: { puerta: "nube", salidaCruda: "", tokensEntrada: 5561, tokensSalida: 379 } });
+  });
+
+  it("por eso la nube va siempre ÚLTIMA: un EXITO vacío nunca le quita el turno a otra puerta", () => {
+    for (const modo of MODOS_PUERTAS) {
+      const orden = ordenDePuertas(modo);
+      if (orden.includes("nube")) expect(orden.at(-1)).toBe("nube");
+    }
+  });
+});
+
 describe("lo que sale por el cable", () => {
   it.each(TIPOS_RESUMEN)("%s: el contenido es solo la vista ciega; system es el prompt; nada del paquete completo", async (tipo) => {
     const { paquete, pedido } = pedidoFicticio(tipo);
@@ -113,6 +127,7 @@ describe("el límite y los errores, por el orquestador", () => {
     ["401", { tipo: "JSON", estado: 401, cuerpo: cuerpoErrorFicticio("authentication_error") }, "ERROR_PROVEEDOR", "NO_AUTORIZADO"],
     ["conexión rechazada", { tipo: "RECHAZAR" }, "MODELO_NO_DISPONIBLE", "SIN_CONEXION"],
     ["respuesta demasiado grande", { tipo: "BYTES", n: 1_048_577 }, "ERROR_PROVEEDOR", "RESPUESTA_DEMASIADO_GRANDE"],
+    ["el cuerpo se corta a la mitad (sin aborto)", { tipo: "CORTAR_CUERPO" }, "MODELO_NO_DISPONIBLE", "SIN_CONEXION"],
   ] as const)("%s → %s · %s, una sola llamada, sin la llave ni el mensaje del proveedor", async (_caso, conducta, motivo, detalle) => {
     const { resultado, falso } = await correr(conducta as ConductaFetch);
     expect(resultado).toEqual({ estado: "FALLO", ok: false, fallos: [{ ok: false, puerta: "nube", motivo, detalle }] });

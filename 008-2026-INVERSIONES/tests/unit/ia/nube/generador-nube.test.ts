@@ -259,6 +259,9 @@ describe("la reserva: lo que pudo cobrarse sin saberse cuenta en el tope del mis
     ["un aborto en vuelo", () => Promise.reject(new APIUserAbortError())],
     ["una conexión cortada", () => Promise.reject(new APIConnectionError({ cause: new TypeError("fetch failed") }))],
     ["un 200 ilegible", () => Promise.resolve("texto plano")],
+    // Revisión (MEDIO): un 408 o un 5xx pudo llegar después de que el modelo trabajó; por las dudas, se reserva.
+    ["un 504", () => Promise.reject(APIError.generate(504, cuerpoErrorFicticio("timeout_error"), undefined, new Headers()))],
+    ["un 529", () => Promise.reject(APIError.generate(529, cuerpoErrorFicticio("overloaded_error"), undefined, new Headers()))],
   ])("después de %s, la siguiente no cabe con un micro-USD de menos y sí con el justo", async (_caso, primera) => {
     const conducta: ConductaCliente = (_l, indice) => (indice === 0 ? primera() : Promise.resolve(mensajeFicticio()));
     const corto = montar(configLista(TOPE_DOS_MENOS_UNO), conducta);
@@ -273,13 +276,32 @@ describe("la reserva: lo que pudo cobrarse sin saberse cuenta en el tope del mis
 
   it.each([
     ["un 400 (respuesta HTTP de error: no se cobra)", () => Promise.reject(APIError.generate(400, cuerpoErrorFicticio("invalid_request_error"), undefined, new Headers()))],
-    ["un 529", () => Promise.reject(APIError.generate(529, cuerpoErrorFicticio("overloaded_error"), undefined, new Headers()))],
     ["un éxito (sus tokens los cuenta el registro)", () => Promise.resolve(mensajeFicticio())],
   ])("después de %s no hay reserva", async (_caso, primera) => {
     const conducta: ConductaCliente = (_l, indice) => (indice === 0 ? primera() : Promise.resolve(mensajeFicticio()));
     const m = montar(configLista(TOPE_DOS_MENOS_UNO), conducta);
     await generar(m);
     expect(await generar(m)).toMatchObject({ ok: true });
+  });
+
+  it("un éxito que llega con la señal ya abortada (el orquestador lo descarta): se reserva su costo real", async () => {
+    // Revisión de seguridad (MEDIO M2): ese éxito no lo guarda nadie; sin reserva, su gasto no contaría en el tope.
+    const control = new AbortController();
+    const costoReal = costoMicroUsd({ mes: GASTO_FICTICIO.mes, tokensEntrada: 5561, tokensSalida: 379 });
+    const conducta: ConductaCliente = (_l, indice) => {
+      if (indice === 0) control.abort();
+      return Promise.resolve(mensajeFicticio());
+    };
+    const corto = montar(configLista(GASTADO + costoReal + MAXIMO - 1n), conducta);
+    expect(await corto.generador.generar(pedidoFicticio().pedido, control.signal)).toMatchObject({ ok: true });
+    expect(await generar(corto)).toEqual(fallo("TOPE_MENSUAL", "TOPE_DEL_MES"));
+    const otroControl = new AbortController();
+    const justo = montar(configLista(GASTADO + costoReal + MAXIMO), (l, indice) => {
+      if (indice === 0) otroControl.abort();
+      return Promise.resolve(mensajeFicticio());
+    });
+    await justo.generador.generar(pedidoFicticio().pedido, otroControl.signal);
+    expect(await generar(justo)).toMatchObject({ ok: true });
   });
 
   it("las reservas del mismo mes se suman", async () => {

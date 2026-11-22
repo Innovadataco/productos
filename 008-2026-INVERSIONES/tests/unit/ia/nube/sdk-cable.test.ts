@@ -83,7 +83,7 @@ describe("el entorno no cambia nada", () => {
     vi.stubEnv("ANTHROPIC_API_KEY", OTRA_LLAVE_FICTICIA);
     vi.stubEnv("ANTHROPIC_AUTH_TOKEN", OTRA_LLAVE_FICTICIA);
     vi.stubEnv("ANTHROPIC_BASE_URL", "https://ficticio.invalid");
-    vi.stubEnv("ANTHROPIC_CUSTOM_HEADERS", `authorization: Bearer ${OTRA_LLAVE_FICTICIA}\nx-ficticia: si`);
+    vi.stubEnv("ANTHROPIC_CUSTOM_HEADERS", `authorization: Bearer ${OTRA_LLAVE_FICTICIA}\nx-ficticia: si\nanthropic-version: 2015-01-01\naccept: text/html\ncontent-type: text/plain`);
     vi.stubEnv("ANTHROPIC_LOG", "debug");
     vi.stubEnv("ANTHROPIC_PROFILE", "perfil-ficticio");
     vi.stubEnv("ANTHROPIC_WEBHOOK_SIGNING_KEY", OTRA_LLAVE_FICTICIA);
@@ -94,6 +94,10 @@ describe("el entorno no cambia nada", () => {
     expect(llamada?.url).toBe(URL_MENSAJES_NUBE);
     expect(llamada?.cabeceras.authorization).toBe(`Bearer ${LLAVE_FICTICIA}`);
     expect(llamada?.cabeceras["x-ficticia"]).toBeUndefined();
+    // Revisión de seguridad (BAJO B1): la versión de la API, accept y content-type son fijos del transporte.
+    expect(llamada?.cabeceras["anthropic-version"]).toBe("2026-10-21");
+    expect(llamada?.cabeceras.accept).toBe("application/json");
+    expect(llamada?.cabeceras["content-type"]).toBe("application/json");
     expect(JSON.stringify(llamada?.cabeceras)).not.toContain(OTRA_LLAVE_FICTICIA);
     for (const espia of espias) expect(espia).not.toHaveBeenCalled();
   });

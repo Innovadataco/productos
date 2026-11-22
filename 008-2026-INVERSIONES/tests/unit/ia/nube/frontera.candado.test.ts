@@ -97,9 +97,15 @@ describe("candado de la frontera de la nube · controles positivos", () => {
     expect(usosProhibidos("cliente.beta.messages.create({});").prohibidos).toEqual(["beta"]);
     expect(usosProhibidos("const c = { fallbacks: [] };").prohibidos).toEqual(["fallbacks"]);
     expect(usosProhibidos("import { betaRefusalFallbackMiddleware } from 'x';").prohibidos).toEqual(["betaRefusalFallbackMiddleware"]);
-    expect(usosProhibidos("const v = process.env.INV_IA_NUBE_LLAVE;").prohibidos).toEqual(["process.env"]);
+    expect(usosProhibidos("const v = process.env.INV_IA_NUBE_LLAVE;").prohibidos).toEqual(["process"]);
     expect(usosProhibidos("const t = llave.revelar();").revela).toBe(true);
     expect(usosProhibidos("const t = llave.ocultar();")).toEqual({ prohibidos: [], revela: false });
+    // Revisión de seguridad (BAJO B3): otras formas de escribir lo mismo.
+    expect(usosProhibidos('const t = llave["revelar"]();').revela).toBe(true);
+    expect(usosProhibidos("const { revelar } = llave;").revela).toBe(true);
+    expect(usosProhibidos('const v = process["env"];').prohibidos).toEqual(["process"]);
+    expect(usosProhibidos("const { env } = process;").prohibidos).toEqual(["process"]);
+    expect(usosProhibidos("const v = globalThis.process;").prohibidos).toEqual(["process"]);
   });
 });
 

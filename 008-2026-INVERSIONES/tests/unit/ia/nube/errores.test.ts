@@ -23,18 +23,19 @@ const TABLA: readonly (readonly [string, () => unknown, MotivoFalloGenerador, st
   ["402", () => deEstado(402, "billing_error"), "ERROR_PROVEEDOR", "PAGO_REQUERIDO", false],
   ["403", () => deEstado(403, "permission_error"), "ERROR_PROVEEDOR", "PROHIBIDO", false],
   ["404", () => deEstado(404, "not_found_error"), "MODELO_NO_DISPONIBLE", "MODELO_NO_ENCONTRADO", false],
-  ["408", () => deEstado(408, "timeout_error"), "TIEMPO_AGOTADO", "TIEMPO_DEL_PROVEEDOR", false],
+  ["408", () => deEstado(408, "timeout_error"), "TIEMPO_AGOTADO", "TIEMPO_DEL_PROVEEDOR", true],
   ["409", () => deEstado(409, "conflict_error"), "ERROR_PROVEEDOR", "ERROR_DESCONOCIDO", false],
   ["413", () => deEstado(413, "request_too_large"), "ERROR_PROVEEDOR", "PEDIDO_DEMASIADO_GRANDE", false],
   ["418", () => deEstado(418, "invalid_request_error"), "ERROR_PROVEEDOR", "ERROR_DESCONOCIDO", false],
   ["422", () => deEstado(422, "invalid_request_error"), "ERROR_PROVEEDOR", "PEDIDO_RECHAZADO", false],
   ["429", () => deEstado(429, "rate_limit_error"), "MODELO_NO_DISPONIBLE", "LIMITE_DE_PEDIDOS", false],
   ["429 por el límite de gasto de la cuenta", () => deEstado(429, "rate_limit_error", "enforced_spend_limit_reached"), "TOPE_MENSUAL", "LIMITE_DE_GASTO_DEL_PROVEEDOR", false],
-  ["500", () => deEstado(500, "api_error"), "ERROR_PROVEEDOR", "ERROR_DEL_SERVIDOR", false],
-  ["501", () => deEstado(501, "api_error"), "ERROR_PROVEEDOR", "ERROR_DEL_SERVIDOR", false],
-  ["503", () => deEstado(503, "api_error"), "MODELO_NO_DISPONIBLE", "SERVICIO_NO_DISPONIBLE", false],
-  ["504", () => deEstado(504, "timeout_error"), "TIEMPO_AGOTADO", "TIEMPO_DEL_PROVEEDOR", false],
-  ["529", () => deEstado(529, "overloaded_error"), "MODELO_NO_DISPONIBLE", "SOBRECARGA", false],
+  ["500", () => deEstado(500, "api_error"), "ERROR_PROVEEDOR", "ERROR_DEL_SERVIDOR", true],
+  ["501", () => deEstado(501, "api_error"), "ERROR_PROVEEDOR", "ERROR_DEL_SERVIDOR", true],
+  ["502", () => deEstado(502, "api_error"), "ERROR_PROVEEDOR", "ERROR_DEL_SERVIDOR", true],
+  ["503", () => deEstado(503, "api_error"), "MODELO_NO_DISPONIBLE", "SERVICIO_NO_DISPONIBLE", true],
+  ["504", () => deEstado(504, "timeout_error"), "TIEMPO_AGOTADO", "TIEMPO_DEL_PROVEEDOR", true],
+  ["529", () => deEstado(529, "overloaded_error"), "MODELO_NO_DISPONIBLE", "SOBRECARGA", true],
   ["el pedido abortado", () => new APIUserAbortError(), "TIEMPO_AGOTADO", "ABORTADO", true],
   ["el tiempo del cliente", () => new APIConnectionTimeoutError(), "TIEMPO_AGOTADO", "TIEMPO_DEL_CLIENTE", true],
   ["sin conexión", () => new APIConnectionError({ cause: new TypeError("fetch failed") }), "MODELO_NO_DISPONIBLE", "SIN_CONEXION", true],
@@ -68,7 +69,7 @@ describe("traducirError", () => {
 });
 
 describe("hayPosibleCobro", () => {
-  it.each(TABLA)("%s → según la tabla (una respuesta HTTP de error no se cobra; lo que pudo llegar, sí)", (_caso, crear, _motivo, _detalle, cobro) => {
+  it.each(TABLA)("%s → según la tabla (un 4xx no se cobra; lo que pudo llegar al modelo, incluido un 408 o un 5xx, sí: por las dudas)", (_caso, crear, _motivo, _detalle, cobro) => {
     expect(hayPosibleCobro(crear())).toBe(cobro);
   });
 });
