@@ -7,6 +7,9 @@
 --             comandos de carga y de acceso inicial, que corren en el contenedor del migrador).
 --  inv_app:   la app. Por defecto solo LEE; las escrituras del login las da privilegios.sql, tabla por
 --             tabla, después de cada migración. Nunca TRUNCATE (se salta los disparadores de fila) ni DDL.
+-- inv_precios e inv_ia (los servicios de precios y de los resúmenes con IA) no van aquí: los crea crear-roles-prod.sh
+-- (sql_rol_precios y sql_rol_ia), NOLOGIN hasta su secreto y sin privilegios por defecto; sus permisos, por columna,
+-- los da docker/migrador/privilegios.sql.
 
 DO $$
 BEGIN

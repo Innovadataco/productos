@@ -101,6 +101,16 @@ Cada cambio que agregue código suma aquí sus guardianes y su job en `inv.yml`,
 
 **Migraciones:** créelas con `npx prisma migrate dev --create-only` y revise el SQL antes de aplicarlas. La migración inicial trae reglas escritas a mano (CHECK, índices parciales, exclusión y disparadores de solo inserción) que Prisma no conoce; si una migración nueva las borra, `npm run test:integracion` se pone rojo.
 
+## Fase E · candados de la IA
+El modelo (local o en la nube) solo recibe la vista ciega del paquete de hechos; las cifras las pone el código. Todos corren en `npm test`, con control positivo:
+
+| Candado | Pruebas |
+|---|---|
+| Vista ciega: ni valores, ni presentaciones, ni nombres, ni fechas, ni fuentes; la guarda prueba la conducta sobre el JSON que saldría | `tests/unit/ia/vista-ciega.test.ts`, `vista-ciega.propiedades.test.ts`, `vista-ciega.mutacion.test.ts`, `tipos.test.ts` |
+| Guarda de las puertas: `generarConPuertas` rechaza una vista con un dato plantado antes de llamar a cualquier generador | `tests/unit/ia/puertas.guarda.test.ts`, `revision.seguridad.test.ts` |
+| Presentación: cada `presentacion` es `presentar(valor, unidad)` (`src/ia/presentar.ts`); `construirPaquete` rechaza otra con `PRESENTACION_NO_COINCIDE` | `tests/unit/ia/hechos/presentar.test.ts`, `tests/unit/ia/paquete.test.ts` |
+| Armadores (`src/ia/hechos/`): la acción y la cantidad de las reglas, la tenencia, el texto libre, el encargo, las cuentas y los ids no entran al paquete; sin base, red, reloj ni azar | `tests/unit/ia/hechos/candado.test.ts`, `tests/unit/ia/hechos/pureza.candado.test.ts` |
+
 ## Datos (regla dura)
 - **Los datos reales nunca entran al repo**: ni montos, ni cuentas, ni posiciones, ni extractos, ni capturas; tampoco en seeds, tests o fixtures. Viven solo en la base de datos del servidor y en sus secretos.
 - Los datos de prueba son **inventados** y van en archivos marcados `.ficticio.` (ej. `tests/fixtures/ordenes.ficticio.csv`).
@@ -159,6 +169,7 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.33 · 2026-11-22 · 13:38 (-05) · INV · Fábrica Inversiones (frente ia-hechos, E1b) · sección «Fase E · candados de la IA»: vista ciega, guarda de las puertas, presentación y armadores de hechos (v1.33 sobre la v1.32 de main)
 > v1.32 · 2026-11-22 · 08:53 (-05) · INV · Fábrica Inversiones (frente fondo-rendimientos; v1.32 sobre la v1.31 de main) · comando `registrar-rendimientos-fondo` (rendimientos del FIC y su retención; vía B, paso 12 ter) y `conciliacion-v3` en `conciliar-certificacion` (v1.31 sobre la v1.30 de main)
 > v1.31 · 2026-11-22 · 07:32 (-05) · INV · Fábrica Inversiones (frente plan-edicion, fase B PR-B) · área de edición del plan y del diario: guardianes `candados-edicion` y e2e `zz-edicion`; `inv_app` con INSERT solo en las tablas del plan y del diario (v1.31 sobre la v1.30 de main)
 > v1.30 · 2026-11-22 · 06:25 (-05) · INV · Fábrica Inversiones (frente datos-oficiales-docs, C8) · comandos de la fase C (`importar-series`, `importar-decretos`, `exportar-trm`, `exportar-banrep` y `exportar-ipc`), guardianes `camino-unico-series`, `sin-guarda`, `escrituras.candado`, e2e de datos oficiales y `series-leer-rendimiento`; `lectores-candado` corregido (XML y zip, no HTTP); cobertura en el CI; conteo previo a la migración de C1 (v1.30 sobre la v1.29 de main)

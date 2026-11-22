@@ -1,12 +1,13 @@
 /**
  * Paquetes de hechos AL AZAR, con semilla (PRNG de `src/proyecciones/prng.ts`, sin modificarlo): especies FICTICIA-*,
  * valores decimales con signo y no redondos, fechas de 2027 o de 2015 a 2021, fuentes, avisos y versiones de cálculo
- * con dígitos, y presentaciones es-CO hechas con los formatos de la pantalla. Todo inventado.
+ * con dígitos, y presentaciones es-CO de `presentar` (E1b: el paquete no acepta otra). Los hechos de regla citan a
+ * veces al ancla de una regla (REGLA_DEL_PLAN) en vez de a la especie. Todo inventado.
  */
-import { cop, fecha as fechaEsCo, numero, pct } from "@/app/tablero/formato";
-import { CLAVE_NOMBRE_ESPECIE, clavesDe, entradaDeCatalogo, type ClaveHecho, type EntradaCatalogo } from "@/ia/catalogo";
+import { CLAVE_ANCLA_REGLA, CLAVE_NOMBRE_ESPECIE, clavesDe, entradaDeCatalogo, esClaveDeRegla, type ClaveHecho, type EntradaCatalogo } from "@/ia/catalogo";
 import { CALIDADES, CERCANIAS, DIRECCIONES, FRESCURAS, TIPOS_RESUMEN, type EntradaHecho, type EntradaPaquete, type IdHecho, type PaqueteHechos, type TipoResumen } from "@/ia/contrato";
 import { construirPaquete, idDeHecho } from "@/ia/paquete";
+import { presentar } from "@/ia/presentar";
 import type { Prng } from "@/proyecciones/prng";
 
 const GRIEGAS = ["ALFA", "BETA", "GAMMA", "DELTA", "EPSILON", "ZETA", "ETA", "TETA", "IOTA", "KAPA", "LAMBDA", "OMEGA"] as const;
@@ -52,36 +53,29 @@ function nombreAlAzar(prng: Prng, usados: ReadonlySet<string>): string {
   }
 }
 
-function valorYPresentacion(prng: Prng, catalogo: EntradaCatalogo, hoyMs: number, nombre: string): readonly [string, string] {
+/** El valor al azar de la unidad (los sorteos son los mismos de antes de E1b; la presentación no sortea nada). */
+function valorAlAzar(prng: Prng, catalogo: EntradaCatalogo, hoyMs: number, nombre: string): string {
   switch (catalogo.unidad) {
     case "NOMBRE":
-      return [nombre, nombre];
-    case "FECHA": {
-      const dia = diaAlAzar(prng, hoyMs);
-      return [dia, fechaEsCo(dia)];
-    }
-    case "DIAS": {
-      const dias = String(enteroNoRedondo(prng) % 997 - (prng.uniforme() < 0.3 ? 613 : 0));
-      return [dias, `${numero(Number(dias))} días`];
-    }
+      return nombre;
+    case "FECHA":
+      return diaAlAzar(prng, hoyMs);
+    case "DIAS":
+      return String(enteroNoRedondo(prng) % 997 - (prng.uniforme() < 0.3 ? 613 : 0));
     case "MESES":
-    case "ESPECIES": {
-      const conteo = String(1 + prng.enteroMenorQue(97));
-      return [conteo, catalogo.unidad === "MESES" ? `${conteo} meses` : conteo];
-    }
-    case "PORCENTAJE": {
-      const v = decimalAlAzar(prng, true);
-      return [v, pct(Number(v))];
-    }
-    case "PESOS_POR_DOLAR": {
-      const v = decimalAlAzar(prng, false);
-      return [v, `$ ${numero(Number(v), 2)}`];
-    }
-    case "PESOS": {
-      const v = decimalAlAzar(prng, true);
-      return [v, cop(Number(v))];
-    }
+    case "ESPECIES":
+      return String(1 + prng.enteroMenorQue(97));
+    case "PORCENTAJE":
+    case "PESOS":
+      return decimalAlAzar(prng, true);
+    case "PESOS_POR_DOLAR":
+      return decimalAlAzar(prng, false);
   }
+}
+
+function valorYPresentacion(prng: Prng, catalogo: EntradaCatalogo, hoyMs: number, nombre: string): readonly [string, string] {
+  const valor = valorAlAzar(prng, catalogo, hoyMs, nombre);
+  return [valor, presentar(valor, catalogo.unidad)];
 }
 
 function marcas(prng: Prng, catalogo: EntradaCatalogo): Pick<EntradaHecho, "calidad" | "direccion" | "cercania" | "frescura" | "obligatorio"> {
@@ -102,6 +96,7 @@ export function entradaAlAzar(prng: Prng, tipoFijo?: TipoResumen): EntradaPaquet
   const claves = clavesDe(tipo) as readonly ClaveHecho[];
   const hechos: EntradaHecho[] = [];
   const especies: { readonly id: IdHecho; readonly nombre: string }[] = [];
+  const anclas: { readonly id: IdHecho }[] = [];
   const usados = new Set<string>();
   const total = 1 + prng.enteroMenorQue(MAX_HECHOS_AZAR);
   // Con tope de intentos: en ESCENARIOS hay menos pares (clave, sujeto) distintos que el máximo de hechos.
@@ -117,15 +112,18 @@ export function entradaAlAzar(prng: Prng, tipoFijo?: TipoResumen): EntradaPaquet
     const id = idDeHecho(hechos.length + 1);
     const nombre = clave === CLAVE_NOMBRE_ESPECIE ? nombreAlAzar(prng, new Set(especies.map((e) => e.nombre))) : "";
     const [valor, presentacion] = valorYPresentacion(prng, catalogo, hoyMs, nombre);
-    const conSujeto = catalogo.politicaSujeto === "EXIGIDO" || (catalogo.politicaSujeto === "OPCIONAL" && especies.length > 0 && prng.uniforme() < 0.5);
-    const sujeto = conSujeto ? elegir(prng, especies).id : undefined;
-    // Un hecho por (clave, sujeto): si ya está, se sortea otro (el nombre de la especie se repite con nombres distintos).
+    // Un hecho de regla puede citar a la especie o al ancla de una regla; los demás, solo a la especie.
+    const destinos: readonly { readonly id: IdHecho }[] = esClaveDeRegla(clave) ? [...especies, ...anclas] : especies;
+    const conSujeto = catalogo.politicaSujeto === "EXIGIDO" || (catalogo.politicaSujeto === "OPCIONAL" && destinos.length > 0 && prng.uniforme() < 0.5);
+    const sujeto = conSujeto ? elegir(prng, destinos).id : undefined;
+    // Un hecho por (clave, sujeto): si ya está, se sortea otro (el nombre de la especie y el ancla pueden repetirse).
     const par = `${clave}|${sujeto ?? ""}`;
-    if (clave !== CLAVE_NOMBRE_ESPECIE && usados.has(par)) continue;
+    if (clave !== CLAVE_NOMBRE_ESPECIE && clave !== CLAVE_ANCLA_REGLA && usados.has(par)) continue;
     usados.add(par);
     const fuente = `FUENTE-FICTICIA-${1 + prng.enteroMenorQue(97)}`;
     hechos.push({ id, clave, ...(sujeto === undefined ? {} : { sujeto }), valor, presentacion, fuente, fecha: diaAlAzar(prng, hoyMs), ...marcas(prng, catalogo) });
     if (clave === CLAVE_NOMBRE_ESPECIE) especies.push({ id, nombre });
+    if (clave === CLAVE_ANCLA_REGLA) anclas.push({ id });
   }
   const avisos = Array.from({ length: prng.enteroMenorQue(4) }, (_, i) => `AVISO_FICTICIO_${i}${1 + prng.enteroMenorQue(9)}`);
   return { tipo, hoy, versionesCalculo: { calculo: `calculo-ficticio-v${1 + prng.enteroMenorQue(97)}` }, avisos, hechos };

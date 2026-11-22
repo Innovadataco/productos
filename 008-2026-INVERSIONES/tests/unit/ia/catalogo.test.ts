@@ -4,7 +4,7 @@
  * recomendaciones ni predicciones; el nombre de la especie como hecho propio en los tres tipos.
  */
 import { describe, expect, it } from "vitest";
-import { CATALOGO, CLAVE_NOMBRE_ESPECIE, clavesDe, entradaDeCatalogo } from "@/ia/catalogo";
+import { CATALOGO, CLAVES_DE_REGLA, CLAVE_ANCLA_REGLA, CLAVE_NOMBRE_ESPECIE, clavesDe, entradaDeCatalogo, esClaveDeRegla } from "@/ia/catalogo";
 import { TIPOS_RESUMEN, UNIDADES } from "@/ia/contrato";
 
 const ESPERADAS = {
@@ -18,7 +18,7 @@ const ESPERADAS = {
   REGLAS: [
     "ESPECIE_NOMBRE", "CIERRE_ESPECIE", "FECHA_CIERRE_ESPECIE", "REGLA_NIVEL", "REGLA_TOCADA", "REGLA_EN_EL_NIVEL", "REGLA_DISTANCIA",
     "REGLA_SIN_CIERRE_AL_DIA", "REGLA_PLAZO", "REGLA_DIAS_AL_PLAZO", "PROXIMO_EX_DIVIDENDO", "DIAS_A_EX_DIVIDENDO",
-    "DIVIDENDO_POR_ACCION", "DIVIDENDO_FECHA_PAGO", "DIVIDENDO_BRUTO_ESTIMADO",
+    "DIVIDENDO_POR_ACCION", "DIVIDENDO_FECHA_PAGO", "DIVIDENDO_BRUTO_ESTIMADO", "REGLA_DEL_PLAN",
   ],
   ESCENARIOS: [
     "ESPECIE_NOMBRE", "VALOR_INICIAL", "HORIZONTE_CORTO", "HORIZONTE_MEDIO", "HORIZONTE_LARGO",
@@ -140,5 +140,25 @@ describe("catálogo cerrado de claves", () => {
     for (const rara of ["constructor", "__proto__", "toString", "hasOwnProperty", "", "valor_acciones"]) expect(entradaDeCatalogo("DIARIO", rara)).toBeNull();
     expect(entradaDeCatalogo("OTRO" as never, "VALOR_ACCIONES")).toBeNull();
     expect(entradaDeCatalogo("constructor" as never, "VALOR_ACCIONES")).toBeNull();
+  });
+
+  it("el ancla de una regla es REGLA_DEL_PLAN: solo en REGLAS, un día, con la especie como sujeto opcional, sin dirección ni cercanía", () => {
+    expect(CLAVE_ANCLA_REGLA).toBe("REGLA_DEL_PLAN");
+    expect(CATALOGO.REGLAS.REGLA_DEL_PLAN).toMatchObject({ unidad: "FECHA", politicaSujeto: "OPCIONAL", admiteDireccion: false, admiteCercania: false });
+    expect(entradaDeCatalogo("DIARIO", CLAVE_ANCLA_REGLA)).toBeNull();
+    expect(entradaDeCatalogo("ESCENARIOS", CLAVE_ANCLA_REGLA)).toBeNull();
+  });
+
+  it("las claves de regla (las que pueden citar al ancla) son una lista cerrada y congelada que no incluye al ancla", () => {
+    expect([...CLAVES_DE_REGLA]).toEqual([
+      "REGLA_NIVEL", "REGLA_TOCADA", "REGLA_EN_EL_NIVEL", "REGLA_DISTANCIA", "REGLA_SIN_CIERRE_AL_DIA", "REGLA_PLAZO", "REGLA_DIAS_AL_PLAZO",
+    ]);
+    expect(Object.isFrozen(CLAVES_DE_REGLA)).toBe(true);
+    expect(CLAVES_DE_REGLA).not.toContain(CLAVE_ANCLA_REGLA);
+    for (const clave of CLAVES_DE_REGLA) expect(entradaDeCatalogo("REGLAS", clave), clave).not.toBeNull();
+    expect(esClaveDeRegla("REGLA_NIVEL")).toBe(true);
+    // Guardián de la lista: son todas las REGLA_* del catálogo menos el ancla (si se agrega una, entra aquí).
+    expect([...CLAVES_DE_REGLA]).toEqual(clavesDe("REGLAS").filter((c) => c.startsWith("REGLA_") && c !== CLAVE_ANCLA_REGLA));
+    for (const otra of [CLAVE_ANCLA_REGLA, CLAVE_NOMBRE_ESPECIE, "PROXIMO_EX_DIVIDENDO", "VALOR_ESPECIE", "constructor", ""]) expect(esClaveDeRegla(otra), otra).toBe(false);
   });
 });

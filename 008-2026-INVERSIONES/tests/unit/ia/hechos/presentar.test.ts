@@ -1,0 +1,124 @@
+/**
+ * `presentar(valor, unidad)`: la cadena es-CO de cada unidad, con los formatos de la pantalla (src/app/tablero/formato.ts).
+ * Es la única fuente de la presentación de un hecho: `construirPaquete` exige `presentacion === presentar(valor, unidad)`
+ * (condición 2 de PI desde el origen). Valores inventados, no redondos, y fechas de 2027.
+ */
+import { describe, expect, it } from "vitest";
+import { entradaDeCatalogo } from "@/ia/catalogo";
+import { UNIDADES, type TipoResumen, type Unidad } from "@/ia/contrato";
+import { presentar } from "@/ia/presentar";
+import { crearPrng } from "@/proyecciones/prng";
+import { paqueteAlAzar } from "../apoyo/aleatorio.ficticio";
+import { ENTRADAS_FICTICIAS, entradaReglasConAnclas } from "../apoyo/hechos.ficticio";
+
+const MENOS = "−";
+
+describe("presentar · una cadena por unidad", () => {
+  it.each<readonly [Unidad, string, string]>([
+    ["PESOS", "37911.47", "$ 37.911"],
+    ["PESOS", "-1237.53", `${MENOS}$ 1.238`],
+    ["PESOS", "-0.41", "$ 0"],
+    ["PESOS", "4613", "$ 4.613"],
+    ["PESOS", "2713.9", "$ 2.714"],
+    ["PESOS_POR_DOLAR", "4613.27", "$ 4.613,27"],
+    ["PESOS_POR_DOLAR", "4613.276", "$ 4.613,28"],
+    ["PESOS_POR_DOLAR", "-37.19", `${MENOS}$ 37,19`],
+    ["PORCENTAJE", "12.37", "12,4 %"],
+    ["PORCENTAJE", "-2.47", `${MENOS}2,5 %`],
+    ["PORCENTAJE", "-0.04", "0,0 %"],
+    ["PORCENTAJE", "1237.53", "1.237,5 %"],
+    ["DIAS", "190", "190 días"],
+    ["DIAS", "1", "1 día"],
+    ["DIAS", "-1", `${MENOS}1 día`],
+    ["DIAS", "4613", "4.613 días"],
+    ["DIAS", "0", "0 días"],
+    ["MESES", "3", "3 meses"],
+    ["MESES", "1", "1 mes"],
+    ["MESES", "13", "13 meses"],
+    ["ESPECIES", "7", "7"],
+    ["ESPECIES", "1237", "1.237"],
+    ["FECHA", "2027-03-16", "16-mar-2027"],
+    ["FECHA", "2019-11-03", "3-nov-2019"],
+    ["NOMBRE", "FICTICIA-ALFA", "FICTICIA-ALFA"],
+  ])("%s · %s → «%s»", (unidad, valor, esperada) => {
+    expect(presentar(valor, unidad)).toBe(esperada);
+  });
+
+  it("nunca pinta «+»: la dirección va aparte, en el hecho", () => {
+    const positivos: readonly (readonly [Unidad, string])[] = [
+      ["PESOS", "37.19"], ["PESOS_POR_DOLAR", "37.19"], ["PORCENTAJE", "37.19"], ["DIAS", "37"], ["MESES", "37"], ["ESPECIES", "37"],
+    ];
+    for (const [unidad, valor] of positivos) expect(presentar(valor, unidad), unidad).not.toContain("+");
+  });
+
+  it("lo que no se puede pintar sale «—», como en la pantalla", () => {
+    expect(presentar("4613270000000000000000.19", "PESOS")).toBe("—");
+    expect(presentar("4613270000000000000000.19", "PORCENTAJE")).toBe("—");
+    expect(presentar("4613270000000000000000", "DIAS")).toBe("—");
+    expect(presentar("4613270000000000000000.19", "PESOS_POR_DOLAR")).toBe("—");
+  });
+
+  it.each<readonly [Unidad, unknown]>([
+    ["PESOS", "37.911,47"],
+    ["PESOS", "37911.470"],
+    ["PESOS", 37911.47],
+    ["PORCENTAJE", "-0"],
+    ["DIAS", "7.5"],
+    ["MESES", "3.1"],
+    ["ESPECIES", "7.1"],
+    ["FECHA", "2027-02-30"],
+    ["FECHA", "16-mar-2027"],
+    ["NOMBRE", "FICTICIA  ALFA"],
+    ["NOMBRE", ""],
+    ["MESES", "-3"],
+    ["ESPECIES", "-7"],
+    ["OTRA" as Unidad, "7"],
+  ])("rechaza con TypeError un valor sin la forma de la unidad (%s · %s), sin repetir el valor", (unidad, valor) => {
+    expect(() => presentar(valor as string, unidad)).toThrow(TypeError);
+    try {
+      presentar(valor as string, unidad);
+    } catch (e) {
+      expect((e as Error).message).not.toMatch(/\p{N}/u);
+      expect((e as Error).message.toLowerCase()).not.toContain("ficticia");
+    }
+  });
+
+  it("cubre todas las unidades del contrato", () => {
+    const muestras: Readonly<Record<Unidad, string>> = {
+      PESOS: "1", PESOS_POR_DOLAR: "1", PORCENTAJE: "1", DIAS: "1", MESES: "1", ESPECIES: "1", FECHA: "2027-03-16", NOMBRE: "FICTICIA-ALFA",
+    };
+    for (const unidad of UNIDADES) expect(presentar(muestras[unidad], unidad), unidad).toMatch(/\S/);
+  });
+});
+
+/** La unidad que el catálogo del tipo da a la clave. */
+const unidadDe = (tipo: TipoResumen, clave: string): Unidad => {
+  const entrada = entradaDeCatalogo(tipo, clave);
+  if (entrada === null) throw new Error(`clave fuera del catálogo: ${clave}`);
+  return entrada.unidad;
+};
+
+describe("presentar · los apoyos de las pruebas salen de presentar", () => {
+  it.each(Object.keys(ENTRADAS_FICTICIAS) as TipoResumen[])("cada hecho de la entrada ficticia %s trae presentar(valor, unidad)", (tipo) => {
+    for (const h of ENTRADAS_FICTICIAS[tipo]().hechos) expect(h.presentacion, `${tipo} ${h.id}`).toBe(presentar(h.valor, unidadDe(tipo, h.clave)));
+  });
+
+  it("las cadenas que fijan las pruebas de la vista ciega y de la guarda no cambian", () => {
+    const diario = ENTRADAS_FICTICIAS.DIARIO().hechos;
+    expect(diario[2]?.presentacion).toBe("$ 37.911");
+    expect(diario[6]?.presentacion).toBe("12,4 %");
+    expect(diario[1]?.presentacion).toBe("$ 4.613");
+  });
+
+  it("la entrada de reglas con anclas también trae presentar(valor, unidad)", () => {
+    for (const h of entradaReglasConAnclas().hechos) expect(h.presentacion, h.id).toBe(presentar(h.valor, unidadDe("REGLAS", h.clave)));
+  });
+
+  it("propiedad (semilla fija): en trescientos paquetes al azar, toda presentación es presentar(valor, unidad)", () => {
+    const prng = crearPrng(37913);
+    for (let i = 0; i < 300; i += 1) {
+      const paquete = paqueteAlAzar(prng);
+      for (const h of paquete.hechos) expect(h.presentacion).toBe(presentar(h.valor, h.unidad));
+    }
+  });
+});
