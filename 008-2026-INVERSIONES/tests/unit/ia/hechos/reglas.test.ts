@@ -17,6 +17,7 @@ const filas = (hechos: readonly Hecho[]) =>
   hechos.map((h) => [h.id, h.clave, h.valor, h.sujeto ?? null, h.fecha, h.calidad, h.direccion, h.cercania, h.frescura, h.obligatorio] as const);
 const sinId = (f: readonly unknown[]): Fila => f.slice(1) as unknown as Fila;
 
+/** Lo vigente (el plan, los decretos, el nombre) va con el día de hoy y frescura HOY: fecha y frescura nunca se contradicen. */
 describe("armarReglas · el paquete del plan", () => {
   it("arma cada especie con su cierre, una ancla por regla con sus hechos y su próximo dividendo; las de portafolio al final", () => {
     const paquete = armarReglas(entradaReglasFicticia());
@@ -39,10 +40,10 @@ describe("armarReglas · el paquete del plan", () => {
       ["H13", "REGLA_NIVEL", "4791.53", "H12", HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H14", "REGLA_DISTANCIA", "3.86", "H12", "2027-03-16", "CALCULADO", "SUBE", "LEJOS", "RECIENTE", false],
       ["H15", "REGLA_PLAZO", "2027-01-29", "H12", HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
-      ["H16", "PROXIMO_EX_DIVIDENDO", "2027-04-07", "H01", "2027-03-02", "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
+      ["H16", "PROXIMO_EX_DIVIDENDO", "2027-04-07", "H01", HOY, "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H17", "DIAS_A_EX_DIVIDENDO", "21", "H01", HOY, "CALCULADO", "NO_APLICA", "NO_APLICA", "HOY", false],
-      ["H18", "DIVIDENDO_POR_ACCION", "41.37", "H01", "2027-03-02", "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
-      ["H19", "DIVIDENDO_FECHA_PAGO", "2027-04-21", "H01", "2027-03-02", "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
+      ["H18", "DIVIDENDO_POR_ACCION", "41.37", "H01", HOY, "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
+      ["H19", "DIVIDENDO_FECHA_PAGO", "2027-04-21", "H01", HOY, "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H20", "DIVIDENDO_BRUTO_ESTIMADO", "30578.79", "H01", HOY, "ESTIMADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H21", "ESPECIE_NOMBRE", BETA, null, HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", true],
       ["H22", "CIERRE_ESPECIE", "2713.9", "H21", "2027-03-15", "ATRASADO", "NO_APLICA", "NO_APLICA", "ATRASADO", false],
@@ -51,10 +52,10 @@ describe("armarReglas · el paquete del plan", () => {
       ["H25", "REGLA_NIVEL", "2491.73", "H24", HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H26", "REGLA_SIN_CIERRE_AL_DIA", "2027-03-15", "H24", "2027-03-15", "ATRASADO", "NO_APLICA", "NO_APLICA", "ATRASADO", true],
       ["H27", "ESPECIE_NOMBRE", DELTA, null, HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
-      ["H28", "PROXIMO_EX_DIVIDENDO", "2027-05-12", "H27", "2027-03-02", "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
+      ["H28", "PROXIMO_EX_DIVIDENDO", "2027-05-12", "H27", HOY, "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H29", "DIAS_A_EX_DIVIDENDO", "56", "H27", HOY, "CALCULADO", "NO_APLICA", "NO_APLICA", "HOY", false],
-      ["H30", "DIVIDENDO_POR_ACCION", "97.31", "H27", "2027-03-02", "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
-      ["H31", "DIVIDENDO_FECHA_PAGO", "2027-05-26", "H27", "2027-03-02", "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
+      ["H30", "DIVIDENDO_POR_ACCION", "97.31", "H27", HOY, "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
+      ["H31", "DIVIDENDO_FECHA_PAGO", "2027-05-26", "H27", HOY, "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H32", "REGLA_DEL_PLAN", "2027-02-03", null, HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H33", "REGLA_PLAZO", "2027-06-30", "H32", HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H34", "REGLA_DIAS_AL_PLAZO", "105", "H32", HOY, "CALCULADO", "NO_APLICA", "NO_APLICA", "HOY", false],
@@ -99,6 +100,11 @@ describe("armarReglas · cada estado del nivel", () => {
       "ESPECIE_NOMBRE", "CIERRE_ESPECIE", "FECHA_CIERRE_ESPECIE", "REGLA_DEL_PLAN", "REGLA_PLAZO", "REGLA_DIAS_AL_PLAZO",
     ]);
     expect(() => armarCon([unaRegla("LIBRE", null), unaRegla("NINGUNA", null)])).toThrow(/SIN_HECHOS/);
+  });
+
+  it("una regla de portafolio con condición de precio no lleva nivel: sin especie no hay precio que comparar", () => {
+    const portafolio = { ...unaRegla("CIERRE_BAJO", "4497.11", "2027-06-30"), instrumentoId: null, nemotecnico: null };
+    expect(armarCon([portafolio]).hechos.map((h) => h.clave)).toEqual(["REGLA_DEL_PLAN", "REGLA_PLAZO", "REGLA_DIAS_AL_PLAZO"]);
   });
 
   it("una regla de portafolio sin plazo no tiene nada que decir: no entra", () => {

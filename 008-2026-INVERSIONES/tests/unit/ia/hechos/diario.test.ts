@@ -10,7 +10,9 @@ import { ErrorArmado } from "@/ia/hechos/errores";
 import { esPaqueteConstruido } from "@/ia/paquete";
 import { presentar } from "@/ia/presentar";
 import { vistaCiega } from "@/ia/vista-ciega";
-import { ALFA, BETA, D, HOY, dia, entradaDiarioFicticia, filasTablero } from "./apoyo.ficticio";
+import { FUENTE_SFC } from "@/fondo/sfc";
+import { FUENTES } from "@/ia/hechos";
+import { ALFA, BETA, D, HOY, dia, entradaDiarioFicticia, filasTablero, fuenteDe } from "./apoyo.ficticio";
 
 type Fila = readonly [string, string, string | null, string, string, string, string, boolean];
 /** [clave, valor, especie del sujeto, fecha, calidad, dirección, frescura, obligatorio] */
@@ -63,11 +65,15 @@ describe("armarDiario · el paquete del tablero", () => {
     const paquete = armarDiario(entradaDiarioFicticia());
     for (const h of paquete.hechos) expect(h.presentacion, h.id).toBe(presentar(h.valor, h.unidad));
     const fuentes = new Map(paquete.hechos.map((h) => [h.clave, h.fuente]));
-    expect(fuentes.get("TASA_TRM")).toBe("sfc:ficticia-trm");
-    expect(fuentes.get("VARIACION_ANUAL_IPC")).toBe("dane:ficticia-ipc");
-    expect(fuentes.get("FONDO_VALOR_UNIDAD")).toBe("sfc:ficticia-fondo");
+    expect(fuentes.get("TASA_TRM")).toBe(fuenteDe("TRM"));
+    expect(fuentes.get("VARIACION_ANUAL_IPC")).toBe(fuenteDe("IPC_INDICE"));
+    expect(fuentes.get("FONDO_VALOR_UNIDAD")).toBe(FUENTE_SFC);
     expect(fuentes.get("CIERRE_ESPECIE")).toBe("cierres de la BVC");
     expect(fuentes.get("VALOR_ACCIONES")).toBe("cálculo de 008 sobre los cierres");
+  });
+
+  it("la fuente del fondo es la constante de la SFC, no un texto de quien llama", () => {
+    expect(FUENTES.FONDO).toBe(FUENTE_SFC);
   });
 
   it("la vista ciega del paquete pasa la guarda", () => {
@@ -187,6 +193,7 @@ describe("armarDiario · lo que falta se dice en los avisos, sin inventar", () =
     ["una serie que el catálogo de hechos no conoce", (e) => ({ ...e, series: [{ ...e.series[0]!, cifra: { ...e.series[0]!.cifra, serie: "UVR" } }] }), "SERIE_DESCONOCIDA"],
     ["la TRM como cifra calculada", (e) => ({ ...e, series: [{ ...e.series[0]!, cifra: { ...e.series[0]!.cifra, origen: "CALCULADA" } }] }), "SERIE_DESCONOCIDA"],
     ["la misma serie dos veces", (e) => ({ ...e, series: [e.series[0]!, e.series[0]!] }), "SERIE_REPETIDA"],
+    ["una serie con otra fuente que la de su catálogo", (e) => ({ ...e, series: [{ ...e.series[0]!, cifra: { ...e.series[0]!.cifra, fuente: "sfc:otra-fuente" } }] }), "FUENTE_DESCONOCIDA"],
     ["una fecha que no es medianoche UTC", (e) => ({ ...e, tablero: { ...e.tablero, fechaReferencia: new Date("2027-03-16T13:00:00.000Z") } }), "FECHA_INVALIDA"],
     ["un cierre posterior a hoy", (e) => ({ ...e, tablero: { ...e.tablero, fechaReferencia: dia("2027-03-18") } }), "FECHA_FUTURA"],
   ])("cierra en fallo con %s (%s)", (_caso, cambio, codigo) => {

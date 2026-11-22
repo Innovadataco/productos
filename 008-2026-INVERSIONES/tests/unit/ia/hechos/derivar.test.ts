@@ -5,7 +5,7 @@
  */
 import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
-import { compararDecimales, deDecimal, deNumero, deTextoDecimal, diaDe, diasEntre, menorDia, signoDe } from "@/ia/hechos/decimal";
+import { compararDecimales, deDecimal, deEntero, deNumero, deTextoDecimal, diaDe, diasEntre, menorDia, signoDe } from "@/ia/hechos/decimal";
 import {
   ORIGENES_DATO, UMBRAL_CERCANIA_REGLA_PCT, calidadDe, cercaniaDeRegla, direccionDelSigno, direccionFrente, frescuraDeSerie, frescuraDelFondo,
   frescuraPorCalendario, peorFrescura,
@@ -40,6 +40,17 @@ describe("cifras canónicas", () => {
     expect(deDecimal(new Prisma.Decimal("0.00000004613"))).toBe("0.00000004613");
     expect(deDecimal(new Prisma.Decimal("4.613e+22"))).toBe("46130000000000000000000");
     expect(deDecimal(new Prisma.Decimal("-0"))).toBe("0");
+  });
+
+  it("un número no es un decimal: DECIMAL_INVALIDO (su toFixed() redondearía al entero en silencio)", () => {
+    expect(codigoDe(() => deDecimal(4613.27 as never))).toBe("DECIMAL_INVALIDO");
+    expect(codigoDe(() => deDecimal(null as never))).toBe("DECIMAL_INVALIDO");
+    expect(codigoDe(() => deDecimal({ toFixed: () => "4613.27" } as never))).toBe("DECIMAL_INVALIDO");
+  });
+
+  it("deEntero: un entero seguro en forma canónica; lo demás, NUMERO_INVALIDO", () => {
+    expect([deEntero(190), deEntero(-47), deEntero(-0), deEntero(0)]).toEqual(["190", "-47", "0", "0"]);
+    for (const malo of [1.5, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 53]) expect(codigoDe(() => deEntero(malo)), String(malo)).toBe("NUMERO_INVALIDO");
   });
 
   it("una cifra de más de cuarenta caracteres no cabe en el contrato: DECIMAL_INVALIDO", () => {

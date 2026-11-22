@@ -70,6 +70,8 @@ describe("presentar · una cadena por unidad", () => {
     ["FECHA", "16-mar-2027"],
     ["NOMBRE", "FICTICIA  ALFA"],
     ["NOMBRE", ""],
+    ["MESES", "-3"],
+    ["ESPECIES", "-7"],
     ["OTRA" as Unidad, "7"],
   ])("rechaza con TypeError un valor sin la forma de la unidad (%s · %s), sin repetir el valor", (unidad, valor) => {
     expect(() => presentar(valor as string, unidad)).toThrow(TypeError);

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { CATALOGO, CLAVE_ANCLA_REGLA } from "@/ia/catalogo";
 import type { EntradaPaquete, PaqueteHechos } from "@/ia/contrato";
 import { hashPaquete } from "@/ia/hash";
-import { CODIGOS_ERROR_PAQUETE, ErrorPaquete, construirPaquete, esPaqueteConstruido, idDeHecho, leerPaquete, type CodigoErrorPaquete } from "@/ia/paquete";
+import { CODIGOS_ERROR_PAQUETE, ErrorPaquete, construirPaquete, esPaqueteConstruido, especieDe, idDeHecho, leerPaquete, type CodigoErrorPaquete } from "@/ia/paquete";
 import { vistaCiega } from "@/ia/vista-ciega";
 import { ENTRADAS_FICTICIAS, ESPECIE_ALFA, HOY_FICTICIO, entradaDiario, entradaReglasConAnclas, hecho } from "./apoyo/hechos.ficticio";
 
@@ -303,6 +303,21 @@ describe("construirPaquete · el ancla de cada regla (REGLA_DEL_PLAN): varias re
     const conDecimal = base();
     Object.assign(h(conDecimal, 1), { valor: "37911.47", presentacion: "$ 37.911" });
     expect(errorEn(conDecimal).codigo).toBe("VALOR_NO_FECHA");
+  });
+
+  it("especieDe: el nombre de la especie de un hecho, siguiendo el ancla de su regla (dos saltos); null si no tiene", () => {
+    const paquete = construir(base());
+    const nombreDe = (id: string) => especieDe(paquete, id as never)?.valor ?? null;
+    expect(["H01", "H02", "H03", "H04", "H06", "H07", "H11"].map(nombreDe)).toEqual(Array(7).fill("FICTICIA-BETA"));
+    expect(["H08", "H09", "H10"].map(nombreDe)).toEqual([null, null, null]);
+    expect(nombreDe("H12")).toBeNull();
+    const diario = construir(copia());
+    expect(especieDe(diario, "H02")?.id).toBe("H01");
+    expect(especieDe(diario, "H03")).toBeNull();
+  });
+
+  it("especieDe solo acepta paquetes construidos", () => {
+    expect(() => especieDe(structuredClone(construir(base())), "H03")).toThrow(/paquete construido/);
   });
 
   it("un ancla fuera de REGLAS es una clave fuera del catálogo", () => {

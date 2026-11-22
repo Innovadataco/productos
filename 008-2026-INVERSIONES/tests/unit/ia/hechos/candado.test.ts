@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import type { PaqueteHechos } from "@/ia/contrato";
 import { jsonCanonico } from "@/ia/hash";
 import { armarDiario, armarEscenarios, armarReglas, type EntradaArmadoReglas } from "@/ia/hechos";
+import { borrador, marcasDeHoy } from "@/ia/hechos/comun";
 import { deDecimal } from "@/ia/hechos/decimal";
 import { numerarGrupos } from "@/ia/hechos/grupos";
 import { construirPaquete } from "@/ia/paquete";
@@ -66,6 +67,13 @@ describe("candado de los armadores · lo prohibido no entra al paquete", () => {
     expect(hayDigitosFueraDeIds(json)).toBe(false);
   });
 
+  it("la fuente de una serie es la de su catálogo: una fuente con una marca no entra (el armador falla)", () => {
+    const entrada = entradaDiarioConPlantados();
+    const serie = entrada.series[0]!;
+    const conMarca = { ...entrada, series: [{ ...serie, cifra: { ...serie.cifra, fuente: `sfc:${MARCAS.cuenta}` } }, ...entrada.series.slice(1)] };
+    expect(() => armarDiario(conMarca)).toThrow(/FUENTE_DESCONOCIDA/);
+  });
+
   it("condición 2 de PI desde el origen: el valor es la cifra fuente canónica y la presentación sale de él", () => {
     const entrada = entradaDiarioConPlantados();
     const paquete = armarDiario(entrada);
@@ -79,7 +87,7 @@ describe("candado de los armadores · control positivo", () => {
   it("el detector de marcas muerde cuando una marca entra por un canal permitido (el nombre o la fuente)", () => {
     const [plantado] = numerarGrupos("REGLAS", [{
       prioridad: 1,
-      hechos: [{ clave: "ESPECIE_NOMBRE", valor: `FICTICIA-${MARCAS.cantidad}`, fuente: `${ACCION_PLANTADA} ${MARCAS.detalle}`, fecha: HOY, calidad: "VERIFICADO", direccion: "NO_APLICA", cercania: "NO_APLICA", frescura: "HOY", obligatorio: false }],
+      hechos: [borrador("ESPECIE_NOMBRE", `FICTICIA-${MARCAS.cantidad}`, `${ACCION_PLANTADA} ${MARCAS.detalle}`, marcasDeHoy(HOY, "REGISTRO"))],
     }]).hechos;
     const paquete = construirPaquete({ tipo: "REGLAS", hoy: HOY, versionesCalculo: {}, avisos: [], hechos: [plantado!] });
     expect(marcasEn(jsonCanonico(paquete))).toEqual([MARCAS.cantidad, MARCAS.detalle]);
@@ -88,13 +96,10 @@ describe("candado de los armadores · control positivo", () => {
 
   it("un armador que copiara el texto libre de la regla a la fuente quedaría en rojo (mutación simulada)", () => {
     const [regla] = reglasLeidas();
-    const fuga = numerarGrupos("REGLAS", [{
-      prioridad: 1,
-      hechos: [
-        { ref: "especie", clave: "ESPECIE_NOMBRE", valor: BETA, fuente: regla!.detalle, fecha: HOY, calidad: "VERIFICADO", direccion: "NO_APLICA", cercania: "NO_APLICA", frescura: "HOY", obligatorio: false },
-        { clave: "REGLA_NIVEL", sujeto: "especie", valor: deDecimal(D("4497.11")), fuente: `cantidad ${regla!.cantidad}`, fecha: HOY, calidad: "VERIFICADO", direccion: "NO_APLICA", cercania: "NO_APLICA", frescura: "HOY", obligatorio: false },
-      ],
-    }]).hechos;
+    const especie = borrador("ESPECIE_NOMBRE", BETA, regla!.detalle, marcasDeHoy(HOY, "REGISTRO"));
+    const ancla = borrador("REGLA_DEL_PLAN", "2027-02-03", "plan-ficticio", marcasDeHoy(HOY, "PLAN"), { sujeto: especie });
+    const nivel = borrador("REGLA_NIVEL", deDecimal(D("4497.11")), `cantidad ${regla!.cantidad}`, marcasDeHoy(HOY, "PLAN"), { sujeto: ancla });
+    const fuga = numerarGrupos("REGLAS", [{ prioridad: 1, hechos: [especie, ancla, nivel] }]).hechos;
     const paquete = construirPaquete({ tipo: "REGLAS", hoy: HOY, versionesCalculo: {}, avisos: [], hechos: fuga });
     expect(marcasEn(jsonCanonico(paquete))).toEqual([MARCAS.cantidad, MARCAS.detalle]);
   });

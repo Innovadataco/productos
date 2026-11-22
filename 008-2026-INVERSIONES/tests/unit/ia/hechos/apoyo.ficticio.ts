@@ -6,6 +6,7 @@
  */
 import { Prisma } from "@prisma/client";
 import type { EntradaArmadoDiario, EntradaArmadoEscenarios, EntradaArmadoReglas } from "@/ia/hechos";
+import { serieDelCatalogo } from "@/datos-oficiales/catalogo";
 import type { CalendarioBvc } from "@/precios/negociacion";
 
 export const D = (v: string): Prisma.Decimal => new Prisma.Decimal(v);
@@ -41,6 +42,13 @@ export const ACCION_PLANTADA = "VENDER";
 
 const inst = (nombre: string): string => `${MARCAS.instrumento}-${nombre.toLowerCase()}`;
 
+/** La fuente pública de una serie del catálogo de datos oficiales (el armador solo acepta esa). */
+export function fuenteDe(codigo: string): string {
+  const serie = serieDelCatalogo(codigo);
+  if (serie === undefined) throw new Error("Serie fuera del catálogo en un apoyo de prueba.");
+  return serie.fuente;
+}
+
 // ───────────── DIARIO ─────────────
 
 /** Las filas con la forma real de FilaTablero: con cantidad, costo e id del instrumento (no deben pasar). */
@@ -73,11 +81,11 @@ export function entradaDiarioFicticia(): EntradaArmadoDiario {
     movimiento: { neto: D("-211.37"), motivo: null, especies: [{ instrumentoId: inst(ALFA), aporte: D("-211.37"), variacionPct: D("-0.8931") }] },
     conciliacion: { fechaCorte: dia("2027-02-26"), resultado: "PARCIAL" },
     series: [
-      { cifra: { serie: "TRM", valor: "4137.19", hasta: dia("2027-03-17"), fuente: "sfc:ficticia-trm", origen: "OFICIAL" }, frescura: { estado: "AL_DIA", cubreHoy: true }, anterior: "4129.53" },
-      { cifra: { serie: "TPM", valor: "9.13", hasta: dia("2027-03-16"), fuente: "banrep:ficticia-tpm", origen: "OFICIAL" }, frescura: { estado: "AL_DIA", cubreHoy: false }, anterior: null },
-      { cifra: { serie: "IPC_INDICE", valor: "4.30", hasta: dia("2027-02-28"), fuente: "dane:ficticia-ipc", origen: "CALCULADA" }, frescura: { estado: "ATRASADA", cubreHoy: false }, anterior: null },
+      { cifra: { serie: "TRM", valor: "4137.19", hasta: dia("2027-03-17"), fuente: fuenteDe("TRM"), origen: "OFICIAL" }, frescura: { estado: "AL_DIA", cubreHoy: true }, anterior: "4129.53" },
+      { cifra: { serie: "TPM", valor: "9.13", hasta: dia("2027-03-16"), fuente: fuenteDe("TPM"), origen: "OFICIAL" }, frescura: { estado: "AL_DIA", cubreHoy: false }, anterior: null },
+      { cifra: { serie: "IPC_INDICE", valor: "4.30", hasta: dia("2027-02-28"), fuente: fuenteDe("IPC_INDICE"), origen: "CALCULADA" }, frescura: { estado: "ATRASADA", cubreHoy: false }, anterior: null },
     ],
-    fondo: { valorUnidad: D("13711.293847"), valorUnidadAnterior: D("13709.117"), fecha: dia("2027-03-15"), atrasado: false, fuente: "sfc:ficticia-fondo", valor: null },
+    fondo: { valorUnidad: D("13711.293847"), valorUnidadAnterior: D("13709.117"), fecha: dia("2027-03-15"), atrasado: false, valor: null },
   };
 }
 
@@ -198,6 +206,6 @@ export function entradaEscenariosFicticia(): EntradaArmadoEscenarios {
 export function entradaDiarioConPlantados(): EntradaArmadoDiario {
   const base = entradaDiarioFicticia();
   const conciliacion = { ...base.conciliacion, encargo: MARCAS.encargo, cuenta: MARCAS.cuenta, correo: MARCAS.correo };
-  const fondo = { ...base.fondo, unidades: Number(MARCAS.unidades), encargo: MARCAS.encargo, cuenta: MARCAS.cuenta };
+  const fondo = { ...base.fondo, unidades: Number(MARCAS.unidades), encargo: MARCAS.encargo, cuenta: MARCAS.cuenta, fuente: `sfc:${MARCAS.cuenta}` };
   return { ...base, conciliacion, fondo } as EntradaArmadoDiario;
 }
