@@ -58,6 +58,8 @@ test.describe("gráficas del tablero", () => {
   test("con el ratón, al pasar se ve el detalle del día", async ({ page }, info) => {
     const { g } = await abrir(page, info);
     const titulo = "TWR acumulada";
+    // Que la entrada termine antes de la captura (si no, el trazo sale a medio dibujar).
+    await g.dibujarTodas();
     await g.figura(titulo).scrollIntoViewIfNeeded();
     await g.mira(titulo).hover({ position: { x: 40, y: 60 } });
     await expect(g.detalleDelDia(titulo)).toBeVisible();
@@ -79,6 +81,15 @@ test.describe("gráficas del tablero", () => {
     await page.keyboard.press("Escape");
     await expect(t.detalle("FICTA")).toHaveCount(0);
     await expect(boton).toBeFocused();
+  });
+
+  test("«Ver los datos» abre la tabla de la ventana: el último día cuadra con «Valor en acciones»", async ({ page }, info) => {
+    const { g } = await abrir(page, info);
+    const figura = g.figura("Valor frente al costo de lo que tiene");
+    await figura.getByText("Ver los datos").click();
+    const tabla = figura.getByRole("table", { name: "Valor frente al costo de lo que tiene" });
+    await expect(tabla).toBeVisible();
+    await expect(tabla.getByRole("row").last()).toContainText("22-nov-2024$ 268.090$ 265.000");
   });
 
   test.describe("con el dedo", () => {

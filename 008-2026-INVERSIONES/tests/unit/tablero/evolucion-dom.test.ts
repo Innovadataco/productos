@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // «Cómo ha ido» en el tablero (frente graficas-tablero): valor frente al costo y TWR acumulada con un solo selector
 // de rango arriba; la TWR del rango viene del servidor; el método y lo que no entra se dicen. Datos inventados.
-import { createElement } from "react";
+import { act, createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { aVista } from "@/app/tablero/serializar";
 import { Tablero } from "@/app/tablero/Tablero";
@@ -57,8 +57,7 @@ describe("Cómo ha ido", () => {
   it("al elegir 1M cambian el periodo y la TWR del rango (la del servidor), no la acumulada", async () => {
     await pintar(evo);
     const r1m = evo.rangos.find((r) => r.clave === "1M")!;
-    boton("1M").click();
-    await pintar(evo);
+    await act(async () => boton("1M").click());
     expect(boton("1M").getAttribute("aria-pressed")).toBe("true");
     expect(texto(seccion().querySelector(".eyebrow"))).toBe("Del 1-mar-2027 al 31-mar-2027");
     // El cambio de rango se anuncia (hallazgo MEDIO de a11y-architect).

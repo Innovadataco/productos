@@ -64,6 +64,22 @@ describe("GraficaTiempo · accesible", () => {
     expect([...m.contenedor.querySelectorAll(".g-leyenda li")].map(texto)).toEqual(["$4588 Valor", "$4517 Costo"]);
   });
 
+  it("las marcas del eje Y van en su propia columna, fuera del dibujo: nunca encima de las líneas (hallazgo ALTO de e2e-runner)", async () => {
+    // Valores inventados entre 7,3713 y 7,3911: pasos de 0,005 de 7,37 a 7,395 (marcas de distinto largo).
+    await m.pintar(createElement(GraficaTiempo, base({
+      series: [
+        { id: "valor", nombre: "Valor", tono: "valor", valores: [7.3713, 7.3829, 7.3761, 7.3887, 7.3911] },
+        { id: "costo", nombre: "Costo", tono: "costo", valores: [7.3727, 7.3727, 7.3727, 7.3803, 7.3803] },
+      ],
+    })));
+    const marcas = m.contenedor.querySelector(".g-ticks-y")!;
+    expect(marcas.closest(".g-plot")).toBeNull();
+    expect(marcas.parentElement).toBe(m.contenedor.querySelector(".g-plot")!.parentElement);
+    expect([...marcas.querySelectorAll(".g-tick-y")].map(texto)).toEqual(["e7.37", "e7.375", "e7.38", "e7.385", "e7.39", "e7.395"]);
+    // Una copia invisible de la marca más larga le da el ancho a la columna.
+    expect(texto(marcas.querySelector(".g-tick-medida"))).toBe("e7.375");
+  });
+
   it("con una sola serie no hay leyenda: el título la nombra", async () => {
     await m.pintar(createElement(GraficaTiempo, base({ series: [base().series[0]!] })));
     expect(m.contenedor.querySelector(".g-leyenda")).toBeNull();
