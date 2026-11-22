@@ -104,3 +104,88 @@ describe("señal 2 · el PDF se generó antes del cierre definitivo del día ped
     expect(texto).toContain("--fecha-corte 2027-08-19 --nueva-fecha-corte 2027-08-18");
   });
 });
+
+// Señal 1: los cierres ya guardados del corte y del día hábil anterior. Las especies se registran ANTES (como si ya
+// tuvieran órdenes) para sembrar sus cierres; el PDF se generó al día siguiente del corte (la señal 2 no aplica).
+describe("señal 1 · los precios de valoración son los cierres del día hábil anterior", () => {
+  const sembrar = async (c: Caso, cierres: Readonly<Record<string, readonly (string | null)[]>>) => {
+    const ids = await Promise.all(c.nemos.map(async (nemo) => (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo, nombre: nemo } })).id));
+    for (const [fecha, precios] of Object.entries(cierres)) {
+      const filas = ids.flatMap((instrumentoId, i) => (precios[i] ? [{ instrumentoId, fecha: dia(fecha), precio: precios[i]!, fuente: "yahoo", estado: "NO_VERIFICADO" as const }] : []));
+      await db.precioCierre.createMany({ data: filas });
+    }
+    return ids;
+  };
+  const conUna = (c: Caso): Caso => ({ ...c, nemos: [c.nemos[0]!], espec: { ...c.espec, rentaVariable: [c.espec.rentaVariable[0]!] } });
+
+  it("jueves 2027-08-26 valorado al miércoles: CORTE_NO_COINCIDE, sin certificación ni filas, sugiere 2027-08-25; con esa fecha carga", async () => {
+    const c = caso("2027-08-27", "10:15:07");
+    await registrarFondo(c);
+    await sembrar(c, { "2027-08-25": ["2371", "63.17"], "2027-08-26": ["2371", "65.83"] });
+    const r = await importarCertificacion(db, archivo(c, "2027-08-26", "2027-08-30"));
+    expect(r.estado).toBe("RECHAZADO");
+    expect(r.errores.map((e) => e.codigo)).toEqual(["CORTE_NO_COINCIDE"]);
+    expect(r.pistaCorte).toEqual({ tipo: "PRECIOS", sugerido: "2027-08-25", especies: 2, distintas: 1 });
+    const cargas = await db.cargaArchivo.findMany({ where: { sha256: sha(c) }, select: { id: true, fechaCorte: true, estado: true, errores: true } });
+    expect(cargas.map(({ id: _id, ...resto }) => resto)).toEqual([{ fechaCorte: dia("2027-08-26"), estado: "RECHAZADO", errores: errores("CORTE_NO_COINCIDE") }]);
+    expect(await db.filaFuente.count({ where: { primeraCargaId: { in: cargas.map((x) => x.id) } } })).toBe(0);
+    expect(await db.certificacion.count({ where: { fechaCorte: dia("2027-08-26") } })).toBe(0);
+
+    const texto = (await cargarYConciliar(db, archivo(c, "2027-08-26", "2027-08-30"))).lineas.join("\n");
+    expect(texto).toContain("cuadran (±1 %) con los cierres del 2027-08-25, el día hábil anterior al corte, en las 2 especies");
+    expect(texto).toContain("--fecha-corte 2027-08-25");
+    for (const dato of [...c.nemos, "2371", "63.17", "65.83", email]) expect(texto, dato).not.toContain(dato);
+
+    const otra = await importarCertificacion(db, archivo(c, "2027-08-25", "2027-08-30"));
+    expect([otra.estado, otra.errores]).toEqual(["CARGADO", []]);
+  });
+
+  it("si a una especie le falta el cierre del día anterior: no se puede saber y carga", async () => {
+    const c = caso("2027-09-10", "10:15:23");
+    await registrarFondo(c);
+    await sembrar(c, { "2027-09-08": ["2371", null], "2027-09-09": ["2389.17", "65.83"] });
+    const r = await importarCertificacion(db, archivo(c, "2027-09-09", "2027-09-13"));
+    expect([r.estado, r.errores]).toEqual(["CARGADO", []]);
+  });
+
+  it("si una especie todavía no existe (no tiene cierres): carga y la crea", async () => {
+    const c = caso("2027-09-24", "10:15:31");
+    await registrarFondo(c);
+    const [id] = await Promise.all([db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: c.nemos[0]!, nombre: c.nemos[0]! } })]);
+    await db.precioCierre.createMany({ data: [{ instrumentoId: id.id, fecha: dia("2027-09-22"), precio: "2371", fuente: "yahoo", estado: "NO_VERIFICADO" }, { instrumentoId: id.id, fecha: dia("2027-09-23"), precio: "2411.9", fuente: "yahoo", estado: "NO_VERIFICADO" }] });
+    const r = await importarCertificacion(db, archivo(c, "2027-09-23", "2027-09-27"));
+    expect([r.estado, r.errores, r.instrumentosCreados]).toEqual(["CARGADO", [], 1]);
+  });
+
+  it("si los precios son los del corte (y no los del día anterior): carga", async () => {
+    const c = caso("2027-10-01", "10:15:43");
+    await registrarFondo(c);
+    await sembrar(c, { "2027-09-29": ["2311.7", "61.03"], "2027-09-30": ["2371", "63.17"] });
+    const r = await importarCertificacion(db, archivo(c, "2027-09-30", "2027-10-04"));
+    expect([r.estado, r.errores]).toEqual(["CARGADO", []]);
+  });
+
+  it("con una sola especie no concluye: carga", async () => {
+    const c = conUna(caso("2027-10-08", "10:15:59"));
+    await registrarFondo(c);
+    await sembrar(c, { "2027-10-06": ["2371"], "2027-10-07": ["2449.3"] });
+    const r = await importarCertificacion(db, { ...archivo(c, "2027-10-07", "2027-10-11"), contenido: generarCertificacionPdf({ ...c.espec, rentaVariable: [c.espec.rentaVariable[0]!] }) });
+    expect([r.estado, r.errores]).toEqual(["CARGADO", []]);
+  });
+
+  it("reimportar la misma certificación ya cargada (repetida) no se bloquea aunque después lleguen los cierres", async () => {
+    const c = caso("2027-10-15", "10:16:11");
+    await registrarFondo(c);
+    const ids = await Promise.all(c.nemos.map(async (nemo) => (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo, nombre: nemo } })).id));
+    const primera = await importarCertificacion(db, archivo(c, "2027-10-14", "2027-10-18"));
+    expect([primera.estado, primera.errores]).toEqual(["CARGADO", []]);
+    await db.precioCierre.createMany({
+      data: [["2027-10-13", "2371", "63.17"], ["2027-10-14", "2371", "65.83"]].flatMap(([fecha, a, b]) => [
+        { instrumentoId: ids[0]!, fecha: dia(fecha!), precio: a!, fuente: "yahoo", estado: "NO_VERIFICADO" as const },
+        { instrumentoId: ids[1]!, fecha: dia(fecha!), precio: b!, fuente: "yahoo", estado: "NO_VERIFICADO" as const },
+      ]),
+    });
+    const otra = await importarCertificacion(db, archivo(c, "2027-10-14", "2027-10-18"));
+    expect([otra.estado, otra.repetida, otra.errores]).toEqual(["CARGADO", true, []]);
+  });
+});

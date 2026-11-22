@@ -99,3 +99,25 @@ describe("cargarYConciliar · la fecha pedida es posterior al día de creación 
     expect([texto.includes("📅"), texto.includes("--fecha-corte")]).toEqual([false, false]);
   });
 });
+
+describe("cargarYConciliar · los precios de valoración son los cierres del día hábil anterior (señal 1)", () => {
+  const pista = { tipo: "PRECIOS", sugerido: "2027-08-25", especies: 9, distintas: 7 } as const;
+
+  it("1, dice los conteos, el día que sugiere y el comando para repetir (local)", async () => {
+    const { p, llamadas } = pasos(rechazo("CORTE_NO_COINCIDE", pista));
+    const r = await cargarYConciliar(db, entrada("2027-08-26"), p);
+    const texto = r.lineas.join("\n");
+    expect(r.codigo).toBe(1);
+    expect(texto).toContain("página 0 · fila 0 · CORTE_NO_COINCIDE");
+    expect(texto).toContain("Los precios de valoración de la certificación cuadran (±1 %) con los cierres del 2027-08-25, el día hábil anterior al corte, en las 9 especies, y en 7 no cuadran con los del 2027-08-26");
+    expect(texto).toContain("`npx tsx scripts/importar-certificacion.ts --email <correo-del-dueño> --fecha-corte 2027-08-25 [--fondo <codigoFic>] <certificacion.pdf>`");
+    expect(llamadas).toEqual({ conciliar: 0, calendario: 0 });
+  });
+
+  it("en producción: por cargar-prod.sh importar-certificacion", async () => {
+    const { p } = pasos(rechazo("CORTE_NO_COINCIDE", pista));
+    const texto = (await cargarYConciliar(db, entrada("2027-08-26"), p, { produccion: true })).lineas.join("\n");
+    expect(texto).toContain("`cargar-prod.sh importar-certificacion` con el mismo PDF y, en la cabecera, `--fecha-corte 2027-08-25`");
+    expect(texto).not.toContain("npx tsx");
+  });
+});
