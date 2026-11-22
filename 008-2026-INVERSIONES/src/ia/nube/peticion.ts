@@ -11,6 +11,8 @@ import "server-only";
  * - salida estructurada (`output_config.format`) con el esquema del pedido pasado a la forma estricta de la API por el
  *   transformador del SDK (`additionalProperties: false` en todo objeto; lo que la API no impone, como `maxItems`, va a
  *   la descripción y lo valida el validador al leer);
+ * - capacidad y velocidad estándar explícitas (`service_tier: "standard_only"`, `speed: "standard"`): el tope modela
+ *   el precio estándar; la región de inferencia queda la del espacio de trabajo (la revisa Jelk en la consola);
  * - sin `temperature`, `top_p` ni `top_k` (400 en Opus 5.5 y en la versión de API que manda el SDK).
  *
  * Nunca lanza: un pedido que no debe salir devuelve su código.
@@ -125,6 +127,8 @@ export function armarCuerpoNube(pedido: PedidoGeneracion): CuerpoArmado {
     messages: [{ role: "user", content: contenido }],
     thinking: { type: "adaptive" },
     output_config: { effort: ESFUERZO_NUBE, format: { type: "json_schema", schema } },
+    service_tier: "standard_only",
+    speed: "standard",
   });
   return Object.freeze({ ok: true, cuerpo, json: JSON.stringify(cuerpo), limiteMs: contrato.limiteMs });
 }

@@ -296,7 +296,7 @@ describe("la reserva: lo que pudo cobrarse sin saberse cuenta en el tope del mis
     expect(await corto.generador.generar(pedidoFicticio().pedido, control.signal)).toMatchObject({ ok: true });
     expect(await generar(corto)).toEqual(fallo("TOPE_MENSUAL", "TOPE_DEL_MES"));
     const otroControl = new AbortController();
-    const justo = montar(configLista(GASTADO + costoReal + MAXIMO), (l, indice) => {
+    const justo = montar(configLista(GASTADO + costoReal + MAXIMO), (_l, indice) => {
       if (indice === 0) otroControl.abort();
       return Promise.resolve(mensajeFicticio());
     });
