@@ -1,9 +1,6 @@
 /**
- * Lectura estricta de las opciones de los CLI de 008. Es lo común que estaba copiado en:
- * - los argumentos de la vía B de los precios, del fondo y de las series (src/precios/argumentos-carga.ts,
- *   src/fondo/argumentos-carga.ts y src/datos-oficiales/series/argumentos.ts);
- * - los de los exportadores de BanRep y de la TRM (src/datos-oficiales/fuentes/banrep-argumentos.ts y exportar-trm.ts).
- * Es pura: no toca la base, el disco ni la red. Prueba propia: tests/unit/cli/opciones.test.ts.
+ * Lectura estricta de las opciones de los CLI de 008 (la vía B y los exportadores). Es pura: no toca la base, el disco
+ * ni la red. Prueba propia: tests/unit/cli/opciones.test.ts.
  *
  * `leerOpciones` aplica estas reglas, en este orden:
  * 1. Trampa de npm: sin «--», `npm run <comando> --opcion …` deja la opción en npm_config_<opcion> y el script no la
@@ -122,13 +119,13 @@ export function exigirRango(desde: Date, hasta: Date, tope: Date, maxDias: numbe
 /** Las opciones que llegaron más de una vez, una vez cada una y en el orden de su segunda aparición. */
 function repetidas(tokens: readonly { readonly kind: string; readonly name?: string }[]): string[] {
   const vistas = new Set<string>();
-  const dobles: string[] = [];
+  const dobles = new Set<string>();
   for (const t of tokens) {
     if (t.kind !== "option" || t.name === undefined) continue;
-    if (vistas.has(t.name) && !dobles.includes(t.name)) dobles.push(t.name);
+    if (vistas.has(t.name)) dobles.add(t.name);
     vistas.add(t.name);
   }
-  return dobles;
+  return [...dobles];
 }
 
 function intentar<O extends ParseArgsOptionsConfig>(argv: readonly string[], opciones: O) {

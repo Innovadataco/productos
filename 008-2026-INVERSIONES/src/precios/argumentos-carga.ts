@@ -4,8 +4,8 @@
  * lee el lector común de src/cli/opciones.ts, con estas reglas:
  * - Cada opción lleva su valor en el argumento siguiente, a lo sumo una vez; un valor nunca empieza por «-» (una
  *   opción nunca es una ruta ni una fecha). `--opcion=valor`, `--` y los argumentos sueltos no se admiten.
- * - Trampa de npm: `npm run precios:exportar --hasta …` sin «--» deja la
- *   opción en npm_config_hasta y el script no la recibe; si la variable está y la opción no llegó, sale con 2.
+ * - Trampa de npm: `npm run precios:exportar --hasta …` sin «--» deja la opción en npm_config_hasta y el script no la
+ *   recibe; si la variable está y la opción no llegó, sale con 2.
  * - Fechas `AAAA-MM-DD` exactas (sin espacios), de negocio en Colombia.
  * Los mensajes nunca repiten rutas ni fechas: a lo sumo el nombre de una opción.
  */
