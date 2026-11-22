@@ -7,6 +7,7 @@ import { resumirDecisiones } from "@/analisis/decisiones";
 import { redondear } from "@/analisis/numeros";
 import { toleranciaSuma } from "@/analisis/riesgo";
 import { VERSION_ANALISIS, type Analisis, type AnalisisEspecie, type EntradasAnalisis } from "@/analisis/tipos";
+import { clavesProhibidasEn } from "@/ia/prohibidas";
 import { armarHistoria } from "@/proyecciones/historia";
 import { Prisma } from "@prisma/client";
 import {
@@ -48,7 +49,26 @@ describe("análisis · identidad y orden", () => {
     const fila = e.tablero.filas.find((f) => f.instrumentoId === "FICTICIA-A")!;
     expect(de(a, "FICTICIA-A").valor!.eq(fila.valor!)).toBe(true);
     expect(de(a, "FICTICIA-A").peso).toBe(redondear(fila.valor!.div(e.tablero.valorAcciones).toNumber()));
-    expect(de(a, "FICTICIA-A").nemotecnico).toBe("FICTA");
+  });
+
+  it("la salida no trae nombres: ni el nemotécnico del tablero, ni el nombre de la historia, ni el de los avisos o la ventana", () => {
+    const conNombre = (x: EspecieFicticia): EspecieFicticia => ({ ...x, extra: { nombre: `ETIQUETA-${x.id.slice(-1)}` } });
+    const r = analizar(portafolio([conNombre(especie("FICTICIA-A", 37, 1237.4, 1)), conNombre(especie("FICTICIA-C", 23, 905.61, 1.3, DIAS.slice(200)))], { historia: { noHabiles: [] } }));
+    const claves: string[] = [];
+    const recorrer = (v: unknown): void => {
+      if (v instanceof Prisma.Decimal || v === null || typeof v !== "object") return;
+      if (Array.isArray(v)) return v.forEach(recorrer);
+      Object.entries(v).forEach(([k, x]) => (claves.push(k), recorrer(x)));
+    };
+    recorrer(r);
+    expect(r.avisos.length).toBeGreaterThan(0);
+    expect(claves.filter((k) => ["nemotecnico", "nombre", "limitadaPor"].includes(k))).toEqual([]);
+    expect(JSON.stringify(r)).not.toMatch(/ETIQUETA|FICTA\b/);
+  });
+
+  it("el análisis crudo no pasa la guarda de la IA (src/ia/prohibidas.ts): la vista ciega se arma aparte, con ids opacos", () => {
+    const halladas = clavesProhibidasEn(JSON.parse(JSON.stringify(a)));
+    expect(halladas).toEqual(expect.arrayContaining(["especies[0].instrumentoId"]));
   });
 
   it("en un empate de valor, por id", () => {
@@ -102,7 +122,8 @@ describe("análisis · riesgo en la ventana común", () => {
     const e = portafolio([especie("FICTICIA-A", 37, 1237.4, 1), especie("FICTICIA-B", 11, 4613.27, 2)]);
     const r = calculado(analizar(e));
     expect(r.factorAnualizacion).toBe(redondear(12 * armarHistoria(e.historia).historia.ruedasPorMes));
-    expect(r.ventana).toEqual(armarHistoria(e.historia).ventana);
+    const { desde, hasta, ruedas } = armarHistoria(e.historia).ventana!;
+    expect(r.ventana).toEqual({ desde, hasta, ruedas });
   });
 
   it("correlación −1 (B = −A)", () => {

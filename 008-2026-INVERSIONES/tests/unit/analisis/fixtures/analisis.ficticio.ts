@@ -13,7 +13,7 @@ export const vacio = (h: 30 | 90): ResumenHorizonte => ({
 });
 
 export const especie = (id: string, cambios: Partial<AnalisisEspecie> = {}): AnalisisEspecie => ({
-  instrumentoId: id, nemotecnico: id, valor: D("4613.27"), peso: 0.2, cierre: AL_DIA, historia: { estado: "SIN_CIERRES" }, dividendo12m: null,
+  instrumentoId: id, valor: D("4613.27"), peso: 0.2, cierre: AL_DIA, historia: { estado: "SIN_CIERRES" }, dividendo12m: null,
   riesgo: { estado: "SIN_VALOR" }, efectoCaida: null, proximaEx: null, ...cambios,
 });
 
@@ -33,7 +33,7 @@ export const concentracion = (primera: number, tres: number, especies: number) =
 });
 
 export const riesgo = (ids: readonly string[], valores: (number | null)[][]): Analisis["riesgo"] => ({
-  estado: "CALCULADO", ventana: { desde: "2020-06-15", hasta: "2021-06-14", ruedas: 251, limitadaPor: null }, factorAnualizacion: 250.12, volatilidadAnual: 0.21,
+  estado: "CALCULADO", ventana: { desde: "2020-06-15", hasta: "2021-06-14", ruedas: 251 }, factorAnualizacion: 250.12, volatilidadAnual: 0.21,
   fraccionCubierta: 1, correlacion: { ids, valores },
 });
 
