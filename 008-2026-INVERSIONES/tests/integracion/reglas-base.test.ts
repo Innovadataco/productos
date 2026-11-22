@@ -73,6 +73,7 @@ describe("reglas escritas a mano en la migración", () => {
       "certificacion_posicion_solo_insercion",
       "certificacion_solo_insercion",
       "conciliacion_solo_insercion",
+      "config_ia_solo_insercion",
       "control_conciliacion_solo_insercion",
       "decision_solo_insercion",
       "dividendo_solo_insercion",

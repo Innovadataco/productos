@@ -326,3 +326,34 @@ describe("guardián del esquema: resumen_ia", () => {
     expect(await guardianTras(['ALTER TABLE "resumen_ia" DISABLE TRIGGER "resumen_ia_solo_insercion"'])).toContain("resumen_ia");
   });
 });
+
+// Fase E (E8): config_ia. Si una migración o un DROP le quita la solo inserción, la hora que pone la base, la unicidad
+// de la versión o una CHECK, o si la función del instante cambia, el despliegue se detiene.
+describe("guardián del esquema: config_ia", () => {
+  it.each([
+    ["el disparador de solo inserción", ['DROP TRIGGER "config_ia_solo_insercion" ON "config_ia"'], "config_ia_solo_insercion"],
+    ["el disparador del instante", ['DROP TRIGGER "config_ia_instante" ON "config_ia"'], "config_ia_instante"],
+    ["la unicidad de la versión", ['DROP INDEX "config_ia_version_key"'], "config_ia_version_key"],
+    ["la CHECK de lo que exige cada modo", ['ALTER TABLE "config_ia" DROP CONSTRAINT "config_ia_usa_chk"'], "config_ia_usa_chk"],
+    ["la CHECK del tope", ['ALTER TABLE "config_ia" DROP CONSTRAINT "config_ia_tope_chk"'], "config_ia_tope_chk"],
+    ["la CHECK del modelo de la nube", ['ALTER TABLE "config_ia" DROP CONSTRAINT "config_ia_modelo_nube_chk"'], "config_ia_modelo_nube_chk"],
+    ["la llave del autor", ['ALTER TABLE "config_ia" DROP CONSTRAINT "config_ia_autorId_fkey"'], "config_ia_autorId_fkey"],
+  ])("falla si se borra %s", async (_n, romper, nombre) => {
+    expect(await guardianTras(romper)).toContain(nombre);
+  });
+
+  it("falla si la CHECK del tope se afloja (otro techo)", async () => {
+    const otra = 'ALTER TABLE "config_ia" ADD CONSTRAINT "config_ia_tope_chk" CHECK ("topeMensualUsd" IS NULL OR "topeMensualUsd" >= 0)';
+    expect(await guardianTras(['ALTER TABLE "config_ia" DROP CONSTRAINT "config_ia_tope_chk"', otra])).toContain("config_ia_tope_chk");
+  });
+
+  it("falla si la función del instante cambia de código o pasa a SECURITY DEFINER", async () => {
+    const reemplazo = `CREATE OR REPLACE FUNCTION "inv_config_ia_instante"() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END; $$`;
+    expect(await guardianTras([reemplazo])).toContain("inv_config_ia_instante");
+    expect(await guardianTras(['ALTER FUNCTION "inv_config_ia_instante"() SECURITY DEFINER'])).toContain("inv_config_ia_instante");
+  });
+
+  it("falla si el disparador de solo inserción queda deshabilitado", async () => {
+    expect(await guardianTras(['ALTER TABLE "config_ia" DISABLE TRIGGER "config_ia_solo_insercion"'])).toContain("config_ia");
+  });
+});

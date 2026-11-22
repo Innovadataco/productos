@@ -21,6 +21,11 @@ import { MAX_LARGO_DETALLE, MAX_SALIDA_CRUDA, MOTIVOS_FALLO_GENERADOR, PATRON_DE
 import { clonCongelado, jsonCanonico } from "./hash";
 import { fugasDelPedido, type CodigoFugaVista } from "./vista-ciega";
 
+/**
+ * Lista cerrada. E8 NO agrega «nube-luego-local»: la nube va siempre ÚLTIMA (decisión de la revisión de la puerta nube,
+ * tests/unit/ia/nube/puertas-nube.test.ts): una respuesta cobrada pero inservible (un rechazo del modelo, `max_tokens`)
+ * vuelve como EXITO con la salida vacía para que el registro cuente sus tokens, y le quitaría el turno a la local.
+ */
 export const MODOS_PUERTAS = Object.freeze(["apagado", "local", "nube", "local-luego-nube"] as const);
 export type ModoPuertas = (typeof MODOS_PUERTAS)[number];
 

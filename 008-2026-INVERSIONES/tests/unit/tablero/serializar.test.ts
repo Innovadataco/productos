@@ -67,3 +67,24 @@ describe("aVista · fechas de los cierres", () => {
     expect(v.filas.map((f) => [f.nemo, f.cierre?.atrasado])).toEqual([["FICT1", false], ["FICT3", true]]);
   });
 });
+
+describe("aVista · procedencia de cada cierre (frente fecha-hora-datos)", () => {
+  const conOrigen = (traidoEn: string) => especie({
+    nemotecnico: "FICT7", cantidad: 3n, costoVivo: D(911),
+    cierre: { precio: D("317.41"), fecha: dia("2027-03-31"), verificado: false, traidoEn: new Date(traidoEn), fuente: "yahoo" },
+  });
+
+  it("cuándo lo trajo 008 cruza en hora de Colombia («AAAA-MM-DD HH:MM») y la fuente, con su código", () => {
+    const f = aVista(resumenDe([conOrigen("2027-03-31T23:04:41Z")])).filas[0]!;
+    expect([f.cierre?.traidoEn, f.cierre?.fuente]).toEqual(["2027-03-31 18:04", "yahoo"]);
+  });
+
+  it("un cierre traído entre la medianoche UTC y las 5:00 es del día anterior en Colombia", () => {
+    expect(aVista(resumenDe([conOrigen("2027-04-01T04:12:00Z")])).filas[0]!.cierre?.traidoEn).toBe("2027-03-31 23:12");
+  });
+
+  it("sin la hora ni la fuente en la lectura, cruzan como null (no se inventan)", () => {
+    const f = aVista(resumenDe([viva])).filas[0]!;
+    expect([f.cierre?.traidoEn, f.cierre?.fuente]).toEqual([null, null]);
+  });
+});

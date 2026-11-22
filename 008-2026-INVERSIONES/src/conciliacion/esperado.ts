@@ -64,9 +64,10 @@ interface CierreVigente {
 /**
  * Orden total entre los cierres vigentes de un mismo día: Yahoo primero; luego el traído más recientemente; con el
  * mismo `traidoEn`, la fuente en orden alfabético (la base deja un solo vigente por fuente). Así el elegido nunca
- * depende del orden en que la base devuelve las filas.
+ * depende del orden en que la base devuelve las filas. Se exporta para que la pantalla diga la procedencia del MISMO
+ * cierre (src/app/conciliacion/procedencias.ts, frente fecha-hora-datos).
  */
-const primeroElegido = (a: CierreVigente, b: CierreVigente): number =>
+export const primeroElegido = (a: CierreVigente, b: CierreVigente): number =>
   Number(b.fuente === YAHOO) - Number(a.fuente === YAHOO) || b.traidoEn.getTime() - a.traidoEn.getTime() || (a.fuente < b.fuente ? -1 : a.fuente > b.fuente ? 1 : 0);
 
 /** Cierre vigente de ese día exacto, por especie: Yahoo si hay; si no, el de otra fuente más reciente. */

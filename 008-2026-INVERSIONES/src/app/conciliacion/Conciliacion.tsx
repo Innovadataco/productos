@@ -4,6 +4,8 @@
  * «A&V» es lo que dice la certificación; «Sistema», lo que calcula 008 con los archivos cargados, al corte.
  */
 import type { ReactNode } from "react";
+import { FechaDato, FechaDatoCompuesta } from "../_comun/fecha-dato/FechaDato";
+import type { Procedencia, ProcedenciaCompuesta } from "../_comun/fecha-dato/tipos";
 import { cop, fecha, n, numero } from "../tablero/formato";
 import { MarcaSoloLectura } from "../tablero/SoloLectura";
 import type { DatosConciliacion } from "./datos";
@@ -51,7 +53,26 @@ function Porque({ frases, precios }: { frases: readonly string[]; precios?: Fila
   );
 }
 
-function FilaEspecie({ f }: { f: FilaEspecieVista }) {
+/**
+ * El «Valor sistema» con el dato con que se calculó (frente fecha-hora-datos): el cierre o el valor de unidad del corte,
+ * cuándo lo trajo 008 y la fuente; el total, por el cierre más viejo que lo compone. Sin cifra, sin procedencia.
+ */
+function ValorSistema({ valor, procedencia, compuesta, etiqueta }: {
+  valor: string | null; procedencia?: Procedencia; compuesta?: ProcedenciaCompuesta | null; etiqueta: string;
+}) {
+  return (
+    <td className="num">
+      {monto(valor)}
+      {valor !== null && procedencia ? <FechaDato procedencia={procedencia} etiqueta={etiqueta} /> : null}
+      {valor !== null && compuesta ? <FechaDatoCompuesta compuesta={compuesta} /> : null}
+    </td>
+  );
+}
+
+/** La procedencia de un id, solo si es propia del registro (nunca algo heredado del prototipo). */
+const deId = (registro: Readonly<Record<string, Procedencia>>, id: string): Procedencia | undefined => (Object.hasOwn(registro, id) ? registro[id] : undefined);
+
+function FilaEspecie({ f, procedencia }: { f: FilaEspecieVista; procedencia?: Procedencia }) {
   return (
     <tr>
       <th scope="row">{f.nemo}</th>
@@ -59,7 +80,7 @@ function FilaEspecie({ f }: { f: FilaEspecieVista }) {
       <td className="num">{cantidad(f.cantidadSistema)}</td>
       <td className="num">{cantidadConSigno(f.diferenciaCantidad)}</td>
       <td className="num">{monto(f.valorAv)}</td>
-      <td className="num">{monto(f.valorSistema)}</td>
+      <ValorSistema valor={f.valorSistema} procedencia={procedencia} etiqueta="Cierre" />
       <td className="num">{porcentaje(f.diferenciaPct)}</td>
       <td><Estado estado={f.estado} /></td>
       <Porque frases={f.porque} precios={f.precios} />
@@ -67,14 +88,21 @@ function FilaEspecie({ f }: { f: FilaEspecieVista }) {
   );
 }
 
-function FilaMonto({ f, columnas }: { f: FilaMontoVista; columnas: "acciones" | "montos" }) {
+interface PropsFilaMonto {
+  f: FilaMontoVista;
+  columnas: "acciones" | "montos";
+  procedencia?: Procedencia;
+  compuesta?: ProcedenciaCompuesta | null;
+}
+
+function FilaMonto({ f, columnas, procedencia, compuesta }: PropsFilaMonto) {
   const vacias = columnas === "acciones" ? <><td /><td /><td /></> : null;
   return (
     <tr>
       <th scope="row">{f.etiqueta}</th>
       {vacias}
       <td className="num">{monto(f.av)}</td>
-      <td className="num">{monto(f.sistema)}</td>
+      <ValorSistema valor={f.sistema} procedencia={procedencia} compuesta={compuesta} etiqueta="Valor de unidad" />
       {columnas === "montos" ? <td className="num">{montoConSigno(f.diferencia)}</td> : null}
       <td className="num">{porcentaje(f.diferenciaPct)}</td>
       <td><Estado estado={f.estado} /></td>
@@ -95,8 +123,8 @@ function TablaAcciones({ c }: { c: ConciliacionVista }) {
               <th scope="col">Valor A&amp;V</th><th scope="col">Valor sistema</th><th scope="col">Diferencia %</th><th scope="col">Resultado</th><th scope="col">Por qué</th>
             </tr>
           </thead>
-          <tbody>{c.especies.map((f) => <FilaEspecie key={f.id} f={f} />)}</tbody>
-          {c.total ? <tfoot><FilaMonto f={c.total} columnas="acciones" /></tfoot> : null}
+          <tbody>{c.especies.map((f) => <FilaEspecie key={f.id} f={f} procedencia={deId(c.procedencias.especies, f.id)} />)}</tbody>
+          {c.total ? <tfoot><FilaMonto f={c.total} columnas="acciones" compuesta={c.procedencias.total} /></tfoot> : null}
         </table>
       </div>
     </section>
@@ -117,7 +145,7 @@ function TablaMontos({ c }: { c: ConciliacionVista }) {
               <th scope="col">Diferencia %</th><th scope="col">Resultado</th><th scope="col">Por qué</th>
             </tr>
           </thead>
-          <tbody>{filas.map((f, i) => <FilaMonto key={`${f.id}-${i}`} f={f} columnas="montos" />)}</tbody>
+          <tbody>{filas.map((f, i) => <FilaMonto key={`${f.id}-${i}`} f={f} columnas="montos" procedencia={deId(c.procedencias.fondos, f.id)} />)}</tbody>
         </table>
       </div>
     </section>

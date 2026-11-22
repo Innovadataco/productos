@@ -10,6 +10,7 @@ import "server-only";
  * objeto. Solo el transporte la revela, para la cabecera del pedido (lo cuida el candado de la frontera).
  */
 import { inspect } from "node:util";
+import { revisarAjustesNube, type EsfuerzoNube, type ModeloNube } from "./peticion";
 
 /** La llave de la API de Claude (secreto: va en el archivo de secretos de producción, nunca en el repo). */
 export const VARIABLE_LLAVE_NUBE = "INV_IA_NUBE_LLAVE";
@@ -31,7 +32,7 @@ const DECIMALES_MICRO_USD = 6;
 export const TECHO_TOPE_MICRO_USD = 50n * MICRO_USD_POR_USD;
 
 export const CODIGOS_APAGADO_NUBE = Object.freeze([
-  "SIN_LLAVE", "LLAVE_INVALIDA", "SIN_TOPE", "TOPE_INVALIDO", "TOPE_FUERA_DE_RANGO", "CLIENTE_NO_CONSTRUIDO",
+  "SIN_LLAVE", "LLAVE_INVALIDA", "SIN_TOPE", "TOPE_INVALIDO", "TOPE_FUERA_DE_RANGO", "CLIENTE_NO_CONSTRUIDO", "AJUSTES_INVALIDOS",
 ] as const);
 export type CodigoApagadoNube = (typeof CODIGOS_APAGADO_NUBE)[number];
 
@@ -76,8 +77,12 @@ export class LlaveNube {
   }
 }
 
+/**
+ * Lista: la llave y el tope; E8 agrega, opcionales, el modelo y el esfuerzo de la configuración de la IA (sin ellos,
+ * opus y esfuerzo bajo, como antes).
+ */
 export type ConfigNube =
-  | { readonly lista: true; readonly llave: LlaveNube; readonly topeMicroUsd: bigint }
+  | { readonly lista: true; readonly llave: LlaveNube; readonly topeMicroUsd: bigint; readonly modelo?: ModeloNube; readonly esfuerzo?: EsfuerzoNube }
   | { readonly lista: false; readonly detalle: CodigoApagadoNube };
 
 const apagada = (detalle: CodigoApagadoNube): ConfigNube => Object.freeze({ lista: false, detalle });
@@ -109,4 +114,29 @@ export function leerConfigNube(entorno: Readonly<Record<string, string | undefin
   if (topeMicroUsd === null) return apagada("TOPE_INVALIDO");
   const codigo = codigoDelTope(topeMicroUsd);
   return codigo === null ? Object.freeze({ lista: true, llave, topeMicroUsd }) : apagada(codigo);
+}
+
+/** Lo que pone la configuración vigente de la IA (`config_ia`, E8): el tope (null si no hay) y los ajustes. */
+export interface AjustesConfigNube {
+  readonly topeMicroUsd: bigint | null;
+  readonly modelo: ModeloNube;
+  readonly esfuerzo: EsfuerzoNube;
+}
+
+/**
+ * La configuración de la nube con la llave del entorno (SOLO `INV_IA_NUBE_LLAVE`) y el tope, el modelo y el esfuerzo
+ * de la configuración de la IA (E8): `INV_IA_NUBE_TOPE_USD` no cuenta aquí. Pura: no lanza. Sin llave o sin tope, apagada.
+ */
+export function configNubeDesde(entorno: Readonly<Record<string, string | undefined>>, ajustes: AjustesConfigNube): ConfigNube {
+  const textoLlave = entorno[VARIABLE_LLAVE_NUBE];
+  if (textoLlave === undefined || textoLlave === "") return apagada("SIN_LLAVE");
+  const llave = LlaveNube.desdeTexto(textoLlave);
+  if (llave === null) return apagada("LLAVE_INVALIDA");
+  const { topeMicroUsd } = ajustes;
+  if (topeMicroUsd === null) return apagada("SIN_TOPE");
+  const codigo = codigoDelTope(topeMicroUsd);
+  if (codigo !== null) return apagada(codigo);
+  const elegidos = revisarAjustesNube({ modelo: ajustes.modelo, esfuerzo: ajustes.esfuerzo });
+  if (elegidos === null) return apagada("AJUSTES_INVALIDOS");
+  return Object.freeze({ lista: true, llave, topeMicroUsd, modelo: elegidos.modelo, esfuerzo: elegidos.esfuerzo });
 }

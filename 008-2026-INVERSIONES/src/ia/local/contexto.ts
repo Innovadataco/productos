@@ -18,6 +18,8 @@ export interface ConfigLocal {
   readonly destino: string;
   /** Un nombre de la lista cerrada de `modelos.ts`. */
   readonly modelo: string;
+  /** E8, opcional: la temperatura de la configuración, en centésimas (entero de 0 a 100). Sin ella, 0. */
+  readonly temperaturaCentesimas?: number;
 }
 
 export interface DependenciasLocal {
@@ -25,6 +27,11 @@ export interface DependenciasLocal {
   readonly fetch: BuscarLocal;
   /** Reloj monótono en milisegundos, para la latencia. Por omisión, `performance.now`. */
   readonly ahora?: () => number;
+  /**
+   * E8, opcional: un turno COMPARTIDO entre instancias (una por modelo de cada tarea), para que al Mac vaya un pedido a la
+   * vez. Sin él, cada instancia tiene el suyo.
+   */
+  readonly semaforo?: Semaforo;
 }
 
 export interface ContextoLocal {
@@ -36,23 +43,33 @@ export interface ContextoLocal {
   readonly buscar: BuscarLocal;
   readonly ahora: () => number;
   readonly semaforo: Semaforo;
+  /** Centésimas, de 0 a 100. */
+  readonly temperaturaCentesimas: number;
 }
 
-const CAMPOS_CONFIG: readonly string[] = Object.freeze(["destino", "modelo"]);
-const CAMPOS_DEPENDENCIAS: readonly string[] = Object.freeze(["fetch", "ahora"]);
+const CAMPOS_CONFIG: readonly string[] = Object.freeze(["destino", "modelo", "temperaturaCentesimas"]);
+const CAMPOS_DEPENDENCIAS: readonly string[] = Object.freeze(["fetch", "ahora", "semaforo"]);
+const MAX_CENTESIMAS = 100;
+
+const temperaturaValida = (valor: unknown): valor is number | undefined =>
+  valor === undefined || (typeof valor === "number" && Number.isInteger(valor) && valor >= 0 && valor <= MAX_CENTESIMAS);
+const semaforoValido = (valor: unknown): valor is Semaforo | undefined =>
+  valor === undefined || (typeof valor === "object" && valor !== null && typeof (valor as { readonly tomar?: unknown }).tomar === "function");
 const relojDelSistema = (): number => performance.now();
 
 export function crearContexto(config: ConfigLocal, dependencias: DependenciasLocal): ContextoLocal {
   const crudo: unknown = config;
   if (!esObjetoPlano(crudo) || !soloCampos(crudo, CAMPOS_CONFIG)) throw new ErrorLocal("CONFIGURACION_INVALIDA");
   const destino = leerDestinoLocal(crudo.destino as string | undefined);
+  const { temperaturaCentesimas } = crudo;
+  if (!temperaturaValida(temperaturaCentesimas)) throw new ErrorLocal("CONFIGURACION_INVALIDA");
   const aprobado = modeloAprobado(crudo.modelo);
   // Un digest mal formado en la lista es un defecto de quien la editó: no se acepta el modelo.
   if (aprobado === null || (aprobado.digest !== null && !PATRON_DIGEST.test(aprobado.digest))) throw new ErrorLocal("MODELO_NO_APROBADO");
   const deps: unknown = dependencias;
   if (!esObjetoPlano(deps) || !soloCampos(deps, CAMPOS_DEPENDENCIAS)) throw new ErrorLocal("CONFIGURACION_INVALIDA");
-  const { fetch: buscar, ahora } = deps;
-  if (typeof buscar !== "function" || (ahora !== undefined && typeof ahora !== "function")) throw new ErrorLocal("CONFIGURACION_INVALIDA");
+  const { fetch: buscar, ahora, semaforo } = deps;
+  if (typeof buscar !== "function" || (ahora !== undefined && typeof ahora !== "function") || !semaforoValido(semaforo)) throw new ErrorLocal("CONFIGURACION_INVALIDA");
   return Object.freeze({
     urlTags: urlLocal(destino, "/api/tags"),
     urlGenerar: urlLocal(destino, "/api/generate"),
@@ -60,7 +77,8 @@ export function crearContexto(config: ConfigLocal, dependencias: DependenciasLoc
     digest: aprobado.digest,
     buscar: buscar as BuscarLocal,
     ahora: (ahora as (() => number) | undefined) ?? relojDelSistema,
-    semaforo: crearSemaforo(),
+    semaforo: semaforo ?? crearSemaforo(),
+    temperaturaCentesimas: temperaturaCentesimas ?? 0,
   });
 }
 

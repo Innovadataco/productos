@@ -55,16 +55,36 @@ export interface Generacion {
   readonly finalizacion: Finalizacion;
 }
 
-export function cuerpoGenerar(modelo: string, pedido: PedidoGeneracion): string {
-  return jsonCanonico({
+/** Marcador del valor de `options` mientras se arma el JSON canónico (que solo admite enteros). */
+const MARCA_OPCIONES = "__OPCIONES_DE_LA_GENERACION__";
+const CENTESIMAS = 100;
+
+/** La temperatura en centésimas (entero de 0 a 100) como número JSON: 0, 0.05, 0.37, 1. */
+function temperaturaJson(centesimas: number): string {
+  const enteros = Math.trunc(centesimas / CENTESIMAS);
+  const resto = centesimas % CENTESIMAS;
+  if (resto === 0) return String(enteros);
+  return `${enteros}.${String(resto).padStart(2, "0").replace(/0$/, "")}`;
+}
+
+/**
+ * El cuerpo de /api/generate. E8: la temperatura de la configuración (en centésimas, de 0 a 100; sin ella, 0, como
+ * antes); la semilla queda fija. El JSON canónico no admite decimales: `options` se arma aparte, solo con enteros, y se
+ * pone en el lugar de su marcador (que solo puede aparecer como el valor de `options`: dentro de cualquier texto, las
+ * comillas van escapadas). Con 0, el cuerpo es exactamente el de siempre.
+ */
+export function cuerpoGenerar(modelo: string, pedido: PedidoGeneracion, temperaturaCentesimas = 0): string {
+  const base = jsonCanonico({
     model: modelo,
     system: pedido.prompt.texto,
     prompt: jsonCanonico(pedido.vista),
     format: pedido.esquemaSalida,
     stream: false,
-    options: OPCIONES_GENERACION,
+    options: MARCA_OPCIONES,
     keep_alive: KEEP_ALIVE_LOCAL,
   });
+  const opciones = `{"seed":${OPCIONES_GENERACION.seed},"temperature":${temperaturaJson(temperaturaCentesimas)}}`;
+  return base.replace(`"options":"${MARCA_OPCIONES}"`, `"options":${opciones}`);
 }
 
 export function cuerpoSmoke(modelo: string): string {

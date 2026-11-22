@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "publicadoPor": "PI (ficticio)",
+  "fecha": "2027-01-14",
+  "modelos": [
+    { "nombre": "qwen2.5:14b", "digest": "4613a27c4613a27c4613a27c4613a27c4613a27c4613a27c4613a27c4613a27c", "nota": "Recomendado para 008 (nota ficticia)" },
+    { "nombre": "gemma2:27b", "digest": "37911f4737911f4737911f4737911f4737911f4737911f4737911f4737911f47" },
+    { "nombre": "aya-expanse:32b", "digest": "1237bead1237bead1237bead1237bead1237bead1237bead1237bead1237bead", "nota": "Nota ficticia del 32B" }
+  ]
+}

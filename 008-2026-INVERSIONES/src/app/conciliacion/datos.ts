@@ -6,6 +6,7 @@
 import "server-only";
 import type { PrismaClient } from "@prisma/client";
 import { cortesDisponibles, leerConciliacion } from "@/conciliacion/leer";
+import { procedenciasDeLaLectura } from "./procedencias";
 import { aCortes, aVistaCorte, dia } from "./serializar";
 import type { CorteVista, VistaCorte } from "./tipos";
 
@@ -21,5 +22,7 @@ export async function datosDeConciliacion(db: PrismaClient, pedido: string | str
   if (elegido === undefined) return { estado: "CORTE_INVALIDO", cortes: aCortes(cortes, null) };
   const lectura = await leerConciliacion(db, elegido.fechaCorte);
   if (lectura === null) return { estado: "CORTE_INVALIDO", cortes: aCortes(cortes, null) };
-  return { estado: "CORTE", vista: aVistaCorte(lectura), cortes: aCortes(cortes, dia(elegido.fechaCorte)) };
+  // De dónde y de cuándo es cada valor del sistema: el dato con que se calculó (frente fecha-hora-datos).
+  const procedencias = await procedenciasDeLaLectura(db, lectura);
+  return { estado: "CORTE", vista: aVistaCorte(lectura, procedencias), cortes: aCortes(cortes, dia(elegido.fechaCorte)) };
 }

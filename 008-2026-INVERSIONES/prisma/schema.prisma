@@ -203,6 +203,7 @@ model Usuario {
   intentos            IntentoIngreso[]
   tokensAcceso        TokenAcceso[]
   codigosRecuperacion CodigoRecuperacion[]
+  configsIa           ConfigIa[]
 
   @@map("usuario")
 }
@@ -963,4 +964,32 @@ model ResumenIa {
 
   @@index([puerta, generadoEn], map: "resumen_ia_gasto_idx")
   @@map("resumen_ia")
+}
+
+/// Configuración de la IA (fase E, E8): la edita el dueño en /edicion/ia. Versionada y de SOLO INSERCIÓN (disparador
+/// inv_solo_insercion): cada cambio es una versión nueva con su autor, su motivo y la hora que pone la base
+/// (inv_config_ia_instante). La vigente es la de mayor versión; sin ninguna, la IA está apagada. Las listas cerradas y
+/// los límites van como CHECK a mano en la migración *_config_ia (espejo de src/ia/config/parametros.ts, puertas.ts y
+/// nube/peticion.ts) y el guardián del esquema los vigila. Lo escribe inv_app (INSERT por columna sin creadaEn) y lo lee
+/// inv_ia sin el motivo ni el autor (docker/migrador/privilegios.sql). Nunca guarda la llave de la nube.
+model ConfigIa {
+  id               String   @id @default(cuid())
+  version          Int      @unique
+  modo             String // apagado, local, nube o local-luego-nube (MODOS_PUERTAS)
+  ollamaHost       String? // la IPv4 de la tailnet del Ollama del Mac (formato del destino; el control está en la red de PI)
+  ollamaPuerto     Int?
+  temperaturaLocal Decimal  @db.Decimal(3, 2) // de 0 a 1; 0 por omisión (la semilla queda fija)
+  tareas           Json // por tarea (tipo de resumen): { "DIARIO": { "activo": true, "modeloLocal": "…" | null }, … }
+  modeloNube       String // MODELOS_NUBE; por omisión claude-opus-5-5
+  topeMensualUsd   Decimal? @db.Decimal(6, 2) // obligatorio si el modo usa la nube; de 1 a 50 USD
+  horaResumen      String // HORAS_RESUMEN, hora de Colombia
+  limiteSegundos   Int // de 10 a 120 (el límite de PI)
+  esfuerzoNube     String // low o medium
+  motivo           String
+  autorId          String
+  autor            Usuario  @relation(fields: [autorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creadaEn         DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_config_ia_instante)
+
+  @@index([autorId])
+  @@map("config_ia")
 }

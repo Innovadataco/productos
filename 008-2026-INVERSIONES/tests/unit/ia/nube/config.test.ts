@@ -26,7 +26,7 @@ describe("nombres y listas cerradas", () => {
   it("las variables, los códigos de apagado y el techo del tope", () => {
     expect(VARIABLE_LLAVE_NUBE).toBe("INV_IA_NUBE_LLAVE");
     expect(VARIABLE_TOPE_NUBE).toBe("INV_IA_NUBE_TOPE_USD");
-    expect([...CODIGOS_APAGADO_NUBE]).toEqual(["SIN_LLAVE", "LLAVE_INVALIDA", "SIN_TOPE", "TOPE_INVALIDO", "TOPE_FUERA_DE_RANGO", "CLIENTE_NO_CONSTRUIDO"]);
+    expect([...CODIGOS_APAGADO_NUBE]).toEqual(["SIN_LLAVE", "LLAVE_INVALIDA", "SIN_TOPE", "TOPE_INVALIDO", "TOPE_FUERA_DE_RANGO", "CLIENTE_NO_CONSTRUIDO", "AJUSTES_INVALIDOS"]);
     expect(Object.isFrozen(CODIGOS_APAGADO_NUBE)).toBe(true);
     expect(TECHO_TOPE_MICRO_USD).toBe(50_000_000n);
     expect(MAX_LARGO_LLAVE_NUBE).toBe(256);
