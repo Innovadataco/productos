@@ -43,6 +43,12 @@ export interface CierreLeido {
   readonly fecha: Date;
   readonly precio: Prisma.Decimal;
   readonly estado: EstadoPrecio;
+  /**
+   * Cuándo lo trajo 008 y de qué fuente (frente fecha-hora-datos). Opcionales a propósito (cambio aditivo): quien arma
+   * un cierre sin ellos sigue compilando; `ultimosCierres` siempre los trae.
+   */
+  readonly traidoEn?: Date;
+  readonly fuente?: string;
 }
 
 export interface ReglaCitada {
@@ -134,7 +140,7 @@ export async function ultimosCierres(db: Db, ids: readonly string[]): Promise<Re
   const unicos = [...new Set(ids)];
   if (unicos.length === 0) return new Map();
   const filas = await db.$queryRaw<(CierreLeido & { readonly instrumentoId: string })[]>`
-    SELECT DISTINCT ON ("instrumentoId") "instrumentoId", "fecha", "precio", "estado"::text AS "estado"
+    SELECT DISTINCT ON ("instrumentoId") "instrumentoId", "fecha", "precio", "estado"::text AS "estado", "fuente", "traidoEn"
     FROM "precio_cierre"
     WHERE "instrumentoId" = ANY(${unicos}::text[]) AND "reemplazadoEn" IS NULL
     ORDER BY "instrumentoId", "fecha" DESC, "traidoEn" DESC, "id" DESC`;

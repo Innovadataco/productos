@@ -10,7 +10,7 @@ import { montar, movimiento, tecla, texto, type Montaje } from "../graficas/dom"
 import { D, dia, especie, resumenDe } from "./ficticio";
 import { nueveEspecies } from "./ficticio-graficas";
 
-const cierre = (precio: string) => ({ precio: D(precio), fecha: dia("2027-03-31"), verificado: false });
+const cierre = (precio: string) => ({ precio: D(precio), fecha: dia("2027-03-31"), verificado: false, traidoEn: new Date("2027-03-31T23:04:00Z"), fuente: "yahoo" });
 const tres = aVista(resumenDe([
   especie({ nemotecnico: "FICTA", cantidad: 13n, costoVivo: D(4613), cierre: cierre("317.41") }),
   especie({ nemotecnico: "FICTB", cantidad: 7n, costoVivo: D(7919), cierre: cierre("1211.09") }),
@@ -53,6 +53,7 @@ describe("Cómo está repartido", () => {
       const nemo = texto(b.querySelector(".g-barra-nombre"));
       expect(texto(b.querySelector(".g-barra-valor"))).toBe(celdaPct(nemo));
     }
+    // La procedencia va en la fila, el detalle y bajo las gráficas: aquí alargaría el nombre del botón (revisión a11y).
     expect(texto(barras()[0]!.querySelector(".g-barra-detalle"))).toBe("costo $ 7.919 · valor $ 8.478 · sin verificar · 31-mar-2027");
   });
 

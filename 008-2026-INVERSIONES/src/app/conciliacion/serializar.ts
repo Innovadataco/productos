@@ -7,12 +7,15 @@
  *   cuántos rendimientos del fondo contó la caja y el último día, para que se vea si falta alguno.
  */
 import { Prisma, type ResultadoConciliacion } from "@prisma/client";
-import type { ControlLeido, CorteDisponible, LecturaConciliacion, PorLiquidar } from "@/conciliacion/leer";
+import { componer } from "@/app/_comun/fecha-dato/componer";
+import { horaColombia } from "@/app/_comun/fecha-dato/hora";
+import type { Procedencia } from "@/app/_comun/fecha-dato/tipos";
+import type { ConciliacionLeida, ControlLeido, CorteDisponible, LecturaConciliacion, PorLiquidar } from "@/conciliacion/leer";
+import { idsCalculados, SIN_PROCEDENCIAS, type LecturaProcedencias, type Origen } from "./calculados";
 import { estadoDeControl, fraseDeMotivo, textoDeResultadoGlobal, type Estado, type Tono } from "./motivos";
 import type { LineaConciliacionVista } from "../tablero/tipos";
-import type { ConciliacionVista, CorteVista, CuentasVista, FilaEspecieVista, FilaMontoVista, PorLiquidarVista, VistaCorte } from "./tipos";
+import type { ConciliacionVista, CorteVista, CuentasVista, FilaEspecieVista, FilaMontoVista, PorLiquidarVista, ProcedenciasVista, VistaCorte } from "./tipos";
 
-const DESFASE_COLOMBIA_MS = 5 * 60 * 60 * 1000;
 const DECIMALES_PCT = 2;
 const DECIMAL = /^-?\d{1,30}(\.\d{1,12})?$/;
 const GRAVEDAD: Readonly<Record<Tono, number>> = { cuadra: 0, "por-liquidar": 1, "sin-verificar": 2, "no-cuadra": 3 };
@@ -21,7 +24,6 @@ const OPERACION: Readonly<Record<PorLiquidar["operacion"], PorLiquidarVista["ope
 
 /** Columnas DATE: el día UTC es el día del dato. */
 export const dia = (d: Date): string => d.toISOString().slice(0, 10);
-const horaColombia = (d: Date): string => new Date(d.getTime() - DESFASE_COLOMBIA_MS).toISOString().slice(0, 16).replace("T", " ");
 const texto = (d: Prisma.Decimal | null): string | null => (d === null ? null : d.toString());
 
 function porcentaje(diferencia: Prisma.Decimal | null, real: Prisma.Decimal | null): string | null {
@@ -96,7 +98,20 @@ function cuentas(controles: readonly ControlLeido[]): CuentasVista {
 const reconocido = (c: ControlLeido): boolean =>
   c.tipo === "EFECTIVO" || c.tipo === "FONDO" || c.tipo === "CANTIDAD" || (c.tipo === "VALOR" && (c.instrumentoId !== null || alcance(c) === "total_acciones"));
 
-function conciliacion(l: LecturaConciliacion): ConciliacionVista | null {
+/**
+ * Solo de lo que se calculó (frente fecha-hora-datos): una procedencia de una especie o un fondo sin cifra del sistema
+ * no se muestra. El total, por el cierre más viejo de sus especies, solo si el total se calculó.
+ */
+function procedencias(k: ConciliacionLeida, corte: Date, leidas: LecturaProcedencias, totalCalculado: boolean): ProcedenciasVista {
+  const de = (o: Origen): Procedencia => ({ dia: dia(corte), traidoEn: horaColombia(o.traidoEn), fuente: o.fuente });
+  const porId = (ids: readonly string[], mapa: ReadonlyMap<string, Origen>) =>
+    Object.fromEntries(ids.flatMap((id) => { const o = mapa.get(id); return o ? [[id, de(o)] as const] : []; }));
+  const { especies: idsEspecies, fondos: idsFondos } = idsCalculados(k);
+  const especies = porId(idsEspecies, leidas.cierres);
+  return { especies, fondos: porId(idsFondos, leidas.fondos), total: totalCalculado ? componer(Object.values(especies)) : null };
+}
+
+function conciliacion(l: LecturaConciliacion, leidas: LecturaProcedencias): ConciliacionVista | null {
   const k = l.conciliacion;
   if (k === null || l.frescura === null) return null;
   const controles = k.controles.filter(reconocido);
@@ -112,13 +127,15 @@ function conciliacion(l: LecturaConciliacion): ConciliacionVista | null {
     efectivo: efectivo ? filaMonto(efectivo, "Efectivo") : null,
     cuentas: cuentas(controles),
     noReconocidos: k.controles.length - controles.length,
+    procedencias: procedencias(k, l.fechaCorte, leidas, total !== undefined && total.esperado !== null),
   };
 }
 
-export function aVistaCorte(l: LecturaConciliacion): VistaCorte {
+/** `leidas`: de dónde y de cuándo es cada valor del sistema (src/app/conciliacion/procedencias.ts); sin ellas, ninguna. */
+export function aVistaCorte(l: LecturaConciliacion, leidas: LecturaProcedencias = SIN_PROCEDENCIAS): VistaCorte {
   return {
     fechaCorte: dia(l.fechaCorte),
-    conciliacion: conciliacion(l),
+    conciliacion: conciliacion(l, leidas),
     porLiquidar: l.porLiquidar.map((p) => ({
       nemo: p.nemotecnico, operacion: OPERACION[p.operacion], cantidad: p.cantidad.toString(), fechaOperacion: dia(p.fechaOperacion), fechaLiquidacion: dia(p.fechaLiquidacion),
     })),

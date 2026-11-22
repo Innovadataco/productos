@@ -5,6 +5,7 @@
 import type { AccionPlan, CondicionRegla, LadoOrden } from "@prisma/client";
 import type { MotivoSinDividendos } from "@/plan/dividendos";
 import type { EstadoResultado, Veredicto } from "@/plan/resultado";
+import type { Procedencia } from "../_comun/fecha-dato/tipos";
 
 export type CierreVista =
   | { readonly estado: "NO_APLICA" }
@@ -73,6 +74,8 @@ export interface ReglaVista {
   /** null en una versión que no rige hoy (sin cierres ni distancia). */
   readonly cierre: CierreVista | null;
   readonly frente: NivelVista | null;
+  /** De dónde y de cuándo es su último cierre (frente fecha-hora-datos); null sin cierre o en una versión que no rige. */
+  readonly procedencia: Procedencia | null;
 }
 
 export interface VistaPlan {

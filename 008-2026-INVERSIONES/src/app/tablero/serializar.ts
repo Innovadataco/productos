@@ -1,3 +1,4 @@
+import { horaColombia } from "@/app/_comun/fecha-dato/hora";
 import type { Resumen } from "@/tablero/datos";
 import type { FilaTablero } from "@/tablero/calculo";
 import { componer, type Tajada } from "@/tablero/composicion";
@@ -17,7 +18,10 @@ function fila(f: FilaTablero): FilaVista {
     valor: f.valor?.toString() ?? null, sinVender: f.sinVender?.toString() ?? null,
     rentabilidadPct: f.rentabilidadPct?.toFixed(2) ?? null, pesoPct: f.pesoPct?.toFixed(2) ?? null,
     realizada: f.realizada.toString(), dividendos: f.dividendos.toString(), comisiones: f.comisiones.toString(),
-    cierre: f.cierre ? { precio: f.cierre.precio.toString(), fecha: dia(f.cierre.fecha), verificado: f.cierre.verificado, atrasado: f.cierreAtrasado } : null,
+    cierre: f.cierre ? {
+      precio: f.cierre.precio.toString(), fecha: dia(f.cierre.fecha), verificado: f.cierre.verificado, atrasado: f.cierreAtrasado,
+      traidoEn: f.cierre.traidoEn ? horaColombia(f.cierre.traidoEn) : null, fuente: f.cierre.fuente ?? null,
+    } : null,
     lotesVivos: f.lotesVivos, serie: f.serie.map((p) => ({ fecha: dia(p.fecha), precio: p.precio.toString() })),
   };
 }
