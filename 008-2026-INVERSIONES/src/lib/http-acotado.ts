@@ -46,6 +46,9 @@ type Lectura = { readonly ok: true; readonly bytes: Uint8Array } | { readonly ok
 
 const fallo = (prefijo: string, falla: Falla): Fallo => ({ ok: false, codigo: `${prefijo}_${falla}` });
 
+/** Cancela un cuerpo que no se va a leer (sin esperar ni lanzar). */
+const descartar = (respuesta: RespuestaHttp): void => void respuesta.body?.cancel().catch(() => undefined);
+
 /** Une los trozos en un Uint8Array propio (nunca un Buffer del pool compartido de Node). */
 function unir(partes: readonly Uint8Array[], total: number): Uint8Array {
   const salida = new Uint8Array(total);
@@ -57,10 +60,16 @@ function unir(partes: readonly Uint8Array[], total: number): Uint8Array {
   return salida;
 }
 
-/** Lee el cuerpo con tope de bytes: rechaza por el content-length declarado y corta el flujo si lo pasa. */
-async function leerCuerpoAcotado(respuesta: RespuestaHttp, bytesMaximos: number, senal: AbortSignal): Promise<Lectura> {
+/**
+ * Lee el cuerpo con tope de bytes: rechaza por el content-length declarado y corta el flujo si lo pasa. Con
+ * `descartarSiRechaza`, un cuerpo rechazado por el content-length se cancela sin leerlo.
+ */
+async function leerCuerpoAcotado(respuesta: RespuestaHttp, bytesMaximos: number, senal: AbortSignal, descartarSiRechaza: boolean): Promise<Lectura> {
   const declarado = Number(respuesta.headers.get("content-length"));
-  if (declarado > bytesMaximos || !respuesta.body) return { ok: false, falla: "FORMATO" };
+  if (declarado > bytesMaximos || !respuesta.body) {
+    if (descartarSiRechaza) descartar(respuesta);
+    return { ok: false, falla: "FORMATO" };
+  }
   const lector = respuesta.body.getReader();
   const cancelar = (): void => void lector.cancel().catch(() => undefined);
   if (senal.aborted) {
@@ -101,8 +110,10 @@ function tipoAceptado(valor: string | null, aceptados: readonly string[]): boole
 }
 
 /**
- * Pedido y lectura, sin plazo propio: la señal la pone `conPlazo`. Con `aceptados`, el content-type se mira antes de
- * leer el cuerpo (y si no sirve, el cuerpo se cancela sin leerlo). No lanza.
+ * Pedido y lectura, sin plazo propio: la señal la pone `conPlazo`. Con `aceptados` (la vía de bytes), el content-type
+ * se mira antes de leer el cuerpo, y todo cuerpo rechazado sin leer (estado de error, tipo o content-length) se cancela.
+ * La vía de JSON (`aceptados` null) queda como estaba en main: no cancela (deuda aparte, para no cambiar su
+ * comportamiento en este cambio). No lanza.
  */
 async function pedirCuerpo(buscar: BuscarHttp, url: string, limites: LimitesPedido, senal: AbortSignal, aceptados: readonly string[] | null): Promise<ResultadoBytes> {
   let respuesta: RespuestaHttp;
@@ -111,12 +122,16 @@ async function pedirCuerpo(buscar: BuscarHttp, url: string, limites: LimitesPedi
   } catch {
     return fallo(limites.prefijo, "RED");
   }
-  if (!respuesta.ok) return { ok: false, codigo: `${limites.prefijo}_HTTP_${respuesta.status}` };
-  if (aceptados !== null && !tipoAceptado(respuesta.headers.get("content-type"), aceptados)) {
-    void respuesta.body?.cancel().catch(() => undefined);
+  const esBytes = aceptados !== null;
+  if (!respuesta.ok) {
+    if (esBytes) descartar(respuesta);
+    return { ok: false, codigo: `${limites.prefijo}_HTTP_${respuesta.status}` };
+  }
+  if (esBytes && !tipoAceptado(respuesta.headers.get("content-type"), aceptados)) {
+    descartar(respuesta);
     return fallo(limites.prefijo, "TIPO");
   }
-  const cuerpo = await leerCuerpoAcotado(respuesta, limites.bytesMaximos, senal);
+  const cuerpo = await leerCuerpoAcotado(respuesta, limites.bytesMaximos, senal, esBytes);
   return cuerpo.ok ? cuerpo : fallo(limites.prefijo, cuerpo.falla);
 }
 

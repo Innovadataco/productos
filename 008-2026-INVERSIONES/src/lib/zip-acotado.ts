@@ -1,8 +1,8 @@
 /**
  * Lector zip acotado, propio y mínimo, para los xlsx de las fuentes oficiales. SOLO lo usan los exportadores del Mac:
  * ni la app ni los importadores (candado en tests/unit/lib/lectores-candado.test.ts).
- * - Sin ZIP64, sin cifrado, sin multidisco y sin comentario en el registro de fin (que va en los últimos 22 bytes:
- *   no se busca hacia atrás, así no hay dos lecturas posibles del mismo archivo).
+ * - Sin ZIP64, sin cifrado, sin multidisco y sin comentarios (ni en las entradas ni en el registro de fin, que va en
+ *   los últimos 22 bytes: no se busca hacia atrás, así no hay dos lecturas posibles del mismo archivo).
  * - Solo los métodos 0 (almacenado) y 8 (deflate); banderas en lista blanca (opciones de deflate, descriptor, UTF-8).
  * - Topes (TOPES_ZIP) de bytes del archivo, entradas, tamaño por entrada, tamaño total y razón de compresión (contra
  *   bombas), todos medidos al abrir sobre lo declarado; al leer, `inflateRawSync` con `maxOutputLength` igual al
@@ -13,6 +13,7 @@
  *   por solape), sin huecos y sin bytes antepuestos.
  * - Nombres ASCII imprimibles sin `\`, `:`, `/` inicial ni segmentos vacíos, `.` o `..`; sin repetidos (tampoco solo
  *   en mayúsculas). Las carpetas (terminan en `/`, tamaño 0) no se listan.
+ * - Trabaja sobre su propia copia de la entrada: mutarla después de abrir no cambia lo que se lee.
  * - CRC32 verificado al leer. Cada lectura devuelve una copia propia.
  * - Nunca lanza otra cosa que ErrorZip, con un mensaje fijo por código que no lleva nada de la entrada.
  */
@@ -247,6 +248,7 @@ function entradaCentral(b: Lectura, p: number): Entrada {
   const [crc, comprimido, real, offset] = [b.u32(p + 16), b.u32(p + 20), b.u32(p + 24), b.u32(p + 42)];
   if (comprimido === MAX_U32 || real === MAX_U32 || offset === MAX_U32 || disco === MAX_U16) throw error("ZIP64_NO_SOPORTADO");
   if (disco !== 0) throw error("ZIP_MULTIDISCO");
+  if (b.u16(p + 32) !== 0) throw error("ZIP_COMENTARIO_NO_SOPORTADO");
   revisarExtra(b, p + LARGO_CENTRAL + largoNombre, largoExtra);
   revisarBanderasYMetodo(banderas, metodo);
   const bytesNombre = b.tramo(p + LARGO_CENTRAL, largoNombre);
@@ -353,8 +355,10 @@ function protegido<T>(trabajo: () => T): T {
   }
 }
 
-function abrir(bytes: Uint8Array): ArchivoZip {
-  if (bytes.length > TOPES_ZIP.bytesArchivo) throw error("ZIP_DEMASIADO_GRANDE");
+function abrir(entrada: Uint8Array): ArchivoZip {
+  if (entrada.length > TOPES_ZIP.bytesArchivo) throw error("ZIP_DEMASIADO_GRANDE");
+  // Copia propia (a lo sumo bytesArchivo): lo validado al abrir es lo que se lee después, aunque el llamador mute la suya.
+  const bytes = new Uint8Array(entrada);
   const b = new Lectura(bytes);
   const fin = leerFin(b);
   const entradas = leerCentral(b, fin);

@@ -30,12 +30,7 @@ function archivos(dir: string): string[] {
 
 /** Especificadores de un módulo (por el analizador de TypeScript) y cuántos import()/require() no llevan un literal. */
 function especificadores(codigo: string): { literales: string[]; dinamicosSinLiteral: number } {
-  void ts;
-  const literales = [
-    ...codigo.matchAll(/(?:^|[^\w$.])(?:import|export)\s[^;]*?\sfrom\s*["']([^"']+)["']/g),
-    ...codigo.matchAll(/(?:^|[^\w$.])import\s*["']([^"']+)["']/g),
-    ...codigo.matchAll(/(?:^|[^\w$.])(?:import|require)\s*\(\s*["']([^"']+)["']\s*\)/g),
-  ].map((m) => m[1]!);
+  const literales = ts.preProcessFile(codigo, true, true).importedFiles.map((f) => f.fileName);
   const dinamicos = [...codigo.matchAll(/(?:^|[^\w$.])(?:import|require)\s*\(\s*([^\s)])/g)].filter((m) => !["'", '"'].includes(m[1]!)).length;
   return { literales, dinamicosSinLiteral: dinamicos };
 }
