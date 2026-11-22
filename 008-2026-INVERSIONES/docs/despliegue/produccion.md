@@ -30,7 +30,7 @@ Cómo se despliega, se revierte, se respalda, se restaura y se cargan los datos 
   - **la app no tiene salida a internet:** vive solo en redes `internal` (`inv-008-red-interna`, con la base, e `inv-008-red-entrada`, con la entrada) y no publica puertos;
   - **las dos redes `internal` aíslan la puerta de enlace** (`driver_opts: com.docker.network.bridge.gateway_mode_ipv4: isolated`): el puente no tiene dirección del host, así que ni la app ni la base llegan al **host** por ahí. Sin aislar, una red `internal` sí llegaba a los servicios del host por su puerta de enlace (medición en el VPS: <ver ESTADO en la gestión>; en el Mac, capas-pi.md). Necesita Docker 28 o más. `desplegar-prod.sh` revisa la opción **y su efecto** (la red sin puerta de enlace del host); el alcance real hacia el host lo probó el ensayo, el script no lo prueba;
   - la base no publica ningún puerto y vive solo en `inv-008-red-interna`;
-  - con salida a internet, en `inv-008-red`, solo la entrada (para publicar) y el vigía (Telegram).
+  - con salida a internet, en `inv-008-red`, solo la entrada (para publicar) y el vigía (Telegram); y en `inv-008-red-precios`, solo el servicio de precios (§5, «El servicio de precios»).
 - **Alcance de «la app sin salida»** (decisión del CEO, dicho tal cual):
   - si alguien compromete la app, no puede abrir conexiones hacia internet ni resolver nombres de afuera. Pero **sí puede sacar datos por la respuesta del túnel**: responder lo que quiera a quien le pide. «Sin salida» no impide eso;
   - `Cf-Connecting-IP` (los topes por IP) lo pone Cloudflare y la entrada lo pasa tal cual. En `127.0.0.1:5008` solo lo puede falsificar quien ya está en el host; dentro del proyecto, también un contenedor de 008 que llegue a `inv-008-entrada:5008` (hoy, el vigía, que no expone nada). Es aceptable: la barrera principal es el bloqueo por cuenta;
@@ -48,7 +48,7 @@ Documentos relacionados:
 | `inv-008-app:<sha>` | La app (Next standalone). Usuario 10008, solo lectura, escucha en 5008 **sin publicar nada y sin salida a internet**. La misma imagen corre `inv-008-entrada`. |
 | `inv-008-migrador:<sha>` | `prisma migrate deploy`, el guardián del esquema y los privilegios de `inv_app`. Además corre las cargas y el acceso inicial (`tsx`, rol `inv_dueno`). Es de un solo uso. |
 | `inv-008-vigia:<sha>` | Imagen mínima: alpine, sin node ni prisma. Lleva `age`, `curl`, certificados y `pg_dump` 16. La usan el vigía y el respaldo. |
-| Servicios de `inv-008-prod` | Permanentes, con `restart: always`: `inv-008-db` (Postgres 16, 70:70, sin puertos, red interna), `inv-008-app` (solo redes internal), `inv-008-entrada` (el relé del túnel), `inv-008-vigia` (solo avisa) e `inv-008-respaldo` (respaldo diario, `0:<gid respaldo>` sin capacidades: la excepción documentada). De un solo uso, con `restart: "no"` y `run --rm`: `inv-008-migrador`. |
+| Servicios de `inv-008-prod` | Permanentes, con `restart: always`: `inv-008-db` (Postgres 16, 70:70, sin puertos, red interna), `inv-008-app` (solo redes internal), `inv-008-entrada` (el relé del túnel), `inv-008-vigia` (solo avisa), `inv-008-respaldo` (respaldo diario, `0:<gid respaldo>` sin capacidades: la excepción documentada) e `inv-008-precios` (servicio de precios, solo si la imagen del sha lo trae; §5). De un solo uso, con `restart: "no"` y `run --rm`: `inv-008-migrador`. |
 | `inv-008-entrada` | **Relé TCP (capa 4)** en `node -e`, con la imagen de la app: copia bytes entre `127.0.0.1:5008` del host y `inv-008-app:5008`, sin leer el HTTP. Por eso `Cf-Connecting-IP`, el Host y las cabeceras de la app (CSP, HSTS…) pasan tal cual, sin quitar ni duplicar nada. Destino fijo (no es un relé abierto), sin variables ni secretos, sin volúmenes, 32m y 32 pids, sin log de los clientes, inactividad de 120 s y 64 conexiones como máximo. Existe porque una red `internal` no publica puertos. Su código está en el compose y lo ejecuta `tests/unit/produccion/entrada.test.ts`. |
 | `<raíz>/repo` | Clon por HTTPS del repo público. De root y sin escritura para el grupo ni para otros: todo script con sudo lo revisa al empezar (§2, «Árbol de root»). |
 | `<raíz>/.env.inversiones.production` | **El único archivo de producción**: root, 600, fuera de git. Plantilla sin valores: [`env-inversiones-production.example`](env-inversiones-production.example). |
@@ -84,6 +84,7 @@ COMPOSE="env INV_RESPALDOS_DIR=$R INV_RUTA_PAUSA=$B/repo/008-2026-INVERSIONES/sc
 | base | `POSTGRES_PASSWORD` |
 | respaldo | la URL con `inv_dueno`, la clave **pública** de `age` y el gid de `respaldo` |
 | vigía | Telegram y la ruta de la pausa |
+| precios | su URL con `inv_precios` (`INV_PRECIOS_DATABASE_URL`, §2); si la línea no existe, el servicio queda en espera |
 
 - **Límite conocido:** el valor de esas variables se ve con `docker inspect <contenedor>` (root y el grupo `docker`). Las **imágenes** no traen ninguno.
 
@@ -279,7 +280,7 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
    sudo <raíz>/repo/008-2026-INVERSIONES/scripts/desplegar-prod.sh <id-imagen> \
      --cargar <raíz>/imagenes/inv-008-<sha>.tar <sha256-del-Mac>
    ```
-   - Solo cuenta como desplegado si la **última línea** es `DEPLOY VERIFICADO <sha>`. Tarda unos 10 minutos.
+   - Solo cuenta como desplegado si la **última línea** es `DEPLOY VERIFICADO <sha>`. Tarda lo que dura la espera de la medición (120 s si el despliegue es solo de código; 600 s si cambian servicios, límites o la imagen base, o si no se sabe; §5) más el resto del despliegue. Con el piso de memoria, la espera corta puede llegar a 600 s.
    - **El despliegue se niega si** existe la marca de pausa, si PI tiene el candado común o si se ve un despliegue de PI. El `deploy-prod.sh` de PI toma el mismo candado (SPEC-980 de PI) y espera hasta 900 s.
    - Si la app sale o se reinicia (`instrumentation.ts` sin `AUTH_SECRET` o sin `APP_ORIGEN`), falla.
    - **Si migra, la app vieja queda abajo** desde antes del respaldo previo hasta que la versión nueva queda healthy. Durante el migrador también se detiene el respaldo diario. Así ningún contenedor de Inversiones retiene tablas mientras migra. Con `--sin-migrar` no se detiene nada.
@@ -288,8 +289,9 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
      - la app y la entrada corriendo de una vez y con la imagen enviada;
      - `/api/salud` con la versión del sha, pedido **dentro de la entrada** (el camino del túnel) y, en producción, también en `127.0.0.1:5008` del host;
      - la app y la base sin puertos y solo en redes `internal` con la puerta de enlace aislada (revisa cada red);
+     - el servicio de precios, si la imagen del sha lo trae: corriendo con la imagen enviada y healthy, sin puertos, solo en `inv-008-red-interna` y `inv-008-red-precios`, y con el entorno de su lista blanca (`verificar_servicio`; §5). Se verifica al levantar y otra vez después de la espera;
      - **la app sin salida a internet**: la entrada resuelve la sonda (`api.telegram.org`, el único destino de 008 hacia afuera) y llega a su IP por el 443 (control positivo); desde la app, la misma IP falla por **falta de ruta** y el nombre no resuelve. Un tiempo agotado o un rechazo no cuentan como prueba: el despliegue se detiene.
-   - Si falla después de tocar contenedores (incluida esa pausa), **vuelve solo a la imagen que corría**: levanta app, entrada, vigía y respaldo con ese sha, con el compose del clon. Si se re-desplegaba el mismo sha, levanta otra vez ese mismo.
+   - Si falla después de tocar contenedores (incluida esa pausa), **vuelve solo a la imagen que corría**: levanta app, entrada, vigía y respaldo con ese sha, y el servicio de precios si la imagen de ese sha lo trae (si no, lo baja), con el compose del clon. Si se re-desplegaba el mismo sha, levanta otra vez ese mismo.
      - Solo vuelve a un sha de 40 hex: si `estado/sha-actual` está dañado, lo dice y no levanta nada.
      - En el primer despliegue no hay imagen a la que volver: lo dice, y lo detenido queda abajo.
 4. **Acceso inicial, que es también la recuperación de acceso.** Lo corre **Jelk por SSH**, no la Fábrica, y **antes de cargar los datos reales**:
@@ -313,12 +315,23 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
 9. **Anotar** el sha en `ESTADO.md` de la gestión.
 
 ## 5 · Despliegues siguientes y reversa
+- **Espera de la medición: 120 s o 600 s** (entre el `up` y la medición de memoria; acuerdo con el CEO de PI). La decide `desplegar-prod.sh` sin red ni GitHub:
+  - **120 s** si el despliegue es solo de código: mismos servicios, mismos `mem_limit`, `memswap_limit`, `cpus` y demás claves de memoria, CPU e imagen en `docker-compose.prod.yml`, y mismos `FROM` (y `ARG` globales) en el `Dockerfile` que el sha que corre.
+  - **600 s** si hay un servicio nuevo o retirado, cambia una de esas claves o un `FROM`, o no se puede saber: sin `estado/sha-actual` (primer despliegue) o con uno que no es un sha de 40 hex, `git` no puede leer el archivo, o el compose usa formas que el resumen no lee (alias, `<<`, etiquetas, mapas en línea, claves entre comillas, `include`, `extends` o un límite interpolado).
+  - **Fuera de la comparación:** `environment`, `command`, `entrypoint`, `tmpfs`, `ulimits` y `pids_limit`. Un cambio de esas claves da 120 s, igual que un cambio de código. Sumarlas queda por decidir con PI.
+  - **La reversa** (`--sin-migrar`) usa la misma comparación: el compose del clon contra el `FROM` del sha de la imagen anterior, contra lo que corre.
+  - **Una línea** dice la espera y por qué, por ejemplo `espera de la medición: 120 s · solo código: …` o `espera de la medición: 600 s · cambian servicios, límites o imágenes del compose respecto de <sha>: …`. La etiqueta de la medición dice los segundos reales (`120 s después de up`, o `600 s después de up (espera extendida)`).
+  - **Piso de memoria de la espera corta (acuerdo con PI):** al terminar la espera de 120 s, si `MemAvailable` < 1 GiB o `SwapFree` < 512 MiB (sin swap, o sin poder leer la memoria, cuenta como bajo el piso), la espera se extiende hasta 600 s y se mide otra vez.
+    - Si sigue bajo el piso, el despliegue **sale con 3 sin `DEPLOY VERIFICADO`**, con el aviso «MEMORIA BAJO EL PISO…» y el comando de corte. El sha nuevo queda registrado y no se detiene nada: el corte es manual (`pausar-008.sh`; [convivencia-pi.md §4](convivencia-pi.md)).
+    - Si la salud cae durante la extensión, sí hay vuelta atrás, como en cualquier falla después del `up`.
+    - Con 600 s no hay extensión ni piso.
+  - **`INV_ESPERA_MEDICION_S`** (variable de entorno al correr el script, p. ej. `sudo env INV_ESPERA_MEDICION_S=<s> …`): si se define, manda sobre la comparación, y la línea dice qué daba. Va de 0 a 99999 y se lee en base 10 (`0613` son 613 s). **No salta el piso**: si es menor que 600 s, el piso se aplica igual.
 - **Siguiente versión:** pasos 3 y 4.0–4.3.
   - **La primera versión que deriva la raíz** (sin rutas escritas en el repo) necesita `<raíz>/inv-008.conf` **antes** de poner el clon en su sha. Sin ella, `desplegar-prod.sh` se niega sin tocar nada.
   - Ese despliegue recrea `inv-008-respaldo` (cambió la forma de su bind) e `inv-008-vigia` (recibe la ruta de la pausa).
   - El script se niega a migrar hacia atrás: el sha nuevo debe descender del que corre.
   - Conserva la imagen y el `.tar` actuales y anteriores, y purga solo las `inv-008-*` viejas.
-- **Reversa por etiqueta, sin migrar y sin consultar GitHub** (sirve con GitHub caído). Acepta la imagen actual o la anterior. **El clon NO se mueve:** se queda en el sha que corre (`estado/sha-actual`) y solo la imagen vuelve atrás:
+- **Reversa por etiqueta, sin migrar y sin consultar GitHub** (sirve con GitHub caído). Acepta la imagen actual o la anterior. **El clon NO se mueve:** se queda en el sha que corre (`estado/sha-actual`), o en uno posterior si un despliegue falló a medias, y solo la imagen vuelve atrás (`verificar_clon` y `verificar_sentido` lo exigen):
   ```sh
   sudo <raíz>/repo/008-2026-INVERSIONES/scripts/desplegar-prod.sh "inv-008-app:$(sudo cat <raíz>/estado/sha-anterior)" --sin-migrar
   ```
@@ -371,6 +384,30 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
 - **Ensayo en el Mac** (Colima, Docker 29.5.2, driver `cgroupfs`, proyecto `inv-008-prueba`, 2026-11-21): con `memory.swap.max` puesto a mano en `max` en la base de prueba, `docker inspect` seguía diciendo `Memory = MemorySwap`; el comando, corrido dentro de la máquina virtual (desde el Mac el cgroup no se ve), lo devolvió a 0, y la segunda corrida dio 0 corregidos.
 - **Por verificar en el VPS:** que `docker update` con los mismos valores reescriba `memory.swap.max` con el driver `systemd`. Si no lo hiciera, el script lo detecta en la relectura y aborta antes de migrar.
 
+### El servicio de precios (`inv-008-precios`, D-018)
+- **Qué es:** un contenedor permanente con la imagen de la app y otro entrypoint, `node --max-old-space-size=64 /app/precios/servicio-precios.mjs bucle` (`scripts/servicio-precios.ts`, `src/servicio-precios/`):
+  - de lunes a viernes, a las 18:00 COT, trae los cierres de Yahoo (`.CL`) y el valor de unidad de la SFC con los mismos CLI de `scripts/` (`precios`, luego `fondo`), cada uno como proceso hijo, con plazo de 15 min por tarea y **sin reintentos**;
+  - no mira festivos: ese día los CLI no guardan nada. Una corrida perdida no se recupera (cada corrida trae 10 días).
+- **Lo que lo limita:** usuario 10008, sistema de archivos de solo lectura, `cap_drop: ALL`, `no-new-privileges`, 96 MiB con `mem_limit` = `memswap_limit`, 0.25 CPU, 64 procesos, sin puertos y con el `ulimits` de core en 0.
+  - Su única credencial es la del rol `inv_precios`. Sus redes: la interna (para la base) y `inv-008-red-precios`, la única con salida. El puente tiene nombre fijo, `br-inv008-prec`, para la regla de firewall del host que pone PI.
+  - El buscador solo llega a los dos hosts fijos de sus fuentes (Yahoo y datos.gov.co), sin seguir redirecciones y solo por IPv4 pública. La red no filtra por destino: lo limita el código.
+- **Sin el secreto no se cae.** Si `INV_PRECIOS_DATABASE_URL` no está, o trae una credencial ajena, el servicio queda sano en espera (`SIN_SECRETO` o `SECRETO_INVALIDO` en su log y en su huella), con latido.
+- **Cómo se pone el secreto:** la línea `INV_PRECIOS_DATABASE_URL` la agrega Jelk en el VPS, sin verla (§2). El servicio exige el formato `postgresql://inv_precios:<clave>@inv-008-db:5432/inversiones?connection_limit=2` (solo los parámetros `schema`, `connection_limit`, `connect_timeout` y `pool_timeout`; sin `host` ni `hostaddr`) y nunca imprime la URL.
+- **Cómo se despliega:**
+  - la guarda `imagen_con_servicio_precios <sha>` mira en el clon, con git, si el commit trae `src/servicio-precios/bucle.ts`;
+  - si lo trae, `desplegar-prod.sh` lo levanta con los permanentes y lo verifica (`verificar_servicio`): corriendo con la imagen enviada y healthy, sin puertos, solo en sus dos redes, y con el entorno de una lista blanca por nombre (el ENV de la imagen más `DATABASE_URL` y `TZ`; cualquier otra variable aborta);
+  - si la imagen es anterior al servicio, lo baja con `--scale`; si no se sabe, el despliegue aborta (`--estricto`);
+  - la vuelta atrás aplica la misma guarda al sha al que vuelve;
+  - el primer despliegue con el servicio cuenta el servicio nuevo en la espera (600 s).
+- **`--ahora`: una corrida ya** (la carga histórica), con la huella y el candado de corrida:
+  ```sh
+  sudo env INV_TAG=$(sudo cat <raíz>/estado/sha-actual) $COMPOSE run --rm -T --no-deps inv-008-precios --ahora --desde AAAA-MM-DD
+  ```
+  - Salida: 0 bien · 3 aviso (algún CLI salió con 3) · 1 fallo · 2 uso · 64 sin el secreto o con una credencial ajena · 75 otra corrida en curso (el bucle o un `--ahora`).
+  - Los CLI salen con 3 tanto por una especie sin dato como por una caída de Yahoo: hoy no se distinguen.
+- **Huella para el vigía:** el servicio escribe `bucle`, `ultima-corrida` y `corrida.candado` (en `clave=valor`) en el volumen `inv-008-precios-estado`, un tmpfs de 64 KiB solo para él. **El vigía todavía no la lee** (el compose de main no la monta en el vigía): lo hace un frente aparte.
+- **Por verificar en el VPS:** la imagen amd64 y la medición de memoria del servicio (`medir-memoria.sh`) en el primer despliegue; Yahoo y la SFC reales en el primer `--ahora`; la corrida de las 18:00 en vivo; y la regla de firewall del host para `br-inv008-prec`, que pone PI.
+
 **Política de migraciones**, como PI:
 - en producción, solo `prisma migrate deploy`;
 - solo migraciones **aditivas**: columnas nuevas con nulos o con valor por defecto, y nunca un DROP ni un RENAME en el mismo despliegue que la quita del código;
@@ -391,7 +428,7 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
   - lo pasa por `age -r <pública>`, a las 02:30 COT;
   - deja `<respaldos>/inv-008-AAAAMMDD-HHMMSS[-semanal|-<motivo>].dump.age` con su `.sha256`, los dos `root:respaldo` en 0640;
   - el texto plano nunca toca el disco: si algo falla, no queda ningún archivo.
-- **Retención:** 14 diarios, 8 semanales (los del domingo) y 5 extras.
+- **Retención:** 14 diarios y 8 semanales (los del domingo). De los extras (con motivo), los de las últimas 48 h y el más reciente de cada motivo nunca se borran, y de los demás quedan los 10 más nuevos. La retención nunca borra el respaldo recién escrito ni uno cuyo `.sha256` falte o no cuadre (queda en el registro para revisarlo a mano). Si el cálculo falla, no se borra nada. Detalle en la cabecera de `docker/respaldo/respaldo.sh`.
 - **Respaldo ya:** `respaldar-base.sh [--motivo x]`. Se lo pide al contenedor y verifica el archivo y su sha256. El despliegue lo corre antes de migrar.
 - **Un respaldo a la vez.** El manual (`exec … --ahora`) y el diario corren en el mismo contenedor y comparten un candado (`flock` sobre `/run/respaldo/respaldo.candado`, que se suelta solo si el proceso muere):
   - el manual espera hasta 600 s (`RESPALDO_ESPERA_S`) y, si no lo consigue, sale con 75 sin tocar nada;
@@ -757,6 +794,11 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 - **`registrar-escision` con salida 3:** había dividendos importados como ordinarios. En la vía B no debe pasar: si pasa, se para.
 - **`construir-lotes` con salida 3:** son avisos, no un error. En el paso 5 puede dar 3 por la escisión; en el 7 debe dar 0, o 3 con los avisos explicados.
 - **`importar-plan` con salida 3:** había otra importación en curso: se reintenta.
+- **`registrar-escision` y `lote-escision` (pasos 3 y 6):**
+  - con **2**, la cabecera o los datos están mal formados (`campo · CÓDIGO`, o `DATOS_INVALIDOS` en el lote): la base no se tocó;
+  - con **1**, la línea dice el código y qué significa. `INSTRUMENTO_DESCONOCIDO` dice si es el origen o el destino. `ERROR_BASE` es «no se pudo confirmar el registro»: un fallo al confirmar pudo dejarlo hecho;
+  - con **0**, el siguiente paso ya es el de la vía B (`cargar-prod.sh`), no `npm run`;
+  - en producción, toda salida distinta de 0 termina con «Vía B: pare la carga y avise al CEO de 008». Un `EVENTO_DUPLICADO` o `LOTE_YA_REGISTRADO` al repetir un paso también pide parar; si eso debe contar como «salió bien» lo decide el CEO de 008 (por decidir).
 - **`registrar-fondo` (paso 10):** imprime el id interno del fondo, «creado» o «ya existía» y la clase; nunca el código ni el nombre.
 - **`importar-certificacion` (paso 11):** puede rechazar el corte (arriba, «El corte real de la certificación»). Si carga, concilia al cargar; sin los cierres del día de corte, el valor sale `sin_precio_al_corte`, y el fondo, `fondo_sin_unidades` o `sin_valor_unidad_al_corte`. Es lo esperado: lo resuelven los pasos 12 a 14. Su «siguiente paso» en producción ya es este (vía B), no `precios:actualizar`.
 - **`importar-valores-fondo` (paso 12):** imprime `CSV de valores del fondo · filas · fondos` y el reporte de `actualizar-fondo` (valores nuevos y revisados, el último dato de cada fondo por su id interno).
@@ -780,6 +822,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.16 · 2026-11-21 · 23:26 (-05) · Inversiones · Fábrica Inversiones (frente docs-tanda-21nov) · §1: `inv-008-precios` entre los servicios, la variable `precios` y `inv-008-red-precios` con salida; §4.3: espera de la medición (120 s o 600 s), verificación del servicio de precios, vuelta atrás con precios; §5: regla de la espera, piso de memoria con salida 3, reversa con el clon en el sha que corre o uno posterior, `INV_ESPERA_MEDICION_S`, y el servicio de precios (qué es, secreto, despliegue, `--ahora`, huella); §6: retención nueva; §11: salidas de `registrar-escision` y `lote-escision` (v2.16 sobre la v2.15)
 > v2.15 · 2026-11-21 · 23:01 (-05) · Inversiones · Fábrica Inversiones (frente limites-reaplicar) · §5 «Límites de memoria»: el reload diario del host deja `memory.swap.max` en `max`; `desplegar-prod.sh` y `reanudar-008.sh` reaplican mem = memswap con `docker update` (antes de tocar nada y antes del chequeo), el comando `reaplicar-limites-008.sh`, el aviso de `medir-memoria.sh`, el ensayo en Colima y lo que decide PI; reglas: la excepción de `docker update` (v2.15 sobre la v2.14 de main)
 > v2.14 · 2026-11-21 · 22:05 (-05) · Inversiones · Fábrica Inversiones (frente fondo-movimientos-via-b; v2.14 sobre la v2.13 de main) · §11: paso 12 bis `registrar-movimiento-fondo` (la constitución del fondo por el sobre: cabecera, ensayo y `--aplicar`, contraste con el valor de unidad del mismo día, lo que garantiza la base y lo que garantiza la app, salidas y la frase de parar); el CSV del paso 12 cubre el día de la constitución; riesgo residual del argv con sus cifras
 > v2.13 · 2026-11-21 · 20:38 (-05) · Inversiones · Fábrica Inversiones (frente certificacion-corte-real) · §11: el corte real de la certificación (`FECHA_CORTE_ANTES_DEL_CIERRE`, `CORTE_NO_COINCIDE`, `fecha_corte_dudosa` con día sugerido), el paso 15 `corregir-corte-certificacion` por el sobre (lista blanca, qué deja, rechazos, conciliar el corte real) y reconciliar al desplegar por `conciliacion-v2` (la numeración v2.13 sigue a la v2.12 de main)

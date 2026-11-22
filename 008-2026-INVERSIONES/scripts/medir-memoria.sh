@@ -2,7 +2,8 @@
 # Inversiones · medición de memoria del VPS compartido con PI: MemAvailable y SwapFree de /proc/meminfo,
 # más `docker stats --no-stream` SOLO de los contenedores de inv-008-prod (nada de PI ni de otros), y un aviso por cada
 # uno que pueda usar swap (memory.swap.max distinto de 0), con el comando que lo corrige (reaplicar-limites-008.sh).
-# desplegar-prod.sh la corre antes de `up` y 10 minutos después, y deja las dos en estado/mediciones/.
+# desplegar-prod.sh la corre antes de `up` y después de la espera (120 o 600 s; en la corta, con el piso de memoria,
+# una tercera medición tras extenderla a 600 s), y deja las mediciones en estado/mediciones/.
 # Criterio de corte: MemAvailable en reposo bajo 1 GiB.
 #
 # Uso: sudo scripts/medir-memoria.sh [--etiqueta <texto>] [--salida <archivo bajo la raíz de Inversiones>]

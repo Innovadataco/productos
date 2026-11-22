@@ -26,6 +26,8 @@ npm run importar:trii -- --email <su-correo> movimientos.csv ordenes.csv dividen
   ```
   El origen debe existir (se crea al importar las órdenes); un nemotécnico mal escrito se rechaza. Si la especie destino solo le llegó por la escisión (no está en ninguna orden), agregue `--crear-destino`.
   Un evento registrado no se corrige con el comando: revise los datos antes. El mismo evento o un mismo pago de fracción en dos eventos se rechazan (`EVENTO_DUPLICADO`, `PAGO_FRACCION_DUPLICADO`). La salida 3 indica que el evento quedó registrado, pero hay dividendos ya cargados como ordinarios que hay que revertir.
+- Salidas de `escision:registrar`: 0 registrado (con su id y el siguiente paso) · 1 rechazado, con el código y qué significa (`INSTRUMENTO_DESCONOCIDO` dice si es el origen o el destino) · 2 datos inválidos, sin tocar la base · 3 registrado, con dividendos ordinarios que revertir.
+- En producción va por la vía B (`cargar-prod.sh registrar-escision`, runbook §11). Ante cualquier salida distinta de 0 dice «pare la carga y avise al CEO de 008».
 - Montos con más decimales de los que guarda la base se rechazan (`NUMERO_PRECISION`) en vez de redondearse.
 - Reconoce cada archivo por su encabezado. Reimportar o cargar exportaciones que se solapan no duplica.
 - Si una fila no se puede leer, **ese archivo no se carga** y el comando dice la fila, la columna y el código del error (nunca el valor).
@@ -39,6 +41,7 @@ npm run lote:escision -- --destino <NEMO> --fecha-evento AAAA-MM-DD --cantidad <
 ```
 - Corra `lotes:construir` después de cada importación de órdenes. Si avisa `VENTA_SIN_LOTES`, a una especie le falta un lote (p. ej. el de una escisión); sus ventas quedan sin asignar hasta registrarlo.
 - El lote de escisión toma su costo del portal de Acciones & Valores y se enlaza al evento y al lote vivo más antiguo de la especie origen. El lote madre no se ajusta (se sigue al portal).
+- Salidas de `lote:escision`: 0 registrado (con el siguiente paso: `lotes:construir`; en producción, `cargar-prod.sh construir-lotes`) · 1 rechazado, con el código (`EVENTO_NO_ENCONTRADO`, `EVENTO_AMBIGUO`, `LOTE_YA_REGISTRADO` o `SIN_LOTE_MADRE`, cada uno dice qué falta) · 2 datos inválidos (`DATOS_INVALIDOS`), sin tocar la base.
 
 ## Constitución del fondo (unidades y aporte)
 ```bash
@@ -79,5 +82,12 @@ El PDF no trae la fecha de corte en el texto: usted la da. Un PDF bajado durante
 
 Este repo es público: aquí no hay datos reales. Los datos de prueba están inventados y marcados `.ficticio.`.
 
+## Proyecciones (motor, sin pantalla)
+- Módulo de dominio puro en `src/proyecciones/`, con su lector de solo lectura en el servidor. No tiene comando ni pantalla: en `main` todavía no hay pantalla de proyecciones. Su punto de entrada es `proyectar(db, entrada)`.
+- Entrada: el portafolio vigente, los cierres vigentes de los últimos 10 años como máximo, los dividendos, los decretos y los parámetros del escenario (que no se guardan).
+- Salida: JSON con percentiles por mes, la probabilidad de terminar bajo lo aportado, la caída máxima mediana, los supuestos y el aviso «Escenario ilustrativo, no es recomendación ni promesa.».
+- Pruebas: `npx vitest run tests/unit/proyecciones` (incluye `rendimiento.test.ts`).
+
 ---
+> v1.2 · 2026-11-21 · 23:28 (-05) · INV · Fábrica Inversiones (frente docs-tanda-21nov) · salidas de `escision:registrar` y `lote:escision` con el siguiente paso; sección de proyecciones (motor, sin pantalla) (v1.2 sobre la v1.1)
 > v1.1 · 2026-11-21 · 20:26 (-05) · INV · Fábrica Inversiones (frente certificacion-corte-real) · primer pie de versión · certificación de A&V: el corte real (FECHA_CORTE_ANTES_DEL_CIERRE, CORTE_NO_COINCIDE, fecha_corte_dudosa) y su corrección con `corregir-corte-certificacion`
