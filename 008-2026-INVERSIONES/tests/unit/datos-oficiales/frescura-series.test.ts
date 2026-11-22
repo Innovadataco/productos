@@ -54,7 +54,7 @@ describe("frescura · umbrales del catálogo", () => {
     }
   });
 
-  it("IPC: 44 días después del fin del mes AL_DIA, 45 ATRASADA; el mes nunca cubre hoy (se publica cerrado)", () => {
+  it("IPC: 44 días después del fin del mes AL_DIA, 45 ATRASADA; con hoy posterior al mes, no lo cubre", () => {
     const marzo = cifra("IPC_INDICE", "2027-03-01", "2027-03-31");
     expect(frescura("IPC_INDICE", marzo, dia("2027-05-14"))).toEqual({ estado: "AL_DIA", dias: 44, umbralDias: 45, cubreHoy: false });
     expect(frescura("IPC_INDICE", marzo, dia("2027-05-15"))).toEqual({ estado: "ATRASADA", dias: 45, umbralDias: 45, cubreHoy: false });
@@ -86,5 +86,7 @@ describe("frescura · errores tipados (nunca adivina)", () => {
     expect(codigoDe(() => frescura("TRM", cifra("TRM", "2027-03-06", "2027-03-06", { hasta: new Date("x") }), dia("2027-03-08")))).toBe("FECHA_INVALIDA");
     expect(codigoDe(() => frescura("TRM", cifra("TRM", "2027-03-06", "2027-03-06", { desde: new Date("2027-03-06T12:00:00Z") }), dia("2027-03-08")))).toBe("FECHA_INVALIDA");
     expect(codigoDe(() => frescura("TRM", cifra("TRM", "2027-03-09", "2027-03-11"), dia("2027-03-08")))).toBe("VIGENCIA_FUTURA");
+    // Hallazgo MEDIO del code-reviewer: una vigencia al revés (hasta antes de desde) inflaría los días; nunca se adivina.
+    expect(codigoDe(() => frescura("TRM", cifra("TRM", "2027-03-07", "2027-03-06"), dia("2027-03-08")))).toBe("FECHA_INVALIDA");
   });
 });

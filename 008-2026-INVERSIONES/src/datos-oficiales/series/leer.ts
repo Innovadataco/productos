@@ -23,6 +23,7 @@ import type { Prisma } from "@prisma/client";
 import { CATALOGO, type SerieCatalogo } from "../catalogo";
 import { esFechaDeNegocio, MS_POR_DIA, sumarDias } from "../../plan/fechas";
 import { ErrorLecturaSeries, esValorOficial, type CifraOficial } from "./consulta";
+import type { Frescura } from "./frescura";
 
 /** El cliente de Prisma o una transacción. */
 export type LectorSeries = Prisma.TransactionClient;
@@ -81,6 +82,15 @@ export async function valorVigenteEn(db: LectorSeries, codigo: string, fecha: Da
   exigirDia(fecha);
   const fila = await ultimoQueEmpieza(db, serie.codigo, fecha);
   return fila !== null && fila.hasta.getTime() >= fecha.getTime() ? aCifra(serie, fila) : null;
+}
+
+/** ESQUEMA DEL ROJO (hallazgo MEDIO del code-reviewer): el último y su frescura con un solo `hoy`. */
+export async function estadoSerie(db: LectorSeries, codigo: string, hoy: Date, catalogo: readonly SerieCatalogo[] = CATALOGO): Promise<{ readonly ultimo: CifraOficial | null; readonly frescura: Frescura }> {
+  void db;
+  void codigo;
+  void hoy;
+  void catalogo;
+  throw new Error("NO_IMPLEMENTADO");
 }
 
 /** Las vigentes que se solapan con [desde, hasta] (los dos incluidos), ordenadas por desde. */

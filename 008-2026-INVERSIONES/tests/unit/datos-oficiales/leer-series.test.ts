@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { CATALOGO, serieDelCatalogo } from "@/datos-oficiales/catalogo";
 import { ErrorLecturaSeries } from "@/datos-oficiales/series/consulta";
-import { MAX_DIAS_RANGO_SERIES, MAX_DIAS_TRAS_DESDE_LECTURA, serieEnRango, ultimoValor, valorVigenteEn } from "@/datos-oficiales/series/leer";
+import { MAX_DIAS_RANGO_SERIES, MAX_DIAS_TRAS_DESDE_LECTURA, estadoSerie, serieEnRango, ultimoValor, valorVigenteEn } from "@/datos-oficiales/series/leer";
 import { baseFalsaLectura, type FilaLecturaFalsa } from "./base-falsa-lectura";
 
 const dia = (iso: string) => new Date(`${iso}T00:00:00Z`);
@@ -64,7 +64,7 @@ describe("ultimoValor · el último YA en vigor (desde ≤ hoy), solo vigentes",
     expect([enElHueco?.valor, enElHueco?.desde, enElHueco?.hasta]).toEqual(["4609.41", dia("2027-03-10"), dia("2027-03-10")]);
   });
 
-  it("los ceros sobrantes de DECIMAL(20,8) no salen y la cifra queda congelada", async () => {
+  it("un Prisma.Decimal de la base (que ya normaliza) sale canónico y la cifra queda congelada", async () => {
     const { db } = baseFalsaLectura([{ serie: "TPM", desde: "2027-03-10", hasta: "2027-03-10", valor: "9.50000000" }]);
     const c = await ultimoValor(db, "TPM", dia("2027-03-10"));
     expect(c?.valor).toBe("9.5");
@@ -174,5 +174,60 @@ describe("leer.ts · entradas inválidas: error tipado y sin consultar la base",
     expect(await ultimoValor(db, "FICTA", dia("2027-03-10"), [ficticia])).toMatchObject({ serie: "FICTA", valor: "7.13", unidad: "unidad ficticia" });
     expect(await codigoDe(() => ultimoValor(db, "TPM", dia("2027-03-10"), [ficticia]))).toBe("SERIE_DESCONOCIDA");
     expect(CATALOGO.map((s) => s.codigo)).toContain("TRM");
+  });
+});
+
+describe("hallazgos de la revisión (C5a)", () => {
+  it("estadoSerie: el último y su frescura con UN solo hoy y una sola consulta (code-reviewer, MEDIO)", async () => {
+    const { db, llamadas } = baseFalsaLectura(SEMANA);
+    const enElHueco = await estadoSerie(db, "TRM", dia("2027-03-11"));
+    expect(enElHueco.ultimo?.valor).toBe("4609.41");
+    expect(enElHueco.frescura).toEqual({ estado: "AL_DIA", dias: 1, umbralDias: 3, cubreHoy: false });
+    expect(llamadas).toHaveLength(1);
+    expect(llamadas[0]?.args.where.desde).toEqual({ lte: dia("2027-03-11") });
+    const hoy = await estadoSerie(db, "TRM", dia("2027-03-07"));
+    expect([hoy.ultimo?.valor, hoy.frescura.estado, hoy.frescura.cubreHoy]).toEqual(["4617.13", "AL_DIA", true]);
+    expect((await estadoSerie(db, "TRM", dia("2027-03-16"))).frescura).toEqual({ estado: "ATRASADA", dias: 4, umbralDias: 3, cubreHoy: false });
+    expect(await estadoSerie(db, "IBR_3M_EA", dia("2027-03-16"))).toEqual({ ultimo: null, frescura: { estado: "SIN_DATOS", dias: null, umbralDias: 7, cubreHoy: false } });
+    const antes = llamadas.length;
+    expect(await codigoDe(() => estadoSerie(db, "TRM", new Date("2027-03-16T05:00:00Z")))).toBe("FECHA_INVALIDA");
+    expect(await codigoDe(() => estadoSerie(db, "UVR", dia("2027-03-16")))).toBe("SERIE_DESCONOCIDA");
+    expect(llamadas.length).toBe(antes);
+    expect(Object.isFrozen(hoy)).toBe(true);
+  });
+
+  it("fechas fuera de la ventana de lectura (1902-01-01 a 2199-12-31): FECHA_INVALIDA tipado, sin llegar a Prisma (security-reviewer, BAJO)", async () => {
+    const { db, llamadas } = baseFalsaLectura(SEMANA);
+    for (const f of [dia("1901-12-31"), dia("2200-01-01"), new Date(Date.UTC(275760, 8, 13)), new Date(Date.UTC(-271821, 3, 20))]) {
+      expect(await codigoDe(() => ultimoValor(db, "TRM", f)), f.toISOString()).toBe("FECHA_INVALIDA");
+      expect(await codigoDe(() => valorVigenteEn(db, "TRM", f)), f.toISOString()).toBe("FECHA_INVALIDA");
+    }
+    expect(await codigoDe(() => serieEnRango(db, "TRM", dia("1901-12-31"), dia("1902-01-02")))).toBe("FECHA_INVALIDA");
+    expect(await codigoDe(() => serieEnRango(db, "TRM", dia("2199-12-30"), dia("2200-01-01")))).toBe("FECHA_INVALIDA");
+    expect(llamadas).toEqual([]);
+    expect(await ultimoValor(db, "TRM", dia("1902-01-01"))).toBeNull();
+    expect((await ultimoValor(db, "TRM", dia("2199-12-31")))?.valor).toBe("4608.37");
+  });
+
+  it("los ceros sobrantes que traiga el decimal se quitan (antes la prueba pasaba sola: Prisma.Decimal ya normaliza) (code-reviewer, BAJO)", async () => {
+    for (const [crudo, canonico] of [["9.50000000", "9.5"], ["4613.00000000", "4613"], ["4613.", "4613"], ["0.00000371", "0.00000371"]] as const) {
+      const { db } = baseFalsaLectura([trm("2027-03-05", "2027-03-05", { toFixed: () => crudo } as never)]);
+      expect((await ultimoValor(db, "TRM", dia("2027-03-05")))?.valor, crudo).toBe(canonico);
+    }
+    const { db } = baseFalsaLectura([trm("2027-03-05", "2027-03-05", { toFixed: () => "0.00000000" } as never)]);
+    expect(await codigoDe(() => ultimoValor(db, "TRM", dia("2027-03-05")))).toBe("VALOR_INVALIDO");
+  });
+
+  it("la cifra no comparte sus fechas con lo leído: cambiar una no cambia la siguiente lectura (code-reviewer, BAJO)", async () => {
+    const { db } = baseFalsaLectura(SEMANA);
+    const primera = await ultimoValor(db, "TRM", dia("2027-03-07"));
+    primera!.desde.setTime(0);
+    primera!.hasta.setTime(0);
+    primera!.traidoEn.setTime(0);
+    const segunda = await ultimoValor(db, "TRM", dia("2027-03-07"));
+    expect([segunda?.desde, segunda?.hasta, segunda?.traidoEn]).toEqual([dia("2027-03-06"), dia("2027-03-08"), new Date("2027-03-05T21:07:19Z")]);
+    const [enRango] = await serieEnRango(db, "TRM", dia("2027-03-06"), dia("2027-03-06"));
+    enRango!.desde.setTime(0);
+    expect((await serieEnRango(db, "TRM", dia("2027-03-06"), dia("2027-03-06")))[0]?.desde).toEqual(dia("2027-03-06"));
   });
 });

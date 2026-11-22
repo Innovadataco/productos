@@ -144,6 +144,9 @@ describe("variacionIndice · la variación del IPC sale del índice (CALCULADA)"
     expect(codigoDe(() => variacionIndice(b, { ...f, hasta: new Date(Number.NaN) }))).toBe("FECHA_INVALIDA");
     expect(codigoDe(() => variacionIndice(b, { ...f, desde: instante("2027-02-01T05:00:00Z") }))).toBe("FECHA_INVALIDA");
     expect(codigoDe(() => variacionIndice(b, { ...f, traidoEn: new Date("x") }))).toBe("FECHA_INVALIDA");
+    // Hallazgo MEDIO del code-reviewer: una vigencia al revés (hasta antes de desde), en la base o en el final.
+    expect(codigoDe(() => variacionIndice({ ...b, hasta: dia("2026-12-31") }, f))).toBe("FECHA_INVALIDA");
+    expect(codigoDe(() => variacionIndice(b, { ...f, desde: dia("2027-03-01"), hasta: dia("2027-02-28") }))).toBe("FECHA_INVALIDA");
   });
 
   it("el mensaje del error es solo el código: ni valores ni fechas", () => {

@@ -28,7 +28,10 @@ import { MAX_DIAS_RANGO_SERIES, serieEnRango } from "@/datos-oficiales/series/le
 const db = new PrismaClient();
 const corrida = Date.now().toString(36).toUpperCase();
 const SERIE = `FICTR_${corrida}`;
-const CATALOGO_PRUEBA: readonly SerieCatalogo[] = [{ ...serieDelCatalogo("TPM")!, codigo: SERIE, unidad: "unidad ficticia", fuente: "sfc:ficticia" }];
+/** Una serie intercalada día a día con el ruido (el peor caso de dispersión en el heap; database-reviewer, MEDIO). */
+const SERIE_DISPERSA = `FICTD_${corrida}`;
+const ficticia = (codigo: string): SerieCatalogo => ({ ...serieDelCatalogo("TPM")!, codigo, unidad: "unidad ficticia", fuente: "sfc:ficticia" });
+const CATALOGO_PRUEBA: readonly SerieCatalogo[] = [ficticia(SERIE), ficticia(SERIE_DISPERSA)];
 const INICIO_MS = Date.UTC(1931, 0, 5);
 const DIA_MS = 86_400_000;
 const DIAS_SERIE = 12_000;
@@ -37,6 +40,8 @@ const VECES_RANGO = 16;
 const RANGO_GRANDE = VECES_RANGO * RANGO_CHICO;
 const CRECIMIENTO_MINIMO = 8;
 const MARGEN_BLOQUES = 4;
+/** Páginas de índice que puede leer una consulta acotada (altura del árbol y las hojas del tramo), además de las del heap. */
+const MARGEN_INDICE = 8;
 /** El doble de lo lineal. */
 const ESCALA_MAXIMA = 2 * VECES_RANGO;
 const CORRIDAS = 3;
@@ -79,14 +84,20 @@ const contadores = async (tx: Prisma.TransactionClient): Promise<Contadores> => 
  * una transacción, así que al empezar pueden traer lo de sentencias anteriores (el count(*) y el ANALYZE de la siembra);
  * dentro de la transacción no se vacían, y la diferencia es exacta.
  */
-async function medirConsulta(desde: number, hasta: number): Promise<Medida> {
+async function medirConsulta(desde: number, hasta: number, serie = SERIE): Promise<Medida> {
   return db.$transaction(async (tx) => {
     const c0 = await contadores(tx);
-    const filas = await serieEnRango(tx, SERIE, diaN(desde), diaN(hasta), CATALOGO_PRUEBA);
+    const filas = await serieEnRango(tx, serie, diaN(desde), diaN(hasta), CATALOGO_PRUEBA);
     const c1 = await contadores(tx);
     const bloques = (c: Contadores) => Number(c.bt) + Number(c.bi ?? 0n);
     return { filas: filas.length, secuenciales: Number(c1.seq - c0.seq), scansIndiceVigente: Number(c1.idx - c0.idx), bloques: bloques(c1) - bloques(c0) };
   });
+}
+
+/** ESQUEMA DEL ROJO (security-reviewer, MEDIO): solo se siembra en una base de pruebas que llega casi vacía. */
+function exigirBaseDescartable(nombreBase: string, filasPrevias: number): void {
+  void nombreBase;
+  void filasPrevias;
 }
 
 async function contar(): Promise<number> {
@@ -130,6 +141,7 @@ let tamanoDespues = 0;
 let paginas = 0;
 let antes: { medio: Medida; principio: Medida; final: Medida };
 let despues: Medida;
+let dispersa: Medida;
 
 beforeAll(async () => {
   await sembrar(SERIE, null);
@@ -143,6 +155,7 @@ beforeAll(async () => {
   await sembrar(SERIE, Math.ceil(((CRECIMIENTO_MINIMO - 1) * tamanoAntes + 1) / DIAS_SERIE));
   tamanoDespues = await contar();
   despues = await medirConsulta(MEDIO, MEDIO + 30);
+  dispersa = await medirConsulta(MEDIO, MEDIO + 30, SERIE_DISPERSA);
   paginas = await paginasDeLaTabla();
   if (medir) {
     process.stdout.write(`[series] tabla ${tamanoAntes} → ${tamanoDespues} filas (${paginas} páginas); bloques de 31 días: medio ${antes.medio.bloques} → ${despues.bloques}, principio ${antes.principio.bloques}, final ${antes.final.bloques}\n`);
@@ -154,6 +167,30 @@ afterAll(async () => {
 });
 
 describe("serieEnRango · rendimiento con volumen inventado (candado de escalamiento, no de tiempo fijo)", () => {
+  it("solo siembra en una base de pruebas (nombre terminado en _test) que llega casi vacía (security-reviewer, MEDIO)", () => {
+    const filasDe = (f: () => void): string | null => {
+      try {
+        f();
+        return null;
+      } catch (e) {
+        return (e as Error).message;
+      }
+    };
+    expect(filasDe(() => exigirBaseDescartable("inversiones", 0))).toMatch(/_test/);
+    expect(filasDe(() => exigirBaseDescartable("inversiones_test_copia", 0))).toMatch(/_test/);
+    expect(filasDe(() => exigirBaseDescartable("inversiones_series_lectura_test", MAX_TABLA_ANTES - DIAS_SERIE + 1))).toMatch(/integracion\.mjs/);
+    expect(filasDe(() => exigirBaseDescartable("inversiones_series_lectura_test", MAX_TABLA_ANTES - DIAS_SERIE))).toBeNull();
+    expect(filasDe(() => exigirBaseDescartable("inversiones_test", 0))).toBeNull();
+  });
+
+  it(`con las series intercaladas día a día (peor caso de dispersión), 31 días leen a lo sumo una página por fila más ${MARGEN_INDICE} de índice (database-reviewer, MEDIO)`, () => {
+    expect(dispersa.filas).toBe(31);
+    expect(dispersa.secuenciales).toBe(0);
+    expect(dispersa.scansIndiceVigente).toBeGreaterThanOrEqual(1);
+    expect(dispersa.bloques).toBeLessThanOrEqual(dispersa.filas + MARGEN_INDICE);
+    expect(dispersa.bloques * 10).toBeLessThan(paginas);
+  });
+
   it("usa el índice único parcial (serie, desde) de los vigentes y nunca recorre la tabla", () => {
     for (const m of [antes.medio, antes.principio, antes.final, despues]) {
       expect(m.filas).toBe(31);
