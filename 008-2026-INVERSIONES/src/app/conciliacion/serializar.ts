@@ -3,7 +3,8 @@
  * - Una fila por especie (CANTIDAD y VALOR juntos), por nemotécnico: toma el peor estado de los dos y junta sus porqués.
  * - Filas aparte para el total de acciones, cada fondo y el efectivo.
  * - % de diferencia = (A&V − sistema) / |A&V| × 100, el mismo denominador de la tolerancia, en Decimal y con 2 decimales.
- * - El `detalle` se lee con guardas por clave y tipo: si no tiene la forma esperada, no se pinta.
+ * - El `detalle` se lee con guardas por clave y tipo: si no tiene la forma esperada, no se pinta. En el efectivo (v3),
+ *   cuántos rendimientos del fondo contó la caja y el último día, para que se vea si falta alguno.
  */
 import { Prisma, type ResultadoConciliacion } from "@prisma/client";
 import type { ControlLeido, CorteDisponible, LecturaConciliacion, PorLiquidar } from "@/conciliacion/leer";
@@ -56,10 +57,21 @@ function filaEspecie(id: string, cantidad: ControlLeido | undefined, valor: Cont
   };
 }
 
+const DIA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/** En el efectivo (v3): los rendimientos del fondo que contó la caja, si el detalle los trae con su forma. */
+function rendimientosContados(c: ControlLeido): string[] {
+  const d = c.detalle;
+  if (c.tipo !== "EFECTIVO" || !esObjeto(d)) return [];
+  const { rendimientosFic: n, ultimoRendimientoFic: ultimo } = d;
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || typeof ultimo !== "string" || !DIA_ISO.test(ultimo)) return [];
+  return [`Rendimientos del fondo contados en la caja: ${n}; el último, del ${ultimo}.`];
+}
+
 function filaMonto(c: ControlLeido, etiqueta: string): FilaMontoVista {
   return {
     id: c.instrumentoId ?? c.tipo, etiqueta, av: texto(c.real), sistema: texto(c.esperado), diferencia: texto(c.diferencia),
-    diferenciaPct: porcentaje(c.diferencia, c.real), estado: estado(c), porque: porques([c]),
+    diferenciaPct: porcentaje(c.diferencia, c.real), estado: estado(c), porque: [...porques([c]), ...rendimientosContados(c)],
   };
 }
 

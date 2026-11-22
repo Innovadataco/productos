@@ -148,7 +148,10 @@ export async function cajaAlCorte(
   return { liquidado: liquidado.toString(), operado: operado.toString(), aporteFondoRegistrado: conAporte.length === new Set(fondos).size };
 }
 
-/** Los RENDIMIENTO (pagados en efectivo) de esos fondos con fecha ≤ corte: cuántos y el último día. */
+/**
+ * Los RENDIMIENTO (pagados en efectivo) de esos fondos con fecha ≤ corte: cuántos y el último día. Lo sirve el único
+ * rendimiento_fondo (fondoId, fecha, tipo) (database-reviewer): no se quita ni se reordena sin revisar esta consulta.
+ */
 export async function rendimientosFicAlCorte(db: Lector, corte: Date, fondos: readonly string[]): Promise<RendimientosFicEntrada> {
   const r = await db.rendimientoFondo.aggregate({
     where: { fondoId: { in: [...fondos] }, tipo: "RENDIMIENTO", fecha: { lte: corte } },

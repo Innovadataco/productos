@@ -77,7 +77,7 @@ DECLARE
   restricciones text[] := ARRAY[
     ['ajuste_caja', 'ajuste_caja_fraccion_chk', 'CHECK (((categoria = ''FRACCION_ESCISION''::"CategoriaAjusteCaja") = ("eventoId" IS NOT NULL)))'],
     ['ajuste_caja', 'ajuste_caja_monto_chk', 'CHECK ((monto <> (0)::numeric))'],
-    ['ajuste_caja', 'ajuste_caja_rendimiento_fic_chk', 'CHECK (((categoria <> ''RENDIMIENTO_FIC''::"CategoriaAjusteCaja") OR (monto > (0)::numeric)))'],
+    ['ajuste_caja', 'ajuste_caja_rendimiento_fic_chk', 'CHECK (((categoria <> ''RENDIMIENTO_FIC''::"CategoriaAjusteCaja") OR ((monto > (0)::numeric) AND (monto <> ''NaN''::numeric))))'],
     ['asignacion_venta', 'asignacion_venta_cantidad_chk', 'CHECK (((cantidad > 0) AND ("costoBase" >= (0)::numeric)))'],
     ['certificacion', 'certificacion_retiro_chk', 'CHECK (((("retiradaEn" IS NULL) = ("reemplazadaPorId" IS NULL)) AND (("reemplazadaPorId" IS NULL) OR ("reemplazadaPorId" <> id))))'],
     ['certificacion', 'certificacion_referencia_efectivo_chk', 'CHECK ((("referenciaEfectivo" IS NULL) OR ("referenciaEfectivo" ~ ''^p[0-9]{1,3}:f[0-9]{1,5}$''::text)))'],

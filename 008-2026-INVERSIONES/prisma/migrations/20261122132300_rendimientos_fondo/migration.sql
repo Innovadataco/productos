@@ -9,7 +9,8 @@
 --   caja descontaría dos veces). Lo decide el CHECK de enlace y un disparador (no una FK compuesta: Prisma 5.22 no la
 --   maneja con columnas derivadas). Si falta el ajuste, decide la FK; si el valor no es positivo, el CHECK.
 -- - El fondo es un FIC (el disparador lo comprueba al insertar: el tipo de un instrumento no cambia).
--- - ajuste_caja: un RENDIMIENTO_FIC siempre entra a la caja (> 0). La tabla ya tiene filas (los aportes): el CHECK nace
+-- - ajuste_caja: un RENDIMIENTO_FIC siempre entra a la caja (> 0 y sin NaN: ajuste_caja_monto_chk, «<> 0», lo deja
+--   pasar). La tabla ya tiene filas (los aportes): el CHECK nace
 --   NOT VALID y se valida aquí mismo; si una base tuviera un RENDIMIENTO_FIC negativo (no puede: el valor nace en la
 --   migración anterior), el migrador aborta y se ve.
 -- - Solo inserción, como los demás hechos (la salida `inv.reversion` es la de siempre: freno contra errores, no contra
@@ -60,7 +61,7 @@ ALTER TABLE "rendimiento_fondo" ADD CONSTRAINT "rendimiento_fondo_valor_chk" CHE
 ALTER TABLE "rendimiento_fondo" ADD CONSTRAINT "rendimiento_fondo_fecha_chk" CHECK (isfinite("fecha"));
 ALTER TABLE "rendimiento_fondo" ADD CONSTRAINT "rendimiento_fondo_enlace_chk" CHECK (("tipo" = 'RENDIMIENTO') = ("ajusteCajaId" IS NOT NULL));
 
-ALTER TABLE "ajuste_caja" ADD CONSTRAINT "ajuste_caja_rendimiento_fic_chk" CHECK ("categoria" <> 'RENDIMIENTO_FIC' OR "monto" > 0) NOT VALID;
+ALTER TABLE "ajuste_caja" ADD CONSTRAINT "ajuste_caja_rendimiento_fic_chk" CHECK ("categoria" <> 'RENDIMIENTO_FIC' OR ("monto" > 0 AND "monto" <> 'NaN')) NOT VALID;
 ALTER TABLE "ajuste_caja" VALIDATE CONSTRAINT "ajuste_caja_rendimiento_fic_chk";
 
 -- Los mensajes son fijos: nunca llevan valores (son datos del dueño).
