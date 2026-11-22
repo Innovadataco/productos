@@ -14,9 +14,11 @@ import { conexionRechazada, crearOllamaFalso, generacionFicticia, json, tagsCon,
 import { URL_GENERAR, URL_TAGS } from "../local/apoyo/red.ficticio";
 import { DESTINO_FICTICIO, DIGEST_AYA, DIGEST_GEMMA, DIGEST_QWEN, LISTA_FICTICIA, SIN_LISTA, VIGENTE_FICTICIA } from "./apoyo/config.ficticio";
 
+// La lista ficticia de PI como la del módulo (sin importar el apoyo, que importa este mismo módulo: se colgaría).
 vi.mock("@/ia/local/modelos", async (original) => {
   const real = await original<typeof import("@/ia/local/modelos")>();
-  const { LISTA_FICTICIA: lista } = await import("./apoyo/config.ficticio");
+  const { readFileSync } = await import("node:fs");
+  const lista = real.leerModelosPermitidos(readFileSync(new URL("../../../fixtures/ia/modelos-ia-local-permitidos.ficticio.json", import.meta.url), "utf8"));
   const modelos = lista.estado === "LISTA" ? lista.modelos : [];
   return { ...real, modeloAprobado: (n: unknown) => modelos.find((m) => m.nombre === n) ?? null };
 });

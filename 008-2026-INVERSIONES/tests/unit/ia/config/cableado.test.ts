@@ -5,6 +5,7 @@
  * puertas sobre un `fetch` y un SDK falsos: lo elegido llega al cable. Sin red. Datos inventados.
  */
 import { describe, expect, it, vi } from "vitest";
+import type { PaqueteHechos } from "@/ia/contrato";
 import { configLocalDe, configNubeDe, corridaDe, generarSegunConfig, generadoresDeConfig } from "@/ia/config/cableado";
 import type { ConfigIaVigente } from "@/ia/config/leer";
 import { crearGeneradorFalso } from "@/ia/generador-falso";
@@ -17,17 +18,19 @@ import { mensajeFicticio } from "../nube/apoyo/datos.ficticio";
 import { crearOllamaFalso, generacionFicticia, json, tagsCon, vigilarFalsos } from "../local/apoyo/ollama-falso";
 import { DESTINO_FICTICIO, DIGEST_GEMMA, DIGEST_QWEN, VIGENTE_FICTICIA } from "./apoyo/config.ficticio";
 
+// La lista ficticia de PI como la del módulo (sin importar el apoyo, que importa este mismo módulo: se colgaría).
 vi.mock("@/ia/local/modelos", async (original) => {
   const real = await original<typeof import("@/ia/local/modelos")>();
-  const { LISTA_FICTICIA } = await import("./apoyo/config.ficticio");
-  const modelos = LISTA_FICTICIA.estado === "LISTA" ? LISTA_FICTICIA.modelos : [];
+  const { readFileSync } = await import("node:fs");
+  const lista = real.leerModelosPermitidos(readFileSync(new URL("../../../fixtures/ia/modelos-ia-local-permitidos.ficticio.json", import.meta.url), "utf8"));
+  const modelos = lista.estado === "LISTA" ? lista.modelos : [];
   return { ...real, modeloAprobado: (n: unknown) => modelos.find((m) => m.nombre === n) ?? null };
 });
 
 vigilarFalsos();
 
 const con = (cambios: Partial<ConfigIaVigente>): ConfigIaVigente => ({ ...VIGENTE_FICTICIA, ...cambios });
-const entrada = (paquete = construirPaquete(entradaDiario())) => ({ paquete, prompt: PROMPT_FICTICIO, esquemaSalida: ESQUEMA_FICTICIO });
+const entrada = (paquete: PaqueteHechos = construirPaquete(entradaDiario())) => ({ paquete, prompt: PROMPT_FICTICIO, esquemaSalida: ESQUEMA_FICTICIO });
 const LLAVE = { [VARIABLE_LLAVE_NUBE]: "llave-ficticia-nube-4613-37911-alfa" };
 
 describe("corridaDe · qué dice la configuración para una tarea", () => {

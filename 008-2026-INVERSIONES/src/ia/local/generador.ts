@@ -72,7 +72,7 @@ async function generarLocal(contexto: ContextoLocal, pedido: PedidoGeneracion, s
     const inicio = contexto.ahora();
     const modelo = await consultarModelo(contexto, digest, plazo);
     if (!modelo.ok) return modelo;
-    const respuesta = await pedirGeneracion(contexto, cuerpoGenerar(contexto.nombre, barrera.pedido), plazo);
+    const respuesta = await pedirGeneracion(contexto, cuerpoGenerar(contexto.nombre, barrera.pedido, contexto.temperaturaCentesimas), plazo);
     return respuesta.ok ? resultadoDe(contexto, digest, respuesta.generacion, Math.max(0, contexto.ahora() - inicio)) : respuesta;
   } finally {
     liberar?.();
