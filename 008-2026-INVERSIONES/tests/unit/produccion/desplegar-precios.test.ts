@@ -7,7 +7,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, correr, crearFalsos, crearRepo, entorno, envProduccionFicticio, git, leer008, type Llamada } from "./falsos";
+import { carpetaTemporal, correr, crearFalsos, crearRepo, entorno, envProduccionFicticio, git, leer008, type Entorno, type Llamada } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -70,7 +70,8 @@ function commit(p: Preparado, cambiar: (dir008: string) => void, mensaje = "camb
   git(p.repo.dir, ["add", "-A"]);
   git(p.repo.dir, ["commit", "-q", "--allow-empty", "-m", mensaje]);
   const sha = git(p.repo.dir, ["rev-parse", "HEAD"]);
-  return { sha, env: { ...p.env, FALSO_SHA: sha, FALSO_SALUD: JSON.stringify({ estado: "ok", version: sha }) } };
+  const env: Entorno = { ...p.env, FALSO_SHA: sha, FALSO_SALUD: JSON.stringify({ estado: "ok", version: sha }) };
+  return { sha, env };
 }
 /** Agrega bucle.ts al clon: el commit que lo trae es de una imagen con el servicio. */
 const conBucle = (dir008: string) => {
