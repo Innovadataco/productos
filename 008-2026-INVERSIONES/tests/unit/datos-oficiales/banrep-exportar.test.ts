@@ -106,12 +106,31 @@ describe("exportarBanrep · avisos (salida 3, el CSV sale con lo demás)", () =>
     expect(reporteExportacionBanrep(await exportar(archivo(bytesDe(MENSAJE_TPM)))).lineas.join("\n")).not.toContain("&& mv");
   });
 
-  it("la TPM es diaria de calendario: un día que falta entre el primero y el último se avisa", async () => {
+  // Prueba manual con la descarga pública de la TPM de 2026 (2026-11-22): a la serie «diaria de calendario» le falta un
+  // día suelto. Un hueco corto es lo que BanRep publicó (se informa, salida 0); uno más largo que el umbral de frescura
+  // hace pensar en una descarga incompleta (aviso, salida 3).
+  it("la TPM es diaria de calendario: días sueltos que faltan se informan sin aviso (salida 0)", async () => {
     const r = await exportar(archivo(tpmCon([{ dia: "20270317", valor: "7.31" }, { dia: "20270320", valor: "7.29" }])), TPM, dia(15), dia(20));
-    expect(r.diasFaltantes).toBe(2);
+    expect(r).toMatchObject({ diasFaltantes: 2, huecoMayor: 2 });
+    const reporte = reporteExportacionBanrep(r);
+    expect(reporte.codigoSalida).toBe(0);
+    expect(reporte.lineas).toContain("ℹ️  faltan 2 día(s) entre el primero y el último (ningún hueco de más de 7 días seguidos): la TPM es diaria de calendario y BanRep no publicó esos días.");
+  });
+
+  it("un hueco de la TPM más largo que el umbral de frescura: aviso (salida 3)", async () => {
+    const r = await exportar(archivo(tpmCon([{ dia: "20270317", valor: "7.31" }, { dia: "20270326", valor: "7.29" }])), TPM, dia(15), dia(26));
+    expect(r).toMatchObject({ diasFaltantes: 8, huecoMayor: 8 });
     const reporte = reporteExportacionBanrep(r);
     expect(reporte.codigoSalida).toBe(3);
-    expect(reporte.lineas).toContain("⚠️  faltan 2 día(s) entre el primero y el último: la TPM es diaria de calendario.");
+    expect(reporte.lineas).toContain("⚠️  faltan 8 día(s) entre el primero y el último, con un hueco de 8 días seguidos (más de 7): la TPM es diaria de calendario; revise si la descarga está completa.");
+    const justo = await exportar(archivo(tpmCon([{ dia: "20270317", valor: "7.31" }, { dia: "20270325", valor: "7.29" }])), TPM, dia(15), dia(25));
+    expect(justo).toMatchObject({ huecoMayor: 7 });
+    expect(reporteExportacionBanrep(justo).codigoSalida).toBe(0);
+  });
+
+  it("la IBR (días hábiles) no cuenta huecos", async () => {
+    const r = await exportar(archivo(bytesDe(MENSAJE_IBR)), IBR, dia(15), dia(22));
+    expect(r).toMatchObject({ diasFaltantes: 0, huecoMayor: 0 });
   });
 });
 
