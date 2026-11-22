@@ -93,10 +93,27 @@ exec perl -e 'use Fcntl qw(:flock); open(my $fh, ">&=", $ARGV[0]) or exit 2; my 
       });
       hijo.on("close", (codigo) => mal(new Error(`no se tomó el candado (${codigo})`)));
     });
-  return { dir, respaldos, registro, correr, funcion, lanzar, funcionSinBloquear, sostener, candado };
+  return { dir, bin, respaldos, registro, correr, funcion, lanzar, funcionSinBloquear, sostener, candado };
 }
 
 const archivosDe = (dir: string) => readdirSync(dir).sort();
+
+const FALSOS = ["pg_dump", "age", "chgrp", "awk", "rm", "flock"];
+/** Identidad del archivo que se ejecuta (sigue los enlaces): dispositivo e inodo. */
+const idArchivo = (ruta: string) => {
+  const s = statSync(ruta);
+  return `${s.dev}:${s.ino}`;
+};
+
+describe("respaldo.sh · los falsos", () => {
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila
+  // para todo el Mac: con la máquina cargada son segundos por archivo, y con seis falsos nuevos en cada prueba el
+  // archivo tardaba varias veces más. Por eso los falsos son archivos fijos del repo, los mismos siempre.
+  it("pg_dump, age, chgrp, awk, rm y flock son los mismos ejecutables en todas las pruebas: no se crean nuevos", () => {
+    const [a, b] = [preparar(), preparar()];
+    for (const nombre of FALSOS) expect(idArchivo(path.join(b.bin, nombre)), nombre).toBe(idArchivo(path.join(a.bin, nombre)));
+  });
+});
 
 /** Un respaldo inventado con su .sha256 de verdad (`<hex>  <nombre>`, como lo deja el script); o dañado. */
 function escribirRespaldo(dir: string, nombre: string, sha: "bueno" | "malo" | "falta" = "bueno") {
