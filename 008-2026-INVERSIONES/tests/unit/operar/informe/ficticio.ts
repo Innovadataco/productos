@@ -62,6 +62,34 @@ export function entradas(o: OpcionesEntradas = {}): EntradasInforme {
   };
 }
 
+/**
+ * Un informe con todos los casos de la pantalla: una regla que se cumple (FICTICIA-A, tocada), una cercana
+ * (FICTICIA-B), una con el cierre atrasado (FICTICIA-C), una en el nivel, posturas, una por orden y una escrita; una
+ * especie sin cierre, una atrasada y una incompleta; un ex-dividendo y un plazo en la ventana.
+ */
+export function entradasCompletas(): EntradasInforme {
+  return entradas({
+    especies: [
+      especie({ nemotecnico: "FICTICIA-A", cantidad: 37n, costoVivo: D("158917.31"), cierre: cierre("4597.31") }),
+      especie({ nemotecnico: "FICTICIA-B", cantidad: 113n, costoVivo: D("131711.39"), cierre: cierre("1237") }),
+      especie({ nemotecnico: "FICTICIA-C", cantidad: 19n, costoVivo: D("17431.07"), cierre: cierre("899.11", dia("2027-03-12")) }),
+      especie({ nemotecnico: "FICTICIA-E", cantidad: 7n, costoVivo: D("3191.37") }),
+    ],
+    incompletas: ["FICTICIA-I"],
+    plan: plan([
+      reglaDe("FICTICIA-A", { id: "r-a", condicion: "CIERRE_BAJO", nivel: D("4613.17"), accion: "VENDER", cantidad: 37n, plazoHasta: dia("2027-03-01") }),
+      reglaDe("FICTICIA-B", { id: "r-b", condicion: "CIERRE_SOBRE", nivel: D("1259.17"), accion: "VENDER", cantidad: 13n, plazoHasta: dia("2027-04-02") }),
+      reglaDe("FICTICIA-C", { id: "r-c", condicion: "CIERRE_BAJO", nivel: D("917.43"), accion: "COMPRAR", cantidad: 1n }),
+      reglaDe("FICTICIA-A", { id: "r-n", condicion: "CIERRE_SOBRE", nivel: D("4597.31"), accion: "COMPRAR" }),
+      reglaDe("FICTICIA-B", { id: "r-p", condicion: "NINGUNA", accion: "NO_ACTUAR", cantidad: 43n, plazoHasta: dia("2027-05-14") }),
+      regla({ id: "r-m", condicion: "MONTO_ORDEN_BAJO", nivel: D("1237911.47") }),
+      regla({ id: "r-l", condicion: "LIBRE", detalle: "Orden límite siempre (ficticia)" }),
+    ]),
+    cierres: new Map([["FICTICIA-A", cierreLeido("4597.31")], ["FICTICIA-B", cierreLeido("1237")], ["FICTICIA-C", cierreLeido("899.11", dia("2027-03-12"))]]),
+    proximos: [proximo({ id: "x-d", fechaEx: dia("2027-03-24"), fechaPago: dia("2027-03-31"), cuota: 2, tenencia: 0n })],
+  });
+}
+
 /** Congela en profundidad (objetos, arreglos y mapas por dentro): el armador no debe tocar nada. */
 export function congelar<T>(valor: T): T {
   if (valor === null || typeof valor !== "object" || Object.isFrozen(valor)) return valor;
