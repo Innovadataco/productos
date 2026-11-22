@@ -6,9 +6,12 @@
  * - ni `Date.now()`, ni `new Date()` sin argumentos, ni `Math.random()`, ni `fetch`, ni `process.env`;
  * - ninguna lectura de los campos que nunca entran al paquete (acción, cantidad, tenencia, texto libre, encargo,
  *   cuenta, unidades, referencia oficial, textos de los avisos).
- * Con control positivo: cada detector muerde un fragmento que lo viola.
+ * También el grafo de imports, de forma transitiva: ningún armador alcanza la base, la red, `server-only`, los clientes
+ * de las puertas ni el cálculo de tenencias (`@prisma/client` sí: `niveles.ts` usa su Decimal, sin abrir la base).
+ * Con control positivo: cada detector muerde un fragmento que lo viola (también las formas que señaló la revisión de
+ * seguridad: `import = require`, alias del reloj, `globalThis`, `process`, `eval`, `Reflect` y volcados de objetos).
  */
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -23,9 +26,23 @@ const MODULOS_PROHIBIDOS: readonly RegExp[] = [
   // Los clientes de las puertas y el generador: los armadores no llaman a ningún modelo.
   /(^|\/)(local|nube)(\/|$)/, /(^|\/)(puertas|generador|generador-falso)(\.ts)?$/,
 ];
+/** Lo que nunca se lee. `motivo` no está: el del movimiento es un código cerrado (MotivoSinComparar), no texto libre. */
 const CAMPOS_PROHIBIDOS: ReadonlySet<string> = new Set([
   "accion", "cantidad", "tenencia", "detalle", "encargo", "cuenta", "unidades", "referenciaOficial", "textos", "texto", "correo", "email",
+  "costoVivo", "decisiones", "cantidadCompletada", "totalInvertido", "filaFuente", "crudo",
 ]);
+/** Volcar un objeto entero (copiaría campos prohibidos sin nombrarlos). */
+const VOLCADOS: ReadonlySet<string> = new Set([
+  "Object.values", "Object.entries", "Object.keys", "Object.assign", "Object.getOwnPropertyNames", "Object.getOwnPropertyDescriptors", "JSON.stringify", "JSON.parse",
+]);
+/** Lo que se alcanza de forma transitiva y está prohibido (además de lo de MODULOS_PROHIBIDOS, salvo `@prisma/client`). */
+const MODULOS_PROHIBIDOS_TRANSITIVOS: readonly RegExp[] = [...MODULOS_PROHIBIDOS.filter((r) => !r.test("@prisma/client")), /(^|\/)tenencia(\.ts)?$/];
+/** Los únicos usos permitidos del reloj y de Math: `new Date(algo)`, `Date.parse`, `Date.UTC` y la aritmética de Math. */
+const PROPIEDADES_PERMITIDAS: Readonly<Record<string, ReadonlySet<string>>> = {
+  Date: new Set(["parse", "UTC"]),
+  Math: new Set(["abs", "max", "min", "round", "floor", "ceil", "trunc", "sign"]),
+};
+const GLOBALES_PROHIBIDOS: ReadonlySet<string> = new Set(["globalThis", "process", "eval", "Function", "Reflect", "fetch", "performance", "crypto", "require"]);
 
 /** Los módulos que el código importa EN EJECUCIÓN (sin los `import type` ni los `export type`). */
 function importsDeEjecucion(fuente: ts.SourceFile): string[] {
@@ -33,6 +50,9 @@ function importsDeEjecucion(fuente: ts.SourceFile): string[] {
   const visitar = (nodo: ts.Node): void => {
     if (ts.isImportDeclaration(nodo) && ts.isStringLiteral(nodo.moduleSpecifier) && !nodo.importClause?.isTypeOnly) hallados.push(nodo.moduleSpecifier.text);
     if (ts.isExportDeclaration(nodo) && nodo.moduleSpecifier && ts.isStringLiteral(nodo.moduleSpecifier) && !nodo.isTypeOnly) hallados.push(nodo.moduleSpecifier.text);
+    if (ts.isImportEqualsDeclaration(nodo) && !nodo.isTypeOnly && ts.isExternalModuleReference(nodo.moduleReference) && ts.isStringLiteral(nodo.moduleReference.expression)) {
+      hallados.push(nodo.moduleReference.expression.text);
+    }
     if (ts.isCallExpression(nodo) && (nodo.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(nodo.expression) && nodo.expression.text === "require"))) {
       const [arg] = nodo.arguments;
       hallados.push(arg && ts.isStringLiteral(arg) ? arg.text : "<dinámico>");
@@ -43,16 +63,34 @@ function importsDeEjecucion(fuente: ts.SourceFile): string[] {
   return hallados;
 }
 
-/** Reloj, azar, red y entorno. */
+/** ¿El identificador está en una posición de valor (no es un tipo, ni el nombre de una propiedad o de una declaración)? */
+function esValor(nodo: ts.Identifier): boolean {
+  const padre = nodo.parent;
+  if (ts.isTypeReferenceNode(padre) || ts.isQualifiedName(padre) || ts.isImportSpecifier(padre) || ts.isImportClause(padre)) return false;
+  if ((ts.isPropertyAccessExpression(padre) || ts.isPropertyAssignment(padre) || ts.isPropertySignature(padre) || ts.isMethodDeclaration(padre)) && padre.name === nodo) return false;
+  if ((ts.isBindingElement(padre) && padre.propertyName === nodo) || ((ts.isVariableDeclaration(padre) || ts.isParameter(padre) || ts.isFunctionDeclaration(padre)) && padre.name === nodo)) return false;
+  return true;
+}
+
+/** ¿Es un uso permitido de Date o de Math (`new Date(algo)`, `Date.parse`, `Math.abs`…)? */
+function usoPermitido(nodo: ts.Identifier): boolean {
+  const permitidas = PROPIEDADES_PERMITIDAS[nodo.text];
+  const padre = nodo.parent;
+  if (permitidas === undefined) return true;
+  if (ts.isPropertyAccessExpression(padre) && padre.expression === nodo) return permitidas.has(padre.name.text);
+  // `new Date()` sin argumentos lo reporta su propio caso («new Date()»); con argumentos es un día dado, no el reloj.
+  return nodo.text === "Date" && ts.isNewExpression(padre) && padre.expression === nodo;
+}
+
+/** Reloj, azar, red y entorno: por nombre, por alias, por desestructuración o por los objetos globales. */
 function usosImpuros(fuente: ts.SourceFile): string[] {
   const hallados: string[] = [];
   const visitar = (nodo: ts.Node): void => {
-    if (ts.isPropertyAccessExpression(nodo) && ts.isIdentifier(nodo.expression)) {
-      const nombre = `${nodo.expression.text}.${nodo.name.text}`;
-      if (["Date.now", "Math.random", "process.env", "performance.now", "crypto.getRandomValues", "crypto.randomUUID"].includes(nombre)) hallados.push(nombre);
+    if (ts.isIdentifier(nodo) && esValor(nodo)) {
+      if (GLOBALES_PROHIBIDOS.has(nodo.text)) hallados.push(nodo.text);
+      else if (!usoPermitido(nodo)) hallados.push(ts.isPropertyAccessExpression(nodo.parent) ? `${nodo.text}.${nodo.parent.name.text}` : nodo.text);
     }
     if (ts.isNewExpression(nodo) && ts.isIdentifier(nodo.expression) && nodo.expression.text === "Date" && (nodo.arguments?.length ?? 0) === 0) hallados.push("new Date()");
-    if (ts.isCallExpression(nodo) && ts.isIdentifier(nodo.expression) && nodo.expression.text === "fetch") hallados.push("fetch");
     ts.forEachChild(nodo, visitar);
   };
   visitar(fuente);
@@ -64,7 +102,12 @@ function lecturasProhibidas(fuente: ts.SourceFile): string[] {
   const hallados: string[] = [];
   const visitar = (nodo: ts.Node): void => {
     if (ts.isPropertyAccessExpression(nodo) && CAMPOS_PROHIBIDOS.has(nodo.name.text)) hallados.push(nodo.name.text);
-    if (ts.isElementAccessExpression(nodo) && ts.isStringLiteral(nodo.argumentExpression) && CAMPOS_PROHIBIDOS.has(nodo.argumentExpression.text)) hallados.push(nodo.argumentExpression.text);
+    if (ts.isElementAccessExpression(nodo) && ts.isStringLiteralLike(nodo.argumentExpression) && CAMPOS_PROHIBIDOS.has(nodo.argumentExpression.text)) hallados.push(nodo.argumentExpression.text);
+    if (ts.isCallExpression(nodo)) {
+      const llamada = nodo.expression;
+      const nombre = ts.isPropertyAccessExpression(llamada) && ts.isIdentifier(llamada.expression) ? `${llamada.expression.text}.${llamada.name.text}` : ts.isIdentifier(llamada) ? llamada.text : "";
+      if (VOLCADOS.has(nombre) || nombre === "structuredClone") hallados.push(nombre);
+    }
     if (ts.isBindingElement(nodo)) {
       const nombre = nodo.propertyName ?? nodo.name;
       if (ts.isIdentifier(nombre) && CAMPOS_PROHIBIDOS.has(nombre.text)) hallados.push(nombre.text);
@@ -77,6 +120,40 @@ function lecturasProhibidas(fuente: ts.SourceFile): string[] {
 
 const analizar = (codigo: string, nombre = "fragmento.ts"): ts.SourceFile => ts.createSourceFile(nombre, codigo, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
 const prohibido = (especificador: string): boolean => MODULOS_PROHIBIDOS.some((r) => r.test(especificador));
+const prohibidoTransitivo = (especificador: string): boolean => MODULOS_PROHIBIDOS_TRANSITIVOS.some((r) => r.test(especificador));
+
+interface Sistema {
+  readonly raiz: string;
+  /** El código del archivo, o null si no existe. */
+  readonly leer: (ruta: string) => string | null;
+}
+
+/** El archivo de src al que apunta el especificador (relativo o «@/»), o null si es un paquete o no existe. */
+function resolver(sistema: Sistema, desde: string, especificador: string): string | null {
+  const base = especificador.startsWith("@/") ? path.join(sistema.raiz, "src", especificador.slice(2))
+    : especificador.startsWith(".") ? path.resolve(path.dirname(desde), especificador) : null;
+  if (base === null) return null;
+  return [base, `${base}.ts`, `${base}.tsx`, path.join(base, "index.ts")].find((ruta) => sistema.leer(ruta) !== null) ?? null;
+}
+
+/** «archivo → especificador» de cada import de ejecución prohibido que se alcanza desde las raíces (recorre el grafo). */
+function prohibidosAlcanzados(raices: readonly string[], sistema: Sistema): string[] {
+  const hallados: string[] = [];
+  const vistos = new Set<string>();
+  const pendientes = [...raices];
+  while (pendientes.length > 0) {
+    const ruta = pendientes.shift() as string;
+    const codigo = vistos.has(ruta) ? null : sistema.leer(ruta);
+    vistos.add(ruta);
+    if (codigo === null) continue;
+    for (const especificador of importsDeEjecucion(analizar(codigo, ruta))) {
+      if (prohibidoTransitivo(especificador)) hallados.push(`${path.relative(sistema.raiz, ruta)} → ${especificador}`);
+      const destino = resolver(sistema, ruta, especificador);
+      if (destino !== null && !prohibidoTransitivo(especificador)) pendientes.push(destino);
+    }
+  }
+  return hallados;
+}
 
 function archivos(): string[] {
   if (!existsSync(CARPETA)) return [];
@@ -98,7 +175,7 @@ describe("candado de pureza · control positivo", () => {
 
   it("el detector de impurezas muerde el reloj, el azar, la red y el entorno", () => {
     const codigo = "const a = Date.now(); const b = new Date(); const c = Math.random(); const d = fetch(u); const e = process.env.X; const ok = new Date(t);";
-    expect(usosImpuros(analizar(codigo))).toEqual(["Date.now", "new Date()", "Math.random", "fetch", "process.env"]);
+    expect(usosImpuros(analizar(codigo))).toEqual(["Date.now", "new Date()", "Math.random", "fetch", "process"]);
   });
 
   it("el detector de lecturas muerde cada forma de leer un campo prohibido", () => {
