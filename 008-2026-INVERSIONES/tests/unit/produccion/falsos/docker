@@ -37,6 +37,7 @@ if [ "${1:-}" = "compose" ]; then
         *" inv-008-app "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" ;;
         *" inv-008-entrada "*) printf '%s\n' "${FALSO_CID_ENTRADA-cidentrada}" ;;
         *" inv-008-db "*) printf '%s\n' "${FALSO_CID_DB-ciddb}" ;;
+        *" inv-008-precios "*) printf '%s\n' "${FALSO_CID_PRECIOS-cidprecios}" ;;
         *" -q "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" "${FALSO_CID_DB-ciddb}" ;;
       esac
       exit 0 ;;
@@ -95,14 +96,22 @@ esac
 # El contenedor (o la red) del que se pregunta: el último argumento.
 objeto="${!#}"
 es_entrada() { [ "$objeto" = "${FALSO_CID_ENTRADA-cidentrada}" ]; }
+es_precios() { [ "$objeto" = "${FALSO_CID_PRECIOS-cidprecios}" ]; }
 case "${1:-}" in
   inspect)
     case "$*" in
       *NetworkSettings.Networks*)
         case "$objeto" in
           "${FALSO_CID_DB-ciddb}") printf '%s \n' "${FALSO_REDES_DB-inv-008-prueba_inv-008-red-interna}" ;;
+          "${FALSO_CID_PRECIOS-cidprecios}") printf '%s \n' "${FALSO_REDES_PRECIOS-inv-008-prueba_inv-008-red-interna inv-008-prueba_inv-008-red-precios}" ;;
           *) printf '%s \n' "${FALSO_REDES_APP-inv-008-prueba_inv-008-red-entrada inv-008-prueba_inv-008-red-interna}" ;;
         esac ;;
+      *bridge.name*)
+        # La red del servicio de precios: «internal|nombre del puente|contenedores».
+        printf '%s\n' "${FALSO_RED_PRECIOS-false|br-inv008-prec|1}" ;;
+      *Config.Env*)
+        # El entorno del servicio de precios (con su credencial ficticia por defecto); FALSO_ENV_PRECIOS lo reemplaza.
+        printf '%b' "${FALSO_ENV_PRECIOS-PATH=/usr/local/bin\nNODE_ENV=production\nTZ=America/Bogota\nDATABASE_URL=postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=2\n}" ;;
       *.Internal*)
         # «internal modo»: las redes con salida se nombran en FALSO_REDES_CON_SALIDA; las internal sin aislar la puerta
         # de enlace, en FALSO_REDES_SIN_AISLAR. El resto, internal y aisladas.
@@ -122,8 +131,11 @@ case "${1:-}" in
         case " ${FALSO_REDES_AL_DIA:-} " in *" $objeto "*) echo "isolated"; exit 0 ;; esac
         exit 1 ;;
       *.Image*) if es_entrada; then printf '%s\n' "${FALSO_IMAGEN_ENTRADA:-${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}}"; else printf '%s\n' "${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}"; fi ;;
-      *Health.Status*) printf '%s\n' "${FALSO_SALUD_ESTADO:-healthy}" ;;
-      *State.Status*) if es_entrada; then printf '%s\n' "${FALSO_ESTADO_ENTRADA:-running 0}"; else printf '%s\n' "${FALSO_ESTADO_APP:-running 0}"; fi ;;
+      *Health.Status*) if es_precios; then printf '%s\n' "${FALSO_SALUD_PRECIOS:-healthy}"; else printf '%s\n' "${FALSO_SALUD_ESTADO:-healthy}"; fi ;;
+      *State.Status*)
+        if es_entrada; then printf '%s\n' "${FALSO_ESTADO_ENTRADA:-running 0}"
+        elif es_precios; then printf '%s\n' "${FALSO_ESTADO_PRECIOS:-running 0}"
+        else printf '%s\n' "${FALSO_ESTADO_APP:-running 0}"; fi ;;
       *HostConfig.Memory*) printf '%s\n' "${FALSO_MEMSWAP:-402653184 402653184}" ;;
       *"{{.Id}}"*) printf '%s\n' "${FALSO_ID_LARGO:-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc}" ;;
       *OOMKilled*) printf '%b' "${FALSO_PI_ESTADO:-}" | grep -F -- "/${!#} " || true ;;
@@ -164,6 +176,7 @@ case "${1:-}" in
     case "${2:-}" in
       "${FALSO_CID_APP-cidapp}") printf '%b' "${FALSO_PUERTO_APP:-}" ;;
       "${FALSO_CID_ENTRADA-cidentrada}") printf '%b' "${FALSO_PUERTO_ENTRADA:-}" ;;
+      "${FALSO_CID_PRECIOS-cidprecios}") printf '%b' "${FALSO_PUERTO_PRECIOS:-}" ;;
       *) printf '%b' "${FALSO_PUERTO:-}" ;;
     esac
     exit 0 ;;
