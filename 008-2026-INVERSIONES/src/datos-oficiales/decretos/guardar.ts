@@ -5,9 +5,9 @@
  *   versión; la CADENA la garantiza este módulo: `planificar` solo acepta versiones 1..n con la n como única vigente
  *   (si no, CADENA_ROTA: una v2 sin v1, un número que no sigue al anterior o un retiro sin sucesor), y un cambio retira
  *   la vigente e inserta la n+1 en la misma transacción. Anular es una versión nueva `anulada` con su nota (P10).
- * - Una sola transacción para todo el archivo: el candado de REGISTRO_DECRETOS, se releen y se vuelven a planificar las
- *   versiones, y por cada cambio se retira la vigente (debe contar 1), se guarda la fila cruda cifrada y se inserta la
- *   versión siguiente. Si algo falla, no queda nada (tampoco la carga). Sin cambios, no se escribe nada.
+ * - Una sola transacción para todo el archivo: se toma el candado de REGISTRO_DECRETOS, se releen y se vuelven a
+ *   planificar las versiones y, por cada cambio, se retira la vigente (debe contar 1), se guarda la fila cruda cifrada y
+ *   se inserta la versión siguiente. Si algo falla, no queda nada (tampoco la carga). Sin cambios, no se escribe nada.
  * - Escribe en cualquier base: la condición de C1 (no cargar decretos reales hasta que el motor de proyecciones cruzara
  *   los decretos con los pagos de Trii por ventana) se cumplió en C5b (src/proyecciones/dividendos.ts con ventana.ts),
  *   que retiró la guarda de C4a (candado tests/unit/datos-oficiales/decretos/sin-guarda.test.ts).
@@ -233,8 +233,8 @@ async function enTransaccion(tx: Tx, e: EntradaGuardar): Promise<ResultadoGuarda
 }
 
 /**
- * Aplica las filas ya leídas y resueltas. Los rechazos (CADENA_ROTA, ANULACION_SIN_DECRETO y CONFLICTO_CONCURRENTE) vuelven como RECHAZADO sin haber escrito nada; cualquier otro error sube (puede haber ocurrido
- * al confirmar).
+ * Aplica las filas ya leídas y resueltas. Los rechazos (CADENA_ROTA, ANULACION_SIN_DECRETO y CONFLICTO_CONCURRENTE)
+ * vuelven como RECHAZADO sin haber escrito nada; cualquier otro error sube (puede haber ocurrido al confirmar).
  */
 export async function guardarDecretos(db: PrismaClient, e: EntradaGuardar): Promise<ResultadoGuardar> {
   try {

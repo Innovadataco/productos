@@ -1,6 +1,7 @@
 // La ventana del cruce de un decreto con los pagos de Trii (fase C, C5b: src/datos-oficiales/decretos/ventana.ts): días
 // calendario alrededor de la fecha de pago del decreto, con los dos bordes incluidos. La comparten el cruce y el motor de
-// proyecciones, así que es pura (solo fechas). Datos inventados.
+// proyecciones (también la asignación de cada pago a un grupo, que prueba cruce.test.ts), así que es pura (solo
+// fechas). Datos inventados.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -24,8 +25,8 @@ describe("decretos · ventana de pago del cruce", () => {
     for (const d of ["2027-03-13", "2027-03-28"]) expect(enVentanaDePago(PAGO, dia(d)), d).toBe(false);
   });
 
-  it("es pura: con valor solo importa las fechas del plan (el motor de proyecciones la importa)", () => {
+  it("es pura: con valor solo importa fechas (el motor de proyecciones la importa)", () => {
     const importaciones = [...readFileSync(FUENTE, "utf8").matchAll(/^(?:import|export)\s+(?!type\b)(?:[^"';()=]*?from\s+)?["']([^"']+)["']/gm)].map((m) => m[1]);
-    expect(importaciones).toEqual(["../../plan/fechas"]);
+    expect(importaciones).toEqual(["../../plan/fechas", "../../precios/horario"]);
   });
 });

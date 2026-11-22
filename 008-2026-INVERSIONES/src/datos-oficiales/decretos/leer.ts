@@ -10,6 +10,10 @@ import "server-only";
  *   el menor de los dos; null si falta alguna. Es la regla de `cubiertoHasta` de src/plan/resultados-lote.ts, que no se
  *   exporta (ese archivo es de otro frente): si cambia allá, cambia aquí. Es una APROXIMACIÓN: mide cuándo se cargó, no
  *   hasta qué fecha llega el archivo.
+ * - ultimoPagoTrii: la fecha del último pago de Trii guardado (cualquier especie): sin un pago posterior a la ventana de
+ *   un decreto no hay prueba de que el archivo cargado la cubra, y el cruce no dice NO_RECIBIDO.
+ * - leerDecretos da el cruce y los próximos en una sola foto (la pantalla los muestra juntos).
+ * - Las consultas van una tras otra: dentro de la transacción Prisma usa una sola conexión.
  * - `hoy` y `desde` son fechas de negocio (medianoche UTC) y `desde` ≤ `hoy`: si no, RangeError sin tocar la base.
  * La salida lleva Decimal, bigint y Date: quien la pase al navegador la serializa.
  */
@@ -58,18 +62,51 @@ async function leerPagos(tx: Lector, desde: Date, hoy: Date): Promise<PagoTrii[]
 
 const especiesDe = (filas: readonly { readonly instrumentoId: string }[]): string[] => [...new Set(filas.map((f) => f.instrumentoId))];
 
-/** El cruce de lo que tiene fecha de pago desde `desde` hasta hoy (y los grupos con pago futuro cuya ex ya pasó). */
-export async function leerCruce(db: PrismaClient, hoy: Date, desde: Date): Promise<ResultadoCruce> {
+async function ultimoPagoTrii(tx: Lector, hoy: Date): Promise<Date | null> {
+  const r = await tx.dividendo.aggregate({ where: { fechaPago: { lte: hoy } }, _max: { fechaPago: true } });
+  return r._max.fechaPago;
+}
+
+async function cruceEnFoto(tx: Lector, hoy: Date, desde: Date): Promise<ResultadoCruce> {
+  const limites = limitesDeLectura(desde);
+  const decretos = await leerDecretosDelCruce(tx, limites.decretosDesde);
+  const pagos = await leerPagos(tx, limites.pagosDesde, hoy);
+  const cubiertoHasta = await coberturaTrii(tx);
+  const ultimo = await ultimoPagoTrii(tx, hoy);
+  const movimientos = await movimientosDeEspecies(tx, especiesDe(decretos), hoy);
+  return desdeEn(cruzar({ decretos, pagos, movimientos, cubiertoHasta, ultimoPagoTrii: ultimo, hoy }), desde);
+}
+
+async function proximosEnFoto(tx: Lector, hoy: Date): Promise<Proximo[]> {
+  const filas = await tx.dividendoDecretado.findMany({
+    where: { reemplazadoEn: null, anulada: false, fechaEx: { gte: hoy } },
+    select: {
+      id: true, instrumentoId: true, tipo: true, cuota: true, valorPorAccion: true, fechaAnuncio: true, fechaEx: true, fechaPago: true,
+      referenciaOficial: true, version: true, anulada: true, reemplazadoEn: true, instrumento: { select: { nemotecnico: true } },
+    },
+    orderBy: [{ fechaEx: "asc" }, { id: "asc" }],
+  });
+  const movimientos = await movimientosDeEspecies(tx, especiesDe(filas), hoy);
+  const vigentes = filas.map(({ instrumento, reemplazadoEn, ...f }) => ({ ...f, nemotecnico: instrumento.nemotecnico, vigente: reemplazadoEn === null }));
+  return proximos(vigentes, movimientos, hoy);
+}
+
+function exigirRango(hoy: unknown, desde: unknown): asserts hoy is Date {
   exigirFecha("hoy", hoy);
   exigirFecha("desde", desde);
   if (desde > hoy) throw new RangeError("desde no puede ser posterior a hoy.");
-  const limites = limitesDeLectura(desde);
-  return enSoloLectura(db, async (tx) => {
-    const [decretos, pagos, cubiertoHasta] = await Promise.all([leerDecretosDelCruce(tx, limites.decretosDesde), leerPagos(tx, limites.pagosDesde, hoy), coberturaTrii(tx)]);
-    const ultimo = await tx.dividendo.aggregate({ where: { fechaPago: { lte: hoy } }, _max: { fechaPago: true } });
-    const movimientos = await movimientosDeEspecies(tx, especiesDe(decretos), hoy);
-    return desdeEn(cruzar({ decretos, pagos, movimientos, cubiertoHasta, ultimoPagoTrii: ultimo._max.fechaPago, hoy }), desde);
-  });
+}
+
+/** El cruce de lo que tiene fecha de pago desde `desde` (los grupos con ex ya pasada y los pagos sueltos). */
+export async function leerCruce(db: PrismaClient, hoy: Date, desde: Date): Promise<ResultadoCruce> {
+  exigirRango(hoy, desde);
+  return enSoloLectura(db, (tx) => cruceEnFoto(tx, hoy, desde));
+}
+
+/** Los decretos vigentes y no anulados con ex ≥ hoy, con la tenencia y el bruto estimado. */
+export async function leerProximos(db: PrismaClient, hoy: Date): Promise<readonly Proximo[]> {
+  exigirFecha("hoy", hoy);
+  return enSoloLectura(db, (tx) => proximosEnFoto(tx, hoy));
 }
 
 export interface LecturaDecretos {
@@ -77,25 +114,8 @@ export interface LecturaDecretos {
   readonly proximos: readonly Proximo[];
 }
 
-/** Stub del rojo: el cruce y los próximos en una sola foto. */
-export async function leerDecretos(_db: PrismaClient, _hoy: Date, _desde: Date): Promise<LecturaDecretos> {
-  throw new Error("PENDIENTE");
-}
-
-/** Los decretos vigentes y no anulados con ex ≥ hoy, con la tenencia y el bruto estimado. */
-export async function leerProximos(db: PrismaClient, hoy: Date): Promise<readonly Proximo[]> {
-  exigirFecha("hoy", hoy);
-  return enSoloLectura(db, async (tx) => {
-    const filas = await tx.dividendoDecretado.findMany({
-      where: { reemplazadoEn: null, anulada: false, fechaEx: { gte: hoy } },
-      select: {
-        id: true, instrumentoId: true, tipo: true, cuota: true, valorPorAccion: true, fechaAnuncio: true, fechaEx: true, fechaPago: true,
-        referenciaOficial: true, version: true, anulada: true, reemplazadoEn: true, instrumento: { select: { nemotecnico: true } },
-      },
-      orderBy: [{ fechaEx: "asc" }, { id: "asc" }],
-    });
-    const movimientos = await movimientosDeEspecies(tx, especiesDe(filas), hoy);
-    const vigentes = filas.map(({ instrumento, reemplazadoEn, ...f }) => ({ ...f, nemotecnico: instrumento.nemotecnico, vigente: reemplazadoEn === null }));
-    return proximos(vigentes, movimientos, hoy);
-  });
+/** El cruce y los próximos en una sola foto: una carga que confirme entre medio no los desacuerda. */
+export async function leerDecretos(db: PrismaClient, hoy: Date, desde: Date): Promise<LecturaDecretos> {
+  exigirRango(hoy, desde);
+  return enSoloLectura(db, async (tx) => ({ cruce: await cruceEnFoto(tx, hoy, desde), proximos: await proximosEnFoto(tx, hoy) }));
 }
