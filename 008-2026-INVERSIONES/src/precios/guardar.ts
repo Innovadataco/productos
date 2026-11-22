@@ -121,7 +121,7 @@ export interface Verificacion {
 
 const SIN_REFERENCIA: Verificacion = { estado: "NO_VERIFICADO", fuenteReferencia: null, precioReferencia: null, desviacionPct: null };
 
-async function estadoDe(db: Pick<Prisma.TransactionClient, "certificacionPosicion">, instrumentoId: string, c: Cierre): Promise<Verificacion> {
+async function estadoDe(db: Pick<Prisma.TransactionClient, "certificacionPosicion">, instrumentoId: string, c: Pick<Cierre, "fecha" | "precio">): Promise<Verificacion> {
   const ref = await db.certificacionPosicion.findFirst({
     // Solo la certificación vigente: una retirada (corte equivocado) ya no es referencia de ese día.
     where: { instrumentoId, certificacion: { fechaCorte: c.fecha, retiradaEn: null } },
@@ -186,6 +186,33 @@ async function guardarCierre(db: PrismaClient, instrumentoId: string, c: Cierre)
       if (!esConflicto(err) || intento >= MAX_INTENTOS_GUARDADO) throw err;
     }
   }
+}
+
+/**
+ * Re-verifica, DENTRO de la transacción dada, los cierres vigentes de Yahoo de esos días contra la certificación vigente
+ * de cada día. Lo usa la corrección del corte de una certificación (src/importacion/av/corregir.ts), en su misma
+ * transacción. Mismo mecanismo que «re-verificado»: si la verificación cambió, el vigente queda con `reemplazadoEn` y
+ * se inserta el mismo precio con la verificación nueva; si no, no se escribe. Sin reintentos: si otra corrida reemplazó
+ * el vigente a la vez, lanza y la transacción entera se deshace. Devuelve, por día y en el mismo orden, cuántos cambiaron.
+ */
+export async function reverificarCierres(tx: Prisma.TransactionClient, fechas: readonly Date[]): Promise<number[]> {
+  const conteos: number[] = [];
+  for (const fecha of fechas) {
+    const vigentes = await tx.precioCierre.findMany({
+      where: { fecha, fuente: FUENTE, reemplazadoEn: null }, orderBy: { instrumentoId: "asc" }, select: { ...SELECCION_VIGENTE, instrumentoId: true, moneda: true },
+    });
+    let cambiados = 0;
+    for (const v of vigentes) {
+      const verificacion = await estadoDe(tx, v.instrumentoId, { fecha, precio: v.precio.toString() });
+      if (mismaVerificacion(v, verificacion)) continue;
+      const { count } = await tx.precioCierre.updateMany({ where: { id: v.id, reemplazadoEn: null }, data: { reemplazadoEn: new Date() } });
+      if (count !== 1) throw new ConflictoConcurrente();
+      await tx.precioCierre.create({ data: { instrumentoId: v.instrumentoId, fecha, precio: v.precio, fuente: FUENTE, moneda: v.moneda, ...verificacion } });
+      cambiados += 1;
+    }
+    conteos.push(cambiados);
+  }
+  return conteos;
 }
 
 /**

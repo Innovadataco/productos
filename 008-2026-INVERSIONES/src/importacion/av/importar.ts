@@ -9,6 +9,7 @@
  * - El mismo archivo (sha256) con otra fecha de corte es ARCHIVO_YA_CARGADO. La fecha de una certificación retirada
  *   (corte equivocado, corregida a su corte real) queda ocupada por su historia: CORTE_RETIRADO.
  * - El archivo original no se guarda: solo su sha256, un nombre fijo y las filas cifradas.
+ * - La corrección del corte de una certificación ya cargada (corregir.ts) reutiliza `nueva`, el rechazo y los candados.
  * - Corte real (frente certificacion-corte-real): si la fecha de corte no puede ser la de la certificación (el PDF se
  *   generó antes del cierre definitivo de ese día, o después del corte pedido), el rechazo lleva `pistaCorte` (el día
  *   que el CLI sugiere) y `yaCargadaEn` (el corte con que ya está cargado ese mismo PDF, si lo está): así el CLI manda
@@ -71,7 +72,11 @@ const sinNada = { repetida: false, certificacionId: null, filasNuevas: 0, filasR
 
 type Pista = Pick<ResultadoImportacionAv, "pistaCorte" | "yaCargadaEn">;
 
-async function registrarRechazo(db: PrismaClient, base: Base, filasTotal: number, errores: readonly ErrorFilaAv[], pista: Pista = {}): Promise<ResultadoImportacionAv> {
+/** El candado consultivo de las importaciones de certificaciones (una a la vez); la corrección del corte también lo toma. */
+export const CANDADO_IMPORTAR = `inv008-importar-${TIPO_FUENTE}`;
+
+/** Registra la carga RECHAZADO (códigos y ubicaciones, nunca valores). También la usa la corrección del corte. */
+export async function registrarRechazo(db: PrismaClient, base: Base, filasTotal: number, errores: readonly ErrorFilaAv[], pista: Pista = {}): Promise<ResultadoImportacionAv> {
   const registrados = errores.slice(0, MAX_ERRORES_REGISTRADOS);
   const carga = await db.cargaArchivo.create({
     data: {
@@ -82,7 +87,8 @@ async function registrarRechazo(db: PrismaClient, base: Base, filasTotal: number
   return { ...sinNada, ...pista, cargaId: carga.id, estado: "RECHAZADO", filasTotal, errores: registrados };
 }
 
-interface Base {
+/** Lo que lleva la carga: quién, qué archivo (sha256), con qué corte y con qué nombre fijo. */
+export interface Base {
   readonly usuarioId: string;
   readonly sha256: string;
   readonly fecha: Date;
@@ -98,10 +104,16 @@ async function cargadaEn(db: PrismaClient, sha256: string): Promise<string | nul
   return carga?.fechaCorte ? isoDia(carga.fechaCorte) : null;
 }
 
+/** La pista por la CreationDate del PDF (ANTES_DEL_CIERRE o POSTERIOR_AL_PDF): el día con cierre definitivo a esa hora; si no, null. */
+export function pistaPorPdf(codigo: string, creadoEn: Date | null, calendario: CalendarioCorte): PistaCorte | null {
+  if (!POR_EL_PDF.has(codigo) || creadoEn === null) return null;
+  return { tipo: "PDF", generadoEn: creadoEn, sugerido: ultimoCorteDefinitivo(creadoEn, calendario) };
+}
+
 /** Si el rechazo fue por la CreationDate del PDF: el día con cierre definitivo a esa hora y si ese PDF ya está cargado. */
 async function pistaDeFecha(db: PrismaClient, codigo: string, creadoEn: Date | null, calendario: CalendarioCorte, sha256: string): Promise<Pista> {
-  if (!POR_EL_PDF.has(codigo) || creadoEn === null) return {};
-  return { pistaCorte: { tipo: "PDF", generadoEn: creadoEn, sugerido: ultimoCorteDefinitivo(creadoEn, calendario) }, yaCargadaEn: await cargadaEn(db, sha256) };
+  const pista = pistaPorPdf(codigo, creadoEn, calendario);
+  return pista === null ? {} : { pistaCorte: pista, yaCargadaEn: await cargadaEn(db, sha256) };
 }
 
 /** La misma fecha ya tiene certificación: o es el mismo contenido (repetida) o es un conflicto. */
@@ -116,7 +128,13 @@ async function repetida(tx: Prisma.TransactionClient, base: Base, a: Certificaci
   return { ...sinNada, cargaId: carga.id, estado: "CARGADO", repetida: true, certificacionId: existente.id, filasTotal: n, filasRepetidas: n, errores: [] };
 }
 
-async function nueva(tx: Prisma.TransactionClient, base: Base, a: CertificacionAnalizada, llavero: Llavero): Promise<ResultadoImportacionAv> {
+/** El archivo como carga: su sha256 y el nombre fijo con la fecha de corte (el nombre real no se guarda). */
+export function baseDe(contenido: Uint8Array, usuarioId: string, fecha: Date, fondoCodigo: string | null): Base {
+  return { usuarioId, sha256: createHash("sha256").update(contenido).digest("hex"), fecha, nombre: `certificacion-av-${isoDia(fecha)}.pdf`, fondoCodigo };
+}
+
+/** Una certificación nueva por el camino de siempre (carga, especies, fondo, filas cifradas, certificación). También la usa la corrección. */
+export async function nueva(tx: Prisma.TransactionClient, base: Base, a: CertificacionAnalizada, llavero: Llavero): Promise<ResultadoImportacionAv> {
   const carga = await tx.cargaArchivo.create({
     data: { tipoFuente: TIPO_FUENTE, nombreArchivo: base.nombre, sha256: base.sha256, fechaCorte: base.fecha, estado: "VALIDANDO", cargadoPorId: base.usuarioId },
   });
@@ -158,7 +176,7 @@ async function enTransaccion(db: PrismaClient, base: Base, a: CertificacionAnali
   return db.$transaction(
     async (tx) => {
       // Una sola importación de certificaciones a la vez: el chequeo de sha256 y de fecha no tiene carreras.
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`inv008-importar-${TIPO_FUENTE}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${CANDADO_IMPORTAR}))`;
       const mismoArchivo = await tx.cargaArchivo.findFirst({ where: { tipoFuente: TIPO_FUENTE, sha256: base.sha256, estado: "CARGADO", NOT: { fechaCorte: base.fecha } }, select: { id: true } });
       if (mismoArchivo) throw new ErrorImportacionAv("ARCHIVO_YA_CARGADO");
       const existente = await corteOcupado(tx, base.fecha);
@@ -173,7 +191,7 @@ async function enTransaccion(db: PrismaClient, base: Base, a: CertificacionAnali
 }
 
 /** Código del fallo, sin el mensaje (el de Prisma puede traer valores). P2028 = transacción vencida. */
-function errorDe(e: unknown): ErrorFilaAv {
+export function errorDe(e: unknown): ErrorFilaAv {
   if (e instanceof ErrorImportacionAv) return { ...e.ubicacion, codigo: e.codigo };
   if (e instanceof ErrorCifrado) return documento(e.codigo);
   if (e instanceof Prisma.PrismaClientKnownRequestError) return documento(e.code === "P2028" ? "TIEMPO_AGOTADO" : `BASE_${e.code}`);
@@ -184,12 +202,8 @@ export async function importarCertificacion(db: PrismaClient, archivo: ArchivoCe
   const llavero = obtenerLlavero(); // primero: sin claves no se escribe nada, ni el rechazo
   const usuario = await db.usuario.findUnique({ where: { id: archivo.usuarioId }, select: { activo: true, rol: true } });
   if (!usuario || !usuario.activo || usuario.rol !== "DUENO") throw new ErrorImportacionAv("USUARIO_NO_AUTORIZADO");
-  const dia = isoDia(archivo.fechaCorte);
-  const base: Base = {
-    usuarioId: archivo.usuarioId, sha256: createHash("sha256").update(archivo.contenido).digest("hex"), fecha: archivo.fechaCorte,
-    nombre: `certificacion-av-${dia}.pdf`, fondoCodigo: archivo.fondoCodigo ?? null,
-  };
-  const analisis = analizarCertificacion(archivo.contenido, dia);
+  const base = baseDe(archivo.contenido, archivo.usuarioId, archivo.fechaCorte, archivo.fondoCodigo ?? null);
+  const analisis = analizarCertificacion(archivo.contenido, isoDia(archivo.fechaCorte));
   if (!analisis.ok) return registrarRechazo(db, base, 0, analisis.errores);
   const n = analisis.valor.registros.length;
   const calendario = await leerCalendarioCorte(db);

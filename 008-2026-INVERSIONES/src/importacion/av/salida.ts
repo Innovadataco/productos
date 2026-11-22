@@ -14,6 +14,7 @@ import type { PrismaClient } from "@prisma/client";
 import { conciliarCertificacion, type ResumenConciliacion } from "../../conciliacion/conciliar";
 import { HORA_BARRA_DEFINITIVA_COT } from "../../precios/horario";
 import { diaYHoraEnColombia, isoDia, leerCalendarioCorte, MAX_DIAS_ANTES_DEL_PDF, ultimoHabilAnterior, type CalendarioCorte, type PistaCorte, type UltimoHabil } from "./fecha-corte";
+import type { ResultadoCorreccion } from "./corregir";
 import { importarCertificacion, type ArchivoCertificacion, type ResultadoImportacionAv } from "./importar";
 
 export interface Pasos {
@@ -132,6 +133,41 @@ async function pistaDeCorte(db: PrismaClient, r: ResultadoImportacionAv, fechaCo
   } catch (e) {
     return [`⚠️  No se pudo leer calendario_bvc para indicar el último día hábil anterior (${nombreDe(e)}): corra de nuevo con un día hábil de la BVC.`];
   }
+}
+
+/** Por qué se rechazó la corrección del corte, para los códigos propios (los de fecha y precios los explica la pista). */
+function porQueNoSeCorrigio(codigo: string, actual: string, nuevo: string): string | null {
+  const frases: Readonly<Record<string, string>> = {
+    SIN_CERTIFICACION: `No hay certificación con el corte ${actual}: no hay nada que corregir.`,
+    CORTE_RETIRADO: `La certificación del ${actual} ya se retiró (se corrigió antes): la vigente es la de su corte real.`,
+    ARCHIVO_DISTINTO: `El PDF no es el mismo archivo que se cargó con el corte ${actual} (otro sha256): use el mismo PDF.`,
+    CORTE_OCUPADO: `Ya hay una certificación con el corte ${nuevo}: no se reemplaza.`,
+    ARCHIVO_YA_CARGADO: `Ese PDF también está cargado con un corte distinto del ${actual}: no se corrige solo; avise al CEO de 008.`,
+    MISMA_FECHA: "Las dos fechas son la misma: no hay nada que corregir.",
+  };
+  return frases[codigo] ?? null;
+}
+
+/**
+ * Lo que dice el CLI de corrección del corte: qué se retiró y qué quedó, los cierres re-verificados de cada día y el
+ * siguiente paso (conciliar el corte nuevo); o el rechazo, por qué y que nada cambió. Solo conteos, códigos y fechas.
+ */
+export function lineasDeCorreccion(r: ResultadoCorreccion, actual: string, nuevo: string, produccion: boolean): string[] {
+  if (r.estado === "CORREGIDO") {
+    const { reconciliar } = pasosSiguientes(nuevo, produccion);
+    return [
+      `✅ CORREGIDO · la certificación del ${actual} se retiró y quedó cargada con el corte ${nuevo} (${r.filas} filas; ${r.cargasRevertidas} carga(s) del ${actual} en REVERTIDO). Lo anterior queda como historia.`,
+      `🔁 Cierres re-verificados: ${r.reverificados.anterior} del ${actual} (quedan sin referencia) y ${r.reverificados.nuevo} del ${nuevo} (contra la certificación).`,
+      `➡️  Siguiente paso: corra ${reconciliar}.`,
+    ];
+  }
+  const codigo = r.codigo ?? "ERROR";
+  const frase = porQueNoSeCorrigio(codigo, actual, nuevo);
+  return [
+    `❌ RECHAZADO (nada cambió) · ${codigo}`,
+    ...(frase === null ? [] : [`   ${frase}`]),
+    ...(r.pistaCorte === null ? [] : lineasDePista(nuevo, r.pistaCorte, actual, produccion)),
+  ];
 }
 
 export async function cargarYConciliar(db: PrismaClient, a: ArchivoCertificacion, pasos: Pasos = PASOS, opciones: OpcionesSalida = {}): Promise<{ lineas: string[]; codigo: 0 | 1 }> {

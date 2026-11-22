@@ -10,6 +10,9 @@ import { calcularConciliacion, VERSION_CALCULO, type Control } from "./controles
 import { leerEntradas } from "./esperado";
 import { corteOcupado } from "./vigente";
 
+/** El candado consultivo de las conciliaciones de un corte (AAAA-MM-DD); la corrección del corte también lo toma. */
+export const candadoConciliar = (dia: string): string => `inv008-conciliar-${dia}`;
+
 export class ErrorConciliacion extends Error {
   /** Con CERTIFICACION_RETIRADA: la fecha de corte (AAAA-MM-DD) de la certificación que la reemplazó. */
   constructor(readonly codigo: "SIN_CERTIFICACION" | "CERTIFICACION_RETIRADA", readonly reemplazo: string | null = null) {
@@ -54,7 +57,7 @@ function resumen(conciliacionId: string, fechaCorte: Date, resultado: ResumenCon
 export async function conciliarCertificacion(db: PrismaClient, opciones: { readonly fechaCorte: Date }): Promise<ResumenConciliacion> {
   return db.$transaction(
     async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`inv008-conciliar-${dia(opciones.fechaCorte)}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${candadoConciliar(dia(opciones.fechaCorte))}))`;
       const cert = await corteOcupado(tx, opciones.fechaCorte);
       if (!cert) throw new ErrorConciliacion("SIN_CERTIFICACION");
       // Retirada (corte equivocado): no se concilia sobre ella; la base tampoco lo admitiría.
