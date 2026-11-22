@@ -5,8 +5,9 @@
 // suma, esto se pone rojo. Las definiciones exactas las comprueban contra PostgreSQL real
 // tests/integracion/guardian-esquema.test.ts (en el Mac y en el CI) y roles-base.test.ts (solo CI).
 // Límites del lector de migraciones (por regex): exige nombres entre comillas (lo hace cumplir una prueba de
-// abajo), no modela DROP TABLE, DROP COLUMN ni RENAME (hoy ninguna migración los usa) y quita los `--` de
-// comentario sin mirar si caen dentro de un literal.
+// abajo), no modela DROP TABLE ni DROP COLUMN (hoy ninguna migración los usa) ni RENAME (un RENAME COLUMN, como el
+// de dividendo_decretado en *_datos_oficiales, no cambia ningún objeto de la lista; uno de índice, restricción o
+// disparador lo frena una prueba de abajo) y quita los `--` de comentario sin mirar si caen dentro de un literal.
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -152,6 +153,15 @@ describe("verificar-esquema.sql coincide con las migraciones", () => {
     expect(enGuardian).toEqual(expect.arrayContaining(["btree_gist", "citext"]));
   });
 
+  it("ninguna migración renombra un índice, una restricción ni un disparador (el lector no los seguiría)", () => {
+    const renombres = migraciones().flatMap((sql) => [
+      ...sql.matchAll(/\bALTER\s+INDEX\b[^;]*\bRENAME\b/gi),
+      ...sql.matchAll(/\bRENAME\s+CONSTRAINT\b/gi),
+      ...sql.matchAll(/\bALTER\s+TRIGGER\b[^;]*\bRENAME\b/gi),
+    ]).map((m) => m[0]);
+    expect(renombres).toEqual([]);
+  });
+
   it("las migraciones no traen CHECK ni EXCLUDE sin nombre (el guardián no podría seguirlos)", () => {
     for (const sql of migraciones()) {
       for (const sentencia of sql.split(";")) {
@@ -184,7 +194,10 @@ describe("verificar-esquema.sql coincide con las migraciones", () => {
     for (const nombre of ["inv_precio_cierre_insercion", "inv_retiro_vigente", "inv_valor_unidad_fondo_insercion"]) {
       expect(config.get(nombre), nombre).toBe("search_path=pg_catalog, public, pg_temp");
     }
-    for (const [nombre, valor] of config) if (!nombre.startsWith("inv_precio_") && !nombre.startsWith("inv_valor_") && nombre !== "inv_retiro_vigente") expect(valor, nombre).toBe("");
+    // inv_solo_retiro (datos oficiales) no lee tablas: solo pg_catalog, con pg_temp al final.
+    expect(config.get("inv_solo_retiro")).toBe("search_path=pg_catalog, pg_temp");
+    const conSet = new Set(["inv_retiro_vigente", "inv_solo_retiro"]);
+    for (const [nombre, valor] of config) if (!nombre.startsWith("inv_precio_") && !nombre.startsWith("inv_valor_") && !conSet.has(nombre)) expect(valor, nombre).toBe("");
   });
 
   // La exención de los disparadores de integridad es «tener los privilegios del dueño»: si inv_precios o inv_app
