@@ -67,7 +67,7 @@ beforeAll(async () => {
   if (!base.endsWith("_test")) throw new Error(`Se negó a correr sobre «${base}»`);
   ids["dueno"] = (await db.usuario.create({ data: { email, rol: "DUENO" } })).id;
   await db.usuario.create({ data: { email: familia, rol: "FAMILIA" } });
-  for (const letra of ["A", "C", "R", "S", "U", "V", "X", "Y"]) ids[letra] = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo(letra), nombre: `Ficticia ${letra}` } })).id;
+  for (const letra of ["A", "C", "R", "S", "U", "V", "W", "X", "Y"]) ids[letra] = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo(letra), nombre: `Ficticia ${letra}` } })).id;
   ids["B"] = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo("B"), simboloTrii: nemo("T"), nombre: "Ficticia B" } })).id;
   // P es el nemotécnico de una acción y el símbolo de Trii de otra (Q): un decreto de «P» es ambiguo.
   ids["P"] = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo("P"), nombre: "Ficticia P" } })).id;
@@ -256,6 +256,20 @@ describe("importar-decretos · la cadena de versiones y la atomicidad", () => {
     expect(intento).toBe("falló");
     expect(espera).toBeLessThan(14_000);
     expect(await huella()).toEqual(antes);
+  });
+
+  it("una carga que espera a otra de decretos más de 10 s (2.000 cambios tardan unos 21 s) no falla por lock_timeout", { timeout: 45_000 }, async () => {
+    expect(await importar([fila(nemo("W"))], true)).toMatchObject({ estado: "APLICADO" });
+    let tomado = false;
+    const otraCarga = db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inv008-importar-REGISTRO_DECRETOS'))`;
+      tomado = true;
+      await new Promise((r) => setTimeout(r, 12_000));
+    }, { timeout: 30_000, maxWait: 5_000 });
+    while (!tomado) await new Promise((r) => setTimeout(r, 50));
+    const r = await importar([fila(nemo("W"), { valor_por_accion: "41.3729" })], true);
+    await otraCarga;
+    expect(r).toMatchObject({ estado: "APLICADO", conteos: { versiones: 1 } });
   });
 
   it("un archivo con nuevos, cambios y anulaciones de varias especies queda en una sola carga, con sus conteos", async () => {

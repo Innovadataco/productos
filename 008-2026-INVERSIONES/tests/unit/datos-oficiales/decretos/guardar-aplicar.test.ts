@@ -80,11 +80,11 @@ describe("decretos · guardarDecretos (la transacción)", () => {
     }
   });
 
-  it("un decreto nuevo: guarda, lock_timeout, candado, relee, crea la carga, la fila cruda (y su visto) y la v1", async () => {
+  it("un decreto nuevo: guarda, candado (sin lock_timeout: otra carga puede tardar más), lock_timeout, relee, crea la carga, la fila cruda (y su visto) y la v1", async () => {
     const { db, llamadas } = baseFalsa();
     const r = await guardarDecretos(db, entrada());
     expect(r).toEqual({ estado: "APLICADO", cargaId: "carga-1", conteos: { filas: 1, nuevos: 1, versiones: 0, anulaciones: 0, sinCambios: 0 } });
-    expect(llamadas).toEqual(["nombreDeLaBase", "lockTimeout", "candado", "leerVersiones", "crearCarga", "crearFilaFuente", "verFila", "crearDecreto"]);
+    expect(llamadas).toEqual(["nombreDeLaBase", "candado", "lockTimeout", "leerVersiones", "crearCarga", "crearFilaFuente", "verFila", "crearDecreto"]);
   });
 
   it("un cambio: primero el retiro de la vigente y después la versión siguiente", async () => {
@@ -115,12 +115,12 @@ describe("decretos · guardarDecretos (la transacción)", () => {
   it("sin cambios: no se crea la carga ni nada más", async () => {
     const { db, llamadas } = baseFalsa({ guardadas: [vigente({ valorPorAccion: new Prisma.Decimal("1873.204517") })] });
     expect(await guardarDecretos(db, entrada())).toEqual({ estado: "SIN_CAMBIOS", conteos: { filas: 1, nuevos: 0, versiones: 0, anulaciones: 0, sinCambios: 1 } });
-    expect(llamadas).toEqual(["nombreDeLaBase", "lockTimeout", "candado", "leerVersiones"]);
+    expect(llamadas).toEqual(["nombreDeLaBase", "candado", "lockTimeout", "leerVersiones"]);
   });
 
   it("la cadena rota que aparece al releer dentro de la transacción rechaza sin escribir", async () => {
     const { db, llamadas } = baseFalsa({ guardadas: [vigente({ version: 2 })] });
     expect(await guardarDecretos(db, entrada())).toEqual({ estado: "RECHAZADO", hallazgos: [{ linea: 2, columna: null, codigo: "CADENA_ROTA" }] });
-    expect(llamadas).toEqual(["nombreDeLaBase", "lockTimeout", "candado", "leerVersiones"]);
+    expect(llamadas).toEqual(["nombreDeLaBase", "candado", "lockTimeout", "leerVersiones"]);
   });
 });
