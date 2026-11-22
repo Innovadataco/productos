@@ -75,4 +75,12 @@ describe("candado de pureza · la zona", () => {
   it("ni lo que alcanza por sus imports en src (reloj, azar, red, base, lectores con base)", () => {
     expect(impurezasTransitivas(leerZona(), leerSrc)).toEqual([]);
   });
+
+  it("control positivo sobre el grafo real: un reloj plantado en un módulo reusado de segundo nivel se detecta", () => {
+    const plantado = (ruta: string) => (ruta === "datos-oficiales/decretos/ventana.ts" ? `${leerSrc(ruta)}\nexport const t = Date.now();\n` : leerSrc(ruta));
+    const avisos = impurezasTransitivas(leerZona(), plantado);
+    expect(avisos.length).toBeGreaterThan(0);
+    expect(avisos.every((a) => a.endsWith("datos-oficiales/decretos/ventana.ts: Date.now"))).toBe(true);
+    expect(avisos[0]).toMatch(/^analisis\/\S+\.ts → .*proyecciones\/dividendos\.ts → datos-oficiales\/decretos\/ventana\.ts: Date\.now$/);
+  });
 });
