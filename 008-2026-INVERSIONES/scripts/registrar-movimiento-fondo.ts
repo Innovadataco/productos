@@ -9,7 +9,8 @@
  * Antes: el fondo registrado y el valor de unidad de la SFC de ese día cargado. Sin --aplicar es ensayo (no escribe).
  * Después: conciliar-certificacion. Nunca imprime las cifras, el correo ni el código del fondo: solo ids y códigos
  * (src/fondo/salida-movimiento.ts).
- * Salida: 0 ensayo, registrada o ya existía · 1 error de la base · 2 uso o datos inválidos · 3 rechazado (no escribió).
+ * Salida: 0 ensayo, registrada o ya existía · 1 error de la base o inesperado (no se sabe si quedó registrada) · 2 uso o
+ *   datos inválidos · 3 rechazado (no escribió).
  */
 import { PrismaClient } from "@prisma/client";
 import { interpretarArgumentosMovimiento } from "../src/fondo/argumentos-movimiento";
