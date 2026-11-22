@@ -50,6 +50,12 @@ describe("armarAbanico", () => {
     expect(armarAbanico([{ dia: "2027-04-01", valor: 1.37 }], vista).dias[0]).toBe("2027-03-17");
   });
 
+  it("sin puntos proyectados (no debería pasar), las curvas miden lo mismo que el eje (hallazgo BAJO de code-reviewer)", () => {
+    const a = armarAbanico(historia, { ...vista, puntos: [] });
+    expect(a.dias).toHaveLength(2);
+    for (const c of [a.real, a.mes, a.p5, a.p50, a.p95, a.aportado]) expect(c).toHaveLength(2);
+  });
+
   it("sin historia, el eje empieza en hoy", () => {
     const a = armarAbanico([], vista);
     expect(a.indiceHoy).toBe(0);

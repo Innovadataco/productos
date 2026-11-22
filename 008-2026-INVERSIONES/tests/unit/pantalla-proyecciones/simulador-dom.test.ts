@@ -91,7 +91,8 @@ describe("Simulador · pantalla", () => {
     expect(control("Ajuste fino del horizonte").getAttribute("aria-valuetext")).toBe("5 años");
     expect(control("Aporte periódico").type).toBe("number");
     expect(control("Reinvertir los dividendos").getAttribute("role")).toBe("switch");
-    expect(control("Caída inicial").getAttribute("aria-valuetext")).toBe("0 %");
+    // En palabras, como la cifra a la vista (hallazgo BAJO de a11y-architect).
+    expect(control("Caída inicial").getAttribute("aria-valuetext")).toBe("sin caída");
     expect(m.contenedor.querySelector("[role=group][aria-label='Horizonte']")).not.toBeNull();
     expect(m.contenedor.querySelector("[role=group][aria-label='Frecuencia del aporte']")).not.toBeNull();
     expect(boton("5 años").getAttribute("aria-pressed")).toBe("true");
@@ -116,8 +117,46 @@ describe("Simulador · pantalla", () => {
     expect(resultado().getAttribute("aria-busy")).toBe("false");
     expect(banda()).not.toBe(antes);
     expect(indicador(2)).toBe("Probabilidad de terminar por debajo de lo aportado: 7,1 %");
+    // El anuncio espera 800 ms sin otro resultado: el lector oye solo el último (hallazgo MEDIO de a11y-architect).
+    expect(estado()).toBe("");
+    await avanzar(800);
     expect(estado()).toContain("Proyección a 10 años");
     expect(estado()).toContain("7,1 %");
+    // Sin jerga: el rango se dice en palabras.
+    expect(estado()).toContain("el 90 % de las trayectorias");
+    expect(estado()).not.toContain("P5");
+  });
+
+  it("dos resultados seguidos: se anuncia solo el último", async () => {
+    await pintar();
+    await act(async () => boton("10 años").click());
+    await avanzar(350);
+    await responder({ vista: DIEZ });
+    await avanzar(300);
+    await act(async () => boton("5 años").click());
+    await avanzar(350);
+    await responder({ vista: INICIAL });
+    await avanzar(800);
+    expect(estado()).toContain("Proyección a 5 años");
+  });
+
+  it("un cálculo que tarda más de 1,5 s se anuncia («Calculando…»); el aviso de fallo va fuera de la región ocupada", async () => {
+    await pintar();
+    await act(async () => boton("1 año").click());
+    await avanzar(350);
+    await avanzar(1_499);
+    expect(estado()).toBe("");
+    await avanzar(1);
+    expect(estado()).toBe("Calculando…");
+    await responder({ error: "x" }, 500);
+    expect(m.contenedor.querySelector("[role=alert]")).not.toBeNull();
+    expect(m.contenedor.querySelector("[aria-busy] [role=alert]")).toBeNull();
+  });
+
+  it("los deslizadores llevan el tramo recorrido para pintar la pista (WebKit no tiene «progreso»)", async () => {
+    await pintar();
+    expect(control("Ajuste fino del horizonte").style.getPropertyValue("--relleno")).toBe("49.6%");
+    expect(control("Caída inicial").style.getPropertyValue("--relleno")).toBe("0%");
   });
 
   it("el aporte, la frecuencia, la reinversión y la caída viajan en el pedido", async () => {
@@ -129,19 +168,25 @@ describe("Simulador · pantalla", () => {
     await escribir(control("Ajuste fino del horizonte"), "37");
     await avanzar(350);
     expect(JSON.parse(String(fetchFalso.mock.calls[0]![1].body))).toEqual({ horizonteMeses: 37, aportePeriodico: 413.71, frecuenciaAporte: "TRIMESTRAL", reinvertirDividendos: false, caidaInicialPct: 13 });
-    expect(control("Caída inicial").getAttribute("aria-valuetext")).toBe("13 %");
+    expect(control("Caída inicial").getAttribute("aria-valuetext")).toBe("caída de 13 %");
     expect(control("Ajuste fino del horizonte").getAttribute("aria-valuetext")).toBe("3 años y 1 mes");
   });
 
   it("un aporte vacío o negativo cuenta como 0; uno enorme se recorta al tope", async () => {
     await pintar();
+    const ayuda = () => texto(document.getElementById(control("Aporte periódico").getAttribute("aria-describedby")!.split(" ").at(-1)!));
     await escribir(control("Aporte periódico"), "-7");
     await avanzar(350);
     expect(JSON.parse(String(fetchFalso.mock.calls[0]![1].body)).aportePeriodico).toBe(0);
+    // Lo que se corrige se dice (hallazgo BAJO de a11y-architect, WCAG 3.3.1).
+    expect(ayuda()).toBe("Ese valor no sirve como aporte: se calcula sin aportes.");
     await responder({ vista: INICIAL });
     await escribir(control("Aporte periódico"), "9e15");
     await avanzar(350);
     expect(JSON.parse(String(fetchFalso.mock.calls[1]![1].body)).aportePeriodico).toBe(1e12);
+    expect(ayuda()).toBe("Pasa del tope: se calcula con $ 1.000.000.000.000.");
+    await escribir(control("Aporte periódico"), "413.71");
+    expect(ayuda()).toBe("");
   });
 
   it("un error conserva el resultado anterior y lo dice con un mensaje genérico", async () => {

@@ -50,6 +50,17 @@ describe("historiaMensual", () => {
     expect(h[1]!.valor).toBeCloseTo(4793.29 + 13.71 * 101.37, 6);
   });
 
+  it("solo desde `desde` (los años de historia que se leen): antes no hay valores del fondo y la serie caería sin motivo (hallazgo BAJO de code-reviewer)", () => {
+    const fondos = [{ movimientos: [{ dia: "2027-01-05", unidades: 13.71 }], valores: [{ dia: "2027-02-20", valor: 101.37 }] }];
+    expect(historiaMensual(sinFondo({ fondos, desde: "2027-02-01" })).map((p) => p.dia)).toEqual(["2027-02-26", "2027-03-12"]);
+  });
+
+  it("unidades que se compensan hasta casi cero (sumas en coma flotante) no valoran el fondo", () => {
+    const fondos = [{ movimientos: [{ dia: "2027-01-05", unidades: 0.1 }, { dia: "2027-01-06", unidades: 0.2 }, { dia: "2027-01-07", unidades: -0.3 }], valores: [{ dia: "2027-01-10", valor: 101.37 }] }];
+    expect(historiaMensual(sinFondo({ fondos }))[0]!.valor).toBe(4701.13);
+    expect(historiaMensual(sinFondo({ acciones: [], fondos }))).toEqual([]);
+  });
+
   it("sin evolución de acciones, los días salen de los valores del fondo mientras tiene unidades", () => {
     const fondos = [{
       movimientos: [{ dia: "2027-01-05", unidades: 13.71 }],

@@ -10,13 +10,13 @@ import { describe, expect, it } from "vitest";
 import { esPublica } from "@/auth/rutas";
 
 const DIR = fileURLToPath(new URL("../../../src/app/proyecciones/", import.meta.url));
-const IMPORTACION = /^\s*(?:import|export)\s+(type\s+)?(?:[^"';]*?\s+from\s+)?["']([^"']+)["']/gm;
+const IMPORTACION = /^\s*(?:import|export)\s+(type\s+)?(?:[^"';]*?\s+from\s+)?["']([^"']+)["']|\b(?:import|require)\(\s*["']([^"']+)["']\s*\)/gm;
 const PERMITIDO_CLIENTE = /^(react|react-dom|@\/app\/_graficas|@\/app\/tablero\/formato|@\/app\/tablero\/secciones|@\/proyecciones\/tipos|\.\/[\w.-]+\.css)$/;
 const DEL_SERVIDOR = ["datos.ts", "servidor.ts"];
 
 const leer = (f: string) => readFileSync(`${DIR}${f}`, "utf8");
 const todos = () => readdirSync(DIR).filter((f) => /\.(ts|tsx)$/.test(f));
-const importaciones = (fuente: string) => [...fuente.matchAll(IMPORTACION)].map((m) => ({ soloTipo: Boolean(m[1]), desde: m[2]! }));
+const importaciones = (fuente: string) => [...fuente.matchAll(IMPORTACION)].map((m) => ({ soloTipo: Boolean(m[1]), desde: (m[2] ?? m[3])! }));
 
 /** Los «use client» de la carpeta y lo que importan de ella (./x), recursivo. */
 function delCliente(): string[] {
@@ -56,6 +56,10 @@ describe("frontera de src/app/proyecciones", () => {
     expect(fugas({
       "x.tsx": 'import type { P } from "@/proyecciones/proyectar";\nimport { proyectar } from "@/proyecciones/proyectar";\nimport { db } from "@/lib/db";\nimport { Prisma } from "@prisma/client";\nimport { cop } from "@/app/tablero/formato";\nimport "./proyecciones.css";\n',
     })).toEqual(["x.tsx → @/proyecciones/proyectar", "x.tsx → @/lib/db", "x.tsx → @prisma/client"]);
+  });
+
+  it("el candado ve también import() dinámico y require (hallazgo BAJO de security-reviewer)", () => {
+    expect(fugas({ "x.tsx": 'const m = await import("@/lib/db");\nconst r = require("@prisma/client");\nconst f = await import("./cola");\n' })).toEqual(["x.tsx → @/lib/db", "x.tsx → @prisma/client"]);
   });
 
   it("los módulos del servidor de la carpeta cargan server-only primero", () => {

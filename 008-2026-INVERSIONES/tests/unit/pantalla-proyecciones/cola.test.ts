@@ -128,6 +128,78 @@ describe("crearCola", () => {
     expect(al.fallo).toHaveBeenCalledWith("ERROR");
   });
 
+  it("una respuesta que llega mientras corre el debounce de otro cambio no se entrega ni apaga «Calculando…» (hallazgo MEDIO de code-reviewer y react-reviewer)", async () => {
+    const { cola, abiertos, enviar, al } = armar();
+    cola.pedir(c(12));
+    await esperar(ESPERA_MS);
+    cola.pedir(c(36));
+    await esperar(100);
+    abiertos[0]!.responder({ tipo: "OK", vista: vistaDe(12) });
+    await esperar(0);
+    expect(al.resultado).not.toHaveBeenCalled();
+    expect(al.calculando).toHaveBeenLastCalledWith(true);
+    await esperar(ESPERA_MS);
+    expect(enviar).toHaveBeenCalledTimes(2);
+    expect(enviar).toHaveBeenLastCalledWith(c(36));
+    abiertos[1]!.responder({ tipo: "OK", vista: vistaDe(36) });
+    await esperar(0);
+    expect(al.resultado).toHaveBeenCalledWith(vistaDe(36));
+    expect(al.calculando).toHaveBeenLastCalledWith(false);
+  });
+
+  it("un pendiente viejo no se pide si llega otro cambio: solo el último (hallazgo MEDIO de react-reviewer)", async () => {
+    const { cola, abiertos, enviar } = armar();
+    cola.pedir(c(12));
+    await esperar(ESPERA_MS);
+    cola.pedir(c(36));
+    await esperar(ESPERA_MS);
+    cola.pedir(c(60));
+    await esperar(100);
+    abiertos[0]!.responder({ tipo: "OK", vista: vistaDe(12) });
+    await esperar(ESPERA_MS);
+    expect(enviar.mock.calls.map(([x]) => x.horizonteMeses)).toEqual([12, 60]);
+  });
+
+  it("un 429 con Retry-After largo (límite de frecuencia) no espera minutos: avisa al instante (hallazgo MEDIO de code-reviewer)", async () => {
+    const { cola, abiertos, enviar, al } = armar();
+    cola.pedir(c(12));
+    await esperar(ESPERA_MS);
+    abiertos[0]!.responder({ tipo: "OCUPADO", reintentarEnS: 59 });
+    await esperar(0);
+    expect(al.fallo).toHaveBeenCalledWith("FRECUENCIA");
+    expect(al.calculando).toHaveBeenLastCalledWith(false);
+    await esperar(60_000);
+    expect(enviar).toHaveBeenCalledTimes(1);
+  });
+
+  it("si entregar el resultado falla, «Calculando…» se apaga igual y no queda una promesa rechazada (hallazgo BAJO de code-reviewer)", async () => {
+    const abiertos: Abierto[] = [];
+    const al = { calculando: vi.fn(), resultado: vi.fn(() => { throw new TypeError("x"); }), fallo: vi.fn() };
+    const cola = crearCola({ enviar: (controles) => new Promise<Respuesta>((responder) => abiertos.push({ controles, responder })), al });
+    const sinManejar = vi.fn();
+    process.on("unhandledRejection", sinManejar);
+    cola.pedir(c(12));
+    await esperar(ESPERA_MS);
+    abiertos[0]!.responder({ tipo: "OK", vista: vistaDe(12) });
+    await esperar(0);
+    expect(al.calculando).toHaveBeenLastCalledWith(false);
+    expect(al.fallo).toHaveBeenCalledWith("ERROR");
+    await esperar(0);
+    process.off("unhandledRejection", sinManejar);
+    expect(sinManejar).not.toHaveBeenCalled();
+  });
+
+  it("cancelar aborta el pedido en vuelo (hallazgo BAJO de react-reviewer)", async () => {
+    const senales: AbortSignal[] = [];
+    const al = { calculando: vi.fn(), resultado: vi.fn(), fallo: vi.fn() };
+    const cola = crearCola({ enviar: (_c, senal) => { senales.push(senal); return new Promise<Respuesta>(() => undefined); }, al });
+    cola.pedir(c(12));
+    await esperar(ESPERA_MS);
+    expect(senales[0]!.aborted).toBe(false);
+    cola.cancelar();
+    expect(senales[0]!.aborted).toBe(true);
+  });
+
   it("cancelar (al desmontar) suelta los temporizadores y no entrega nada después", async () => {
     const { cola, abiertos, enviar, al } = armar();
     cola.pedir(c(12));

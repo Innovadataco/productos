@@ -55,6 +55,17 @@ describe("conTurno", () => {
     expect(await Promise.all(enCola)).toEqual([{ ok: true, valor: "b" }, { ok: true, valor: "c" }]);
   });
 
+  it("los rechazos por OCUPADO no gastan la cuota de frecuencia: solo cuenta lo que se calcula (hallazgo MEDIO de security-reviewer)", async () => {
+    const a = pendiente("a");
+    const primera = conTurno("u1", T0, a.tarea);
+    const enCola = [conTurno("u2", T0, async () => "b"), conTurno("u3", T0, async () => "c")];
+    for (let k = 0; k < PROYECCIONES_POR_MINUTO + 5; k += 1) expect((await conTurno("u9", T0 + k, async () => "x")).ok).toBe(false);
+    a.soltar();
+    await primera;
+    await Promise.all(enCola);
+    expect(await conTurno("u9", T0 + 100, async () => "y")).toEqual({ ok: true, valor: "y" });
+  });
+
   it("vive en globalThis (Symbol.for): otra carga del módulo ve el mismo turno", async () => {
     const p = pendiente(1);
     const primera = conTurno("u1", T0, p.tarea);

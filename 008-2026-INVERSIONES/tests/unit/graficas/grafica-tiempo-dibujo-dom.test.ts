@@ -78,6 +78,24 @@ describe("GraficaTiempo · dibujo (interpolación de un resultado)", () => {
   });
 });
 
+describe("GraficaTiempo · dibujo sin trabajo de más (hallazgo MEDIO de react-reviewer)", () => {
+  it("si solo cambia `dibujo` (un cuadro), la tabla abierta, la leyenda y el deslizador no se vuelven a armar", async () => {
+    const formatoY = vi.fn((v: number) => `$${v}`);
+    const formatoDia = vi.fn((d: string) => `día ${d}`);
+    const fijas = base({ formatoY, formatoDia });
+    await m.pintar(createElement(GraficaTiempo, fijas));
+    await alternar(m.contenedor.querySelector("details")!, true);
+    formatoY.mockClear();
+    formatoDia.mockClear();
+    for (const fin of [4657, 4703, 4751]) {
+      await m.pintar(createElement(GraficaTiempo, { ...fijas, dibujo: { series: [{ ...MEDIANA, valores: [null, 4613, 4657, fin] }] } }));
+    }
+    expect(formatoDia).not.toHaveBeenCalled();
+    expect(formatoY).not.toHaveBeenCalled();
+    expect(m.contenedor.querySelectorAll("tbody tr")).toHaveLength(4);
+  });
+});
+
 describe("GraficaTiempo · banda con degradado", () => {
   it("sin `degradado`, la banda no trae degradado ni variable (el tablero queda igual)", () => {
     const html = renderToStaticMarkup(createElement(GraficaTiempo, base()));
