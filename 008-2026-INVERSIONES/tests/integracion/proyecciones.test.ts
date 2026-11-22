@@ -39,7 +39,6 @@ const ids: Record<string, string> = {};
 let fondoId = "";
 let fondoVacioId = "";
 let fondoCeroId = "";
-let decretoRecibidoId = "";
 
 beforeAll(async () => {
   const base = (await db.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db ?? "";
@@ -76,16 +75,38 @@ beforeAll(async () => {
       cierre(ids["a"]!, dia("2017-06-14"), "1111.37"), // más de 10 años antes de hoy: no se lee
     ],
   });
-  await db.dividendoDecretado.createMany({
-    data: [
-      { instrumentoId: ids["a"]!, tipo: "ORDINARIO", valorPorAccion: new Prisma.Decimal("3.47"), fechaPago: dia("2020-07-15"), fuente: "ficticia" },
-      { instrumentoId: ids["a"]!, tipo: "ORDINARIO", valorPorAccion: new Prisma.Decimal("3.13"), fechaPago: dia("2028-04-12"), fuente: "ficticia" },
-    ],
+  // Decretos con la forma de la fase C (migración *_datos_oficiales): cada versión nace de su fila cruda del registro
+  // (REGISTRO_DECRETOS, cifrada), con su referencia oficial, y una corrección es la versión siguiente, que retira a la
+  // anterior. El lector solo trae las vigentes y no anuladas: la v1 de 2020-07-15 (otro valor) y la anulada de
+  // 2020-09-16 no se leen.
+  const cargaDecretos = await db.cargaArchivo.create({
+    data: { tipoFuente: "REGISTRO_DECRETOS", nombreArchivo: "decretos.ficticio.csv", sha256: "d".repeat(64), estado: "CARGADO", cargadoPorId: duenoId },
   });
-  // Un decreto con su pago recibido enlazado (decretadoId): el importador no enlaza, así que la fila va a mano y cifrada.
-  decretoRecibidoId = (await db.dividendoDecretado.create({
-    data: { instrumentoId: ids["a"]!, tipo: "ORDINARIO", valorPorAccion: new Prisma.Decimal("0.0391"), fechaPago: dia("2027-12-22"), fuente: "ficticia" },
-  })).id;
+  let filaDecreto = 0;
+  const decreto = async (d: { valor: string; anuncio: string; cuota: number; ex: string; pago: string; version?: number; anulada?: boolean; retirar?: boolean }) => {
+    filaDecreto += 1;
+    const llave = { tipoFuente: "REGISTRO_DECRETOS" as const, claveNatural: `py${corrida}decreto${filaDecreto}`.padStart(64, "0"), ocurrencia: 1 };
+    const fila = await db.filaFuente.create({
+      data: { ...llave, primeraCargaId: cargaDecretos.id, primeraFilaNo: filaDecreto, crudo: cifrarCrudo({ especie: nemo.a, valor: d.valor, pago: d.pago }, llave) },
+    });
+    const { id } = await db.dividendoDecretado.create({
+      data: {
+        filaFuenteId: fila.id, instrumentoId: ids["a"]!, tipo: "ORDINARIO", valorPorAccion: new Prisma.Decimal(d.valor), fechaAnuncio: dia(d.anuncio), cuota: d.cuota,
+        fechaEx: dia(d.ex), fechaPago: dia(d.pago), referenciaOficial: "https://www.superfinanciera.gov.co/ficticio/decreto", version: d.version ?? 1,
+        anulada: d.anulada ?? false, nota: d.anulada ? "anulado en la prueba" : null,
+      },
+    });
+    if (d.retirar) await db.dividendoDecretado.update({ where: { id }, data: { reemplazadoEn: new Date() } });
+  };
+  await decreto({ valor: "3.71", anuncio: "2020-03-11", cuota: 1, ex: "2020-07-08", pago: "2020-07-15", retirar: true });
+  await decreto({ valor: "3.47", anuncio: "2020-03-11", cuota: 1, ex: "2020-07-08", pago: "2020-07-15", version: 2 });
+  await decreto({ valor: "4.61", anuncio: "2020-03-11", cuota: 2, ex: "2020-09-09", pago: "2020-09-16", retirar: true });
+  await decreto({ valor: "4.61", anuncio: "2020-03-11", cuota: 2, ex: "2020-09-09", pago: "2020-09-16", version: 2, anulada: true });
+  await decreto({ valor: "3.13", anuncio: "2027-03-17", cuota: 2, ex: "2028-04-05", pago: "2028-04-12" });
+  // Un decreto cuyo pago de Trii llegó el mismo día: el motor lo descarta por ese pago. Desde la fase C la base no guarda
+  // el enlace (dividendo."decretadoId" es siempre nulo: el cruce se calcula al leer), así que la fila va sin él, a mano
+  // y cifrada.
+  await decreto({ valor: "0.0391", anuncio: "2027-03-17", cuota: 1, ex: "2027-12-15", pago: "2027-12-22" });
   const carga = await db.cargaArchivo.create({
     data: { tipoFuente: "TRII_DIVIDENDOS", nombreArchivo: "enlazado.ficticio.csv", sha256: "e".repeat(64), estado: "CARGADO", cargadoPorId: duenoId },
   });
@@ -94,7 +115,7 @@ beforeAll(async () => {
     data: { ...llave, tipoFuente: "TRII_DIVIDENDOS", primeraCargaId: carga.id, primeraFilaNo: 1, crudo: cifrarCrudo({ "Fecha y hora": "2027-12-22", Ticker: nemo.a, "Valor total": "47.93" }, llave) },
   });
   await db.dividendo.create({
-    data: { filaFuenteId: fila.id, fechaPago: dia("2027-12-22"), instrumentoId: ids["a"]!, montoNeto: new Prisma.Decimal("47.93"), decretadoId: decretoRecibidoId },
+    data: { filaFuenteId: fila.id, fechaPago: dia("2027-12-22"), instrumentoId: ids["a"]!, montoNeto: new Prisma.Decimal("47.93") },
   });
 
   fondoId = (await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `9${corrida}1`, nombre: "Fondo ficticio de proyecciones" } })).id;
@@ -162,9 +183,10 @@ describe("leerEntradas", () => {
     const a = accionDe(e, ids["a"]!)!;
     expect(a.dividendos).toEqual([
       { fechaPago: dia("2027-12-20"), montoNeto: 733.19, decretadoId: null },
-      { fechaPago: dia("2027-12-22"), montoNeto: 47.93, decretadoId: decretoRecibidoId },
+      { fechaPago: dia("2027-12-22"), montoNeto: 47.93, decretadoId: null },
     ]);
-    expect(a.decretos.map((x) => [iso(x.fechaPago), x.valorPorAccion, x.recibido])).toEqual([["2020-07-15", 3.47, false], ["2027-12-22", 0.0391, true], ["2028-04-12", 3.13, false]]);
+    // Solo las versiones vigentes y no anuladas, con su valor.
+    expect(a.decretos.map((x) => [iso(x.fechaPago), x.valorPorAccion, x.recibido])).toEqual([["2020-07-15", 3.47, false], ["2027-12-22", 0.0391, false], ["2028-04-12", 3.13, false]]);
     expect(e.escisiones).toContainEqual({ origenId: ids["o"], destinoId: ids["d"], fecha: EVENTO, razon: 0.37 });
     expect(e.cierresDestino[ids["d"]!]).toHaveLength(120);
     expect(accionDe(e, ids["d"]!)).toBeUndefined();

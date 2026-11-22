@@ -237,3 +237,50 @@ describe("guardián del esquema: integridad de los precios", () => {
     expect(await guardianTras(romper)).toContain("inv_retiro_vigente");
   });
 });
+
+// Datos oficiales (fase C, C1, migración *_datos_oficiales): las series y los decretos son de solo inserción y retiro
+// para TODOS los roles (inv_solo_retiro, sin exención del dueño); sin sus disparadores, su función, su exclusión o sus
+// claves vigentes, la historia se podría reescribir o duplicar sin que nada lo frene.
+describe("guardián del esquema: datos oficiales", () => {
+  const disparadores: ReadonlyArray<readonly [string, string]> = [
+    ["valor_serie_oficial", "valor_serie_oficial_retiro"],
+    ["dividendo_decretado", "dividendo_decretado_retiro"],
+  ];
+
+  it.each(disparadores)("falla si falta %s.%s o queda deshabilitado", async (tabla, disparador) => {
+    expect(await guardianTras([`DROP TRIGGER "${disparador}" ON "${tabla}"`])).toContain(disparador);
+    expect(await guardianTras([`ALTER TABLE "${tabla}" DISABLE TRIGGER "${disparador}"`])).toContain(disparador);
+  });
+
+  it("falla si inv_solo_retiro cambia de código, pasa a SECURITY DEFINER o gana un SET", async () => {
+    expect(await guardianTras([`CREATE OR REPLACE FUNCTION "inv_solo_retiro"() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN COALESCE(NEW, OLD); END; $$`])).toContain("inv_solo_retiro");
+    expect(await guardianTras(['ALTER FUNCTION "inv_solo_retiro"() SECURITY DEFINER'])).toContain("inv_solo_retiro");
+    expect(await guardianTras(['ALTER FUNCTION "inv_solo_retiro"() SET search_path = public'])).toContain("inv_solo_retiro");
+  });
+
+  it.each([
+    ['ALTER TABLE "valor_serie_oficial" DROP CONSTRAINT "valor_serie_oficial_sin_solape_excl"', "valor_serie_oficial_sin_solape_excl"],
+    ['DROP INDEX "valor_serie_oficial_vigente_key"', "valor_serie_oficial_vigente_key"],
+    ['DROP INDEX "dividendo_decretado_vigente_key"', "dividendo_decretado_vigente_key"],
+    ['DROP INDEX "dividendo_decretado_version_key"', "dividendo_decretado_version_key"],
+    ['ALTER TABLE "dividendo_decretado" DROP CONSTRAINT "dividendo_decretado_referencia_chk"', "dividendo_decretado_referencia_chk"],
+  ])("falla si se quita una regla (%s)", async (romper, nombre) => {
+    expect(await guardianTras([romper])).toContain(nombre);
+  });
+
+  it("falla si dividendo_viejas_nulas_chk queda sin validar (no está en la lista de los que nacen NOT VALID)", async () => {
+    const romper = [
+      'ALTER TABLE "dividendo" DROP CONSTRAINT "dividendo_viejas_nulas_chk"',
+      'ALTER TABLE "dividendo" ADD CONSTRAINT "dividendo_viejas_nulas_chk" CHECK ("montoBruto" IS NULL AND "retencion" IS NULL AND "tasaRetencion" IS NULL AND "decretadoId" IS NULL) NOT VALID',
+    ];
+    expect(await guardianTras(romper)).toContain("dividendo_viejas_nulas_chk");
+  });
+
+  it("falla si la FK de la fila cruda del decreto deja de ser RESTRICT", async () => {
+    const romper = [
+      'ALTER TABLE "dividendo_decretado" DROP CONSTRAINT "dividendo_decretado_filaFuenteId_fkey"',
+      'ALTER TABLE "dividendo_decretado" ADD CONSTRAINT "dividendo_decretado_filaFuenteId_fkey" FOREIGN KEY ("filaFuenteId") REFERENCES "fila_fuente"("id") ON DELETE CASCADE ON UPDATE RESTRICT',
+    ];
+    expect(await guardianTras(romper)).toContain("dividendo_decretado_filaFuenteId_fkey");
+  });
+});

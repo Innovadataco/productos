@@ -5,8 +5,9 @@
 // suma, esto se pone rojo. Las definiciones exactas las comprueban contra PostgreSQL real
 // tests/integracion/guardian-esquema.test.ts (en el Mac y en el CI) y roles-base.test.ts (solo CI).
 // Límites del lector de migraciones (por regex): exige nombres entre comillas (lo hace cumplir una prueba de
-// abajo), no modela DROP TABLE, DROP COLUMN ni RENAME (hoy ninguna migración los usa) y quita los `--` de
-// comentario sin mirar si caen dentro de un literal.
+// abajo), no modela DROP TABLE ni DROP COLUMN (hoy ninguna migración los usa) ni RENAME (un RENAME COLUMN, como el
+// de dividendo_decretado en *_datos_oficiales, no cambia ningún objeto de la lista; uno de índice, restricción o
+// disparador lo frena una prueba de abajo) y quita los `--` de comentario sin mirar si caen dentro de un literal.
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -150,6 +151,15 @@ describe("verificar-esquema.sql coincide con las migraciones", () => {
     const enGuardian = planos("extensiones");
     expect(enGuardian.sort()).toEqual([...esperado.extensiones].sort());
     expect(enGuardian).toEqual(expect.arrayContaining(["btree_gist", "citext"]));
+  });
+
+  it("ninguna migración renombra un índice, una restricción ni un disparador (el lector no los seguiría)", () => {
+    const renombres = migraciones().flatMap((sql) => [
+      ...sql.matchAll(/\bALTER\s+INDEX\b[^;]*\bRENAME\b/gi),
+      ...sql.matchAll(/\bRENAME\s+CONSTRAINT\b/gi),
+      ...sql.matchAll(/\bALTER\s+TRIGGER\b[^;]*\bRENAME\b/gi),
+    ]).map((m) => m[0]);
+    expect(renombres).toEqual([]);
   });
 
   it("las migraciones no traen CHECK ni EXCLUDE sin nombre (el guardián no podría seguirlos)", () => {
