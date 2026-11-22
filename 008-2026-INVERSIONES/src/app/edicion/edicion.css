@@ -1,0 +1,56 @@
+/* Inversiones · área de edición del plan y del diario (fase B, PR-B). Usa los tokens de tablero.css (claro y oscuro)
+   y va todo dentro de .edicion (el contenido). Las entradas desde las pantallas de lectura están en _plan/plan.css. */
+/* Texto del botón dorado con contraste AA en los dos temas (el mismo par de acceso.css, medido en el e2e). */
+:root { --tinta-boton: #141821; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --tinta-boton: #ffffff; }
+}
+:root[data-theme="light"] { --tinta-boton: #ffffff; }
+:root[data-theme="dark"] { --tinta-boton: #141821; }
+
+.edicion .edicion-form { display: grid; gap: 18px; max-width: 980px; }
+.edicion .edicion-form > p { margin: 0; }
+.edicion .edicion-rejilla { display: grid; gap: 12px 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
+.edicion .edicion-cabeza { max-width: 420px; }
+.edicion .edicion-campo { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.edicion .edicion-campo label { font-size: 13px; font-weight: 700; }
+.edicion input[type="text"], .edicion input[type="date"], .edicion select, .edicion textarea {
+  font: inherit; color: var(--fg); background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; width: 100%; min-width: 0; min-height: 44px;
+}
+.edicion textarea { resize: vertical; line-height: 1.45; }
+.edicion input:disabled, .edicion select:disabled { opacity: 0.55; cursor: not-allowed; }
+.edicion input:focus-visible, .edicion select:focus-visible, .edicion textarea:focus-visible, .edicion button:focus-visible, .edicion a:focus-visible {
+  outline: 2px solid var(--gold); outline-offset: 2px;
+}
+.edicion [aria-invalid="true"] { border-color: var(--loss); box-shadow: 0 0 0 1px var(--loss) inset; }
+.edicion .edicion-ayuda { margin: 0; font-size: 13px; color: var(--muted); }
+.edicion .edicion-error { margin: 0; font-size: 13px; font-weight: 600; color: var(--loss); }
+.edicion .edicion-casilla { grid-template-columns: auto 1fr; align-items: center; gap: 10px; min-height: 44px; }
+.edicion .edicion-casilla label { padding-block: 10px; }
+.edicion .edicion-casilla input { width: 24px; height: 24px; accent-color: var(--gold); }
+.edicion .edicion-casilla .edicion-error, .edicion .edicion-casilla .edicion-ayuda { grid-column: 1 / -1; }
+
+.edicion .edicion-regla { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 16px; margin: 0 0 14px; display: grid; gap: 12px; min-width: 0; }
+.edicion .edicion-regla legend { font-family: var(--display); font-size: 22px; padding: 0 6px; }
+.edicion .edicion-reglas h2 { font-family: var(--display); font-weight: 400; font-size: 32px; margin: 8px 0 12px; }
+
+.edicion button { font: inherit; cursor: pointer; border-radius: 999px; min-height: 44px; padding: 10px 16px; }
+.edicion .edicion-boton { border: 0; font-weight: 800; background: var(--gold); color: var(--tinta-boton); }
+.edicion .edicion-boton:disabled { cursor: not-allowed; opacity: 0.7; }
+.edicion .edicion-boton[aria-disabled="true"] { cursor: progress; }
+.edicion .edicion-agregar, .edicion .edicion-quitar { background: transparent; color: var(--fg); border: 1px solid var(--line); font-weight: 600; }
+.edicion .edicion-quitar { justify-self: start; }
+.edicion .edicion-agregar:hover, .edicion .edicion-quitar:hover { border-color: var(--gold); }
+.edicion .edicion-enviar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.edicion .edicion-estado { margin: 0; font-size: 13px; color: var(--muted); min-height: 1.4em; }
+
+.edicion .edicion-resumen:empty { display: none; }
+.edicion .edicion-resumen { border: 1px solid var(--loss); border-left-width: 4px; border-radius: 12px; padding: 12px 16px; background: var(--panel); }
+.edicion .edicion-resumen:focus { outline: 2px solid var(--loss); outline-offset: 2px; }
+.edicion .edicion-resumen-titulo { margin: 0; font-weight: 800; color: var(--loss); }
+.edicion .edicion-resumen ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
+.edicion .edicion-versiones { display: grid; gap: 6px; }
+.edicion .edicion-resumen a { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+.edicion .edicion-anuncio:empty, .edicion .edicion-aviso-fecha:empty { margin: 0; }
+

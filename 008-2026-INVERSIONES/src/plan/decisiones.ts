@@ -6,7 +6,7 @@
 import type { AccionPlan, Prisma, PrismaClient } from "@prisma/client";
 import { exigirDueno } from "./acceso";
 import { bloquearDecision, bloquearVersiones } from "./bloqueos";
-import { escribirEnlace, exigirEnlaceCoherente } from "./enlaces";
+import { CHOQUES_ENLACE, escribirEnlace, exigirEnlaceCoherente } from "./enlaces";
 import { ErrorPlan, exigirSinErrores, traducirChoque } from "./errores";
 import { validarDecision, validarDecisionContraRegla, type DatosDecisionValidable } from "./validar";
 import { hoyDe, versionVigente, type OpcionesPlan } from "./versiones";
@@ -83,6 +83,32 @@ export async function registrarDecision(db: PrismaClient, d: DatosDecision, opci
 }
 
 /**
+ * Registra la decisión y la enlaza a la orden de Trii que la ejecutó, en UNA transacción: si la orden no es coherente
+ * con la decisión (especie, lado, fecha, aprobada) o ya tiene decisión, no queda ni la decisión. Para registrar a la
+ * vez una decisión y la orden que ya se importó (el enlace posterior es `enlazarOrden`).
+ */
+export async function registrarDecisionConOrden(
+  db: PrismaClient,
+  d: DatosDecision,
+  ordenId: string,
+  opciones: OpcionesPlan = {},
+): Promise<DecisionRegistrada & { readonly enlaceId: string }> {
+  const datos = await preparar(db, d, opciones);
+  try {
+    return await db.$transaction(async (tx) => {
+      const nueva = await escribirDecision(tx, datos, d.autorId, null);
+      const orden = await tx.orden.findUnique({ where: { id: ordenId }, select: { estado: true, instrumentoId: true, lado: true, fechaOperacion: true } });
+      if (!orden) throw new ErrorPlan("ORDEN_INEXISTENTE");
+      exigirEnlaceCoherente(orden, { ...datos, reemplazada: false });
+      const enlace = await escribirEnlace(tx, { ordenId, decisionId: nueva.id, autorId: d.autorId, motivo: null });
+      return { ...nueva, enlaceId: enlace.id };
+    });
+  } catch (error) {
+    throw traducirChoque(error, CHOQUES_ENLACE);
+  }
+}
+
+/**
  * Registra `d` como corrección de `decisionId` y mueve a la nueva los enlaces vigentes de la anterior.
  * Si alguna de esas órdenes no es coherente con la nueva decisión, no se guarda nada.
  */
@@ -95,7 +121,7 @@ export async function corregirDecision(
   const datos = await preparar(db, d, opciones);
   try {
     return await db.$transaction(async (tx) => {
-      // La fila de la anterior queda bloqueada: un enlace en curso termina antes y se mueve también.
+      // El candado de la anterior (src/plan/bloqueos.ts): un enlace en curso termina antes y se mueve también.
       if (!(await bloquearDecision(tx, decisionId))) throw new ErrorPlan("DECISION_INEXISTENTE");
       const anterior = await tx.decision.findUnique({ where: { id: decisionId }, select: { id: true, reemplazadaPor: { select: { id: true } } } });
       if (!anterior) throw new ErrorPlan("DECISION_INEXISTENTE");

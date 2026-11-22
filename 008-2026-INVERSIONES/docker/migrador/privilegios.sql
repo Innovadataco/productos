@@ -1,13 +1,25 @@
 -- Inversiones · privilegios de inv_app y de inv_precios. Lo corre el migrador como inv_dueno (dueño de las tablas)
 -- después de cada `migrate deploy`. Idempotente y en una sola transacción.
 --
--- Mínimo privilegio: la app solo LEE (src/app solo lee), salvo lo que escriben el login (contrato del
--- frente login, migración 20261121050319_login) y el TOTP (migración 20261121060000_totp), por COLUMNA:
+-- Mínimo privilegio: la app LEE, salvo lo que escriben el login (contrato del frente login, migración
+-- 20261121050319_login) y el TOTP (migración 20261121060000_totp), por COLUMNA, y el área de edición del plan:
 --   usuario             UPDATE ("claveHash", "sesionVersion", "bloqueadoHasta") y, del TOTP, ("totpSecreto",
 --                       "totpActivadoEn", "totpUltimoPaso", "presesionHash"); también SELECT … FOR UPDATE
 --   token_acceso        UPDATE ("usadoEn"); también SELECT … FOR UPDATE OF t
 --   intento_ingreso     INSERT
 --   codigo_recuperacion INSERT y UPDATE ("usadoEn", "anuladoEn") (un disparador admite una sola marca)
+--   plan_version, regla_plan, decision y enlace_decision_orden: solo INSERT, por COLUMNA y con todas las columnas de
+--                       cada tabla (fase B, el dueño edita el plan y el diario desde la web; migración
+--                       20261121024044_plan_decisiones). Por columna, así una columna nueva no le llega hasta que se
+--                       agregue aquí (falla cerrada). Son de solo inserción por sus disparadores: una versión nueva
+--                       reemplaza entera a la anterior y una decisión se corrige con otra que la reemplaza. El candado
+--                       de una decisión es consultivo (src/plan/bloqueos.ts): sin UPDATE, `SELECT … FOR UPDATE` no le
+--                       está permitido. Quién escribe lo decide el guardián del dueño en cada ruta (exigirDuenoApi); la
+--                       familia no. Riesgo residual: con la clave de inv_app se pueden insertar versiones, reglas,
+--                       decisiones y enlaces falsos (con un autor que exista), y fijar sus instantes ("creadaEn",
+--                       "registradaEn", "creadoEn"): Prisma los manda en cada INSERT (genera `now()` en el cliente, no
+--                       usa el DEFAULT de la base), así que no se pueden quitar de la lista sin cambiar el esquema.
+--                       Nada de lo que ya está se edita ni se borra.
 -- Nunca TRUNCATE, REFERENCES, TRIGGER ni DDL. Sin UPDATE ni DELETE en las tablas de solo inserción,
 -- `SET LOCAL inv.reversion = 'on'` no le sirve a inv_app para saltarse sus disparadores.
 -- El UPDATE por columna de usuario lo acota el disparador usuario_transiciones (migración
@@ -79,6 +91,13 @@ BEGIN
   GRANT INSERT ON TABLE public.codigo_recuperacion TO inv_app;
   GRANT UPDATE ("usadoEn", "anuladoEn") ON TABLE public.codigo_recuperacion TO inv_app;
   GRANT UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") ON TABLE public.usuario TO inv_app;
+
+  -- Escrituras del plan y del diario (área de edición, fase B): solo INSERT, por columna (todas las de cada tabla: Prisma
+  -- las manda todas, también los instantes). Nada se edita ni se borra. (El RETURNING lo cubre el SELECT de arriba.)
+  GRANT INSERT (id, version, "vigenteDesde", motivo, "aprobadaPorId", "creadaEn") ON TABLE public.plan_version TO inv_app;
+  GRANT INSERT (id, "planVersionId", "instrumentoId", condicion, nivel, accion, cantidad, "plazoHasta", detalle) ON TABLE public.regla_plan TO inv_app;
+  GRANT INSERT (id, "planVersionId", "reglaId", "instrumentoId", accion, cantidad, excepcion, motivo, "decididaPorId", "fechaDecision", "registradaEn", "reemplazaId") ON TABLE public.decision TO inv_app;
+  GRANT INSERT (id, "ordenId", "decisionId", "reemplazaId", motivo, "creadoPorId", "creadoEn") ON TABLE public.enlace_decision_orden TO inv_app;
 
   -- inv_precios: solo si el rol existe (desde la primera corrida de crear-roles-prod.sh). Sin él, el despliegue sigue igual.
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'inv_precios') THEN

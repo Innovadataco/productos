@@ -103,7 +103,7 @@ function Vigencia({ vista }: { readonly vista: VistaPlan }) {
   return <p>{`Vigente desde el ${fecha(v.desde)}. Motivo: ${v.motivo}.`}</p>;
 }
 
-function Version({ vista }: { readonly vista: VistaPlan }) {
+function Version({ vista, entrada }: { readonly vista: VistaPlan; readonly entrada: ReactNode }) {
   const v = vista.version;
   return (
     <>
@@ -114,20 +114,31 @@ function Version({ vista }: { readonly vista: VistaPlan }) {
         {vista.programada ? <p className="nota"><a href={`/plan?version=${vista.programada.numero}`}>{`La versión ${vista.programada.numero} entra a regir el ${fecha(vista.programada.desde)}.`}</a></p> : null}
         {vista.conCierres ? <p className="nota">{vista.referencia ? `Cierres al ${fecha(vista.referencia)}` : "Todavía no hay cierres de las especies del portafolio."}</p> : null}
         {vista.preciosAtrasados && vista.referencia ? <p className="nota aviso" role="status">{`Los precios no se han actualizado desde el ${fecha(vista.referencia)}.`}</p> : null}
+        {entrada}
       </Portada>
       <Reglas vista={vista} />
     </>
   );
 }
 
-function Contenido({ datos }: { readonly datos: DatosPlan }) {
+/** La entrada al área de edición: solo el dueño la ve, y es un enlace (esta pantalla no tiene formularios). */
+function Entrada({ texto }: { readonly texto: string }) {
+  return <p className="entradas-edicion"><a className="entrada-edicion" href="/edicion/plan">{texto}</a></p>;
+}
+
+function Contenido({ datos, soloLectura }: { readonly datos: DatosPlan; readonly soloLectura: boolean }) {
   switch (datos.estado) {
     case "SIN_PLAN":
-      return <Portada titulo="Todavía no hay un plan cargado"><p>Cuando se cargue el plan, aquí se verán sus reglas.</p></Portada>;
+      return (
+        <Portada titulo="Todavía no hay un plan cargado">
+          <p>Cuando se cargue el plan, aquí se verán sus reglas.</p>
+          {soloLectura ? null : <Entrada texto="Crear la primera versión del plan" />}
+        </Portada>
+      );
     case "VERSION_INVALIDA":
       return <><Portada titulo="No hay una versión del plan con ese número"><p>Elija una de las versiones cargadas.</p></Portada><Versiones versiones={datos.versiones} /></>;
     case "VERSION":
-      return <><Version vista={datos.vista} /><Versiones versiones={datos.versiones} /></>;
+      return <><Version vista={datos.vista} entrada={soloLectura ? null : <Entrada texto="Nueva versión del plan" />} /><Versiones versiones={datos.versiones} /></>;
   }
 }
 
@@ -137,7 +148,7 @@ export function Plan({ datos, soloLectura = false }: { readonly datos: DatosPlan
     <>
       <Encabezado actual="plan" soloLectura={soloLectura} />
       <main className="wrap plan">
-        <Contenido datos={datos} />
+        <Contenido datos={datos} soloLectura={soloLectura} />
         <footer className="pie">
           {inferencia ? <p>{NOTA_INFERENCIA}</p> : null}
           <p>{PIE_PLAN}</p>

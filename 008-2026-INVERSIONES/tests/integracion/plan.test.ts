@@ -3,6 +3,7 @@
 // así que los casos van en orden y comparten las versiones que crea el primero.
 import { Prisma, PrismaClient, type LadoOrden, type EstadoOrden } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { bloquearDecision } from "@/plan/bloqueos";
 import { CHOQUES_CORRECCION, corregirDecision, registrarDecision } from "@/plan/decisiones";
 import { CHOQUES_ENLACE, enlazarOrden } from "@/plan/enlaces";
 import { ErrorPlan, traducirChoque } from "@/plan/errores";
@@ -257,7 +258,8 @@ describe("enlace de órdenes a decisiones", () => {
     let enlace: Promise<string> = Promise.resolve("no arrancó");
     await db.$transaction(
       async (tx) => {
-        await tx.$queryRaw`SELECT "id" FROM "decision" WHERE "id" = ${d.id} FOR UPDATE`;
+        // El mismo candado que toman enlazar y corregir (src/plan/bloqueos.ts): una de ellas «en curso».
+        expect(await bloquearDecision(tx, d.id)).toBe(true);
         await tx.decision.create({
           data: { planVersionId: d.planVersionId, instrumentoId: instA, accion: "VENDER", motivo: "Corrección en curso", decididaPorId: duenoId, fechaDecision: mas(14), reemplazaId: d.id },
         });
@@ -276,7 +278,8 @@ describe("enlace de órdenes a decisiones", () => {
     const enCurso: { correccion?: Promise<{ id: string }> } = {};
     await db.$transaction(
       async (tx) => {
-        await tx.$queryRaw`SELECT "id" FROM "decision" WHERE "id" = ${d.id} FOR UPDATE`;
+        // El mismo candado que toman enlazar y corregir (src/plan/bloqueos.ts): una de ellas «en curso».
+        expect(await bloquearDecision(tx, d.id)).toBe(true);
         await tx.enlaceDecisionOrden.create({ data: { ordenId: venta.id, decisionId: d.id, creadoPorId: duenoId } });
         enCurso.correccion = corregirDecision(db, d.id, { fechaDecision: mas(14), instrumentoId: instA, accion: "VENDER", motivo: "Vender (corregida)", autorId: duenoId });
         enCurso.correccion.catch(() => undefined); // se espera abajo

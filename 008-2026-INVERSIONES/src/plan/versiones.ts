@@ -18,6 +18,15 @@ export interface OpcionesPlan {
 
 export const hoyDe = (o: OpcionesPlan): Date => o.hoy ?? fechaEnBogota(new Date());
 
+export interface OpcionesVersion extends OpcionesPlan {
+  /**
+   * El número de la última versión que vio quien edita (0 si no había ninguna). Si otra entró en medio, PLAN_CAMBIO y
+   * no se escribe nada: la versión nueva reemplaza entera a la anterior, y no debe pisar una que no vio (otra pestaña,
+   * o el mismo formulario enviado dos veces). Sin él (el importador), no se compara.
+   */
+  readonly ultimaEsperada?: number;
+}
+
 export interface DatosVersionPlan extends DatosVersionValidable {
   readonly autorId: string;
 }
@@ -40,13 +49,14 @@ async function exigirInstrumentos(db: Db, ids: readonly string[]): Promise<void>
   if (existentes !== unicos.length) throw new ErrorPlan("INSTRUMENTO_INEXISTENTE");
 }
 
-export async function crearVersionPlan(db: PrismaClient, d: DatosVersionPlan, opciones: OpcionesPlan = {}): Promise<VersionCreada> {
+export async function crearVersionPlan(db: PrismaClient, d: DatosVersionPlan, opciones: OpcionesVersion = {}): Promise<VersionCreada> {
   exigirSinErrores(validarVersionPlan(d, hoyDe(opciones)));
   await exigirDueno(db, d.autorId);
   return db.$transaction(async (tx) => {
     // Exclusivo: serializa la numeración y deja esperando a las decisiones (que toman el compartido).
     await bloquearVersiones(tx, "exclusivo");
     const ultima = await tx.planVersion.findFirst({ orderBy: { version: "desc" }, select: { version: true, vigenteDesde: true } });
+    if (opciones.ultimaEsperada !== undefined && (ultima?.version ?? 0) !== opciones.ultimaEsperada) throw new ErrorPlan("PLAN_CAMBIO");
     if (ultima && d.vigenteDesde < ultima.vigenteDesde) throw new ErrorPlan("VIGENCIA_RETROCEDE");
     await exigirInstrumentos(tx, d.reglas.flatMap((r) => (r.instrumentoId === null ? [] : [r.instrumentoId])));
     const version = await tx.planVersion.create({

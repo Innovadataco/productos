@@ -123,6 +123,7 @@ export function Diario({ vista, soloLectura = false }: { readonly vista: VistaDi
           <p className="resumen-horizonte">{textoConteos(30, vista.resumen.d30)}</p>
           <p className="resumen-horizonte">{textoConteos(90, vista.resumen.d90)}</p>
           <Filtro vista={vista} />
+          {soloLectura ? null : <p className="entradas-edicion"><a className="entrada-edicion" href="/edicion/decision">Registrar una decisión</a></p>}
         </section>
         <Decisiones vista={vista} />
         <SinDecision vista={vista} />

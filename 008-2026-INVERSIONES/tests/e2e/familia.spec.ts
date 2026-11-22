@@ -7,8 +7,9 @@
  *    y la HUELLA de la base (el contenido de cada tabla fuera de las de autenticación, no solo sus conteos) no cambia;
  *  - revocado, su siguiente pedido lo lleva a /ingresar y la API le responde 401;
  *  - el dueño entra igual y no ve «Solo lectura».
- * Hoy no hay rutas web de escritura fuera de las de la cuenta propia: el 403 del guardián se prueba en integración
- * (tests/integracion/auth-familia-guardian.test.ts). Cada prueba crea su cuenta (correo único) y llega con su propia IP.
+ * Las rutas web de escritura del área de edición (fase B) y su 403 para la familia se prueban de punta a punta en
+ * tests/e2e/zz-edicion.spec.ts; el guardián, en integración (tests/integracion/auth-familia-guardian.test.ts).
+ * Cada prueba crea su cuenta (correo único) y llega con su propia IP.
  * Correos y contraseñas inventados.
  */
 import { expect, type Page, type TestInfo } from "@playwright/test";
