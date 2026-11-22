@@ -2,12 +2,14 @@
  * Lo que calcula el sistema A LA FECHA DE CORTE de una certificación (nunca «a hoy»), para conciliarlo:
  * - cantidades por especie desde las órdenes aprobadas de Trii (no desde AsignacionVenta: no depende de que se
  *   hayan construido los lotes) más los lotes de escisión; por liquidación y por operación (T+2);
- * - el cierre vigente del día EXACTO del corte (Yahoo primero);
+ * - el cierre vigente del día EXACTO del corte (Yahoo primero) y el del día hábil anterior según calendario_bvc (solo
+ *   para ver si la certificación es la foto de ese día: nunca se valora con él);
  * - las unidades del fondo (MovimientoFondo) y su valor de unidad de la SFC del día del corte;
  * - la caja: depósitos − retiros aprobados, ventas − compras por `totalEstimado`, dividendos netos y ajustes.
  * Solo lectura, con `select` explícito: nunca se lee el encargo ni el crudo.
  */
 import { Prisma, type LadoOrden, type TipoMovimientoCaja } from "@prisma/client";
+import { leerCalendarioCorte, ultimoHabilAnterior } from "../importacion/av/fecha-corte";
 import type { EntradasConciliacion, EspecieEntrada, FondoEntrada } from "./controles";
 
 type Lector = Prisma.TransactionClient;
@@ -65,10 +67,10 @@ interface CierreVigente {
 const primeroElegido = (a: CierreVigente, b: CierreVigente): number =>
   Number(b.fuente === YAHOO) - Number(a.fuente === YAHOO) || b.traidoEn.getTime() - a.traidoEn.getTime() || (a.fuente < b.fuente ? -1 : a.fuente > b.fuente ? 1 : 0);
 
-/** Cierre vigente del día exacto: Yahoo si hay; si no, el de otra fuente más reciente. */
-async function cierresDelCorte(db: Lector, corte: Date, ids: readonly string[]): Promise<Map<string, string>> {
+/** Cierre vigente de ese día exacto, por especie: Yahoo si hay; si no, el de otra fuente más reciente. */
+export async function cierresDelDia(db: Lector, fecha: Date, ids: readonly string[]): Promise<Map<string, string>> {
   const filas = await db.precioCierre.findMany({
-    where: { instrumentoId: { in: [...ids] }, fecha: corte, reemplazadoEn: null },
+    where: { instrumentoId: { in: [...ids] }, fecha, reemplazadoEn: null },
     select: { instrumentoId: true, precio: true, fuente: true, traidoEn: true },
   });
   const porEspecie = new Map<string, string>();
@@ -78,8 +80,9 @@ async function cierresDelCorte(db: Lector, corte: Date, ids: readonly string[]):
   return porEspecie;
 }
 
+/** `anterior`: el día hábil anterior al corte (sus cierres van en `cierreAnterior`); null no lo lee. */
 export async function especiesAlCorte(
-  db: Lector, corte: Date, certificadas: ReadonlyMap<string, EspecieEntrada["certificada"]>, ordenes: readonly OrdenAlCorte[],
+  db: Lector, corte: Date, certificadas: ReadonlyMap<string, EspecieEntrada["certificada"]>, ordenes: readonly OrdenAlCorte[], anterior: Date | null = null,
 ): Promise<EspecieEntrada[]> {
   const movimientos = await movimientosDeAcciones(db, corte, ordenes);
   const sinLote = await destinosSinLote(db, corte);
@@ -90,10 +93,11 @@ export async function especiesAlCorte(
     suma.set(m.instrumentoId, { liquidada: s.liquidada + (liquidada ? m.cantidad : 0n), operada: s.operada + m.cantidad, pendientes: s.pendientes + (liquidada ? 0 : 1) });
   }
   const ids = [...new Set([...certificadas.keys(), ...[...suma].filter(([, s]) => s.liquidada !== 0n || s.operada !== 0n).map(([id]) => id)])].sort();
-  const cierres = await cierresDelCorte(db, corte, ids);
+  const cierres = await cierresDelDia(db, corte, ids);
+  const anteriores = anterior === null ? new Map<string, string>() : await cierresDelDia(db, anterior, ids);
   return ids.map((id) => {
     const s = suma.get(id) ?? { liquidada: 0n, operada: 0n, pendientes: 0 };
-    return { instrumentoId: id, certificada: certificadas.get(id) ?? null, ...s, cierre: cierres.get(id) ?? null, escisionSinLote: sinLote.has(id) };
+    return { instrumentoId: id, certificada: certificadas.get(id) ?? null, ...s, cierre: cierres.get(id) ?? null, cierreAnterior: anteriores.get(id) ?? null, escisionSinLote: sinLote.has(id) };
   });
 }
 
@@ -155,8 +159,10 @@ export async function leerEntradas(db: Lector, certificacionId: string): Promise
   const corte = cert.fechaCorte;
   const certificadas = new Map(cert.posiciones.map((p) => [p.instrumentoId, { cantidad: p.cantidad, precioValoracion: p.precioValoracion.toString(), valorMercado: p.valorMercado.toString() }]));
   const ordenes = await ordenesAlCorte(db, corte);
-  const especies = await especiesAlCorte(db, corte, certificadas, ordenes);
+  const ultimo = ultimoHabilAnterior(corte, await leerCalendarioCorte(db));
+  const diaAnterior = ultimo.ok ? ultimo.dia : null;
+  const especies = await especiesAlCorte(db, corte, certificadas, ordenes, diaAnterior === null ? null : new Date(`${diaAnterior}T00:00:00Z`));
   const fondos = await fondosAlCorte(db, corte, cert.fondos);
   const caja = await cajaAlCorte(db, corte, cert.fondos.map((f) => f.instrumentoId), ordenes);
-  return { fechaCorte: corte, entradas: { especies, fondos, efectivo: { certificado: cert.saldoEfectivo.toString(), ...caja, hayFondo: cert.fondos.length > 0 } } };
+  return { fechaCorte: corte, entradas: { especies, fondos, efectivo: { certificado: cert.saldoEfectivo.toString(), ...caja, hayFondo: cert.fondos.length > 0 }, diaAnterior } };
 }

@@ -40,6 +40,16 @@ export function lineaDeConciliacion(c: ResumenConciliacion): string {
   return `🧮 Conciliación al ${c.fechaCorte}: ${c.resultado} · ${c.cuentas.CUADRA} cuadran, ${c.cuentas.NO_CUADRA} no cuadran, ${c.cuentas.PENDIENTE_LIQUIDACION} pendientes de liquidación${motivos}`;
 }
 
+/** La línea de la conciliación y, si sugiere otro corte, cómo corregirlo (nunca lo corrige sola). */
+export function lineasDeConciliacion(c: ResumenConciliacion, produccion = false): string[] {
+  if (c.corteSugerido === null) return [lineaDeConciliacion(c)];
+  const s = c.corteSugerido;
+  return [
+    lineaDeConciliacion(c),
+    `📅 Los precios de valoración cuadran con los cierres del ${s}, el día hábil anterior al corte: la certificación parece ser al cierre del ${s}, y el corte no se corrige solo. Si es así, ${corregirCorte(c.fechaCorte, s, produccion)}.`,
+  ];
+}
+
 const nombreDe = (e: unknown) => (e instanceof Error ? e.name : "error");
 
 /** Dónde corre: en producción no hay red y los pasos van por cargar-prod.sh (vía B, docs/despliegue/produccion.md §11). */
@@ -127,7 +137,7 @@ export async function cargarYConciliar(db: PrismaClient, a: ArchivoCertificacion
   if (r.estado === "RECHAZADO") return { lineas: [...lineas, ...(await pistaDeCorte(db, r, a.fechaCorte, pasos, opciones.produccion ?? false))], codigo: 1 };
   const { reconciliar, siguiente } = pasosSiguientes(isoDia(a.fechaCorte), opciones.produccion ?? false);
   try {
-    lineas.push(lineaDeConciliacion(await pasos.conciliar(db, { fechaCorte: a.fechaCorte })));
+    lineas.push(...lineasDeConciliacion(await pasos.conciliar(db, { fechaCorte: a.fechaCorte }), opciones.produccion ?? false));
   } catch (e) {
     lineas.push(`⚠️  La certificación quedó cargada, pero la conciliación falló (${nombreDe(e)}): corra ${reconciliar}.`);
     return { lineas, codigo: 1 };

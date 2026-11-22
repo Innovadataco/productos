@@ -9,11 +9,16 @@
  * - FONDO: unidades del sistema × valor de unidad de la SFC del corte, ±0,5 %. Sin unidades: «fondo_sin_unidades»
  *   (no se derivan del saldo: sería inventar el dato).
  * - EFECTIVO: ±1 COP absoluto (libro de caja; decisión del CEO). Si no, el porqué y la cifra sin explicar.
+ * - El total que no cuadra dice «fecha_corte_dudosa» si todas las especies (2 o más) difieren del cierre del corte, o
+ *   si todas cuadran con el cierre del día hábil anterior (`corteReal`, frente certificacion-corte-real), aunque
+ *   alguna también cuadre con el del corte; en ese caso el detalle lleva `fechaSugerida` (ese día hábil anterior).
  * Resultado global: CUADRA si todo cuadra; PARCIAL si lo único pendiente es T+2; NO_CUADRA en otro caso.
+ * v2: la regla del día hábil anterior y `fechaSugerida` (una conciliación v1 guardada queda DESACTUALIZADA).
  */
 import { Prisma } from "@prisma/client";
+import { corteReal } from "./corte-real";
 
-export const VERSION_CALCULO = "conciliacion-v1";
+export const VERSION_CALCULO = "conciliacion-v2";
 export const TOLERANCIA_VALOR = "0.005";
 export const TOLERANCIA_EFECTIVO_COP = "1";
 const ESCALA = 6;
@@ -33,6 +38,8 @@ export interface EspecieEntrada {
   readonly pendientes: number;
   /** Cierre vigente del día exacto del corte, o null. */
   readonly cierre: string | null;
+  /** Cierre vigente del día hábil anterior al corte (calendario_bvc), o null. Solo para ver si el corte es otro. */
+  readonly cierreAnterior: string | null;
   /** Destino de una escisión cuyo lote no se registró. */
   readonly escisionSinLote: boolean;
 }
@@ -56,6 +63,8 @@ export interface EntradasConciliacion {
   readonly especies: readonly EspecieEntrada[];
   readonly fondos: readonly FondoEntrada[];
   readonly efectivo: EfectivoEntrada;
+  /** Día hábil anterior al corte (AAAA-MM-DD) según calendario_bvc; null si su año no está sembrado. */
+  readonly diaAnterior: string | null;
 }
 
 export interface Control {
@@ -120,7 +129,14 @@ function controlValor(e: EspecieEntrada & { certificada: NonNullable<EspecieEntr
   return control("VALOR", e.instrumentoId, { ...valores, resultado: "NO_CUADRA", codigoMotivo: motivo, detalle: { cierre: e.cierre, precioValoracion: e.certificada.precioValoracion } });
 }
 
-function controlValorTotal(especies: readonly EspecieEntrada[], pendientes: ReadonlySet<string>): Control {
+/** El día hábil anterior si la certificación es la foto de su cierre (`corteReal`); si no, null. */
+function fechaSugerida(certificadas: readonly EspecieEntrada[], diaAnterior: string | null): string | null {
+  if (diaAnterior === null) return null;
+  const precios = certificadas.map((e) => ({ precioValoracion: e.certificada!.precioValoracion, cierre: e.cierre, cierreAnterior: e.cierreAnterior }));
+  return corteReal(precios) === null ? null : diaAnterior;
+}
+
+function controlValorTotal(especies: readonly EspecieEntrada[], pendientes: ReadonlySet<string>, diaAnterior: string | null): Control {
   const certificadas = especies.filter((e) => e.certificada !== null);
   const real = certificadas.reduce((s, e) => s.add(e.certificada!.valorMercado), D(0));
   const base = { real: txt(real), tolerancia: TOLERANCIA_VALOR, detalle: { alcance: "total_acciones" } };
@@ -128,8 +144,10 @@ function controlValorTotal(especies: readonly EspecieEntrada[], pendientes: Read
   const esperado = certificadas.reduce((s, e) => s.add(D(e.cierre!).mul(cantidadValuada(e, pendientes.has(e.instrumentoId)).toString())), D(0));
   const valores = { ...base, esperado: txt(esperado), diferencia: txt(real.sub(esperado)) };
   if (dentroRelativo(esperado, real)) return control("VALOR", null, certificadas.some((e) => pendientes.has(e.instrumentoId)) ? { ...valores, ...PENDIENTE } : valores);
-  const dudosa = certificadas.length >= 2 && certificadas.every(precioDistinto);
-  return control("VALOR", null, { ...valores, resultado: "NO_CUADRA", codigoMotivo: dudosa ? "fecha_corte_dudosa" : "por_especies" });
+  const sugerida = fechaSugerida(certificadas, diaAnterior);
+  const dudosa = sugerida !== null || (certificadas.length >= 2 && certificadas.every(precioDistinto));
+  const detalle = sugerida === null ? base.detalle : { ...base.detalle, fechaSugerida: sugerida };
+  return control("VALOR", null, { ...valores, detalle, resultado: "NO_CUADRA", codigoMotivo: dudosa ? "fecha_corte_dudosa" : "por_especies" });
 }
 
 function controlFondo(f: FondoEntrada): Control {
@@ -156,7 +174,7 @@ export function calcularConciliacion(e: EntradasConciliacion): Conciliado {
   const cantidades = e.especies.map(controlCantidad);
   const valores = e.especies.flatMap((x, i) => (x.certificada === null ? [] : [controlValor({ ...x, certificada: x.certificada }, cantidades[i]!.resultado)]));
   const pendientes = new Set(cantidades.filter((c) => c.resultado === "PENDIENTE_LIQUIDACION").map((c) => c.instrumentoId!));
-  const controles = [...cantidades, ...valores, controlValorTotal(e.especies, pendientes), ...e.fondos.map(controlFondo), controlEfectivo(e.efectivo)];
+  const controles = [...cantidades, ...valores, controlValorTotal(e.especies, pendientes, e.diaAnterior), ...e.fondos.map(controlFondo), controlEfectivo(e.efectivo)];
   const resultado = controles.some((c) => c.resultado === "NO_CUADRA") ? "NO_CUADRA" : controles.some((c) => c.resultado === "PENDIENTE_LIQUIDACION") ? "PARCIAL" : "CUADRA";
   return { resultado, controles };
 }

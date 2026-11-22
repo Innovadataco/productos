@@ -1,6 +1,6 @@
 /**
  * Concilia una certificación de A&V por su fecha de corte y GUARDA el resultado (Conciliacion + un
- * ControlConciliacion por regla, versión `conciliacion-v1`). Cada corrida es una conciliación nueva: la historia
+ * ControlConciliacion por regla, versión `VERSION_CALCULO`). Cada corrida es una conciliación nueva: la historia
  * queda (las tablas son de solo inserción). Un candado consultivo por fecha de corte serializa las corridas
  * de la misma fecha. Devuelve un resumen con conteos y códigos de motivo, nunca cifras.
  */
@@ -24,6 +24,15 @@ export interface ResumenConciliacion {
   readonly cuentas: Readonly<Record<Control["resultado"], number>>;
   /** Códigos de motivo distintos, en orden alfabético. */
   readonly motivos: readonly string[];
+  /** El día hábil anterior si la certificación parece ser la foto de su cierre (fecha_corte_dudosa); si no, null. */
+  readonly corteSugerido: string | null;
+}
+
+/** La `fechaSugerida` del total de acciones, si la trae. */
+function corteSugeridoDe(controles: readonly Control[]): string | null {
+  const total = controles.find((c) => c.tipo === "VALOR" && c.instrumentoId === null);
+  const fecha = total?.detalle?.fechaSugerida;
+  return typeof fecha === "string" ? fecha : null;
 }
 
 function filaDeControl(conciliacionId: string, c: Control): Prisma.ControlConciliacionCreateManyInput {
@@ -37,7 +46,7 @@ function resumen(conciliacionId: string, fechaCorte: Date, resultado: ResumenCon
   const cuentas = { CUADRA: 0, NO_CUADRA: 0, PENDIENTE_LIQUIDACION: 0 };
   for (const c of controles) cuentas[c.resultado] += 1;
   const motivos = [...new Set(controles.flatMap((c) => (c.codigoMotivo ? [c.codigoMotivo] : [])))].sort();
-  return { conciliacionId, fechaCorte: dia(fechaCorte), versionCalculo: VERSION_CALCULO, resultado, cuentas, motivos };
+  return { conciliacionId, fechaCorte: dia(fechaCorte), versionCalculo: VERSION_CALCULO, resultado, cuentas, motivos, corteSugerido: corteSugeridoDe(controles) };
 }
 
 export async function conciliarCertificacion(db: PrismaClient, opciones: { readonly fechaCorte: Date }): Promise<ResumenConciliacion> {
