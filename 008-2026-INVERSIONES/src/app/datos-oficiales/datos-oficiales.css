@@ -69,12 +69,16 @@
 /* El texto a la izquierda; las cifras (y su encabezado) a la derecha. */
 .do-tabla th { text-align: left; }
 .do-tabla td { text-align: left; }
-.do-tabla th.num { text-align: right; }
+/* El encabezado de una columna de cifras va a la derecha, pero con la letra de los encabezados (no la de las cifras). */
+.do-tabla th.num { text-align: right; font-family: inherit; }
 .do-tabla td.num { text-align: right; white-space: nowrap; }
+.do-tabla th[scope="col"] { font-size: 12px; }
 .do-tabla th[scope="row"] { font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--fg); font-weight: 700; }
+/* La especie queda fija al desplazar la tabla (con su fondo y un filo), así cada fila dice de qué especie es. */
+.do-tabla :is(th[scope="row"], thead th:first-child) { position: sticky; left: 0; z-index: 1; background: var(--panel); box-shadow: inset -1px 0 0 var(--line); }
 .do-tabla tbody tr { cursor: default; }
 .do-tabla tbody tr:hover { background: none; }
-.do-tabla tr[data-disputa] > th { box-shadow: inset 3px 0 0 var(--loss); }
+.do-tabla tr[data-disputa] > th { box-shadow: inset 3px 0 0 var(--loss), inset -1px 0 0 var(--line); }
 .do-tabla a { display: inline-block; padding-block: 3px; color: var(--gold); text-underline-offset: 3px; }
 .do-lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .do-decreto { font-weight: 700; }
@@ -85,6 +89,11 @@
 .do-cruce-estado[data-estado="RECIBIDO"] { border-color: var(--gain); color: var(--gain); }
 .do-cruce-estado[data-estado="NO_RECIBIDO"], .do-cruce-estado[data-estado="REVISAR"] { border-color: var(--loss); color: var(--loss); }
 .do-cruce-estado[data-estado="SIN_DECRETO"] { border-color: var(--gold); color: var(--gold); }
+/* La pista de deslizar: solo en el celular (abajo), donde la tabla es más ancha que la pantalla. */
+.do-desliza { display: none; }
+.do-glosario { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; max-width: 96ch; margin: 12px 0 0; font-size: 13px; }
+.do-glosario dt { font-weight: 700; }
+.do-glosario dd { margin: 0; color: var(--muted); }
 .do-disputa { display: inline-block; margin-top: 6px; border: 1px dashed var(--loss); color: var(--loss); border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
 @media (max-width: 620px) {
@@ -92,9 +101,13 @@
   .do-serie { padding: 14px 12px; }
   .do-pares { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .do-pares dd + dt { margin-top: 6px; }
+  .do-desliza { display: block; }
+  .do-glosario { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .do-glosario dd + dt { margin-top: 6px; }
 }
 @media (forced-colors: active) {
   .do-estado { border-color: CanvasText; }
   .do-variacion { border: 1px solid CanvasText; }
   .do-cruce-estado, .do-disputa { border-color: CanvasText; }
+  .do-tabla tr[data-disputa] > th { border-left: 3px solid CanvasText; }
 }

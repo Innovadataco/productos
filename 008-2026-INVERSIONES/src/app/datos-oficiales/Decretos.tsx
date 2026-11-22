@@ -22,6 +22,17 @@ import { referenciaOficial } from "./fuentes";
 import type { DecretoDelCruceVista, DecretosVista, DiaIso, FilaCruceVista, ProximoVista } from "./tipos";
 
 const NO_SE_ESTIMA = "No se estima: la tenencia sale negativa (faltan órdenes cargadas).";
+const DESLIZA = "Deslice la tabla hacia los lados para ver todas las columnas.";
+
+/** Las palabras de la sección, en corto, para la familia (revisión a11y-architect de C6b). Informan; no recomiendan nada. */
+const GLOSARIO: readonly (readonly [string, string])[] = [
+  ["Fecha ex", "Según la regla que usa 008 (por verificar), el dividendo es de quien tenía las acciones al cierre del día anterior a esta fecha."],
+  ["Tenencia", "Las acciones de la especie que había, contadas por fecha de operación."],
+  ["Bruto", "El valor por acción del decreto por la tenencia, antes de cualquier descuento. Es una estimación de 008."],
+  ["Neto", "Lo que pagó Trii, según los archivos cargados."],
+  ["Cuota", "Un decreto puede pagarse en varias partes; cada cuota tiene su fecha ex y su fecha de pago."],
+  ["Revisar", "Algo no cuadra entre los decretos y lo que hay cargado; al lado dice qué."],
+];
 /** Una columna: su encabezado y si es de cifras (alineada a la derecha, como sus celdas). */
 interface Columna {
   readonly titulo: string;
@@ -61,15 +72,18 @@ interface PropsTabla {
   readonly children: ReactNode;
 }
 
-/** La tabla dentro de una región con el nombre de su título, que se enfoca para desplazarla con las flechas. */
+/** La tabla dentro de una región con el nombre de su título, que se enfoca para desplazarla con las flechas; antes, la pista de deslizar (solo en el celular). */
 function Tabla({ id, columnas, children }: PropsTabla) {
   return (
-    <div className="tabla do-tabla" role="region" aria-labelledby={id} tabIndex={0}>
-      <table aria-labelledby={id}>
-        <thead><tr>{columnas.map((c) => <th key={c.titulo} scope="col" className={c.num ? "num" : undefined}>{c.titulo}</th>)}</tr></thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+    <>
+      <p className="do-nota do-desliza">{DESLIZA}</p>
+      <div className="tabla do-tabla" role="region" aria-labelledby={id} tabIndex={0}>
+        <table aria-labelledby={id}>
+          <thead><tr>{columnas.map((c) => <th key={c.titulo} scope="col" className={c.num ? "num" : undefined}>{c.titulo}</th>)}</tr></thead>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
@@ -172,6 +186,10 @@ function Cruce({ filas, desde, sinTenencia: n }: PropsCruce) {
   );
 }
 
+function Termino({ termino, explicacion }: { readonly termino: string; readonly explicacion: string }) {
+  return <><dt>{termino}</dt><dd>{explicacion}</dd></>;
+}
+
 export function Decretos({ d }: { readonly d: DecretosVista }) {
   return (
     <section className="do-decretos" aria-labelledby="t-decretos">
@@ -182,6 +200,9 @@ export function Decretos({ d }: { readonly d: DecretosVista }) {
           Los decretos que registra el dueño desde la página oficial de la SFC o de la BVC, y su cruce con lo que pagó Trii.
           El bruto es una estimación de 008, no el extracto.
         </p>
+        <dl className="do-glosario">
+          {GLOSARIO.map(([termino, explicacion]) => <Termino key={termino} termino={termino} explicacion={explicacion} />)}
+        </dl>
       </div>
       <Proximos filas={d.proximos} />
       <Cruce filas={d.cruce} desde={d.desde} sinTenencia={d.sinTenencia} />

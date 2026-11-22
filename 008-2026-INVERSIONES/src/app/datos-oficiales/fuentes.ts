@@ -6,8 +6,9 @@
  * - la TPM y la IBR, el portal de estadísticas del Banco de la República (suameca); las páginas de cada serie en
  *   www.banrep.gov.co no se pudieron verificar (devuelven un captcha a un cliente automático), así que no se enlazan;
  * - el IPC, la página del IPC del DANE.
- * Al pintar se vuelve a validar (enlaceSeguro): solo https, un host de la lista, sin usuario ni puerto. Lo que no
- * cumple queda como texto.
+ * Al pintar se vuelve a validar (enlaceSeguro): solo https, un host de la lista, sin usuario ni puerto, y solo en su forma
+ * canónica (la misma que deja el analizador de URL: sin barras invertidas, tabuladores, saltos, espacios, comillas, puerto
+ * por defecto ni mayúsculas en el host; revisión security-reviewer de C6b). Lo que no cumple queda como texto.
  */
 
 export const HOSTS_FUENTES: ReadonlySet<string> = new Set(["www.datos.gov.co", "suameca.banrep.gov.co", "www.dane.gov.co"]);
@@ -21,7 +22,10 @@ const ENLACES: ReadonlyMap<string, string> = new Map([
   ["dane:anex-IPC-Indices", "https://www.dane.gov.co/index.php/estadisticas-por-tema/precios-y-costos/indice-de-precios-al-consumidor-ipc"],
 ]);
 
-/** El enlace tal cual si es https a un host de la lista (por defecto, la de las fuentes), sin usuario ni puerto; si no, null. */
+/**
+ * El enlace tal cual si es https a un host de la lista (por defecto, la de las fuentes), sin usuario ni puerto y ya en su
+ * forma canónica (`href` igual al que deja el analizador: lo que el navegador abriría es exactamente lo validado); si no, null.
+ */
 export function enlaceSeguro(href: string, hosts: ReadonlySet<string> = HOSTS_FUENTES): string | null {
   let u: URL;
   try {
@@ -29,7 +33,7 @@ export function enlaceSeguro(href: string, hosts: ReadonlySet<string> = HOSTS_FU
   } catch {
     return null;
   }
-  const limpio = u.protocol === "https:" && hosts.has(u.hostname) && u.username === "" && u.password === "" && u.port === "";
+  const limpio = u.href === href && u.protocol === "https:" && hosts.has(u.hostname) && u.username === "" && u.password === "" && u.port === "";
   return limpio ? href : null;
 }
 

@@ -66,9 +66,15 @@ const decretoDelCruce = (l: LecturaDecretosPantalla) => (d: DecretoCruzado): Dec
   };
 };
 
+/** Cada decreto y cada pago están en una sola fila (C5b): el primero la identifica. Sin ninguno es un defecto: lanza. */
+function claveDeFila(f: FilaCruce): string {
+  const clave = f.decretos[0]?.decretoId ?? f.pagos[0]?.id;
+  if (clave === undefined) throw new Error("Una fila del cruce sin decreto ni pago en la lectura.");
+  return clave;
+}
+
 const filaDelCruce = (l: LecturaDecretosPantalla) => (f: FilaCruce): FilaCruceVista => ({
-  // Cada decreto y cada pago están en una sola fila, y toda fila trae uno de los dos (C5b): el primero la identifica.
-  clave: f.decretos[0]?.decretoId ?? f.pagos[0]?.id ?? "",
+  clave: claveDeFila(f),
   estado: f.estado, especie: especieDe(l.especies, f.instrumentoId), fechaPago: dia(f.fechaPago),
   decretos: f.decretos.map(decretoDelCruce(l)),
   pagos: f.pagos.map((p) => ({ clave: p.id, fechaPago: dia(p.fechaPago), montoNeto: decimal(p.montoNeto) })),
