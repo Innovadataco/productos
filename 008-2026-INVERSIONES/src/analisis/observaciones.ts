@@ -12,7 +12,7 @@ import { diaIso } from "../precios/horario";
 import {
   CLAVES_OBSERVACION, CONTRIBUCION_MINIMA, DIAS_DECISION_RECIENTE, DIAS_EX_DIVIDENDO_PRONTO, DIAS_REGLA_VENCE_PRONTO, DIAS_REGLA_VENCIDA,
   FACTOR_CONTRIBUCION_DESPROPORCIONADA, MINIMO_ESPECIES_TOP_TRES, UMBRAL_CORRELACION, UMBRAL_PESO_PRIMERA, UMBRAL_PESO_TOP_TRES,
-  UMBRAL_REGLA_CERCANA_PCT, UMBRALES, type Observacion,
+  UMBRAL_REGLA_CERCANA_PCT, CRITERIOS, type Observacion,
 } from "./catalogo";
 import { diasEntre } from "./dias";
 import { compararTexto, redondear } from "./numeros";
@@ -26,10 +26,12 @@ const enRango = (dias: number, desde: number, hasta: number): boolean => dias >=
 function concentracion(a: Analisis): Observacion[] {
   const c = a.concentracion;
   if (c === null) return [];
-  const alta: Observacion[] = c.primera.peso > UMBRAL_PESO_PRIMERA ? [{ clave: "CONCENTRACION_ALTA", umbral: UMBRALES.CONCENTRACION_ALTA, datos: { ...c.primera } }] : [];
+  const alta: Observacion[] = c.primera.peso > UMBRAL_PESO_PRIMERA ? [{ clave: "CONCENTRACION_ALTA", umbral: CRITERIOS.CONCENTRACION_ALTA.umbral, datos: { ...c.primera } }] : [];
   const tres = c.especies >= MINIMO_ESPECIES_TOP_TRES && c.tresPrimeras.peso > UMBRAL_PESO_TOP_TRES;
+  // Con MINIMO_ESPECIES_TOP_TRES (4) o más especies, las tres primeras son exactamente tres.
+  const [x, y, z] = c.tresPrimeras.instrumentoIds;
   const top: Observacion[] = tres
-    ? [{ clave: "CONCENTRACION_TOP_TRES", umbral: UMBRALES.CONCENTRACION_TOP_TRES, datos: { instrumentoIds: [...c.tresPrimeras.instrumentoIds], peso: c.tresPrimeras.peso } }]
+    ? [{ clave: "CONCENTRACION_TOP_TRES", umbral: CRITERIOS.CONCENTRACION_TOP_TRES.umbral, datos: { instrumentoIds: [x!, y!, z!], peso: c.tresPrimeras.peso } }]
     : [];
   return [...alta, ...top];
 }
@@ -40,7 +42,7 @@ function correlacion(a: Analisis): Observacion[] {
   return ids.flatMap((x, i) =>
     ids.slice(i + 1).flatMap((y, d): Observacion[] => {
       const r = valores[i]![i + 1 + d]!;
-      return r !== null && r >= UMBRAL_CORRELACION ? [{ clave: "CORRELACION_ALTA", umbral: UMBRALES.CORRELACION_ALTA, datos: { instrumentoIds: [x, y].sort(compararTexto) as [string, string], correlacion: r } }] : [];
+      return r !== null && r >= UMBRAL_CORRELACION ? [{ clave: "CORRELACION_ALTA", umbral: CRITERIOS.CORRELACION_ALTA.umbral, datos: { instrumentoIds: [x, y].sort(compararTexto) as [string, string], correlacion: r } }] : [];
     }),
   );
 }
@@ -53,7 +55,7 @@ function contribucion(a: Analisis): Observacion[] {
     // El producto se redondea como las métricas: 1,5 × 0,4 es 0,6000000000000001 en coma flotante.
     if (pct < CONTRIBUCION_MINIMA || pct < redondear(FACTOR_CONTRIBUCION_DESPROPORCIONADA * pesoCubierto)) return [];
     const datos = { instrumentoId: e.instrumentoId, pesoCubierto, contribucionPct: pct, veces: redondear(pct / pesoCubierto) };
-    return [{ clave: "CONTRIBUCION_RIESGO_DESPROPORCIONADA", umbral: UMBRALES.CONTRIBUCION_RIESGO_DESPROPORCIONADA, datos }];
+    return [{ clave: "CONTRIBUCION_RIESGO_DESPROPORCIONADA", umbral: CRITERIOS.CONTRIBUCION_RIESGO_DESPROPORCIONADA.umbral, datos }];
   });
 }
 
@@ -67,27 +69,28 @@ function nivel(r: ReglaParaAnalisis, porEspecie: ReadonlyMap<string, EstadoCierr
   if (r.instrumentoId === null || cierre?.estado !== "AL_DIA") return [];
   const e = estadoDelNivel(r.condicion, r.nivel, cierre.precio);
   const base = { reglaId: r.id, instrumentoId: r.instrumentoId };
-  if (e.estado === "TOCADA") return [{ clave: "REGLA_CUMPLIDA", umbral: UMBRALES.REGLA_CUMPLIDA, datos: { ...base, lado: e.lado } }];
+  if (e.estado === "TOCADA") return [{ clave: "REGLA_CUMPLIDA", umbral: CRITERIOS.REGLA_CUMPLIDA.umbral, datos: { ...base, lado: e.lado } }];
   const distancia = e.estado === "EN_EL_NIVEL" ? 0 : e.estado === "A_DISTANCIA" ? e.distanciaPct.toNumber() : null;
   if (distancia === null || Math.abs(distancia) > UMBRAL_REGLA_CERCANA_PCT) return [];
-  return [{ clave: "REGLA_CERCANA", umbral: UMBRALES.REGLA_CERCANA, datos: { ...base, distanciaPct: redondear(distancia) } }];
+  return [{ clave: "REGLA_CERCANA", umbral: CRITERIOS.REGLA_CERCANA.umbral, datos: { ...base, distanciaPct: redondear(distancia) } }];
 }
 
 function plazo(r: ReglaParaAnalisis, hoy: Dia): Observacion[] {
   if (r.plazoHasta === null) return [];
   const dia = diaIso(r.plazoHasta);
   const dias = diasEntre(hoy, dia);
-  if (enRango(dias, 0, DIAS_REGLA_VENCE_PRONTO)) return [{ clave: "REGLA_VENCE_PRONTO", umbral: UMBRALES.REGLA_VENCE_PRONTO, datos: { reglaId: r.id, plazo: dia, dias } }];
-  return -dias >= DIAS_REGLA_VENCIDA ? [{ clave: "REGLA_VENCIDA", umbral: UMBRALES.REGLA_VENCIDA, datos: { reglaId: r.id, plazo: dia, dias: -dias } }] : [];
+  const base = { reglaId: r.id, instrumentoId: r.instrumentoId, plazo: dia };
+  if (enRango(dias, 0, DIAS_REGLA_VENCE_PRONTO)) return [{ clave: "REGLA_VENCE_PRONTO", umbral: CRITERIOS.REGLA_VENCE_PRONTO.umbral, datos: { ...base, dias } }];
+  return -dias >= DIAS_REGLA_VENCIDA ? [{ clave: "REGLA_VENCIDA", umbral: CRITERIOS.REGLA_VENCIDA.umbral, datos: { ...base, dias: -dias } }] : [];
 }
 
 function precios(a: Analisis): Observacion[] {
   const atrasadas = a.especies.flatMap((e): Observacion[] => {
     if (e.cierre.estado !== "SIN_NEGOCIACION" && e.cierre.estado !== "SIN_CIERRE") return [];
-    const [ultimoCierre, sinNegociacionDesde] = e.cierre.estado === "SIN_CIERRE" ? [null, null] : [e.cierre.dia, e.cierre.desde];
-    return [{ clave: "PRECIO_ATRASADO", umbral: UMBRALES.PRECIO_ATRASADO, datos: { instrumentoId: e.instrumentoId, ultimoCierre, sinNegociacionDesde } }];
+    const ultimoCierre = e.cierre.estado === "SIN_CIERRE" ? null : { dia: e.cierre.dia, sinNegociacionDesde: e.cierre.desde };
+    return [{ clave: "PRECIO_ATRASADO", umbral: CRITERIOS.PRECIO_ATRASADO.umbral, datos: { instrumentoId: e.instrumentoId, ultimoCierre } }];
   });
-  const carga: Observacion[] = a.referencia?.cargaDetenida ? [{ clave: "PRECIOS_SIN_ACTUALIZAR", umbral: UMBRALES.PRECIOS_SIN_ACTUALIZAR, datos: { referencia: a.referencia.dia } }] : [];
+  const carga: Observacion[] = a.referencia?.cargaDetenida ? [{ clave: "PRECIOS_SIN_ACTUALIZAR", umbral: CRITERIOS.PRECIOS_SIN_ACTUALIZAR.umbral, datos: { referencia: a.referencia.dia } }] : [];
   return [...atrasadas, ...carga];
 }
 
@@ -96,7 +99,7 @@ function decisiones(a: Analisis): Observacion[] {
     const dias = diasEntre(m.conocidoEl, a.hoy);
     if (m.veredicto !== "NO_FUNCIONO" || !enRango(dias, 0, DIAS_DECISION_RECIENTE)) return [];
     const datos = { decisionId: m.decisionId, horizonteDias: m.horizonteDias, resultadoPesos: m.resultadoPesos, conocidoEl: m.conocidoEl, dias };
-    return [{ clave: "DECISION_RESULTADO_NEGATIVO", umbral: UMBRALES.DECISION_RESULTADO_NEGATIVO, datos }];
+    return [{ clave: "DECISION_RESULTADO_NEGATIVO", umbral: CRITERIOS.DECISION_RESULTADO_NEGATIVO.umbral, datos }];
   });
 }
 
@@ -104,10 +107,10 @@ function especies(a: Analisis): Observacion[] {
   return a.especies.flatMap((e): Observacion[] => {
     const dias = e.proximaEx === null ? -1 : diasEntre(a.hoy, e.proximaEx.dia);
     const ex: Observacion[] = e.proximaEx !== null && enRango(dias, 0, DIAS_EX_DIVIDENDO_PRONTO)
-      ? [{ clave: "EX_DIVIDENDO_PRONTO", umbral: UMBRALES.EX_DIVIDENDO_PRONTO, datos: { instrumentoId: e.instrumentoId, decretoId: e.proximaEx.decretoId, fechaEx: e.proximaEx.dia, dias } }]
+      ? [{ clave: "EX_DIVIDENDO_PRONTO", umbral: CRITERIOS.EX_DIVIDENDO_PRONTO.umbral, datos: { instrumentoId: e.instrumentoId, decretoId: e.proximaEx.decretoId, fechaEx: e.proximaEx.dia, dias } }]
       : [];
     const corta: Observacion[] = e.riesgo.estado === "SIN_HISTORIA"
-      ? [{ clave: "HISTORIA_INSUFICIENTE", umbral: UMBRALES.HISTORIA_INSUFICIENTE, datos: { instrumentoId: e.instrumentoId, motivo: e.riesgo.motivo, dias: e.riesgo.dias } }]
+      ? [{ clave: "HISTORIA_INSUFICIENTE", umbral: CRITERIOS.HISTORIA_INSUFICIENTE.umbral, datos: { instrumentoId: e.instrumentoId, motivo: e.riesgo.motivo, dias: e.riesgo.dias } }]
       : [];
     return [...ex, ...corta];
   });

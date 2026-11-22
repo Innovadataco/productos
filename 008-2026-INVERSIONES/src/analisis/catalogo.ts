@@ -50,7 +50,8 @@ export const DISTANCIA_REGLA_CUMPLIDA_PCT = 0;
 export const UMBRAL_REGLA_CERCANA_PCT = 5;
 /** Días calendario hasta el plazo de la regla: dos semanas para verla antes de que venza. */
 export const DIAS_REGLA_VENCE_PRONTO = 14;
-/** Días calendario desde que venció el plazo: desde el día siguiente al plazo. */
+/** Días calendario desde que venció el plazo: desde el día siguiente al plazo. Sin tope: una regla vencida que sigue
+ * en la versión vigente del plan es justo lo que hay que ver. */
 export const DIAS_REGLA_VENCIDA = 1;
 /** Ruedas de la BVC sin cierre de la especie antes de la fecha de referencia: con una ya no es el precio del día. */
 export const RUEDAS_PRECIO_ATRASADO = 1;
@@ -59,57 +60,57 @@ export const RUEDAS_PRECIOS_SIN_ACTUALIZAR = 1;
 /** Días calendario desde que se conoció un resultado NO_FUNCIONO (src/plan/resultado.ts: pesos < 0): un mes, para que
  * la lista muestre lo reciente; el resumen de decisiones cuenta todos. */
 export const DIAS_DECISION_RECIENTE = 30;
+/** El resultado en pesos que hace NO_FUNCIONO una decisión (el veredicto de src/plan/resultado.ts): menor que cero. */
+export const RESULTADO_PESOS_MENOR_QUE = 0;
 /** Días calendario hasta la fecha ex de un decreto que cuenta: las mismas dos semanas de las reglas. */
 export const DIAS_EX_DIVIDENDO_PRONTO = 14;
 /** Días con cierre propio en la ventana común: el mínimo del motor de proyecciones (≈ un año de la BVC). */
 export const DIAS_HISTORIA_SUFICIENTE = MINIMO_DIAS;
 
-export const UMBRALES = Object.freeze({
-  CONCENTRACION_ALTA: UMBRAL_PESO_PRIMERA,
-  CONCENTRACION_TOP_TRES: UMBRAL_PESO_TOP_TRES,
-  CORRELACION_ALTA: UMBRAL_CORRELACION,
-  CONTRIBUCION_RIESGO_DESPROPORCIONADA: FACTOR_CONTRIBUCION_DESPROPORCIONADA,
-  REGLA_CUMPLIDA: DISTANCIA_REGLA_CUMPLIDA_PCT,
-  REGLA_CERCANA: UMBRAL_REGLA_CERCANA_PCT,
-  REGLA_VENCE_PRONTO: DIAS_REGLA_VENCE_PRONTO,
-  REGLA_VENCIDA: DIAS_REGLA_VENCIDA,
-  PRECIO_ATRASADO: RUEDAS_PRECIO_ATRASADO,
-  PRECIOS_SIN_ACTUALIZAR: RUEDAS_PRECIOS_SIN_ACTUALIZAR,
-  DECISION_RESULTADO_NEGATIVO: DIAS_DECISION_RECIENTE,
-  EX_DIVIDENDO_PRONTO: DIAS_EX_DIVIDENDO_PRONTO,
-  HISTORIA_INSUFICIENTE: DIAS_HISTORIA_SUFICIENTE,
-} as const satisfies Readonly<Record<ClaveObservacion, number>>);
-
 export type UnidadUmbral = "FRACCION" | "CORRELACION" | "VECES" | "PORCENTAJE" | "DIAS" | "RUEDAS";
 
-/** En qué se mide cada umbral, para que la pantalla lo muestre con su unidad. */
-export const UNIDADES = Object.freeze({
-  CONCENTRACION_ALTA: "FRACCION",
-  CONCENTRACION_TOP_TRES: "FRACCION",
-  CORRELACION_ALTA: "CORRELACION",
-  CONTRIBUCION_RIESGO_DESPROPORCIONADA: "VECES",
-  REGLA_CUMPLIDA: "PORCENTAJE",
-  REGLA_CERCANA: "PORCENTAJE",
-  REGLA_VENCE_PRONTO: "DIAS",
-  REGLA_VENCIDA: "DIAS",
-  PRECIO_ATRASADO: "RUEDAS",
-  PRECIOS_SIN_ACTUALIZAR: "RUEDAS",
-  DECISION_RESULTADO_NEGATIVO: "DIAS",
-  EX_DIVIDENDO_PRONTO: "DIAS",
-  HISTORIA_INSUFICIENTE: "DIAS",
-} as const satisfies Readonly<Record<ClaveObservacion, UnidadUmbral>>);
+/** Cómo se compara lo medido con el umbral (DE_CERO_HASTA: 0 ≤ medido ≤ umbral; PASA_EL_NIVEL: la condición de la regla). */
+export type Comparacion = "MAYOR_QUE" | "MAYOR_O_IGUAL" | "MENOR_QUE" | "DE_CERO_HASTA" | "VALOR_ABSOLUTO_HASTA" | "PASA_EL_NIVEL";
+
+export interface Criterio {
+  readonly umbral: number;
+  readonly unidad: UnidadUmbral;
+  readonly comparacion: Comparacion;
+  /** Los otros umbrales nombrados que también deben cumplirse. */
+  readonly auxiliares: Readonly<Record<string, number>>;
+}
+
+const criterio = <const A extends Readonly<Record<string, number>>, const U extends number>(umbral: U, unidad: UnidadUmbral, comparacion: Comparacion, auxiliares: A) =>
+  Object.freeze({ umbral, unidad, comparacion, auxiliares: Object.freeze(auxiliares) });
+
+/** El registro único del catálogo: cada clave con su criterio completo. La pantalla lo muestra tal cual. */
+export const CRITERIOS = Object.freeze({
+  CONCENTRACION_ALTA: criterio(UMBRAL_PESO_PRIMERA, "FRACCION", "MAYOR_QUE", {}),
+  CONCENTRACION_TOP_TRES: criterio(UMBRAL_PESO_TOP_TRES, "FRACCION", "MAYOR_QUE", { minimoEspecies: MINIMO_ESPECIES_TOP_TRES }),
+  CORRELACION_ALTA: criterio(UMBRAL_CORRELACION, "CORRELACION", "MAYOR_O_IGUAL", {}),
+  CONTRIBUCION_RIESGO_DESPROPORCIONADA: criterio(FACTOR_CONTRIBUCION_DESPROPORCIONADA, "VECES", "MAYOR_O_IGUAL", { contribucionMinima: CONTRIBUCION_MINIMA }),
+  REGLA_CUMPLIDA: criterio(DISTANCIA_REGLA_CUMPLIDA_PCT, "PORCENTAJE", "PASA_EL_NIVEL", {}),
+  REGLA_CERCANA: criterio(UMBRAL_REGLA_CERCANA_PCT, "PORCENTAJE", "VALOR_ABSOLUTO_HASTA", {}),
+  REGLA_VENCE_PRONTO: criterio(DIAS_REGLA_VENCE_PRONTO, "DIAS", "DE_CERO_HASTA", {}),
+  REGLA_VENCIDA: criterio(DIAS_REGLA_VENCIDA, "DIAS", "MAYOR_O_IGUAL", {}),
+  PRECIO_ATRASADO: criterio(RUEDAS_PRECIO_ATRASADO, "RUEDAS", "MAYOR_O_IGUAL", {}),
+  PRECIOS_SIN_ACTUALIZAR: criterio(RUEDAS_PRECIOS_SIN_ACTUALIZAR, "RUEDAS", "MAYOR_O_IGUAL", {}),
+  DECISION_RESULTADO_NEGATIVO: criterio(DIAS_DECISION_RECIENTE, "DIAS", "DE_CERO_HASTA", { resultadoPesosMenorQue: RESULTADO_PESOS_MENOR_QUE }),
+  EX_DIVIDENDO_PRONTO: criterio(DIAS_EX_DIVIDENDO_PRONTO, "DIAS", "DE_CERO_HASTA", {}),
+  HISTORIA_INSUFICIENTE: criterio(DIAS_HISTORIA_SUFICIENTE, "DIAS", "MENOR_QUE", {}),
+} as const satisfies Readonly<Record<ClaveObservacion, Criterio>>);
 
 interface ObservacionDe<C extends ClaveObservacion, D> {
   readonly clave: C;
-  /** UMBRALES[clave]. */
-  readonly umbral: (typeof UMBRALES)[C];
+  /** CRITERIOS[clave].umbral. */
+  readonly umbral: (typeof CRITERIOS)[C]["umbral"];
   /** Lo medido y los ids que la sostienen. */
   readonly datos: D;
 }
 
 export type Observacion =
   | ObservacionDe<"CONCENTRACION_ALTA", { readonly instrumentoId: string; readonly peso: number }>
-  | ObservacionDe<"CONCENTRACION_TOP_TRES", { readonly instrumentoIds: readonly string[]; readonly peso: number }>
+  | ObservacionDe<"CONCENTRACION_TOP_TRES", { readonly instrumentoIds: readonly [string, string, string]; readonly peso: number }>
   | ObservacionDe<"CORRELACION_ALTA", { readonly instrumentoIds: readonly [string, string]; readonly correlacion: number }>
   | ObservacionDe<
       "CONTRIBUCION_RIESGO_DESPROPORCIONADA",
@@ -117,9 +118,11 @@ export type Observacion =
     >
   | ObservacionDe<"REGLA_CUMPLIDA", { readonly reglaId: string; readonly instrumentoId: string; readonly lado: "BAJO" | "SOBRE" }>
   | ObservacionDe<"REGLA_CERCANA", { readonly reglaId: string; readonly instrumentoId: string; readonly distanciaPct: number }>
-  | ObservacionDe<"REGLA_VENCE_PRONTO", { readonly reglaId: string; readonly plazo: Dia; readonly dias: number }>
-  | ObservacionDe<"REGLA_VENCIDA", { readonly reglaId: string; readonly plazo: Dia; readonly dias: number }>
-  | ObservacionDe<"PRECIO_ATRASADO", { readonly instrumentoId: string; readonly ultimoCierre: Dia | null; readonly sinNegociacionDesde: Dia | null }>
+  /** instrumentoId null: la regla es de portafolio. */
+  | ObservacionDe<"REGLA_VENCE_PRONTO", { readonly reglaId: string; readonly instrumentoId: string | null; readonly plazo: Dia; readonly dias: number }>
+  | ObservacionDe<"REGLA_VENCIDA", { readonly reglaId: string; readonly instrumentoId: string | null; readonly plazo: Dia; readonly dias: number }>
+  /** ultimoCierre null: la especie no tiene cierre. */
+  | ObservacionDe<"PRECIO_ATRASADO", { readonly instrumentoId: string; readonly ultimoCierre: { readonly dia: Dia; readonly sinNegociacionDesde: Dia } | null }>
   | ObservacionDe<"PRECIOS_SIN_ACTUALIZAR", { readonly referencia: Dia }>
   | ObservacionDe<
       "DECISION_RESULTADO_NEGATIVO",
@@ -127,3 +130,7 @@ export type Observacion =
     >
   | ObservacionDe<"EX_DIVIDENDO_PRONTO", { readonly instrumentoId: string; readonly decretoId: string; readonly fechaEx: Dia; readonly dias: number }>
   | ObservacionDe<"HISTORIA_INSUFICIENTE", { readonly instrumentoId: string; readonly motivo: MotivoSinHistoria; readonly dias: number }>;
+
+/** Cada clave del catálogo tiene su forma en la unión, y ninguna forma usa una clave de fuera (falla al compilar). */
+type Iguales<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+export const UNION_CUBRE_EL_CATALOGO: Iguales<Observacion["clave"], ClaveObservacion> = true;
