@@ -3,7 +3,7 @@
 // positivo: un texto o un archivo plantado con una de esas palabras lo pone en rojo. Puro (solo lee la zona).
 import { describe, expect, it } from "vitest";
 import { analizar } from "@/analisis/analizar";
-import { CLAVES_OBSERVACION, UMBRALES, UNIDADES } from "@/analisis/catalogo";
+import { CLAVES_OBSERVACION, CRITERIOS } from "@/analisis/catalogo";
 import { observaciones } from "@/analisis/observaciones";
 import { hallarProhibidas, leerZona, prohibidasEnZona } from "./candados";
 import { analisisConTodo, HOY } from "./fixtures/analisis.ficticio";
@@ -64,7 +64,7 @@ describe("candado de lenguaje · lo que devuelve el motor", () => {
     );
     const { a, reglas } = analisisConTodo();
     const textos = [
-      JSON.stringify({ CLAVES_OBSERVACION, UMBRALES, UNIDADES }),
+      JSON.stringify({ CLAVES_OBSERVACION, CRITERIOS }),
       JSON.stringify(analizar(e)),
       JSON.stringify(observaciones(analizar(e), { reglas: [] }, e.hoy)),
       JSON.stringify(observaciones(a, { reglas }, dia(HOY))),

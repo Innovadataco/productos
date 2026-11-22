@@ -2,7 +2,7 @@
 // nada del texto libre ni de la acción de una regla llegue a la salida. Puro.
 import { describe, expect, it } from "vitest";
 import { analizar } from "@/analisis/analizar";
-import { CLAVES_OBSERVACION, UMBRALES, type ClaveObservacion, type Observacion } from "@/analisis/catalogo";
+import { CLAVES_OBSERVACION, CRITERIOS, type ClaveObservacion, type Observacion } from "@/analisis/catalogo";
 import { diasEntre } from "@/analisis/dias";
 import { observaciones } from "@/analisis/observaciones";
 import { VERSION_ANALISIS, type Analisis, type ReglaParaAnalisis } from "@/analisis/tipos";
@@ -114,10 +114,12 @@ describe("reglas", () => {
     ];
     const lista = obs(conCierres, reglas);
     expect(de(lista, "REGLA_VENCE_PRONTO")).toEqual([
-      { clave: "REGLA_VENCE_PRONTO", umbral: 14, datos: { reglaId: "FICTICIA-R1", plazo: MAS(14), dias: 14 } },
-      { clave: "REGLA_VENCE_PRONTO", umbral: 14, datos: { reglaId: "FICTICIA-R3", plazo: HOY, dias: 0 } },
+      { clave: "REGLA_VENCE_PRONTO", umbral: 14, datos: { reglaId: "FICTICIA-R1", instrumentoId: "FICTICIA-A", plazo: MAS(14), dias: 14 } },
+      { clave: "REGLA_VENCE_PRONTO", umbral: 14, datos: { reglaId: "FICTICIA-R3", instrumentoId: "FICTICIA-A", plazo: HOY, dias: 0 } },
     ]);
-    expect(de(lista, "REGLA_VENCIDA")).toEqual([{ clave: "REGLA_VENCIDA", umbral: 1, datos: { reglaId: "FICTICIA-R4", plazo: MAS(-1), dias: 1 } }]);
+    expect(de(lista, "REGLA_VENCIDA")).toEqual([{ clave: "REGLA_VENCIDA", umbral: 1, datos: { reglaId: "FICTICIA-R4", instrumentoId: "FICTICIA-A", plazo: MAS(-1), dias: 1 } }]);
+    const portafolio = obs(conCierres, [regla("FICTICIA-R5", { instrumentoId: null, plazoHasta: dia(MAS(3)) })]);
+    expect(de(portafolio, "REGLA_VENCE_PRONTO").map((o) => o.datos.instrumentoId)).toEqual([null]);
   });
 });
 
@@ -130,8 +132,8 @@ describe("precios", () => {
       especie("FICTICIA-D"),
     ];
     expect(de(obs(analisis({ especies })), "PRECIO_ATRASADO")).toEqual([
-      { clave: "PRECIO_ATRASADO", umbral: 1, datos: { instrumentoId: "FICTICIA-A", ultimoCierre: "2021-06-04", sinNegociacionDesde: "2021-06-07" } },
-      { clave: "PRECIO_ATRASADO", umbral: 1, datos: { instrumentoId: "FICTICIA-B", ultimoCierre: null, sinNegociacionDesde: null } },
+      { clave: "PRECIO_ATRASADO", umbral: 1, datos: { instrumentoId: "FICTICIA-A", ultimoCierre: { dia: "2021-06-04", sinNegociacionDesde: "2021-06-07" } } },
+      { clave: "PRECIO_ATRASADO", umbral: 1, datos: { instrumentoId: "FICTICIA-B", ultimoCierre: null } },
     ]);
   });
 
@@ -169,7 +171,7 @@ describe("el catálogo entero", () => {
     const { a, reglas } = analisisConTodo();
     const lista = obs(a, reglas);
     expect([...new Set(lista.map((o) => o.clave))]).toEqual([...CLAVES_OBSERVACION]);
-    expect(lista.every((o) => o.umbral === UMBRALES[o.clave])).toBe(true);
+    expect(lista.every((o) => o.umbral === CRITERIOS[o.clave].umbral)).toBe(true);
   });
 
   it("dentro de una clave, por sus ids", () => {
