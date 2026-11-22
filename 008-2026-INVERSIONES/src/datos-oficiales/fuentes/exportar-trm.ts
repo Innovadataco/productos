@@ -108,7 +108,10 @@ export interface ResultadoExportacionTrm {
   readonly codigo: string | null;
   readonly filas: number;
   readonly descartadas: number;
-  /** Días que ninguna vigencia del CSV cubre, entre la primera y la última. */
+  /**
+   * Días del rango, hasta hoy, que ninguna vigencia del CSV cubre (al inicio, entre vigencias o al final; un valor
+   * descartado deja el suyo). La vigencia de mañana sin publicar no cuenta.
+   */
   readonly diasSinVigencia: number;
   readonly primerDiaSinVigencia: Date | null;
   readonly primeraDesde: Date | null;
@@ -119,17 +122,28 @@ const sinCsv = (codigo: string, descartadas: number): ResultadoExportacionTrm =>
   csv: null, codigo, filas: 0, descartadas, diasSinVigencia: 0, primerDiaSinVigencia: null, primeraDesde: null, ultimaHasta: null,
 });
 
-/** Los días entre vigencias seguidas que ninguna cubre (las vigencias vienen ordenadas y sin solapes). */
-function diasSinVigencia(valores: readonly ValorSerie[]): { readonly dias: number; readonly primero: Date | null } {
+/**
+ * Los días de [desde, fin] que ninguna vigencia cubre: al inicio, entre vigencias y al final (las vigencias vienen
+ * ordenadas y sin solapes). `fin` es el último día que ya debía estar publicado: min(--hasta, hoy). La vigencia de
+ * mañana (la SFC la publica por adelantado, en la tarde) puede no estar aún: no es un hueco.
+ */
+function diasSinVigencia(valores: readonly ValorSerie[], desde: Date, fin: Date): { readonly dias: number; readonly primero: Date | null } {
   let dias = 0;
   let primero: Date | null = null;
-  for (const [i, actual] of valores.entries()) {
-    const previa = valores[i - 1];
-    const hueco = previa ? (actual.desde.getTime() - previa.hasta.getTime()) / DIA_MS - 1 : 0;
-    if (hueco <= 0) continue;
-    dias += hueco;
-    primero ??= new Date(previa!.hasta.getTime() + DIA_MS);
+  /** El primer día aún no cubierto. */
+  let cursor = desde.getTime();
+  const contarHasta = (ultimoMs: number): void => {
+    const faltan = (ultimoMs - cursor) / DIA_MS + 1;
+    if (faltan <= 0) return;
+    dias += faltan;
+    primero ??= new Date(cursor);
+  };
+  for (const v of valores) {
+    contarHasta(Math.min(v.desde.getTime() - DIA_MS, fin.getTime()));
+    // parsearTrm las entrega ordenadas, sin solapes y tocando el rango: cada `hasta` pasa el cursor.
+    cursor = v.hasta.getTime() + DIA_MS;
   }
+  contarHasta(fin.getTime());
   return { dias, primero };
 }
 
@@ -141,7 +155,7 @@ export async function exportarTrm(o: OpcionesExportacionTrm): Promise<ResultadoE
   if (!r.ok) return sinCsv(r.codigo, 0);
   const escrito = escribirCsvSeries([{ codigo: CODIGO_TRM, valores: r.valores }], o.hoy, catalogo);
   if (!escrito.ok) return sinCsv(escrito.codigo, r.descartadas);
-  const huecos = diasSinVigencia(r.valores);
+  const huecos = diasSinVigencia(r.valores, o.desde, o.hasta < o.hoy ? o.hasta : o.hoy);
   return {
     csv: escrito.texto,
     codigo: null,
@@ -188,7 +202,7 @@ export function reporteExportacionTrm(r: ResultadoExportacionTrm): ReporteTrm {
   if (r.csv === null || r.codigo !== null) return { lineas: [...descartes, lineaFallo(r.codigo ?? "SIN_FILAS")], codigoSalida: 1 };
   const rango = r.primeraDesde && r.ultimaHasta ? `desde ${diaIso(r.primeraDesde)} hasta ${diaIso(r.ultimaHasta)}` : "sin vigencias";
   const huecos = r.diasSinVigencia === 0 ? [] : [
-    `⚠️  TRM · ${r.diasSinVigencia} día(s) sin vigencia entre filas (el primero: ${r.primerDiaSinVigencia ? diaIso(r.primerDiaSinVigencia) : "?"}): revíselo antes de importar.`,
+    `⚠️  TRM · ${r.diasSinVigencia} día(s) del rango sin vigencia (el primero: ${r.primerDiaSinVigencia ? diaIso(r.primerDiaSinVigencia) : "?"}): revíselo antes de importar.`,
   ];
   const lineas = [`✅ TRM · SFC (datos.gov.co, 32sa-8pi3) · filas en el CSV: ${r.filas} · ${rango} · descartadas: ${r.descartadas}`, ...descartes, ...huecos];
   return { lineas, codigoSalida: descartes.length + huecos.length > 0 ? 3 : 0 };
@@ -227,7 +241,10 @@ async function escribirCsv(salida: NodeJS.WritableStream, texto: string): Promis
   return !fallo;
 }
 
-/** El CLI entero (scripts/exportar-trm.ts solo cablea el proceso): devuelve el código de salida. `hoy` se calcula una vez. */
+/**
+ * El CLI entero (scripts/exportar-trm.ts solo cablea el proceso): devuelve el código de salida. `hoy` se calcula una
+ * vez. Orden: catálogo (el tope de --hasta sale del adelanto de la TRM) → argumentos → terminal → red.
+ */
 export async function correrExportarTrm(e: EntornoExportarTrm): Promise<0 | 1 | 2 | 3> {
   const hoy = fechaEnBogota(e.ahora);
   const catalogo = e.catalogo ?? CATALOGO;
