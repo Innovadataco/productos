@@ -17,20 +17,22 @@ const REGLAS_DE_REDACCION = [
   "- Cada frase es una lista de segmentos. Un segmento de texto lleva solo prosa; un segmento de referencia lleva solo el id de "
     + "un hecho, por ejemplo H01, y el sistema lo cambia por la cifra exacta. Nunca escriba el id ni llaves dentro de la prosa. "
     + "No escriba la unidad después de la referencia.",
-  "- Cite todos los hechos obligatorios, sin falta: empiece por ellos. Recorra la lista, tome los hechos con obligatorio "
-    + "verdadero (son pocos, no más de seis, nombres de especie incluidos) y escriba primero una frase por cada dato obligatorio, "
-    + "o dos datos obligatorios en una frase unidos con «y». Solo después, si caben en seis frases, agregue otros hechos. Antes "
-    + "de responder, compruebe que el id de cada hecho obligatorio aparece en un segmento de referencia. Cada frase cita al "
-    + "menos un hecho.",
-  "- Cada elemento de la lista de frases es una sola oración. Para decir otra cosa, abra otra frase en la lista; nunca ponga "
-    + "dos oraciones en una frase ni un punto en medio.",
+  "- Cite todos los hechos obligatorios, sin falta. Procedimiento: recorra la lista de hechos en su orden; cada vez que un hecho "
+    + "tenga obligatorio verdadero, escriba la frase de ese hecho (una frase por hecho obligatorio, o dos unidos con «y»), en "
+    + "ese mismo orden, sin saltarse ninguno. Termine ese recorrido antes de agregar nada más; solo si sobran frases (hasta "
+    + "seis), agregue otros hechos. Los hechos obligatorios son pocos (no más de seis, con los nombres de especie incluidos), "
+    + "así que caben. Cada frase cita al menos un hecho.",
+  "- Cada elemento de la lista de frases es una sola oración. Para decir otra cosa, abra otra frase en la lista: cierre la "
+    + "frase con el segmento de texto del punto y empiece otro elemento de la lista. Incorrecto: un elemento con segmentos "
+    + "texto, referencia, texto de punto y luego más segmentos de otra oración. Correcto: un elemento por oración.",
   "- Cada dato se escribe con su etiqueta completa, tal cual, justo antes de su referencia, y la referencia ocupa el lugar de "
     + "la cifra. La referencia nunca queda suelta al final ni sin su etiqueta. No use adjetivos para valorar (como baja, alta, bajista o lejos) salvo los permitidos.",
   "- Un solo dato por parte de la frase: si cita dos, sepárelos con «y» o «pero» y repita la etiqueta del segundo. Nunca ponga "
     + "dos referencias seguidas sin palabras en medio.",
-  "- Un hecho con sujeto es un dato de una especie: su sujeto es el id del hecho nombre de la especie. En la misma frase, justo "
-    + "después de «de la especie» y antes del verbo, ponga una referencia con ese id del sujeto, y luego la referencia del "
-    + "dato. Cada dato se cita con su propio id: no cite dos veces el mismo id ni escriba «especie» más de una vez seguida.",
+  "- Un hecho con sujeto es un dato de una especie. Para hallar la especie, siga el campo sujeto de hecho en hecho hasta llegar "
+    + "a un hecho nombre de la especie, y cite ese id en una referencia, en la misma frase, justo después de «de la especie» y "
+    + "antes del verbo; luego cite el dato con su propio id. El nombre de una especie nunca va solo en una frase («el nombre de "
+    + "la especie es…» está mal): va dentro de la frase de un dato de esa especie. No escriba «especie» más de una vez seguida.",
   "- Hable de movimiento solo cuando el hecho tiene dirección: subió, solo si es SUBE; bajó, solo si es BAJA; se mantuvo, solo si "
     + "es IGUAL, y ese verbo va en la misma parte de la frase y junto al dato cuya dirección es esa. Si es NO_APLICA, no use verbos "
     + "de movimiento. En duda, no los use.",
