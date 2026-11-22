@@ -160,6 +160,13 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     "DELETE FROM enlace_decision_orden WHERE false",
     "TRUNCATE decision",
     "SELECT id FROM decision WHERE false FOR UPDATE",
+    // Los instantes los pone la base (migración *_instantes_base): inv_app no los puede nombrar, ni sin filas (el
+    // permiso de columna se revisa al empezar).
+    `INSERT INTO plan_version (id, "creadaEn") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`,
+    `INSERT INTO decision (id, "registradaEn") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`,
+    `INSERT INTO enlace_decision_orden (id, "creadoEn") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`,
+    // Sin objetos temporales: las funciones de los instantes no fijan search_path (todo va calificado con pg_catalog).
+    "CREATE TEMP TABLE intruso (id int)",
   ]) {
     it(`inv_app NO puede: ${sql}`, async () => {
       await negado(sql);
@@ -204,6 +211,96 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     } finally {
       await dueno.$disconnect();
     }
+  });
+
+  // Los instantes del plan y del diario los pone la base (migración *_instantes_base), con inv_app real.
+  describe("inv_app no fija los instantes del plan ni del diario", () => {
+    const ANTEDATADO = "TIMESTAMPTZ '2019-02-11 10:37:00+00'";
+    let dueno: PrismaClient;
+    let usuario = "";
+    let instrumento = "";
+    /** Una orden de venta por caso (una sola raíz por orden). */
+    let ordenes: string[] = [];
+    const reaplicarPrivilegios = () => {
+      const r = ejecutarSql(ruta008("docker/migrador/privilegios.sql"), conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA));
+      expect(r.status, r.stderr).toBe(0);
+    };
+    const reloj = async (db: PrismaClient) => (await db.$queryRaw<{ t: Date }[]>`SELECT clock_timestamp() AS t`)[0]!.t;
+    /** Los INSERT de las tres tablas con un instante (`k` distingue las filas de cada caso). */
+    const inserts = (k: string, version: number, orden: string, instante: string | null): string[] => {
+      const col = (c: string) => (instante === null ? "" : `, "${c}"`);
+      const val = instante === null ? "" : `, ${instante}`;
+      return [
+        `INSERT INTO plan_version (id, version, "vigenteDesde", motivo, "aprobadaPorId"${col("creadaEn")}) VALUES ('rb-v-${k}', ${version}, DATE '2019-02-04', 'Versión ficticia', '${usuario}'${val})`,
+        `INSERT INTO decision (id, "planVersionId", "instrumentoId", accion, motivo, "decididaPorId", "fechaDecision"${col("registradaEn")}) VALUES ('rb-d-${k}', 'rb-v-${k}', '${instrumento}', 'VENDER', 'Decisión ficticia', '${usuario}', DATE '2019-02-12'${val})`,
+        `INSERT INTO enlace_decision_orden (id, "ordenId", "decisionId", "creadoPorId"${col("creadoEn")}) VALUES ('rb-e-${k}', '${orden}', 'rb-d-${k}', '${usuario}'${val})`,
+      ];
+    };
+    const instantes = async (k: string): Promise<Date[]> => {
+      const f = await dueno.$queryRawUnsafe<Array<{ v: Date; d: Date; e: Date }>>(
+        `SELECT v."creadaEn" AS v, d."registradaEn" AS d, e."creadoEn" AS e FROM plan_version v, decision d, enlace_decision_orden e
+          WHERE v.id = 'rb-v-${k}' AND d.id = 'rb-d-${k}' AND e.id = 'rb-e-${k}'`,
+      );
+      expect(f).toHaveLength(1);
+      return [f[0]!.v, f[0]!.d, f[0]!.e];
+    };
+
+    beforeAll(async () => {
+      dueno = new PrismaClient({ datasources: { db: { url: conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA) } } });
+      usuario = (await dueno.usuario.create({ data: { email: "roles-instantes@ejemplo.invalid", rol: "DUENO" } })).id;
+      instrumento = (await dueno.instrumento.create({ data: { tipo: "ACCION", nemotecnico: "FICTINS", nombre: "Acción ficticia de los instantes" } })).id;
+      const carga = await dueno.cargaArchivo.create({ data: { tipoFuente: "TRII_ORDENES", nombreArchivo: "ordenes-instantes.ficticio.csv", sha256: "3".repeat(64), estado: "CARGADO", cargadoPorId: usuario } });
+      const ventas: string[] = [];
+      for (const k of [1, 2, 3]) {
+        const fila = await dueno.filaFuente.create({ data: { tipoFuente: "TRII_ORDENES", claveNatural: `roles-instantes-${k}`.padStart(64, "0"), ocurrencia: 1, primeraCargaId: carga.id, primeraFilaNo: k, crudo: { ficticio: true } } });
+        const o = await dueno.orden.create({
+          data: {
+            filaFuenteId: fila.id, ejecutadaEn: new Date("2019-02-13T19:41:00.000Z"), fechaOperacion: new Date("2019-02-13T00:00:00.000Z"), fechaLiquidacion: new Date("2019-02-15T00:00:00.000Z"),
+            instrumentoId: instrumento, lado: "VENTA", estado: "APROBADO", cantidadCompletada: 37n, precioUnitario: new Prisma.Decimal("12.37"), totalInvertido: new Prisma.Decimal("457.69"),
+            comision: new Prisma.Decimal("4.61"), totalEstimado: new Prisma.Decimal("453.08"),
+          },
+        });
+        ventas.push(o.id);
+      }
+      ordenes = ventas;
+    });
+
+    afterAll(async () => {
+      await dueno?.$disconnect();
+    });
+
+    it("en una transacción sostenida, la web (Prisma, sin el instante) recibe la hora de la fila, no la del inicio", async () => {
+      const r = await app.$transaction(async (tx) => {
+        const inicio = (await tx.$queryRaw<{ t: Date }[]>`SELECT now() AS t`)[0]!.t;
+        await tx.$executeRawUnsafe("SELECT pg_sleep(0.25)");
+        const v = await tx.planVersion.create({ data: { version: 4613, vigenteDesde: new Date("2019-02-04T00:00:00.000Z"), motivo: "Versión ficticia sostenida", aprobadaPorId: usuario } });
+        return { inicio, creadaEn: v.creadaEn };
+      });
+      expect(r.creadaEn.getTime() - r.inicio.getTime()).toBeGreaterThanOrEqual(250);
+    });
+
+    it("con el permiso de columna dado por error, el disparador ignora el instante antedatado; privilegios.sql lo quita", async () => {
+      await dueno.$executeRawUnsafe('GRANT INSERT ("creadaEn") ON TABLE plan_version TO inv_app');
+      await dueno.$executeRawUnsafe('GRANT INSERT ("registradaEn") ON TABLE decision TO inv_app');
+      await dueno.$executeRawUnsafe('GRANT INSERT ("creadoEn") ON TABLE enlace_decision_orden TO inv_app');
+      const antes = await reloj(dueno);
+      try {
+        for (const s of inserts("error", 4617, ordenes[1]!, ANTEDATADO)) await expect(app.$executeRawUnsafe(s), s).resolves.toBe(1);
+      } finally {
+        reaplicarPrivilegios();
+      }
+      const despues = await reloj(dueno);
+      for (const t of await instantes("error")) {
+        expect(t.getTime()).toBeGreaterThanOrEqual(antes.getTime());
+        expect(t.getTime()).toBeLessThanOrEqual(despues.getTime());
+      }
+      await negado(`INSERT INTO plan_version (id, "creadaEn") SELECT 'x', ${ANTEDATADO} WHERE false`);
+    });
+
+    it("el dueño conserva el instante que manda (restauración de solo datos): la exención es solo suya", async () => {
+      for (const s of inserts("dueno", 4619, ordenes[2]!, ANTEDATADO)) await expect(dueno.$executeRawUnsafe(s), s).resolves.toBe(1);
+      for (const t of await instantes("dueno")) expect(t.toISOString()).toBe("2019-02-11T10:37:00.000Z");
+    });
   });
 
   describe("inv_precios: el rol del servicio de precios", () => {
@@ -599,17 +696,20 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
 
   // La exención de los disparadores de integridad de precios es «tener los privilegios del dueño de la tabla»: si
   // inv_precios o inv_app fueran miembros de inv_dueno, quedarían eximidos (o, con SET ROLE, serían el dueño).
-  it("el guardián falla si inv_precios o inv_app es miembro del dueño de las tablas de precios", async () => {
+  // También en las tablas de los instantes del plan y del diario (migración *_instantes_base): con SET ROLE inv_dueno,
+  // inv_app fijaría el instante (security-reviewer, MEDIO).
+  it("el guardián falla si inv_precios o inv_app es miembro del dueño de las tablas de precios o de los instantes", async () => {
     const guardian = () => ejecutarSql(ruta008("scripts/verificar-esquema.sql"), conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA));
+    const tablas = ["precio_cierre", "valor_unidad_fondo", "plan_version", "decision", "enlace_decision_orden"];
     for (const rol of ["inv_precios", "inv_app"]) {
-      const aviso = new RegExp(`rol con privilegios del dueño ${rol} en precio_cierre`);
+      const avisos = tablas.map((t) => new RegExp(`rol con privilegios del dueño ${rol} en ${t}\\b`));
       const antes = guardian();
-      expect(antes.stderr + antes.stdout).not.toMatch(aviso);
+      for (const aviso of avisos) expect(antes.stderr + antes.stdout).not.toMatch(aviso);
       await admin.$executeRawUnsafe(`GRANT inv_dueno TO ${rol}`);
       try {
         const r = guardian();
         expect(r.status).not.toBe(0);
-        expect(r.stderr + r.stdout).toMatch(aviso);
+        for (const aviso of avisos) expect(r.stderr + r.stdout).toMatch(aviso);
       } finally {
         await admin.$executeRawUnsafe(`REVOKE inv_dueno FROM ${rol}`);
       }
