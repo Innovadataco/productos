@@ -24,6 +24,12 @@
 --                       versión con un número mayor y una vigencia pasada pasa a ser la vigente de esos días: la app lo
 --                       impide, VIGENCIA_RETROCEDE, la base no); lo que no puede es mentir sobre cuándo se registraron, y
 --                       ese instante lo delata. Nada de lo que ya está se edita ni se borra.
+--   config_ia           solo INSERT, por COLUMNA, con todas sus columnas MENOS "creadaEn" (fase E, E8: el dueño configura la
+--                       IA desde /edicion/ia; migración 20261122210000_config_ia). Es de solo inserción por su disparador: un
+--                       cambio es una versión nueva; la hora la pone la base (como en el plan). Riesgo residual: con la clave
+--                       de inv_app se pueden insertar versiones falsas (con un autor que exista y el número que quiera): la
+--                       de mayor número manda, y podría encender la nube con un tope de hasta USD 50 si además existen la
+--                       llave y el servicio; lo que no puede es fecharla, editarla ni borrarla, y la historia la delata.
 -- Nunca TRUNCATE, REFERENCES, TRIGGER ni DDL. Sin UPDATE ni DELETE en las tablas de solo inserción,
 -- `SET LOCAL inv.reversion = 'on'` no le sirve a inv_app para saltarse sus disparadores.
 -- El UPDATE por columna de usuario lo acota el disparador usuario_transiciones (migración
@@ -70,6 +76,10 @@
 --          gastoDelMes (la puerta, la hora y los tokens) y el RETURNING (id y hora): ni el texto, ni la salida, ni los
 --          hechos guardados (los lee la pantalla, inv_app, con ultimoPublicado);
 --   INSERT en resumen_ia de todas sus columnas menos "generadoEn" (la pone la base: migración 20261122175656_resumen_ia).
+--   SELECT de config_ia (E8, migración 20261122210000_config_ia) de lo que usa leerConfigIa (src/ia/config/leer.ts): la
+--          versión, el modo, el destino, la temperatura, las tareas, el modelo de la nube, el tope, la hora, el límite y el
+--          esfuerzo; ni el motivo
+--          (texto libre) ni el autor.
 -- Nada de usuario, filas crudas (crudo), el encargo, la certificación por especie, la caja, los símbolos ni el diario;
 -- sin UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL, y sin privilegios por defecto: una tabla o columna nueva no le
 -- llega hasta que se agregue aquí. resumen_ia es de solo inserción por su disparador.
@@ -122,6 +132,9 @@ BEGIN
   GRANT INSERT (id, "planVersionId", "instrumentoId", condicion, nivel, accion, cantidad, "plazoHasta", detalle) ON TABLE public.regla_plan TO inv_app;
   GRANT INSERT (id, "planVersionId", "reglaId", "instrumentoId", accion, cantidad, excepcion, motivo, "decididaPorId", "fechaDecision", "reemplazaId") ON TABLE public.decision TO inv_app;
   GRANT INSERT (id, "ordenId", "decisionId", "reemplazaId", motivo, "creadoPorId") ON TABLE public.enlace_decision_orden TO inv_app;
+
+  -- La configuración de la IA (fase E, E8): solo INSERT, por columna y sin "creadaEn" (la pone la base). Nada se edita.
+  GRANT INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", motivo, "autorId") ON TABLE public.config_ia TO inv_app;
 
   -- inv_precios: solo si el rol existe (desde la primera corrida de crear-roles-prod.sh). Sin él, el despliegue sigue igual.
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'inv_precios') THEN
@@ -180,6 +193,7 @@ BEGIN
     GRANT SELECT ("tipoFuente", estado, "cargadoEn", "revertidaEn") ON TABLE public.carga_archivo TO inv_ia;
     GRANT SELECT (id, "fechaCorte", "retiradaEn") ON TABLE public.certificacion TO inv_ia;
     GRANT SELECT (id, "certificacionId", "fechaCorte", "calculadaEn", resultado) ON TABLE public.conciliacion TO inv_ia;
+    GRANT SELECT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", "creadaEn") ON TABLE public.config_ia TO inv_ia;
     GRANT SELECT (id, "instrumentoId", tipo, "fechaPago", "montoNeto", "decretadoId") ON TABLE public.dividendo TO inv_ia;
     GRANT SELECT (id, "instrumentoId", tipo, cuota, "valorPorAccion", "fechaAnuncio", "fechaEx", "fechaPago", "referenciaOficial", version, anulada, "reemplazadoEn") ON TABLE public.dividendo_decretado TO inv_ia;
     GRANT SELECT (id, tipo, fecha, "origenId", "destinoId", razon) ON TABLE public.evento_corporativo TO inv_ia;

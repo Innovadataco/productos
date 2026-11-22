@@ -54,8 +54,12 @@ export type ListaModelosPi =
 
 export type LecturaArchivo = { readonly ok: true; readonly texto: string } | { readonly ok: false; readonly motivo: "ARCHIVO_AUSENTE" | "ARCHIVO_ILEGIBLE" | "ARCHIVO_DEMASIADO_GRANDE" };
 
-/** «qwen2.5:14b»: nombre y etiqueta explícita, en minúsculas; sin barras (ni registro ni host). */
-const PATRON_NOMBRE = /^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$/;
+/**
+ * «qwen2.5:14b»: nombre y etiqueta explícita, en minúsculas; sin barras (ni registro ni host). La CHECK de `config_ia`
+ * repite este patrón (tests/unit/ia/config/esquema.test.ts).
+ */
+export const PATRON_NOMBRE_MODELO_LOCAL = /^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$/;
+const PATRON_NOMBRE = PATRON_NOMBRE_MODELO_LOCAL;
 const PATRON_PUBLICADO_POR = /^[\p{L}\p{N}][\p{L}\p{N} ().,_-]*$/u;
 /** Una dirección escrita: una IPv4, un puerto («:47213» suelto), una IPv6 entre corchetes o un esquema de URL. */
 const DIRECCION = /\d{1,3}(?:\.\d{1,3}){3}|:\d{1,5}(?![\w.])|\[[0-9a-f:]*:[0-9a-f:]*\]|:\/\//i;

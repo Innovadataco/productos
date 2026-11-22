@@ -6,8 +6,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
-  COLUMNAS_CONFIG_IA, HORAS_RESUMEN, LIMITE_MAX_S, LIMITE_MIN_S, MAX_LARGO_MOTIVO_CONFIG, MODOS_CON_LOCAL, MODOS_CON_NUBE, TOPE_MAX_MICRO_USD, TOPE_MIN_MICRO_USD,
+  COLUMNAS_CONFIG_IA, HORAS_RESUMEN, LIMITE_MAX_S, LIMITE_MIN_S, MAX_LARGO_MOTIVO_CONFIG, MODOS_CON_LOCAL, MODOS_CON_NUBE, TAREAS_IA, TEMPERATURA_MAX_CENTESIMAS,
+  TOPE_MAX_MICRO_USD, TOPE_MIN_MICRO_USD,
 } from "@/ia/config/parametros";
+import { TIPOS_RESUMEN } from "@/ia/contrato";
 import { PATRON_NOMBRE_MODELO_LOCAL } from "@/ia/local/modelos";
 import { TECHO_TOPE_MICRO_USD } from "@/ia/nube/config";
 import { ESFUERZOS_NUBE, MODELOS_NUBE } from "@/ia/nube/peticion";
@@ -35,6 +37,8 @@ describe("modelo ConfigIa en prisma/schema.prisma", () => {
   it("tipos: versión Int única, el tope en Decimal(6,2) (dinero, nunca Float), la hora de la base con clock_timestamp()", () => {
     expect(campo("version")).toMatch(/^Int\s+@unique$/);
     expect(campo("topeMensualUsd")).toMatch(/^Decimal\?\s+@db\.Decimal\(6, 2\)$/);
+    expect(campo("temperaturaLocal")).toMatch(/^Decimal\s+@db\.Decimal\(3, 2\)$/);
+    expect(campo("tareas")).toMatch(/^Json$/);
     expect(campo("creadaEn")).toMatch(/^DateTime\s+@default\(dbgenerated\("clock_timestamp\(\)"\)\) @db\.Timestamptz\(6\)/);
     expect(campo("autor")).toMatch(/onDelete: Restrict, onUpdate: Restrict/);
     expect(modelo).not.toMatch(/Float|now\(\)/);
@@ -73,8 +77,21 @@ describe("migración *_config_ia", () => {
     expect(check("config_ia_tope_chk")).toBe(`"topeMensualUsd" IS NULL OR ("topeMensualUsd" >= ${usd(TOPE_MIN_MICRO_USD)} AND "topeMensualUsd" <= ${usd(TOPE_MAX_MICRO_USD)})`);
   });
 
-  it("el nombre del modelo local tiene la forma de la lista de PI (la pertenencia a la lista la revisa la app)", () => {
-    expect(check("config_ia_modelo_local_chk")).toBe(`"modeloLocal" IS NULL OR "modeloLocal" ~ '${PATRON_NOMBRE_MODELO_LOCAL.source}'`);
+  it("las tareas: hoy los tres tipos de resumen; cada una con «activo» y su modelo local con la forma de la lista de PI", () => {
+    expect([...TAREAS_IA]).toEqual([...TIPOS_RESUMEN]);
+    const tareas = check("config_ia_tareas_chk");
+    expect(tareas).toContain(`("tareas" - ARRAY[${TAREAS_IA.map((t) => `'${t}'`).join(", ")}]) = '{}'::jsonb`);
+    for (const t of TAREAS_IA) {
+      expect(tareas, t).toContain(`(("tareas"->'${t}') - ARRAY['activo', 'modeloLocal']) = '{}'::jsonb`);
+      expect(tareas, t).toContain(`(("tareas"->'${t}')->>'modeloLocal') ~ '${PATRON_NOMBRE_MODELO_LOCAL.source}'`);
+      // Con la local, cada tarea activa necesita su modelo.
+      expect(check("config_ia_usa_chk"), t).toContain(`NOT (("tareas"->'${t}')->'activo' = 'true'::jsonb AND jsonb_typeof(("tareas"->'${t}')->'modeloLocal') IS DISTINCT FROM 'string')`);
+    }
+  });
+
+  it("la temperatura de la local va de 0 a 1", () => {
+    expect(TEMPERATURA_MAX_CENTESIMAS).toBe(100);
+    expect(check("config_ia_temperatura_chk")).toBe(`"temperaturaLocal" >= 0 AND "temperaturaLocal" <= 1`);
   });
 
   it("el formato del destino: host y puerto juntos o ninguno; NO es el control de seguridad (ese está en la red)", () => {

@@ -18,7 +18,8 @@
 --  - que inv_app e inv_precios no sean miembros del dueño de precio_cierre ni de valor_unidad_fondo, ni de plan_version,
 --    decision y enlace_decision_orden (los disparadores de integridad de precios y los de los instantes eximen al dueño);
 --    ni inv_ia del de ninguna de ellas ni del de resumen_ia, ni inv_app o inv_precios del de resumen_ia (fase E: el
---    disparador de la hora del registro de los resúmenes con IA también exime al dueño);
+--    disparador de la hora del registro de los resúmenes con IA también exime al dueño); ni inv_app, inv_ia o inv_precios
+--    del de config_ia (fase E, E8: el instante de la configuración de la IA);
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 con search_path = public (sacadas de una base recién
 -- migrada); el guardián fija ese search_path para que otro no dé un falso positivo. La lista de nombres sale de
@@ -39,6 +40,7 @@ DECLARE
     ['certificacion', 'certificacion_reemplazadaPorId_key', 'CREATE UNIQUE INDEX "certificacion_reemplazadaPorId_key" ON public.certificacion USING btree ("reemplazadaPorId")'],
     ['codigo_recuperacion', 'codigo_recuperacion_codigoHash_key', 'CREATE UNIQUE INDEX "codigo_recuperacion_codigoHash_key" ON public.codigo_recuperacion USING btree ("codigoHash")'],
     ['codigo_recuperacion', 'codigo_recuperacion_vigentes_idx', 'CREATE INDEX codigo_recuperacion_vigentes_idx ON public.codigo_recuperacion USING btree ("usuarioId") WHERE (("usadoEn" IS NULL) AND ("anuladoEn" IS NULL))'],
+    ['config_ia', 'config_ia_version_key', 'CREATE UNIQUE INDEX config_ia_version_key ON public.config_ia USING btree (version)'],
     ['decision', 'decision_reemplazaId_key', 'CREATE UNIQUE INDEX "decision_reemplazaId_key" ON public.decision USING btree ("reemplazaId")'],
     ['dividendo', 'dividendo_filaFuenteId_key', 'CREATE UNIQUE INDEX "dividendo_filaFuenteId_key" ON public.dividendo USING btree ("filaFuenteId")'],
     ['dividendo_decretado', 'dividendo_decretado_filaFuenteId_key', 'CREATE UNIQUE INDEX "dividendo_decretado_filaFuenteId_key" ON public.dividendo_decretado USING btree ("filaFuenteId")'],
@@ -91,6 +93,18 @@ DECLARE
     ['codigo_recuperacion', 'codigo_recuperacion_fechas_chk', 'CHECK (((("usadoEn" IS NULL) OR ("usadoEn" >= "creadoEn")) AND (("anuladoEn" IS NULL) OR ("anuladoEn" >= "creadoEn"))))'],
     ['codigo_recuperacion', 'codigo_recuperacion_hash_chk', 'CHECK (("codigoHash" ~ ''^[0-9a-f]{64}$''::text))'],
     ['codigo_recuperacion', 'codigo_recuperacion_marca_chk', 'CHECK ((("usadoEn" IS NULL) OR ("anuladoEn" IS NULL)))'],
+    ['config_ia', 'config_ia_destino_chk', 'CHECK (((("ollamaHost" IS NULL) = ("ollamaPuerto" IS NULL)) AND (("ollamaPuerto" IS NULL) OR (("ollamaPuerto" >= 1) AND ("ollamaPuerto" <= 65535))) AND (("ollamaHost" IS NULL) OR ("ollamaHost" ~ ''^100[.](6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])[.](25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])[.](25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$''::text))))'],
+    ['config_ia', 'config_ia_esfuerzo_chk', 'CHECK (("esfuerzoNube" = ANY (ARRAY[''low''::text, ''medium''::text])))'],
+    ['config_ia', 'config_ia_hora_chk', 'CHECK (("horaResumen" = ANY (ARRAY[''18:00''::text, ''19:00''::text, ''20:00''::text, ''21:00''::text])))'],
+    ['config_ia', 'config_ia_limite_chk', 'CHECK ((("limiteSegundos" >= 10) AND ("limiteSegundos" <= 120)))'],
+    ['config_ia', 'config_ia_modelo_nube_chk', 'CHECK (("modeloNube" = ANY (ARRAY[''claude-opus-5-5''::text, ''claude-sonnet-5-5''::text, ''claude-haiku-5-5''::text])))'],
+    ['config_ia', 'config_ia_modo_chk', 'CHECK ((modo = ANY (ARRAY[''apagado''::text, ''local''::text, ''nube''::text, ''local-luego-nube''::text])))'],
+    ['config_ia', 'config_ia_motivo_chk', 'CHECK (((motivo ~ ''[^[:space:]]''::text) AND (char_length(motivo) <= 2000)))'],
+    ['config_ia', 'config_ia_tareas_chk', 'CHECK (((jsonb_typeof(tareas) = ''object''::text) AND ((tareas - ARRAY[''DIARIO''::text, ''REGLAS''::text, ''ESCENARIOS''::text]) = ''{}''::jsonb) AND ((NOT (tareas ? ''DIARIO''::text)) OR ((jsonb_typeof((tareas -> ''DIARIO''::text)) = ''object''::text) AND (((tareas -> ''DIARIO''::text) - ARRAY[''activo''::text, ''modeloLocal''::text]) = ''{}''::jsonb) AND (jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''activo''::text)) = ''boolean''::text) AND ((NOT ((tareas -> ''DIARIO''::text) ? ''modeloLocal''::text)) OR (jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''modeloLocal''::text)) = ''null''::text) OR ((jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''modeloLocal''::text)) = ''string''::text) AND (((tareas -> ''DIARIO''::text) ->> ''modeloLocal''::text) ~ ''^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$''::text))))) AND ((NOT (tareas ? ''REGLAS''::text)) OR ((jsonb_typeof((tareas -> ''REGLAS''::text)) = ''object''::text) AND (((tareas -> ''REGLAS''::text) - ARRAY[''activo''::text, ''modeloLocal''::text]) = ''{}''::jsonb) AND (jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''activo''::text)) = ''boolean''::text) AND ((NOT ((tareas -> ''REGLAS''::text) ? ''modeloLocal''::text)) OR (jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''modeloLocal''::text)) = ''null''::text) OR ((jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''modeloLocal''::text)) = ''string''::text) AND (((tareas -> ''REGLAS''::text) ->> ''modeloLocal''::text) ~ ''^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$''::text))))) AND ((NOT (tareas ? ''ESCENARIOS''::text)) OR ((jsonb_typeof((tareas -> ''ESCENARIOS''::text)) = ''object''::text) AND (((tareas -> ''ESCENARIOS''::text) - ARRAY[''activo''::text, ''modeloLocal''::text]) = ''{}''::jsonb) AND (jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''activo''::text)) = ''boolean''::text) AND ((NOT ((tareas -> ''ESCENARIOS''::text) ? ''modeloLocal''::text)) OR (jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''modeloLocal''::text)) = ''null''::text) OR ((jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''modeloLocal''::text)) = ''string''::text) AND (((tareas -> ''ESCENARIOS''::text) ->> ''modeloLocal''::text) ~ ''^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$''::text)))))))'],
+    ['config_ia', 'config_ia_temperatura_chk', 'CHECK ((("temperaturaLocal" >= (0)::numeric) AND ("temperaturaLocal" <= (1)::numeric)))'],
+    ['config_ia', 'config_ia_tope_chk', 'CHECK ((("topeMensualUsd" IS NULL) OR (("topeMensualUsd" >= 1.00) AND ("topeMensualUsd" <= 50.00))))'],
+    ['config_ia', 'config_ia_usa_chk', 'CHECK ((((modo <> ALL (ARRAY[''local''::text, ''local-luego-nube''::text])) OR (("ollamaHost" IS NOT NULL) AND (NOT ((((tareas -> ''DIARIO''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))) AND (NOT ((((tareas -> ''REGLAS''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))) AND (NOT ((((tareas -> ''ESCENARIOS''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))))) AND ((modo <> ALL (ARRAY[''nube''::text, ''local-luego-nube''::text])) OR ("topeMensualUsd" IS NOT NULL))))'],
+    ['config_ia', 'config_ia_version_chk', 'CHECK ((version >= 1))'],
     ['control_conciliacion', 'control_conciliacion_motivo_chk', 'CHECK (((("codigoMotivo" IS NULL) OR ("codigoMotivo" ~ ''^[a-z0-9_]{1,40}$''::text)) AND ((resultado = ''CUADRA''::"ResultadoControl") OR ("codigoMotivo" IS NOT NULL))))'],
     ['control_conciliacion', 'control_conciliacion_tolerancia_chk', 'CHECK (((tolerancia IS NULL) OR (tolerancia >= (0)::numeric)))'],
     ['decision', 'decision_cantidad_chk', 'CHECK ((((cantidad IS NULL) OR (cantidad > 0)) AND ((accion <> ''NO_ACTUAR''::"AccionPlan") OR (cantidad IS NOT NULL))))'],
@@ -186,6 +200,8 @@ DECLARE
     ['codigo_recuperacion', 'codigo_recuperacion_usuarioId_fkey', 'FOREIGN KEY ("usuarioId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['conciliacion', 'conciliacion_pkey', 'PRIMARY KEY (id)'],
     ['conciliacion', 'conciliacion_certificacionId_fechaCorte_fkey', 'FOREIGN KEY ("certificacionId", "fechaCorte") REFERENCES certificacion(id, "fechaCorte") ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['config_ia', 'config_ia_pkey', 'PRIMARY KEY (id)'],
+    ['config_ia', 'config_ia_autorId_fkey', 'FOREIGN KEY ("autorId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['control_conciliacion', 'control_conciliacion_pkey', 'PRIMARY KEY (id)'],
     ['control_conciliacion', 'control_conciliacion_conciliacionId_fkey', 'FOREIGN KEY ("conciliacionId") REFERENCES conciliacion(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['control_conciliacion', 'control_conciliacion_instrumentoId_fkey', 'FOREIGN KEY ("instrumentoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
@@ -270,6 +286,8 @@ DECLARE
     ['codigo_recuperacion', 'codigo_recuperacion_un_solo_uso', 'CREATE TRIGGER codigo_recuperacion_un_solo_uso BEFORE DELETE OR UPDATE ON public.codigo_recuperacion FOR EACH ROW EXECUTE FUNCTION inv_codigo_un_solo_uso()'],
     ['conciliacion', 'conciliacion_certificacion_vigente', 'CREATE TRIGGER conciliacion_certificacion_vigente BEFORE INSERT ON public.conciliacion FOR EACH ROW EXECUTE FUNCTION inv_certificacion_vigente()'],
     ['conciliacion', 'conciliacion_solo_insercion', 'CREATE TRIGGER conciliacion_solo_insercion BEFORE DELETE OR UPDATE ON public.conciliacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['config_ia', 'config_ia_instante', 'CREATE TRIGGER config_ia_instante BEFORE INSERT ON public.config_ia FOR EACH ROW EXECUTE FUNCTION inv_config_ia_instante()'],
+    ['config_ia', 'config_ia_solo_insercion', 'CREATE TRIGGER config_ia_solo_insercion BEFORE DELETE OR UPDATE ON public.config_ia FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['control_conciliacion', 'control_conciliacion_solo_insercion', 'CREATE TRIGGER control_conciliacion_solo_insercion BEFORE DELETE OR UPDATE ON public.control_conciliacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['decision', 'decision_instante', 'CREATE TRIGGER decision_instante BEFORE INSERT ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_decision_instante()'],
     ['decision', 'decision_solo_insercion', 'CREATE TRIGGER decision_solo_insercion BEFORE DELETE OR UPDATE ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
@@ -308,6 +326,7 @@ DECLARE
     ['inv_certificacion_solo_retiro', '177e253d815166e075e30b75316c539a', ''],
     ['inv_certificacion_vigente', '4f29f5a78b3129f7ace16487160c5c4e', ''],
     ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301', ''],
+    ['inv_config_ia_instante', 'abf0179024dd5f3151006171b5d76bb5', ''],
     ['inv_decision_instante', '0d4631b4ec6f4b4a688af968e5fb5a5d', ''],
     ['inv_enlace_decision_orden_instante', 'a7a550804fa3c435fa5553518e427de9', ''],
     ['inv_lote_fijo', '6906ddebe6b9194201de631eac40241a', ''],
@@ -458,6 +477,18 @@ BEGIN
     WHERE r.rolname IN ('inv_ia', 'inv_app', 'inv_precios')
       AND c.oid IN (to_regclass('public.precio_cierre'), to_regclass('public.valor_unidad_fondo'), to_regclass('public.plan_version'), to_regclass('public.decision'), to_regclass('public.enlace_decision_orden'), to_regclass('public.resumen_ia'))
       AND (r.rolname = 'inv_ia' OR c.oid = to_regclass('public.resumen_ia'))
+      AND pg_has_role(r.oid, c.relowner, 'MEMBER')
+    ORDER BY 1
+  LOOP
+    distintos := distintos || ('rol con privilegios del dueño ' || x);
+  END LOOP;
+
+  -- Fase E (E8): el disparador del instante de config_ia también exime al dueño. Ni inv_app (que la escribe), ni inv_ia (que
+  -- la lee), ni inv_precios pueden ser miembros del dueño de config_ia.
+  FOR x IN
+    SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
+    WHERE r.rolname IN ('inv_app', 'inv_ia', 'inv_precios')
+      AND c.oid = to_regclass('public.config_ia')
       AND pg_has_role(r.oid, c.relowner, 'MEMBER')
     ORDER BY 1
   LOOP

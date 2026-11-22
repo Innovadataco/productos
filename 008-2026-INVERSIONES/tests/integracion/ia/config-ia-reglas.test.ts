@@ -26,8 +26,10 @@ async function version(): Promise<number> {
 }
 
 type Datos = Omit<Prisma.ConfigIaUncheckedCreateInput, "version" | "autorId">;
+const tareas = (modelo: string | null, activas: readonly string[] = ["DIARIO", "REGLAS"]) =>
+  Object.fromEntries(["DIARIO", "REGLAS", "ESCENARIOS"].map((t) => [t, { activo: activas.includes(t), modeloLocal: modelo }]));
 const BASE: Datos = {
-  modo: "apagado", modeloNube: "claude-opus-5-5", horaResumen: "19:00", resumenDiario: true, resumenReglas: true, resumenEscenarios: false,
+  modo: "apagado", temperaturaLocal: new Prisma.Decimal("0"), tareas: tareas(null), modeloNube: "claude-opus-5-5", horaResumen: "19:00",
   limiteSegundos: 120, esfuerzoNube: "low", motivo: "Versión ficticia de la prueba",
 };
 const crear = async (cambios: Partial<Datos> = {}) => db.configIa.create({ data: { ...BASE, ...cambios, version: await version(), autorId } });
@@ -45,14 +47,18 @@ afterAll(async () => {
 describe("config_ia · control positivo", () => {
   it("entran una apagada, una local con su destino y su modelo, y una de nube con su tope", async () => {
     await expect(crear()).resolves.toMatchObject({ modo: "apagado" });
-    await expect(crear({ modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, modeloLocal: "qwen2.5:14b" })).resolves.toMatchObject({ modeloLocal: "qwen2.5:14b" });
+    await expect(crear({ modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: tareas("qwen2.5:14b") })).resolves.toMatchObject({ modo: "local" });
     const nube = await crear({ modo: "nube", topeMensualUsd: new Prisma.Decimal("4.61"), modeloNube: "claude-haiku-5-5", esfuerzoNube: "medium" });
     expect(nube.topeMensualUsd?.toString()).toBe("4.61");
-    await expect(crear({ modo: "local-luego-nube", ollamaHost: HOST, ollamaPuerto: 47213, modeloLocal: "aya-expanse:32b", topeMensualUsd: new Prisma.Decimal("50") })).resolves.toBeDefined();
+    await expect(crear({ modo: "local-luego-nube", ollamaHost: HOST, ollamaPuerto: 47213, tareas: tareas("aya-expanse:32b"), topeMensualUsd: new Prisma.Decimal("50") })).resolves.toBeDefined();
+    // Una tarea inactiva no necesita modelo; cada tarea puede tener el suyo.
+    const porTarea = { DIARIO: { activo: true, modeloLocal: "qwen2.5:14b" }, REGLAS: { activo: true, modeloLocal: "gemma2:27b" }, ESCENARIOS: { activo: false, modeloLocal: null } };
+    await expect(crear({ modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: porTarea })).resolves.toBeDefined();
   });
 
   it("los bordes entran: límite 10 y 120, tope 1 y 50, puerto 1 y 65535, horas de la lista", async () => {
     await expect(crear({ limiteSegundos: 10 })).resolves.toBeDefined();
+    for (const t of ["0", "0.37", "1"]) await expect(crear({ temperaturaLocal: new Prisma.Decimal(t) })).resolves.toBeDefined();
     await expect(crear({ modo: "nube", topeMensualUsd: new Prisma.Decimal("1.00") })).resolves.toBeDefined();
     await expect(crear({ ollamaHost: ip(100, 64, 0, 1), ollamaPuerto: 1 })).resolves.toBeDefined();
     await expect(crear({ ollamaHost: ip(100, 127, 255, 254), ollamaPuerto: 65535 })).resolves.toBeDefined();
@@ -70,8 +76,15 @@ describe("config_ia · cada CHECK muerde", () => {
     ["un límite de 121 s", { limiteSegundos: 121 }, "config_ia_limite_chk"],
     ["un tope de USD 0,99", { topeMensualUsd: new Prisma.Decimal("0.99") }, "config_ia_tope_chk"],
     ["un tope de USD 50,01", { topeMensualUsd: new Prisma.Decimal("50.01") }, "config_ia_tope_chk"],
-    ["un modelo local en mayúsculas", { modeloLocal: "Qwen2.5:14B" }, "config_ia_modelo_local_chk"],
-    ["un modelo local con registro", { modeloLocal: "registro/qwen2.5:14b" }, "config_ia_modelo_local_chk"],
+    ["una temperatura negativa", { temperaturaLocal: new Prisma.Decimal("-0.01") }, "config_ia_temperatura_chk"],
+    ["una temperatura sobre 1", { temperaturaLocal: new Prisma.Decimal("1.01") }, "config_ia_temperatura_chk"],
+    ["un modelo local en mayúsculas", { tareas: tareas("Qwen2.5:14B") }, "config_ia_tareas_chk"],
+    ["un modelo local con registro", { tareas: tareas("registro/qwen2.5:14b") }, "config_ia_tareas_chk"],
+    ["un modelo local que no es texto", { tareas: { DIARIO: { activo: true, modeloLocal: 4613 } } }, "config_ia_tareas_chk"],
+    ["una tarea que no es de la lista", { tareas: { ...tareas(null), OPERAR: { activo: true, modeloLocal: null } } }, "config_ia_tareas_chk"],
+    ["una tarea con un campo de más", { tareas: { DIARIO: { activo: true, modeloLocal: null, temperatura: 1 } } }, "config_ia_tareas_chk"],
+    ["una tarea sin «activo» booleano", { tareas: { DIARIO: { activo: "sí", modeloLocal: null } } }, "config_ia_tareas_chk"],
+    ["las tareas como arreglo", { tareas: ["DIARIO"] }, "config_ia_tareas_chk"],
     ["un host sin puerto", { ollamaHost: HOST }, "config_ia_destino_chk"],
     ["un puerto sin host", { ollamaPuerto: 47213 }, "config_ia_destino_chk"],
     ["el puerto 0", { ollamaHost: HOST, ollamaPuerto: 0 }, "config_ia_destino_chk"],
@@ -84,10 +97,10 @@ describe("config_ia · cada CHECK muerde", () => {
     ["un octeto de más de 255", { ollamaHost: ip(100, 87, 256, 157), ollamaPuerto: 47213 }, "config_ia_destino_chk"],
     ["un motivo de solo espacios", { motivo: "   " }, "config_ia_motivo_chk"],
     ["un motivo de más de 2000 caracteres", { motivo: "m".repeat(2001) }, "config_ia_motivo_chk"],
-    ["el modo local sin modelo", { modo: "local", ollamaHost: HOST, ollamaPuerto: 47213 }, "config_ia_usa_chk"],
-    ["el modo local sin destino", { modo: "local", modeloLocal: "qwen2.5:14b" }, "config_ia_usa_chk"],
+    ["el modo local con una tarea activa sin modelo", { modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: { ...tareas("qwen2.5:14b"), ESCENARIOS: { activo: true, modeloLocal: null } } }, "config_ia_usa_chk"],
+    ["el modo local sin destino", { modo: "local", tareas: tareas("qwen2.5:14b") }, "config_ia_usa_chk"],
     ["el modo nube sin tope", { modo: "nube" }, "config_ia_usa_chk"],
-    ["local-luego-nube sin tope", { modo: "local-luego-nube", ollamaHost: HOST, ollamaPuerto: 47213, modeloLocal: "qwen2.5:14b" }, "config_ia_usa_chk"],
+    ["local-luego-nube sin tope", { modo: "local-luego-nube", ollamaHost: HOST, ollamaPuerto: 47213, tareas: tareas("qwen2.5:14b") }, "config_ia_usa_chk"],
   ] as const)("rechaza %s (%s)", async (_n, cambios, restriccion) => {
     await expect(crear(cambios as Partial<Datos>)).rejects.toThrow(new RegExp(restriccion));
   });
@@ -170,7 +183,7 @@ describe("config_ia · privilegios de inv_ia (pg_signal_backend con los GRANT de
 
   it("lee lo que necesita (control positivo) y nada del motivo ni del autor", async () => {
     await crear();
-    const filas = await restringida.$queryRawUnsafe<unknown[]>(`SELECT id, version, modo, "ollamaHost", "ollamaPuerto", "modeloLocal", "modeloNube", "topeMensualUsd", "horaResumen", "resumenDiario", "resumenReglas", "resumenEscenarios", "limiteSegundos", "esfuerzoNube", "creadaEn" FROM config_ia ORDER BY version DESC LIMIT 1`);
+    const filas = await restringida.$queryRawUnsafe<unknown[]>(`SELECT id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", "creadaEn" FROM config_ia ORDER BY version DESC LIMIT 1`);
     expect(filas).toHaveLength(1);
     for (const sentencia of ['SELECT motivo FROM config_ia LIMIT 1', 'SELECT "autorId" FROM config_ia LIMIT 1', "INSERT INTO config_ia (id) VALUES ('x')"]) {
       await expect(restringida.$executeRawUnsafe(sentencia), sentencia).rejects.toThrow(/42501|permission denied/);

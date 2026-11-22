@@ -33,7 +33,7 @@ describe("privilegios de inv_app", () => {
         'UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") usuario',
         ...Object.entries(INSERT_DEL_PLAN).map(([t, cs]) => `INSERT (${cs.map((c) => (/[A-Z]/.test(c) ? `"${c}"` : c)).join(", ")}) ${t}`),
         // E8: la configuración de la IA, por columna y sin "creadaEn" (bloque «config_ia» de abajo).
-        'INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "modeloLocal", "modeloNube", "topeMensualUsd", "horaResumen", "resumenDiario", "resumenReglas", "resumenEscenarios", "limiteSegundos", "esfuerzoNube", motivo, "autorId") config_ia',
+        'INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", motivo, "autorId") config_ia',
       ].sort(),
     );
   });

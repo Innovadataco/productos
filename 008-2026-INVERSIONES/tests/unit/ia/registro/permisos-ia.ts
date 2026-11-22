@@ -47,8 +47,8 @@ export const PERMISOS_IA: readonly Permiso[] = [
     tabla: "config_ia",
     privilegio: "SELECT",
     columnas: [
-      "id", "version", "modo", "ollamaHost", "ollamaPuerto", "modeloLocal", "modeloNube", "topeMensualUsd", "horaResumen", "resumenDiario", "resumenReglas",
-      "resumenEscenarios", "limiteSegundos", "esfuerzoNube", "creadaEn",
+      "id", "version", "modo", "ollamaHost", "ollamaPuerto", "temperaturaLocal", "tareas", "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos",
+      "esfuerzoNube", "creadaEn",
     ],
   },
   { tabla: "dividendo", privilegio: "SELECT", columnas: ["id", "instrumentoId", "tipo", "fechaPago", "montoNeto", "decretadoId"] },
