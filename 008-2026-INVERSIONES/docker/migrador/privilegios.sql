@@ -20,8 +20,10 @@
 --                       los declara `dbgenerated`, y un disparador que los fija para todo rol que no sea el dueño): inv_app
 --                       no los puede nombrar (42501), así que no puede antedatar nada. Riesgo residual: con la clave de
 --                       inv_app se pueden insertar versiones, reglas, decisiones y enlaces falsos (con un autor que
---                       exista), con la fecha de la decisión y la vigencia que quiera; lo que no puede es mentir sobre
---                       cuándo se registraron. Nada de lo que ya está se edita ni se borra.
+--                       exista), con el id, el número de versión, la fecha de la decisión y la vigencia que quiera (una
+--                       versión con un número mayor y una vigencia pasada pasa a ser la vigente de esos días: la app lo
+--                       impide, VIGENCIA_RETROCEDE, la base no); lo que no puede es mentir sobre cuándo se registraron, y
+--                       ese instante lo delata. Nada de lo que ya está se edita ni se borra.
 -- Nunca TRUNCATE, REFERENCES, TRIGGER ni DDL. Sin UPDATE ni DELETE en las tablas de solo inserción,
 -- `SET LOCAL inv.reversion = 'on'` no le sirve a inv_app para saltarse sus disparadores.
 -- El UPDATE por columna de usuario lo acota el disparador usuario_transiciones (migración

@@ -32,10 +32,11 @@
 -- (scripts/crear-roles-prod.sql; lo prueba roles-base.test.ts), y pg_temp nunca se busca para funciones ni operadores.
 --
 -- Riesgo residual (lo mismo dice privilegios.sql): con la clave de inv_app se siguen pudiendo insertar versiones,
--- reglas, decisiones y enlaces falsos (con un autor que exista), con la fecha de la decisión y la vigencia que quiera
--- (esas son datos del dueño, no instantes); lo que ya no puede es mentir sobre CUÁNDO se registraron. Una transacción
--- abierta puede confirmar más tarde (la hora es la del INSERT, no la del COMMIT; PostgreSQL 16 no tiene
--- transaction_timeout). La hora es la del reloj del servidor de la base.
+-- reglas, decisiones y enlaces falsos (con un autor que exista), con el id, el número de versión, la fecha de la
+-- decisión y la vigencia que quiera (una versión con un número mayor y una vigencia pasada pasa a ser la vigente de esos
+-- días: lo impide la app, VIGENCIA_RETROCEDE, no la base); lo que ya no puede es mentir sobre CUÁNDO se registraron, y
+-- ese instante lo delata. Una transacción abierta puede confirmar más tarde (la hora es la del INSERT, no la del COMMIT;
+-- PostgreSQL 16 no tiene transaction_timeout). La hora es la del reloj del servidor de la base.
 -- Candados: tests/unit/plan/instantes-base.test.ts, tests/integracion/instantes-base.test.ts y roles-base.test.ts (CI).
 SET LOCAL lock_timeout = '5s';
 

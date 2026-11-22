@@ -15,8 +15,8 @@
 --    ningún disparador de más en el esquema, y ninguno deshabilitado, ni siquiera los internos de las FK;
 --  - las funciones escritas a mano: una sola por nombre, con el md5 exacto de su código, sin SECURITY DEFINER y con su
 --    SET exacto (proconfig): un ALTER FUNCTION … SECURITY DEFINER no cambia el md5;
---  - que inv_app e inv_precios no sean miembros del dueño de precio_cierre ni de valor_unidad_fondo (los disparadores
---    de integridad eximen al dueño);
+--  - que inv_app e inv_precios no sean miembros del dueño de precio_cierre ni de valor_unidad_fondo, ni de plan_version,
+--    decision y enlace_decision_orden (los disparadores de integridad de precios y los de los instantes eximen al dueño);
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 con search_path = public (sacadas de una base recién
 -- migrada); el guardián fija ese search_path para que otro no dé un falso positivo. La lista de nombres sale de
@@ -425,12 +425,13 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- Los disparadores de integridad de precios eximen a quien tenga los privilegios del dueño de la tabla: si inv_app o
-  -- inv_precios fueran miembros de él (GRANT inv_dueno TO …), quedarían eximidos o, con SET ROLE, serían el dueño.
+  -- Los disparadores de integridad de precios y los de los instantes del plan (migración *_instantes_base) eximen a quien
+  -- tenga los privilegios del dueño de la tabla: si inv_app o inv_precios fueran miembros de él (GRANT inv_dueno TO …),
+  -- quedarían eximidos o, con SET ROLE, serían el dueño (y fijarían el instante del registro).
   FOR x IN
     SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
     WHERE r.rolname IN ('inv_app', 'inv_precios')
-      AND c.oid IN (to_regclass('public.precio_cierre'), to_regclass('public.valor_unidad_fondo'))
+      AND c.oid IN (to_regclass('public.precio_cierre'), to_regclass('public.valor_unidad_fondo'), to_regclass('public.plan_version'), to_regclass('public.decision'), to_regclass('public.enlace_decision_orden'))
       AND pg_has_role(r.oid, c.relowner, 'MEMBER')
     ORDER BY 1
   LOOP
