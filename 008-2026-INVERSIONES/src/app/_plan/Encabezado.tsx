@@ -1,14 +1,21 @@
 /**
  * Encabezado de las pantallas del plan y del diario: la marca y la navegación entre secciones, con la actual marcada
- * (`aria-current="page"`). Componente del servidor, sin JavaScript en el navegador.
+ * (`aria-current="page"`), y la marca «Solo lectura» del familiar. Componente del servidor, sin JavaScript en el navegador.
  */
 import { SECCIONES, type Seccion } from "../tablero/secciones";
+import { MarcaSoloLectura } from "../tablero/SoloLectura";
 
-export function Encabezado({ actual }: { readonly actual: Seccion }) {
+interface PropsEncabezado {
+  readonly actual: Seccion;
+  /** El familiar ve «Solo lectura» (frente familia-lectura); lo decide la página con la sesión revalidada. */
+  readonly soloLectura?: boolean;
+}
+
+export function Encabezado({ actual, soloLectura = false }: PropsEncabezado) {
   return (
     <header className="top plan-top">
       <div className="wrap fila-top">
-        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio</div>
+        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio{soloLectura ? <MarcaSoloLectura /> : null}</div>
         <nav aria-label="Secciones">
           <ul className="secciones">
             {SECCIONES.map((s) => (

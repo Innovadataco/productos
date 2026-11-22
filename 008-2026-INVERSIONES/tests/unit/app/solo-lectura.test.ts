@@ -4,12 +4,11 @@
 // sesión revalidada (esSoloLectura), nunca de algo del navegador. Ningún texto nuevo recomienda comprar ni vender, y el
 // pie del plan no le dice al familiar que él aprobó el plan. Datos inventados.
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { MarcaSoloLectura, TEXTO_SOLO_LECTURA } from "@/app/_comun/SoloLectura";
 import { Encabezado } from "@/app/_plan/Encabezado";
 import { PIE_PLAN } from "@/app/_plan/textos";
 import type { ConteoVista } from "@/app/_plan/tipos";
@@ -18,11 +17,13 @@ import { Cadena } from "@/app/decisiones/[id]/Cadena";
 import { Diario } from "@/app/decisiones/Diario";
 import { Plan } from "@/app/plan/Plan";
 import { aVista } from "@/app/tablero/serializar";
+import { MarcaSoloLectura, TEXTO_SOLO_LECTURA } from "@/app/tablero/SoloLectura";
 import { Tablero } from "@/app/tablero/Tablero";
 import { MENSAJE_FUERA_DE_PLAZO, MENSAJE_SOLO_LECTURA } from "@/auth/respuestas";
 import { D, especie, resumenDe } from "../tablero/ficticio";
 
-const RAIZ = fileURLToPath(new URL("../../../", import.meta.url));
+// En jsdom, `URL` es el del navegador: la ruta sale del texto de import.meta.url.
+const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const leer = (relativa: string) => readFileSync(join(RAIZ, relativa), "utf8");
 
 const CERO: ConteoVista = { funciono: 0, noFunciono: 0, neutro: 0, sinVeredicto: 0, pendiente: 0, sinPrecio: 0, sinOrden: 0 };
@@ -92,7 +93,7 @@ describe("textos para la familia", () => {
   it("el aviso de solo lectura y el de fuera de plazo sirven al dueño y al familiar, sin recomendar comprar ni vender", () => {
     expect(MENSAJE_SOLO_LECTURA).toMatch(/[Ss]olo lectura/);
     expect(MENSAJE_FUERA_DE_PLAZO).toMatch(/^Pasaron más de 30 minutos/);
-    expect(MENSAJE_FUERA_DE_PLAZO).toMatch(/familiar/);
+    expect(MENSAJE_FUERA_DE_PLAZO).toMatch(/Familiar: pídale al dueño/);
     expect(MENSAJE_FUERA_DE_PLAZO).toContain("crear-acceso-inicial");
     for (const texto of [MENSAJE_SOLO_LECTURA, MENSAJE_FUERA_DE_PLAZO, TEXTO_SOLO_LECTURA]) expect(texto).not.toMatch(/compr|vend/i);
   });

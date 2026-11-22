@@ -9,10 +9,11 @@
  *   bloqueo. Comparte el tope por IP del ingreso, y cada intento queda en `intento_ingreso`.
  */
 import { createHash, randomBytes } from "node:crypto";
-import type { Prisma, PrismaClient, PropositoToken } from "@prisma/client";
+import { Prisma, type PrismaClient, type PropositoToken } from "@prisma/client";
 import { hashClave, largoValido } from "./clave";
 import { redDeIp } from "./ip";
 import { FALLOS_POR_IP, TOKEN_BYTES, VIDA_TOKEN_MS } from "./limites";
+import { ROLES_WEB } from "./roles";
 import { OPCIONES_TX, bloquearRed, fallosDeIp } from "./topes";
 
 export type CodigoAcceso = "OTRO_DUENO" | "ROL_DISTINTO" | "NO_EXISTE";
@@ -93,11 +94,15 @@ interface FilaToken {
   readonly vigente: boolean;
 }
 
-/** El token si existe; `vigente` = sin usar, sin vencer, el más reciente de su usuario y de un DUENO. */
+/**
+ * El token si existe; `vigente` = sin usar, sin vencer, el más reciente de su usuario y de una cuenta ACTIVA con acceso
+ * web (DUENO o FAMILIA, src/auth/roles.ts): el enlace de un familiar revocado ya no sirve.
+ */
 async function tokenBloqueado(tx: Tx, tokenHash: string, ahora: Date): Promise<FilaToken | null> {
   const filas = await tx.$queryRaw<FilaToken[]>`
     SELECT t."id", t."usuarioId",
-      (t."usadoEn" IS NULL AND t."venceEn" > ${ahora.toISOString()}::timestamptz AND u."rol" = 'DUENO'
+      (t."usadoEn" IS NULL AND t."venceEn" > ${ahora.toISOString()}::timestamptz
+       AND u."activo" AND u."rol"::text IN (${Prisma.join([...ROLES_WEB])})
        AND NOT EXISTS (
          SELECT 1 FROM "token_acceso" t2
          WHERE t2."usuarioId" = t."usuarioId" AND (t2."creadoEn", t2."id") > (t."creadoEn", t."id"))) AS "vigente"

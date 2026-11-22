@@ -11,7 +11,8 @@ import type { CierreVista, ConteoVista, NivelVista, ResultadoVista } from "./tip
 
 export const NOTA_INFERENCIA =
   "«Sin negociación» se deduce de que no hay cierre en esos días hábiles de la BVC; el sistema no guarda el volumen de los días omitidos.";
-export const PIE_PLAN = "El sistema calcula y muestra; no recomienda comprar ni vender. Las reglas son las del plan que usted aprobó.";
+// Lo ve también el familiar (frente familia-lectura): «el plan aprobado», no «el que usted aprobó».
+export const PIE_PLAN = "El sistema calcula y muestra; no recomienda comprar ni vender. Las reglas son las del plan aprobado.";
 export const PIE_DIARIO = "El sistema mide decisiones pasadas; no recomienda comprar ni vender. Dividendos según los archivos de Trii; cierres de Yahoo.";
 export const NOTA_FUENTES = "Los dividendos salen de los archivos de Trii; los cierres, de Yahoo.";
 

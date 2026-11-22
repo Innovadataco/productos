@@ -167,10 +167,10 @@ function Contenido({ datos }: { readonly datos: DatosDecision }) {
   );
 }
 
-export function Cadena({ datos }: { readonly datos: DatosDecision }) {
+export function Cadena({ datos, soloLectura = false }: { readonly datos: DatosDecision; readonly soloLectura?: boolean }) {
   return (
     <>
-      <Encabezado actual="decisiones" />
+      <Encabezado actual="decisiones" soloLectura={soloLectura} />
       <main className="wrap plan">
         <Contenido datos={datos} />
         <footer className="pie"><p>{PIE_DIARIO}</p></footer>

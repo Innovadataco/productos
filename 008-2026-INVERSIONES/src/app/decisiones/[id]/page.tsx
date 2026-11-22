@@ -1,3 +1,4 @@
+import { esSoloLectura } from "@/auth/roles";
 import { exigirSesion } from "@/auth/sesion";
 import { db } from "@/lib/db";
 import { SinBase, esErrorDeBase, registrarFalloDeBase } from "../../_comun/sin-base";
@@ -14,14 +15,16 @@ interface Props {
 
 export default async function PaginaDecision({ params }: Props) {
   let datos: DatosDecision;
+  let soloLectura: boolean;
   try {
     // Revalida la sesión contra la base (D-014) antes de leer nada. Sin sesión, `redirect` lanza y pasa.
-    await exigirSesion();
+    const usuario = await exigirSesion();
+    soloLectura = esSoloLectura(usuario);
     datos = await datosDeDecision(db, (await params).id);
   } catch (error) {
     if (!esErrorDeBase(error)) throw error;
     registrarFalloDeBase("decision", error);
     return <SinBase />;
   }
-  return <Cadena datos={datos} />;
+  return <Cadena datos={datos} soloLectura={soloLectura} />;
 }

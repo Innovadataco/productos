@@ -27,10 +27,11 @@ const MARGEN = 4;
  * El secreto pendiente no se pudo descifrar (ErrorCifrado: p. ej. su clave se retiró, O3). Aviso fijo, sin la
  * versión, la clave ni el error; el remedio es el mismo que fuera de plazo: un secreto nuevo, que se cifra con
  * la clave activa. Si el fallo es de configuración (falta la clave activa), el secreto nuevo tampoco se podría
- * cifrar: por eso remite al registro, que lleva el código. La página responde 200 con el aviso.
+ * cifrar: por eso remite al registro, que lleva el código. La página responde 200 con el aviso. Sirve al dueño y al
+ * familiar (la pre-sesión no dice el rol): cada uno con su salida.
  */
 const MENSAJE_SIN_SECRETO =
-  "No se pudo preparar el segundo factor. Corra crear-acceso-inicial --reiniciar-totp (o pida un enlace nuevo con crear-acceso-inicial) y vuelva a entrar con su clave antes de 30 minutos. Si se repite, revise el registro del servidor.";
+  "No se pudo preparar el segundo factor. Dueño: corra crear-acceso-inicial --reiniciar-totp (o pida un enlace nuevo con crear-acceso-inicial). Familiar: pídale al dueño que reinicie su segundo factor. Después, vuelva a entrar con su clave antes de 30 minutos. Si se repite, el dueño revisa el registro del servidor.";
 
 /** El QR como un solo <path>: módulos negros sobre blanco, con su margen, en cualquier tema. */
 function Qr({ uri }: { readonly uri: string }) {

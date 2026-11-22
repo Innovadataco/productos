@@ -5,6 +5,7 @@
  */
 import type { ReactNode } from "react";
 import { cop, fecha, n, numero } from "../tablero/formato";
+import { MarcaSoloLectura } from "../tablero/SoloLectura";
 import type { DatosConciliacion } from "./datos";
 import type { ConciliacionVista, CorteVista, CuentasVista, FilaEspecieVista, FilaMontoVista, PorLiquidarVista, VistaCorte } from "./tipos";
 import "./conciliacion.css";
@@ -26,11 +27,11 @@ const plural = (k: number, uno: string, varios: string): string => `${k} ${k ===
 const textoDeCuentas = (c: CuentasVista): string =>
   [plural(c.cuadra, "cuadra", "cuadran"), plural(c.noCuadra, "no cuadra", "no cuadran"), `${c.porLiquidar} por liquidar`, plural(c.sinVerificar, "no se pudo verificar", "no se pudieron verificar")].join(" · ");
 
-function Encabezado() {
+function Encabezado({ soloLectura }: { readonly soloLectura: boolean }) {
   return (
     <header className="top concilia-top">
       <div className="wrap fila-top">
-        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio</div>
+        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio{soloLectura ? <MarcaSoloLectura /> : null}</div>
         <a className="pill" href="/">Volver al portafolio</a>
       </div>
     </header>
@@ -228,10 +229,10 @@ function Contenido({ datos }: { datos: DatosConciliacion }) {
   }
 }
 
-export function Conciliacion({ datos }: { datos: DatosConciliacion }) {
+export function Conciliacion({ datos, soloLectura = false }: { readonly datos: DatosConciliacion; readonly soloLectura?: boolean }) {
   return (
     <>
-      <Encabezado />
+      <Encabezado soloLectura={soloLectura} />
       <main className="wrap concilia">
         <Contenido datos={datos} />
         <footer className="pie">El sistema calcula y muestra; no recomienda comprar ni vender. Datos guardados en este sistema.</footer>
