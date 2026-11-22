@@ -185,8 +185,11 @@ describe("la pantalla", () => {
   it("no tiene formularios, campos ni botones, y cada región tiene un nombre propio", () => {
     const raiz = pintar();
     expect(raiz.querySelectorAll("form, input, button, textarea, select")).toHaveLength(0);
-    const nombres = [...raiz.querySelectorAll("section[aria-labelledby]")].map((s) => s.getAttribute("aria-labelledby"));
+    const ids = [...raiz.querySelectorAll("section[aria-labelledby]")].map((s) => s.getAttribute("aria-labelledby")!);
+    for (const id of ids) expect(raiz.querySelector(`#${id}`), id).not.toBeNull();
+    // Una sección con nombre ya es una región: ninguna región (secciones y cajas desplazables) repite el nombre.
+    const nombre = (e: Element) => e.getAttribute("aria-label") ?? texto(raiz.querySelector(`#${e.getAttribute("aria-labelledby")}`));
+    const nombres = [...raiz.querySelectorAll('section[aria-labelledby], [role="region"]')].map(nombre);
     expect(new Set(nombres).size).toBe(nombres.length);
-    for (const id of nombres) expect(raiz.querySelector(`#${id}`), id!).not.toBeNull();
   });
 });

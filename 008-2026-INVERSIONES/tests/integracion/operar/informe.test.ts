@@ -29,7 +29,7 @@ const NEMO = { a: `OP${corrida}A`, b: `OP${corrida}B`, c: `OP${corrida}C` } as c
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const ENCABEZADO_ORDENES = "Fecha y hora,Símbolo de la acción,Tipo de orden,Estado,Acciones completadas,Acciones pendientes,Precio por acción,Total invertido,Valor comisión,Total estimado";
 const HOY_REAL = fechaEnBogota(new Date());
-const COMPRA = new Date("2021-06-02T00:00:00.000Z");
+const COMPRA = new Date("2022-02-02T00:00:00.000Z");
 /** La vigencia más temprana que usa la prueba (si la base no tiene un plan posterior): un año que el calendario cubre. */
 const VIGENCIA_MINIMA = new Date("2022-02-09T00:00:00.000Z");
 const ULTIMO_ANIO_CALENDARIO = 2027;
@@ -103,10 +103,11 @@ async function sembrarPlan(duenoId: string): Promise<void> {
 }
 
 async function sembrarDecretos(): Promise<void> {
-  const linea = (nemo: string, ex: Date) => [nemo, "ORDINARIO", iso(sumarDias(ex, -20)), "1", "37.91", "COP", "DINERO", iso(ex), iso(sumarDias(ex, 7)), "sfc:FICTICIO-OP-4613", "", ""].join(",");
+  // El anuncio, antes de hoy (uno futuro se rechaza): 20 días antes del primer «hoy».
+  const linea = (nemo: string, ex: Date) => [nemo, "ORDINARIO", iso(sumarDias(fechas.hoy1, -20)), "1", "37.91", "COP", "DINERO", iso(ex), iso(sumarDias(ex, 7)), "sfc:FICTICIO-OP-4613", "", ""].join(",");
   const contenido = new TextEncoder().encode(`${ENCABEZADO_DECRETOS.join(",")}\n${linea(NEMO.a, fechas.hoy1)}\n${linea(NEMO.b, sumarDias(fechas.hoy1, 31))}\n`);
   const r = await importarDecretos(db, { contenido, email: duenoEmail, aplicar: true }, { ahora: new Date(fechas.hoy1.getTime() + 17 * 3_600_000) });
-  if (r.estado !== "APLICADO") throw new Error(`Los decretos no se registraron: ${r.estado}`);
+  if (r.estado !== "APLICADO") throw new Error(`Los decretos no se registraron: ${r.estado === "RECHAZADO" ? r.hallazgos.map((h) => `${h.linea}:${h.codigo}`).join(", ") : r.estado}`);
 }
 
 beforeAll(async () => {
@@ -156,11 +157,11 @@ describe("datosDeOperar contra la base", () => {
     expect(propias(v.fechas).find((f) => f.tipo === "EX_DIVIDENDO")).toMatchObject({ tenencia: "37", valorPorAccion: "37.91", cuota: 1 });
   });
 
-  it("dos semanas después sin cierres nuevos: los precios atrasados, y el ex-dividendo pasado ya no está", async () => {
+  it("dos semanas después sin cierres nuevos: los precios atrasados; el ex-dividendo pasado ya no está y entra el de hoy + 31", async () => {
     const v = await datosDeOperar(db, fechas.hoy2);
     expect(v.preciosAtrasados).toBe(true);
     expect(propias(v.reglas.seCumplen).map((r) => r.id)).toEqual([reglaIds[0]]);
-    expect(propias(v.fechas).filter((f) => f.tipo === "EX_DIVIDENDO")).toEqual([]);
+    expect(propias(v.fechas).filter((f) => f.tipo === "EX_DIVIDENDO").map((f) => [f.especie, f.fecha])).toEqual([[NEMO.b, iso(sumarDias(fechas.hoy1, 31))]]);
   });
 });
 

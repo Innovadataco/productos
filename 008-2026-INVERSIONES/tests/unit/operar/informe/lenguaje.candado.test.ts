@@ -5,7 +5,7 @@
 // dueño escribió en su plan, y el aviso dice «no recomienda comprar ni vender». Con controles positivos: si el detector
 // deja de morder (un texto plantado con «le conviene»), esto se pone rojo.
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -15,25 +15,11 @@ import { aVistaOperar } from "@/app/operar/serializar";
 import { AVISO_DECISION } from "@/app/operar/textos";
 import { armarInforme } from "@/operar/informe/armar";
 import { dia, entradasCompletas, HOY } from "./ficticio";
+import { prohibidasEn } from "./lenguaje";
 
-const SRC = fileURLToPath(new URL("../../../../src/", import.meta.url));
+// En jsdom, `URL` es el del navegador: la ruta sale del texto de import.meta.url.
+const SRC = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "src");
 const ZONA = ["operar/informe", "app/operar"].map((d) => join(SRC, d));
-
-/** Las expresiones prohibidas, ya sin tildes y en minúsculas (se comparan con el texto normalizado). */
-const PROHIBIDAS: readonly string[] = [
-  "compre", "compren", "venda", "vendan", "le recomendamos", "recomendamos", "le recomiendo", "recomendacion", "le sugerimos", "sugerimos",
-  "le conviene", "conviene", "convendria", "deberia", "deberian", "buen momento", "mal momento", "oportunidad", "oportunidades", "aproveche",
-  "es buena idea", "es mala idea", "le aconsejamos", "aconsejamos",
-];
-
-/** Sin marcas diacríticas, en minúsculas y con los espacios juntos. */
-const normalizar = (t: string): string => t.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ");
-const PATRON = new RegExp(`(?<![\\p{L}\\p{N}])(${PROHIBIDAS.map((p) => p.replace(/ /g, "\\s+")).join("|")})(?![\\p{L}\\p{N}])`, "gu");
-
-/** Las expresiones prohibidas que aparecen en el texto, en orden y sin repetir. */
-export function prohibidasEn(texto: string): string[] {
-  return [...new Set([...normalizar(texto).matchAll(PATRON)].map((m) => m[1]!))];
-}
 
 function archivos(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {

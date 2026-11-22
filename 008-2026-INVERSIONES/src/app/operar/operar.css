@@ -1,0 +1,21 @@
+/* 008 · /operar (frente operar-informe). Solo los tokens de tablero.css (--bg-2, --panel, --line, --fg, --muted,
+   --gold, --loss): claro y oscuro salen de ahí, sin colores fijos. Todo va dentro de .operar: no toca otras pantallas. */
+.operar .op-aviso {
+  max-width: 860px; margin: 18px 0 0; padding: 12px 16px; border-radius: 14px; background: var(--panel);
+  border: 1px solid var(--line); border-left: 3px solid var(--gold); font-size: 14px;
+}
+.operar .op-aviso p { margin: 0; }
+.operar .op-aviso p + p { margin-top: 4px; color: var(--muted); }
+.operar .op-grupo { margin-top: 22px; }
+.operar .op-grupo h3 { margin: 0 0 10px; font-size: 18px; font-weight: 800; }
+.operar .op-reglas, .operar .op-fechas { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.operar .op-regla { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; overflow-wrap: anywhere; }
+.operar .op-se-cumplen .op-regla { border-left: 3px solid var(--gold); }
+.operar .op-regla p { margin: 0; }
+.operar .op-frase { font-weight: 700; }
+.operar .op-estado, .operar .op-plazo { margin-top: 4px; font-size: 13px; }
+.operar .op-plazo { color: var(--muted); }
+.operar .op-plazo.aviso, .operar .op-estado.aviso { color: var(--loss); }
+.operar .op-fecha { font-size: 14px; overflow-wrap: anywhere; padding-left: 12px; border-left: 2px solid var(--line); }
+.operar .op-fecha time { font-weight: 700; }
+.operar tfoot th, .operar tfoot td { font-weight: 700; border-bottom: 0; }
