@@ -20,6 +20,7 @@ export function PaginaEdicion({ seccion, titulo, volver, children }: Props) {
           <div className="eyebrow">Área de edición · solo el dueño</div>
           <h1 id="t-hero">{titulo}</h1>
           <p><a href={volver.href}>{volver.texto}</a></p>
+          <p className="nota"><a href="/edicion/ia">Configuración de la IA</a></p>
         </section>
         <section className="bloque">{children}</section>
       </main>

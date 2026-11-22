@@ -117,7 +117,10 @@ describe("POST /api/ia/config", () => {
   });
 
   it("una clave de más (un autor o una llave): 400, el autor nunca sale del cuerpo", async () => {
-    for (const extra of [{ autorId: "otro" }, { llave: "sk-ficticia" }]) expect((await postConfig(pedido("/api/ia/config", cuerpoFicticio(extra)))).status).toBe(400);
+    for (const extra of [{ autorId: "otro" }, { llave: "sk-ficticia" }]) {
+      reiniciarFrecuenciasIa();
+      expect((await postConfig(pedido("/api/ia/config", cuerpoFicticio(extra)))).status).toBe(400);
+    }
     expect(crearVersionConfigIa).not.toHaveBeenCalled();
   });
 
@@ -195,7 +198,10 @@ describe("POST /api/ia/ollama · solo el destino guardado (I-24)", () => {
   });
 
   it("una acción que no es de la lista, o sin acción: 400", async () => {
-    for (const c of [{ accion: "pull" }, {}, { accion: 4613 }]) expect((await postOllama(pedido("/api/ia/ollama", c))).status).toBe(400);
+    for (const c of [{ accion: "pull" }, {}, { accion: 4613 }]) {
+      reiniciarFrecuenciasIa();
+      expect((await postOllama(pedido("/api/ia/ollama", c))).status).toBe(400);
+    }
   });
 
   it("un pedido cada pocos segundos por usuario: el segundo, 429 con Retry-After, sin llamar a la sonda", async () => {
