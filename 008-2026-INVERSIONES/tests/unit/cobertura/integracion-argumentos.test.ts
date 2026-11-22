@@ -27,13 +27,15 @@ afterAll(() => {
 // La primera ejecución del falso en un clon recién sacado pasa por la revisión de macOS: se paga aquí, una vez y
 // con su propio tope, y no dentro del tope de 5 s de un caso. Ya revisado, cuesta milisegundos.
 beforeAll(async () => {
-  const status = await new Promise<number | null>((ok, mal) => {
+  const { status, stderr } = await new Promise<{ status: number | null; stderr: string }>((ok, mal) => {
     const env = { PATH: process.env.PATH ?? "", FALSO_REGISTRO: "/dev/null" } as unknown as NodeJS.ProcessEnv;
-    const hijo = spawn(REGISTRADOR, ["calentar"], { env, stdio: "ignore" });
+    const hijo = spawn(REGISTRADOR, ["calentar"], { env, stdio: ["ignore", "ignore", "pipe"] });
+    let stderr = "";
+    hijo.stderr.on("data", (c: Buffer) => (stderr += c));
     hijo.on("error", mal);
-    hijo.on("close", ok);
+    hijo.on("close", (status: number | null) => ok({ status, stderr }));
   });
-  expect(status, "el falso registrador no corre").toBe(0);
+  expect(status, `el falso registrador no corre: ${stderr}`).toBe(0);
 }, TOPE_PRIMERA_EJECUCION_MS);
 
 /** Copia el script a un directorio temporal con `node_modules/.bin/{prisma,vitest}` falsos que registran cada llamada. */
