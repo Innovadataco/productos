@@ -32,6 +32,13 @@ describe("aEvolucionVista", () => {
   });
 });
 
+describe("aEvolucionVista · rango sin TWR", () => {
+  it("una TWR de rango que no se pudo calcular cruza como null", () => {
+    const sinBase = { ...e, rangos: [{ ...e.rangos[0]!, twr: null }] };
+    expect(aEvolucionVista(sinBase).rangos[0]!.twrPct).toBeNull();
+  });
+});
+
 describe("aVista · composición", () => {
   it("las tajadas cruzan con el valor exacto y el peso con 2 decimales", () => {
     const v = aVista(resumenDe([especie({ nemotecnico: "FICTA", cantidad: 13n, costoVivo: D(4613), cierre: { precio: D("317.41"), fecha: dia("2027-03-05"), verificado: true } })]));

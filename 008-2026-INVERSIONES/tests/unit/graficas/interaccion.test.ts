@@ -19,6 +19,8 @@ describe("indiceTrasTecla", () => {
   it.each([
     ["ArrowRight", 20, 21], ["ArrowLeft", 20, 19], ["ArrowRight", 59, 59], ["ArrowLeft", 10, 10],
     ["Home", 30, 10], ["End", 30, 59], ["PageUp", 30, 25], ["PageDown", 30, 35], ["PageDown", 57, 59],
+    // Como deslizador (patrón APG): ↑ avanza y ↓ retrocede.
+    ["ArrowUp", 20, 21], ["ArrowDown", 20, 19],
   ])("%s desde %s → %s", (tecla, actual, esperado) => {
     expect(indiceTrasTecla(tecla, actual, v)).toBe(esperado);
   });

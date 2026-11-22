@@ -101,6 +101,17 @@ describe("src/app/page.tsx", () => {
     expect(registro).toHaveBeenCalledWith("[tablero] no se pudo leer la base (código: P2024)");
   });
 
+  it("si el cálculo de la evolución falla (no es la base), el tablero se pinta igual con un aviso y se registra solo el nombre", async () => {
+    obtenerResumen.mockResolvedValueOnce(resumenDe([especie({ nemotecnico: "FICT1", cantidad: 10n, costoVivo: D(1000) })]));
+    obtenerEvolucion.mockRejectedValueOnce(new Error("Evolución: una venta asignada a un lote que no existe a esa fecha."));
+    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const html = renderToStaticMarkup(await Inicio());
+    expect(html).toContain("¿Gano?");
+    expect(html).toContain("No se pudo calcular la evolución");
+    expect(registro).toHaveBeenCalledWith("[tablero] no se pudo calcular la evolución (Error)");
+    expect(JSON.stringify(registro.mock.calls)).not.toContain("venta asignada");
+  });
+
   it("un error que no es de la base se propaga (lo atiende error.tsx)", async () => {
     obtenerResumen.mockRejectedValueOnce(new Error("fallo de cálculo"));
     await expect(Inicio()).rejects.toThrow("fallo de cálculo");

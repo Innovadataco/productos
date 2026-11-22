@@ -2,6 +2,7 @@
 // Dona de composición (frente graficas-tablero): tajadas con hueco, centro que cambia al señalar, leyenda con
 // nombre, valor y porcentaje (visible: no depende del color) y clic para ir al origen de la cifra. Inventado.
 import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dona, type PropsDona } from "@/app/_graficas";
 import { desenfocar, enfocar, montar, movimiento, observador, puntero, texto, type Montaje } from "./dom";
@@ -78,13 +79,20 @@ describe("Dona", () => {
     expect(alElegir).toHaveBeenCalledTimes(2);
   });
 
-  it("las tajadas se dibujan al entrar en pantalla (antes van en cero)", async () => {
+  it("las tajadas se dibujan al entrar en pantalla: el dibujo se marca visible (el CSS las oculta mientras tanto)", async () => {
     const io = observador();
     await m.pintar(createElement(Dona, props()));
-    const primera = () => (m.contenedor.querySelector("circle.g-tajada") as SVGCircleElement).style.strokeDasharray;
-    expect(primera()).toMatch(/^0(px)?,? /);
+    const dibujo = m.contenedor.querySelector(".g-dona-dibujo")!;
+    expect(dibujo.hasAttribute("data-visible")).toBe(false);
     await io.entrar();
-    expect(primera()).not.toMatch(/^0(px)?,? /);
+    expect(dibujo.hasAttribute("data-visible")).toBe(true);
+  });
+
+  it("lo que pinta el servidor ya trae cada tajada completa: sin JS la dona se ve (hallazgo MEDIO de react-reviewer)", () => {
+    const html = renderToStaticMarkup(createElement(Dona, props()));
+    const dash = [...html.matchAll(/<circle[^>]*class="g-tajada[^"]*"[^>]*>/g)].map((c) => /stroke-dasharray="([^"]+)"/.exec(c[0])?.[1] ?? "");
+    expect(dash).toHaveLength(3);
+    dash.forEach((d) => expect(d).toMatch(/^[1-9][\d.]* [\d.]+$/));
   });
 
   it("sin segmentos con valor, dice que no hay qué repartir", async () => {

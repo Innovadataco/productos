@@ -15,12 +15,18 @@ describe("Selector", () => {
     const alCambiar = vi.fn();
     await m.pintar(createElement(Selector<"1M" | "1A" | "TODO">, {
       etiqueta: "Rango de fechas", valor: "TODO", alCambiar,
-      opciones: [{ clave: "1M", texto: "1M", disponible: true }, { clave: "1A", texto: "1A", disponible: false }, { clave: "TODO", texto: "Todo", disponible: true }],
+      opciones: [{ clave: "1M", texto: "1M", disponible: true }, { clave: "1A", texto: "1A", disponible: false, nota: "La historia empieza el 4-ene-2027: no alcanza." }, { clave: "TODO", texto: "Todo", disponible: true }],
     }));
     const grupo = m.contenedor.querySelector("[role=group]")!;
     expect(grupo.getAttribute("aria-label")).toBe("Rango de fechas");
     const botones = [...grupo.querySelectorAll("button")];
-    expect(botones.map((b) => [texto(b), b.getAttribute("aria-pressed"), b.disabled])).toEqual([["1M", "false", false], ["1A", "false", true], ["Todo", "true", false]]);
+    // Lo no disponible sigue enfocable (aria-disabled, no disabled) y dice por qué (hallazgo MEDIO de a11y-architect).
+    expect(botones.map((b) => [texto(b), b.getAttribute("aria-pressed"), b.getAttribute("aria-disabled"), b.disabled])).toEqual([
+      ["1M", "false", null, false], ["1A", "false", "true", false], ["Todo", "true", null, false],
+    ]);
+    expect(texto(document.getElementById(botones[1]!.getAttribute("aria-describedby")!))).toBe("La historia empieza el 4-ene-2027: no alcanza.");
+    botones[1]!.click();
+    expect(alCambiar).not.toHaveBeenCalled();
     botones[0]!.click();
     expect(alCambiar).toHaveBeenCalledWith("1M");
   });

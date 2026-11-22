@@ -206,6 +206,22 @@ describe("calcularEvolucion · rangos", () => {
   });
 });
 
+describe("calcularEvolucion · TWR de un rango sin base", () => {
+  it("si el primer punto del rango quedó en −100 % (factor 0), la TWR del rango no se calcula (null), nunca Infinity", () => {
+    const dias: string[] = [];
+    for (let t = Date.UTC(2027, 0, 4); t <= Date.UTC(2027, 2, 31); t += 86_400_000) {
+      const d = new Date(t);
+      if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6) dias.push(iso(d));
+    }
+    const precios = dias.map((f) => [f, f < "2027-03-01" ? "1237.41" : "0"] as const);
+    const e = calcularEvolucion(entradas({ lotes: [lote("LZ", A, "2027-01-04", 13n, "16086.33", "16097.19")], cierres: cierres(A, precios), referencia: dia("2027-03-31") }));
+    const uno = e.rangos.find((r) => r.clave === "1M")!;
+    expect(e.puntos[uno.inicio]!.twr.add(1).isZero()).toBe(true);
+    expect(uno.twr).toBeNull();
+    expect(e.rangos.find((r) => r.clave === "TODO")!.twr!.toFixed(4)).toBe("-1.0000");
+  });
+});
+
 describe("restarMeses", () => {
   it("resta meses de calendario y ajusta el día al último del mes", () => {
     expect(iso(restarMeses(dia("2027-03-31"), 1))).toBe("2027-02-28");

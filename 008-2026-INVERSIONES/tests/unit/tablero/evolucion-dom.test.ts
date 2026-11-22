@@ -40,7 +40,9 @@ describe("Cómo ha ido", () => {
     expect([...seccion().querySelectorAll("figure .g-titulo")].map(texto)).toEqual(["Valor frente al costo de lo que tiene", "TWR acumulada"]);
     expect(boton("Todo").getAttribute("aria-pressed")).toBe("true");
     expect(texto(seccion().querySelector(".eyebrow"))).toBe("Del 4-ene-2027 al 31-mar-2027");
-    expect([boton("1M").disabled, boton("3M").disabled, boton("6M").disabled, boton("1A").disabled]).toEqual([false, true, true, true]);
+    // Lo que la historia no cubre sigue enfocable y dice por qué (hallazgo MEDIO de a11y-architect).
+    expect(["1M", "3M", "6M", "1A"].map((t) => boton(t).getAttribute("aria-disabled"))).toEqual([null, "true", "true", "true"]);
+    expect(texto(document.getElementById(boton("1A").getAttribute("aria-describedby")!))).toBe("La historia empieza el 4-ene-2027: no alcanza para ese rango.");
   });
 
   it("la leyenda da el valor y el costo del último día, igual que el servidor", async () => {
@@ -59,6 +61,8 @@ describe("Cómo ha ido", () => {
     await pintar(evo);
     expect(boton("1M").getAttribute("aria-pressed")).toBe("true");
     expect(texto(seccion().querySelector(".eyebrow"))).toBe("Del 1-mar-2027 al 31-mar-2027");
+    // El cambio de rango se anuncia (hallazgo MEDIO de a11y-architect).
+    expect(texto(seccion().querySelector("[role=status]"))).toBe("Mostrando 1M: del 1-mar-2027 al 31-mar-2027.");
     const encabezado = texto(seccion().querySelectorAll("figure")[1]!.querySelector("figcaption"));
     const pctTexto = (s: string) => `${Number(s) > 0 ? "+" : Number(s) < 0 ? "−" : ""}${Math.abs(Number(s)).toFixed(1).replace(".", ",")} %`;
     expect(encabezado).toContain(`En el rango ${pctTexto(r1m.twrPct)}`);
@@ -67,7 +71,7 @@ describe("Cómo ha ido", () => {
 
   it("el texto alternativo lleva las cifras de las puntas del rango", async () => {
     await pintar(evo);
-    const resumen = (k: number) => texto(document.getElementById(seccion().querySelectorAll("[role=group][tabindex='0']")[k]!.getAttribute("aria-describedby")!));
+    const resumen = (k: number) => texto(document.getElementById(seccion().querySelectorAll("[role=slider]")[k]!.getAttribute("aria-describedby")!));
     expect(resumen(0)).toContain("Del 4-ene-2027 al 31-mar-2027");
     expect(resumen(0)).toContain("$ 23.503");
     expect(resumen(1)).toContain("TWR acumulada");
@@ -81,6 +85,24 @@ describe("Cómo ha ido", () => {
     expect(evo.omitidos).toBe(3);
     expect(t).toContain("3 días no se grafican");
     expect(t).toContain("Sin ningún cierre (no entran): FICTZ");
+  });
+
+  it("al cargar, el anuncio del rango está vacío (solo habla al cambiarlo)", async () => {
+    await pintar(evo);
+    expect(texto(seccion().querySelector("[role=status]"))).toBe("");
+  });
+
+  it("una TWR de rango que el servidor no pudo calcular se escribe «—» (nunca Infinity)", async () => {
+    await pintar({ ...evo, rangos: evo.rangos.map((r) => (r.clave === "TODO" ? { ...r, twrPct: null } : r)) });
+    const encabezado = texto(seccion().querySelectorAll("figure")[1]!.querySelector("figcaption"));
+    expect(encabezado).toContain("En el rango —");
+    expect(encabezado).not.toMatch(/Infinity|NaN/);
+  });
+
+  it("si la evolución no se pudo calcular (null), lo dice y el resto del tablero sigue", async () => {
+    await pintar(null);
+    expect(texto(seccion())).toContain("No se pudo calcular la evolución");
+    expect(m.contenedor.querySelector("h1")).not.toBeNull();
   });
 
   it("sin días con cierre de todas las especies, lo dice en vez de una gráfica vacía", async () => {

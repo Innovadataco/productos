@@ -33,7 +33,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const toque = () => m.contenedor.querySelector<HTMLElement>("[role=group]")!;
+// La mira es un deslizador (hallazgo ALTO de a11y-architect: un role=group no es operable con lector de pantalla).
+const toque = () => m.contenedor.querySelector<HTMLElement>("[role=slider]")!;
+const valor = () => toque().getAttribute("aria-valuetext") ?? "";
 const tip = () => m.contenedor.querySelector(".g-tip");
 const celdas = (tr: Element) => [...tr.children].map(texto).join(" ");
 const linea = (id: string) => m.contenedor.querySelector(`path.g-linea[data-serie="${id}"]`)!.getAttribute("d");
@@ -48,7 +50,10 @@ describe("GraficaTiempo · accesible", () => {
     expect(toque().tabIndex).toBe(0);
     const resumen = document.getElementById(toque().getAttribute("aria-describedby")!);
     expect(texto(resumen)).toContain("pasó de $4613 a $4723");
-    expect(texto(resumen)).toContain("flechas");
+    expect(toque().getAttribute("aria-orientation")).toBe("horizontal");
+    expect([toque().getAttribute("aria-valuemin"), toque().getAttribute("aria-valuemax"), toque().getAttribute("aria-valuenow")]).toEqual(["0", "4", "4"]);
+    expect(valor()).toBe("día 2027-03-05 · $4723 Valor · $4641 Costo");
+    expect(m.contenedor.querySelector("[aria-live]")).toBeNull();
     expect(m.contenedor.querySelector("svg")!.getAttribute("aria-hidden")).toBe("true");
   });
 
@@ -66,7 +71,7 @@ describe("GraficaTiempo · accesible", () => {
 });
 
 describe("GraficaTiempo · detalle por teclado y puntero", () => {
-  it("al enfocar señala el último día; las flechas, Inicio y Fin recorren y se anuncia; al salir se va", async () => {
+  it("al enfocar señala el último día; las flechas (también ↑/↓), Inicio y Fin recorren y el valor del deslizador lo dice; al salir se va", async () => {
     await m.pintar(createElement(GraficaTiempo, base()));
     await enfocar(toque());
     expect(texto(tip())).toContain("día 2027-03-05");
@@ -74,9 +79,12 @@ describe("GraficaTiempo · detalle por teclado y puntero", () => {
     expect(texto(tip())).toContain("$4641 Costo");
     await tecla(toque(), "ArrowLeft");
     expect(texto(tip())).toContain("día 2027-03-04");
-    const vivo = m.contenedor.querySelector("[aria-live=polite]")!;
-    expect(texto(vivo)).toContain("día 2027-03-04");
-    expect(texto(vivo)).toContain("$4659 Valor");
+    expect(toque().getAttribute("aria-valuenow")).toBe("3");
+    expect(valor()).toBe("día 2027-03-04 · $4659 Valor · $4641 Costo");
+    await tecla(toque(), "ArrowDown");
+    expect(toque().getAttribute("aria-valuenow")).toBe("2");
+    await tecla(toque(), "ArrowUp");
+    expect(toque().getAttribute("aria-valuenow")).toBe("3");
     await tecla(toque(), "Home");
     expect(texto(tip())).toContain("día 2027-03-01");
     await tecla(toque(), "Escape");
@@ -100,7 +108,6 @@ describe("GraficaTiempo · detalle por teclado y puntero", () => {
     expect(texto(tip())).toContain("día 2027-03-05");
     await puntero(toque(), "salir", 0, "touch");
     expect(texto(tip())).toContain("día 2027-03-05");
-    expect(m.contenedor.querySelector("[aria-live=polite]")!.textContent).toBe("");
   });
 
   it("el detalle se pone del lado que tiene lugar", async () => {
@@ -218,6 +225,34 @@ describe("GraficaTiempo · ventana y movimiento", () => {
     m = montar();
     await m.pintar(createElement(GraficaTiempo, base()));
     expect(m.contenedor.querySelector(".g-plot")!.hasAttribute("data-visible")).toBe(true);
+  });
+});
+
+describe("GraficaTiempo · trabajo por cuadro (hallazgos MEDIOS de react-reviewer)", () => {
+  it("mover el puntero dentro del mismo día no vuelve a pintar el detalle ni la leyenda", async () => {
+    const formatoY = vi.fn((v: number) => `$${v}`);
+    await m.pintar(createElement(GraficaTiempo, base({ formatoY })));
+    rectangulo(toque(), 500);
+    await puntero(toque(), "pointermove", 250);
+    formatoY.mockClear();
+    await puntero(toque(), "pointermove", 252);
+    await puntero(toque(), "pointermove", 247);
+    expect(formatoY).not.toHaveBeenCalled();
+  });
+
+  it("con la tabla abierta, la animación del cambio de ventana no vuelve a armar la tabla en cada cuadro", async () => {
+    movimiento(false);
+    const r = reloj();
+    const formatoDia = vi.fn((d: string) => `día ${d}`);
+    await m.pintar(createElement(GraficaTiempo, base({ formatoDia })));
+    await alternar(m.contenedor.querySelector("details")!, true);
+    await m.pintar(createElement(GraficaTiempo, base({ formatoDia, ventana: { desde: 2, hasta: 4 } })));
+    await r.avanzar(16);
+    formatoDia.mockClear();
+    await r.avanzar(100);
+    await r.avanzar(100);
+    expect(formatoDia).not.toHaveBeenCalled();
+    expect(m.contenedor.querySelectorAll("tbody tr")).toHaveLength(3);
   });
 });
 

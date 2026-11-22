@@ -15,6 +15,7 @@ const db = new PrismaClient();
 const corrida = Date.now().toString(36).toUpperCase().slice(-5);
 const A = `TE${corrida}A`;
 const B = `TE${corrida}B`;
+const C = `TE${corrida}C`; // tres fuentes vigentes cada día (hallazgo MEDIO del database-reviewer)
 const ORD = "Fecha y hora,Símbolo de la acción,Tipo de orden,Estado,Acciones completadas,Acciones pendientes,Precio por acción,Total invertido,Valor comisión,Total estimado\n";
 const csv = (t: string) => new TextEncoder().encode(t);
 const D = (v: Prisma.Decimal.Value) => new Prisma.Decimal(v);
@@ -42,6 +43,7 @@ beforeAll(async () => {
     `"1 mar 2027, 10:00 a. m.",${A},Compra,Aprobado,19,0,1237.0,23503.0,16.11,23519.11`,
     `"3 mar 2027, 10:00 a. m.",${B},Compra,Aprobado,37,0,461.3,17068.1,11.19,17079.29`,
     `"8 mar 2027, 10:00 a. m.",${A},Venta,Aprobado,7,0,1301.17,9108.19,6.31,9101.88`,
+    `"4 ene 2027, 10:00 a. m.",${C},Compra,Aprobado,11,0,371.13,4082.43,3.71,4086.14`,
   ].join("\n") + "\n");
   await imp("de.ficticio.csv", `Fecha y hora,Ticker,Estado,Valor total\n2027-03-05,${A},,371.13\n`);
   await construirLotes(db);
@@ -51,6 +53,15 @@ beforeAll(async () => {
       data: serie.map(([f, p]) => ({ instrumentoId, fecha: dia(f), precio: D(p), fuente: "yahoo", estado: "NO_VERIFICADO" as const, traidoEn: new Date("2027-03-10T02:00:00Z") })),
     });
   }
+  // C: 70 días seguidos con tres fuentes cada día; la última traída es la «c».
+  const idC = (await db.instrumento.findFirstOrThrow({ where: { nemotecnico: C } })).id;
+  const diasC = Array.from({ length: 70 }, (_, k) => new Date(Date.UTC(2027, 0, 5 + k)));
+  await db.precioCierre.createMany({
+    data: diasC.flatMap((fecha, k) => ["a", "b", "c"].map((f, j) => ({
+      instrumentoId: idC, fecha, precio: D(`${371 + k}.${13 + j}`), fuente: `fuente-${f}-ficticia`, estado: "NO_VERIFICADO" as const,
+      traidoEn: new Date(Date.UTC(2027, 2, 20, j)),
+    }))),
+  });
   // El mismo día, otra fuente traída después: gana esta (nunca al azar).
   const idB = (await db.instrumento.findFirstOrThrow({ where: { nemotecnico: B } })).id;
   await db.precioCierre.create({ data: { instrumentoId: idB, fecha: dia("2027-03-09"), precio: D("471.37"), fuente: "otra-ficticia", estado: "NO_VERIFICADO", traidoEn: new Date("2027-03-10T05:00:00Z") } });
@@ -66,6 +77,17 @@ describe("un cierre por día en el tablero", () => {
     expect(fila.serie.filter((p) => iso(p.fecha) === "2027-03-09").map((p) => p.precio.toString())).toEqual(["471.37"]);
     expect(fila.cierre!.precio.toString()).toBe("471.37");
     expect(fila.serie.map((p) => iso(p.fecha))).toEqual(["2027-03-03", "2027-03-04", "2027-03-08", "2027-03-09"]);
+  });
+});
+
+describe("serie de 60 cierres con varias fuentes por día", () => {
+  it("con tres fuentes vigentes cada día, la serie sigue teniendo 60 días distintos, cada uno con la traída más reciente", async () => {
+    const fila = (await obtenerResumen(db)).tablero.filas.find((f) => f.nemotecnico === C)!;
+    const dias = fila.serie.map((p) => iso(p.fecha));
+    expect(dias).toHaveLength(60);
+    expect(new Set(dias).size).toBe(60);
+    expect(dias.at(-1)).toBe("2027-03-15");
+    expect(fila.serie.every((p) => p.precio.toString().endsWith(".15"))).toBe(true);
   });
 });
 

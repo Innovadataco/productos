@@ -37,19 +37,20 @@ test.describe("gráficas del tablero", () => {
     const antes = await twr.textContent();
     await g.botonRango("1M").click();
     await expect(g.botonRango("1M")).toHaveAttribute("aria-pressed", "true");
+    await expect(g.evolucion.getByRole("status")).toHaveText(/^Mostrando 1M: del \d+-(oct|nov)-2024 al 22-nov-2024\.$/);
     await expect(g.evolucion.locator(".eyebrow")).toHaveText(/^Del \d+-(oct|nov)-2024 al 22-nov-2024$/);
     await expect(twr).not.toHaveText(antes ?? "");
   });
 
-  test("con el teclado la mira recorre los días y se anuncia", async ({ page }, info) => {
+  test("con el teclado el deslizador recorre los días y su valor lo dice", async ({ page }, info) => {
     const { g } = await abrir(page, info);
     const titulo = "Valor frente al costo de lo que tiene";
     await g.mira(titulo).focus();
     await page.keyboard.press("End");
     await expect(g.detalleDelDia(titulo)).toContainText("22-nov-2024");
-    await expect(g.anuncio(titulo)).toContainText("$ 268.090");
+    await expect(g.mira(titulo)).toHaveAttribute("aria-valuetext", /^22-nov-2024 · \$ 268\.090 Valor · \$ 265\.000 Costo de lo que tiene/);
     await page.keyboard.press("ArrowLeft");
-    await expect(g.anuncio(titulo)).toContainText("21-nov-2024");
+    await expect(g.mira(titulo)).toHaveAttribute("aria-valuetext", /^21-nov-2024 · /);
     await page.keyboard.press("Tab");
     await expect(g.detalleDelDia(titulo)).toHaveCount(0);
   });

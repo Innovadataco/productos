@@ -1,5 +1,5 @@
 /** Las gráficas del tablero para el E2E (frente graficas-tablero): localizadores por rol y nombre accesible. */
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { expect, type Locator, type Page } from "@playwright/test";
 
 export const TITULOS = ["Valor frente al costo de lo que tiene", "TWR acumulada", "Composición", "Rentabilidad sin vender por especie"] as const;
@@ -19,17 +19,13 @@ export class PaginaGraficas {
     return this.page.getByRole("figure", { name: titulo });
   }
 
-  /** La zona interactiva (mira) de una gráfica de tiempo: el grupo enfocable con el nombre de la gráfica. */
+  /** La mira de una gráfica de tiempo: un deslizador por los días, con el nombre de la gráfica. */
   mira(titulo: (typeof TITULOS)[number]): Locator {
-    return this.figura(titulo).locator("[role=group][tabindex='0']");
+    return this.figura(titulo).getByRole("slider", { name: titulo });
   }
 
   detalleDelDia(titulo: (typeof TITULOS)[number]): Locator {
     return this.figura(titulo).locator(".g-tip");
-  }
-
-  anuncio(titulo: (typeof TITULOS)[number]): Locator {
-    return this.figura(titulo).locator("[aria-live=polite]");
   }
 
   botonRango(texto: string): Locator {
@@ -54,7 +50,8 @@ export class PaginaGraficas {
     if (!dir) return;
     // Playwright corre desde 008-2026-INVERSIONES/: el repo es la carpeta de arriba.
     const repo = resolve(process.cwd(), "..");
-    const dentro = !relative(repo, resolve(dir)).startsWith("..");
+    const rel = relative(repo, resolve(dir));
+    const dentro = !(rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel));
     if (!isAbsolute(dir) || dentro) throw new Error("CAPTURAS_GRAFICAS debe ser una carpeta absoluta fuera del repo.");
     await this.page.screenshot({ path: join(dir, `${nombre}.png`), fullPage: completa });
   }
