@@ -14,13 +14,15 @@
 # Orden: marca de pausa → candados (Inversiones y común con PI) → disco → PI sin desplegar → (.tar:
 # etiquetas, sha256 y disco; docker load) → las tres imágenes del mismo sha, amd64 → CI en verde y sha en
 # main → clon en el sha, limpio y de root → solo hacia adelante → espera de la medición (120 s si es solo código;
-# 600 s si cambian los servicios, los límites o la imagen base, o si no se sabe) → medición → (redes de una versión
+# 600 s si cambian los servicios, los límites o la imagen base, o si no se sabe) → límites reaplicados a lo que corre
+# (mem = memswap, sin reiniciar; si no se puede, aborta sin tocar nada más) → medición → (redes de una versión
 # anterior: down sin -v) → base y respaldo → roles → PI otra vez → (si migra) app vieja detenida → respaldo cifrado →
 # (si migra) respaldo diario detenido → migrador (migraciones, guardián del esquema y privilegios) → app,
 # entrada, vigía y respaldo → imagen, salud por la entrada, la app y la base sin puertos y solo en redes internal
 # con la puerta de enlace aislada → la app sin salida a internet (con control positivo desde la entrada) →
-# mem = memswap → la espera y la medición (en la corta, piso de memoria: bajo él, se extiende a 600 s) → salud otra
-# vez → estado → retención (solo en producción) → convivencia y piso → DEPLOY VERIFICADO <sha>. Si algo falla
+# límites reaplicados otra vez y mem = memswap → la espera y la medición (en la corta, piso de memoria: bajo él, se
+# extiende a 600 s) → salud otra vez → estado → retención (solo en producción) → convivencia y piso →
+# DEPLOY VERIFICADO <sha>. Si algo falla
 # después de tocar contenedores, vuelve a la imagen que corría.
 # Mientras migra no corre nada de Inversiones que retenga tablas: la app queda abajo desde el respaldo previo
 # hasta que el up de la versión nueva queda healthy.
@@ -270,7 +272,8 @@ verificar_roles() {
 }
 
 # Con mem_limit = memswap_limit, HostConfig.Memory debe ser igual a MemorySwap y, si el cgroup lo expone,
-# memory.swap.max debe ser 0: si no, el tope de memoria no es real (el VPS tiene swap).
+# memory.swap.max debe ser 0: si no, el tope de memoria no es real (el VPS tiene swap). Corre justo después de
+# reaplicar_limites: lo que el daemon-reload diario del host deja así ya se corrigió (produccion.md §5).
 verificar_memswap() {
   local cid mem swap id largo archivo raiz
   raiz="$(raiz_cgroup)"
@@ -827,6 +830,10 @@ main() {
   else
     informar "⚠️  la imagen no trae el servicio de precios (es anterior a él): se baja inv-008-precios (--scale 0) y se levanta lo demás"
   fi
+  # Antes de tocar nada (el respaldo previo, la migración) y antes de la trampa: los límites que un daemon-reload del
+  # host dejó sin efecto en lo que corre (la base casi nunca se recrea). Si no se pueden reaplicar, sale sin vuelta atrás
+  # y sin tocar nada más que los límites que ya haya corregido (que quedan en lo declarado).
+  reaplicar_limites
 
   local medicion
   medicion="$(ruta_escribible "$INV_ESTADO_DIR/mediciones/$SHA-$(date +%Y%m%d-%H%M%S).txt")"
@@ -868,6 +875,8 @@ main() {
   DETENIDOS=0
   verificar_servicio
   verificar_sin_salida
+  # Otra vez, por si el reload del host pasó durante el despliegue (lo que el up no recreó). Si falla, vuelta atrás.
+  reaplicar_limites
   verificar_memswap
 
   esperar_y_medir "$ESPERA" "$medicion"
