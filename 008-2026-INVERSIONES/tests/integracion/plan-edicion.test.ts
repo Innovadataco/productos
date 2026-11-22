@@ -202,16 +202,16 @@ describe("con los privilegios de inv_app (solo INSERT en el plan): las funciones
     expect(await db.enlaceDecisionOrden.count({ where: { ordenId: otraVenta.id, decisionId: conOrden.id } })).toBe(1);
   });
 
-  it("los instantes los pone la base: inv_app no puede fijar cuándo se registró una decisión, una versión o un enlace", async () => {
-    const v = await db.planVersion.findFirstOrThrow({ orderBy: { version: "desc" }, select: { id: true } });
-    const d = await db.decision.findFirstOrThrow({ select: { id: true } });
-    const o = await nuevaOrden("VENTA", mas(7));
-    const intentos = [
-      `INSERT INTO decision (id, "planVersionId", "instrumentoId", accion, motivo, "decididaPorId", "fechaDecision", "registradaEn") VALUES ('d-sello', '${v.id}', '${instA}', 'VENDER', 'x', '${duenoId}', '${mas(6).toISOString().slice(0, 10)}', '2001-01-01')`,
-      `INSERT INTO plan_version (id, version, "vigenteDesde", motivo, "aprobadaPorId", "creadaEn") VALUES ('v-sello', 999999, '${mas(30).toISOString().slice(0, 10)}', 'x', '${duenoId}', '2001-01-01')`,
-      `INSERT INTO enlace_decision_orden (id, "ordenId", "decisionId", "creadoPorId", "creadoEn") VALUES ('e-sello', '${o.id}', '${d.id}', '${duenoId}', '2001-01-01')`,
-    ];
-    for (const sql of intentos) await expect(restringida.$executeRawUnsafe(sql), sql.slice(0, 40)).rejects.toThrow(/42501|permission denied/);
+  it("Prisma manda los instantes en cada INSERT: sin ellos en la lista de privilegios.sql, la app no podría escribir", async () => {
+    // Por qué los instantes van en la lista (y quedan como riesgo residual): con el mismo rol, sin INSERT de «creadaEn»,
+    // crear una versión falla. Se le quita ese permiso al rol de la prueba y se le repone al final.
+    const ultima = (await db.planVersion.findFirst({ orderBy: { version: "desc" }, select: { version: true } }))!.version;
+    await db.$executeRawUnsafe(`REVOKE INSERT ("creadaEn") ON TABLE public.plan_version FROM ${ROL}`);
+    try {
+      await expect(crearVersionPlan(restringida, { vigenteDesde: mas(30), motivo: "Sin el instante (ficticia)", autorId: duenoId, reglas: [regla("VENDER", "Vender (ficticia)")] }, { hoy: HOY, ultimaEsperada: ultima })).rejects.toThrow(/42501|permission denied/);
+    } finally {
+      await db.$executeRawUnsafe(`GRANT INSERT ("creadaEn") ON TABLE public.plan_version TO ${ROL}`);
+    }
   });
 
   it("los disparadores de solo inserción siguen mandando aunque el rol tuviera UPDATE (defensa en profundidad)", async () => {

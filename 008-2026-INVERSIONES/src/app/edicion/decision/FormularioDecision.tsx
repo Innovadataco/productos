@@ -8,7 +8,7 @@
  */
 import type { AccionPlan } from "@prisma/client";
 import { useState, type FormEvent } from "react";
-import { BotonEnviar, Campo, ResumenErrores, describir, useEnvio } from "../campos";
+import { AvisoObligatorios, BotonEnviar, Campo, ResumenErrores, describir, useEnvio } from "../campos";
 import { idValido, irA } from "../enviar";
 import { ACCIONES, ETIQUETAS_CAMPO, TEXTOS_DECISION, fecha, textoAccionDecisionCorta } from "../textos";
 import type { DatosEdicionDecision, DecisionEditable, ReglaCitable, VersionConReglas } from "../tipos";
@@ -23,27 +23,47 @@ const vigenteEn = (versiones: readonly VersionConReglas[], dia: string): Version
 const citables = (versiones: readonly VersionConReglas[], d: DecisionEditable): readonly ReglaCitable[] =>
   (vigenteEn(versiones, d.fechaDecision)?.reglas ?? []).filter((r) => r.instrumentoId === null || r.instrumentoId === d.instrumentoId);
 
+const candidatas = (datos: Listo, d: DecisionEditable): Listo["ordenes"] => {
+  const lado = LADO[d.accion];
+  return lado === null || datos.corrige !== null ? [] : datos.ordenes.filter((o) => o.instrumentoId === d.instrumentoId && o.lado === lado && o.fecha >= d.fechaDecision);
+};
+
+/**
+ * Lo elegido que ya no cabe (cambió la fecha, la especie o la acción) se suelta y no vuelve solo: nunca se envía una
+ * regla u orden oculta, ni una excepción sin regla.
+ */
+function coherente(datos: Listo, d: DecisionEditable): DecisionEditable {
+  const reglaId = citables(datos.versiones, d).some((r) => r.id === d.reglaId) ? d.reglaId : "";
+  const ordenId = candidatas(datos, d).some((o) => o.id === d.ordenId) ? d.ordenId : "";
+  return { ...d, reglaId, ordenId, excepcion: reglaId !== "" && d.excepcion };
+}
+
+/** Dónde está el control de cada campo del pedido (para los enlaces del resumen de errores). */
+const ID_DE_CAMPO: Readonly<Record<string, string>> = {
+  fechaDecision: "decision-fecha", instrumentoId: "decision-especie", accion: "decision-accion", cantidad: "decision-cantidad",
+  reglaId: "decision-regla", excepcion: "decision-excepcion", motivo: "decision-motivo", ordenId: "decision-orden",
+};
+const idDe = (campo: string): string | undefined => ID_DE_CAMPO[campo];
+
 function Correccion({ corrige }: { readonly corrige: NonNullable<Listo["corrige"]> }) {
   return <p className="nota aviso">{`Corrige la decisión del ${fecha(corrige.fecha)} de ${corrige.especie}. ${TEXTOS_DECISION.CORRECCION}`}</p>;
 }
 
 export function FormularioDecision({ datos }: { readonly datos: Listo }) {
-  const [d, setD] = useState<DecisionEditable>(datos.inicial);
+  const [d, setD] = useState<DecisionEditable>(() => coherente(datos, datos.inicial));
   const envio = useEnvio("/api/decisiones");
   const reglas = citables(datos.versiones, d);
   const lado = LADO[d.accion];
-  const ordenes = lado === null ? [] : datos.ordenes.filter((o) => o.instrumentoId === d.instrumentoId && o.lado === lado && o.fecha >= d.fechaDecision);
-  // Lo elegido que ya no cabe (cambió la fecha, la especie o la acción) se suelta: nunca se envía una regla u orden oculta.
-  const reglaId = reglas.some((r) => r.id === d.reglaId) ? d.reglaId : "";
-  const ordenId = datos.corrige === null && ordenes.some((o) => o.id === d.ordenId) ? d.ordenId : "";
-  const cambiar = (cambio: Partial<DecisionEditable>) => setD((x) => ({ ...x, ...cambio }));
+  const ordenes = candidatas(datos, d);
+  const { reglaId, ordenId } = d;
+  const cambiar = (cambio: Partial<DecisionEditable>) => setD((x) => coherente(datos, { ...x, ...cambio }));
   const err = (campo: string) => envio.errorDe(campo);
 
   async function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const cuerpo = {
       fechaDecision: d.fechaDecision, instrumentoId: d.instrumentoId, accion: d.accion, cantidad: d.cantidad, reglaId: reglaId || null,
-      excepcion: reglaId !== "" && d.excepcion, motivo: d.motivo, ordenId: ordenId || null, corrige: datos.corrige?.id ?? null,
+      excepcion: d.excepcion, motivo: d.motivo, ordenId: ordenId || null, corrige: datos.corrige?.id ?? null,
     };
     await envio.enviar<{ id?: unknown }>(cuerpo, (r) => {
       if (!idValido(r.id)) return false;
@@ -53,10 +73,11 @@ export function FormularioDecision({ datos }: { readonly datos: Listo }) {
   }
 
   return (
-    <form className="edicion-form" noValidate onSubmit={guardar}>
-      <p>{TEXTOS_DECISION.INTRO}</p>
+    <form className="edicion-form" noValidate onSubmit={guardar} aria-describedby="edicion-intro edicion-obligatorios">
+      <p id="edicion-intro">{TEXTOS_DECISION.INTRO}</p>
+      <AvisoObligatorios />
       {datos.corrige ? <Correccion corrige={datos.corrige} /> : null}
-      <ResumenErrores envio={envio} />
+      <ResumenErrores envio={envio} idDe={idDe} />
       <div className="edicion-rejilla">
         <Campo id="decision-fecha" etiqueta={ETIQUETAS_CAMPO.fechaDecision!} error={err("fechaDecision")}>
           <input id="decision-fecha" type="date" required max={datos.hoy} value={d.fechaDecision} onChange={(e) => cambiar({ fechaDecision: e.target.value })} {...describir("decision-fecha", false, err("fechaDecision"))} />
@@ -83,8 +104,9 @@ export function FormularioDecision({ datos }: { readonly datos: Listo }) {
         </select>
       </Campo>
       <div className="edicion-campo edicion-casilla">
-        <input id="decision-excepcion" type="checkbox" disabled={reglaId === ""} checked={reglaId !== "" && d.excepcion} onChange={(e) => cambiar({ excepcion: e.target.checked })} {...describir("decision-excepcion", false, err("excepcion"))} />
+        <input id="decision-excepcion" type="checkbox" disabled={reglaId === ""} checked={d.excepcion} onChange={(e) => cambiar({ excepcion: e.target.checked })} {...describir("decision-excepcion", reglaId === "", err("excepcion"))} />
         <label htmlFor="decision-excepcion">Se aparta de la acción de la regla (excepción)</label>
+        {reglaId === "" ? <p className="edicion-ayuda" id="decision-excepcion-ayuda">{TEXTOS_DECISION.AYUDA_EXCEPCION}</p> : null}
         {err("excepcion") ? <p className="edicion-error" id="decision-excepcion-error">{err("excepcion")}</p> : null}
       </div>
       <Campo id="decision-motivo" etiqueta="Por qué" error={err("motivo")}>

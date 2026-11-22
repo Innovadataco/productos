@@ -22,8 +22,9 @@ export function PaginaEdicion({ seccion, titulo, volver, children }: Props) {
           <p><a href={volver.href}>{volver.texto}</a></p>
         </section>
         <section className="bloque">{children}</section>
-        <footer className="pie"><p>{PIE_EDICION}</p></footer>
       </main>
+      {/* Fuera de <main>: así es el landmark contentinfo de la página. */}
+      <footer className="wrap plan pie"><p>{PIE_EDICION}</p></footer>
     </>
   );
 }

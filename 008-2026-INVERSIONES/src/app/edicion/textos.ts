@@ -63,6 +63,7 @@ export const MENSAJES: Readonly<Record<string, string>> = {
   // De la conexión
   SESION_VENCIDA: "La sesión venció. Ingrese de nuevo.",
   DEMASIADAS: "Demasiadas solicitudes. Espere un momento e intente de nuevo.",
+  ORDEN_SIN_ELEGIR: "Elija la orden de Trii que ejecutó esta decisión.",
   SIN_ORDENES_POSIBLES: "No hay órdenes de Trii que quepan en esta decisión: aprobadas, sin decisión, de la misma especie y lado, y no anteriores a ella.",
   DESCONOCIDO: "No se pudo guardar. Intente de nuevo.",
 };
@@ -104,7 +105,9 @@ export const TEXTOS_PLAN = {
   PORTAFOLIO: "Portafolio (todas las especies)",
   AYUDA_NIVEL: "Como en la ficha: 1.234,5 · millones con M: 7,3 M. Solo con las condiciones que lo llevan.",
   AYUDA_CANTIDAD: "Opcional. Entero: 3.172.",
+  AYUDA_PLAZO: "Opcional.",
   AYUDA_VIGENCIA: "No puede ser anterior a la última versión.",
+  OBLIGATORIOS: "Los campos sin «opcional» son obligatorios.",
   FECHA_PASADA: "Esa fecha ya pasó: la versión regirá también hacia atrás desde ella.",
   PLAZO_VENCIDO: "Su plazo es anterior a la fecha de la versión: quítela o cambie el plazo (la regla vencida queda en la versión anterior).",
   ENVIANDO: "Guardando la versión…",
@@ -120,7 +123,8 @@ export const TEXTOS_DECISION = {
   SIN_REGLA: "Sin regla citada",
   SIN_ORDEN: "Sin orden (se puede enlazar después)",
   NO_ACTUAR_SIN_ORDEN: "«No actuar» no lleva orden.",
-  AYUDA_REGLA: "Las de la versión vigente en la fecha de la decisión, de esa especie o del portafolio.",
+  AYUDA_REGLA: "Opcional. Las de la versión vigente en la fecha de la decisión, de esa especie o del portafolio.",
+  AYUDA_EXCEPCION: "Elija primero una regla que citar: la excepción se aparta de ella.",
   AYUDA_ORDEN: "Órdenes aprobadas de Trii sin decisión, de esa especie y lado, desde la fecha de la decisión.",
   AYUDA_CANTIDAD: "Obligatoria en «no actuar». Entero: 3.172.",
   CORRECCION: "La decisión anterior queda en la historia; sus órdenes pasan a esta corrección.",
@@ -131,6 +135,7 @@ export const TEXTOS_ENLACE = {
   TITULO: "Enlazar una orden de Trii",
   INTRO: "La orden que ejecutó esta decisión. Cambiar un enlace ya hecho no se hace desde aquí.",
   BOTON: "Enlazar la orden",
+  ELIJA: "Elija la orden",
   ENVIANDO: "Enlazando la orden…",
 } as const;
 
@@ -144,6 +149,12 @@ export const SIN_NIVEL: ReadonlySet<CondicionRegla> = new Set<CondicionRegla>(["
 export { textoAccionRegla, textoCondicion };
 
 export const mensajeDeError = (codigo: string): string => MENSAJES[codigo] ?? MENSAJES["DESCONOCIDO"]!;
+
+/** «Se quitó la regla 2. Quedan 3 reglas.»: lo que anuncia la región de estado al quitar una regla. */
+export function textoReglaQuitada(numero: number, quedan: number): string {
+  const resto = quedan === 0 ? "No queda ninguna regla." : quedan === 1 ? "Queda 1 regla." : `Quedan ${quedan} reglas.`;
+  return `Se quitó la regla ${numero}. ${resto}`;
+}
 
 const CAMPO_DE_REGLA = /^reglas\[(\d+)\](?:\.(\w+))?$/;
 

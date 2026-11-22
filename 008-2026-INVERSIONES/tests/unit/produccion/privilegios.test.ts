@@ -64,13 +64,16 @@ describe("privilegios de inv_app", () => {
 });
 
 // Área de edición del plan (fase B, PR-B): el dueño crea versiones y registra decisiones desde la web, que corre como
-// inv_app. Solo INSERT, solo en las cuatro tablas del plan y del diario, y POR COLUMNA: sin los instantes que pone la
-// base (`creadaEn`, `registradaEn`, `creadoEn`), que son la huella de cuándo se registró cada cosa (una decisión
-// tomada antes de ver su resultado). Nada se edita ni se borra: los disparadores de solo inserción de la migración del
-// plan siguen mandando, y sin UPDATE ni DELETE inv_app ni los intenta.
+// inv_app. Solo INSERT, solo en las cuatro tablas del plan y del diario, y POR COLUMNA con todas las columnas de cada
+// una (una columna nueva no le llega hasta que se agregue: falla cerrada). Los instantes (`creadaEn`, `registradaEn`,
+// `creadoEn`) van en la lista porque Prisma los manda en cada INSERT (genera `now()` en el cliente): quitarlos
+// rompería la app (lo prueba tests/integracion/plan-edicion.test.ts con los privilegios de este archivo) y que los
+// ponga la base exigiría cambiar el esquema. Es riesgo residual, dicho en privilegios.sql. Nada se edita ni se borra:
+// los disparadores de solo inserción de la migración del plan siguen mandando, y sin UPDATE ni DELETE inv_app ni los
+// intenta.
 const TABLAS_DEL_PLAN = ["decision", "enlace_decision_orden", "plan_version", "regla_plan"];
-/** Los instantes que pone la base al insertar: nunca los escribe la app. */
-const SELLADAS = new Set(["creadaEn", "registradaEn", "creadoEn"]);
+/** Los instantes con DEFAULT de la base que Prisma igual manda (por eso van en la lista). */
+const INSTANTES = ["creadaEn", "registradaEn", "creadoEn"];
 
 /** Columnas escalares de una tabla según prisma/schema.prisma (los campos de relación son de otro modelo). */
 function columnasDe(tabla: string): string[] {
@@ -100,16 +103,13 @@ describe("privilegios del plan y del diario (área de edición)", () => {
     }
   });
 
-  it("cada INSERT trae todas las columnas de la tabla salvo los instantes que pone la base", () => {
+  it("cada INSERT trae exactamente las columnas de su tabla según el esquema (también los instantes, que manda Prisma)", () => {
     for (const t of TABLAS_DEL_PLAN) {
-      const esperadas = columnasDe(t).filter((c) => !SELLADAS.has(c));
-      expect(esperadas.length, t).toBeGreaterThan(3);
-      expect([...INSERT_DEL_PLAN[t]!].sort(), t).toEqual(esperadas.sort());
+      const esperadas = columnasDe(t);
+      expect(esperadas.length, t).toBeGreaterThan(5);
+      expect([...INSERT_DEL_PLAN[t]!].sort(), t).toEqual([...esperadas].sort());
     }
-    expect(columnasDe("decision")).toContain("registradaEn");
-    expect(columnasDe("plan_version")).toContain("creadaEn");
-    expect(columnasDe("enlace_decision_orden")).toContain("creadoEn");
-    for (const cs of Object.values(INSERT_DEL_PLAN)) for (const c of cs) expect(SELLADAS.has(c), c).toBe(false);
+    for (const instante of INSTANTES) expect(Object.values(INSERT_DEL_PLAN).some((cs) => cs.includes(instante)), instante).toBe(true);
   });
 
   it("ningún otro INSERT de inv_app fuera del login, del TOTP y del plan", () => {

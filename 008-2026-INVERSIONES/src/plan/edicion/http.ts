@@ -18,12 +18,18 @@ export const MENSAJE_SOLICITUD = "Solicitud inválida.";
 export const MENSAJE_INVALIDO = "Revise los datos marcados.";
 export const MENSAJE_CONFLICTO = "Lo que intenta guardar cambió mientras editaba. Vuelva a cargar la página.";
 export const MENSAJE_FALLO = "No se pudo guardar. Intente de nuevo.";
+export const MENSAJE_NO_EXISTE = "Lo que eligió ya no existe. Vuelva a cargar la página.";
 
 /**
- * Los códigos del dominio que no son un 400: el estado cambió mientras se editaba (409) o quien escribe no es el
- * dueño (403; el guardián ya lo frena antes). Todo otro código del dominio es un dato que no cabe: 400.
+ * Los códigos del dominio que no son un 400: lo elegido ya no existe (404: otra pestaña o una carga lo cambió), el
+ * estado cambió mientras se editaba (409) o quien escribe no es el dueño (403; el guardián ya lo frena antes). Todo
+ * otro código del dominio es un dato que no cabe: 400.
  */
 export const ESTADO_POR_CODIGO: Readonly<Record<string, number>> = {
+  DECISION_INEXISTENTE: 404,
+  ORDEN_INEXISTENTE: 404,
+  REGLA_INEXISTENTE: 404,
+  INSTRUMENTO_INEXISTENTE: 404,
   PLAN_CAMBIO: 409,
   VIGENCIA_RETROCEDE: 409,
   DECISION_YA_REEMPLAZADA: 409,
@@ -33,7 +39,16 @@ export const ESTADO_POR_CODIGO: Readonly<Record<string, number>> = {
   AUTOR_NO_AUTORIZADO: 403,
 };
 
-const MENSAJE_POR_ESTADO: Readonly<Record<number, string>> = { 400: MENSAJE_INVALIDO, 403: MENSAJE_SOLO_LECTURA, 409: MENSAJE_CONFLICTO };
+const MENSAJE_POR_ESTADO: Readonly<Record<number, string>> = { 400: MENSAJE_INVALIDO, 403: MENSAJE_SOLO_LECTURA, 404: MENSAJE_NO_EXISTE, 409: MENSAJE_CONFLICTO };
+
+/** Los códigos del dominio que no traen su campo, con el campo que señalan (para marcarlo en el formulario). */
+const CAMPO_POR_CODIGO: Readonly<Record<string, string>> = { SIN_PLAN: "fechaDecision" };
+
+function camposDe(error: ErrorPlan): readonly ErrorCampo[] {
+  if (error.errores.length > 0) return error.errores;
+  const campo = CAMPO_POR_CODIGO[error.codigo];
+  return campo ? [{ campo, codigo: error.codigo }] : [];
+}
 
 /** El Origin no es de la lista (403) o falta la configuración en producción (503); null si pasa. */
 export function origenRechazado(pedido: Request): Response | null {
@@ -74,7 +89,7 @@ function huella(error: unknown): string {
 export function respuestaDeError(error: unknown, contexto: string): Response {
   if (error instanceof ErrorPlan) {
     const estado = ESTADO_POR_CODIGO[error.codigo] ?? 400;
-    return respuestaJson({ error: MENSAJE_POR_ESTADO[estado], codigo: error.codigo, campos: error.errores }, estado);
+    return respuestaJson({ error: MENSAJE_POR_ESTADO[estado], codigo: error.codigo, campos: camposDe(error) }, estado);
   }
   console.error(`[edicion:${contexto}] no se pudo guardar (${huella(error)})`);
   return respuestaJson({ error: MENSAJE_FALLO }, 500);

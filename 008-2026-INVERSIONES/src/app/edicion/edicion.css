@@ -24,11 +24,12 @@
   outline: 2px solid var(--gold); outline-offset: 2px;
 }
 .edicion [aria-invalid="true"] { border-color: var(--loss); box-shadow: 0 0 0 1px var(--loss) inset; }
-.edicion .edicion-ayuda { margin: 0; font-size: 12px; color: var(--muted); }
+.edicion .edicion-ayuda { margin: 0; font-size: 13px; color: var(--muted); }
 .edicion .edicion-error { margin: 0; font-size: 13px; font-weight: 600; color: var(--loss); }
-.edicion .edicion-casilla { grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
-.edicion .edicion-casilla input { width: 22px; height: 22px; accent-color: var(--gold); }
-.edicion .edicion-casilla .edicion-error { grid-column: 1 / -1; }
+.edicion .edicion-casilla { grid-template-columns: auto 1fr; align-items: center; gap: 10px; min-height: 44px; }
+.edicion .edicion-casilla label { padding-block: 10px; }
+.edicion .edicion-casilla input { width: 24px; height: 24px; accent-color: var(--gold); }
+.edicion .edicion-casilla .edicion-error, .edicion .edicion-casilla .edicion-ayuda { grid-column: 1 / -1; }
 
 .edicion .edicion-regla { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 16px; margin: 0 0 14px; display: grid; gap: 12px; min-width: 0; }
 .edicion .edicion-regla legend { font-family: var(--display); font-size: 22px; padding: 0 6px; }
@@ -50,4 +51,6 @@
 .edicion .edicion-resumen-titulo { margin: 0; font-weight: 800; color: var(--loss); }
 .edicion .edicion-resumen ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
 .edicion .edicion-versiones { display: grid; gap: 6px; }
+.edicion .edicion-resumen a { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+.edicion .edicion-anuncio:empty, .edicion .edicion-aviso-fecha:empty { margin: 0; }
 

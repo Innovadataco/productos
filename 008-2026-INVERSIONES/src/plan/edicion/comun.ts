@@ -14,7 +14,11 @@ import { MAX_TEXTO } from "../validar";
 export const MAX_REGLAS = 100;
 /** BIGINT de PostgreSQL: una cantidad mayor daría un 500 de la base (22003); se rechaza aquí con su campo. */
 export const MAX_CANTIDAD = 9_223_372_036_854_775_807n;
-/** Un texto de MAX_TEXTO caracteres en UTF-8 y escapado en JSON ocupa a lo sumo esto (4 bytes por carácter). */
+/**
+ * Un texto de MAX_TEXTO caracteres escritos (UTF-8, hasta 4 bytes por carácter) cabe en esto. Un carácter de control
+ * escapado en JSON (`\u0001`) ocupa 6: un texto hecho solo de ellos puede pasar el tope del cuerpo y salir como
+ * solicitud inválida (400) en vez de DEMASIADO_LARGO; desde el formulario no se escriben.
+ */
 const BYTES_POR_TEXTO = MAX_TEXTO * 4;
 /** Lo demás de una regla o de una decisión (claves, ids, fechas, números) cabe de sobra en 1 KB. */
 const BYTES_SIN_TEXTOS = 1024;
@@ -45,15 +49,19 @@ export class Errores {
   }
 }
 
-/** Un objeto plano con EXACTAMENTE esas claves (ni una de más: el autor sale de la sesión). */
+/** Un objeto plano con EXACTAMENTE esas claves, comparadas una por una (ni una de más: el autor sale de la sesión). */
 export function objetoConClaves(valor: unknown, claves: readonly string[]): Record<string, unknown> | null {
   if (typeof valor !== "object" || valor === null || Array.isArray(valor)) return null;
   const registro = valor as Record<string, unknown>;
-  return Object.keys(registro).sort().join(",") === [...claves].sort().join(",") ? registro : null;
+  const propias = Object.keys(registro);
+  return propias.length === claves.length && claves.every((c) => Object.hasOwn(registro, c)) ? registro : null;
 }
 
+/** PostgreSQL no guarda el carácter nulo en un texto (22021): se rechaza aquí, con su campo. */
+const NULO = "\u0000";
+
 export function texto(e: Errores, campo: string, v: unknown): string | undefined {
-  if (typeof v !== "string") return e.anotar(campo, "FORMATO_INVALIDO");
+  if (typeof v !== "string" || v.includes(NULO)) return e.anotar(campo, "FORMATO_INVALIDO");
   return v.length > MAX_TEXTO ? e.anotar(campo, "DEMASIADO_LARGO") : v;
 }
 

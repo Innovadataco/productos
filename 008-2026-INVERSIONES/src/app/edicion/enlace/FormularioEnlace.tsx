@@ -13,12 +13,17 @@ import type { DatosEdicionEnlace } from "../tipos";
 type Listo = Extract<DatosEdicionEnlace, { estado: "LISTO" }>;
 
 export function FormularioEnlace({ datos }: { readonly datos: Listo }) {
-  const [ordenId, setOrdenId] = useState(datos.ordenes[0]?.id ?? "");
+  // Nada elegido de antemano: un enlace no se cambia después desde la web, así que la orden la elige el dueño.
+  const [ordenId, setOrdenId] = useState("");
   const envio = useEnvio("/api/decisiones/enlaces");
   if (datos.ordenes.length === 0) return <p className="nota">{MENSAJES["SIN_ORDENES_POSIBLES"]}</p>;
 
   async function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    if (ordenId === "") {
+      envio.fallar([{ campo: "ordenId", codigo: "ORDEN_SIN_ELEGIR" }]);
+      return;
+    }
     await envio.enviar(
       { decisionId: datos.decision.id, ordenId },
       () => {
@@ -29,11 +34,12 @@ export function FormularioEnlace({ datos }: { readonly datos: Listo }) {
   }
 
   return (
-    <form className="edicion-form" noValidate onSubmit={guardar}>
-      <p>{TEXTOS_ENLACE.INTRO}</p>
-      <ResumenErrores envio={envio} />
+    <form className="edicion-form" noValidate onSubmit={guardar} aria-describedby="edicion-intro">
+      <p id="edicion-intro">{TEXTOS_ENLACE.INTRO}</p>
+      <ResumenErrores envio={envio} idDe={(campo) => (campo === "ordenId" ? "enlace-orden" : undefined)} />
       <Campo id="enlace-orden" etiqueta="Orden de Trii" error={envio.errorDe("ordenId")}>
         <select id="enlace-orden" required value={ordenId} onChange={(e) => setOrdenId(e.target.value)} {...describir("enlace-orden", false, envio.errorDe("ordenId"))}>
+          <option value="" disabled>{TEXTOS_ENLACE.ELIJA}</option>
           {datos.ordenes.map((o) => <option key={o.id} value={o.id}>{o.texto}</option>)}
         </select>
       </Campo>

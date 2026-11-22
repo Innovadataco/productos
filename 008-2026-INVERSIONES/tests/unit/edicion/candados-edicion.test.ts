@@ -22,8 +22,8 @@ function archivos(dir: string): string[] {
   });
 }
 
-/** Lo único que un componente de cliente del área puede importar (en valor; los `import type` no cuentan). */
-const PERMITIDOS_CLIENTE = /^(react|\.\/[\w-]+|\.\.\/(textos|enviar|tipos|campos)|@\/app\/edicion\/(textos|enviar|tipos|campos))$/;
+/** Lo único que un componente de cliente del área puede importar (en valor): un hermano, salvo las lecturas y la página. */
+const PERMITIDOS_CLIENTE = /^(react|\.\/(?!datos$|page$)[\w-]+|\.\.\/(textos|enviar|tipos|campos)|@\/app\/edicion\/(textos|enviar|tipos|campos))$/;
 
 const esCliente = (t: string) => /^\s*["']use client["']/m.test(t);
 /** Lo que el módulo trae en valor: `import … from`, `import "…"` y `export … from` (una re-exportación también trae). */

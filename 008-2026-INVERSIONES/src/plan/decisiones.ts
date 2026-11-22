@@ -121,7 +121,7 @@ export async function corregirDecision(
   const datos = await preparar(db, d, opciones);
   try {
     return await db.$transaction(async (tx) => {
-      // La fila de la anterior queda bloqueada: un enlace en curso termina antes y se mueve también.
+      // El candado de la anterior (src/plan/bloqueos.ts): un enlace en curso termina antes y se mueve también.
       if (!(await bloquearDecision(tx, decisionId))) throw new ErrorPlan("DECISION_INEXISTENTE");
       const anterior = await tx.decision.findUnique({ where: { id: decisionId }, select: { id: true, reemplazadaPor: { select: { id: true } } } });
       if (!anterior) throw new ErrorPlan("DECISION_INEXISTENTE");
