@@ -8,14 +8,24 @@
  *   - TPM: un valor por día hasta ayer: al día, pero no es la cifra de hoy;
  *   - IBR 3M: de lunes a viernes, y el último hace 10 días: atrasada (el umbral es 7);
  *   - IPC: 26 meses hasta el mes anterior: al día, con la variación en 12 meses calculada (ESPERADO).
- * No toca nada de lo que miran las demás pantallas (solo valor_serie_oficial).
+ * Y los dividendos decretados (frente datos-oficiales-decretos-pantalla, C6b), por el camino único (importarDecretos, con
+ * el dueño del e2e), en dos especies nuevas SIN órdenes ni pagos (FICTD y FICTE, creadas aquí) y en FICTI (la incompleta:
+ * su tenencia sale negativa). Fechas relativas a hoy (DECRETOS_E2E):
+ *   - próximos: FICTD (referencia https de la BVC: enlace), FICTE (radicado de la SFC: texto) y FICTI (no se estima);
+ *   - cruce: FICTI con ex pasada → REVISAR por la tenencia negativa; FICTE, un grupo con una ex pasada y otra por venir
+ *     (las cargas de Trii, de hoy, no cubren la segunda) → PENDIENTE; FICTD con ex pasada y sin acciones → no esperaba
+ *     pago (se cuenta aparte).
+ * Sin órdenes ni pagos nuevos: el tablero, la conciliación y el plan no cambian, y las proyecciones solo leen los
+ * decretos de las especies vivas (FICTI es incompleta). No toca nada de lo que miran las demás pantallas.
  */
 import type { PrismaClient } from "@prisma/client";
 import { serieDelCatalogo } from "../../src/datos-oficiales/catalogo";
+import { ENCABEZADO_DECRETOS } from "../../src/datos-oficiales/decretos/csv";
+import { importarDecretos } from "../../src/datos-oficiales/decretos/importar";
 import { canonizarValor, leerCsvSeries } from "../../src/datos-oficiales/series/csv-series";
 import { importarSeries } from "../../src/datos-oficiales/series/importar";
 import { sumarDias } from "../../src/plan/fechas";
-import { hoyDelE2E } from "./base";
+import { DUENO_E2E, hoyDelE2E } from "./base";
 
 /** Lo que la pantalla debe mostrar, ya con su formato. */
 export const ESPERADO = {
@@ -59,6 +69,28 @@ function ipc(hoy: Date): string[] {
   });
 }
 
+/** Los decretos del e2e: especie, tipo, cuota, valor, días desde hoy (anuncio, ex, pago) y referencia. */
+export const DECRETOS_E2E = [
+  { especie: "FICTD", tipo: "ORDINARIO", cuota: 2, valor: "37.91", anuncio: -20, ex: 12, pago: 19, referencia: "https://www.bvc.com.co/ficticio/e2e-c6b-fictd-2" },
+  { especie: "FICTD", tipo: "ORDINARIO", cuota: 1, valor: "41.37", anuncio: -60, ex: -40, pago: -33, referencia: "https://www.superfinanciera.gov.co/ficticio/e2e-c6b-fictd-1" },
+  { especie: "FICTE", tipo: "ORDINARIO", cuota: 1, valor: "13.71", anuncio: -20, ex: -2, pago: 5, referencia: "sfc:FICTICIO-E2E-4613" },
+  { especie: "FICTE", tipo: "EXTRAORDINARIO", cuota: 1, valor: "23.17", anuncio: -20, ex: 2, pago: 5, referencia: "sfc:FICTICIO-E2E-4617" },
+  { especie: "FICTI", tipo: "ORDINARIO", cuota: 1, valor: "17.43", anuncio: -50, ex: -30, pago: -23, referencia: "https://www.bvc.com.co/ficticio/e2e-c6b-ficti-1" },
+  { especie: "FICTI", tipo: "ORDINARIO", cuota: 2, valor: "19.37", anuncio: -10, ex: 20, pago: 27, referencia: "https://www.bvc.com.co/ficticio/e2e-c6b-ficti-2" },
+] as const;
+
+async function sembrarDecretos(db: PrismaClient, hoy: Date): Promise<void> {
+  for (const nemotecnico of ["FICTD", "FICTE"]) {
+    await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico, nombre: `Especie ficticia ${nemotecnico} (decretos del e2e)` } });
+  }
+  const filas = DECRETOS_E2E.map((d) =>
+    [d.especie, d.tipo, iso(sumarDias(hoy, d.anuncio)), String(d.cuota), d.valor, "COP", "DINERO", iso(sumarDias(hoy, d.ex)), iso(sumarDias(hoy, d.pago)), d.referencia, "", ""].join(","));
+  const contenido = new TextEncoder().encode(`${ENCABEZADO_DECRETOS.join(",")}\n${filas.join("\n")}\n`);
+  // El reloj de la siembra es el «hoy» de la corrida (al mediodía de Colombia): ningún anuncio queda en el futuro.
+  const r = await importarDecretos(db, { contenido, email: DUENO_E2E.email, aplicar: true }, { ahora: new Date(hoy.getTime() + 17 * 3_600_000) });
+  if (r.estado !== "APLICADO") throw new Error(`Los decretos del E2E no se registraron: ${r.estado === "RECHAZADO" ? r.hallazgos.map((h) => `${h.linea}:${h.codigo}`).join(", ") : r.estado}`);
+}
+
 export async function sembrarDatosOficiales(db: PrismaClient): Promise<void> {
   const hoy = hoyDelE2E();
   const csv = ["serie,desde,hasta,valor,fuente", ...trm(hoy), ...tpm(hoy), ...ibr(hoy), ...ipc(hoy)].join("\n") + "\n";
@@ -67,4 +99,5 @@ export async function sembrarDatosOficiales(db: PrismaClient): Promise<void> {
   const r = await importarSeries(db, lectura);
   const fallas = r.series.filter((s) => s.fallo !== null).map((s) => s.codigo);
   if (fallas.length > 0) throw new Error(`No se guardaron las series del E2E: ${fallas.join(", ")}`);
+  await sembrarDecretos(db, hoy);
 }

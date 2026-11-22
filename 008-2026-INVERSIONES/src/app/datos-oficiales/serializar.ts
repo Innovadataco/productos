@@ -10,7 +10,7 @@
 import type { SerieCatalogo } from "@/datos-oficiales/catalogo";
 import type { CifraOficial } from "@/datos-oficiales/series/consulta";
 import type { Frescura } from "@/datos-oficiales/series/frescura";
-import type { DiaIso, PuntoVista, SerieBase, SerieVista, VariacionVista, Ventana, VistaDatosOficiales } from "./tipos";
+import type { DecretosVista, DiaIso, PuntoVista, SerieBase, SerieVista, VariacionVista, Ventana, VistaDatosOficiales } from "./tipos";
 
 const DESFASE_COLOMBIA_MS = 5 * 60 * 60 * 1000;
 
@@ -72,4 +72,6 @@ export function aSerieVista(l: LecturaSerie): SerieVista {
   };
 }
 
-export const aDatosOficiales = (hoy: Date, lecturas: readonly LecturaSerie[]): VistaDatosOficiales => ({ hoy: dia(hoy), series: lecturas.map(aSerieVista) });
+export const aDatosOficiales = (hoy: Date, lecturas: readonly LecturaSerie[], decretos: DecretosVista): VistaDatosOficiales => ({
+  hoy: dia(hoy), series: lecturas.map(aSerieVista), decretos,
+});

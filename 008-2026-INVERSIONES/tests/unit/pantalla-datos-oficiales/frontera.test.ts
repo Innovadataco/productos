@@ -1,4 +1,4 @@
-// Candados de la frontera de /datos-oficiales (frente datos-oficiales-pantalla, C6a):
+// Candados de la frontera de /datos-oficiales (frente datos-oficiales-pantalla, C6a; la sección de decretos, C6b):
 // - lo que llega al navegador (los «use client» de la carpeta y lo que importan de ella) solo importa con valor de una
 //   lista blanca: react, el módulo de gráficas, el formato del tablero y sus propios módulos puros (nunca Prisma,
 //   server-only, la base, la sesión, la lectura ni el catálogo con sus reglas);
@@ -15,7 +15,11 @@ import { esPublica } from "@/auth/rutas";
 const DIR = fileURLToPath(new URL("../../../src/app/datos-oficiales/", import.meta.url));
 const IMPORTACION = /^\s*(?:import|export)\s+(type\s+)?(?:[^"';]*?\s+from\s+)?["']([^"']+)["']|\b(?:import|require)\(\s*["']([^"']+)["']\s*\)/gm;
 const PERMITIDO_CLIENTE = /^(react|react-dom|@\/app\/_graficas|@\/app\/tablero\/formato|\.\/[\w.-]+\.css)$/;
-const LECTURA_PERMITIDA = new Set(["server-only", "@prisma/client", "@/conciliacion/leer", "@/datos-oficiales/catalogo", "@/datos-oficiales/series/consulta", "@/datos-oficiales/series/leer", "@/plan/fechas", "./serializar", "./tipos"]);
+const LECTURA_PERMITIDA = new Set([
+  "server-only", "@prisma/client", "@/conciliacion/leer", "@/datos-oficiales/catalogo", "@/datos-oficiales/series/consulta", "@/datos-oficiales/series/leer",
+  // C6b: el cruce y los próximos de C5b, en la misma transacción.
+  "@/datos-oficiales/decretos/leer", "@/plan/fechas", "./serializar", "./serializar-decretos", "./tipos",
+]);
 const LOCAL = /\bIntl\b|\.toLocale[A-Za-z]*\(|\.get(?:FullYear|Month|Date|Day|Hours|Minutes|Seconds|TimezoneOffset)\(/;
 /** En el navegador, «ahora» no es el del servidor: lo del cliente no lo lee. */
 const AHORA = /\bnew Date\(\s*\)|\bDate\.now\(/;
@@ -52,6 +56,14 @@ describe("frontera de src/app/datos-oficiales", () => {
 
   it("encuentra la gráfica y lo que importa; la lectura, la página y la pantalla del servidor no entran", () => {
     expect(cliente).toEqual(["GraficaSerie.tsx", "formato.ts"]);
+  });
+
+  it("la sección de decretos (C6b) es del servidor: ni Decretos.tsx ni sus formatos llegan al navegador", () => {
+    for (const f of ["Decretos.tsx", "formato-decretos.ts", "serializar-decretos.ts"]) {
+      expect(todos(), f).toContain(f);
+      expect(/^\s*["']use client["']/.test(leer(f)), f).toBe(false);
+      expect(cliente, f).not.toContain(f);
+    }
   });
 
   it("lo del navegador solo importa con valor de la lista blanca", () => {

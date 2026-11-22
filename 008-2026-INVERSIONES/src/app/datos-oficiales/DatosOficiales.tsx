@@ -6,9 +6,10 @@
  * - la fuente con enlace https a su página oficial (fuentes.ts), cuándo se trajo y cómo entra;
  * - la gráfica de su ventana, con «Ver los datos».
  * Sin datos o con error, ninguna cifra. Sin formularios ni botones: la familia la ve en solo lectura y la pantalla no
- * escribe nada. La sección de decretos es de otro frente (C6b).
+ * escribe nada. Después de las series, la sección de los dividendos decretados y su cruce con Trii (Decretos.tsx, C6b).
  */
 import { Encabezado } from "../_plan/Encabezado";
+import { Decretos } from "./Decretos";
 import {
   PIE_DATOS_OFICIALES, TEXTO_ENTRADA, TEXTO_ESTADO, cifra, conSigno, detalleFrescura, estadoDe, lineaVigencia, mes, paraGrafica, sigla, textoVariacionFaltante, traidoEl,
 } from "./formato";
@@ -116,6 +117,7 @@ export function DatosOficiales({ datos, soloLectura = false }: PropsDatosOficial
         <section className="do-series">
           {datos.series.map((s) => <Tarjeta key={s.codigo} s={s} />)}
         </section>
+        <Decretos d={datos.decretos} />
         <footer className="pie">{PIE_DATOS_OFICIALES}</footer>
       </main>
     </>

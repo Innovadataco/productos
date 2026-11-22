@@ -51,13 +51,63 @@
  */
 .do :is(a, summary, [tabindex]) { scroll-margin-top: 128px; }
 
+/*
+ * Los dividendos decretados (frente datos-oficiales-decretos-pantalla, C6b). Cada tabla se desplaza dentro de su región
+ * (.tabla de tablero.css) con un ancho mínimo moderado: a 375 px la página no se desborda. Aquí no se elige ninguna fila:
+ * sin el cursor de mano ni el resaltado del tablero. El estado del cruce y la marca de la disputa se dicen con texto y
+ * borde; la fila en disputa lleva además una franja al inicio.
+ */
+.do-decretos { display: grid; gap: 22px; padding-block: 8px 28px; }
+.do-decretos h2 { margin: 4px 0 8px; font-family: var(--display); font-weight: 400; font-size: 36px; line-height: 1.05; }
+.do-bloque { display: grid; gap: 10px; min-width: 0; }
+.do-bloque h3 { margin: 0; font-size: 20px; line-height: 1.2; }
+.do-nota { margin: 0; max-width: 80ch; font-size: 13px; color: var(--muted); }
+/* Relativa: los textos solo para el lector (.sr, absolutos) quedan dentro de la región y no estiran la página a 375 px. */
+.do-tabla { position: relative; }
+.do-tabla table { min-width: 880px; font-size: 13px; }
+.do-tabla th, .do-tabla td { padding: 10px 12px; vertical-align: top; }
+/* El texto a la izquierda; las cifras (y su encabezado) a la derecha. */
+.do-tabla th { text-align: left; }
+.do-tabla td { text-align: left; }
+/* El encabezado de una columna de cifras va a la derecha, pero con la letra de los encabezados (no la de las cifras). */
+.do-tabla th.num { text-align: right; font-family: inherit; }
+.do-tabla td.num { text-align: right; white-space: nowrap; }
+.do-tabla th[scope="col"] { font-size: 12px; }
+.do-tabla th[scope="row"] { font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--fg); font-weight: 700; }
+/* La especie queda fija al desplazar la tabla (con su fondo y un filo), así cada fila dice de qué especie es. */
+.do-tabla :is(th[scope="row"], thead th:first-child) { position: sticky; left: 0; z-index: 1; background: var(--panel); box-shadow: inset -1px 0 0 var(--line); }
+.do-tabla tbody tr { cursor: default; }
+.do-tabla tbody tr:hover { background: none; }
+.do-tabla tr[data-disputa] > th { box-shadow: inset 3px 0 0 var(--loss), inset -1px 0 0 var(--line); }
+.do-tabla a { display: inline-block; padding-block: 3px; color: var(--gold); text-underline-offset: 3px; }
+.do-lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.do-decreto { font-weight: 700; }
+.do-version, .do-pagos { color: var(--muted); font-size: 12px; }
+.do-pagos { display: block; white-space: normal; }
+.do-no-estima { display: inline-block; max-width: 26ch; white-space: normal; font-family: var(--body); color: var(--muted); text-align: left; }
+.do-cruce-estado { display: inline-block; border: 1px solid var(--muted); color: var(--muted); border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.do-cruce-estado[data-estado="RECIBIDO"] { border-color: var(--gain); color: var(--gain); }
+.do-cruce-estado[data-estado="NO_RECIBIDO"], .do-cruce-estado[data-estado="REVISAR"] { border-color: var(--loss); color: var(--loss); }
+.do-cruce-estado[data-estado="SIN_DECRETO"] { border-color: var(--gold); color: var(--gold); }
+/* La pista de deslizar: solo en el celular (abajo), donde la tabla es más ancha que la pantalla. */
+.do-desliza { display: none; }
+.do-glosario { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; max-width: 96ch; margin: 12px 0 0; font-size: 13px; }
+.do-glosario dt { font-weight: 700; }
+.do-glosario dd { margin: 0; color: var(--muted); }
+.do-disputa { display: inline-block; margin-top: 6px; border: 1px dashed var(--loss); color: var(--loss); border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+
 @media (max-width: 620px) {
   .do :is(a, summary, [tabindex]) { scroll-margin-top: 200px; }
   .do-serie { padding: 14px 12px; }
   .do-pares { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .do-pares dd + dt { margin-top: 6px; }
+  .do-desliza { display: block; }
+  .do-glosario { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .do-glosario dd + dt { margin-top: 6px; }
 }
 @media (forced-colors: active) {
   .do-estado { border-color: CanvasText; }
   .do-variacion { border: 1px solid CanvasText; }
+  .do-cruce-estado, .do-disputa { border-color: CanvasText; }
+  .do-tabla tr[data-disputa] > th { border-left: 3px solid CanvasText; }
 }

@@ -2,7 +2,8 @@
 // de los formatos. «Hoy» es el 17-mar-2021 (fuera del periodo de la historia real del dueño). Cifras inventadas.
 import { CATALOGO } from "@/datos-oficiales/catalogo";
 import { UNIDAD_VARIACION } from "@/datos-oficiales/series/consulta";
-import type { PuntoVista, SerieBase, SerieConDatos, SerieVista, VariacionVista, VistaDatosOficiales } from "@/app/datos-oficiales/tipos";
+import type { DecretosVista, PuntoVista, SerieBase, SerieConDatos, SerieVista, VariacionVista, VistaDatosOficiales } from "@/app/datos-oficiales/tipos";
+import { DECRETOS_VACIOS } from "./ficticio-decretos";
 
 export const HOY = "2021-03-17";
 
@@ -56,6 +57,7 @@ export const IPC: SerieConDatos = {
   variacion: VARIACION,
 };
 
-export const datos = (series: readonly SerieVista[] = [TRM, TPM, IBR, IPC]): VistaDatosOficiales => ({ hoy: HOY, series });
+/** Sin decretos por defecto (la sección de C6b la prueban sus propios archivos con ficticio-decretos.ts). */
+export const datos = (series: readonly SerieVista[] = [TRM, TPM, IBR, IPC], decretos: DecretosVista = DECRETOS_VACIOS): VistaDatosOficiales => ({ hoy: HOY, series, decretos });
 export const sinDatos = (codigo: string): SerieVista => ({ ...baseDe(codigo), estado: "SIN_DATOS" });
 export const conError = (codigo: string): SerieVista => ({ ...baseDe(codigo), estado: "ERROR" });

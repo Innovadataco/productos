@@ -1,4 +1,7 @@
-/** La pantalla /datos-oficiales para el E2E (frente datos-oficiales-pantalla, C6a): localizadores por rol y nombre accesible. */
+/**
+ * La pantalla /datos-oficiales para el E2E (frente datos-oficiales-pantalla, C6a; la sección de decretos, C6b): localizadores
+ * por rol y nombre accesible.
+ */
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { iniciarSesion } from "./sesion";
@@ -43,6 +46,26 @@ export class PaginaDatosOficiales {
     return this.figura(titulo).getByRole("slider", { name: titulo });
   }
 
+  /** La sección de los dividendos decretados (C6b). */
+  get decretos(): Locator {
+    return this.page.getByRole("region", { name: "Dividendos decretados" });
+  }
+
+  /** Una tabla de los decretos por su nombre («Próximos ex-dividendos» o «Cruce con lo recibido de Trii»). */
+  tablaDecretos(nombre: "Próximos ex-dividendos" | "Cruce con lo recibido de Trii"): Locator {
+    return this.decretos.getByRole("table", { name: nombre });
+  }
+
+  /** La región que desplaza esa tabla (se enfoca con el teclado). */
+  regionDecretos(nombre: "Próximos ex-dividendos" | "Cruce con lo recibido de Trii"): Locator {
+    return this.decretos.getByRole("region", { name: nombre });
+  }
+
+  /** La fila de una especie en una tabla de los decretos (la especie es el encabezado de la fila). */
+  filaDecretos(tabla: Locator, especie: string): Locator {
+    return tabla.getByRole("row").filter({ has: this.page.getByRole("rowheader", { name: especie, exact: true }) });
+  }
+
   /** Recorre la página para que cada gráfica entre en pantalla, espera a que se dibujen y vuelve arriba. */
   async dibujarTodas(): Promise<void> {
     for (const t of TITULOS_GRAFICAS) await this.figura(t).scrollIntoViewIfNeeded();
@@ -60,12 +83,24 @@ export class PaginaDatosOficiales {
    * rechaza capturas versionadas. Sin la variable, no hace nada.
    */
   async capturar(nombre: string, completa = true): Promise<void> {
-    const dir = process.env.CAPTURAS_DATOS_OFICIALES;
-    if (!dir) return;
-    const repo = resolve(process.cwd(), "..");
-    const rel = relative(repo, resolve(dir));
-    const dentro = !(rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel));
-    if (!isAbsolute(dir) || dentro) throw new Error("CAPTURAS_DATOS_OFICIALES debe ser una carpeta absoluta fuera del repo.");
-    await this.page.screenshot({ path: join(dir, `${nombre}.png`), fullPage: completa });
+    const ruta = rutaDeCaptura(nombre);
+    if (ruta !== null) await this.page.screenshot({ path: ruta, fullPage: completa });
   }
+
+  /** Captura solo un elemento (la sección de decretos), con la misma regla de la carpeta; el encabezado fijo no lo tapa. */
+  async capturarElemento(elemento: Locator, nombre: string): Promise<void> {
+    const ruta = rutaDeCaptura(nombre);
+    if (ruta !== null) await elemento.screenshot({ path: ruta, style: "header.top { position: static !important; }" });
+  }
+}
+
+/** La ruta de la captura, o null sin CAPTURAS_DATOS_OFICIALES; lanza si la carpeta no es absoluta o queda dentro del repo. */
+function rutaDeCaptura(nombre: string): string | null {
+  const dir = process.env.CAPTURAS_DATOS_OFICIALES;
+  if (!dir) return null;
+  const repo = resolve(process.cwd(), "..");
+  const rel = relative(repo, resolve(dir));
+  const dentro = !(rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel));
+  if (!isAbsolute(dir) || dentro) throw new Error("CAPTURAS_DATOS_OFICIALES debe ser una carpeta absoluta fuera del repo.");
+  return join(dir, `${nombre}.png`);
 }
