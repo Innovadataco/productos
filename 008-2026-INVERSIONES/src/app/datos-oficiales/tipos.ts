@@ -1,3 +1,6 @@
+import type { TipoDividendo } from "@prisma/client";
+import type { EstadoCruce, MotivoRevisar } from "@/datos-oficiales/decretos/cruce";
+
 /**
  * La vista de /datos-oficiales (frente datos-oficiales-pantalla, C6a), ya serializada para la pantalla: solo textos y
  * números (ni Date ni Decimal), así cruza al componente de cliente de la gráfica sin cambiar. Los valores van como texto
@@ -93,9 +96,84 @@ export interface SerieConError extends SerieBase {
 
 export type SerieVista = SerieConDatos | SerieSinDatos | SerieConError;
 
+// ───────────── Los dividendos decretados (frente datos-oficiales-decretos-pantalla, C6b) ─────────────
+// Los montos van como texto decimal exacto (del Decimal de C5b); las tenencias, como texto entero con signo (del bigint).
+// `clave` es el id de la fila en la base: solo sirve de clave de React, nunca se pinta.
+
+/** Un decreto vigente y no anulado con ex ≥ hoy (C5b, proximos.ts). */
+export interface ProximoVista {
+  readonly clave: string;
+  readonly especie: string;
+  readonly tipo: TipoDividendo;
+  readonly cuota: number;
+  readonly valorPorAccion: string;
+  readonly fechaEx: DiaIso;
+  readonly fechaPago: DiaIso;
+  /** Tal como la registró el dueño: https de la SFC o de la BVC, o sfc:<radicado> (la pantalla decide si es enlace). */
+  readonly referencia: string;
+  readonly version: number;
+  /** La de hoy (o la del cierre de ayer si la ex es hoy); puede ser negativa si faltan órdenes cargadas. */
+  readonly tenencia: string;
+  /** valor × tenencia, ESTIMADO; null con la tenencia negativa (no se estima). */
+  readonly brutoEstimado: string | null;
+}
+
+/** Un decreto de un grupo del cruce (C5b, cruce.ts), con su referencia y su versión. */
+export interface DecretoDelCruceVista {
+  readonly clave: string;
+  readonly tipo: TipoDividendo;
+  readonly cuota: number;
+  readonly fechaEx: DiaIso;
+  readonly valorPorAccion: string;
+  /** Al cierre del día anterior a la ex, por operación; negativa si faltan órdenes cargadas. */
+  readonly tenenciaAntesDeLaEx: string;
+  /** valor × tenencia antes de la ex, ESTIMADO. */
+  readonly bruto: string;
+  readonly referencia: string;
+  readonly version: number;
+}
+
+export interface PagoVista {
+  readonly clave: string;
+  readonly fechaPago: DiaIso;
+  readonly montoNeto: string;
+}
+
+/** Una fila del cruce: un grupo (especie y fecha de pago) o, en SIN_DECRETO, un pago suelto. */
+export interface FilaCruceVista {
+  readonly clave: string;
+  readonly estado: EstadoCruce;
+  readonly especie: string;
+  readonly fechaPago: DiaIso;
+  /** Vacío en SIN_DECRETO. */
+  readonly decretos: readonly DecretoDelCruceVista[];
+  readonly pagos: readonly PagoVista[];
+  /** null en SIN_DECRETO. */
+  readonly brutoEsperado: string | null;
+  /** null sin pagos. */
+  readonly netoRecibido: string | null;
+  /** «diferencia bruto − neto»; null si falta alguno de los dos. */
+  readonly diferenciaBrutoNeto: string | null;
+  /** Solo en REVISAR, en el orden de C5b. */
+  readonly motivos: readonly MotivoRevisar[];
+}
+
+export interface DecretosVista {
+  /** Desde qué fecha de pago se muestra el cruce (hoy − 365). */
+  readonly desde: DiaIso;
+  /** Por fecha ex, como los da C5b. */
+  readonly proximos: readonly ProximoVista[];
+  /** Lo más reciente primero. */
+  readonly cruce: readonly FilaCruceVista[];
+  /** Decretos con ex pasada que no esperaban pago (sin acciones antes de la ex, sin pagos y con las cargas hasta la ex). */
+  readonly sinTenencia: number;
+}
+
 export interface VistaDatosOficiales {
   /** El día de la consulta en Colombia. */
   readonly hoy: DiaIso;
   /** En el orden del catálogo. */
   readonly series: readonly SerieVista[];
+  /** La sección de los dividendos decretados (C6b). */
+  readonly decretos: DecretosVista;
 }

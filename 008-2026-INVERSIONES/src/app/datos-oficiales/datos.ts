@@ -14,14 +14,22 @@ import "server-only";
  * debería tener) queda ERROR sola y se registra solo su código; si falla la variación, solo la variación. Cualquier
  * otro error (la base, un defecto) se propaga: dentro de la transacción, PostgreSQL la abortaría y las demás series
  * fallarían con otro error. La página lo muestra como SinBase o lo deja a src/app/error.tsx.
+ * Después, en la MISMA transacción (frente datos-oficiales-decretos-pantalla, C6b), el lector de C5b (leerDecretos, sin
+ * cambios): el cruce con Trii desde hoy − 365 por fecha de pago (la ventana de un año de las gráficas) y los próximos ex.
+ * Ese lector abre su foto con enSoloLectura; aquí recibe la transacción ya abierta (enEstaTransaccion), así no abre otra.
+ * Luego, en ese mismo tx, la especie de cada fila y la referencia y la versión de cada decreto del cruce, por id y con
+ * select explícito (nunca la fila cruda; ninguna consulta si no hay filas). Los decretos no tienen un error de lectura
+ * propio: cualquier error se propaga y la página entera sale como SinBase o error.tsx (es la misma transacción).
  */
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { enSoloLectura } from "@/conciliacion/leer";
 import { CATALOGO, type SerieCatalogo } from "@/datos-oficiales/catalogo";
+import { leerDecretos, type LecturaDecretos } from "@/datos-oficiales/decretos/leer";
 import { ErrorLecturaSeries, SERIES_INDICE, variacionIndice, type CifraOficial } from "@/datos-oficiales/series/consulta";
 import { DIA_MINIMO_LECTURA_MS, estadoSerie, serieEnRango, valorVigenteEn, type LectorSeries } from "@/datos-oficiales/series/leer";
 import { sumarDias } from "@/plan/fechas";
 import { aDatosOficiales, type LecturaSerie, type LecturaVariacion } from "./serializar";
+import { aDecretosVista, type LecturaDecretosPantalla } from "./serializar-decretos";
 import type { Ventana, VistaDatosOficiales } from "./tipos";
 
 /** Días que mira atrás cada gráfica, contando hoy. */
@@ -69,13 +77,48 @@ async function leerSerie(tx: LectorSeries, serie: SerieCatalogo, hoy: Date): Pro
   }
 }
 
-/** Las series del catálogo leídas en una sola transacción de solo lectura, con el día de Colombia `hoy` (medianoche UTC). */
+/** Desde qué fecha de pago se muestra el cruce de los decretos: el último año, como la gráfica de una serie diaria. */
+export const desdeDelCruce = (hoy: Date): Date => sumarDias(hoy, -(VENTANA_DIAS.ANIO - 1));
+
+const unicos = (ids: readonly string[]): string[] => [...new Set(ids)];
+
+/**
+ * La transacción ya abierta con la forma que pide el lector de C5b: leerDecretos abre su foto con enSoloLectura, que
+ * solo llama a `$transaction(leer, opciones)`. Aquí ese `$transaction` corre `leer` con ESTE tx: el cruce y los próximos
+ * salen de la misma foto que las series, sin otra transacción ni otra conexión. Las opciones (aislamiento y plazos) no
+ * cuentan: son las de esta transacción, que también abrió enSoloLectura. enSoloLectura repite SET TRANSACTION READ ONLY,
+ * que PostgreSQL acepta dentro de una transacción de solo lectura ya empezada (sondeo del 2026-11-22 contra la base de
+ * pruebas: sigue REPEATABLE READ y rechaza escribir). Si enSoloLectura llamara otra cosa, revienta: lo prueban
+ * tests/unit/pantalla-datos-oficiales/datos.test.ts y la integración (una sola transacción).
+ */
+export function enEstaTransaccion(tx: Prisma.TransactionClient): PrismaClient {
+  const soloTransaccion = { $transaction: <T>(leer: (t: Prisma.TransactionClient) => Promise<T>): Promise<T> => leer(tx) };
+  return Object.freeze(soloTransaccion) as unknown as PrismaClient;
+}
+
+/** Las especies (de las filas del cruce y de los próximos) y las referencias de los decretos del cruce, en el mismo tx. */
+async function completarDecretos(tx: Prisma.TransactionClient, desde: Date, lectura: LecturaDecretos): Promise<LecturaDecretosPantalla> {
+  const ids = unicos([...lectura.cruce.filas.map((f) => f.instrumentoId), ...lectura.proximos.map((p) => p.instrumentoId)]);
+  const decretoIds = unicos(lectura.cruce.filas.flatMap((f) => f.decretos.map((d) => d.decretoId)));
+  const especies = ids.length === 0 ? [] : await tx.instrumento.findMany({ where: { id: { in: ids } }, select: { id: true, nemotecnico: true, nombre: true } });
+  const referencias = decretoIds.length === 0
+    ? []
+    : await tx.dividendoDecretado.findMany({ where: { id: { in: decretoIds } }, select: { id: true, referenciaOficial: true, version: true } });
+  return {
+    desde, lectura,
+    especies: new Map(especies.map((e) => [e.id, { nemotecnico: e.nemotecnico, nombre: e.nombre }])),
+    referencias: new Map(referencias.map((r) => [r.id, { referenciaOficial: r.referenciaOficial, version: r.version }])),
+  };
+}
+
+/** Las series del catálogo y los decretos, leídos en una sola transacción de solo lectura, con el día de Colombia `hoy` (medianoche UTC). */
 export async function datosOficiales(db: PrismaClient, hoy: Date): Promise<VistaDatosOficiales> {
-  const lecturas = await enSoloLectura(db, async (tx) => {
+  const desde = desdeDelCruce(hoy);
+  const { lecturas, decretos } = await enSoloLectura(db, async (tx) => {
     const leidas: LecturaSerie[] = [];
     // Una tras otra: una transacción interactiva es una sola conexión.
     for (const serie of CATALOGO) leidas.push(await leerSerie(tx, serie, hoy));
-    return leidas;
+    return { lecturas: leidas, decretos: await completarDecretos(tx, desde, await leerDecretos(enEstaTransaccion(tx), hoy, desde)) };
   });
-  return aDatosOficiales(hoy, lecturas);
+  return aDatosOficiales(hoy, lecturas, aDecretosVista(decretos));
 }

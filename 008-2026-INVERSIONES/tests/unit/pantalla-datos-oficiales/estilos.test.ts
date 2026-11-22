@@ -63,6 +63,16 @@ describe("datos-oficiales.css", () => {
     expect(sinComentarios).toMatch(/\.do-tabla tbody tr:hover\s*\{[^}]*background:\s*none/);
   });
 
+  it("en las tablas de los decretos los encabezados van a la izquierda, como su texto; los de cifras, a la derecha", () => {
+    expect(sinComentarios).toMatch(/\.do-tabla th\s*\{[^}]*text-align:\s*left/);
+    expect(sinComentarios).toMatch(/\.do-tabla th\.num\s*\{[^}]*text-align:\s*right/);
+  });
+
+  it("la región de cada tabla es relativa: el texto solo para el lector (.sr, absoluto) no se escapa y no estira la página a 375 px", () => {
+    // El e2e a 375 px lo encontró: sin esto, el .sr de una celda lejana toma de referencia la página y la desborda.
+    expect(sinComentarios).toMatch(/\.do-tabla\s*\{[^}]*position:\s*relative/);
+  });
+
   it("el estado del cruce y la marca de la disputa tienen borde y en alto contraste se siguen viendo", () => {
     expect(sinComentarios).toMatch(/\.do-cruce-estado\s*\{[^}]*border:\s*1px solid/);
     expect(sinComentarios).toMatch(/\.do-disputa\s*\{[^}]*border:\s*1px dashed/);

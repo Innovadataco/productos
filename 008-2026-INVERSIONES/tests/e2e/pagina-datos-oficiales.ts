@@ -87,10 +87,10 @@ export class PaginaDatosOficiales {
     if (ruta !== null) await this.page.screenshot({ path: ruta, fullPage: completa });
   }
 
-  /** Captura solo un elemento (la sección de decretos), con la misma regla de la carpeta. */
+  /** Captura solo un elemento (la sección de decretos), con la misma regla de la carpeta; el encabezado fijo no lo tapa. */
   async capturarElemento(elemento: Locator, nombre: string): Promise<void> {
     const ruta = rutaDeCaptura(nombre);
-    if (ruta !== null) await elemento.screenshot({ path: ruta });
+    if (ruta !== null) await elemento.screenshot({ path: ruta, style: "header.top { position: static !important; }" });
   }
 }
 

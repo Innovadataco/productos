@@ -66,6 +66,18 @@ describe("la sección de dividendos decretados", () => {
     }
   });
 
+  it("las columnas de cifras alinean su encabezado con sus celdas (clase num); las de texto, no", () => {
+    const raiz = pantalla();
+    const numericas = (t: HTMLTableElement | null) => [...(t?.querySelectorAll("thead th") ?? [])].filter((th) => th.classList.contains("num")).map(texto);
+    expect(numericas(tabla(raiz, "t-proximos"))).toEqual(["Valor por acción", "Tenencia", "Bruto estimado"]);
+    expect(numericas(tabla(raiz, "t-cruce"))).toEqual(["Bruto esperado (estimado)", "Neto de Trii", "Diferencia bruto − neto"]);
+    for (const id of ["t-proximos", "t-cruce"] as const) {
+      const t = tabla(raiz, id)!;
+      const columnas = [...t.querySelectorAll("thead th")].map((th) => th.classList.contains("num"));
+      for (const tr of filas(t)) expect([...tr.children].map((c) => c.classList.contains("num")), id).toEqual(columnas);
+    }
+  });
+
   it("no trae formularios, botones ni campos", () => {
     expect(seccion(pantalla()).querySelectorAll("form, button, input, select, textarea")).toHaveLength(0);
   });
