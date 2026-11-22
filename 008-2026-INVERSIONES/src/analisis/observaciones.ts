@@ -11,11 +11,7 @@ import { Prisma } from "@prisma/client";
 import { esFechaDeNegocio } from "../plan/fechas";
 import { estadoDelNivel } from "../plan/niveles";
 import { diaIso } from "../precios/horario";
-import {
-  CLAVES_OBSERVACION, CONTRIBUCION_MINIMA, DIAS_DECISION_RECIENTE, DIAS_EX_DIVIDENDO_PRONTO, DIAS_REGLA_VENCE_PRONTO, DIAS_REGLA_VENCIDA,
-  FACTOR_CONTRIBUCION_DESPROPORCIONADA, MINIMO_ESPECIES_TOP_TRES, UMBRAL_CORRELACION, UMBRAL_PESO_PRIMERA, UMBRAL_PESO_TOP_TRES,
-  UMBRAL_REGLA_CERCANA_PCT, CRITERIOS, type Observacion,
-} from "./catalogo";
+import { CLAVES_OBSERVACION, CRITERIOS, cumple, type Observacion } from "./catalogo";
 import { diasEntre } from "./dias";
 import { compararTexto, redondear } from "./numeros";
 import { VERSION_ANALISIS, type Analisis, type EstadoCierre, type PlanParaAnalisis, type ReglaParaAnalisis } from "./tipos";
@@ -23,13 +19,12 @@ import { validarPlan } from "./validar";
 
 type Dia = Analisis["hoy"];
 
-const enRango = (dias: number, desde: number, hasta: number): boolean => dias >= desde && dias <= hasta;
-
 function concentracion(a: Analisis): Observacion[] {
   const c = a.concentracion;
   if (c === null) return [];
-  const alta: Observacion[] = c.primera.peso > UMBRAL_PESO_PRIMERA ? [{ clave: "CONCENTRACION_ALTA", umbral: CRITERIOS.CONCENTRACION_ALTA.umbral, datos: { ...c.primera } }] : [];
-  const tres = c.especies >= MINIMO_ESPECIES_TOP_TRES && c.tresPrimeras.peso > UMBRAL_PESO_TOP_TRES;
+  const alta: Observacion[] = cumple(CRITERIOS.CONCENTRACION_ALTA, c.primera.peso) ? [{ clave: "CONCENTRACION_ALTA", umbral: CRITERIOS.CONCENTRACION_ALTA.umbral, datos: { ...c.primera } }] : [];
+  const criterio = CRITERIOS.CONCENTRACION_TOP_TRES;
+  const tres = c.especies >= criterio.auxiliares.minimoEspecies && cumple(criterio, c.tresPrimeras.peso);
   // Con MINIMO_ESPECIES_TOP_TRES (4) o más especies, las tres primeras son exactamente tres.
   const [x, y, z] = c.tresPrimeras.instrumentoIds;
   const top: Observacion[] = tres
@@ -44,7 +39,7 @@ function correlacion(a: Analisis): Observacion[] {
   return ids.flatMap((x, i) =>
     ids.slice(i + 1).flatMap((y, d): Observacion[] => {
       const r = valores[i]![i + 1 + d]!;
-      return r !== null && r >= UMBRAL_CORRELACION ? [{ clave: "CORRELACION_ALTA", umbral: CRITERIOS.CORRELACION_ALTA.umbral, datos: { instrumentoIds: [x, y].sort(compararTexto) as [string, string], correlacion: r } }] : [];
+      return r !== null && cumple(CRITERIOS.CORRELACION_ALTA, r) ? [{ clave: "CORRELACION_ALTA", umbral: CRITERIOS.CORRELACION_ALTA.umbral, datos: { instrumentoIds: [x, y].sort(compararTexto) as [string, string], correlacion: r } }] : [];
     }),
   );
 }
@@ -54,9 +49,12 @@ function contribucion(a: Analisis): Observacion[] {
     if (e.riesgo.estado !== "CUBIERTA" || e.riesgo.contribucion === null) return [];
     const { pesoEnCubiertas } = e.riesgo;
     const pct = e.riesgo.contribucion.contribucionPct;
-    // El producto se redondea como las métricas: 1,5 × 0,4 es 0,6000000000000001 en coma flotante.
-    if (pesoEnCubiertas <= 0 || pct < CONTRIBUCION_MINIMA || pct < redondear(FACTOR_CONTRIBUCION_DESPROPORCIONADA * pesoEnCubiertas)) return [];
-    const datos = { instrumentoId: e.instrumentoId, pesoEnCubiertas, contribucionPct: pct, veces: redondear(pct / pesoEnCubiertas) };
+    const criterio = CRITERIOS.CONTRIBUCION_RIESGO_DESPROPORCIONADA;
+    if (pesoEnCubiertas <= 0 || pct < criterio.auxiliares.contribucionMinima) return [];
+    // Se compara el número que se muestra: las veces redondeadas como las métricas (0,6 / 0,4 da 1,4999999999999998).
+    const veces = redondear(pct / pesoEnCubiertas);
+    if (!cumple(criterio, veces)) return [];
+    const datos = { instrumentoId: e.instrumentoId, pesoEnCubiertas, contribucionPct: pct, veces };
     return [{ clave: "CONTRIBUCION_RIESGO_DESPROPORCIONADA", umbral: CRITERIOS.CONTRIBUCION_RIESGO_DESPROPORCIONADA.umbral, datos }];
   });
 }
@@ -73,7 +71,7 @@ function nivel(r: ReglaParaAnalisis, porEspecie: ReadonlyMap<string, EstadoCierr
   const base = { reglaId: r.id, instrumentoId: r.instrumentoId };
   if (e.estado === "TOCADA") return [{ clave: "REGLA_CUMPLIDA", umbral: CRITERIOS.REGLA_CUMPLIDA.umbral, datos: { ...base, lado: e.lado } }];
   const distancia = e.estado === "EN_EL_NIVEL" ? 0 : e.estado === "A_DISTANCIA" ? e.distanciaPct.toNumber() : null;
-  if (distancia === null || Math.abs(distancia) > UMBRAL_REGLA_CERCANA_PCT) return [];
+  if (distancia === null || !cumple(CRITERIOS.REGLA_CERCANA, distancia)) return [];
   return [{ clave: "REGLA_CERCANA", umbral: CRITERIOS.REGLA_CERCANA.umbral, datos: { ...base, distanciaPct: redondear(distancia) } }];
 }
 
@@ -82,8 +80,8 @@ function plazo(r: ReglaParaAnalisis, hoy: Dia): Observacion[] {
   const dia = diaIso(r.plazoHasta);
   const dias = diasEntre(hoy, dia);
   const base = { reglaId: r.id, instrumentoId: r.instrumentoId, plazo: dia };
-  if (enRango(dias, 0, DIAS_REGLA_VENCE_PRONTO)) return [{ clave: "REGLA_VENCE_PRONTO", umbral: CRITERIOS.REGLA_VENCE_PRONTO.umbral, datos: { ...base, dias } }];
-  return -dias >= DIAS_REGLA_VENCIDA ? [{ clave: "REGLA_VENCIDA", umbral: CRITERIOS.REGLA_VENCIDA.umbral, datos: { ...base, dias: -dias } }] : [];
+  if (cumple(CRITERIOS.REGLA_VENCE_PRONTO, dias)) return [{ clave: "REGLA_VENCE_PRONTO", umbral: CRITERIOS.REGLA_VENCE_PRONTO.umbral, datos: { ...base, dias } }];
+  return cumple(CRITERIOS.REGLA_VENCIDA, -dias) ? [{ clave: "REGLA_VENCIDA", umbral: CRITERIOS.REGLA_VENCIDA.umbral, datos: { ...base, dias: -dias } }] : [];
 }
 
 function precios(a: Analisis): Observacion[] {
@@ -99,7 +97,8 @@ function precios(a: Analisis): Observacion[] {
 function decisiones(a: Analisis): Observacion[] {
   return a.decisiones.medidas.flatMap((m): Observacion[] => {
     const dias = diasEntre(m.conocidoEl, a.hoy);
-    if (m.veredicto !== "NO_FUNCIONO" || !enRango(dias, 0, DIAS_DECISION_RECIENTE)) return [];
+    // NO_FUNCIONO es el veredicto de resultado.ts para pesos < 0 (el auxiliar resultadoPesosMenorQue).
+    if (m.veredicto !== "NO_FUNCIONO" || !cumple(CRITERIOS.DECISION_RESULTADO_NEGATIVO, dias)) return [];
     const datos = { decisionId: m.decisionId, horizonteDias: m.horizonteDias, resultadoPesos: m.resultadoPesos, conocidoEl: m.conocidoEl, dias };
     return [{ clave: "DECISION_RESULTADO_NEGATIVO", umbral: CRITERIOS.DECISION_RESULTADO_NEGATIVO.umbral, datos }];
   });
@@ -108,7 +107,7 @@ function decisiones(a: Analisis): Observacion[] {
 function especies(a: Analisis): Observacion[] {
   return a.especies.flatMap((e): Observacion[] => {
     const dias = e.proximaEx === null ? -1 : diasEntre(a.hoy, e.proximaEx.dia);
-    const ex: Observacion[] = e.proximaEx !== null && enRango(dias, 0, DIAS_EX_DIVIDENDO_PRONTO)
+    const ex: Observacion[] = e.proximaEx !== null && cumple(CRITERIOS.EX_DIVIDENDO_PRONTO, dias)
       ? [{ clave: "EX_DIVIDENDO_PRONTO", umbral: CRITERIOS.EX_DIVIDENDO_PRONTO.umbral, datos: { instrumentoId: e.instrumentoId, decretoId: e.proximaEx.decretoId, fechaEx: e.proximaEx.dia, dias } }]
       : [];
     const corta: Observacion[] = e.riesgo.estado === "SIN_HISTORIA"

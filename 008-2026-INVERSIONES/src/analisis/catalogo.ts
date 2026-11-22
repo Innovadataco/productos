@@ -131,6 +131,29 @@ export type Observacion =
   | ObservacionDe<"EX_DIVIDENDO_PRONTO", { readonly instrumentoId: string; readonly decretoId: string; readonly fechaEx: Dia; readonly dias: number }>
   | ObservacionDe<"HISTORIA_INSUFICIENTE", { readonly instrumentoId: string; readonly motivo: MotivoSinHistoria; readonly dias: number }>;
 
+/**
+ * ¿Lo medido cumple el criterio? Es la comparación que aplican las observaciones: lo que la pantalla muestra es lo que
+ * dispara. PASA_EL_NIVEL no se compara con un número (lo decide `estadoDelNivel`, src/plan/niveles.ts). En PRECIO_ATRASADO,
+ * PRECIOS_SIN_ACTUALIZAR e HISTORIA_INSUFICIENTE el umbral describe el estado que las dispara: lo deciden
+ * `frescuraDelCierre`, `preciosAtrasados` y `armarHistoria`.
+ */
+export function cumple(c: Criterio, medido: number): boolean {
+  switch (c.comparacion) {
+    case "MAYOR_QUE":
+      return medido > c.umbral;
+    case "MAYOR_O_IGUAL":
+      return medido >= c.umbral;
+    case "MENOR_QUE":
+      return medido < c.umbral;
+    case "DE_CERO_HASTA":
+      return medido >= 0 && medido <= c.umbral;
+    case "VALOR_ABSOLUTO_HASTA":
+      return Math.abs(medido) <= c.umbral;
+    case "PASA_EL_NIVEL":
+      throw new RangeError("PASA_EL_NIVEL lo decide estadoDelNivel, no un número.");
+  }
+}
+
 /** Cada clave del catálogo tiene su forma en la unión, y ninguna forma usa una clave de fuera (falla al compilar). */
 type Iguales<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 export const UNION_CUBRE_EL_CATALOGO: Iguales<Observacion["clave"], ClaveObservacion> = true;
