@@ -116,7 +116,10 @@ function lineasDeCorteNoHabil(corte: string, ultimo: UltimoHabil, produccion: bo
 /** Por qué la fecha no es el corte real (si el resultado lo trae) o, si no es hábil, el último día hábil anterior. */
 function lineasDePista(corte: string, pista: PistaCorte, yaCargadaEn: string | null, produccion: boolean): string[] {
   if (pista.tipo === "PDF") return lineasDePistaPdf(corte, pista, yaCargadaEn, produccion);
-  return [];
+  return [
+    `📅 Los precios de valoración de la certificación cuadran (±1 %) con los cierres del ${pista.sugerido}, el día hábil anterior al corte, en las ${pista.especies} especies, y en ${pista.distintas} no cuadran con los del ${corte}: es la foto del cierre del ${pista.sugerido}, y la fecha de corte no se ajusta sola.`,
+    lineaDeRepetir(pista.sugerido, yaCargadaEn, produccion),
+  ];
 }
 
 /** Si el rechazo trae la pista del corte real, la dice; si fue por la fecha no hábil, lee el calendario y dice el día hábil anterior. */

@@ -12,16 +12,22 @@
  *   generó antes del cierre definitivo de ese día, o después del corte pedido), el rechazo lleva `pistaCorte` (el día
  *   que el CLI sugiere) y `yaCargadaEn` (el corte con que ya está cargado ese mismo PDF, si lo está): así el CLI manda
  *   a corregir el corte en vez de reimportar. Nada de eso se guarda en la base.
+ * - Señal 1 del corte real: una certificación NUEVA cuyos precios de valoración son los cierres ya guardados del día
+ *   hábil anterior (`corteReal`, la misma regla de la conciliación) se rechaza con CORTE_NO_COINCIDE y la pista del día.
+ *   Si faltan cierres, alguna especie no existe o el año no está sembrado, no se puede saber y no bloquea. La
+ *   reimportación idempotente (la misma certificación ya cargada) no se bloquea: la corrige `corregir-corte-certificacion`.
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { ErrorCifrado } from "../../cifrado/errores";
+import { corteReal } from "../../conciliacion/corte-real";
+import { cierresDelDia } from "../../conciliacion/esperado";
 import { obtenerLlavero, type Llavero } from "../../cifrado/llavero";
 import { analizarCertificacion, errorDeDocumento as documento, type CertificacionAnalizada } from "./analisis";
-import { isoDia, leerCalendarioCorte, ultimoCorteDefinitivo, validarFechaCorte, type CalendarioCorte, type PistaCorte } from "./fecha-corte";
+import { isoDia, leerCalendarioCorte, ultimoCorteDefinitivo, ultimoHabilAnterior, validarFechaCorte, type CalendarioCorte, type PistaCorte } from "./fecha-corte";
 import type { ErrorFilaAv } from "./filas";
 import {
-  ErrorImportacionAv, TIPO_FUENTE, filasSiCoinciden, guardarCertificacion, guardarFilas, registrarVistas, resolverEspecies, resolverFondos,
+  ErrorImportacionAv, TIPO_FUENTE, buscarEspecies, filasSiCoinciden, guardarCertificacion, guardarFilas, registrarVistas, resolverEspecies, resolverFondos,
 } from "./guardar";
 import { MAX_BYTES } from "./pdf/documento";
 
@@ -122,7 +128,31 @@ async function nueva(tx: Prisma.TransactionClient, base: Base, a: CertificacionA
   return { ...sinNada, cargaId: carga.id, estado: "CARGADO", certificacionId, filasTotal: n, filasNuevas: n, instrumentosCreados: especies.creadas, fondoVinculado: fondos.vinculado, errores: [] };
 }
 
-async function enTransaccion(db: PrismaClient, base: Base, a: CertificacionAnalizada, llavero: Llavero): Promise<ResultadoImportacionAv> {
+/** El rechazo de la señal 1, con su pista (el día sugerido y los conteos). */
+export class ErrorCorteNoCoincide extends ErrorImportacionAv {
+  constructor(readonly pista: Extract<PistaCorte, { tipo: "PRECIOS" }>) {
+    super("CORTE_NO_COINCIDE");
+    this.name = "ErrorCorteNoCoincide";
+  }
+}
+
+/**
+ * Señal 1: lanza ErrorCorteNoCoincide si los precios de valoración son los cierres guardados del día hábil anterior
+ * al corte y no los del corte (`corteReal`). Solo lee: no crea especies.
+ */
+export async function exigirCorteReal(tx: Prisma.TransactionClient, fecha: Date, a: CertificacionAnalizada, calendario: CalendarioCorte): Promise<void> {
+  const anterior = ultimoHabilAnterior(fecha, calendario);
+  if (!anterior.ok) return;
+  const ids = await buscarEspecies(tx, a.posiciones.map((p) => p.nemo));
+  if (ids === null) return;
+  const todos = [...ids.values()];
+  const [delCorte, delAnterior] = [await cierresDelDia(tx, fecha, todos), await cierresDelDia(tx, new Date(`${anterior.dia}T00:00:00Z`), todos)];
+  const precios = a.posiciones.map((p) => ({ precioValoracion: p.precioValoracion, cierre: delCorte.get(ids.get(p.nemo)!) ?? null, cierreAnterior: delAnterior.get(ids.get(p.nemo)!) ?? null }));
+  const r = corteReal(precios);
+  if (r !== null) throw new ErrorCorteNoCoincide({ tipo: "PRECIOS", sugerido: anterior.dia, especies: r.especies, distintas: r.distintas });
+}
+
+async function enTransaccion(db: PrismaClient, base: Base, a: CertificacionAnalizada, llavero: Llavero, calendario: CalendarioCorte): Promise<ResultadoImportacionAv> {
   return db.$transaction(
     async (tx) => {
       // Una sola importación de certificaciones a la vez: el chequeo de sha256 y de fecha no tiene carreras.
@@ -130,7 +160,9 @@ async function enTransaccion(db: PrismaClient, base: Base, a: CertificacionAnali
       const mismoArchivo = await tx.cargaArchivo.findFirst({ where: { tipoFuente: TIPO_FUENTE, sha256: base.sha256, estado: "CARGADO", NOT: { fechaCorte: base.fecha } }, select: { id: true } });
       if (mismoArchivo) throw new ErrorImportacionAv("ARCHIVO_YA_CARGADO");
       const existente = await tx.certificacion.findUnique({ where: { fechaCorte: base.fecha }, select: { id: true, cargaId: true } });
-      return existente ? repetida(tx, base, a, existente, llavero) : nueva(tx, base, a, llavero);
+      if (existente) return repetida(tx, base, a, existente, llavero);
+      await exigirCorteReal(tx, base.fecha, a, calendario);
+      return nueva(tx, base, a, llavero);
     },
     { timeout: 60_000, maxWait: 10_000 },
   );
@@ -162,11 +194,11 @@ export async function importarCertificacion(db: PrismaClient, archivo: ArchivoCe
   if (fecha) return registrarRechazo(db, base, n, [documento(fecha)], await pistaDeFecha(db, fecha, creadoEn, calendario, base.sha256));
   for (let intento = 1; ; intento += 1) {
     try {
-      return await enTransaccion(db, base, analisis.valor, llavero);
+      return await enTransaccion(db, base, analisis.valor, llavero, calendario);
     } catch (e) {
       // Otro importador creó la misma especie a la vez (P2002): se relee y se reintenta una sola vez.
       if (esChoque(e) && intento < MAX_INTENTOS) continue;
-      return registrarRechazo(db, base, n, [errorDe(e)]);
+      return registrarRechazo(db, base, n, [errorDe(e)], e instanceof ErrorCorteNoCoincide ? { pistaCorte: e.pista } : {});
     }
   }
 }

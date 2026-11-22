@@ -31,17 +31,33 @@ const enFondo = (f: FondoCertificado) => ({ pagina: f.pagina, fila: f.numero, co
  * consulta y solo entre acciones. Si dos acciones distintas lo reclaman, no se elige: ESPECIE_AMBIGUA.
  * Si ninguna, se crea. `ubicaciones` dice en qué fila del PDF aparece cada nemotécnico (para el error).
  */
-export async function resolverEspecies(
-  tx: Tx, nemos: readonly string[], ubicaciones: ReadonlyMap<string, Omit<ErrorFilaAv, "codigo">>,
-): Promise<{ ids: Map<string, string>; creadas: number }> {
+/** Las acciones que reclaman cada nemotécnico (por símbolo de Trii o por nemotécnico), en una sola consulta. */
+async function candidatasDe(tx: Tx, nemos: readonly string[]): Promise<ReadonlyMap<string, ReadonlySet<string>>> {
   const candidatas = await tx.instrumento.findMany({
     where: { tipo: "ACCION", OR: [{ simboloTrii: { in: [...nemos] } }, { nemotecnico: { in: [...nemos] } }] },
     select: { id: true, simboloTrii: true, nemotecnico: true },
   });
+  return new Map(nemos.map((nemo) => [nemo, new Set(candidatas.filter((c) => c.simboloTrii === nemo || c.nemotecnico === nemo).map((c) => c.id))]));
+}
+
+/**
+ * Solo lectura (señal 1 del corte real): cada nemotécnico → su acción, sin crear nada. null si alguno no existe o es
+ * ambiguo: entonces no se puede comparar con los cierres guardados.
+ */
+export async function buscarEspecies(tx: Tx, nemos: readonly string[]): Promise<Map<string, string> | null> {
+  const porNemo = await candidatasDe(tx, nemos);
+  const ids = nemos.map((nemo) => [nemo, [...(porNemo.get(nemo) ?? [])]] as const);
+  return ids.every(([, propias]) => propias.length === 1) ? new Map(ids.map(([nemo, propias]) => [nemo, propias[0]!])) : null;
+}
+
+export async function resolverEspecies(
+  tx: Tx, nemos: readonly string[], ubicaciones: ReadonlyMap<string, Omit<ErrorFilaAv, "codigo">>,
+): Promise<{ ids: Map<string, string>; creadas: number }> {
+  const porNemo = await candidatasDe(tx, nemos);
   const ids = new Map<string, string>();
   let creadas = 0;
   for (const nemo of nemos) {
-    const propias = new Set(candidatas.filter((c) => c.simboloTrii === nemo || c.nemotecnico === nemo).map((c) => c.id));
+    const propias = porNemo.get(nemo) ?? new Set<string>();
     if (propias.size > 1) throw new ErrorImportacionAv("ESPECIE_AMBIGUA", ubicaciones.get(nemo));
     const id = [...propias][0] ?? (await tx.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo, nombre: nemo }, select: { id: true } })).id;
     if (propias.size === 0) creadas += 1;
