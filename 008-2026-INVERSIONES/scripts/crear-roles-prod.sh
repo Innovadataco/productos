@@ -38,7 +38,8 @@ clave_de_url() {
 # SQL puro del rol inv_precios (sin clave ni metacomandos de psql), en un heredoc entre comillas: no se expande nada.
 # Nace NOLOGIN; el LOGIN no se toca aquí (lo decide el secreto, más abajo), así no hay vaivén en un rol que ya entra.
 # Solo CONNECT a la base y USAGE del esquema; sin privilegios por defecto: cada permiso de tabla, por columna,
-# lo da privilegios.sql (que lo corre el migrador como inv_dueno). 4 conexiones: dos veces el pool de su URL
+# lo da privilegios.sql (que lo corre el migrador como inv_dueno). Topes por sesión de 60 s por sentencia y 30 s de
+# transacción quieta (revisión de base del servicio de precios, M3). 4 conexiones: dos veces el pool de su URL
 # (connection_limit=2); con inv_dueno (5) e inv_app (10) suman 19 de las 30 de la base. Lo prueba el CI contra una PostgreSQL 16 real
 # (tests/unit/produccion/roles-base.test.ts).
 sql_rol_precios() {
@@ -51,6 +52,10 @@ BEGIN
 END
 $$;
 ALTER ROLE inv_precios WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 4;
+-- Topes por sesión: si el servicio mata a un hijo a mitad (plazo o SIGTERM), su backend no ocupa el CONNECTION LIMIT 4
+-- más de lo que dure su sentencia o su transacción quieta. Las del servicio son cortas (sin red dentro).
+ALTER ROLE inv_precios SET statement_timeout = '60s';
+ALTER ROLE inv_precios SET idle_in_transaction_session_timeout = '30s';
 DO $$
 BEGIN
   EXECUTE format('GRANT CONNECT ON DATABASE %I TO inv_precios', current_database());
