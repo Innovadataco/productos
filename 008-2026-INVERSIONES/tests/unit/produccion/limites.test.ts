@@ -35,7 +35,8 @@ const CHECKS = JSON.stringify({
   ],
 });
 
-type Cgroup = { max?: string; swapMax?: string; swapCurrent?: string };
+/** El cgroup simulado: memory.max, memory.swap.max, memory.swap.current (por defecto 0) y memory.stat (si se da). */
+type Cgroup = { max?: string; swapMax?: string; swapCurrent?: string; stat?: string };
 
 /** Base de prueba con el archivo de producción ficticio, el cgroup simulado y la tabla de límites del docker falso. */
 function base(prefijo: string) {
@@ -55,7 +56,8 @@ function base(prefijo: string) {
     mkdirSync(scope(datos.id), { recursive: true });
     writeFileSync(path.join(scope(datos.id), "memory.max"), `${cg.max ?? datos.mem}\n`);
     writeFileSync(path.join(scope(datos.id), "memory.swap.max"), `${cg.swapMax ?? "0"}\n`);
-    if (cg.swapCurrent !== undefined) writeFileSync(path.join(scope(datos.id), "memory.swap.current"), `${cg.swapCurrent}\n`);
+    writeFileSync(path.join(scope(datos.id), "memory.swap.current"), `${cg.swapCurrent ?? "0"}\n`);
+    if (cg.stat !== undefined) writeFileSync(path.join(scope(datos.id), "memory.stat"), cg.stat);
   };
   const falsos = crearFalsos(dir);
   const meminfo = path.join(dir, "meminfo");
@@ -119,7 +121,8 @@ function sinTocarNada(ll: Llamada[], stderr: string) {
 
 describe("desplegar-prod.sh · reaplica los límites ANTES de tocar nada", () => {
   it("la base con memory.swap.max = max: un docker update con su HostConfig.Memory antes del respaldo previo y de migrar, una línea de log, y despliega", async () => {
-    const p = despliegue({ swapMax: "max", swapCurrent: "4613" });
+    // En swap 4613 bytes: con anon y shmem cabe de sobra en su límite (sin riesgo de OOM al reponer el tope).
+    const p = despliegue({ swapMax: "max", swapCurrent: "4613", stat: "anon 37911347\nfile 129237\nshmem 1237311\n" });
     const r = await correr(p.script, [IMAGEN], p.env);
     expect(r.status, r.stderr).toBe(0);
     expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${p.sha}`);
@@ -194,6 +197,28 @@ describe("desplegar-prod.sh · reaplica los límites ANTES de tocar nada", () =>
     const r = await correr(p.script, [IMAGEN], p.env);
     expect(r.status).not.toBe(0);
     expect(r.stderr).toMatch(new RegExp(`${NOMBRE_DB} no tiene un límite de memoria declarado`));
+    expect(updates(p.falsos.llamadas())).toEqual([]);
+    sinTocarNada(p.falsos.llamadas(), r.stderr);
+  });
+
+  // Revisión de seguridad (MEDIO): poner swap.max en 0 no saca lo que ya está en swap; al volver a la memoria, si lo que
+  // no se puede soltar (anon y shmem) más lo que está en swap no cabe en el límite, el contenedor muere por OOM.
+  it("si lo que tiene en swap no cabría en su límite (anon + shmem + swap > Memory): no reaplica, aborta sin tocar ningún contenedor", async () => {
+    const p = despliegue({ swapMax: "max", swapCurrent: "297911047", stat: "anon 301237467\nfile 4613\nshmem 67117056\n" }, { swapMax: "max" });
+    const r = await correr(p.script, [IMAGEN], p.env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(new RegExp(`${NOMBRE_DB} tiene 297911047 bytes en swap y no cabría en su límite: anon 301237467 \\+ shmem 67117056 \\+ swap 297911047 = 666265570 > ${MEM_DB}`));
+    expect(r.stderr).toMatch(/podría morir por OOM/);
+    expect(updates(p.falsos.llamadas()), "tampoco la app, que sí cabía").toEqual([]);
+    expect(leer(path.join(p.scope(ID_DB), "memory.swap.max"))).toBe("max");
+    sinTocarNada(p.falsos.llamadas(), r.stderr);
+  });
+
+  it("con algo en swap y sin memory.stat legible no se sabe si cabe: aborta sin tocar nada", async () => {
+    const p = despliegue({ swapMax: "max", swapCurrent: "4613" });
+    const r = await correr(p.script, [IMAGEN], p.env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(new RegExp(`${NOMBRE_DB} tiene 4613 bytes en swap y no deja leer memory\\.stat`));
     expect(updates(p.falsos.llamadas())).toEqual([]);
     sinTocarNada(p.falsos.llamadas(), r.stderr);
   });
@@ -349,6 +374,16 @@ describe("reaplicar-limites-008.sh · el comando a mano", () => {
     expect(b.falsos.llamadas().filter((l) => l[0] === "docker")).toEqual([]);
   });
 
+  it("un contenedor sin etiqueta de proyecto (vacía) tampoco se toca: aborta sin ningún update", async () => {
+    const b = base("limites-comando-sin-etiqueta");
+    appYBase(b, { swapMax: "max" });
+    b.contenedor("cidsuelto", { proyecto: "", nombre: "suelto-1", mem: MEM_APP, id: ID_AJENO }, { swapMax: "max" });
+    const r = await correr(REAPLICAR, [], { ...b.env, FALSO_CIDS_PS: "cidapp\nciddb\ncidsuelto\n" });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/suelto-1 no lleva la etiqueta del proyecto inv-008-prueba \(lleva «»\)/);
+    expect(updates(b.falsos.llamadas())).toEqual([]);
+  });
+
   it("no lleva argumentos", async () => {
     const b = base("limites-comando-args");
     const r = await correr(REAPLICAR, ["--todo"], b.env);
@@ -369,8 +404,19 @@ describe("medir-memoria.sh · avisa si un contenedor de 008 puede usar swap", ()
     expect(r.stdout).toContain(`⚠️  ${NOMBRE_DB} puede usar swap (memory.swap.max = max`);
     expect(r.stdout).toContain(`sudo ${path.join(realpathSync(DIR_008), "scripts/reaplicar-limites-008.sh")}`);
     expect(r.stdout).not.toContain(NOMBRE_APP);
+    expect(r.stdout.split("puede usar swap").length - 1, "un aviso por contenedor").toBe(1);
     expect(readFileSync(salida, "utf8")).toBe(r.stdout);
     expect(updates(b.falsos.llamadas())).toEqual([]);
+  });
+
+  it("nunca falla (corre dentro de la trampa del despliegue): con docker inspect fallando, mide igual y sale con 0, sin ruido", async () => {
+    const b = base("limites-medir-inspect");
+    appYBase(b, { swapMax: "max" });
+    const r = await correr(MEDIR, [], { ...b.env, FALSO_INSPECT_RC: "1" });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/MemAvailable/);
+    expect(r.stdout).not.toMatch(/puede usar swap/);
+    expect(r.stderr).toBe("");
   });
 
   it("con todo al día no avisa", async () => {
