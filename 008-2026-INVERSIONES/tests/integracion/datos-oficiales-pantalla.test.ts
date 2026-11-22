@@ -6,7 +6,11 @@
 // - una sola transacción REPEATABLE READ para todo (la lectura combinada de C5a);
 // - la TRM que vale hoy (un tramo que lo cubre) y no la publicada por adelantado; la TPM de ayer, al día pero sin «hoy»;
 //   la IBR atrasada; el IPC del mes anterior con la variación en 12 meses CALCULADA;
-// - la historia de cada ventana, en orden, sin lo que empieza después de hoy.
+// - la historia de cada ventana, en orden, sin lo que empieza después de hoy;
+// - con PostgreSQL de verdad, un error de la lectura (ErrorLecturaSeries) no aborta la transacción: la variación que no
+//   se puede calcular queda NO_SE_PUDO y la lectura sigue (revisión code-reviewer, MEDIO). Una serie entera en ERROR no
+//   se puede sembrar aquí: lo que la provoca (un valor cero, negativo o fuera de DECIMAL(20,8)) lo rechazan los CHECK y
+//   el tipo de la columna; ese caso lo cubre tests/unit/pantalla-datos-oficiales/datos.test.ts con la base falsa.
 // Cifras inventadas.
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -98,5 +102,17 @@ describe("/datos-oficiales contra la base", () => {
     expect(ipc.frescura).toEqual({ estado: "AL_DIA", dias: 17, umbralDias: 45, valeHoy: false });
     expect(ipc.variacion).toEqual({ estado: "CALCULADA", valor: "2.97", unidad: UNIDAD_VARIACION, mesBase: "1907-05-01", mesFinal: "1908-05-01" });
     expect(ipc.historia).toHaveLength(13);
+  });
+});
+
+describe("un error de la lectura dentro de la transacción real", () => {
+  it("el mes base cae antes del primer día que acepta la lectura: la variación NO_SE_PUDO, la tarjeta sale y la lectura sigue", async () => {
+    const [balance] = await guardarSeries(db, [{ codigo: "IPC_INDICE", fuente: "dane:anex-IPC-Indices", valores: [fila("1902-04-01", "1902-04-30", "37.91"), fila("1902-05-01", "1902-05-31", "38.17")] }]);
+    expect(balance?.fallo).toBeNull();
+    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const temprana = await datosOficiales(db, dia("1902-06-17"));
+    expect(temprana.series.map((s) => s.estado)).toEqual(["SIN_DATOS", "SIN_DATOS", "SIN_DATOS", "CON_DATOS"]);
+    expect(temprana.series[3]).toMatchObject({ variacion: { estado: "NO_SE_PUDO" }, historia: [{ desde: "1902-04-01" }, { desde: "1902-05-01" }] });
+    expect(registro.mock.calls).toEqual([["[datos-oficiales] IPC_INDICE (variación): FECHA_INVALIDA"]]);
   });
 });

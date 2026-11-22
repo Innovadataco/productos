@@ -35,10 +35,11 @@ describe("serializar", () => {
     });
   });
 
-  it("una frescura incoherente con un último (no la da frescura.ts) se muestra atrasada, nunca al día", () => {
+  it("una frescura incoherente con un último (no la da frescura.ts) no se adorna: la serie sale ERROR, sin cifra ni días inventados", () => {
+    // Revisión code-reviewer y react-reviewer (BAJO): antes se mostraba atrasada con «hace N días» sin haberlo leído.
     const ultimo = cifra("2021-03-13", "2021-03-15", "3921.17", "2021-03-12T22:03:00Z");
     const vista = aSerieVista({ serie: TRM, ventana: "ANIO", estado: "CON_DATOS", ultimo, frescura: { estado: "SIN_DATOS", dias: null, umbralDias: 3, cubreHoy: false }, historia: [ultimo], variacion: null });
-    expect(vista).toMatchObject({ frescura: { estado: "ATRASADA", dias: 3, umbralDias: 3, valeHoy: false } });
+    expect(vista).toEqual({ ...baseDe("TRM"), estado: "ERROR" });
   });
 
   it("sin datos y con error: solo lo del catálogo (nada que se pueda leer como una cifra)", () => {

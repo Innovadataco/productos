@@ -37,6 +37,19 @@ describe("datos-oficiales.css", () => {
     expect(bloque).toMatch(/\.do-estado\s*\{[^}]*border-color:\s*CanvasText/);
   });
 
+  it("el foco no queda bajo el encabezado fijo (WCAG 2.4.11; revisión a11y-architect, ALTO): margen al desplazar, mayor en el celular", () => {
+    const margen = (bloque: string) => Number(/\.do :is\(a, summary, \[tabindex\]\)\s*\{[^}]*scroll-margin-top:\s*(\d+)px/.exec(bloque)?.[1] ?? 0);
+    const sinMedia = sinComentarios.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^{}]*\}/g, "");
+    const celular = /@media \(max-width: 620px\)\s*\{([\s\S]*?)\n\}/.exec(sinComentarios)?.[1] ?? "";
+    expect(margen(sinMedia)).toBeGreaterThanOrEqual(96);
+    expect(margen(celular)).toBeGreaterThan(margen(sinMedia));
+  });
+
+  it("el enlace de la fuente mide al menos 24 px de alto (WCAG 2.5.8) y el código de la fuente no baja de 12 px", () => {
+    expect(sinComentarios).toMatch(/\.do-pares a\s*\{[^}]*display:\s*inline-block[^}]*padding-block:\s*[3-9]px/);
+    expect(Number(/\.do-codigo\s*\{[^}]*font-size:\s*(\d+)px/.exec(sinComentarios)?.[1])).toBeGreaterThanOrEqual(12);
+  });
+
   it("no anima nada propio", () => {
     expect(sinComentarios).not.toMatch(/\banimation\b|\btransition\b|@keyframes/);
   });

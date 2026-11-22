@@ -72,23 +72,23 @@ test.describe("pantalla de datos oficiales", () => {
     await expect(page.locator(".do-hero .eyebrow")).toHaveText(/^Consultado el \d{1,2}-[a-z]{3}-\d{4} \(hora de Colombia\)$/);
 
     const trm = p.tarjeta("Tasa Representativa del Mercado");
-    await expect(trm.locator(".do-estado")).toHaveText("Al día");
+    await expect(trm.locator(".do-estado-texto")).toHaveText("Al día");
     await expect(trm.locator(".do-cifra")).toHaveText(ESPERADO.trm);
     await expect(trm.locator(".do-vigencia")).toHaveText(/^Vale hoy · vigente del /);
 
     const tpm = p.tarjeta("Tasa de política monetaria");
-    await expect(tpm.locator(".do-estado")).toHaveText("Al día");
+    await expect(tpm.locator(".do-estado-texto")).toHaveText("Al día");
     await expect(tpm.locator(".do-cifra")).toHaveText(ESPERADO.tpm);
     await expect(tpm.locator(".do-vigencia")).toHaveText(/^No es la cifra de hoy · vigente el /);
     await expect(tpm).not.toContainText("Vale hoy");
 
     const ibr = p.tarjeta("IBR a 3 meses, efectiva anual");
-    await expect(ibr.locator(".do-estado")).toHaveText("Atrasada");
+    await expect(ibr.locator(".do-estado-texto")).toHaveText("Atrasada");
     await expect(ibr.locator(".do-cifra")).toHaveText(ESPERADO.ibr);
     await expect(ibr).toContainText(/Terminó hace 1[01] días; se marca atrasada desde 7 días\./);
 
     const ipc = p.tarjeta("Índice de precios al consumidor");
-    await expect(ipc.locator(".do-estado")).toHaveText("Al día");
+    await expect(ipc.locator(".do-estado-texto")).toHaveText("Al día");
     await expect(ipc.locator(".do-cifra")).toHaveText(ESPERADO.ipc);
     await expect(ipc.locator(".do-vigencia")).toHaveText(/^No es la cifra de hoy · corresponde a [a-z]{3}-\d{4}$/);
     await expect(ipc.locator(".do-variacion")).toHaveText(`Variación en 12 meses ${ESPERADO.variacionIpc} % de variación (calculada por 008)`);
@@ -184,6 +184,26 @@ test.describe("pantalla de datos oficiales", () => {
         for (const s of SERIES) expect((await p.tarjeta(s).boundingBox())!.width, s).toBeLessThanOrEqual(ANCHO_CELULAR.width);
         for (const t of TITULOS_GRAFICAS) expect((await p.figura(t).boundingBox())!.width, t).toBeLessThanOrEqual(ANCHO_CELULAR.width);
         await p.capturar(`datos-oficiales-375-${nombre}`);
+      });
+
+      test("con Mayús+Tab hacia arriba, nada de lo enfocado queda bajo el encabezado fijo (WCAG 2.4.11)", async ({ page }, info) => {
+        await PaginaDatosOficiales.abrir(page, info);
+        await page.getByRole("main").getByText("Ver los datos").last().focus();
+        const vistos: string[] = [];
+        for (let k = 0; k < 40; k += 1) {
+          await page.keyboard.press("Shift+Tab");
+          const r = await page.evaluate(() => {
+            const el = document.activeElement;
+            const main = document.querySelector("main");
+            const header = document.querySelector("header.top");
+            if (!el || !main?.contains(el) || !header) return null;
+            return { arriba: el.getBoundingClientRect().top, encabezado: header.getBoundingClientRect().bottom, texto: (el.textContent ?? "").slice(0, 40) };
+          });
+          if (r === null) break;
+          vistos.push(r.texto);
+          expect(r.arriba, `«${r.texto}» queda bajo el encabezado`).toBeGreaterThanOrEqual(r.encabezado - 1);
+        }
+        expect(vistos.length).toBeGreaterThan(8);
       });
     });
   }

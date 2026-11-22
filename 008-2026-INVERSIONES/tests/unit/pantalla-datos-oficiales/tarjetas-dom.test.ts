@@ -3,6 +3,8 @@
 // una tarjeta por serie con su último valor, su vigencia (y «Vale hoy» solo si cubre hoy), su frescura en texto (no
 // solo en color), la fuente con enlace https a un host de la lista (sin target, sin referer), cuándo se trajo y cómo
 // entra; en el IPC, la variación «calculada por 008». Sin datos y con error, ninguna cifra. Sin formularios ni botones.
+// Revisión a11y-architect (MEDIO): la insignia dice, para el lector, que es el estado de la serie, y el enlace dice
+// adónde lleva (la página oficial de esa serie, en un sitio externo), sin cambiar el texto visible.
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -25,6 +27,10 @@ const tarjeta = (raiz: HTMLElement, nombre: string): HTMLElement => {
   if (!t) throw new Error(`No hay tarjeta «${nombre}»`);
   return t;
 };
+
+/** El texto visible del estado (la insignia lleva además «Estado de la serie: » para el lector de pantalla). */
+const estadoVisible = (t: HTMLElement) => texto(t.querySelector(".do-estado .do-estado-texto"));
+const externo = (nombre: string) => `(página oficial de ${nombre}, sitio externo)`;
 
 /** Los pares de la lista de datos de una tarjeta: [término, descripción]. */
 const pares = (t: HTMLElement) => [...t.querySelectorAll("dl dt")].map((dt) => [texto(dt), texto(dt.nextElementSibling)]);
@@ -60,28 +66,34 @@ describe("la pantalla", () => {
 describe("cada tarjeta", () => {
   it("TRM al día y vigente hoy: cifra, unidad, «Vale hoy», fuente, carga y cómo entra", () => {
     const t = tarjeta(pantalla(), TRM.nombre);
-    expect(texto(t.querySelector(".do-estado"))).toBe("Al día");
+    expect(estadoVisible(t)).toBe("Al día");
     expect(texto(t.querySelector(".do-cifra"))).toBe("3.923,07");
     expect(texto(t.querySelector(".do-unidad"))).toBe("COP por USD");
     expect(texto(t.querySelector(".do-vigencia"))).toBe("Vale hoy · vigente el 17-mar-2021");
     expect(pares(t)).toEqual([
-      ["Fuente", `${TRM.origen} sfc:32sa-8pi3`],
+      ["Fuente", `${TRM.origen} ${externo(TRM.nombre)} sfc:32sa-8pi3`],
       ["Traído el", "16-mar-2021 a las 18:41 (hora de Colombia)"],
       ["Cómo entra", "A mano: la carga el dueño (vía B)"],
       ["Frescura", "Su vigencia todavía corre."],
     ]);
   });
 
+  it("la insignia, para el lector de pantalla, dice que es el estado de la serie; lo visible no cambia", () => {
+    const t = tarjeta(pantalla(), IBR.nombre);
+    expect(texto(t.querySelector(".do-estado"))).toBe("Estado de la serie: Atrasada");
+    expect(texto(t.querySelector(".do-estado .sr"))).toBe("Estado de la serie:");
+  });
+
   it("TPM al día pero de ayer: nunca dice «Vale hoy»", () => {
     const t = tarjeta(pantalla(), TPM.nombre);
-    expect(texto(t.querySelector(".do-estado"))).toBe("Al día");
+    expect(estadoVisible(t)).toBe("Al día");
     expect(texto(t.querySelector(".do-vigencia"))).toBe("No es la cifra de hoy · vigente el 16-mar-2021");
     expect(texto(t)).not.toContain("Vale hoy");
   });
 
   it("IBR atrasada: lo dice en texto, con hace cuánto terminó", () => {
     const t = tarjeta(pantalla(), IBR.nombre);
-    expect(texto(t.querySelector(".do-estado"))).toBe("Atrasada");
+    expect(estadoVisible(t)).toBe("Atrasada");
     expect(t.querySelector(".do-estado")?.getAttribute("data-estado")).toBe("ATRASADA");
     expect(pares(t).at(-1)).toEqual(["Frescura", "Terminó hace 12 días; se marca atrasada desde 7 días."]);
   });
@@ -109,10 +121,10 @@ describe("cada tarjeta", () => {
   it("sin datos y con error: ninguna cifra ni gráfica; la fuente y cómo entra, sí", () => {
     const raiz = pantalla([sinDatos("TRM"), conError("TPM")]);
     const sin = tarjeta(raiz, TRM.nombre);
-    expect(texto(sin.querySelector(".do-estado"))).toBe("Sin datos");
+    expect(estadoVisible(sin)).toBe("Sin datos");
     expect(texto(sin.querySelector(".do-mensaje"))).toBe("Todavía no hay ningún valor cargado de esta serie.");
     const error = tarjeta(raiz, TPM.nombre);
-    expect(texto(error.querySelector(".do-estado"))).toBe("No se pudo leer");
+    expect(estadoVisible(error)).toBe("No se pudo leer");
     expect(texto(error.querySelector(".do-mensaje"))).toBe("No se pudo leer esta serie; las demás sí. Quedó registrado para revisarlo.");
     for (const t of [sin, error]) {
       expect(t.querySelector(".do-cifra, .do-vigencia, figure")).toBeNull();
@@ -137,6 +149,15 @@ describe("los enlaces", () => {
       expect((a.getAttribute("rel") ?? "").split(" ").sort(), href).toEqual(["noopener", "noreferrer"]);
       expect(a.getAttribute("referrerpolicy"), href).toBe("no-referrer");
       expect(a.hasAttribute("target"), href).toBe(false);
+    }
+  });
+
+  it("cada enlace dice adónde lleva (para el lector): la página oficial de esa serie, en un sitio externo", () => {
+    const raiz = pantalla();
+    for (const s of [TRM, TPM, IBR, IPC]) {
+      const a = tarjeta(raiz, s.nombre).querySelector("a")!;
+      expect(texto(a), s.codigo).toBe(`${s.origen} ${externo(s.nombre)}`);
+      expect(texto(a.querySelector(".sr")), s.codigo).toBe(externo(s.nombre));
     }
   });
 

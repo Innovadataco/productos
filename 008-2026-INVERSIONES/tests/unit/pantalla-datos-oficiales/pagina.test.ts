@@ -70,6 +70,16 @@ describe("src/app/datos-oficiales/page.tsx", () => {
     expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
   });
 
+  it("si la base cae al revalidar la sesión, «No se pudo leer la base» y no se lee nada (revisión security-reviewer, BAJO)", async () => {
+    exigirSesion.mockRejectedValueOnce(new Prisma.PrismaClientInitializationError("sin conexión a postgresql://u:clave-secreta@h", "5.22.0"));
+    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const html = renderToStaticMarkup(await PaginaDatosOficiales());
+    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).not.toContain("Datos oficiales");
+    expect(datosOficiales).not.toHaveBeenCalled();
+    expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
+  });
+
   it("otro error se propaga (lo atiende src/app/error.tsx)", async () => {
     datosOficiales.mockRejectedValueOnce(new TypeError("x"));
     await expect(PaginaDatosOficiales()).rejects.toThrow(TypeError);

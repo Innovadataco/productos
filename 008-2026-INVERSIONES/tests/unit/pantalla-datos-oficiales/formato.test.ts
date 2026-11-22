@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PIE_DATOS_OFICIALES, TEXTO_ENTRADA, TEXTO_ESTADO, cifra, conSigno, detalleFrescura, estadoDe, extraDetalle, formatoDia, formatoEje, formatoY, lineaVigencia, mes,
-  notaSinGrafica, rangoVigencia, resumenGrafica, sigla, textoVariacionFaltante, tituloGrafica, traidoEl, valores,
+  notaSinGrafica, paraGrafica, rangoVigencia, resumenGrafica, sigla, textoVariacionFaltante, tituloGrafica, traidoEl, valores,
 } from "@/app/datos-oficiales/formato";
 import { IBR, IPC, TPM, TRM, conError, sinDatos } from "./ficticio";
 
@@ -88,6 +88,12 @@ describe("frescura y estado", () => {
 });
 
 describe("lo que usa la gráfica", () => {
+  it("al navegador va solo lo que dibuja la gráfica (revisión react-reviewer, MEDIO: el payload)", () => {
+    const g = paraGrafica(TRM);
+    expect(Object.keys(g).sort()).toEqual(["codigo", "escala", "historia", "nombre", "unidad", "ventana", "vigencia"]);
+    expect(g.historia).toBe(TRM.historia);
+  });
+
   it("el título dice la ventana", () => {
     expect(tituloGrafica(TRM)).toBe("Tasa Representativa del Mercado, último año");
     expect(tituloGrafica(IPC)).toBe("Índice de precios al consumidor, últimos cinco años");
