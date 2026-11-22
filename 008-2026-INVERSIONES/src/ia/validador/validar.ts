@@ -21,7 +21,8 @@ import { esNombre, hechosPorId, type HechosPorId } from "./hechos";
 import { leerSalida, type FraseLeida } from "./leer";
 import { revisarMarcas } from "./marcas";
 import { coincidenciasEn, prepararTexto, type Patron } from "./patron";
-import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA } from "./patrones-lengua";
+import { esNumeroFundido } from "./numeros";
+import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA, PATRONES_SIN_DATO } from "./patrones-lengua";
 import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "./patrones-redaccion";
 import { renderizarFrase } from "./render";
 import { armarResumen } from "./resumen";
@@ -30,6 +31,7 @@ import type { FraseResumen, Hallazgo, ResultadoValidacion } from "./tipos";
 
 const LISTAS: readonly (readonly [CodigoValidador, readonly Patron[]])[] = [
   ["CIFRA_EN_PALABRAS", PATRONES_CIFRA_EN_PALABRAS],
+  ["DIRECCION_CONTRADICE", PATRONES_SIN_DATO],
   ["RECOMENDACION", PATRONES_RECOMENDACION],
   ["PREDICCION", PATRONES_PREDICCION],
   ["TRATO", PATRONES_TRATO],
@@ -46,7 +48,10 @@ interface FraseAnalizada {
 
 type Anotar = (codigo: CodigoValidador, patron: string) => void;
 
-/** Las citas del texto contra el paquete y contra la lista `hechos` de la frase. Devuelve las conocidas, en orden. */
+/**
+ * Las citas del texto contra el paquete y contra la lista `hechos` de la frase. Devuelve las conocidas, en orden. Una
+ * frase sin ninguna cita de un dato (solo nombres, o nada) no está respaldada por el paquete: HECHO_NO_CITADO.
+ */
 function revisarCitas(frase: FraseLeida, texto: string, porId: HechosPorId, anotar: Anotar): readonly IdHecho[] {
   const citas = citasDe(texto).map((c) => c.id);
   const conocidas = citas.filter((id): id is IdHecho => esIdHecho(id) && porId.has(id));
@@ -57,7 +62,7 @@ function revisarCitas(frase: FraseLeida, texto: string, porId: HechosPorId, anot
   if (lista.size !== frase.hechos.length || lista.size !== enTexto.size || [...lista].some((id) => !enTexto.has(id))) {
     anotar("FORMATO", "FORMATO.LISTA_HECHOS");
   }
-  if (citas.length === 0) anotar("HECHO_NO_CITADO", "HECHO_NO_CITADO.FRASE_SIN_CITA");
+  if (!conocidas.some((id) => !esNombre(porId.get(id)))) anotar("HECHO_NO_CITADO", "HECHO_NO_CITADO.FRASE_SIN_CITA");
   return conocidas;
 }
 
@@ -70,6 +75,7 @@ function analizarFrase(frase: FraseLeida, paquete: PaqueteHechos, porId: HechosP
   for (const h of revisarEtiquetas(atribucion, porId, paquete.tipo, new Set(conocidas))) anotar(h.codigo, h.patron);
   for (const h of revisarMarcas(preparado, atribucion, porId)) anotar(h.codigo, h.patron);
   for (const [codigo, patrones] of LISTAS) for (const id of coincidenciasEn(preparado, patrones)) anotar(codigo, id);
+  if ((preparado.plegado.match(/\p{L}+/gu) ?? []).some(esNumeroFundido)) anotar("CIFRA_EN_PALABRAS", "CIFRA_EN_PALABRAS.FUNDIDA");
   const renderizado = renderizarFrase(texto, paquete);
   const largo = [...renderizado].length;
   if (largo === 0) anotar("LONGITUD", "LONGITUD.VACIA");
@@ -79,6 +85,7 @@ function analizarFrase(frase: FraseLeida, paquete: PaqueteHechos, porId: HechosP
   return { resumen: { texto: renderizado, citados: [...new Set(conocidas)] }, largo };
 }
 
+/** Solo se llama con al menos un hallazgo: los motivos no quedan vacíos (de ahí la tupla no vacía). */
 function rechazo<T extends TipoResumen>(hallazgos: readonly Hallazgo[]): ResultadoValidacion<T> {
   const codigos = CODIGOS_VALIDADOR.filter((c) => hallazgos.some((h) => h.codigo === c));
   return Object.freeze({

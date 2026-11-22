@@ -13,7 +13,7 @@
  * otra clave nunca (salvo que tengan las mismas palabras clave: lo impide la prueba del catálogo).
  */
 import { CATALOGO, CLAVE_NOMBRE_ESPECIE, type ClaveHecho, type EntradaCatalogo } from "../catalogo";
-import { TIPOS_RESUMEN, type Hecho, type IdHecho, type TipoResumen } from "../contrato";
+import { TIPOS_RESUMEN, type Hecho, type TipoResumen } from "../contrato";
 import type { CodigoValidador } from "./codigos";
 import { cadenaDeSujetos, esNombre, type HechosPorId } from "./hechos";
 import { plegarTildes } from "./patron";
@@ -118,8 +118,8 @@ function ajenas(clave: string, clavesDeLaClausula: ReadonlySet<string>, tipo: Ti
 
 /**
  * ETIQUETA_NO_COINCIDE de una frase: por cada cita que no es un nombre, la cobertura (ETIQUETA.COBERTURA), un nombre
- * que no es de su cadena de sujetos (ETIQUETA.SUJETO_AJENO) y, si tiene sujeto, el nombre de su especie citado en la
- * misma frase (ETIQUETA.SIN_SUJETO).
+ * que no es de su cadena de sujetos (ETIQUETA.SUJETO_AJENO) y, si su cadena llega a una especie, el nombre de esa
+ * especie citado en la misma frase (ETIQUETA.SIN_SUJETO).
  */
 export function revisarEtiquetas(atribucion: Atribucion, porId: HechosPorId, tipo: TipoResumen, citadasEnLaFrase: ReadonlySet<string>): readonly HallazgoDeEtiqueta[] {
   const patrones = new Set<string>();
@@ -139,8 +139,8 @@ export function revisarEtiquetas(atribucion: Atribucion, porId: HechosPorId, tip
     const cadena = cadenaDeSujetos(hecho, porId);
     const nombres = tokens.flatMap((t) => (t.tipo === "CITA" && esNombre(porId.get(t.id)) ? [t.id] : []));
     if (nombres.some((n) => !(cadena.ids as readonly string[]).includes(n))) patrones.add("ETIQUETA.SUJETO_AJENO");
-    // Una cadena que no llega a un nombre (raíz undefined) tampoco está citada: SIN_SUJETO (cierra en fallo).
-    if (hecho.sujeto !== undefined && !citadasEnLaFrase.has(cadena.raiz as IdHecho)) patrones.add("ETIQUETA.SIN_SUJETO");
+    // Si la cadena llega a una especie, la frase la nombra. Una regla cuyo ancla no cita especie (E1b) no tiene raíz.
+    if (cadena.raiz !== undefined && !citadasEnLaFrase.has(cadena.raiz)) patrones.add("ETIQUETA.SIN_SUJETO");
   }
   return Object.freeze([...patrones].map((patron) => Object.freeze({ codigo: ETIQUETA, patron })));
 }

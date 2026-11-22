@@ -151,7 +151,7 @@ describe("todos los códigos, en orden y sin repetir", () => {
       expect(h.patron).toMatch(/^[A-Z_]+\.[A-Z_]+$/);
       expect(CODIGOS_VALIDADOR).toContain(h.codigo);
     }
-    expect(resultado.hallazgos).toContainEqual({ codigo: "RECOMENDACION", frase: 1, patron: "RECOMENDACION.COMPRE" });
+    expect(resultado.hallazgos).toContainEqual({ codigo: "RECOMENDACION", frase: 1, patron: "RECOMENDACION.COMPRA" });
     expect(resultado.hallazgos).toContainEqual({ codigo: "DIRECCION_CONTRADICE", frase: 1, patron: "DIRECCION.SUBE_VERBO" });
     expect(JSON.stringify(resultado.hallazgos.map((h) => [h.codigo, h.patron]))).not.toMatch(/\p{N}/u);
     expect(JSON.stringify(resultado)).not.toContain("compre");

@@ -12,7 +12,7 @@ import { resumenSinIa, salidaDePlantilla } from "@/ia/validador/plantilla";
 import { validarSalida } from "@/ia/validador/validar";
 import { crearPrng } from "@/proyecciones/prng";
 import { entradaAlAzar, paqueteAlAzar } from "../apoyo/aleatorio.ficticio";
-import { paqueteFicticio } from "./apoyo/salidas.ficticio";
+import { paqueteAlAzarConTope, paqueteFicticio, TOPE_OBLIGATORIOS } from "./apoyo/salidas.ficticio";
 
 /** El nombre de la especie al final de la cadena de sujetos (o nada). */
 function raiz(hecho: Hecho, paquete: PaqueteHechos): IdHecho | undefined {
@@ -64,7 +64,7 @@ describe("plantilla sin IA", () => {
     const prng = crearPrng(29_573);
     let conSueltos = 0;
     for (let i = 0; i < 307; i += 1) {
-      const paquete = paqueteAlAzar(prng, "DIARIO");
+      const paquete = paqueteAlAzarConTope(prng, "DIARIO");
       const conSujeto = new Set(paquete.hechos.filter((h) => h.obligatorio && h.unidad !== "NOMBRE").map((h) => h.sujeto));
       if (!paquete.hechos.some((h) => h.unidad === "NOMBRE" && h.obligatorio && !conSujeto.has(h.id))) continue;
       conSueltos += 1;
@@ -128,8 +128,16 @@ describe("plantilla sin IA", () => {
     expect(rechazos).toBeGreaterThan(0);
   });
 
-  it.each(TIPOS_RESUMEN)("%s: paquetes al azar con semilla pasan el mismo validador", (tipo) => {
+  it.each(TIPOS_RESUMEN)("%s: paquetes al azar con semilla (con el tope de obligatorios) pasan el mismo validador", (tipo) => {
     const prng = crearPrng(41_377);
-    for (let i = 0; i < 307; i += 1) revisar(paqueteAlAzar(prng, tipo));
+    let conObligatorios = 0;
+    for (let i = 0; i < 307; i += 1) {
+      const paquete = paqueteAlAzarConTope(prng, tipo);
+      const obligatorios = paquete.hechos.filter((h) => h.obligatorio).length;
+      expect(obligatorios).toBeLessThanOrEqual(TOPE_OBLIGATORIOS);
+      if (obligatorios === TOPE_OBLIGATORIOS) conObligatorios += 1;
+      revisar(paquete);
+    }
+    expect(conObligatorios).toBeGreaterThan(0);
   });
 });

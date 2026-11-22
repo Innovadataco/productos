@@ -7,6 +7,8 @@
 import type { ClaveHecho } from "@/ia/catalogo";
 import type { EntradaHecho, EntradaPaquete, Hecho, IdHecho, PaqueteHechos, TipoResumen } from "@/ia/contrato";
 import { construirPaquete } from "@/ia/paquete";
+import type { Prng } from "@/proyecciones/prng";
+import { entradaAlAzar } from "../../apoyo/aleatorio.ficticio";
 import { ENTRADAS_FICTICIAS } from "../../apoyo/hechos.ficticio";
 
 export interface FraseFicticia {
@@ -78,3 +80,16 @@ export const FRASES_VALIDAS: { readonly [T in TipoResumen]: readonly string[] } 
     "{ESPECIE_NOMBRE} tiene {DIAS_HISTORIA_ESPECIE} de historia.",
   ],
 };
+
+/**
+ * Los armadores marcan obligatorio solo lo mínimo de cada tipo; el paquete al azar marca la mitad. Este tope deja
+ * obligatorios solo los primeros (cambia solo la marca `obligatorio`, nada de valores ni presentaciones): con él, los
+ * obligatorios caben siempre en los límites de la salida. Que no quepan cuando son muchos lo prueba otra prueba.
+ */
+export const TOPE_OBLIGATORIOS = 6;
+
+export function paqueteAlAzarConTope(prng: Prng, tipo?: TipoResumen): PaqueteHechos {
+  const entrada = entradaAlAzar(prng, tipo);
+  const marcados = entrada.hechos.flatMap((h, i) => (h.obligatorio ? [i] : [])).slice(0, TOPE_OBLIGATORIOS);
+  return construirPaquete({ ...entrada, hechos: entrada.hechos.map((h, i) => ({ ...h, obligatorio: marcados.includes(i) })) });
+}

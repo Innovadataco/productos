@@ -46,7 +46,7 @@ describe("lista blanca de caracteres", () => {
   );
 
   it("un patrón escondido con un invisible se detecta igual (y el invisible es FORMATO)", () => {
-    expect(hallazgos(p, "El valor de las acciones subió a {VALOR_ACCIONES}, com\u200Bpre.")).toEqual(expect.arrayContaining(["FORMATO.CARACTER", "RECOMENDACION.COMPRE"]));
+    expect(hallazgos(p, "El valor de las acciones subió a {VALOR_ACCIONES}, com\u200Bpre.")).toEqual(expect.arrayContaining(["FORMATO.CARACTER", "RECOMENDACION.COMPRA"]));
   });
 
   it("el texto que no está en NFC es FORMATO, y se analiza ya normalizado", () => {

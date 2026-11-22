@@ -11,7 +11,8 @@ import { TIPOS_RESUMEN, type PaqueteHechos } from "@/ia/contrato";
 import { resumenSinIa, salidaDePlantilla } from "@/ia/validador/plantilla";
 import { validarSalida } from "@/ia/validador/validar";
 import { crearPrng, type Prng } from "@/proyecciones/prng";
-import { elegir, paqueteAlAzar } from "../apoyo/aleatorio.ficticio";
+import { elegir } from "../apoyo/aleatorio.ficticio";
+import { paqueteAlAzarConTope } from "./apoyo/salidas.ficticio";
 
 interface FraseCruda { readonly hechos: readonly string[]; readonly texto: string }
 
@@ -56,9 +57,11 @@ function motivos(cruda: string, paquete: PaqueteHechos): readonly string[] {
 
 describe.each(TIPOS_RESUMEN)("inyección de cifras · %s", (tipo) => {
   const prng = crearPrng(17_389 + TIPOS_RESUMEN.indexOf(tipo));
-  const paquetes = Array.from({ length: 113 }, () => paqueteAlAzar(prng, tipo));
+  // Solo paquetes con algún dato que no sea un nombre: con solo nombres no hay plantilla válida (lo prueba la plantilla).
+  const paquetes = Array.from({ length: 113 }, () => paqueteAlAzarConTope(prng, tipo)).filter((p) => p.hechos.some((h) => h.unidad !== "NOMBRE"));
 
   it("control positivo: la plantilla de cada paquete pasa", () => {
+    expect(paquetes.length).toBeGreaterThan(97);
     for (const paquete of paquetes) expect(resumenSinIa(paquete).ok).toBe(true);
   });
 

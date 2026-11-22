@@ -3,7 +3,7 @@
  * solo se admiten las letras del español (a-z, á é í ó ú ü ñ, en mayúscula o minúscula), el espacio, « . , ; : ( ) « » »
  * y las llaves de una cita con forma «{Hnn}». Lo demás se clasifica:
  * - un dígito de cualquier sistema (`\p{N}`: también superíndices, fracciones, romanos): CIFRA_SUELTA.DIGITO;
- * - un símbolo de moneda, «%», «‰» o «‱»: CIFRA_SUELTA.SIMBOLO;
+ * - un símbolo de moneda o de porcentaje (también «％», «٪», «⁒»), «‰» o «‱»: CIFRA_SUELTA.SIMBOLO;
  * - otra letra (cirílica, griega, ligaduras, anchos completos, alfanuméricos matemáticos): IDIOMA.LETRA;
  * - lo demás (invisibles, espacios duros, saltos, signos, guiones, emojis, markdown, HTML): FORMATO.CARACTER.
  * La forma: la cita sin pegar a otra cosa, una sola oración terminada en punto, sin espacios de más, sin mayúsculas en
@@ -21,9 +21,12 @@ export interface HallazgoDeFrase {
 
 const PERMITIDO = /^[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ .,;:()«»]$/u;
 const DIGITO = /^\p{N}$/u;
-const SIMBOLO_DE_CIFRA = /^[\p{Sc}%‰‱]$/u;
+/** Moneda y porcentaje, también de otras escrituras (ancho completo, árabe, comercial, pequeño). */
+const SIMBOLO_DE_CIFRA = /^[\p{Sc}%‰‱％٪⁒﹪]$/u;
 const LETRA = /^\p{L}$/u;
 const PALABRA = /\p{L}+/gu;
+/** La primera palabra de la frase, solo si la frase empieza con ella (después de una cita ya no es inicio). */
+const INICIO = /^\p{L}+/u;
 const MAYUSCULA = /\p{Lu}/u;
 const ANTES_DE_CITA = new Set(["", " ", "(", "«"]);
 const PUNTUACION_TRAS_CITA = new Set([".", ",", ";", ":", ")", "»"]);
@@ -73,7 +76,8 @@ function revisarForma(texto: string, citas: readonly (readonly [number, number])
   if (!texto.endsWith(".")) hallados.push(hallazgo("FORMATO", "FORMATO.PUNTO_FINAL"));
   if (texto.indexOf(".") !== texto.length - 1 && texto.includes(".")) hallados.push(hallazgo("FORMATO", "FORMATO.PUNTO_INTERNO"));
   const palabras = texto.replace(PATRON_CITA, " ").match(PALABRA) ?? [];
-  const mayusculaFuera = palabras.some((p, i) => MAYUSCULA.test(p) && !SIGLAS.has(p) && (i > 0 || MAYUSCULA.test(p.slice(1))));
+  const primera = INICIO.exec(texto)?.[0];
+  const mayusculaFuera = palabras.some((p, i) => MAYUSCULA.test(p) && !SIGLAS.has(p) && (i > 0 || p !== primera || MAYUSCULA.test(p.slice(1))));
   if (mayusculaFuera) hallados.push(hallazgo("FORMATO", "FORMATO.MAYUSCULA_INTERNA"));
   if (palabras.some((p) => [...p].length > LIMITES_SALIDA.maxLargoPalabra)) hallados.push(hallazgo("FORMATO", "FORMATO.PALABRA_LARGA"));
   return hallados;
