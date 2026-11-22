@@ -13,6 +13,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { correoDeCli } from "../cli/correo";
 import { TOLERANCIA_VALOR } from "../conciliacion/controles";
+import { candadoFondo } from "../lib/candados";
 import { ESCALA_MONTO, leerDecimal, leerFechaIso, type ResultadoValor } from "../importacion/trii/valores";
 import { CODIGO_FIC_RE } from "./sfc";
 
@@ -165,7 +166,7 @@ async function comprobarFechaYValor(tx: Tx, fondoId: string, d: ConstitucionVali
 async function registrarEnTransaccion(db: PrismaClient, d: ConstitucionValida, opciones: OpcionesConstitucion): Promise<ResultadoConstitucion> {
   return db.$transaction(async (tx) => {
     // Dos registros del mismo fondo a la vez se serializan; el índice único de la constitución es la red de abajo.
-    await tx.$queryRaw`SELECT 1 AS ok FROM pg_advisory_xact_lock(hashtext(${`008:fondo-movimiento:${d.codigoFic}`}))`;
+    await tx.$queryRaw`SELECT 1 AS ok FROM pg_advisory_xact_lock(hashtext(${candadoFondo(d.codigoFic)}))`;
     const creadoPorId = await duenoActivo(tx, d.email);
     const fondoId = await fondoActivo(tx, d.codigoFic);
     const previa = await constitucionPrevia(tx, fondoId, d);
