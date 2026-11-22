@@ -47,6 +47,9 @@ export interface Emision {
 
 type Tx = Prisma.TransactionClient;
 
+/** El candado consultivo de las cuentas: lo toman las emisiones del dueño y del familiar (src/auth/familia.ts). */
+export const candadoDeCuentas = (tx: Tx): Promise<number> => tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended('inv008:cuentas', 0))`;
+
 async function duenoParaEnlace(tx: Tx, email: string): Promise<{ id: string; creado: boolean; proposito: PropositoToken }> {
   const existente = await tx.usuario.findUnique({ where: { email }, select: { id: true, rol: true, claveHash: true } });
   if (existente) {
@@ -62,7 +65,7 @@ export async function emitirAcceso(db: PrismaClient, datos: { readonly email: st
   const token = generarToken();
   return db.$transaction(async (tx) => {
     // Dos emisiones a la vez no crean dos dueños.
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended('inv008:cuentas', 0))`;
+    await candadoDeCuentas(tx);
     const dueno = await duenoParaEnlace(tx, datos.email);
     await tx.tokenAcceso.create({
       data: {

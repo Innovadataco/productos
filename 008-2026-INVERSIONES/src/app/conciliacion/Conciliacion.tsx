@@ -31,7 +31,7 @@ function Encabezado({ soloLectura }: { readonly soloLectura: boolean }) {
   return (
     <header className="top concilia-top">
       <div className="wrap fila-top">
-        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio{soloLectura ? <MarcaSoloLectura /> : null}</div>
+        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio{soloLectura ? <>{" "}<MarcaSoloLectura /></> : null}</div>
         <a className="pill" href="/">Volver al portafolio</a>
       </div>
     </header>

@@ -13,7 +13,7 @@
  * fila tomada: dos comandos a la vez no se pisan.
  */
 import type { Prisma, PrismaClient, PropositoToken } from "@prisma/client";
-import { generarToken, hashToken } from "./acceso";
+import { candadoDeCuentas, generarToken, hashToken } from "./acceso";
 import { VIDA_TOKEN_MS } from "./limites";
 import { aplicarReinicioTotp, tomarCuentaPorCorreo, type CuentaParaReiniciar } from "./reinicio-totp";
 import { OPCIONES_TX } from "./topes";
@@ -46,9 +46,6 @@ interface DatosComando {
 }
 
 type Tx = Prisma.TransactionClient;
-
-/** El mismo candado consultivo de las cuentas que usa emitirAcceso (src/auth/acceso.ts). */
-const candadoDeCuentas = (tx: Tx) => tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended('inv008:cuentas', 0))`;
 
 /** La cuenta del correo, que debe ser de un familiar activo. */
 function familiarActivo(cuenta: CuentaParaReiniciar | null): CuentaParaReiniciar {

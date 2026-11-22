@@ -8,7 +8,8 @@
 #   sudo <raíz>/repo/008-2026-INVERSIONES/scripts/acceso-familiar.sh --email <correo-del-familiar> [--revocar | --reiniciar-totp]
 #   (<raíz>: ver ESTADO en la gestión)
 # Lista blanca ANTES de tocar nada: `--email <correo>` y, si acaso, UNA de --revocar o --reiniciar-totp. Ningún
-# mensaje repite el correo. El CLI vuelve a validar todo (y en producción exige la conexión de inv_dueno).
+# mensaje de este script repite el correo (el CLI sí lo nombra en su resultado, para que Jelk confirme a quién tocó).
+# El CLI vuelve a validar todo (y en producción exige la conexión de inv_dueno).
 set -euo pipefail
 INV_SCRIPT=acceso-familiar
 # shellcheck source=produccion-comun.sh

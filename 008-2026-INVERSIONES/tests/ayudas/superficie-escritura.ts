@@ -1,23 +1,97 @@
 // Clasificador del candado de escrituras (frente familia-lectura): lo usa tests/unit/auth/escrituras.candado.test.ts
 // sobre el árbol real y, para los controles positivos, sobre fuentes inventadas. Puro: lee por funciones que recibe
 // (así un control positivo usa un árbol en memoria). No es una prueba (no termina en .test.ts).
-//  - Métodos de un route.ts: solo se admite `export [async] function <MÉTODO>(`; cualquier otra forma de exportar un
+//  - Todo se clasifica SIN comentarios (`sinComentarios`, que respeta los textos): un comentario no cuenta como guardián
+//    ni como escritura.
+//  - Entradas: todo archivo especial de Next en src/app (route, page, layout, error, global-error, sitemap, robots,
+//    manifest, icon…), en .ts, .tsx, .js, .jsx, .mjs o .cjs.
+//  - Métodos de un route: solo se admite `export [async] function <MÉTODO>(`; cualquier otra forma de exportar un
 //    método (const, re-export, `export *`, `export default`) es irregular y da rojo, porque esquivaría la detección.
+//  - Guardián por handler: cada handler de escritura trae `const s = await exigirDuenoApi(x); if (!s.ok) return
+//    s.respuesta;`, y el archivo lo importa de "@/auth/sesion".
 //  - Escrituras en la base: los delegados de Prisma (los modelos de prisma/schema.prisma) con create/update/upsert/
-//    delete y sus «Many», `$executeRaw` (salvo `SET TRANSACTION READ ONLY`), `$executeRawUnsafe`, `$queryRawUnsafe`
-//    y un `$queryRaw` con INSERT, UPDATE o DELETE.
+//    delete y sus «Many» (también por corchetes), un delegado desestructurado o con alias (se cuenta como escritura
+//    posible), `$executeRaw` (salvo `SET TRANSACTION READ ONLY`), `$executeRawUnsafe`, `$queryRawUnsafe` y un
+//    `$queryRaw` (con o sin genérico) que empieza por WITH, INSERT, UPDATE, DELETE, MERGE o TRUNCATE.
 //  - Grafo de importaciones desde una entrada: no baja por las importaciones solo de tipos ni por las que traen de un
 //    módulo escritor solo constantes revisadas (lista cerrada en la prueba).
 import { dirname, join, resolve } from "node:path";
+
+/**
+ * La fuente sin comentarios `//` ni de bloque, sin tocar lo que va entre comillas, apóstrofos o acentos graves (una
+ * URL con «//» dentro de un texto sigue igual). Los saltos de línea de un comentario de línea se conservan.
+ */
+export function sinComentarios(fuente: string): string {
+  let salida = "";
+  let k = 0;
+  while (k < fuente.length) {
+    const c = fuente[k] ?? "";
+    const siguiente = fuente[k + 1] ?? "";
+    if (c === "/" && siguiente === "/") {
+      while (k < fuente.length && fuente[k] !== "\n") k += 1;
+      continue;
+    }
+    if (c === "/" && siguiente === "*") {
+      const fin = fuente.indexOf("*/", k + 2);
+      k = fin === -1 ? fuente.length : fin + 2;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      let j = k + 1;
+      while (j < fuente.length && fuente[j] !== c) j += fuente[j] === "\\" ? 2 : 1;
+      salida += fuente.slice(k, j + 1);
+      k = j + 1;
+      continue;
+    }
+    salida += c;
+    k += 1;
+  }
+  return salida;
+}
+
+const EXTENSIONES = "(?:[cm]?[jt]sx?)";
+const ESPECIALES = ["page", "layout", "template", "default", "not-found", "forbidden", "unauthorized", "error", "global-error", "loading", "route", "sitemap", "robots", "manifest", "icon", "apple-icon", "opengraph-image", "twitter-image"];
+
+/** Un route de Next (route.ts, .tsx, .js, .mjs…). */
+export const esRutaDeNext = (ruta: string): boolean => new RegExp(`/route\\.${EXTENSIONES}$`).test(ruta);
+
+/** Un archivo especial de Next: lo que Next sirve por sí mismo (página, layout, route, metadatos…). */
+export const esEntradaDeNext = (ruta: string): boolean => new RegExp(`/(?:${ESPECIALES.join("|")})\\.${EXTENSIONES}$`).test(ruta);
 
 export const METODOS_ESCRITURA = ["POST", "PUT", "PATCH", "DELETE"] as const;
 const METODOS = ["GET", "HEAD", "OPTIONS", ...METODOS_ESCRITURA] as const;
 const ALTERNATIVA = METODOS.join("|");
 
+const DECLARACION = new RegExp(`^export\\s+(?:async\\s+)?function\\s+(${ALTERNATIVA})\\s*\\(`, "gm");
+
 /** Los métodos que declara un route.ts con la forma admitida. */
 export function metodosDeclarados(fuente: string): string[] {
-  return [...fuente.matchAll(new RegExp(`^export\\s+(?:async\\s+)?function\\s+(${ALTERNATIVA})\\s*\\(`, "gm"))].map((m) => m[1] ?? "");
+  return [...sinComentarios(fuente).matchAll(DECLARACION)].map((m) => m[1] ?? "");
 }
+
+/** El cuerpo de cada método: desde su declaración hasta la siguiente declaración exportada (o el final). */
+function handlers(fuente: string): { readonly metodo: string; readonly cuerpo: string }[] {
+  const limpia = sinComentarios(fuente);
+  const inicios = [...limpia.matchAll(DECLARACION)].map((m) => ({ metodo: m[1] ?? "", desde: m.index ?? 0 }));
+  return inicios.map(({ metodo, desde }) => {
+    const resto = limpia.slice(desde + 1);
+    const otra = resto.search(/^export\s/m);
+    return { metodo, cuerpo: limpia.slice(desde, otra === -1 ? limpia.length : desde + 1 + otra) };
+  });
+}
+
+const GUARDIAN_EN_HANDLER = /const\s+(\w+)\s*=\s*await\s+exigirDuenoApi\(\s*\w+\s*\)\s*;?\s*if\s*\(\s*!\s*\1\.ok\s*\)\s*return\s+\1\.respuesta\b/;
+
+/** Los métodos de escritura cuyo cuerpo no trae el guardián con su forma exacta. */
+export function handlersSinGuardian(fuente: string): string[] {
+  return handlers(fuente)
+    .filter((h) => (METODOS_ESCRITURA as readonly string[]).includes(h.metodo) && !GUARDIAN_EN_HANDLER.test(h.cuerpo))
+    .map((h) => h.metodo);
+}
+
+/** true si el archivo importa exigirDuenoApi de "@/auth/sesion" (una función local con ese nombre no cuenta). */
+export const importaGuardianApi = (fuente: string): boolean =>
+  /^\s*import\s*\{[^}]*\bexigirDuenoApi\b[^}]*\}\s*from\s*["']@\/auth\/sesion["']/m.test(sinComentarios(fuente));
 
 /** Formas de exportar desde un route.ts que el candado no admite (cada una esquivaría `metodosDeclarados`). */
 export function exportacionesIrregulares(fuente: string): string[] {
@@ -31,10 +105,10 @@ export function exportacionesIrregulares(fuente: string): string[] {
 }
 
 export const escribe = (metodos: readonly string[]): boolean => metodos.some((m) => (METODOS_ESCRITURA as readonly string[]).includes(m));
-export const llamaGuardianApi = (fuente: string): boolean => /\bexigirDuenoApi\(/.test(fuente);
-export const llamaGuardianPagina = (fuente: string): boolean => /\bexigirDueno\(\)/.test(fuente);
-export const esServerAction = (fuente: string): boolean => /^\s*["']use server["']/m.test(fuente);
-export const importaDinamico = (fuente: string): boolean => /\bimport\s*\(|\brequire\s*\(/.test(fuente);
+export const llamaGuardianApi = (fuente: string): boolean => /\bexigirDuenoApi\(/.test(sinComentarios(fuente));
+export const llamaGuardianPagina = (fuente: string): boolean => /\bexigirDueno\(\)/.test(sinComentarios(fuente));
+export const esServerAction = (fuente: string): boolean => /^\s*["']use server["']/m.test(sinComentarios(fuente));
+export const importaDinamico = (fuente: string): boolean => /\bimport\s*\(|\brequire\s*\(/.test(sinComentarios(fuente));
 
 /** Los delegados de Prisma (`usuario`, `tokenAcceso`…) de los modelos del esquema. */
 export function delegadosDelEsquema(esquema: string): string[] {
@@ -47,9 +121,19 @@ export function delegadosDelEsquema(esquema: string): string[] {
 /** Un detector de escrituras en la base para estos delegados. */
 export function detectorDeEscritura(delegados: readonly string[]): (fuente: string) => boolean {
   if (delegados.length === 0) throw new Error("Sin delegados: el esquema no se leyó.");
-  const prisma = new RegExp(`\\.\\s*(?:${delegados.join("|")})\\s*\\.\\s*(?:create|createMany|createManyAndReturn|update|updateMany|updateManyAndReturn|upsert|delete|deleteMany)\\s*\\(`);
-  const crudo = /\.\$executeRaw\s*`(?!SET TRANSACTION READ ONLY`)|\.\$executeRaw\s*\(|\.\$executeRawUnsafe\s*\(|\.\$queryRawUnsafe\s*\(|\.\$queryRaw\s*`\s*(?:INSERT|UPDATE|DELETE)\b/i;
-  return (fuente) => prisma.test(fuente) || crudo.test(fuente);
+  const nombres = delegados.join("|");
+  const acciones = "(?:create|createMany|createManyAndReturn|update|updateMany|updateManyAndReturn|upsert|delete|deleteMany)";
+  const prisma = new RegExp(`\\.\\s*(?:${nombres})\\s*\\.\\s*${acciones}\\s*\\(|\\[\\s*["'\`](?:${nombres})["'\`]\\s*\\]\\s*\\.\\s*${acciones}\\s*\\(`);
+  // Un delegado que sale de su cliente (desestructurado o con alias) ya no se puede seguir: cuenta como escritura posible.
+  // Solo desde los nombres de cliente del repo (db, tx…): «const { conciliacion } = datos» es un dato, no un delegado.
+  const clientes = "(?:db|tx|base|bd|prisma|cliente)";
+  const indirecto = new RegExp(`\\{[^}]*\\b(?:${nombres})\\b[^}]*\\}\\s*=\\s*${clientes}\\s*;|=\\s*${clientes}\\s*\\.\\s*(?:${nombres})\\s*;`);
+  const crudo =
+    /\.\$executeRaw(?:<[^`]*>)?\s*`(?!SET TRANSACTION READ ONLY`)|\.\$executeRaw\s*\(|\.\$executeRawUnsafe\s*\(|\.\$queryRawUnsafe\s*\(|\.\$queryRaw(?:<[^`]*>)?\s*`\s*(?:WITH|INSERT|UPDATE|DELETE|MERGE|TRUNCATE)\b/i;
+  return (fuente) => {
+    const limpia = sinComentarios(fuente);
+    return prisma.test(limpia) || indirecto.test(limpia) || crudo.test(limpia);
+  };
 }
 
 export interface Arista {
@@ -67,15 +151,18 @@ export interface Arbol {
 
 function resolverEspecificador(arbol: Arbol, desde: string, especificador: string): string {
   if (!especificador.startsWith(".") && !especificador.startsWith("@/")) return especificador;
-  const base = especificador.startsWith("@/") ? join(arbol.src, especificador.slice(2)) : resolve(dirname(desde), especificador);
-  return [".ts", ".tsx", "/index.ts", "/index.tsx"].map((ext) => `${base}${ext}`).find(arbol.existe) ?? base;
+  const crudo = especificador.startsWith("@/") ? join(arbol.src, especificador.slice(2)) : resolve(dirname(desde), especificador);
+  // `./x.js` en TypeScript es `./x.ts` (o .tsx): se prueba también sin la extensión de JavaScript.
+  const bases = /\.[cm]?jsx?$/.test(crudo) ? [crudo, crudo.replace(/\.[cm]?jsx?$/, "")] : [crudo];
+  const candidatos = bases.flatMap((b) => [".ts", ".tsx", "/index.ts", "/index.tsx"].map((ext) => `${b}${ext}`));
+  return candidatos.find(arbol.existe) ?? crudo;
 }
 
 const IMPORTACION = /^\s*(import|export)\s+(type\s+)?([^"';]*?)\s*from\s+["']([^"']+)["']|^\s*import\s+["']([^"']+)["']/gm;
 
 /** Las importaciones (y re-exportaciones) de un archivo, resueltas a rutas; los paquetes quedan por nombre. */
 export function aristas(arbol: Arbol, ruta: string): Arista[] {
-  return [...arbol.leer(ruta).matchAll(IMPORTACION)].map((m) => {
+  return [...sinComentarios(arbol.leer(ruta)).matchAll(IMPORTACION)].map((m) => {
     const destino = resolverEspecificador(arbol, ruta, m[4] ?? m[5] ?? "");
     const clausula = m[3] ?? "";
     const llaves = /^\{([^}]*)\}$/.exec(clausula.trim());
@@ -112,7 +199,8 @@ export function alcanzables(arbol: Arbol, entrada: string, constantes: ReadonlyM
 
 /** Los valores de `usuarioId:` y de `where: { id: … }` de una fuente (para el candado de IDOR). */
 export function identificadoresUsados(fuente: string): string[] {
-  const usuario = [...fuente.matchAll(/\busuarioId\s*:\s*([\w.]+)/g)].map((m) => m[1] ?? "");
-  const donde = [...fuente.matchAll(/\bwhere\s*:\s*\{\s*id\s*:\s*([\w.]+)/g)].map((m) => m[1] ?? "");
+  const limpia = sinComentarios(fuente);
+  const usuario = [...limpia.matchAll(/\busuarioId\s*:\s*([\w.]+)/g)].map((m) => m[1] ?? "");
+  const donde = [...limpia.matchAll(/\bwhere\s*:\s*\{\s*id\s*:\s*([\w.]+)/g)].map((m) => m[1] ?? "");
   return [...usuario, ...donde];
 }
