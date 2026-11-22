@@ -2,15 +2,18 @@
  * Resultado a 30 y 90 días de varias decisiones a la vez (fase B, corte 3), sin una consulta por decisión: las
  * decisiones con sus enlaces vigentes y, de todas sus especies juntas, los cierres VIGENTES de Yahoo (la fuente de
  * los diarios), los dividendos, los movimientos de la tenencia (órdenes aprobadas y lotes de escisión), las
- * escisiones y la cobertura de las cargas de Trii. Después, el cálculo puro de `resultado.ts` por decisión.
+ * escisiones, la cobertura de las cargas de Trii y las fechas de los decretos que cuentan alrededor de los pagos
+ * (src/datos-oficiales/decretos/vigentes.ts: su filtro y el rango de la ventana del cruce). Después, el cálculo puro
+ * de `resultado.ts` por decisión.
  * Solo lee, con `select` explícito (nunca el crudo). Quien quiera una sola instantánea lo llama dentro de
  * `enSoloLectura` (las pantallas lo hacen).
  */
 import type { LadoOrden } from "@prisma/client";
+import { leerFechasDeDecretos } from "../datos-oficiales/decretos/vigentes";
 import { FUENTE as FUENTE_CIERRES } from "../precios/actualizar";
 import { fechaEnBogota } from "../precios/horario";
 import type { Db } from "./acceso";
-import type { ContextoEspecie, DividendoPagado } from "./dividendos";
+import type { ContextoEspecie, DecretoDeLaEspecie, DividendoPagado } from "./dividendos";
 import { sumarDias } from "./fechas";
 import { HORIZONTES, MAX_RETROCESO_DIAS, calcularResultados, type Cierre, type OrdenMedida, type ResultadoHorizonte } from "./resultado";
 import type { MovimientoTenencia } from "./tenencia";
@@ -111,7 +114,7 @@ async function contextos(db: Db, rangos: ReadonlyMap<string, Rango>): Promise<{ 
   const porRango = <C extends string>(campo: C, desdeExclusivo: boolean) =>
     [...rangos].map(([id, r]) => ({ instrumentoId: id, [campo]: desdeExclusivo ? { gt: r.desde, lte: r.hasta } : { gte: r.desde, lte: r.hasta } }));
   const hastaGlobal = new Date(Math.max(...[...rangos.values()].map((r) => r.hasta.getTime())));
-  const [cierres, dividendos, movimientos, eventos, cobertura] = await Promise.all([
+  const [cierres, dividendos, movimientos, eventos, cobertura, decretos] = await Promise.all([
     db.precioCierre.findMany({
       where: { fuente: FUENTE_CIERRES, reemplazadoEn: null, OR: porRango("fecha", false) },
       select: { id: true, instrumentoId: true, fecha: true, precio: true, estado: true, fuente: true },
@@ -125,10 +128,13 @@ async function contextos(db: Db, rangos: ReadonlyMap<string, Rango>): Promise<{ 
       select: { origenId: true, destinoId: true, fecha: true, _count: { select: { lotes: { where: { origen: "ESCISION" } } } } },
     }),
     cubiertoHasta(db),
+    // Siempre, aunque no haya decretos: el número de consultas no depende de cuántas decisiones van en el lote.
+    leerFechasDeDecretos(db, rangos),
   ]);
   const porEspecie = {
     cierres: agrupar(cierres, ({ instrumentoId: _, ...c }): Cierre => c),
     dividendos: agrupar(dividendos, ({ instrumentoId: _, ...dv }): DividendoPagado => dv),
+    decretos: agrupar(decretos, ({ instrumentoId: _, ...dc }): DecretoDeLaEspecie => dc),
   };
   const contexto = (id: string): ContextoEspecie => ({
     dividendos: porEspecie.dividendos.get(id) ?? [],
@@ -136,6 +142,7 @@ async function contextos(db: Db, rangos: ReadonlyMap<string, Rango>): Promise<{ 
     cubiertoHasta: cobertura,
     destinoSinLote: eventos.some((e) => e.destinoId === id && e._count.lotes === 0),
     escisiones: eventos.filter((e) => e.origenId === id).map((e) => e.fecha),
+    decretos: porEspecie.decretos.get(id) ?? [],
   });
   return { cierres: porEspecie.cierres, contexto };
 }

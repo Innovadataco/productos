@@ -18,9 +18,11 @@ export const NOTA_FUENTES = "Los dividendos salen de los archivos de Trii; los c
 
 export const MOTIVOS_SIN_DIVIDENDOS: Readonly<Record<MotivoSinDividendos, string>> = {
   SIN_TENENCIA: "no quedaron acciones en la ventana para saber qué pagó la especie",
-  TENENCIA_CAMBIA_CERCA_DEL_PAGO: "la tenencia cambió en los 10 días anteriores a un pago (aproximación de la fecha ex, que la base no tiene)",
+  TENENCIA_CAMBIA_CERCA_DEL_PAGO: "la tenencia cambió en los 10 días anteriores a un pago sin decreto registrado (aproximación de la fecha ex)",
   CARGA_NO_CUBRE: "la última carga de los archivos de Trii es anterior a la fecha objetivo",
   ESCISION_SIN_LOTE: "falta el lote de la escisión de la que salió la especie",
+  DECRETO_EN_DUDA: "un pago cabe en la ventana de dos decretos registrados, o llegó antes de la fecha ex de su decreto: no se sabe con qué fecha ex medirlo",
+  EX_DISTINTAS_EN_EL_PAGO: "un pago junta decretos con fechas ex distintas y la decisión (o su orden) cae entre ellas, o la tenencia cambia entre ellas: no se sabe qué acciones cobraron cada uno",
 };
 
 const CONDICIONES: Readonly<Record<CondicionRegla, string>> = {
