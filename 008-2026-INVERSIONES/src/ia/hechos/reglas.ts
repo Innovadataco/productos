@@ -17,6 +17,7 @@
  */
 import { CLAVE_ANCLA_REGLA, type ClaveReglas } from "../catalogo";
 import type { DiaIso, PaqueteHechos } from "../contrato";
+import { compararTexto } from "../../datos-oficiales/decretos/cruce";
 import { frescuraDelCierre } from "../../plan/cierre-frescura";
 import { estadoDelNivel, type EstadoNivel } from "../../plan/niveles";
 import { borrador, cerrarPaquete, frescuraConAviso, hastaHoy, type Marcas, type Parte } from "./comun";
@@ -135,13 +136,18 @@ interface Especie {
   readonly proximo: ProximoParaHechos | null;
 }
 
+type ProximoConNombre = ProximoParaHechos & { readonly nemotecnico: string };
+const tieneNombre = (p: ProximoParaHechos): p is ProximoConNombre => p.nemotecnico !== null;
+
+/** El primero de cada clave (en el orden dado). */
+const primeroPor = <T>(lista: readonly T[], clave: (x: T) => string): ReadonlyMap<string, T> =>
+  lista.reduce<ReadonlyMap<string, T>>((m, x) => (m.has(clave(x)) ? m : new Map([...m, [clave(x), x]])), new Map());
+
 /** El próximo más cercano de cada especie con nombre (los demás y los sin nombre, con aviso); solo con la ex desde hoy. */
-function proximosPorEspecie(c: Contexto): { readonly porEspecie: ReadonlyMap<string, ProximoParaHechos>; readonly avisos: readonly CodigoAvisoArmado[] } {
+function proximosPorEspecie(c: Contexto): { readonly porEspecie: ReadonlyMap<string, ProximoConNombre>; readonly avisos: readonly CodigoAvisoArmado[] } {
   const vigentes = c.e.proximos.filter((p) => diaDe(p.fechaEx) >= c.hoy).sort((a, b) => a.fechaEx.getTime() - b.fechaEx.getTime());
-  const conNombre = vigentes.filter((p) => p.nemotecnico !== null);
-  // El primero de cada especie (los vigentes ya van por fecha ex): el más cercano.
-  const porEspecie = conNombre.reduce<ReadonlyMap<string, ProximoParaHechos>>(
-    (m, p) => (m.has(p.instrumentoId) ? m : new Map([...m, [p.instrumentoId, p]])), new Map());
+  const conNombre = vigentes.filter(tieneNombre);
+  const porEspecie = primeroPor(conNombre, (p) => p.instrumentoId);
   const avisos: CodigoAvisoArmado[] = [
     ...(conNombre.length < vigentes.length ? (["PROXIMO_SIN_NOMBRE"] as const) : []),
     ...(porEspecie.size < conNombre.length ? (["DIVIDENDOS_PROXIMOS_OMITIDOS"] as const) : []),
@@ -149,15 +155,13 @@ function proximosPorEspecie(c: Contexto): { readonly porEspecie: ReadonlyMap<str
   return { porEspecie, avisos };
 }
 
-/** Las especies con reglas o con un próximo dividendo, de la A a la Z (por unidades de código). */
-function especiesDe(c: Contexto, proximos: ReadonlyMap<string, ProximoParaHechos>): readonly Especie[] {
-  const ids = [...new Set([...c.e.reglas.flatMap((r) => (r.instrumentoId !== null && r.nemotecnico !== null ? [r.instrumentoId] : [])), ...proximos.keys()])];
-  const especies = ids.map((id): Especie => {
-    const reglas = c.e.reglas.filter((r) => r.instrumentoId === id && r.nemotecnico !== null);
-    const proximo = proximos.get(id) ?? null;
-    return { instrumentoId: id, nombre: reglas[0]?.nemotecnico ?? proximo?.nemotecnico ?? "", reglas, proximo };
-  });
-  return especies.sort((a, b) => (a.nombre < b.nombre ? -1 : a.nombre > b.nombre ? 1 : 0));
+/** Las especies con reglas o con un próximo dividendo, de la A a la Z (por unidades de código, nunca `localeCompare`). */
+function especiesDe(c: Contexto, proximos: ReadonlyMap<string, ProximoConNombre>): readonly Especie[] {
+  const conNombre = c.e.reglas.flatMap((r) => (r.instrumentoId !== null && r.nemotecnico !== null ? [{ id: r.instrumentoId, nombre: r.nemotecnico }] : []));
+  const nombres = primeroPor([...conNombre, ...[...proximos.values()].map((p) => ({ id: p.instrumentoId, nombre: p.nemotecnico }))], (x) => x.id);
+  return [...nombres.values()]
+    .map(({ id, nombre }): Especie => ({ instrumentoId: id, nombre, reglas: c.e.reglas.filter((r) => r.instrumentoId === id && r.nemotecnico !== null), proximo: proximos.get(id) ?? null }))
+    .sort((a, b) => compararTexto(a.nombre, b.nombre));
 }
 
 function grupoDeEspecie(c: Contexto, especie: Especie): Parte<ClaveReglas> {

@@ -101,6 +101,11 @@ describe("armarReglas · cada estado del nivel", () => {
     expect(() => armarCon([unaRegla("LIBRE", null), unaRegla("NINGUNA", null)])).toThrow(/SIN_HECHOS/);
   });
 
+  it("una regla de portafolio sin plazo no tiene nada que decir: no entra", () => {
+    const portafolio = { ...unaRegla("MONTO_ORDEN_BAJO", "613.29"), instrumentoId: null, nemotecnico: null };
+    expect(armarCon([unaRegla("CIERRE_BAJO", "4497.11"), portafolio]).hechos.filter((h) => h.clave === "REGLA_DEL_PLAN")).toHaveLength(1);
+  });
+
   it("un plazo vencido va como fecha, sin días negativos", () => {
     const claves = armarCon([unaRegla("NINGUNA", null, "2027-01-29")]).hechos.map((h) => h.clave);
     expect(claves).toContain("REGLA_PLAZO");

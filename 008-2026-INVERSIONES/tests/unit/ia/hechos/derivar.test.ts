@@ -63,6 +63,7 @@ describe("cifras canónicas", () => {
     expect(compararDecimales("-41.3", "-41.29")).toBe(-1);
     expect(compararDecimales("12.1", "9.97")).toBe(1);
     expect(compararDecimales("-0.5", "0.4")).toBe(-1);
+    expect(codigoDe(() => compararDecimales("4.613,27", "3"))).toBe("DECIMAL_INVALIDO");
   });
 
   it("días de negocio: el día ISO de una fecha a medianoche UTC, los días entre dos y el menor", () => {

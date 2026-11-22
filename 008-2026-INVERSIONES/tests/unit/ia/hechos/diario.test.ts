@@ -141,6 +141,23 @@ describe("armarDiario · lo que falta se dice en los avisos, sin inventar", () =
     expect(paquete.hechos.some((h) => h.valor === "FICTICIA-SIN-CIERRE")).toBe(false);
   });
 
+  it("sin el valor de unidad anterior, el fondo va sin dirección; una especie sin costo, sin rentabilidad; sin el más viejo, sin su fecha", () => {
+    const [alfa] = filasTablero();
+    const paquete = con((e) => ({
+      ...e,
+      fondo: e.fondo === null ? null : { ...e.fondo, valorUnidadAnterior: null },
+      tablero: { ...e.tablero, filas: [{ ...alfa!, pesoPct: null, rentabilidadPct: null }], cierreMasViejo: null },
+    }));
+    expect(paquete.hechos.find((h) => h.clave === "FONDO_VALOR_UNIDAD")?.direccion).toBe("NO_APLICA");
+    const claves = paquete.hechos.map((h) => h.clave);
+    for (const clave of ["PESO_ESPECIE", "RENTABILIDAD_ESPECIE", "FECHA_CIERRE_MAS_ANTIGUO"]) expect(claves).not.toContain(clave);
+    expect(claves).toContain("VALOR_ESPECIE");
+  });
+
+  it("un valor del fondo posterior a hoy cierra en fallo (FECHA_FUTURA)", () => {
+    expect(() => con((e) => ({ ...e, fondo: e.fondo === null ? null : { ...e.fondo, fecha: dia("2027-03-18") } }))).toThrow(/FECHA_FUTURA/);
+  });
+
   it("todos los cierres del mismo día: no hay fecha del cierre más antiguo", () => {
     const paquete = con((e) => ({ ...e, tablero: { ...e.tablero, cierreMasViejo: e.tablero.fechaReferencia } }));
     expect(claves(paquete)).not.toContain("FECHA_CIERRE_MAS_ANTIGUO");
