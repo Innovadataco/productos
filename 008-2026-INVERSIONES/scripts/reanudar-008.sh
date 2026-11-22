@@ -14,7 +14,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/produccion-comun.sh"
 # ¿La imagen del sha $1 trae el servicio de precios (D-018)? Se mira en el clon, sin contenedores ni red: el commit de la
 # imagen (su etiqueta revision es ese sha) trae src/servicio-precios/bucle.ts. 0 sí · 1 no (una imagen anterior al
 # servicio: su bundle no tiene el modo «bucle», saldría con 2 en un bucle de reinicios y el --wait fallaría) · 2 no se
-# puede saber (el clon no tiene ese commit). Igual en desplegar-prod.sh (lo cuida desplegar-precios.test.ts).
+# puede saber (el clon no tiene ese commit, o git no pudo leerlo). Igual en desplegar-prod.sh (lo cuida desplegar-precios.test.ts).
 imagen_con_servicio_precios() {
   local git_clon=(env -i PATH="$PATH" GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -C "$INV_DIR_008")
   "${git_clon[@]}" cat-file -e "$1^{commit}" 2>/dev/null || return 2
@@ -42,7 +42,7 @@ main() {
   case "$rc" in
     0) ;;
     1) informar "⚠️  la imagen del sha que corre no trae el servicio de precios (es anterior a él): se baja inv-008-precios y se levanta lo demás"; sin_precios=(--scale inv-008-precios=0) ;;
-    *) informar "⚠️  no se pudo saber si la imagen del sha que corre trae el servicio de precios (el clon no tiene $sha): se baja inv-008-precios y se levanta lo demás"; sin_precios=(--scale inv-008-precios=0) ;;
+    *) informar "⚠️  no se pudo saber si la imagen del sha que corre trae el servicio de precios (el clon no tiene $sha, o git no pudo leerlo): se baja inv-008-precios y se levanta lo demás"; sin_precios=(--scale inv-008-precios=0) ;;
   esac
   informar "levantando Inversiones con el sha $sha (up -d --wait)"
   "${COMPOSE[@]}" up -d --wait --wait-timeout 180 ${sin_precios[@]+"${sin_precios[@]}"} || morir "Inversiones no quedó healthy: la marca de pausa se mantiene"

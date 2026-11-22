@@ -114,7 +114,8 @@ describe("desplegar-prod.sh · servicio de precios: se levanta y se verifica sol
     const p = preparar(CON_SERVICIO, { SHELLOPTS: "xtrace" });
     const r = await correr(p.script, [ID], p.env);
     expect(r.stderr).toContain("+ ");
-    expect(`${r.stdout}${r.stderr}`).not.toContain(CLAVE);
+    const conClave = `${r.stdout}${r.stderr}`.split("\n").filter((l) => l.includes(CLAVE));
+    expect(conClave, conClave.join("\n").slice(0, 2000)).toEqual([]);
   });
 
   it("sin el secreto (DATABASE_URL vacía): despliega y avisa que el servicio queda en espera", async () => {

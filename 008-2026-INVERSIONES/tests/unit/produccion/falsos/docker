@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # docker falso: registra la llamada y responde según variables FALSO_*.
+# Es un binario en el VPS: sin xtrace aunque llegue SHELLOPTS=xtrace (si no, su propia traza traería los valores falsos).
+{ set +x; } 2>/dev/null
 linea_falso="$(basename "$0")"; for a in "$@"; do linea_falso="$linea_falso"$'\t'"$a"; done; printf '%s\n' "$linea_falso" >>"$FALSO_REGISTRO" # una sola escritura: atómica entre procesos
 args=("$@")
 if [ "${1:-}" = "compose" ]; then
