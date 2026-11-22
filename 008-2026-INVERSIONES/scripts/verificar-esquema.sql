@@ -260,7 +260,7 @@ DECLARE
     ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301', ''],
     ['inv_lote_fijo', '6906ddebe6b9194201de631eac40241a', ''],
     ['inv_movimiento_fondo_coherente', '53cb26c826f67c555b19e1b8ad9dffd0', ''],
-    ['inv_precio_cierre_insercion', '00651c5dd0393fa53773bf63e6911f6f', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_precio_cierre_insercion', '6bdf12a80eeee52cff6a412139ffe5c1', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77', ''],
     ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546', ''],
