@@ -161,10 +161,12 @@ function matriz(e: EntradasProyeccion, preparadas: readonly Preparada[], s: Sele
     const d = dividendosPorAccion(p.entrada, hoy);
     avisosDiv.push(...d.avisos);
     decretosFuturos += d.decretosFuturos;
-    const dentro = d.pagos.filter((x) => x.dia > dias[0]! && x.dia <= dias[T]!);
+    // Con el precio del día anterior en 0 o inválido no hay rendimiento que calcular: el pago no se usa.
+    const previo = (dia: Dia) => precios[(primerIndiceDesde(dias, dia) - 1) * K + k]!;
+    const dentro = d.pagos.filter((x) => x.dia > dias[0]! && x.dia <= dias[T]! && previo(x.dia) > 0 && Number.isFinite(previo(x.dia)));
     dentro.forEach((x) => {
       const j = primerIndiceDesde(dias, x.dia);
-      rendimientos[(j - 1) * K + k] = rendimientos[(j - 1) * K + k]! + x.porAccion / precios[(j - 1) * K + k]!;
+      rendimientos[(j - 1) * K + k] = rendimientos[(j - 1) * K + k]! + x.porAccion / previo(x.dia);
     });
     usados.set(p.entrada.instrumentoId, { n: dentro.length, primero: dentro[0] ? dias[primerIndiceDesde(dias, dentro[0].dia)]! : null });
   });
@@ -182,13 +184,30 @@ function historicoAnual(h: Historia, valores: readonly number[]): { rendimiento:
   return { rendimiento: Math.exp(media(logs) * ruedasAnio) - 1, volatilidad: desviacion(logs) * Math.sqrt(ruedasAnio) };
 }
 
-function avisosGenerales(e: EntradasProyeccion, preparadas: readonly Preparada[], estados: ReadonlyMap<Preparada, EstadoPosicion>, anios: ReadonlySet<number>): AvisoCrudo[] {
+interface Contexto {
+  readonly estados: ReadonlyMap<Preparada, EstadoPosicion>;
+  readonly anios: ReadonlySet<number>;
+  readonly dias: readonly Dia[];
+}
+
+const enVentana = (p: Preparada, dias: readonly Dia[]): number => (dias.length > 0 ? contarEntre(p.propios, dias[0]!, dias.at(-1)!) : 0);
+
+/** Fija con pocos días en total, o con 250 o más en total pero pocos en la ventana común (el aviso dice cuál). */
+function avisoFija(p: Preparada, dias: readonly Dia[]): AvisoCrudo {
+  const largo = p.propios.length >= MINIMO_DIAS;
+  return {
+    codigo: largo ? "HISTORIA_CORTA_EN_VENTANA" : "HISTORIA_CORTA", instrumentoId: p.entrada.instrumentoId, nombre: p.entrada.nombre, dia: null,
+    dato: largo ? enVentana(p, dias) : p.propios.length,
+  };
+}
+
+function avisosGenerales(e: EntradasProyeccion, preparadas: readonly Preparada[], { estados, anios, dias }: Contexto): AvisoCrudo[] {
   const deP = (p: Preparada, codigo: AvisoCrudo["codigo"]): AvisoCrudo => ({ codigo, instrumentoId: p.entrada.instrumentoId, nombre: p.entrada.nombre, dia: null, dato: p.propios.length });
   const sinCalendario = [...new Set(preparadas.flatMap((p) => p.propios.map((d) => Number(d.slice(0, 4)))))].filter((a) => !anios.has(a)).sort();
   return [
     ...e.incompletas.map((nombre): AvisoCrudo => ({ codigo: "ESPECIE_INCOMPLETA", instrumentoId: null, nombre, dia: null, dato: null })),
     ...preparadas.filter((p) => estados.get(p) === "EXCLUIDA_SIN_VALOR").map((p) => deP(p, "SIN_VALOR")),
-    ...preparadas.filter((p) => estados.get(p) === "FIJA_HISTORIA_CORTA").map((p) => deP(p, "HISTORIA_CORTA")),
+    ...preparadas.filter((p) => estados.get(p) === "FIJA_HISTORIA_CORTA").map((p) => avisoFija(p, dias)),
     ...sinCalendario.map((anio): AvisoCrudo => ({ codigo: "ANIO_SIN_CALENDARIO", instrumentoId: null, nombre: null, dia: null, dato: anio })),
   ];
 }
@@ -219,7 +238,7 @@ export function armarHistoria(e: EntradasProyeccion): ArmadoHistoria {
     return {
       instrumentoId: p.entrada.instrumentoId, nombre: p.entrada.nombre, tipo: p.entrada.tipo === "ACCION" ? "ACCION" : "FONDO", estado: estados.get(p)!,
       valorHoy: p.valorHoy, peso: p.valorHoy === null ? null : valorHoy > 0 ? p.valorHoy / valorHoy : 0,
-      diasEnVentana: dias.length > 0 ? contarEntre(p.propios, dias[0]!, dias.at(-1)!) : 0, diasTotales: p.propios.length,
+      diasEnVentana: enVentana(p, dias), diasTotales: p.propios.length,
       ultimoDia: p.propios.at(-1) ?? null, dividendosUsados: usado?.n ?? 0, primerDividendo: usado?.primero ?? null,
     };
   });
@@ -228,7 +247,7 @@ export function armarHistoria(e: EntradasProyeccion): ArmadoHistoria {
   return {
     historia, columnas, valorHoy, posiciones,
     valorFijo: preparadas.filter((p) => estados.get(p) === "FIJA_HISTORIA_CORTA").reduce((t, p) => t + p.valorHoy!, 0),
-    avisos: [...avisosGenerales(e, preparadas, estados, anios), ...(m?.avisos ?? []), ...sinRiesgo(valorHoy, K)],
+    avisos: [...avisosGenerales(e, preparadas, { estados, anios, dias }), ...(m?.avisos ?? []), ...sinRiesgo(valorHoy, K)],
     ventana: s ? { desde: dias[0]!, hasta: dias.at(-1)!, ruedas: dias.length, limitadaPor: s.limitadaPor } : null,
     decretosFuturos: m?.decretosFuturos ?? 0, rendimientoAnualVentana: anual.rendimiento, volatilidadAnualVentana: anual.volatilidad,
   };

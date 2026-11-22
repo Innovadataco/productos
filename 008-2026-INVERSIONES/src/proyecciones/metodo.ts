@@ -21,6 +21,9 @@ export const VENTANA_EX_DIAS = 10;
 export const ANIOS_HISTORIA_MAX = 10;
 /** Tope de trabajo por pedido: trayectorias × meses (dos veces 5000 × 120). */
 export const MAX_TRABAJO = 1_200_000;
+/** Tope del costo real (trayectorias × ruedas del horizonte × posiciones proyectadas): 5000 × 10 años × 13 posiciones son
+ * ≈ 164 millones de pasos y tardan ≈ 0,36 s en el Mac; el tope deja ≈ 1 s. Lo aplica `simular` (el portafolio fija K). */
+export const MAX_PASOS = 400_000_000;
 export const MAX_TRAYECTORIAS = 10_000;
 export const MAX_HORIZONTE_MESES = 360;
 export const MAX_APORTE = 1e12;

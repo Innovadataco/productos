@@ -18,6 +18,8 @@ const DIA_EN_CERO = "el retorno de ese día se toma como 0 %";
 
 const TEXTO_AVISO: Readonly<Record<CodigoAviso, (a: AvisoCrudo, n: string) => string>> = {
   HISTORIA_CORTA: (a, n) => `${n}: ${dias(a.dato ?? 0)}, menos de ${MINIMO_DIAS}: queda fija en su valor de hoy, sin retorno, volatilidad ni dividendos.`,
+  HISTORIA_CORTA_EN_VENTANA: (a, n) =>
+    `${n}: tiene ${MINIMO_DIAS} o más días con cierre, pero solo ${dias(a.dato ?? 0)} en la ventana común: queda fija en su valor de hoy, sin retorno, volatilidad ni dividendos.`,
   SIN_VALOR: (_, n) => `${n}: sin cierres ni valores de unidad hasta hoy; no se puede valorar y queda fuera del valor.`,
   ESPECIE_INCOMPLETA: (_, n) => `${n}: tiene ventas sin asignar a sus lotes; queda fuera hasta completar la carga de órdenes.`,
   ESCISION_SIN_RAZON: (a, n) => `${n}: la escisión que mueve su precio el ${a.dia} no tiene razón registrada; ${DIA_EN_CERO}.`,

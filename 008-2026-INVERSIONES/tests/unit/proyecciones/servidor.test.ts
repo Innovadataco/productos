@@ -15,9 +15,9 @@ vi.mock("server-only", () => {
 const CARPETA = path.join(__dirname, "..", "..", "..", "src", "proyecciones");
 const DEL_SERVIDOR = ["leer.ts", "proyectar.ts"];
 const fuente = (archivo: string) => readFileSync(path.join(CARPETA, archivo), "utf8");
-/** Importaciones con valor (no `import type`) de un archivo. */
-const importaciones = (texto: string) =>
-  [...texto.matchAll(/^import\s+(?!type\b)(?:[^"';]*?from\s+)?["']([^"']+)["']/gm)].map((m) => m[1]!);
+/** Importaciones con valor (no `import type` ni `export type`) de un archivo: import/export … from, import() y require(). */
+const IMPORTACION = /^(?:import|export)\s+(?!type\b)(?:[^"';()=]*?from\s+)?["']([^"']+)["']|\b(?:import|require)\(\s*["']([^"']+)["']\s*\)/gm;
+const importaciones = (texto: string) => [...texto.matchAll(IMPORTACION)].map((m) => (m[1] ?? m[2])!);
 /** Lo único que un módulo puro puede importar con valor fuera de su carpeta: módulos puros ya existentes. */
 const PUROS_DE_AFUERA = new Set(["../plan/tenencia", "../plan/fechas", "../precios/horario"]);
 

@@ -10,9 +10,17 @@
  * Un mes m termina en la rueda round(m · ruedasPorMes): el redondeo es acumulado y no deriva.
  */
 import { percentil } from "./estadistica";
-import { BLOQUE, TOLERANCIA_RELATIVA } from "./metodo";
+import { BLOQUE, MAX_PASOS, TOLERANCIA_RELATIVA } from "./metodo";
 import { crearPrng, type Prng } from "./prng";
 import { MESES_FRECUENCIA, type Historia, type ParametrosProyeccion, type PuntoProyeccion } from "./tipos";
+
+/** El pedido pasa MAX_PASOS (trayectorias × ruedas × posiciones): no se simula. */
+export class ErrorTrabajo extends RangeError {
+  constructor() {
+    super("DEMASIADO_TRABAJO");
+    this.name = "ErrorTrabajo";
+  }
+}
 
 export interface Cartera {
   /** Valor de hoy de cada columna proyectada (K). */
@@ -142,6 +150,7 @@ export function simular(h: Historia, c: Cartera, p: ParametrosProyeccion, opcion
   const pl = armarPlan(h, c, p, opciones);
   const N = p.trayectorias;
   const H = p.horizonteMeses;
+  if (N * pl.ruedasHasta[H]! * Math.max(h.K, 1) > MAX_PASOS) throw new ErrorTrabajo();
   const valores = new Float64Array(N * (H + 1));
   const dividendos = new Float64Array(N * (H + 1));
   const caidas = new Float64Array(N);
