@@ -104,6 +104,8 @@ export interface EntradaCruce {
   readonly movimientos: ReadonlyMap<string, readonly MovimientoTenencia[]>;
   /** El día de la última carga de Trii de órdenes Y de dividendos, el menor de los dos; null si falta alguna. */
   readonly cubiertoHasta: Date | null;
+  /** La fecha del último pago de Trii guardado (de cualquier especie); null si no hay ninguno. */
+  readonly ultimoPagoTrii: Date | null;
   /** Fecha de negocio en Colombia: lo posterior no cuenta. */
   readonly hoy: Date;
 }

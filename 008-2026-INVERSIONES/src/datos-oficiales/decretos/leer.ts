@@ -66,9 +66,20 @@ export async function leerCruce(db: PrismaClient, hoy: Date, desde: Date): Promi
   const limites = limitesDeLectura(desde);
   return enSoloLectura(db, async (tx) => {
     const [decretos, pagos, cubiertoHasta] = await Promise.all([leerDecretosDelCruce(tx, limites.decretosDesde), leerPagos(tx, limites.pagosDesde, hoy), coberturaTrii(tx)]);
+    const ultimo = await tx.dividendo.aggregate({ where: { fechaPago: { lte: hoy } }, _max: { fechaPago: true } });
     const movimientos = await movimientosDeEspecies(tx, especiesDe(decretos), hoy);
-    return desdeEn(cruzar({ decretos, pagos, movimientos, cubiertoHasta, hoy }), desde);
+    return desdeEn(cruzar({ decretos, pagos, movimientos, cubiertoHasta, ultimoPagoTrii: ultimo._max.fechaPago, hoy }), desde);
   });
+}
+
+export interface LecturaDecretos {
+  readonly cruce: ResultadoCruce;
+  readonly proximos: readonly Proximo[];
+}
+
+/** Stub del rojo: el cruce y los próximos en una sola foto. */
+export async function leerDecretos(_db: PrismaClient, _hoy: Date, _desde: Date): Promise<LecturaDecretos> {
+  throw new Error("PENDIENTE");
 }
 
 /** Los decretos vigentes y no anulados con ex ≥ hoy, con la tenencia y el bruto estimado. */

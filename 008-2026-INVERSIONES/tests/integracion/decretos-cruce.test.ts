@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ENCABEZADO_DECRETOS } from "@/datos-oficiales/decretos/csv";
 import type { FilaCruce } from "@/datos-oficiales/decretos/cruce";
 import { importarDecretos } from "@/datos-oficiales/decretos/importar";
-import { coberturaTrii, leerCruce, leerProximos } from "@/datos-oficiales/decretos/leer";
+import { coberturaTrii, leerCruce, leerDecretos, leerProximos } from "@/datos-oficiales/decretos/leer";
 import { importarArchivoTrii } from "@/importacion/trii/importar";
 import { fechaEnBogota } from "@/precios/horario";
 
@@ -113,6 +113,13 @@ describe("leerCruce", () => {
   it("desde filtra la salida: desde el 15-dic ya no sale el decreto del 14-dic (ni su pago)", async () => {
     const r = await leerCruce(db, HOY, dia("2027-12-15"));
     expect(deEstaCorrida(r.filas).map((f) => iso(f.fechaPago))).toEqual(["2027-12-21", "2027-12-27"]);
+  });
+});
+
+describe("leerDecretos", () => {
+  it("el cruce y los próximos en una sola foto: lo mismo que leerlos por separado (sin cargas entre medio)", async () => {
+    const juntos = await leerDecretos(db, HOY, dia("2027-12-01"));
+    expect(juntos).toEqual({ cruce: await leerCruce(db, HOY, dia("2027-12-01")), proximos: await leerProximos(db, HOY) });
   });
 });
 

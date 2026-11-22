@@ -30,13 +30,16 @@ describe("decretos · lector (frontera)", () => {
   });
 
   it("hoy o desde que no son fechas de negocio, o desde posterior a hoy: RangeError sin tocar la base", async () => {
-    const { leerCruce, leerProximos } = await import("@/datos-oficiales/decretos/leer");
+    const { leerCruce, leerDecretos, leerProximos } = await import("@/datos-oficiales/decretos/leer");
     const malas = [new Date("2027-06-09T05:00:00Z"), new Date(Number.NaN), "2027-06-09" as unknown as Date];
     for (const m of malas) {
       await expect(leerCruce(base, m, dia("2027-01-01"))).rejects.toThrow(RangeError);
       await expect(leerCruce(base, dia("2027-06-09"), m)).rejects.toThrow(RangeError);
       await expect(leerProximos(base, m)).rejects.toThrow(RangeError);
+      await expect(leerDecretos(base, m, dia("2027-01-01"))).rejects.toThrow(RangeError);
+      await expect(leerDecretos(base, dia("2027-06-09"), m)).rejects.toThrow(RangeError);
     }
     await expect(leerCruce(base, dia("2027-06-09"), dia("2027-06-10"))).rejects.toThrow(RangeError);
+    await expect(leerDecretos(base, dia("2027-06-09"), dia("2027-06-10"))).rejects.toThrow(RangeError);
   });
 });

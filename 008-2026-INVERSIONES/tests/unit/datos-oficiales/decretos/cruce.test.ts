@@ -2,8 +2,10 @@
 // - Bruto esperado = valor por acción × tenencia al cierre del día anterior a la ex (src/plan/tenencia.ts, por operación),
 //   en millonésimas exactas; neto = lo que pagó Trii en la ventana (sin las fracciones de escisión); la diferencia se
 //   llama «diferencia bruto − neto».
-// - Asignación: decretos de una especie con la misma fecha de pago son un grupo; cada pago va a un solo grupo (el de
-//   fecha más cercana; en empate, el anterior) o queda SIN_DECRETO; si dos grupos comparten el pago, los dos REVISAR.
+// - Asignación: decretos de una especie con la misma fecha de pago son un grupo; cada pago va a un solo grupo (el último
+//   cuya fecha de pago ya llegó; si ninguno, el más cercano por venir) o queda SIN_DECRETO; si dos grupos comparten el
+//   pago, los dos REVISAR. Un decreto repetido (misma especie, tipo, cuota y fecha de pago) es REVISAR.
+// - NO_RECIBIDO exige además un pago de Trii posterior a la ventana (prueba de que el archivo la cubre).
 // - Estados RECIBIDO, PENDIENTE, NO_RECIBIDO, SIN_DECRETO y REVISAR (con sus motivos); `sinTenencia` aparte.
 // - Leer acotado (limitesDeLectura) y filtrar (desdeEn) da lo mismo que cruzar toda la historia (propiedad con semilla).
 // Datos inventados: especies ins-*, números raros, fechas de 2027.
@@ -32,7 +34,7 @@ const COMPRA: MovimientoTenencia = { fecha: dia("2027-02-03"), cantidad: 1237n }
 const movs = (...m: MovimientoTenencia[]) => new Map([["ins-a", [COMPRA, ...m]]]);
 const HOY = dia("2027-06-09");
 const entrada = (c: Partial<EntradaCruce> = {}): EntradaCruce => ({
-  decretos: [decreto()], pagos: [pago()], movimientos: movs(), cubiertoHasta: HOY, hoy: HOY, ...c,
+  decretos: [decreto()], pagos: [pago()], movimientos: movs(), cubiertoHasta: HOY, ultimoPagoTrii: HOY, hoy: HOY, ...c,
 });
 /** La única fila (o la de esa fecha de pago y especie). */
 const fila = (r: ResultadoCruce, fecha = "2027-03-17", especie = "ins-a"): FilaCruce => {
@@ -116,21 +118,37 @@ describe("decretos · cruce · asignación de pagos por ventana", () => {
     expect(r.filas.filter((x) => x.estado === "SIN_DECRETO").map((x) => x.pagos[0]!.id)).toEqual(["pag-b"]);
   });
 
-  it("dos ventanas que se tocan: cada pago va al grupo más cercano (en empate, al anterior) y los dos grupos quedan REVISAR", () => {
+  it("dos ventanas que se tocan: cada pago va al último grupo cuya fecha de pago ya llegó (Trii no paga antes que el emisor) y los dos grupos quedan REVISAR", () => {
     const decretos = [decreto({ id: "dec-a", fechaEx: dia("2027-01-06"), fechaPago: dia("2027-01-10") }), decreto({ id: "dec-b", cuota: 2, fechaEx: dia("2027-01-13"), fechaPago: dia("2027-01-17") })];
     const m = new Map([["ins-a", [{ fecha: dia("2026-12-02"), cantidad: 1237n }]]]);
     const r = cruzar(entrada({ decretos, movimientos: m, pagos: [pago({ id: "p15", fechaPago: dia("2027-01-15") }), pago({ id: "p20", fechaPago: dia("2027-01-20") })] }));
     const a = fila(r, "2027-01-10");
     const b = fila(r, "2027-01-17");
-    expect(a.pagos).toEqual([]);
-    expect(b.pagos.map((p) => p.id)).toEqual(["p15", "p20"]);
+    // El 15 está más cerca del 17, pero ese grupo aún no llegaba a su fecha de pago: va al del 10 (5 días tarde).
+    expect(a.pagos.map((p) => p.id)).toEqual(["p15"]);
+    expect(b.pagos.map((p) => p.id)).toEqual(["p20"]);
     expect([a.estado, b.estado]).toEqual(["REVISAR", "REVISAR"]);
     expect(a.motivos).toContain("PAGO_EN_DISPUTA");
     expect(b.motivos).toContain("PAGO_EN_DISPUTA");
-    // Empate exacto (13 de enero: 3 días de los dos): va al anterior.
+    // A 3 días de los dos (13 de enero): el del 10 ya llegó a su fecha, el del 16 no.
     const empate = asignarPagos(agruparDecretos([decretos[0]!, decreto({ id: "dec-c", cuota: 2, fechaEx: dia("2027-01-12"), fechaPago: dia("2027-01-16") })]), [pago({ id: "p13", fechaPago: dia("2027-01-13") })]);
     expect([...empate.porGrupo.entries()].map(([k, v]) => [k, v.map((p) => p.id)])).toEqual([["ins-a|2027-01-10", ["p13"]]]);
     expect([...empate.enDisputa].sort()).toEqual(["ins-a|2027-01-10", "ins-a|2027-01-16"]);
+    // Ningún grupo llegó aún a su fecha (un pago adelantado, dentro de la tolerancia): al más cercano por venir.
+    const adelantado = asignarPagos(
+      agruparDecretos([decreto({ id: "dec-e", cuota: 2, fechaEx: dia("2027-01-11"), fechaPago: dia("2027-01-11") }), decretos[0]!]),
+      [pago({ id: "p08", fechaPago: dia("2027-01-08") })],
+    );
+    expect([...adelantado.porGrupo.entries()].map(([k, v]) => [k, v.map((p) => p.id)])).toEqual([["ins-a|2027-01-10", ["p08"]]]);
+  });
+
+  it("un decreto repetido en el grupo (misma especie, tipo, cuota y fecha de pago; otro anuncio): REVISAR, con pago o sin él", () => {
+    const repetidos = [decreto(), decreto({ id: "dec-1b" })];
+    const conPago = fila(cruzar(entrada({ decretos: repetidos })));
+    expect(conPago).toMatchObject({ estado: "REVISAR", motivos: ["DECRETO_REPETIDO"] });
+    expect(fila(cruzar(entrada({ decretos: repetidos, pagos: [] }))).motivos).toEqual(["DECRETO_REPETIDO"]);
+    // Ordinario y extraordinario, o dos cuotas, el mismo día: no es repetido.
+    expect(fila(cruzar(entrada({ decretos: [decreto(), decreto({ id: "dec-x", tipo: "EXTRAORDINARIO" }), decreto({ id: "dec-2", cuota: 2 })], pagos: [pago({ montoNeto: D("9999.37") })] }))).motivos).toEqual([]);
   });
 
   it("propiedad (semilla): cada pago elegible aparece exactamente una vez, en un grupo o como SIN_DECRETO", () => {
@@ -197,7 +215,11 @@ describe("decretos · cruce · sin pagos", () => {
     expect(fila(sinPagos({ hoy: fin, cubiertoHasta: fin })).estado).toBe("PENDIENTE");
     expect(fila(sinPagos({ hoy: sumar(fin, 1), cubiertoHasta: fin })).estado).toBe("PENDIENTE");
     expect(fila(sinPagos({ hoy: sumar(fin, 1), cubiertoHasta: null })).estado).toBe("PENDIENTE");
-    const no = fila(sinPagos({ hoy: sumar(fin, 1), cubiertoHasta: sumar(fin, 1) }));
+    // Sin un pago de Trii posterior a la ventana no hay prueba de que el archivo la cubre (se carga hoy uno viejo): PENDIENTE.
+    for (const ultimoPagoTrii of [fin, null]) {
+      expect(fila(sinPagos({ hoy: sumar(fin, 1), cubiertoHasta: sumar(fin, 1), ultimoPagoTrii })).estado, String(ultimoPagoTrii)).toBe("PENDIENTE");
+    }
+    const no = fila(sinPagos({ hoy: sumar(fin, 1), cubiertoHasta: sumar(fin, 1), ultimoPagoTrii: sumar(fin, 1) }));
     expect(no).toMatchObject({ estado: "NO_RECIBIDO", motivos: [], pagos: [], netoRecibido: null, diferenciaBrutoNeto: null });
     expect(texto(no.brutoEsperado)).toBe("5308.871247");
   });
@@ -210,10 +232,11 @@ describe("decretos · cruce · sin pagos", () => {
     expect(fila(sinPagos({ movimientos: sinTenencia, cubiertoHasta: dia("2027-03-09") })).estado).toBe("PENDIENTE");
   });
 
-  it("un decreto cuya ex aún no llega y sin pagos no entra al cruce (es un próximo)", () => {
-    const r = sinPagos({ decretos: [decreto({ fechaEx: dia("2027-06-10"), fechaPago: dia("2027-06-16") })] });
-    expect(r).toEqual({ filas: [], sinTenencia: [] });
-    expect(sinPagos({ decretos: [decreto({ fechaEx: HOY, fechaPago: dia("2027-06-16") })] }).filas).toHaveLength(1);
+  it("un decreto con ex desde hoy y sin pagos no entra al cruce: es un próximo (proximos.ts, ex ≥ hoy); con ex ayer, sí", () => {
+    for (const ex of [dia("2027-06-10"), HOY]) {
+      expect(sinPagos({ decretos: [decreto({ fechaEx: ex, fechaPago: dia("2027-06-16") })] }), iso(ex)).toEqual({ filas: [], sinTenencia: [] });
+    }
+    expect(sinPagos({ decretos: [decreto({ fechaEx: dia("2027-06-08"), fechaPago: dia("2027-06-16") })] }).filas).toHaveLength(1);
   });
 });
 
@@ -265,5 +288,6 @@ function entradaAzar(azar: () => number): EntradaCruce {
   }));
   const movimientos = new Map(especies.map((s) => [s, [{ fecha: dia("2026-12-03"), cantidad: 1237n }, { fecha: fecha(), cantidad: azar() < 0.5 ? 311n : -97n }]]));
   const hoy = sumar(dia("2027-01-15"), Math.floor(azar() * 200));
-  return { decretos, pagos, movimientos, cubiertoHasta: azar() < 0.15 ? null : sumar(hoy, -Math.floor(azar() * 30)), hoy };
+  const ultimoPagoTrii = azar() < 0.15 ? null : sumar(hoy, -Math.floor(azar() * 40));
+  return { decretos, pagos, movimientos, cubiertoHasta: azar() < 0.15 ? null : sumar(hoy, -Math.floor(azar() * 30)), ultimoPagoTrii, hoy };
 }
