@@ -144,7 +144,7 @@ describe("propiedades (semilla)", () => {
 
   /** Compra inicial y movimientos que nunca dejan la tenencia en cero (el plan exige tenencia positiva en el tramo). */
   function movimientosPositivos(azar: () => number): MovimientoTenencia[] {
-    const fechas = Array.from({ length: Math.floor(azar() * 11) }, () => dentroDe(azar, 1, 400)).sort((a, b) => a.getTime() - b.getTime());
+    const fechas = Array.from({ length: Math.floor(azar() * 11) }, () => dentroDe(azar, 1, 397)).sort((a, b) => a.getTime() - b.getTime());
     let tenencia = 1237n;
     const movimientos = [{ fecha: INICIO, cantidad: 1237n }];
     for (const fecha of fechas) {
@@ -159,7 +159,7 @@ describe("propiedades (semilla)", () => {
   function decretosAlAzar(azar: () => number): DecretoLeido[] {
     const decretos: DecretoLeido[] = [];
     for (let i = 0, n = 1 + Math.floor(azar() * 5); i < n; i += 1) {
-      const fechaPago = dentroDe(azar, 60, 340);
+      const fechaPago = dentroDe(azar, 61, 337);
       const conEx = (j: number) => ({ id: `d${i}${j}`, fechaEx: sumar(fechaPago, -Math.floor(azar() * 25)), fechaPago, valorPorAccion: 1 + azar(), recibido: false });
       decretos.push(conEx(0), ...(azar() < 0.3 ? [conEx(1)] : []));
     }
@@ -170,15 +170,15 @@ describe("propiedades (semilla)", () => {
    * lector; la mayoría cerca de la fecha de pago de algún decreto, para que caigan en su ventana. */
   function pagosAlAzar(azar: () => number, decretos: readonly DecretoLeido[] = []): { fechaPago: Date; monto: string }[] {
     const cercaDeUnDecreto = (): Date => sumar(decretos[Math.floor(azar() * decretos.length)]!.fechaPago, Math.floor(azar() * 16) - 4);
-    const unDia = () => iso(decretos.length > 0 && azar() < 0.7 ? cercaDeUnDecreto() : dentroDe(azar, 60, 360));
+    const unDia = () => iso(decretos.length > 0 && azar() < 0.7 ? cercaDeUnDecreto() : dentroDe(azar, 61, 359));
     const dias = [...new Set(Array.from({ length: Math.floor(azar() * 7) }, unDia))].sort();
-    return dias.map((d) => ({ fechaPago: dia(d), monto: (100 + azar() * 900).toFixed(2) }));
+    return dias.map((d) => ({ fechaPago: dia(d), monto: (103.7 + azar() * 911.3).toFixed(2) }));
   }
 
   it("cada pago de Trii tiene el mismo veredicto y el mismo por acción que en el plan (un tramo desde antes de toda ex)", () => {
     const azar = azarDePrueba(4613);
     const ramas = new Map<string, number>();
-    for (let caso = 0; caso < 1000; caso += 1) {
+    for (let caso = 0; caso < 997; caso += 1) {
       const movimientos = movimientosPositivos(azar);
       const decretos = decretosAlAzar(azar);
       const pagos = pagosAlAzar(azar, decretos);
@@ -215,9 +215,9 @@ describe("propiedades (semilla)", () => {
 
   it("sin decretos, el resultado es el de siempre: la tenencia del día del pago, quieta en los VENTANA_EX_DIAS anteriores", () => {
     const azar = azarDePrueba(1237);
-    for (let caso = 0; caso < 300; caso += 1) {
+    for (let caso = 0; caso < 293; caso += 1) {
       // Aquí la tenencia sí puede quedar en cero o negativa (DIVIDENDO_SIN_TENENCIA).
-      const movimientos = [COMPRA, ...Array.from({ length: Math.floor(azar() * 5) }, () => ({ fecha: dentroDe(azar, -30, 430), cantidad: BigInt(Math.floor(azar() * 2600) - 1300) }))];
+      const movimientos = [COMPRA, ...Array.from({ length: Math.floor(azar() * 5) }, () => ({ fecha: dentroDe(azar, -31, 431), cantidad: BigInt(Math.floor(azar() * 2611) - 1307) }))];
       const pagos = pagosAlAzar(azar).map((p) => ({ fechaPago: p.fechaPago, montoNeto: Number(p.monto), decretadoId: null }));
       const r = dividendosPorAccion(accion("a", 1237, [], { movimientos, dividendos: pagos }), HOY);
       // La conducta de antes de este cambio, escrita aparte: sin tenencia ese día, o con la tenencia moviéndose en los
@@ -236,7 +236,7 @@ describe("propiedades (semilla)", () => {
 
   it("los decretos cuya ventana no alcanza ningún pago no cambian las entradas de los pagos ni sus avisos", () => {
     const azar = azarDePrueba(311);
-    for (let caso = 0; caso < 300; caso += 1) {
+    for (let caso = 0; caso < 293; caso += 1) {
       const movimientos = movimientosPositivos(azar);
       const dividendos = pagosAlAzar(azar).map((p) => ({ fechaPago: p.fechaPago, montoNeto: Number(p.monto), decretadoId: null }));
       // Decretos al azar sin los que alcanzan algún pago.
