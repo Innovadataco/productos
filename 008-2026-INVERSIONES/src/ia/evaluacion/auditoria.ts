@@ -23,6 +23,9 @@ const PATRONES: readonly (readonly [string, RegExp])[] = Object.freeze([
   ["APROVECHAR", new RegExp(`${FRONTERA_ANTES}aprovech\\p{L}*`, "u")],
   ["GANANCIAS", /toma de ganancias|tome ganancias|tomar ganancias/u],
   ["OBJETIVO", /precio objetivo|punto de entrada|punto de salida/u],
+  // Formas indirectas de usted (revisión de mle-reviewer): marcan más de la cuenta a propósito; decide la persona.
+  ["INDIRECTO", palabras(["considere", "consideren", "evalue", "evaluen", "revise", "revisen", "vigile", "vigilen", "procure", "siga", "sigan", "continue", "evite", "eviten", "espere", "esperen", "prefiera", "opte", "actue", "actuar"])],
+  ["PRUDENCIA", /tenga en cuenta|lo mejor es|es prudente|seria prudente|hay que|tendria que|tendrian que|podria considerar|puede considerar/u],
 ]);
 
 /** Minúsculas, sin tildes ni diéresis (NFD sin marcas) y con los espacios simples. */

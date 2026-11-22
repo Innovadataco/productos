@@ -15,7 +15,7 @@ import path from "node:path";
 export const CODIGOS_ERROR_SALIDA = Object.freeze([
   "RUTA_RELATIVA", "PADRE_INEXISTENTE", "NO_ES_CARPETA", "ES_ENLACE", "PERMISOS_ABIERTOS", "DE_OTRO_USUARIO", "DENTRO_DE_UN_REPO",
   "EN_CARPETA_PROHIBIDA", "SALIDA_INEXISTENTE", "ARCHIVO_EXISTE", "NOMBRE_INVALIDO", "DEMASIADO_GRANDE", "JSONL_INVALIDO", "NO_SE_PUDO_ESCRIBIR",
-  "NO_SE_PUDO_LEER",
+  "NO_SE_PUDO_LEER", "ARCHIVO_ABIERTO", "NO_ES_ARCHIVO",
 ] as const);
 export type CodigoErrorSalida = (typeof CODIGOS_ERROR_SALIDA)[number];
 
@@ -31,6 +31,7 @@ export const MAX_BYTES_LECTURA = 32 * 1024 * 1024;
 const MODO_CARPETA = 0o700;
 const MODO_ARCHIVO = 0o600;
 const PERMISOS = 0o777;
+const PERMISOS_AJENOS = 0o077;
 const NOMBRE = /^[a-z0-9][a-z0-9._-]*$/;
 
 export interface OpcionesCarpeta {
@@ -197,6 +198,19 @@ export function abrirCarpeta(ruta: string, opciones: OpcionesCarpeta): Carpeta {
     }
   }
   return carpetaEn(normal);
+}
+
+/**
+ * Un archivo con datos del portafolio (el JSON del export): regular, no un enlace, del usuario y sin permisos para el
+ * grupo ni para otros (0600 o más cerrado). Lanza `ErrorSalida` sin repetir la ruta.
+ */
+export function revisarArchivoPrivado(ruta: string): void {
+  const st = estado(ruta);
+  if (st === null) throw new ErrorSalida("NO_SE_PUDO_LEER");
+  if (st.isSymbolicLink()) throw new ErrorSalida("ES_ENLACE");
+  if (!st.isFile()) throw new ErrorSalida("NO_ES_ARCHIVO");
+  if ((st.mode & PERMISOS_AJENOS) !== 0) throw new ErrorSalida("ARCHIVO_ABIERTO");
+  if (typeof process.getuid === "function" && st.uid !== process.getuid()) throw new ErrorSalida("DE_OTRO_USUARIO");
 }
 
 /** Un nombre de archivo seguro desde el nombre del modelo: «qwen2.5:14b» → «qwen2.5-14b». */

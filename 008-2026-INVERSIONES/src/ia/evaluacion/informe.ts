@@ -4,14 +4,21 @@
  * Escribe metricas.json, metricas.md, pares-a-ciegas.md y clave-pares.json (0600, sin pisar ninguno). Las fuentes de
  * los pares son modelos o «plantilla»; el texto de un modelo para un caso es el de su primera corrida publicada.
  */
-import { ARCHIVOS, ErrorArchivos, leerCorridas, leerPlantilla, VERSION_ARCHIVOS } from "./archivos";
+import { FUENTE_PLANTILLA } from "./argumentos";
+import { ARCHIVOS, ErrorArchivos, leerCorridas, leerPlantilla, VERSION_ARCHIVOS, type CorridasLeidas } from "./archivos";
 import { calcularMetricas, lineaBase } from "./metricas";
 import { armarPares, claveDePares, paresEnMarkdown, type TextosDeFuente } from "./pares";
 import { metricasEnMarkdown } from "./reporte";
 import type { Carpeta } from "./salida";
 import type { RegistroCorrida } from "./tipos";
 
-export const FUENTE_PLANTILLA = "plantilla";
+export { FUENTE_PLANTILLA };
+
+const SALIDAS = Object.freeze([ARCHIVOS.metricasJson, ARCHIVOS.metricasMd, ARCHIVOS.pares, ARCHIVOS.clave]);
+
+/** Completa: con su FIN COMPLETA y todas las corridas esperadas (casos × pasadas). */
+const completitud = (leidas: CorridasLeidas, casos: number): { readonly esperadas: number; readonly completa: boolean } =>
+  ({ esperadas: casos * leidas.cabecera.pasadas, completa: leidas.fin?.estado === "COMPLETA" });
 
 export interface OpcionesInforme {
   readonly fuentes: readonly string[];
@@ -37,11 +44,13 @@ function textosDelModelo(registros: readonly RegistroCorrida[]): ReadonlyMap<str
 }
 
 export function escribirInforme(carpeta: Carpeta, o: OpcionesInforme): ResumenInforme {
+  // Todo o nada: si ya hay algún archivo del informe, no se escribe ninguno (no quedan métricas sin sus pares).
+  if (SALIDAS.some((nombre) => carpeta.existe(nombre))) throw new ErrorArchivos("INFORME_EXISTE");
   const plantilla = leerPlantilla(carpeta);
   const modelos = o.fuentes.filter((f) => f !== FUENTE_PLANTILLA);
   const corridas = modelos.map((modelo) => ({ modelo, leidas: leerCorridas(carpeta, modelo) }));
   if (corridas.some((c) => c.leidas.cabecera.casosHash !== plantilla.casosHash)) throw new ErrorArchivos("CASOS_DISTINTOS");
-  const metricas = corridas.map((c) => calcularMetricas(c.modelo, c.leidas.registros));
+  const metricas = corridas.map((c) => calcularMetricas(c.modelo, c.leidas.registros, completitud(c.leidas, plantilla.registros.length)));
   const base = lineaBase(plantilla.registros);
   const textos: TextosDeFuente[] = o.fuentes.map((fuente) => ({
     fuente,

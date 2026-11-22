@@ -3,7 +3,8 @@
  * sin IA), para calificar la claridad de cada uno de 1 a 5.
  * - Con una cantidad: casos distintos, repartidos por tipo en turno (DIARIO, REGLAS, ESCENARIOS…), y para cada caso un
  *   par de fuentes al azar. Con «TODOS»: todos los pares de fuentes de todos los casos.
- * - El orden de los pares y el de A y B van al azar con la semilla (`crearPrng`); la clave (qué fuente es A y cuál B)
+ * - El orden de los pares y el de A y B van al azar con la semilla (`crearPrng`), con los lados balanceados (cada par de
+ *   fuentes sale la mitad de las veces de cada lado); la clave (qué fuente es A y cuál B)
  *   va en un archivo aparte; el archivo de pares no nombra ninguna fuente.
  * Un caso sin texto de alguna fuente (no publicó) queda sin par, y la clave dice cuál faltó.
  */
@@ -108,8 +109,14 @@ export function armarPares(o: OpcionesPares): ResultadoPares {
   const completos = o.casos.filter((c) => o.fuentes.every((f) => f.textos.has(c.id)));
   const porCaso = completos.map((caso) => combinaciones(o.fuentes).map((fuentes): Candidato => ({ caso, fuentes })));
   const elegidos = o.cantidad === "TODOS" ? porCaso.flat() : muestra(p, porCaso, o.cantidad);
+  // Los lados, balanceados: en cada par va en A la fuente que menos veces fue A hasta ahí (empates al azar).
+  const vecesEnA = new Map<string, number>();
   const pares = mezclar(p, elegidos).map((c, i): Par => {
-    const [x, y] = p.enteroMenorQue(2) === 0 ? c.fuentes : [c.fuentes[1], c.fuentes[0]];
+    const [f, g] = c.fuentes;
+    const nf = vecesEnA.get(f.fuente) ?? 0;
+    const ng = vecesEnA.get(g.fuente) ?? 0;
+    const [x, y] = nf < ng || (nf === ng && p.enteroMenorQue(2) === 0) ? [f, g] : [g, f];
+    vecesEnA.set(x.fuente, (vecesEnA.get(x.fuente) ?? 0) + 1);
     const lado = (f: TextosDeFuente): LadoDelPar => Object.freeze({ fuente: f.fuente, texto: f.textos.get(c.caso.id) as string });
     return Object.freeze({ numero: i + 1, caso: c.caso.id, tipo: c.caso.tipo, a: lado(x), b: lado(y) });
   });

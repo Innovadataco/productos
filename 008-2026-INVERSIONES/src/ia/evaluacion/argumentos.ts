@@ -13,6 +13,9 @@ import { MAX_PAUSA_MS } from "./evaluar";
 import { MAX_FUENTES, MIN_FUENTES } from "./pares";
 import type { Pasada } from "./tipos";
 
+/** La fuente de la línea base en el informe (la plantilla sin IA). */
+export const FUENTE_PLANTILLA = "plantilla";
+
 /** La variable de entorno con el destino de la puerta local (`http://<IPv4 de la tailnet>:<puerto>`). Nunca va al repo. */
 export const VARIABLE_DESTINO = "INV_IA_LOCAL_DESTINO";
 export const PAUSA_POR_OMISION_MS = 2000;
@@ -93,7 +96,8 @@ function semillaYPaquetes(v: ReadonlyMap<string, string>): { readonly semilla: n
 
 function correr(v: ReadonlyMap<string, string>): ArgumentosEvaluacion {
   const modelo = v.get("--modelo") ?? falla("FALTA_MODELO");
-  if (!PATRON_MODELO.test(modelo)) falla("MODELO_INVALIDO");
+  // «plantilla» es la línea base en el informe: ningún modelo se llama así.
+  if (!PATRON_MODELO.test(modelo) || modelo === FUENTE_PLANTILLA) falla("MODELO_INVALIDO");
   const salida = absoluta(v.get("--salida") ?? falla("FALTA_SALIDA"), "SALIDA_RELATIVA") as string;
   const pasadas = (entero(v.get("--pasadas"), 1, 2, "PASADAS_INVALIDAS") ?? 2) as Pasada;
   const pausa = entero(v.get("--pausa-s"), 0, MAX_PAUSA_MS / MS_POR_SEGUNDO, "PAUSA_INVALIDA");

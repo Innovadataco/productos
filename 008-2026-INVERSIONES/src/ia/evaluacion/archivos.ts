@@ -27,7 +27,7 @@ export const ARCHIVOS = Object.freeze({
 
 export const archivoDeCorridas = (modelo: string): string => `corridas-${nombreDeModelo(modelo)}.jsonl`;
 
-export const CODIGOS_ERROR_ARCHIVOS = Object.freeze(["SIN_CORRIDAS", "SIN_PLANTILLA", "CASOS_DISTINTOS", "ARCHIVO_INVALIDO"] as const);
+export const CODIGOS_ERROR_ARCHIVOS = Object.freeze(["SIN_CORRIDAS", "SIN_PLANTILLA", "CASOS_DISTINTOS", "ARCHIVO_INVALIDO", "INFORME_EXISTE"] as const);
 export type CodigoErrorArchivos = (typeof CODIGOS_ERROR_ARCHIVOS)[number];
 
 export class ErrorArchivos extends Error {

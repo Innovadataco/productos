@@ -121,8 +121,8 @@ describe("calcularMetricas", () => {
   it("revisión: intervalo de Wilson al 95 % de la publicación y «no concluyente» si cruza el 90 %", () => {
     const treintaYSeis = [...Array.from({ length: 36 }, (_, i) => registro({ caso: `DIARIO-${i}` })), ...Array.from({ length: 4 }, (_, i) => rechazo(["IDIOMA"], { caso: `REGLAS-${i}` }))];
     const m = calcularMetricas("m", treintaYSeis);
-    expect(m.publicacion.intervalo95[0]).toBeCloseTo(0.769, 2);
-    expect(m.publicacion.intervalo95[1]).toBeCloseTo(0.960, 2);
+    expect(m.publicacion.intervalo95![0]).toBeCloseTo(0.769, 2);
+    expect(m.publicacion.intervalo95![1]).toBeCloseTo(0.960, 2);
     expect(m.publicacion.noConcluyente).toBe(true);
     const todas = calcularMetricas("m", Array.from({ length: 80 }, (_, i) => registro({ caso: `DIARIO-${i}` })));
     expect(todas.publicacion.noConcluyente).toBe(false);

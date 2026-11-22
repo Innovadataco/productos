@@ -10,8 +10,8 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 
 export const OPCIONES_FOTO = Object.freeze({
   isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
-  /** El export lee el tablero, el plan, las series y proyecta (el motor tarda hasta ≈ 1 s): holgura amplia. */
-  timeout: 120_000,
+  /** El export lee el tablero, el plan, las series y proyecta (el motor tarda hasta ≈ 1 s): holgura, sin retener la foto. */
+  timeout: 45_000,
   maxWait: 10_000,
 });
 

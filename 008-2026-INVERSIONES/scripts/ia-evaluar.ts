@@ -2,7 +2,8 @@
  * La evaluación de la IA local (E7), en el Mac: corre un modelo de Ollama (por la tailnet, la instancia de PI) sobre los
  * casos y mide cuántos resúmenes publica el validador, por qué rechaza, cuánto tarda y si repite.
  *   npm run ia:evaluar -- casos [--semilla N | --paquetes <archivo.json>]
- *   INV_IA_LOCAL_DESTINO=http://<IPv4 de la tailnet>:<puerto> npm run ia:evaluar -- correr --modelo <nombre> --salida <carpeta> […]
+ *   npm run ia:evaluar -- correr --modelo <nombre> --salida <carpeta> […]   (con INV_IA_LOCAL_DESTINO exportada desde un archivo
+ *   0600 fuera del repo, nunca escrita en la línea de comandos: quedaría en el historial)
  *   npm run ia:evaluar -- informe --salida <carpeta> --fuentes <modelo,modelo|plantilla> [--pares N|todos]
  * Los casos son los 40 inventados (CI y robustez) o los del portafolio (`--paquetes`, el JSON de exportar-hechos-ia por
  * la vía B). El destino llega SOLO por la variable: nunca va al repo, a la terminal ni a los resultados. Con el
@@ -25,12 +26,14 @@ import { escribirInforme } from "../src/ia/evaluacion/informe";
 import { ErrorPares } from "../src/ia/evaluacion/pares";
 import { vigilarRed } from "../src/ia/evaluacion/red";
 import { codigoDeSalida, lineaDeAvance, lineasDeCasos, lineasDeFin } from "../src/ia/evaluacion/reporte";
-import { abrirCarpeta, ErrorSalida, revisarCarpeta } from "../src/ia/evaluacion/salida";
+import { abrirCarpeta, ErrorSalida, revisarArchivoPrivado, revisarCarpeta } from "../src/ia/evaluacion/salida";
 import type { CasoEvaluacion } from "../src/ia/evaluacion/tipos";
 
 type Correr = Extract<ArgumentosEvaluacion, { comando: "correr" }>;
 
-const TEMPORALES = Object.freeze(["/tmp", "/var/folders"]);
+const TEMPORALES = Object.freeze(["/tmp", "/var/tmp", "/var/folders"]);
+/** Con alguna de estas, la red de Node podría salir por un proxy de entorno (security-reviewer): se niega. */
+const VARIABLES_DE_PROXY = Object.freeze(["NODE_USE_ENV_PROXY", "HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "ALL_PROXY", "all_proxy"]);
 
 /** Un error esperado (de uso, configuración o archivos): su código, que se imprime sin valores. */
 class Negativa extends Error {
@@ -44,6 +47,11 @@ const codigoDe = (e: unknown): string | null => (CON_CODIGO.some((c) => e instan
 
 function casosDe(semilla: number | null, paquetes: string | null): readonly CasoEvaluacion[] {
   if (paquetes === null) return casosInventados(semilla ?? undefined);
+  try {
+    revisarArchivoPrivado(paquetes);
+  } catch (error) {
+    throw new Negativa(error instanceof ErrorSalida && error.codigo === "ARCHIVO_ABIERTO" ? "PAQUETES_ABIERTO" : error instanceof ErrorSalida && error.codigo !== "NO_SE_PUDO_LEER" ? `PAQUETES_${error.codigo}` : "PAQUETES_ILEGIBLE");
+  }
   const leida = leerArchivoAcotado(paquetes, MAX_BYTES_EXPORTACION);
   if (!leida.ok) throw new Negativa(leida.codigo === "ARCHIVO_DEMASIADO_GRANDE" ? "PAQUETES_DEMASIADO_GRANDE" : "PAQUETES_ILEGIBLE");
   return leerExportacion(leida.bytes);
@@ -51,6 +59,10 @@ function casosDe(semilla: number | null, paquetes: string | null): readonly Caso
 
 const esperar = (ms: number, senal: AbortSignal): Promise<void> =>
   new Promise((resolver) => {
+    if (senal.aborted) {
+      resolver();
+      return;
+    }
     const reloj = setTimeout(resolver, ms);
     senal.addEventListener("abort", () => {
       clearTimeout(reloj);
@@ -66,6 +78,7 @@ async function correr(a: Correr): Promise<number> {
   // el TMPDIR del proceso (/tmp y, en macOS, /var/folders).
   const opcionesCarpeta = { raicesProhibidas: origen === "PAQUETES" ? [tmpdir(), ...TEMPORALES] : [] };
   revisarCarpeta(a.salida, opcionesCarpeta);
+  if (VARIABLES_DE_PROXY.some((v) => (process.env[v] ?? "") !== "")) throw new Negativa("PROXY_DE_ENTORNO");
   const destino = process.env[VARIABLE_DESTINO];
   if (destino === undefined || destino === "") throw new Negativa("DESTINO_AUSENTE");
   const red = vigilarRed(fetch, destino);
@@ -77,18 +90,23 @@ async function correr(a: Correr): Promise<number> {
   for (const senal of ["SIGINT", "SIGTERM"] as const) process.once(senal, () => control.abort());
   const total = casos.length * a.pasadas;
   console.error(`▶ ${a.modelo}: ${total} corridas en serie (${casos.length} casos × ${a.pasadas} pasadas), límite ${LIMITE_EVALUACION_MS / 1000} s por pedido`);
-  const fin = await evaluarModelo(
-    { casos, modelo: a.modelo, pasadas: a.pasadas, limiteMs: LIMITE_EVALUACION_MS, pausaMs: a.pausaMs },
-    {
-      generador, sondear: (limiteMs, senal) => generador.sondaLocal({ smoke: false, limiteMs }, senal), reloj: () => performance.now(),
-      ahoraIso: () => new Date(Date.now()).toISOString(), esperar, senal: control.signal,
-      anotar: (r) => {
-        corridas.anotar(r);
-        console.error(lineaDeAvance(r, total));
+  let fin: Awaited<ReturnType<typeof evaluarModelo>> = { estado: "CORTADA_POR_SENAL", corridas: 0, motivo: "DEFECTO_DEL_ARNES", detalle: null };
+  try {
+    fin = await evaluarModelo(
+      { casos, modelo: a.modelo, pasadas: a.pasadas, limiteMs: LIMITE_EVALUACION_MS, pausaMs: a.pausaMs },
+      {
+        generador, sondear: (limiteMs, senal) => generador.sondaLocal({ smoke: false, limiteMs }, senal), reloj: () => performance.now(),
+        ahoraIso: () => new Date(Date.now()).toISOString(), esperar, senal: control.signal,
+        anotar: (r) => {
+          corridas.anotar(r);
+          console.error(lineaDeAvance(r, total));
+        },
       },
-    },
-  );
-  corridas.terminar(fin, red.conteo());
+    );
+  } finally {
+    // También si el arnés lanza: el archivo queda cerrado y con su fin (el motivo dice que fue un defecto).
+    corridas.terminar(fin, red.conteo());
+  }
   for (const linea of lineasDeFin(a.modelo, fin, red.conteo())) console.error(linea);
   return codigoDeSalida(fin, red.conteo());
 }
