@@ -5,7 +5,7 @@
  */
 import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
-import { compararDecimales, deDecimal, deEntero, deNumero, deTextoDecimal, diaDe, diasEntre, menorDia, signoDe } from "@/ia/hechos/decimal";
+import { compararDecimales, compararTexto, deDecimal, deEntero, deNumero, deTextoDecimal, diaDe, diasEntre, menorDia, signoDe } from "@/ia/hechos/decimal";
 import {
   ORIGENES_DATO, UMBRAL_CERCANIA_REGLA_PCT, calidadDe, cercaniaDeRegla, direccionDelSigno, direccionFrente, frescuraDeSerie, frescuraDelFondo,
   frescuraPorCalendario, peorFrescura,
@@ -75,6 +75,11 @@ describe("cifras canónicas", () => {
     expect(compararDecimales("12.1", "9.97")).toBe(1);
     expect(compararDecimales("-0.5", "0.4")).toBe(-1);
     expect(codigoDe(() => compararDecimales("4.613,27", "3"))).toBe("DECIMAL_INVALIDO");
+  });
+
+  it("orden de textos por unidades de código, sin localeCompare", () => {
+    expect([compararTexto("FICTICIA-A", "FICTICIA-B"), compararTexto("FICTICIA-B", "FICTICIA-A"), compararTexto("FICTICIA-A", "FICTICIA-A")]).toEqual([-1, 1, 0]);
+    expect(compararTexto("Z", "a")).toBe(-1);
   });
 
   it("días de negocio: el día ISO de una fecha a medianoche UTC, los días entre dos y el menor", () => {

@@ -8,9 +8,20 @@ import type { DiaIso } from "../contrato";
 import { esFechaDeNegocio, MS_POR_DIA } from "../../plan/fechas";
 import { ErrorArmado } from "./errores";
 
-/** Lo que se lee de un decimal (Prisma.Decimal lo cumple): su notación normal, sin exponente. */
+/**
+ * Lo que se lee de un decimal (Prisma.Decimal lo cumple): su notación normal, sin exponente, y si es finito. Un `number`
+ * NO lo cumple (no tiene `isFinite()` propio): su `toFixed()` redondearía al entero en silencio.
+ */
 export interface DecimalLike {
   toFixed(): string;
+  isFinite(): boolean;
+}
+
+/** ¿Es un decimal (un objeto con `toFixed` e `isFinite`, finito)? Se revisa en ejecución: los tipos no llegan aquí. */
+function esDecimal(valor: unknown): valor is DecimalLike {
+  if (typeof valor !== "object" || valor === null) return false;
+  const d = valor as Partial<DecimalLike>;
+  return typeof d.toFixed === "function" && typeof d.isFinite === "function" && d.isFinite() === true;
 }
 
 const DECIMAL_LIBRE = /^(-?)([0-9]+)(?:\.([0-9]+))?$/;
@@ -30,9 +41,16 @@ export function deTextoDecimal(texto: string): string {
   return canonico;
 }
 
-/** La forma canónica de un decimal ya calculado (Prisma.Decimal), por su notación normal. */
+/** La forma canónica de un decimal ya calculado (Prisma.Decimal), por su notación normal. DECIMAL_INVALIDO si no es uno. */
 export function deDecimal(valor: DecimalLike): string {
+  if (!esDecimal(valor)) throw new ErrorArmado("DECIMAL_INVALIDO");
   return deTextoDecimal(valor.toFixed());
+}
+
+/** Un entero (días, conteos) en forma canónica. NUMERO_INVALIDO si no es un entero seguro. */
+export function deEntero(valor: number): string {
+  if (!Number.isSafeInteger(valor)) throw new ErrorArmado("NUMERO_INVALIDO");
+  return deTextoDecimal(String(valor));
 }
 
 /** Un número (las proyecciones son números) redondeado a `decimales`, en forma canónica. NUMERO_INVALIDO si no es finito o es enorme. */
@@ -94,3 +112,9 @@ export function sumarDiasIso(dia: DiaIso, dias: number): DiaIso {
 
 /** El menor de dos días ISO (el orden del texto es el del calendario). */
 export const menorDia = (a: DiaIso, b: DiaIso): DiaIso => (a <= b ? a : b);
+
+/**
+ * Orden de dos textos por unidades de código (nunca `localeCompare`, que depende del entorno). Es la misma regla que
+ * `compararTexto` de src/datos-oficiales/decretos/cruce.ts; no se importa de allí para no cargar el cálculo de tenencias.
+ */
+export const compararTexto = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);

@@ -157,6 +157,8 @@ describe("catálogo cerrado de claves", () => {
     expect(CLAVES_DE_REGLA).not.toContain(CLAVE_ANCLA_REGLA);
     for (const clave of CLAVES_DE_REGLA) expect(entradaDeCatalogo("REGLAS", clave), clave).not.toBeNull();
     expect(esClaveDeRegla("REGLA_NIVEL")).toBe(true);
+    // Guardián de la lista: son todas las REGLA_* del catálogo menos el ancla (si se agrega una, entra aquí).
+    expect([...CLAVES_DE_REGLA]).toEqual(clavesDe("REGLAS").filter((c) => c.startsWith("REGLA_") && c !== CLAVE_ANCLA_REGLA));
     for (const otra of [CLAVE_ANCLA_REGLA, CLAVE_NOMBRE_ESPECIE, "PROXIMO_EX_DIVIDENDO", "VALOR_ESPECIE", "constructor", ""]) expect(esClaveDeRegla(otra), otra).toBe(false);
   });
 });

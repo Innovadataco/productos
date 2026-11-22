@@ -18,6 +18,8 @@ export const FUENTES = Object.freeze({
   NIVELES: "cálculo de 008 sobre el plan y los cierres",
   DECRETOS: "dividendos decretados registrados en 008",
   PROYECCION: "proyección de 008, escenario ilustrativo",
+  /** El valor de unidad del fondo: el mismo texto que `FUENTE_SFC` de src/fondo/sfc.ts (ese módulo llama a la red). */
+  FONDO: "sfc:qhpu-8ixx",
 });
 
 /** Los avisos que agregan los armadores, en el orden en que salen en el paquete. */

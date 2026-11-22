@@ -40,8 +40,7 @@ export type ClaveReglas =
   | ClaveAnclaRegla;
 
 /** Los hechos de una regla: los únicos que pueden citar a un ancla (REGLA_DEL_PLAN) como `sujeto`. El ancla no está. */
-export type ClaveDeRegla = Extract<ClaveReglas,
-  "REGLA_NIVEL" | "REGLA_TOCADA" | "REGLA_EN_EL_NIVEL" | "REGLA_DISTANCIA" | "REGLA_SIN_CIERRE_AL_DIA" | "REGLA_PLAZO" | "REGLA_DIAS_AL_PLAZO">;
+export type ClaveDeRegla = (typeof LISTA_DE_REGLA)[number];
 
 export type ClaveEscenarios =
   | ClaveNombreEspecie
@@ -190,9 +189,12 @@ export function clavesDe<T extends TipoResumen>(tipo: T): readonly ClaveDe<T>[] 
   return Object.freeze(Object.keys(CATALOGO[tipo]) as ClaveDe<T>[]);
 }
 
-export const CLAVES_DE_REGLA: readonly ClaveDeRegla[] = Object.freeze([
+/** Una sola fuente de las claves de regla: `satisfies` rechaza en compilación una que no sea del catálogo de REGLAS. */
+const LISTA_DE_REGLA = [
   "REGLA_NIVEL", "REGLA_TOCADA", "REGLA_EN_EL_NIVEL", "REGLA_DISTANCIA", "REGLA_SIN_CIERRE_AL_DIA", "REGLA_PLAZO", "REGLA_DIAS_AL_PLAZO",
-] as const);
+] as const satisfies readonly ClaveReglas[];
+
+export const CLAVES_DE_REGLA: readonly ClaveDeRegla[] = Object.freeze([...LISTA_DE_REGLA]);
 
 /** ¿Es la clave un hecho de regla, que puede citar a un ancla como `sujeto`? */
 export function esClaveDeRegla(clave: string): clave is ClaveDeRegla {

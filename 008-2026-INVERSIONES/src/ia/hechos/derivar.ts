@@ -11,7 +11,7 @@
  *   (src/datos-oficiales/series/frescura.ts y el aviso de atraso de src/fondo/guardar.ts).
  * - Calidad según la fuente; un dato atrasado es ATRASADO venga de donde venga.
  */
-import type { Calidad, Cercania, DiaIso, Direccion, Frescura } from "../contrato";
+import type { Calidad, DiaIso, Direccion, Frescura } from "../contrato";
 import type { EstadoFrescura } from "../../datos-oficiales/series/frescura";
 import { esDiaHabil } from "../../precios/horario";
 import type { CalendarioBvc } from "../../precios/negociacion";
@@ -104,5 +104,3 @@ export function calidadDe(origen: OrigenDato, frescura: Frescura): Calidad {
   return frescura === "ATRASADO" ? "ATRASADO" : CALIDAD_DE[origen];
 }
 
-/** La cercanía de un hecho que admite cercanía pero no tiene umbral decidido. */
-export const SIN_UMBRAL: Cercania = "NO_APLICA";

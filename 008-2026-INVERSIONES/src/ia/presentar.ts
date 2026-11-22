@@ -21,8 +21,11 @@ import { esDe, esDecimalCanonico, esDiaIso, esNombreEspecie } from "./formas";
 
 const SIN_DATO = "—";
 const MENOS = "−";
-const ENTERO = /^-?[0-9]+$/;
-const UNIDADES_ENTERAS: ReadonlySet<Unidad> = new Set<Unidad>(["DIAS", "MESES", "ESPECIES"]);
+/** Un entero en texto (sobre un decimal canónico). La comparte `construirPaquete`: una sola regla de forma. */
+export const ENTERO = /^-?[0-9]+$/;
+/** Las unidades enteras y, de ellas, las que no admiten negativos (DIAS sí: un plazo vencido). */
+export const UNIDADES_ENTERAS: ReadonlySet<Unidad> = new Set<Unidad>(["DIAS", "MESES", "ESPECIES"]);
+export const UNIDADES_NO_NEGATIVAS: ReadonlySet<Unidad> = new Set<Unidad>(["MESES", "ESPECIES"]);
 const DECIMALES_DOLAR = 2;
 const DECIMALES_PORCENTAJE = 1;
 
@@ -31,7 +34,9 @@ function tieneForma(valor: unknown, unidad: Unidad): valor is string {
   if (unidad === "NOMBRE") return esNombreEspecie(valor);
   if (typeof valor !== "string") return false;
   if (unidad === "FECHA") return esDiaIso(valor);
-  return esDecimalCanonico(valor) && (!UNIDADES_ENTERAS.has(unidad) || ENTERO.test(valor));
+  if (!esDecimalCanonico(valor)) return false;
+  if (UNIDADES_ENTERAS.has(unidad) && !ENTERO.test(valor)) return false;
+  return !(UNIDADES_NO_NEGATIVAS.has(unidad) && valor.startsWith("-"));
 }
 
 /** «N día» o «N días»: la palabra va en singular solo si el entero es 1 o −1. */
@@ -55,7 +60,8 @@ function porcentaje(v: number): string {
 
 /**
  * La cadena es-CO del valor en su unidad. Lanza TypeError (sin repetir el valor) si la unidad no es del contrato o el
- * valor no tiene su forma: decimal canónico (entero en DIAS, MESES y ESPECIES), día ISO o nombre de especie.
+ * valor no tiene su forma: decimal canónico (entero en DIAS, MESES y ESPECIES; sin signo en MESES y ESPECIES), día ISO o
+ * nombre de especie: la misma regla que `construirPaquete` aplica antes (con sus códigos de error).
  */
 export function presentar(valor: string, unidad: Unidad): string {
   if (!esDe(UNIDADES, unidad)) throw new TypeError("Unidad fuera del contrato de hechos.");

@@ -38,7 +38,10 @@ export interface MovimientoParaHechos extends Pick<Movimiento, "neto" | "motivo"
 /** El último corte de la conciliación y su resultado (`ultimaConciliacion` de src/conciliacion/leer.ts). */
 export type CorteParaHechos = Pick<CorteDisponible, "fechaCorte" | "resultado">;
 
-/** Una serie oficial: su último vigente y su frescura (`estadoSerie`), y el vigente anterior para la dirección. */
+/**
+ * Una serie oficial: su último vigente y su frescura (`estadoSerie`), y el vigente anterior para la dirección. La fuente
+ * tiene que ser exactamente la de su serie en el catálogo de datos oficiales (si no, FUENTE_DESCONOCIDA).
+ */
 export interface SerieParaHechos {
   /** TRM, TPM e IBR_3M_EA, oficiales; IPC_INDICE, la variación anual calculada por 008 (`variacionIndice`). */
   readonly cifra: Pick<CifraOficial, "serie" | "valor" | "hasta" | "fuente" | "origen">;
@@ -47,7 +50,7 @@ export interface SerieParaHechos {
   readonly anterior: string | null;
 }
 
-/** El valor de unidad del fondo, ya leído por quien llama. */
+/** El valor de unidad del fondo, ya leído por quien llama. Su fuente es siempre la de la SFC (`FUENTES.FONDO`). */
 export interface FondoParaHechos {
   readonly valorUnidad: DecimalLike;
   /** El valor de unidad anterior, para la dirección; null si no se sabe. */
@@ -55,8 +58,6 @@ export interface FondoParaHechos {
   readonly fecha: Date;
   /** El aviso de atraso del fondo (`DIAS_ATRASO_AVISO` de src/fondo/guardar.ts), calculado por quien llama. */
   readonly atrasado: boolean;
-  /** La fuente del valor (p. ej. la de la SFC). */
-  readonly fuente: string;
   /** Unidades × valor de unidad, si quien llama lo calculó; null si no (el armador no recibe las unidades). */
   readonly valor: DecimalLike | null;
 }

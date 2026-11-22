@@ -17,7 +17,7 @@ import { CALIDADES, CERCANIAS, DIRECCIONES, FRESCURAS, MAX_AVISOS, MAX_HECHOS, M
 import { CLAVE_ANCLA_REGLA, CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, esClaveDeRegla, type ClaveDe, type EntradaCatalogo } from "./catalogo";
 import { esDe, esDecimalCanonico, esDiaIso, esNombreEspecie, esObjetoPlano, esTextoSeguro, type Registro } from "./formas";
 import { hashPaquete } from "./hash";
-import { presentar } from "./presentar";
+import { ENTERO, UNIDADES_ENTERAS, UNIDADES_NO_NEGATIVAS, presentar } from "./presentar";
 import { esClaveProhibida } from "./prohibidas";
 
 export const CODIGOS_ERROR_PAQUETE = Object.freeze([
@@ -37,10 +37,7 @@ const CAMPO_OPCIONAL_HECHO = "sujeto";
 const CLAVE_VERSION = /^[a-z][a-zA-Z]{0,31}$/;
 const VALOR_VERSION = /^[a-z][a-z0-9.-]{0,63}$/;
 const CODIGO_AVISO = /^[A-Z][A-Z0-9_]{0,63}$/;
-const ENTERO = /^-?[0-9]+$/;
 const DIGITO = /[0-9]/;
-const UNIDADES_ENTERAS: ReadonlySet<string> = new Set(["DIAS", "MESES", "ESPECIES"]);
-const UNIDADES_NO_NEGATIVAS: ReadonlySet<string> = new Set(["MESES", "ESPECIES"]);
 
 export class ErrorPaquete extends Error {
   override readonly name = "ErrorPaquete";
@@ -268,4 +265,18 @@ export function leerPaquete(guardado: unknown): PaqueteHechos {
   });
   if (guardado.hash !== paquete.hash) throw new ErrorPaquete("GUARDADO_NO_COINCIDE", null, "hash");
   return paquete;
+}
+
+/**
+ * El nombre de la especie (hecho ESPECIE_NOMBRE) al que se refiere el hecho `id`, siguiendo su sujeto: directo, o a
+ * través del ancla de su regla (dos saltos). El propio nombre devuelve el mismo hecho. null si no se refiere a una
+ * especie (un hecho del portafolio, una regla de portafolio) o si el id no existe. Solo con paquetes construidos.
+ */
+export function especieDe(paquete: PaqueteHechos, id: IdHecho): Hecho | null {
+  if (!esPaqueteConstruido(paquete)) throw new TypeError("especieDe necesita un paquete construido por construirPaquete.");
+  const porId = (buscado: IdHecho | undefined): Hecho | undefined => paquete.hechos.find((h) => h.id === buscado);
+  const hecho = porId(id);
+  const sujeto = hecho?.clave === CLAVE_NOMBRE_ESPECIE ? hecho : porId(hecho?.sujeto);
+  const especie = sujeto?.clave === CLAVE_ANCLA_REGLA ? porId(sujeto.sujeto) : sujeto;
+  return especie?.clave === CLAVE_NOMBRE_ESPECIE ? especie : null;
 }

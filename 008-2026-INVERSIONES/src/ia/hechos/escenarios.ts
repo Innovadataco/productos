@@ -13,9 +13,9 @@
  */
 import type { ClaveEscenarios } from "../catalogo";
 import type { DiaIso, PaqueteHechos } from "../contrato";
-import { borrador, cerrarPaquete, hastaHoy, type Marcas } from "./comun";
+import { borrador, cerrarPaquete, conOrigen, hastaHoy, marcasDeHoy, type Marcas } from "./comun";
 import { FUENTES } from "./constantes";
-import { deNumero, deTextoDecimal, exigirDia } from "./decimal";
+import { deEntero, deNumero, exigirDia } from "./decimal";
 import { direccionDelSigno, direccionFrente } from "./derivar";
 import type { EntradaArmadoEscenarios, ResultadoParaHechos } from "./entradas";
 import { ErrorArmado } from "./errores";
@@ -81,25 +81,23 @@ export function armarEscenarios(e: EntradaArmadoEscenarios): PaqueteHechos<"ESCE
   const r = e.resultado;
   if (r.hoy !== hoy) throw new ErrorArmado("HOY_DISTINTO");
   if (r.parametros.horizonteMeses !== HORIZONTES_ESCENARIOS.LARGO) throw new ErrorArmado("HORIZONTES_INVALIDOS");
-  const calculo: Marcas = { fecha: hoy, frescura: "HOY", origen: "CALCULO" };
-  const estimacion: Marcas = { ...calculo, origen: "ESTIMACION" };
+  const calculo = marcasDeHoy(hoy, "CALCULO");
+  const estimacion = conOrigen(calculo, "ESTIMACION");
   const inicial = pesos(r.valorHoy);
   const proyeccion: readonly Borrador[] = [
     borrador("VALOR_INICIAL", inicial, FUENTES.PROYECCION, calculo),
-    ...HORIZONTES.map((h) => borrador(`HORIZONTE_${h}`, String(HORIZONTES_ESCENARIOS[h]), FUENTES.PROYECCION, calculo, { obligatorio: true })),
+    ...HORIZONTES.map((h) => borrador(`HORIZONTE_${h}`, deEntero(HORIZONTES_ESCENARIOS[h]), FUENTES.PROYECCION, calculo, { obligatorio: true })),
     ...HORIZONTES.flatMap((h) => hechosDelHorizonte(r, h, inicial, { calculo, estimacion })),
     borrador("PROBABILIDAD_BAJO_APORTADO", porcentaje(r.probabilidadBajoAportado), FUENTES.PROYECCION, estimacion, { obligatorio: true }),
     borrador("CAIDA_MAXIMA_MEDIANA", porcentaje(Math.abs(r.caidaMaximaMediana)), FUENTES.PROYECCION, estimacion),
     ...hechosDeLaHistoria(r, hoy, calculo),
   ];
   const cortas = r.supuestos.posiciones.filter((p) => p.tipo === "ACCION" && p.estado === "FIJA_HISTORIA_CORTA");
-  const especies = cortas.map((p) => ({
-    prioridad: PRIORIDAD.ESPECIES,
-    hechos: [
-      borrador<ClaveEscenarios>("ESPECIE_NOMBRE", p.nombre, FUENTES.REGISTRO, { fecha: hoy, frescura: "HOY", origen: "REGISTRO" }, { ref: "especie" }),
-      borrador<ClaveEscenarios>("DIAS_HISTORIA_ESPECIE", deTextoDecimal(String(p.diasTotales)), FUENTES.PROYECCION, calculo, { sujeto: "especie" }),
-    ],
-  }));
+  const especies = cortas.map((p) => {
+    const especie = borrador("ESPECIE_NOMBRE", p.nombre, FUENTES.REGISTRO, marcasDeHoy(hoy, "REGISTRO"));
+    const hechos: readonly Borrador[] = [especie, borrador("DIAS_HISTORIA_ESPECIE", deEntero(p.diasTotales), FUENTES.PROYECCION, calculo, { sujeto: especie })];
+    return { prioridad: PRIORIDAD.ESPECIES, hechos };
+  });
   const avisos = [...new Set(r.supuestos.avisos.map((a) => a.codigo))];
   return cerrarPaquete("ESCENARIOS", hoy, [{ grupos: [{ prioridad: PRIORIDAD.PROYECCION, hechos: proyeccion }, ...especies], avisos: [] }], { proyecciones: r.versionMetodo }, avisos);
 }
