@@ -1,9 +1,12 @@
 // Candado de escrituras (frente familia-lectura): la familia entra en SOLO LECTURA, y eso se cumple en el servidor.
 // Recorre TODO src/app (también lo que agreguen otros frentes) y exige:
 //  1. Cada route.ts declara sus métodos solo con `export [async] function <MÉTODO>(` (otra forma esquivaría el candado).
-//  2. Cada route.ts que escribe (POST, PUT, PATCH, DELETE) llama al guardián del dueño `exigirDuenoApi(`, salvo una
-//     lista CERRADA y justificada: las del ingreso y la cuenta propia (escriben solo la autenticación de quien llama) y
-//     las de cálculo sin guardar (que además no pueden alcanzar ningún módulo que escriba en la base).
+//     Se buscan todas las entradas que Next acepta (route y page en .ts, .tsx, .js…; layout, error, global-error,
+//     sitemap, robots, manifest, icon…), y no puede existir src/pages (el Pages Router quedaría fuera).
+//  2. Cada HANDLER que escribe (POST, PUT, PATCH, DELETE) usa el guardián del dueño con esta forma exacta, sin comentarios
+//     de por medio: `const s = await exigirDuenoApi(pedido); if (!s.ok) return s.respuesta;`, importado de
+//     "@/auth/sesion". Salvo una lista CERRADA y justificada: las del ingreso y la cuenta propia (escriben solo la
+//     autenticación de quien llama) y las de cálculo sin guardar (que además no pueden alcanzar ningún módulo que escriba).
 //  3. Ninguna entrada (página, layout, route…) que no llame al guardián alcanza un módulo que escriba en la base, salvo
 //     las de la lista de arriba, cuyas escrituras solo pueden estar en src/auth/ (o en su propio archivo).
 //  4. Server Actions: siguen prohibidas (tests/unit/auth/candados.test.ts); si alguna aparece, llama `exigirDueno(`.
@@ -17,6 +20,11 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   alcanzables,
+  esEntradaDeNext,
+  esRutaDeNext,
+  handlersSinGuardian,
+  importaGuardianApi,
+  sinComentarios,
   delegadosDelEsquema,
   detectorDeEscritura,
   escribe,
@@ -48,8 +56,8 @@ function archivos(carpeta: string, filtro: (ruta: string) => boolean): string[] 
 const escribeEnBase = detectorDeEscritura(delegadosDelEsquema(leer(join(RAIZ, "prisma", "schema.prisma"))));
 const FUENTES = archivos(SRC, (r) => /\.tsx?$/.test(r));
 const ESCRITORES = new Set(FUENTES.filter((r) => escribeEnBase(leer(r))));
-const RUTAS = archivos(APP, (r) => /\/route\.ts$/.test(r));
-const ENTRADAS = archivos(APP, (r) => /\/(page|layout|template|default|not-found|error|loading|route)\.tsx?$/.test(r));
+const RUTAS = archivos(APP, esRutaDeNext);
+const ENTRADAS = archivos(APP, esEntradaDeNext);
 
 /** Escriben solo la autenticación de quien llama (su clave, su TOTP, sus códigos, su versión de sesión o sus intentos). */
 const ESCRITURA_PROPIA: ReadonlyMap<string, string> = new Map([
@@ -112,13 +120,19 @@ describe("candado de escrituras · el árbol real", () => {
     }
   });
 
-  it("cada route.ts que escribe llama exigirDuenoApi(, salvo la lista cerrada de la cuenta propia y del cálculo", () => {
+  it("cada handler que escribe usa el guardián (forma exacta, importado de @/auth/sesion), salvo la lista cerrada", () => {
     for (const ruta of RUTAS) {
       const fuente = leer(ruta);
       if (!escribe(metodosDeclarados(fuente))) continue;
       if (ESCRITURA_PROPIA.has(rel(ruta)) || CALCULO_SIN_GUARDAR.has(rel(ruta))) continue;
-      expect(llamaGuardianApi(fuente), `${rel(ruta)} escribe y no llama exigirDuenoApi(`).toBe(true);
+      expect(importaGuardianApi(fuente), `${rel(ruta)} no importa exigirDuenoApi de @/auth/sesion`).toBe(true);
+      expect(handlersSinGuardian(fuente), `${rel(ruta)}: handlers de escritura sin guardián`).toEqual([]);
     }
+  });
+
+  it("no existe src/pages: el Pages Router (y sus API) quedarían fuera de este candado", () => {
+    expect(existsSync(join(SRC, "pages"))).toBe(false);
+    expect(existsSync(join(RAIZ, "pages"))).toBe(false);
   });
 
   it("las listas cerradas coinciden con archivos que existen y que escriben (sin entradas viejas)", () => {
@@ -153,8 +167,13 @@ describe("candado de escrituras · el árbol real", () => {
     }
   });
 
-  it("src/app no importa módulos de forma dinámica (el grafo no los vería)", () => {
+  it("ningún módulo alcanzable desde una entrada importa de forma dinámica (el grafo no lo vería)", () => {
     for (const ruta of FUENTES.filter((r) => r.startsWith(APP))) expect(importaDinamico(leer(ruta)), rel(ruta)).toBe(false);
+    for (const entrada of ENTRADAS) {
+      for (const modulo of alcanzables(ARBOL, entrada)) {
+        if (modulo.startsWith(SRC) && existsSync(modulo)) expect(importaDinamico(leer(modulo)), `${rel(entrada)} → ${rel(modulo)}`).toBe(false);
+      }
+    }
   });
 
   it("toda Server Action (si alguna llega a existir) llama exigirDueno(", () => {
@@ -228,6 +247,76 @@ describe("candado de escrituras · controles positivos (fuentes inventadas)", ()
     expect(alcanzados.has("/v/src/escribe.ts")).toBe(true);
     expect(alcanzados.has("/v/src/escribe2.ts")).toBe(false);
     expect(alcanzables(arbol, "/v/src/app/page.tsx").has("/v/src/escribe2.ts")).toBe(true);
+  });
+
+  describe("el guardián se exige por handler, con su forma exacta y fuera de comentarios", () => {
+    const IMPORTA = 'import { exigirDuenoApi } from "@/auth/sesion";\n';
+    const BIEN = "const sesion = await exigirDuenoApi(pedido);\n  if (!sesion.ok) return sesion.respuesta;";
+    it.each([
+      ["un GET con guardián no cubre un POST sin él", `${IMPORTA}export async function GET(pedido: Request) {\n  ${BIEN}\n}\nexport async function POST(pedido: Request) {\n  return new Response(null);\n}`, ["POST"]],
+      ["el guardián solo en un comentario", `${IMPORTA}export async function POST(pedido: Request) {\n  // ${BIEN}\n  return new Response(null);\n}`, ["POST"]],
+      ["el guardián en un comentario de bloque", `${IMPORTA}export async function PUT(pedido: Request) {\n  /* ${BIEN} */\n  return new Response(null);\n}`, ["PUT"]],
+      ["el resultado del guardián se ignora", `${IMPORTA}export async function DELETE(pedido: Request) {\n  await exigirDuenoApi(pedido);\n  return new Response(null);\n}`, ["DELETE"]],
+      ["se mira otra variable", `${IMPORTA}export async function PATCH(pedido: Request) {\n  const s = await exigirDuenoApi(pedido);\n  if (!otra.ok) return s.respuesta;\n}`, ["PATCH"]],
+      ["con la forma exacta en cada handler de escritura", `${IMPORTA}export async function POST(pedido: Request) {\n  ${BIEN}\n  return new Response(null);\n}\nexport async function GET() {\n  return new Response(null);\n}`, []],
+    ])("%s", (_caso, fuente, esperado) => {
+      expect(handlersSinGuardian(fuente)).toEqual(esperado);
+    });
+
+    it("exige importarlo de @/auth/sesion (una función local con el mismo nombre no sirve)", () => {
+      expect(importaGuardianApi('import { exigirDuenoApi, exigirSesion } from "@/auth/sesion";')).toBe(true);
+      expect(importaGuardianApi("async function exigirDuenoApi(p: Request) { return { ok: true }; }")).toBe(false);
+      expect(importaGuardianApi('import { exigirDuenoApi } from "./falso";')).toBe(false);
+      expect(importaGuardianApi('// import { exigirDuenoApi } from "@/auth/sesion";')).toBe(false);
+    });
+
+    it("quita los comentarios sin tocar los textos que parecen comentarios", () => {
+      expect(sinComentarios('const u = "http://127.0.0.1:5008"; // nota\n/* bloque */ f();')).toBe('const u = "http://127.0.0.1:5008"; \n f();');
+      expect(sinComentarios("const t = `a // b`; // fuera")).toBe("const t = `a // b`; ");
+    });
+  });
+
+  it("detecta las escrituras indirectas: SQL con genéricos o CTE, delegados por corchetes, desestructurados o con alias", () => {
+    const detecta = detectorDeEscritura(["usuario", "planVersion"]);
+    expect(detecta("await tx.$queryRaw<{ id: string }[]>`INSERT INTO plan_version DEFAULT VALUES RETURNING id`")).toBe(true);
+    expect(detecta("await db.$queryRaw`WITH x AS (DELETE FROM usuario RETURNING id) SELECT * FROM x`")).toBe(true);
+    expect(detecta("await db.$queryRaw`MERGE INTO usuario u USING x ON true WHEN MATCHED THEN DELETE`")).toBe(true);
+    expect(detecta("await db.$executeRaw`TRUNCATE usuario`")).toBe(true);
+    expect(detecta('await tx["usuario"].update({ where, data })')).toBe(true);
+    expect(detecta("const { usuario } = tx;\nawait usuario.update({ where, data });")).toBe(true);
+    expect(detecta("const u = db.usuario;\nawait u.deleteMany({});")).toBe(true);
+    expect(detecta("// await tx.usuario.update({ where, data })\nawait tx.usuario.findMany({});")).toBe(false);
+    expect(detecta("await db.$queryRaw<{ n: number }[]>`SELECT count(*) AS n FROM usuario`")).toBe(false);
+  });
+
+  it.each([
+    ["src/app/x/route.ts", true, true],
+    ["src/app/x/route.tsx", true, true],
+    ["src/app/x/route.js", true, true],
+    ["src/app/x/route.mjs", true, true],
+    ["src/app/page.jsx", false, true],
+    ["src/app/global-error.tsx", false, true],
+    ["src/app/sitemap.ts", false, true],
+    ["src/app/robots.ts", false, true],
+    ["src/app/manifest.ts", false, true],
+    ["src/app/opengraph-image.tsx", false, true],
+    ["src/app/icon.tsx", false, true],
+    ["src/app/tablero/Tablero.tsx", false, false],
+    ["src/app/x/rutas.ts", false, false],
+  ])("%s: ¿ruta? %s · ¿entrada de Next? %s", (ruta, esRuta, esEntrada) => {
+    expect(esRutaDeNext(`/v/${ruta}`)).toBe(esRuta);
+    expect(esEntradaDeNext(`/v/${ruta}`)).toBe(esEntrada);
+  });
+
+  it("el grafo resuelve importaciones con «.js» y ve una importación dinámica en un módulo alcanzado", () => {
+    const archivosVirtuales: Record<string, string> = {
+      "/v/src/app/page.tsx": 'import { leer } from "../lib/leer.js";\n',
+      "/v/src/lib/leer.ts": 'export const leer = async () => (await import("./escribe")).guardar();\n',
+    };
+    const arbol: Arbol = { src: "/v/src", existe: (r) => r in archivosVirtuales, leer: (r) => archivosVirtuales[r] ?? "" };
+    const alcanzados = alcanzables(arbol, "/v/src/app/page.tsx");
+    expect(alcanzados.has("/v/src/lib/leer.ts")).toBe(true);
+    expect(importaDinamico(archivosVirtuales["/v/src/lib/leer.ts"] ?? "")).toBe(true);
   });
 
   it("detecta Server Actions, importaciones dinámicas, el guardián de página y los identificadores (IDOR)", () => {

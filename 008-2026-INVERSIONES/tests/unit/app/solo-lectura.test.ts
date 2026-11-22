@@ -74,9 +74,11 @@ describe("cada página deriva la marca de la sesión revalidada", () => {
     "src/app/proyecciones/page.tsx",
   ])("%s pasa soloLectura={…} calculado con esSoloLectura(usuario de exigirSesion)", (pagina) => {
     const fuente = leer(pagina);
-    expect(fuente).toMatch(/=\s*await exigirSesion\(\)/);
-    expect(fuente).toMatch(/\besSoloLectura\(/);
-    expect(fuente).toMatch(/soloLectura=\{/);
+    // El mismo usuario de la sesión, y el valor calculado llega tal cual al componente (no un literal).
+    expect(fuente).toMatch(/const usuario = await exigirSesion\(\);/);
+    expect(fuente).toMatch(/soloLectura = esSoloLectura\(usuario\);/);
+    expect(fuente).toMatch(/soloLectura=\{soloLectura\}/);
+    expect(fuente).not.toMatch(/soloLectura=\{(?:true|false)\}/);
   });
 
   it.each(["src/app/plan/Plan.tsx", "src/app/decisiones/Diario.tsx", "src/app/decisiones/[id]/Cadena.tsx"])("%s pasa soloLectura a su Encabezado", (componente) => {

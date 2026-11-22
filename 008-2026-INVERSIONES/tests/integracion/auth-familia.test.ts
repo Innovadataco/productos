@@ -111,6 +111,26 @@ describe("emitirAccesoFamiliar", () => {
     expect(await codigo(emitirAcceso(db, { email: familiar, ahora: reloj(5)(1) }))).toBe("ROL_DISTINTO");
   });
 
+  it("dos altas a la vez del mismo correo crean UN familiar y solo vale el enlace más reciente", async () => {
+    const email = correo();
+    const t = reloj(8);
+    const [a, b] = await Promise.all([emitirAccesoFamiliar(db, { email, ahora: t() }), emitirAccesoFamiliar(db, { email, ahora: t(1) })]);
+    expect(a.usuarioId).toBe(b.usuarioId);
+    expect([a.creado, b.creado].filter(Boolean)).toHaveLength(1);
+    expect(await db.usuario.count({ where: { email } })).toBe(1);
+    const definidas = await Promise.all([a, b].map((r, k) => definirClave(db, { token: r.token, clave: CLAVE, ip: ipNueva(), ahora: t(2 + k) })));
+    expect(definidas.filter((d) => d.ok)).toHaveLength(1);
+    expect(definidas[1]).toEqual({ ok: true, usuarioId: a.usuarioId });
+  });
+
+  it("el enlace exige una cuenta activa, también la del dueño (endurecimiento: un dueño inactivo no define clave)", async () => {
+    const email = correo();
+    await db.usuario.create({ data: { email, rol: "DUENO", activo: false } });
+    const r = await emitirAcceso(db, { email, ahora: reloj(9)() });
+    expect(await definirClave(db, { token: r.token, clave: CLAVE, ip: ipNueva(), ahora: reloj(9)(1) })).toEqual({ ok: false, motivo: "TOKEN_INVALIDO" });
+    expect((await fila(email)).claveHash).toBeNull();
+  });
+
   it("a un familiar revocado no le da enlace (REVOCADO) ni cambia nada: no se reactiva", async () => {
     const email = correo();
     const t = reloj(6);
@@ -135,6 +155,21 @@ describe("del enlace a la sesión: el mismo modelo del dueño", () => {
   });
 });
 
+describe("recuperación de la clave de un familiar con TOTP", () => {
+  it("el enlace de RECUPERACION cambia la clave, cierra sus sesiones y conserva su TOTP (no vuelve a enrolar)", async () => {
+    const t = reloj(20);
+    const f = await familiarEnrolado(t);
+    const r = await emitirAccesoFamiliar(db, { email: f.email, ahora: t(10) });
+    expect(r.proposito).toBe("RECUPERACION");
+    const nueva = "clave-ficticia-familiar-3791";
+    expect(await definirClave(db, { token: r.token, clave: nueva, ip: ipNueva(), ahora: t(11) })).toEqual({ ok: true, usuarioId: f.id });
+    expect(await sesionDe(f, t(12))).toBeNull();
+    expect((await fila(f.email)).totpActivadoEn).not.toBeNull();
+    expect(await ingresar(db, { email: f.email, clave: CLAVE, ip: ipNueva(), ahora: t(13) })).toEqual({ ok: false, motivo: "CLAVE_INCORRECTA" });
+    expect(await ingresar(db, { email: f.email, clave: nueva, ip: ipNueva(), ahora: t(14) })).toMatchObject({ ok: true, paso: "totp" });
+  });
+});
+
 describe("revocarFamiliar", () => {
   it("lo desactiva y le cierra todo: sesión, pre-sesión, enlace pendiente y clave", async () => {
     const t = reloj(10);
@@ -156,6 +191,23 @@ describe("revocarFamiliar", () => {
     });
     expect(await definirClave(db, { token: pendiente.token, clave: "otra-clave-ficticia-familiar", ip: ipNueva(), ahora: t(8) })).toEqual({ ok: false, motivo: "TOKEN_INVALIDO" });
     expect(await ingresar(db, { email: f.email, clave: CLAVE, ip: ipNueva(), ahora: t(9) })).toEqual({ ok: false, motivo: "CUENTA_INACTIVA" });
+  });
+
+  it("revocado a medio enrolar: su pre-sesión ya no activa el TOTP pendiente", async () => {
+    const email = correo();
+    const t = reloj(13);
+    const alta = await emitirAccesoFamiliar(db, { email, ahora: t() });
+    await definirClave(db, { token: alta.token, clave: CLAVE, ip: ipNueva(), ahora: t(1) });
+    const paso = await ingresar(db, { email, clave: CLAVE, ip: ipNueva(), ahora: t(2) });
+    if (!paso.ok || paso.paso !== "enrolar") throw new Error("debía quedar para enrolar");
+    const secreto = descifrarSecretoTotp((await fila(email)).totpSecreto, alta.usuarioId);
+    await revocarFamiliar(db, { email, ahora: t(3) });
+    const presesion = { sub: alta.usuarioId, sesionVersion: paso.sesionVersion, jti: paso.jti };
+    expect(await confirmarEnrolamiento(db, { presesion, codigo: hotp(secreto, pasoDe(t(4).getTime())), ip: ipNueva(), ahora: t(4) })).toEqual({
+      ok: false,
+      motivo: "PRESESION_INVALIDA",
+    });
+    expect(await fila(email)).toMatchObject({ activo: false, totpActivadoEn: null });
   });
 
   it("es idempotente: la segunda vez dice que ya estaba y no cambia nada", async () => {
@@ -189,6 +241,19 @@ describe("reiniciarTotpFamiliar", () => {
     expect(await sesionDe(f, t(11))).toBeNull();
     expect(await db.intentoIngreso.count({ where: { usuarioId: f.id, resultado: "TOTP_REINICIADO" } })).toBe(1);
     expect(await ingresar(db, { email: f.email, clave: CLAVE, ip: ipNueva(), ahora: t(12) })).toMatchObject({ ok: true, paso: "enrolar" });
+  });
+
+  it("con códigos de recuperación ya usados: anula los vigentes y deja los usados como estaban", async () => {
+    const t = reloj(16);
+    const f = await familiarEnrolado(t);
+    const paso = await ingresar(db, { email: f.email, clave: CLAVE, ip: ipNueva(), ahora: t(4) });
+    if (!paso.ok) throw new Error("debía pasar la clave");
+    const usado = await verificarSegundoPaso(db, { presesion: { sub: f.id, sesionVersion: paso.sesionVersion, jti: paso.jti }, codigo: f.codigos[0] ?? "", ip: ipNueva(), ahora: t(5) });
+    expect(usado).toMatchObject({ ok: true, via: "RECUPERACION", restantes: 9 });
+    await reiniciarTotpFamiliar(db, { email: f.email, ahora: t(6) });
+    const codigos = await db.codigoRecuperacion.findMany({ where: { usuarioId: f.id } });
+    expect(codigos.filter((c) => c.usadoEn !== null && c.anuladoEn === null)).toHaveLength(1);
+    expect(codigos.filter((c) => c.anuladoEn !== null)).toHaveLength(9);
   });
 
   it("no toca al dueño, a un correo que no existe ni a un revocado; y el reinicio del dueño sigue sin tocar al familiar", async () => {

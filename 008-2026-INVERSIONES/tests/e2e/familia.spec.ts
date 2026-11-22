@@ -1,11 +1,15 @@
 /**
  * E2E de la familia en SOLO LECTURA (frente familia-lectura) contra la base e2e sembrada (tests/e2e/sembrar.ts):
  *  - un familiar ficticio dado de alta por el camino real (emitirAccesoFamiliar, el mismo del comando de Jelk) define su
- *    clave con el enlace, enrola su TOTP y ve las cinco pantallas con «Solo lectura», sin formularios que escriban;
- *  - el simulador de Proyecciones le calcula (200) y nada del portafolio cambia en la base durante toda su visita;
+ *    clave con el enlace, enrola su TOTP y ve las cinco pantallas con «Solo lectura»;
+ *  - durante su visita (las cinco pantallas y el simulador de Proyecciones, que le calcula con 200), el navegador no hace
+ *    ningún pedido que no sea GET salvo el cálculo del simulador, ninguna pantalla trae un formulario con method o action,
+ *    y la HUELLA de la base (el contenido de cada tabla fuera de las de autenticación, no solo sus conteos) no cambia;
  *  - revocado, su siguiente pedido lo lleva a /ingresar y la API le responde 401;
  *  - el dueño entra igual y no ve «Solo lectura».
- * Cada prueba crea su cuenta (correo único) y llega con su propia IP. Correos y contraseñas inventados.
+ * Hoy no hay rutas web de escritura fuera de las de la cuenta propia: el 403 del guardián se prueba en integración
+ * (tests/integracion/auth-familia-guardian.test.ts). Cada prueba crea su cuenta (correo único) y llega con su propia IP.
+ * Correos y contraseñas inventados.
  */
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { emitirAccesoFamiliar, revocarFamiliar } from "../../src/auth/familia";
@@ -20,6 +24,9 @@ const PANTALLAS = [
   { ruta: "/conciliacion", titulo: /./ },
   { ruta: "/proyecciones", titulo: "Proyecciones" },
 ] as const;
+/** Las tablas del login y del TOTP: las únicas que una visita puede tocar (intentos, pre-sesión, último paso). */
+const TABLAS_DE_AUTENTICACION = new Set(["usuario", "intento_ingreso", "token_acceso", "codigo_recuperacion", "_prisma_migrations"]);
+const CALCULO = "/api/proyecciones";
 
 test.afterAll(async () => {
   await cerrarBaseE2E();
@@ -39,22 +46,31 @@ async function altaDeFamiliar(page: Page, info: TestInfo): Promise<CuentaConTotp
   return enrolarEnPagina(page, cuenta);
 }
 
-/** Conteos de las tablas del portafolio: lo que una visita de solo lectura nunca debe cambiar. */
-async function fotoDelPortafolio(): Promise<Record<string, number>> {
+/** La huella de la base: el md5 del contenido de cada tabla de public fuera de las de autenticación, en orden estable. */
+async function huellaDeLaBase(): Promise<Record<string, string>> {
   const db = baseE2E();
-  const [planes, reglas, decisiones, ordenes, lotes, cierres, certificaciones, conciliaciones, fondos, cargas] = await Promise.all([
-    db.planVersion.count(),
-    db.reglaPlan.count(),
-    db.decision.count(),
-    db.orden.count(),
-    db.lote.count(),
-    db.precioCierre.count(),
-    db.certificacion.count(),
-    db.conciliacion.count(),
-    db.movimientoFondo.count(),
-    db.cargaArchivo.count(),
-  ]);
-  return { planes, reglas, decisiones, ordenes, lotes, cierres, certificaciones, conciliaciones, fondos, cargas };
+  const tablas = await db.$queryRaw<{ nombre: string }[]>`
+    SELECT table_name::text AS nombre FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY 1`;
+  const huellas = await Promise.all(
+    tablas
+      .map((t) => t.nombre)
+      .filter((nombre) => !TABLAS_DE_AUTENTICACION.has(nombre) && /^[a-z_]+$/.test(nombre))
+      // El nombre sale del catálogo y pasa por la forma [a-z_]: se puede citar sin riesgo.
+      .map(async (nombre) => {
+        const filas = await db.$queryRawUnsafe<{ h: string | null }[]>(`SELECT md5(coalesce(string_agg(t::text, '|' ORDER BY t::text), '')) AS h FROM "${nombre}" t`);
+        return [nombre, filas[0]?.h ?? ""] as const;
+      }),
+  );
+  return Object.fromEntries(huellas);
+}
+
+/** Los pedidos del navegador que no son GET ni HEAD (lo que podría escribir), con su ruta. */
+function vigilarPedidos(page: Page): string[] {
+  const vistos: string[] = [];
+  page.on("request", (r) => {
+    if (!["GET", "HEAD"].includes(r.method())) vistos.push(`${r.method()} ${new URL(r.url()).pathname}`);
+  });
+  return vistos;
 }
 
 async function verPantallas(page: Page, soloLectura: boolean): Promise<void> {
@@ -65,8 +81,7 @@ async function verPantallas(page: Page, soloLectura: boolean): Promise<void> {
     const marca = page.locator("header .solo-lectura");
     if (soloLectura) await expect(marca, p.ruta).toHaveText("Solo lectura");
     else await expect(marca, p.ruta).toHaveCount(0);
-    // Ninguna pantalla de lectura le ofrece un formulario que mande algo al servidor.
-    await expect(page.locator('form[method="post"], form[action]'), p.ruta).toHaveCount(0);
+    await expect(page.locator('form[method], form[action]'), `${p.ruta}: ningún formulario con method o action`).toHaveCount(0);
   }
 }
 
@@ -74,19 +89,27 @@ test.describe("la familia, en solo lectura", () => {
   test("un familiar dado de alta con el enlace entra con su clave y su TOTP y ve las cinco pantallas en «Solo lectura»", async ({ page }, info) => {
     await altaDeFamiliar(page, info);
     await expect(page).toHaveURL("/");
+    const antes = await huellaDeLaBase();
+    const pedidos = vigilarPedidos(page);
     await verPantallas(page, true);
+    expect(pedidos, "pedidos que no son GET durante la visita").toEqual([]);
+    expect(await huellaDeLaBase()).toEqual(antes);
   });
 
-  test("el simulador le calcula (200) y nada del portafolio cambia en la base durante su visita", async ({ page }, info) => {
+  test("el simulador le calcula (200), no hay otros pedidos de escritura y la huella de la base no cambia", async ({ page }, info) => {
     await altaDeFamiliar(page, info);
-    const antes = await fotoDelPortafolio();
+    const antes = await huellaDeLaBase();
+    expect(Object.keys(antes).length).toBeGreaterThan(10);
+    const pedidos = vigilarPedidos(page);
     await verPantallas(page, true);
     const p = await PaginaProyecciones.abrir(page, info);
-    const respuesta = page.waitForResponse((r) => r.url().endsWith("/api/proyecciones") && r.request().method() === "POST");
+    const respuesta = page.waitForResponse((r) => r.url().endsWith(CALCULO) && r.request().method() === "POST");
     await p.botonHorizonte("10 años").click();
     expect((await respuesta).status()).toBe(200);
     await p.esperarCalculo();
-    expect(await fotoDelPortafolio()).toEqual(antes);
+    expect(pedidos.filter((x) => x !== `POST ${CALCULO}`), "pedidos que no son GET, fuera del cálculo").toEqual([]);
+    expect(pedidos).toContain(`POST ${CALCULO}`);
+    expect(await huellaDeLaBase()).toEqual(antes);
   });
 
   test("revocado, su siguiente pedido lo lleva a /ingresar y la API le responde 401", async ({ page }, info) => {
@@ -94,7 +117,7 @@ test.describe("la familia, en solo lectura", () => {
     await revocarFamiliar(baseE2E(), { email: cuenta.email, ahora: new Date() });
     await page.goto("/plan");
     await expect(page).toHaveURL("/ingresar");
-    const r = await page.request.post("/api/proyecciones", {
+    const r = await page.request.post(CALCULO, {
       data: { horizonteMeses: 36, aportePeriodico: 0, frecuenciaAporte: "MENSUAL", reinvertirDividendos: true, caidaInicialPct: 0 },
       headers: { origin: new URL(page.url()).origin },
     });
