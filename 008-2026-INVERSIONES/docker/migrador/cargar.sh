@@ -9,8 +9,8 @@
 # Antes de leer nada comprueba que el contenedor no use swap: el temporal vive en el tmpfs /tmp, que con
 # mem = memswap no baja al disco. El archivo queda en un temporal 600 dentro de una carpeta 700 con nombre fijo
 # (trii.csv, ficha.md, certificacion.pdf, precios.csv, valores-fondo.csv, series.csv, decretos.csv o
-# rendimientos-fondo.csv: el nombre real no llega a la base), corre el CLI y lo borra SIEMPRE (trap), también si el CLI falla o llega una señal. El tmpfs muere
-# con el contenedor.
+# rendimientos-fondo.csv: el nombre real no llega a la base), corre el CLI y lo borra SIEMPRE (trap), también si el
+# CLI falla o llega una señal. El tmpfs muere con el contenedor.
 # Nunca imprime la cabecera ni el archivo: solo errores sin valores. Sale con 64 (EX_USAGE, distinto de los
 # códigos de los CLI, de 0 a 3) si se niega sin correr el CLI, o con el código del CLI.
 # Solo POSIX (busybox en la imagen; dash o bash en las pruebas). INV_CARGAR_* solo los usan las pruebas.
