@@ -37,7 +37,7 @@ export function aEvolucionVista(e: Evolucion): EvolucionVista {
   return {
     metodo: e.metodo,
     puntos: e.puntos.map((p) => ({ fecha: dia(p.fecha), valor: p.valor.toString(), costo: p.costo.toString(), twrPct: p.twr.mul(100).toFixed(4), atrasadas: p.atrasadas })),
-    rangos: e.rangos.map((r) => ({ clave: r.clave, desde: dia(r.desde), inicio: r.inicio, cubre: r.cubre, twrPct: r.twr.mul(100).toFixed(2) })),
+    rangos: e.rangos.map((r) => ({ clave: r.clave, desde: dia(r.desde), inicio: r.inicio, cubre: r.cubre, twrPct: r.twr === null ? null : r.twr.mul(100).toFixed(2) })),
     omitidos: e.omitidos,
     sinCierre: e.sinCierre,
   };

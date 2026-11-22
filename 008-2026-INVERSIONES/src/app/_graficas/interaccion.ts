@@ -16,14 +16,16 @@ export function indiceCercano(xs: readonly number[], x: number, v: Ventana): num
 /** Fracción de la ventana que salta RePág/AvPág. */
 const SALTO = 10;
 
-/** El índice tras una tecla (←/→, Inicio/Fin, RePág/AvPág); null si la tecla no mueve la mira. */
+/** El índice tras una tecla (←/→ y ↓/↑ como en un deslizador, Inicio/Fin, RePág/AvPág); null si no mueve la mira. */
 export function indiceTrasTecla(tecla: string, actual: number | null, v: Ventana): number | null {
   const paso = Math.max(1, Math.round((v.hasta - v.desde + 1) / SALTO));
   const dentro = (i: number) => Math.min(v.hasta, Math.max(v.desde, i));
   const desde = actual ?? v.hasta;
   switch (tecla) {
-    case "ArrowRight": return actual === null ? v.hasta : dentro(desde + 1);
-    case "ArrowLeft": return actual === null ? v.hasta : dentro(desde - 1);
+    case "ArrowRight":
+    case "ArrowUp": return actual === null ? v.hasta : dentro(desde + 1);
+    case "ArrowLeft":
+    case "ArrowDown": return actual === null ? v.hasta : dentro(desde - 1);
     case "Home": return v.desde;
     case "End": return v.hasta;
     case "PageUp": return dentro(desde - paso);

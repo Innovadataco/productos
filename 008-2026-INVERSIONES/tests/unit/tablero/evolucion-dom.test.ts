@@ -64,7 +64,7 @@ describe("Cómo ha ido", () => {
     // El cambio de rango se anuncia (hallazgo MEDIO de a11y-architect).
     expect(texto(seccion().querySelector("[role=status]"))).toBe("Mostrando 1M: del 1-mar-2027 al 31-mar-2027.");
     const encabezado = texto(seccion().querySelectorAll("figure")[1]!.querySelector("figcaption"));
-    const pctTexto = (s: string) => `${Number(s) > 0 ? "+" : Number(s) < 0 ? "−" : ""}${Math.abs(Number(s)).toFixed(1).replace(".", ",")} %`;
+    const pctTexto = (s: string | null) => s === null ? "—" : `${Number(s) > 0 ? "+" : Number(s) < 0 ? "−" : ""}${Math.abs(Number(s)).toFixed(1).replace(".", ",")} %`;
     expect(encabezado).toContain(`En el rango ${pctTexto(r1m.twrPct)}`);
     expect(encabezado).toContain(`Desde el inicio ${pctTexto(ultimo.twrPct)}`);
   });

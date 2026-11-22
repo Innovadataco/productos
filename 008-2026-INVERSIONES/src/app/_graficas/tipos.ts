@@ -107,7 +107,13 @@ export interface PropsBarras {
   readonly alElegir?: (id: string, origen: HTMLElement) => void;
 }
 
-export interface OpcionSelector<K extends string> { readonly clave: K; readonly texto: string; readonly disponible: boolean }
+export interface OpcionSelector<K extends string> {
+  readonly clave: K;
+  readonly texto: string;
+  readonly disponible: boolean;
+  /** Por qué no está disponible (se lee con el botón). */
+  readonly nota?: string;
+}
 
 export interface PropsSelector<K extends string> {
   readonly etiqueta: string;

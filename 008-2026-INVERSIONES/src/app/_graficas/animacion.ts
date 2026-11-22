@@ -64,7 +64,9 @@ export function useTransicion(objetivo: readonly number[], ms = DURACION_MS): re
     const hasta = clave === "" ? [] : clave.split("|").map(Number);
     const desde = mostrado.current;
     const salta = reducido || document.hidden || desde.length !== hasta.length || typeof requestAnimationFrame !== "function";
-    if (salta || desde.every((v, i) => v === hasta[i])) {
+    const igual = desde.length === hasta.length && desde.every((v, i) => Object.is(v, hasta[i]));
+    if (igual) return undefined;
+    if (salta) {
       mostrado.current = hasta;
       setActual(hasta);
       return undefined;

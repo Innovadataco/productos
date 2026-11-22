@@ -421,7 +421,7 @@ interface PropsTablero {
   readonly vista: Vista;
   /** Opcional: sin el dato (pruebas de otras partes del tablero) no se pinta la línea. */
   readonly conciliacion?: LineaConciliacionVista;
-  /** La evolución diaria y la TWR (src/tablero/evolucion.ts). Opcional, como la conciliación. */
+  /** La evolución diaria y la TWR (src/tablero/evolucion.ts). Opcional, como la conciliación; null = no se pudo calcular. */
   readonly evolucion?: EvolucionVista | null;
 }
 
@@ -434,7 +434,7 @@ export function Tablero({ vista, conciliacion, evolucion }: PropsTablero) {
       <main className="wrap">
         {conciliacion === undefined ? null : <LineaConciliacion linea={conciliacion} />}
         <Respuesta vista={vista} />
-        {evolucion ? <Evolucion evolucion={evolucion} /> : null}
+        {evolucion === undefined ? null : <Evolucion evolucion={evolucion} />}
         <Movimientos mov={vista.movimiento} />
         <Foto vista={vista} elegir={elegir} />
         <Posiciones vista={vista} elegida={elegida} elegir={elegir} alCerrar={() => setElegida(null)} />

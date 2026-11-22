@@ -79,8 +79,8 @@ export interface RangoEvolucion {
   readonly desde: Date;
   /** ¿La historia alcanza toda la ventana pedida? (Todo siempre.) */
   readonly cubre: boolean;
-  /** TWR del rango: la del último punto sobre la de su primer punto. */
-  readonly twr: Decimal;
+  /** TWR del rango: la del último punto sobre la de su primer punto; null si el primero quedó en −100 % (factor 0). */
+  readonly twr: Decimal | null;
 }
 
 export interface Evolucion {
@@ -244,7 +244,9 @@ function rangosDe(puntos: readonly PuntoEvolucion[]): RangoEvolucion[] {
     const objetivo = meses === null ? primero.fecha : restarMeses(ultimo.fecha, meses);
     const inicio = puntos.findIndex((p) => p.fecha.getTime() >= objetivo.getTime());
     const p = puntos[inicio]!;
-    return { clave, inicio, desde: p.fecha, cubre: primero.fecha.getTime() <= objetivo.getTime(), twr: ultimo.twr.add(UNO).div(p.twr.add(UNO)).sub(UNO) };
+    const base = p.twr.add(UNO);
+    const twr = base.isZero() ? null : ultimo.twr.add(UNO).div(base).sub(UNO);
+    return { clave, inicio, desde: p.fecha, cubre: primero.fecha.getTime() <= objetivo.getTime(), twr };
   });
 }
 

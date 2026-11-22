@@ -30,9 +30,7 @@ describe("aEvolucionVista", () => {
     const todo = aEvolucionVista(e).rangos.find((r) => r.clave === "TODO")!;
     expect(todo).toEqual({ clave: "TODO", desde: "2027-03-01", inicio: 0, cubre: true, twrPct: D(125037).div(123700).sub(1).mul(100).toFixed(2) });
   });
-});
 
-describe("aEvolucionVista · rango sin TWR", () => {
   it("una TWR de rango que no se pudo calcular cruza como null", () => {
     const sinBase = { ...e, rangos: [{ ...e.rangos[0]!, twr: null }] };
     expect(aEvolucionVista(sinBase).rangos[0]!.twrPct).toBeNull();

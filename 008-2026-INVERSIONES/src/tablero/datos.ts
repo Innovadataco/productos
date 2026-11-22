@@ -7,13 +7,10 @@ import "server-only";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { posiciones, type Posicion } from "../lotes/posiciones";
 import { calcularTablero, type EntradaEspecie, type Tablero } from "./calculo";
-import { unCierrePorDia } from "./cierres";
 import { calcularMovimiento, calendarioDe, type Movimiento } from "./movimiento";
 
 const D = (v: Prisma.Decimal.Value) => new Prisma.Decimal(v);
 const DIAS_SERIE = 60;
-/** Filas leídas por día de la serie: alcanza para 60 días aunque haya dos fuentes vigentes el mismo día. */
-const FUENTES_POR_DIA = 2;
 
 export interface Resumen {
   /** Trae la fecha de referencia de los cierres (la más reciente entre las vivas), no un máximo global. */
@@ -25,7 +22,7 @@ export interface Resumen {
   readonly incompletas: readonly string[];
 }
 
-type CierreDb = { readonly id: string; readonly instrumentoId: string; readonly fecha: Date; readonly traidoEn: Date; readonly precio: Prisma.Decimal; readonly estado: string };
+type CierreDb = { readonly instrumentoId: string; readonly fecha: Date; readonly precio: Prisma.Decimal; readonly estado: string };
 
 interface Fuentes {
   readonly vivas: ReadonlyMap<string, Posicion>;
@@ -56,21 +53,29 @@ async function realizadaPorEspecie(db: PrismaClient): Promise<Map<string, Prisma
 }
 
 /**
- * Últimos cierres vigentes de cada especie, uno por día (src/tablero/cierres.ts: si dos fuentes cerraron el mismo día,
- * el traído más recientemente), del más reciente al más viejo (consultas en paralelo).
+ * Los últimos 60 días con cierre vigente de cada especie, uno por día, del más reciente al más viejo, en UNA consulta.
+ * Si varias fuentes cerraron el mismo día, gana la traída más recientemente y, con el mismo `traidoEn`, el id mayor:
+ * la regla de `ultimosCierres` (src/plan/lectura.ts) y de src/tablero/cierres.ts. `DISTINCT ON` deja un cierre por
+ * (especie, día) sin importar cuántas fuentes haya, y `ROW_NUMBER` corta en 60 días por especie. Ids parametrizados.
  */
 async function seriesPorEspecie(db: PrismaClient, ids: readonly string[]): Promise<Map<string, readonly CierreDb[]>> {
-  const series = await Promise.all(
-    ids.map((id) =>
-      db.precioCierre.findMany({
-        where: { instrumentoId: id, reemplazadoEn: null },
-        orderBy: [{ fecha: "desc" }, { traidoEn: "desc" }, { id: "desc" }],
-        take: DIAS_SERIE * FUENTES_POR_DIA,
-        select: { id: true, instrumentoId: true, fecha: true, traidoEn: true, precio: true, estado: true },
-      }),
-    ),
-  );
-  return new Map(ids.map((id, k) => [id, unCierrePorDia(series[k] ?? []).reverse().slice(0, DIAS_SERIE)]));
+  const series = new Map<string, CierreDb[]>(ids.map((id) => [id, []]));
+  if (ids.length === 0) return series;
+  const filas = await db.$queryRaw<CierreDb[]>`
+    SELECT "instrumentoId", "fecha", "precio", "estado"
+    FROM (
+      SELECT u.*, ROW_NUMBER() OVER (PARTITION BY u."instrumentoId" ORDER BY u."fecha" DESC) AS n
+      FROM (
+        SELECT DISTINCT ON ("instrumentoId", "fecha") "instrumentoId", "fecha", "precio", "estado"::text AS "estado"
+        FROM "precio_cierre"
+        WHERE "instrumentoId" = ANY(${[...ids]}::text[]) AND "reemplazadoEn" IS NULL
+        ORDER BY "instrumentoId", "fecha" DESC, "traidoEn" DESC, "id" DESC
+      ) u
+    ) r
+    WHERE r.n <= ${DIAS_SERIE}
+    ORDER BY "instrumentoId", "fecha" DESC`;
+  for (const f of filas) series.get(f.instrumentoId)?.push(f);
+  return series;
 }
 
 function entrada(i: { readonly id: string; readonly nemotecnico: string | null }, f: Fuentes): EntradaEspecie {

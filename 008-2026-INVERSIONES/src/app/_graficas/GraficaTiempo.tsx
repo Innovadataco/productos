@@ -5,10 +5,11 @@
  * - Sin medir la pantalla: el SVG usa un viewBox de 1000 de ancho estirado al contenedor (trazos sin deformar) y el
  *   texto, los puntos y el detalle van en HTML, posicionados en %. Lo que pinta el servidor es lo que hidrata.
  * - Al cambiar la ventana se anima el dominio (un zoom); con «reducir movimiento», salta.
- * - Detalle con el puntero y con el teclado (src/app/_graficas/mira.ts), anunciado por aria-live. La tabla de datos
- *   está en «Ver los datos».
+ * - Detalle con el puntero y con el teclado: la capa enfocable es un deslizador por los días (src/app/_graficas/mira.ts)
+ *   cuyo aria-valuetext dice el día y sus cifras. La tabla de datos está en «Ver los datos».
+ * - La leyenda y la tabla no se vuelven a pintar en los cuadros de la animación (memo con la ventana en primitivos).
  */
-import { Fragment, useId, useMemo } from "react";
+import { Fragment, memo, useId, useMemo } from "react";
 import { useHidratado, useTransicion, useVisible } from "./animacion";
 import { DetalleDia, textoDelDia } from "./DetalleDia";
 import { ticksBonitos } from "./escalas";
@@ -21,12 +22,12 @@ import type { PropsGraficaTiempo, Ventana } from "./tipos";
 
 const ALTO = 220;
 const MARCAS_X = 6;
-const INSTRUCCIONES = "Use las flechas izquierda y derecha para recorrer los días; Inicio y Fin van a las puntas.";
 const pct = (x: number) => Math.round((x / ANCHO) * 10000) / 100;
 const px = (y: number) => `${Math.round(y * 10) / 10}px`;
 
-function Leyenda({ p, v }: { readonly p: PropsGraficaTiempo; readonly v: Ventana }) {
+const Leyenda = memo(function Leyenda({ p, desde, hasta }: { readonly p: PropsGraficaTiempo; readonly desde: number; readonly hasta: number }) {
   if (p.series.length < 2) return null;
+  const v: Ventana = { desde, hasta };
   return (
     <ul className="g-leyenda">
       {p.series.map((s) => {
@@ -36,7 +37,7 @@ function Leyenda({ p, v }: { readonly p: PropsGraficaTiempo; readonly v: Ventana
       {(p.bandas ?? []).map((b) => <li key={b.id}><i className={`g-clave-banda g-banda-${b.intensidad} t-${b.tono}`} aria-hidden="true" /> {b.nombre}</li>)}
     </ul>
   );
-}
+});
 
 /** Los puntos de la mira (o el final de cada serie) en HTML: redondos aunque el SVG se estire. */
 function Puntos({ p, xs, e, indice, clase }: { readonly p: PropsGraficaTiempo; readonly xs: readonly number[]; readonly e: Escalas; readonly indice: (valores: readonly (number | null)[]) => number | null; readonly clase: string }) {
@@ -102,7 +103,9 @@ export function GraficaTiempo(p: PropsGraficaTiempo) {
   const e = escalasDe(useTransicion(objetivo) as Dominio, alto);
   const { ref, visible } = useVisible<HTMLDivElement>();
   const hidratado = useHidratado();
-  const { activo, anunciar, manejadores } = useMira(xs, v, e.x);
+  const { activo, manejadores } = useMira(xs, v, e.x);
+  const indiceValor = activo ?? v.hasta;
+  const valorTexto = useMemo(() => textoDelDia(p, indiceValor), [p, indiceValor]);
   const ticksY = ticksBonitos(objetivo[2], objetivo[3], MARCAS_Y);
   const xActivo = activo === null ? null : e.x.a(xs[activo]!);
   const corte = p.corte && xs[p.corte.indice] !== undefined ? { nombre: p.corte.nombre, x: e.x.a(xs[p.corte.indice]!) } : null;
@@ -112,7 +115,7 @@ export function GraficaTiempo(p: PropsGraficaTiempo) {
         <span className="g-titulo" id={`${base}-t`}>{p.titulo}</span>
         {p.encabezado ? <span className="g-encabezado">{p.encabezado}</span> : null}
       </figcaption>
-      <Leyenda p={p} v={v} />
+      <Leyenda p={p} desde={v.desde} hasta={v.hasta} />
       <div className="g-plot" ref={ref} data-visible={visible ? "" : undefined} data-hidratado={hidratado ? "" : undefined} style={{ height: `${alto}px` }}>
         <Dibujo p={p} xs={xs} e={e} alto={alto} ticksY={ticksY} base={base} xActivo={xActivo} xCorte={corte?.x ?? null} />
         <div className="g-ticks-y" aria-hidden="true">
@@ -122,12 +125,14 @@ export function GraficaTiempo(p: PropsGraficaTiempo) {
         <Puntos p={p} xs={xs} e={e} clase="g-fin" indice={(valores) => ultimoIndice(valores, v)} />
         {activo === null ? null : <Puntos p={p} xs={xs} e={e} clase="g-punto" indice={() => activo} />}
         {activo === null || xActivo === null ? null : <DetalleDia p={p} indice={activo} posicion={pct(xActivo)} />}
-        <div className="g-toque" role="group" tabIndex={0} aria-labelledby={`${base}-t`} aria-describedby={`${base}-r`} {...manejadores} />
+        <div
+          className="g-toque" role="slider" tabIndex={0} aria-orientation="horizontal" aria-labelledby={`${base}-t`} aria-describedby={`${base}-r`}
+          aria-valuemin={v.desde} aria-valuemax={v.hasta} aria-valuenow={indiceValor} aria-valuetext={valorTexto} {...manejadores}
+        />
       </div>
       <EjeX p={p} e={e} desde={objetivo[0]} hasta={objetivo[1]} />
-      <p id={`${base}-r`} className="sr">{p.resumen} {INSTRUCCIONES}</p>
-      <p className="sr" aria-live="polite">{anunciar && activo !== null ? textoDelDia(p, activo) : ""}</p>
-      <TablaDatos p={p} ventana={v} />
+      <p id={`${base}-r`} className="g-sr">{p.resumen}</p>
+      <TablaDatos p={p} desde={v.desde} hasta={v.hasta} />
     </figure>
   );
 }

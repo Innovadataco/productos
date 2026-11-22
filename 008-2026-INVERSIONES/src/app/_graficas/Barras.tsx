@@ -37,8 +37,8 @@ export function Barras({ titulo, resumen, filas, alElegir }: PropsBarras) {
   return (
     <figure className="g-figura g-barras-figura" aria-labelledby={`${base}-t`} aria-describedby={`${base}-r`}>
       <figcaption className="g-cabeza"><span className="g-titulo" id={`${base}-t`}>{titulo}</span></figcaption>
-      <p id={`${base}-r`} className="sr">{resumen}</p>
-      {filas.length === 0 ? <p className="nota">Sin especies con rentabilidad para mostrar.</p> : (
+      <p id={`${base}-r`} className="g-sr">{resumen}</p>
+      {filas.length === 0 ? <p className="g-nota">Sin especies con rentabilidad para mostrar.</p> : (
         <ul className="g-barras" ref={ref} data-visible={visible ? "" : undefined} data-hidratado={hidratado ? "" : undefined}>
           {filas.map((f, k) => {
             const g = geo.barras[k]!;

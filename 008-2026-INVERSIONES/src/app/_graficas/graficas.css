@@ -1,10 +1,11 @@
 /*
- * 008 · módulo de gráficas. Tokens sobre los del tablero (tablero.css): valor y «gana» = --gain, costo = --gold,
- * «pierde» = --loss. La paleta categórica (dona) es la de referencia validada para el panel oscuro (#131a2a) y el
- * claro (#ffffff): CVD adyacente ≥ 8,4 y visión normal ≥ 19,3 en los dos; en claro tres tonos quedan bajo 3:1 y por
- * eso la leyenda lleva siempre nombre, valor y porcentaje. Va rotada para empezar en aqua: en esta app el azul y el
- * naranja dicen «gana» y «pierde», y la primera tajada no debe parecer una ganancia. La rotación se validó con el
- * par que cierra la vuelta de la dona (naranja ↔ aqua: CVD 9,2 claro y 9,4 oscuro). Movimiento: transform, opacity y clip-path; nada con
+ * 008 · módulo de gráficas. Usa los tokens del diseño del tablero (tablero.css: --panel, --line, --fg, --muted,
+ * --gain, --loss, --gold, --bg-2, --glow, --mono) y solo clases propias (g-*, t-*). Valor y «gana» = --gain,
+ * costo = --gold, «pierde» = --loss. La paleta categórica (dona) es la de referencia, rotada para empezar en aqua (en
+ * esta app el azul y el naranja dicen «gana» y «pierde») y, en claro, con aqua, amarillo, magenta y naranja un paso
+ * más oscuros para dar ≥ 3:1 sobre #ffffff (WCAG 1.4.11). Validada como anillo (con el par que cierra la vuelta):
+ * oscuro sobre #131a2a, CVD adyacente ≥ 8,4, visión normal ≥ 19,3, contraste ≥ 3:1; claro sobre #ffffff, CVD ≥ 8,5,
+ * visión normal ≥ 17,7, contraste ≥ 3:1. Candado: tests/unit/graficas/estilos.test.ts. Movimiento: transform, opacity y clip-path; nada con
  * «reducir movimiento» (la regla global de tablero.css apaga animaciones y transiciones).
  */
 :root {
@@ -14,11 +15,11 @@
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --g-c1: #1baf7a; --g-c2: #eda100; --g-c3: #e87ba4; --g-c4: #008300; --g-c5: #6250d6; --g-c6: #e34948; --g-c7: #2a78d6; --g-c8: #eb6834;
+    --g-c1: #139a6a; --g-c2: #b47c00; --g-c3: #d4558a; --g-c4: #008300; --g-c5: #6250d6; --g-c6: #e34948; --g-c7: #2a78d6; --g-c8: #d9562a;
   }
 }
 :root[data-theme="light"] {
-  --g-c1: #1baf7a; --g-c2: #eda100; --g-c3: #e87ba4; --g-c4: #008300; --g-c5: #6250d6; --g-c6: #e34948; --g-c7: #2a78d6; --g-c8: #eb6834;
+  --g-c1: #139a6a; --g-c2: #b47c00; --g-c3: #d4558a; --g-c4: #008300; --g-c5: #6250d6; --g-c6: #e34948; --g-c7: #2a78d6; --g-c8: #d9562a;
 }
 
 .t-valor { --tono: var(--g-valor); } .t-costo { --tono: var(--g-costo); } .t-gana { --tono: var(--g-gana); }
@@ -27,6 +28,8 @@
 .t-c5 { --tono: var(--g-c5); } .t-c6 { --tono: var(--g-c6); } .t-c7 { --tono: var(--g-c7); } .t-c8 { --tono: var(--g-c8); }
 
 /* ── Marco común ── */
+.g-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.g-nota { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
 .g-figura {
   margin: 0; min-width: 0; position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
   padding: 16px 16px 12px; background-image: radial-gradient(120% 80% at 0% 0%, var(--glow), transparent 60%);
@@ -81,7 +84,7 @@
 .g-tip-fila .g-clave, .g-tip-fila .g-clave-banda { margin-right: 0; }
 .g-tip-extra { margin-top: 4px; color: var(--loss); }
 .g-datos { margin-top: 8px; font-size: 12px; color: var(--muted); }
-.g-datos summary { cursor: pointer; width: fit-content; }
+.g-datos summary { cursor: pointer; width: fit-content; min-height: 24px; display: flex; align-items: center; gap: 6px; }
 .g-datos-caja { max-height: 320px; overflow: auto; margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; }
 .g-datos table { min-width: 0; font-size: 12px; }
 .g-datos caption { text-align: left; padding: 8px 10px; color: var(--fg); font-weight: 700; }
@@ -121,26 +124,29 @@ button.g-barra:hover, button.g-barra:focus-visible { background: var(--bg-2); }
 .g-barra-detalle { grid-column: 2 / -1; font-size: 11px; color: var(--muted); }
 .g-sin-corte { white-space: nowrap; }
 .g-selector { display: flex; flex-wrap: wrap; gap: 6px; }
-.g-selector .pill[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); font-weight: 700; }
-.g-selector .pill:disabled { opacity: 0.4; cursor: not-allowed; }
+.g-opcion { min-height: 32px; min-width: 44px; border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; color: inherit; cursor: pointer; }
+.g-opcion:hover { background: var(--bg-2); }
+.g-opcion[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); font-weight: 700; }
+.g-opcion[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; background: transparent; }
 
-/* ── Entrada: oculto hasta verse en pantalla; si el script no arranca, aparece a los 3 s ── */
+/*
+ * ── Entrada ── El servidor pinta todo completo (sin JS se ve igual). Ya hidratada y fuera de pantalla, cada gráfica
+ * queda oculta y se dibuja al entrar: la línea y sus rellenos de izquierda a derecha, las barras desde el cero y las
+ * tajadas en el sentido del reloj.
+ */
 @media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
   .g-plot .g-svg, .g-plot .g-fin { clip-path: inset(0 0 0 0); transition: clip-path 1.3s var(--g-ease); }
   .g-plot .g-relleno, .g-plot .g-banda { transition: opacity 0.9s ease 0.45s; }
-  .g-plot:not([data-visible]) .g-svg, .g-plot:not([data-visible]) .g-fin { clip-path: inset(0 100% 0 0); }
-  .g-plot:not([data-visible]) .g-relleno, .g-plot:not([data-visible]) .g-banda { opacity: 0; }
-  .g-plot:not([data-visible]):not([data-hidratado]) .g-svg { animation: g-revela 0s linear 3s forwards; }
+  .g-plot[data-hidratado]:not([data-visible]) .g-svg, .g-plot[data-hidratado]:not([data-visible]) .g-fin { clip-path: inset(0 100% 0 0); }
+  .g-plot[data-hidratado]:not([data-visible]) .g-relleno, .g-plot[data-hidratado]:not([data-visible]) .g-banda { opacity: 0; }
   .g-barra-relleno { transition: transform 1s var(--g-ease); }
-  .g-barras:not([data-visible]) .g-barra-relleno { transform: scaleX(0); }
+  .g-barras[data-hidratado]:not([data-visible]) .g-barra-relleno { transform: scaleX(0); }
   .g-barras li:nth-child(2) .g-barra-relleno { transition-delay: 60ms; } .g-barras li:nth-child(3) .g-barra-relleno { transition-delay: 120ms; }
   .g-barras li:nth-child(4) .g-barra-relleno { transition-delay: 180ms; } .g-barras li:nth-child(n + 5) .g-barra-relleno { transition-delay: 240ms; }
-  .g-barras:not([data-visible]):not([data-hidratado]) .g-barra-relleno { animation: g-crece 0s linear 3s forwards; }
-  .g-dona-dibujo:not([data-visible]) .g-centro { opacity: 0; }
+  .g-dona-dibujo[data-hidratado]:not([data-visible]) .g-tajada { stroke-dasharray: 0 600; }
+  .g-dona-dibujo[data-hidratado]:not([data-visible]) .g-centro { opacity: 0; }
   .g-centro { transition: opacity 0.6s ease 0.5s; }
 }
-@keyframes g-revela { to { clip-path: inset(0 0 0 0); } }
-@keyframes g-crece { to { transform: scaleX(1); } }
 
 /* ── Celular: dona en una columna; el detalle del día ocupa el ancho del dibujo (nunca se sale de la pantalla) ── */
 @media (max-width: 620px) {

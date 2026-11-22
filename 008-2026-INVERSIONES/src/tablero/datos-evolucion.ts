@@ -1,8 +1,10 @@
 /**
  * Lee la base y arma las entradas de la evolución del tablero (frente graficas-tablero). Solo lectura.
  * El universo es el del tablero ya leído (vivas y cerradas, sin las incompletas) y la serie llega hasta su fecha de
- * referencia: así el último punto cuadra con «Valor en acciones». Una consulta por tabla (nunca una por especie) y
- * las cuatro en la misma foto (REPEATABLE READ), como src/lotes/posiciones.ts.
+ * referencia: así el último punto cuadra con «Valor en acciones», salvo que entre una carga entre la lectura del
+ * tablero y esta (son dos fotos; en una app de un solo dueño, la siguiente visita ya cuadra). Una consulta por tabla
+ * (nunca una por especie) y las cuatro en la misma foto (REPEATABLE READ), como src/lotes/posiciones.ts. Es un
+ * $transaction de arreglo: Prisma 5 no le aplica maxWait ni timeout (son de las transacciones interactivas).
  * Flujos: las compras salen de la orden de cada lote (un lote de escisión no tiene orden: sin flujo) y las ventas,
  * de las órdenes con asignaciones FIFO; así ningún flujo queda sin sus acciones.
  */

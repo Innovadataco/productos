@@ -201,8 +201,8 @@ describe("calcularEvolucion · rangos", () => {
   it("la TWR de un rango es la del último punto sobre la de su primer punto (calculada en el servidor)", () => {
     const ultimo = e.puntos[e.puntos.length - 1]!;
     const inicio = e.puntos[rango("1M").inicio]!;
-    expect(diez(rango("1M").twr)).toBe(diez(ultimo.twr.add(1).div(inicio.twr.add(1)).sub(1)));
-    expect(diez(rango("TODO").twr)).toBe(diez(ultimo.twr));
+    expect(diez(rango("1M").twr!)).toBe(diez(ultimo.twr.add(1).div(inicio.twr.add(1)).sub(1)));
+    expect(diez(rango("TODO").twr!)).toBe(diez(ultimo.twr));
   });
 });
 

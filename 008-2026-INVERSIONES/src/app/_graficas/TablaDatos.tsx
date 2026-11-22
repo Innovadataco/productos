@@ -1,17 +1,18 @@
 "use client";
 /**
  * La tabla de los datos de la gráfica de tiempo (el equivalente sin color ni puntero). Se arma solo al abrir
- * «Ver los datos»: cerrada no pesa en el celular ni compite con la tabla de especies.
+ * «Ver los datos»: cerrada no pesa en el celular ni compite con la tabla de especies. La ventana llega en primitivos
+ * para que el memo la deje quieta durante los cuadros de la animación del dominio.
  */
-import { useState, type SyntheticEvent } from "react";
-import type { PropsGraficaTiempo, Ventana } from "./tipos";
+import { memo, useState, type SyntheticEvent } from "react";
+import type { PropsGraficaTiempo } from "./tipos";
 
 const SIN_DATO = "—";
 
-export function TablaDatos({ p, ventana }: { readonly p: PropsGraficaTiempo; readonly ventana: Ventana }) {
+export const TablaDatos = memo(function TablaDatos({ p, desde, hasta }: { readonly p: PropsGraficaTiempo; readonly desde: number; readonly hasta: number }) {
   const [abierta, setAbierta] = useState(false);
   const alternar = (e: SyntheticEvent<HTMLDetailsElement>) => setAbierta(e.currentTarget.open);
-  const indices = Array.from({ length: Math.max(0, ventana.hasta - ventana.desde + 1) }, (_, k) => ventana.desde + k);
+  const indices = Array.from({ length: Math.max(0, hasta - desde + 1) }, (_, k) => desde + k);
   const celda = (v: number | null | undefined) => (v === null || v === undefined ? SIN_DATO : p.formatoY(v));
   return (
     <details className="g-datos" onToggle={alternar}>
@@ -42,4 +43,4 @@ export function TablaDatos({ p, ventana }: { readonly p: PropsGraficaTiempo; rea
       ) : null}
     </details>
   );
-}
+});

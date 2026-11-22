@@ -3,7 +3,8 @@
  * Dona de composición (frente graficas-tablero): tajadas con un hueco del color del panel, el total al centro y, al
  * marcar una tajada (en el dibujo o en la leyenda, con puntero o foco), su nombre, valor y porcentaje. La leyenda
  * lleva siempre las cifras (la identidad nunca depende solo del color) y, si hay `alElegir`, cada tajada elegible
- * es un botón que lleva a su detalle. Las tajadas se dibujan al entrar en pantalla.
+ * es un botón que lleva a su detalle. El servidor pinta cada tajada completa (atributos); ya hidratada y fuera de
+ * pantalla, el CSS la deja en cero y la dibuja al entrar (sin JS, la dona se ve igual).
  */
 import { useId, useRef, useState } from "react";
 import { useHidratado, useVisible } from "./animacion";
@@ -49,8 +50,8 @@ export function Dona({ titulo, resumen, segmentos, centro, alElegir }: PropsDona
   return (
     <figure className="g-figura g-dona" aria-labelledby={`${base}-t`} aria-describedby={`${base}-r`}>
       <figcaption className="g-cabeza"><span className="g-titulo" id={`${base}-t`}>{titulo}</span></figcaption>
-      <p id={`${base}-r`} className="sr">{resumen}</p>
-      {segmentos.length === 0 ? <p className="nota">Sin valores para repartir.</p> : (
+      <p id={`${base}-r`} className="g-sr">{resumen}</p>
+      {segmentos.length === 0 ? <p className="g-nota">Sin valores para repartir.</p> : (
         <div className="g-dona-cuerpo">
           <div className="g-dona-dibujo" ref={ref} data-visible={visible ? "" : undefined} data-hidratado={hidratado ? "" : undefined}>
             <svg viewBox={`0 0 ${LADO} ${LADO}`} aria-hidden="true" focusable="false">
@@ -61,10 +62,8 @@ export function Dona({ titulo, resumen, segmentos, centro, alElegir }: PropsDona
                   <circle
                     key={s.id} data-id={s.id} className={`g-tajada t-${tonoDe(s, k)}`} data-activo={activoId === s.id ? "" : undefined}
                     cx={LADO / 2} cy={LADO / 2} r={RADIO} strokeWidth={GROSOR} transform={`rotate(-90 ${LADO / 2} ${LADO / 2})`}
-                    style={{
-                      strokeDasharray: visible ? `${t.largo} ${Math.round((CIRCUNFERENCIA - t.largo) * 10) / 10}` : `0 ${Math.round(CIRCUNFERENCIA * 10) / 10}`,
-                      strokeDashoffset: `${-t.inicio}`, transitionDelay: `${k * RETRASO_MS}ms`,
-                    }}
+                    strokeDasharray={`${t.largo} ${Math.round((CIRCUNFERENCIA - t.largo) * 10) / 10}`} strokeDashoffset={-t.inicio}
+                    style={{ transitionDelay: `${k * RETRASO_MS}ms` }}
                     onPointerEnter={marcar(s.id)} onPointerLeave={marcar(null)} onClick={() => elegir(s)}
                   />
                 );
@@ -87,7 +86,7 @@ export function Dona({ titulo, resumen, segmentos, centro, alElegir }: PropsDona
                     <button
                       type="button" className="g-item" ref={(el) => { if (el) botones.current.set(s.id, el); else botones.current.delete(s.id); }}
                       onFocus={marcar(s.id)} onBlur={marcar(null)} onClick={() => elegir(s)}
-                    >{contenido}<span className="sr"> (ver el detalle)</span></button>
+                    >{contenido}<span className="g-sr"> (ver el detalle)</span></button>
                   ) : <span className="g-item">{contenido}</span>}
                 </li>
               );

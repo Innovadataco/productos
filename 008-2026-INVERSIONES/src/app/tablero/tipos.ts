@@ -83,8 +83,8 @@ export interface RangoEvolucionVista {
   readonly desde: string;
   readonly inicio: number;
   readonly cubre: boolean;
-  /** TWR del rango calculada en el servidor, en porcentaje con 2 decimales. */
-  readonly twrPct: string;
+  /** TWR del rango calculada en el servidor, en porcentaje con 2 decimales; null si no se pudo calcular. */
+  readonly twrPct: string | null;
 }
 
 export interface EvolucionVista {
