@@ -107,7 +107,9 @@ describe("reglas escritas a mano en la migración", () => {
     ).rejects.toThrow(/movimiento_caja_monto_chk/);
   });
 
-  it("exige bruto − retención = neto cuando hay bruto", async () => {
+  // Desde la fase C (C1, migración *_datos_oficiales) las columnas viejas son obsoletas y van nulas: lo que cumple
+  // bruto − retención = neto ya no entra (lo frena dividendo_viejas_nulas_chk, que se evalúa después por su nombre).
+  it("exige bruto − retención = neto cuando hay bruto, y desde C1 ningún dividendo lleva bruto", async () => {
     const fila = await nuevaFila("TRII_DIVIDENDOS");
     await expect(
       db.dividendo.create({
@@ -117,12 +119,17 @@ describe("reglas escritas a mano en la migración", () => {
         },
       }),
     ).rejects.toThrow(/dividendo_bruto_chk/);
+    await expect(
+      db.dividendo.create({
+        data: {
+          filaFuenteId: fila.id, fechaPago: new Date("2026-03-01"), instrumentoId, tipo: "EXTRAORDINARIO",
+          montoNeto: new Prisma.Decimal("650"), montoBruto: new Prisma.Decimal("1000"), retencion: new Prisma.Decimal("350"),
+          tasaRetencion: new Prisma.Decimal("0.35"),
+        },
+      }),
+    ).rejects.toThrow(/dividendo_viejas_nulas_chk/);
     const ok = await db.dividendo.create({
-      data: {
-        filaFuenteId: fila.id, fechaPago: new Date("2026-03-01"), instrumentoId, tipo: "EXTRAORDINARIO",
-        montoNeto: new Prisma.Decimal("650"), montoBruto: new Prisma.Decimal("1000"), retencion: new Prisma.Decimal("350"),
-        tasaRetencion: new Prisma.Decimal("0.35"),
-      },
+      data: { filaFuenteId: fila.id, fechaPago: new Date("2026-03-01"), instrumentoId, tipo: "EXTRAORDINARIO", montoNeto: new Prisma.Decimal("650") },
     });
     expect(ok.montoNeto.toString()).toBe("650");
   });

@@ -146,17 +146,21 @@ describe("CHECK de defensa en profundidad (NOT VALID)", () => {
     });
   }
 
+  // Desde la fase C (C1, migración *_datos_oficiales) las columnas viejas van nulas: lo que cumple estos CHECK lo frena
+  // dividendo_viejas_nulas_chk, que se evalúa después de ellos (PostgreSQL los evalúa por nombre), así que lo que los
+  // incumple sigue dando su propio error.
   it("la retención de un dividendo no es negativa (aunque cuadre bruto − retención = neto)", async () => {
     expect(await enTransaccionDeshecha((tx) => dividendo(tx, { bruto: "99", retencion: "-1" }))).toMatch(/dividendo_retencion_chk/);
-    expect(await enTransaccionDeshecha((tx) => dividendo(tx, { bruto: "100", retencion: "0" }))).toBeNull();
+    expect(await enTransaccionDeshecha((tx) => dividendo(tx, { bruto: "100", retencion: "0" }))).toMatch(/dividendo_viejas_nulas_chk/);
+    expect(await enTransaccionDeshecha((tx) => dividendo(tx, {}))).toBeNull();
   });
 
   it("la tasa de retención es una fracción entre 0 y 1 (MODELO-DATOS: p. ej. 0.350000)", async () => {
     expect(await enTransaccionDeshecha((tx) => dividendo(tx, { bruto: "154", retencion: "54", tasa: "35" }))).toMatch(/dividendo_tasa_retencion_chk/);
     expect(await enTransaccionDeshecha((tx) => dividendo(tx, { bruto: "154", retencion: "54", tasa: "-0.1" }))).toMatch(/dividendo_tasa_retencion_chk/);
-    expect(await enTransaccionDeshecha((tx) => dividendo(tx, { bruto: "154", retencion: "54", tasa: "0.35" }))).toBeNull();
-    expect(await enTransaccionDeshecha((tx) => dividendo(tx, { bruto: "100", retencion: "0", tasa: "0" }))).toBeNull();
-    expect(await enTransaccionDeshecha((tx) => dividendo(tx, { tasa: "1" }))).toBeNull();
+    expect(await enTransaccionDeshecha((tx) => dividendo(tx, { bruto: "154", retencion: "54", tasa: "0.35" }))).toMatch(/dividendo_viejas_nulas_chk/);
+    expect(await enTransaccionDeshecha((tx) => dividendo(tx, { bruto: "100", retencion: "0", tasa: "0" }))).toMatch(/dividendo_viejas_nulas_chk/);
+    expect(await enTransaccionDeshecha((tx) => dividendo(tx, { tasa: "1" }))).toMatch(/dividendo_viejas_nulas_chk/);
   });
 
   async function orden(tx: Tx, operacion: string, liquidacion: string) {

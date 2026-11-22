@@ -47,6 +47,7 @@ export interface ValorUnidad {
 export interface DividendoLeido {
   readonly fechaPago: Date;
   readonly montoNeto: number;
+  /** Siempre nulo desde la fase C (migración *_datos_oficiales): el enlace no se guarda; el cruce llegará con C5b. */
   readonly decretadoId: string | null;
 }
 export interface DecretoLeido {
@@ -54,7 +55,7 @@ export interface DecretoLeido {
   readonly fechaPago: Date;
   /** Valor decretado por acción (bruto). */
   readonly valorPorAccion: number;
-  /** Tiene un dividendo recibido enlazado. */
+  /** Tiene un dividendo recibido enlazado. Siempre falso desde la fase C (nadie enlaza: `decretadoId` es nulo). */
   readonly recibido: boolean;
 }
 export interface EscisionLeida {
