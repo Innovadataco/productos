@@ -4,40 +4,43 @@
  * «aporte_fic_sin_registrar».
  *   npx tsx scripts/registrar-movimiento-fondo.ts --email <correo-del-dueño> --fondo <código del fondo en la SFC> \
  *     --fecha AAAA-MM-DD --unidades <n> --monto <n> [--aplicar]
+ * En producción va por la vía B: `cargar-prod.sh registrar-movimiento-fondo`, con los argumentos en la cabecera del
+ * sobre (docs/despliegue/produccion.md §11); inv-cargar los pasa por su lista blanca.
  * Antes: el fondo registrado y el valor de unidad de la SFC de ese día cargado. Sin --aplicar es ensayo (no escribe).
- * Después: conciliar-certificacion. Nunca imprime las cifras, el correo ni el código del fondo: solo ids y códigos.
- * Salida: 0 ensayo, registrada o ya existía · 1 error de la base · 2 uso o datos inválidos · 3 rechazado (no escribió).
+ * Después: conciliar-certificacion. Nunca imprime las cifras, el correo ni el código del fondo: solo ids y códigos
+ * (src/fondo/salida-movimiento.ts).
+ * Salida: 0 ensayo, registrada o ya existía · 1 error de la base o inesperado (no se sabe si quedó registrada) · 2 uso o
+ *   datos inválidos · 3 rechazado (no escribió).
  */
 import { PrismaClient } from "@prisma/client";
-import { interpretarArgumentosMovimiento, USO_MOVIMIENTO } from "../src/fondo/argumentos-movimiento";
+import { interpretarArgumentosMovimiento } from "../src/fondo/argumentos-movimiento";
 import { ErrorMovimientoFondo, registrarConstitucion } from "../src/fondo/movimiento";
-import { textoRechazo, textoResultado } from "../src/fondo/salida-movimiento";
-import { detalleDeError } from "../src/precios/guardar";
+import {
+  emitir, salidaDatosInvalidos, salidaErrorBase, salidaInesperada, salidaRechazo, salidaResultado, type SalidaCli,
+} from "../src/fondo/salida-movimiento";
 
-async function main(): Promise<void> {
+// La imagen del migrador trae NODE_ENV=production: allí los pasos son los de la vía B (cargar-prod.sh).
+const opciones = { produccion: process.env.NODE_ENV === "production" };
+
+async function main(): Promise<SalidaCli> {
   const a = interpretarArgumentosMovimiento(process.argv.slice(2), new Date());
-  if (!a.ok) {
-    console.error("❌ Datos inválidos, no se registró nada:");
-    for (const e of a.errores) console.error(`   ${e.campo} · ${e.codigo}`);
-    console.error(USO_MOVIMIENTO);
-    process.exitCode = 2;
-    return;
-  }
+  if (!a.ok) return salidaDatosInvalidos(a.errores, opciones);
   const db = new PrismaClient();
   try {
-    console.log(textoResultado(await registrarConstitucion(db, a.datos, { aplicar: a.aplicar })));
+    return salidaResultado(await registrarConstitucion(db, a.datos, { aplicar: a.aplicar }), opciones);
   } catch (e) {
-    if (e instanceof ErrorMovimientoFondo) {
-      console.error(textoRechazo(e.codigo));
-      process.exitCode = 3;
-    } else {
-      // Solo el nombre y el código del error (p. ej. «PrismaClientKnownRequestError P2028»), nunca su mensaje.
-      console.error(`❌ No se registró: ERROR_BASE (${detalleDeError(e)})`);
-      process.exitCode = 1;
-    }
+    return e instanceof ErrorMovimientoFondo ? salidaRechazo(e.codigo, opciones) : salidaErrorBase(e, opciones);
   } finally {
     await db.$disconnect();
   }
 }
 
-void main();
+// exitCode y no exit(): en macOS stdout por tubería es asíncrono y exit() podría cortar la salida. El catch va
+// después del then: también atrapa un fallo al cerrar la base o al escribir la salida (no se sabe qué llegó a verse).
+main()
+  .then((s) => {
+    process.exitCode = emitir(s, console);
+  })
+  .catch((e: unknown) => {
+    process.exitCode = emitir(salidaInesperada(e, opciones), console);
+  });
