@@ -95,7 +95,23 @@ describe("la versión vigente, con cierres y distancia al nivel", () => {
     expect(a[6]).toContain("$ 1.100 · 22-nov-2024");
     expect(a[6]).toContain("sin verificar");
     expect(a.slice(7, 9)).toEqual(["a +9,1 % del nivel", "2"]);
-    expect(celdas(fila(raiz, "FICTB")).slice(5, 8)).toEqual(["venció el 31-oct-2024", "$ 1.913 · 22-nov-2024verificado A&V", "tocada · cierre bajo el nivel"]);
+    expect(celdas(fila(raiz, "FICTB")).slice(5, 8)).toEqual([
+      "venció el 31-oct-2024", "$ 1.913 · 22-nov-2024verificado A&Vtraído el 14-ene-2027 a las 07:07 (hora de Colombia) · BVC por Yahoo", "tocada · cierre bajo el nivel",
+    ]);
+  });
+
+  it("cada «Último cierre» dice cuándo lo trajo 008 (hora de Colombia) y de qué fuente; sin cierre, nada (frente fecha-hora-datos)", async () => {
+    const raiz = await pantalla();
+    const nota = (especie: string) => [...(fila(raiz, especie)?.querySelectorAll("td")[5]?.querySelectorAll(".fecha-dato") ?? [])].map(texto);
+    expect(nota("FICTA")).toEqual(["traído el 13-ene-2027 a las 18:41 (hora de Colombia) · BVC por Yahoo"]);
+    expect(nota("FICTC")).toEqual(["traído el 13-ene-2027 a las 18:41 (hora de Colombia) · bvc-ficticia"]);
+    expect(nota("FICTP")).toEqual([]);
+    for (const tr of [...raiz.querySelectorAll("tbody tr")].filter((t) => texto(t.querySelector("th")) === "Portafolio")) expect(tr.querySelector(".fecha-dato")).toBeNull();
+  });
+
+  it("una versión que no rige hoy no lleva cierres ni su procedencia", async () => {
+    const raiz = await pantalla({ version: "2" });
+    expect(raiz.querySelector(".fecha-dato")).toBeNull();
   });
 
   it("FICTC no negocia desde el 5-nov (el 4 fue festivo): explica en vez de dar el precio viejo como de hoy", async () => {

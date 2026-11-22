@@ -10,7 +10,7 @@ import { montar, movimiento, tecla, texto, type Montaje } from "../graficas/dom"
 import { D, dia, especie, resumenDe } from "./ficticio";
 import { nueveEspecies } from "./ficticio-graficas";
 
-const cierre = (precio: string) => ({ precio: D(precio), fecha: dia("2027-03-31"), verificado: false });
+const cierre = (precio: string) => ({ precio: D(precio), fecha: dia("2027-03-31"), verificado: false, traidoEn: new Date("2027-03-31T23:04:00Z"), fuente: "yahoo" });
 const tres = aVista(resumenDe([
   especie({ nemotecnico: "FICTA", cantidad: 13n, costoVivo: D(4613), cierre: cierre("317.41") }),
   especie({ nemotecnico: "FICTB", cantidad: 7n, costoVivo: D(7919), cierre: cierre("1211.09") }),
@@ -46,14 +46,16 @@ describe("Cómo está repartido", () => {
     expect(texto(seccion())).toContain("Sin cierre (no entra aquí): FICTC");
   });
 
-  it("rentabilidad sin vender de mayor a menor; cada barra dice lo mismo que la columna % de la tabla y su origen", async () => {
+  it("rentabilidad sin vender de mayor a menor; cada barra dice lo mismo que la columna % de la tabla y su origen (con cuándo se trajo su cierre y de dónde)", async () => {
     await m.pintar(createElement(Tablero, { vista: tres }));
     expect(barras().map((b) => texto(b.querySelector(".g-barra-nombre")))).toEqual(["FICTB", "FICTA"]);
     for (const b of barras()) {
       const nemo = texto(b.querySelector(".g-barra-nombre"));
       expect(texto(b.querySelector(".g-barra-valor"))).toBe(celdaPct(nemo));
     }
-    expect(texto(barras()[0]!.querySelector(".g-barra-detalle"))).toBe("costo $ 7.919 · valor $ 8.478 · sin verificar · 31-mar-2027");
+    expect(texto(barras()[0]!.querySelector(".g-barra-detalle"))).toBe(
+      "costo $ 7.919 · valor $ 8.478 · sin verificar · 31-mar-2027 · traído el 31-mar-2027 a las 18:04 (hora de Colombia) · BVC por Yahoo",
+    );
   });
 
   it("el clic en una barra abre el detalle de la especie; Escape lo cierra y devuelve el foco a la barra", async () => {
