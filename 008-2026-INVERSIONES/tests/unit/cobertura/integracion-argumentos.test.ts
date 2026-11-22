@@ -2,13 +2,17 @@
 // rechaza cualquier otro ANTES de tocar la base (`prisma migrate reset`). Con prisma y vitest falsos en un
 // directorio temporal: la prueba nunca toca una base de verdad.
 import { spawn } from "node:child_process";
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const SCRIPT = fileURLToPath(new URL("../../../scripts/integracion.mjs", import.meta.url));
+/** El falso de prisma y de vitest: un archivo fijo del repo (ver «los falsos», abajo). */
+const REGISTRADOR = fileURLToPath(new URL("./falsos/registrador", import.meta.url));
+/** Tope de la primera ejecución del falso en un clon nuevo: con el Mac cargado, la revisión tarda segundos. */
+const TOPE_PRIMERA_EJECUCION_MS = 60_000;
 const URL_PRUEBA = "postgresql://ficticio:ficticio@localhost:5438/inversiones_ficticio_test?schema=public";
 const BLOB = "node_modules/.cache/cobertura-blobs/integracion.json";
 const FLAGS_UNIDA = ["--coverage", "--reporter=default", "--reporter=blob", `--outputFile.blob=${BLOB}`];
@@ -20,6 +24,20 @@ afterAll(() => {
   for (const dir of temporales) rmSync(dir, { recursive: true, force: true });
 });
 
+// La primera ejecución del falso en un clon recién sacado pasa por la revisión de macOS: se paga aquí, una vez y
+// con su propio tope, y no dentro del tope de 5 s de un caso. Ya revisado, cuesta milisegundos.
+beforeAll(async () => {
+  const { status, stderr } = await new Promise<{ status: number | null; stderr: string }>((ok, mal) => {
+    const env = { PATH: process.env.PATH ?? "", FALSO_REGISTRO: "/dev/null" } as unknown as NodeJS.ProcessEnv;
+    const hijo = spawn(REGISTRADOR, ["calentar"], { env, stdio: ["ignore", "ignore", "pipe"] });
+    let stderr = "";
+    hijo.stderr.on("data", (c: Buffer) => (stderr += c));
+    hijo.on("error", mal);
+    hijo.on("close", (status: number | null) => ok({ status, stderr }));
+  });
+  expect(status, `el falso registrador no corre: ${stderr}`).toBe(0);
+}, TOPE_PRIMERA_EJECUCION_MS);
+
 /** Copia el script a un directorio temporal con `node_modules/.bin/{prisma,vitest}` falsos que registran cada llamada. */
 function preparar(): { dir: string; registro: string } {
   const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "inv-008-integracion-")));
@@ -30,11 +48,8 @@ function preparar(): { dir: string; registro: string } {
   copyFileSync(SCRIPT, path.join(dir, "scripts", "integracion.mjs"));
   const registro = path.join(dir, "registro.txt");
   writeFileSync(registro, "");
-  for (const nombre of ["prisma", "vitest"]) {
-    const falso = path.join(bin, nombre);
-    writeFileSync(falso, `#!/usr/bin/env bash\n(IFS=$'\\t'; printf '%s\\n' "${nombre}"$'\\t'"$*") >> "$FALSO_REGISTRO"\n`);
-    chmodSync(falso, 0o755);
-  }
+  // Enlaces al falso fijo, no ejecutables nuevos: el falso registra el nombre con el que se le llamó.
+  for (const nombre of ["prisma", "vitest"]) symlinkSync(REGISTRADOR, path.join(bin, nombre));
   return { dir, registro };
 }
 
@@ -61,6 +76,24 @@ function correr(args: string[], url = URL_PRUEBA): Promise<Resultado> {
 
 const RESET = ["prisma", "migrate", "reset", "--force", "--skip-generate", "--skip-seed"];
 const VITEST = ["vitest", "run", "--config", "vitest.integracion.config.ts"];
+
+/** Identidad del archivo que se ejecuta (sigue los enlaces): dispositivo e inodo. */
+const idArchivo = (ruta: string) => {
+  const s = statSync(ruta);
+  return `${s.dev}:${s.ino}`;
+};
+
+describe("scripts/integracion.mjs · los falsos", () => {
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila
+  // para todo el Mac: con la máquina cargada son segundos por archivo, y un caso con dos falsos nuevos se
+  // pasaba del tope de 5 s. Por eso los falsos son un archivo fijo del repo, el mismo en todos los casos.
+  it("prisma y vitest son el mismo ejecutable en todos los casos: no se crea uno nuevo por caso", () => {
+    const [a, b] = [preparar(), preparar()];
+    for (const nombre of ["prisma", "vitest"]) {
+      expect(idArchivo(path.join(b.dir, "node_modules", ".bin", nombre)), nombre).toBe(idArchivo(path.join(a.dir, "node_modules", ".bin", nombre)));
+    }
+  });
+});
 
 describe("scripts/integracion.mjs · argumentos", () => {
   it("sin argumentos: reinicia la base de pruebas y corre la integración igual que siempre", async () => {

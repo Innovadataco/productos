@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Falso de prisma y de vitest para integracion-argumentos.test.ts, que lo enlaza con esos nombres en
+# node_modules/.bin: registra su nombre y sus argumentos, separados por tabulador, en $FALSO_REGISTRO.
+linea="${0##*/}"; for a in "$@"; do linea="$linea"$'\t'"$a"; done; printf '%s\n' "$linea" >>"$FALSO_REGISTRO"

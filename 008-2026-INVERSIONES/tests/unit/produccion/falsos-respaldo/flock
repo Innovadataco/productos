@@ -1,0 +1,6 @@
+#!/bin/sh
+# flock de verdad en el Mac (que no lo trae) y en Linux: flock(2) con perl sobre el descriptor heredado, con la interfaz de BusyBox que usa la imagen (-n, -u y -x; sin -w). El candado queda tomado mientras el descriptor siga abierto en el proceso que lo pidió, como con el flock real.
+l="flock"; for a in "$@"; do l="$l|$a"; done; printf '%s\n' "$l" >>"$FALSO_REGISTRO"
+modo=LOCK_EX; nb=0
+while [ $# -gt 1 ]; do case "$1" in -n) nb=1 ;; -u) modo=LOCK_UN ;; -x) ;; *) break ;; esac; shift; done
+exec perl -e 'use Fcntl qw(:flock); open(my $fh, ">&=", $ARGV[0]) or exit 2; my $op = $ARGV[1] eq "LOCK_UN" ? LOCK_UN : (LOCK_EX | ($ARGV[2] ? LOCK_NB : 0)); exit(flock($fh, $op) ? 0 : 1)' "$1" "$modo" "$nb"

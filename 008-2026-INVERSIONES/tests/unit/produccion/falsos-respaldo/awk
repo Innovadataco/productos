@@ -1,0 +1,4 @@
+#!/bin/sh
+# awk que, con FALSO_AWK_MUERE, imprime la última línea de su entrada (el respaldo más viejo) y muere: un cálculo de retención cortado a mitad. Sin la variable, el del sistema.
+l="awk"; for a in "$@"; do l="$l|$a"; done; printf '%s\n' "$l" >>"$FALSO_REGISTRO"
+[ -z "${FALSO_AWK_MUERE:-}" ] || { tail -n 1; exit 1; }; for d in /usr/bin /bin; do [ -x "$d/awk" ] && exec "$d/awk" "$@"; done; exit 127
