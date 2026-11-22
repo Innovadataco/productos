@@ -83,6 +83,8 @@ case "${1:-} ${2:-}" in
     case "$fmt" in
       *.Id*) printf '%s\n' "${FALSO_ID:-sha256:0000000000000000000000000000000000000000000000000000000000000000}" ;;
       *.Architecture*) printf '%s\n' "${FALSO_ARQ:-amd64}" ;;
+      # El ENV de la imagen de la app (lo que el servicio de precios puede tener además de DATABASE_URL y TZ).
+      *Config.Env*) printf '%b' "${FALSO_ENV_IMAGEN-PATH=/usr/local/bin\nNODE_VERSION=22.23.5\nYARN_VERSION=1.22.22\nNODE_ENV=production\nHOSTNAME=0.0.0.0\nPORT=5008\nAPP_VERSION=ficticia\nNEXT_TELEMETRY_DISABLED=1\nCHECKPOINT_DISABLE=1\nPRISMA_HIDE_UPDATE_MESSAGE=1\n}" ;;
       *revision*)
         case "$ref" in
           inv-008-migrador:*) printf '%s\n' "${FALSO_SHA_MIGRADOR:-${FALSO_SHA:-}}" ;;

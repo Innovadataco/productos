@@ -110,6 +110,13 @@ describe("desplegar-prod.sh · servicio de precios: se levanta y se verifica sol
     for (const dato of [CLAVE, "postgresql://inv_precios", "connection_limit"]) expect(`${r.stdout}${r.stderr}`).not.toContain(dato);
   });
 
+  it("con xtrace (SHELLOPTS=xtrace, como un `bash -x` a mano), la clave del servicio tampoco sale (revisión de seguridad M1)", async () => {
+    const p = preparar(CON_SERVICIO, { SHELLOPTS: "xtrace" });
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.stderr).toContain("+ ");
+    expect(`${r.stdout}${r.stderr}`).not.toContain(CLAVE);
+  });
+
   it("sin el secreto (DATABASE_URL vacía): despliega y avisa que el servicio queda en espera", async () => {
     const p = preparar(CON_SERVICIO, { FALSO_ENV_PRECIOS: "TZ=America/Bogota\\nDATABASE_URL=\\n" });
     const r = await correr(p.script, [ID], p.env);
@@ -141,6 +148,10 @@ describe("desplegar-prod.sh · servicio de precios: se levanta y se verifica sol
     ["con el token de Telegram en su entorno", { FALSO_ENV_PRECIOS: `TZ=America/Bogota\\nTELEGRAM_BOT_TOKEN=${CLAVE}\\nDATABASE_URL=\\n` }, /variables que no son suyas: TELEGRAM_BOT_TOKEN/],
     ["con una clave de cifrado en su entorno", { FALSO_ENV_PRECIOS: `CIFRADO_CLAVE_V1=${CLAVE}\\nDATABASE_URL=\\n` }, /variables que no son suyas: CIFRADO_CLAVE_V1/],
     ["con la credencial de otro rol", { FALSO_ENV_PRECIOS: `DATABASE_URL=postgresql://inv_app:${CLAVE}@inv-008-db:5432/inversiones\\n` }, /no es la de inv_precios/],
+    // Lista blanca (revisión de seguridad M2 y de código M3): solo las de la imagen, DATABASE_URL y TZ.
+    ["con PGPASSWORD en su entorno (cambiaría el rol real)", { FALSO_ENV_PRECIOS: `PGPASSWORD=${CLAVE}\\nDATABASE_URL=\\n` }, /variables que no son suyas: PGPASSWORD/],
+    ["con una variable cualquiera que no es de la imagen", { FALSO_ENV_PRECIOS: `AWS_SECRET_ACCESS_KEY=${CLAVE}\\nTZ=America/Bogota\\n` }, /variables que no son suyas: AWS_SECRET_ACCESS_KEY/],
+    ["con la credencial de inv_precios en otro host", { FALSO_ENV_PRECIOS: `DATABASE_URL=postgresql://inv_precios:${CLAVE}@ejemplo.invalid:5432/inversiones\\n` }, /no es la de inv_precios en inv-008-db/],
   ];
   for (const [caso, falso, dice] of fallas) {
     it(`${caso}: no da el despliegue por verificado y lo dice, sin imprimir la clave`, async () => {
