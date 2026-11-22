@@ -2,7 +2,8 @@
 // (docker/migrador/cargar.sh → /usr/local/bin/inv-cargar). El sobre llega por stdin:
 //   - una cabecera de EXACTAMENTE 4096 bytes: un argumento por línea, una línea vacía y relleno de líneas vacías;
 //     lleva --bytes N y --sha256 H del cuerpo (los consume inv-cargar, no pasan al CLI);
-//   - el cuerpo (solo importar-trii e importar-plan).
+//   - el cuerpo: importar-trii, importar-plan, importar-certificacion, corregir-corte-certificacion, importar-precios,
+//     importar-valores-fondo, importar-series e importar-decretos (cada uno con su tope; docker/migrador/cargar.sh).
 // inv-cargar comprueba que el contenedor no use swap, deja el cuerpo en un temporal 600 dentro de una carpeta
 // 700 del tmpfs, corre el CLI y lo borra siempre (también si el CLI falla o llega una señal). En el argv solo va
 // el nombre del comando: los parámetros nunca pasan por la línea de comandos del host.

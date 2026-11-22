@@ -82,12 +82,13 @@ El PDF no trae la fecha de corte en el texto: usted la da. Un PDF bajado durante
 
 Este repo es público: aquí no hay datos reales. Los datos de prueba están inventados y marcados `.ficticio.`.
 
-## Proyecciones (motor, sin pantalla)
-- Módulo de dominio puro en `src/proyecciones/`, con su lector de solo lectura en el servidor. No tiene comando ni pantalla: en `main` todavía no hay pantalla de proyecciones. Su punto de entrada es `proyectar(db, entrada)`.
+## Proyecciones (motor y pantalla)
+- Módulo de dominio puro en `src/proyecciones/`, con su lector de solo lectura en el servidor. No tiene comando. Su pantalla es `/proyecciones` (el simulador, en `src/app/proyecciones/`), con su lector de solo lectura. Su punto de entrada es `proyectar(db, entrada)`.
 - Entrada: el portafolio vigente, los cierres vigentes de los últimos 10 años como máximo, los dividendos, los decretos y los parámetros del escenario (que no se guardan).
 - Salida: JSON con percentiles por mes, la probabilidad de terminar bajo lo aportado, la caída máxima mediana, los supuestos y el aviso «Escenario ilustrativo, no es recomendación ni promesa.».
-- Pruebas: `npx vitest run tests/unit/proyecciones` (incluye `rendimiento.test.ts`).
+- Pruebas: `npx vitest run tests/unit/proyecciones` (incluye `rendimiento.test.ts`) y el e2e `tests/e2e/proyecciones.spec.ts`.
 
 ---
+> v1.3 · 2026-11-22 · 06:28 (-05) · INV · Fábrica Inversiones (frente datos-oficiales-docs, C8) · la sección de proyecciones: hay pantalla `/proyecciones` y su e2e (v1.3 sobre la v1.2 de main)
 > v1.2 · 2026-11-21 · 23:28 (-05) · INV · Fábrica Inversiones (frente docs-tanda-21nov) · salidas de `escision:registrar` y `lote:escision` con el siguiente paso; sección de proyecciones (motor, sin pantalla) (v1.2 sobre la v1.1)
 > v1.1 · 2026-11-21 · 20:26 (-05) · INV · Fábrica Inversiones (frente certificacion-corte-real) · primer pie de versión · certificación de A&V: el corte real (FECHA_CORTE_ANTES_DEL_CIERRE, CORTE_NO_COINCIDE, fecha_corte_dudosa) y su corrección con `corregir-corte-certificacion`
