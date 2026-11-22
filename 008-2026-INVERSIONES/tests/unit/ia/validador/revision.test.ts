@@ -156,3 +156,55 @@ describe("vocabulario cerrado (re-revisión de seguridad)", () => {
     expect(rechazo(...FRASES_VALIDAS.DIARIO).patrones).toEqual([]);
   });
 });
+
+/** Tercera pasada de seguridad: vocabulario por tipo, palabras de doble uso, condicional solo en ESCENARIOS. */
+describe("tercera pasada: vocabulario del tipo y palabras de doble uso", () => {
+  const escenarios = paqueteFicticio("ESCENARIOS");
+  const reglas = paqueteFicticio("REGLAS");
+  const enEscenarios = (...plantillas: string[]): readonly string[] => {
+    const r = validarSalida(salidaDe(escenarios, ...plantillas), escenarios);
+    return r.ok ? [] : r.hallazgos.map((h) => h.patron);
+  };
+
+  it.each([
+    "El valor de las acciones es alto {VALOR_ACCIONES}.", "El valor de las acciones subió a {VALOR_ACCIONES}, con un riesgo alto.",
+    "El valor de las acciones subió a {VALOR_ACCIONES}, con riesgo bajo.", "El valor de las acciones subió a {VALOR_ACCIONES}, un precio justo.",
+    "El valor de las acciones baja a {VALOR_ACCIONES}.", "El valor de las acciones subió a {VALOR_ACCIONES}, con baja.",
+    "El valor de las acciones tuvo una caída a {VALOR_ACCIONES}.", "El valor de las acciones subió a {VALOR_ACCIONES}, el mismo cambio.",
+  ])("DIARIO, palabra de otro tipo o de doble uso: «%s» se rechaza", (plantilla) => {
+    expect(rechazo(plantilla).motivos.length).toBeGreaterThan(0);
+  });
+
+  it("«más que» es un comparativo y «tocó fondo» una bajada (contra un hecho que sube)", () => {
+    expect(rechazo("El valor de las acciones subió a {VALOR_ACCIONES}, más que el precio.").patrones).toContain("DIRECCION.COMPARATIVO");
+    expect(rechazo("El valor de las acciones tocó fondo en {VALOR_ACCIONES}.").patrones).toContain("DIRECCION.BAJA_VERBO");
+  });
+
+  it("«no cambio» sin tilde es estabilidad (contra un hecho que baja)", () => {
+    expect(rechazo(VA, "La ganancia total no cambio, es {GANANCIA_TOTAL}.").patrones).toContain("DIRECCION.IGUAL");
+  });
+
+  it("ESCENARIOS: «alto» o «caída» sobre un dato que no es el suyo es ETIQUETA.DOBLE_USO", () => {
+    expect(enEscenarios("En el escenario central a corto plazo, el valor es alto, {ESCENARIO_CENTRAL_CORTO}.")).toContain("ETIQUETA.DOBLE_USO");
+    expect(enEscenarios("La probabilidad de terminar por debajo de lo aportado tuvo una caída, {PROBABILIDAD_BAJO_APORTADO}.")).toContain("ETIQUETA.DOBLE_USO");
+  });
+
+  it("«sin vender» fuera de la ganancia sin vender es ETIQUETA.DOBLE_USO", () => {
+    expect(rechazo("Para usted, sin vender, el valor de las acciones es {VALOR_ACCIONES}.").patrones).toContain("ETIQUETA.DOBLE_USO");
+    expect(rechazo("El valor de las acciones es {VALOR_ACCIONES}, sin vender.").patrones).toContain("ETIQUETA.DOBLE_USO");
+  });
+
+  it.each(["quedaría en", "llegaría a", "alcanzaría", "tendría", "sería"])("DIARIO y REGLAS: el condicional «%s» se rechaza", (verbo) => {
+    expect(rechazo(`El valor de las acciones ${verbo} {VALOR_ACCIONES}.`).patrones).toContain("IDIOMA.VOCABULARIO");
+    const r = validarSalida(salidaDe(reglas, `{ESPECIE_NOMBRE}: la distancia al nivel de la regla ${verbo} {REGLA_DISTANCIA}.`), reglas);
+    expect(r.ok ? [] : r.hallazgos.map((h) => h.patron)).toContain("IDIOMA.VOCABULARIO");
+  });
+
+  it("ESCENARIOS: el condicional sí se admite (control positivo)", () => {
+    expect(enEscenarios(...FRASES_VALIDAS.ESCENARIOS)).toEqual([]);
+  });
+
+  it.each(["Suma", "Cuenta", "Paga", "Marca", "Registra", "Muestra", "Cierra"])("«%s …» al inicio de la frase es un imperativo de tú", (verbo) => {
+    expect(rechazo(`${verbo} el valor de las acciones, que subió a {VALOR_ACCIONES}.`).patrones).toContain("TRATO.IMPERATIVO_INICIAL");
+  });
+});

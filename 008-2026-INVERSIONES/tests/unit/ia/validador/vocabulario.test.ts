@@ -10,27 +10,27 @@ import { TIPOS_RESUMEN } from "@/ia/contrato";
 import { coincidencias } from "@/ia/validador/patron";
 import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA, PATRONES_SIN_DATO } from "@/ia/validador/patrones-lengua";
 import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "@/ia/validador/patrones-redaccion";
-import { PALABRAS_BASE, palabrasFueraDelVocabulario } from "@/ia/validador/vocabulario";
+import { CONDICIONALES, PALABRAS_BASE, palabrasFueraDelVocabulario } from "@/ia/validador/vocabulario";
 import { FRASES_VALIDAS, frase, paqueteFicticio } from "./apoyo/salidas.ficticio";
 
 const PROHIBIDOS = [...PATRONES_RECOMENDACION, ...PATRONES_PREDICCION, ...PATRONES_TRATO, ...PATRONES_CIFRA_EN_PALABRAS, ...PATRONES_IDIOMA, ...PATRONES_SIN_DATO];
 
 describe("vocabulario cerrado", () => {
   it.each(TIPOS_RESUMEN)("%s: cada etiqueta del catálogo cabe en el vocabulario", (tipo) => {
-    for (const entrada of Object.values(CATALOGO[tipo])) expect([entrada.etiqueta, palabrasFueraDelVocabulario(entrada.etiqueta)]).toEqual([entrada.etiqueta, []]);
+    for (const entrada of Object.values(CATALOGO[tipo])) expect([entrada.etiqueta, palabrasFueraDelVocabulario(entrada.etiqueta, tipo)]).toEqual([entrada.etiqueta, []]);
   });
 
-  it.each(TIPOS_RESUMEN)("%s: las frases válidas de las pruebas caben en el vocabulario", (tipo) => {
+  it.each(TIPOS_RESUMEN)("%s: las frases válidas de las pruebas caben en el vocabulario de su tipo", (tipo) => {
     const paquete = paqueteFicticio(tipo);
     for (const plantilla of FRASES_VALIDAS[tipo]) {
       const { texto } = frase(paquete, plantilla);
-      expect([texto, palabrasFueraDelVocabulario(texto)]).toEqual([texto, []]);
+      expect([texto, palabrasFueraDelVocabulario(texto, tipo)]).toEqual([texto, []]);
     }
   });
 
-  it("ninguna palabra de la lista base dispara un patrón prohibido", () => {
+  it("ninguna palabra de la lista base ni del condicional dispara un patrón prohibido", () => {
     expect(PALABRAS_BASE.length).toBeGreaterThan(41);
-    for (const palabra of PALABRAS_BASE) expect([palabra, coincidencias(palabra, PROHIBIDOS)]).toEqual([palabra, []]);
+    for (const palabra of [...PALABRAS_BASE, ...CONDICIONALES]) expect([palabra, coincidencias(palabra, PROHIBIDOS)]).toEqual([palabra, []]);
   });
 
   it("la lista base está congelada, en minúsculas, sin tildes y sin repetir", () => {
@@ -40,8 +40,20 @@ describe("vocabulario cerrado", () => {
   });
 
   it("control positivo: una palabra de fuera se nombra (una vez), las de dentro no; plurales, singulares, tildes y mayúsculas cuentan", () => {
-    expect(palabrasFueraDelVocabulario("El valor de las acciones es favorable y favorable.")).toEqual(["favorable"]);
-    expect(palabrasFueraDelVocabulario("La acción y las especies; la Especie y las ACCIONES; las especies atrasadas.")).toEqual([]);
-    expect(palabrasFueraDelVocabulario("Subió, bajó y se mantuvo {H03}.")).toEqual([]);
+    expect(palabrasFueraDelVocabulario("El valor de las acciones es favorable y favorable.", "DIARIO")).toEqual(["favorable"]);
+    expect(palabrasFueraDelVocabulario("La acción y las especies; la Especie y las ACCIONES; las especies atrasadas.", "DIARIO")).toEqual([]);
+    expect(palabrasFueraDelVocabulario("Subió, bajó y se mantuvo {H03}, a la baja.", "DIARIO")).toEqual([]);
+  });
+
+  it("el vocabulario es el del tipo: una palabra de otro tipo no vale; las de una marca solo dentro de la marca", () => {
+    expect(palabrasFueraDelVocabulario("El escenario alto.", "DIARIO")).toEqual(["escenario", "alto"]);
+    expect(palabrasFueraDelVocabulario("El escenario alto.", "ESCENARIOS")).toEqual([]);
+    expect(palabrasFueraDelVocabulario("Con baja y el mismo dato.", "DIARIO")).toEqual(["baja", "mismo"]);
+  });
+
+  it("el condicional solo vale en ESCENARIOS", () => {
+    expect(palabrasFueraDelVocabulario("El valor quedaría.", "DIARIO")).toEqual(["quedaria"]);
+    expect(palabrasFueraDelVocabulario("El valor quedaría.", "REGLAS")).toEqual(["quedaria"]);
+    expect(palabrasFueraDelVocabulario("El valor quedaría.", "ESCENARIOS")).toEqual([]);
   });
 });
