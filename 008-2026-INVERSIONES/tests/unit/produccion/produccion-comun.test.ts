@@ -6,18 +6,20 @@
 //  - la carpeta de respaldos sale de la configuración no secreta <raíz>/inv-008.conf, validada;
 //  - lectura del archivo de producción sin ejecutarlo, y detección de un despliegue de PI en curso.
 // Ninguna prueba usa rutas reales del VPS: todo es temporal o ficticio.
-import { chmodSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { userInfo } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { realpathSync } from "node:fs";
-import { arbolProduccionFalso, carpetaTemporal, confFicticia, DIR_008, envProduccionFicticio, funcion, leer008, ruta008 } from "./falsos";
+import { arbolProduccionFalso, carpetaTemporal, confFicticia, DIR_008, envProduccionFicticio, funcion, idArchivo, leer008, ruta008, rutaEnPath } from "./falsos";
 const readFileSync008 = leer008;
 
 // Cada prueba corre scripts de bash con varios procesos: con la suite en paralelo puede pasar de 5 s.
 vi.setConfig({ testTimeout: 60_000 });
 
 const COMUN = ruta008("scripts/produccion-comun.sh");
+/** El findmnt falso: un archivo fijo del repo (ver «montaje del host», abajo). */
+const FINDMNT_FALSO = ruta008("tests/unit/produccion/falsos-montaje/findmnt");
 const env = (extra: Record<string, string>) => {
   const limpio = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("INV_")));
   return { ...limpio, ...extra };
@@ -337,19 +339,29 @@ describe("configuración no secreta · la carpeta de respaldos (inv-008.conf)", 
 // de respaldos, que hace el CEO de PI. Mientras no lo confirme, los scripts AVISAN (no bloquean); volverlo fatal es
 // cambiar una constante (INV_MONTAJE_RESPALDOS_FATAL=1).
 describe("montaje del host de la carpeta de respaldos · nosuid y noexec (por ahora avisa)", () => {
+  /** findmnt falso versionado: registra la llamada en `<dir>/registro.txt` e imprime `opciones`. */
   const findmntFalso = (opciones: string | null) => {
     const dir = carpetaTemporal("findmnt");
-    const bin = path.join(dir, "bin");
-    mkdirSync(bin);
-    // null: un findmnt que falla sin imprimir nada (el VPS no puede leer el montaje).
-    const cuerpo = opciones === null ? "exit 1" : `printf '%s\\n' '${opciones}'`;
-    writeFileSync(path.join(bin, "findmnt"), `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >"${dir}/args.txt"\n${cuerpo}\n`, { mode: 0o755 });
-    return { dir, env: env({ PATH: `${bin}:/usr/bin:/bin` }) };
+    // null: un findmnt que falla sin imprimir nada (el VPS no puede leer el montaje). Sus opciones serían las buenas:
+    // si el falso no fallara, el caso no avisaría. Las tres variables siempre: env() no limpia las FALSO_* heredadas.
+    const falso = {
+      FALSO_REGISTRO: path.join(dir, "registro.txt"),
+      FALSO_FINDMNT_OPCIONES: opciones ?? "rw,nosuid,nodev,noexec,relatime",
+      FALSO_FINDMNT_RC: opciones === null ? "1" : "0",
+    };
+    return { dir, env: env({ PATH: `${path.dirname(FINDMNT_FALSO)}:/usr/bin:/bin`, ...falso }) };
   };
   const revisar = (opciones: string | null, extra = "") => {
     const f = findmntFalso(opciones);
     return { ...f, r: funcion(COMUN, `${extra} revisar_montaje_respaldos /srv/respaldos-ficticios; echo sigue`, f.env) };
   };
+
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo. Por eso findmnt es un archivo fijo del repo.
+  it("findmnt es el falso versionado (falsos-montaje/findmnt), el mismo archivo en todas las pruebas: no se crea uno nuevo", () => {
+    const versionado = idArchivo(FINDMNT_FALSO);
+    for (const opciones of ["rw,nosuid,noexec", null]) expect(idArchivo(rutaEnPath(findmntFalso(opciones).env, "findmnt")), String(opciones)).toBe(versionado);
+  });
 
   it("faltan_opciones_montaje: nombra solo las que faltan, por opción entera", () => {
     const faltan = (o: string) => funcion(COMUN, `faltan_opciones_montaje "${o}"`).stdout.trim();
@@ -368,8 +380,8 @@ describe("montaje del host de la carpeta de respaldos · nosuid y noexec (por ah
     expect(r.status, r.stderr).toBe(0);
     expect(r.stdout).toContain("sigue");
     expect(r.stderr).toBe("");
-    // Lee el montaje que contiene la carpeta (findmnt -T), solo sus opciones: no toca nada.
-    expect(funcion(COMUN, `cat "${dir}/args.txt"`).stdout.trim()).toBe("-no OPTIONS -T /srv/respaldos-ficticios");
+    // Lee el montaje que contiene la carpeta (findmnt -T), solo sus opciones: no toca nada. Una sola llamada.
+    expect(readFileSync(path.join(dir, "registro.txt"), "utf8")).toBe("findmnt\t-no\tOPTIONS\t-T\t/srv/respaldos-ficticios\n");
   });
 
   it("sin nosuid ni noexec, en modo aviso: avisa nombrando las que faltan y SIGUE (no bloquea el despliegue)", () => {

@@ -6,13 +6,13 @@
 // temporales y sin repetir valores. El tope del sobre es el del CLI (una sola fuente).
 // Correo, código del fondo, fechas y cifras inventados (no redondos; 2027).
 import { spawn } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { leerArgumentosRendimientos } from "@/fondo/rendimientos/argumentos";
 import { MAX_BYTES_RENDIMIENTOS } from "@/fondo/rendimientos/csv";
-import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, ruta008, type Entorno } from "./falsos";
+import { appCargarFalsa, carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, idArchivo, ruta008, TSX_CARGAR_FALSO, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -48,37 +48,20 @@ function ejecutar(programa: string, args: string[], env: Entorno, entrada: Buffe
   });
 }
 
-/** Un /app falso con un tsx que registra su argv (una línea, separado por tabuladores), los permisos y el sha del temporal. */
+/** Un /app falso propio de la prueba, con el tsx versionado (falsos-cargar/tsx), que registra su argv, el cwd, los permisos y el sha del temporal. */
 function preparar() {
   const dir = carpetaTemporal("cargar-rendimientos-fondo");
-  const app = path.join(dir, "app");
+  const app = appCargarFalsa(dir);
   const tmp = path.join(dir, "tmp");
-  mkdirSync(path.join(app, "node_modules", ".bin"), { recursive: true });
   mkdirSync(tmp);
   const registro = path.join(dir, "tsx.txt");
-  const tsx = path.join(app, "node_modules", ".bin", "tsx");
-  writeFileSync(
-    tsx,
-    [
-      "#!/usr/bin/env bash",
-      'printf "argv" >>"$FALSO_TSX_REGISTRO"; for a in "$@"; do printf "\\t%s" "$a" >>"$FALSO_TSX_REGISTRO"; done; printf "\\n" >>"$FALSO_TSX_REGISTRO"',
-      'for a in "$@"; do case "$a" in */inv-carga.*/*)',
-      '  printf "archivo\\t%s\\t%s\\n" "$(ls -l "$a" | cut -c1-10)" "$(ls -ld "$(dirname "$a")" | cut -c1-10)" >>"$FALSO_TSX_REGISTRO"',
-      '  if command -v sha256sum >/dev/null 2>&1; then h="$(sha256sum "$a")"; else h="$(shasum -a 256 "$a")"; fi',
-      '  printf "sha\\t%s\\n" "${h%% *}" >>"$FALSO_TSX_REGISTRO" ;;',
-      "esac; done",
-      'exit "${FALSO_TSX_RC:-0}"',
-      "",
-    ].join("\n"),
-  );
-  chmodSync(tsx, 0o755);
   const swap = path.join(dir, "memory.swap.max");
   writeFileSync(swap, "0\n");
   const env: Entorno = { PATH: process.env.PATH, INV_CARGAR_APP: app, INV_CARGAR_TMP: tmp, INV_CARGAR_SWAP: swap, FALSO_TSX_REGISTRO: registro };
   const llamadas = () => (existsSync(registro) ? readFileSync(registro, "utf8").trim().split("\n").map((l) => l.split("\t")) : []);
   const argv = () => llamadas().find((l) => l[0] === "argv")?.slice(1) ?? null;
   const carga = (comando: string, sobreDe: Buffer, extra: Entorno = {}) => ejecutar("sh", [CARGAR, comando], { ...env, ...extra }, sobreDe);
-  return { tmp, llamadas, argv, carga };
+  return { app, tmp, llamadas, argv, carga };
 }
 
 /** Sobre armado a mano: cabecera de 4096 bytes (los argumentos, una línea vacía y relleno) y el cuerpo. */
@@ -111,6 +94,15 @@ async function seNiega(entrada: Buffer, datos: readonly string[] = DATOS, comand
   for (const dato of datos) expect(r.stdout + r.stderr).not.toContain(dato);
   return r.stderr;
 }
+
+describe("inv-cargar · el tsx falso del /app", () => {
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo. Por eso el tsx es un archivo fijo del repo
+  // (falsos-cargar/tsx), el mismo en todas las pruebas; el /app sí es propio de cada una.
+  it("el tsx del /app es el versionado, el mismo archivo en todas las pruebas: no se crea uno nuevo", () => {
+    for (const p of [preparar(), preparar()]) expect(idArchivo(path.join(p.app, "node_modules", ".bin", "tsx"))).toBe(idArchivo(TSX_CARGAR_FALSO));
+  });
+});
 
 describe("inv-cargar · registrar-rendimientos-fondo: el CSV en rendimientos-fondo.csv, --email, --fondo y, si viene, --aplicar (orden fijo)", () => {
   for (const [nombre, cabecera, aplicar] of [
