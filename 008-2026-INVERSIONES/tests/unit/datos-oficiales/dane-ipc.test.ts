@@ -152,6 +152,21 @@ describe("leerAnexoIpc · textos compartidos", () => {
     expect(leer({ textos: (x) => x.replace(`<si><t>${TITULO}</t></si>`, conFonetica) })).toMatchObject({ ok: true });
   });
 
+  it("un <t> de otro espacio de nombres dentro de <si> no cuenta (no se suma a la etiqueta)", () => {
+    const ajeno = '<x:t xmlns:x="urn:ficticio">FICT</x:t>';
+    expect(leer({ textos: (x) => x.replace("<si><t>Mes</t></si>", `<si><t>Mes</t>${ajeno}</si>`) })).toMatchObject({ ok: true });
+    expect(leer({ textos: (x) => x.replace("<si><t>Mes</t></si>", `<si>${ajeno}</si>`) })).toEqual(formato("MES"));
+  });
+
+  it('una celda t="s" sin <v> está vacía (un mes no publicado)', () => {
+    expect(leer({ valor: enMes(31, (r) => `<c r="${r}" s="14" t="s"/>`) })).toMatchObject({ ok: true, valores: { length: 31 } });
+  });
+
+  it("una relación sin Target: REL (la de la hoja) o SST (la de los textos)", () => {
+    expect(leer({ rels: (x) => x.replace(' Target="worksheets/sheet1.xml"', "") })).toEqual(formato("REL"));
+    expect(leer({ rels: (x) => x.replace(' Target="sharedStrings.xml"', "") })).toEqual(formato("SST"));
+  });
+
   it("un índice fuera de la lista o mal escrito: SST con la celda (dentro o fuera de la tabla)", () => {
     expect(leer({ mes: (m, r) => (m === 3 ? `<c r="${r}" t="s"><v>20</v></c>` : undefined) })).toEqual(formato("SST", "A13"));
     expect(leer({ mes: (m, r) => (m === 3 ? `<c r="${r}" t="s"><v>01</v></c>` : undefined) })).toEqual(formato("SST", "A13"));
