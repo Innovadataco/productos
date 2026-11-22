@@ -571,7 +571,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
   - Con **64** si `inv-cargar` se niega sin correr el CLI (uso, correo, swap, tamaño o sha256 del archivo): es distinto de los códigos de los CLI.
   - Con **1** si `cargar-prod.sh` se niega antes de correr (marca de pausa, candado común tomado o PI desplegando, sin sha registrado, comando fuera de la lista, árbol de root). El mensaje empieza por `[cargar-prod]`.
 - **Riesgo residual aceptado por el CEO:**
-  - qué: los parámetros (correo, especies, cifras de `registrar-escision` y `lote-escision`, código, clase y nombre del fondo de `registrar-fondo`) van en el argv del CLI **dentro** del contenedor, y root los ve con `ps` mientras corre;
+  - qué: los parámetros (correo, especies, cifras de `registrar-escision` y `lote-escision`, código, clase y nombre del fondo de `registrar-fondo`; correo, código del fondo, fecha, unidades y monto de `registrar-movimiento-fondo`) van en el argv del CLI **dentro** del contenedor, y root los ve con `ps` mientras corre;
   - no quedan en disco salvo que se active la auditoría de `execve` del host;
   - además, el sobre pasa por la memoria del host (sshd, el cliente de Docker y dockerd), que sí puede bajar al swap del host: el `memory.swap.max = 0` solo cubre el contenedor;
   - seguimiento: que los CLI lean sus parámetros desde stdin o desde un archivo.
@@ -592,6 +592,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 | 10 | El fondo (FIC), una sola vez y antes de la certificación, que lo exige registrado | `registrar-fondo` | `--codigo` y su código de la SFC, `--participacion` y su clase (si la tiene), `--nombre` y el nombre | — |
 | 11 | La certificación de A&V, que concilia y marca los cierres que faltan | `importar-certificacion` | `--email`, el correo, `--fecha-corte` y la fecha; `--fondo` y su código solo la primera vez | el PDF |
 | 12 | Los valores de unidad del fondo, con el del día del corte | `importar-valores-fondo` | vacía (`/dev/null`) | el CSV de valores que exportó el Mac (abajo) |
+| 12 bis | La constitución del fondo (unidades y aporte del extracto del FIC), una sola vez: primero en ensayo y después con `--aplicar` | `registrar-movimiento-fondo` | `--email` y el correo, `--fondo` y su código de la SFC, `--fecha` y el día, `--unidades` y `--monto` (abajo); `--aplicar` solo la segunda vez | — |
 | 13 | Los precios, que se verifican al escribir contra la certificación ya cargada | `importar-precios` | vacía (`/dev/null`) | el CSV de cierres que exportó el Mac (abajo) |
 | 14 | La conciliación otra vez, con los valores del fondo y los precios ya cargados | `conciliar-certificacion` | `--fecha-corte` y la fecha | — |
 | 15 | Solo si el corte no es el real (abajo, «El corte real de la certificación»): corregirlo y conciliar el corte real | `corregir-corte-certificacion` y después `conciliar-certificacion` | `--email`, el correo, `--fecha-corte` y la fecha con que se cargó, `--nueva-fecha-corte` y la sugerida; luego `--fecha-corte` y la sugerida | el MISMO PDF del paso 11; luego — |
@@ -642,7 +643,33 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
      9990001,907,2024-03-11,10001.25,500000000.1235
      9990001,907,2024-03-12,10002,
      ```
-   - **Las unidades del fondo** (cuántas tiene el dueño) no las carga este paso. Hoy ningún comando las registra en producción: sin ellas, el fondo queda en `fondo_sin_unidades` aunque el valor del corte esté (seguimiento, otro frente).
+   - **Las unidades del fondo** (cuántas tiene el dueño) no las carga este paso: las registra el paso 12 bis (abajo). Sin ellas, el fondo queda en `fondo_sin_unidades` aunque el valor del corte esté. **El CSV de este paso debe cubrir también el día de la constitución** (`--desde` ese día o antes): el paso 12 bis lo exige.
+
+**La constitución del fondo (paso 12 bis): las unidades y el aporte que dice el extracto del FIC.** Ningún archivo los trae: el CSV de caja de Trii solo tiene depósitos y retiros, y la certificación, el saldo al corte. Sin este paso, la conciliación dice `fondo_sin_unidades` (fondo) y `aporte_fic_sin_registrar` (efectivo).
+1. **La cabecera** (privada; valores inventados). Las cifras, tal cual el extracto: punto decimal, sin miles; unidades hasta 8 decimales y monto (lo que salió de la caja, en COP) hasta 4. Una sola fecha: la del cargo en caja y la asignación de las unidades.
+   ```text
+   --email
+   dueno@ejemplo.ficticio
+   --fondo
+   4613927
+   --fecha
+   2027-03-17
+   --unidades
+   1237.48215
+   --monto
+   5713946.2817
+   ```
+   ```sh
+   scripts/armar-sobre.sh <cabecera-de-la-constitucion> | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh registrar-movimiento-fondo
+   ```
+   - **Primero sin `--aplicar` (ensayo):** valida todo contra la base y no escribe. Si sale 0, se agrega `--aplicar` como última línea de la cabecera y se repite.
+   - `inv-cargar` admite solo `--email`, `--fondo` (de 1 a 12 dígitos), `--fecha` (`AAAA-MM-DD`), `--unidades` y `--monto` (dígitos con un punto, hasta 40 caracteres) y `--aplicar`, cada una una vez; las cinco primeras son obligatorias. Arma el argv de `scripts/registrar-movimiento-fondo.ts` en orden fijo. La precisión, el rango y la fecha los decide el CLI.
+2. **Qué hace** (`src/fondo/movimiento.ts`, el único camino que escribe estas tablas): en una transacción, el ajuste de caja (−monto, `APORTE_FIC`, fuente `EXTRACTO`) y la `CONSTITUCION` del fondo enlazada, de la misma fecha.
+   - **Lo que garantiza la base** (migración `movimiento_fondo_reglas`): una sola constitución por fondo; unidades y monto > 0; el ajuste enlazado es `APORTE_FIC`, de la misma fecha y con −monto; y las dos tablas son de solo inserción. Es un freno contra errores, no contra el dueño de la base (la salida `inv.reversion` existe): corregir será un ajuste compensatorio que decide el CEO de 008.
+   - **Lo que garantiza la app,** bajo un candado por fondo: que no haya movimientos del fondo anteriores a ese día y el contraste del valor de unidad (abajo). El contraste se hace con el valor vigente al registrar: si después el paso 12 trae una revisión de ese día, la constitución ya registrada no se vuelve a contrastar.
+   - **Contraste:** el monto debe ser unidades × el valor de unidad de la SFC **de ese mismo día**, con ±0,5 %. Si no cuadra (`MONTO_NO_CUADRA_CON_VALOR_UNIDAD`) o falta ese valor (`SIN_VALOR_UNIDAD_DEL_DIA`), se niega sin escribir nada. Se revisan en el extracto el día y el valor de unidad; no se fuerza.
+   - Repetirla con los mismos datos da «ya estaba registrada» y no escribe. Con otros datos, `CONSTITUCION_DISTINTA`: no se cambia (la corrección, si hace falta, será un ajuste aparte que decide el CEO de 008).
+3. **Salida:** 0 ensayo, registrada o ya existía · 1 error de la base o inesperado (no se sabe si quedó registrada: el CEO de 008 decide; repetir el mismo sobre no duplica, porque da «ya estaba registrada» o la registra) · 2 datos inválidos · 3 rechazado (no escribió nada) · 64 si `inv-cargar` se niega. Con cualquier salida distinta de 0, el CLI termina con «Vía B: pare la carga y avise al CEO de 008». Nunca imprime las cifras, el correo ni el código del fondo: solo ids internos y códigos.
 
 **Los precios (paso 13): se exportan en el Mac del dueño y viajan en el sobre.** Producción no tiene salida a internet: la app y el migrador no llegan a Yahoo.
 1. **En el Mac del dueño, que sí tiene red,** se exportan los cierres. La lista de nemotécnicos (uno por línea; `#` comenta) la crea el dueño en su carpeta privada. **La Fábrica lo corre con los símbolos del portafolio solo con orden del CEO Inversiones** (decisión del CEO, 2026-11-21): saca la lista de producción (acción activa con lotes) sin imprimirla, la deja con el CSV en una carpeta 700 (`umask 077`) y la borra al terminar, junto con el CSV. Para la Fábrica, `<carpeta-privada>` es esa carpeta 700 que ella crea: nunca escribe en la carpeta privada del dueño. Con la misma orden corre también el paso 2:
@@ -707,6 +734,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 - **`registrar-fondo` (paso 10):** imprime el id interno del fondo, «creado» o «ya existía» y la clase; nunca el código ni el nombre.
 - **`importar-certificacion` (paso 11):** puede rechazar el corte (arriba, «El corte real de la certificación»). Si carga, concilia al cargar; sin los cierres del día de corte, el valor sale `sin_precio_al_corte`, y el fondo, `fondo_sin_unidades` o `sin_valor_unidad_al_corte`. Es lo esperado: lo resuelven los pasos 12 a 14. Su «siguiente paso» en producción ya es este (vía B), no `precios:actualizar`.
 - **`importar-valores-fondo` (paso 12):** imprime `CSV de valores del fondo · filas · fondos` y el reporte de `actualizar-fondo` (valores nuevos y revisados, el último dato de cada fondo por su id interno).
+- **`registrar-movimiento-fondo` (paso 12 bis):** el ensayo imprime el id interno del fondo y «No se escribió nada»; con `--aplicar`, los ids del fondo, del movimiento y del ajuste de caja. Después, el fondo deja `fondo_sin_unidades` en la conciliación del paso 14, y el efectivo deja `aporte_fic_sin_registrar`: pasa a cuadrar o a `partida_sin_fuente`, la brecha que ningún archivo explica todavía.
 - **`importar-precios` (paso 13):** imprime `CSV de cierres · filas · especies` y el reporte de `precios:actualizar`. Si el CSV cubre el día de corte, «verificados en el rango» cuenta los cierres de ese día que cuadran (±1 %) con la certificación; uno que no cuadra queda NO_VERIFICADO y lo muestra la conciliación del paso 14. Con salida 3: especies sin acción activa con lotes (`ESPECIE_NO_REGISTRADA`, por su línea del CSV), otro símbolo de Yahoo registrado (`SIMBOLO_DISTINTO`), un fallo del guardado o un año sin calendario: se para y se avisa.
 - **`conciliar-certificacion` (paso 14):** guarda una conciliación nueva, ahora con los valores del fondo y los precios; la anterior queda en la historia. Con `fecha_corte_dudosa` y un día sugerido, sigue el paso 15.
 - **`corregir-corte-certificacion` (paso 15):** imprime qué se retiró y qué quedó (filas, cargas en `REVERTIDO`), los cierres re-verificados de cada día y el siguiente paso; nunca cifras, especies ni el correo.
@@ -726,6 +754,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.14 · 2026-11-21 · 22:05 (-05) · Inversiones · Fábrica Inversiones (frente fondo-movimientos-via-b; v2.14 sobre la v2.13 de main) · §11: paso 12 bis `registrar-movimiento-fondo` (la constitución del fondo por el sobre: cabecera, ensayo y `--aplicar`, contraste con el valor de unidad del mismo día, lo que garantiza la base y lo que garantiza la app, salidas y la frase de parar); el CSV del paso 12 cubre el día de la constitución; riesgo residual del argv con sus cifras
 > v2.13 · 2026-11-21 · 20:38 (-05) · Inversiones · Fábrica Inversiones (frente certificacion-corte-real) · §11: el corte real de la certificación (`FECHA_CORTE_ANTES_DEL_CIERRE`, `CORTE_NO_COINCIDE`, `fecha_corte_dudosa` con día sugerido), el paso 15 `corregir-corte-certificacion` por el sobre (lista blanca, qué deja, rechazos, conciliar el corte real) y reconciliar al desplegar por `conciliacion-v2` (la numeración v2.13 sigue a la v2.12 de main)
 > v2.12 · 2026-11-21 · 18:32 (-05) · Inversiones · Fábrica Inversiones (frente precios-integridad) · §2: `inv_precios` existe desde la primera corrida de `crear-roles-prod.sh` (NOLOGIN y sin clave sin su línea; quitarla lo desactiva), la restauración ya no depende de la línea (ensayada), los disparadores de `20261121231049_precios_integridad` y el riesgo residual completo; §4: permisos «si el rol existe»; §6 (A): `crear-roles-prod.sh` crea `inv_precios` y el guardián de una imagen anterior ve sobrantes; §10: las 4 migraciones con `lock_timeout`
 > v2.11 · 2026-11-21 · 17:48 (-05) · Inversiones · Fábrica Inversiones (frente fondo-carga) · §11: el fondo por la vía B: paso 10 `registrar-fondo` por el sobre (lista blanca), paso 12 los valores de unidad (`fondo:exportar` en el Mac con `umask 077` → `importar-valores-fondo` por el sobre, camino único), formato exacto del CSV, la regla T−2 (solo el valor del día del corte) y el hueco de las unidades del fondo; los pasos de los precios pasan de 10–12 a 11, 13 y 14 (la numeración v2.11 sigue a la v2.10 de main)

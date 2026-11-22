@@ -40,6 +40,18 @@ npm run lote:escision -- --destino <NEMO> --fecha-evento AAAA-MM-DD --cantidad <
 - Corra `lotes:construir` después de cada importación de órdenes. Si avisa `VENTA_SIN_LOTES`, a una especie le falta un lote (p. ej. el de una escisión); sus ventas quedan sin asignar hasta registrarlo.
 - El lote de escisión toma su costo del portal de Acciones & Valores y se enlaza al evento y al lote vivo más antiguo de la especie origen. El lote madre no se ajusta (se sigue al portal).
 
+## Constitución del fondo (unidades y aporte)
+```bash
+npx tsx scripts/registrar-movimiento-fondo.ts --email <su-correo> --fondo <código del fondo en la SFC> \
+  --fecha AAAA-MM-DD --unidades <n> --monto <n>             # ensayo: no escribe
+npx tsx scripts/registrar-movimiento-fondo.ts … --aplicar   # registra
+```
+- Las unidades y el aporte salen del extracto del FIC: ningún archivo los trae. Tal cual el extracto, con punto decimal y sin miles; nada se redondea (`NUMERO_PRECISION`).
+- Antes: el fondo registrado y el valor de unidad de la SFC **de ese día** cargado. El monto debe ser unidades × ese valor (±0,5 %); si no cuadra o falta, se niega sin escribir y dice qué revisar en el extracto.
+- Es una sola por fondo y no se edita: repetirla con los mismos datos no escribe nada; con otros, `CONSTITUCION_DISTINTA`.
+- Después, `conciliar-certificacion`: el fondo deja `fondo_sin_unidades` y el efectivo, `aporte_fic_sin_registrar`.
+- En producción va por la vía B (`cargar-prod.sh registrar-movimiento-fondo`, [runbook §11](docs/despliegue/produccion.md)).
+
 ## Precios de cierre (INV-SPEC-13)
 ```bash
 npm run precios:actualizar                       # últimos 10 días de las especies con lotes

@@ -52,6 +52,7 @@ case "$comando" in
   importar-valores-fondo) cli=scripts/importar-valores-fondo.ts archivo=valores-fondo.csv tope=$TOPE_VALORES_FONDO ;;
   registrar-escision) cli=scripts/registrar-escision.ts ;;
   registrar-fondo) cli=scripts/actualizar-fondo.ts ;;
+  registrar-movimiento-fondo) cli=scripts/registrar-movimiento-fondo.ts ;;
   lote-escision) cli=scripts/lote-escision.ts ;;
   construir-lotes) cli=scripts/construir-lotes.ts ;;
   conciliar-certificacion) cli=scripts/conciliar-certificacion.ts ;;
@@ -146,6 +147,14 @@ fondo_valido() {
 participacion_valida() {
   case "$1" in '' | *[!0-9]*) return 1 ;; esac
   [ "${#1}" -le 6 ]
+}
+# Unidades y monto de registrar-movimiento-fondo: solo la forma (dígitos, con un punto y dígitos a los dos lados; sin
+# signo, coma, exponente ni miles) y hasta MAX_DECIMAL caracteres. La precisión, el rango y el signo los decide el CLI
+# (validarConstitucion, en src/fondo/movimiento.ts, que quita los ceros sobrantes antes de contar).
+MAX_DECIMAL=40
+decimal_valido() {
+  case "$1" in '' | .* | *. | *[!0-9.]* | *.*.*) return 1 ;; esac
+  [ "${#1}" -le "$MAX_DECIMAL" ]
 }
 # El nombre del fondo: no vacío, sin «-» al inicio (el CLI lo tomaría por una opción), sin caracteres de control y
 # de hasta MAX_NOMBRE_FONDO bytes, contados en C (no dependen del locale ni del shell). Es un tope grueso: el CLI
@@ -268,6 +277,64 @@ else
     else
       set -- --registrar --codigo "$codigo" --nombre "$nombre"
     fi
+  fi
+  # registrar-movimiento-fondo (la constitución del fondo): lista blanca propia, cada opción una vez y las cinco con
+  # valor obligatorias. El contenedor arma `--email … --fondo … --fecha … --unidades … --monto … [--aplicar]` en ese
+  # orden; sin --aplicar, el CLI hace el ensayo. Ningún mensaje repite un valor (unidades y monto son datos del dueño).
+  if [ "$comando" = registrar-movimiento-fondo ]; then
+    correo=""
+    fondo=""
+    fecha=""
+    unidades=""
+    monto=""
+    aplicar=0
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --email)
+          [ -z "$correo" ] || falla "--email repetido"
+          if [ $# -lt 2 ] || ! correo_valido "$2"; then falla "--email necesita un correo válido (no una opción)"; fi
+          correo="$2"
+          shift 2
+          ;;
+        --fondo)
+          [ -z "$fondo" ] || falla "--fondo repetido"
+          if [ $# -lt 2 ] || ! fondo_valido "$2"; then falla "--fondo necesita el código numérico del fondo en la SFC (de 1 a 12 dígitos)"; fi
+          fondo="$2"
+          shift 2
+          ;;
+        --fecha)
+          [ -z "$fecha" ] || falla "--fecha repetido"
+          if [ $# -lt 2 ] || ! fecha_valida "$2"; then falla "--fecha necesita una fecha AAAA-MM-DD"; fi
+          fecha="$2"
+          shift 2
+          ;;
+        --unidades)
+          [ -z "$unidades" ] || falla "--unidades repetido"
+          if [ $# -lt 2 ] || ! decimal_valido "$2"; then falla "--unidades necesita un número con punto decimal (sin signo, coma, exponente ni miles; hasta $MAX_DECIMAL caracteres)"; fi
+          unidades="$2"
+          shift 2
+          ;;
+        --monto)
+          [ -z "$monto" ] || falla "--monto repetido"
+          if [ $# -lt 2 ] || ! decimal_valido "$2"; then falla "--monto necesita un número con punto decimal (sin signo, coma, exponente ni miles; hasta $MAX_DECIMAL caracteres)"; fi
+          monto="$2"
+          shift 2
+          ;;
+        --aplicar)
+          [ "$aplicar" = 0 ] || falla "--aplicar repetido"
+          aplicar=1
+          shift
+          ;;
+        *) falla "opción no permitida para registrar-movimiento-fondo (se admiten --email, --fondo, --fecha, --unidades, --monto y --aplicar)" ;;
+      esac
+    done
+    [ -n "$correo" ] || falla "falta --email <correo-del-dueño>"
+    [ -n "$fondo" ] || falla "falta --fondo <código del fondo en la SFC>"
+    [ -n "$fecha" ] || falla "falta --fecha AAAA-MM-DD"
+    [ -n "$unidades" ] || falla "falta --unidades <n>"
+    [ -n "$monto" ] || falla "falta --monto <n>"
+    set -- --email "$correo" --fondo "$fondo" --fecha "$fecha" --unidades "$unidades" --monto "$monto"
+    [ "$aplicar" = 0 ] || set -- "$@" --aplicar
   fi
   # conciliar-certificacion: lista blanca también aquí (defensa en profundidad; su CLI ya es estricto). Los otros
   # comandos sin archivo pasan sus argumentos tal cual a su CLI estricto.
