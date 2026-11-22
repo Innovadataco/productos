@@ -5,7 +5,7 @@ import { Writable } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { ADELANTO_TRM_DIAS, CATALOGO } from "@/datos-oficiales/catalogo";
 import {
-  USO_EXPORTAR_TRM, correrExportarTrm, exportarTrm, leerArgumentosExportarTrm, reporteExportacionTrm, type EntornoExportarTrm, type ResultadoExportacionTrm,
+  USO_EXPORTAR_TRM, correrExportarTrm, exportarTrm, leerArgumentosExportarTrm, reporteExportacionTrm, type EntornoExportarTrm, type ExportacionTrm, type ResultadoExportacionTrm,
 } from "@/datos-oficiales/fuentes/exportar-trm";
 import { MAX_DIAS_RANGO_TRM, trmDelCatalogo } from "@/datos-oficiales/fuentes/trm-sfc";
 import { ENCABEZADO_CSV_SERIES, leerCsvSeries } from "@/datos-oficiales/series/csv-series";
@@ -27,6 +27,13 @@ const CSV_SEMANA = [
   "TRM,2027-03-16,2027-03-16,4122.6,sfc:32sa-8pi3",
   "",
 ].join("\n");
+
+/** El CSV de un resultado que debía tenerlo (si no, la prueba falla con el código). */
+function csvDe(r: ResultadoExportacionTrm): string {
+  if (!r.ok) throw new Error(`sin CSV: ${r.codigo}`);
+  return r.csv;
+}
+const sinVigencia = (dias: number, primero: string) => ({ dias, primero: dia(primero) });
 
 const argumentos = (argv: readonly string[], entorno: Record<string, string> = {}, hoy = VIERNES) => leerArgumentosExportarTrm(argv, entorno, hoy, ADELANTO);
 function errorDe(argv: readonly string[], entorno: Record<string, string> = {}): string {
@@ -104,72 +111,76 @@ describe("exportarTrm · el CSV canónico de series", () => {
     const { buscar, pedidos } = buscarQueResponde(SEMANA_FICTICIA);
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
     expect(r).toEqual({
-      csv: CSV_SEMANA, codigo: null, filas: 5, descartadas: 0, diasSinVigencia: 0, primerDiaSinVigencia: null, primeraDesde: dia("2027-03-10"), ultimaHasta: MARTES,
+      ok: true, csv: CSV_SEMANA, filas: 5, descartadas: 0, primeraDesde: dia("2027-03-10"), ultimaHasta: MARTES, sinVigencia: null,
     });
     expect(pedidos).toHaveLength(1);
-    const leido = leerCsvSeries(new TextEncoder().encode(r.csv!), MARTES);
+    const leido = leerCsvSeries(new TextEncoder().encode(csvDe(r)), MARTES);
     expect(leido.ok && leido.series.map((s) => [s.codigo, s.fuente, s.valores.map((v) => v.valor)])).toEqual([["TRM", "sfc:32sa-8pi3", [...VALORES_SEMANA]]]);
-    expect(leerCsvSeries(new TextEncoder().encode(r.csv!), new Date(MARTES.getTime() + 30 * DIA_MS)).ok).toBe(true);
+    expect(leerCsvSeries(new TextEncoder().encode(csvDe(r)), new Date(MARTES.getTime() + 30 * DIA_MS)).ok).toBe(true);
   });
 
   it("el viernes trae la vigencia de sábado a lunes, publicada por adelantado (desde = mañana)", async () => {
     const { buscar } = buscarQueResponde(SEMANA_FICTICIA.slice(0, 4));
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: dia("2027-03-13"), hoy: VIERNES, buscar });
-    expect(r.codigo).toBeNull();
-    expect(r.filas).toBe(4);
-    expect(r.ultimaHasta).toEqual(dia("2027-03-15"));
+    expect(r).toMatchObject({ ok: true, filas: 4, ultimaHasta: dia("2027-03-15"), sinVigencia: null });
   });
 
   it("una fila con valor inválido queda fuera, se cuenta y deja un día sin vigencia: el CSV trae el resto", async () => {
     const { buscar } = buscarQueResponde([SEMANA_FICTICIA[0], fila("2027-03-11", "2027-03-11", "4131,80"), ...SEMANA_FICTICIA.slice(2)]);
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
-    expect(r).toMatchObject({ codigo: null, filas: 4, descartadas: 1, diasSinVigencia: 1, primerDiaSinVigencia: dia("2027-03-11") });
-    expect(r.csv).not.toContain("2027-03-11");
-    expect(leerCsvSeries(new TextEncoder().encode(r.csv!), MARTES).ok).toBe(true);
+    expect(r).toMatchObject({ ok: true, filas: 4, descartadas: 1, sinVigencia: sinVigencia(1, "2027-03-11") });
+    expect(csvDe(r)).not.toContain("2027-03-11");
+    expect(leerCsvSeries(new TextEncoder().encode(csvDe(r)), MARTES).ok).toBe(true);
   });
 
   it("días sin vigencia entre dos filas de la fuente: los cuenta, con el primero", async () => {
     const { buscar } = buscarQueResponde([fila("2027-03-10", "2027-03-10", "4127.39"), fila("2027-03-13", "2027-03-15", "4108.53"), fila("2027-03-16", "2027-03-16", "4122.6")]);
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
-    expect(r).toMatchObject({ codigo: null, filas: 3, descartadas: 0, diasSinVigencia: 2, primerDiaSinVigencia: dia("2027-03-11") });
+    expect(r).toMatchObject({ ok: true, filas: 3, descartadas: 0, sinVigencia: sinVigencia(2, "2027-03-11") });
   });
 
   // code-reviewer MEDIO: varios huecos separados se suman y el primero es el más temprano.
   it("tres huecos separados (11, 13 y 15): suma 3 y el primero es el 11", async () => {
     const { buscar } = buscarQueResponde([fila("2027-03-10", "2027-03-10", "4127.39"), fila("2027-03-12", "2027-03-12", "4119.07"), fila("2027-03-14", "2027-03-14", "4113.29"), fila("2027-03-16", "2027-03-16", "4122.6")]);
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
-    expect(r).toMatchObject({ codigo: null, filas: 4, diasSinVigencia: 3, primerDiaSinVigencia: dia("2027-03-11") });
+    expect(r).toMatchObject({ ok: true, filas: 4, sinVigencia: sinVigencia(3, "2027-03-11") });
   });
 
   // code-reviewer MEDIO y security-reviewer BAJO-1: una respuesta corta por la cola o por la cabeza no salía 0 en silencio.
   it("la fuente no trae los últimos días del rango (ya pasados): los cuenta desde el primero que falta", async () => {
     const { buscar } = buscarQueResponde(SEMANA_FICTICIA.slice(0, 3));
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
-    expect(r).toMatchObject({ codigo: null, filas: 3, diasSinVigencia: 4, primerDiaSinVigencia: dia("2027-03-13") });
+    expect(r).toMatchObject({ ok: true, filas: 3, sinVigencia: sinVigencia(4, "2027-03-13") });
   });
 
   it("la fuente no trae los primeros días del rango: los cuenta desde --desde", async () => {
     const { buscar } = buscarQueResponde(SEMANA_FICTICIA.slice(2));
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
-    expect(r).toMatchObject({ codigo: null, filas: 3, diasSinVigencia: 2, primerDiaSinVigencia: dia("2027-03-10") });
+    expect(r).toMatchObject({ ok: true, filas: 3, sinVigencia: sinVigencia(2, "2027-03-10") });
   });
 
   it("la vigencia de mañana aún sin publicar no es un hueco (el viernes sin la de sábado a lunes): 0", async () => {
     const { buscar } = buscarQueResponde(SEMANA_FICTICIA.slice(0, 3));
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: dia("2027-03-13"), hoy: VIERNES, buscar });
-    expect(r).toMatchObject({ codigo: null, filas: 3, diasSinVigencia: 0, primerDiaSinVigencia: null });
+    expect(r).toMatchObject({ ok: true, filas: 3, sinVigencia: null });
+  });
+
+  it("un rango ya pasado se mide hasta --hasta, no hasta hoy", async () => {
+    const { buscar } = buscarQueResponde(SEMANA_FICTICIA.slice(0, 3));
+    const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: VIERNES, hoy: dia("2027-04-15"), buscar });
+    expect(r).toMatchObject({ ok: true, filas: 3, sinVigencia: null });
   });
 
   it("una vigencia que empieza antes de --desde lo cubre: sin hueco al inicio", async () => {
     const { buscar } = buscarQueResponde(SEMANA_FICTICIA.slice(3));
     const r = await exportarTrm({ desde: dia("2027-03-14"), hasta: MARTES, hoy: MARTES, buscar });
-    expect(r).toMatchObject({ codigo: null, filas: 2, diasSinVigencia: 0, primeraDesde: dia("2027-03-13") });
+    expect(r).toMatchObject({ ok: true, filas: 2, sinVigencia: null, primeraDesde: dia("2027-03-13") });
   });
 
   it("un descartado en el borde final también cuenta como día sin vigencia", async () => {
     const { buscar } = buscarQueResponde([...SEMANA_FICTICIA.slice(0, 4), fila("2027-03-16", "2027-03-16", "4122,6")]);
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
-    expect(r).toMatchObject({ codigo: null, filas: 4, descartadas: 1, diasSinVigencia: 1, primerDiaSinVigencia: MARTES });
+    expect(r).toMatchObject({ ok: true, filas: 4, descartadas: 1, sinVigencia: { dias: 1, primero: MARTES } });
   });
 
   it.each<[string, unknown, string, number]>([
@@ -179,29 +190,29 @@ describe("exportarTrm · el CSV canónico de series", () => {
   ])("%s: sin CSV, con el código (%s)", async (_caso, cuerpo, esperado, descartadas) => {
     const { buscar } = buscarQueResponde(cuerpo);
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar });
-    expect(r).toMatchObject({ csv: null, codigo: esperado, filas: 0, descartadas });
+    expect(r).toEqual({ ok: false, codigo: esperado, descartadas });
   });
 
   it("la SFC falla: sin CSV, con el código de la fuente", async () => {
     const { buscar } = buscarQueResponde("[]", { status: 503, headers: TIPO_JSON });
-    expect(await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar })).toMatchObject({ csv: null, codigo: "TRM_HTTP_503", filas: 0 });
+    expect(await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar })).toEqual({ ok: false, codigo: "TRM_HTTP_503", descartadas: 0 });
   });
 
   it("una vigencia que el importador rechazaría (empieza después de mañana): FILA_INVALIDA, sin CSV", async () => {
     const { buscar } = buscarQueResponde(SEMANA_FICTICIA);
-    expect(await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: VIERNES, buscar })).toMatchObject({ csv: null, codigo: "FILA_INVALIDA", filas: 0 });
+    expect(await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: VIERNES, buscar })).toEqual({ ok: false, codigo: "FILA_INVALIDA", descartadas: 0 });
   });
 
   it("si el catálogo no trae la TRM (o cambió su forma): TRM_CATALOGO sin salir a la red", async () => {
     const { buscar, llamado } = buscarProhibido();
     const r = await exportarTrm({ desde: dia("2027-03-10"), hasta: MARTES, hoy: MARTES, buscar, catalogo: CATALOGO.filter((s) => s.codigo !== "TRM") });
-    expect(r).toMatchObject({ csv: null, codigo: "TRM_CATALOGO" });
+    expect(r).toEqual({ ok: false, codigo: "TRM_CATALOGO", descartadas: 0 });
     expect(llamado()).toBe(false);
   });
 });
 
-const base: ResultadoExportacionTrm = {
-  csv: CSV_SEMANA, codigo: null, filas: 5, descartadas: 0, diasSinVigencia: 0, primerDiaSinVigencia: null, primeraDesde: dia("2027-03-10"), ultimaHasta: MARTES,
+const base: ExportacionTrm = {
+  ok: true, csv: CSV_SEMANA, filas: 5, descartadas: 0, primeraDesde: dia("2027-03-10"), ultimaHasta: MARTES, sinVigencia: null,
 };
 const textoDe = (r: ResultadoExportacionTrm): string => reporteExportacionTrm(r).lineas.join("\n");
 
@@ -213,14 +224,14 @@ describe("reporteExportacionTrm · stderr: conteos, códigos y fechas, nunca val
   });
 
   it("filas descartadas: 3, con TRM_VALOR_INVALIDO (el CSV trae el resto)", () => {
-    const rep = reporteExportacionTrm({ ...base, filas: 4, descartadas: 1, diasSinVigencia: 1, primerDiaSinVigencia: dia("2027-03-11") });
+    const rep = reporteExportacionTrm({ ...base, filas: 4, descartadas: 1, sinVigencia: sinVigencia(1, "2027-03-11") });
     expect(rep.codigoSalida).toBe(3);
     expect(rep.lineas.join("\n")).toContain("⚠️  TRM · 1 fila(s) descartada(s) (TRM_VALOR_INVALIDO)");
     expect(rep.lineas.join("\n")).toContain("⚠️  TRM · 1 día(s) del rango sin vigencia (el primero: 2027-03-11)");
   });
 
   it("días sin vigencia sin descartes: 3", () => {
-    const rep = reporteExportacionTrm({ ...base, diasSinVigencia: 2, primerDiaSinVigencia: dia("2027-03-11") });
+    const rep = reporteExportacionTrm({ ...base, sinVigencia: sinVigencia(2, "2027-03-11") });
     expect(rep.codigoSalida).toBe(3);
     expect(rep.lineas.join("\n")).not.toContain("TRM_VALOR_INVALIDO");
   });
@@ -240,15 +251,30 @@ describe("reporteExportacionTrm · stderr: conteos, códigos y fechas, nunca val
     ["CSV_DEMASIADO_GRANDE", "rango más corto"],
     ["TRM_HTTP_503", "respondió con error"],
   ])("%s: 1, sin CSV, con su indicación", (codigo, indicacion) => {
-    const rep = reporteExportacionTrm({ ...base, csv: null, codigo, filas: 0, primeraDesde: null, ultimaHasta: null });
+    const rep = reporteExportacionTrm({ ok: false, codigo, descartadas: 0 });
     expect(rep.codigoSalida).toBe(1);
     expect(rep.lineas.at(-1)).toContain(`❌ ${codigo} · `);
     expect(rep.lineas.at(-1)).toContain(indicacion);
     expect(rep.lineas.at(-1)).toContain("no se escribió el CSV");
   });
 
+  it("sin CSV y con descartes: 1, el conteo sin «el CSV trae el resto» y el código al final", () => {
+    const rep = reporteExportacionTrm({ ok: false, codigo: "SIN_FILAS", descartadas: 2 });
+    expect(rep.codigoSalida).toBe(1);
+    expect(rep.lineas).toHaveLength(2);
+    expect(rep.lineas[0]).toContain("⚠️  TRM · 2 fila(s) descartada(s) (TRM_VALOR_INVALIDO)");
+    expect(rep.lineas[0]).not.toContain("el CSV trae el resto");
+    expect(rep.lineas[1]).toContain("❌ SIN_FILAS · ");
+  });
+
+  it("un código que no está en la lista: 1, con una indicación genérica (nunca se queda sin línea)", () => {
+    const rep = reporteExportacionTrm({ ok: false, codigo: "TRM_OTRO", descartadas: 0 });
+    expect(rep).toEqual({ codigoSalida: 1, lineas: ["❌ TRM_OTRO · fallo de la fuente; no se escribió el CSV."] });
+  });
+
   it("nunca imprime valores", () => {
-    for (const r of [base, { ...base, descartadas: 3, diasSinVigencia: 4, primerDiaSinVigencia: dia("2027-03-11") }, { ...base, csv: null, codigo: "SIN_FILAS" }]) {
+    const casos: ResultadoExportacionTrm[] = [base, { ...base, descartadas: 3, sinVigencia: sinVigencia(4, "2027-03-11") }, { ok: false, codigo: "SIN_FILAS", descartadas: 2 }];
+    for (const r of casos) {
       for (const v of VALORES_SEMANA) expect(textoDe(r), v).not.toContain(v);
     }
   });

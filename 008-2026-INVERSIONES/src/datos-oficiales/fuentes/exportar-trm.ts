@@ -102,69 +102,82 @@ export interface OpcionesExportacionTrm {
   readonly catalogo?: readonly SerieCatalogo[];
 }
 
-export interface ResultadoExportacionTrm {
-  readonly csv: string | null;
-  /** Por qué no hay CSV (de la fuente, del catálogo o del CSV), o null. */
-  readonly codigo: string | null;
-  readonly filas: number;
-  readonly descartadas: number;
-  /**
-   * Días del rango, hasta hoy, que ninguna vigencia del CSV cubre (al inicio, entre vigencias o al final; un valor
-   * descartado deja el suyo). La vigencia de mañana sin publicar no cuenta.
-   */
-  readonly diasSinVigencia: number;
-  readonly primerDiaSinVigencia: Date | null;
-  readonly primeraDesde: Date | null;
-  readonly ultimaHasta: Date | null;
+/** Días del rango que ninguna vigencia del CSV cubre, y el primero de ellos. */
+export interface DiasSinVigencia {
+  readonly dias: number;
+  readonly primero: Date;
 }
 
-const sinCsv = (codigo: string, descartadas: number): ResultadoExportacionTrm => ({
-  csv: null, codigo, filas: 0, descartadas, diasSinVigencia: 0, primerDiaSinVigencia: null, primeraDesde: null, ultimaHasta: null,
-});
+/** Hay CSV (al menos una vigencia). */
+export interface ExportacionTrm {
+  readonly ok: true;
+  readonly csv: string;
+  readonly filas: number;
+  readonly descartadas: number;
+  readonly primeraDesde: Date;
+  readonly ultimaHasta: Date;
+  /**
+   * Los días del rango, hasta hoy, sin vigencia (al inicio, entre vigencias o al final; un valor descartado deja el
+   * suyo), o null si no falta ninguno. La vigencia de mañana sin publicar no cuenta.
+   */
+  readonly sinVigencia: DiasSinVigencia | null;
+}
+
+/** No hay CSV: el código (de la fuente, del catálogo o del CSV) y cuántas filas se descartaron. */
+export interface ExportacionTrmFallida {
+  readonly ok: false;
+  readonly codigo: string;
+  readonly descartadas: number;
+}
+
+export type ResultadoExportacionTrm = ExportacionTrm | ExportacionTrmFallida;
+
+const fallida = (codigo: string, descartadas: number): ExportacionTrmFallida => ({ ok: false, codigo, descartadas });
 
 /**
  * Los días de [desde, fin] que ninguna vigencia cubre: al inicio, entre vigencias y al final (las vigencias vienen
  * ordenadas y sin solapes). `fin` es el último día que ya debía estar publicado: min(--hasta, hoy). La vigencia de
  * mañana (la SFC la publica por adelantado, en la tarde) puede no estar aún: no es un hueco.
  */
-function diasSinVigencia(valores: readonly ValorSerie[], desde: Date, fin: Date): { readonly dias: number; readonly primero: Date | null } {
+function diasSinVigencia(valores: readonly ValorSerie[], desde: Date, fin: Date): DiasSinVigencia | null {
+  const finMs = fin.getTime();
+  // Un tramo centinela justo después de `fin` cuenta los días que faltan al final con la misma cuenta.
+  const tramos = [...valores.map((v) => ({ desde: v.desde.getTime(), hasta: v.hasta.getTime() })), { desde: finMs + DIA_MS, hasta: finMs + DIA_MS }];
   let dias = 0;
-  let primero: Date | null = null;
+  let primero: number | null = null;
   /** El primer día aún no cubierto. */
   let cursor = desde.getTime();
-  const contarHasta = (ultimoMs: number): void => {
-    const faltan = (ultimoMs - cursor) / DIA_MS + 1;
-    if (faltan <= 0) return;
-    dias += faltan;
-    primero ??= new Date(cursor);
-  };
-  for (const v of valores) {
-    contarHasta(Math.min(v.desde.getTime() - DIA_MS, fin.getTime()));
+  for (const t of tramos) {
+    const faltan = (Math.min(t.desde - DIA_MS, finMs) - cursor) / DIA_MS + 1;
+    if (faltan > 0) {
+      dias += faltan;
+      primero ??= cursor;
+    }
     // parsearTrm las entrega ordenadas, sin solapes y tocando el rango: cada `hasta` pasa el cursor.
-    cursor = v.hasta.getTime() + DIA_MS;
+    cursor = t.hasta + DIA_MS;
   }
-  contarHasta(fin.getTime());
-  return { dias, primero };
+  return primero === null ? null : { dias, primero: new Date(primero) };
 }
 
 export async function exportarTrm(o: OpcionesExportacionTrm): Promise<ResultadoExportacionTrm> {
   const catalogo = o.catalogo ?? CATALOGO;
   const trm = trmDelCatalogo(catalogo);
-  if (!trm) return sinCsv("TRM_CATALOGO", 0);
+  if (!trm) return fallida("TRM_CATALOGO", 0);
   const r = await obtenerTrm({ desde: o.desde, hasta: o.hasta }, o.buscar, trm);
-  if (!r.ok) return sinCsv(r.codigo, 0);
+  if (!r.ok) return fallida(r.codigo, 0);
+  const [primera] = r.valores;
+  if (primera === undefined) return fallida("SIN_FILAS", r.descartadas);
   const escrito = escribirCsvSeries([{ codigo: CODIGO_TRM, valores: r.valores }], o.hoy, catalogo);
-  if (!escrito.ok) return sinCsv(escrito.codigo, r.descartadas);
-  const huecos = diasSinVigencia(r.valores, o.desde, o.hasta < o.hoy ? o.hasta : o.hoy);
+  if (!escrito.ok) return fallida(escrito.codigo, r.descartadas);
   return {
+    ok: true,
     csv: escrito.texto,
-    codigo: null,
     filas: escrito.filas,
     descartadas: r.descartadas,
-    diasSinVigencia: huecos.dias,
-    primerDiaSinVigencia: huecos.primero,
-    primeraDesde: r.valores[0]?.desde ?? null,
-    ultimaHasta: r.valores.at(-1)?.hasta ?? null,
+    primeraDesde: primera.desde,
+    // Hay al menos una (la primera): la última existe.
+    ultimaHasta: r.valores[r.valores.length - 1]!.hasta,
+    sinVigencia: diasSinVigencia(r.valores, o.desde, o.hasta < o.hoy ? o.hasta : o.hoy),
   };
 }
 
@@ -197,13 +210,13 @@ export interface ReporteTrm {
 /** El reporte a stderr (el CSV va a stdout): conteos, códigos y fechas. 1 sin CSV; 3 con descartes o días sin vigencia. */
 export function reporteExportacionTrm(r: ResultadoExportacionTrm): ReporteTrm {
   const descartes = r.descartadas === 0 ? [] : [
-    `⚠️  TRM · ${r.descartadas} fila(s) descartada(s) (TRM_VALOR_INVALIDO): valor ausente o fuera de la escala o el rango del catálogo${r.csv === null ? "" : "; el CSV trae el resto"}.`,
+    `⚠️  TRM · ${r.descartadas} fila(s) descartada(s) (TRM_VALOR_INVALIDO): valor ausente o fuera de la escala o el rango del catálogo${r.ok ? "; el CSV trae el resto" : ""}.`,
   ];
-  if (r.csv === null || r.codigo !== null) return { lineas: [...descartes, lineaFallo(r.codigo ?? "SIN_FILAS")], codigoSalida: 1 };
-  const rango = r.primeraDesde && r.ultimaHasta ? `desde ${diaIso(r.primeraDesde)} hasta ${diaIso(r.ultimaHasta)}` : "sin vigencias";
-  const huecos = r.diasSinVigencia === 0 ? [] : [
-    `⚠️  TRM · ${r.diasSinVigencia} día(s) del rango sin vigencia (el primero: ${r.primerDiaSinVigencia ? diaIso(r.primerDiaSinVigencia) : "?"}): revíselo antes de importar.`,
+  if (!r.ok) return { lineas: [...descartes, lineaFallo(r.codigo)], codigoSalida: 1 };
+  const huecos = r.sinVigencia === null ? [] : [
+    `⚠️  TRM · ${r.sinVigencia.dias} día(s) del rango sin vigencia (el primero: ${diaIso(r.sinVigencia.primero)}): revíselo antes de importar.`,
   ];
+  const rango = `desde ${diaIso(r.primeraDesde)} hasta ${diaIso(r.ultimaHasta)}`;
   const lineas = [`✅ TRM · SFC (datos.gov.co, 32sa-8pi3) · filas en el CSV: ${r.filas} · ${rango} · descartadas: ${r.descartadas}`, ...descartes, ...huecos];
   return { lineas, codigoSalida: descartes.length + huecos.length > 0 ? 3 : 0 };
 }
@@ -267,7 +280,7 @@ export async function correrExportarTrm(e: EntornoExportarTrm): Promise<0 | 1 | 
     return 2;
   }
   const r = await exportarTrm({ desde: a.desde, hasta: a.hasta, hoy, buscar: e.buscar, catalogo });
-  if (r.csv !== null && !(await escribirCsv(e.salida, r.csv))) {
+  if (r.ok && !(await escribirCsv(e.salida, r.csv))) {
     e.error("❌ SALIDA_CERRADA · no se pudo escribir el CSV completo (¿se cerró el tubo o se llenó el disco?): no lo use.");
     return 1;
   }

@@ -194,6 +194,11 @@ describe("parsearTrm · valores inválidos: la fila se descarta y se cuenta (nun
     });
   });
 
+  it("dos filas idénticas sin valor se funden y cuentan como un solo descarte", () => {
+    const sinValor = { unidad: "COP", vigenciadesde: "2027-03-11T00:00:00.000", vigenciahasta: "2027-03-11T00:00:00.000" };
+    expect(parsear([sinValor, { ...sinValor }])).toEqual({ ok: true, valores: [], descartadas: 1 });
+  });
+
   it("todas descartadas: ok, sin valores y con el conteo", () => {
     expect(parsear([fila("2027-03-10", "2027-03-10", "x"), fila("2027-03-11", "2027-03-11", "y")])).toEqual({ ok: true, valores: [], descartadas: 2 });
   });
