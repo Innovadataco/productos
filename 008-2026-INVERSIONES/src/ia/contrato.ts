@@ -65,7 +65,10 @@ export interface Hecho<C extends ClaveHecho = ClaveHecho> {
   readonly id: IdHecho;
   /** Clave del catálogo del tipo del paquete. */
   readonly clave: C;
-  /** Id del hecho «nombre de especie» (clave ESPECIE_NOMBRE) al que se refiere, anterior a este. */
+  /**
+   * Id de un hecho anterior al que se refiere: el «nombre de especie» (ESPECIE_NOMBRE) o, si este es un hecho de regla
+   * (`CLAVES_DE_REGLA`), el ancla de su regla (REGLA_DEL_PLAN), que a su vez cita a la especie.
+   */
   readonly sujeto?: IdHecho;
   /** Decimal canónico en texto (con signo, sin exponente ni ceros sobrantes), día ISO o, con unidad NOMBRE, el nombre. */
   readonly valor: string;

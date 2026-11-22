@@ -7,12 +7,19 @@
  * - las claves son identificadores en mayúsculas SIN dígitos (la vista ciega no lleva dígitos fuera de los ids);
  * - ninguna etiqueta lleva dígitos, cifras en palabras ni nombres de especie; los horizontes son corto, medio y
  *   largo, y el «3 meses» lo pone el código en la presentación del hecho;
- * - el nombre de la especie es un hecho propio (ESPECIE_NOMBRE); los hechos de una especie lo citan en `sujeto`.
+ * - el nombre de la especie es un hecho propio (ESPECIE_NOMBRE); los hechos de una especie lo citan en `sujeto`;
+ * - varias reglas por especie (decisión de la Fábrica, E1b): cada regla tiene su hecho ancla (REGLA_DEL_PLAN, solo en
+ *   REGLAS). Los hechos de la regla (`CLAVES_DE_REGLA`) citan como `sujeto` a su ancla, y el ancla cita a la especie
+ *   (o a nadie, si la regla es de portafolio). Así dos reglas de la misma especie no chocan en HECHO_REPETIDO.
  */
 import type { TipoResumen, Unidad } from "./contrato";
 
 export const CLAVE_NOMBRE_ESPECIE = "ESPECIE_NOMBRE";
 export type ClaveNombreEspecie = typeof CLAVE_NOMBRE_ESPECIE;
+
+/** El ancla de una regla del plan (solo en REGLAS): su valor es el día desde el que rige la versión del plan. */
+export const CLAVE_ANCLA_REGLA = "REGLA_DEL_PLAN";
+export type ClaveAnclaRegla = typeof CLAVE_ANCLA_REGLA;
 
 export type ClaveDiario =
   | ClaveNombreEspecie
@@ -29,7 +36,12 @@ export type ClaveReglas =
   | "CIERRE_ESPECIE" | "FECHA_CIERRE_ESPECIE"
   | "REGLA_NIVEL" | "REGLA_TOCADA" | "REGLA_EN_EL_NIVEL" | "REGLA_DISTANCIA" | "REGLA_SIN_CIERRE_AL_DIA"
   | "REGLA_PLAZO" | "REGLA_DIAS_AL_PLAZO"
-  | "PROXIMO_EX_DIVIDENDO" | "DIAS_A_EX_DIVIDENDO" | "DIVIDENDO_POR_ACCION" | "DIVIDENDO_FECHA_PAGO" | "DIVIDENDO_BRUTO_ESTIMADO";
+  | "PROXIMO_EX_DIVIDENDO" | "DIAS_A_EX_DIVIDENDO" | "DIVIDENDO_POR_ACCION" | "DIVIDENDO_FECHA_PAGO" | "DIVIDENDO_BRUTO_ESTIMADO"
+  | ClaveAnclaRegla;
+
+/** Los hechos de una regla: los únicos que pueden citar a un ancla (REGLA_DEL_PLAN) como `sujeto`. El ancla no está. */
+export type ClaveDeRegla = Extract<ClaveReglas,
+  "REGLA_NIVEL" | "REGLA_TOCADA" | "REGLA_EN_EL_NIVEL" | "REGLA_DISTANCIA" | "REGLA_SIN_CIERRE_AL_DIA" | "REGLA_PLAZO" | "REGLA_DIAS_AL_PLAZO">;
 
 export type ClaveEscenarios =
   | ClaveNombreEspecie
@@ -133,6 +145,7 @@ const REGLAS: Readonly<Record<ClaveReglas, EntradaCatalogo>> = Object.freeze({
   DIVIDENDO_POR_ACCION: entrada("dividendo decretado por acción", "PESOS", DE_ESPECIE),
   DIVIDENDO_FECHA_PAGO: entrada("fecha de pago del dividendo", "FECHA", DE_ESPECIE),
   DIVIDENDO_BRUTO_ESTIMADO: entrada("dividendo bruto estimado", "PESOS", DE_ESPECIE),
+  REGLA_DEL_PLAN: entrada("regla del plan vigente desde", "FECHA", { sujeto: "OPCIONAL" }),
 });
 
 const ESCENARIOS: Readonly<Record<ClaveEscenarios, EntradaCatalogo>> = Object.freeze({
@@ -175,4 +188,13 @@ export function entradaDeCatalogo(tipo: TipoResumen, clave: string): EntradaCata
 /** Las claves del tipo, en el orden del catálogo. */
 export function clavesDe<T extends TipoResumen>(tipo: T): readonly ClaveDe<T>[] {
   return Object.freeze(Object.keys(CATALOGO[tipo]) as ClaveDe<T>[]);
+}
+
+export const CLAVES_DE_REGLA: readonly ClaveDeRegla[] = Object.freeze([
+  "REGLA_NIVEL", "REGLA_TOCADA", "REGLA_EN_EL_NIVEL", "REGLA_DISTANCIA", "REGLA_SIN_CIERRE_AL_DIA", "REGLA_PLAZO", "REGLA_DIAS_AL_PLAZO",
+] as const);
+
+/** ¿Es la clave un hecho de regla, que puede citar a un ancla como `sujeto`? */
+export function esClaveDeRegla(clave: string): clave is ClaveDeRegla {
+  return (CLAVES_DE_REGLA as readonly string[]).includes(clave);
 }
