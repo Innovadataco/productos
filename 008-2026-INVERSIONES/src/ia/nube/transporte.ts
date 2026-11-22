@@ -5,9 +5,10 @@ import "server-only";
  *   busca otra en el entorno: ni ANTHROPIC_API_KEY, ni ANTHROPIC_AUTH_TOKEN, ni perfiles); `webhookKey: null`;
  * - destino fijo (`baseURL` explícita: ANTHROPIC_BASE_URL no cuenta), sin reintentos, sin registro (`logLevel: "off"`:
  *   ANTHROPIC_LOG no cuenta) y sin trazas de OpenTelemetry;
- * - el `fetch` envuelto solo deja salir un POST a la API de mensajes, con una lista cerrada de cabeceras y la llave
- *   propia en `authorization` (el SDK lee ANTHROPIC_CUSTOM_HEADERS siempre y las pone DESPUÉS de la credencial: así no
- *   cuelan nada), sin seguir redirecciones; y lee el cuerpo de la respuesta DENTRO del fetch, con un tope de bytes,
+ * - el `fetch` envuelto solo deja salir un POST a la API de mensajes, con cabeceras fijas (la versión de la API,
+ *   accept, content-type y la llave propia en `authorization`; del SDK solo pasa el `user-agent`): el SDK lee
+ *   ANTHROPIC_CUSTOM_HEADERS siempre y las pone DESPUÉS de la credencial, así que no cuelan nada; sin seguir
+ *   redirecciones; y lee el cuerpo de la respuesta DENTRO del fetch, con un tope de bytes,
  *   para que el tiempo del SDK cubra también la lectura y nada se lea entero sin límite.
  * El `fetch` base se inyecta: en las pruebas, uno falso; en el servicio (E6), el que sale por el proxy de salida.
  */
@@ -20,6 +21,8 @@ export const URL_MENSAJES_NUBE = `${URL_BASE_NUBE}/v1/messages`;
 /** Tope de la respuesta: holgado para `MAX_TOKENS_NUBE` de salida en JSON; más es un error del proveedor. */
 export const MAX_BYTES_RESPUESTA_NUBE = 1_048_576;
 export const CABECERAS_PERMITIDAS_NUBE = Object.freeze(["accept", "anthropic-version", "authorization", "content-type", "user-agent"] as const);
+/** La versión de la API: la que manda el SDK 1.x, fija aquí (ni el entorno ni una subida del SDK la cambian sin revisión). */
+export const VERSION_API_NUBE = "2026-10-21";
 
 export type CodigoTransporteNube = "DESTINO_NO_PERMITIDO" | "RESPUESTA_DEMASIADO_GRANDE";
 
@@ -36,14 +39,16 @@ function destinoPermitido(entrada: unknown, metodo: string | undefined): boolean
   return URL.canParse(String(entrada)) && new URL(String(entrada)).href === URL_MENSAJES_NUBE;
 }
 
+/** Las cabeceras que salen: fijas, salvo el `user-agent` del SDK; la llave, la propia. */
 function cabecerasPermitidas(origen: HeadersInit | undefined, llave: LlaveNube): Headers {
-  const recibidas = new Headers(origen);
-  const salida = new Headers();
-  for (const nombre of CABECERAS_PERMITIDAS_NUBE) {
-    const valor = recibidas.get(nombre);
-    if (valor !== null && nombre !== "authorization") salida.set(nombre, valor);
-  }
-  salida.set("authorization", `Bearer ${llave.revelar()}`);
+  const salida = new Headers({
+    accept: "application/json",
+    "anthropic-version": VERSION_API_NUBE,
+    authorization: `Bearer ${llave.revelar()}`,
+    "content-type": "application/json",
+  });
+  const agente = new Headers(origen).get("user-agent");
+  if (agente !== null) salida.set("user-agent", agente);
   return salida;
 }
 

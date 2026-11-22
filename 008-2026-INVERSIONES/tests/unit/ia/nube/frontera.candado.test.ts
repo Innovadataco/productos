@@ -59,8 +59,11 @@ function usosProhibidos(codigo: string): { readonly prohibidos: readonly string[
   let revela = false;
   const visitar = (nodo: ts.Node): void => {
     if (ts.isIdentifier(nodo) && IDENTIFICADORES_PROHIBIDOS.has(nodo.text)) prohibidos.push(nodo.text);
-    if (ts.isPropertyAccessExpression(nodo) && nodo.name.text === "env" && ts.isIdentifier(nodo.expression) && nodo.expression.text === "process") prohibidos.push("process.env");
-    if (ts.isCallExpression(nodo) && ts.isPropertyAccessExpression(nodo.expression) && nodo.expression.name.text === "revelar") revela = true;
+    // Ni `process.env`, ni `process["env"]`, ni `const { env } = process`: ninguna mención de `process`.
+    if (ts.isIdentifier(nodo) && nodo.text === "process") prohibidos.push("process");
+    // `revelar` usado de cualquier forma (`.revelar()`, `["revelar"]`, desestructurado), salvo su declaración.
+    const nombraRevelar = (ts.isIdentifier(nodo) || ts.isStringLiteral(nodo)) && nodo.text === "revelar";
+    if (nombraRevelar && !ts.isMethodDeclaration(nodo.parent)) revela = true;
     ts.forEachChild(nodo, visitar);
   };
   visitar(fuente);

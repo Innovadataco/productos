@@ -11,8 +11,9 @@ import "server-only";
  * 4. el tope: lo gastado + lo reservado en ese mes + el costo máximo de esta llamada ≤ tope, o TOPE_MENSUAL sin llamar;
  * 5. la llamada, con la señal del orquestador, el límite del pedido y ningún reintento;
  * 6. la respuesta o el error, traducidos. Si la llamada pudo cobrarse sin saberse cuánto (un aborto en vuelo, un corte,
- *    un 200 ilegible), su costo máximo queda RESERVADO en ese mes para esta instancia: el tope solo se vuelve más
- *    estricto. La reserva no sobrevive a un reinicio (persistirla le toca al registro y al servicio).
+ *    un 408 o un 5xx, un 200 ilegible), su costo máximo queda RESERVADO en ese mes para esta instancia; si llegó bien
+ *    pero con la señal ya abortada (el orquestador la descarta y nadie la registra), se reserva su costo real. El tope
+ *    solo se vuelve más estricto. La reserva no sobrevive a un reinicio (persistirla le toca al registro y al servicio).
  *
  * Lo que este cliente NO cubre y queda para el servicio (E6): registrar cada corrida antes de pedir la siguiente (el
  * turno cubre gasto, tope y llamada, no el guardado del registro) y usar una sola instancia por proceso.
@@ -101,7 +102,9 @@ export function crearGeneradorNube(config: ConfigNube, dependencias: Dependencia
     try {
       const crudo = await lista.cliente.messages.create(armado.cuerpo, { signal: senal, timeout: armado.limiteMs, maxRetries: 0 });
       const resultado = leerRespuesta(crudo, ahora() - inicio);
+      // Un 200 ilegible pudo cobrarse; un éxito con la señal ya abortada lo descarta el orquestador y no lo registra nadie.
       if (!resultado.ok) reservar(mes, maximo);
+      else if (senal.aborted) reservar(mes, costoMicroUsd({ mes, tokensEntrada: resultado.tokensEntrada, tokensSalida: resultado.tokensSalida }));
       return resultado;
     } catch (error) {
       if (hayPosibleCobro(error)) reservar(mes, maximo);

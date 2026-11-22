@@ -13,8 +13,10 @@ import { esObjetoPlano } from "../formas";
 
 /**
  * Precios de `claude-opus-5-5` por token, en micro-USD: USD 4 y USD 20 por millón de tokens de entrada y de salida.
- * Fuente: skill claude-api, tabla «Current Models» (la caché que trae la skill), leída al construir este frente. Si Anthropic cambia
- * el precio, se cambia aquí (y su prueba).
+ * Fuente: skill claude-api, tabla «Current Models» (la caché que trae la skill), leída al construir este frente. POR VERIFICAR contra
+ * la página de precios de Anthropic y la factura antes de encender la puerta: no cubren recargos de la cuenta (región
+ * de inferencia por omisión del espacio de trabajo, modo rápido, que este cliente no pide). Si cambian, se cambian aquí
+ * (y su prueba).
  */
 export const PRECIO_ENTRADA_MICRO_USD_POR_TOKEN = 4n;
 export const PRECIO_SALIDA_MICRO_USD_POR_TOKEN = 20n;

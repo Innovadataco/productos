@@ -110,6 +110,7 @@ describe("armarCuerpoNube · cierra en fallo sin lanzar", () => {
     ["una etiqueta con un dígito de ancho completo", (p: PedidoGeneracion) => conHecho(p, (h) => ({ ...h, etiqueta: "Valor ７" }))],
     ["un objeto anidado con una clave prohibida", (p: PedidoGeneracion) => conHecho(p, (h) => ({ ...h, etiqueta: { correo: "a" } }))],
     ["un número en lugar de texto", (p: PedidoGeneracion) => conHecho(p, (h) => ({ ...h, obligatorio: 1 }))],
+    ["un número con decimales (sin forma canónica)", (p: PedidoGeneracion) => conHecho(p, (h) => ({ ...h, obligatorio: 4.613 }))],
     ["un hecho que no es objeto", (p: PedidoGeneracion) => conHecho(p, () => "H01")],
     ["un hecho sin un campo exigido", (p: PedidoGeneracion) => conHecho(p, ({ clave: _clave, ...resto }) => resto)],
     // Revisión de seguridad (MEDIO M1): textos sin dígitos pero fuera de las listas cerradas del contrato y del catálogo.

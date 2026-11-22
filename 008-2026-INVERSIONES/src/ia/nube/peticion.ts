@@ -17,7 +17,8 @@ import "server-only";
  */
 import type { MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resources/messages";
 import { transformJSONSchema } from "@anthropic-ai/sdk/lib/transform-json-schema";
-import { CAMPOS_HECHO_CIEGO, CAMPOS_PAQUETE_CIEGO, TIPOS_RESUMEN } from "../contrato";
+import { entradaDeCatalogo } from "../catalogo";
+import { CALIDADES, CAMPOS_HECHO_CIEGO, CAMPOS_PAQUETE_CIEGO, CERCANIAS, DIRECCIONES, FRESCURAS, TIPOS_RESUMEN, esIdHecho, type TipoResumen } from "../contrato";
 import { esDe, esObjetoPlano, soloCampos, sonDatosPuros } from "../formas";
 import { revisarPedido, type PedidoGeneracion } from "../generador";
 import { clonCongelado, jsonCanonico } from "../hash";
@@ -53,25 +54,43 @@ export type CuerpoArmado =
 /** Los ids son la única cifra permitida, y solo como valor completo de un campo («"H07"»). */
 const ID_COMO_TEXTO = /"H[0-9]{2}"/g;
 const CUALQUIER_DIGITO = /\p{N}/u;
-const CAMPOS_EXIGIDOS_HECHO: readonly string[] = CAMPOS_HECHO_CIEGO.filter((campo) => campo !== "sujeto");
+const esId = (valor: unknown): boolean => typeof valor === "string" && esIdHecho(valor);
 
-function hechoCiegoValido(hecho: unknown): boolean {
+/**
+ * Un hecho ciego con cada campo dentro de su lista cerrada: el id y el sujeto (opcional) son ids, la clave es del
+ * catálogo del tipo y la etiqueta es la del catálogo para esa clave, las marcas son de sus listas y `obligatorio` es
+ * booleano. Así ningún texto libre (un nombre, un valor escrito en letras) sale en un campo de texto.
+ */
+function hechoCiegoValido(tipo: TipoResumen, hecho: unknown): boolean {
   if (!esObjetoPlano(hecho) || !soloCampos(hecho, CAMPOS_HECHO_CIEGO)) return false;
-  if (!CAMPOS_EXIGIDOS_HECHO.every((campo) => Object.hasOwn(hecho, campo))) return false;
-  return Object.entries(hecho).every(([campo, valor]) => (campo === "obligatorio" ? typeof valor === "boolean" : typeof valor === "string"));
+  const { id, clave, etiqueta, sujeto, direccion, cercania, frescura, calidad, obligatorio } = hecho;
+  const catalogo = typeof clave === "string" ? entradaDeCatalogo(tipo, clave) : null;
+  return esId(id) && catalogo !== null && etiqueta === catalogo.etiqueta && (!Object.hasOwn(hecho, "sujeto") || esId(sujeto))
+    && esDe(DIRECCIONES, direccion) && esDe(CERCANIAS, cercania) && esDe(FRESCURAS, frescura) && esDe(CALIDADES, calidad)
+    && typeof obligatorio === "boolean";
 }
 
 /**
  * El JSON canónico de la vista (lo que se envía), o null si no tiene la forma de una vista ciega: solo el tipo y los
- * hechos con los campos ciegos, valores de texto (y `obligatorio` booleano), datos puros y ningún dígito fuera de los
- * ids. Se serializa una sola vez: lo revisado es lo que sale.
+ * hechos con los campos ciegos en sus listas cerradas, datos puros y ningún dígito fuera de los ids. Se serializa una
+ * sola vez: lo revisado es lo que sale.
  */
 export function vistaParaNube(vista: unknown): string | null {
   if (!sonDatosPuros(vista) || !esObjetoPlano(vista) || !soloCampos(vista, CAMPOS_PAQUETE_CIEGO)) return null;
+  const json = canonicoONulo(vista);
+  // Primero, el detector independiente: ningún dígito fuera de los ids; después, las listas cerradas.
+  if (json === null || CUALQUIER_DIGITO.test(json.replace(ID_COMO_TEXTO, '""'))) return null;
   const { tipo, hechos } = vista;
-  if (!esDe(TIPOS_RESUMEN, tipo) || !Array.isArray(hechos) || !hechos.every(hechoCiegoValido)) return null;
-  const json = jsonCanonico(vista);
-  return CUALQUIER_DIGITO.test(json.replace(ID_COMO_TEXTO, '""')) ? null : json;
+  return esDe(TIPOS_RESUMEN, tipo) && Array.isArray(hechos) && hechos.every((hecho) => hechoCiegoValido(tipo, hecho)) ? json : null;
+}
+
+/** El JSON canónico, o null si el valor no tiene forma canónica (p. ej. un número con decimales). */
+function canonicoONulo(valor: unknown): string | null {
+  try {
+    return jsonCanonico(valor);
+  } catch {
+    return null;
+  }
 }
 
 /** El esquema en la forma estricta de la API, copiado en datos canónicos; null si el SDK no lo sabe transformar. */

@@ -11,7 +11,7 @@ import "server-only";
  */
 import { APIConnectionError, APIConnectionTimeoutError, APIError, APIUserAbortError } from "@anthropic-ai/sdk";
 import { esObjetoPlano, type Registro } from "../formas";
-import { MAX_SALIDA_CRUDA, PATRON_MODELO, type FalloGeneracion, type MotivoFalloGenerador, type ResultadoGeneracion } from "../generador";
+import { MAX_SALIDA_CRUDA, PATRON_MODELO, type ExitoGeneracion, type FalloGeneracion, type MotivoFalloGenerador } from "../generador";
 import { CODIGOS_APAGADO_NUBE } from "./config";
 import { MODELO_NUBE } from "./peticion";
 import { ErrorTransporteNube } from "./transporte";
@@ -32,14 +32,14 @@ export const falloNube = (motivo: MotivoFalloGenerador, detalle: DetalleNube): F
 
 const BLOQUES_DE_PENSAMIENTO: readonly string[] = Object.freeze(["thinking", "redacted_thinking"]);
 const esConteo = (valor: unknown): valor is number => typeof valor === "number" && Number.isSafeInteger(valor) && valor >= 0;
-const esConteoOpcional = (valor: unknown): boolean => valor === null || valor === undefined || esConteo(valor);
+const esConteoOpcional = (valor: unknown): valor is number | null | undefined => valor === null || valor === undefined || esConteo(valor);
 
 /** Los tokens de `usage`: la entrada suma lo leído y lo escrito en caché (cuenta de más, nunca de menos). */
 function tokensDe(usage: unknown): { readonly entrada: number; readonly salida: number } | null {
   if (!esObjetoPlano(usage)) return null;
   const { input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens } = usage;
   if (!esConteo(input_tokens) || !esConteo(output_tokens) || !esConteoOpcional(cache_creation_input_tokens) || !esConteoOpcional(cache_read_input_tokens)) return null;
-  const entrada = input_tokens + ((cache_creation_input_tokens as number | null) ?? 0) + ((cache_read_input_tokens as number | null) ?? 0);
+  const entrada = input_tokens + (cache_creation_input_tokens ?? 0) + (cache_read_input_tokens ?? 0);
   return Number.isSafeInteger(entrada) ? { entrada, salida: output_tokens } : null;
 }
 
@@ -58,8 +58,14 @@ function salidaDe(mensaje: Registro): string {
   return texto.length <= MAX_SALIDA_CRUDA && texto.isWellFormed() ? texto : "";
 }
 
+/** Un éxito de la nube: siempre con los tokens de `usage`. */
+export interface ExitoNube extends ExitoGeneracion {
+  readonly tokensEntrada: number;
+  readonly tokensSalida: number;
+}
+
 /** Una respuesta 200 del SDK (lo que resolvió `messages.create`), con la latencia medida por el generador. */
-export function leerRespuesta(crudo: unknown, latenciaMs: number): ResultadoGeneracion {
+export function leerRespuesta(crudo: unknown, latenciaMs: number): ExitoNube | FalloGeneracion {
   if (!esObjetoPlano(crudo) || crudo.type !== "message") return falloNube("ERROR_PROVEEDOR", "RESPUESTA_INVALIDA");
   const { model } = crudo;
   const tokens = tokensDe(crudo.usage);
@@ -105,8 +111,8 @@ const tieneEstado = (error: APIError): error is APIError & { readonly status: nu
 
 /**
  * Un error del SDK (o cualquier cosa lanzada) como fallo de la puerta nube. Si la señal del orquestador ya se abortó,
- * gana el tiempo: TIEMPO_AGOTADO · ABORTADO. Nunca usa el mensaje, el cuerpo, las cabeceras ni la causa del error,
- * salvo el código propio del transporte.
+ * gana el tiempo: TIEMPO_AGOTADO · ABORTADO. Nunca usa el mensaje, el cuerpo ni las cabeceras del error; de la causa
+ * solo mira si es del transporte propio, para tomar su código.
  */
 export function traducirError(error: unknown, senal: AbortSignal): FalloGeneracion {
   if (senal.aborted || error instanceof APIUserAbortError) return falloNube("TIEMPO_AGOTADO", "ABORTADO");
@@ -119,10 +125,14 @@ export function traducirError(error: unknown, senal: AbortSignal): FalloGeneraci
   return falloNube("ERROR_PROVEEDOR", "EXCEPCION_INTERNA");
 }
 
+/** Un 408 o un 5xx pudo llegar después de que el modelo trabajó (no está verificado que no se cobre). */
+const ESTADO_QUE_PUDO_COBRARSE = (estado: number): boolean => estado === 408 || estado >= 500;
+
 /**
- * ¿Pudo cobrarse la llamada sin que se sepa cuánto? Sí, si el pedido pudo llegar y no volvió una respuesta HTTP: un
- * aborto, un corte de tiempo o de conexión, una respuesta demasiado grande o un error desconocido (por las dudas). No,
- * si el servidor contestó con un estado de error, o si el transporte no dejó salir el pedido.
+ * ¿Pudo cobrarse la llamada sin que se sepa cuánto? Sí, por las dudas, si el pedido pudo llegar al modelo y no volvió
+ * un `usage`: un aborto, un corte de tiempo o de conexión, una respuesta demasiado grande, un 408 o un 5xx (incluidos
+ * la sobrecarga y el servicio no disponible), o un error desconocido. No, si el servidor rechazó el pedido con otro 4xx
+ * (validación, credencial, permiso, límite de pedidos) o si el transporte no lo dejó salir.
  */
 export function hayPosibleCobro(error: unknown): boolean {
   if (error instanceof APIConnectionError) {
@@ -130,5 +140,5 @@ export function hayPosibleCobro(error: unknown): boolean {
     return !(causa instanceof ErrorTransporteNube && causa.codigo === "DESTINO_NO_PERMITIDO");
   }
   if (error instanceof APIUserAbortError) return true;
-  return !(error instanceof APIError && tieneEstado(error));
+  return error instanceof APIError && tieneEstado(error) ? ESTADO_QUE_PUDO_COBRARSE(error.status) : true;
 }
