@@ -442,8 +442,8 @@ model Orden {
   @@map("orden")
 }
 
-/// Dividendo recibido. El CSV de Trii trae el NETO; bruto = decreto × acciones, y el cruce con el decreto se calcula
-/// al leer (la tabla es de solo inserción).
+/// Dividendo recibido. El CSV de Trii trae el NETO; bruto = decreto × acciones. El enlace con el decreto no se guarda
+/// (la tabla es de solo inserción): el cruce se calculará al leer (fase C, C5b).
 model Dividendo {
   id            String              @id @default(cuid())
   filaFuenteId  String              @unique
@@ -472,7 +472,8 @@ model Dividendo {
 
 /// Lo que anunció el emisor (fuente del bruto), una fila por cuota, tal como lo publica la fuente oficial (la fecha ex
 /// no se calcula). Lo registra el dueño (vía B, REGISTRO_DECRETOS); solo inserción y retiro (inv_solo_retiro): un
-/// cambio es la versión v+1, que retira a la v, y un decreto mal registrado se anula con una versión nueva `anulada`.
+/// cambio es la versión v+1, que retira a la v, y un decreto mal registrado se anula con una versión nueva `anulada`
+/// (la base exige una vigente por clave y versiones sin repetir; la cadena v → v+1 la cuida el camino de escritura).
 /// Vigente = reemplazadoEn nulo; quien lee toma solo las vigentes y no anuladas. Solo en pesos y en dinero (P11).
 model DividendoDecretado {
   id                String        @id @default(cuid())
@@ -492,7 +493,7 @@ model DividendoDecretado {
   nota              String?
   version           Int           @default(1)
   anulada           Boolean       @default(false)
-  registradoEn      DateTime      @default(now()) @db.Timestamptz(6)
+  registradoEn      DateTime      @default(now()) @db.Timestamptz(6) // la pone la base (inv_solo_retiro)
   reemplazadoEn     DateTime?     @db.Timestamptz(6)
   recibidos         Dividendo[] // obsoleta: dividendo."decretadoId" es siempre nulo
 
@@ -714,7 +715,7 @@ model ValorSerieOficial {
   hasta         DateTime  @db.Date
   valor         Decimal   @db.Decimal(20, 8)
   fuente        String // sfc:…, banrep:… o dane:…
-  traidoEn      DateTime  @default(now()) @db.Timestamptz(6)
+  traidoEn      DateTime  @default(now()) @db.Timestamptz(6) // la pone la base (inv_solo_retiro)
   reemplazadoEn DateTime? @db.Timestamptz(6)
 
   @@map("valor_serie_oficial")

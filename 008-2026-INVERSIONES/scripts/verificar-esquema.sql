@@ -98,7 +98,7 @@ DECLARE
     ['dividendo', 'dividendo_viejas_nulas_chk', 'CHECK ((("montoBruto" IS NULL) AND (retencion IS NULL) AND ("tasaRetencion" IS NULL) AND ("decretadoId" IS NULL)))'],
     ['dividendo_decretado', 'dividendo_decretado_anulada_chk', 'CHECK (((NOT anulada) OR ((version >= 2) AND (nota IS NOT NULL) AND (nota ~ ''[^[:space:]]''::text))))'],
     ['dividendo_decretado', 'dividendo_decretado_cuota_chk', 'CHECK (((cuota >= 1) AND (cuota <= 12)))'],
-    ['dividendo_decretado', 'dividendo_decretado_fechas_chk', 'CHECK ((("fechaAnuncio" <= "fechaEx") AND ("fechaEx" <= "fechaPago")))'],
+    ['dividendo_decretado', 'dividendo_decretado_fechas_chk', 'CHECK ((isfinite("fechaAnuncio") AND isfinite("fechaPago") AND ("fechaAnuncio" <= "fechaEx") AND ("fechaEx" <= "fechaPago")))'],
     ['dividendo_decretado', 'dividendo_decretado_nota_chk', 'CHECK (((nota IS NULL) OR ((nota ~ ''[^[:space:]]''::text) AND (char_length(nota) <= 500))))'],
     ['dividendo_decretado', 'dividendo_decretado_referencia_chk', 'CHECK (((char_length("referenciaOficial") <= 500) AND (("referenciaOficial" ~ ''^https://www\.superfinanciera\.gov\.co/[A-Za-z0-9._~/?=&%#:+-]+$''::text) OR ("referenciaOficial" ~ ''^https://www\.bvc\.com\.co/[A-Za-z0-9._~/?=&%#:+-]+$''::text) OR ("referenciaOficial" ~ ''^sfc:[A-Za-z0-9._-]{1,60}$''::text))))'],
     ['dividendo_decretado', 'dividendo_decretado_tipo_chk', 'CHECK ((tipo <> ''FRACCION_ESCISION''::"TipoDividendo"))'],
@@ -142,7 +142,7 @@ DECLARE
     ['valor_serie_oficial', 'valor_serie_oficial_serie_chk', 'CHECK ((serie ~ ''^[A-Z][A-Z0-9_]{1,39}$''::text))'],
     ['valor_serie_oficial', 'valor_serie_oficial_sin_solape_excl', 'EXCLUDE USING gist (serie WITH =, daterange(desde, hasta, ''[]''::text) WITH &&) WHERE (("reemplazadoEn" IS NULL))'],
     ['valor_serie_oficial', 'valor_serie_oficial_valor_chk', 'CHECK (((valor > (0)::numeric) AND (valor <> ''NaN''::numeric)))'],
-    ['valor_serie_oficial', 'valor_serie_oficial_vigencia_chk', 'CHECK (((hasta >= desde) AND (hasta <= (desde + 31))))'],
+    ['valor_serie_oficial', 'valor_serie_oficial_vigencia_chk', 'CHECK ((isfinite(desde) AND (hasta >= desde) AND (hasta <= (desde + 31))))'],
     ['valor_unidad_fondo', 'valor_unidad_fondo_valor_chk', 'CHECK (("valorUnidad" > (0)::numeric))']
   ];
   sin_validar text[] := ARRAY['dividendo_retencion_chk', 'dividendo_tasa_retencion_chk', 'evento_corporativo_origen_destino_chk', 'evento_corporativo_razon_chk', 'orden_fechas_chk'];
@@ -251,7 +251,7 @@ DECLARE
     ['control_conciliacion', 'control_conciliacion_solo_insercion', 'CREATE TRIGGER control_conciliacion_solo_insercion BEFORE DELETE OR UPDATE ON public.control_conciliacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['decision', 'decision_solo_insercion', 'CREATE TRIGGER decision_solo_insercion BEFORE DELETE OR UPDATE ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['dividendo', 'dividendo_solo_insercion', 'CREATE TRIGGER dividendo_solo_insercion BEFORE DELETE OR UPDATE ON public.dividendo FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
-    ['dividendo_decretado', 'dividendo_decretado_retiro', 'CREATE TRIGGER dividendo_decretado_retiro BEFORE INSERT OR DELETE OR UPDATE ON public.dividendo_decretado FOR EACH ROW EXECUTE FUNCTION inv_solo_retiro()'],
+    ['dividendo_decretado', 'dividendo_decretado_retiro', 'CREATE TRIGGER dividendo_decretado_retiro BEFORE INSERT OR DELETE OR UPDATE ON public.dividendo_decretado FOR EACH ROW EXECUTE FUNCTION inv_solo_retiro(''registradoEn'')'],
     ['enlace_decision_orden', 'enlace_decision_orden_solo_insercion', 'CREATE TRIGGER enlace_decision_orden_solo_insercion BEFORE DELETE OR UPDATE ON public.enlace_decision_orden FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['fila_de_carga', 'fila_de_carga_solo_insercion', 'CREATE TRIGGER fila_de_carga_solo_insercion BEFORE DELETE OR UPDATE ON public.fila_de_carga FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['fila_fuente', 'fila_fuente_solo_insercion', 'CREATE TRIGGER fila_fuente_solo_insercion BEFORE DELETE OR UPDATE ON public.fila_fuente FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
@@ -267,7 +267,7 @@ DECLARE
     ['regla_plan', 'regla_plan_solo_insercion', 'CREATE TRIGGER regla_plan_solo_insercion BEFORE DELETE OR UPDATE ON public.regla_plan FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['token_acceso', 'token_acceso_un_solo_uso', 'CREATE TRIGGER token_acceso_un_solo_uso BEFORE DELETE OR UPDATE ON public.token_acceso FOR EACH ROW EXECUTE FUNCTION inv_token_un_solo_uso()'],
     ['usuario', 'usuario_transiciones', 'CREATE TRIGGER usuario_transiciones BEFORE UPDATE ON public.usuario FOR EACH ROW EXECUTE FUNCTION inv_usuario_transiciones()'],
-    ['valor_serie_oficial', 'valor_serie_oficial_retiro', 'CREATE TRIGGER valor_serie_oficial_retiro BEFORE INSERT OR DELETE OR UPDATE ON public.valor_serie_oficial FOR EACH ROW EXECUTE FUNCTION inv_solo_retiro()'],
+    ['valor_serie_oficial', 'valor_serie_oficial_retiro', 'CREATE TRIGGER valor_serie_oficial_retiro BEFORE INSERT OR DELETE OR UPDATE ON public.valor_serie_oficial FOR EACH ROW EXECUTE FUNCTION inv_solo_retiro(''traidoEn'')'],
     ['valor_unidad_fondo', 'valor_unidad_fondo_insercion', 'CREATE TRIGGER valor_unidad_fondo_insercion BEFORE INSERT ON public.valor_unidad_fondo FOR EACH ROW EXECUTE FUNCTION inv_valor_unidad_fondo_insercion()'],
     ['valor_unidad_fondo', 'valor_unidad_fondo_retiro', 'CREATE TRIGGER valor_unidad_fondo_retiro BEFORE DELETE OR UPDATE ON public.valor_unidad_fondo FOR EACH ROW EXECUTE FUNCTION inv_retiro_vigente()']
   ];
@@ -284,7 +284,7 @@ DECLARE
     ['inv_precio_cierre_insercion', '6bdf12a80eeee52cff6a412139ffe5c1', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77', ''],
-    ['inv_solo_retiro', '93db5488285d944ea321787851d204b4', ''],
+    ['inv_solo_retiro', 'fa039cef28a3f175cfd7639ead0e8f62', 'search_path=pg_catalog, pg_temp'],
     ['inv_token_un_solo_uso', 'eef69326d8da1a1ed8a4f5086d212546', ''],
     ['inv_usuario_transiciones', '368539024fbeaeb771669ff741aa7ed3', ''],
     ['inv_valor_unidad_fondo_insercion', '200c0ff4c9421344a810814a97568db0', 'search_path=pg_catalog, public, pg_temp']
