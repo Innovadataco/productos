@@ -15,6 +15,8 @@ const AVISO_CRUCE = [
   "  ⚠️  NO cargue decretos reales todavía: hasta que el motor de proyecciones cruce los decretos con los pagos de Trii",
   "  por ventana (C5b), contaría dos veces un pago que Trii acredita otro día. Por eso --aplicar solo escribe en una base",
   "  de pruebas (nombre terminado en _test); en cualquier otra sale CRUCE_PENDIENTE. El ensayo funciona en todas.",
+  "  Solo el crudo de cada fila va cifrado: la nota y la referencia quedan en claro en la base. No ponga en la nota",
+  "  cantidades, montos ni datos de la cuenta.",
 ];
 
 export const USO_IMPORTAR_DECRETOS = [

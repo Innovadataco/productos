@@ -4,8 +4,9 @@
  * - Tope de bytes antes de decodificar; UTF-8 estricto (con o sin BOM); RFC 4180 con el lector de Trii
  *   (src/importacion/trii/csv.ts: comillas, comillas escapadas y líneas vacías omitidas que cuentan en la numeración).
  * - Encabezado EXACTO y en su orden: una columna de más, de menos, en otro orden o con espacios rechaza el archivo.
- * - Cada fila con tantas celdas como el encabezado, y ninguna celda con caracteres de control, invisibles o de
- *   dirección de texto (tampoco un salto dentro de comillas: ningún dato del registro lo necesita).
+ * - Cada fila con tantas celdas como el encabezado, y ninguna celda con caracteres de control, de formato (invisibles,
+ *   de dirección de texto, etiquetas), separadores de línea o de párrafo, ni los rellenos invisibles que no son de
+ *   formato (tampoco un salto dentro de comillas: ningún dato del registro lo necesita). La nota se mostrará en C6b.
  * - Tope de filas de datos.
  * Los hallazgos llevan línea, columna y código, nunca el valor. El sha256 es el de los bytes recibidos.
  */
@@ -30,8 +31,12 @@ export type LecturaArchivo =
   | { readonly ok: true; readonly sha256: string; readonly filas: readonly FilaArchivo[] }
   | { readonly ok: false; readonly sha256: string; readonly hallazgos: readonly Hallazgo[] };
 
-/** Controles (C0 con el tabulador y los saltos, DEL, C1) e invisibles o de dirección de texto (como src/cli/correo.ts). */
-export const NO_PERMITIDO = /[\u0000-\u001f\u007f-\u009f\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/;
+/**
+ * Controles (Cc: C0 con el tabulador y los saltos, DEL, C1), de formato (Cf: guion blando, marcas de dirección, ancho
+ * cero, BOM, anclas, etiquetas), separadores de línea y de párrafo (Zl, Zp), y los invisibles que Unicode no marca como
+ * formato: el grafema combinante U+034F, los rellenos hangul y los selectores de variación.
+ */
+export const NO_PERMITIDO = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\u034f\u115f\u1160\u3164\uffa0\ufe00-\ufe0f]/u;
 
 /** UTF-8 estricto; el BOM inicial lo quita el decodificador. */
 function decodificar(bytes: Uint8Array): string | null {

@@ -10,11 +10,11 @@
  *   escribe en una base de pruebas (nombre terminado en _test); en cualquier otra sale CRUCE_PENDIENTE.
  * - Lee un archivo REGULAR con tope (src/lib/archivo-acotado.ts). Usa DATABASE_URL y las claves de cifrado del entorno
  *   (el crudo de cada fila se guarda cifrado). Imprime solo el modo, conteos, códigos, números de línea y el id de la
- *   carga: nunca especies, valores, fechas, referencias, notas ni el correo. El archivo original no se guarda.
+ *   carga: nunca especies, valores, fechas, referencias, notas ni el correo. El archivo original no se guarda, ni su
+ *   nombre (puede nombrar una especie): la carga dice «decretos.csv» y la identifica su sha256.
  * Salida: 0 bien · 1 error de la base o del cifrado · 2 uso o archivo ilegible · 3 rechazado (no escribió nada).
  */
 import { PrismaClient } from "@prisma/client";
-import { basename } from "node:path";
 import { leerArgumentosDecretos, salidaUso } from "../src/datos-oficiales/decretos/argumentos";
 import { MAX_BYTES_DECRETOS } from "../src/datos-oficiales/decretos/csv";
 import { importarDecretos, salidaArchivo, salidaDecretos } from "../src/datos-oficiales/decretos/importar";
@@ -31,7 +31,7 @@ async function main(): Promise<SalidaCli> {
   if (!leido.ok) return salidaArchivo(leido.codigo, opciones);
   const db = new PrismaClient();
   try {
-    const r = await importarDecretos(db, { contenido: leido.bytes, nombreArchivo: basename(a.archivo), email: a.email, aplicar: a.aplicar });
+    const r = await importarDecretos(db, { contenido: leido.bytes, email: a.email, aplicar: a.aplicar });
     return salidaDecretos(r, opciones);
   } finally {
     await db.$disconnect();

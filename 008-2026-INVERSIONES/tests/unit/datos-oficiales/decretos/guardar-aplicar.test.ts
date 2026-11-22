@@ -19,7 +19,7 @@ const DECRETO: DecretoLeido = {
   fechaEx: dia("2021-04-14"), fechaPago: dia("2021-04-21"), referencia: "sfc:FICT-4613", anulada: false, nota: null,
 };
 const RESUELTO: DecretoResuelto = { instrumentoId: "ins-a", fila: { decreto: DECRETO, crudo: { especie: "FICTA" } } };
-const entrada = (resueltos: readonly DecretoResuelto[] = [RESUELTO]): EntradaGuardar => ({ usuarioId: "u-1", nombreArchivo: "d.ficticio.csv", sha256: "e".repeat(64), resueltos, llavero: LLAVERO });
+const entrada = (resueltos: readonly DecretoResuelto[] = [RESUELTO]): EntradaGuardar => ({ usuarioId: "u-1", sha256: "e".repeat(64), resueltos, llavero: LLAVERO });
 
 interface Opciones {
   readonly base?: string;

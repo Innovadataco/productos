@@ -11,7 +11,13 @@
  *   escribe nada.
  * - Guarda del cruce (condición de C1): hasta que el motor de proyecciones cruce los decretos con los pagos de Trii por
  *   ventana (C5b), solo se escribe en una base de pruebas (nombre terminado en `_test`, el de la conexión que escribe):
- *   si no, el motor contaría dos veces un pago de Trii que llega otro día. En otra base: CRUCE_PENDIENTE. C5b la quita.
+ *   si no, el motor contaría dos veces un pago de Trii que llega otro día. En otra base: CRUCE_PENDIENTE. C5b la quita
+ *   (exigirCruce, basePermiteAplicar y el aviso de la ayuda en argumentos.ts, juntos).
+ * - La transacción fija lock_timeout (10 s): con la tabla tomada por una migración no espera los 60 s. El orden
+ *   de lectura es dividendo_decretado y después fila_fuente; la migración de C1 toma fila_fuente primero: una migración
+ *   futura que tome las dos debe correr con las cargas detenidas (si se cruzan, PostgreSQL aborta una; nada se corrompe).
+ * - El nombre del archivo del dueño no se guarda (puede nombrar una especie): la carga dice NOMBRE_ARCHIVO; la identifica
+ *   su sha256.
  */
 import { createHash } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
@@ -27,6 +33,7 @@ type Db = PrismaClient | Tx;
 
 export const TIPO_FUENTE = "REGISTRO_DECRETOS" as const;
 const TRANSACCION = { timeout: 60_000, maxWait: 10_000 } as const;
+export const NOMBRE_ARCHIVO = "decretos.csv";
 
 export type CodigoDecretos = "CRUCE_PENDIENTE" | "CADENA_ROTA" | "ANULACION_SIN_DECRETO" | "CONFLICTO_CONCURRENTE";
 
@@ -166,7 +173,7 @@ export async function leerVersiones(db: Db, instrumentoIds: readonly string[]): 
 }
 
 /** Solo una base de pruebas (nombre en minúsculas terminado en `_test`) admite escribir decretos hasta C5b. */
-export const basePermiteAplicar = (nombre: string): boolean => /^[a-z0-9_]*_test$/.test(nombre);
+export const basePermiteAplicar = (nombre: string): boolean => /^[a-z0-9_]+_test$/.test(nombre);
 
 /** El nombre de la base de esa conexión (no el de la URL). */
 export async function nombreDeLaBase(db: Db): Promise<string> {
@@ -189,17 +196,27 @@ async function escribir(tx: Tx, cargaId: string, p: Planificado, llavero: Llaver
   }
   const claveNatural = claveNaturalDecreto(instrumentoId, d, p.plan.version);
   const filaFuenteId = await guardarFilaCruda(tx, { cargaId, tipoFuente: TIPO_FUENTE, claveNatural, filaNo: d.linea, crudo: fila.crudo }, llavero);
-  await tx.dividendoDecretado.create({
-    data: {
-      filaFuenteId, instrumentoId, tipo: d.tipo, valorPorAccion: new Prisma.Decimal(d.valorPorAccion), fechaAnuncio: d.fechaAnuncio, cuota: d.cuota,
-      fechaEx: d.fechaEx, fechaPago: d.fechaPago, moneda: "COP", referenciaOficial: d.referencia, nota: d.nota, version: p.plan.version, anulada: d.anulada,
-    },
-  });
+  await crearDecreto(tx, {
+    filaFuenteId, instrumentoId, tipo: d.tipo, valorPorAccion: new Prisma.Decimal(d.valorPorAccion), fechaAnuncio: d.fechaAnuncio, cuota: d.cuota,
+    fechaEx: d.fechaEx, fechaPago: d.fechaPago, moneda: "COP", referenciaOficial: d.referencia, nota: d.nota, version: p.plan.version, anulada: d.anulada,
+  }, d.linea);
+}
+
+/**
+ * Con el candado tomado, un P2002 aquí (la vigente o la versión ya existen) solo puede venir de un escritor fuera de
+ * este camino: CONFLICTO_CONCURRENTE con su línea. Un P2002 en otra tabla (la fila cruda) sería un defecto propio y sube.
+ */
+async function crearDecreto(tx: Tx, data: Prisma.DividendoDecretadoUncheckedCreateInput, linea: number): Promise<void> {
+  try {
+    await tx.dividendoDecretado.create({ data, select: { id: true } });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new ErrorDecretos("CONFLICTO_CONCURRENTE", linea);
+    throw error;
+  }
 }
 
 export interface EntradaGuardar {
   readonly usuarioId: string;
-  readonly nombreArchivo: string;
   readonly sha256: string;
   readonly resueltos: readonly DecretoResuelto[];
   readonly llavero: Llavero;
@@ -212,6 +229,8 @@ export type ResultadoGuardar =
 
 async function enTransaccion(tx: Tx, e: EntradaGuardar): Promise<ResultadoGuardar> {
   await exigirCruce(tx);
+  // Lo más que espera por un candado de tabla (una migración); el consultivo lo acota el timeout de la transacción.
+  await tx.$executeRaw`SET LOCAL lock_timeout = '10s'`;
   await tomarCandado(tx, TIPO_FUENTE);
   const versiones = await leerVersiones(tx, e.resueltos.map((r) => r.instrumentoId));
   const { planes, hallazgos } = planificarTodos(e.resueltos, versiones);
@@ -219,7 +238,7 @@ async function enTransaccion(tx: Tx, e: EntradaGuardar): Promise<ResultadoGuarda
   const conteos = contar(planes);
   if (!hayCambios(conteos)) return { estado: "SIN_CAMBIOS", conteos };
   const cargaId = await crearCarga(tx, {
-    tipoFuente: TIPO_FUENTE, nombreArchivo: e.nombreArchivo, sha256: e.sha256, usuarioId: e.usuarioId,
+    tipoFuente: TIPO_FUENTE, nombreArchivo: NOMBRE_ARCHIVO, sha256: e.sha256, usuarioId: e.usuarioId,
     filasTotal: conteos.filas, filasNuevas: conteos.filas - conteos.sinCambios, filasRepetidas: conteos.sinCambios,
   });
   for (const p of planes) await escribir(tx, cargaId, p, e.llavero);
@@ -228,17 +247,14 @@ async function enTransaccion(tx: Tx, e: EntradaGuardar): Promise<ResultadoGuarda
 
 /**
  * Aplica las filas ya leídas y resueltas. Los rechazos (CRUCE_PENDIENTE, CADENA_ROTA, ANULACION_SIN_DECRETO y
- * CONFLICTO_CONCURRENTE, también un P2002 de otra carga que se adelantó) vuelven como RECHAZADO sin haber escrito nada;
- * cualquier otro error sube (puede haber ocurrido al confirmar).
+ * CONFLICTO_CONCURRENTE) vuelven como RECHAZADO sin haber escrito nada; cualquier otro error sube (puede haber ocurrido
+ * al confirmar).
  */
 export async function guardarDecretos(db: PrismaClient, e: EntradaGuardar): Promise<ResultadoGuardar> {
   try {
     return await db.$transaction((tx) => enTransaccion(tx, e), TRANSACCION);
   } catch (error) {
     if (error instanceof ErrorDecretos) return { estado: "RECHAZADO", hallazgos: [{ linea: error.linea, columna: null, codigo: error.codigo }] };
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return { estado: "RECHAZADO", hallazgos: [{ linea: 0, columna: null, codigo: "CONFLICTO_CONCURRENTE" }] };
-    }
     throw error;
   }
 }

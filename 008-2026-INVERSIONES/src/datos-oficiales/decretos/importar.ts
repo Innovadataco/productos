@@ -24,7 +24,6 @@ import {
 
 export interface EntradaDecretos {
   readonly contenido: Uint8Array;
-  readonly nombreArchivo: string;
   readonly email: string;
   readonly aplicar: boolean;
 }
@@ -49,29 +48,40 @@ export type ResultadoDecretos =
       readonly aplicarPermitido: boolean;
     };
 
-/** Nemotécnico (o símbolo de Trii) → id de la ACCIÓN registrada. No crea nada: un decreto es de una acción. */
-async function resolverAcciones(db: PrismaClient, especies: readonly string[]): Promise<ReadonlyMap<string, string>> {
+/** Lo que resuelve el texto de una especie: el id de la acción, o AMBIGUA si nombra a dos. */
+type Resolucion = string | typeof AMBIGUA;
+const AMBIGUA = Symbol("ESPECIE_AMBIGUA");
+
+/**
+ * Nemotécnico (o símbolo de Trii) → id de la ACCIÓN registrada. No crea nada: un decreto es de una acción. Si el texto
+ * es el nemotécnico de una acción y el símbolo de Trii de otra, es AMBIGUA: no se adivina a cuál le toca el decreto.
+ */
+async function resolverAcciones(db: PrismaClient, especies: readonly string[]): Promise<ReadonlyMap<string, Resolucion>> {
   const lista = [...new Set(especies)];
   const filas = await db.instrumento.findMany({
     where: { tipo: "ACCION", OR: [{ nemotecnico: { in: lista } }, { simboloTrii: { in: lista } }] },
     select: { id: true, nemotecnico: true, simboloTrii: true },
   });
-  return new Map(lista.flatMap((e): [string, string][] => {
-    const fila = filas.find((f) => f.nemotecnico === e) ?? filas.find((f) => f.simboloTrii === e);
-    return fila ? [[e, fila.id]] : [];
+  return new Map(lista.flatMap((e): [string, Resolucion][] => {
+    const ids = new Set(filas.filter((f) => f.nemotecnico === e || f.simboloTrii === e).map((f) => f.id));
+    if (ids.size === 0) return [];
+    return [[e, ids.size === 1 ? [...ids][0]! : AMBIGUA]];
   }));
 }
 
-/** Cada fila con su instrumento; sin él, ESPECIE_NO_REGISTRADA; dos filas del mismo instrumento y clave, DECRETO_REPETIDO. */
-function resolver(filas: readonly FilaDecreto[], ids: ReadonlyMap<string, string>): { resueltos: DecretoResuelto[]; hallazgos: Hallazgo[] } {
+/**
+ * Cada fila con su instrumento; sin él, ESPECIE_NO_REGISTRADA; con dos, ESPECIE_AMBIGUA; dos filas del mismo
+ * instrumento y clave, DECRETO_REPETIDO.
+ */
+function resolver(filas: readonly FilaDecreto[], ids: ReadonlyMap<string, Resolucion>): { resueltos: DecretoResuelto[]; hallazgos: Hallazgo[] } {
   const resueltos: DecretoResuelto[] = [];
   const hallazgos: Hallazgo[] = [];
   const vistas = new Set<string>();
   for (const fila of filas) {
     const d = fila.decreto;
     const instrumentoId = ids.get(d.especie);
-    if (!instrumentoId) {
-      hallazgos.push({ linea: d.linea, columna: "especie", codigo: "ESPECIE_NO_REGISTRADA" });
+    if (instrumentoId === undefined || instrumentoId === AMBIGUA) {
+      hallazgos.push({ linea: d.linea, columna: "especie", codigo: instrumentoId === AMBIGUA ? "ESPECIE_AMBIGUA" : "ESPECIE_NO_REGISTRADA" });
       continue;
     }
     const clave = claveDecreto(instrumentoId, d.tipo, d.fechaAnuncio, d.cuota);
@@ -102,7 +112,7 @@ export async function importarDecretos(db: PrismaClient, e: EntradaDecretos, o: 
   const { resueltos, hallazgos } = resolver(csv.filas, ids);
   if (hallazgos.length > 0) return rechazo(hallazgos);
   if (!e.aplicar) return ensayo(db, resueltos);
-  const r = await guardarDecretos(db, { usuarioId, nombreArchivo: e.nombreArchivo, sha256: csv.sha256, resueltos, llavero });
+  const r = await guardarDecretos(db, { usuarioId, sha256: csv.sha256, resueltos, llavero });
   if (r.estado === "RECHAZADO") return rechazo(r.hallazgos);
   return { modo, estado: r.estado, conteos: r.conteos, cargaId: r.estado === "APLICADO" ? r.cargaId : null, aplicarPermitido: true };
 }
@@ -114,6 +124,7 @@ const CRUCE = "los decretos reales no se cargan hasta que el motor de proyeccion
 const QUE_REVISAR: Readonly<Record<string, string>> = {
   USUARIO_NO_AUTORIZADO: "el correo no es el de un dueño activo",
   ESPECIE_NO_REGISTRADA: "esa especie no es una acción registrada: importe primero sus órdenes de Trii (este comando no crea especies)",
+  ESPECIE_AMBIGUA: "ese texto es el nemotécnico de una acción y el símbolo de Trii de otra: no se adivina a cuál le toca; avise al CEO de 008",
   DECRETO_REPETIDO: "dos filas con la misma especie, fecha de anuncio, tipo y cuota",
   MONEDA_NO_ADMITIDA: "solo decretos en pesos (moneda=COP); los de USD quedan fuera (P11)",
   FORMA_NO_ADMITIDA: "solo decretos en dinero (forma=DINERO); los de acciones quedan fuera (P11)",

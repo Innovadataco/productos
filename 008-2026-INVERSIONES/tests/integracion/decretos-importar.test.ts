@@ -33,7 +33,7 @@ const fila = (especie: string, c: Partial<Fila> = {}): Fila => ({
 const csv = (filas: readonly Fila[]) =>
   new TextEncoder().encode(`${ENCABEZADO_DECRETOS.join(",")}\n${filas.map((f) => COLUMNAS.map((k) => f[k]).join(",")).join("\n")}\n`);
 const importar = (filas: readonly Fila[], aplicar: boolean, correo = email): Promise<ResultadoDecretos> =>
-  importarDecretos(db, { contenido: csv(filas), nombreArchivo: `decretos-${nemo("A")}.csv`, email: correo, aplicar });
+  importarDecretos(db, { contenido: csv(filas), email: correo, aplicar });
 
 /** Conteos de todo lo que una carga de decretos puede escribir: si no cambian, no se escribió nada. */
 async function huella() {
