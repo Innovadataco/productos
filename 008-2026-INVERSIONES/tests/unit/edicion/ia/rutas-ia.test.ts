@@ -214,8 +214,31 @@ describe("POST /api/ia/ollama · solo el destino guardado (I-24)", () => {
     expect(s.destinos).toEqual([DESTINO_FICTICIO]);
   });
 
-  it("guardar también tiene su límite de frecuencia por usuario", async () => {
+  // e2e: tras un 400, el dueño corrige y reenvía enseguida; un límite de frecuencia en guardar le daba 429. El doble envío
+  // no duplica: la versión de partida da 409 (CONFIG_CAMBIO). Guardar queda solo con el tope general por IP del proxy.
+  it("guardar no tiene límite propio de frecuencia: corregir y reenviar enseguida funciona", async () => {
+    expect((await postConfig(pedido("/api/ia/config", cuerpoFicticio({ topeMensualUsd: "" })))).status).toBe(400);
     expect((await postConfig(pedido("/api/ia/config", cuerpoFicticio()))).status).toBe(201);
-    expect((await postConfig(pedido("/api/ia/config", cuerpoFicticio()))).status).toBe(429);
+  });
+
+  // Revisión (seguridad, M2): «Probar» puede tardar minutos (hasta tres modelos con su límite). Una sola acción al Mac a
+  // la vez en el proceso: mientras corre una, otra da 429 sin llamar a la sonda.
+  it("una acción en curso: otra a la vez da 429, sin llamar a la sonda", async () => {
+    let liberar: () => void = () => undefined;
+    const lenta: SondaOllama & { llamadas: number } = {
+      tipo: "DIRECTA", llamadas: 0,
+      identificar() { this.llamadas += 1; return new Promise((r) => { liberar = () => r({ ok: true, modelos: [] }); }); },
+      probar() { this.llamadas += 1; return Promise.resolve({ ok: true, latenciaMs: 1, smoke: "OK" }); },
+    };
+    sondaDelEntorno.mockReturnValue(lenta);
+    const primera = postOllama(pedido("/api/ia/ollama", { accion: "identificar" }));
+    await new Promise((r) => setTimeout(r, 5));
+    reiniciarFrecuenciasIa();
+    exigirDuenoApi.mockResolvedValueOnce({ ok: true, usuario: { id: "otro-dueno-1237", email: "otro@ejemplo.invalid", rol: "DUENO" } });
+    const segunda = await postOllama(pedido("/api/ia/ollama", { accion: "probar" }));
+    expect(segunda.status).toBe(429);
+    expect(lenta.llamadas).toBe(1);
+    liberar();
+    expect((await primera).status).toBe(200);
   });
 });

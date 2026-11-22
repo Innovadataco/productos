@@ -77,6 +77,11 @@ describe("leerModelosPermitidos · control positivo", () => {
     expect(leerModelosPermitidos(con((o) => { o.modelos = []; }))).toMatchObject({ estado: "LISTA", modelos: [] });
   });
 
+  // Revisión (código, M1): una hora o una proporción en una nota no es un puerto: no tumba la lista.
+  it.each(["ratio 1:1", "mejor a las 10:30", "versión 2:7b"])("una nota con «%s» pasa", (nota) => {
+    expect(leerModelosPermitidos(con((o) => { modelosDe(o)[0]!.nota = nota; })).estado).toBe("LISTA");
+  });
+
   it("la nota es opcional", () => {
     const l = leerModelosPermitidos(con((o) => { delete modelosDe(o)[0]!.nota; }));
     expect(l.estado === "LISTA" && l.modelos[0]).toEqual({ nombre: "qwen2.5:14b", digest: DIGEST_QWEN });

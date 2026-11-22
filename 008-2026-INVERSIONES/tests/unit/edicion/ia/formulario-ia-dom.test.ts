@@ -170,3 +170,43 @@ describe("FormularioIa · identificar y probar (solo el destino guardado)", () =
 });
 
 const TEXTO_EN_LISTA = "En la lista de PI";
+
+// Revisión (react): lo que se ve es lo que se envía; una opción que no se puede elegir dice por qué; un doble clic no
+// manda dos pedidos; una respuesta con otra forma no tumba la pantalla.
+describe("FormularioIa · hallazgos de la revisión", () => {
+  it("un modelo guardado que ya no está en la lista de PI se ve como opción (deshabilitada) y no se pierde en silencio", async () => {
+    const datos = { ...DATOS, inicial: { ...DATOS.inicial, tareas: { ...DATOS.inicial.tareas, ESCENARIOS: { activo: false, modeloLocal: "ornith:9b" } } }, guardado: { ...DATOS.guardado, modelos: { ...DATOS.guardado.modelos, ESCENARIOS: "ornith:9b" } } };
+    await m.pintar(createElement(FormularioIa, { datos }));
+    const select = control<HTMLSelectElement>("ia-tarea-ESCENARIOS-modelo");
+    expect(select.value).toBe("ornith:9b");
+    const opcion = [...select.options].find((o) => o.value === "ornith:9b");
+    expect(opcion?.disabled).toBe(true);
+    expect(opcion?.textContent).toContain(AVISOS_IA.YA_NO_EN_LISTA);
+  });
+
+  it("las opciones que no se pueden elegir dicen por qué (sin identificar), y la ayuda va enlazada al selector", async () => {
+    await m.pintar(createElement(FormularioIa, { datos: DATOS }));
+    const select = control<HTMLSelectElement>("ia-tarea-DIARIO-modelo");
+    expect([...select.options].find((o) => o.value === "gemma2:27b")?.textContent).toContain(AVISOS_IA.SIN_IDENTIFICAR);
+    expect(select.getAttribute("aria-describedby")).toContain("ia-tarea-DIARIO-modelo-ayuda");
+  });
+
+  it("un doble clic en identificar manda un solo pedido, y los botones se deshabilitan mientras consulta", async () => {
+    await m.pintar(createElement(FormularioIa, { datos: DATOS }));
+    await act(async () => {
+      boton("Identificar modelos")!.click();
+      boton("Identificar modelos")!.click();
+    });
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+    expect(boton("Probar")?.disabled).toBe(true);
+    await responder({ accion: "identificar", resultado: { estado: "PENDIENTE" } }, 200);
+    expect(boton("Probar")?.disabled).toBe(false);
+  });
+
+  it("una respuesta OK sin la lista de modelos no tumba la pantalla: dice que no se pudo", async () => {
+    await m.pintar(createElement(FormularioIa, { datos: DATOS }));
+    await act(async () => { boton("Identificar modelos")!.click(); });
+    await responder({ accion: "identificar", resultado: { estado: "OK" } }, 200);
+    expect(texto(m.contenedor.querySelector('[role="status"].ia-sonda'))).toContain(mensajeIa("DESCONOCIDO"));
+  });
+});

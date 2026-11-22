@@ -85,6 +85,9 @@ describe("config_ia · cada CHECK muerde", () => {
     ["una tarea con un campo de más", { tareas: { DIARIO: { activo: true, modeloLocal: null, temperatura: 1 } } }, "config_ia_tareas_chk"],
     ["una tarea sin «activo» booleano", { tareas: { DIARIO: { activo: "sí", modeloLocal: null } } }, "config_ia_tareas_chk"],
     ["las tareas como arreglo", { tareas: ["DIARIO"] }, "config_ia_tareas_chk"],
+    // Revisión (base, M1): sin una tarea, la regla del modo daba NULL y la fila pasaba. Todas las tareas van siempre.
+    ["las tareas vacías con la local", { modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: {} }, "config_ia_tareas_chk"],
+    ["una tarea que falta", { tareas: { DIARIO: { activo: false, modeloLocal: null }, REGLAS: { activo: false, modeloLocal: null } } }, "config_ia_tareas_chk"],
     ["un host sin puerto", { ollamaHost: HOST }, "config_ia_destino_chk"],
     ["un puerto sin host", { ollamaPuerto: 47213 }, "config_ia_destino_chk"],
     ["el puerto 0", { ollamaHost: HOST, ollamaPuerto: 0 }, "config_ia_destino_chk"],

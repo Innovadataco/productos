@@ -122,11 +122,24 @@ describe("leerPedidoConfig · reglas de cada modo y la lista de PI", () => {
     expect(errores(leerPedidoConfig(cuerpoFicticio({ tareas }), LISTA_FICTICIA))).toContainEqual({ campo: "tareas.DIARIO.modeloLocal", codigo: "MODELO_LOCAL_FALTA" });
   });
 
-  it("un modelo que no está en la lista de PI: MODELO_FUERA_DE_LISTA (también en una tarea inactiva)", () => {
-    const tareas = { DIARIO: { activo: true, modeloLocal: "qwen2.5:32b" }, REGLAS: { activo: false, modeloLocal: "ornith:9b" }, ESCENARIOS: { activo: false, modeloLocal: "" } };
-    const e = errores(leerPedidoConfig(cuerpoFicticio({ tareas }), LISTA_FICTICIA));
-    expect(e).toContainEqual({ campo: "tareas.DIARIO.modeloLocal", codigo: "MODELO_FUERA_DE_LISTA" });
-    expect(e).toContainEqual({ campo: "tareas.REGLAS.modeloLocal", codigo: "MODELO_FUERA_DE_LISTA" });
+  it("un modelo que no está en la lista de PI en una tarea activa con la local: MODELO_FUERA_DE_LISTA", () => {
+    const tareas = { DIARIO: { activo: true, modeloLocal: "qwen2.5:32b" }, REGLAS: { activo: false, modeloLocal: "" }, ESCENARIOS: { activo: false, modeloLocal: "" } };
+    expect(errores(leerPedidoConfig(cuerpoFicticio({ tareas }), LISTA_FICTICIA))).toContainEqual({ campo: "tareas.DIARIO.modeloLocal", codigo: "MODELO_FUERA_DE_LISTA" });
+  });
+
+  // Revisión (código, M2): si PI retira un modelo o falta la lista, el dueño igual puede apagar la IA o pasar a la nube
+  // sin vaciar a mano cada tarea: la pertenencia se exige solo donde la local lo va a usar.
+  it("un modelo viejo fuera de la lista en una tarea inactiva, o con un modo sin la local, no impide guardar", () => {
+    const tareas = { DIARIO: { activo: true, modeloLocal: "ornith:9b" }, REGLAS: { activo: false, modeloLocal: "ornith:9b" }, ESCENARIOS: { activo: false, modeloLocal: "" } };
+    expect(leerPedidoConfig(cuerpoFicticio({ modo: "nube", tareas }), LISTA_FICTICIA)).toMatchObject({ ok: true, valor: { tareas: { DIARIO: { modeloLocal: "ornith:9b" } } } });
+    expect(leerPedidoConfig(cuerpoFicticio({ modo: "apagado", tareas }), SIN_LISTA).ok).toBe(true);
+    const conLocal = { ...tareas, DIARIO: { activo: true, modeloLocal: "qwen2.5:14b" } };
+    expect(leerPedidoConfig(cuerpoFicticio({ tareas: conLocal }), LISTA_FICTICIA).ok).toBe(true);
+  });
+
+  it("un modelo con otra forma (registro, mayúsculas) es FORMATO_INVALIDO en cualquier tarea y modo", () => {
+    const tareas = { DIARIO: { activo: false, modeloLocal: "registro/Qwen:14B" }, REGLAS: { activo: false, modeloLocal: "" }, ESCENARIOS: { activo: false, modeloLocal: "" } };
+    expect(errores(leerPedidoConfig(cuerpoFicticio({ modo: "apagado", tareas }), LISTA_FICTICIA))).toContainEqual({ campo: "tareas.DIARIO.modeloLocal", codigo: "FORMATO_INVALIDO" });
   });
 
   it("sin lista de PI, ningún modelo local: SIN_LISTA_DE_PI en el modo y en cada modelo elegido", () => {
