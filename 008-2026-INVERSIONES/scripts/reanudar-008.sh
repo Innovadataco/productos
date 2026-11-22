@@ -3,7 +3,8 @@
 # (estado/sha-actual) y borra la marca de pausa solo si todo quedó healthy. Se niega si PI está
 # desplegando: el candado común tomado («PI desplegando») o un proceso de despliegue o build de PI a la vista
 # (segunda barrera). Exige la configuración no secreta (inv-008.conf): el up levanta el respaldo. El servicio de precios
-# (D-018) sube solo si la imagen de ese sha lo trae; si no, se baja con --scale inv-008-precios=0.
+# (D-018) sube solo si la imagen de ese sha lo trae; si no, se baja con --scale inv-008-precios=0. Después del up reaplica
+# los límites de memoria (mem = memswap, reaplicar_limites) a los contenedores de 008 que corren.
 #
 # Uso: sudo <raíz>/repo/008-2026-INVERSIONES/scripts/reanudar-008.sh   (<raíz>: ver ESTADO en la gestión)
 set -euo pipefail
@@ -46,6 +47,9 @@ main() {
   esac
   informar "levantando Inversiones con el sha $sha (up -d --wait)"
   "${COMPOSE[@]}" up -d --wait --wait-timeout 180 ${sin_precios[@]+"${sin_precios[@]}"} || morir "Inversiones no quedó healthy: la marca de pausa se mantiene"
+  # Los límites que un daemon-reload del host dejó sin efecto (produccion.md §5). Si no se pueden reaplicar, sale con
+  # error antes de borrar la marca: la pausa se mantiene.
+  reaplicar_limites
   rm -f "$(ruta_escribible "$INV_MARCA_PAUSA")"
   informar "Inversiones reanudada (sha $sha); marca de pausa borrada"
 }

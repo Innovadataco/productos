@@ -1,6 +1,7 @@
 // Candados estáticos de los scripts de producción (orden de Jelk: «no tocar gesmovil ni pi, solo
 // inversiones, ojo no puede dañar nada»). Recorre cada script y falla si encuentra:
-//  1. un docker global (prune, stop/rm sobre $(docker ps ...)) o un subcomando de docker fuera de la lista;
+//  1. un docker global (prune, stop/rm sobre $(docker ps ...)) o un subcomando de docker fuera de la lista (el único
+//     que cambia un contenedor sin COMPOSE es `docker update` de un contenedor ya revisado, y solo con mem = memswap);
 //  2. un nombre pi-, bi-, gesmovil o hermes en CUALQUIER comando de docker (ni siquiera de lectura: el OOM
 //     de PI se lee del cgroup jerárquico, sin Docker);
 //  3. un `docker compose` que no salga de la variable COMPOSE (proyecto inv-008-prod);
@@ -20,6 +21,7 @@ const SCRIPTS = [
   "scripts/vigilar-convivencia.sh",
   "scripts/pausar-008.sh",
   "scripts/reanudar-008.sh",
+  "scripts/reaplicar-limites-008.sh",
   "scripts/crear-acceso-inicial.sh",
   "scripts/cargar-prod.sh",
   "scripts/armar-sobre.sh",
@@ -30,8 +32,14 @@ const SCRIPTS = [
 type Hallazgo = { regla: string; linea: number; texto: string };
 
 // Subcomandos de docker que un script puede llamar directo. Lo que cambia contenedores (stop, start,
-// rm, run, up…) va siempre por "${COMPOSE[@]}", que fija el proyecto inv-008-prod.
-const DOCKER_PERMITIDOS = /^docker\s+(?:(?:image\s+(?:inspect|ls|rm)|inspect|port|stats|load|save|buildx\s+build)\b|exec\s+"\$cid"(?=\s))/;
+// rm, run, up…) va siempre por "${COMPOSE[@]}", que fija el proyecto inv-008-prod. La única excepción es reaplicar los
+// límites (reaplicar_limites, en produccion-comun.sh) a un contenedor que salió de COMPOSE y cuya etiqueta del proyecto ya
+// se revisó: `docker update` con esta forma exacta, la misma variable en --memory y en --memory-swap (solo puede dejar
+// mem = memswap), sobre "$cid" y nada más (ni otra opción, ni otro valor, ni otro contenedor).
+const DOCKER_UPDATE_LIMITES = /update\s+--memory\s+"\$mem"\s+--memory-swap\s+"\$mem"\s+"\$cid"(?:\s+>\s*\/dev\/null)?$/;
+const DOCKER_PERMITIDOS = new RegExp(
+  `^docker\\s+(?:(?:image\\s+(?:inspect|ls|rm)|inspect|port|stats|load|save|buildx\\s+build)\\b|exec\\s+"\\$cid"(?=\\s)|${DOCKER_UPDATE_LIMITES.source})`,
+);
 const NOMBRES_AJENOS = /(^|[^a-z0-9])(pi-|bi-|gesmovil|hermes)/i;
 
 function revisar(archivo: string, contenido: string): Hallazgo[] {
@@ -70,8 +78,8 @@ describe("candados de los scripts de producción", () => {
     }
   });
 
-  it("pausar, reanudar y desplegar toman los candados de Inversiones", () => {
-    for (const archivo of ["scripts/pausar-008.sh", "scripts/reanudar-008.sh", "scripts/desplegar-prod.sh"]) {
+  it("pausar, reanudar, desplegar y reaplicar los límites toman los candados de Inversiones", () => {
+    for (const archivo of ["scripts/pausar-008.sh", "scripts/reanudar-008.sh", "scripts/desplegar-prod.sh", "scripts/reaplicar-limites-008.sh"]) {
       expect(leer008(archivo), archivo).toMatch(/tomar_candado/);
     }
   });
@@ -82,6 +90,7 @@ describe("candados de los scripts de producción", () => {
       "scripts/crear-roles-prod.sh",
       "scripts/crear-acceso-inicial.sh",
       "scripts/reanudar-008.sh",
+      "scripts/reaplicar-limites-008.sh",
       "scripts/respaldar-base.sh",
       "scripts/medir-memoria.sh",
       "scripts/vigilar-convivencia.sh",
@@ -131,6 +140,15 @@ describe("controles positivos del revisor (si dejan de morder, el candado no sir
     ["docker inspect pi-app", "scripts/vigilar-convivencia.sh", "nombre-ajeno"],
     ["docker ps -q", "scripts/medir-memoria.sh", "docker-no-permitido"],
     ["docker update --memory 1g hermes", "scripts/vigilar-convivencia.sh", "nombre-ajeno"],
+    // docker update: solo la forma exacta de reaplicar_limites (mem = memswap sobre "$cid").
+    ['docker update --memory "$mem" --memory-swap "$swap" "$cid"', "scripts/produccion-comun.sh", "docker-no-permitido"],
+    ['docker update --memory-swap -1 "$cid"', "scripts/produccion-comun.sh", "docker-no-permitido"],
+    ['docker update --memory "$mem" --memory-swap "$mem" "$cid" --restart always', "scripts/produccion-comun.sh", "docker-no-permitido"],
+    ['docker update --restart no "$cid"', "scripts/produccion-comun.sh", "docker-no-permitido"],
+    ['docker update --memory "$mem" --memory-swap "$mem" "$otro"', "scripts/produccion-comun.sh", "docker-no-permitido"],
+    ['docker update --memory "$mem" --memory-swap "$mem" "$cid" 2>&1', "scripts/produccion-comun.sh", "docker-no-permitido"],
+    ['docker update --memory "$mem" --memory-swap "$mem" pi-db', "scripts/produccion-comun.sh", "nombre-ajeno"],
+    ["docker update --memory 1g $(docker ps -q)", "scripts/reaplicar-limites-008.sh", "docker-global"],
     ["docker stop inv-008-prod-inv-008-app-1", "scripts/pausar-008.sh", "docker-no-permitido"],
     ["docker run --rm alpine true", "scripts/respaldar-base.sh", "docker-no-permitido"],
     ["docker compose -p otro stop", "scripts/pausar-008.sh", "compose-fuera-de-COMPOSE"],
@@ -151,5 +169,17 @@ describe("controles positivos del revisor (si dejan de morder, el candado no sir
     expect(revisar("scripts/pausar-008.sh", '"${COMPOSE[@]}" stop')).toEqual([]);
     expect(revisar("scripts/pausar-008.sh", "systemctl --user list-timers")).toEqual([]);
     expect(revisar("scripts/desplegar-prod.sh", "# docker system prune está prohibido")).toEqual([]);
+  });
+
+  it("deja pasar el docker update de reaplicar_limites, con su forma exacta (mem = memswap sobre el contenedor revisado)", () => {
+    expect(revisar("scripts/produccion-comun.sh", 'docker update --memory "$mem" --memory-swap "$mem" "$cid" >/dev/null ||')).toEqual([]);
+    expect(revisar("scripts/produccion-comun.sh", 'docker update --memory "$mem" --memory-swap "$mem" "$cid"')).toEqual([]);
+  });
+
+  it("el docker update de los límites solo vive en reaplicar_limites (produccion-comun.sh), una sola vez", () => {
+    for (const archivo of SCRIPTS) {
+      const veces = leer008(archivo).split("\n").filter((l) => !l.trim().startsWith("#") && /(?:^|[\s;|&(`$])docker\s+update\b/.test(l)).length;
+      expect(veces, archivo).toBe(archivo === "scripts/produccion-comun.sh" ? 1 : 0);
+    }
   });
 });

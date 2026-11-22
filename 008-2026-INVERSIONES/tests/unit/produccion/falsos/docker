@@ -19,6 +19,9 @@ if [ "${1:-}" = "compose" ]; then
   case "$sub" in
     up)
       if [ -n "${FALSO_BORRAR_EN_UP:-}" ] && [ -e "$FALSO_BORRAR_EN_UP" ]; then rm -rf "$FALSO_BORRAR_EN_UP"; fi
+      # FALSO_ROMPER_EN_UP: un memory.swap.max que pasa a max con el up de la app (el daemon-reload del host a mitad de
+      # un despliegue, sobre un contenedor que el up no recrea).
+      case "$todo" in *" inv-008-app "*) [ -z "${FALSO_ROMPER_EN_UP:-}" ] || printf 'max\n' >"$FALSO_ROMPER_EN_UP" ;; esac
       [ -z "${FALSO_TAGS:-}" ] || printf 'up %s %s\n' "${INV_TAG:-}" "$*" >>"$FALSO_TAGS"
       case "$todo" in
         *" inv-008-app "*) [ -z "${FALSO_UP_FALLA_TAG:-}" ] || [ "${INV_TAG:-}" != "$FALSO_UP_FALLA_TAG" ] || exit 1 ;;
@@ -33,14 +36,16 @@ if [ "${1:-}" = "compose" ]; then
       case "$todo" in *" -f "*) ;; *) [ -z "${FALSO_DOWN_SIN_F_RC:-}" ] || exit "$FALSO_DOWN_SIN_F_RC" ;; esac
       exit "${FALSO_DOWN_RC:-0}" ;;
     ps)
-      # FALSO_BORRAR_EN_PS: borra una ruta en el primer `compose ps` (la medición de memoria, antes de levantar nada).
+      # FALSO_BORRAR_EN_PS: borra una ruta en el primer `compose ps` (la reaplicación de los límites, antes de levantar nada).
       if [ -n "${FALSO_BORRAR_EN_PS:-}" ] && [ -e "$FALSO_BORRAR_EN_PS" ]; then rm -rf "$FALSO_BORRAR_EN_PS"; fi
+      [ "${FALSO_COMPOSE_PS_RC:-0}" = 0 ] || exit "$FALSO_COMPOSE_PS_RC"
       case "$todo" in
         *" inv-008-app "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" ;;
         *" inv-008-entrada "*) printf '%s\n' "${FALSO_CID_ENTRADA-cidentrada}" ;;
         *" inv-008-db "*) printf '%s\n' "${FALSO_CID_DB-ciddb}" ;;
         *" inv-008-precios "*) printf '%s\n' "${FALSO_CID_PRECIOS-cidprecios}" ;;
-        *" -q "*) printf '%s\n' "${FALSO_CID_APP-cidapp}" "${FALSO_CID_DB-ciddb}" ;;
+        # FALSO_CIDS_PS: los ids de todo el proyecto (con \n), si se quiere otra lista que la app y la base.
+        *" -q "*) if [ -n "${FALSO_CIDS_PS+x}" ]; then printf '%b' "$FALSO_CIDS_PS"; else printf '%s\n' "${FALSO_CID_APP-cidapp}" "${FALSO_CID_DB-ciddb}"; fi ;;
       esac
       exit 0 ;;
     exec)
@@ -99,11 +104,21 @@ case "${1:-} ${2:-}" in
 esac
 # El contenedor (o la red) del que se pregunta: el último argumento.
 objeto="${!#}"
+# Los límites del contenedor $1 en una línea «proyecto|nombre|memory|memoryswap|id largo». FALSO_LIMITES es una carpeta
+# con un archivo por contenedor (se llama como su id) que trae esa línea; sin archivo, el proyecto de prueba (o
+# FALSO_PROYECTO), FALSO_MEMSWAP y FALSO_ID_LARGO. La leen el formato de los límites, HostConfig.Memory e {{.Id}}.
+limites_de() {
+  if [ -n "${FALSO_LIMITES:-}" ] && [ -f "$FALSO_LIMITES/$1" ]; then cat "$FALSO_LIMITES/$1"; return 0; fi
+  local proyecto="${FALSO_PROYECTO:-inv-008-prueba}" m="${FALSO_MEMSWAP:-402653184 402653184}"
+  printf '%s|/%s-%s-1|%s|%s|%s\n' "$proyecto" "$proyecto" "$1" "${m%% *}" "${m#* }" "${FALSO_ID_LARGO:-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc}"
+}
 es_entrada() { [ "$objeto" = "${FALSO_CID_ENTRADA-cidentrada}" ]; }
 es_precios() { [ "$objeto" = "${FALSO_CID_PRECIOS-cidprecios}" ]; }
 case "${1:-}" in
   inspect)
     case "$*" in
+      # Los límites (datos_limites): va antes que HostConfig.Memory e {{.Id}}, que su formato también trae.
+      *compose.project*) [ "${FALSO_INSPECT_RC:-0}" = 0 ] || exit "$FALSO_INSPECT_RC"; limites_de "$objeto" ;;
       *NetworkSettings.Networks*)
         case "$objeto" in
           "${FALSO_CID_DB-ciddb}") printf '%s \n' "${FALSO_REDES_DB-inv-008-prueba_inv-008-red-interna}" ;;
@@ -140,8 +155,8 @@ case "${1:-}" in
         if es_entrada; then printf '%s\n' "${FALSO_ESTADO_ENTRADA:-running 0}"
         elif es_precios; then printf '%s\n' "${FALSO_ESTADO_PRECIOS:-running 0}"
         else printf '%s\n' "${FALSO_ESTADO_APP:-running 0}"; fi ;;
-      *HostConfig.Memory*) printf '%s\n' "${FALSO_MEMSWAP:-402653184 402653184}" ;;
-      *"{{.Id}}"*) printf '%s\n' "${FALSO_ID_LARGO:-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc}" ;;
+      *HostConfig.Memory*) IFS='|' read -r _ _ m s _ <<<"$(limites_de "$objeto")"; printf '%s %s\n' "$m" "$s" ;;
+      *"{{.Id}}"*) IFS='|' read -r _ _ _ _ l <<<"$(limites_de "$objeto")"; printf '%s\n' "$l" ;;
       *OOMKilled*) printf '%b' "${FALSO_PI_ESTADO:-}" | grep -F -- "/${!#} " || true ;;
     esac
     exit 0 ;;
@@ -176,6 +191,22 @@ case "${1:-}" in
     [ -z "${FALSO_EXECS:-}" ] || printf '%s\n' "$cid_exec" >>"$FALSO_EXECS"
     if [ -n "${FALSO_SALUD_ARCHIVO:-}" ] && [ -s "$FALSO_SALUD_ARCHIVO" ]; then cat "$FALSO_SALUD_ARCHIVO"; else printf '%s' "${FALSO_SALUD:-}"; fi
     exit "${FALSO_EXEC_RC:-0}" ;;
+  update)
+    # docker update --memory M --memory-swap M <cid>: sale con FALSO_UPDATE_RC. Si sale bien (y sin FALSO_UPDATE_NO_APLICA,
+    # un update que no tiene efecto), deja el contenedor como lo pidió, igual que Docker: su archivo de FALSO_LIMITES con
+    # M y M, y su cgroup simulado bajo INV_CGROUP con memory.max = M y memory.swap.max = memory-swap − memory.
+    [ "${FALSO_UPDATE_RC:-0}" = 0 ] || exit "$FALSO_UPDATE_RC"
+    [ "${FALSO_UPDATE_NO_APLICA:-}" != 1 ] || exit 0
+    mem="" swap="" previo=""
+    for a in "$@"; do case "$previo" in --memory) mem="$a" ;; --memory-swap) swap="$a" ;; esac; previo="$a"; done
+    IFS='|' read -r p n _ _ l <<<"$(limites_de "$objeto")"
+    if [ -n "${FALSO_LIMITES:-}" ]; then mkdir -p "$FALSO_LIMITES"; printf '%s|%s|%s|%s|%s\n' "$p" "$n" "$mem" "$swap" "$l" >"$FALSO_LIMITES/$objeto"; fi
+    for d in "${INV_CGROUP:-/nonexistent}/system.slice/docker-$l.scope" "${INV_CGROUP:-/nonexistent}/docker/$l"; do
+      [ -d "$d" ] || continue
+      printf '%s\n' "$mem" >"$d/memory.max"
+      printf '%s\n' "$((swap - mem))" >"$d/memory.swap.max"
+    done
+    exit 0 ;;
   port)
     case "${2:-}" in
       "${FALSO_CID_APP-cidapp}") printf '%b' "${FALSO_PUERTO_APP:-}" ;;
