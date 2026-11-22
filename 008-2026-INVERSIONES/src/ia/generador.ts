@@ -15,7 +15,11 @@ import { ErrorVistaCiega, hayDatosDelPaqueteEn, vistaCiega } from "./vista-ciega
 export const PUERTAS = Object.freeze(["local", "nube"] as const);
 export type Puerta = (typeof PUERTAS)[number];
 
-/** Lo que puede responder un generador (o el orquestador por esa puerta) cuando falla. Lista cerrada. */
+/**
+ * Lo que puede responder un generador (o el orquestador por esa puerta) cuando falla. Lista cerrada. PUERTA_APAGADA
+ * la pone el orquestador si no hay generador registrado, y también puede devolverla un cliente que no está habilitado
+ * (p. ej. la nube sin su llave).
+ */
 export const MOTIVOS_FALLO_GENERADOR = Object.freeze(["MODELO_NO_DISPONIBLE", "TIEMPO_AGOTADO", "TOPE_MENSUAL", "PUERTA_APAGADA", "ERROR_PROVEEDOR"] as const);
 export type MotivoFalloGenerador = (typeof MOTIVOS_FALLO_GENERADOR)[number];
 

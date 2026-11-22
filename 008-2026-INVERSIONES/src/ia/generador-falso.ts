@@ -83,19 +83,19 @@ function tardar(ms: number, luego: ConductaInmediata, puerta: Puerta, senal: Abo
 }
 
 export function crearGeneradorFalso(opciones: OpcionesGeneradorFalso): GeneradorFalso {
-  const recibidos: PedidoGeneracion[] = [];
+  const pedidos: PedidoGeneracion[] = [];
   const { puerta } = opciones;
   const conductaDe = (indice: number): ConductaFalsa => (typeof opciones.conducta === "function" ? opciones.conducta(indice) : opciones.conducta);
   return Object.freeze({
     puerta,
     generar(pedido: PedidoGeneracion, senal: AbortSignal): Promise<ResultadoGeneracion> {
-      const conducta = conductaDe(recibidos.length);
-      recibidos.push(pedido);
+      const conducta = conductaDe(pedidos.length);
+      pedidos.push(pedido);
       if (conducta.tipo === "LANZAR" && conducta.sincrono === true) throw new Error(conducta.mensaje ?? MENSAJE_POR_OMISION);
       if (conducta.tipo === "COLGAR") return new Promise<ResultadoGeneracion>(() => undefined);
       if (conducta.tipo === "TARDAR") return tardar(conducta.ms, conducta.luego, puerta, senal);
       return inmediata(conducta, puerta);
     },
-    llamadas: (): readonly PedidoGeneracion[] => Object.freeze([...recibidos]),
+    llamadas: (): readonly PedidoGeneracion[] => Object.freeze([...pedidos]),
   });
 }

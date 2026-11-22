@@ -190,17 +190,24 @@ function validarHechos(crudos: readonly unknown[], tipo: TipoResumen, hoy: strin
 }
 
 /**
- * El paquete validado, congelado y con su hash. Orden de las validaciones: la raíz (campos, tipo, hoy, versiones de
- * cálculo, avisos, hechos) y después hecho por hecho, campo por campo.
+ * Los paquetes que salieron de `construirPaquete` (o de `leerPaquete`); congelados, no cambian después. El registro
+ * es uno por proceso (`Symbol.for` en `globalThis`), no por instancia del módulo: si el empaquetador carga este
+ * archivo dos veces (la app y un servicio), un paquete armado en una vale en la otra. Protege de copias y de paquetes
+ * armados a mano por error, no de código hostil dentro del proceso (ese puede hacer cualquier cosa).
  */
-/** Los paquetes que salieron de `construirPaquete` (o de `leerPaquete`). Congelados: no cambian después. */
-const CONSTRUIDOS = new WeakSet<object>();
+const LLAVE_REGISTRO = Symbol.for("inv-008.ia.paquetes-construidos");
+const globalConRegistro = globalThis as typeof globalThis & { [LLAVE_REGISTRO]?: WeakSet<object> };
+const CONSTRUIDOS: WeakSet<object> = globalConRegistro[LLAVE_REGISTRO] ?? (globalConRegistro[LLAVE_REGISTRO] = new WeakSet<object>());
 
 /** ¿Salió este objeto (el mismo, no una copia) de `construirPaquete` o de `leerPaquete`? */
 export function esPaqueteConstruido(valor: unknown): valor is PaqueteHechos {
   return typeof valor === "object" && valor !== null && CONSTRUIDOS.has(valor);
 }
 
+/**
+ * El paquete validado, congelado, con su hash y registrado. Orden de las validaciones: la raíz (campos, tipo, hoy,
+ * versiones de cálculo, avisos, hechos) y después hecho por hecho, campo por campo.
+ */
 export function construirPaquete<T extends TipoResumen>(entrada: EntradaPaquete<T>): PaqueteHechos<T> {
   const crudo: unknown = entrada;
   if (!esObjetoPlano(crudo)) throw new ErrorPaquete("FORMA_INVALIDA");
