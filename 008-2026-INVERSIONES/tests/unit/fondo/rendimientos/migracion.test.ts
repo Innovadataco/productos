@@ -44,7 +44,7 @@ describe("migración de la tabla rendimiento_fondo", () => {
   it("el CHECK de ajuste_caja nace NOT VALID y se valida en la misma migración", () => {
     const i = lista.findIndex((s) => s.startsWith(`ALTER TABLE "ajuste_caja" ADD CONSTRAINT "ajuste_caja_rendimiento_fic_chk"`));
     expect(i).toBeGreaterThan(0);
-    expect(lista[i]).toMatch(/CHECK \("categoria" <> 'RENDIMIENTO_FIC' OR "monto" > 0\) NOT VALID$/);
+    expect(lista[i]).toMatch(/CHECK \("categoria" <> 'RENDIMIENTO_FIC' OR \("monto" > 0 AND "monto" <> 'NaN'\)\) NOT VALID$/);
     expect(lista[i + 1]).toBe(`ALTER TABLE "ajuste_caja" VALIDATE CONSTRAINT "ajuste_caja_rendimiento_fic_chk"`);
   });
 

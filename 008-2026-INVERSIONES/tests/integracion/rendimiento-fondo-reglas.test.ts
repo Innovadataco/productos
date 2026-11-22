@@ -169,6 +169,16 @@ describe("rendimiento_fondo · enlace con la caja", () => {
   });
 });
 
+describe("ajuste_caja · RENDIMIENTO_FIC sin NaN (database-reviewer BAJO)", () => {
+  it("un ajuste RENDIMIENTO_FIC con monto NaN se rechaza (NaN > 0 y NaN <> 0 son verdaderos en PostgreSQL)", async () => {
+    const error = await enTransaccionDeshecha(async (tx) => {
+      const u = await usuario(tx);
+      await tx.$executeRaw`INSERT INTO "ajuste_caja" ("id", "fecha", "monto", "categoria", "fuente", "motivo", "creadoPorId") VALUES (${unico()}, ${FECHA}, 'NaN'::numeric, 'RENDIMIENTO_FIC', 'EXTRACTO', 'rendimiento ficticio', ${u.id})`;
+    });
+    expect(error).toMatch(/ajuste_caja_rendimiento_fic_chk/);
+  });
+});
+
 describe("rendimiento_fondo · únicos", () => {
   it("un solo hecho por fondo, fecha y tipo", async () => {
     const error = await enTransaccionDeshecha(async (tx) => {
