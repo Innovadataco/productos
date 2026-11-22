@@ -1,11 +1,44 @@
-// Esqueleto del rojo: la firma, sin implementar.
+/**
+ * Las reglas del plan que la orden toca. Información, nunca un juicio sobre la operación:
+ * - MONTO_ORDEN_BAJO (de portafolio o de la especie): el valor de la orden queda por debajo del monto mínimo que el
+ *   dueño fijó (igual no cuenta);
+ * - CIERRE_BAJO o CIERRE_SOBRE de la especie: el precio límite queda del lado que toca el nivel, o en el nivel
+ *   (`estadoDelNivel`, la misma regla de la pantalla del plan, con el precio de la orden en lugar del cierre);
+ * - otra acción: una regla de la especie (no de portafolio ni de monto) cuya acción no es la de la orden.
+ * Solo rigen las reglas sin plazo o con el plazo hoy o después. Puro.
+ */
 import type { Prisma } from "@prisma/client";
-import type { OperacionSimulada, ReglaAfectada, ReglaSimulada } from "./tipos";
+import { estadoDelNivel } from "@/plan/niveles";
+import type { Afectacion, OperacionSimulada, ReglaAfectada, ReglaSimulada } from "./tipos";
 
-export function rigeHoy(_regla: ReglaSimulada, _hoy: Date): boolean {
-  throw new Error("sin implementar");
+/** Sin plazo, o con el plazo hoy o después (los dos a medianoche UTC). */
+export const rigeHoy = (regla: ReglaSimulada, hoy: Date): boolean => regla.plazoHasta === null || regla.plazoHasta.getTime() >= hoy.getTime();
+
+function porElMonto(r: ReglaSimulada, valorOrden: Prisma.Decimal): Afectacion[] {
+  return r.nivel !== null && valorOrden.lt(r.nivel) ? [{ tipo: "MONTO_ORDEN_BAJO", montoMinimo: r.nivel }] : [];
 }
 
-export function reglasAfectadas(_reglas: readonly ReglaSimulada[], _operacion: OperacionSimulada, _valorOrden: Prisma.Decimal, _hoy: Date): ReglaAfectada[] {
-  throw new Error("sin implementar");
+function porLaEspecie(r: ReglaSimulada, op: OperacionSimulada): Afectacion[] {
+  const frente = estadoDelNivel(r.condicion, r.nivel, op.precioLimite);
+  return [
+    ...(frente.estado === "TOCADA" || frente.estado === "EN_EL_NIVEL" ? [{ tipo: "PRECIO_DEL_LADO_DEL_NIVEL", frente } as const] : []),
+    ...(r.accion !== op.lado ? [{ tipo: "OTRA_ACCION", accionDelPlan: r.accion } as const] : []),
+  ];
+}
+
+function afectacionesDe(r: ReglaSimulada, op: OperacionSimulada, valorOrden: Prisma.Decimal): Afectacion[] {
+  const deLaEspecie = r.instrumentoId === op.instrumentoId;
+  if (!deLaEspecie && r.instrumentoId !== null) return [];
+  if (r.condicion === "MONTO_ORDEN_BAJO") return porElMonto(r, valorOrden);
+  return deLaEspecie ? porLaEspecie(r, op) : [];
+}
+
+/** Las reglas que rigen hoy y que la orden toca, en el orden del plan, cada una con lo que la toca. */
+export function reglasAfectadas(reglas: readonly ReglaSimulada[], op: OperacionSimulada, valorOrden: Prisma.Decimal, hoy: Date): ReglaAfectada[] {
+  return reglas
+    .filter((r) => rigeHoy(r, hoy))
+    .flatMap((regla): ReglaAfectada[] => {
+      const [primera, ...resto] = afectacionesDe(regla, op, valorOrden);
+      return primera === undefined ? [] : [{ regla, afectaciones: [primera, ...resto] }];
+    });
 }

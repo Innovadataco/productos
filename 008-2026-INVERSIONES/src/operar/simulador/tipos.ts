@@ -14,7 +14,6 @@ type Decimal = Prisma.Decimal;
 
 /** El lado de la operación, con las palabras del plan. */
 export type LadoSimulado = Extract<AccionPlan, "COMPRAR" | "VENDER">;
-export const LADOS_SIMULADOS = ["COMPRAR", "VENDER"] as const satisfies readonly LadoSimulado[];
 
 /** Decimales del precio límite y de los cierres: la escala de `orden.precioUnitario` y `precio_cierre.precio`. */
 export const DECIMALES_PRECIO = 6;

@@ -58,8 +58,8 @@ describe("errores de la operación (datos para el usuario)", () => {
     expect(codigos(operacion(A, "COMPRAR", 2n ** 64n + 1n, "0.000001"))).toEqual(["ORDEN_FUERA_DE_RANGO"]);
   });
 
-  it("junta todos los errores de una vez, y no dice VENTA_SUPERA_TENENCIA si la especie no se conoce", () => {
-    expect(codigos({ instrumentoId: "id-otra", lado: "VENDER", cantidad: 0n, precioLimite: D("0") })).toEqual(["CANTIDAD_NO_POSITIVA", "PRECIO_NO_POSITIVO", "ESPECIE_DESCONOCIDA"]);
+  it("junta todos los errores de una vez, en el orden del formulario, y no dice VENTA_SUPERA_TENENCIA si la especie no se conoce", () => {
+    expect(codigos({ instrumentoId: "id-otra", lado: "VENDER", cantidad: 0n, precioLimite: D("0") })).toEqual(["ESPECIE_DESCONOCIDA", "CANTIDAD_NO_POSITIVA", "PRECIO_NO_POSITIVO"]);
     expect(codigos({ instrumentoId: "id-otra", lado: "VENDER", cantidad: 41n, precioLimite: D("11.71") })).toEqual(["ESPECIE_DESCONOCIDA"]);
     expect(codigos(operacion(B, "VENDER", 380n, "11.7100001"))).toEqual(["PRECIO_FUERA_DE_ESCALA", "VENTA_SUPERA_TENENCIA"]);
   });
