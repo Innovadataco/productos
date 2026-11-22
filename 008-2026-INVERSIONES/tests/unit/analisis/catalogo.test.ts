@@ -1,7 +1,7 @@
 // El catálogo cerrado de los puntos para revisar es un contrato con la pantalla y con la IA: claves y criterios exactos
 // (umbral, unidad, comparación y umbrales auxiliares), en un solo registro. Puro.
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { CLAVES_OBSERVACION, CONTRIBUCION_MINIMA, CRITERIOS, DIAS_HISTORIA_SUFICIENTE, MINIMO_ESPECIES_TOP_TRES, type ClaveObservacion, type Observacion } from "@/analisis/catalogo";
+import { CLAVES_OBSERVACION, CONTRIBUCION_MINIMA, CRITERIOS, cumple, DIAS_HISTORIA_SUFICIENTE, MINIMO_ESPECIES_TOP_TRES, type ClaveObservacion, type Criterio, type Observacion } from "@/analisis/catalogo";
 import { MINIMO_DIAS } from "@/proyecciones/metodo";
 
 describe("catálogo de observaciones", () => {
@@ -41,6 +41,19 @@ describe("catálogo de observaciones", () => {
   it("no se pueden cambiar en ejecución, ni el registro ni cada criterio", () => {
     expect(Object.isFrozen(CRITERIOS)).toBe(true);
     expect(Object.values(CRITERIOS).every((c) => Object.isFrozen(c) && Object.isFrozen(c.auxiliares))).toBe(true);
+  });
+
+  it("cumple aplica la comparación declarada, con sus bordes", () => {
+    const c = (comparacion: Criterio["comparacion"], umbral = 5): Criterio => ({ umbral, unidad: "DIAS", comparacion, auxiliares: {} });
+    expect([4.99, 5, 5.01].map((x) => cumple(c("MAYOR_QUE"), x))).toEqual([false, false, true]);
+    expect([4.99, 5, 5.01].map((x) => cumple(c("MAYOR_O_IGUAL"), x))).toEqual([false, true, true]);
+    expect([4.99, 5, 5.01].map((x) => cumple(c("MENOR_QUE"), x))).toEqual([true, false, false]);
+    expect([-0.01, 0, 5, 5.01].map((x) => cumple(c("DE_CERO_HASTA"), x))).toEqual([false, true, true, false]);
+    expect([-5.01, -5, 5, 5.01].map((x) => cumple(c("VALOR_ABSOLUTO_HASTA"), x))).toEqual([false, true, true, false]);
+  });
+
+  it("PASA_EL_NIVEL no se compara con un número: lo decide estadoDelNivel (src/plan/niveles.ts)", () => {
+    expect(() => cumple(CRITERIOS.REGLA_CUMPLIDA, 0)).toThrow(RangeError);
   });
 
   it("la unión de observaciones cubre exactamente las claves del catálogo (se verifica al compilar)", () => {

@@ -2,7 +2,7 @@
 // nada del texto libre ni de la acción de una regla llegue a la salida. Puro.
 import { describe, expect, it } from "vitest";
 import { analizar } from "@/analisis/analizar";
-import { CLAVES_OBSERVACION, CRITERIOS, type ClaveObservacion, type Observacion } from "@/analisis/catalogo";
+import { CLAVES_OBSERVACION, CRITERIOS, cumple, type ClaveObservacion, type Observacion } from "@/analisis/catalogo";
 import { diasEntre } from "@/analisis/dias";
 import { observaciones } from "@/analisis/observaciones";
 import { VERSION_ANALISIS, type Analisis, type ReglaParaAnalisis } from "@/analisis/tipos";
@@ -164,6 +164,47 @@ describe("decisiones y dividendos", () => {
     expect(de(obs(analisis({ especies })), "EX_DIVIDENDO_PRONTO")).toEqual([
       { clave: "EX_DIVIDENDO_PRONTO", umbral: 14, datos: { instrumentoId: "FICTICIA-A", decretoId: "FICTICIA-DEC-1", fechaEx: MAS(14), dias: 14 } },
     ]);
+  });
+});
+
+describe("lo que dispara es lo que declara CRITERIOS (justo antes, en y justo después del umbral)", () => {
+  const E = 1e-8;
+  const bordes = (u: number) => [u - E, u, u + E];
+  const dispara = (a: Parameters<typeof obs>[0], clave: ClaveObservacion, reglas: readonly ReglaParaAnalisis[] = []) => obs(a, reglas).some((o) => o.clave === clave);
+
+  it("CONCENTRACION_ALTA y CONCENTRACION_TOP_TRES", () => {
+    for (const x of bordes(CRITERIOS.CONCENTRACION_ALTA.umbral)) expect(dispara(analisis({ concentracion: concentracion(x, 0.5, 4) }), "CONCENTRACION_ALTA")).toBe(cumple(CRITERIOS.CONCENTRACION_ALTA, x));
+    for (const x of bordes(CRITERIOS.CONCENTRACION_TOP_TRES.umbral)) expect(dispara(analisis({ concentracion: concentracion(0.2, x, 4) }), "CONCENTRACION_TOP_TRES")).toBe(cumple(CRITERIOS.CONCENTRACION_TOP_TRES, x));
+  });
+
+  it("CORRELACION_ALTA y CONTRIBUCION_RIESGO_DESPROPORCIONADA (en veces su peso)", () => {
+    for (const x of bordes(CRITERIOS.CORRELACION_ALTA.umbral)) expect(dispara(analisis({ riesgo: riesgo(["FICTICIA-A", "FICTICIA-B"], [[1, x], [x, 1]]) }), "CORRELACION_ALTA")).toBe(cumple(CRITERIOS.CORRELACION_ALTA, x));
+    for (const veces of [1.49999998, 1.5, 1.50000002]) {
+      const especies = [especie("FICTICIA-A", { riesgo: cubierta(0.5, veces * 0.5) })];
+      expect(dispara(analisis({ especies }), "CONTRIBUCION_RIESGO_DESPROPORCIONADA")).toBe(cumple(CRITERIOS.CONTRIBUCION_RIESGO_DESPROPORCIONADA, veces));
+    }
+  });
+
+  it("REGLA_CERCANA, REGLA_VENCE_PRONTO y REGLA_VENCIDA", () => {
+    const conA = analisis({ especies: [especie("FICTICIA-A")] });
+    // 1237 × (1 + d/100): d = 4,99 · 5 · 5,01 por ciento sobre el cierre al día de 1237.
+    for (const d of [4.99, 5, 5.01]) {
+      const nivel = D(1237).mul(D(1).add(D(d).div(100)));
+      expect(dispara(conA, "REGLA_CERCANA", [regla("FICTICIA-R1", { condicion: "CIERRE_SOBRE", nivel })])).toBe(cumple(CRITERIOS.REGLA_CERCANA, d));
+    }
+    for (const n of [-1, 0, 14, 15]) expect(dispara(conA, "REGLA_VENCE_PRONTO", [regla("FICTICIA-R1", { plazoHasta: dia(MAS(n)) })])).toBe(cumple(CRITERIOS.REGLA_VENCE_PRONTO, n));
+    for (const n of [0, 1, 2]) expect(dispara(conA, "REGLA_VENCIDA", [regla("FICTICIA-R1", { plazoHasta: dia(MAS(-n)) })])).toBe(cumple(CRITERIOS.REGLA_VENCIDA, n));
+  });
+
+  it("DECISION_RESULTADO_NEGATIVO y EX_DIVIDENDO_PRONTO", () => {
+    for (const n of [-1, 0, 30, 31]) {
+      const medidas = [{ decisionId: "FICTICIA-DEC-A", horizonteDias: 30 as const, veredicto: "NO_FUNCIONO" as const, resultadoPesos: D("-1237.41"), conocidoEl: MAS(-n) }];
+      expect(dispara(analisis({ decisiones: { d30: vacio(30), d90: vacio(90), medidas } }), "DECISION_RESULTADO_NEGATIVO")).toBe(cumple(CRITERIOS.DECISION_RESULTADO_NEGATIVO, n));
+    }
+    for (const n of [-1, 0, 14, 15]) {
+      const especies = [especie("FICTICIA-A", { proximaEx: { dia: MAS(n), decretoId: "FICTICIA-DEC-1" } })];
+      expect(dispara(analisis({ especies }), "EX_DIVIDENDO_PRONTO")).toBe(cumple(CRITERIOS.EX_DIVIDENDO_PRONTO, n));
+    }
   });
 });
 
