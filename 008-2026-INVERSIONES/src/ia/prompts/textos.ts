@@ -34,7 +34,7 @@ const REGLAS_DE_REDACCION = [
     + "antes del verbo; luego cite el dato con su propio id. El nombre de una especie nunca va solo en una frase («el nombre de "
     + "la especie es…» está mal): va dentro de la frase de un dato de esa especie. No escriba «especie» más de una vez seguida.",
   "- Hable de movimiento solo cuando el hecho tiene dirección: subió, solo si es SUBE; bajó, solo si es BAJA; se mantuvo, solo si "
-    + "es IGUAL, y ese verbo va en la misma parte de la frase y junto al dato cuya dirección es esa. Si es NO_APLICA, no use verbos "
+    + "es IGUAL, y ese verbo va solo, nunca después de «es» (no «es sube»), en la misma parte de la frase y junto al dato cuya dirección es esa. Si es NO_APLICA, no use verbos "
     + "de movimiento. En duda, no los use.",
   "- Diga cerca solo junto a un dato con cercanía CERCA y lejos solo junto a uno con LEJOS; no use esas palabras en otro caso. "
     + "Diga hoy solo junto a un dato con frescura HOY. No use alto, bajo, caída ni justo si no están en la etiqueta del dato.",
@@ -70,22 +70,27 @@ const armar = (tema: string, ejemplos: string): string =>
 
 export const TEXTO_PROMPT_DIARIO = armar(
   "del día de un portafolio de inversiones: el valor de las acciones y su variación del día, las ganancias, los dividendos "
-    + "y las comisiones, los cierres atrasados, la conciliación, las tasas y el fondo.",
+    + "y las comisiones, los cierres atrasados, la conciliación, las tasas y el fondo. Casi siempre son obligatorios el valor de las acciones, la variación del día, la ganancia total, las "
+    + "especies sin precio o con cierre atrasado y la conciliación que no cuadra: cada uno lleva su frase, y la lista de "
+    + "ejemplos de abajo tiene la misma extensión que se espera.",
   ejemplos(
-    frase("La ganancia total es", null, "."),
-    frase("El valor de las acciones subió a", null, "."),
-    frase("La ganancia sin vender es", null, ", y la ganancia por ventas es", null, "."),
+    frase("El valor de las acciones es", null, "."),
+    frase("La variación del día del valor de las acciones es", null, "."),
+    frase("La ganancia total es", null, ", y la ganancia sin vender es", null, "."),
+    frase("Las especies sin precio son", null, ", y las especies con cierre atrasado son", null, "."),
+    frase("El corte de la conciliación que no cuadra es", null, "."),
     frase("El precio de cierre de la especie", null, "es", null, "."),
   ),
 );
 
 export const TEXTO_PROMPT_REGLAS = armar(
-  "del estado de las reglas del plan de un portafolio de inversiones: qué regla está cerca de su nivel, cuál se tocó, los "
-    + "plazos y los próximos dividendos. Las reglas no le dicen al lector qué hacer: no diga qué hacer con ellas.",
+  "del estado de las reglas del plan de un portafolio de inversión: qué regla está cerca de su nivel, cuál se tocó, los "
+    + "plazos y los próximos dividendos. Las reglas no le dicen al lector qué hacer: no diga qué hacer con ellas. Cada regla tocada o cercana que sea obligatoria lleva su frase, con el nombre de su especie.",
   ejemplos(
-    frase("La distancia al nivel de la regla de", null, "es", null, "."),
-    frase("La distancia al nivel de la regla de", null, ", cerca del nivel, es", null, "."),
-    frase("Los días que faltan para el plazo de la regla son", null, "."),
+    frase("La regla tocada de la especie", null, "es", null, "."),
+    frase("La distancia al nivel de la regla de la especie", null, "es", null, "."),
+    frase("La distancia al nivel de la regla de la especie", null, ", cerca del nivel, es", null, "."),
+    frase("Los días que faltan para el plazo de la regla de la especie", null, "son", null, "."),
   ),
 );
 
@@ -93,9 +98,12 @@ export const TEXTO_PROMPT_ESCENARIOS = armar(
   "de los escenarios de la proyección de un portafolio de inversiones: el bajo, el central y el alto en cada horizonte, lo "
     + "aportado, la probabilidad de terminar por debajo de lo aportado, la caída máxima y la volatilidad. Son escenarios "
     + "ilustrativos, no pronósticos: use el condicional (por ejemplo, «en el escenario central a corto plazo, el valor "
-    + "quedaría en» y, enseguida, la referencia del dato) y nunca el futuro.",
+    + "quedaría en» y, enseguida, la referencia del dato) y nunca el futuro. Casi siempre son obligatorios el escenario central de los tres horizontes (corto, medio y largo) y la "
+    + "probabilidad de terminar por debajo de lo aportado: escriba al menos cuatro frases: una por cada uno.",
   ejemplos(
-    frase("El escenario bajo a corto plazo quedaría en", null, "."),
+    frase("El escenario central a corto plazo quedaría en", null, "."),
+    frase("El escenario central a medio plazo quedaría en", null, "."),
+    frase("El escenario central a largo plazo quedaría en", null, "."),
     frase("La probabilidad de terminar por debajo de lo aportado es", null, "."),
     frase("La caída máxima mediana sería", null, ", y la volatilidad anual histórica sería", null, "."),
   ),
