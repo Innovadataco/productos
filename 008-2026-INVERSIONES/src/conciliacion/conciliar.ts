@@ -13,7 +13,11 @@ import { corteOcupado } from "./vigente";
 
 export { candadoConciliar };
 
-/** Intentos ante una serialización (P2034): la instantánea se toma antes de esperar el candado (database-reviewer MEDIO). */
+/**
+ * Intentos ante una serialización (P2034): la instantánea se toma antes de esperar el candado (database-reviewer MEDIO).
+ * El caso conocido es el retiro de la certificación mientras se espera, pero se repite cualquier P2034, una sola vez:
+ * la transacción fallida se deshizo entera, así que no se duplica nada.
+ */
 const MAX_INTENTOS = 2;
 const esSerializacion = (e: unknown): boolean => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034";
 
@@ -61,7 +65,8 @@ function resumen(conciliacionId: string, fechaCorte: Date, resultado: ResumenCon
 /**
  * Concilia en REPEATABLE READ. La instantánea se toma con la primera sentencia (el candado), ANTES de esperarlo: si
  * mientras espera otra transacción retira la certificación (corrección del corte), el disparador de la base hace fallar
- * el INSERT (P2034) y se repite UNA vez, ya con una instantánea nueva que ve el retiro (CERTIFICACION_RETIRADA).
+ * el INSERT (P2034) y se repite UNA vez, ya con una instantánea nueva que ve el retiro (CERTIFICACION_RETIRADA). Otro
+ * P2034 también se repite una vez; uno segundo, o cualquier otro error, sale tal cual.
  */
 export async function conciliarCertificacion(db: PrismaClient, opciones: { readonly fechaCorte: Date }): Promise<ResumenConciliacion> {
   for (let intento = 1; ; intento += 1) {
