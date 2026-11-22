@@ -33,7 +33,7 @@ export const USO_EXPORTAR_BANREP = [
   "  importar-series (formato en src/datos-oficiales/series/csv-series.ts). Se niega a escribir en una terminal.",
   "  --archivo: el XML que usted bajó en su navegador (si BanRep bloquea el pedido automático); no se pide nada a la red.",
   `  --hasta por defecto: hoy; rango de hasta ${MAX_DIAS_RANGO_BANREP} días.`,
-  "  Salida: 0 bien · 3 con avisos (descartes, serie atrasada o días faltantes) · 2 uso, terminal o archivo ilegible · 1 BanRep, archivo o CSV fallido.",
+  "  Salida: 0 bien · 3 con avisos (descartes, inicio tardío, serie atrasada o días faltantes) · 2 uso, terminal, TLS apagado o archivo ilegible · 1 BanRep, archivo o CSV fallido.",
 ].join("\n");
 
 type Entorno = Readonly<Record<string, string | undefined>>;

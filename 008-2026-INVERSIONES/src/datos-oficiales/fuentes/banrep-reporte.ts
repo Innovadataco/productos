@@ -2,8 +2,9 @@
  * El reporte de scripts/exportar-banrep.ts, por stderr (el CSV va a stdout): conteos, códigos, las fechas del pedido y de
  * la serie (públicas) y la URL pública de la descarga. Nunca valores ni rutas. Ante un fallo de BanRep dice qué hacer:
  * abrir la URL en el navegador, resolver usted el desafío si lo hay y repetir con --archivo. Nada se evade.
- * Salida: 1 si no hay CSV (fallo de BanRep o del archivo, sin filas o fila inválida) · 3 si hay avisos (descartes, serie
- * atrasada o días faltantes) · 0 si no. El 1 gana sobre el 3.
+ * Salida: 1 si no hay CSV (fallo de BanRep o del archivo, sin filas o fila inválida) · 3 si hay avisos (descartes, inicio
+ * tardío, serie atrasada o días faltantes; el CSV sale entero, pero `&& mv` no lo mueve: se dice) · 0 si no. El 1 gana
+ * sobre el 3.
  */
 import { diaIso } from "../../precios/horario";
 import { SALIDA_CON_AVISOS, SALIDA_FALLIDA } from "../../precios/reporte";
@@ -22,9 +23,11 @@ type CodigoArchivo = "ARCHIVO_ILEGIBLE" | "ARCHIVO_NO_REGULAR" | "ARCHIVO_DEMASI
 
 const GUARDAR = "guárdelo como XML (la fuente de la página, no un «archivo web»)";
 const ACOTAR = "pida la descarga con un startPeriod más reciente (un --desde más reciente)";
+const PARCIAL_SIN_MOVER = "   Con avisos (salida 3) el CSV salió entero, pero «&& mv» no lo movió: revise los avisos y, si los acepta, muévalo usted.";
 
 const EXPLICACION: Readonly<Record<string, string>> = {
-  BANREP_BLOQUEADO: "BanRep no entregó el SDMX (una página de captcha o de bloqueo, o un tipo de contenido que no es XML)",
+  BANREP_BLOQUEADO: "BanRep no entregó el SDMX: respondió una página HTML (captcha, bloqueo o error) o negó el pedido (403 o 429)",
+  BANREP_TIPO: "BanRep respondió un tipo de contenido que no es el XML del SDMX ni una página HTML, o un charset distinto de UTF-8",
   BANREP_RED: "no hubo respuesta a tiempo, falló la red o BanRep redirigió (un desafío antibots redirige)",
   BANREP_FORMATO: `la respuesta vino vacía o pasa del tope de bytes del lector: ${ACOTAR}`,
   BANREP_XML: "el lector XML acotado lo rechazó (DTD, entidades, CDATA, codificación, topes o XML mal formado)",
@@ -62,11 +65,14 @@ function avisos(r: ResultadoExportarBanrep): string[] {
   const descartes = c && c.noDefinitivas + c.sinValor + c.valorInvalido > 0
     ? [`⚠️  descartadas · no definitivas (OBS_STATUS distinto de A): ${c.noDefinitivas} · sin valor: ${c.sinValor} · valor fuera de la escala o del rango del catálogo: ${c.valorInvalido}`]
     : [];
+  const tardio = r.inicioTardio && r.primerDia
+    ? [`⚠️  INICIO_TARDIO · el primer valor es del ${diaIso(r.primerDia)}: más de ${r.umbralFrescuraDias} días después de --desde (${diaIso(r.desde)}). ¿El --archivo se bajó con un startPeriod posterior, o BanRep no tiene esos días?`]
+    : [];
   const atrasada = r.atrasada && r.ultimoDia
     ? [`⚠️  ATRASADA · el último valor es del ${diaIso(r.ultimoDia)}: más de ${r.umbralFrescuraDias} días antes de --hasta (${diaIso(r.hasta)}). BanRep puede no haber publicado todavía.`]
     : [];
   const faltantes = r.diasFaltantes > 0 ? [`⚠️  faltan ${r.diasFaltantes} día(s) entre el primero y el último: la ${r.serie} es diaria de calendario.`] : [];
-  return [...descartes, ...atrasada, ...faltantes];
+  return [...descartes, ...tardio, ...atrasada, ...faltantes];
 }
 
 export function reporteExportacionBanrep(r: ResultadoExportarBanrep): ReporteBanrep {
@@ -81,7 +87,8 @@ export function reporteExportacionBanrep(r: ResultadoExportarBanrep): ReporteBan
   const lista = avisos(r);
   const sinCsv = r.codigoCsv === null ? [] : [`❌ ${r.codigoCsv} · no se escribió el CSV (${SIN_CSV[r.codigoCsv]}).`];
   const codigoSalida = sinCsv.length > 0 ? SALIDA_FALLIDA : lista.length > 0 ? SALIDA_CON_AVISOS : 0;
-  return { lineas: [resumen, ...lista, ...sinCsv], codigoSalida };
+  const parcial = codigoSalida === SALIDA_CON_AVISOS ? [PARCIAL_SIN_MOVER] : [];
+  return { lineas: [resumen, ...lista, ...sinCsv, ...parcial], codigoSalida };
 }
 
 /** El --archivo no se pudo leer: 2 si no se puede abrir o no es un archivo regular; 1 si pasa del tope. Nunca la ruta. */

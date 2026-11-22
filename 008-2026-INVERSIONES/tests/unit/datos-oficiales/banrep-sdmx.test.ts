@@ -62,7 +62,7 @@ describe("leerSdmxBanrep · página de bloqueo (captcha o HTML en vez de SDMX): 
   it.each([
     ["el captcha ficticio", CAPTCHA_FICTICIO],
     ["<html> a secas", "<html><body>x</body></html>"],
-    ["BOM, espacios y DOCTYPE en mayúsculas", "﻿ \n\t<!DOCTYPE HTML><html></html>"],
+    ["BOM, espacios y DOCTYPE en mayúsculas", "\uFEFF \n\t<!DOCTYPE HTML><html></html>"],
     ["declaración XML y luego DOCTYPE html", "<?xml version='1.0'?>\n<!doctype html><html></html>"],
     ["un script suelto", '<script>var fict = "x";</script>'],
     ["head o body sueltos", "<head></head>"],

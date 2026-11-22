@@ -3,7 +3,9 @@
  * (pedirSdmxBanrep) o desde el --archivo que él bajó en su navegador, con el MISMO lector (leerSdmxBanrep). Sin base de
  * datos. El CSV lo arma escribirCsvSeries, que lo vuelve a leer: nunca sale uno que importar-series rechazaría.
  * Además de los descartes del lector, avisa lo que perdería datos sin decirlo:
- * - ATRASADA: el último valor queda más de `umbralFrescuraDias` (catálogo) antes de --hasta (BanRep no ha publicado).
+ * - INICIO_TARDIO: el primer valor llega más de `umbralFrescuraDias` (catálogo) después de --desde (un --archivo bajado
+ *   con un startPeriod posterior, o BanRep que no tiene esos días).
+ * - ATRASADA: el último valor queda más de `umbralFrescuraDias` antes de --hasta (BanRep no ha publicado).
  * - Días faltantes entre el primero y el último, solo en una serie diaria de calendario (la TPM); la IBR es de días
  *   hábiles y sus huecos no se pueden juzgar sin el calendario bancario.
  * El CSV se entrega entero al final (el script lo escribe con escribirCompleto): nunca uno a medias.
@@ -32,6 +34,7 @@ export interface ResultadoExportarBanrep {
   readonly origen: OrigenBanrep["tipo"];
   /** La URL pública de la descarga: la que el dueño abre en su navegador si BanRep bloquea. */
   readonly url: string;
+  readonly desde: Date;
   readonly hasta: Date;
   readonly umbralFrescuraDias: number;
   readonly csv: string | null;
@@ -41,6 +44,7 @@ export interface ResultadoExportarBanrep {
   readonly primerDia: Date | null;
   readonly ultimoDia: Date | null;
   readonly diasFaltantes: number;
+  readonly inicioTardio: boolean;
   readonly atrasada: boolean;
   readonly codigoCsv: Extract<EscrituraCsvSeries, { ok: false }>["codigo"] | null;
 }
@@ -53,20 +57,22 @@ const diasEntre = (a: Date, b: Date): number => Math.round((b.getTime() - a.getT
 
 export async function exportarBanrep(o: OpcionesExportarBanrep): Promise<ResultadoExportarBanrep> {
   const base = {
-    serie: o.serie.codigo, origen: o.origen.tipo, url: urlBanrep(o.serie, o.desde), hasta: o.hasta, umbralFrescuraDias: o.serie.catalogo.umbralFrescuraDias,
+    serie: o.serie.codigo, origen: o.origen.tipo, url: urlBanrep(o.serie, o.desde), desde: o.desde, hasta: o.hasta, umbralFrescuraDias: o.serie.catalogo.umbralFrescuraDias,
   };
-  const vacio = { csv: null, filas: 0, conteos: null, primerDia: null, ultimoDia: null, diasFaltantes: 0, atrasada: false, codigoCsv: null };
+  const vacio = { csv: null, filas: 0, conteos: null, primerDia: null, ultimoDia: null, diasFaltantes: 0, inicioTardio: false, atrasada: false, codigoCsv: null };
   const bytes = await bytesDe(o);
   if (!bytes.ok) return { ...base, ...vacio, fallo: bytes };
   const leido = leerSdmxBanrep(bytes.bytes, o.serie, o.desde, o.hasta);
   if (!leido.ok) return { ...base, ...vacio, fallo: leido };
   const [primero, ultimo] = [leido.valores[0]?.desde ?? null, leido.valores.at(-1)?.hasta ?? null];
   const deCalendario = o.serie.catalogo.cadencia === "DIARIA_CALENDARIO";
+  const umbral = o.serie.catalogo.umbralFrescuraDias;
   const cobertura = {
     primerDia: primero,
     ultimoDia: ultimo,
     diasFaltantes: primero && ultimo && deCalendario ? diasEntre(primero, ultimo) + 1 - leido.valores.length : 0,
-    atrasada: ultimo !== null && diasEntre(ultimo, o.hasta) > o.serie.catalogo.umbralFrescuraDias,
+    inicioTardio: primero !== null && diasEntre(o.desde, primero) > umbral,
+    atrasada: ultimo !== null && diasEntre(ultimo, o.hasta) > umbral,
   };
   const escrito = escribirCsvSeries([{ codigo: o.serie.codigo, valores: leido.valores }], o.hoy);
   return {

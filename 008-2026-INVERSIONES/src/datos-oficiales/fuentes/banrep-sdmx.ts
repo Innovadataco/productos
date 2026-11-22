@@ -7,18 +7,24 @@
  * La forma que se exige es la observada en las descargas públicas del 2026-11-21 (POR VERIFICAR con la ficha de BanRep),
  * y todo lo que se aparta falla cerrado, con un código fijo que no lleva nada de la respuesta:
  * - Una página HTML en vez del XML (captcha, bloqueo o error del servidor): BANREP_BLOQUEADO (detalle HTML). Se olfatea
- *   antes del lector XML (que rechazaría su DOCTYPE) y se mira la raíz (un XHTML bien formado).
+ *   antes del lector XML (que rechazaría su DOCTYPE): tras la BOM, espacios, la declaración y comentarios, una etiqueta de
+ *   HTML; si el lector XML lo rechaza y el principio trae `<html` o `<!doctype html`, también; y se mira la raíz (un XHTML
+ *   o un fragmento HTML bien formados).
  * - Lo que el lector XML rechaza (DTD, entidades, CDATA, topes…): BANREP_XML, con el código del lector como detalle.
  * - Un mensaje de error SDMX: BANREP_ERROR_SDMX (detalle: su `code`, si es numérico).
  * - La raíz GenericData del espacio del mensaje SDMX 2.1, con exactamente una cabecera y un DataSet (BANREP_NO_SDMX); un
  *   pie (Footer) avisa una respuesta parcial: BANREP_TRUNCADO. La cabecera: emisor BANREP, no de prueba, la dimensión de
  *   la observación es TIME_PERIOD (NO_SDMX) y el ID es el dataflow pedido (BANREP_OTRO_DATAFLOW: el --archivo de la otra
  *   serie).
- * - La serie se elige por SUBJECT + UNIT_MEASURE de la SeriesKey (el dataflow de la IBR trae 8): ninguna
- *   (SERIE_AUSENTE), dos (SERIE_REPETIDA); diaria, de Colombia y sin multiplicador (UNIT_MULT = 0): si no, SERIE_DISTINTA.
+ * - La serie se elige por SUBJECT + UNIT_MEASURE de la SeriesKey (el dataflow de la IBR trae 8; toda serie debe tener
+ *   una clave legible: NO_SDMX): ninguna (SERIE_AUSENTE), dos (SERIE_REPETIDA). Solo la elegida (y la nominal de la
+ *   guarda) deben tener la forma estricta; una ajena con un hijo de más no estorba. La elegida: diaria, de Colombia y sin
+ *   multiplicador (UNIT_MULT = 0, también en cada observación): si no, SERIE_DISTINTA (OBS_INVALIDA en la observación).
  * - Guarda de la unidad (la IBR): si en el mismo mensaje viene la nominal (NR) del mismo plazo, la efectiva anual (ER)
  *   nunca puede ser menor un día que tienen las dos (con tasas positivas, la efectiva supera a la nominal): si lo es, las
- *   unidades vienen cruzadas (BANREP_UNIDAD_DUDOSA).
+ *   unidades vienen cruzadas (BANREP_UNIDAD_DUDOSA). Es una heurística contra errores del origen, no contra un
+ *   adversario (que puede omitir la nominal); la semántica de ER, NR y PA queda POR VERIFICAR con la ficha de BanRep. Un
+ *   día de la nominal repetido con valores distintos no se compara.
  * - Las observaciones las lee banrep-observaciones.ts. Se compara por espacio de nombres, nunca por el prefijo.
  * Nunca lanza: cualquier otra falla sale como BANREP_ERROR_INTERNO.
  */
@@ -41,10 +47,15 @@ const AREA_COLOMBIA = "CO";
 const SIN_MULTIPLICADOR = "0";
 const UNIDAD_EFECTIVA = "ER";
 const UNIDAD_NOMINAL = "NR";
-const RAICES_HTML: ReadonlySet<string> = new Set(["html", "head", "body", "script"]);
+const ETIQUETAS_HTML = ["html", "head", "body", "script", "meta", "title", "noscript", "div", "form", "style", "link"] as const;
+const RAICES_HTML: ReadonlySet<string> = new Set(ETIQUETAS_HTML);
 /** Cuánto del principio se mira para reconocer una página HTML. */
 const OLFATEO_BYTES = 1024;
-const HTML_AL_INICIO = /^﻿?\s*(?:<\?xml[^>]{0,200}\?>\s*)?<(?:!doctype\s+html|html|head|body|script)(?=[\s>/])/i;
+/** Una etiqueta de HTML (o su DOCTYPE) justo donde se mira. */
+const ETIQUETA_HTML = new RegExp(`^<(?:!doctype\\s+html|${ETIQUETAS_HTML.join("|")})(?=[\\s>/])`, "i");
+/** Rastro de HTML en un texto que el lector XML rechazó. */
+const RASTRO_HTML = /<html(?![\w:.-])|<!doctype\s+html/i;
+const ESPACIO = /\s/;
 const CODIGO_ERROR_SDMX = /^[0-9]{1,4}$/;
 const ESPACIOS_XML = /^[ \t\n]+|[ \t\n]+$/g;
 
@@ -52,17 +63,33 @@ const es = (e: ElementoXml, espacio: string, local: string): boolean => e.espaci
 const hijosDe = (e: ElementoXml, espacio: string, local: string): readonly ElementoXml[] => e.hijos.filter((h) => es(h, espacio, local));
 const limpio = (texto: string): string => texto.replace(ESPACIOS_XML, "");
 
-/** ¿Empieza como una página HTML (tras la BOM, espacios y, si viene, la declaración XML)? */
-function pareceHtml(bytes: Uint8Array): boolean {
-  return HTML_AL_INICIO.test(new TextDecoder("utf-8").decode(bytes.subarray(0, OLFATEO_BYTES)));
+/** El principio del cuerpo como texto, para olfatear (sin validar: TextDecoder no fatal, que nunca lanza). */
+const principio = (bytes: Uint8Array): string => new TextDecoder("utf-8").decode(bytes.subarray(0, OLFATEO_BYTES));
+
+/** Dónde empieza el contenido tras la BOM, los espacios, la declaración `<?xml …?>` y los comentarios (lineal). */
+function saltarPrologo(texto: string): number {
+  let i = texto.charCodeAt(0) === 0xfeff ? 1 : 0;
+  for (;;) {
+    while (i < texto.length && ESPACIO.test(texto[i]!)) i += 1;
+    const [abre, cierra] = texto.startsWith("<?xml", i) ? ["<?xml", "?>"] : texto.startsWith("<!--", i) ? ["<!--", "-->"] : [null, null];
+    const fin = abre === null ? -1 : texto.indexOf(cierra!, i + abre.length);
+    if (fin === -1) return i;
+    i = fin + cierra!.length;
+  }
 }
 
-function raizXml(bytes: Uint8Array): ElementoXml | FalloBanrep {
+/** ¿Empieza como una página HTML (tras la BOM, espacios, la declaración XML y comentarios)? */
+function pareceHtml(texto: string): boolean {
+  return ETIQUETA_HTML.test(texto.slice(saltarPrologo(texto)));
+}
+
+/** La raíz, o el fallo del lector XML (una página HTML que el lector rechaza es un bloqueo). */
+function raizXml(bytes: Uint8Array, texto: string): ElementoXml | FalloBanrep {
   try {
     return leerXmlAcotado(bytes);
   } catch (e) {
-    if (e instanceof ErrorXml) return falloBanrep("BANREP_XML", e.codigo);
-    throw e;
+    if (!(e instanceof ErrorXml)) throw e;
+    return RASTRO_HTML.test(texto) ? falloBanrep("BANREP_BLOQUEADO", "HTML") : falloBanrep("BANREP_XML", e.codigo);
   }
 }
 
@@ -97,6 +124,9 @@ function obsCruda(o: ElementoXml): ObsCruda | null {
   const valor = valores.length === 1 ? buscarAtributo(valores[0]!, "value") : null;
   const estados = atributos.length === 1 ? valoresDe(atributos[0]!) : new Map<string, string>();
   if (dia === undefined || valor === undefined || estados === null) return null;
+  // Un multiplicador en la observación (distinto de 0) escalaría el valor: no se lee.
+  const multiplicador = estados.get("UNIT_MULT");
+  if (multiplicador !== undefined && multiplicador !== SIN_MULTIPLICADOR) return null;
   return { dia, valor, estado: estados.get("OBS_STATUS") ?? null };
 }
 
@@ -148,47 +178,64 @@ function falloDeCabecera(cabecera: ElementoXml, serie: SerieBanrep): FalloBanrep
   return limpio(id.texto) === serie.dataflow ? null : falloBanrep("BANREP_OTRO_DATAFLOW");
 }
 
-const conClave = (series: readonly SerieXml[], sujeto: string, unidad: string): readonly SerieXml[] =>
-  series.filter((s) => s.clave.get("SUBJECT") === sujeto && s.clave.get("UNIT_MEASURE") === unidad);
-
-/** La serie pedida entre las del DataSet (todas deben tener la forma de una Series). */
-function elegir(datos: ElementoXml, serie: SerieBanrep): { readonly elegida: SerieXml; readonly todas: readonly SerieXml[] } | FalloBanrep {
-  if (datos.hijos.some((h) => !es(h, NS_GENERICO_SDMX, "Series"))) return falloBanrep("BANREP_NO_SDMX");
-  const todas = datos.hijos.map(serieXml);
-  if (todas.some((s) => s === null)) return falloBanrep("BANREP_NO_SDMX");
-  const candidatas = conClave(todas as SerieXml[], serie.sujeto, serie.unidad);
-  if (candidatas.length === 0) return falloBanrep("BANREP_SERIE_AUSENTE");
-  if (candidatas.length > 1) return falloBanrep("BANREP_SERIE_REPETIDA");
-  const elegida = candidatas[0]!;
-  const forma = elegida.clave.get("FREQ") === FRECUENCIA_DIARIA && elegida.clave.get("REFERENCE_AREA") === AREA_COLOMBIA && elegida.atributos.get("UNIT_MULT") === SIN_MULTIPLICADOR;
-  return forma ? { elegida, todas: todas as SerieXml[] } : falloBanrep("BANREP_SERIE_DISTINTA");
+/** La clave (SeriesKey) de una Series cualquiera: una sola, legible, con SUBJECT y UNIT_MEASURE; null si no. */
+function claveDe(s: ElementoXml): ReadonlyMap<string, string> | null {
+  const claves = hijosDe(s, NS_GENERICO_SDMX, "SeriesKey");
+  const clave = claves.length === 1 ? valoresDe(claves[0]!) : null;
+  return clave && clave.has("SUBJECT") && clave.has("UNIT_MEASURE") ? clave : null;
 }
 
-/** Los valores definitivos y decimales de una serie, por día (para la guarda de la unidad). */
+interface Elegida {
+  readonly elegida: SerieXml;
+  /** La nominal del mismo plazo (para la guarda), si viene una sola y con la forma estricta. */
+  readonly nominal: SerieXml | null;
+}
+
+/** La serie pedida entre las del DataSet: todas deben ser Series con clave legible; la elegida, con la forma estricta. */
+function elegir(datos: ElementoXml, serie: SerieBanrep): Elegida | FalloBanrep {
+  if (datos.hijos.some((h) => !es(h, NS_GENERICO_SDMX, "Series"))) return falloBanrep("BANREP_NO_SDMX");
+  const claves = datos.hijos.map(claveDe);
+  if (claves.some((c) => c === null)) return falloBanrep("BANREP_NO_SDMX");
+  const conClave = (unidad: string): readonly ElementoXml[] =>
+    datos.hijos.filter((_h, i) => claves[i]!.get("SUBJECT") === serie.sujeto && claves[i]!.get("UNIT_MEASURE") === unidad);
+  const candidatas = conClave(serie.unidad);
+  if (candidatas.length === 0) return falloBanrep("BANREP_SERIE_AUSENTE");
+  if (candidatas.length > 1) return falloBanrep("BANREP_SERIE_REPETIDA");
+  const elegida = serieXml(candidatas[0]!);
+  if (!elegida) return falloBanrep("BANREP_NO_SDMX");
+  const forma = elegida.clave.get("FREQ") === FRECUENCIA_DIARIA && elegida.clave.get("REFERENCE_AREA") === AREA_COLOMBIA && elegida.atributos.get("UNIT_MULT") === SIN_MULTIPLICADOR;
+  if (!forma) return falloBanrep("BANREP_SERIE_DISTINTA");
+  const nominales = serie.unidad === UNIDAD_EFECTIVA ? conClave(UNIDAD_NOMINAL) : [];
+  return { elegida, nominal: nominales.length === 1 ? serieXml(nominales[0]!) : null };
+}
+
+/** Los valores definitivos y decimales de una serie, por día; un día repetido con valores distintos queda fuera. */
 function definitivosPorDia(s: SerieXml): ReadonlyMap<string, string> {
-  const porDia = new Map<string, string>();
+  const porDia = new Map<string, string | null>();
   for (const o of s.obs) {
     const c = obsCruda(o);
     const valor = c && c.estado === ESTADO_DEFINITIVO && c.valor !== null ? canonizarValor(c.valor) : null;
-    if (c && valor !== null) porDia.set(c.dia, valor);
+    if (!c || valor === null) continue;
+    const previo = porDia.get(c.dia);
+    porDia.set(c.dia, previo === undefined || previo === valor ? valor : null);
   }
-  return porDia;
+  return new Map([...porDia].filter((par): par is [string, string] => par[1] !== null));
 }
 
 /** ¿La efectiva (ER) queda por debajo de la nominal (NR) del mismo plazo algún día que tienen las dos? */
-function unidadDudosa(serie: SerieBanrep, elegida: SerieXml, todas: readonly SerieXml[]): boolean {
-  const nominales = conClave(todas, serie.sujeto, UNIDAD_NOMINAL);
-  if (serie.unidad !== UNIDAD_EFECTIVA || nominales.length !== 1) return false;
-  const nominal = definitivosPorDia(nominales[0]!);
-  return [...definitivosPorDia(elegida)].some(([dia, efectiva]) => {
+function unidadDudosa(e: Elegida): boolean {
+  if (!e.nominal) return false;
+  const nominal = definitivosPorDia(e.nominal);
+  return [...definitivosPorDia(e.elegida)].some(([dia, efectiva]) => {
     const n = nominal.get(dia);
     return n !== undefined && compararDecimales(efectiva, n) < 0;
   });
 }
 
 function leer(bytes: Uint8Array, serie: SerieBanrep, desde: Date, hasta: Date): ResultadoBanrep {
-  if (pareceHtml(bytes)) return falloBanrep("BANREP_BLOQUEADO", "HTML");
-  const raiz = raizXml(bytes);
+  const texto = principio(bytes);
+  if (pareceHtml(texto)) return falloBanrep("BANREP_BLOQUEADO", "HTML");
+  const raiz = raizXml(bytes, texto);
   if ("ok" in raiz) return raiz;
   const fallo = falloDeRaiz(raiz);
   if (fallo) return fallo;
@@ -201,7 +248,7 @@ function leer(bytes: Uint8Array, serie: SerieBanrep, desde: Date, hasta: Date): 
   const crudas = e.elegida.obs.map(obsCruda);
   if (crudas.some((c) => c === null)) return falloBanrep("BANREP_OBS_INVALIDA");
   const r = leerObservaciones(crudas as ObsCruda[], serie.catalogo, desde, hasta);
-  return r.ok && unidadDudosa(serie, e.elegida, e.todas) ? falloBanrep("BANREP_UNIDAD_DUDOSA") : r;
+  return r.ok && unidadDudosa(e) ? falloBanrep("BANREP_UNIDAD_DUDOSA") : r;
 }
 
 /**

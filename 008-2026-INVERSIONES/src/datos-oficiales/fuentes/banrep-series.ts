@@ -29,16 +29,16 @@ export type SeriesBanrep =
   | { readonly ok: false; readonly codigo: "BANREP_CATALOGO_INVALIDO" };
 
 /**
- * Los fallos de la fuente. Los del pedido salen de pedirBytesAcotado (RED, HTTP_<n>, FORMATO) y de la lectura del
- * bloqueo (BLOQUEADO); los demás, del lector del SDMX. Ninguno lleva nada de la respuesta.
+ * Los fallos de la fuente. Los del pedido salen de pedirBytesAcotado (RED, HTTP_<n>, FORMATO, TIPO) y del bloqueo
+ * (BLOQUEADO); los demás, del lector del SDMX. Ninguno lleva nada de la respuesta.
  */
 export type CodigoBanrep =
-  | "BANREP_RED" | `BANREP_HTTP_${number}` | "BANREP_FORMATO" | "BANREP_BLOQUEADO" | "BANREP_XML" | "BANREP_ERROR_SDMX" | "BANREP_NO_SDMX"
+  | "BANREP_RED" | `BANREP_HTTP_${number}` | "BANREP_FORMATO" | "BANREP_TIPO" | "BANREP_BLOQUEADO" | "BANREP_XML" | "BANREP_ERROR_SDMX" | "BANREP_NO_SDMX"
   | "BANREP_OTRO_DATAFLOW" | "BANREP_TRUNCADO" | "BANREP_SERIE_AUSENTE" | "BANREP_SERIE_REPETIDA" | "BANREP_SERIE_DISTINTA"
   | "BANREP_UNIDAD_DUDOSA" | "BANREP_OBS_INVALIDA" | "BANREP_AMBIGUO" | "BANREP_ERROR_INTERNO";
 
 /**
- * `detalle` es fijo, nunca de la respuesta: «HTML», «TIPO» o «HTTP_403»/«HTTP_429» (bloqueo), un código XML_* del
+ * `detalle` es fijo, nunca de la respuesta: «HTML» o «HTTP_403»/«HTTP_429» (bloqueo), un código XML_* del
  * lector (BANREP_XML) o el `code` numérico de un error SDMX.
  */
 export interface FalloBanrep {
