@@ -52,6 +52,8 @@ export interface DividendoLeido {
 }
 export interface DecretoLeido {
   readonly id: string;
+  /** La que publicó la fuente: manda qué tenencia cobró el pago de Trii que cruza con el decreto (src/proyecciones/dividendos.ts). */
+  readonly fechaEx: Date;
   readonly fechaPago: Date;
   /** Valor decretado por acción (bruto). */
   readonly valorPorAccion: number;
@@ -134,7 +136,7 @@ export type EstadoPosicion = "PROYECTADA" | "FIJA_HISTORIA_CORTA" | "EXCLUIDA_SI
 
 export const CODIGOS_AVISO = [
   "HISTORIA_CORTA", "HISTORIA_CORTA_EN_VENTANA", "SIN_VALOR", "ESPECIE_INCOMPLETA", "ESCISION_SIN_RAZON", "ESCISION_SIN_CIERRE_DESTINO", "ESCISION_ENCADENADA",
-  "SALTO_SIN_EVENTO", "DIVIDENDO_SIN_TENENCIA", "DIVIDENDO_TENENCIA_CAMBIA", "DECRETO_BRUTO", "ANIO_SIN_CALENDARIO",
+  "SALTO_SIN_EVENTO", "DIVIDENDO_SIN_TENENCIA", "DIVIDENDO_TENENCIA_CAMBIA", "DIVIDENDO_DECRETO_EN_DUDA", "DIVIDENDO_EX_DISTINTAS", "DECRETO_BRUTO", "ANIO_SIN_CALENDARIO",
   "SIN_POSICIONES_PROYECTADAS", "SIN_POSICIONES_VALORADAS",
 ] as const;
 export type CodigoAviso = (typeof CODIGOS_AVISO)[number];
