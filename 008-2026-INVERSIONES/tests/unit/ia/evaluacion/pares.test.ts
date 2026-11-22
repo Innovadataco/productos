@@ -35,11 +35,13 @@ describe("armarPares", () => {
     }
   });
 
-  it("A y B van al azar: las dos fuentes salen de A", () => {
-    const r = armarPares({ casos, fuentes: [fuente(A), fuente(B)], cantidad: 10, semilla: 4613 });
-    const deA = r.pares.filter((p) => p.a.fuente === A).length;
-    expect(deA).toBeGreaterThan(0);
-    expect(deA).toBeLessThan(10);
+  it("A y B van al azar pero balanceados: cada fuente sale de A la mitad de las veces (revisión)", () => {
+    for (const semilla of [4613, 37_911, 1237]) {
+      const r = armarPares({ casos, fuentes: [fuente(A), fuente(B)], cantidad: 10, semilla });
+      expect(r.pares.filter((p) => p.a.fuente === A).length).toBe(5);
+    }
+    const nueve = armarPares({ casos: casos.filter((c) => c.id.endsWith("-01")), fuentes: [fuente(A), fuente(B), fuente(C)], cantidad: "TODOS", semilla: 4613 });
+    for (const f of [A, B, C]) expect(nueve.pares.filter((p) => p.a.fuente === f).length).toBeGreaterThanOrEqual(2);
   });
 
   it("TODOS con tres fuentes: los tres pares posibles de cada caso", () => {

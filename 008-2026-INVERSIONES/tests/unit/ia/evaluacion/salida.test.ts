@@ -8,7 +8,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, 
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { abrirCarpeta, ErrorSalida, nombreDeModelo, revisarCarpeta } from "@/ia/evaluacion/salida";
+import { abrirCarpeta, ErrorSalida, nombreDeModelo, revisarArchivoPrivado, revisarCarpeta } from "@/ia/evaluacion/salida";
 
 const RAIZ_008 = path.join(__dirname, "..", "..", "..", "..");
 const nueva = (): string => mkdtempSync(path.join(tmpdir(), "e7-salida-"));
@@ -125,6 +125,24 @@ describe("los archivos de la carpeta", () => {
     expect(codigoDe(() => c.leerJsonl("grande.jsonl", 16))).toBe("DEMASIADO_GRANDE");
     c.escribirArchivo("roto.jsonl", "{no es json}\n");
     expect(codigoDe(() => c.leerJsonl("roto.jsonl"))).toBe("JSONL_INVALIDO");
+  });
+});
+
+describe("revisarArchivoPrivado (revisión de seguridad: el JSON del portafolio)", () => {
+  it("acepta un archivo regular propio 0600; rechaza uno legible por otros, un enlace y una carpeta", () => {
+    const base = nueva();
+    const privado = path.join(base, "hechos.json");
+    writeFileSync(privado, "{}", { mode: 0o600 });
+    chmodSync(privado, 0o600);
+    expect(codigoDe(() => revisarArchivoPrivado(privado))).toBe("SIN_ERROR");
+    const abierto = path.join(base, "abierto.json");
+    writeFileSync(abierto, "{}");
+    chmodSync(abierto, 0o644);
+    expect(codigoDe(() => revisarArchivoPrivado(abierto))).toBe("ARCHIVO_ABIERTO");
+    symlinkSync(privado, path.join(base, "enlace.json"));
+    expect(codigoDe(() => revisarArchivoPrivado(path.join(base, "enlace.json")))).toBe("ES_ENLACE");
+    expect(codigoDe(() => revisarArchivoPrivado(base))).toBe("NO_ES_ARCHIVO");
+    expect(codigoDe(() => revisarArchivoPrivado(path.join(base, "no-existe.json")))).toBe("NO_SE_PUDO_LEER");
   });
 });
 

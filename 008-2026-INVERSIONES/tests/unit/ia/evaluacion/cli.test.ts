@@ -4,7 +4,7 @@
  * Nunca se prueba aquí un destino con forma válida: en el Mac, una IP inventada de la tailnet podría existir.
  * El hijo corre con un entorno mínimo (tests/ayudas/cli.ts).
  */
-import { existsSync, mkdtempSync } from "node:fs";
+import { copyFileSync, chmodSync, existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -13,6 +13,14 @@ import { ip } from "../local/apoyo/red.ficticio";
 
 const SCRIPT = "ia-evaluar.ts";
 const salidaNueva = (): string => path.join(mkdtempSync(path.join(tmpdir(), "e7-cli-")), "r");
+const FICTICIO = path.join(RAIZ, "tests", "fixtures", "ia", "evaluacion", "paquetes.ficticio.json");
+/** El archivo ficticio copiado 0600 a una carpeta temporal propia (como debe quedar el export real). */
+function privado(): string {
+  const destino = path.join(mkdtempSync(path.join(tmpdir(), "e7-cli-paquetes-")), "hechos.json");
+  copyFileSync(FICTICIO, destino);
+  chmodSync(destino, 0o600);
+  return destino;
+}
 
 describe("ia-evaluar · como proceso, sin red", { timeout: 10 * POR_CLI_MS }, () => {
   it("sin argumentos: 2 con el uso", () => {
@@ -23,15 +31,21 @@ describe("ia-evaluar · como proceso, sin red", { timeout: 10 * POR_CLI_MS }, ()
     comprobar(correr(SCRIPT, ["casos"], entornoMinimo({})), 0, "DIARIO 15", ["FICTICIA"]);
   });
 
-  it("casos con el archivo exportado (.ficticio.json): 0, tres casos revalidados con su hash, sin nombres ni cifras", () => {
-    const ficticio = path.join(RAIZ, "tests", "fixtures", "ia", "evaluacion", "paquetes.ficticio.json");
-    comprobar(correr(SCRIPT, ["casos", "--paquetes", ficticio], entornoMinimo({})), 0, "3 casos (PAQUETES): DIARIO 1 · REGLAS 1 · ESCENARIOS 1", ["FICTICIA", "37.911"]);
+  it("casos con el archivo exportado (.ficticio.json, copiado 0600): 0, tres casos revalidados con su hash, sin nombres ni cifras", () => {
+    comprobar(correr(SCRIPT, ["casos", "--paquetes", privado()], entornoMinimo({})), 0, "3 casos (PAQUETES): DIARIO 1 · REGLAS 1 · ESCENARIOS 1", ["FICTICIA", "37.911"]);
+  });
+
+  it("revisión: un archivo de paquetes legible por otros se rechaza (PAQUETES_ABIERTO), sin leerlo", () => {
+    comprobar(correr(SCRIPT, ["casos", "--paquetes", FICTICIO], entornoMinimo({})), 2, "PAQUETES_ABIERTO", ["FICTICIA"]);
+  });
+
+  it("revisión: con un proxy de entorno activo para el fetch, se niega (el tráfico a la tailnet no sale por un proxy)", () => {
+    comprobar(correr(SCRIPT, ["correr", "--modelo", "qwen2.5:14b", "--salida", salidaNueva()], entornoMinimo({ NODE_USE_ENV_PROXY: "1", INV_IA_LOCAL_DESTINO: "no-es-un-destino" })), 2, "PROXY_DE_ENTORNO", []);
   });
 
   it("correr con el portafolio y la salida en el temporal: 2 EN_CARPETA_PROHIBIDA, sin crearla", () => {
-    const ficticio = path.join(RAIZ, "tests", "fixtures", "ia", "evaluacion", "paquetes.ficticio.json");
     const salida = salidaNueva();
-    comprobar(correr(SCRIPT, ["correr", "--modelo", "qwen2.5:14b", "--salida", salida, "--paquetes", ficticio], entornoMinimo({ INV_IA_LOCAL_DESTINO: "no-es-un-destino" })), 2, "EN_CARPETA_PROHIBIDA", []);
+    comprobar(correr(SCRIPT, ["correr", "--modelo", "qwen2.5:14b", "--salida", salida, "--paquetes", privado()], entornoMinimo({ INV_IA_LOCAL_DESTINO: "no-es-un-destino" })), 2, "EN_CARPETA_PROHIBIDA", []);
     expect(existsSync(salida)).toBe(false);
   });
 

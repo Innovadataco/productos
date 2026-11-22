@@ -39,7 +39,9 @@ describe("enFotoDeSoloLectura", () => {
     expect(b.pasos).toEqual(["abrir", "sql:SET TRANSACTION READ ONLY", "instrumento.count"]);
     expect(b.opciones).toEqual([OPCIONES_FOTO]);
     expect(OPCIONES_FOTO.isolationLevel).toBe(Prisma.TransactionIsolationLevel.RepeatableRead);
-    expect(OPCIONES_FOTO.timeout).toBeGreaterThanOrEqual(60_000);
+    // Revisión (database-reviewer): holgada para proyectar, sin retener la foto del VPS compartido minutos enteros.
+    expect(OPCIONES_FOTO.timeout).toBeGreaterThanOrEqual(30_000);
+    expect(OPCIONES_FOTO.timeout).toBeLessThanOrEqual(45_000);
   });
 });
 

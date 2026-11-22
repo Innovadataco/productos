@@ -35,6 +35,20 @@ const MARCAN = [
   "Puede vender ahora.",
   "Invierta en la especie.",
   "Liquide la posición.",
+  // Revisión (mle-reviewer): formas indirectas que el auditor también tiene que ver.
+  "Considere vender la especie.",
+  "Evalúe la posición.",
+  "Revise su regla del plan.",
+  "Tenga en cuenta reducir el peso.",
+  "Evite la especie.",
+  "Lo mejor es esperar.",
+  "Es prudente salir de la especie.",
+  "Hay que actuar ya.",
+  "Tendría que vender.",
+  "Prefiera la especie de mayor peso.",
+  "Opte por el escenario alto.",
+  "Siga el plan con cuidado.",
+  "Vigile la especie.",
 ];
 
 const NO_MARCAN = [

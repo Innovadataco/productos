@@ -100,13 +100,52 @@ describe("calcularMetricas", () => {
   it("criterio: cero recomendaciones, al menos 90 % publicado y p95 de hasta 120 s; la claridad es humana", () => {
     expect(CRITERIO).toEqual({ minTasaPublicacion: 0.9, maxP95Ms: 120_000, maxRecomendaciones: 0 });
     const nueve = Array.from({ length: 9 }, (_, i) => registro({ caso: `DIARIO-${i + 1}`, latenciaMs: 119_000 }));
-    const apto = calcularMetricas("m", [...nueve, rechazo(["IDIOMA"], { caso: "DIARIO-10" })]);
-    expect(apto.criterio).toEqual({ recomendaciones: true, publicacion: true, latencia: true, claridad: "PENDIENTE", apto: true });
+    const diez = [...nueve, rechazo(["IDIOMA"], { caso: "DIARIO-10" })];
+    const apto = calcularMetricas("m", diez, { esperadas: 10, completa: true });
+    expect(apto.criterio).toEqual({ completa: true, recomendaciones: true, publicacion: true, latencia: true, claridad: "PENDIENTE", apto: true });
     const poco = calcularMetricas("m", [...nueve.slice(0, 8), rechazo(["IDIOMA"]), rechazo(["IDIOMA"])]);
     expect(poco.criterio).toMatchObject({ publicacion: false, apto: false });
     const lento = calcularMetricas("m", nueve.map((r) => ({ ...r, latenciaMs: 120_001 })));
     expect(lento.criterio).toMatchObject({ latencia: false, apto: false });
     expect(calcularMetricas("m", []).criterio).toMatchObject({ publicacion: false, apto: false });
+  });
+
+  it("revisión: sin la evaluación completa (cortada o con menos corridas que las esperadas) no hay apto", () => {
+    const diez = Array.from({ length: 10 }, (_, i) => registro({ caso: `DIARIO-${i + 1}` }));
+    expect(calcularMetricas("m", diez).criterio).toMatchObject({ completa: false, apto: false });
+    expect(calcularMetricas("m", diez, { esperadas: 10, completa: false }).criterio).toMatchObject({ completa: false, apto: false });
+    expect(calcularMetricas("m", diez, { esperadas: 80, completa: true }).criterio).toMatchObject({ completa: false, apto: false });
+    expect(calcularMetricas("m", diez, { esperadas: 10, completa: true }).criterio).toMatchObject({ completa: true, apto: true });
+  });
+
+  it("revisión: intervalo de Wilson al 95 % de la publicación y «no concluyente» si cruza el 90 %", () => {
+    const treintaYSeis = [...Array.from({ length: 36 }, (_, i) => registro({ caso: `DIARIO-${i}` })), ...Array.from({ length: 4 }, (_, i) => rechazo(["IDIOMA"], { caso: `REGLAS-${i}` }))];
+    const m = calcularMetricas("m", treintaYSeis);
+    expect(m.publicacion.intervalo95[0]).toBeCloseTo(0.769, 2);
+    expect(m.publicacion.intervalo95[1]).toBeCloseTo(0.960, 2);
+    expect(m.publicacion.noConcluyente).toBe(true);
+    const todas = calcularMetricas("m", Array.from({ length: 80 }, (_, i) => registro({ caso: `DIARIO-${i}` })));
+    expect(todas.publicacion.noConcluyente).toBe(false);
+    expect(calcularMetricas("m", []).publicacion).toEqual({ intervalo95: null, noConcluyente: true });
+  });
+
+  it("revisión: la latencia de la pasada 1 aparte (la 2 puede salir de la caché)", () => {
+    const m = calcularMetricas("m", [registro({ pasada: 1, latenciaMs: 9137 }), registro({ pasada: 2, latenciaMs: 1013 }), registro({ caso: "DIARIO-02", pasada: 1, latenciaMs: 7019 })]);
+    expect(m.latenciaPasada1).toMatchObject({ n: 2, p95: 9137 });
+  });
+
+  it("revisión: saturación del contexto (el mismo tope de tokens con pedidos de largo distinto)", () => {
+    const m = calcularMetricas("m", [
+      registro({ tokensEntrada: 4096, caracteresPedido: 14_000 }), registro({ caso: "DIARIO-02", tokensEntrada: 4096, caracteresPedido: 21_000 }),
+      registro({ caso: "DIARIO-03", tokensEntrada: 1300, caracteresPedido: 4613 }),
+    ]);
+    expect(m.entradaEnElTope).toBe(2);
+    expect(calcularMetricas("m", [registro({ tokensEntrada: 4096, caracteresPedido: 14_000 }), registro({ caso: "DIARIO-02", tokensEntrada: 4096, caracteresPedido: 14_000 })]).entradaEnElTope).toBe(0);
+  });
+
+  it("revisión: las versiones de prompt, validador y digest que se vieron (para comparar modelos)", () => {
+    const m = calcularMetricas("m", [registro({}), registro({ caso: "REGLAS-01", promptVersion: "resumen-reglas-v1" })]);
+    expect(m.versiones).toEqual({ prompts: ["resumen-diario-v1", "resumen-reglas-v1"], validador: ["validador-v1"], digest: ["d".repeat(64)] });
   });
 });
 

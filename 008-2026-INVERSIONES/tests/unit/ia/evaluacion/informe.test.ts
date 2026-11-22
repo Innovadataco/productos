@@ -106,6 +106,30 @@ describe("escribirInforme", () => {
     expect(escribirInforme(c, { fuentes: ["ficticio-a:7b", "ficticio-b:9b", "ficticio-c:5b"], pares: "TODOS", semilla: 4613 })).toMatchObject({ modelos: 3, pares: 9 });
   });
 
+  it("revisión: si ya existe algún archivo del informe, no escribe ninguno (INFORME_EXISTE)", () => {
+    const c = carpeta();
+    escribirPlantilla(c, casos, "INVENTADOS");
+    correrFicticio(c, "ficticio-a:7b");
+    c.escribirArchivo(ARCHIVOS.clave, "{}\n");
+    let codigo = "";
+    try {
+      escribirInforme(c, { fuentes: ["ficticio-a:7b", "plantilla"], pares: 10, semilla: 4613 });
+    } catch (e) {
+      codigo = e instanceof ErrorArchivos ? e.codigo : "OTRO";
+    }
+    expect(codigo).toBe("INFORME_EXISTE");
+    expect(c.existe(ARCHIVOS.metricasJson)).toBe(false);
+  });
+
+  it("revisión: un modelo con la evaluación completa sale apto; uno cortado (sin fin), no", () => {
+    const c = carpeta();
+    escribirPlantilla(c, casos, "INVENTADOS");
+    correrFicticio(c, "ficticio-a:7b");
+    const cortada = abrirCorridas(c, { modelo: "ficticio-b:9b", origen: "INVENTADOS", casosHash: hashDeCasos(casos), pasadas: 2, limiteMs: 120_000 });
+    for (const x of casos) cortada.anotar(registro(x, "ficticio-b:9b", 1, 1));
+    expect(escribirInforme(c, { fuentes: ["ficticio-a:7b", "ficticio-b:9b"], pares: 10, semilla: 4613 }).aptos).toEqual(["ficticio-a:7b"]);
+  });
+
   it("corridas de otros casos que la plantilla: CASOS_DISTINTOS", () => {
     const c = carpeta();
     escribirPlantilla(c, casos, "INVENTADOS");

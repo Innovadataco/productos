@@ -66,6 +66,7 @@ describe("leerArgumentosEvaluacion", () => {
     ["un archivo de paquetes relativo", ["correr", "--modelo", "qwen2.5:14b", "--salida", SALIDA, "--paquetes", "hechos-exportados.json"], "PAQUETES_RELATIVA"],
     ["semilla con paquetes", ["correr", "--modelo", "qwen2.5:14b", "--salida", SALIDA, "--paquetes", "/ruta/ficticia/hechos.json", "--semilla", "4613"], "SEMILLA_CON_PAQUETES"],
     ["un modelo con espacios", ["correr", "--modelo", "modelo con espacios", "--salida", SALIDA], "MODELO_INVALIDO"],
+    ["un modelo llamado como la línea base", ["correr", "--modelo", "plantilla", "--salida", SALIDA], "MODELO_INVALIDO"],
     ["una semilla negativa", ["casos", "--semilla", "-1"], "SEMILLA_INVALIDA"],
     ["una semilla con decimales", ["casos", "--semilla", "4613.5"], "SEMILLA_INVALIDA"],
     ["tres pasadas", ["correr", "--modelo", "qwen2.5:14b", "--salida", SALIDA, "--pasadas", "3"], "PASADAS_INVALIDAS"],
