@@ -2,37 +2,59 @@
  * Registra el lote recibido por una escisión, con el costo del portal de Acciones & Valores (INV-SPEC-12).
  *   npm run lote:escision -- --destino <NEMO> --fecha-evento AAAA-MM-DD --cantidad <N> --costo-unitario <precio de compra del portal>
  * El evento debe estar registrado (npm run escision:registrar) y los lotes construidos (npm run
- * lotes:construir). El lote madre es el más antiguo de la especie origen vivo al corte del evento. No imprime los datos (son reales), solo el resultado.
+ * lotes:construir). El lote madre es el más antiguo de la especie origen vivo al corte del evento.
+ * Lee y valida los argumentos antes de abrir la base. No imprime los datos del lote (son reales): solo el id
+ * interno, campos, códigos y el siguiente paso (en producción, el de la vía B). Mismo criterio de salida que
+ * registrar-escision (src/cli/salida-escision.ts).
+ * Salida: 0 registrado · 1 rechazado o error (código y qué hacer) · 2 argumentos o datos inválidos (no abre la base).
  */
 import { PrismaClient } from "@prisma/client";
 import { parseArgs } from "node:util";
-import { ErrorLote, registrarLoteEscision } from "../src/lotes/escision";
+import {
+  OPCIONES_LOTE, emitir, salidaArgumentosInvalidos, salidaDatosInvalidos, salidaInesperada, salidaLoteRegistrado, salidaRechazo,
+  type SalidaCli,
+} from "../src/cli/salida-escision";
+import { registrarLoteEscision, validarLoteEscision, type DatosLoteEscision } from "../src/lotes/escision";
 
-let valores: Record<string, string | undefined>;
-try {
-  valores = parseArgs({
-    strict: true, allowPositionals: false,
-    options: { destino: { type: "string" }, "fecha-evento": { type: "string" }, cantidad: { type: "string" }, "costo-unitario": { type: "string" } },
-  }).values;
-} catch {
-  console.error("❌ Argumentos inválidos. Opciones: --destino --fecha-evento --cantidad --costo-unitario");
-  process.exit(2);
+// La imagen del migrador trae NODE_ENV=production: allí el siguiente paso es la vía B (cargar-prod.sh).
+const opciones = { produccion: process.env.NODE_ENV === "production" };
+
+function argumentos(): DatosLoteEscision | null {
+  try {
+    const { values } = parseArgs({
+      strict: true, allowPositionals: false,
+      options: { destino: { type: "string" }, "fecha-evento": { type: "string" }, cantidad: { type: "string" }, "costo-unitario": { type: "string" } },
+    });
+    return {
+      destino: values.destino ?? "", fechaEvento: values["fecha-evento"] ?? "",
+      cantidad: values.cantidad ?? "", costoUnitario: values["costo-unitario"] ?? "",
+    };
+  } catch {
+    return null; // el mensaje de parseArgs puede repetir lo escrito: no se imprime
+  }
 }
 
-async function main(): Promise<void> {
+async function main(): Promise<SalidaCli> {
+  const datos = argumentos();
+  if (datos === null) return salidaArgumentosInvalidos(OPCIONES_LOTE, opciones);
+  const v = validarLoteEscision(datos);
+  if (!v.ok) return salidaDatosInvalidos(v.errores, opciones);
   const db = new PrismaClient();
   try {
-    const r = await registrarLoteEscision(db, {
-      destino: valores.destino ?? "", fechaEvento: valores["fecha-evento"] ?? "",
-      cantidad: valores.cantidad ?? "", costoUnitario: valores["costo-unitario"] ?? "",
-    });
-    console.log(`✅ Lote de escisión registrado (${r.loteId}). Corra npm run lotes:construir para recalcular las ventas.`);
+    return salidaLoteRegistrado(await registrarLoteEscision(db, datos), opciones);
   } catch (e) {
-    console.error(`❌ No se registró: ${e instanceof ErrorLote ? e.codigo : "ERROR_BASE"}`);
-    process.exitCode = 1;
+    return salidaRechazo(e, opciones);
   } finally {
     await db.$disconnect();
   }
 }
 
-void main();
+// exitCode y no exit(): en macOS stdout por tubería es asíncrono y exit() podría cortar la salida. El catch va
+// después del then: también atrapa un fallo al escribir la salida (no se sabe qué llegó a verse).
+main()
+  .then((s) => {
+    process.exitCode = emitir(s, console);
+  })
+  .catch((e: unknown) => {
+    process.exitCode = emitir(salidaInesperada(e, opciones), console);
+  });

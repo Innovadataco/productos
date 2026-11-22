@@ -67,8 +67,8 @@ describe("CLI · argumentos inválidos y --ayuda (sin base)", { timeout: 4 * POR
     comprobar(correr("lote-escision.ts", ["FICTSUELTO"]), 2, opciones, ["FICTSUELTO"]);
   });
 
-  // Datos mal formados → 2 es la salida que documenta registrar-escision.ts. lote-escision sale con 1 en ese caso
-  // (O2, reportado aparte): no se prueba aquí hasta que se decida cuál es la correcta.
+  // Datos mal formados → 2 en registrar-escision y, desde O2, también en lote-escision (sus casos, en
+  // tests/unit/cli/escision-proceso.test.ts).
   it("registrar-escision: --ayuda → 2; datos mal formados → 2 con el código por campo, sin repetir los valores", () => {
     comprobar(correr("registrar-escision.ts", ["--ayuda"]), 2, "Argumentos inválidos. Opciones: --origen --destino --fecha");
     const s = correr("registrar-escision.ts", ["--origen", "fict-minusculas", "--destino", "FICTDES", "--fecha", "26-02-2024"]);
@@ -180,12 +180,12 @@ describe("CLI · un error de la base no imprime datos (base inalcanzable)", { ti
   });
 
   it("lote-escision con datos bien formados → 1 «ERROR_BASE», sin los datos del lote", () => {
-    const s = correr("lote-escision.ts", ["--destino", "FICTLOTE", "--fecha-evento", "2024-02-26", "--cantidad", "777", "--costo-unitario", "12345.5"]);
-    comprobar(s, 1, "❌ No se registró: ERROR_BASE", ["FICTLOTE", "2024-02-26", "777", "12345"]);
+    const s = correr("lote-escision.ts", ["--destino", "FICTLOTE", "--fecha-evento", "2027-03-17", "--cantidad", "4613", "--costo-unitario", "1237.53"]);
+    comprobar(s, 1, "❌ No se pudo confirmar el registro: ERROR_BASE", ["FICTLOTE", "2027-03-17", "4613", "1237"]);
   });
 
   it("registrar-escision con datos bien formados → 1 «ERROR_BASE», sin los datos del evento", () => {
-    const args = ["--origen", "FICTORI", "--destino", "FICTDES", "--fecha", "2024-02-26", "--nota", "nota ficticia reservada"];
-    comprobar(correr("registrar-escision.ts", args), 1, "❌ No se registró: ERROR_BASE", ["FICTORI", "FICTDES", "2024-02-26", "nota ficticia"]);
+    const args = ["--origen", "FICTORI", "--destino", "FICTDES", "--fecha", "2027-03-17", "--nota", "nota ficticia reservada"];
+    comprobar(correr("registrar-escision.ts", args), 1, "❌ No se pudo confirmar el registro: ERROR_BASE", ["FICTORI", "FICTDES", "2027-03-17", "nota ficticia"]);
   });
 });

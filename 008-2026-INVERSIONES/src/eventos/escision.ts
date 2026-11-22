@@ -35,8 +35,13 @@ export interface ErrorCampo {
   readonly codigo: string;
 }
 
+/** Rechazos del registro de un evento (salida 1 de registrar-escision; su significado, en src/cli/salida-escision.ts). */
+export type CodigoEvento = "INSTRUMENTO_DESCONOCIDO" | "EVENTO_DUPLICADO" | "PAGO_FRACCION_DUPLICADO";
+/** Cuál de las dos especies no está registrada (INSTRUMENTO_DESCONOCIDO): el nombre del campo, nunca su valor. */
+export type CampoInstrumento = "origen" | "destino";
+
 export class ErrorEvento extends Error {
-  constructor(readonly codigo: string) {
+  constructor(readonly codigo: CodigoEvento, readonly campo?: CampoInstrumento) {
     super(codigo);
     this.name = "ErrorEvento";
   }
@@ -113,7 +118,9 @@ export async function registrarEscision(db: PrismaClient, e: EscisionValida, opc
 async function registrarEnTransaccion(tx: Tx, e: EscisionValida, opciones: OpcionesEscision): Promise<ResultadoEscision> {
   const origen = await buscar(tx, e.origen);
   const existente = await buscar(tx, e.destino);
-  if (!origen || (!existente && !opciones.crearDestino)) throw new ErrorEvento("INSTRUMENTO_DESCONOCIDO");
+  // El origen se revisa primero: si faltan los dos, se dice el origen (--crear-destino no lo crea).
+  if (!origen) throw new ErrorEvento("INSTRUMENTO_DESCONOCIDO", "origen");
+  if (!existente && !opciones.crearDestino) throw new ErrorEvento("INSTRUMENTO_DESCONOCIDO", "destino");
   const destino = existente ?? (await tx.instrumento.create({ data: { tipo: "ACCION", nemotecnico: e.destino, nombre: e.destino }, select: { id: true } }));
 
   // La base garantiza la unicidad (índices únicos de la migración eventos_unicos), también ante
