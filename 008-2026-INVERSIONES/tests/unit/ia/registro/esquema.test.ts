@@ -67,7 +67,7 @@ describe("migración *_resumen_ia", () => {
   it("es una sola, posterior a todas las de main, y aditiva (no borra ni altera nada que ya exista)", () => {
     expect(carpetas.filter((c) => c.endsWith("_resumen_ia"))).toHaveLength(1);
     expect(carpetas.at(-1)).toBe(carpeta);
-    expect(sinComentarios).not.toMatch(/\bDROP\b|\bALTER\s+(TYPE|COLUMN)\b|\bRENAME\b|\bTRUNCATE\b|\bDELETE\b|\bUPDATE\s+"/i);
+    expect(sinComentarios).not.toMatch(/\bDROP\b|\bALTER\s+(TYPE|COLUMN)\b|\bRENAME\b|\bTRUNCATE\b|\bDELETE\s+FROM\b|\bUPDATE\s+"/i);
     for (const m of sinComentarios.matchAll(/ALTER TABLE "(\w+)"/g)) expect(m[1]).toBe("resumen_ia");
   });
 

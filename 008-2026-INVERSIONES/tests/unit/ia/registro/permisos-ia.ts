@@ -3,8 +3,11 @@
 // tests/integracion/ia/privilegios-ia.test.ts (los lectores reales con solo estos permisos) y roles-base.test.ts (contra
 // el catálogo de una PostgreSQL 16 real, solo CI). No es una prueba (no termina en .test.ts).
 //
-// Lectura: las columnas que tocan los lectores que arman las entradas de los armadores de hechos, medidas con el
-// registro de consultas de Prisma 5.22 (incluye las llaves de enlace, los `where` y los `orderBy` que agrega Prisma):
+// Lectura: las columnas que tocan los lectores que arman las entradas de los armadores de hechos, medidas el 2026-11-22
+// con el registro de consultas de Prisma 5.22 (incluye las llaves de enlace, los `where` y los `orderBy` que agrega
+// Prisma; con órdenes, lotes, una venta, un dividendo y un cierre de 2027, para que corran también las consultas de
+// las relaciones) más el SQL crudo de los cierres (src/tablero/datos.ts y src/plan/lectura.ts); la conciliación, por su
+// `select` (la medida corrió sin certificaciones):
 //  - DIARIO: obtenerResumen y obtenerEvolucion (src/tablero), ultimaConciliacion (src/conciliacion/leer.ts) y las series
 //    oficiales (src/datos-oficiales/series/leer.ts);
 //  - REGLAS: ultimosCierres y calendarioBvc (src/plan/lectura.ts), leerProximos (src/datos-oficiales/decretos/leer.ts) y
@@ -27,17 +30,17 @@ export const RESUMEN_IA_COLUMNAS = [
 export const PERMISOS_IA: readonly Permiso[] = [
   { tabla: "asignacion_venta", privilegio: "SELECT", columnas: ["id", "ordenVentaId", "loteId", "cantidad", "costoBase"] },
   { tabla: "calendario_bvc", privilegio: "SELECT", columnas: ["dia", "esHabil"] },
-  { tabla: "carga_archivo", privilegio: "SELECT", columnas: ["id", "tipoFuente", "estado", "cargadoEn", "revertidaEn"] },
+  { tabla: "carga_archivo", privilegio: "SELECT", columnas: ["tipoFuente", "estado", "cargadoEn", "revertidaEn"] },
   { tabla: "certificacion", privilegio: "SELECT", columnas: ["id", "fechaCorte", "retiradaEn"] },
-  { tabla: "conciliacion", privilegio: "SELECT", columnas: ["id", "certificacionId", "fechaCorte", "calculadaEn", "resultado", "versionCalculo"] },
-  { tabla: "dividendo", privilegio: "SELECT", columnas: ["id", "instrumentoId", "tipo", "fechaPago", "montoNeto", "decretadoId", "eventoId"] },
+  { tabla: "conciliacion", privilegio: "SELECT", columnas: ["id", "certificacionId", "fechaCorte", "calculadaEn", "resultado"] },
+  { tabla: "dividendo", privilegio: "SELECT", columnas: ["id", "instrumentoId", "tipo", "fechaPago", "montoNeto", "decretadoId"] },
   {
     tabla: "dividendo_decretado",
     privilegio: "SELECT",
     columnas: ["id", "instrumentoId", "tipo", "cuota", "valorPorAccion", "fechaAnuncio", "fechaEx", "fechaPago", "referenciaOficial", "version", "anulada", "reemplazadoEn"],
   },
-  { tabla: "evento_corporativo", privilegio: "SELECT", columnas: ["id", "tipo", "fecha", "origenId", "destinoId", "razon", "fechaPagoFraccion"] },
-  { tabla: "instrumento", privilegio: "SELECT", columnas: ["id", "tipo", "nemotecnico", "nombre", "activo", "codigoFic"] },
+  { tabla: "evento_corporativo", privilegio: "SELECT", columnas: ["id", "tipo", "fecha", "origenId", "destinoId", "razon"] },
+  { tabla: "instrumento", privilegio: "SELECT", columnas: ["id", "tipo", "nemotecnico", "nombre"] },
   { tabla: "lote", privilegio: "SELECT", columnas: ["id", "instrumentoId", "fechaCompra", "cantidad", "costoTotal", "ordenId", "origen"] },
   { tabla: "movimiento_fondo", privilegio: "SELECT", columnas: ["id", "fondoId", "fecha", "unidades", "tipo"] },
   {

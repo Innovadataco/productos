@@ -6,7 +6,7 @@
 // acción y la cantidad de las reglas, y cualquier escritura fuera de un INSERT en resumen_ia dan 42501. inv_app, con su
 // único permiso sobre resumen_ia (el SELECT del bucle de todas las tablas), lee y no escribe. La prueba con los roles
 // reales es tests/unit/produccion/roles-base.test.ts (solo CI). Datos inventados: especies propias de la corrida,
-// valores no redondos y fechas anteriores a 2022 o de 2027.
+// valores no redondos y fechas de 2027 (el calendario de la BVC sembrado).
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
@@ -31,7 +31,7 @@ const db = new PrismaClient();
 const ROL = "pg_signal_backend";
 const corrida = Date.now().toString(36).toUpperCase().slice(-5);
 const ESPECIE = `PI${corrida}`;
-const HOY = new Date("2021-09-14T00:00:00.000Z");
+const HOY = new Date("2027-09-14T00:00:00.000Z");
 const ORD = "Fecha y hora,Símbolo de la acción,Tipo de orden,Estado,Acciones completadas,Acciones pendientes,Precio por acción,Total invertido,Valor comisión,Total estimado\n";
 const sql = readFileSync(fileURLToPath(new URL("../../../docker/migrador/privilegios.sql", import.meta.url)), "utf8").replace(/--.*$/gm, "");
 
@@ -50,12 +50,15 @@ const negado = async (sentencia: string) => {
 
 async function sembrar(): Promise<void> {
   const dueno = await db.usuario.create({ data: { email: `dueno-ia-${corrida.toLowerCase()}@ejemplo.invalid`, rol: "DUENO" } });
-  const imp = (nombre: string, t: string) => importarArchivoTrii(db, { nombreArchivo: nombre, contenido: new TextEncoder().encode(t), usuarioId: dueno.id });
-  await imp("o-ia.ficticio.csv", ORD + `"9 feb 2021, 10:00 a. m.",${ESPECIE},Compra,Aprobado,137,0,23.17,3174.29,7.13,3181.42\n"7 jun 2021, 10:00 a. m.",${ESPECIE},Venta,Aprobado,41,0,29.03,1190.23,7.13,1183.1\n`);
-  await imp("d-ia.ficticio.csv", `Fecha y hora,Ticker,Estado,Valor total\n2021-04-19,${ESPECIE},,61.37\n`);
+  const imp = async (nombre: string, t: string) => {
+    const r = await importarArchivoTrii(db, { nombreArchivo: nombre, contenido: new TextEncoder().encode(t), usuarioId: dueno.id });
+    if (r.estado !== "CARGADO") throw new Error(`siembra ${nombre}: ${r.estado}`);
+  };
+  await imp("o-ia.ficticio.csv", ORD + `"9 feb 2027, 10:00 a. m.",${ESPECIE},Compra,Aprobado,137,0,23.17,3174.29,7.13,3181.42\n"7 jun 2027, 10:00 a. m.",${ESPECIE},Venta,Aprobado,41,0,29.03,1190.23,7.13,1183.1\n`);
+  await imp("d-ia.ficticio.csv", `Fecha y hora,Ticker,Estado,Valor total\n2027-04-19,${ESPECIE},,61.37\n`);
   await construirLotes(db);
   instrumentoId = (await db.instrumento.findFirstOrThrow({ where: { nemotecnico: ESPECIE } })).id;
-  await db.precioCierre.create({ data: { instrumentoId, fecha: new Date("2021-09-13T00:00:00.000Z"), precio: "27.41", fuente: "yahoo", estado: "NO_VERIFICADO" } });
+  await db.precioCierre.create({ data: { instrumentoId, fecha: new Date("2027-09-13T00:00:00.000Z"), precio: "27.41", fuente: "yahoo", estado: "NO_VERIFICADO" } });
 }
 
 beforeAll(async () => {
@@ -63,6 +66,8 @@ beforeAll(async () => {
   if (!base.endsWith("_test")) throw new Error(`Se negó a correr sobre «${base}»: solo bases *_test`);
   expect(grantsIa.length).toBeGreaterThan(5);
   await sembrar();
+  // Lo que crear-roles-prod.sh le da a inv_ia (USAGE del esquema) y, encima, los GRANT de privilegios.sql.
+  await db.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO ${ROL}`);
   for (const g of grantsIa) await db.$executeRawUnsafe(`GRANT ${g.privilegio} ON TABLE public.${g.tabla} TO ${ROL}`);
   const url = new URL(process.env.DATABASE_URL ?? "");
   url.searchParams.set("connection_limit", "1");
@@ -74,6 +79,7 @@ afterAll(async () => {
   await restringida?.$disconnect();
   // REVOKE de tabla quita también los de columna.
   for (const t of TABLAS_IA) await db.$executeRawUnsafe(`REVOKE ALL ON TABLE public.${t} FROM ${ROL}`);
+  await db.$executeRawUnsafe(`REVOKE USAGE ON SCHEMA public FROM ${ROL}`);
   await db.$disconnect();
 });
 
@@ -89,7 +95,7 @@ describe("con los privilegios de inv_ia: control positivo", () => {
     await expect(ultimaConciliacion(restringida)).resolves.not.toBeUndefined();
     for (const serie of SERIES) {
       await expect(estadoSerie(restringida, serie.codigo, HOY), serie.codigo).resolves.toBeDefined();
-      await expect(serieEnRango(restringida, serie.codigo, new Date("2021-06-01T00:00:00Z"), HOY), serie.codigo).resolves.toBeDefined();
+      await expect(serieEnRango(restringida, serie.codigo, new Date("2027-06-01T00:00:00Z"), HOY), serie.codigo).resolves.toBeDefined();
     }
     expect(await quien()).toBe(ROL);
   });
@@ -99,7 +105,7 @@ describe("con los privilegios de inv_ia: control positivo", () => {
     expect(cierres.get(instrumentoId)).toBeDefined();
     await expect(calendarioBvc(restringida)).resolves.toBeDefined();
     await expect(leerProximos(restringida, HOY)).resolves.toBeDefined();
-    await expect(leerDecretos(restringida, HOY, new Date("2021-01-04T00:00:00Z"))).resolves.toBeDefined();
+    await expect(leerDecretos(restringida, HOY, new Date("2027-01-04T00:00:00Z"))).resolves.toBeDefined();
     await expect(restringida.planVersion.findMany({ select: { id: true, version: true, vigenteDesde: true, creadaEn: true }, orderBy: { version: "desc" } })).resolves.toBeDefined();
     const reglas = await restringida.reglaPlan.findMany({ where: { planVersionId }, select: { id: true, planVersionId: true, instrumentoId: true, condicion: true, nivel: true, plazoHasta: true } });
     expect(reglas).toEqual([]);
@@ -175,6 +181,7 @@ describe("inv_app y resumen_ia: solo lee", () => {
   let app: PrismaClient;
 
   beforeAll(async () => {
+    await db.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO ${APP}`);
     await db.$executeRawUnsafe(`GRANT SELECT ON TABLE public.resumen_ia TO ${APP}`);
     const url = new URL(process.env.DATABASE_URL ?? "");
     url.searchParams.set("connection_limit", "1");
@@ -185,6 +192,7 @@ describe("inv_app y resumen_ia: solo lee", () => {
   afterAll(async () => {
     await app?.$disconnect();
     await db.$executeRawUnsafe(`REVOKE ALL ON TABLE public.resumen_ia FROM ${APP}`);
+    await db.$executeRawUnsafe(`REVOKE USAGE ON SCHEMA public FROM ${APP}`);
   });
 
   it("lee el último publicado (control positivo) y no inserta, ni edita, ni borra", async () => {

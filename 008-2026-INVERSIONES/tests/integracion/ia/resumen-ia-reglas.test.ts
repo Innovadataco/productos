@@ -30,7 +30,7 @@ let corrida = 0;
 async function insertar(tx: Tx, f: Fila): Promise<void> {
   corrida += 1;
   const columnas = [
-    Prisma.sql`${`reglas-${Date.now().toString(36)}-${corrida}`}`, Prisma.sql`${f.tipo}::"TipoResumenIa"`, Prisma.sql`${f.fechaNegocio}::date`,
+    Prisma.sql`${`reglas-${Date.now().toString(36)}-${corrida}`}`, Prisma.sql`${f.tipo}::"TipoResumenIa"`, Prisma.sql`${f.fechaNegocio.toISOString().slice(0, 10)}::date`,
     Prisma.sql`${f.estado}::"EstadoResumenIa"`, Prisma.sql`${f.puerta}::"PuertaIa"`, Prisma.sql`${f.texto}`, Prisma.sql`${f.salidaModelo}`,
     Prisma.sql`${JSON.stringify(f.hechos)}::jsonb`, Prisma.sql`${f.hechosHash}`, Prisma.sql`${f.hechosVersion}`, Prisma.sql`${f.modelo}`,
     Prisma.sql`${f.modeloDigest}`, Prisma.sql`${JSON.stringify(f.opciones)}::jsonb`, Prisma.sql`${f.promptVersion}`, Prisma.sql`${f.promptHash}`,
@@ -125,8 +125,9 @@ describe("resumen_ia: cada CHECK muerde", () => {
 });
 
 describe("resumen_ia: a lo sumo un PUBLICADO por clave", () => {
-  it("dos PUBLICADO con la misma clave chocan con resumen_ia_publicado_key", async () => {
-    expect(await errorAlInsertar(PUBLICADO, PUBLICADO)).toMatch(/resumen_ia_publicado_key/);
+  it("dos PUBLICADO con la misma clave chocan (23505, la clave de resumen_ia_publicado_key)", async () => {
+    // PostgreSQL nombra las columnas del índice (no su nombre): son las de resumen_ia_publicado_key, y es el único único.
+    expect(await errorAlInsertar(PUBLICADO, PUBLICADO)).toMatch(/23505[\s\S]*Key \(tipo, \\?"fechaNegocio\\?", \\?"hechosHash\\?", \\?"promptHash\\?", \\?"modeloDigest\\?"\)/);
   });
 
   it("los RECHAZADO y los FALLIDO se repiten, y un PUBLICADO con otro prompt u otro digest es otra clave", async () => {

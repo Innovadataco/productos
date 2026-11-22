@@ -1,4 +1,4 @@
--- Inversiones · privilegios de inv_app y de inv_precios. Lo corre el migrador como inv_dueno (dueño de las tablas)
+-- Inversiones · privilegios de inv_app, de inv_precios y de inv_ia. Lo corre el migrador como inv_dueno (dueño de las tablas)
 -- después de cada `migrate deploy`. Idempotente y en una sola transacción.
 --
 -- Mínimo privilegio: la app LEE, salvo lo que escriben el login (contrato del frente login, migración
@@ -57,6 +57,23 @@
 -- certificación, de cualquier instrumento; retirar vigentes de cualquier fuente, también en masa y sin sucesor (la
 -- historia queda, pero la valoración se queda sin cierre), e insertar valores de unidad falsos dentro del rango de la
 -- SFC: la base no puede comparar contra Yahoo ni contra la SFC.
+--
+-- inv_ia (el servicio de los resúmenes con IA, fase E): solo si el rol existe, como inv_precios (existe desde que Jelk
+-- corre crear-roles-prod.sh, NOLOGIN y sin clave mientras el archivo de producción no traiga INV_IA_DATABASE_URL; antes,
+-- se omite con un aviso). Parte de cero en cada corrida y vuelve a dar solo esto, todo POR COLUMNA (lista única:
+-- tests/unit/ia/registro/permisos-ia.ts):
+--   SELECT de las columnas que leen los lectores de las entradas de los armadores de hechos (el tablero y su evolución,
+--          la última conciliación, las series oficiales, los cierres, el calendario, los decretos, las proyecciones y la
+--          historia del fondo), medidas con el SQL que genera Prisma, y de la versión vigente del plan y sus reglas SIN la
+--          acción, la cantidad, el detalle ni el motivo (los lectores de la página del plan sí los leen: con inv_ia dan
+--          42501, y el servicio lee con su propio `select`); de resumen_ia, todas (ultimoPublicado y el RETURNING);
+--   INSERT en resumen_ia de todas sus columnas menos "generadoEn" (la pone la base: migración 20261122175656_resumen_ia).
+-- Nada de usuario, filas crudas (crudo), el encargo, la certificación por especie, la caja, los símbolos ni el diario;
+-- sin UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL, y sin privilegios por defecto: una tabla o columna nueva no le
+-- llega hasta que se agregue aquí. resumen_ia es de solo inserción por su disparador.
+-- Riesgo residual de inv_ia: con su clave se leen las cifras del portafolio (cantidades, costos, dividendos, cierres) y se
+-- pueden insertar resúmenes falsos (un PUBLICADO con un texto cualquiera y un paquete que cuadre consigo mismo, o tokens
+-- de más o de menos para el tope de la nube); no se puede editar, borrar ni fechar ninguno.
 DO $$
 DECLARE
   t record;
@@ -138,6 +155,45 @@ BEGIN
     GRANT UPDATE ("reemplazadoEn") ON TABLE public.valor_unidad_fondo TO inv_precios;
   ELSE
     RAISE NOTICE 'inv_precios no existe: se omiten sus privilegios (existe desde que se corre crear-roles-prod.sh una vez)';
+  END IF;
+
+  -- inv_ia: solo si el rol existe (desde la primera corrida de crear-roles-prod.sh). Sin él, el despliegue sigue igual.
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'inv_ia') THEN
+    FOR t IN
+      SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm')
+    LOOP
+      EXECUTE format('REVOKE ALL ON TABLE public.%I FROM inv_ia', t.relname);
+    END LOOP;
+    FOR t IN
+      SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'S'
+    LOOP
+      EXECUTE format('REVOKE ALL ON SEQUENCE public.%I FROM inv_ia', t.relname);
+    END LOOP;
+
+    -- Lecturas de los armadores de hechos y del registro, y la única escritura: INSERT en resumen_ia sin "generadoEn".
+    GRANT SELECT (id, "ordenVentaId", "loteId", cantidad, "costoBase") ON TABLE public.asignacion_venta TO inv_ia;
+    GRANT SELECT (dia, "esHabil") ON TABLE public.calendario_bvc TO inv_ia;
+    GRANT SELECT ("tipoFuente", estado, "cargadoEn", "revertidaEn") ON TABLE public.carga_archivo TO inv_ia;
+    GRANT SELECT (id, "fechaCorte", "retiradaEn") ON TABLE public.certificacion TO inv_ia;
+    GRANT SELECT (id, "certificacionId", "fechaCorte", "calculadaEn", resultado) ON TABLE public.conciliacion TO inv_ia;
+    GRANT SELECT (id, "instrumentoId", tipo, "fechaPago", "montoNeto", "decretadoId") ON TABLE public.dividendo TO inv_ia;
+    GRANT SELECT (id, "instrumentoId", tipo, cuota, "valorPorAccion", "fechaAnuncio", "fechaEx", "fechaPago", "referenciaOficial", version, anulada, "reemplazadoEn") ON TABLE public.dividendo_decretado TO inv_ia;
+    GRANT SELECT (id, tipo, fecha, "origenId", "destinoId", razon) ON TABLE public.evento_corporativo TO inv_ia;
+    GRANT SELECT (id, tipo, nemotecnico, nombre) ON TABLE public.instrumento TO inv_ia;
+    GRANT SELECT (id, "instrumentoId", "fechaCompra", cantidad, "costoTotal", "ordenId", origen) ON TABLE public.lote TO inv_ia;
+    GRANT SELECT (id, "fondoId", fecha, unidades, tipo) ON TABLE public.movimiento_fondo TO inv_ia;
+    GRANT SELECT (id, "instrumentoId", lado, estado, "fechaOperacion", "cantidadCompletada", "totalInvertido", "totalEstimado", comision) ON TABLE public.orden TO inv_ia;
+    GRANT SELECT (id, version, "vigenteDesde", "creadaEn") ON TABLE public.plan_version TO inv_ia;
+    GRANT SELECT (id, "instrumentoId", fecha, precio, fuente, estado, "traidoEn", "reemplazadoEn") ON TABLE public.precio_cierre TO inv_ia;
+    GRANT SELECT (id, "planVersionId", "instrumentoId", condicion, nivel, "plazoHasta") ON TABLE public.regla_plan TO inv_ia;
+    GRANT SELECT (id, tipo, "fechaNegocio", estado, puerta, texto, "salidaModelo", hechos, "hechosHash", "hechosVersion", modelo, "modeloDigest", opciones, "promptVersion", "promptHash", "validadorVersion", motivos, "latenciaMs", "tokensEntrada", "tokensSalida", "generadoEn") ON TABLE public.resumen_ia TO inv_ia;
+    GRANT INSERT (id, tipo, "fechaNegocio", estado, puerta, texto, "salidaModelo", hechos, "hechosHash", "hechosVersion", modelo, "modeloDigest", opciones, "promptVersion", "promptHash", "validadorVersion", motivos, "latenciaMs", "tokensEntrada", "tokensSalida") ON TABLE public.resumen_ia TO inv_ia;
+    GRANT SELECT (id, serie, desde, hasta, valor, fuente, "traidoEn", "reemplazadoEn") ON TABLE public.valor_serie_oficial TO inv_ia;
+    GRANT SELECT (id, "fondoId", "fechaValor", "valorUnidad", "reemplazadoEn") ON TABLE public.valor_unidad_fondo TO inv_ia;
+  ELSE
+    RAISE NOTICE 'inv_ia no existe: se omiten sus privilegios (existe desde que se corre crear-roles-prod.sh una vez)';
   END IF;
 END
 $$;

@@ -17,6 +17,8 @@
 --    SET exacto (proconfig): un ALTER FUNCTION … SECURITY DEFINER no cambia el md5;
 --  - que inv_app e inv_precios no sean miembros del dueño de precio_cierre ni de valor_unidad_fondo, ni de plan_version,
 --    decision y enlace_decision_orden (los disparadores de integridad de precios y los de los instantes eximen al dueño);
+--    ni inv_ia del de ninguna de ellas ni del de resumen_ia, ni inv_app o inv_precios del de resumen_ia (fase E: el
+--    disparador de la hora del registro de los resúmenes con IA también exime al dueño);
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 con search_path = public (sacadas de una base recién
 -- migrada); el guardián fija ese search_path para que otro no dé un falso positivo. La lista de nombres sale de
@@ -69,6 +71,7 @@ DECLARE
     ['rendimiento_fondo', 'rendimiento_fondo_ajusteCajaId_key', 'CREATE UNIQUE INDEX "rendimiento_fondo_ajusteCajaId_key" ON public.rendimiento_fondo USING btree ("ajusteCajaId")'],
     ['rendimiento_fondo', 'rendimiento_fondo_filaFuenteId_key', 'CREATE UNIQUE INDEX "rendimiento_fondo_filaFuenteId_key" ON public.rendimiento_fondo USING btree ("filaFuenteId")'],
     ['rendimiento_fondo', 'rendimiento_fondo_fondoId_fecha_tipo_key', 'CREATE UNIQUE INDEX "rendimiento_fondo_fondoId_fecha_tipo_key" ON public.rendimiento_fondo USING btree ("fondoId", fecha, tipo)'],
+    ['resumen_ia', 'resumen_ia_publicado_key', 'CREATE UNIQUE INDEX resumen_ia_publicado_key ON public.resumen_ia USING btree (tipo, "fechaNegocio", "hechosHash", "promptHash", "modeloDigest") WHERE (estado = ''PUBLICADO''::"EstadoResumenIa")'],
     ['token_acceso', 'token_acceso_tokenHash_key', 'CREATE UNIQUE INDEX "token_acceso_tokenHash_key" ON public.token_acceso USING btree ("tokenHash")'],
     ['usuario', 'usuario_email_key', 'CREATE UNIQUE INDEX usuario_email_key ON public.usuario USING btree (email)'],
     ['valor_serie_oficial', 'valor_serie_oficial_vigente_key', 'CREATE UNIQUE INDEX valor_serie_oficial_vigente_key ON public.valor_serie_oficial USING btree (serie, desde) WHERE ("reemplazadoEn" IS NULL)'],
@@ -135,6 +138,13 @@ DECLARE
     ['rendimiento_fondo', 'rendimiento_fondo_enlace_chk', 'CHECK (((tipo = ''RENDIMIENTO''::"TipoRendimientoFondo") = ("ajusteCajaId" IS NOT NULL)))'],
     ['rendimiento_fondo', 'rendimiento_fondo_fecha_chk', 'CHECK (isfinite(fecha))'],
     ['rendimiento_fondo', 'rendimiento_fondo_valor_chk', 'CHECK (((valor > (0)::numeric) AND (valor <> ''NaN''::numeric)))'],
+    ['resumen_ia', 'resumen_ia_conteos_chk', 'CHECK (((("latenciaMs" IS NULL) OR ("latenciaMs" >= 0)) AND (("tokensEntrada" IS NULL) OR ("tokensEntrada" >= 0)) AND (("tokensSalida" IS NULL) OR ("tokensSalida" >= 0))))'],
+    ['resumen_ia', 'resumen_ia_estado_chk', 'CHECK ((((estado = ''PUBLICADO''::"EstadoResumenIa") = (texto IS NOT NULL)) AND ((estado = ''FALLIDO''::"EstadoResumenIa") = ("salidaModelo" IS NULL)) AND ((estado = ''FALLIDO''::"EstadoResumenIa") OR ((modelo IS NOT NULL) AND ("modeloDigest" IS NOT NULL))) AND ((estado <> ''FALLIDO''::"EstadoResumenIa") OR (("tokensEntrada" IS NULL) AND ("tokensSalida" IS NULL)))))'],
+    ['resumen_ia', 'resumen_ia_formas_chk', 'CHECK ((("hechosHash" ~ ''^[0-9a-f]{64}$''::text) AND ("promptHash" ~ ''^[0-9a-f]{64}$''::text) AND ("hechosVersion" ~ ''^hechos-v[1-9][0-9]*$''::text) AND ("promptVersion" ~ ''^[a-z]+(-[a-z]+)*-v[1-9][0-9]*$''::text) AND ("validadorVersion" ~ ''^[a-z]+(-[a-z]+)*-v[1-9][0-9]*$''::text) AND ((modelo IS NULL) OR (modelo ~ ''^[!-~]{1,128}$''::text)) AND (("modeloDigest" IS NULL) OR ("modeloDigest" ~ ''^[!-~]{1,128}$''::text)) AND (jsonb_typeof(opciones) = ''object''::text) AND (octet_length((opciones)::text) <= 4096) AND isfinite("fechaNegocio")))'],
+    ['resumen_ia', 'resumen_ia_hechos_chk', 'CHECK (((jsonb_typeof(hechos) = ''object''::text) AND ((hechos ->> ''hash''::text) = "hechosHash") AND ((hechos ->> ''version''::text) = "hechosVersion") AND ((hechos ->> ''tipo''::text) = (tipo)::text) AND ((hechos ->> ''hoy''::text) = to_char(("fechaNegocio")::timestamp without time zone, ''YYYY-MM-DD''::text))))'],
+    ['resumen_ia', 'resumen_ia_motivos_chk', 'CHECK (((motivos IS NOT NULL) AND (array_position(motivos, NULL::text) IS NULL) AND (cardinality(motivos) <= 32) AND ((cardinality(motivos) = 0) OR (array_ndims(motivos) = 1)) AND (char_length(array_to_string(motivos, '',''::text)) <= 2079) AND (array_to_string(motivos, '',''::text) ~ ''^([A-Z]+(_[A-Z]+)*(,[A-Z]+(_[A-Z]+)*)*)?$''::text) AND ((estado = ''PUBLICADO''::"EstadoResumenIa") = (cardinality(motivos) = 0)) AND ((estado <> ''FALLIDO''::"EstadoResumenIa") OR (motivos[1] = ANY (ARRAY[''MODELO_NO_DISPONIBLE''::text, ''TIEMPO_AGOTADO''::text, ''TOPE_MENSUAL''::text, ''PUERTA_APAGADA''::text, ''ERROR_PROVEEDOR''::text, ''VISTA_NO_CIEGA''::text]))) AND ((estado <> ''RECHAZADO''::"EstadoResumenIa") OR (NOT (motivos && ARRAY[''MODELO_NO_DISPONIBLE''::text, ''TIEMPO_AGOTADO''::text, ''TOPE_MENSUAL''::text, ''PUERTA_APAGADA''::text, ''ERROR_PROVEEDOR''::text, ''VISTA_NO_CIEGA''::text])))))'],
+    ['resumen_ia', 'resumen_ia_puerta_chk', 'CHECK ((((puerta IS NULL) = (''VISTA_NO_CIEGA''::text = ANY (motivos))) AND ((puerta IS NOT NULL) OR ((estado = ''FALLIDO''::"EstadoResumenIa") AND (motivos[1] = ''VISTA_NO_CIEGA''::text)))))'],
+    ['resumen_ia', 'resumen_ia_textos_chk', 'CHECK ((((texto IS NULL) OR ((char_length(texto) <= 16384) AND (texto ~ ''[^[:space:]]''::text))) AND (("salidaModelo" IS NULL) OR (char_length("salidaModelo") <= 65536))))'],
     ['simbolo_precio', 'simbolo_precio_sin_solape_excl', 'EXCLUDE USING gist ("instrumentoId" WITH =, proveedor WITH =, daterange("vigenteDesde", "vigenteHasta", ''[)''::text) WITH &&)'],
     ['simbolo_precio', 'simbolo_precio_vigencia_chk', 'CHECK ((("vigenteHasta" IS NULL) OR ("vigenteHasta" > "vigenteDesde")))'],
     ['token_acceso', 'token_acceso_hash_chk', 'CHECK (("tokenHash" ~ ''^[0-9a-f]{64}$''::text))'],
@@ -238,6 +248,7 @@ DECLARE
     ['rendimiento_fondo', 'rendimiento_fondo_ajusteCajaId_fkey', 'FOREIGN KEY ("ajusteCajaId") REFERENCES ajuste_caja(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['rendimiento_fondo', 'rendimiento_fondo_filaFuenteId_fkey', 'FOREIGN KEY ("filaFuenteId") REFERENCES fila_fuente(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['rendimiento_fondo', 'rendimiento_fondo_fondoId_fkey', 'FOREIGN KEY ("fondoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['resumen_ia', 'resumen_ia_pkey', 'PRIMARY KEY (id)'],
     ['simbolo_precio', 'simbolo_precio_pkey', 'PRIMARY KEY (id)'],
     ['simbolo_precio', 'simbolo_precio_instrumentoId_fkey', 'FOREIGN KEY ("instrumentoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['token_acceso', 'token_acceso_pkey', 'PRIMARY KEY (id)'],
@@ -281,6 +292,8 @@ DECLARE
     ['regla_plan', 'regla_plan_solo_insercion', 'CREATE TRIGGER regla_plan_solo_insercion BEFORE DELETE OR UPDATE ON public.regla_plan FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['rendimiento_fondo', 'rendimiento_fondo_coherente', 'CREATE TRIGGER rendimiento_fondo_coherente BEFORE INSERT OR UPDATE ON public.rendimiento_fondo FOR EACH ROW EXECUTE FUNCTION inv_rendimiento_fondo_coherente()'],
     ['rendimiento_fondo', 'rendimiento_fondo_solo_insercion', 'CREATE TRIGGER rendimiento_fondo_solo_insercion BEFORE DELETE OR UPDATE ON public.rendimiento_fondo FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['resumen_ia', 'resumen_ia_instante', 'CREATE TRIGGER resumen_ia_instante BEFORE INSERT ON public.resumen_ia FOR EACH ROW EXECUTE FUNCTION inv_resumen_ia_instante()'],
+    ['resumen_ia', 'resumen_ia_solo_insercion', 'CREATE TRIGGER resumen_ia_solo_insercion BEFORE DELETE OR UPDATE ON public.resumen_ia FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['token_acceso', 'token_acceso_un_solo_uso', 'CREATE TRIGGER token_acceso_un_solo_uso BEFORE DELETE OR UPDATE ON public.token_acceso FOR EACH ROW EXECUTE FUNCTION inv_token_un_solo_uso()'],
     ['usuario', 'usuario_transiciones', 'CREATE TRIGGER usuario_transiciones BEFORE UPDATE ON public.usuario FOR EACH ROW EXECUTE FUNCTION inv_usuario_transiciones()'],
     ['valor_serie_oficial', 'valor_serie_oficial_retiro', 'CREATE TRIGGER valor_serie_oficial_retiro BEFORE INSERT OR DELETE OR UPDATE ON public.valor_serie_oficial FOR EACH ROW EXECUTE FUNCTION inv_solo_retiro(''traidoEn'')'],
@@ -302,6 +315,7 @@ DECLARE
     ['inv_plan_version_instante', 'abf0179024dd5f3151006171b5d76bb5', ''],
     ['inv_precio_cierre_insercion', '6bdf12a80eeee52cff6a412139ffe5c1', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_rendimiento_fondo_coherente', '9a6b541c07fa34227bf9a3476e9c48ca', ''],
+    ['inv_resumen_ia_instante', '3225d295850c7feb0575a40ec4330442', ''],
     ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_solo_insercion', '86053be6cc8c56d4cb328ac370f3cc77', ''],
     ['inv_solo_retiro', 'cabe3b51e599c2a5c6cdf4c16aadcb83', 'search_path=pg_catalog, pg_temp'],
@@ -432,6 +446,18 @@ BEGIN
     SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
     WHERE r.rolname IN ('inv_app', 'inv_precios')
       AND c.oid IN (to_regclass('public.precio_cierre'), to_regclass('public.valor_unidad_fondo'), to_regclass('public.plan_version'), to_regclass('public.decision'), to_regclass('public.enlace_decision_orden'))
+      AND pg_has_role(r.oid, c.relowner, 'MEMBER')
+    ORDER BY 1
+  LOOP
+    distintos := distintos || ('rol con privilegios del dueño ' || x);
+  END LOOP;
+  -- Fase E: el disparador del instante de resumen_ia también exime al dueño. Ni inv_ia (el servicio de los resúmenes con
+  -- IA) puede ser miembro del dueño de ninguna de estas tablas, ni inv_app o inv_precios del de resumen_ia.
+  FOR x IN
+    SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
+    WHERE r.rolname IN ('inv_ia', 'inv_app', 'inv_precios')
+      AND c.oid IN (to_regclass('public.precio_cierre'), to_regclass('public.valor_unidad_fondo'), to_regclass('public.plan_version'), to_regclass('public.decision'), to_regclass('public.enlace_decision_orden'), to_regclass('public.resumen_ia'))
+      AND (r.rolname = 'inv_ia' OR c.oid = to_regclass('public.resumen_ia'))
       AND pg_has_role(r.oid, c.relowner, 'MEMBER')
     ORDER BY 1
   LOOP

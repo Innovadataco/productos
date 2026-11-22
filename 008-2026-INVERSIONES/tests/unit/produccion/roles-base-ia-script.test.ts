@@ -49,7 +49,7 @@ describe("crear-roles-prod.sh · inv_ia (existe siempre; LOGIN solo con su secre
     const { falsos, stdin, env } = preparar();
     const r = await correr(SCRIPT, [], env);
     expect(r.status, r.stderr).toBe(0);
-    expect(r.stderr).toMatch(/sin INV_IA_DATABASE_URL[^\n]*inv_ia queda sin LOGIN y sin clave/);
+    expect(r.stderr).toMatch(/sin INV_IA_DATABASE_URL[^\n]*inv_ia existe sin LOGIN y sin clave/);
     const sql = readFileSync(stdin, "utf8");
     enOrden(sql, ["ALTER ROLE inv_app PASSWORD :'clave_app';", sqlDe("sql_rol_precios"), sqlDe("sql_rol_ia"), SIN_LOGIN]);
     expect(sql).not.toContain("clave_ia");
@@ -61,7 +61,7 @@ describe("crear-roles-prod.sh · inv_ia (existe siempre; LOGIN solo con su secre
     const { falsos, stdin, env } = preparar({ INV_PRECIOS_DATABASE_URL: URL_PRECIOS, INV_IA_DATABASE_URL: URL_IA });
     const r = await correr(SCRIPT, [], env);
     expect(r.status, r.stderr).toBe(0);
-    expect(r.stderr).not.toMatch(/inv_ia queda sin LOGIN/);
+    expect(r.stderr).not.toMatch(/inv_ia existe sin LOGIN/);
     const sql = readFileSync(stdin, "utf8");
     enOrden(sql, ["ALTER ROLE inv_precios WITH LOGIN PASSWORD :'clave_precios';", sqlDe("sql_rol_ia"), `\\set clave_ia '${CLAVE_IA}'`, CON_LOGIN, "\\unset clave_ia"]);
     expect(sql).not.toContain(SIN_LOGIN);
