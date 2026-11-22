@@ -19,6 +19,8 @@ const SRC = path.join(__dirname, "..", "..", "..", "..", "src");
 const VIGENTES = path.join(SRC, "datos-oficiales", "decretos", "vigentes.ts");
 const IMPORTACION = /^(?:import|export)\s+(?!type\b)(?:[^"';()=]*?from\s+)?["']([^"']+)["']/gm;
 const dia = (iso: string) => new Date(`${iso}T00:00:00Z`);
+/** `reemplazadoEn: null` y `anulada: false` como claves hermanas (sin llaves entre las dos), en cualquier orden: el filtro. */
+const FILTRO_LITERAL = /\breemplazadoEn\s*:\s*null\b[^{}]*\banulada\s*:\s*false\b|\banulada\s*:\s*false\b[^{}]*\breemplazadoEn\s*:\s*null\b/;
 
 function archivos(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {
@@ -40,17 +42,23 @@ describe("decretos que cuentan · frontera", () => {
   it("el filtro es uno: vigentes (sin reemplazo) y no anulados", async () => {
     const { DECRETOS_QUE_CUENTAN } = await import("@/datos-oficiales/decretos/vigentes");
     expect(DECRETOS_QUE_CUENTAN).toEqual({ reemplazadoEn: null, anulada: false });
+    expect(Object.isFrozen(DECRETOS_QUE_CUENTAN)).toBe(true);
   });
 
   it("candado: el filtro literal solo vive en vigentes.ts, y los lectores de decretos lo importan de ahí", () => {
-    const conLiteral = archivos(SRC).filter((a) => /\banulada\s*:\s*false\b/.test(readFileSync(a, "utf8"))).map((a) => path.relative(SRC, a));
-    expect(conLiteral).toEqual([path.join("datos-oficiales", "decretos", "vigentes.ts")]);
+    const conFiltro = archivos(SRC).filter((a) => FILTRO_LITERAL.test(readFileSync(a, "utf8"))).map((a) => path.relative(SRC, a));
+    expect(conFiltro).toEqual([path.join("datos-oficiales", "decretos", "vigentes.ts")]);
     for (const lector of [path.join(SRC, "datos-oficiales", "decretos", "leer.ts"), path.join(SRC, "proyecciones", "leer.ts")]) {
       const texto = readFileSync(lector, "utf8");
       expect(texto, lector).toMatch(/\bDECRETOS_QUE_CUENTAN\b[^;]*from\s+["'][./]*(datos-oficiales\/decretos\/)?vigentes["']/);
     }
-    // Control positivo: el detector ve el literal.
-    expect(/\banulada\s*:\s*false\b/.test("where: { reemplazadoEn: null, anulada : false }")).toBe(true);
+  });
+
+  it("el detector del filtro ve las dos condiciones juntas, en cualquier orden, y no un `anulada: false` suelto", () => {
+    expect(FILTRO_LITERAL.test("where: { reemplazadoEn: null, anulada : false, fechaPago: { gte: desde } }")).toBe(true);
+    expect(FILTRO_LITERAL.test("where: { anulada: false, instrumentoId: id, reemplazadoEn:null }")).toBe(true);
+    expect(FILTRO_LITERAL.test("data: { anulada: false, nota: null }")).toBe(false);
+    expect(FILTRO_LITERAL.test("where: { reemplazadoEn: null, fechaPago: { gte: desde } }, data: { anulada: false }")).toBe(false);
   });
 });
 

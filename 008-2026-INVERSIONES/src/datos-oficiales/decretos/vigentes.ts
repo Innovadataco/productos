@@ -12,8 +12,8 @@ import { VENTANA_PAGO_ANTES_DIAS, VENTANA_PAGO_DESPUES_DIAS } from "./ventana";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
-/** Va al final del `where`: ninguna condición del llamador lo pisa. */
-export const DECRETOS_QUE_CUENTAN = { reemplazadoEn: null, anulada: false } as const satisfies Prisma.DividendoDecretadoWhereInput;
+/** Va al final del `where`, así ninguna condición del llamador lo pisa; congelado, nadie lo cambia en tiempo de ejecución. */
+export const DECRETOS_QUE_CUENTAN = Object.freeze({ reemplazadoEn: null, anulada: false } as const satisfies Prisma.DividendoDecretadoWhereInput);
 
 /** Un rango de fechas, con los dos bordes incluidos. */
 export interface RangoDeFechas {

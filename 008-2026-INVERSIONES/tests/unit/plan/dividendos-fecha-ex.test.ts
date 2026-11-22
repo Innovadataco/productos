@@ -105,6 +105,14 @@ describe("con decreto, manda su fecha ex", () => {
     expect(r.medible && r.total.toString()).toBe("390.9171");
   });
 
+  it("varios pagos del mismo día salen por id, en el orden que lleguen", () => {
+    const mismoDia = [div("p-c", "2027-03-23", "41.37"), div("p-a", "2027-03-23", "41.37"), div("p-b", "2027-03-23", "41.37")];
+    for (const dividendos of [mismoDia, [...mismoDia].reverse()]) {
+      const r = tramo(contexto({ dividendos, decretos: [DECRETO] }));
+      expect(r.medible && r.atribuidos.map((a) => a.dividendoId)).toEqual(["p-a", "p-b", "p-c"]);
+    }
+  });
+
   it("la fracción de una escisión en la ventana del decreto no se asigna, no se atribuye ni crea duda", () => {
     const ctx = contexto({ dividendos: [div("f", "2027-03-20", "41.37", "FRACCION_ESCISION"), PAGO], movimientos: [COMPRA, mov("2027-03-18", -311n)], decretos: [DECRETO] });
     expect(usados(ctx)).toEqual([[1237n, "3.729402", "361.752"]]);

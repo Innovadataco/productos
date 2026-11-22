@@ -6,7 +6,10 @@
 // para que, si se leyeran, el resultado cambiara. Datos INVENTADOS y cifras raras.
 // Fechas: la cobertura de las cargas de Trii usa la hora real de la carga, así que los hechos van antes de hoy; se
 // derivan de hoy al correr (ningún literal de fecha). El plan es global y no retrocede: se empieza después de la última
-// versión.
+// versión. Eso depende de que la base se reinicie antes de cada corrida (scripts/integracion.mjs hace `migrate reset`)
+// y de que los archivos corran de a uno (vitest.integracion.config.ts): la versión de este archivo queda DIAS_ATRAS antes
+// de hoy y los demás archivos del plan, que se corren después de la última, conservan margen para medir sus 90 días.
+// La cobertura de Trii es la de la carga más reciente de cada tipo: las de este archivo, que no se revierten.
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ENCABEZADO_DECRETOS } from "@/datos-oficiales/decretos/csv";
