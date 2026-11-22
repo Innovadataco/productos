@@ -24,6 +24,8 @@
  *   único) se deshace y se reintenta releyendo: lo que la otra corrida ya guardó igual queda «sin cambios».
  */
 import { Prisma, type EstadoPrecio, type PrismaClient } from "@prisma/client";
+import { candadoConciliar } from "../lib/candados";
+import { diaIso } from "./horario";
 import { aniosDelRango, leerCalendario, motivoOmision, retiraElVigente, type CalendarioBvc, type MotivoOmision } from "./negociacion";
 import type { Cierre, ResultadoYahoo } from "./yahoo";
 
@@ -101,8 +103,8 @@ export async function leerCalendarioBvc(db: Pick<PrismaClient, "calendarioBvc">,
   return leerCalendario(await db.calendarioBvc.findMany({ where: { dia: aniosDelRango(desde, hasta) }, select: { dia: true, esHabil: true } }));
 }
 
-/** Otra corrida reemplazó el vigente entre la lectura y el reemplazo: hay que releer. */
-class ConflictoConcurrente extends Error {
+/** Otra corrida reemplazó el vigente entre la lectura y el reemplazo: hay que releer (o repetir, en la corrección del corte). */
+export class ConflictoConcurrente extends Error {
   constructor() {
     super("conflicto");
     this.name = "ConflictoConcurrente";
@@ -164,6 +166,9 @@ function clasificar(vigente: (Verificacion & { readonly precio: Prisma.Decimal }
 /** Un intento, en una transacción: leer el vigente, compararlo, reemplazarlo con guarda e insertar. Todo o nada. */
 async function guardarCierreUnaVez(db: PrismaClient, instrumentoId: string, c: Cierre): Promise<Cambio> {
   return db.$transaction(async (tx) => {
+    // Compartido con las demás barras del día; exclusivo en la corrección del corte de una certificación: el cierre no
+    // se verifica contra una certificación que se está retirando (security-reviewer MEDIO).
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtext(${candadoConciliar(diaIso(c.fecha))}))`;
     const vigente = await tx.precioCierre.findFirst({ where: { instrumentoId, fecha: c.fecha, fuente: FUENTE, reemplazadoEn: null }, select: SELECCION_VIGENTE });
     const verificacion = await estadoDe(tx, instrumentoId, c);
     const cambio = clasificar(vigente, c.precio, verificacion);

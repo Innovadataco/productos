@@ -79,7 +79,7 @@ CREATE TRIGGER "conciliacion_certificacion_vigente" BEFORE INSERT ON "conciliaci
 CREATE TRIGGER "certificacion_posicion_vigente" BEFORE INSERT ON "certificacion_posicion" FOR EACH ROW EXECUTE FUNCTION "inv_certificacion_vigente"();
 CREATE TRIGGER "certificacion_fondo_vigente" BEFORE INSERT ON "certificacion_fondo" FOR EACH ROW EXECUTE FUNCTION "inv_certificacion_vigente"();
 
--- Una carga pasa a REVERTIDO una sola vez: desde CARGADO, con quién (un DUEÑO) y cuándo, sin cambiar ninguna otra
+-- Una carga pasa a REVERTIDO una sola vez: desde CARGADO, con quién (un DUEÑO activo) y cuándo, sin cambiar ninguna otra
 -- columna y solo si ninguna certificación vigente cuelga de ella (la corrección retira primero y revierte después).
 -- REVERTIDO es final, y revertidaEn y revertidaPorId solo se escriben con él. Las demás actualizaciones de una carga
 -- (VALIDANDO → CARGADO o RECHAZADO, con sus conteos) no pasan por aquí.
@@ -89,7 +89,7 @@ BEGIN
     RETURN NEW;
   END IF;
   IF OLD."estado" = 'CARGADO' AND NEW."estado" = 'REVERTIDO' AND NEW."revertidaEn" IS NOT NULL
-     AND EXISTS (SELECT 1 FROM "usuario" u WHERE u."id" = NEW."revertidaPorId" AND u."rol" = 'DUENO')
+     AND EXISTS (SELECT 1 FROM "usuario" u WHERE u."id" = NEW."revertidaPorId" AND u."rol" = 'DUENO' AND u."activo")
      AND (to_jsonb(NEW) - 'estado' - 'revertidaEn' - 'revertidaPorId') = (to_jsonb(OLD) - 'estado' - 'revertidaEn' - 'revertidaPorId')
      AND NOT EXISTS (SELECT 1 FROM "certificacion" c WHERE c."cargaId" = NEW."id" AND c."retiradaEn" IS NULL) THEN
     RETURN NEW;
@@ -102,3 +102,7 @@ $$;
 CREATE TRIGGER "carga_archivo_reversion" BEFORE UPDATE ON "carga_archivo" FOR EACH ROW
   WHEN (OLD."estado" = 'REVERTIDO' OR NEW."estado" = 'REVERTIDO' OR NEW."revertidaEn" IS DISTINCT FROM OLD."revertidaEn" OR NEW."revertidaPorId" IS DISTINCT FROM OLD."revertidaPorId")
   EXECUTE FUNCTION "inv_carga_reversion"();
+
+-- La re-verificación de la corrección lee los cierres vigentes de un DÍA (sin especie): el índice por (instrumento,
+-- fecha) no le sirve de entrada. Parcial, como precio_cierre_vigente_key: solo los vigentes (database-reviewer MEDIO).
+CREATE INDEX "precio_cierre_dia_vigente_idx" ON "precio_cierre" ("fecha", "fuente") WHERE "reemplazadoEn" IS NULL;

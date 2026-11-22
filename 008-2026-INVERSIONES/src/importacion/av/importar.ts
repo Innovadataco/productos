@@ -24,6 +24,7 @@ import { createHash } from "node:crypto";
 import { ErrorCifrado } from "../../cifrado/errores";
 import { corteReal } from "../../conciliacion/corte-real";
 import { cierresDelDia } from "../../conciliacion/esperado";
+import { ConflictoConcurrente } from "../../precios/guardar";
 import { corteOcupado } from "../../conciliacion/vigente";
 import { obtenerLlavero, type Llavero } from "../../cifrado/llavero";
 import { analizarCertificacion, errorDeDocumento as documento, type CertificacionAnalizada } from "./analisis";
@@ -96,6 +97,8 @@ export interface Base {
   readonly fondoCodigo: string | null;
 }
 
+const CODIGO_PRISMA: Readonly<Record<string, string>> = { P2028: "TIEMPO_AGOTADO", P2034: "CONFLICTO_CONCURRENTE" };
+
 const POR_EL_PDF = new Set(["FECHA_CORTE_ANTES_DEL_CIERRE", "FECHA_CORTE_POSTERIOR_AL_PDF"]);
 
 /** El corte con que ese mismo archivo ya está cargado (una carga CARGADO de certificación con su sha256), o null. */
@@ -148,28 +151,31 @@ export async function nueva(tx: Prisma.TransactionClient, base: Base, a: Certifi
   return { ...sinNada, cargaId: carga.id, estado: "CARGADO", certificacionId, filasTotal: n, filasNuevas: n, instrumentosCreados: especies.creadas, fondoVinculado: fondos.vinculado, errores: [] };
 }
 
-/** El rechazo de la señal 1, con su pista (el día sugerido y los conteos). */
-export class ErrorCorteNoCoincide extends ErrorImportacionAv {
-  constructor(readonly pista: Extract<PistaCorte, { tipo: "PRECIOS" }>) {
-    super("CORTE_NO_COINCIDE");
-    this.name = "ErrorCorteNoCoincide";
+/** Un rechazo porque la fecha de corte no es el corte real, con su pista (el día sugerido y por qué). */
+export class ErrorCorte extends ErrorImportacionAv {
+  constructor(codigo: string, readonly pista: PistaCorte | null) {
+    super(codigo);
+    this.name = "ErrorCorte";
   }
 }
 
 /**
- * Señal 1: lanza ErrorCorteNoCoincide si los precios de valoración son los cierres guardados del día hábil anterior
- * al corte y no los del corte (`corteReal`). Solo lee: no crea especies.
+ * Señal 1: lanza ErrorCorte (CORTE_NO_COINCIDE) si los precios de valoración son los cierres guardados del día hábil
+ * anterior al corte y no los del corte (`corteReal`, con las especies comparables). Solo lee: no crea especies.
  */
 export async function exigirCorteReal(tx: Prisma.TransactionClient, fecha: Date, a: CertificacionAnalizada, calendario: CalendarioCorte): Promise<void> {
   const anterior = ultimoHabilAnterior(fecha, calendario);
   if (!anterior.ok) return;
   const ids = await buscarEspecies(tx, a.posiciones.map((p) => p.nemo));
-  if (ids === null) return;
   const todos = [...ids.values()];
   const [delCorte, delAnterior] = [await cierresDelDia(tx, fecha, todos), await cierresDelDia(tx, new Date(`${anterior.dia}T00:00:00Z`), todos)];
-  const precios = a.posiciones.map((p) => ({ precioValoracion: p.precioValoracion, cierre: delCorte.get(ids.get(p.nemo)!) ?? null, cierreAnterior: delAnterior.get(ids.get(p.nemo)!) ?? null }));
+  const cierre = (m: ReadonlyMap<string, string>, nemo: string) => {
+    const id = ids.get(nemo);
+    return id === undefined ? null : (m.get(id) ?? null);
+  };
+  const precios = a.posiciones.map((p) => ({ precioValoracion: p.precioValoracion, cierre: cierre(delCorte, p.nemo), cierreAnterior: cierre(delAnterior, p.nemo) }));
   const r = corteReal(precios);
-  if (r !== null) throw new ErrorCorteNoCoincide({ tipo: "PRECIOS", sugerido: anterior.dia, especies: r.especies, distintas: r.distintas });
+  if (r !== null) throw new ErrorCorte("CORTE_NO_COINCIDE", { tipo: "PRECIOS", sugerido: anterior.dia, especies: r.especies, distintas: r.distintas });
 }
 
 async function enTransaccion(db: PrismaClient, base: Base, a: CertificacionAnalizada, llavero: Llavero, calendario: CalendarioCorte): Promise<ResultadoImportacionAv> {
@@ -190,11 +196,15 @@ async function enTransaccion(db: PrismaClient, base: Base, a: CertificacionAnali
   );
 }
 
-/** Código del fallo, sin el mensaje (el de Prisma puede traer valores). P2028 = transacción vencida. */
+/**
+ * Código del fallo, sin el mensaje (el de Prisma puede traer valores). P2028 = transacción vencida. Un choque con otra
+ * corrida (la re-verificación de precios o una serialización de la base, P2034) es CONFLICTO_CONCURRENTE: basta repetir.
+ */
 export function errorDe(e: unknown): ErrorFilaAv {
   if (e instanceof ErrorImportacionAv) return { ...e.ubicacion, codigo: e.codigo };
   if (e instanceof ErrorCifrado) return documento(e.codigo);
-  if (e instanceof Prisma.PrismaClientKnownRequestError) return documento(e.code === "P2028" ? "TIEMPO_AGOTADO" : `BASE_${e.code}`);
+  if (e instanceof ConflictoConcurrente) return documento("CONFLICTO_CONCURRENTE");
+  if (e instanceof Prisma.PrismaClientKnownRequestError) return documento(CODIGO_PRISMA[e.code] ?? `BASE_${e.code}`);
   return documento("BASE_ERROR");
 }
 
@@ -216,7 +226,7 @@ export async function importarCertificacion(db: PrismaClient, archivo: ArchivoCe
     } catch (e) {
       // Otro importador creó la misma especie a la vez (P2002): se relee y se reintenta una sola vez.
       if (esChoque(e) && intento < MAX_INTENTOS) continue;
-      return registrarRechazo(db, base, n, [errorDe(e)], e instanceof ErrorCorteNoCoincide ? { pistaCorte: e.pista } : {});
+      return registrarRechazo(db, base, n, [errorDe(e)], e instanceof ErrorCorte && e.pista !== null ? { pistaCorte: e.pista } : {});
     }
   }
 }

@@ -41,13 +41,15 @@ async function candidatasDe(tx: Tx, nemos: readonly string[]): Promise<ReadonlyM
 }
 
 /**
- * Solo lectura (señal 1 del corte real): cada nemotécnico → su acción, sin crear nada. null si alguno no existe o es
- * ambiguo: entonces no se puede comparar con los cierres guardados.
+ * Solo lectura (señal 1 del corte real): cada nemotécnico → su acción, sin crear nada. Los que no existen o son
+ * ambiguos no salen: no tienen con qué compararse (no cuentan en la regla del corte real).
  */
-export async function buscarEspecies(tx: Tx, nemos: readonly string[]): Promise<Map<string, string> | null> {
+export async function buscarEspecies(tx: Tx, nemos: readonly string[]): Promise<Map<string, string>> {
   const porNemo = await candidatasDe(tx, nemos);
-  const ids = nemos.map((nemo) => [nemo, [...(porNemo.get(nemo) ?? [])]] as const);
-  return ids.every(([, propias]) => propias.length === 1) ? new Map(ids.map(([nemo, propias]) => [nemo, propias[0]!])) : null;
+  return new Map(nemos.flatMap((nemo) => {
+    const propias = [...(porNemo.get(nemo) ?? [])];
+    return propias.length === 1 ? [[nemo, propias[0]!] as const] : [];
+  }));
 }
 
 export async function resolverEspecies(

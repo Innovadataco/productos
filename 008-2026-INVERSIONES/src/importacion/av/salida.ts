@@ -118,7 +118,7 @@ function lineasDeCorteNoHabil(corte: string, ultimo: UltimoHabil, produccion: bo
 function lineasDePista(corte: string, pista: PistaCorte, yaCargadaEn: string | null, produccion: boolean): string[] {
   if (pista.tipo === "PDF") return lineasDePistaPdf(corte, pista, yaCargadaEn, produccion);
   return [
-    `📅 Los precios de valoración de la certificación cuadran (±1 %) con los cierres del ${pista.sugerido}, el día hábil anterior al corte, en las ${pista.especies} especies, y en ${pista.distintas} no cuadran con los del ${corte}: es la foto del cierre del ${pista.sugerido}, y la fecha de corte no se ajusta sola.`,
+    `📅 Los precios de valoración de la certificación cuadran (±1 %) con los cierres del ${pista.sugerido}, el día hábil anterior al corte, en las ${pista.especies} especies con cierre en los dos días, y en ${pista.distintas} no cuadran con los del ${corte}: es la foto del cierre del ${pista.sugerido}, y la fecha de corte no se ajusta sola.`,
     lineaDeRepetir(pista.sugerido, yaCargadaEn, produccion),
   ];
 }
@@ -144,6 +144,7 @@ function porQueNoSeCorrigio(codigo: string, actual: string, nuevo: string): stri
     CORTE_OCUPADO: `Ya hay una certificación con el corte ${nuevo}: no se reemplaza.`,
     ARCHIVO_YA_CARGADO: `Ese PDF también está cargado con un corte distinto del ${actual}: no se corrige solo; avise al CEO de 008.`,
     MISMA_FECHA: "Las dos fechas son la misma: no hay nada que corregir.",
+    CONFLICTO_CONCURRENTE: "Otra corrida (precios o una conciliación) escribía a la vez: repita el mismo comando.",
   };
   return frases[codigo] ?? null;
 }

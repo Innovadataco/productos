@@ -6,12 +6,16 @@
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { isoDia as dia } from "../importacion/av/fecha-corte";
+import { candadoConciliar } from "../lib/candados";
 import { calcularConciliacion, VERSION_CALCULO, type Control } from "./controles";
 import { leerEntradas } from "./esperado";
 import { corteOcupado } from "./vigente";
 
-/** El candado consultivo de las conciliaciones de un corte (AAAA-MM-DD); la corrección del corte también lo toma. */
-export const candadoConciliar = (dia: string): string => `inv008-conciliar-${dia}`;
+export { candadoConciliar };
+
+/** Intentos ante una serialización (P2034): la instantánea se toma antes de esperar el candado (database-reviewer MEDIO). */
+const MAX_INTENTOS = 2;
+const esSerializacion = (e: unknown): boolean => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034";
 
 export class ErrorConciliacion extends Error {
   /** Con CERTIFICACION_RETIRADA: la fecha de corte (AAAA-MM-DD) de la certificación que la reemplazó. */
@@ -54,7 +58,22 @@ function resumen(conciliacionId: string, fechaCorte: Date, resultado: ResumenCon
   return { conciliacionId, fechaCorte: dia(fechaCorte), versionCalculo: VERSION_CALCULO, resultado, cuentas, motivos, corteSugerido: corteSugeridoDe(controles) };
 }
 
+/**
+ * Concilia en REPEATABLE READ. La instantánea se toma con la primera sentencia (el candado), ANTES de esperarlo: si
+ * mientras espera otra transacción retira la certificación (corrección del corte), el disparador de la base hace fallar
+ * el INSERT (P2034) y se repite UNA vez, ya con una instantánea nueva que ve el retiro (CERTIFICACION_RETIRADA).
+ */
 export async function conciliarCertificacion(db: PrismaClient, opciones: { readonly fechaCorte: Date }): Promise<ResumenConciliacion> {
+  for (let intento = 1; ; intento += 1) {
+    try {
+      return await conciliarUnaVez(db, opciones);
+    } catch (e) {
+      if (!esSerializacion(e) || intento >= MAX_INTENTOS) throw e;
+    }
+  }
+}
+
+function conciliarUnaVez(db: PrismaClient, opciones: { readonly fechaCorte: Date }): Promise<ResumenConciliacion> {
   return db.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${candadoConciliar(dia(opciones.fechaCorte))}))`;

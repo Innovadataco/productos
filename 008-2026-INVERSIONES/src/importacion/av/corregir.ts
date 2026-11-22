@@ -17,13 +17,13 @@
  */
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { obtenerLlavero, type Llavero } from "../../cifrado/llavero";
-import { candadoConciliar } from "../../conciliacion/conciliar";
+import { candadoConciliar } from "../../lib/candados";
 import { corteOcupado } from "../../conciliacion/vigente";
 import { reverificarCierres } from "../../precios/guardar";
 import { analizarCertificacion, errorDeDocumento, type CertificacionAnalizada } from "./analisis";
 import { isoDia, leerCalendarioCorte, validarFechaCorte, type CalendarioCorte, type PistaCorte } from "./fecha-corte";
 import { ErrorImportacionAv, TIPO_FUENTE } from "./guardar";
-import { CANDADO_IMPORTAR, ErrorCorteNoCoincide, baseDe, errorDe, exigirCorteReal, nueva, pistaPorPdf, registrarRechazo, type Base } from "./importar";
+import { CANDADO_IMPORTAR, ErrorCorte, baseDe, errorDe, exigirCorteReal, nueva, pistaPorPdf, registrarRechazo, type Base } from "./importar";
 
 export interface CorreccionCorte {
   readonly contenido: Uint8Array;
@@ -58,14 +58,6 @@ export interface DependenciasCorreccion {
 
 const DEPENDENCIAS: DependenciasCorreccion = { reverificar: reverificarCierres };
 
-/** Un rechazo de fecha con su pista (la CreationDate del PDF). */
-class ErrorConPista extends ErrorImportacionAv {
-  constructor(codigo: string, readonly pista: PistaCorte | null) {
-    super(codigo);
-    this.name = "ErrorConPista";
-  }
-}
-
 interface Contexto {
   readonly c: CorreccionCorte;
   readonly base: Base;
@@ -88,7 +80,7 @@ async function exigir(tx: Prisma.TransactionClient, x: Contexto): Promise<{ id: 
   if (enOtroCorte) throw new ErrorImportacionAv("ARCHIVO_YA_CARGADO");
   if (await corteOcupado(tx, x.c.nuevaFechaCorte)) throw new ErrorImportacionAv("CORTE_OCUPADO");
   const fecha = validarFechaCorte(x.c.nuevaFechaCorte, { ...x.calendario, hoy: x.c.hoy ?? new Date(), creadoEn: x.analizada.creadoEn });
-  if (fecha) throw new ErrorConPista(fecha, pistaPorPdf(fecha, x.analizada.creadoEn, x.calendario));
+  if (fecha) throw new ErrorCorte(fecha, pistaPorPdf(fecha, x.analizada.creadoEn, x.calendario));
   await exigirCorteReal(tx, x.c.nuevaFechaCorte, x.analizada, x.calendario);
   return vieja;
 }
@@ -118,7 +110,7 @@ async function rechazar(db: PrismaClient, base: Base, filas: number, error: Retu
   return { ...NADA, estado: "RECHAZADO", codigo: error.codigo, pistaCorte: pista, cargaId: r.cargaId };
 }
 
-const pistaDe = (e: unknown): PistaCorte | null => (e instanceof ErrorCorteNoCoincide ? e.pista : e instanceof ErrorConPista ? e.pista : null);
+const pistaDe = (e: unknown): PistaCorte | null => (e instanceof ErrorCorte ? e.pista : null);
 
 export async function corregirCorteCertificacion(db: PrismaClient, c: CorreccionCorte, deps: DependenciasCorreccion = DEPENDENCIAS): Promise<ResultadoCorreccion> {
   const llavero = obtenerLlavero(); // primero: sin claves no se escribe nada, ni el rechazo

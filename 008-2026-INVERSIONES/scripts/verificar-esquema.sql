@@ -60,6 +60,7 @@ DECLARE
     ['movimiento_fondo', 'movimiento_fondo_constitucion_key', 'CREATE UNIQUE INDEX movimiento_fondo_constitucion_key ON public.movimiento_fondo USING btree ("fondoId") WHERE (tipo = ''CONSTITUCION''::"TipoMovimientoFondo")'],
     ['orden', 'orden_filaFuenteId_key', 'CREATE UNIQUE INDEX "orden_filaFuenteId_key" ON public.orden USING btree ("filaFuenteId")'],
     ['plan_version', 'plan_version_version_key', 'CREATE UNIQUE INDEX plan_version_version_key ON public.plan_version USING btree (version)'],
+    ['precio_cierre', 'precio_cierre_dia_vigente_idx', 'CREATE INDEX precio_cierre_dia_vigente_idx ON public.precio_cierre USING btree (fecha, fuente) WHERE ("reemplazadoEn" IS NULL)'],
     ['precio_cierre', 'precio_cierre_vigente_key', 'CREATE UNIQUE INDEX precio_cierre_vigente_key ON public.precio_cierre USING btree ("instrumentoId", fecha, fuente) WHERE ("reemplazadoEn" IS NULL)'],
     ['regla_plan', 'regla_plan_id_planVersionId_key', 'CREATE UNIQUE INDEX "regla_plan_id_planVersionId_key" ON public.regla_plan USING btree (id, "planVersionId")'],
     ['token_acceso', 'token_acceso_tokenHash_key', 'CREATE UNIQUE INDEX "token_acceso_tokenHash_key" ON public.token_acceso USING btree ("tokenHash")'],
@@ -252,7 +253,7 @@ DECLARE
   -- [nombre, md5(prosrc), proconfig unido con ';' ('' = sin SET)]. Ninguna puede ser SECURITY DEFINER.
   funciones text[] := ARRAY[
     ['inv_asignacion_coherente', 'e102cbd2ac508ce492a6081f44c8818d', ''],
-    ['inv_carga_reversion', 'ad1ca3edece8cf11b1e8df4ef56610d2', ''],
+    ['inv_carga_reversion', 'de8fc0662b39f8ccad6b91dd8bde5083', ''],
     ['inv_certificacion_fondo_solo_encargo', '0c694690f57d13c0fbd819a28130c975', ''],
     ['inv_certificacion_solo_retiro', '177e253d815166e075e30b75316c539a', ''],
     ['inv_certificacion_vigente', '4f29f5a78b3129f7ace16487160c5c4e', ''],
