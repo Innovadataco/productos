@@ -3,7 +3,8 @@
 #
 # Candados (orden de Jelk: «no tocar gesmovil ni pi, solo inversiones, ojo no puede dañar nada»):
 #  - Docker solo con el proyecto inv-008-prod (o inv-008-prueba en local), siempre por la variable COMPOSE (o
-#    COMPOSE_PAUSA, solo para el down de la pausa).
+#    COMPOSE_PAUSA, solo para el down de la pausa). Única excepción: `docker update` de los límites (mem = memswap) en
+#    reaplicar_limites, a un contenedor que salió de COMPOSE y lleva la etiqueta del proyecto.
 #  - La raíz de producción NO está escrita en el repo (es público): es la carpeta que contiene al clon,
 #    <raíz>/repo/008-2026-INVERSIONES (el valor real, en el ESTADO de la gestión). Sus anclas son fatales: el clon
 #    se llama repo, la raíz y sus padres son solo de root, y el archivo de producción es de root, 600 y regular.
@@ -510,6 +511,111 @@ raiz_cgroup() {
   else
     printf '%s' /sys/fs/cgroup
   fi
+}
+
+# Límites de memoria de los contenedores de 008: mem_limit = memswap_limit, el invariante acordado con PI. Cada noche un
+# `daemon-reload` de systemd en el host (lo dispara una tarea del agente qemu-ga del proveedor) deja memory.swap.max en
+# max en el cgroup de todo contenedor que esté corriendo, mientras docker inspect sigue diciendo Memory = MemorySwap: el
+# tope deja de ser real sin que Docker lo vea. Los contenedores creados después del reload quedan bien. La solución de
+# fondo, en el host, la decide PI (produccion.md §5); mientras tanto, reaplicar_limites los vuelve a poner sin reiniciar.
+
+# Los datos que deciden los límites del contenedor $1, en una línea «proyecto|nombre|memory|memoryswap|id»: la etiqueta
+# del proyecto de Compose, el nombre, HostConfig.Memory y HostConfig.MemorySwap (lo declarado) y el id largo.
+datos_limites() {
+  docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}|{{.Name}}|{{.HostConfig.Memory}}|{{.HostConfig.MemorySwap}}|{{.Id}}' "$1"
+}
+
+# La carpeta del cgroup v2 del contenedor de id largo $1 (64 hex) bajo la raíz $2: el scope del driver systemd (el del
+# VPS) o la carpeta del driver cgroupfs. La primera con memory.swap.max y memory.max legibles; si no hay, falla.
+cgroup_de_contenedor() {
+  local dir
+  [[ "$1" =~ ^[0-9a-f]{64}$ ]] || return 1
+  for dir in "$2/system.slice/docker-$1.scope" "$2/docker/$1"; do
+    [ -r "$dir/memory.swap.max" ] && [ -r "$dir/memory.max" ] || continue
+    printf '%s' "$dir"
+    return 0
+  done
+  return 1
+}
+
+# El valor de un archivo del cgroup ($1) sin espacios, o «ilegible».
+valor_cgroup() {
+  local valor
+  valor="$( { tr -d '[:space:]' <"$1"; } 2>/dev/null)" || valor=""
+  printf '%s' "${valor:-ilegible}"
+}
+
+# $1 sin nada fuera de [A-Za-z0-9_.-] (nombres y etiquetas de Docker, que van al log).
+limpio() {
+  printf '%s' "$1" | LC_ALL=C tr -cd 'A-Za-z0-9_.-'
+}
+
+# Fase 1 de reaplicar_limites: solo lee. Deja en LIMITES_PENDIENTES («cid|nombre|mem|swap.max|memory.max|MemorySwap|
+# carpeta del cgroup») los contenedores que corren y están fuera de lo declarado: memory.swap.max distinto de 0,
+# memory.max distinto de HostConfig.Memory o MemorySwap distinto de Memory. Aborta sin tocar ninguno si `ps` falla, si un
+# contenedor no lleva la etiqueta del proyecto activo, si no tiene un límite declarado (no se inventa uno) o, en
+# producción, si su cgroup no se puede leer. En el proyecto de prueba (en el Mac el cgroup está en la máquina virtual de
+# Colima) un cgroup ilegible solo se avisa y se mira HostConfig.
+revisar_limites() {
+  local raiz ids cid datos proyecto nombre mem swap largo dir swap_max mem_max
+  LIMITES_PENDIENTES=()
+  LIMITES_REVISADOS=0
+  raiz="$(raiz_cgroup)"
+  ids="$("${COMPOSE[@]}" ps -q)" || morir "no se pudieron listar los contenedores de $INV_PROYECTO_ACTIVO (compose ps): los límites no se revisan a ciegas"
+  while IFS= read -r cid; do
+    [ -n "$cid" ] || continue
+    datos="$(datos_limites "$cid")" || morir "no se pudo leer el contenedor $(limpio "$cid") (inspect): no se toca ninguno"
+    IFS='|' read -r proyecto nombre mem swap largo <<<"$datos"
+    nombre="$(limpio "${nombre#/}")"
+    [ "$proyecto" = "$INV_PROYECTO_ACTIVO" ] ||
+      morir "el contenedor ${nombre:-$(limpio "$cid")} no lleva la etiqueta del proyecto $INV_PROYECTO_ACTIVO (lleva «$(limpio "$proyecto")»): no se toca ningún contenedor"
+    [[ "$mem" =~ ^[1-9][0-9]*$ ]] ||
+      morir "el contenedor $nombre no tiene un límite de memoria declarado (HostConfig.Memory = $(limpio "$mem")): no se inventa uno; no se toca ningún contenedor"
+    if dir="$(cgroup_de_contenedor "$largo" "$raiz")"; then
+      swap_max="$(valor_cgroup "$dir/memory.swap.max")"
+      mem_max="$(valor_cgroup "$dir/memory.max")"
+    else
+      [ "$INV_PROYECTO_ACTIVO" = "$INV_PROYECTO_PRUEBA" ] ||
+        morir "no se pudo leer el cgroup de $nombre (memory.swap.max y memory.max bajo $raiz): no se sabe si usa swap; no se toca ningún contenedor"
+      informar "⚠️  sin el cgroup de $nombre bajo $raiz (proyecto de prueba): solo se revisa HostConfig"
+      dir="" swap_max=0 mem_max="$mem"
+    fi
+    LIMITES_REVISADOS=$((LIMITES_REVISADOS + 1))
+    [ "$swap_max" = 0 ] && [ "$mem_max" = "$mem" ] && [ "$swap" = "$mem" ] && continue
+    LIMITES_PENDIENTES+=("$cid|$nombre|$mem|$(limpio "$swap_max")|$(limpio "$mem_max")|$(limpio "$swap")|$dir")
+  done <<<"$ids"
+}
+
+# Fase 2: a cada contenedor de LIMITES_PENDIENTES, `docker update --memory M --memory-swap M` con M = su HostConfig.Memory
+# (nunca otro valor), sin reiniciar nada; después relee HostConfig y el cgroup. Si el update falla o algo sigue fuera de
+# lo declarado, aborta. Una línea de log por corrección: el contenedor y de qué a qué (y lo que tenía en swap).
+corregir_limites() {
+  local pendiente cid nombre mem swap_max mem_max swap dir datos ahora_mem ahora_swap ahora_swap_max ahora_mem_max en_swap
+  for pendiente in ${LIMITES_PENDIENTES[@]+"${LIMITES_PENDIENTES[@]}"}; do
+    IFS='|' read -r cid nombre mem swap_max mem_max swap dir <<<"$pendiente"
+    docker update --memory "$mem" --memory-swap "$mem" "$cid" >/dev/null ||
+      morir "no se pudieron reaplicar los límites de $nombre (falló «docker update»): no se sigue"
+    datos="$(datos_limites "$cid")" || morir "no se pudo releer $nombre después de reaplicar sus límites: no se sigue"
+    IFS='|' read -r _ _ ahora_mem ahora_swap _ <<<"$datos"
+    ahora_swap_max=0 ahora_mem_max="$mem" en_swap=""
+    if [ -n "$dir" ]; then
+      ahora_swap_max="$(valor_cgroup "$dir/memory.swap.max")"
+      ahora_mem_max="$(valor_cgroup "$dir/memory.max")"
+      [ ! -r "$dir/memory.swap.current" ] || en_swap="; en swap: $(limpio "$(valor_cgroup "$dir/memory.swap.current")") bytes"
+    fi
+    [ "$ahora_swap_max" = 0 ] && [ "$ahora_mem_max" = "$mem" ] && [ "$ahora_mem" = "$mem" ] && [ "$ahora_swap" = "$mem" ] ||
+      morir "$nombre sigue mal después de reaplicar sus límites (memory.swap.max = $(limpio "$ahora_swap_max"), memory.max = $(limpio "$ahora_mem_max"), Memory/MemorySwap = $(limpio "$ahora_mem")/$(limpio "$ahora_swap"); declarado $mem): no se sigue"
+    informar "límites reaplicados a $nombre: memory.swap.max $swap_max → 0, memory.max $mem_max → $mem, MemorySwap $swap → $mem (HostConfig.Memory = $mem$en_swap)"
+  done
+}
+
+# Reaplica mem = memswap a los contenedores de 008 que corren ("${COMPOSE[@]}" ps -q, y solo los de la etiqueta del
+# proyecto activo), sin reiniciar nada: primero lee y valida todos, después corrige. Se llama directo, nunca dentro de `||`
+# ni de una tubería: sus `morir` tienen que cortar el script.
+reaplicar_limites() {
+  revisar_limites
+  corregir_limites
+  informar "límites de memoria: $LIMITES_REVISADOS contenedor(es) de $INV_PROYECTO_ACTIVO revisados, ${#LIMITES_PENDIENTES[@]} corregido(s) (mem = memswap)"
 }
 
 # Aborta si PI está desplegando o construyendo. $1 dice en qué momento se revisó.
