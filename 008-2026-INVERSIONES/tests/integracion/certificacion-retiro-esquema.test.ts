@@ -207,6 +207,14 @@ describe("carga_archivo: REVERTIDO", () => {
       await revertir(tx, p.cargaVieja, f.id);
     });
     expect(familia).toMatch(/REVERTIDO/);
+    // security-reviewer BAJO: un DUEÑO desactivado tampoco.
+    const inactivo = await enTransaccionDeshecha(async (tx) => {
+      const p = await par(tx);
+      await retirar(tx, p);
+      const d = await tx.usuario.create({ data: { email: `inactivo-${unico()}@ejemplo.invalid`, rol: "DUENO", activo: false } });
+      await revertir(tx, p.cargaVieja, d.id);
+    });
+    expect(inactivo).toMatch(/REVERTIDO/);
     const otraColumna = await enTransaccionDeshecha(async (tx) => {
       const p = await par(tx);
       await retirar(tx, p);
@@ -265,5 +273,14 @@ describe("carrera con una conciliación en REPEATABLE READ", () => {
     );
     await expect(resultado).rejects.toThrow(/could not serialize|write conflict|P2034|está retirada/i);
     expect(await db.conciliacion.count({ where: { certificacionId: p.vieja } })).toBe(0);
+  });
+});
+
+// database-reviewer MEDIO: la re-verificación de la corrección lee los cierres vigentes de un día (sin especie); con
+// el índice por (instrumento, fecha) no tiene por dónde entrar. Índice parcial de los vigentes por día y fuente.
+describe("precio_cierre: índice de los vigentes por día", () => {
+  it("existe precio_cierre_dia_vigente_idx sobre (fecha, fuente) de los vigentes", async () => {
+    const filas = await db.$queryRaw<{ indexdef: string }[]>`SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'precio_cierre_dia_vigente_idx'`;
+    expect(filas.map((f) => f.indexdef)).toEqual(['CREATE INDEX precio_cierre_dia_vigente_idx ON public.precio_cierre USING btree (fecha, fuente) WHERE ("reemplazadoEn" IS NULL)']);
   });
 });

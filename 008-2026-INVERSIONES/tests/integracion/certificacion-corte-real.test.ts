@@ -189,3 +189,21 @@ describe("señal 1 · los precios de valoración son los cierres del día hábil
     expect([otra.estado, otra.repetida, otra.errores]).toEqual(["CARGADO", true, []]);
   });
 });
+
+// code-reviewer MEDIO: una especie que no negoció el día del corte (sin cierre ese día) no apaga la señal 1.
+describe("señal 1 · con una especie sin cierre en el corte", () => {
+  it("jueves 2027-11-04 valorado al miércoles, con una tercera especie sin cierre el jueves: CORTE_NO_COINCIDE con las 2 comparables", async () => {
+    const c = caso("2027-11-05", "10:17:13");
+    const tercera = `R${corrida}${n}C`;
+    const espec: EspecCertificacion = { ...c.espec, rentaVariable: [...c.espec.rentaVariable, { nemo: tercera, cantidad: "19", precio: "COP 418,90", valor: "COP 7.959,10" }] };
+    await registrarFondo(c);
+    const ids = await Promise.all([...c.nemos, tercera].map(async (nemo) => (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo, nombre: nemo } })).id));
+    const fila = (i: number, fecha: string, precio: string) => ({ instrumentoId: ids[i]!, fecha: dia(fecha), precio, fuente: "yahoo", estado: "NO_VERIFICADO" as const });
+    await db.precioCierre.createMany({
+      data: [fila(0, "2027-11-03", "2371"), fila(1, "2027-11-03", "63.17"), fila(2, "2027-11-03", "418.9"), fila(0, "2027-11-04", "2371"), fila(1, "2027-11-04", "65.83")],
+    });
+    const r = await importarCertificacion(db, { ...archivo(c, "2027-11-04", "2027-11-08"), contenido: generarCertificacionPdf(espec) });
+    expect(r.errores.map((x) => x.codigo)).toEqual(["CORTE_NO_COINCIDE"]);
+    expect(r.pistaCorte).toEqual({ tipo: "PRECIOS", sugerido: "2027-11-03", especies: 2, distintas: 1 });
+  });
+});

@@ -109,7 +109,7 @@ describe("cargarYConciliar · los precios de valoración son los cierres del dí
     const texto = r.lineas.join("\n");
     expect(r.codigo).toBe(1);
     expect(texto).toContain("página 0 · fila 0 · CORTE_NO_COINCIDE");
-    expect(texto).toContain("Los precios de valoración de la certificación cuadran (±1 %) con los cierres del 2027-08-25, el día hábil anterior al corte, en las 9 especies, y en 7 no cuadran con los del 2027-08-26");
+    expect(texto).toContain("Los precios de valoración de la certificación cuadran (±1 %) con los cierres del 2027-08-25, el día hábil anterior al corte, en las 9 especies con cierre en los dos días, y en 7 no cuadran con los del 2027-08-26");
     expect(texto).toContain("`npx tsx scripts/importar-certificacion.ts --email <correo-del-dueño> --fecha-corte 2027-08-25 [--fondo <codigoFic>] <certificacion.pdf>`");
     expect(llamadas).toEqual({ conciliar: 0, calendario: 0 });
   });
