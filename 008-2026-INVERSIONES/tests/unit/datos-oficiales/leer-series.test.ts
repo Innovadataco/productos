@@ -123,8 +123,9 @@ describe("serieEnRango · las vigentes que se solapan con el rango, en orden", (
   it("un día (desde = hasta) vale; el rango más largo (MAX_DIAS_RANGO_SERIES) vale; uno más, no, sin consultar", async () => {
     const { db, llamadas } = baseFalsaLectura(SEMANA);
     expect((await serieEnRango(db, "TRM", dia("2027-03-09"), dia("2027-03-09"))).map((c) => c.valor)).toEqual(["4611.87"]);
-    const inicio = dia("1991-01-07");
+    const inicio = dia("1951-01-08");
     const finMaximo = new Date(inicio.getTime() + (MAX_DIAS_RANGO_SERIES - 1) * 86_400_000);
+    expect(finMaximo.getTime()).toBeLessThan(dia("2027-03-05").getTime());
     expect(await serieEnRango(db, "TRM", inicio, finMaximo)).toEqual([]);
     expect(llamadas.at(-1)?.args.take).toBe(MAX_DIAS_RANGO_SERIES + 1);
     const antes = llamadas.length;
