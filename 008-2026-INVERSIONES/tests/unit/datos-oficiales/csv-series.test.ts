@@ -179,6 +179,12 @@ describe("leerCsvSeries · el archivo entero", () => {
     ))).toEqual([[5, "SOLAPE"]]);
   });
 
+  it("una vigencia contenida en otra no esconde el solape de la siguiente (code-reviewer, BAJO)", () => {
+    expect(errores(csv(`TRM,2027-03-05,2027-03-10,4613.27,${TRM}`, `TRM,2027-03-06,2027-03-07,4613.29,${TRM}`, `TRM,2027-03-08,2027-03-09,4613.31,${TRM}`))).toEqual([
+      [3, "SOLAPE"], [4, "SOLAPE"],
+    ]);
+  });
+
   it("los errores salen ordenados por línea aunque el solape se descubra al final", () => {
     expect(errores(csv(`TRM,2027-03-05,2027-03-07,4613.27,${TRM}`, `TRM,2027-03-06,2027-03-06,4613.29,${TRM}`, `UVR,2027-03-08,2027-03-08,317.43,${TRM}`))).toEqual([
       [3, "SOLAPE"], [4, "SERIE_DESCONOCIDA"],
@@ -204,9 +210,17 @@ describe("leerCsvSeries · el archivo entero", () => {
     expect(errores(demas, HOY, catalogo)).toEqual([[MAX_FILAS_CSV_SERIES + 2, "DEMASIADAS_FILAS"]]);
   });
 
-  it("con líneas largas el tope que muerde primero es el de bytes (2 MiB): 40 000 filas de la IBR no caben", () => {
-    const linea = `IBR_3M_EA,2027-03-08,2027-03-08,12.461,${IBR}\n`;
-    expect(linea.length * MAX_FILAS_CSV_SERIES).toBeGreaterThan(MAX_BYTES_CSV_SERIES);
+  it("con líneas largas el tope que muerde primero es el de bytes: menos de 40 000 filas de la IBR ya pasan los 2 MiB y el lector lo rechaza (code-reviewer, MEDIO)", () => {
+    const inicio = dia("1950-01-01").getTime();
+    const fila = (i: number) => {
+      const d = new Date(inicio + i * 86_400_000).toISOString().slice(0, 10);
+      return `IBR_3M_EA,${d},${d},12.461,${IBR}`;
+    };
+    const cuantas = Math.ceil(MAX_BYTES_CSV_SERIES / (fila(0).length + 1));
+    const archivo = csv(...Array.from({ length: cuantas }, (_, i) => fila(i)));
+    expect(cuantas).toBeLessThan(MAX_FILAS_CSV_SERIES);
+    expect(archivo.length).toBeGreaterThan(MAX_BYTES_CSV_SERIES);
+    expect(leer(archivo)).toEqual({ ok: false, codigo: "CSV_DEMASIADO_GRANDE", errores: [], totalErrores: 0 });
   });
 });
 

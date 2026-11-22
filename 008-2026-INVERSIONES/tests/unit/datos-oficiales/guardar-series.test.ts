@@ -109,6 +109,23 @@ describe("guardarSeries · choques con otra corrida", () => {
     expect(b.filas()).toEqual([["FICTA", "2027-03-08", "2027-03-08", "9.37", true]]);
   });
 
+  it("un choque en el retiro (P2034) también se reintenta, y lo retirado en el intento fallido se deshace (code-reviewer, BAJO)", async () => {
+    const b = baseFalsaSeries({ previas: [{ serie: "FICTA", desde: "2027-03-08", hasta: "2027-03-08", valor: "9.37" }], fallosRetirar: [errorConocido("P2034")] });
+    const [r] = await guardarSeries(b.db, [serie([fila("2027-03-08", "2027-03-08", "9.41")])]);
+    expect(r).toMatchObject({ revisadas: 1, retiradas: 1, fallo: null });
+    expect(b.llamadas.transacciones).toBe(2);
+    expect(b.filas()).toEqual([["FICTA", "2027-03-08", "2027-03-08", "9.37", false], ["FICTA", "2027-03-08", "2027-03-08", "9.41", true]]);
+  });
+
+  it("un choque después de alargar el lote: se reintenta el lote entero, alargado otra vez", async () => {
+    const corte = masDias(dia("2021-01-01"), TAMANO_LOTE_SERIES - 1);
+    const b = baseFalsaSeries({ previas: [{ serie: "FICTA", desde: iso(corte), hasta: iso(masDias(corte, 2)), valor: "7.13" }], fallosCrear: [error23P01()] });
+    const [r] = await guardarSeries(b.db, [serie(diarios("2021-01-01", TAMANO_LOTE_SERIES + 5))]);
+    expect(r).toMatchObject({ nuevas: TAMANO_LOTE_SERIES + 2, revisadas: 3, retiradas: 1, fallo: null });
+    expect(b.llamadas.creadas.map((c) => c.length)).toEqual([TAMANO_LOTE_SERIES + 2, 3]);
+    expect(b.llamadas.transacciones).toBe(3);
+  });
+
   it("otra corrida ya retiró el vigente (el retiro cuenta menos): se relee y lo que la otra guardó igual queda sin cambios", async () => {
     const otra = (filas: FilaSerieFalsa[], n: number) => {
       if (n > 0) return;
@@ -154,12 +171,10 @@ describe("guardarSeries · un lote que falla", () => {
   });
 
   it("los lotes ya guardados quedan; los que siguen al que falla no se intentan", async () => {
-    let creadas = 0;
     const b = baseFalsaSeries({ fallosCrear: [undefined, errorConocido("P2028")] });
     const [r] = await guardarSeries(b.db, [serie(diarios("2021-01-01", 2 * TAMANO_LOTE_SERIES + 3))]);
-    creadas = b.filas().length;
     expect(r).toMatchObject({ nuevas: TAMANO_LOTE_SERIES, fallo: { codigo: "GUARDADO_ERROR", sinGuardar: TAMANO_LOTE_SERIES + 3 } });
-    expect(creadas).toBe(TAMANO_LOTE_SERIES);
+    expect(b.filas()).toHaveLength(TAMANO_LOTE_SERIES);
     expect(b.llamadas.intentosCrear).toBe(2);
   });
 

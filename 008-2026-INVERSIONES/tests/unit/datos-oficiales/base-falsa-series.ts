@@ -30,6 +30,8 @@ export interface OpcionesBaseFalsaSeries {
   readonly fallosCrear?: readonly (Error | undefined)[];
   /** Lo que lanza siempre createMany de esta serie (un fallo que no se reintenta o que se agota). */
   readonly falloSiempre?: { readonly serie: string; readonly error: () => Error };
+  /** Lo que lanza cada updateMany (el retiro), en orden, después de retirar (la transacción lo deshace). */
+  readonly fallosRetirar?: readonly (Error | undefined)[];
   /** «Otra corrida» que escribe entre la lectura y el retiro, en el retiro número `n` (desde 0). */
   readonly antesDeRetirar?: (filas: FilaSerieFalsa[], n: number) => void;
   /** findFirst (último vigente) lanza esto. */
@@ -127,6 +129,8 @@ export function baseFalsaSeries(o: OpcionesBaseFalsaSeries = {}) {
         f.reemplazadoEn = a.data.reemplazadoEn;
         deshacer.push(() => void (f.reemplazadoEn = null));
       }
+      const inyectado = o.fallosRetirar?.[retiros - 1];
+      if (inyectado) throw inyectado;
       return { count: retiradas.length };
     },
     async createMany(a: { data: DatoNuevo[] }) {
