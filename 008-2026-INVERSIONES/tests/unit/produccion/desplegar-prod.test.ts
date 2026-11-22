@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, correr, crearFalsos, crearRepo, entorno, envProduccionFicticio, funcion, git, leer008, ruta008, type Entorno, type Llamada } from "./falsos";
+import { carpetaTemporal, correr, crearFalsos, crearRepo, entorno, envProduccionFicticio, funcion, git, idArchivo, leer008, ruta008, rutaEnPath, type Entorno, type Llamada } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -936,6 +936,16 @@ describe("desplegar-prod.sh · espera de la medición: 120 s si es solo código,
     writeFileSync(path.join(p.falsos.bin, "sleep"), lineas.join("\n") + "\n", { mode: 0o755 });
     return () => readFileSync(fds, "utf8").trim().split("\n");
   }
+
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo. Por eso sleepQueMira no escribe un sleep propio:
+  // usa el versionado de falsos/, que responde según variables FALSO_SLEEP_*.
+  it("sleepQueMira no crea un sleep nuevo: el del PATH es el versionado (falsos/sleep) y la carpeta propia queda vacía", () => {
+    const p = conCorriendo();
+    sleepQueMira(p, { enSegundos: "480", meminfo: MEMINFO_SANA });
+    expect(readdirSync(p.falsos.bin)).toEqual([]);
+    expect(idArchivo(rutaEnPath(p.env, "sleep"))).toBe(idArchivo(ruta008("tests/unit/produccion/falsos/sleep")));
+  });
 
   const medicionesDe = (p: Preparado) => {
     const dir = path.join(p.base, "estado", "mediciones");

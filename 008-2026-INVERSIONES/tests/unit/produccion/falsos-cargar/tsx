@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# tsx falso del /app de inv-cargar (las pruebas cargar-*.test.ts lo enlazan en <app>/node_modules/.bin/tsx):
+# registra en FALSO_TSX_REGISTRO su argv, el cwd, los bytes de su stdin y, por cada temporal de la carga, sus
+# permisos y su sha256. FALSO_TSX_DORMIR: duerme esos segundos; FALSO_TSX_RC: el código de salida.
+printf "argv" >>"$FALSO_TSX_REGISTRO"; for a in "$@"; do printf "\t%s" "$a" >>"$FALSO_TSX_REGISTRO"; done; printf "\n" >>"$FALSO_TSX_REGISTRO"
+printf "cwd\t%s\n" "$PWD" >>"$FALSO_TSX_REGISTRO"
+printf "stdin\t%s\n" "$(wc -c | tr -d " ")" >>"$FALSO_TSX_REGISTRO"
+for a in "$@"; do case "$a" in */inv-carga.*/*)
+  printf "archivo\t%s\t%s\n" "$(ls -l "$a" | cut -c1-10)" "$(ls -ld "$(dirname "$a")" | cut -c1-10)" >>"$FALSO_TSX_REGISTRO"
+  if command -v sha256sum >/dev/null 2>&1; then h="$(sha256sum "$a")"; else h="$(shasum -a 256 "$a")"; fi
+  printf "sha\t%s\n" "${h%% *}" >>"$FALSO_TSX_REGISTRO" ;;
+esac; done
+# exec: la señal llega al proceso que duerme (como a node), no a un bash que la difiere.
+[ -z "${FALSO_TSX_DORMIR:-}" ] || { printf "dormido\n" >>"$FALSO_TSX_REGISTRO"; exec sleep "$FALSO_TSX_DORMIR"; }
+exit "${FALSO_TSX_RC:-0}"

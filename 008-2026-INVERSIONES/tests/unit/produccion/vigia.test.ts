@@ -5,13 +5,13 @@
 // El OOM se lee del contador JERÁRQUICO (system.slice o docker): persiste aunque el scope del contenedor muerto
 // se borre. El token va a curl por stdin (-K -), nunca en sus argumentos.
 // El Telegram falso escucha en un socket Unix (sin puertos TCP).
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, utimesSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { chmodSync } from "node:fs";
-import { carpetaTemporal, crearFalsos, entorno, ruta008, type Falsos } from "./falsos";
+import { carpetaTemporal, crearFalsos, entorno, idArchivo, ruta008, rutaEnPath, type Entorno, type Falsos } from "./falsos";
 
 // Cada prueba corre scripts de bash con varios procesos: con la suite en paralelo puede pasar de 5 s.
 vi.setConfig({ testTimeout: 60_000 });
@@ -105,6 +105,27 @@ function preparar() {
 }
 
 const textos = () => mensajes.map((m) => m.cuerpo.text);
+
+/** El curl del vigía: un archivo fijo del repo, que registra la llamada y habla con el Telegram falso por el socket. */
+const CURL_VIGIA = ruta008("tests/unit/produccion/falsos-vigia/curl");
+
+describe("vigía · el curl falso", () => {
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo, y un curl nuevo en cada prueba hacía este archivo
+  // varias veces más lento. Por eso el curl es un archivo fijo del repo, el mismo en todas las pruebas.
+  it("curl es el versionado (falsos-vigia/curl), el mismo archivo en todas las pruebas: no se crea uno nuevo", () => {
+    for (const v of [preparar(), preparar()]) expect(idArchivo(rutaEnPath(v.env, "curl"))).toBe(idArchivo(CURL_VIGIA));
+  });
+
+  it("sin el socket del Telegram falso, el curl versionado sale con 97 sin llamar al curl del sistema (nunca a la red)", () => {
+    const registro = path.join(carpetaTemporal("vigia-sin-socket"), "registro.txt");
+    const sinSocket: Entorno = { PATH: process.env.PATH, FALSO_REGISTRO: registro };
+    const r = spawnSync(CURL_VIGIA, ["--version"], { env: sinSocket as NodeJS.ProcessEnv, encoding: "utf8" });
+    expect(r.status, r.stderr).toBe(97);
+    expect(r.stdout).toBe("");
+    expect(r.stderr).toMatch(/falta FALSO_TELEGRAM_SOCKET/);
+  });
+});
 
 describe("vigía · máquina de estados sin spam", () => {
   it("OK no avisa; ALERTA avisa una vez; PEOR solo si baja 256 MiB más; RESUELTO una vez", async () => {

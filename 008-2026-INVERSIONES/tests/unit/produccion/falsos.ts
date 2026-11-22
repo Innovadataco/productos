@@ -1,7 +1,7 @@
 // Apoyo de las pruebas de producción: ejecutables falsos en PATH (docker, curl, flock, df, ps, npm, sleep)
 // que registran cada llamada, y repos git temporales. No es una prueba (no termina en .test.ts).
 import { spawn, spawnSync, type SpawnSyncReturns } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +20,14 @@ export function carpetaTemporal(prefijo: string): string {
 // Se usan en su sitio, sin copiarlos: en macOS la primera ejecución de cada ejecutable NUEVO pasa por la revisión del
 // sistema, en una sola fila para todo el Mac (con la máquina cargada, segundos por archivo). Candado: falsos.test.ts.
 const DIR_FALSOS = fileURLToPath(new URL("./falsos", import.meta.url));
+/** El tsx falso del /app de inv-cargar (cargar-*.test.ts): versionado, como los de ./falsos/. */
+export const TSX_CARGAR_FALSO = fileURLToPath(new URL("./falsos-cargar/tsx", import.meta.url));
+
+/** Identidad del archivo que se ejecuta (sigue los enlaces): dispositivo e inodo. */
+export function idArchivo(ruta: string): string {
+  const s = statSync(ruta);
+  return `${s.dev}:${s.ino}`;
+}
 
 export type Llamada = string[];
 /** Variables de entorno para los scripts (sin las que Next exige en ProcessEnv). */
@@ -54,6 +62,12 @@ export function entorno(falsos: Falsos, extra: Record<string, string> = {}): Ent
     Object.entries(process.env).filter(([k]) => !k.startsWith("INV_") && !k.startsWith("FALSO_") && k !== "DATABASE_URL"),
   );
   return { ...limpio, PATH: `${falsos.bin}:${falsos.fijos}:${process.env.PATH}`, FALSO_REGISTRO: falsos.registro, ...extra };
+}
+
+/** Ruta que bash ejecutaría para `nombre` con el PATH de `env` («» si no lo encuentra). */
+export function rutaEnPath(env: Entorno, nombre: string): string {
+  const r = spawnSync("bash", ["-c", 'command -v "$1"', "bash", nombre], { env: env as NodeJS.ProcessEnv, encoding: "utf8" });
+  return r.status === 0 ? r.stdout.trim() : "";
 }
 
 export type Resultado = { status: number | null; stdout: string; stderr: string };

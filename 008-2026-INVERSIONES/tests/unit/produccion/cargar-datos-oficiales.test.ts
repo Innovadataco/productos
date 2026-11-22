@@ -16,7 +16,7 @@ import { leerArgumentosDecretos } from "@/datos-oficiales/decretos/argumentos";
 import { ENCABEZADO_DECRETOS, MAX_BYTES_DECRETOS } from "@/datos-oficiales/decretos/csv";
 import { leerArgumentosImportarSeries } from "@/datos-oficiales/series/argumentos";
 import { ENCABEZADO_CSV_SERIES, MAX_BYTES_CSV_SERIES } from "@/datos-oficiales/series/csv-series";
-import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, ruta008, type Entorno } from "./falsos";
+import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, idArchivo, ruta008, TSX_CARGAR_FALSO, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -83,7 +83,7 @@ function preparar() {
   const llamadas = () => (existsSync(registro) ? readFileSync(registro, "utf8").trim().split("\n").map((l) => l.split("\t")) : []);
   const argv = () => llamadas().find((l) => l[0] === "argv")?.slice(1) ?? null;
   const carga = (comando: string, sobreDe: Buffer, extra: Entorno = {}) => ejecutar("sh", [CARGAR, comando], { ...env, ...extra }, sobreDe);
-  return { tmp, llamadas, argv, carga };
+  return { app, tmp, llamadas, argv, carga };
 }
 
 /** Sobre armado a mano: cabecera de 4096 bytes (los argumentos, una línea vacía y relleno) y el cuerpo. */
@@ -119,6 +119,15 @@ async function seNiega(comando: string, entrada: Buffer, datos: readonly string[
   for (const dato of datos) expect(r.stdout + r.stderr).not.toContain(dato);
   return r.stderr;
 }
+
+describe("inv-cargar · el tsx falso del /app", () => {
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo. Por eso el tsx es un archivo fijo del repo
+  // (falsos-cargar/tsx), el mismo en todas las pruebas; el /app sí es propio de cada una.
+  it("el tsx del /app es el versionado, el mismo archivo en todas las pruebas: no se crea uno nuevo", () => {
+    for (const p of [preparar(), preparar()]) expect(idArchivo(path.join(p.app, "node_modules", ".bin", "tsx"))).toBe(idArchivo(TSX_CARGAR_FALSO));
+  });
+});
 
 describe("inv-cargar · importar-series: el CSV en un temporal 600 y --archivo, sin opciones", () => {
   it("el CLI recibe solo --archivo <temporal series.csv>, con el sha del Mac, y el temporal se borra", async () => {

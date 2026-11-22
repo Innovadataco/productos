@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { MAX_BYTES_CSV_FONDO } from "@/fondo/csv-valores";
-import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, ruta008, type Entorno } from "./falsos";
+import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, idArchivo, ruta008, TSX_CARGAR_FALSO, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -68,7 +68,7 @@ function preparar() {
   const llamadas = () => (existsSync(registro) ? readFileSync(registro, "utf8").trim().split("\n").map((l) => l.split("\t")) : []);
   const argv = () => llamadas().find((l) => l[0] === "argv")?.slice(1) ?? null;
   const carga = (comando: string, sobre: Buffer, extra: Entorno = {}) => ejecutar("sh", [CARGAR, comando], { ...env, ...extra }, sobre);
-  return { tmp, llamadas, argv, carga };
+  return { app, tmp, llamadas, argv, carga };
 }
 
 /** Sobre armado a mano: cabecera de 4096 bytes (los argumentos, una línea vacía y relleno) y el cuerpo. */
@@ -78,6 +78,15 @@ function sobre(lineas: readonly string[], cuerpo?: Buffer): Buffer {
 }
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
 const conCuerpo =(args: readonly string[], cuerpo: Buffer) => sobre([...args, "--bytes", String(cuerpo.length), "--sha256", sha(cuerpo)], cuerpo);
+
+describe("inv-cargar · el tsx falso del /app", () => {
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo. Por eso el tsx es un archivo fijo del repo
+  // (falsos-cargar/tsx), el mismo en todas las pruebas; el /app sí es propio de cada una.
+  it("el tsx del /app es el versionado, el mismo archivo en todas las pruebas: no se crea uno nuevo", () => {
+    for (const p of [preparar(), preparar()]) expect(idArchivo(path.join(p.app, "node_modules", ".bin", "tsx"))).toBe(idArchivo(TSX_CARGAR_FALSO));
+  });
+});
 
 describe("inv-cargar · registrar-fondo arma el argv de actualizar-fondo --registrar (sin red)", () => {
   for (const [nombre, cabecera, esperado] of [

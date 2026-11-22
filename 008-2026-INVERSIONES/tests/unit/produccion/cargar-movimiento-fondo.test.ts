@@ -8,7 +8,7 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileS
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, ruta008, type Entorno } from "./falsos";
+import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, idArchivo, ruta008, TSX_CARGAR_FALSO, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -68,7 +68,7 @@ function preparar() {
   const llamadas = () => (existsSync(registro) ? readFileSync(registro, "utf8").trim().split("\n").map((l) => l.split("\t")) : []);
   const argv = () => llamadas().find((l) => l[0] === "argv")?.slice(1) ?? null;
   const carga = (sobreDe: Buffer, extra: Entorno = {}) => ejecutar("sh", [CARGAR, COMANDO], { ...env, ...extra }, sobreDe);
-  return { tmp, llamadas, argv, carga };
+  return { app, tmp, llamadas, argv, carga };
 }
 
 /** Sobre armado a mano: cabecera de 4096 bytes (los argumentos, una línea vacía y relleno) y el cuerpo. */
@@ -83,6 +83,15 @@ function con(opcion: string, valor: string | null): string[] {
   const i = BASE.indexOf(opcion);
   return valor === null ? [...BASE.slice(0, i), ...BASE.slice(i + 2)] : [...BASE.slice(0, i + 1), valor, ...BASE.slice(i + 2)];
 }
+
+describe("inv-cargar · el tsx falso del /app", () => {
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo. Por eso el tsx es un archivo fijo del repo
+  // (falsos-cargar/tsx), el mismo en todas las pruebas; el /app sí es propio de cada una.
+  it("el tsx del /app es el versionado, el mismo archivo en todas las pruebas: no se crea uno nuevo", () => {
+    for (const p of [preparar(), preparar()]) expect(idArchivo(path.join(p.app, "node_modules", ".bin", "tsx"))).toBe(idArchivo(TSX_CARGAR_FALSO));
+  });
+});
 
 describe("inv-cargar · registrar-movimiento-fondo arma el argv del CLI en orden fijo", () => {
   for (const [nombre, cabecera, esperado] of [

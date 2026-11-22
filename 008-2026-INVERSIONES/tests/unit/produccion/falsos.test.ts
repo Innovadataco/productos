@@ -7,22 +7,27 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
-import { carpetaTemporal, crearFalsos, DIR_008, entorno, ruta008 } from "./falsos";
+import { describe, expect, it, vi } from "vitest";
+import { carpetaTemporal, crearFalsos, DIR_008, entorno, idArchivo, ruta008, rutaEnPath } from "./falsos";
 
-const DIR_FALSOS = ruta008("tests/unit/produccion/falsos");
+// La primera ejecución de cada falso en un clon recién sacado pasa por la revisión de macOS: con el Mac cargado,
+// segundos. Ya revisado, cuesta milisegundos.
+vi.setConfig({ testTimeout: 60_000 });
+
+const DIR_PRODUCCION = ruta008("tests/unit/produccion");
+const DIR_FALSOS = path.join(DIR_PRODUCCION, "falsos");
 const NOMBRES = readdirSync(DIR_FALSOS).sort();
+/** Todas las carpetas de falsos versionados: ./falsos/ y las propias de un archivo de pruebas (./falsos-*). */
+const CARPETAS_FALSOS = readdirSync(DIR_PRODUCCION, { withFileTypes: true })
+  .filter((e) => e.isDirectory() && (e.name === "falsos" || e.name.startsWith("falsos-")))
+  .map((e) => e.name)
+  .sort();
 
-/** Identidad del archivo (sigue los enlaces): dispositivo e inodo. */
-const idArchivo = (ruta: string) => {
-  const s = statSync(ruta);
-  return `${s.dev}:${s.ino}`;
-};
 /** Ruta que bash ejecutaría para `nombre` con el PATH de esos falsos. */
 const resuelve = (falsos: ReturnType<typeof crearFalsos>, nombre: string) => {
-  const r = spawnSync("bash", ["-c", 'command -v "$1"', "bash", nombre], { env: entorno(falsos) as NodeJS.ProcessEnv, encoding: "utf8" });
-  expect(r.status, `${nombre}: ${r.stderr}`).toBe(0);
-  return r.stdout.trim();
+  const ruta = rutaEnPath(entorno(falsos), nombre);
+  expect(ruta, `${nombre} no está en el PATH de los falsos`).not.toBe("");
+  return ruta;
 };
 const sha256 = (ruta: string) => createHash("sha256").update(readFileSync(ruta)).digest("hex");
 
@@ -56,18 +61,27 @@ describe("falsos.ts · crearFalsos", () => {
     expect([sha256(versionado), idArchivo(versionado)]).toEqual([antesSha, antesId]);
   });
 
-  it("los falsos versionados son ejecutables, en git (100755) y en disco", () => {
-    const r = spawnSync("git", ["-C", DIR_008, "ls-files", "-s", "--", "tests/unit/produccion/falsos"], { encoding: "utf8" });
-    expect(r.status, r.stderr).toBe(0);
-    const modos = Object.fromEntries(
-      r.stdout
-        .trim()
-        .split("\n")
-        .map((l) => [path.basename(l.split("\t")[1]!), l.split(" ")[0]]),
-    );
-    for (const nombre of NOMBRES) {
-      expect(modos[nombre], nombre).toBe("100755");
-      expect(statSync(path.join(DIR_FALSOS, nombre)).mode & 0o111, nombre).toBe(0o111);
+  it("hay carpetas de falsos que revisar, además de ./falsos/", () => {
+    expect(CARPETAS_FALSOS).toEqual(expect.arrayContaining(["falsos", "falsos-cargar", "falsos-montaje", "falsos-vigia"]));
+  });
+
+  it("los falsos versionados de todas las carpetas son ejecutables, en git (100755) y en disco", () => {
+    for (const carpeta of CARPETAS_FALSOS) {
+      const r = spawnSync("git", ["-C", DIR_008, "ls-files", "-s", "--", `tests/unit/produccion/${carpeta}`], { encoding: "utf8" });
+      expect(r.status, r.stderr).toBe(0);
+      const modos = Object.fromEntries(
+        r.stdout
+          .trim()
+          .split("\n")
+          .filter(Boolean)
+          .map((l) => [path.basename(l.split("\t")[1]!), l.split(" ")[0]]),
+      );
+      const nombres = readdirSync(path.join(DIR_PRODUCCION, carpeta)).sort();
+      expect(nombres.length, carpeta).toBeGreaterThan(0);
+      for (const nombre of nombres) {
+        expect(modos[nombre], `${carpeta}/${nombre}`).toBe("100755");
+        expect(statSync(path.join(DIR_PRODUCCION, carpeta, nombre)).mode & 0o111, `${carpeta}/${nombre}`).toBe(0o111);
+      }
     }
   });
 

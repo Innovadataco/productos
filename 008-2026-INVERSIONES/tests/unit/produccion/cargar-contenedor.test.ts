@@ -15,7 +15,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { MAX_BYTES as MAX_BYTES_PDF } from "@/importacion/av/pdf/documento";
 import { MAX_BYTES_CSV } from "@/precios/csv-cierres";
-import { carpetaTemporal, ruta008, type Entorno } from "./falsos";
+import { carpetaTemporal, idArchivo, ruta008, TSX_CARGAR_FALSO, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -113,6 +113,15 @@ async function armar(lineasCabecera: string, archivo?: Buffer) {
   }
   return ejecutar("bash", args, { PATH: process.env.PATH });
 }
+
+describe("inv-cargar · el tsx falso del /app", () => {
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo. Por eso el tsx es un archivo fijo del repo
+  // (falsos-cargar/tsx), el mismo en todas las pruebas; el /app sí es propio de cada una.
+  it("el tsx del /app es el versionado, el mismo archivo en todas las pruebas: no se crea uno nuevo", () => {
+    for (const p of [preparar(), preparar()]) expect(idArchivo(path.join(p.app, "node_modules", ".bin", "tsx"))).toBe(idArchivo(TSX_CARGAR_FALSO));
+  });
+});
 
 describe("armar-sobre.sh · el sobre se arma en el Mac desde un archivo privado", () => {
   it("cabecera de 4096 bytes exactos con los argumentos, --bytes y --sha256, y después el cuerpo tal cual", async () => {
