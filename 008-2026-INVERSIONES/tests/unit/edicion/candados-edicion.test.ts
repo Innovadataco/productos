@@ -57,6 +57,8 @@ describe("candados del área de edición · controles positivos", () => {
     expect(violacionesDeCliente(fuente('import { useState } from "react";\nimport type { X } from "@/plan/versiones";\nimport { MENSAJES } from "../textos";\nimport { Campo } from "./Campo";'))).toEqual([]);
     expect(violacionesDeCliente('import { db } from "@/lib/db";')).toEqual([]);
     expect(violacionesDeCliente(fuente('export { guardar } from "@/plan/versiones";'))).toEqual(["@/plan/versiones"]);
+    // Un hermano de servidor (las lecturas de la página) tampoco, aunque sea relativo.
+    expect(violacionesDeCliente(fuente('import { datosEdicionPlan } from "./datos";\nimport { PaginaEdicionPlan } from "./page";\nimport { leerEspecies } from "../lecturas";'))).toEqual(["./datos", "./page", "../lecturas"]);
   });
 
   it("el común muerde", () => {

@@ -49,7 +49,9 @@ describe("FormularioEnlace", () => {
   it("la orden con su etiqueta; envía solo la decisión y la orden elegida; con 201 vuelve a la cadena", async () => {
     await m.pintar(createElement(FormularioEnlace, { datos: DATOS }));
     expect(texto(m.contenedor.querySelector(`label[for="enlace-orden"]`))).toBe("Orden de Trii");
-    expect([...selector().options].map((o) => o.value)).toEqual(["o-1", "o-2"]);
+    // Nada elegido de antemano: el enlace no se cambia después desde la web.
+    expect([...selector().options].map((o) => o.value)).toEqual(["", "o-1", "o-2"]);
+    expect(selector().value).toBe("");
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(selector(), "o-2");
       selector().dispatchEvent(new Event("change", { bubbles: true }));
@@ -62,11 +64,25 @@ describe("FormularioEnlace", () => {
     expect(ir).toHaveBeenCalledWith("/decisiones/decision-a");
   });
 
-  it("con 409 (la orden ya se enlazó en otra pestaña) muestra el mensaje del código", async () => {
+  it("sin elegir una orden no envía nada: lo dice en el resumen, que toma el foco, y marca el campo", async () => {
     await m.pintar(createElement(FormularioEnlace, { datos: DATOS }));
     await act(async () => { boton()!.click(); });
+    expect(fetchFalso).not.toHaveBeenCalled();
+    const resumen = m.contenedor.querySelector<HTMLElement>(".edicion-resumen")!;
+    expect(document.activeElement).toBe(resumen);
+    expect(texto(resumen)).toContain(MENSAJES.ORDEN_SIN_ELEGIR);
+    expect(selector().getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("con 409 (la orden ya se enlazó en otra pestaña) muestra el mensaje del código", async () => {
+    await m.pintar(createElement(FormularioEnlace, { datos: DATOS }));
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(selector(), "o-1");
+      selector().dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await act(async () => { boton()!.click(); });
     await responder({ error: "x", codigo: "ORDEN_YA_ENLAZADA", campos: [] }, 409);
-    expect(texto(m.contenedor.querySelector("[role=alert]"))).toContain(MENSAJES.ORDEN_YA_ENLAZADA);
+    expect(texto(m.contenedor.querySelector(".edicion-resumen"))).toContain(MENSAJES.ORDEN_YA_ENLAZADA);
     expect(ir).not.toHaveBeenCalled();
   });
 

@@ -31,10 +31,7 @@ describe("privilegios de inv_app", () => {
         "INSERT codigo_recuperacion",
         'UPDATE ("usadoEn", "anuladoEn") codigo_recuperacion',
         'UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") usuario',
-        "INSERT plan_version",
-        "INSERT regla_plan",
-        "INSERT decision",
-        "INSERT enlace_decision_orden",
+        ...Object.entries(INSERT_DEL_PLAN).map(([t, cs]) => `INSERT (${cs.map((c) => (/[A-Z]/.test(c) ? `"${c}"` : c)).join(", ")}) ${t}`),
       ].sort(),
     );
   });
@@ -67,16 +64,52 @@ describe("privilegios de inv_app", () => {
 });
 
 // Área de edición del plan (fase B, PR-B): el dueño crea versiones y registra decisiones desde la web, que corre como
-// inv_app. Solo INSERT, y solo en las cuatro tablas del plan y del diario; nada se edita ni se borra (los disparadores
-// de solo inserción de la migración del plan siguen mandando, y sin UPDATE ni DELETE inv_app ni los intenta).
+// inv_app. Solo INSERT, solo en las cuatro tablas del plan y del diario, y POR COLUMNA: sin los instantes que pone la
+// base (`creadaEn`, `registradaEn`, `creadoEn`), que son la huella de cuándo se registró cada cosa (una decisión
+// tomada antes de ver su resultado). Nada se edita ni se borra: los disparadores de solo inserción de la migración del
+// plan siguen mandando, y sin UPDATE ni DELETE inv_app ni los intenta.
 const TABLAS_DEL_PLAN = ["decision", "enlace_decision_orden", "plan_version", "regla_plan"];
+/** Los instantes que pone la base al insertar: nunca los escribe la app. */
+const SELLADAS = new Set(["creadaEn", "registradaEn", "creadoEn"]);
+
+/** Columnas escalares de una tabla según prisma/schema.prisma (los campos de relación son de otro modelo). */
+function columnasDe(tabla: string): string[] {
+  const esquema = leer008("prisma/schema.prisma").replace(/\/\/.*$/gm, "");
+  const modelos = new Map([...esquema.matchAll(/model (\w+) \{([\s\S]*?)\n\}/g)].map((m) => [m[1]!, m[2]!]));
+  const cuerpo = [...modelos.values()].find((c) => new RegExp(`@@map\\("${tabla}"\\)`).test(c)) ?? "";
+  return cuerpo
+    .split("\n")
+    .map((l) => /^\s+(\w+)\s+(\w+)(\[\])?/.exec(l))
+    .filter((m): m is RegExpExecArray => m !== null && !modelos.has(m[2]!) && !m[3])
+    .map((m) => m[1]!);
+}
+
+/** Las columnas de cada INSERT del plan que privilegios.sql le da a inv_app. */
+const INSERT_DEL_PLAN: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
+  [...sql.matchAll(/GRANT\s+INSERT\s*\(([^)]*)\)\s+ON\s+TABLE\s+public\.([a-z_]+)\s+TO\s+inv_app\s*;/g)]
+    .filter((m) => TABLAS_DEL_PLAN.includes(m[2]!))
+    .map((m) => [m[2]!, m[1]!.split(",").map((c) => c.trim().replace(/^"|"$/g, ""))]),
+);
 
 describe("privilegios del plan y del diario (área de edición)", () => {
-  const delPlan = grants.filter((g) => TABLAS_DEL_PLAN.includes(g.split(" ").at(-1)!));
+  it("INSERT por columna en las cuatro, y ningún otro privilegio sobre ellas (ni INSERT de tabla completa)", () => {
+    expect(Object.keys(INSERT_DEL_PLAN).sort()).toEqual(TABLAS_DEL_PLAN);
+    for (const t of TABLAS_DEL_PLAN) {
+      expect(sql, t).not.toMatch(new RegExp(`GRANT\\s+(?!INSERT\\s*\\()[^;]*\\bpublic\\.${t}\\b[^;]*TO\\s+inv_app`));
+      expect(sql, t).not.toMatch(new RegExp(`GRANT\\s+INSERT\\s+ON\\s+TABLE\\s+public\\.${t}\\b`));
+    }
+  });
 
-  it("exactamente INSERT de tabla en las cuatro, y ningún otro privilegio sobre ellas", () => {
-    expect(delPlan.sort()).toEqual(TABLAS_DEL_PLAN.map((t) => `INSERT ${t}`).sort());
-    for (const t of TABLAS_DEL_PLAN) expect(sql, t).not.toMatch(new RegExp(`GRANT\\s+(?!INSERT\\s+ON)[^;]*\\bpublic\\.${t}\\b[^;]*TO\\s+inv_app`));
+  it("cada INSERT trae todas las columnas de la tabla salvo los instantes que pone la base", () => {
+    for (const t of TABLAS_DEL_PLAN) {
+      const esperadas = columnasDe(t).filter((c) => !SELLADAS.has(c));
+      expect(esperadas.length, t).toBeGreaterThan(3);
+      expect([...INSERT_DEL_PLAN[t]!].sort(), t).toEqual(esperadas.sort());
+    }
+    expect(columnasDe("decision")).toContain("registradaEn");
+    expect(columnasDe("plan_version")).toContain("creadaEn");
+    expect(columnasDe("enlace_decision_orden")).toContain("creadoEn");
+    for (const cs of Object.values(INSERT_DEL_PLAN)) for (const c of cs) expect(SELLADAS.has(c), c).toBe(false);
   });
 
   it("ningún otro INSERT de inv_app fuera del login, del TOTP y del plan", () => {
@@ -93,7 +126,7 @@ describe("privilegios del plan y del diario (área de edición)", () => {
 
   it("los INSERT del plan van después del REVOKE ALL de cada corrida (parten de cero)", () => {
     const revoke = sql.indexOf("EXECUTE format('REVOKE ALL ON TABLE public.%I FROM inv_app', t.relname);");
-    for (const t of TABLAS_DEL_PLAN) expect(sql.indexOf(`GRANT INSERT ON TABLE public.${t} TO inv_app;`), t).toBeGreaterThan(revoke);
+    for (const t of TABLAS_DEL_PLAN) expect(sql.search(new RegExp(`GRANT INSERT \\([^)]*\\) ON TABLE public\\.${t} TO inv_app;`)), t).toBeGreaterThan(revoke);
   });
 });
 

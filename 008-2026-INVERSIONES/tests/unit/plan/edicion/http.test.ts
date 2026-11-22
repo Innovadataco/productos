@@ -10,6 +10,7 @@ import {
   MENSAJE_CONFLICTO,
   MENSAJE_FALLO,
   MENSAJE_INVALIDO,
+  MENSAJE_NO_EXISTE,
   MENSAJE_SOLICITUD,
   leerCuerpoJson,
   origenRechazado,
@@ -89,6 +90,20 @@ describe("respuestas", () => {
       expect(r.headers.get("cache-control")).toBe("no-store");
       expect(await r.json()).toEqual({ error: mensaje, codigo: error.codigo, campos: error.errores });
     }
+  });
+
+  it("lo que ya no existe (otra pestaña, una orden o decisión que cambió) es un 404 con su propio mensaje, no «revise los datos»", async () => {
+    for (const codigo of ["DECISION_INEXISTENTE", "ORDEN_INEXISTENTE", "REGLA_INEXISTENTE", "INSTRUMENTO_INEXISTENTE"]) {
+      const r = respuestaDeError(new ErrorPlan(codigo), "prueba");
+      expect(r.status, codigo).toBe(404);
+      expect(await r.json()).toEqual({ error: MENSAJE_NO_EXISTE, codigo, campos: [] });
+    }
+  });
+
+  it("sin plan vigente en la fecha: 400 con el campo de la fecha marcado (el dominio no lo trae)", async () => {
+    const r = respuestaDeError(new ErrorPlan("SIN_PLAN"), "prueba");
+    expect(r.status).toBe(400);
+    expect(await r.json()).toEqual({ error: MENSAJE_INVALIDO, codigo: "SIN_PLAN", campos: [{ campo: "fechaDecision", codigo: "SIN_PLAN" }] });
   });
 
   it("un código del dominio sin estado propio es un 400 (no un 500): lo pidió mal el formulario", async () => {

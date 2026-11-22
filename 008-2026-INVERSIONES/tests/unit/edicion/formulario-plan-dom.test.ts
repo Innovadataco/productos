@@ -9,8 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const ir = vi.hoisted(() => vi.fn());
 vi.mock("@/app/edicion/enviar", async (original) => ({ ...(await original<typeof import("@/app/edicion/enviar")>()), irA: ir }));
 
+import { FilaRegla } from "@/app/edicion/plan/FilaRegla";
 import { FormularioPlan } from "@/app/edicion/plan/FormularioPlan";
-import { MENSAJES } from "@/app/edicion/textos";
+import { MENSAJES, TEXTOS_PLAN } from "@/app/edicion/textos";
 import type { DatosEdicionPlan } from "@/app/edicion/tipos";
 import { montar, texto, type Montaje } from "../graficas/dom";
 
@@ -65,6 +66,8 @@ async function escribir(el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaE
 }
 const clic = (b: HTMLElement) => act(async () => { b.click(); });
 const enviar = () => clic(boton("Guardar la versión nueva"));
+/** El resumen de errores: una región con nombre que toma el foco (sin role="alert": el foco ya lo anuncia). */
+const resumen = () => m.contenedor.querySelector<HTMLElement>(".edicion-resumen")!;
 
 describe("FormularioPlan", () => {
   it("precarga la base: vigencia, cada regla con su especie, condición, nivel es-CO, acción, cantidad y detalle", async () => {
@@ -98,6 +101,53 @@ describe("FormularioPlan", () => {
     expect(texto(reglas()[0]!.querySelector("legend"))).toBe("Regla 1");
   });
 
+  it("al quitar una regla el foco no se pierde (va a la que queda en su lugar, o a «Agregar») y se anuncia", async () => {
+    await pintar();
+    const anuncio = () => texto(m.contenedor.querySelector(".edicion-anuncio"));
+    expect(m.contenedor.querySelector(".edicion-anuncio")?.getAttribute("role")).toBe("status");
+    expect(anuncio()).toBe("");
+    await clic(boton("Quitar la regla 1"));
+    expect(document.activeElement).toBe(porEtiqueta("Especie", reglas()[0]));
+    expect(anuncio()).toBe("Se quitó la regla 1. Queda 1 regla.");
+    await clic(boton("Quitar la regla 1"));
+    expect(reglas()).toHaveLength(0);
+    expect(document.activeElement).toBe(boton("Agregar una regla"));
+    expect(anuncio()).toBe("Se quitó la regla 1. No queda ninguna regla.");
+  });
+
+  it("al quitar la última de varias, el foco va a la anterior", async () => {
+    await pintar();
+    await clic(boton("Quitar la regla 2"));
+    expect(document.activeElement).toBe(porEtiqueta("Especie", reglas()[0]));
+  });
+
+  it("cada fila está memorizada: escribir en una regla no vuelve a pintar las demás (planes con muchas reglas)", () => {
+    expect((FilaRegla as unknown as { $$typeof?: symbol }).$$typeof).toBe(Symbol.for("react.memo"));
+  });
+
+  it("dice qué es obligatorio: un aviso al comienzo, asociado al formulario", async () => {
+    await pintar();
+    const form = m.contenedor.querySelector("form")!;
+    const aviso = document.getElementById("edicion-obligatorios")!;
+    expect(texto(aviso)).toBe(TEXTOS_PLAN.OBLIGATORIOS);
+    expect(form.getAttribute("aria-describedby")?.split(" ")).toContain("edicion-obligatorios");
+    expect(form.getAttribute("aria-labelledby")).toBeNull();
+  });
+
+  it("si el navegador vuelve a la página desde su caché (atrás), el formulario se puede volver a enviar", async () => {
+    await pintar();
+    await enviar();
+    await responder({ version: 4 }, 201);
+    expect(ir).toHaveBeenCalledTimes(1);
+    expect(boton("Guardar la versión nueva").getAttribute("aria-disabled")).toBe("true");
+    await act(async () => {
+      window.dispatchEvent(Object.assign(new Event("pageshow"), { persisted: true }));
+    });
+    expect(boton("Guardar la versión nueva").getAttribute("aria-disabled")).toBe("false");
+    await enviar();
+    expect(fetchFalso).toHaveBeenCalledTimes(2);
+  });
+
   it("envía por fetch exactamente lo que espera la ruta, con la última versión que vio; con 201 va a la versión nueva", async () => {
     await pintar();
     await escribir(porEtiqueta("Motivo del cambio"), "Ajuste ficticio");
@@ -127,9 +177,14 @@ describe("FormularioPlan", () => {
     await pintar();
     await enviar();
     await responder({ error: "x", codigo: "DATOS_INVALIDOS", campos: [{ campo: "motivo", codigo: "VACIO" }, { campo: "reglas[0].nivel", codigo: "NIVEL_NO_RECONOCIDO" }] }, 400);
-    const resumen = m.contenedor.querySelector<HTMLElement>("[role=alert]")!;
-    expect(document.activeElement).toBe(resumen);
-    expect(texto(resumen)).toContain(MENSAJES.NIVEL_NO_RECONOCIDO);
+    expect(document.activeElement).toBe(resumen());
+    expect(resumen().getAttribute("role")).toBeNull();
+    expect(texto(document.getElementById(resumen().getAttribute("aria-labelledby")!))).toBe(TEXTOS_PLAN.RESUMEN);
+    expect(texto(resumen())).toContain(MENSAJES.NIVEL_NO_RECONOCIDO);
+    // Cada error enlaza a su campo y lo enfoca.
+    const enlace = [...resumen().querySelectorAll("a")].find((a) => texto(a).includes(MENSAJES.NIVEL_NO_RECONOCIDO))!;
+    await clic(enlace);
+    expect(document.activeElement).toBe(porEtiqueta("Nivel", reglas()[0]));
     const nivel = porEtiqueta("Nivel", reglas()[0]);
     expect(nivel.getAttribute("aria-invalid")).toBe("true");
     expect(texto(document.getElementById(nivel.getAttribute("aria-describedby")!.split(" ").at(-1)!))).toBe(MENSAJES.NIVEL_NO_RECONOCIDO);
@@ -143,10 +198,11 @@ describe("FormularioPlan", () => {
     await pintar();
     await enviar();
     await responder({ error: "x", codigo: "PLAN_CAMBIO", campos: [] }, 409);
-    expect(texto(m.contenedor.querySelector("[role=alert]"))).toContain(MENSAJES.PLAN_CAMBIO);
+    expect(texto(resumen())).toContain(MENSAJES.PLAN_CAMBIO);
+    expect(document.activeElement).toBe(resumen());
     fetchFalso.mockRejectedValueOnce(new TypeError("red"));
     await enviar();
-    expect(texto(m.contenedor.querySelector("[role=alert]"))).toContain(MENSAJES.DESCONOCIDO);
+    expect(texto(resumen())).toContain(MENSAJES.DESCONOCIDO);
   });
 
   it("avisa en la regla cuyo plazo es anterior a la fecha de la versión (el dominio la rechazaría)", async () => {
@@ -160,6 +216,10 @@ describe("FormularioPlan", () => {
   it("avisa si la base no es la vigente y si la fecha elegida ya pasó (no la cambia)", async () => {
     await m.pintar(createElement(FormularioPlan, { datos: { ...DATOS, base: { numero: 2, desde: "2021-06-01", tipo: "HISTORICA" } } }));
     expect(texto(m.contenedor)).toContain("versión 2");
+    // La región del aviso está desde el comienzo (vacía), así el lector de pantalla anuncia el cambio.
+    const aviso = m.contenedor.querySelector(".edicion-aviso-fecha")!;
+    expect(aviso.getAttribute("role")).toBe("status");
+    expect(texto(aviso)).toBe("");
     await escribir(porEtiqueta("Rige desde"), "2027-02-01");
     expect(texto(m.contenedor.querySelector(".edicion-aviso-fecha"))).toContain("ya pasó");
   });

@@ -11,7 +11,7 @@ const ir = vi.hoisted(() => vi.fn());
 vi.mock("@/app/edicion/enviar", async (original) => ({ ...(await original<typeof import("@/app/edicion/enviar")>()), irA: ir }));
 
 import { FormularioDecision } from "@/app/edicion/decision/FormularioDecision";
-import { MENSAJES } from "@/app/edicion/textos";
+import { MENSAJES, TEXTOS_DECISION, TEXTOS_PLAN } from "@/app/edicion/textos";
 import type { DatosEdicionDecision } from "@/app/edicion/tipos";
 import { montar, texto, type Montaje } from "../graficas/dom";
 
@@ -63,6 +63,7 @@ const control = (etiqueta: string) => {
   return document.getElementById(label.htmlFor) as HTMLInputElement & HTMLSelectElement & HTMLTextAreaElement;
 };
 const opciones = (etiqueta: string) => [...control(etiqueta).options].map((o) => o.value);
+const resumen = () => m.contenedor.querySelector<HTMLElement>(".edicion-resumen")!;
 const boton = (t: string) => [...m.contenedor.querySelectorAll("button")].find((b) => texto(b) === t) as HTMLButtonElement;
 async function escribir(el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, valor: string) {
   const proto = el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
@@ -104,12 +105,35 @@ describe("FormularioDecision · reglas y órdenes que se pueden citar", () => {
     expect(texto(m.contenedor)).toContain("«No actuar» no lleva orden");
   });
 
-  it("la excepción solo con una regla citada", async () => {
+  it("la excepción solo con una regla citada, y deshabilitada dice por qué", async () => {
     await pintar();
     const excepcion = control("Se aparta de la acción de la regla (excepción)");
     expect(excepcion.disabled).toBe(true);
+    const ayuda = document.getElementById("decision-excepcion-ayuda")!;
+    expect(texto(ayuda)).toBe(TEXTOS_DECISION.AYUDA_EXCEPCION);
+    expect(excepcion.getAttribute("aria-describedby")?.split(" ")).toContain("decision-excepcion-ayuda");
     await escribir(control("Regla que cita"), "r-v2-a");
     expect(control("Se aparta de la acción de la regla (excepción)").disabled).toBe(false);
+  });
+
+  it("lo que se soltó no vuelve solo: cambiar la fecha y volver no recupera la regla ni la excepción", async () => {
+    await pintar();
+    await escribir(control("Regla que cita"), "r-v2-a");
+    await act(async () => { control("Se aparta de la acción de la regla (excepción)").click(); });
+    await escribir(control("Fecha de la decisión"), "2026-12-30");
+    await escribir(control("Fecha de la decisión"), "2027-02-08");
+    expect(control("Regla que cita").value).toBe("");
+    expect(control("Se aparta de la acción de la regla (excepción)").checked).toBe(false);
+    await escribir(control("Orden de Trii (opcional)"), "o-venta-a");
+    await escribir(control("Qué decidió"), "COMPRAR");
+    await escribir(control("Qué decidió"), "VENDER");
+    expect(control("Orden de Trii (opcional)").value).toBe("");
+  });
+
+  it("dice qué es obligatorio, con un aviso asociado al formulario", async () => {
+    await pintar();
+    expect(texto(document.getElementById("edicion-obligatorios"))).toBe(TEXTOS_PLAN.OBLIGATORIOS);
+    expect(m.contenedor.querySelector("form")!.getAttribute("aria-describedby")?.split(" ")).toContain("edicion-obligatorios");
   });
 });
 
@@ -141,15 +165,18 @@ describe("FormularioDecision · envío", () => {
     await pintar();
     await clic(boton("Registrar la decisión"));
     await responder({ error: "x", codigo: "DATOS_INVALIDOS", campos: [{ campo: "motivo", codigo: "VACIO" }, { campo: "accion", codigo: "ACCION_DISTINTA_SIN_EXCEPCION" }] }, 400);
-    expect(document.activeElement).toBe(m.contenedor.querySelector("[role=alert]"));
+    expect(document.activeElement).toBe(resumen());
     expect(control("Por qué").getAttribute("aria-invalid")).toBe("true");
-    expect(texto(m.contenedor.querySelector("[role=alert]"))).toContain(MENSAJES.ACCION_DISTINTA_SIN_EXCEPCION);
+    expect(texto(resumen())).toContain(MENSAJES.ACCION_DISTINTA_SIN_EXCEPCION);
+    // El error del campo enlaza a su control.
+    const enlace = [...resumen().querySelectorAll("a")].find((a) => texto(a).includes(MENSAJES.VACIO))!;
+    expect(enlace.getAttribute("href")).toBe("#decision-motivo");
   });
 
   it("sin sesión (401): pide volver a ingresar", async () => {
     await pintar();
     await clic(boton("Registrar la decisión"));
     await responder({ error: "No autenticado" }, 401);
-    expect(texto(m.contenedor.querySelector("[role=alert]"))).toContain(MENSAJES.SESION_VENCIDA);
+    expect(texto(resumen())).toContain(MENSAJES.SESION_VENCIDA);
   });
 });

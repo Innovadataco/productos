@@ -129,6 +129,17 @@ describe("decisión con su orden, en una sola transacción", () => {
     expect(await contar()).toEqual(antes);
   });
 
+  it("dos registros a la vez con la misma orden: uno entra, el otro sale ORDEN_YA_ENLAZADA y no deja su decisión", async () => {
+    const venta = await nuevaOrden("VENTA", mas(3));
+    const antes = await contar();
+    const datos = { fechaDecision: mas(2), instrumentoId: instA, accion: "VENDER" as const, motivo: "A la vez (ficticio)", autorId: duenoId };
+    const r = await Promise.all(Array.from({ length: 4 }, () => codigo(registrarDecisionConOrden(db, datos, venta.id, { hoy: HOY }))));
+    expect(r.filter((c) => c === "SIN_ERROR")).toHaveLength(1);
+    expect(r.filter((c) => c !== "SIN_ERROR").every((c) => c === "ORDEN_YA_ENLAZADA"), r.join(",")).toBe(true);
+    const despues = await contar();
+    expect([despues.decisiones - antes.decisiones, despues.enlaces - antes.enlaces]).toEqual([1, 1]);
+  });
+
   it("«no actuar» no lleva orden: NO_ACTUAR_SIN_ORDEN y nada escrito", async () => {
     const compra = await nuevaOrden("COMPRA", mas(3));
     const antes = await contar();
@@ -137,10 +148,13 @@ describe("decisión con su orden, en una sola transacción", () => {
   });
 });
 
-/** Los INSERT que privilegios.sql le da a inv_app en las tablas del plan (leídos del archivo, sin comentarios). */
-function insertsDelPlan(): string[] {
+/** Los INSERT (por columna) que privilegios.sql le da a inv_app en las tablas del plan, leídos del archivo. */
+function insertsDelPlan(): { readonly tabla: string; readonly columnas: string }[] {
   const sql = readFileSync(new URL("../../docker/migrador/privilegios.sql", import.meta.url), "utf8").replace(/--.*$/gm, "");
-  return [...sql.matchAll(/GRANT INSERT ON TABLE public\.([a-z_]+) TO inv_app;/g)].map((m) => m[1]!).filter((t) => TABLAS_DEL_PLAN.includes(t)).sort();
+  return [...sql.matchAll(/GRANT INSERT (\([^)]*\)) ON TABLE public\.([a-z_]+) TO inv_app;/g)]
+    .map((m) => ({ tabla: m[2]!, columnas: m[1]! }))
+    .filter((g) => TABLAS_DEL_PLAN.includes(g.tabla))
+    .sort((a, b) => a.tabla.localeCompare(b.tabla));
 }
 
 describe("con los privilegios de inv_app (solo INSERT en el plan): las funciones reales del dominio", () => {
@@ -148,9 +162,9 @@ describe("con los privilegios de inv_app (solo INSERT en el plan): las funciones
   const quien = async () => (await restringida.$queryRaw<{ u: string }[]>`SELECT current_user::text AS u`)[0]?.u;
 
   beforeAll(async () => {
-    const tablas = insertsDelPlan();
-    expect(tablas).toEqual(TABLAS_DEL_PLAN);
-    for (const t of tablas) await db.$executeRawUnsafe(`GRANT INSERT ON TABLE public.${t} TO ${ROL}`);
+    const inserts = insertsDelPlan();
+    expect(inserts.map((g) => g.tabla)).toEqual(TABLAS_DEL_PLAN);
+    for (const g of inserts) await db.$executeRawUnsafe(`GRANT INSERT ${g.columnas} ON TABLE public.${g.tabla} TO ${ROL}`);
     const url = new URL(process.env.DATABASE_URL ?? "");
     url.searchParams.set("connection_limit", "1");
     restringida = new PrismaClient({ datasourceUrl: url.toString() });
@@ -159,6 +173,7 @@ describe("con los privilegios de inv_app (solo INSERT en el plan): las funciones
 
   afterAll(async () => {
     await restringida?.$disconnect();
+    // REVOKE de tabla quita también los de columna.
     for (const t of TABLAS_DEL_PLAN) await db.$executeRawUnsafe(`REVOKE INSERT ON TABLE public.${t} FROM ${ROL}`);
   });
 
@@ -187,6 +202,18 @@ describe("con los privilegios de inv_app (solo INSERT en el plan): las funciones
     expect(await db.enlaceDecisionOrden.count({ where: { ordenId: otraVenta.id, decisionId: conOrden.id } })).toBe(1);
   });
 
+  it("los instantes los pone la base: inv_app no puede fijar cuándo se registró una decisión, una versión o un enlace", async () => {
+    const v = await db.planVersion.findFirstOrThrow({ orderBy: { version: "desc" }, select: { id: true } });
+    const d = await db.decision.findFirstOrThrow({ select: { id: true } });
+    const o = await nuevaOrden("VENTA", mas(7));
+    const intentos = [
+      `INSERT INTO decision (id, "planVersionId", "instrumentoId", accion, motivo, "decididaPorId", "fechaDecision", "registradaEn") VALUES ('d-sello', '${v.id}', '${instA}', 'VENDER', 'x', '${duenoId}', '${mas(6).toISOString().slice(0, 10)}', '2001-01-01')`,
+      `INSERT INTO plan_version (id, version, "vigenteDesde", motivo, "aprobadaPorId", "creadaEn") VALUES ('v-sello', 999999, '${mas(30).toISOString().slice(0, 10)}', 'x', '${duenoId}', '2001-01-01')`,
+      `INSERT INTO enlace_decision_orden (id, "ordenId", "decisionId", "creadoPorId", "creadoEn") VALUES ('e-sello', '${o.id}', '${d.id}', '${duenoId}', '2001-01-01')`,
+    ];
+    for (const sql of intentos) await expect(restringida.$executeRawUnsafe(sql), sql.slice(0, 40)).rejects.toThrow(/42501|permission denied/);
+  });
+
   it("los disparadores de solo inserción siguen mandando aunque el rol tuviera UPDATE (defensa en profundidad)", async () => {
     await db.$executeRawUnsafe(`GRANT UPDATE, DELETE ON TABLE public.decision TO ${ROL}`);
     try {
@@ -202,11 +229,12 @@ describe("el candado de una decisión (consultivo, sin FOR UPDATE)", () => {
     const d = await registrarDecision(db, { fechaDecision: mas(2), instrumentoId: instA, accion: "VENDER", motivo: "Para el candado (ficticio)", autorId: duenoId }, { hoy: HOY });
     expect(await db.$transaction((tx) => bloquearDecision(tx, "decision-que-no-existe"))).toBe(false);
     const orden: string[] = [];
+    let segundo: Promise<void> = Promise.resolve();
     await db.$transaction(
       async (tx) => {
         expect(await bloquearDecision(tx, d.id)).toBe(true);
-        // El segundo no se espera aquí (esperaría al candado que esta transacción tiene): se mira después.
-        void db.$transaction(async (tx2) => {
+        // El segundo no se espera aquí (esperaría al candado que esta transacción tiene): se espera después.
+        segundo = db.$transaction(async (tx2) => {
           await bloquearDecision(tx2, d.id);
           orden.push("segundo");
         });
@@ -215,6 +243,7 @@ describe("el candado de una decisión (consultivo, sin FOR UPDATE)", () => {
       },
       { timeout: 10_000 },
     );
-    await expect.poll(() => orden).toEqual(["primero", "segundo"]);
+    await segundo;
+    expect(orden).toEqual(["primero", "segundo"]);
   });
 });

@@ -109,6 +109,18 @@ describe("leerPedidoVersion", () => {
     expect(errores(leerPedidoVersion({ ...VERSION, reglas: "todas" }))).toEqual([{ campo: "reglas", codigo: "FORMATO_INVALIDO" }]);
   });
 
+  it("un texto con el carácter nulo se rechaza en el borde (PostgreSQL no lo guarda: sería un 500)", () => {
+    expect(errores(leerPedidoVersion({ ...VERSION, motivo: "Ajuste\u0000ficticio", reglas: [{ ...REGLA, detalle: "a\u0000" }] }))).toEqual([
+      { campo: "motivo", codigo: "FORMATO_INVALIDO" },
+      { campo: "reglas[0].detalle", codigo: "FORMATO_INVALIDO" },
+    ]);
+  });
+
+  it("las claves se comparan una por una (una sola clave con comas no se hace pasar por varias)", () => {
+    expect(errores(leerPedidoEnlace({ "decisionId,ordenId": "x" }))).toEqual([{ campo: "cuerpo", codigo: "FORMATO_INVALIDO" }]);
+    expect(errores(leerPedidoEnlace({ decisionId: "d-1", ordenId: "o-1", "": "x" }))).toEqual([{ campo: "cuerpo", codigo: "FORMATO_INVALIDO" }]);
+  });
+
   it("una versión sin reglas pasa el borde: SIN_REGLAS lo dice el dominio, como al importar", () => {
     expect(leerPedidoVersion({ ...VERSION, reglas: [] })).toMatchObject({ ok: true, valor: { reglas: [] } });
   });
