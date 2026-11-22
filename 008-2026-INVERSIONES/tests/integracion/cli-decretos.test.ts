@@ -74,11 +74,14 @@ describe("importar-decretos como proceso", { timeout: 12 * POR_CLI_MS }, () => {
   });
 
   it("ensayo (0, no escribe), --aplicar (0, aplicado) y otra vez (0, sin cambios)", async () => {
-    const ruta = archivo("decretos.csv", [fila(NEMO)]);
+    // El nombre del archivo lo elige el dueño y puede nombrar una especie: no se guarda (la carga dice «decretos.csv»).
+    const ruta = archivo(`decretos-${NEMO}.csv`, [fila(NEMO)]);
     comprobar(correr(["--archivo", ruta, "--email", email]), 0, "listo para --aplicar; no se escribió nada");
     expect(await decretos()).toBe(0);
     comprobar(correr(["--archivo", ruta, "--email", email, "--aplicar"]), 0, "Resultado: aplicado · carga");
     expect(await decretos()).toBe(1);
+    const { filaFuente } = await db.dividendoDecretado.findFirstOrThrow({ where: { instrumento: { nemotecnico: NEMO } }, select: { filaFuente: { select: { primeraCarga: { select: { nombreArchivo: true } } } } } });
+    expect(filaFuente.primeraCarga.nombreArchivo).toBe("decretos.csv");
     comprobar(correr(["--archivo", ruta, "--email", email, "--aplicar"]), 0, "ya estaba todo registrado; no se escribió nada");
     expect(await decretos()).toBe(1);
   });

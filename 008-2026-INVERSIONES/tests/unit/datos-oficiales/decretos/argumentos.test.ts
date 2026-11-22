@@ -52,6 +52,8 @@ describe("decretos · ayuda", () => {
       expect(texto).toMatch(/C5b/);
       expect(texto).toMatch(/dos veces/);
       expect(texto).toMatch(/CRUCE_PENDIENTE/);
+      // Solo el crudo va cifrado: la nota y la referencia quedan en claro en la base (decisión de esquema de C1).
+      expect(texto).toMatch(/nota y la referencia quedan en claro/);
       expect(texto).toMatch(/0 bien · 1 .* · 2 .* · 3 rechazado/);
       expect(texto).not.toMatch(/\b(compr[ae]|vend[ae]|recomendamos)\b/i);
     }

@@ -123,7 +123,7 @@ describe("decretos · clave natural de la fila cruda y guarda del cruce", () => 
 
   it("solo una base de pruebas (minúsculas, terminada en _test) admite aplicar hasta C5b", () => {
     for (const si of ["inversiones_test", "inversiones_decretos_test", "x_test"]) expect(basePermiteAplicar(si), si).toBe(true);
-    for (const no of ["inversiones", "inversiones_test_x", "INVERSIONES_TEST", "inversiones-test", "test", "", "inversiones_test "]) {
+    for (const no of ["inversiones", "inversiones_test_x", "INVERSIONES_TEST", "inversiones-test", "test", "_test", "", "inversiones_test "]) {
       expect(basePermiteAplicar(no), no).toBe(false);
     }
   });

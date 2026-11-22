@@ -66,6 +66,12 @@ describe("decretos · salida del CLI", () => {
     expect(salidaDecretos(r, PROD).errores.at(-1)).toBe(PARE_VIA_B);
   });
 
+  it("ESPECIE_AMBIGUA dice qué revisar: el texto es el nemotécnico de una acción y el símbolo de Trii de otra", () => {
+    const { codigo, todo } = texto({ modo: "ENSAYO", estado: "RECHAZADO", total: 1, hallazgos: [{ linea: 4, columna: "especie", codigo: "ESPECIE_AMBIGUA" }] });
+    expect(codigo).toBe(3);
+    expect(todo).toMatch(/ESPECIE_AMBIGUA: .*nemotécnico de una acción y el símbolo de Trii de otra/);
+  });
+
   it("nunca recomienda comprar ni vender", () => {
     const todos = [
       texto(ok({})).todo, texto(ok({ aplicarPermitido: false })).todo,

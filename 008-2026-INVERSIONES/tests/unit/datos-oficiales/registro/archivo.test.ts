@@ -77,6 +77,14 @@ describe("registro · lectura del CSV del dueño", () => {
     expect(leer("alfa,beta,gama\nÁrbol ñandú,y1,z1\n").ok).toBe(true);
   });
 
+  it("también los demás de formato e invisibles: marca árabe, separador mongol, selectores de variación, rellenos hangul, anclas y etiquetas", () => {
+    const malas = ["\u061c", "\u180e", "\u034f", "\ufe0f", "\u115f", "\u1160", "\u3164", "\uffa0", "\ufff9", "\u{e0041}", "\u2064", "\u2029"];
+    for (const mala of malas) {
+      expect(hallazgos(leer(`alfa,beta,gama\nx1,y${mala}1,z1\n`)), JSON.stringify(mala)).toEqual([{ linea: 2, columna: "beta", codigo: "CARACTER_NO_PERMITIDO" }]);
+    }
+    expect(leer("alfa,beta,gama\nCafé 😀 ü,y1,z1\n").ok).toBe(true);
+  });
+
   it("los hallazgos nunca llevan el valor de la celda", () => {
     const r = leer("alfa,beta,gama\nFICTA-4613\u0007,y1\n");
     expect(r.ok).toBe(false);

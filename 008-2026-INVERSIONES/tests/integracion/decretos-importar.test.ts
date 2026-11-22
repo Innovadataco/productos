@@ -3,7 +3,10 @@
 // CIFRADA y su visto, y la v1; reimportar no escribe nada; un cambio es la v2 vigente, que retira a la v1 en el mismo
 // instante; anular es una versión nueva `anulada` con su nota (P10); una cadena rota sembrada a mano (v2 sin v1, 1 y 3,
 // retiro sin sucesor) rechaza sin escribir; si la inserción de la versión siguiente falla después del retiro, la
-// transacción se deshace (la v1 sigue vigente); dos cargas a la vez del mismo cambio dejan una sola v2.
+// transacción se deshace (la v1 sigue vigente); dos cargas a la vez del mismo cambio dejan una sola v2; con la tabla
+// bloqueada (una migración), la carga no espera más que su lock_timeout; un P2002 en la fila cruda no se disfraza de
+// concurrencia; una especie que es el nemotécnico de una acción y el símbolo de Trii de otra es ambigua; el nombre del
+// archivo del dueño no se guarda.
 // Datos inventados: especies FICT*, números raros, anuncios anteriores a 2022.
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -30,7 +33,7 @@ const fila = (especie: string, c: Partial<Fila> = {}): Fila => ({
 const csv = (filas: readonly Fila[]) =>
   new TextEncoder().encode(`${ENCABEZADO_DECRETOS.join(",")}\n${filas.map((f) => COLUMNAS.map((k) => f[k]).join(",")).join("\n")}\n`);
 const importar = (filas: readonly Fila[], aplicar: boolean, correo = email): Promise<ResultadoDecretos> =>
-  importarDecretos(db, { contenido: csv(filas), nombreArchivo: "decretos.ficticio.csv", email: correo, aplicar });
+  importarDecretos(db, { contenido: csv(filas), nombreArchivo: `decretos-${nemo("A")}.csv`, email: correo, aplicar });
 
 /** Conteos de todo lo que una carga de decretos puede escribir: si no cambian, no se escribió nada. */
 async function huella() {
@@ -66,6 +69,10 @@ beforeAll(async () => {
   await db.usuario.create({ data: { email: familia, rol: "FAMILIA" } });
   for (const letra of ["A", "C", "R", "S", "U", "V", "X", "Y"]) ids[letra] = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo(letra), nombre: `Ficticia ${letra}` } })).id;
   ids["B"] = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo("B"), simboloTrii: nemo("T"), nombre: "Ficticia B" } })).id;
+  // P es el nemotécnico de una acción y el símbolo de Trii de otra (Q): un decreto de «P» es ambiguo.
+  ids["P"] = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo("P"), nombre: "Ficticia P" } })).id;
+  ids["Q"] = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo("Q"), simboloTrii: nemo("P"), nombre: "Ficticia Q" } })).id;
+  ids["L"] = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: nemo("L"), nombre: "Ficticia L" } })).id;
   // Un fondo con nemotécnico (no debería existir así, pero no es una acción): un decreto no se le registra.
   await db.instrumento.create({ data: { tipo: "FIC", nemotecnico: nemo("F"), codigoFic: `9${corrida}1`, nombre: "Fondo ficticio" } });
 });
@@ -98,6 +105,15 @@ describe("importar-decretos · ensayo y rechazos (no escriben nada)", () => {
     expect(await db.dividendoDecretado.count({ where: { instrumentoId: ids["B"] } })).toBe(0);
   });
 
+  it("una especie que es el nemotécnico de una acción y el símbolo de Trii de otra: ESPECIE_AMBIGUA, sin escribir nada", async () => {
+    const antes = await huella();
+    const r = await importar([fila(nemo("A")), fila(nemo("P"))], true);
+    expect(r).toMatchObject({ estado: "RECHAZADO", hallazgos: [{ linea: 3, columna: "especie", codigo: "ESPECIE_AMBIGUA" }] });
+    expect(await huella()).toEqual(antes);
+    // El nemotécnico de Q no es ambiguo: sí resuelve.
+    expect(await importar([fila(nemo("Q"))], false)).toMatchObject({ estado: "LISTO" });
+  });
+
   it("solo el dueño activo: la familia o un correo que no existe salen con USUARIO_NO_AUTORIZADO", async () => {
     for (const correo of [familia, `nadie-${corrida}@ejemplo.invalid`]) expect(codigos(await importar([fila(nemo("A"))], true, correo))).toEqual(["0:USUARIO_NO_AUTORIZADO"]);
   });
@@ -116,7 +132,7 @@ describe("importar-decretos · aplicar", () => {
     expect(r).toMatchObject({ modo: "APLICAR", estado: "APLICADO", conteos: { filas: 2, nuevos: 2, versiones: 0, anulaciones: 0, sinCambios: 0 } });
     if (r.estado !== "APLICADO") return;
     const carga = await db.cargaArchivo.findUniqueOrThrow({ where: { id: r.cargaId! } });
-    expect(carga).toMatchObject({ tipoFuente: "REGISTRO_DECRETOS", estado: "CARGADO", filasTotal: 2, filasNuevas: 2, filasRepetidas: 0, cargadoPorId: ids["dueno"], nombreArchivo: "decretos.ficticio.csv" });
+    expect(carga).toMatchObject({ tipoFuente: "REGISTRO_DECRETOS", estado: "CARGADO", filasTotal: 2, filasNuevas: 2, filasRepetidas: 0, cargadoPorId: ids["dueno"], nombreArchivo: "decretos.csv" });
     const [v1] = await versiones(ids["A"]!);
     expect(v1).toMatchObject({ version: 1, reemplazadoEn: null, anulada: false, tipo: "ORDINARIO", cuota: 1, moneda: "COP", nota: "primera cuota", fechaAnuncio: dia("2021-03-17"), fechaEx: dia("2021-04-14"), fechaPago: dia("2021-04-21") });
     expect(v1!.valorPorAccion.toString()).toBe("1873.204517");
@@ -213,14 +229,33 @@ describe("importar-decretos · la cadena de versiones y la atomicidad", () => {
     expect((await versiones(ids["V"]!)).map((v) => [v.version, v.reemplazadoEn === null])).toEqual([[1, false], [2, true]]);
   });
 
-  it("una fila cruda huérfana con la clave de la versión siguiente (P2002): CONFLICTO_CONCURRENTE sin escribir nada", async () => {
+  it("una fila cruda huérfana con la clave de la versión siguiente (P2002 en fila_fuente, defecto propio): sube, sin escribir nada", async () => {
     expect(await importar([fila(nemo("X"))], true)).toMatchObject({ estado: "APLICADO" });
     const carga = await db.cargaArchivo.create({ data: { tipoFuente: "REGISTRO_DECRETOS", nombreArchivo: "huerfana.ficticio.csv", sha256: "a".repeat(64), estado: "CARGADO", cargadoPorId: ids["dueno"]! } });
     await db.filaFuente.create({ data: { tipoFuente: "REGISTRO_DECRETOS", claveNatural: claveNaturalDecreto(ids["X"]!, { tipo: "ORDINARIO", fechaAnuncio: dia("2021-03-17"), cuota: 1 }, 2), ocurrencia: 1, primeraCargaId: carga.id, primeraFilaNo: 2, crudo: {} } });
     const antes = await huella();
-    expect(codigos(await importar([fila(nemo("X"), { valor_por_accion: "41.3729" })], true))).toEqual(["0:CONFLICTO_CONCURRENTE"]);
+    await expect(importar([fila(nemo("X"), { valor_por_accion: "41.3729" })], true)).rejects.toMatchObject({ code: "P2002" });
     expect(await huella()).toEqual(antes);
     expect((await versiones(ids["X"]!)).map((v) => [v.version, v.reemplazadoEn === null])).toEqual([[1, true]]);
+  });
+
+  it("con dividendo_decretado bloqueada (como en una migración), la carga no espera más que su lock_timeout y no escribe", { timeout: 45_000 }, async () => {
+    expect(await importar([fila(nemo("L"))], true)).toMatchObject({ estado: "APLICADO" });
+    const antes = await huella();
+    let bloqueada = false;
+    const bloqueo = db.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(`LOCK TABLE "dividendo_decretado" IN ACCESS EXCLUSIVE MODE`);
+      bloqueada = true;
+      await new Promise((r) => setTimeout(r, 15_000));
+    }, { timeout: 30_000, maxWait: 5_000 });
+    while (!bloqueada) await new Promise((r) => setTimeout(r, 50));
+    const inicio = Date.now();
+    const intento = await importar([fila(nemo("L"), { valor_por_accion: "41.3729" })], true).then(() => "escribió", () => "falló");
+    const espera = Date.now() - inicio;
+    await bloqueo;
+    expect(intento).toBe("falló");
+    expect(espera).toBeLessThan(14_000);
+    expect(await huella()).toEqual(antes);
   });
 
   it("un archivo con nuevos, cambios y anulaciones de varias especies queda en una sola carga, con sus conteos", async () => {
