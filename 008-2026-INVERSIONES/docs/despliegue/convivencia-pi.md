@@ -33,7 +33,7 @@ Inversiones comparte el VPS de producción con PI (D-015). **PI tiene prioridad*
 2. **Al final**, con una trampa aunque falle, `docker start` de esos mismos IDs, **salvo que exista la marca de pausa** `<raíz>/estado/pausado`. Si existe, PI no reanuda.
 3. **Mientras despliega, PI tiene el candado común** (`/var/lock/despliegue-vps.lock`).
    - Lo toma desde su SPEC-980, ya activa. Espera hasta 900 s y, si no lo obtiene, aborta limpio con salida 3.
-   - Inversiones lo toma sin esperar en `desplegar-prod.sh`, `reanudar-008.sh`, `crear-roles-prod.sh`, `crear-acceso-inicial.sh` y `cargar-prod.sh`. Si PI lo tiene, se niega con «PI desplegando».
+   - Inversiones lo toma sin esperar en `desplegar-prod.sh`, `reanudar-008.sh`, `crear-roles-prod.sh`, `crear-acceso-inicial.sh`, `cargar-prod.sh` y `reaplicar-limites-008.sh`. Si PI lo tiene, se niega con «PI desplegando».
    - Antes de una carga se avisa al CEO de PI en una línea, solo por trazabilidad: la exclusión la resuelve el candado ([produccion.md](produccion.md) §11).
 
 **Para el código de PI (lo escribe PI, no Inversiones):** el `docker stop` por etiqueta tiene que aceptar una **lista vacía**. Con Inversiones en pausa (`pausar-008.sh` hace `down`), no hay ningún contenedor de `inv-008-prod`, y `docker stop` sin argumentos falla. Por ejemplo:
@@ -91,7 +91,7 @@ sudo env INV_TAG=$(sudo cat "$B/estado/sha-actual") $COMPOSE up -d --wait && sud
 
 ## 3 · Medición de memoria
 `scripts/medir-memoria.sh` lee `MemAvailable` y `SwapFree` de `/proc/meminfo`, más `docker stats --no-stream` **solo de los contenedores de `inv-008-prod`**.
-- **En el despliegue:** `desplegar-prod.sh` lo corre antes de `up` y 10 minutos después. Las dos mediciones quedan en `<raíz>/estado/mediciones/<sha>-<fecha>.txt`.
+- **En el despliegue:** `desplegar-prod.sh` lo corre antes de `up` y después de la espera de la medición (120 o 600 s; [produccion.md §5](produccion.md)). En la espera corta, si `MemAvailable` está bajo 1 GiB o `SwapFree` bajo 512 MiB, la espera se extiende a 600 s y se mide otra vez: son tres mediciones. Quedan en `<raíz>/estado/mediciones/<sha>-<fecha>.txt`.
 - **A mano:**
   ```sh
   sudo <raíz>/repo/008-2026-INVERSIONES/scripts/medir-memoria.sh --etiqueta "en reposo"
@@ -123,6 +123,7 @@ Se detiene Inversiones, con `pausar-008.sh`, si se da cualquiera de estas condic
 - **Qué lee:** la memoria y el `oom_kill` **jerárquico** de `/sys/fs/cgroup/system.slice/memory.events`, que persiste aunque el contenedor muerto se recree.
 - **Qué hace:** si se cumple el criterio, lo informa con el comando de corte y sale con 3. **No detiene nada.**
 - **En el despliegue:** `desplegar-prod.sh` la corre al final; si sale con 3, no imprime `DEPLOY VERIFICADO`.
+  - El piso de memoria de la espera corta (§3) también sale con 3 y sin `DEPLOY VERIFICADO`, con el aviso «MEMORIA BAJO EL PISO…». Nada se detiene: el sha nuevo queda registrado y el corte es manual, con `pausar-008.sh`.
 
 ## 5 · El vigía (`inv-008-vigia`): solo avisa por Telegram
 - **Lo que lee:**
@@ -177,6 +178,7 @@ Lo ejecuta el coordinador con Jelk después del primer despliegue (condición de
 - `desplegar-prod.sh` toma los dos candados y revisa los procesos de PI en tres momentos: antes de empezar, antes de migrar y antes de `up`.
 
 ---
+> v2.6 · 2026-11-21 · 23:26 (-05) · Inversiones · Fábrica Inversiones (frente docs-tanda-21nov) · §1: `reaplicar-limites-008.sh` toma el candado común; §3: la medición antes de `up` y después de la espera (120 o 600 s), con el piso que extiende a 600 s (tres mediciones); §4: el piso de la espera corta también sale con 3 sin DEPLOY VERIFICADO (v2.6 sobre la v2.5)
 > v2.5 · 2026-11-21 · 16:57 (-05) · Inversiones · Fábrica Inversiones (frente convivencia-d019) · D-019: la pausa de Inversiones en los despliegues de PI ya no es obligatoria; PI pausa solo para ese build si su preflight arranca con MemAvailable < 1 GiB o SwapFree < 512 MB; marca de pausa y candado común sin cambios
 > v2.4 · 2026-11-21 · 07:05 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · SPEC-980 de PI activa: PI toma el candado común y espera hasta 900 s; la pausa baja aunque no pueda escribir la marca, y con un despliegue en curso se niega; marcador `<raíz>` en el aviso del vigía
 > v2.3 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · sin nombres de contenedores ni de proyectos ajenos (salvo el alias SSH del Mac, decidido); reanudación manual marcada como excepción; `crear-roles-prod.sh` y `crear-acceso-inicial.sh` también toman el candado común
