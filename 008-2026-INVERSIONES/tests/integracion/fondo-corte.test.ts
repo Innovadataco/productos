@@ -58,7 +58,14 @@ beforeAll(async () => {
   const cert = await importarCertificacion(db, { contenido: generarCertificacionPdf(espec), usuarioId: duenoId, fechaCorte: CORTE, fondoCodigo: codigo, hoy: HOY });
   expect(cert.errores).toEqual([]);
   // Las unidades del fondo (1000) y el saldo certificado (6 250 000): cuadra solo con 6250 del día del corte.
-  await db.movimientoFondo.create({ data: { fondoId, fecha: dias(-20), unidades: dec("1000"), tipo: "CONSTITUCION", fuente: "MANUAL" } });
+  // La constitución lleva su ajuste de caja APORTE_FIC, de la misma fecha y con −monto (migración movimiento_fondo_reglas).
+  // El monto, inventado: el control FONDO no lo usa.
+  const aporte = await db.ajusteCaja.create({
+    data: { fecha: dias(-20), monto: dec("-6173.4129"), categoria: "APORTE_FIC", fuente: "MANUAL", motivo: "aporte ficticio", creadoPorId: duenoId },
+  });
+  await db.movimientoFondo.create({
+    data: { fondoId, fecha: dias(-20), unidades: dec("1000"), monto: dec("6173.4129"), tipo: "CONSTITUCION", fuente: "MANUAL", ajusteCajaId: aporte.id },
+  });
 });
 
 afterAll(async () => {
