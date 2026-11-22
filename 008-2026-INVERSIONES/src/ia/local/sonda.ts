@@ -3,7 +3,7 @@
  * - ping: GET /api/tags responde y el modelo aprobado está con su digest. NO toma el turno: no carga el modelo, y un
  *   ping durante una generación larga no debe dar una caída falsa;
  * - smoke (si se pide): una generación mínima (`cuerpoSmoke`) con el turno, como cualquier pedido al Mac. Vale con
- *   `response` o con `thinking`, aunque pare por el tope de tokens.
+ *   `response` o con `thinking`, aunque pare por el tope de tokens; otra finalización es FINALIZACION_INESPERADA.
  * Con el digest por verificar, la sonda dice DIGEST_POR_VERIFICAR sin tocar la red. Opciones inválidas son un defecto
  * del código: rechaza con `ErrorLocal`. Lo demás nunca rechaza: vuelve con la etapa, el motivo y el detalle.
  */
@@ -58,7 +58,9 @@ async function pasos(contexto: ContextoLocal, digest: string, smoke: boolean, li
     if (typeof turno !== "function") return fallida("SMOKE", turno, latencia());
     liberar = turno;
     const respuesta = await pedirGeneracion(contexto, cuerpoSmoke(contexto.nombre), plazo);
-    return respuesta.ok ? Object.freeze({ ok: true, smoke: "OK", latenciaMs: latencia() }) : fallida("SMOKE", respuesta, latencia());
+    if (!respuesta.ok) return fallida("SMOKE", respuesta, latencia());
+    if (respuesta.generacion.finalizacion === "OTRA") return fallida("SMOKE", falloLocal("ERROR_PROVEEDOR", "FINALIZACION_INESPERADA"), latencia());
+    return Object.freeze({ ok: true, smoke: "OK", latenciaMs: latencia() });
   } finally {
     liberar?.();
     plazo.cerrar();

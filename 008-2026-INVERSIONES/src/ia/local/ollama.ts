@@ -6,11 +6,18 @@
  * - `cuerpoSmoke`: la generación mínima de la sonda, como el smoke de PI (sin `format` ni `system`, pocos tokens).
  * - `verificarModelo`: en `/api/tags`, exactamente una entrada con el nombre aprobado (en `name` o en `model`) y con el
  *   digest aprobado (64 hex, con o sin el prefijo «sha256:», comparado exacto).
- * - `leerGeneracion`: la respuesta de `/api/generate`, del mismo modelo y terminada; la salida es `response` y, si
- *   viene vacía, `thinking` (como PI: un modelo con modo de pensar puede dejar ahí el JSON). Se entrega tal cual.
+ * - `leerGeneracion`: la respuesta de `/api/generate` (con `model` en texto), del mismo modelo y terminada; la salida
+ *   es `response` y, si viene vacía o falta, `thinking` (como PI: un modelo con modo de pensar puede dejar ahí el JSON),
+ *   con su origen marcado. Un `response` presente que no es texto es un cuerpo inválido. Se entrega tal cual. La
+ *   finalización (`done_reason`) se informa: «stop» o ausente es completa, «length» es por largo, otra cosa es otra;
+ *   quien llama decide.
  *
  * Los cuerpos se arman con el JSON canónico: el orden queda fijo. Hechos de la documentación de Ollama (api.md): el
  * digest de tags viene sin prefijo y `keep_alive` vale por omisión 5m; `thinking` en generate no está documentado.
+ *
+ * No se fija `num_ctx`: un valor distinto del que tiene cargado el modelo de PI podría hacer que Ollama lo recargue
+ * (sin verificar). Riesgo abierto: si la vista pasa del contexto por omisión del modelo, Ollama puede recortar el
+ * prompt sin avisar; se mide en E7 (`prompt_eval_count` frente al contexto del modelo en el Mac).
  */
 import type { PedidoGeneracion } from "../generador";
 import { esObjetoPlano } from "../formas";
@@ -35,13 +42,17 @@ export interface Aprobado {
   readonly digest: string;
 }
 
+export type OrigenSalida = "RESPONSE" | "THINKING";
+/** COMPLETA: «stop» o sin `done_reason`; POR_LARGO: «length» (la salida puede estar incompleta); OTRA: lo demás. */
+export type Finalizacion = "COMPLETA" | "POR_LARGO" | "OTRA";
+
 export interface Generacion {
   /** La salida elegida (`response` o, si viene vacía, `thinking`), sin recortar. */
   readonly salida: string;
+  readonly origen: OrigenSalida;
   readonly tokensEntrada: number | null;
   readonly tokensSalida: number | null;
-  /** El modelo paró por el tope de tokens (`done_reason: "length"`): la salida puede estar incompleta. */
-  readonly cortada: boolean;
+  readonly finalizacion: Finalizacion;
 }
 
 export function cuerpoGenerar(modelo: string, pedido: PedidoGeneracion): string {
@@ -73,15 +84,21 @@ export function verificarModelo(datos: unknown, aprobado: Aprobado): { readonly 
 const conContenido = (texto: unknown): texto is string => typeof texto === "string" && texto.trim() !== "";
 const conteo = (valor: unknown): number | null => (typeof valor === "number" && Number.isSafeInteger(valor) && valor >= 0 ? valor : null);
 
+function finalizacionDe(doneReason: unknown): Finalizacion {
+  if (doneReason === undefined || doneReason === "stop") return "COMPLETA";
+  return doneReason === "length" ? "POR_LARGO" : "OTRA";
+}
+
 export function leerGeneracion(datos: unknown, modelo: string): { readonly ok: true; readonly generacion: Generacion } | FalloLocal {
-  if (!esObjetoPlano(datos)) return falloLocal("ERROR_PROVEEDOR", "CUERPO_INVALIDO");
+  if (!esObjetoPlano(datos) || typeof datos.model !== "string") return falloLocal("ERROR_PROVEEDOR", "CUERPO_INVALIDO");
   if (datos.model !== modelo) return falloLocal("ERROR_PROVEEDOR", "MODELO_DISTINTO");
   if (datos.done !== true) return falloLocal("ERROR_PROVEEDOR", "GENERACION_INCOMPLETA");
   const { response, thinking } = datos;
-  const salida = conContenido(response) ? response : conContenido(thinking) ? thinking : null;
-  if (salida === null) return falloLocal("ERROR_PROVEEDOR", "RESPUESTA_VACIA");
+  if (response !== undefined && typeof response !== "string") return falloLocal("ERROR_PROVEEDOR", "CUERPO_INVALIDO");
+  const elegida = conContenido(response) ? { salida: response, origen: "RESPONSE" as const } : conContenido(thinking) ? { salida: thinking, origen: "THINKING" as const } : null;
+  if (elegida === null) return falloLocal("ERROR_PROVEEDOR", "RESPUESTA_VACIA");
   return {
     ok: true,
-    generacion: { salida, tokensEntrada: conteo(datos.prompt_eval_count), tokensSalida: conteo(datos.eval_count), cortada: datos.done_reason === "length" },
+    generacion: { ...elegida, tokensEntrada: conteo(datos.prompt_eval_count), tokensSalida: conteo(datos.eval_count), finalizacion: finalizacionDe(datos.done_reason) },
   };
 }

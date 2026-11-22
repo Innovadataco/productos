@@ -89,6 +89,9 @@ describe("barreraLocal · rechaza un pedido que no es ciego (PEDIDO_NO_CIEGO)", 
     ["una clave que no es del catálogo", (v: { hechos: HechoAbierto[] }) => {
       (v.hechos[1] as HechoAbierto).clave = "CLAVE_INVENTADA";
     }],
+    ["una clave que no es texto", (v: { hechos: HechoAbierto[] }) => {
+      (v.hechos[1] as HechoAbierto).clave = true;
+    }],
     ["una clave del catálogo de otro tipo", (v: { hechos: HechoAbierto[] }) => {
       (v.hechos[1] as HechoAbierto).clave = "REGLA_NIVEL";
     }],

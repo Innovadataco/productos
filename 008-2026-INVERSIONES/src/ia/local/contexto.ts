@@ -8,7 +8,7 @@ import { esObjetoPlano, soloCampos } from "../formas";
 import { urlLocal, leerDestinoLocal } from "./destino";
 import { ErrorLocal, falloLocal, type FalloLocal } from "./errores";
 import { BYTES_MAXIMOS_GENERAR, BYTES_MAXIMOS_TAGS, pedirJsonLocal, type BuscarLocal } from "./http";
-import { modeloAprobado } from "./modelos";
+import { PATRON_DIGEST, modeloAprobado } from "./modelos";
 import { leerGeneracion, verificarModelo, type Generacion } from "./ollama";
 import type { Plazo } from "./plazo";
 import { crearSemaforo, type Liberar, type Semaforo } from "./semaforo";
@@ -47,7 +47,8 @@ export function crearContexto(config: ConfigLocal, dependencias: DependenciasLoc
   if (!esObjetoPlano(crudo) || !soloCampos(crudo, CAMPOS_CONFIG)) throw new ErrorLocal("CONFIGURACION_INVALIDA");
   const destino = leerDestinoLocal(crudo.destino as string | undefined);
   const aprobado = modeloAprobado(crudo.modelo);
-  if (aprobado === null) throw new ErrorLocal("MODELO_NO_APROBADO");
+  // Un digest mal formado en la lista es un defecto de quien la editó: no se acepta el modelo.
+  if (aprobado === null || (aprobado.digest !== null && !PATRON_DIGEST.test(aprobado.digest))) throw new ErrorLocal("MODELO_NO_APROBADO");
   const deps: unknown = dependencias;
   if (!esObjetoPlano(deps) || !soloCampos(deps, CAMPOS_DEPENDENCIAS)) throw new ErrorLocal("CONFIGURACION_INVALIDA");
   const { fetch: buscar, ahora } = deps;

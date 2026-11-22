@@ -4,9 +4,10 @@
  * - El «ok» lo decide el estado (200 a 299), no `respuesta.ok`. Todo cuerpo que no se va a leer se cancela.
  * - Cuerpo con tope de bytes, leído por flujo: se rechaza por el content-length declarado y se corta el flujo si lo
  *   pasa. Después, UTF-8 estricto y JSON.
- * - Clasificación: con el plazo abortado, TIEMPO_AGOTADO (con su causa); un rechazo del `fetch` (conexión rechazada u
- *   otro fallo de red) o un corte a mitad del cuerpo, MODELO_NO_DISPONIBLE; un estado que no es 2xx o un cuerpo
- *   grande o inválido, ERROR_PROVEEDOR.
+ * - Clasificación: con el plazo abortado, TIEMPO_AGOTADO (con su causa); un rechazo del `fetch` con TypeError (así
+ *   rechaza el estándar un fallo de red: conexión rechazada u otro) o un corte a mitad del cuerpo, MODELO_NO_DISPONIBLE;
+ *   un estado que no es 2xx o un cuerpo grande o inválido, ERROR_PROVEEDOR; un `fetch` que lanza en la llamada misma o
+ *   rechaza con otra cosa es un defecto de la dependencia, no de la red: ERROR_PROVEEDOR EXCEPCION_INTERNA.
  * - Cada espera compite con el plazo (`plazo.esperar`): un `fetch` que ignora la señal no cuelga al cliente.
  *
  * No se reusa `src/lib/http-acotado.ts`: solo hace GET y junta el plazo y la red en un mismo código.
@@ -54,11 +55,18 @@ function detalleDeEstado(estado: unknown): DetalleDe<"ERROR_PROVEEDOR"> | null {
   return estado < 500 ? "HTTP_ERROR_CLIENTE" : "HTTP_ERROR_SERVIDOR";
 }
 
-/** ECONNREFUSED (nadie escucha en el puerto) frente a cualquier otro fallo de red. Solo se mira el código de la causa. */
-function detalleDeRed(error: unknown): DetalleDe<"MODELO_NO_DISPONIBLE"> {
-  const causa = error instanceof Error ? error.cause : undefined;
-  const codigo = typeof causa === "object" && causa !== null ? (causa as { readonly code?: unknown }).code : undefined;
-  return codigo === "ECONNREFUSED" ? "CONEXION_RECHAZADA" : "FALLO_DE_RED";
+/** Lo que rechaza `llamar` cuando el `fetch` lanzó en la llamada misma (no se repite lo que lanzó). */
+const LANZO_EN_LA_LLAMADA = Object.freeze({ lanzo: true });
+
+/**
+ * Un rechazo del `fetch`: TypeError es un fallo de red (ECONNREFUSED, nadie escucha en el puerto, frente a cualquier
+ * otro; solo se mira el código de la causa); cualquier otra cosa es un defecto de la dependencia.
+ */
+function falloDeRechazo(error: unknown): FalloLocal {
+  if (!(error instanceof TypeError)) return falloLocal("ERROR_PROVEEDOR", "EXCEPCION_INTERNA");
+  const { cause } = error;
+  const codigo = typeof cause === "object" && cause !== null ? (cause as { readonly code?: unknown }).code : undefined;
+  return falloLocal("MODELO_NO_DISPONIBLE", codigo === "ECONNREFUSED" ? "CONEXION_RECHAZADA" : "FALLO_DE_RED");
 }
 
 /** Une los trozos en un Uint8Array propio. */
@@ -111,8 +119,8 @@ function llamar(buscar: BuscarLocal, url: string, init: InitLocal, plazo: Plazo)
   let llamada: Promise<RespuestaHttp>;
   try {
     llamada = Promise.resolve(buscar(url, init));
-  } catch (error) {
-    return Promise.reject(error);
+  } catch {
+    return Promise.reject(LANZO_EN_LA_LLAMADA);
   }
   llamada.then((respuesta) => {
     if (plazo.senal.aborted) cancelar(respuesta);
@@ -129,7 +137,7 @@ export async function pedirJsonLocal(buscar: BuscarLocal, url: string, peticion:
   const llegada = await plazo.esperar(llamar(buscar, url, init, plazo));
   if (llegada.tipo === "ABORTADO") return tiempo(plazo);
   // El rechazo que causa el aborto mismo llega después: la escucha del plazo se puso antes que la del `fetch`.
-  if (llegada.tipo === "ERROR") return falloLocal("MODELO_NO_DISPONIBLE", detalleDeRed(llegada.error));
+  if (llegada.tipo === "ERROR") return falloDeRechazo(llegada.error);
   // Si el plazo se abortó después de llegar la respuesta, la lectura del cuerpo lo ve y la cancela.
   const respuesta = llegada.valor;
   const detalle = detalleDeEstado(respuesta.status);
