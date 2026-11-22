@@ -112,7 +112,7 @@ describe("catálogo cerrado de claves", () => {
     expect(CLAVE_NOMBRE_ESPECIE).toBe("ESPECIE_NOMBRE");
     for (const tipo of TIPOS_RESUMEN) {
       const entrada = CATALOGO[tipo].ESPECIE_NOMBRE;
-      expect(entrada).toMatchObject({ unidad: "NOMBRE", sujeto: "NINGUNO", admiteDireccion: false, admiteCercania: false });
+      expect(entrada).toMatchObject({ unidad: "NOMBRE", politicaSujeto: "NINGUNO", admiteDireccion: false, admiteCercania: false });
     }
     for (const { clave, entrada } of entradas()) if (clave !== CLAVE_NOMBRE_ESPECIE) expect(entrada.unidad, clave).not.toBe("NOMBRE");
   });
@@ -120,18 +120,18 @@ describe("catálogo cerrado de claves", () => {
   it("cada entrada tiene una unidad del contrato y un modo de sujeto cerrado; hay claves de especie en los tres tipos", () => {
     for (const { clave, entrada } of entradas()) {
       expect(UNIDADES, clave).toContain(entrada.unidad);
-      expect(["EXIGIDO", "OPCIONAL", "NINGUNO"], clave).toContain(entrada.sujeto);
+      expect(["EXIGIDO", "OPCIONAL", "NINGUNO"], clave).toContain(entrada.politicaSujeto);
       expect(typeof entrada.admiteDireccion === "boolean" && typeof entrada.admiteCercania === "boolean").toBe(true);
     }
-    for (const tipo of TIPOS_RESUMEN) expect(Object.values(CATALOGO[tipo]).some((e) => e.sujeto === "EXIGIDO"), tipo).toBe(true);
+    for (const tipo of TIPOS_RESUMEN) expect(Object.values(CATALOGO[tipo]).some((e) => e.politicaSujeto === "EXIGIDO"), tipo).toBe(true);
   });
 
   it("las claves por especie exigen sujeto; las del portafolio no lo admiten", () => {
-    expect(CATALOGO.DIARIO.VALOR_ESPECIE.sujeto).toBe("EXIGIDO");
-    expect(CATALOGO.DIARIO.VALOR_ACCIONES.sujeto).toBe("NINGUNO");
-    expect(CATALOGO.REGLAS.REGLA_DISTANCIA).toMatchObject({ sujeto: "EXIGIDO", admiteDireccion: true, admiteCercania: true });
-    expect(CATALOGO.REGLAS.REGLA_PLAZO.sujeto).toBe("OPCIONAL");
-    expect(CATALOGO.ESCENARIOS.DIAS_HISTORIA_ESPECIE.sujeto).toBe("EXIGIDO");
+    expect(CATALOGO.DIARIO.VALOR_ESPECIE.politicaSujeto).toBe("EXIGIDO");
+    expect(CATALOGO.DIARIO.VALOR_ACCIONES.politicaSujeto).toBe("NINGUNO");
+    expect(CATALOGO.REGLAS.REGLA_DISTANCIA).toMatchObject({ politicaSujeto: "EXIGIDO", admiteDireccion: true, admiteCercania: true });
+    expect(CATALOGO.REGLAS.REGLA_PLAZO.politicaSujeto).toBe("OPCIONAL");
+    expect(CATALOGO.ESCENARIOS.DIAS_HISTORIA_ESPECIE.politicaSujeto).toBe("EXIGIDO");
   });
 
   it("entradaDeCatalogo solo encuentra claves propias del tipo (ni del prototipo ni de otro tipo)", () => {

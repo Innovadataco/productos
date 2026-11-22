@@ -13,6 +13,7 @@ const GRIEGAS = ["ALFA", "BETA", "GAMMA", "DELTA", "EPSILON", "ZETA", "ETA", "TE
 const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const MAX_ESPECIES = 5;
 const MAX_HECHOS_AZAR = 40;
+const MAX_INTENTOS = 2_000;
 const DIA_MS = 86_400_000;
 const INICIO_VIEJO = Date.UTC(2015, 0, 1);
 const FIN_VIEJO = Date.UTC(2021, 11, 31);
@@ -101,11 +102,13 @@ export function entradaAlAzar(prng: Prng, tipoFijo?: TipoResumen): EntradaPaquet
   const claves = clavesDe(tipo) as readonly ClaveHecho[];
   const hechos: EntradaHecho[] = [];
   const especies: { readonly id: IdHecho; readonly nombre: string }[] = [];
+  const usados = new Set<string>();
   const total = 1 + prng.enteroMenorQue(MAX_HECHOS_AZAR);
-  while (hechos.length < total) {
+  // Con tope de intentos: en ESCENARIOS hay menos pares (clave, sujeto) distintos que el máximo de hechos.
+  for (let intentos = 0; hechos.length < total && intentos < MAX_INTENTOS; intentos += 1) {
     let clave = elegir(prng, claves);
     let catalogo = entradaDeCatalogo(tipo, clave) as EntradaCatalogo;
-    const faltaEspecie = catalogo.sujeto === "EXIGIDO" && especies.length === 0;
+    const faltaEspecie = catalogo.politicaSujeto === "EXIGIDO" && especies.length === 0;
     if (faltaEspecie || (clave === CLAVE_NOMBRE_ESPECIE && especies.length >= MAX_ESPECIES)) {
       if (especies.length >= MAX_ESPECIES) continue;
       clave = CLAVE_NOMBRE_ESPECIE;
@@ -114,8 +117,12 @@ export function entradaAlAzar(prng: Prng, tipoFijo?: TipoResumen): EntradaPaquet
     const id = idDeHecho(hechos.length + 1);
     const nombre = clave === CLAVE_NOMBRE_ESPECIE ? nombreAlAzar(prng, new Set(especies.map((e) => e.nombre))) : "";
     const [valor, presentacion] = valorYPresentacion(prng, catalogo, hoyMs, nombre);
-    const conSujeto = catalogo.sujeto === "EXIGIDO" || (catalogo.sujeto === "OPCIONAL" && especies.length > 0 && prng.uniforme() < 0.5);
+    const conSujeto = catalogo.politicaSujeto === "EXIGIDO" || (catalogo.politicaSujeto === "OPCIONAL" && especies.length > 0 && prng.uniforme() < 0.5);
     const sujeto = conSujeto ? elegir(prng, especies).id : undefined;
+    // Un hecho por (clave, sujeto): si ya está, se sortea otro (el nombre de la especie se repite con nombres distintos).
+    const par = `${clave}|${sujeto ?? ""}`;
+    if (clave !== CLAVE_NOMBRE_ESPECIE && usados.has(par)) continue;
+    usados.add(par);
     const fuente = `FUENTE-FICTICIA-${1 + prng.enteroMenorQue(97)}`;
     hechos.push({ id, clave, ...(sujeto === undefined ? {} : { sujeto }), valor, presentacion, fuente, fecha: diaAlAzar(prng, hoyMs), ...marcas(prng, catalogo) });
     if (clave === CLAVE_NOMBRE_ESPECIE) especies.push({ id, nombre });

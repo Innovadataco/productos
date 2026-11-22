@@ -72,7 +72,7 @@ describe("ordenDePuertas", () => {
 describe("generarConPuertas · orden y resultados", () => {
   it("local responde: es el éxito y la nube no se llama", async () => {
     const { resultado, falsos } = await correr("local-luego-nube", responder(), responder());
-    expect(resultado).toMatchObject({ ok: true, exito: { puerta: "local" }, fallosPrevios: [] });
+    expect(resultado).toMatchObject({ estado: "EXITO", ok: true, exito: { puerta: "local" }, fallosPrevios: [] });
     expect(falsos.local?.llamadas()).toHaveLength(1);
     expect(falsos.nube?.llamadas()).toHaveLength(0);
   });
@@ -80,6 +80,7 @@ describe("generarConPuertas · orden y resultados", () => {
   it("local falla y la nube responde: el éxito de la nube con el fallo previo de local", async () => {
     const { resultado, falsos } = await correr("local-luego-nube", fallar, responder());
     expect(resultado).toEqual({
+      estado: "EXITO",
       ok: true,
       exito: expect.objectContaining({ ok: true, puerta: "nube" }),
       fallosPrevios: [{ ok: false, puerta: "local", motivo: "MODELO_NO_DISPONIBLE", detalle: "SIN_RESPUESTA" }],
@@ -91,6 +92,7 @@ describe("generarConPuertas · orden y resultados", () => {
   it("fallan las dos: todos los fallos, en orden", async () => {
     const { resultado } = await correr("local-luego-nube", fallar, { tipo: "FALLAR", motivo: "TOPE_MENSUAL", detalle: "TOPE_DEL_MES" });
     expect(resultado).toEqual({
+      estado: "FALLO",
       ok: false,
       fallos: [
         { ok: false, puerta: "local", motivo: "MODELO_NO_DISPONIBLE", detalle: "SIN_RESPUESTA" },
@@ -99,25 +101,25 @@ describe("generarConPuertas · orden y resultados", () => {
     });
   });
 
-  it("apagado: ningún generador se llama y no hay fallos", async () => {
+  it("apagado: ningún generador se llama y el estado lo dice (no es un fallo)", async () => {
     const { resultado, falsos } = await correr("apagado", responder(), responder());
-    expect(resultado).toEqual({ ok: false, fallos: [] });
+    expect(resultado).toEqual({ estado: "APAGADO", ok: false });
     expect(falsos.local?.llamadas()).toHaveLength(0);
     expect(falsos.nube?.llamadas()).toHaveLength(0);
   });
 
   it("solo la puerta del modo se prueba", async () => {
     const { resultado, falsos } = await correr("nube", responder(), responder());
-    expect(resultado).toMatchObject({ ok: true, exito: { puerta: "nube" } });
+    expect(resultado).toMatchObject({ estado: "EXITO", ok: true, exito: { puerta: "nube" } });
     expect(falsos.local?.llamadas()).toHaveLength(0);
   });
 
   it("una puerta del orden sin generador es PUERTA_APAGADA, no una excepción", async () => {
     const { resultado, falsos } = await correr("local-luego-nube", null, responder());
-    expect(resultado).toMatchObject({ ok: true, exito: { puerta: "nube" }, fallosPrevios: [{ puerta: "local", motivo: "PUERTA_APAGADA", detalle: "SIN_GENERADOR" }] });
+    expect(resultado).toMatchObject({ estado: "EXITO", ok: true, exito: { puerta: "nube" }, fallosPrevios: [{ puerta: "local", motivo: "PUERTA_APAGADA", detalle: "SIN_GENERADOR" }] });
     expect(falsos.nube?.llamadas()).toHaveLength(1);
     const sinNinguno = await correr("nube", null, null);
-    expect(sinNinguno.resultado).toEqual({ ok: false, fallos: [{ ok: false, puerta: "nube", motivo: "PUERTA_APAGADA", detalle: "SIN_GENERADOR" }] });
+    expect(sinNinguno.resultado).toEqual({ estado: "FALLO", ok: false, fallos: [{ ok: false, puerta: "nube", motivo: "PUERTA_APAGADA", detalle: "SIN_GENERADOR" }] });
   });
 
   it.each([
@@ -125,7 +127,7 @@ describe("generarConPuertas · orden y resultados", () => {
     ["síncrona", { tipo: "LANZAR", mensaje: `${ESPECIE_ALFA} 4613.27 secreto`, sincrono: true }],
   ] as const)("una excepción %s es ERROR_PROVEEDOR sin su mensaje, y se pasa a la siguiente puerta", async (_caso, lanzar) => {
     const { resultado } = await correr("local-luego-nube", lanzar, fallar);
-    expect(resultado).toMatchObject({ ok: false, fallos: [{ puerta: "local", motivo: "ERROR_PROVEEDOR", detalle: "EXCEPCION" }, { puerta: "nube" }] });
+    expect(resultado).toMatchObject({ estado: "FALLO", ok: false, fallos: [{ puerta: "local", motivo: "ERROR_PROVEEDOR", detalle: "EXCEPCION" }, { puerta: "nube" }] });
     const json = JSON.stringify(resultado);
     expect(json).not.toContain("secreto");
     expect(json).not.toContain(ESPECIE_ALFA);
@@ -170,7 +172,7 @@ describe("generarConPuertas · límite del orquestador", () => {
     expect(resultado).toBeNull();
     expect((senal as AbortSignal | null)?.aborted).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
-    await expect(promesa).resolves.toMatchObject({ ok: true, exito: { puerta: "nube", salidaCruda: "de la nube" }, fallosPrevios: [{ puerta: "local", motivo: "TIEMPO_AGOTADO", detalle: "LIMITE_DEL_ORQUESTADOR" }] });
+    await expect(promesa).resolves.toMatchObject({ estado: "EXITO", ok: true, exito: { puerta: "nube", salidaCruda: "de la nube" }, fallosPrevios: [{ puerta: "local", motivo: "TIEMPO_AGOTADO", detalle: "LIMITE_DEL_ORQUESTADOR" }] });
     expect((senal as AbortSignal | null)?.aborted).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -181,11 +183,11 @@ describe("generarConPuertas · límite del orquestador", () => {
     const lento = crearGeneradorFalso({ puerta: "local", conducta: { tipo: "TARDAR", ms: 1238, luego: { tipo: "RESPONDER", salidaCruda: "tarde" } } });
     const promesaLenta = generarConPuertas([lento], "local", pedidoDe(p, 1237), p);
     await vi.advanceTimersByTimeAsync(1237);
-    await expect(promesaLenta).resolves.toEqual({ ok: false, fallos: [{ ok: false, puerta: "local", motivo: "TIEMPO_AGOTADO", detalle: "LIMITE_DEL_ORQUESTADOR" }] });
+    await expect(promesaLenta).resolves.toEqual({ estado: "FALLO", ok: false, fallos: [{ ok: false, puerta: "local", motivo: "TIEMPO_AGOTADO", detalle: "LIMITE_DEL_ORQUESTADOR" }] });
     const rapido = crearGeneradorFalso({ puerta: "local", conducta: { tipo: "TARDAR", ms: 1236, luego: { tipo: "RESPONDER", salidaCruda: "a tiempo" } } });
     const promesaRapida = generarConPuertas([rapido], "local", pedidoDe(p, 1237), p);
     await vi.advanceTimersByTimeAsync(1236);
-    await expect(promesaRapida).resolves.toMatchObject({ ok: true, exito: { salidaCruda: "a tiempo" } });
+    await expect(promesaRapida).resolves.toMatchObject({ estado: "EXITO", ok: true, exito: { salidaCruda: "a tiempo" } });
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -195,7 +197,7 @@ describe("generarConPuertas · límite del orquestador", () => {
     const tardio: Generador = { puerta: "local", generar: () => new Promise((_resolver, rechazar) => setTimeout(() => rechazar(new Error("tarde")), 4613)) };
     const promesa = generarConPuertas([tardio], "local", pedidoDe(p, 1237), p);
     await vi.advanceTimersByTimeAsync(4613);
-    await expect(promesa).resolves.toMatchObject({ ok: false, fallos: [{ motivo: "TIEMPO_AGOTADO" }] });
+    await expect(promesa).resolves.toMatchObject({ estado: "FALLO", ok: false, fallos: [{ motivo: "TIEMPO_AGOTADO" }] });
   });
 });
 
@@ -216,21 +218,21 @@ describe("generarConPuertas · resultados que no cumplen el contrato", () => {
     ["un motivo desconocido", { ok: false, puerta: "local", motivo: "OTRO", detalle: "X" }, "MOTIVO_DESCONOCIDO"],
   ])("%s → ERROR_PROVEEDOR (%s)", async (_caso, devuelto, detalle) => {
     const { resultado } = await correr("local", { tipo: "DEVOLVER", resultado: devuelto }, null);
-    expect(resultado).toEqual({ ok: false, fallos: [{ ok: false, puerta: "local", motivo: "ERROR_PROVEEDOR", detalle }] });
+    expect(resultado).toEqual({ estado: "FALLO", ok: false, fallos: [{ ok: false, puerta: "local", motivo: "ERROR_PROVEEDOR", detalle }] });
   });
 
   it("un detalle con datos o fuera del patrón se reemplaza: nunca sale lo que puso el proveedor", async () => {
     for (const detalle of [`${ESPECIE_ALFA} 4613`, "detalle en minúsculas", "CODIGO_7", "A".repeat(65), 7]) {
       const { resultado } = await correr("local", { tipo: "DEVOLVER", resultado: { ok: false, puerta: "local", motivo: "MODELO_NO_DISPONIBLE", detalle } }, null);
-      expect(resultado).toEqual({ ok: false, fallos: [{ ok: false, puerta: "local", motivo: "MODELO_NO_DISPONIBLE", detalle: "DETALLE_NO_VALIDO" }] });
+      expect(resultado).toEqual({ estado: "FALLO", ok: false, fallos: [{ ok: false, puerta: "local", motivo: "MODELO_NO_DISPONIBLE", detalle: "DETALLE_NO_VALIDO" }] });
     }
   });
 
   it("se copian solo los campos del contrato y la puerta es siempre la del generador registrado", async () => {
     const { resultado } = await correr("nube", null, { tipo: "DEVOLVER", resultado: { ...exito, puerta: "local", extra: ESPECIE_ALFA } });
-    expect(resultado).toEqual({ ok: true, exito: { ...exito, puerta: "nube" }, fallosPrevios: [] });
+    expect(resultado).toEqual({ estado: "EXITO", ok: true, exito: { ...exito, puerta: "nube" }, fallosPrevios: [] });
     const fallo = await correr("nube", null, { tipo: "DEVOLVER", resultado: { ok: false, puerta: "local", motivo: "TOPE_MENSUAL", detalle: "TOPE_DEL_MES", extra: "x" } });
-    expect(fallo.resultado).toEqual({ ok: false, fallos: [{ ok: false, puerta: "nube", motivo: "TOPE_MENSUAL", detalle: "TOPE_DEL_MES" }] });
+    expect(fallo.resultado).toEqual({ estado: "FALLO", ok: false, fallos: [{ ok: false, puerta: "nube", motivo: "TOPE_MENSUAL", detalle: "TOPE_DEL_MES" }] });
   });
 });
 

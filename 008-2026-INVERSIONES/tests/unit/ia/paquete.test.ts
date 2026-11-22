@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 import { CATALOGO } from "@/ia/catalogo";
 import type { EntradaPaquete, PaqueteHechos } from "@/ia/contrato";
 import { hashPaquete } from "@/ia/hash";
-import { CODIGOS_ERROR_PAQUETE, ErrorPaquete, construirPaquete, idDeHecho, type CodigoErrorPaquete } from "@/ia/paquete";
+import { CODIGOS_ERROR_PAQUETE, ErrorPaquete, construirPaquete, esPaqueteConstruido, idDeHecho, leerPaquete, type CodigoErrorPaquete } from "@/ia/paquete";
+import { vistaCiega } from "@/ia/vista-ciega";
 import { ENTRADAS_FICTICIAS, ESPECIE_ALFA, HOY_FICTICIO, entradaDiario, hecho } from "./apoyo/hechos.ficticio";
 
 type Crudo = Record<string, unknown> & { hechos: Record<string, unknown>[] };
@@ -23,9 +24,16 @@ function errorDe(crudo: unknown): ErrorPaquete {
   throw new Error("construirPaquete no lanzó");
 }
 
+const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+/** `n` hechos distintos: un nombre de especie inventado y, a continuación, el valor de esa especie. */
 function conHechos(n: number): Crudo {
   const crudo = copia();
-  crudo.hechos = Array.from({ length: n }, (_, i) => ({ ...hecho(idDeHecho(i + 1), "VALOR_ACCIONES", "37911.47", "$ 37.911") }));
+  crudo.hechos = Array.from({ length: n }, (_, i) => {
+    const id = idDeHecho(i + 1);
+    if (i % 2 === 1) return { ...hecho(id, "VALOR_ESPECIE", "4613.27", "$ 4.613", { sujeto: idDeHecho(i) }) };
+    const k = i / 2;
+    return { ...hecho(id, "ESPECIE_NOMBRE", `FICTICIA-${LETRAS[Math.floor(k / 26)]}${LETRAS[k % 26]}`, "nombre") };
+  });
   return crudo;
 }
 
@@ -96,6 +104,19 @@ const CASOS: readonly Caso[] = [
   ["DIRECCION_NO_APLICA", "dirección en una clave que no la admite", (c) => (h(c, 4).direccion = "SUBE", c), "H05", "direccion"],
   ["CERCANIA_NO_APLICA", "cercanía en una clave que no la admite", (c) => (h(c, 2).cercania = "CERCA", c), "H03", "cercania"],
   ["OBLIGATORIO_INVALIDO", "obligatorio que no es booleano", (c) => (h(c, 2).obligatorio = "si", c), "H03", "obligatorio"],
+  ["HECHO_REPETIDO", "la misma clave del portafolio dos veces", (c) => ({ ...c, hechos: [...c.hechos, hecho("H08", "VALOR_ACCIONES", "41377.19", "$ 41.377")] }), "H08", "clave"],
+  ["HECHO_REPETIDO", "la misma clave de la misma especie dos veces", (c) => ({ ...c, hechos: [...c.hechos, hecho("H08", "VALOR_ESPECIE", "41377.19", "$ 41.377", { sujeto: "H01" })] }), "H08", "clave"],
+];
+
+/** Rechazos de leerPaquete (un paquete guardado que vuelve a entrar). */
+const CASOS_LEER: readonly Caso[] = [
+  ["FORMA_INVALIDA", "lo guardado no es un objeto", () => "paquete", null, null],
+  ["CAMPO_FALTANTE", "lo guardado no trae el hash", (c) => ({ ...c, hash: undefined }), null, "hash"],
+  ["VERSION_DISTINTA", "lo guardado es de otra versión del contrato", (c) => ({ ...c, version: "hechos-v2" }), null, "version"],
+  ["GUARDADO_NO_COINCIDE", "la etiqueta guardada no es la del catálogo de hoy", (c) => (h(c, 2).etiqueta = "otra etiqueta", c), "H03", "etiqueta"],
+  ["GUARDADO_NO_COINCIDE", "la unidad guardada no es la del catálogo de hoy", (c) => (h(c, 2).unidad = "DIAS", c), "H03", "unidad"],
+  ["GUARDADO_NO_COINCIDE", "un valor cambiado con el hash viejo", (c) => (h(c, 2).valor = "41377.19", c), null, "hash"],
+  ["CAMPO_FALTANTE", "un hecho guardado sin etiqueta", (c) => (delete h(c, 2).etiqueta, c), "H03", "etiqueta"],
 ];
 
 describe("construirPaquete · casos felices", () => {
@@ -155,8 +176,14 @@ describe("construirPaquete · casos felices", () => {
 });
 
 describe("construirPaquete · rechazos (cierra en fallo)", () => {
-  it("la tabla de casos cubre cada código de error", () => {
-    expect(new Set(CASOS.map(([codigo]) => codigo))).toEqual(new Set(CODIGOS_ERROR_PAQUETE));
+  it("las tablas de casos cubren cada código de error", () => {
+    expect(new Set([...CASOS, ...CASOS_LEER].map(([codigo]) => codigo))).toEqual(new Set(CODIGOS_ERROR_PAQUETE));
+  });
+
+  it("dos hechos de la misma clave con especies distintas sí caben", () => {
+    const crudo = copia();
+    crudo.hechos.push(hecho("H08", "ESPECIE_NOMBRE", "FICTICIA-BETA", "FICTICIA-BETA"), hecho("H09", "VALOR_ESPECIE", "41377.19", "$ 41.377", { sujeto: "H08" }));
+    expect(construir(crudo).hechos).toHaveLength(9);
   });
 
   it.each(CASOS)("%s: %s", (codigo, _descripcion, mutar, hechoEsperado, campoEsperado) => {
@@ -183,5 +210,41 @@ describe("idDeHecho", () => {
 
   it.each([0, 100, 1.5, -1, Number.NaN])("fuera de rango (%s): RangeError", (posicion) => {
     expect(() => idDeHecho(posicion)).toThrow(RangeError);
+  });
+});
+
+describe("leerPaquete · un paquete guardado vuelve a entrar validado (TIPOS-ALTO-2)", () => {
+  const guardado = (): Crudo => JSON.parse(JSON.stringify(construirPaquete(entradaDiario()))) as Crudo;
+
+  function errorAlLeer(crudo: unknown): ErrorPaquete {
+    try {
+      leerPaquete(crudo);
+    } catch (e) {
+      if (e instanceof ErrorPaquete) return e;
+      throw e;
+    }
+    throw new Error("leerPaquete no lanzó");
+  }
+
+  it("el JSON guardado vuelve igual, con el mismo hash, construido y con vista", () => {
+    const original = construirPaquete(entradaDiario());
+    const leido = leerPaquete(JSON.parse(JSON.stringify(original)));
+    expect(leido).toEqual(original);
+    expect(leido.hash).toBe(original.hash);
+    expect(esPaqueteConstruido(leido)).toBe(true);
+    expect(vistaCiega(leido)).toEqual(vistaCiega(original));
+  });
+
+  it.each(CASOS_LEER)("%s: %s", (codigo, _descripcion, mutar, hechoEsperado, campoEsperado) => {
+    const error = errorAlLeer(mutar(guardado()));
+    expect(error.codigo).toBe(codigo);
+    expect(error.hecho).toBe(hechoEsperado);
+    expect(error.campo).toBe(campoEsperado);
+  });
+
+  it("lo guardado con un hecho inválido se rechaza con el código de construirPaquete", () => {
+    const crudo = guardado();
+    h(crudo, 2).valor = "37.911,47";
+    expect(errorAlLeer(crudo).codigo).toBe("VALOR_NO_DECIMAL");
   });
 });
