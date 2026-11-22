@@ -36,7 +36,7 @@ import { canonizarValor, compararDecimales, escribirCsvSeries, type ValorSerie }
 import type { ResultadoArchivo } from "../../lib/archivo-acotado";
 import { ErrorXml, buscarAtributo, leerXmlAcotado, type CodigoXml, type ElementoXml } from "../../lib/xml-acotado";
 import { ErrorZip, abrirZipAcotado, type ArchivoZip, type CodigoZip } from "../../lib/zip-acotado";
-import { ErrorArgumentosCarga } from "../../precios/argumentos-carga";
+import { ErrorArgumentosCarga } from "../../cli/opciones";
 import { diaIso } from "../../precios/horario";
 
 export const SERIE_IPC = "IPC_INDICE";
