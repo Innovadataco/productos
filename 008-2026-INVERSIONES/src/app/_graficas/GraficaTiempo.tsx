@@ -9,7 +9,9 @@
  *   cuyo aria-valuetext dice el día y sus cifras. La tabla de datos está en «Ver los datos».
  * - La leyenda y la tabla no se vuelven a pintar en los cuadros de la animación (memo con la ventana en primitivos).
  * - Con `dibujo` (proyecciones: un resultado que se interpola hacia el siguiente), el SVG y los puntos trazan los
- *   valores del cuadro; el dominio, la leyenda, el detalle, el deslizador y la tabla usan los finales.
+ *   valores del cuadro; el dominio, la leyenda, el detalle, el deslizador y la tabla usan los finales. Esos reciben
+ *   unas props «finales» que solo cambian si cambia lo que leen (título, días, series, bandas y formatos): un cuadro
+ *   que solo trae otro `dibujo` no los vuelve a armar.
  * - Una banda con `degradado` se rellena con un linearGradient horizontal propio, por la variable --g-relleno-banda
  *   (así la regla de alto contraste de graficas.css sigue mandando).
  */
@@ -139,6 +141,13 @@ const conDibujo = (p: PropsGraficaTiempo): PropsGraficaTiempo =>
 
 export function GraficaTiempo(p: PropsGraficaTiempo) {
   const trazo = conDibujo(p);
+  // Lo que leen la leyenda, la tabla y el texto del deslizador (memo): estable mientras solo cambie `dibujo`.
+  const { titulo, dias, series, bandas: lasBandas, formatoY, formatoDia, extraDetalle } = p;
+  const finales = useMemo(
+    () => ({ ...p, dibujo: undefined }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a propósito: solo los campos que leen.
+    [titulo, dias, series, lasBandas, formatoY, formatoDia, extraDetalle],
+  );
   const alto = p.alto ?? ALTO;
   const base = idSeguro(useId());
   const xs = useMemo(() => p.dias.map(diaANumero), [p.dias]);
@@ -149,7 +158,7 @@ export function GraficaTiempo(p: PropsGraficaTiempo) {
   const hidratado = useHidratado();
   const { activo, manejadores } = useMira(xs, v, e.x);
   const indiceValor = activo ?? v.hasta;
-  const valorTexto = useMemo(() => textoDelDia(p, indiceValor), [p, indiceValor]);
+  const valorTexto = useMemo(() => textoDelDia(finales, indiceValor), [finales, indiceValor]);
   const ticksY = ticksBonitos(objetivo[2], objetivo[3], MARCAS_Y);
   const xActivo = activo === null ? null : e.x.a(xs[activo]!);
   const corte = p.corte && xs[p.corte.indice] !== undefined ? { nombre: p.corte.nombre, x: e.x.a(xs[p.corte.indice]!) } : null;
@@ -159,7 +168,7 @@ export function GraficaTiempo(p: PropsGraficaTiempo) {
         <span className="g-titulo" id={`${base}-t`}>{p.titulo}</span>
         {p.encabezado ? <span className="g-encabezado">{p.encabezado}</span> : null}
       </figcaption>
-      <Leyenda p={p} desde={v.desde} hasta={v.hasta} />
+      <Leyenda p={finales} desde={v.desde} hasta={v.hasta} />
       <div className="g-marco">
         <EjeY p={p} e={e} ticks={ticksY} alto={alto} />
         <div className="g-plot" ref={ref} data-visible={visible ? "" : undefined} data-hidratado={hidratado ? "" : undefined} style={{ height: `${alto}px` }}>
@@ -176,7 +185,7 @@ export function GraficaTiempo(p: PropsGraficaTiempo) {
         <EjeX p={p} e={e} desde={objetivo[0]} hasta={objetivo[1]} />
       </div>
       <p id={`${base}-r`} className="g-sr">{p.resumen}</p>
-      <TablaDatos p={p} desde={v.desde} hasta={v.hasta} />
+      <TablaDatos p={finales} desde={v.desde} hasta={v.hasta} />
     </figure>
   );
 }

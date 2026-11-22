@@ -36,7 +36,7 @@ describe("crearCola", () => {
     expect(enviar).not.toHaveBeenCalled();
     await esperar(1);
     expect(enviar).toHaveBeenCalledTimes(1);
-    expect(enviar).toHaveBeenCalledWith(c(36));
+    expect(enviar.mock.calls[0]![0]).toEqual(c(36));
   });
 
   it("avisa que calcula desde que se mueve un control y hasta que llega el resultado, que entrega", async () => {
@@ -63,7 +63,7 @@ describe("crearCola", () => {
     await esperar(0);
     expect(al.resultado).not.toHaveBeenCalled();
     expect(enviar).toHaveBeenCalledTimes(2);
-    expect(enviar).toHaveBeenLastCalledWith(c(60));
+    expect(enviar.mock.calls.at(-1)![0]).toEqual(c(60));
     expect(al.calculando).toHaveBeenLastCalledWith(true);
     abiertos[1]!.responder({ tipo: "OK", vista: vistaDe(60) });
     await esperar(0);
@@ -140,7 +140,7 @@ describe("crearCola", () => {
     expect(al.calculando).toHaveBeenLastCalledWith(true);
     await esperar(ESPERA_MS);
     expect(enviar).toHaveBeenCalledTimes(2);
-    expect(enviar).toHaveBeenLastCalledWith(c(36));
+    expect(enviar.mock.calls.at(-1)![0]).toEqual(c(36));
     abiertos[1]!.responder({ tipo: "OK", vista: vistaDe(36) });
     await esperar(0);
     expect(al.resultado).toHaveBeenCalledWith(vistaDe(36));

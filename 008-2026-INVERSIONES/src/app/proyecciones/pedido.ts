@@ -14,9 +14,10 @@ const ESTADO_PARAMETROS = 400;
 const esVista = (x: unknown): x is { readonly vista: VistaProyeccion } =>
   typeof x === "object" && x !== null && "vista" in x && typeof (x as { vista: unknown }).vista === "object" && (x as { vista: unknown }).vista !== null;
 
-export async function enviarPedido(controles: Controles): Promise<Respuesta> {
+/** `senal` aborta el pedido al desmontar (el servidor igual termina su cálculo, pero nada se entrega). */
+export async function enviarPedido(controles: Controles, senal?: AbortSignal): Promise<Respuesta> {
   const r = await fetch(RUTA_API, {
-    method: "POST", cache: "no-store", credentials: "same-origin",
+    method: "POST", cache: "no-store", credentials: "same-origin", signal: senal,
     headers: { "content-type": "application/json" }, body: JSON.stringify(controles),
   });
   if (r.status === ESTADO_OCUPADO) return { tipo: "OCUPADO", reintentarEnS: Number(r.headers.get("retry-after")) || 1 };

@@ -6,6 +6,7 @@
  */
 import { expect } from "@playwright/test";
 import { AVISO } from "../../src/proyecciones/tipos";
+import { APP } from "./base";
 import { PaginaProyecciones, TITULO_ABANICO } from "./pagina-proyecciones";
 import { PaginaTablero } from "./pagina-tablero";
 import { test } from "./sesion";
@@ -95,8 +96,9 @@ test.describe("pantalla de proyecciones", () => {
   });
 
   test("la API sin sesión responde 401 y no calcula", async ({ playwright }) => {
-    const sinSesion = await playwright.request.newContext({ baseURL: "http://127.0.0.1:5008" });
-    const r = await sinSesion.post("/api/proyecciones", { data: { horizonteMeses: 12 }, headers: { origin: "http://127.0.0.1:5008" } });
+    const origen = `http://${APP.host}:${APP.puerto}`;
+    const sinSesion = await playwright.request.newContext({ baseURL: origen });
+    const r = await sinSesion.post("/api/proyecciones", { data: { horizonteMeses: 12 }, headers: { origin: origen } });
     expect(r.status()).toBe(401);
     await sinSesion.dispose();
   });

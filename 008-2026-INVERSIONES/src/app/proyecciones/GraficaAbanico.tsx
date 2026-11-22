@@ -57,12 +57,18 @@ export function Abanico({ historia, vista }: { readonly historia: readonly Punto
     };
   }, [final]);
   const animado = useTransicion(plano);
-  const cuadro = animado === plano ? null : armarAbanico(historia, vista, dePlano(animado, vista.puntos.length - 1));
+  // Al terminar, la transición devuelve otro arreglo con los mismos valores: en reposo no hay cuadro que armar.
+  const enReposo = animado === plano || (animado.length === plano.length && animado.every((x, i) => x === plano[i]));
+  const dibujo = useMemo(() => {
+    if (enReposo) return undefined;
+    const cuadro = armarAbanico(historia, vista, dePlano(animado, vista.puntos.length - 1));
+    return { series: series(cuadro), bandas: bandas(cuadro) };
+  }, [enReposo, animado, historia, vista]);
+  const corte = useMemo(() => ({ indice: final.indiceHoy, nombre: "Hoy" }), [final]);
   return (
     <GraficaTiempo
       titulo={TITULO_ABANICO} resumen={resumen(historia, vista)} alto={ALTO} dias={final.dias} series={finales.series} bandas={finales.bandas}
-      corte={{ indice: final.indiceHoy, nombre: "Hoy" }} formatoY={cop} formatoEje={copCompacto} formatoDia={formatoDia} formatoTick={etiquetaTick}
-      dibujo={cuadro ? { series: series(cuadro), bandas: bandas(cuadro) } : undefined}
+      corte={corte} formatoY={cop} formatoEje={copCompacto} formatoDia={formatoDia} formatoTick={etiquetaTick} dibujo={dibujo}
     />
   );
 }

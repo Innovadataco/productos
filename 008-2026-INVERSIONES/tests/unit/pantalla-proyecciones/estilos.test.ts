@@ -37,7 +37,8 @@ describe("proyecciones.css", () => {
   });
 
   it("el panel de controles solo queda fijo al bajar si cabe en la ventana (hallazgo MEDIO de a11y-architect)", () => {
-    expect(sinComentarios).not.toMatch(/\.proy-controles\s*\{[^}]*position:\s*sticky/);
+    const sinMedia = sinComentarios.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^{}]*\}/g, "");
+    expect(sinMedia).not.toMatch(/\.proy-controles\s*\{[^}]*position:\s*sticky/);
     expect(sinComentarios).toMatch(/@media \(min-width: 981px\) and \(min-height: 820px\)\s*\{\s*\.proy-controles\s*\{[^}]*position:\s*sticky/);
   });
 

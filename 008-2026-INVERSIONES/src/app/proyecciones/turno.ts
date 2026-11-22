@@ -2,7 +2,8 @@
  * El turno de las proyecciones (frente proyecciones-pantalla; contrato de src/proyecciones/proyectar.ts). El cálculo es
  * síncrono (bloquea el proceso mientras dura), así que, en memoria del proceso (la app es un solo contenedor):
  * - una proyección en vuelo por usuario: la segunda se rechaza (EN_VUELO);
- * - un límite de frecuencia por usuario: PROYECCIONES_POR_MINUTO en una ventana fija (FRECUENCIA);
+ * - un límite de frecuencia por usuario: PROYECCIONES_POR_MINUTO en una ventana fija (FRECUENCIA); cuenta solo lo que
+ *   entra a calcular (se registra al tomar el turno del proceso): un rechazo por EN_VUELO u OCUPADO no gasta cuota;
  * - en todo el proceso, un cálculo a la vez con una cola chica; llena, se rechaza (OCUPADO).
  * Vive en globalThis (como src/auth/carga.ts): la página y la ruta comparten la misma instancia aunque Next cargue el
  * módulo dos veces. El tope general de /api por IP (src/proxy.ts) sigue aparte. Puro (sin base).
@@ -29,6 +30,14 @@ interface Estado {
 
 const CLAVE = Symbol.for("inv008.proyecciones.turno");
 
+/** El límite de frecuencia, tomado ya dentro del turno del proceso. */
+class ErrorFrecuencia extends Error {
+  override readonly name = "ErrorFrecuencia";
+  constructor(readonly reintentarEnS: number) {
+    super("FRECUENCIA");
+  }
+}
+
 const nuevo = (): Estado => ({
   enVuelo: new Set(),
   frecuencia: crearLimitador({ maximo: PROYECCIONES_POR_MINUTO, ventanaMs: MINUTO_MS, maxRedes: MAX_USUARIOS }),
@@ -49,13 +58,17 @@ export function reiniciarTurnoParaPruebas(): void {
 export async function conTurno<T>(usuarioId: string, ahoraMs: number, tarea: () => Promise<T>): Promise<Turno<T>> {
   const e = estado();
   if (e.enVuelo.has(usuarioId)) return { ok: false, motivo: "EN_VUELO", reintentarEnS: REINTENTO_S };
-  const decision = e.frecuencia.registrar(usuarioId, ahoraMs);
-  if (!decision.permitido) return { ok: false, motivo: "FRECUENCIA", reintentarEnS: decision.reintentarEnS };
   e.enVuelo.add(usuarioId);
   try {
-    return { ok: true, valor: await e.proceso.con(tarea) };
+    const valor = await e.proceso.con(() => {
+      const decision = e.frecuencia.registrar(usuarioId, ahoraMs);
+      if (!decision.permitido) throw new ErrorFrecuencia(decision.reintentarEnS);
+      return tarea();
+    });
+    return { ok: true, valor };
   } catch (error) {
     if (error instanceof ErrorOcupado) return { ok: false, motivo: "OCUPADO", reintentarEnS: REINTENTO_S };
+    if (error instanceof ErrorFrecuencia) return { ok: false, motivo: "FRECUENCIA", reintentarEnS: error.reintentarEnS };
     throw error;
   } finally {
     e.enVuelo.delete(usuarioId);

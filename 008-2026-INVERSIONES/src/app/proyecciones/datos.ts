@@ -32,6 +32,9 @@ export interface DatosProyecciones {
   readonly estado: EstadoInicial;
 }
 
+/** El primer día de la historia que se lee: ANIOS_HISTORIA_MAX años antes de hoy, como el motor. */
+const desdeDeHistoria = (hoy: Date): Date => new Date(Date.UTC(hoy.getUTCFullYear() - ANIOS_HISTORIA_MAX, hoy.getUTCMonth(), hoy.getUTCDate()));
+
 /** El fondo por fondo: movimientos con signo (el retiro resta, como src/conciliacion/esperado.ts) y valores vigentes. */
 export async function leerFondosHistoria(db: PrismaClient, hoy: Date): Promise<(FondoHistoria & { readonly fondoId: string })[]> {
   const movs = await db.movimientoFondo.findMany({
@@ -41,7 +44,7 @@ export async function leerFondosHistoria(db: PrismaClient, hoy: Date): Promise<(
   });
   const ids = [...new Set(movs.map((m) => m.fondoId))];
   if (ids.length === 0) return [];
-  const desde = new Date(Date.UTC(hoy.getUTCFullYear() - ANIOS_HISTORIA_MAX, hoy.getUTCMonth(), hoy.getUTCDate()));
+  const desde = desdeDeHistoria(hoy);
   const valores = await db.valorUnidadFondo.findMany({
     where: { fondoId: { in: ids }, reemplazadoEn: null, fechaValor: { gte: desde, lte: hoy } },
     select: { fondoId: true, fechaValor: true, valorUnidad: true },
@@ -68,7 +71,7 @@ async function accionesHistoria(db: PrismaClient): Promise<PuntoHistoria[] | nul
 
 export async function leerHistoria(db: PrismaClient, hoy: Date): Promise<PuntoHistoria[]> {
   const [acciones, fondos] = await Promise.all([accionesHistoria(db), leerFondosHistoria(db, hoy)]);
-  return acciones === null ? [] : historiaMensual({ acciones, fondos, hoy: diaIso(hoy) });
+  return acciones === null ? [] : historiaMensual({ acciones, fondos, hoy: diaIso(hoy), desde: diaIso(desdeDeHistoria(hoy)) });
 }
 
 async function calculoInicial(db: PrismaClient, usuarioId: string): Promise<{ readonly inicial: VistaProyeccion | null; readonly estado: EstadoInicial }> {

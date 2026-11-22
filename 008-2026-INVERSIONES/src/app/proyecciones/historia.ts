@@ -27,9 +27,17 @@ export interface EntradasHistoria {
   readonly acciones: readonly PuntoHistoria[];
   readonly fondos: readonly FondoHistoria[];
   readonly hoy: string;
+  /** El primer día que se lee (los valores del fondo se leen desde aquí): antes no hay historia. */
+  readonly desde?: string;
 }
 
-const unidadesEn = (f: FondoHistoria, dia: string): number => f.movimientos.reduce((s, m) => (m.dia <= dia ? s + m.unidades : s), 0);
+/** Unidades que se compensan quedan en un residuo de coma flotante: por debajo de esto, no hay unidades. */
+const UNIDADES_MINIMAS = 1e-9;
+const sumaUnidades = (f: FondoHistoria, dia: string): number => f.movimientos.reduce((s, m) => (m.dia <= dia ? s + m.unidades : s), 0);
+const unidadesEn = (f: FondoHistoria, dia: string): number => {
+  const u = sumaUnidades(f, dia);
+  return Math.abs(u) < UNIDADES_MINIMAS ? 0 : u;
+};
 
 function valorUnidadEn(f: FondoHistoria, dia: string): number | null {
   let ultimo: number | null = null;
@@ -54,8 +62,9 @@ function ultimoPorMes(dias: readonly string[]): string[] {
 }
 
 export function historiaMensual(e: EntradasHistoria): PuntoHistoria[] {
-  const acciones = new Map(e.acciones.filter((p) => p.dia <= e.hoy).map((p) => [p.dia, p.valor]));
-  const diasFondo = e.fondos.flatMap((f) => f.valores.map((v) => v.dia).filter((d) => d <= e.hoy && unidadesEn(f, d) > 0));
+  const enRango = (d: string) => d <= e.hoy && (e.desde === undefined || d >= e.desde);
+  const acciones = new Map(e.acciones.filter((p) => enRango(p.dia)).map((p) => [p.dia, p.valor]));
+  const diasFondo = e.fondos.flatMap((f) => f.valores.map((v) => v.dia).filter((d) => enRango(d) && unidadesEn(f, d) > 0));
   const dias = ultimoPorMes(acciones.size > 0 ? [...acciones.keys()] : diasFondo);
   return dias.map((dia) => ({ dia, valor: (acciones.get(dia) ?? 0) + e.fondos.reduce((s, f) => s + valorFondoEn(f, dia), 0) }));
 }

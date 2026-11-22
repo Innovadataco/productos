@@ -2,7 +2,8 @@
 /**
  * La tabla de los datos de la gráfica de tiempo (el equivalente sin color ni puntero). Se arma solo al abrir
  * «Ver los datos»: cerrada no pesa en el celular ni compite con la tabla de especies. La ventana llega en primitivos
- * para que el memo la deje quieta durante los cuadros de la animación del dominio.
+ * para que el memo la deje quieta durante los cuadros de la animación del dominio. La caja, que se desplaza, es una
+ * región enfocable con nombre: con el teclado también se recorre (a11y-architect, frente proyecciones-pantalla).
  */
 import { memo, useState, type SyntheticEvent } from "react";
 import type { PropsGraficaTiempo } from "./tipos";
@@ -18,7 +19,7 @@ export const TablaDatos = memo(function TablaDatos({ p, desde, hasta }: { readon
     <details className="g-datos" onToggle={alternar}>
       <summary>Ver los datos</summary>
       {abierta ? (
-        <div className="g-datos-caja">
+        <div className="g-datos-caja" role="region" tabIndex={0} aria-label={`Datos de ${p.titulo}`}>
           <table>
             <caption>{p.titulo}</caption>
             <thead><tr>

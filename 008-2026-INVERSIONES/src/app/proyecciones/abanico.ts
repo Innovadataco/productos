@@ -55,9 +55,9 @@ export function armarAbanico(historia: readonly PuntoHistoria[], vista: VistaPro
   const antes = previa.length;
   const vacia = (): (number | null)[] => Array<number | null>(antes).fill(null);
   const proyectada = (c: NombreCurva): Curva => [...vacia(), ...meses.map((_, k) => curvas[c][k] ?? null)];
+  const real = meses.length === 0 ? previa.map((p) => p.valor) : [...previa.map((p) => p.valor), enHoy?.valor ?? null, ...meses.slice(1).map(() => null)];
   return {
-    dias, indiceHoy: antes, mes: [...vacia(), ...meses],
-    real: [...previa.map((p) => p.valor), enHoy?.valor ?? null, ...meses.slice(1).map(() => null)],
+    dias, indiceHoy: antes, mes: [...vacia(), ...meses], real,
     p5: proyectada("p5"), p25: proyectada("p25"), p50: proyectada("p50"), p75: proyectada("p75"), p95: proyectada("p95"), aportado: proyectada("aportado"),
   };
 }

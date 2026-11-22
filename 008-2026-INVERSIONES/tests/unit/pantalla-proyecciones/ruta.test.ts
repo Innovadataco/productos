@@ -4,6 +4,7 @@
 // cliente y errores genéricos (el registro sin cifras). Inventado.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@prisma/client";
+import { ORIGENES_DESARROLLO } from "@/auth/origen";
 import { aVistaProyeccion } from "@/app/proyecciones/vista";
 import { reiniciarTurnoParaPruebas } from "@/app/proyecciones/turno";
 import { resultadoFicticio } from "./ficticio";
@@ -16,7 +17,8 @@ vi.mock("@/proyecciones/proyectar", () => ({ proyectar }));
 
 import { POST } from "@/app/api/proyecciones/route";
 
-const ORIGEN = "http://127.0.0.1:5008";
+/** El origen de la app local (la lista de desarrollo de src/auth/origen.ts), sin escribirlo aquí. */
+const ORIGEN = ORIGENES_DESARROLLO[0]!;
 const BIEN = { horizonteMeses: 37, aportePeriodico: 413.71, frecuenciaAporte: "TRIMESTRAL", reinvertirDividendos: false, caidaInicialPct: 13.7 };
 const pedido = (cuerpo: unknown, cabeceras: Record<string, string> = {}) =>
   new Request(`${ORIGEN}/api/proyecciones`, {

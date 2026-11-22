@@ -44,7 +44,7 @@ export function Indicadores({ vista, calculando }: { readonly vista: VistaProyec
     <ul className="proy-indicadores" aria-label="Indicadores del escenario" data-calculando={calculando ? "" : undefined}>
       <Indicador
         etiqueta="Valor mediano al final" valor={f?.p50 ?? null} formato={cop} destacado
-        detalle={f ? `P5–P95: de ${cop(f.p5)} a ${cop(f.p95)}` : `P5–P95: ${SIN_DATO}`}
+        detalle={f ? `El 90 % de las trayectorias (P5–P95): de ${cop(f.p5)} a ${cop(f.p95)}` : `El 90 % de las trayectorias (P5–P95): ${SIN_DATO}`}
       />
       <Indicador etiqueta="Lo aportado" valor={f?.aportado ?? null} formato={cop} detalle="El valor de hoy más los aportes del escenario" />
       <Indicador

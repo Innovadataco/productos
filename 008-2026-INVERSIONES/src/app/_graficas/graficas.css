@@ -54,8 +54,10 @@
 .g-relleno { fill: var(--tono); opacity: 0.18; }
 .g-banda { fill: var(--g-relleno-banda, var(--tono)); }
 .g-banda-suave { opacity: 0.14; } .g-banda-media { opacity: 0.28; }
-/* Banda con degradado (proyecciones): el tono entero cerca de «Hoy» y más tenue hacia el horizonte. */
-.g-banda-degradada.g-banda-suave { opacity: 0.3; } .g-banda-degradada.g-banda-media { opacity: 0.5; }
+/* Banda con degradado (proyecciones): el tono entero cerca de «Hoy» y más tenue hacia el horizonte, con su borde en el
+   tono para que los dos percentiles se vean (WCAG 1.4.11): el relleno baja con fill-opacity, no el borde. */
+.g-banda-degradada { stroke: var(--tono); stroke-width: 1; stroke-opacity: 0.75; vector-effect: non-scaling-stroke; }
+.g-banda-degradada.g-banda-suave { opacity: 1; fill-opacity: 0.3; } .g-banda-degradada.g-banda-media { opacity: 1; fill-opacity: 0.5; stroke-opacity: 0.4; }
 .g-parada-ini { stop-color: var(--tono); stop-opacity: 1; } .g-parada-fin { stop-color: var(--tono); stop-opacity: 0.4; }
 .g-clave-degradada { background: linear-gradient(90deg, var(--tono), color-mix(in srgb, var(--tono) 40%, transparent)); }
 .g-base { stroke: var(--muted); stroke-width: 1; opacity: 0.7; }
