@@ -135,6 +135,10 @@ describe("sql_rol_ia (SQL puro, sin claves)", () => {
     expect(sinComentarios).toMatch(/ALTER ROLE inv_ia WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 2;/);
   });
 
+  it("el registro de errores de su sesión es terse: el DETAIL de una fila rechazada (texto, hechos) no llega al log de PostgreSQL", () => {
+    expect(sinComentarios).toMatch(/^ALTER ROLE inv_ia SET log_error_verbosity = 'terse';$/m);
+  });
+
   it("topes por sesión: statement_timeout 60s e idle_in_transaction_session_timeout 30s", () => {
     expect(sinComentarios).toMatch(/^ALTER ROLE inv_ia SET statement_timeout = '60s';$/m);
     expect(sinComentarios).toMatch(/^ALTER ROLE inv_ia SET idle_in_transaction_session_timeout = '30s';$/m);

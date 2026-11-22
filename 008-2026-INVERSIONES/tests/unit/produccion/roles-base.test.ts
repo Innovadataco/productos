@@ -739,7 +739,7 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       );
       expect(filas).toEqual([{ rolinherit: false, rolsuper: false, rolcreatedb: false, rolcreaterole: false, rolreplication: false, rolbypassrls: false, rolconnlimit: 2 }]);
       const ajustes = await admin.$queryRawUnsafe<Array<{ ajuste: string }>>("SELECT unnest(rolconfig) AS ajuste FROM pg_roles WHERE rolname = 'inv_ia' ORDER BY 1");
-      expect(ajustes.map((a) => a.ajuste)).toEqual(["idle_in_transaction_session_timeout=30s", "statement_timeout=60s"]);
+      expect(ajustes.map((a) => a.ajuste)).toEqual(["idle_in_transaction_session_timeout=30s", "log_error_verbosity=terse", "statement_timeout=60s"]);
     });
 
     it("el catálogo tiene exactamente los permisos de la lista, por columna; nada de tabla, secuencia, por defecto, TEMP ni CREATE", async () => {
@@ -777,15 +777,16 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       await expect(leerReglas(ia, "version-ficticia")).rejects.toThrow(/42501|permission denied/);
     });
 
-    it("el registro corre como inv_ia: registra con la hora de la base, no repite, lee el último y suma el gasto", async () => {
+    it("el registro corre como inv_ia: registra con la hora de la base, no repite y suma el gasto; el último lo lee inv_app", async () => {
       const paquete = construirPaquete({ ...ENTRADAS_FICTICIAS.REGLAS(), avisos: ["ROLES_BASE_IA"] });
       const prompt = { version: "resumen-reglas-v1", hash: sha256Hex("prompt ficticio de roles-base") };
       const exito = { ok: true, puerta: "local", salidaCruda: "{}", modelo: "ornith:9b", modeloDigest: "digest-ficticio-roles", latenciaMs: 2311, tokensEntrada: 1931, tokensSalida: 287 } as const;
       const entrada = { paquete, prompt, opciones: { temperature: 0, seed: 42 }, validadorVersion: "validador-v1", estado: "PUBLICADO", exito, texto: "Resumen ficticio." } as const;
       const r = await registrarResumen(ia, entrada);
-      await expect(registrarResumen(ia, entrada)).rejects.toThrow(expect.objectContaining({ codigo: "YA_PUBLICADO" }));
+      await expect(registrarResumen(ia, entrada)).resolves.toMatchObject({ estado: "RECHAZADO", yaPublicado: true });
       expect(await yaPublicado(ia, { tipo: "REGLAS", fechaNegocio: paquete.hoy, hechosHash: paquete.hash, promptHash: prompt.hash, modeloDigest: exito.modeloDigest })).toBe(true);
-      expect((await ultimoPublicado(ia, "REGLAS", paquete.hoy))?.id).toBe(r.id);
+      await expect(ultimoPublicado(ia, "REGLAS", paquete.hoy)).rejects.toThrow(/42501|permission denied/);
+      expect((await ultimoPublicado(app, "REGLAS", paquete.hoy))?.id).toBe(r.id);
       expect((await gastoDelMes(ia, "local", new Date(r.generadoEn.getTime() - 1), new Date(r.generadoEn.getTime() + 1))).tokensEntrada).toBe(1931);
     });
 

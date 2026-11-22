@@ -4,7 +4,7 @@
 // escribe solo en resumen_ia, con INSERT y sin "generadoEn". inv_app solo LEE resumen_ia. Que muerdan en una
 // PostgreSQL real lo prueban tests/integracion/ia/privilegios-ia.test.ts (Mac y CI) y roles-base.test.ts (CI, inv_ia real).
 import { describe, expect, it } from "vitest";
-import { filasPermisos, PERMISOS_IA, PROHIBIDAS_IA, RESUMEN_IA_COLUMNAS, TABLAS_FUERA_IA, type Permiso } from "../ia/registro/permisos-ia";
+import { filasPermisos, PERMISOS_IA, PROHIBIDAS_IA, RESUMEN_IA_COLUMNAS, RESUMEN_IA_SELECT_IA, TABLAS_FUERA_IA, type Permiso } from "../ia/registro/permisos-ia";
 import { leer008 } from "./falsos";
 
 const crudo = leer008("docker/migrador/privilegios.sql");
@@ -47,6 +47,14 @@ describe("privilegios de inv_ia", () => {
     expect(inserts.map((p) => p.tabla)).toEqual(["resumen_ia"]);
     expect([...inserts[0]!.columnas].sort()).toEqual(RESUMEN_IA_COLUMNAS.filter((c) => c !== "generadoEn").sort());
     expect([...RESUMEN_IA_COLUMNAS].sort()).toEqual(columnasDe("resumen_ia").sort());
+  });
+
+  it("de resumen_ia lee solo la clave, la puerta, la hora y los tokens: ni el texto, ni la salida, ni los hechos (revisión de base, M3)", () => {
+    const select = PERMISOS_IA.filter((p) => p.tabla === "resumen_ia" && p.privilegio === "SELECT");
+    expect(select.map((p) => [...p.columnas].sort())).toEqual([[...RESUMEN_IA_SELECT_IA].sort()]);
+    for (const c of ["texto", "salidaModelo", "hechos", "opciones", "motivos", "latenciaMs", "modelo", "hechosVersion", "promptVersion", "validadorVersion"]) {
+      expect(RESUMEN_IA_SELECT_IA as readonly string[], c).not.toContain(c);
+    }
   });
 
   it("cada columna existe en su modelo, y ninguna es de las prohibidas", () => {

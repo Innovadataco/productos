@@ -48,16 +48,50 @@ describe("registrarResumen", () => {
     expect(r.generadoEn.getTime()).toBeGreaterThanOrEqual(antes.getTime() - 5_000);
   });
 
-  it("un segundo PUBLICADO con la misma clave da YA_PUBLICADO y no escribe; los RECHAZADO y FALLIDO se repiten", async () => {
+  it("un segundo PUBLICADO con la misma clave queda RECHAZADO con YA_PUBLICADO y sus tokens (el gasto no se pierde); los RECHAZADO y FALLIDO se repiten", async () => {
     const paquete = paqueteDe("DIARIO", "2027-04-08", "REGISTRO_DOS");
-    await registrarResumen(db, publicado(paquete));
+    const primero = await registrarResumen(db, publicado(paquete));
+    expect(primero).toMatchObject({ estado: "PUBLICADO", yaPublicado: false });
     const n = await contar();
-    await expect(registrarResumen(db, publicado(paquete))).rejects.toThrow(expect.objectContaining({ codigo: "YA_PUBLICADO" }));
-    expect(await contar()).toBe(n);
+    const segundo = await registrarResumen(db, publicado(paquete));
+    expect(segundo).toMatchObject({ estado: "RECHAZADO", yaPublicado: true });
+    expect(await db.resumenIa.findUniqueOrThrow({ where: { id: segundo.id } })).toMatchObject({ estado: "RECHAZADO", texto: null, motivos: ["YA_PUBLICADO"], tokensEntrada: 1237, tokensSalida: 211 });
+    expect(await contar()).toBe(n + 1);
+    expect(await db.resumenIa.count({ where: { estado: "PUBLICADO", hechosHash: paquete.hash } })).toBe(1);
+    const n2 = await contar();
     const rechazado: EntradaResumen = { ...comun(paquete), estado: "RECHAZADO", exito: exito("local", 1237, 211), motivos: ["PREDICCION"] };
     const fallido: EntradaResumen = { ...comun(paquete), estado: "FALLIDO", puerta: "local", motivo: "TIEMPO_AGOTADO", detalles: ["LIMITE_DEL_ORQUESTADOR"] };
     for (const e of [rechazado, rechazado, fallido, fallido]) await registrarResumen(db, e);
-    expect(await contar()).toBe(n + 4);
+    expect(await contar()).toBe(n2 + 4);
+  });
+
+  it("dos corridas a la vez con la misma clave: un PUBLICADO y un RECHAZADO con YA_PUBLICADO, sin error (revisión de base, M1)", async () => {
+    const paquete = paqueteDe("DIARIO", "2027-04-13", "REGISTRO_CARRERA");
+    const otro = new PrismaClient();
+    try {
+      const [a, b] = await Promise.all([registrarResumen(db, publicado(paquete)), registrarResumen(otro, publicado(paquete))]);
+      expect([a.estado, b.estado].sort()).toEqual(["PUBLICADO", "RECHAZADO"]);
+      expect(await db.resumenIa.count({ where: { hechosHash: paquete.hash } })).toBe(2);
+    } finally {
+      await otro.$disconnect();
+    }
+  });
+
+  it("dentro de una transacción, el choque no la deja abortada: lo que sigue en ella corre (revisión de base, M2)", async () => {
+    const paquete = paqueteDe("DIARIO", "2027-04-14", "REGISTRO_TRANSACCION");
+    await registrarResumen(db, publicado(paquete));
+    const despues = await db.$transaction(async (tx) => {
+      const r = await registrarResumen(tx, publicado(paquete));
+      return { r, n: await tx.resumenIa.count({ where: { hechosHash: paquete.hash } }) };
+    });
+    expect(despues.r.yaPublicado).toBe(true);
+    expect(despues.n).toBe(2);
+  });
+
+  it("una salida del modelo con un NUL se registra saneada, con sus tokens (revisión de código, ALTO)", async () => {
+    const paquete = paqueteDe("DIARIO", "2027-04-15", "REGISTRO_NUL");
+    const r = await registrarResumen(db, { ...comun(paquete), estado: "RECHAZADO", exito: { ...exito("nube", 389, 47), salidaCruda: "a\u0000b" }, motivos: ["SALIDA_INVALIDA"] });
+    expect(await db.resumenIa.findUniqueOrThrow({ where: { id: r.id } })).toMatchObject({ salidaModelo: "a\ufffdb", tokensEntrada: 389 });
   });
 
   it("una entrada inválida no llega a la base (ErrorRegistro antes de escribir)", async () => {
@@ -96,6 +130,8 @@ describe("ultimoPublicado", () => {
     const ultimo = await ultimoPublicado(db, "DIARIO", dia);
     expect(ultimo).toMatchObject({ tipo: "DIARIO", fechaNegocio: dia, puerta: "local", texto: `Resumen ficticio ${marca}.`, hechosHash: nuevo.hash, promptHash: PROMPT.hash, modeloDigest: "sha256:ficticio7193" });
     expect(ultimo!.generadoEn.toISOString()).toBe("2027-05-11T23:17:41.000Z");
+    // La salida del modelo va con el texto: quien muestra puede volver a validarla y renderizarla (revisión de seguridad, M2).
+    expect(ultimo!.salidaModelo).toBe(exito("local", 1, 1).salidaCruda);
     expect(esPaqueteConstruido(ultimo!.paquete)).toBe(true);
     expect(ultimo!.paquete).toEqual(nuevo);
   });

@@ -40,6 +40,8 @@ const grantsIa = [...sql.matchAll(/GRANT\s+([A-Z]+\s*(?:\([^)]*\))?)\s+ON\s+TABL
 const TABLAS_IA = [...new Set(grantsIa.map((g) => g.tabla))];
 
 let restringida: PrismaClient;
+/** El PUBLICADO que registra inv_ia; lo lee inv_app más abajo. */
+let idPublicado = "";
 let instrumentoId = "";
 /** Sin sembrar el plan (la vigencia de una versión no retrocede y la base es compartida): los permisos se revisan al planear la consulta, con o sin filas. */
 const planVersionId = `version-ficticia-${corrida}`;
@@ -118,7 +120,7 @@ describe("con los privilegios de inv_ia: control positivo", () => {
     expect(await quien()).toBe(ROL);
   });
 
-  it("el registro: registrar, no repetir, leer el último publicado y sumar el gasto", async () => {
+  it("el registro: registrar, no repetir (el repetido queda RECHAZADO con sus tokens) y sumar el gasto", async () => {
     const paquete = construirPaquete({ ...ENTRADAS_FICTICIAS.ESCENARIOS(), avisos: [`PRIVILEGIOS_IA_${corrida}`] });
     const prompt = { version: "resumen-escenarios-v1", hash: sha256Hex(`prompt ficticio de privilegios ${corrida}`) };
     const exito = { ok: true, puerta: "nube", salidaCruda: "{}", modelo: "modelo-ficticio", modeloDigest: "digest-ficticio-4613", latenciaMs: 1913, tokensEntrada: 2389, tokensSalida: 173 } as const;
@@ -127,14 +129,21 @@ describe("con los privilegios de inv_ia: control positivo", () => {
     const r = await registrarResumen(restringida, { paquete, prompt, opciones: { temperature: 0 }, validadorVersion: "validador-v1", estado: "PUBLICADO", exito, texto: "Resumen ficticio de escenarios." });
     expect(r.generadoEn).toBeInstanceOf(Date);
     expect(await yaPublicado(restringida, clave)).toBe(true);
-    expect((await ultimoPublicado(restringida, "ESCENARIOS", paquete.hoy))?.id).toBe(r.id);
+    const repetido = await registrarResumen(restringida, { paquete, prompt, opciones: { temperature: 0 }, validadorVersion: "validador-v1", estado: "PUBLICADO", exito, texto: "Resumen ficticio de escenarios." });
+    expect(repetido).toMatchObject({ estado: "RECHAZADO", yaPublicado: true });
     const gasto = await gastoDelMes(restringida, "nube", new Date(r.generadoEn.getTime() - 1), new Date(r.generadoEn.getTime() + 1));
     expect(gasto.tokensEntrada).toBeGreaterThanOrEqual(2389);
     expect(await quien()).toBe(ROL);
+    idPublicado = r.id;
   });
 });
 
 describe("con los privilegios de inv_ia: control negativo", () => {
+  it("no lee el texto, la salida ni los hechos guardados: ultimoPublicado es de la pantalla (inv_app), no del servicio", async () => {
+    await expect(ultimoPublicado(restringida, "ESCENARIOS", ENTRADAS_FICTICIAS.ESCENARIOS().hoy)).rejects.toThrow(/42501|permission denied/);
+    for (const c of ["texto", '"salidaModelo"', "hechos", "opciones", "motivos"]) await negado(`SELECT ${c} FROM resumen_ia LIMIT 1`);
+  });
+
   it("los lectores de la página del plan leen el motivo, la acción, la cantidad y el detalle: dan 42501 (el servicio necesita los suyos)", async () => {
     await expect(leerVersiones(restringida)).rejects.toThrow(/42501|permission denied/);
     await expect(leerReglas(restringida, planVersionId)).rejects.toThrow(/42501|permission denied/);
@@ -196,9 +205,22 @@ describe("inv_app y resumen_ia: solo lee", () => {
   });
 
   it("lee el último publicado (control positivo) y no inserta, ni edita, ni borra", async () => {
-    await expect(ultimoPublicado(app, "ESCENARIOS", ENTRADAS_FICTICIAS.ESCENARIOS().hoy)).resolves.not.toBeUndefined();
+    const ultimo = await ultimoPublicado(app, "ESCENARIOS", ENTRADAS_FICTICIAS.ESCENARIOS().hoy);
+    expect(ultimo?.id).toBe(idPublicado);
     for (const sentencia of ["INSERT INTO resumen_ia (id) VALUES ('x')", "UPDATE resumen_ia SET texto = 'x' WHERE false", "DELETE FROM resumen_ia WHERE false"]) {
       await expect(app.$executeRawUnsafe(sentencia), sentencia).rejects.toThrow(/42501|permission denied/);
     }
+  });
+
+  it("si la base rechaza la fila, registrarResumen lanza BASE_RECHAZADA sin repetir el texto ni los hechos (revisión de seguridad, M1)", async () => {
+    const paquete = construirPaquete({ ...ENTRADAS_FICTICIAS.DIARIO(), avisos: [`BASE_RECHAZADA_${corrida}`] });
+    const texto = `Texto ficticio que no debe salir en el error ${corrida}`;
+    const exito = { ok: true, puerta: "local", salidaCruda: "{}", modelo: "m", modeloDigest: "d", latenciaMs: 3, tokensEntrada: 5, tokensSalida: 2 } as const;
+    const intento = registrarResumen(app, { paquete, prompt: { version: "resumen-diario-v1", hash: sha256Hex("p") }, opciones: {}, validadorVersion: "validador-v1", estado: "PUBLICADO", exito, texto });
+    const error = await intento.then(() => null, (e: unknown) => e);
+    expect(error).toMatchObject({ name: "ErrorRegistro", codigo: "BASE_RECHAZADA" });
+    expect(String((error as Error).message)).not.toContain(texto);
+    expect(String((error as Error).message)).not.toContain(paquete.hash);
+    expect((error as Error).cause).toBeUndefined();
   });
 });

@@ -114,6 +114,12 @@ describe("migración *_resumen_ia", () => {
     expect(sinComentarios).toContain(`cardinality("motivos") <= ${MAX_MOTIVOS}`);
   });
 
+  it("el cotejo de los hechos no deja pasar un NULL: IS NOT DISTINCT FROM en cada clave (revisión de base, A1)", () => {
+    const chk = /ADD CONSTRAINT "resumen_ia_hechos_chk" CHECK \(([\s\S]*?)\n\);/.exec(sinComentarios)?.[1] ?? "";
+    for (const clave of ["hash", "version", "tipo", "hoy"]) expect(chk, clave).toMatch(new RegExp(`\\("hechos" ->> '${clave}'\\) IS NOT DISTINCT FROM `));
+    expect(chk).not.toMatch(/->> '[a-z]+'\) = /);
+  });
+
   it("un FALLIDO empieza por un motivo de fallo de src/ia (MOTIVOS_FALLO, en el mismo orden), y VISTA_NO_CIEGA va sin puerta", () => {
     const lista = `ARRAY[${MOTIVOS_FALLO.map((m) => `'${m}'`).join(", ")}]`;
     expect(sinComentarios).toContain(`"motivos"[1] = ANY (${lista})`);

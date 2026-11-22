@@ -15,9 +15,9 @@
 //    src/plan/lectura.ts sí los leen: con inv_ia dan 42501, y el servicio necesita un lector propio con `select`);
 //  - ESCENARIOS: leerEntradas (src/proyecciones/leer.ts) y leerFondosHistoria y leerHistoria (src/app/proyecciones/datos.ts).
 // Nada de usuario, filas crudas (`crudo`), el `encargo`, la certificación por especie, los lotes de A&V, la caja ni los
-// símbolos. Escritura: solo INSERT en resumen_ia, sin "generadoEn" (lo pone la base); SELECT de todas sus columnas
-// (ultimoPublicado, yaPublicado, gastoDelMes y el RETURNING del INSERT). Sin UPDATE, DELETE, TRUNCATE ni permisos de
-// tabla completa.
+// símbolos. Escritura: solo INSERT en resumen_ia, sin "generadoEn" (lo pone la base); de resumen_ia lee solo lo de
+// yaPublicado, gastoDelMes y el RETURNING (RESUMEN_IA_SELECT_IA). Sin UPDATE, DELETE, TRUNCATE ni permisos de tabla
+// completa.
 
 export type Permiso = { readonly tabla: string; readonly privilegio: "SELECT" | "INSERT"; readonly columnas: readonly string[] };
 
@@ -25,6 +25,15 @@ export const RESUMEN_IA_COLUMNAS = [
   "id", "tipo", "fechaNegocio", "estado", "puerta", "texto", "salidaModelo", "hechos", "hechosHash", "hechosVersion", "modelo",
   "modeloDigest", "opciones", "promptVersion", "promptHash", "validadorVersion", "motivos", "latenciaMs", "tokensEntrada",
   "tokensSalida", "generadoEn",
+] as const;
+
+/**
+ * Lo que inv_ia LEE de resumen_ia: solo lo que usan yaPublicado (la clave), gastoDelMes (la puerta, la hora y los tokens)
+ * y el RETURNING del INSERT (id y hora). Ni el texto, ni la salida del modelo, ni los hechos: la pantalla (inv_app) los
+ * lee con ultimoPublicado; el servicio no los necesita.
+ */
+export const RESUMEN_IA_SELECT_IA = [
+  "id", "tipo", "fechaNegocio", "estado", "puerta", "hechosHash", "promptHash", "modeloDigest", "tokensEntrada", "tokensSalida", "generadoEn",
 ] as const;
 
 export const PERMISOS_IA: readonly Permiso[] = [
@@ -51,7 +60,7 @@ export const PERMISOS_IA: readonly Permiso[] = [
   { tabla: "plan_version", privilegio: "SELECT", columnas: ["id", "version", "vigenteDesde", "creadaEn"] },
   { tabla: "precio_cierre", privilegio: "SELECT", columnas: ["id", "instrumentoId", "fecha", "precio", "fuente", "estado", "traidoEn", "reemplazadoEn"] },
   { tabla: "regla_plan", privilegio: "SELECT", columnas: ["id", "planVersionId", "instrumentoId", "condicion", "nivel", "plazoHasta"] },
-  { tabla: "resumen_ia", privilegio: "SELECT", columnas: RESUMEN_IA_COLUMNAS },
+  { tabla: "resumen_ia", privilegio: "SELECT", columnas: RESUMEN_IA_SELECT_IA },
   { tabla: "resumen_ia", privilegio: "INSERT", columnas: RESUMEN_IA_COLUMNAS.filter((c) => c !== "generadoEn") },
   { tabla: "valor_serie_oficial", privilegio: "SELECT", columnas: ["id", "serie", "desde", "hasta", "valor", "fuente", "traidoEn", "reemplazadoEn"] },
   { tabla: "valor_unidad_fondo", privilegio: "SELECT", columnas: ["id", "fondoId", "fechaValor", "valorUnidad", "reemplazadoEn"] },

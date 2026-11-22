@@ -65,6 +65,29 @@ describe("filaDeResumen: lo que sale del paquete", () => {
   });
 });
 
+describe("filaDeResumen: lo que se normaliza para no perder el registro (revisión, ALTO y MEDIO)", () => {
+  it("la salida del modelo con un NUL o un sustituto suelto se guarda saneada (U+FFFD), con sus tokens: la base no la rechaza", () => {
+    const fila = filaDeResumen(rechazado({ exito: { ...EXITO, salidaCruda: 'antes\u0000medio\ud800despues' } }));
+    expect(fila.salidaModelo).toBe("antes\ufffdmedio\ufffddespues");
+    expect(fila.salidaModelo!.isWellFormed()).toBe(true);
+    expect(fila).toMatchObject({ tokensEntrada: 1237, tokensSalida: 461 });
+    // Control positivo: una salida limpia queda tal cual.
+    expect(filaDeResumen(rechazado()).salidaModelo).toBe(EXITO.salidaCruda);
+  });
+
+  it("los motivos y los detalles repetidos se guardan una vez, en el orden en que llegaron", () => {
+    expect(filaDeResumen(rechazado({ motivos: ["LONGITUD", "CIFRA_SUELTA", "LONGITUD"] })).motivos).toEqual(["LONGITUD", "CIFRA_SUELTA"]);
+    const vista = fallido({ puerta: null, motivo: "VISTA_NO_CIEGA", detalles: ["VALOR_DEL_PAQUETE", "NOMBRE_DE_ESPECIE", "VALOR_DEL_PAQUETE"] });
+    expect(filaDeResumen(vista).motivos).toEqual(["VISTA_NO_CIEGA", "VALOR_DEL_PAQUETE", "NOMBRE_DE_ESPECIE"]);
+  });
+
+  it("el tope cuenta los distintos: el motivo de fallo y hasta MAX_MOTIVOS - 1 detalles entran; uno más, no", () => {
+    const detalles = Array.from({ length: MAX_MOTIVOS - 1 }, (_, i) => `DETALLE_${"Q".repeat(i + 1)}`);
+    expect(filaDeResumen(fallido({ detalles })).motivos).toHaveLength(MAX_MOTIVOS);
+    expect(codigo(fallido({ detalles: [...detalles, "DETALLE_DE_MAS"] }))).toBe("MOTIVOS_INVALIDOS");
+  });
+});
+
 describe("filaDeResumen: cierra en fallo, con un código y sin repetir lo recibido", () => {
   it.each<[string, unknown, string]>([
     ["un paquete copiado (no construido)", publicado({ paquete: JSON.parse(JSON.stringify(paquete)) }), "PAQUETE_NO_CONSTRUIDO"],
@@ -77,6 +100,9 @@ describe("filaDeResumen: cierra en fallo, con un código y sin repetir lo recibi
     ["opciones que no son un objeto", publicado({ opciones: [] as never }), "OPCIONES_INVALIDAS"],
     ["opciones con una función", publicado({ opciones: { f: () => 1 } as never }), "OPCIONES_INVALIDAS"],
     ["opciones demasiado largas", publicado({ opciones: { relleno: "x".repeat(4613) } }), "OPCIONES_INVALIDAS"],
+    ["opciones con un NUL (la base lo rechaza en jsonb)", publicado({ opciones: { keep_alive: "3\u00007s" } }), "OPCIONES_INVALIDAS"],
+    ["opciones con un sustituto suelto", publicado({ opciones: { anidada: { valor: "x\ud800" } } }), "OPCIONES_INVALIDAS"],
+    ["opciones con una clave con NUL", publicado({ opciones: { "cla\u0000ve": 1 } }), "OPCIONES_INVALIDAS"],
     ["un texto vacío", publicado({ texto: "" }), "TEXTO_INVALIDO"],
     ["un texto de solo espacios", publicado({ texto: " \n " }), "TEXTO_INVALIDO"],
     ["un texto con un carácter de control", publicado({ texto: "Resumen\u0007 ficticio" }), "TEXTO_INVALIDO"],
@@ -93,7 +119,6 @@ describe("filaDeResumen: cierra en fallo, con un código y sin repetir lo recibi
     ["un rechazo sin motivos", rechazado({ motivos: [] }), "MOTIVOS_INVALIDOS"],
     ["un motivo en minúsculas", rechazado({ motivos: ["cifra_suelta"] }), "MOTIVOS_INVALIDOS"],
     ["un motivo con dígitos (datos)", rechazado({ motivos: ["CIFRA_4613"] }), "MOTIVOS_INVALIDOS"],
-    ["motivos repetidos", rechazado({ motivos: ["LONGITUD", "LONGITUD"] }), "MOTIVOS_INVALIDOS"],
     ["un rechazo con un motivo de fallo del generador", rechazado({ motivos: ["TIEMPO_AGOTADO"] }), "MOTIVOS_INVALIDOS"],
     ["más motivos que el tope", rechazado({ motivos: Array.from({ length: MAX_MOTIVOS + 1 }, (_, i) => `MOTIVO_${"X".repeat(i + 1)}`) }), "MOTIVOS_INVALIDOS"],
     ["un fallo con un motivo fuera de la lista", fallido({ motivo: "CIFRA_SUELTA" as never }), "MOTIVOS_INVALIDOS"],
