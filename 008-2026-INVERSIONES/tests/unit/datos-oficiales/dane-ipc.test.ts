@@ -318,6 +318,24 @@ describe("leerAnexoIpc · la serie y el periodo", () => {
     expect(leer({ valor: enMes(30, (r) => celdaNumero(r, "1000.01")) }, d(1999, 7, 31))).toEqual(en("VALOR_FUERA_DE_RANGO", "D16"));
   });
 
+  // code-reviewer M1: la precedencia del encabezado del módulo, tramo por tramo (dos defectos a la vez: sale el primero).
+  it("precedencia de la forma: libro → relaciones → textos → hoja → celdas → etiquetas → años → meses → fuera de la tabla → valores", () => {
+    const sstRota = (x: string) => x.replace("<sst ", "<sstx ").replace("</sst>", "</sstx>");
+    expect(leer({ libro: (x) => x.replace(/<sheet [^>]*\/>/, ""), rels: (x) => x.replace(/xmlns="[^"]+"/, `xmlns="${NS_MAIN}"`) })).toEqual(formato("HOJAS"));
+    expect(leer({ rels: (x) => x.replace(`${NS_R}/worksheet"`, `${NS_R}/chartsheet"`), textos: sstRota })).toEqual(formato("REL"));
+    expect(leer({ textos: sstRota, partes: { [PARTE_HOJA]: null } })).toEqual(formato("RAIZ"));
+    expect(leer({ textos: sstRota, hoja: (x) => x.replace("?>", "?><!DOCTYPE worksheet>") })).toEqual(formato("RAIZ"));
+    expect(leer({ textos: sstRota, hoja: (x) => x.replace('<row r="1" ', "<row ") })).toEqual(formato("RAIZ"));
+    expect(leer({ etiquetas: { mes: null }, hoja: (x) => x.replace('<row r="1" ', "<row ") })).toEqual(formato("REF"));
+    const aniosMalos: OpcionesAnexo["anio"] = (i, r) => (i > 0 ? celdaNumero(r, String(1998 + i)) : undefined);
+    expect(leer({ etiquetas: { base: null }, anio: aniosMalos })).toEqual({ ok: false, codigo: "DANE_BASE_DISTINTA" });
+    const setiembre = (x: string) => x.replace("<t>Septiembre</t>", "<t>Setiembre</t>");
+    expect(leer({ anio: aniosMalos, textos: setiembre })).toEqual(en("DANE_ANIOS", "C9"));
+    const aLaDerecha = (m: number) => (m === 4 ? celdaNumero("E14", "471.93") : "");
+    expect(leer({ textos: setiembre, extraFilaMes: aLaDerecha })).toEqual(en("DANE_MES_DESCONOCIDO", "A18"));
+    expect(leer({ extraFilaMes: aLaDerecha, valor: enMes(0, (r) => celdaNumero(r, "414.775")) })).toEqual(formato("FUERA_DE_TABLA", "E14"));
+  });
+
   it("un fallo no previsto sale ERROR_INTERNO, nunca como un cambio del DANE ni como excepción", () => {
     const rota = { ...SERIE, rango: undefined as unknown as RangoCordura };
     expect(leerAnexoIpc(anexoIpc(), HOY, rota)).toEqual({ ok: false, codigo: "ERROR_INTERNO" });
