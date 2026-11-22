@@ -124,8 +124,9 @@ export function asegurarVistaCiega(vista: unknown, paquete: PaqueteHechos): asse
   if (codigos.length > 0) throw new ErrorVistaCiega(codigos);
 }
 
+/** La anotación de tipo hace que TypeScript rechace un campo de más (verificación por exceso de propiedades). */
 function proyectar<C extends ClaveHecho>(hecho: Hecho<C>): HechoCiego<C> {
-  return Object.freeze({
+  const ciego: HechoCiego<C> = {
     id: hecho.id,
     clave: hecho.clave,
     etiqueta: hecho.etiqueta,
@@ -135,7 +136,8 @@ function proyectar<C extends ClaveHecho>(hecho: Hecho<C>): HechoCiego<C> {
     frescura: hecho.frescura,
     calidad: hecho.calidad,
     obligatorio: hecho.obligatorio,
-  });
+  };
+  return Object.freeze(ciego);
 }
 
 /** La vista ciega del paquete, ya pasada por la guarda (si la proyección filtrara algo, lanza). Congelada. */
