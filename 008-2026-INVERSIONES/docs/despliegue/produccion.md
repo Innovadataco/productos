@@ -18,6 +18,7 @@ Cómo se despliega, se revierte, se respalda, se restaura y se cargan los datos 
   - `<respaldos>/`, esa carpeta, sin subcarpetas: los respaldos cifrados.
 - **Lo que nunca se toca:** la carpeta de PI, los contenedores de PI y de BI, y los de otros proyectos del VPS.
 - **Docker:** solo con el proyecto `inv-008-prod`, siempre por la variable `COMPOSE`.
+  - Única excepción: `docker update` de los límites de memoria (mem = memswap), sobre un contenedor que salió de `$COMPOSE` y lleva la etiqueta del proyecto (§5, «Límites de memoria»).
   - Nunca un comando global (`system prune`, `image prune -a`, `volume prune`, `stop $(docker ps -q)`).
   - Ningún comando de Docker nombra contenedores de PI, de BI ni de otros proyectos del VPS, ni siquiera para leer.
 - **Sistema:** ningún script toca `ufw`, `systemctl`, `/etc/` ni el `crontab` de root.
@@ -344,6 +345,31 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
     curl -s -w ' %{http_code}\n' https://<dominio de la app>/api/no-existe                            # 401
     ```
 - **Bajar Inversiones sin perder datos:** `sudo $COMPOSE down`, **nunca con `-v`**. Mejor `pausar-008.sh`, que deja la marca.
+
+### Límites de memoria: el reload diario del host (`reaplicar-limites-008.sh`)
+- **Causa** (medida en producción por la Fábrica y el CEO, 2026-11-21):
+  - todos los días, entre las 02:17 y las 02:31 UTC, una tarea del agente qemu-ga del proveedor del VPS habilita un temporizador de systemd (`fstrim.timer`), y eso dispara un `daemon-reload`;
+  - el reload deja `memory.swap.max` en `max` (antes, 0) en el cgroup de **todo contenedor que esté corriendo**;
+  - los contenedores creados después del reload quedan bien (0).
+- **Síntoma:**
+  - `docker inspect` sigue diciendo `Memory = MemorySwap`: Docker no lo ve, solo el cgroup;
+  - el contenedor puede usar el swap del host: el tope de mem = memswap, acordado con PI, deja de ser real;
+  - le pasa sobre todo a la base (`inv-008-db`), que casi nunca se recrea. Antes de este arreglo, el chequeo «mem = memswap» de `desplegar-prod.sh` lo encontraba **después** de migrar y hacía vuelta atrás: todo despliegue fallaba;
+  - `medir-memoria.sh` lo avisa con una línea `⚠️ <contenedor> puede usar swap (memory.swap.max = max)` y el comando de abajo.
+- **Qué hacen los scripts** (`reaplicar_limites`, en `produccion-comun.sh`):
+  - `desplegar-prod.sh` reaplica los límites **antes de tocar nada** (antes del respaldo previo y de migrar; si falla, sale sin vuelta atrás) y **otra vez antes** del chequeo «mem = memswap» (si falla ahí, vuelta atrás);
+  - `reanudar-008.sh`, después de su `up` (si falla, la marca de pausa queda).
+  - Reaplicar es `docker update --memory M --memory-swap M`, con `M` = el `HostConfig.Memory` del **mismo** contenedor: sin reiniciar nada y solo en los contenedores del proyecto (los de `$COMPOSE`, con su etiqueta). Primero revisa todos; si alguno no es del proyecto, no tiene un límite declarado o su cgroup no se puede leer, no toca ninguno.
+  - Una línea de log por corrección, con el contenedor y de qué a qué. Después relee el cgroup y `HostConfig`: si el update falló o algo sigue fuera de lo declarado, aborta.
+  - **No repone el tope si el contenedor no cabría:** con algo en swap, lo que no se puede soltar sin swap (`anon` y `shmem` de `memory.stat`) más lo que está en swap tiene que caber en el límite. Si no cabe (o no se puede leer), aborta sin tocar ninguno: reponer el tope podría matarlo por OOM. Lo decide una persona; por ejemplo, recrear ese contenedor en una ventana avisada.
+- **El comando, a mano** (toma el candado de Inversiones y el común con PI, sin esperar; si PI está desplegando, se niega):
+  ```sh
+  sudo <raíz>/repo/008-2026-INVERSIONES/scripts/reaplicar-limites-008.sh
+  ```
+  Sale con 0 y «N corregido(s)», o con 1 y el motivo.
+- **Lo que no arregla:** entre el reload de la noche y la siguiente reaplicación, lo que corre puede usar swap. **La solución de fondo, en el host, la decide PI.** Inversiones no toca systemd, el crontab ni el host.
+- **Ensayo en el Mac** (Colima, Docker 29.5.2, driver `cgroupfs`, proyecto `inv-008-prueba`, 2026-11-21): con `memory.swap.max` puesto a mano en `max` en la base de prueba, `docker inspect` seguía diciendo `Memory = MemorySwap`; el comando, corrido dentro de la máquina virtual (desde el Mac el cgroup no se ve), lo devolvió a 0, y la segunda corrida dio 0 corregidos.
+- **Por verificar en el VPS:** que `docker update` con los mismos valores reescriba `memory.swap.max` con el driver `systemd`. Si no lo hiciera, el script lo detecta en la relectura y aborta antes de migrar.
 
 **Política de migraciones**, como PI:
 - en producción, solo `prisma migrate deploy`;
@@ -754,6 +780,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.15 · 2026-11-21 · 23:01 (-05) · Inversiones · Fábrica Inversiones (frente limites-reaplicar) · §5 «Límites de memoria»: el reload diario del host deja `memory.swap.max` en `max`; `desplegar-prod.sh` y `reanudar-008.sh` reaplican mem = memswap con `docker update` (antes de tocar nada y antes del chequeo), el comando `reaplicar-limites-008.sh`, el aviso de `medir-memoria.sh`, el ensayo en Colima y lo que decide PI; reglas: la excepción de `docker update` (v2.15 sobre la v2.14 de main)
 > v2.14 · 2026-11-21 · 22:05 (-05) · Inversiones · Fábrica Inversiones (frente fondo-movimientos-via-b; v2.14 sobre la v2.13 de main) · §11: paso 12 bis `registrar-movimiento-fondo` (la constitución del fondo por el sobre: cabecera, ensayo y `--aplicar`, contraste con el valor de unidad del mismo día, lo que garantiza la base y lo que garantiza la app, salidas y la frase de parar); el CSV del paso 12 cubre el día de la constitución; riesgo residual del argv con sus cifras
 > v2.13 · 2026-11-21 · 20:38 (-05) · Inversiones · Fábrica Inversiones (frente certificacion-corte-real) · §11: el corte real de la certificación (`FECHA_CORTE_ANTES_DEL_CIERRE`, `CORTE_NO_COINCIDE`, `fecha_corte_dudosa` con día sugerido), el paso 15 `corregir-corte-certificacion` por el sobre (lista blanca, qué deja, rechazos, conciliar el corte real) y reconciliar al desplegar por `conciliacion-v2` (la numeración v2.13 sigue a la v2.12 de main)
 > v2.12 · 2026-11-21 · 18:32 (-05) · Inversiones · Fábrica Inversiones (frente precios-integridad) · §2: `inv_precios` existe desde la primera corrida de `crear-roles-prod.sh` (NOLOGIN y sin clave sin su línea; quitarla lo desactiva), la restauración ya no depende de la línea (ensayada), los disparadores de `20261121231049_precios_integridad` y el riesgo residual completo; §4: permisos «si el rol existe»; §6 (A): `crear-roles-prod.sh` crea `inv_precios` y el guardián de una imagen anterior ve sobrantes; §10: las 4 migraciones con `lock_timeout`
