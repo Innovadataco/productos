@@ -362,6 +362,68 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  # Servicio de precios (D-018): de lunes a viernes a las 18:00 COT trae los cierres de Yahoo y el valor de unidad de
+  # la SFC, una vez al día, con plazo por tarea y sin reintentos (src/servicio-precios/). La imagen de la app con otro
+  # entrypoint: el bundle /app/precios/servicio-precios.mjs en modo «bucle», que corre cada tarea como un proceso hijo
+  # del mismo bundle. La carga histórica, a pedido y sin levantar la base si está en pausa:
+  #   "${COMPOSE[@]}" run --rm -T --no-deps inv-008-precios --ahora --desde AAAA-MM-DD
+  # - Solo la credencial del rol inv_precios, y opcional (${…:-}, nunca :?): sin el secreto NO se cae, queda en
+  #   espera con latido (healthy) y lo dice en el log; con :? fallarían la pausa y los up de todo el proyecto. Ni
+  #   claves de cifrado, ni AUTH_SECRET, ni Telegram.
+  # - Red: la interna (la base) y inv-008-red-precios, con salida y solo para él, con la subred del pool de Docker.
+  #   La red no filtra por destino: lo limita el código (src/servicio-precios/buscador.ts): solo Yahoo query1 y la SFC
+  #   www.datos.gov.co por https, redirect "error", y solo a IPv4 públicas (nunca la puerta de enlace ni la IP del
+  #   host vista desde el contenedor).
+  # - Huella para el vigía (PR 4) en el volumen inv-008-precios-estado (/estado): bucle (latido y estado, cada
+  #   minuto: es el healthcheck), ultima-corrida y corrida.candado, en clave=valor (src/servicio-precios/estado.ts).
+  # - 96m sin swap, también con el hijo. Medido en el Mac (arm64 nativo, 2026-11-21; el VPS es amd64 y se mide allí con
+  #   medir-memoria.sh): en espera 14 MiB (pico 17) y 13 pids; una corrida de 10 días, pico de 41 MiB y 34 pids; la
+  #   carga de un año, pico de 52 MiB. Sin OOM y sin /tmp (no lo necesita).
+  inv-008-precios:
+    image: inv-008-app:${INV_TAG:-sin-desplegar}
+    pull_policy: never
+    user: "10008:10008"
+    restart: always
+    init: true
+    depends_on:
+      inv-008-db:
+        condition: service_healthy
+    entrypoint: ["node", "--max-old-space-size=64", "/app/precios/servicio-precios.mjs"]
+    command: ["bucle"]
+    environment:
+      DATABASE_URL: ${INV_PRECIOS_DATABASE_URL:-}
+      TZ: America/Bogota
+    volumes:
+      - inv-008-precios-estado:/estado
+    networks:
+      - inv-008-red-interna
+      - inv-008-red-precios
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 96m
+    memswap_limit: 96m
+    cpus: 0.25
+    cpu_shares: 256
+    # node, su hijo (la tarea), los hilos de libuv y V8 y los del engine de Prisma, más el healthcheck.
+    pids_limit: 64
+    # SIGTERM al bucle: detiene al hijo (SIGTERM, 5 s de gracia y SIGKILL) antes de que Docker lo mate.
+    stop_grace_period: 15s
+    ulimits:
+      core: 0
+    # El latido de menos de 3 minutos, con el find y el grep de busybox (sin un segundo node: no cabe en 96m).
+    healthcheck:
+      test: ["CMD-SHELL", "find /estado/bucle -mmin -3 | grep -q ."]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
 # Las dos redes internal aíslan además la puerta de enlace (gateway_mode_ipv4: isolated, Docker 28 o más): el puente
 # no tiene dirección del host, así que desde ellas no se llega ni a internet ni al HOST (sin aislar se llegaba a los
 # servicios del host por su puerta de enlace). El DNS de Docker y los vecinos de la misma red siguen funcionando.
@@ -379,6 +441,25 @@ networks:
   # Con salida: la entrada (para publicar 127.0.0.1:5008) y el vigía (Telegram). Ni la app ni la base.
   inv-008-red:
     driver: bridge
+  # Con salida, solo para el servicio de precios (Yahoo y la SFC): un puente propio, con la subred del pool de Docker
+  # (sin ipam), sin IPv6 y sin nadie más. No se aísla la puerta de enlace: por ella sale a internet. Que no abra
+  # conexiones a la IP del host lo garantiza su código (src/servicio-precios/direcciones.ts); además, el puente lleva
+  # un nombre fijo (br-inv008-prec, 14 caracteres: el tope de Linux es 15) para la regla de firewall del host que pone
+  # PI (lo que entra por ese puente, sin acceso al host). Un nombre fijo es único en el host: un solo proyecto a la vez.
+  inv-008-red-precios:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-inv008-prec
 
 volumes:
   inv-008-db-datos:
+  # La huella del servicio de precios para el vigía (src/servicio-precios/estado.ts): un tmpfs local de 64k, del
+  # usuario 10008 (0700; el vigía también es 10008), nosuid, nodev y noexec: sin disco y sin crecer. Se vacía cuando
+  # ningún contenedor lo usa (pausa, down, reinicio). Sus opciones no se cambian en caliente: cambiarlas exige
+  # borrar el volumen (y borrar volúmenes está prohibido en producción), así que quedan fijas desde el principio.
+  inv-008-precios-estado:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: "size=64k,uid=10008,gid=10008,mode=0700,nosuid,nodev,noexec"

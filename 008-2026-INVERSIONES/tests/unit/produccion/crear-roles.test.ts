@@ -277,6 +277,13 @@ describe("sql_rol_precios (SQL puro, sin claves)", () => {
     expect(sinComentarios).toMatch(/ALTER ROLE inv_precios WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 4;/);
   });
 
+  // Revisión de base del servicio de precios (M3): si el servicio mata a un hijo a mitad (plazo o SIGTERM), su backend
+  // no ocupa el CONNECTION LIMIT 4 más de lo que dure su sentencia (60 s) o su transacción quieta (30 s).
+  it("topes por sesión del rol: statement_timeout 60s e idle_in_transaction_session_timeout 30s", () => {
+    expect(sinComentarios).toMatch(/^ALTER ROLE inv_precios SET statement_timeout = '60s';$/m);
+    expect(sinComentarios).toMatch(/^ALTER ROLE inv_precios SET idle_in_transaction_session_timeout = '30s';$/m);
+  });
+
   it("sql_precios_sin_login (sin el secreto) le quita el LOGIN y la clave, también si ya los tenía", () => {
     const r = funcion(SCRIPT, "sql_precios_sin_login", { PATH: process.env.PATH });
     expect(r.status, r.stderr).toBe(0);
