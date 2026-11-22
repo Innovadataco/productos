@@ -2,8 +2,10 @@
  * Tenencia de una especie a una fecha, por fecha de OPERACIÓN (fase B, corte 3): las compras aprobadas y los
  * lotes de escisión suman, las ventas restan, y la operación del mismo día ya cuenta. Es la regla de las
  * cantidades de `src/conciliacion/esperado.ts` (órdenes aprobadas más lotes de escisión), contada por operación
- * y no por liquidación. La usa el cálculo de los dividendos de una decisión. Puro.
+ * y no por liquidación. La usan el cálculo de los dividendos de una decisión y el cruce de los decretos. Puro.
  */
+import { sumarDias } from "./fechas";
+
 export interface MovimientoTenencia {
   readonly fecha: Date;
   /** Con signo: + compra o lote de escisión, − venta. */
@@ -28,4 +30,14 @@ export function positivaEn(movimientos: readonly MovimientoTenencia[], desde: Da
 export function constanteEn(movimientos: readonly MovimientoTenencia[], desde: Date, hasta: Date): boolean {
   const inicial = tenenciaEn(movimientos, desde);
   return cambiosEn(movimientos, desde, hasta).every((f) => tenenciaEn(movimientos, f) === inicial);
+}
+
+/**
+ * La tenencia que cobra un dividendo con fecha ex `fechaEx`: la del cierre del día anterior a la ex, por operación (la
+ * compra de ese día cuenta; la del día de la ex, no). Es la regla del periodo ex tal como la toma 008: por verificar con
+ * la norma vigente y con los extractos (P12). La usan el cruce de los decretos (src/datos-oficiales/decretos/cruce.ts) y
+ * los dividendos de una decisión (dividendos.ts).
+ */
+export function tenenciaAntesDeLaEx(movimientos: readonly MovimientoTenencia[], fechaEx: Date): bigint {
+  return tenenciaEn(movimientos, sumarDias(fechaEx, -1));
 }

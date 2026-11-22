@@ -10,13 +10,14 @@ import "server-only";
  *   son siempre las de hoy (`posiciones()` no recibe fecha): `hoy` solo acota la historia y los movimientos.
  * - Historia: cierres VIGENTES de Yahoo (la fuente de los diarios) de las acciones vivas y de los destinos de sus
  *   escisiones, valores de unidad vigentes de los fondos, de los últimos ANIOS_HISTORIA_MAX años y hasta hoy.
- * - Dividendos pagados (sin las fracciones de escisión), decretos VIGENTES y no anulados (una corrección es una versión
- *   nueva que retira a la anterior y una anulación es una versión `anulada`: migración *_datos_oficiales; también los de
- *   pago futuro, solo para contarlos), los movimientos de la tenencia, las escisiones y los días no hábiles de
- *   calendario_bvc.
+ * - Dividendos pagados (sin las fracciones de escisión), decretos VIGENTES y no anulados (DECRETOS_QUE_CUENTAN de
+ *   src/datos-oficiales/decretos/vigentes.ts, el único filtro: una corrección es una versión nueva que retira a la
+ *   anterior y una anulación es una versión `anulada`; también los de pago futuro, solo para contarlos), los movimientos
+ *   de la tenencia, las escisiones y los días no hábiles de calendario_bvc.
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { enSoloLectura } from "../conciliacion/leer";
+import { DECRETOS_QUE_CUENTAN } from "../datos-oficiales/decretos/vigentes";
 import { posiciones, type ResultadoPosiciones } from "../lotes/posiciones";
 import { esFechaDeNegocio } from "../plan/fechas";
 import { movimientosDeEspecies } from "../plan/resultados-lote";
@@ -91,7 +92,7 @@ async function leerHistoria(tx: Lector, hoy: Date, ids: readonly string[], desti
       orderBy: [{ fechaPago: "asc" }, { id: "asc" }],
     }),
     tx.dividendoDecretado.findMany({
-      where: { instrumentoId: { in: [...ids] }, reemplazadoEn: null, anulada: false, fechaPago: { gte: desde } },
+      where: { instrumentoId: { in: [...ids] }, fechaPago: { gte: desde }, ...DECRETOS_QUE_CUENTAN },
       select: { id: true, instrumentoId: true, fechaPago: true, valorPorAccion: true, _count: { select: { recibidos: true } } },
       orderBy: [{ fechaPago: "asc" }, { id: "asc" }],
     }),

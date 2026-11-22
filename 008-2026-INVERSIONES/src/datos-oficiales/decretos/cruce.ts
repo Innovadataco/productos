@@ -25,7 +25,7 @@
  */
 import { Prisma, type TipoDividendo } from "@prisma/client";
 import { sumarDias } from "../../plan/fechas";
-import { tenenciaEn, type MovimientoTenencia } from "../../plan/tenencia";
+import { tenenciaAntesDeLaEx, type MovimientoTenencia } from "../../plan/tenencia";
 import {
   VENTANA_PAGO_ANTES_DIAS, VENTANA_PAGO_DESPUES_DIAS, agruparPorFechaDePago, asignarPagos, finVentana, type AsignacionDePagos, type GrupoDePago,
 } from "./ventana";
@@ -171,7 +171,7 @@ interface Calculo {
 function calcular(grupo: Grupo, e: EntradaCruce, a: Asignacion): Calculo {
   const movs = e.movimientos.get(grupo.instrumentoId) ?? [];
   const partes = grupo.decretos.map((d) => {
-    const tenencia = tenenciaEn(movs, sumarDias(d.fechaEx, -1));
+    const tenencia = tenenciaAntesDeLaEx(movs, d.fechaEx);
     return { d, tenencia, micros: aMicros(d.valorPorAccion) * tenencia };
   });
   const decretos = partes.map(({ d, tenencia, micros }): DecretoCruzado => ({

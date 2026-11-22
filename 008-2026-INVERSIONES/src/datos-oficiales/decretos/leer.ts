@@ -2,7 +2,8 @@ import "server-only";
 /**
  * Lector de los decretos para la pantalla (fase C, C5b; la pantalla es C6b): el cruce con los pagos de Trii (cruce.ts)
  * y los próximos ex-dividendos (proximos.ts). Solo lectura, en una foto (enSoloLectura) y con `select` explícito:
- * nunca la fila de origen cifrada. Los decretos son los vigentes (reemplazadoEn nulo) y no anulados.
+ * nunca la fila de origen cifrada. Los decretos son los que cuentan: vigentes y no anulados (DECRETOS_QUE_CUENTAN de
+ * vigentes.ts, el único filtro).
  * - Cruce desde `desde`: se leen los decretos y los pagos de Trii (sin las fracciones de escisión) de limitesDeLectura,
  *   lo justo para que lo que se muestra salga igual que cruzando toda la historia, y la tenencia de las especies con
  *   decretos (movimientosDeEspecies de src/plan/resultados-lote.ts: órdenes aprobadas y lotes de escisión).
@@ -25,6 +26,7 @@ import { movimientosDeEspecies } from "../../plan/resultados-lote";
 import { fechaEnBogota } from "../../precios/horario";
 import { cruzar, desdeEn, limitesDeLectura, type DecretoCruce, type PagoTrii, type ResultadoCruce } from "./cruce";
 import { proximos, type Proximo } from "./proximos";
+import { DECRETOS_QUE_CUENTAN } from "./vigentes";
 
 type Lector = Prisma.TransactionClient;
 type Db = PrismaClient | Lector;
@@ -47,7 +49,7 @@ export async function coberturaTrii(db: Db): Promise<Date | null> {
 
 async function leerDecretosDelCruce(tx: Lector, desde: Date): Promise<DecretoCruce[]> {
   return tx.dividendoDecretado.findMany({
-    where: { reemplazadoEn: null, anulada: false, fechaPago: { gte: desde } },
+    where: { fechaPago: { gte: desde }, ...DECRETOS_QUE_CUENTAN },
     select: { id: true, instrumentoId: true, tipo: true, cuota: true, valorPorAccion: true, fechaEx: true, fechaPago: true },
     orderBy: [{ fechaPago: "asc" }, { id: "asc" }],
   });
@@ -80,7 +82,7 @@ async function cruceEnFoto(tx: Lector, hoy: Date, desde: Date): Promise<Resultad
 
 async function proximosEnFoto(tx: Lector, hoy: Date): Promise<Proximo[]> {
   const filas = await tx.dividendoDecretado.findMany({
-    where: { reemplazadoEn: null, anulada: false, fechaEx: { gte: hoy } },
+    where: { fechaEx: { gte: hoy }, ...DECRETOS_QUE_CUENTAN },
     select: {
       id: true, instrumentoId: true, tipo: true, cuota: true, valorPorAccion: true, fechaAnuncio: true, fechaEx: true, fechaPago: true,
       referenciaOficial: true, version: true, anulada: true, reemplazadoEn: true, instrumento: { select: { nemotecnico: true } },
