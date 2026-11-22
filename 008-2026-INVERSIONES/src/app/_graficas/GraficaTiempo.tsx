@@ -85,6 +85,21 @@ function Dibujo({ p, xs, e, alto, ticksY, base, xActivo, xCorte }: PropsDibujo) 
   );
 }
 
+/**
+ * Las marcas del eje Y en su propia columna, a la izquierda del dibujo (nunca encima de las líneas). Una copia
+ * invisible de la marca más larga le da el ancho a la columna (las marcas van posicionadas y no ocupan lugar).
+ */
+function EjeY({ p, e, ticks, alto }: { readonly p: PropsGraficaTiempo; readonly e: Escalas; readonly ticks: readonly number[]; readonly alto: number }) {
+  const textos = ticks.map((t) => p.formatoEje(t));
+  const larga = textos.reduce((a, b) => (b.length > a.length ? b : a), "");
+  return (
+    <div className="g-ticks-y" aria-hidden="true" style={{ height: `${alto}px` }}>
+      <span className="g-tick-medida">{larga}</span>
+      {ticks.map((t, k) => <span key={t} className="g-tick-y" style={{ top: px(Math.round(e.y.a(t))) }}>{textos[k]}</span>)}
+    </div>
+  );
+}
+
 function EjeX({ p, e, desde, hasta }: { readonly p: PropsGraficaTiempo; readonly e: Escalas; readonly desde: number; readonly hasta: number }) {
   const marcas = ticksTiempo(desde, hasta, MARCAS_X).map((m) => ({ ...m, pos: pct(e.x.a(m.valor)) })).filter((m) => m.pos >= 0 && m.pos <= 100);
   return (
@@ -116,21 +131,21 @@ export function GraficaTiempo(p: PropsGraficaTiempo) {
         {p.encabezado ? <span className="g-encabezado">{p.encabezado}</span> : null}
       </figcaption>
       <Leyenda p={p} desde={v.desde} hasta={v.hasta} />
-      <div className="g-plot" ref={ref} data-visible={visible ? "" : undefined} data-hidratado={hidratado ? "" : undefined} style={{ height: `${alto}px` }}>
-        <Dibujo p={p} xs={xs} e={e} alto={alto} ticksY={ticksY} base={base} xActivo={xActivo} xCorte={corte?.x ?? null} />
-        <div className="g-ticks-y" aria-hidden="true">
-          {ticksY.map((t) => <span key={t} className="g-tick-y" style={{ top: px(Math.round(e.y.a(t))) }}>{p.formatoEje(t)}</span>)}
+      <div className="g-marco">
+        <EjeY p={p} e={e} ticks={ticksY} alto={alto} />
+        <div className="g-plot" ref={ref} data-visible={visible ? "" : undefined} data-hidratado={hidratado ? "" : undefined} style={{ height: `${alto}px` }}>
+          <Dibujo p={p} xs={xs} e={e} alto={alto} ticksY={ticksY} base={base} xActivo={xActivo} xCorte={corte?.x ?? null} />
+          {corte ? <span className="g-corte" aria-hidden="true" style={{ left: `${pct(corte.x)}%` }}>{corte.nombre}</span> : null}
+          <Puntos p={p} xs={xs} e={e} clase="g-fin" indice={(valores) => ultimoIndice(valores, v)} />
+          {activo === null ? null : <Puntos p={p} xs={xs} e={e} clase="g-punto" indice={() => activo} />}
+          {activo === null || xActivo === null ? null : <DetalleDia p={p} indice={activo} posicion={pct(xActivo)} />}
+          <div
+            className="g-toque" role="slider" tabIndex={0} aria-orientation="horizontal" aria-labelledby={`${base}-t`} aria-describedby={`${base}-r`}
+            aria-valuemin={v.desde} aria-valuemax={v.hasta} aria-valuenow={indiceValor} aria-valuetext={valorTexto} {...manejadores}
+          />
         </div>
-        {corte ? <span className="g-corte" aria-hidden="true" style={{ left: `${pct(corte.x)}%` }}>{corte.nombre}</span> : null}
-        <Puntos p={p} xs={xs} e={e} clase="g-fin" indice={(valores) => ultimoIndice(valores, v)} />
-        {activo === null ? null : <Puntos p={p} xs={xs} e={e} clase="g-punto" indice={() => activo} />}
-        {activo === null || xActivo === null ? null : <DetalleDia p={p} indice={activo} posicion={pct(xActivo)} />}
-        <div
-          className="g-toque" role="slider" tabIndex={0} aria-orientation="horizontal" aria-labelledby={`${base}-t`} aria-describedby={`${base}-r`}
-          aria-valuemin={v.desde} aria-valuemax={v.hasta} aria-valuenow={indiceValor} aria-valuetext={valorTexto} {...manejadores}
-        />
+        <EjeX p={p} e={e} desde={objetivo[0]} hasta={objetivo[1]} />
       </div>
-      <EjeX p={p} e={e} desde={objetivo[0]} hasta={objetivo[1]} />
       <p id={`${base}-r`} className="g-sr">{p.resumen}</p>
       <TablaDatos p={p} desde={v.desde} hasta={v.hasta} />
     </figure>

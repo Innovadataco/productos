@@ -58,14 +58,12 @@
 .g-mira, .g-corte-linea { stroke: var(--muted); stroke-width: 1; }
 .g-corte-linea { stroke-dasharray: 2 4; }
 .g-corte { position: absolute; top: 2px; transform: translateX(6px); font-size: 11px; color: var(--muted); pointer-events: none; }
-.g-ticks-y { position: absolute; inset: 0; pointer-events: none; }
-.g-tick-y {
-  position: absolute; left: 2px; transform: translateY(-100%); padding-bottom: 2px; font-size: 11px; color: var(--muted);
-  font-family: var(--mono); font-variant-numeric: tabular-nums;
-  /* Halo del color del panel: la marca se lee aunque una línea pase por debajo. */
-  text-shadow: 0 0 3px var(--panel), 0 0 3px var(--panel), 0 0 2px var(--panel);
-}
-.g-eje-x { position: relative; height: 18px; margin-top: 6px; font-size: 11px; color: var(--muted); }
+/* El eje Y en su columna (a la izquierda) y el dibujo y el eje X en la de al lado. */
+.g-marco { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 8px; }
+.g-ticks-y { position: relative; pointer-events: none; font-size: 11px; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+.g-tick-medida { display: block; height: 0; overflow: hidden; visibility: hidden; white-space: nowrap; }
+.g-tick-y { position: absolute; right: 0; transform: translateY(-50%); white-space: nowrap; }
+.g-eje-x { grid-column: 2; position: relative; height: 18px; margin-top: 6px; font-size: 11px; color: var(--muted); }
 .g-tick-x { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
 .g-tick-x[data-borde="ini"] { transform: none; } .g-tick-x[data-borde="fin"] { transform: translateX(-100%); }
 .g-fin, .g-punto { position: absolute; border-radius: 50%; background: var(--tono); transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 0 2px var(--panel); }
@@ -84,7 +82,7 @@
 .g-tip-fila .g-clave, .g-tip-fila .g-clave-banda { margin-right: 0; }
 .g-tip-extra { margin-top: 4px; color: var(--loss); }
 .g-datos { margin-top: 8px; font-size: 12px; color: var(--muted); }
-.g-datos summary { cursor: pointer; width: fit-content; min-height: 24px; display: flex; align-items: center; gap: 6px; }
+.g-datos summary { cursor: pointer; width: fit-content; min-height: 24px; line-height: 24px; }
 .g-datos-caja { max-height: 320px; overflow: auto; margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; }
 .g-datos table { min-width: 0; font-size: 12px; }
 .g-datos caption { text-align: left; padding: 8px 10px; color: var(--fg); font-weight: 700; }
@@ -155,7 +153,8 @@ button.g-barra:hover, button.g-barra:focus-visible { background: var(--bg-2); }
   .g-dona-dibujo { max-width: 200px; }
   .g-tip { left: 4px !important; right: 4px; max-width: none; transform: none !important; }
   .g-barra { grid-template-columns: 64px minmax(0, 1fr) 64px; gap: 2px 8px; padding: 8px 6px; }
-  .g-tick-x:nth-child(even) { display: none; }
+  /* Con 5 marcas o más, una sí y otra no: nunca se montan. */
+  .g-eje-x:has(> .g-tick-x:nth-child(5)) .g-tick-x:nth-child(even) { display: none; }
 }
 @media (forced-colors: active) {
   .g-linea, .g-mira, .g-base { stroke: CanvasText; } .g-relleno, .g-banda { fill: Highlight; }
