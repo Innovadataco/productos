@@ -15,6 +15,7 @@
  *   `hasta` − DIAS_ATRASO_AVISO.
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
+import { esUnicidad } from "../lib/choques";
 import { detalleDeError } from "../precios/actualizar";
 import { FUENTE_SFC, type ResultadoSfc, type ValorDia } from "./sfc";
 
@@ -131,7 +132,7 @@ async function guardarLote(db: PrismaClient, fondoId: string, lote: readonly Val
   }, { timeout: TIEMPO_MAXIMO_LOTE_MS });
 }
 
-const esConflicto = (e: unknown): boolean => e instanceof ConflictoConcurrente || (e as { code?: unknown } | null)?.code === "P2002";
+const esConflicto = (e: unknown): boolean => e instanceof ConflictoConcurrente || esUnicidad(e);
 
 async function guardarConReintento(db: PrismaClient, fondoId: string, lote: readonly ValorDia[]): Promise<{ nuevos: number; revisados: number }> {
   for (let intento = 1; ; intento += 1) {

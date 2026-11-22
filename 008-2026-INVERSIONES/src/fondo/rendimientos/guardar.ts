@@ -19,6 +19,7 @@ import type { Llavero } from "../../cifrado/llavero";
 import { crearCarga, guardarFilaCruda, verFila } from "../../datos-oficiales/registro/carga";
 import { enTodoElArchivo, type Hallazgo } from "../../datos-oficiales/registro/hallazgos";
 import { candadoFondo } from "../../lib/candados";
+import { CODIGO_UNICIDAD, esErrorPrisma } from "../../lib/choques";
 import { diaIso } from "../../precios/horario";
 import { claveFila, type FilaRendimiento, type TipoRendimiento } from "./csv";
 import { contarRendimientos, hayNuevos, planificarRendimientos, type ConteosRendimientos, type HechoGuardado, type Planificado } from "./planificar";
@@ -121,7 +122,7 @@ export async function guardarRendimientos(db: PrismaClient, e: EntradaGuardar): 
   try {
     return await db.$transaction((tx) => enTransaccion(tx, e), TRANSACCION);
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (esErrorPrisma(error, CODIGO_UNICIDAD)) {
       return { estado: "RECHAZADO", hallazgos: [enTodoElArchivo("CONFLICTO_CONCURRENTE")] };
     }
     throw error;

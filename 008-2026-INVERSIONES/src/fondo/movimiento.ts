@@ -14,6 +14,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { correoDeCli } from "../cli/correo";
 import { TOLERANCIA_VALOR } from "../conciliacion/controles";
 import { candadoFondo } from "../lib/candados";
+import { esUnicidad } from "../lib/choques";
 import { ESCALA_MONTO, leerDecimal, leerFechaIso, type ResultadoValor } from "../importacion/trii/valores";
 import { CODIGO_FIC_RE } from "./sfc";
 
@@ -186,8 +187,6 @@ async function registrarEnTransaccion(db: PrismaClient, d: ConstitucionValida, o
   });
 }
 
-const esConflicto = (e: unknown): boolean => (e as { code?: unknown } | null)?.code === "P2002";
-
 /**
  * Registra la constitución del fondo: el ajuste de caja (−monto, APORTE_FIC, EXTRACTO, el dueño como autor) y el
  * movimiento CONSTITUCION enlazado, de la misma fecha, todo o nada. Idempotente. Un choque se relee una vez y, si
@@ -198,7 +197,7 @@ export async function registrarConstitucion(db: PrismaClient, d: ConstitucionVal
     try {
       return await registrarEnTransaccion(db, d, opciones);
     } catch (err) {
-      if (!esConflicto(err)) throw err;
+      if (!esUnicidad(err)) throw err;
       if (intento >= MAX_INTENTOS) throw new ErrorMovimientoFondo("REGISTRO_EN_CONFLICTO");
     }
   }
