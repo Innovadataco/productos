@@ -40,15 +40,6 @@ npm run lote:escision -- --destino <NEMO> --fecha-evento AAAA-MM-DD --cantidad <
 - Corra `lotes:construir` después de cada importación de órdenes. Si avisa `VENTA_SIN_LOTES`, a una especie le falta un lote (p. ej. el de una escisión); sus ventas quedan sin asignar hasta registrarlo.
 - El lote de escisión toma su costo del portal de Acciones & Valores y se enlaza al evento y al lote vivo más antiguo de la especie origen. El lote madre no se ajusta (se sigue al portal).
 
-## Precios de cierre (INV-SPEC-13)
-```bash
-npm run precios:actualizar                       # últimos 10 días de las especies con lotes
-npm run precios:actualizar -- --desde 2025-01-01 # carga histórica
-```
-- Fuente: Yahoo Finance `<NEMO>.CL` (no oficial), cierre sin ajustar en COP. Un cierre revisado reemplaza al anterior, que queda como historia.
-- Verificación: si hay certificación de A&V de ese día, el cierre debe quedar a ±1 % de su precio de valoración (`VERIFICADO`). Si no hay referencia oficial, queda `NO_VERIFICADO`.
-- Si Yahoo falla, no se guarda nada de esa especie y el comando lo informa (salida 3).
-
 ## Constitución del fondo (unidades y aporte)
 ```bash
 npx tsx scripts/registrar-movimiento-fondo.ts --email <su-correo> --fondo <código del fondo en la SFC> \
@@ -60,5 +51,14 @@ npx tsx scripts/registrar-movimiento-fondo.ts … --aplicar   # registra
 - Es una sola por fondo y no se edita: repetirla con los mismos datos no escribe nada; con otros, `CONSTITUCION_DISTINTA`.
 - Después, `conciliar-certificacion`: el fondo deja `fondo_sin_unidades` y el efectivo, `aporte_fic_sin_registrar`.
 - En producción va por la vía B (`cargar-prod.sh registrar-movimiento-fondo`, [runbook §11](docs/despliegue/produccion.md)).
+
+## Precios de cierre (INV-SPEC-13)
+```bash
+npm run precios:actualizar                       # últimos 10 días de las especies con lotes
+npm run precios:actualizar -- --desde 2025-01-01 # carga histórica
+```
+- Fuente: Yahoo Finance `<NEMO>.CL` (no oficial), cierre sin ajustar en COP. Un cierre revisado reemplaza al anterior, que queda como historia.
+- Verificación: si hay certificación de A&V de ese día, el cierre debe quedar a ±1 % de su precio de valoración (`VERIFICADO`). Si no hay referencia oficial, queda `NO_VERIFICADO`.
+- Si Yahoo falla, no se guarda nada de esa especie y el comando lo informa (salida 3).
 
 Este repo es público: aquí no hay datos reales. Los datos de prueba están inventados y marcados `.ficticio.`.
