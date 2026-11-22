@@ -1,0 +1,47 @@
+/**
+ * El vocabulario cerrado del validador (IDIOMA.VOCABULARIO): las palabras de las etiquetas del catálogo (y sus plurales
+ * y singulares), las de las marcas que se cotejan contra el paquete y una lista corta de palabras funcionales y verbos
+ * neutros. Candados: las etiquetas y las frases válidas caben en él; ninguna palabra suya dispara un patrón de
+ * recomendación, predicción, trato, cifra en palabras, idioma o afirmación sin dato; y una palabra de fuera se rechaza.
+ */
+import { describe, expect, it } from "vitest";
+import { CATALOGO } from "@/ia/catalogo";
+import { TIPOS_RESUMEN } from "@/ia/contrato";
+import { coincidencias } from "@/ia/validador/patron";
+import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA, PATRONES_SIN_DATO } from "@/ia/validador/patrones-lengua";
+import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "@/ia/validador/patrones-redaccion";
+import { PALABRAS_BASE, palabrasFueraDelVocabulario } from "@/ia/validador/vocabulario";
+import { FRASES_VALIDAS, frase, paqueteFicticio } from "./apoyo/salidas.ficticio";
+
+const PROHIBIDOS = [...PATRONES_RECOMENDACION, ...PATRONES_PREDICCION, ...PATRONES_TRATO, ...PATRONES_CIFRA_EN_PALABRAS, ...PATRONES_IDIOMA, ...PATRONES_SIN_DATO];
+
+describe("vocabulario cerrado", () => {
+  it.each(TIPOS_RESUMEN)("%s: cada etiqueta del catálogo cabe en el vocabulario", (tipo) => {
+    for (const entrada of Object.values(CATALOGO[tipo])) expect([entrada.etiqueta, palabrasFueraDelVocabulario(entrada.etiqueta)]).toEqual([entrada.etiqueta, []]);
+  });
+
+  it.each(TIPOS_RESUMEN)("%s: las frases válidas de las pruebas caben en el vocabulario", (tipo) => {
+    const paquete = paqueteFicticio(tipo);
+    for (const plantilla of FRASES_VALIDAS[tipo]) {
+      const { texto } = frase(paquete, plantilla);
+      expect([texto, palabrasFueraDelVocabulario(texto)]).toEqual([texto, []]);
+    }
+  });
+
+  it("ninguna palabra de la lista base dispara un patrón prohibido", () => {
+    expect(PALABRAS_BASE.length).toBeGreaterThan(41);
+    for (const palabra of PALABRAS_BASE) expect([palabra, coincidencias(palabra, PROHIBIDOS)]).toEqual([palabra, []]);
+  });
+
+  it("la lista base está congelada, en minúsculas, sin tildes y sin repetir", () => {
+    expect(Object.isFrozen(PALABRAS_BASE)).toBe(true);
+    expect(new Set(PALABRAS_BASE).size).toBe(PALABRAS_BASE.length);
+    for (const palabra of PALABRAS_BASE) expect(palabra).toMatch(/^[a-zñ]+$/u);
+  });
+
+  it("control positivo: una palabra de fuera se nombra (una vez), las de dentro no; plurales, singulares, tildes y mayúsculas cuentan", () => {
+    expect(palabrasFueraDelVocabulario("El valor de las acciones es favorable y favorable.")).toEqual(["favorable"]);
+    expect(palabrasFueraDelVocabulario("La acción y las especies; la Especie y las ACCIONES; las especies atrasadas.")).toEqual([]);
+    expect(palabrasFueraDelVocabulario("Subió, bajó y se mantuvo {H03}.")).toEqual([]);
+  });
+});

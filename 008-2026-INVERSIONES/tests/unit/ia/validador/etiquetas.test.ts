@@ -7,7 +7,12 @@
 import { describe, expect, it } from "vitest";
 import { CATALOGO, CLAVE_NOMBRE_ESPECIE, clavesDe, entradaDeCatalogo, type ClaveHecho } from "@/ia/catalogo";
 import { TIPOS_RESUMEN, type TipoResumen } from "@/ia/contrato";
-import { claveCoincide, PALABRAS_VACIAS, palabrasClave, raicesDe } from "@/ia/validador/etiquetas";
+import type { Hecho } from "@/ia/contrato";
+import { claveCoincide, PALABRAS_VACIAS, palabrasClave, raicesDe, revisarEtiquetas } from "@/ia/validador/etiquetas";
+import { esNombre, hechosPorId } from "@/ia/validador/hechos";
+import { prepararTexto } from "@/ia/validador/patron";
+import { atribuir, citasDe, clausulasDe } from "@/ia/validador/texto";
+import { paqueteFicticio } from "./apoyo/salidas.ficticio";
 
 const etiqueta = (tipo: TipoResumen, clave: ClaveHecho): string => entradaDeCatalogo(tipo, clave)?.etiqueta ?? "";
 const raices = (texto: string): ReadonlySet<string> => new Set(raicesDe(texto.split(" ")));
@@ -112,5 +117,40 @@ describe("claveCoincide sobre el catálogo", () => {
     ["ESCENARIOS", "ESCENARIO_CENTRAL_MEDIO", "el escenario central a corto plazo"],
   ] as const)("etiqueta cambiada que falla · %s %s «%s»", (tipo, clave, texto) => {
     expect(claveCoincide(tipo, clave, raices(texto))).toBe(false);
+  });
+});
+
+describe("el sujeto de un hecho de regla con ancla (E1b)", () => {
+  /**
+   * En `main` el sujeto siempre es el nombre de la especie; con E1b, un hecho de regla cita al ancla de su regla, y el
+   * ancla puede no citar especie (regla de portafolio). Aquí se arma solo el mapa de hechos que lee `revisarEtiquetas`
+   * (no un paquete): la regla con ancla sin especie no exige nombre; con especie, sí.
+   */
+  const reglas = paqueteFicticio("REGLAS");
+  const base = reglas.hechos[0] as Hecho;
+  const conId = (id: string, clave: string, unidad: Hecho["unidad"], sujeto?: string): Hecho =>
+    ({ ...base, id, clave, unidad, ...(sujeto === undefined ? {} : { sujeto }) }) as unknown as Hecho;
+  const porId: ReadonlyMap<string, Hecho> = new Map([
+    conId("H01", "REGLA_PLAZO", "FECHA"),
+    conId("H02", "REGLA_NIVEL", "PESOS", "H01"),
+    conId("H03", "ESPECIE_NOMBRE", "NOMBRE"),
+    conId("H04", "REGLA_NIVEL", "PESOS", "H03"),
+  ].map((h) => [h.id, h]));
+  const revisar = (texto: string): readonly string[] => {
+    const atribucion = atribuir(clausulasDe(prepararTexto(texto).minusculas), (id) => porId.has(id) && !esNombre(porId.get(id)));
+    return revisarEtiquetas(atribucion, porId, "REGLAS", new Set(citasDe(texto).map((c) => c.id))).map((h) => h.patron);
+  };
+
+  it("una cadena que no llega a una especie no exige nombre", () => {
+    expect(revisar("Nivel de la regla {H02}.")).toEqual([]);
+  });
+
+  it("una cadena que llega a una especie exige su nombre en la frase", () => {
+    expect(revisar("Nivel de la regla {H04}.")).toEqual(["ETIQUETA.SIN_SUJETO"]);
+    expect(revisar("{H03}: nivel de la regla {H04}.")).toEqual([]);
+  });
+
+  it("el mapa de hechos del paquete real da lo mismo que el armado (control)", () => {
+    expect(hechosPorId(reglas).size).toBe(reglas.hechos.length);
   });
 });

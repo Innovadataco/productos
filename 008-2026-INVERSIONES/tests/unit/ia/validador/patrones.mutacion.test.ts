@@ -62,6 +62,17 @@ const EJEMPLOS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   },
 };
 
+/** Las raíces de movimiento que una negación da vuelta, cada una con su ejemplo (una alternativa por raíz en src). */
+const NEGACION = "(?:no|sin|nunca|ni|tampoco|dejo de|dejaron de)(?: \\p{L}+){0,2} ";
+const NEGADOS_CON_EJEMPLO: Readonly<Record<string, string>> = Object.fromEntries(([
+  ["sub", "no subió"], ["baj", "dejó de bajar"], ["ca[eiy]", "no cayó"], ["crec", "no creció"], ["aument", "no aumentó"], ["dismin", "no disminuyó"],
+  ["descend", "no descendió"], ["retroced", "no retrocedió"], ["perd", "no perdió"], ["gan(?!anc)", "no ganó"], ["avanz", "no avanzó"],
+  ["repunt", "no repuntó"], ["mejor", "no mejoró"], ["empeor", "no empeoró"], ["valoriz", "no se valorizó"], ["desvaloriz", "no se desvalorizó"],
+  ["recuper", "no se ha recuperado"], ["ascend", "no ascendió"], ["escal", "no escaló"], ["dispar", "no se disparó"], ["desplom", "no se desplomó"],
+  ["hund", "no se hundió"], ["ced", "no cedió"], ["fortalec", "no se fortaleció"], ["debilit", "no se debilitó"], ["super", "no superó"],
+  ["rebas", "no rebasó"], ["salt", "no saltó"],
+] as const).map(([raiz, ejemplo]) => [`${NEGACION}${raiz}\\p{L}*`, ejemplo]));
+
 /** El ejemplo de cada alternativa que no es una palabra o frase literal (un fragmento de regex). */
 const EJEMPLOS_DE_FRAGMENTO: Readonly<Record<string, string>> = {
   "compr(?!ob|end|ens|om|im|esi|esor)\\p{L}*": "compraríamos",
@@ -80,7 +91,7 @@ const EJEMPLOS_DE_FRAGMENTO: Readonly<Record<string, string>> = {
   "(?:milesim|centesim|undecim|duodecim|vigesim|trigesim)\\p{L}*": "milésima",
   "(?:casi|unos|unas|alrededor de|aproximadamente|mas de|menos de|apenas) \\{h[0-9]{2}\\}": "más de {H01}",
   "(?=[ivxlcdm]{2,}(?![\\p{L}\\p{N}]))m{0,3}(?:cm|cd|d?c{0,3})(?:xc|xl|l?x{0,3})(?:ix|iv|v?i{0,3})": "mcmxc",
-  "(?:no|sin|nunca|ni|tampoco|dejo de|dejaron de)(?: \\p{L}+)? (?:sub|baj|ca[eiy]|crec|aument|dismin|descend|retroced|perd|gan(?!anc)|avanz|repunt|mejor|empeor|valoriz|desvaloriz|recuper|ascend|escal|dispar|desplom|hund|ced|fortalec|debilit|super|rebas|salt)\\p{L}*": "dejó de subir",
+  ...NEGADOS_CON_EJEMPLO,
 };
 
 const LISTAS: Readonly<Record<string, { readonly patrones: readonly Patron[]; readonly codigo: CodigoValidador }>> = {
@@ -181,6 +192,18 @@ describe.each(ALTERNATIVAS)("$id · «$alternativa»", ({ lista, id, alternativa
 
   it("cableado: validarSalida lo rechaza con el código de su lista", () => {
     rechazaConSuCodigo(lista, p, ejemplo as string);
+  });
+});
+
+describe("las exclusiones de los fragmentos (lo que NO es una recomendación, una predicción ni una negación)", () => {
+  it.each([
+    ["comprobar", PATRONES_RECOMENDACION], ["comprender", PATRONES_RECOMENDACION], ["comprensión", PATRONES_RECOMENDACION],
+    ["compromiso", PATRONES_RECOMENDACION], ["comprimido", PATRONES_RECOMENDACION], ["compresión", PATRONES_RECOMENDACION],
+    ["compresor", PATRONES_RECOMENDACION], ["ganancia sin vender", PATRONES_RECOMENDACION], ["ganancia por ventas", PATRONES_RECOMENDACION],
+    ["extremos", PATRONES_PREDICCION], ["supremos", PATRONES_PREDICCION], ["sin ganancia", PATRONES_SIN_DATO], ["no cambió", PATRONES_SIN_DATO],
+    ["sin variación", PATRONES_SIN_DATO],
+  ] as const)("«%s» no dispara su lista", (texto, lista) => {
+    expect(coincidencias(texto, lista)).toEqual([]);
   });
 });
 

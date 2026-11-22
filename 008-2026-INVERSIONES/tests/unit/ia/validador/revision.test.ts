@@ -34,6 +34,13 @@ describe("dirección: negación, sinónimos y comparativos", () => {
     ["es la misma contra una subida", "El valor de las acciones es la misma, {VALOR_ACCIONES}."],
     ["un comparativo sin dato", "El valor de las acciones es mayor que antes, {VALOR_ACCIONES}."],
     ["por encima sin dato", "El valor de las acciones quedó por encima, en {VALOR_ACCIONES}."],
+    ["mejora contra una bajada (re-revisión)", "La ganancia total mejora, es {GANANCIA_TOTAL}."],
+    ["mantuvo sin «se» contra una bajada (re-revisión)", "La ganancia total mantuvo {GANANCIA_TOTAL}."],
+    ["sigue en contra una bajada (re-revisión)", "La ganancia total sigue en {GANANCIA_TOTAL}."],
+    ["empeora contra una subida (re-revisión)", "El valor de las acciones empeora a {VALOR_ACCIONES}."],
+    ["no se ha subido (dos palabras en medio)", "El valor de las acciones no se ha subido a {VALOR_ACCIONES}."],
+    ["no llegó a subir", "El valor de las acciones no llegó a subir de {VALOR_ACCIONES}."],
+    ["se estancó contra una subida", "El valor de las acciones se estancó en {VALOR_ACCIONES}."],
   ])("%s: DIRECCION_CONTRADICE", (_caso, plantilla) => {
     expect(rechazo(plantilla).motivos).toContain("DIRECCION_CONTRADICE");
   });
@@ -45,7 +52,7 @@ describe("dirección: negación, sinónimos y comparativos", () => {
   });
 
   it("«igual de» ya no es una marca de estabilidad (falso positivo)", () => {
-    expect(rechazo(conCola("igual de rápido")).motivos).toEqual([]);
+    expect(rechazo(conCola("igual de alto")).motivos).toEqual([]);
   });
 });
 
@@ -113,5 +120,39 @@ describe("frases y caracteres", () => {
 
   it("una mayúscula después de una cita no es inicio de frase", () => {
     expect(rechazo(VA, "{ESPECIE_NOMBRE}: Valor de la especie subió a {VALOR_ESPECIE}.").patrones).toContain("FORMATO.MAYUSCULA_INTERNA");
+  });
+});
+
+/**
+ * Re-revisión de seguridad: con listas negras, cada ronda encuentra sinónimos nuevos. El vocabulario cerrado
+ * (IDIOMA.VOCABULARIO) rechaza toda palabra que no sea de las etiquetas del catálogo, de las marcas cotejadas o de una
+ * lista corta de palabras funcionales y verbos neutros: así se cierra la clase entera.
+ */
+describe("vocabulario cerrado (re-revisión de seguridad)", () => {
+  it.each([
+    "tome posición", "abra posición", "cierre su posición", "hágase con ella", "desprendase de ella", "entre ya", "entrar", "ingrese",
+    "posiciónese", "sume", "recoja utilidades", "realice ganancias", "no se la pierda", "manténgase", "guárdela", "aguante", "apueste",
+    "prefiera", "elija", "cúbrase", "protéjase", "tenga presente", "recuerde", "evite", "observe", "favorable", "rentable", "firme", "fuerte",
+    "segura", "sensato", "según expertos", "yo creo", "pienso que sube",
+    "se perfila", "se encamina", "rumbo a", "camino a", "promete", "augura", "anticipa", "descuenta", "proyecta", "estima", "apunta",
+    "luce bien", "pinta bien", "puede subir", "podría bajar", "es probable", "riesgo de caer", "peligro",
+    "trepó", "rebotó", "se elevó", "se apreció", "se encareció", "se revalorizó", "ganando terreno", "en ascenso", "escalada",
+    "en recuperación", "cuadrillón", "septuagésimo", "nonagésimo", "millonésima", "tressientos", "dies", "onze", "kuatro", "twelve",
+    "eleven", "three", "ten", "evita", "toma", "haz", "vete", "dime", "ve", "ven", "oye", "escucha", "pon", "sal", "tengas", "inviertas",
+    "puedas", "debas", "quieras", "necesitas",
+  ])("«%s»: IDIOMA.VOCABULARIO", (cola) => {
+    expect(rechazo(conCola(cola)).patrones).toContain("IDIOMA.VOCABULARIO");
+  });
+
+  it("«fue a más» (todas sus palabras son comunes) es un comparativo sin dato", () => {
+    expect(rechazo("La ganancia total fue a más, {GANANCIA_TOTAL}.").patrones).toContain("DIRECCION.COMPARATIVO");
+  });
+
+  it("los numerales compuestos con «i» son cifras fundidas", () => {
+    for (const cola of ["treintaiuno", "cuarentaicinco", "ochentaicinco"]) expect(rechazo(conCola(cola)).patrones).toContain("CIFRA_EN_PALABRAS.FUNDIDA");
+  });
+
+  it("control positivo: las frases válidas de los tres tipos usan solo el vocabulario", () => {
+    expect(rechazo(...FRASES_VALIDAS.DIARIO).patrones).toEqual([]);
   });
 });

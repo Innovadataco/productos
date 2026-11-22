@@ -73,30 +73,32 @@ describe("salida válida", () => {
 
 describe("un rechazo por cada código", () => {
   const p = diario();
-  const CASOS: readonly (readonly [CodigoValidador, () => string, boolean])[] = [
-    ["SALIDA_INVALIDA", () => "esto no es un JSON", true],
-    ["LONGITUD", () => salidaDe(p, ...Array.from({ length: 7 }, () => VALOR_ACCIONES)), true],
-    ["CIFRA_SUELTA", () => salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES} en el corte 7391."), false],
-    ["CIFRA_EN_PALABRAS", () => salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES} en marzo."), true],
-    ["HECHO_DESCONOCIDO", () => salida(frase(p, VALOR_ACCIONES), { texto: "Las comisiones pagadas suman {H99}.", hechos: ["H99"] }), false],
-    ["HECHO_NO_CITADO", () => salidaDe(p, ESPECIE, GANANCIA, ATRASADAS), true],
-    ["ETIQUETA_NO_COINCIDE", () => salidaDe(p, VALOR_ACCIONES, "Las comisiones pagadas bajaron a {GANANCIA_TOTAL}."), true],
-    ["DIRECCION_CONTRADICE", () => salidaDe(p, VALOR_ACCIONES, "La ganancia total subió a {GANANCIA_TOTAL}."), true],
-    ["RECOMENDACION", () => salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES}, compre."), true],
-    ["PREDICCION", () => salidaDe(p, "El valor de las acciones subirá a {VALOR_ACCIONES}."), true],
-    ["TRATO", () => salidaDe(p, "Tu valor de las acciones subió a {VALOR_ACCIONES}."), true],
-    ["IDIOMA", () => salidaDe(p, "The valor de las acciones subió a {VALOR_ACCIONES}."), true],
-    ["FORMATO", () => salidaDe(p, "El valor de las acciones subió a **{VALOR_ACCIONES}**."), true],
+  /** Cada caso, con los otros códigos que puede traer además del suyo (vacío: exactamente ese código). */
+  const CASOS: readonly (readonly [CodigoValidador, () => string, readonly CodigoValidador[]])[] = [
+    ["SALIDA_INVALIDA", () => "esto no es un JSON", []],
+    ["LONGITUD", () => salidaDe(p, ...Array.from({ length: 7 }, () => VALOR_ACCIONES)), []],
+    ["CIFRA_SUELTA", () => salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES} en el corte 7391."), ["RENDER_CIFRA"]],
+    // Las palabras de cifra, recomendación, predicción y tú están además fuera del vocabulario cerrado (IDIOMA).
+    ["CIFRA_EN_PALABRAS", () => salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES} en marzo."), ["IDIOMA"]],
+    ["HECHO_DESCONOCIDO", () => salida(frase(p, VALOR_ACCIONES), { texto: "Las comisiones pagadas suman {H99}.", hechos: ["H99"] }), ["HECHO_NO_CITADO", "RENDER_CIFRA"]],
+    ["HECHO_NO_CITADO", () => salidaDe(p, ESPECIE, GANANCIA, ATRASADAS), []],
+    ["ETIQUETA_NO_COINCIDE", () => salidaDe(p, VALOR_ACCIONES, "Las comisiones pagadas bajaron a {GANANCIA_TOTAL}."), []],
+    ["DIRECCION_CONTRADICE", () => salidaDe(p, VALOR_ACCIONES, "La ganancia total subió a {GANANCIA_TOTAL}."), []],
+    ["RECOMENDACION", () => salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES}, compre."), ["IDIOMA"]],
+    ["PREDICCION", () => salidaDe(p, "El valor de las acciones subirá a {VALOR_ACCIONES}."), ["IDIOMA"]],
+    ["TRATO", () => salidaDe(p, "Tu valor de las acciones subió a {VALOR_ACCIONES}."), ["IDIOMA"]],
+    ["IDIOMA", () => salidaDe(p, "The valor de las acciones subió a {VALOR_ACCIONES}."), []],
+    ["FORMATO", () => salidaDe(p, "El valor de las acciones subió a **{VALOR_ACCIONES}**."), []],
   ];
 
   it("la tabla cubre todos los códigos salvo RENDER_CIFRA (que tiene su prueba con el render cambiado)", () => {
     expect([...CASOS.map(([c]) => c), "RENDER_CIFRA"].sort()).toEqual([...CODIGOS_VALIDADOR].sort());
   });
 
-  it.each(CASOS)("%s", (codigo, armar, exacto) => {
+  it.each(CASOS)("%s", (codigo, armar, otros) => {
     const motivos = motivosDe(armar(), p);
     expect(motivos).toContain(codigo);
-    if (exacto) expect(motivos).toEqual([codigo]);
+    expect(motivos.filter((m) => m !== codigo && !otros.includes(m))).toEqual([]);
   });
 
   it("la cifra suelta también la ve el cotejo del texto final", () => {
@@ -137,7 +139,7 @@ describe("todos los códigos, en orden y sin repetir", () => {
   it("una frase con varios problemas da todos sus códigos en el orden canónico", () => {
     const p = diario();
     const motivos = motivosDe(salidaDe(p, "Tu ganancia total subirá a {VALOR_ACCIONES} en marzo, compre."), p);
-    expect(motivos).toEqual(["CIFRA_EN_PALABRAS", "ETIQUETA_NO_COINCIDE", "RECOMENDACION", "PREDICCION", "TRATO"]);
+    expect(motivos).toEqual(["CIFRA_EN_PALABRAS", "ETIQUETA_NO_COINCIDE", "RECOMENDACION", "PREDICCION", "TRATO", "IDIOMA"]);
     const orden = motivos.map((m) => CODIGOS_VALIDADOR.indexOf(m));
     expect(orden).toEqual([...orden].sort((a, b) => a - b));
   });

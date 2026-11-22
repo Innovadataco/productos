@@ -45,6 +45,7 @@ describe.each(TIPOS_RESUMEN)("de punta a punta · %s", (tipo) => {
     const resultado = await generarConPuertas([falso], "nube", pedido, paquete);
     if (resultado.estado !== "EXITO") throw new Error("el falso debía responder");
     const validado = validarSalida(resultado.exito.salidaCruda, paquete);
-    expect(validado.ok ? [] : validado.motivos).toEqual(["RECOMENDACION"]);
+    // «conviene» es una recomendación y, además, está fuera del vocabulario cerrado.
+    expect(validado.ok ? [] : validado.motivos).toEqual(["RECOMENDACION", "IDIOMA"]);
   });
 });
