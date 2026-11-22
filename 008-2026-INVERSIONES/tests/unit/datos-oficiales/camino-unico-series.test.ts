@@ -18,7 +18,10 @@ const LECTURAS = new Set(["findMany", "findFirst", "findFirstOrThrow", "findUniq
 const ESCRITURAS_DE_GUARDAR = new Set(["createMany", "updateMany"]);
 /** Cada aparición del delegado con lo que le sigue: `.operacion` o cualquier otra cosa (alias, corchetes, desestructuración). */
 const DELEGADO = /\bvalorSerieOficial\b(\s*\.\s*(\w+))?/g;
-const SQL_CRUDO = /\b(INSERT\s+INTO|UPDATE|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?|COPY|ALTER\s+TABLE)\s+(?:ONLY\s+)?(?:IF\s+EXISTS\s+)?(?:"?public"?\s*\.\s*)?"?valor_serie_oficial\b/i;
+const SQL_CRUDO =
+  /\b(INSERT\s+INTO|UPDATE|DELETE\s+FROM|MERGE\s+INTO|TRUNCATE(?:\s+TABLE)?|COPY|ALTER\s+TABLE|DROP\s+TABLE|DROP\s+TRIGGER\s+(?:IF\s+EXISTS\s+)?"?\w+"?\s+ON)\s+(?:ONLY\s+)?(?:IF\s+EXISTS\s+)?(?:"?public"?\s*\.\s*)?"?valor_serie_oficial\b/i;
+/** Lo que se recorre (prisma/migrations/ no: allí se crea la tabla). */
+const CARPETAS = ["src", "scripts", "docker", path.join("prisma", "init")];
 
 function archivos(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {
@@ -28,7 +31,7 @@ function archivos(dir: string): string[] {
 }
 
 const relativo = (a: string) => path.relative(RAIZ, a).split(path.sep).join("/");
-const todos = () => ["src", "scripts"].flatMap((d) => archivos(path.join(RAIZ, d)));
+const todos = () => CARPETAS.flatMap((d) => archivos(path.join(RAIZ, d)));
 
 /** «archivo · uso» de cada aparición que no es una lectura permitida (en guardar.ts, tampoco sus dos escrituras). */
 function usosNoPermitidos(archivo: string, codigo: string): string[] {
@@ -40,7 +43,7 @@ function usosNoPermitidos(archivo: string, codigo: string): string[] {
   });
 }
 
-describe("valor_serie_oficial · un solo camino de escritura (src y scripts)", () => {
+describe("valor_serie_oficial · un solo camino de escritura (src, scripts, docker y prisma/init)", () => {
   it("solo guardar.ts inserta y retira, y lo hace por createMany y updateMany", () => {
     const usos = new Set<string>();
     for (const a of todos()) {

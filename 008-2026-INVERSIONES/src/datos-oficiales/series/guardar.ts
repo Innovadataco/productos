@@ -9,7 +9,8 @@
  *   (`reemplazadoEn` nulo; la hora la pone inv_solo_retiro) de los que se solapan con una fila distinta y una inserción.
  *   Si lo que se retira pasa del corte, el lote se alarga (finDeLote) para que el retiro y todo su reemplazo vayan en
  *   la misma transacción; si en MAX_VUELTAS_LOTE vueltas no encuentra corte, ese lote no se escribe (LoteSinCorte).
- * - Choques con otra corrida: el retiro que cuenta menos (otra ya retiró), P2002 (el índice único parcial), la
+ * - Dos corridas de la misma serie se ponen en fila con un candado de asesoría por serie (database-reviewer, MEDIO).
+ * - Choques con otra escritura: el retiro que cuenta menos (otra ya retiró), P2002 (el índice único parcial), la
  *   exclusión de vigencias (SQLSTATE 23P01: Prisma 5.22 la entrega como PrismaClientUnknownRequestError, sin código;
  *   verificado en tests/integracion/series-importar.test.ts) y P2034 (conflicto de escritura o bloqueo mutuo). Cuál de
  *   los dos primeros salta cuando chocan los dos depende del orden de los índices, que cambia al restaurar un respaldo:
@@ -124,9 +125,18 @@ interface Lote {
   readonly plan: PlanSerie;
 }
 
-/** Un lote en una transacción, alargado si hace falta: leer, planificar, retirar e insertar. Todo o nada. */
+/** La clave del candado de asesoría de una serie (pg_advisory_xact_lock(hashtext(clave))). */
+export const candadoSerie = (codigo: string): string => `008:serie-oficial:${codigo}`;
+
+/**
+ * Un lote en una transacción, alargado si hace falta: el candado de la serie, leer, planificar, retirar e insertar. Todo
+ * o nada. El candado (de transacción: se suelta al confirmar o deshacer) pone en fila a dos corridas de la misma serie:
+ * la segunda lee lo que la primera ya confirmó, sin chocar ni agotar los reintentos. Quien escriba sin pasar por aquí
+ * sigue chocando con la base (P2002 o 23P01) y se reintenta.
+ */
 async function guardarLote(db: PrismaClient, serie: SerieAGuardar, filas: readonly ValorSerie[], inicio: number): Promise<Lote> {
   return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT 1 AS ok FROM pg_advisory_xact_lock(hashtext(${candadoSerie(serie.codigo)}))`;
     let fin = Math.min(inicio + TAMANO_LOTE_SERIES, filas.length);
     let lote = filas.slice(inicio, fin);
     let plan = planificar(lote, await leerVigentes(tx, serie.codigo, lote));
