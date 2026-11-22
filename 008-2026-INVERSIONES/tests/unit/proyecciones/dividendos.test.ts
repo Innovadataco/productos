@@ -5,7 +5,8 @@ import { VENTANA_EX_DIAS as VENTANA_DEL_PLAN } from "@/plan/dividendos";
 import { dividendosPorAccion } from "@/proyecciones/dividendos";
 import { armarHistoria } from "@/proyecciones/historia";
 import { VENTANA_EX_DIAS } from "@/proyecciones/metodo";
-import { accion, dia, diasHabiles, entradas, iso, serieGeometrica } from "./ficticio";
+import { enVentanaDePago } from "@/datos-oficiales/decretos/ventana";
+import { accion, azarDePrueba, dia, diasHabiles, entradas, iso, serieGeometrica, sumar } from "./ficticio";
 
 const COMPRA = [{ fecha: dia("2019-01-08"), cantidad: 1237n }];
 const conDividendos = (extra: Parameters<typeof accion>[3]) => accion("a", 1237, [], { movimientos: COMPRA, ...extra });
@@ -57,6 +58,68 @@ describe("dividendosPorAccion", () => {
     ]);
     expect(r.avisos.map((a) => [a.codigo, a.dia])).toEqual([["DECRETO_BRUTO", "2020-03-11"]]);
     expect(r.decretosFuturos).toBe(1);
+  });
+});
+
+describe("dividendosPorAccion · un decreto ya cruzado con su pago de Trii no se cuenta dos veces (C5b)", () => {
+  const decreto = (id: string, fechaPago: string, valorPorAccion = 0.61) => ({ id, fechaPago: dia(fechaPago), valorPorAccion, recibido: false });
+  const pagoDe = (fechaPago: string, montoNeto = 733.19) => ({ fechaPago: dia(fechaPago), montoNeto, decretadoId: null });
+  const origenes = (r: ReturnType<typeof dividendosPorAccion>) => r.pagos.map((p) => `${p.dia} ${p.origen}`);
+
+  it("el pago que llega 2 días después del decreto: solo el PAGO, sin el bruto del decreto", () => {
+    const r = dividendosPorAccion(conDividendos({ dividendos: [pagoDe("2019-11-15")], decretos: [decreto("d1", "2019-11-13")] }), HOY);
+    expect(origenes(r)).toEqual(["2019-11-15 PAGO"]);
+    expect(r.avisos).toEqual([]);
+  });
+
+  it("la ventana del cruce: un pago 3 días antes o 10 después lo cruza; 4 antes u 11 después, no (cuentan los dos)", () => {
+    for (const [d, cruza] of [["2020-03-08", true], ["2020-03-21", true], ["2020-03-07", false], ["2020-03-22", false]] as const) {
+      const r = dividendosPorAccion(conDividendos({ dividendos: [pagoDe(d)], decretos: [decreto("d1", "2020-03-11", 3.47)] }), HOY);
+      expect(origenes(r), d).toEqual(cruza ? [`${d} PAGO`] : [d, "2020-03-11"].sort().map((x) => `${x} ${x === d ? "PAGO" : "DECRETO"}`));
+    }
+  });
+
+  it("si el pago cruzado no entró a la historia (sin tenencia o con la tenencia cambiando), el decreto entra con su bruto", () => {
+    const cambia = dividendosPorAccion(
+      conDividendos({ movimientos: [...COMPRA, { fecha: dia("2019-11-08"), cantidad: 113n }], dividendos: [pagoDe("2019-11-13")], decretos: [decreto("d1", "2019-11-13")] }),
+      HOY,
+    );
+    expect(origenes(cambia)).toEqual(["2019-11-13 DECRETO"]);
+    expect(cambia.avisos.map((a) => a.codigo)).toEqual(["DIVIDENDO_TENENCIA_CAMBIA", "DECRETO_BRUTO"]);
+    const sin = dividendosPorAccion(conDividendos({ dividendos: [pagoDe("2019-01-04", 41.37)], decretos: [decreto("d1", "2019-01-06")] }), HOY);
+    expect(origenes(sin)).toEqual(["2019-01-06 DECRETO"]);
+    expect(sin.avisos.map((a) => a.codigo)).toEqual(["DIVIDENDO_SIN_TENENCIA", "DECRETO_BRUTO"]);
+  });
+
+  it("dos decretos con ventanas que se tocan y sus dos pagos: ningún decreto se suma", () => {
+    const r = dividendosPorAccion(
+      conDividendos({ dividendos: [pagoDe("2020-01-15"), pagoDe("2020-01-20", 802.61)], decretos: [decreto("a", "2020-01-10"), decreto("b", "2020-01-17")] }),
+      HOY,
+    );
+    expect(origenes(r)).toEqual(["2020-01-15 PAGO", "2020-01-20 PAGO"]);
+  });
+
+  it("un decreto con pago futuro cuyo pago de Trii ya llegó (adelantado) no se cuenta como futuro", () => {
+    const r = dividendosPorAccion(conDividendos({ dividendos: [pagoDe("2020-06-29")], decretos: [decreto("d1", "2020-07-02")] }), HOY);
+    expect(origenes(r)).toEqual(["2020-06-29 PAGO"]);
+    expect(r.decretosFuturos).toBe(0);
+  });
+
+  it("propiedad (semilla): ningún DECRETO tiene un PAGO de la historia dentro de su ventana, y no se pierde ninguno", () => {
+    const azar = azarDePrueba(1237);
+    const fecha = () => iso(sumar(dia("2019-02-01"), Math.floor(azar() * 480)));
+    for (let caso = 0; caso < 500; caso += 1) {
+      const decretos = Array.from({ length: 1 + Math.floor(azar() * 5) }, (_, i) => decreto(`d${i}`, fecha(), 1 + azar()));
+      const dividendos = Array.from({ length: Math.floor(azar() * 6) }, () => pagoDe(fecha(), 100 + azar() * 900));
+      const movimientos = [...COMPRA, ...(azar() < 0.5 ? [{ fecha: dia(fecha()), cantidad: 113n }] : [])];
+      const r = dividendosPorAccion(conDividendos({ dividendos, decretos, movimientos }), HOY);
+      const pagosEntrados = r.pagos.filter((p) => p.origen === "PAGO").map((p) => dia(p.dia));
+      const cruzado = (d: { fechaPago: Date }) => pagosEntrados.some((f) => enVentanaDePago(d.fechaPago, f));
+      const esperados = decretos.filter((d) => !cruzado(d) && d.fechaPago <= HOY).map((d) => iso(d.fechaPago)).sort();
+      const decretosEntrados = r.pagos.filter((p) => p.origen === "DECRETO").map((p) => p.dia).sort();
+      expect(decretosEntrados, `caso ${caso}`).toEqual(esperados);
+      expect(r.decretosFuturos, `caso ${caso}`).toBe(decretos.filter((d) => !cruzado(d) && d.fechaPago > HOY).length);
+    }
   });
 });
 
