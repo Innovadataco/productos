@@ -7,7 +7,8 @@
  *
  * Controles por frase, sobre el texto en NFC: caracteres y forma (CIFRA_SUELTA, IDIOMA, FORMATO), cifras en palabras,
  * citas y lista de hechos (HECHO_DESCONOCIDO, HECHO_NO_CITADO, FORMATO), etiquetas y sujeto (ETIQUETA_NO_COINCIDE),
- * marcas (DIRECCION_CONTRADICE), recomendación, predicción, trato e idioma; después del render, el largo (LONGITUD), la
+ * marcas (DIRECCION_CONTRADICE), recomendación, predicción, trato e idioma (también el vocabulario cerrado: toda
+ * palabra fuera de él rechaza, `vocabulario.ts`); después del render, el largo (LONGITUD), la
  * palabra repetida (FORMATO) y el cotejo de cada número contra el paquete (RENDER_CIFRA). De la salida entera: el número
  * de frases, el largo total y los hechos obligatorios.
  */
@@ -22,6 +23,7 @@ import { leerSalida, type FraseLeida } from "./leer";
 import { revisarMarcas } from "./marcas";
 import { coincidenciasEn, prepararTexto, type Patron } from "./patron";
 import { esNumeroFundido } from "./numeros";
+import { palabrasFueraDelVocabulario } from "./vocabulario";
 import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA, PATRONES_SIN_DATO } from "./patrones-lengua";
 import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "./patrones-redaccion";
 import { renderizarFrase } from "./render";
@@ -76,6 +78,7 @@ function analizarFrase(frase: FraseLeida, paquete: PaqueteHechos, porId: HechosP
   for (const h of revisarMarcas(preparado, atribucion, porId)) anotar(h.codigo, h.patron);
   for (const [codigo, patrones] of LISTAS) for (const id of coincidenciasEn(preparado, patrones)) anotar(codigo, id);
   if ((preparado.plegado.match(/\p{L}+/gu) ?? []).some(esNumeroFundido)) anotar("CIFRA_EN_PALABRAS", "CIFRA_EN_PALABRAS.FUNDIDA");
+  if (palabrasFueraDelVocabulario(texto).length > 0) anotar("IDIOMA", "IDIOMA.VOCABULARIO");
   const renderizado = renderizarFrase(texto, paquete);
   const largo = [...renderizado].length;
   if (largo === 0) anotar("LONGITUD", "LONGITUD.VACIA");

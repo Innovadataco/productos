@@ -62,32 +62,39 @@ const MARCAS: readonly PatronMarca[] = [
     "aumentaron", "aumenta", "aumentan", "creció", "crecieron", "crece", "crecen", "avanzó", "avanzaron", "avanza", "avanzan", "ganó", "ganaron",
     "repuntó", "repuntaron", "mejoró", "mejoraron", "incrementó", "incrementaron", "se valorizó", "se valorizaron", "se valoriza", "se recuperó",
     "se recuperaron", "se disparó", "se dispararon", "ascendió", "ascendieron", "asciende", "escaló", "escalaron", "saltó", "saltaron",
-    "se fortaleció", "se fortalecieron", "superó", "superaron", "rebasó", "rebasaron"], SUBE),
+    "se fortaleció", "se fortalecieron", "superó", "superaron", "rebasó", "rebasaron", "mejora", "mejoran"], SUBE),
   patronMarca("DIRECCION.SUBE_SUSTANTIVO", "MINUSCULAS", ["subida", "subidas", "aumento", "aumentos", "alza", "alzas", "crecimiento", "incremento",
     "incrementos", "repunte", "repuntes", "avance", "valorización"], SUBE),
   patronMarca("DIRECCION.BAJA_VERBO", "MINUSCULAS", ["bajó", "bajaron", "bajan", "bajando", "ha bajado", "han bajado", "cayó", "cayeron", "cae", "caen",
     "cayendo", "descendió", "descendieron", "desciende", "disminuyó", "disminuyeron", "disminuye", "retrocedió", "retrocedieron", "retrocede",
     "perdió", "perdieron", "pierde", "pierden", "empeoró", "se redujo", "se redujeron", "se desvalorizó", "se desvalorizaron", "se contrajo",
-    "se contrajeron", "se desplomó", "se desplomaron", "se hundió", "se hundieron", "cedió", "cedieron", "se debilitó", "se debilitaron"], BAJA),
+    "se contrajeron", "se desplomó", "se desplomaron", "se hundió", "se hundieron", "cedió", "cedieron", "se debilitó", "se debilitaron",
+    "empeora", "empeoran"], BAJA),
   patronMarca("DIRECCION.BAJA_SUSTANTIVO", "MINUSCULAS", ["bajada", "descenso", "descensos", "disminución", "retroceso", "pérdida", "pérdidas",
     "a la baja", "reducción", "desvalorización", "contracción"], BAJA),
-  patronMarca("DIRECCION.IGUAL", "MINUSCULAS", ["se mantuvo", "se mantuvieron", "se mantiene", "se mantienen", "sin cambio", "sin cambios", "no cambió",
+  patronMarca("DIRECCION.IGUAL", "MINUSCULAS", ["mantuvo", "mantuvieron", "mantiene", "mantienen", "sin cambio", "sin cambios", "no cambió",
     "no cambiaron", "no varió", "no variaron", "estable", "estables", "sigue igual", "siguió igual", "quedó igual", "es igual", "es la misma",
-    "es el mismo", "se sostuvo", "invariable", "sin variación"], IGUAL),
+    "es el mismo", "se sostuvo", "invariable", "sin variación", "sigue en", "siguió en", "continúa en", "continuó en", "se estancó",
+    "se estancaron"], IGUAL),
   patronMarca("CERCANIA.CERCA", "MINUSCULAS", ["cerca", "cercano", "cercana", "cercanos", "cercanas", "a punto de", "próximo a", "próxima a"],
     { campo: "cercania", valor: "CERCA" }),
   patronMarca("CERCANIA.LEJOS", "MINUSCULAS", ["lejos", "lejano", "lejana", "lejanos", "lejanas", "distante", "distantes"], { campo: "cercania", valor: "LEJOS" }),
   patronMarca("FRESCURA.HOY", "MINUSCULAS", ["hoy"], { campo: "frescura", valor: "HOY" }),
 ];
 
-/** Movimientos que una negación da vuelta («no subió», «sin bajar»): «cambi…» y «vari…» negados son estabilidad (IGUAL). */
-const NEGADOS = "(?:sub|baj|ca[eiy]|crec|aument|dismin|descend|retroced|perd|gan(?!anc)|avanz|repunt|mejor|empeor|valoriz|desvaloriz|recuper|ascend"
-  + "|escal|dispar|desplom|hund|ced|fortalec|debilit|super|rebas|salt)\\p{L}*";
+/**
+ * Movimientos que una negación da vuelta («no subió», «sin bajar», «no se ha subido»; hasta dos palabras en medio):
+ * «cambi…» y «vari…» negados son estabilidad (IGUAL) y no están. Una alternativa por raíz: el candado las muta una a una.
+ */
+const NEGACION = "(?:no|sin|nunca|ni|tampoco|dejo de|dejaron de)(?: \\p{L}+){0,2} ";
+const NEGADOS: readonly string[] = ["sub", "baj", "ca[eiy]", "crec", "aument", "dismin", "descend", "retroced", "perd", "gan(?!anc)", "avanz",
+  "repunt", "mejor", "empeor", "valoriz", "desvaloriz", "recuper", "ascend", "escal", "dispar", "desplom", "hund", "ced", "fortalec",
+  "debilit", "super", "rebas", "salt"];
 
 const SIN_DATO: readonly Patron[] = [
   patron("DIRECCION.COMPARATIVO", "PLEGADO", ["mayor", "mayores", "menor", "menores", "superior", "superiores", "inferior", "inferiores", "mas alto",
-    "mas alta", "mas bajo", "mas baja", "por encima"]),
-  patron("DIRECCION.NEGADA", "PLEGADO", [`(?:no|sin|nunca|ni|tampoco|dejo de|dejaron de)(?: \\p{L}+)? ${NEGADOS}`]),
+    "mas alta", "mas bajo", "mas baja", "por encima", "a mas", "a menos"]),
+  patron("DIRECCION.NEGADA", "PLEGADO", NEGADOS.map((raiz) => `${NEGACION}${raiz}\\p{L}*`)),
 ];
 
 export const PATRONES_CIFRA_EN_PALABRAS: readonly Patron[] = Object.freeze(CIFRA_EN_PALABRAS);

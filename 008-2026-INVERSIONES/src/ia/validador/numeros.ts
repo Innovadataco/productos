@@ -1,7 +1,7 @@
 /**
- * Números escritos en palabras y fundidos en una sola («dosmil», «unmillon», «treintaycinco»): los patrones de palabra
- * completa no los ven. Una palabra es un número fundido si se puede partir entera en dos o más piezas de numeral (con
- * «y» entre ellas o no). Se revisa palabra por palabra (hasta `maxLargoPalabra` letras: las más largas ya son FORMATO),
+ * Números escritos en palabras y fundidos en una sola («dosmil», «unmillon», «treintaycinco», «treintaiuno»): los
+ * patrones de palabra completa no los ven. Una palabra es un número fundido si se puede partir entera en dos o más piezas
+ * de numeral (con «y» o «i» entre ellas, o sin nada). Se revisa palabra por palabra (hasta `maxLargoPalabra` letras: las más largas ya son FORMATO),
  * con programación dinámica: sin expresiones con retroceso.
  */
 import { LIMITES_SALIDA } from "./codigos";
@@ -10,7 +10,7 @@ const PIEZAS: readonly string[] = Object.freeze([
   "un", "uno", "una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce", "trece", "catorce",
   "quince", "dieci", "veinte", "veinti", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa", "cien", "ciento",
   "cientos", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos", "mil",
-  "miles", "millon", "millones", "billon", "billones", "trillon", "trillones", "y",
+  "miles", "millon", "millones", "billon", "billones", "trillon", "trillones", "y", "i",
 ]);
 const MIN_PIEZAS = 2;
 

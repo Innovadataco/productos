@@ -87,8 +87,15 @@ function repartir({ datos, sueltos }: Seleccion, paquete: PaqueteHechos): readon
     total += largo(nueva);
     return true;
   };
+  /** Pone cada nombre pendiente en la primera frase donde quepa; los que no caben siguen pendientes. */
   const colocarSueltos = (): void => {
-    pendientes = pendientes.filter((n) => !frases.some((_, i) => agregar(i, n)));
+    const quedan: Item[] = [];
+    for (const nombre of pendientes) {
+      let puesto = false;
+      for (let i = 0; i < frases.length && !puesto; i += 1) puesto = agregar(i, nombre);
+      if (!puesto) quedan.push(nombre);
+    }
+    pendientes = quedan;
   };
   for (const dato of datos) {
     if (frases.length > 0 && agregar(frases.length - 1, dato)) continue;
