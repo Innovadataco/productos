@@ -66,7 +66,7 @@ export function aSerieVista(l: LecturaSerie): SerieVista {
     ...comun,
     estado: "CON_DATOS",
     ultimo: { ...punto(l.ultimo), fuente: l.ultimo.fuente, traidoEn: horaColombia(l.ultimo.traidoEn) },
-    frescura: { estado, dias: dias ?? umbralDias, umbralDias, valeHoy: cubreHoy },
+    frescura: { estado, dias, umbralDias, valeHoy: cubreHoy },
     historia: l.historia.map(punto),
     variacion: l.variacion === null ? null : variacion(l.variacion),
   };
