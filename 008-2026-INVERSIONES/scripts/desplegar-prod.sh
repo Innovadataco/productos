@@ -38,6 +38,12 @@ ESPERA_COMPLETA_S=600
 # 512 MiB, el mismo par del preflight de memoria de PI (convivencia-pi.md §1).
 PISO_SWAPFREE_KB=524288
 PERMANENTES=(inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo)
+# El servicio de precios (D-018) entra con los permanentes solo si la imagen lo trae (imagen_con_servicio_precios).
+PRECIOS="inv-008-precios"
+# El puente de su red con salida: nombre fijo para la regla de firewall del host que pone PI.
+PUENTE_PRECIOS="br-inv008-prec"
+# Variables que el servicio de precios nunca recibe (solo se leen los NOMBRES de su entorno).
+AJENAS_PRECIOS='^(CIFRADO_|AUTH_SECRET|TELEGRAM_|AGE_|POSTGRES_|APP_ORIGEN|INV_)'
 # La sonda de la prueba de no salida: el único destino de internet de 008 en producción (el vigía, Telegram). Lo
 # resuelve y lo alcanza la ENTRADA (control positivo); desde la app no debe haber ruta.
 SONDA_SALIDA_DESTINO="api.telegram.org"
@@ -509,6 +515,69 @@ verificar_aislado() {
   done
 }
 
+# ¿La imagen del sha $1 trae el servicio de precios (D-018)? Se mira en el clon, sin contenedores ni red: el commit de la
+# imagen (su etiqueta revision es ese sha) trae src/servicio-precios/bucle.ts. 0 sí · 1 no (una imagen anterior al
+# servicio: su bundle no tiene el modo «bucle», saldría con 2 en un bucle de reinicios y el --wait fallaría) · 2 no se
+# puede saber (el clon no tiene ese commit). Igual en reanudar-008.sh (lo cuida desplegar-precios.test.ts).
+imagen_con_servicio_precios() {
+  local git_clon=(env -i PATH="$PATH" GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -C "$INV_DIR_008")
+  "${git_clon[@]}" cat-file -e "$1^{commit}" 2>/dev/null || return 2
+  "${git_clon[@]}" cat-file -e "$1:./src/servicio-precios/bucle.ts" 2>/dev/null || return 1
+  return 0
+}
+
+# Fija UP_PERMANENTES, la lista del up de los permanentes para la imagen del sha $1: con el servicio de precios si la
+# imagen lo trae; si no (o no se sabe), con --scale inv-008-precios=0, que baja el contenedor que haya. $2 = --estricto:
+# si no se puede saber, aborta (el despliegue, con el clon en el sha); sin él, sigue sin el servicio (la vuelta atrás).
+permanentes_para() {
+  local rc=0
+  imagen_con_servicio_precios "$1" || rc=$?
+  if [ "$rc" = 0 ]; then
+    UP_PERMANENTES=("${PERMANENTES[@]}" "$PRECIOS")
+    CON_PRECIOS=1
+    return 0
+  fi
+  [ "$rc" = 1 ] || [ "${2:-}" != "--estricto" ] || morir "no se pudo saber si la imagen de $1 trae el servicio de precios (el clon no tiene ese commit)"
+  UP_PERMANENTES=(--scale "$PRECIOS=0" "${PERMANENTES[@]}" "$PRECIOS")
+  CON_PRECIOS=0
+}
+
+# Su entorno, por NOMBRES: ninguna variable de la app, de la base, de los respaldos ni de Telegram. De su credencial se
+# mira solo el usuario (nunca se imprime ni se guarda la URL): la de inv_precios, o vacía (sin el secreto, en espera).
+verificar_entorno_precios() {
+  local cid="$1" entorno ajenas usuario
+  entorno="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$cid")" || morir "no se pudo leer el entorno del servicio de precios"
+  ajenas="$(printf '%s\n' "$entorno" | cut -d= -f1 | grep -E "$AJENAS_PRECIOS" | tr '\n' ' ' || true)"
+  [ -z "$ajenas" ] || morir "el servicio de precios recibe variables que no son suyas: $ajenas"
+  if ! printf '%s\n' "$entorno" | grep -q '^DATABASE_URL=.'; then
+    informar "⚠️  el servicio de precios corre sin INV_PRECIOS_DATABASE_URL: queda en espera y no trae precios (produccion.md §2)"
+    return 0
+  fi
+  usuario="$(printf '%s\n' "$entorno" | sed -n 's|^DATABASE_URL=postgres\(ql\)\{0,1\}://\([^:@/]*\)[:@].*|\2|p')"
+  [ "$usuario" = inv_precios ] || morir "la DATABASE_URL del servicio de precios no es la de inv_precios"
+  informar "el servicio de precios corre con la credencial de inv_precios"
+}
+
+# El servicio de precios (D-018): corriendo de una vez con la imagen enviada y healthy (su latido), sin puertos, solo en
+# la red interna y en la suya, que tiene salida, el puente PUENTE_PRECIOS y nadie más, y con su entorno.
+verificar_precios() {
+  local cid redes esperadas red_precios="${INV_PROYECTO_ACTIVO}_inv-008-red-precios" datos
+  cid="$("${COMPOSE[@]}" ps -q "$PRECIOS")"
+  [ -n "$cid" ] || morir "no hay contenedor del servicio de precios"
+  verificar_corriendo "el servicio de precios" "$cid"
+  [ "$(docker inspect -f '{{.State.Health.Status}}' "$cid")" = healthy ] || morir "el servicio de precios no está healthy (su latido, /estado/bucle): revise sus logs"
+  [ -z "$(docker port "$cid")" ] || morir "el servicio de precios publica puertos"
+  redes="$(docker inspect -f '{{range $nombre, $_ := .NetworkSettings.Networks}}{{$nombre}} {{end}}' "$cid")" || morir "no se pudieron leer las redes del servicio de precios"
+  esperadas="${INV_PROYECTO_ACTIVO}_inv-008-red-interna $red_precios "
+  [ "$redes" = "$esperadas" ] || morir "el servicio de precios está en otras redes ($redes): solo la interna y la suya"
+  datos="$(docker inspect --type network -f '{{.Internal}}|{{index .Options "com.docker.network.bridge.name"}}|{{len .Containers}}' "$red_precios")" ||
+    morir "no se pudo leer la red $red_precios"
+  [ "$datos" = "false|$PUENTE_PRECIOS|1" ] ||
+    morir "la red de precios no es la esperada (internal|puente|contenedores: $datos): con salida, el puente $PUENTE_PRECIOS y solo el servicio"
+  verificar_entorno_precios "$cid"
+  informar "el servicio de precios corre la imagen enviada, healthy, sin puertos, solo en la red interna y la suya ($PUENTE_PRECIOS)"
+}
+
 verificar_servicio() {
   local cid salud
   cid="$("${COMPOSE[@]}" ps -q inv-008-app)"
@@ -530,6 +599,7 @@ verificar_servicio() {
   cid="$("${COMPOSE[@]}" ps -q inv-008-db)"
   verificar_aislado "la base" "$cid"
   informar "la app corre la imagen enviada, sin puertos y solo en redes internal; /api/salud por la entrada responde ok con la versión $SHA"
+  [ "$CON_PRECIOS" = 0 ] || verificar_precios
 }
 
 # Imprime, una por línea, las redes internal del proyecto que YA existen sin la puerta de enlace aislada (de una
@@ -663,6 +733,8 @@ DETENIDOS=0
 VERIFICADO=0
 ESPERA=""
 BAJO_PISO=""
+CON_PRECIOS=0
+UP_PERMANENTES=()
 vuelta_atras() {
   local codigo=$? sha="$SHA_VUELTA"
   [ -n "$sha" ] || [ "$DETENIDOS" = 0 ] || sha="$SHA_CORRIA"
@@ -678,7 +750,9 @@ vuelta_atras() {
   fi
   if [ "$VERIFICADO" = 0 ] && [ -n "$sha" ]; then
     informar "vuelta atrás: levantando de nuevo la imagen que corría (sha $sha)"
-    if INV_TAG="$sha" "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${PERMANENTES[@]}"; then
+    permanentes_para "$sha"
+    [ "$CON_PRECIOS" = 1 ] || informar "vuelta atrás: la imagen de $sha no trae el servicio de precios (o no se sabe): se baja inv-008-precios"
+    if INV_TAG="$sha" "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${UP_PERMANENTES[@]}"; then
       informar "vuelta atrás hecha: corre $sha. Revise la causa antes de reintentar."
     else
       informar "⚠️  la vuelta atrás también falló: revise a mano (docs/despliegue/produccion.md, reversa)"
@@ -738,6 +812,12 @@ main() {
   verificar_sentido "$sin_migrar"
   export INV_TAG="$SHA"
   decidir_espera "$espera_explicita" "$(leer_estado sha-actual)"
+  permanentes_para "$SHA" --estricto
+  if [ "$CON_PRECIOS" = 1 ]; then
+    informar "la imagen trae el servicio de precios: se levanta y se verifica con los permanentes"
+  else
+    informar "⚠️  la imagen no trae el servicio de precios (es anterior a él): se baja inv-008-precios (--scale 0) y se levanta lo demás"
+  fi
 
   local medicion
   medicion="$(ruta_escribible "$INV_ESTADO_DIR/mediciones/$SHA-$(date +%Y%m%d-%H%M%S).txt")"
@@ -773,8 +853,8 @@ main() {
 
   revisar_pi "antes de up"
   respaldos_siguen_validos || morir "la carpeta de respaldos dejó de pasar la validación antes del up"
-  informar "app, entrada, vigía y respaldo: up --wait"
-  "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${PERMANENTES[@]}"
+  informar "app, entrada, vigía, respaldo y precios: up --wait"
+  "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${UP_PERMANENTES[@]}"
   # La app y el respaldo ya están arriba: si algo falla después, se vuelve solo si hay otra imagen.
   DETENIDOS=0
   verificar_servicio
