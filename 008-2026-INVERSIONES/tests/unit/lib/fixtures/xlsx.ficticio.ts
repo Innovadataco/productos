@@ -2,9 +2,21 @@
  * Generadores de zip (y de un xlsx mínimo) para las pruebas del lector acotado (`src/lib/zip-acotado.ts`). Todo el
  * contenido es inventado (`FICT…`, fechas de 2027). No se versiona ningún `.zip` ni `.xlsx` suelto: se arman en código.
  * `armarZip` escribe un zip correcto por defecto y deja torcer cada campo (perillas) para las mutaciones.
- * El CRC lo calcula `zlib.crc32` de Node, NO el del lector: así un error compartido entre escritor y lector se nota.
+ * El CRC lo calcula `zlib.crc32` de Node (o, en un Node 22 anterior a 22.2, una versión bit a bit), NO el del lector:
+ * así un error compartido entre escritor y lector se nota.
  */
-import { crc32, deflateRawSync } from "node:zlib";
+import * as zlib from "node:zlib";
+
+/** CRC-32 bit a bit (sin tabla): solo si falta zlib.crc32. */
+function crc32BitABit(datos: Uint8Array): number {
+  let c = 0xffffffff;
+  for (const byte of datos) {
+    c ^= byte;
+    for (let k = 0; k < 8; k += 1) c = c & 1 ? (c >>> 1) ^ 0xedb88320 : c >>> 1;
+  }
+  return (c ^ 0xffffffff) >>> 0;
+}
+const crc32 = (datos: Uint8Array): number => (typeof zlib.crc32 === "function" ? zlib.crc32(datos) : crc32BitABit(datos));
 
 export const FIRMA_LOCAL = 0x04034b50;
 export const FIRMA_CENTRAL = 0x02014b50;
@@ -112,7 +124,7 @@ class Escritor {
 
 function comprimir(e: EntradaZip): Uint8Array {
   if (e.comprimidos) return e.comprimidos;
-  return (e.metodo ?? 8) === 8 ? new Uint8Array(deflateRawSync(e.datos)) : e.datos;
+  return (e.metodo ?? 8) === 8 ? new Uint8Array(zlib.deflateRawSync(e.datos)) : e.datos;
 }
 
 interface Armada {

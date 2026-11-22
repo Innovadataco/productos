@@ -116,6 +116,15 @@ describe("pedirBytesAcotado · pedido y cuerpo", () => {
     expect(await pedir(responder(flujo([], "falla"), { status: 503, headers: XML }))).toEqual({ ok: false, codigo: "PRUEBA_HTTP_503" });
   });
 
+  it("con un estado HTTP de error o un content-length sobre el tope, el cuerpo se cancela sin leerlo", async () => {
+    const error = espia();
+    expect(await pedir(responder(error.flujo, { status: 503, headers: XML }))).toEqual({ ok: false, codigo: "PRUEBA_HTTP_503" });
+    expect([error.pedidos(), error.cancelado()]).toEqual([0, true]);
+    const largo = espia();
+    expect(await pedir(responder(largo.flujo, { headers: { ...XML, "content-length": String(TOPE + 1) } }))).toEqual({ ok: false, codigo: "PRUEBA_FORMATO" });
+    expect([largo.pedidos(), largo.cancelado()]).toEqual([0, true]);
+  });
+
   it("si buscar lanza (red, redirección rechazada), da <PREFIJO>_RED sin lanzar", async () => {
     expect(await pedir(async () => { throw new TypeError("redirect"); })).toEqual({ ok: false, codigo: "PRUEBA_RED" });
   });

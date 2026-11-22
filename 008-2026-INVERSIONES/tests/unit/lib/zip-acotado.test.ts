@@ -1,7 +1,7 @@
 // Lector zip acotado (para xlsx, solo en los exportadores del Mac): sin ZIP64, cifrado ni comentario; métodos 0 y 8;
 // CRC verificado; topes de archivo, entradas, tamaño por entrada y total y razón de compresión; cabecera local igual a
 // la central; entradas contiguas sin solapes; nombres seguros. Cada rechazo, contra su par válido. Datos inventados.
-import { crc32, deflateRawSync } from "node:zlib";
+import * as zlib from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { ErrorZip, TOPES_ZIP, abrirZipAcotado, crc32Zip, type ArchivoZip, type CodigoZip } from "@/lib/zip-acotado";
 import { leerXmlAcotado } from "@/lib/xml-acotado";
@@ -149,11 +149,22 @@ describe("zip-acotado · lectura", () => {
     expect(Object.isFrozen(archivo.nombres)).toBe(true);
   });
 
-  it("el CRC propio coincide con el estándar (vector «123456789») y con zlib.crc32", () => {
+  it("el CRC propio da los vectores estándar («123456789» y vacío)", () => {
     expect(crc32Zip(ascii("123456789"))).toBe(0xcbf43926);
     expect(crc32Zip(new Uint8Array())).toBe(0);
+  });
+
+  // zlib.crc32 existe desde Node 22.2 (engines admite 22.0): donde no está, esta comparación no corre.
+  it.skipIf(typeof zlib.crc32 !== "function")("el CRC propio coincide con zlib.crc32 en datos al azar", () => {
     const datos = bytesAzar(4613, 3001);
-    expect(crc32Zip(datos)).toBe(crc32(datos));
+    expect(crc32Zip(datos)).toBe(zlib.crc32(datos));
+  });
+
+  it("mutar los bytes de entrada después de abrir no cambia lo que se lee (el lector trabaja sobre su copia)", () => {
+    const bytes = zip([entrada("a", "FICT original", { metodo: 0 })]);
+    const archivo = abrirZipAcotado(bytes);
+    bytes.fill(0x5a, 31, 31 + 4);
+    expect(texto(archivo.leer("a"))).toBe("FICT original");
   });
 });
 
@@ -244,7 +255,7 @@ describe("zip-acotado · cifrado, banderas, métodos y CRC", () => {
 
   it("CRC malo en las dos cabeceras, o un bit volteado en los datos: ZIP_CRC_INVALIDO al leer", () => {
     const bueno = zip([entrada("a", "FICT 4613,27", { metodo: 0 })]);
-    par(bueno, zip([entrada("a", "FICT 4613,27", { metodo: 0, crc: crc32(ascii("FICT 4613,27")) ^ 1 })]), "ZIP_CRC_INVALIDO");
+    par(bueno, zip([entrada("a", "FICT 4613,27", { metodo: 0, crc: crc32Zip(ascii("FICT 4613,27")) ^ 1 })]), "ZIP_CRC_INVALIDO");
     const volteado = bueno.slice();
     volteado[30 + 1 + 2] ^= 0x01;
     expect(alAbrir(volteado)).toBe("ABIERTO");
@@ -253,7 +264,7 @@ describe("zip-acotado · cifrado, banderas, métodos y CRC", () => {
 
   it("deflate corrupto, truncado o con basura después del final: ZIP_ENTRADA_INVALIDA", () => {
     const datos = ascii("FICT 37911,47 ".repeat(9));
-    const deflate = new Uint8Array(deflateRawSync(datos));
+    const deflate = new Uint8Array(zlib.deflateRawSync(datos));
     par(zip([{ nombre: "a", datos, comprimidos: deflate }]), zip([{ nombre: "a", datos, comprimidos: deflate.subarray(0, deflate.length - 3) }]), "ZIP_ENTRADA_INVALIDA");
     expect(alLeer(zip([{ nombre: "a", datos, comprimidos: Uint8Array.from([...deflate, 0x46, 0x49]) }]))).toBe("ZIP_ENTRADA_INVALIDA");
     expect(alLeer(zip([{ nombre: "a", datos, comprimidos: new Uint8Array(deflate.length).fill(0xff) }]))).toBe("ZIP_ENTRADA_INVALIDA");
@@ -298,7 +309,7 @@ describe("zip-acotado · cabecera local contra la central y descriptor", () => {
 
   it("la cabecera local puede traer los valores verdaderos aunque haya descriptor", () => {
     const datos = ascii("FICT");
-    const e: EntradaZip = { nombre: "a", datos, metodo: 0, descriptor: { firma: true }, local: { crc: crc32(datos), comprimido: 4, real: 4 } };
+    const e: EntradaZip = { nombre: "a", datos, metodo: 0, descriptor: { firma: true }, local: { crc: crc32Zip(datos), comprimido: 4, real: 4 } };
     expect(alLeer(zip([e]))).toBe("LEIDO");
   });
 });
@@ -344,8 +355,11 @@ describe("zip-acotado · tramos y directorio central", () => {
     expect(alAbrir(zip(DOS, { fin: { tamanoCentral: 0x7fffff } }))).toBe("ZIP_ESTRUCTURA_INVALIDA");
     expect(alAbrir(zip(DOS, { fin: { entradas: 1, entradasDisco: 1 } }))).toBe("ZIP_ESTRUCTURA_INVALIDA");
     expect(alAbrir(zip(DOS, { fin: { entradas: 3, entradasDisco: 3 } }))).toBe("ZIP_ESTRUCTURA_INVALIDA");
-    expect(alAbrir(zip([entrada("a", "FICT", { central: { comentario: new Uint8Array(400) } })]))).toBe("ABIERTO");
     expect(alAbrir(zip([entrada("a", "FICT", { central: { firma: 0x02014b51 } })]))).toBe("ZIP_ESTRUCTURA_INVALIDA");
+  });
+
+  it("un comentario en una entrada del directorio central: ZIP_COMENTARIO_NO_SOPORTADO", () => {
+    par(zip(UNA), zip([entrada("xl/workbook.xml", undefined, { central: { comentario: ascii("FICT") } })]), "ZIP_COMENTARIO_NO_SOPORTADO");
   });
 
   it("un largo de comentario de la entrada que se sale del directorio central: ZIP_ESTRUCTURA_INVALIDA", () => {

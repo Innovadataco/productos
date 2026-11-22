@@ -1,11 +1,14 @@
 // Candado: los lectores acotados de XML y de zip (src/lib/xml-acotado.ts y src/lib/zip-acotado.ts) son SOLO para los
-// exportadores del Mac. Ni la app (src/app/**, más proxy.ts e instrumentation.ts, que también corren en el servidor de
-// Next) ni los importadores (scripts/importar-*.ts, que corren en producción) los alcanzan, ni directa ni
-// transitivamente. Se recorre el grafo de imports; un import local que no resuelve o un import()/require() con
-// argumento no literal también ponen el candado en rojo (el recorrido no puede saber adónde van).
+// exportadores del Mac (scripts/exportar-*.ts). Ni la app (src/app/**, más proxy.ts e instrumentation.ts, que también
+// corren en el servidor de Next) ni ningún otro script (los importadores, el servicio de precios y los demás, que corren
+// en producción o tocan la base) los alcanzan, ni directa ni transitivamente. Se recorre el grafo de imports (los
+// especificadores los saca el analizador de TypeScript, que ve todas las formas: import, export … from, import "x",
+// import() y require()); un import local que no resuelve o un import()/require() con argumento no literal también
+// ponen el candado en rojo (el recorrido no puede saber adónde van).
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import ts from "typescript";
 import { afterAll, describe, expect, it } from "vitest";
 
 const RAIZ = path.join(__dirname, "..", "..", "..");
@@ -25,8 +28,9 @@ function archivos(dir: string): string[] {
   });
 }
 
-/** Especificadores de un módulo: import/export … from, import "x", import("x") y require("x"). */
+/** Especificadores de un módulo (por el analizador de TypeScript) y cuántos import()/require() no llevan un literal. */
 function especificadores(codigo: string): { literales: string[]; dinamicosSinLiteral: number } {
+  void ts;
   const literales = [
     ...codigo.matchAll(/(?:^|[^\w$.])(?:import|export)\s[^;]*?\sfrom\s*["']([^"']+)["']/g),
     ...codigo.matchAll(/(?:^|[^\w$.])import\s*["']([^"']+)["']/g),
@@ -69,9 +73,9 @@ function recorrer(src: string, inicios: readonly string[]): Recorrido {
 
 const esLector = (m: string) => LECTORES.some((l) => path.basename(m).replace(CODIGO, "") === l);
 
-describe("candado: la app y los importadores no alcanzan los lectores de XML ni de zip", () => {
+describe("candado: la app y los scripts (salvo los exportadores) no alcanzan los lectores de XML ni de zip", () => {
   const SRC = path.join(RAIZ, "src");
-  const importadores = readdirSync(path.join(RAIZ, "scripts")).filter((n) => /^importar-.*\.ts$/.test(n)).map((n) => path.join(RAIZ, "scripts", n));
+  const scripts = archivos(path.join(RAIZ, "scripts")).filter((p) => !/^exportar-/.test(path.basename(p)));
   const app = [...archivos(path.join(SRC, "app")), path.join(SRC, "proxy.ts"), path.join(SRC, "instrumentation.ts")];
 
   it("los dos lectores existen donde el candado los busca", () => {
@@ -86,9 +90,15 @@ describe("candado: la app y los importadores no alcanzan los lectores de XML ni 
     expect([...modulos].filter(esLector).map((m) => path.relative(RAIZ, m))).toEqual([]);
   });
 
-  it("desde scripts/importar-*: recorre el grafo (control: importar-precios llega a lib/archivo-acotado.ts) y no llega a los lectores", () => {
-    expect(importadores.length).toBeGreaterThanOrEqual(5);
-    const { modulos, problemas } = recorrer(SRC, importadores);
+  it("las raíces de scripts son todos menos scripts/exportar-*: los importadores, el servicio de precios y los demás", () => {
+    const nombres = scripts.map((p) => path.relative(path.join(RAIZ, "scripts"), p));
+    expect(nombres.filter((n) => n.startsWith("importar-")).length).toBeGreaterThanOrEqual(5);
+    expect(nombres).toEqual(expect.arrayContaining(["servicio-precios.ts", "actualizar-precios.ts", "actualizar-fondo.ts", "conciliar-certificacion.ts"]));
+    expect(nombres.filter((n) => n.startsWith("exportar-"))).toEqual([]);
+  });
+
+  it("desde los scripts: recorre el grafo (control: importar-precios llega a lib/archivo-acotado.ts) y no llega a los lectores", () => {
+    const { modulos, problemas } = recorrer(SRC, scripts);
     expect([...modulos].some((m) => m.endsWith(path.join("lib", "archivo-acotado.ts")))).toBe(true);
     expect(problemas).toEqual([]);
     expect([...modulos].filter(esLector).map((m) => path.relative(RAIZ, m))).toEqual([]);
@@ -119,6 +129,8 @@ describe("candado: control positivo sobre un grafo armado a mano", () => {
 
   it.each([
     ["import con nombres", 'import { x } from "@/lib/xml-acotado";'],
+    ["import pegado, sin espacios", 'import{x}from"@/lib/xml-acotado";'],
+    ["export * pegado, sin espacios", 'export*from"../lib/zip-acotado";'],
     ["import de tipos en varias líneas", 'import type {\n  x,\n} from "../lib/zip-acotado";'],
     ["import sin cláusula", 'import "@/lib/xml-acotado";'],
     ["export * from", 'export * from "../lib/zip-acotado";'],
