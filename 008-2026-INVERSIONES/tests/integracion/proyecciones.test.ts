@@ -7,6 +7,7 @@
 // cierres de las especies vivas terminan en 2020: no mueven la fecha de referencia del tablero (16-nov-2027).
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { cifrarCrudo } from "@/cifrado/campos";
 import { importarArchivoTrii } from "@/importacion/trii/importar";
 import { construirLotes } from "@/lotes/construir";
 import { calcularProyeccion } from "@/proyecciones/calcular";
@@ -36,6 +37,8 @@ const SABADO = dia("2019-06-15");
 const ids: Record<string, string> = {};
 let fondoId = "";
 let fondoVacioId = "";
+let fondoCeroId = "";
+let decretoRecibidoId = "";
 
 beforeAll(async () => {
   const base = (await db.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db ?? "";
@@ -69,6 +72,7 @@ beforeAll(async () => {
       cierre(ids["a"]!, SABADO, "1311.97"), // barra suelta en sábado: el lector la trae, la historia la descarta
       cierre(ids["a"]!, dias[10]!, "9999.13", { reemplazadoEn: new Date() }), // reemplazado: no se lee
       cierre(ids["a"]!, dias[11]!, "8888.17", { fuente: "otra" }), // otra fuente: no se lee
+      cierre(ids["a"]!, dia("2017-06-14"), "1111.37"), // más de 10 años antes de hoy: no se lee
     ],
   });
   await db.dividendoDecretado.createMany({
@@ -77,9 +81,24 @@ beforeAll(async () => {
       { instrumentoId: ids["a"]!, tipo: "ORDINARIO", valorPorAccion: new Prisma.Decimal("3.13"), fechaPago: dia("2028-04-12"), fuente: "ficticia" },
     ],
   });
+  // Un decreto con su pago recibido enlazado (decretadoId): el importador no enlaza, así que la fila va a mano y cifrada.
+  decretoRecibidoId = (await db.dividendoDecretado.create({
+    data: { instrumentoId: ids["a"]!, tipo: "ORDINARIO", valorPorAccion: new Prisma.Decimal("0.0391"), fechaPago: dia("2027-12-22"), fuente: "ficticia" },
+  })).id;
+  const carga = await db.cargaArchivo.create({
+    data: { tipoFuente: "TRII_DIVIDENDOS", nombreArchivo: "enlazado.ficticio.csv", sha256: "e".repeat(64), estado: "CARGADO", cargadoPorId: duenoId },
+  });
+  const llave = { tipoFuente: "TRII_DIVIDENDOS", claveNatural: `py${corrida}enlazado`.padStart(64, "0"), ocurrencia: 1 };
+  const fila = await db.filaFuente.create({
+    data: { ...llave, tipoFuente: "TRII_DIVIDENDOS", primeraCargaId: carga.id, primeraFilaNo: 1, crudo: cifrarCrudo({ "Fecha y hora": "2027-12-22", Ticker: nemo.a, "Valor total": "47.93" }, llave) },
+  });
+  await db.dividendo.create({
+    data: { filaFuenteId: fila.id, fechaPago: dia("2027-12-22"), instrumentoId: ids["a"]!, montoNeto: new Prisma.Decimal("47.93"), decretadoId: decretoRecibidoId },
+  });
 
   fondoId = (await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `9${corrida}1`, nombre: "Fondo ficticio de proyecciones" } })).id;
   fondoVacioId = (await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `9${corrida}2`, nombre: "Fondo ficticio sin valores" } })).id;
+  fondoCeroId = (await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `9${corrida}3`, nombre: "Fondo ficticio retirado" } })).id;
   await db.movimientoFondo.createMany({
     data: [
       { fondoId, fecha: dia("2019-01-03"), unidades: new Prisma.Decimal("1237.4321"), tipo: "CONSTITUCION", fuente: "MANUAL" },
@@ -87,6 +106,8 @@ beforeAll(async () => {
       { fondoId, fecha: dia("2019-09-10"), unidades: new Prisma.Decimal("48.7519"), tipo: "RETIRO", fuente: "MANUAL" },
       { fondoId, fecha: dia("2028-02-09"), unidades: new Prisma.Decimal("97.13"), tipo: "APORTE", fuente: "MANUAL" }, // después de hoy
       { fondoId: fondoVacioId, fecha: dia("2019-01-03"), unidades: new Prisma.Decimal("7.31"), tipo: "CONSTITUCION", fuente: "MANUAL" },
+      { fondoId: fondoCeroId, fecha: dia("2019-01-03"), unidades: new Prisma.Decimal("7.13"), tipo: "CONSTITUCION", fuente: "MANUAL" },
+      { fondoId: fondoCeroId, fecha: dia("2019-02-06"), unidades: new Prisma.Decimal("7.13"), tipo: "RETIRO", fuente: "MANUAL" },
     ],
   });
   const vu = (j: number) => new Prisma.Decimal((12731.4419 * 1.00013 ** j).toFixed(8));
@@ -122,14 +143,18 @@ describe("leerEntradas", () => {
     expect(a.cierres.find((c) => iso(c.dia) === iso(dias[10]!))!.precio).toBe(Number(precioA(10)));
     expect(a.cierres.find((c) => iso(c.dia) === iso(dias[11]!))!.precio).toBe(Number(precioA(11)));
     expect(a.cierres.some((c) => iso(c.dia) === iso(SABADO))).toBe(true);
+    expect(a.cierres.some((c) => iso(c.dia) === "2017-06-14")).toBe(false); // fuera de los 10 años
     expect(a.movimientos).toEqual([{ fecha: dia("2027-12-06"), cantidad: 1237n }]);
   });
 
   it("dividendos sin la fracción de escisión, decretos con su marca y las escisiones con los cierres del destino", async () => {
     const e = await leerEntradas(db, HOY);
     const a = accionDe(e, ids["a"]!)!;
-    expect(a.dividendos).toEqual([{ fechaPago: dia("2027-12-20"), montoNeto: 733.19, decretadoId: null }]);
-    expect(a.decretos.map((x) => [iso(x.fechaPago), x.valorPorAccion, x.recibido])).toEqual([["2020-07-15", 3.47, false], ["2028-04-12", 3.13, false]]);
+    expect(a.dividendos).toEqual([
+      { fechaPago: dia("2027-12-20"), montoNeto: 733.19, decretadoId: null },
+      { fechaPago: dia("2027-12-22"), montoNeto: 47.93, decretadoId: decretoRecibidoId },
+    ]);
+    expect(a.decretos.map((x) => [iso(x.fechaPago), x.valorPorAccion, x.recibido])).toEqual([["2020-07-15", 3.47, false], ["2027-12-22", 0.0391, true], ["2028-04-12", 3.13, false]]);
     expect(e.escisiones).toContainEqual({ origenId: ids["o"], destinoId: ids["d"], fecha: EVENTO, razon: 0.37 });
     expect(e.cierresDestino[ids["d"]!]).toHaveLength(120);
     expect(accionDe(e, ids["d"]!)).toBeUndefined();
@@ -143,6 +168,7 @@ describe("leerEntradas", () => {
     expect(f.valores).toHaveLength(640);
     expect(f.valores.find((v) => iso(v.dia) === "2019-03-05")!.valorUnidad).toBe(Number((12731.4419 * 1.00013 ** 75).toFixed(8)));
     expect(fondoDe(e, fondoVacioId)).toMatchObject({ unidades: 7.31, valores: [] });
+    expect(fondoDe(e, fondoCeroId)).toBeUndefined(); // unidades netas 0: no es una posición
   });
 
   it("la especie con ventas sin asignar queda fuera y se nombra", async () => {
@@ -164,6 +190,8 @@ describe("la proyección sobre lo leído", () => {
     expect(pos(fondoVacioId)).toMatchObject({ estado: "EXCLUIDA_SIN_VALOR" });
     expect(pos(ids["a"]!).valorHoy).toBeCloseTo(1237 * Number(precioA(419)), 6);
     expect(r.supuestos.ventana).toMatchObject({ desde: iso(dias[0]!), hasta: iso(dias[419]!), ruedas: 420 });
+    // Guarda: el aviso de año sin calendario depende de que 2019-2020 sigan sin sembrar en calendario_bvc.
+    expect(await db.calendarioBvc.count({ where: { dia: { gte: dia("2019-01-01"), lt: dia("2021-01-01") } } }), "2019-2020 no deben estar sembrados").toBe(0);
     const codigos = r.supuestos.avisos.map((x) => [x.codigo, x.dia ?? x.dato]);
     expect(codigos).toContainEqual(["DECRETO_BRUTO", "2020-07-15"]);
     expect(codigos).toContainEqual(["ANIO_SIN_CALENDARIO", 2019]);

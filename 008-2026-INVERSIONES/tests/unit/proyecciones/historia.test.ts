@@ -71,6 +71,10 @@ describe("armarHistoria · rejilla y ventana", () => {
     expect(posicion(h, "b")).toMatchObject({ estado: "PROYECTADA", diasEnVentana: 310 });
     expect(posicion(h, "s")).toMatchObject({ estado: "FIJA_HISTORIA_CORTA", diasTotales: 260 });
     expect(posicion(h, "s").diasEnVentana).toBeLessThan(MINIMO_DIAS);
+    // El aviso dice la verdad: tiene 250 o más en total, pero pocos en la ventana común (code-reviewer M1).
+    const aviso = h.avisos.find((x) => x.instrumentoId === "s")!;
+    expect(aviso).toMatchObject({ codigo: "HISTORIA_CORTA_EN_VENTANA", dato: posicion(h, "s").diasEnVentana });
+    expect(h.avisos.filter((x) => x.codigo === "HISTORIA_CORTA")).toEqual([]);
   });
 
   it("ruedas por mes = retornos de la ventana / meses de la ventana", () => {
@@ -133,6 +137,19 @@ describe("armarHistoria · casos borde y valor de hoy", () => {
     cerca(posicion(h, "f").valorHoy!, f);
     cerca(posicion(h, "u").peso!, u / (a + f + u));
     cerca(h.valorFijo, u);
+  });
+
+  it("un precio 0 antes de un dividendo no envenena el resultado: el dividendo no se usa y todo queda finito", () => {
+    const dias = diasHabiles("2019-01-02", 300);
+    const cierres = serieGeometrica(dias, 1237.4, 1.0003).map((c, j) => (j === 149 ? { ...c, precio: 0 } : c));
+    const a = accion("a", 37, cierres, {
+      movimientos: [{ fecha: dia("2018-12-03"), cantidad: 37n }],
+      dividendos: [{ fechaPago: dias[150]!, montoNeto: 41.37, decretadoId: null }],
+    });
+    const h = armarHistoria(entradas([a]));
+    expect([...h.historia.rendimientos].every(Number.isFinite)).toBe(true);
+    expect([...h.historia.factores].every(Number.isFinite)).toBe(true);
+    expect(posicion(h, "a").dividendosUsados).toBe(0);
   });
 
   it("avisa los años sin calendario sembrado y las especies incompletas", () => {

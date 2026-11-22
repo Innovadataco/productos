@@ -81,6 +81,36 @@ describe("simular · escenario", () => {
     cerca(s.puntos.at(-1)!.p50, columna + fijo);
   });
 
+  it("dos columnas distintas (factor, dividendo y peso propios) cuadran con la cuenta cerrada por columna", () => {
+    const R = 20;
+    const filas = Array.from({ length: 23 }, () => [1.0021, 0.9987]);
+    const divs = Array.from({ length: 23 }, () => [0, 0.0013]);
+    const s = simular(historiaDe(filas, R, divs), cartera([2873.59, 1469.83], 203.77), P({ horizonteMeses: 5, aportePeriodico: 371.53, reinvertirDividendos: false }));
+    const total = 2873.59 + 1469.83 + 203.77;
+    const v = [2873.59, 1469.83];
+    let fijo = 203.77;
+    let cobrado = 0;
+    for (let m = 1; m <= 5; m += 1) {
+      for (let d = 0; d < R; d += 1) {
+        cobrado += v[1]! * 0.0013;
+        v[0] = v[0]! * 1.0021;
+        v[1] = v[1]! * 0.9987;
+      }
+      v[0] = v[0]! + 371.53 * (2873.59 / total);
+      v[1] = v[1]! + 371.53 * (1469.83 / total);
+      fijo += 371.53 * (203.77 / total);
+    }
+    cerca(s.puntos.at(-1)!.p50, v[0]! + v[1]! + fijo);
+    cerca(s.puntos.at(-1)!.dividendosP50, cobrado);
+  });
+
+  it("sin reinvertir, el dividendo cobrado cuenta en el índice de la caída máxima (no es una caída)", () => {
+    const s = simular(historiaConstante(37, 1, 0.999, 21, 0.001), cartera([4613.27]), P({ reinvertirDividendos: false }));
+    expect(s.caidaMaximaMediana).toBeLessThan(1e-12);
+    const conCaida = simular(historiaConstante(37, 1, 0.999, 21, 0), cartera([4613.27]), P({ reinvertirDividendos: false }));
+    cerca(conCaida.caidaMaximaMediana, 1 - 0.999 ** Math.round(7 * 21));
+  });
+
   it("sin nada valorado, los aportes se suman sin retorno", () => {
     const s = simular(historiaDe([], 0), cartera([], 0), P({ horizonteMeses: 3, aportePeriodico: 41.3 }));
     s.puntos.forEach((p, m) => {

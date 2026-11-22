@@ -30,7 +30,10 @@ function entradaConTodo(): EntradasProyeccion {
   });
   const otra = accion("p", 13, serieGeometrica(dias, 905.6, 1.0001));
   return entradas(
-    [conTodo, otra, accion("q", 5, serieGeometrica(dias, 77.31, 1.0002)), accion("u", 5, [{ dia: dias[3]!, precio: 811.3 }]), accion("v", 5, []), fondo("g", 31.7, [])],
+    [
+      conTodo, otra, accion("q", 5, serieGeometrica(dias, 77.31, 1.0002)), accion("u", 5, [{ dia: dias[3]!, precio: 811.3 }]), accion("v", 5, []), fondo("g", 31.7, []),
+      accion("s", 3, serieGeometrica(diasHabiles("2018-01-02", 260), 413.9, 1.0001)), // 260 en total, 0 en la ventana
+    ],
     {
       escisiones: [
         { origenId: "o", destinoId: "d", fecha: evento, razon: null },
@@ -70,6 +73,8 @@ describe("supuestos", () => {
     expect(todo).toContain("semilla 4613");
     expect(todo).toContain("P: 300 días con cierre en la ventana");
     expect(todo).toContain("U: 1 día con cierre");
+    expect(todo).toContain("S: 0 días con cierre en la ventana (260 en total)");
+    expect(r.supuestos.avisos.find((x) => x.codigo === "HISTORIA_CORTA_EN_VENTANA")!.texto).toContain("solo 0 días con cierre en la ventana común");
     expect(todo).toMatch(/caída inicial de 12,7 %/i);
     expect(todo).toMatch(/no incluye el efectivo/);
     expect(r.supuestos).toMatchObject({ bloque: BLOQUE, minimoDias: MINIMO_DIAS, decretosFuturos: 1 });

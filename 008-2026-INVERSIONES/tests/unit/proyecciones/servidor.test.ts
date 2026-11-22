@@ -28,6 +28,11 @@ describe("frontera del motor de proyecciones", () => {
     expect(candado.cargado).toBe(true);
   });
 
+  it("el candado ve también export … from, import() dinámico y require (security-reviewer B5)", () => {
+    const muestra = ['export { x } from "@prisma/client";', 'export * from "server-only";', 'const m = await import("node:fs");', 'const r = require("../lib/db");', 'export type { T } from "./solo-tipos";'].join("\n");
+    expect(importaciones(muestra)).toEqual(["@prisma/client", "server-only", "node:fs", "../lib/db"]);
+  });
+
   it("los módulos puros solo importan con valor de su carpeta o de módulos puros conocidos", () => {
     const puros = readdirSync(CARPETA).filter((a) => a.endsWith(".ts") && !DEL_SERVIDOR.includes(a));
     expect(puros.length).toBeGreaterThanOrEqual(10);
