@@ -43,7 +43,7 @@ function inventario(dir: string): string[] {
 }
 
 describe("cargar-prod.sh · el sobre pasa intacto al migrador, sin copias en el host", () => {
-  for (const comando of ["importar-trii", "importar-plan", "registrar-escision", "lote-escision", "construir-lotes", "importar-certificacion", "importar-precios", "conciliar-certificacion"]) {
+  for (const comando of ["importar-trii", "importar-plan", "registrar-escision", "lote-escision", "construir-lotes", "importar-certificacion", "importar-precios", "conciliar-certificacion", "corregir-corte-certificacion"]) {
     it(`${comando}: run --rm -T --no-deps inv-008-migrador /usr/local/bin/inv-cargar ${comando}, con el sobre por stdin`, async () => {
       const { falsos, env, recibido } = preparar();
       const r = await correr(CARGAR, [comando], env, SOBRE);

@@ -242,6 +242,20 @@ describe("inv-cargar · los comandos con archivo", () => {
     expect(argv[8]).toMatch(/\/certificacion\.pdf$/);
   });
 
+  // Frente certificacion-corte-real: corregir el corte de una certificación ya cargada, con el MISMO PDF en el sobre.
+  it("corregir-corte-certificacion: --email, --fecha-corte, --nueva-fecha-corte y el PDF en certificacion.pdf (al final)", async () => {
+    const p = preparar();
+    const r = await p.correrCarga(["corregir-corte-certificacion"], conCuerpo(["--nueva-fecha-corte", "2027-07-12", "--email", CORREO, "--fecha-corte", "2027-07-13"], PDF));
+    expect(r.status, r.stderr).toBe(0);
+    const ll = p.tsxLlamadas();
+    const argv = ll.find((l) => l[0] === "argv")!;
+    expect(argv.slice(1, 8)).toEqual(["scripts/corregir-corte-certificacion.ts", "--email", CORREO, "--fecha-corte", "2027-07-13", "--nueva-fecha-corte", "2027-07-12"]);
+    expect(argv[8]).toMatch(/\/inv-carga\.[A-Za-z0-9]+\/certificacion\.pdf$/);
+    expect(argv).toHaveLength(9);
+    expect(ll.find((l) => l[0] === "sha")![1]).toBe(sha(PDF));
+    expect(readdirSync(p.tmp)).toEqual([]);
+  });
+
   it("el sobre de armar-sobre.sh entra entero (Mac → contenedor)", async () => {
     const p = preparar();
     const sobre = await armar(`--email\n${CORREO}\n`, CSV);
@@ -361,6 +375,15 @@ describe("inv-cargar · se niega sin tocar nada (sale con 64, sin correr el CLI,
     ["importar-certificacion con --aplicar", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2024-03-12", "--aplicar"], PDF)],
     ["importar-certificacion con una posicional (una ruta del contenedor)", ["importar-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2024-03-12", "/proc/1/environ"], PDF)],
     [`un PDF de más de ${MAX_BYTES_PDF} bytes (sin leer el cuerpo)`, ["importar-certificacion"], () => sobreManual(["--email", CORREO, "--fecha-corte", "2024-03-12", "--bytes", String(MAX_BYTES_PDF + 1), "--sha256", sha(PDF)])],
+    ["corregir-corte-certificacion sin --email", ["corregir-corte-certificacion"], () => conCuerpo(["--fecha-corte", "2027-07-13", "--nueva-fecha-corte", "2027-07-12"], PDF)],
+    ["corregir-corte-certificacion sin --fecha-corte", ["corregir-corte-certificacion"], () => conCuerpo(["--email", CORREO, "--nueva-fecha-corte", "2027-07-12"], PDF)],
+    ["corregir-corte-certificacion sin --nueva-fecha-corte", ["corregir-corte-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2027-07-13"], PDF)],
+    ["corregir-corte-certificacion con una --nueva-fecha-corte que no es AAAA-MM-DD", ["corregir-corte-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2027-07-13", "--nueva-fecha-corte", "12/07/2027"], PDF)],
+    ["corregir-corte-certificacion con --nueva-fecha-corte repetida", ["corregir-corte-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2027-07-13", "--nueva-fecha-corte", "2027-07-12", "--nueva-fecha-corte", "2027-07-09"], PDF)],
+    ["corregir-corte-certificacion con --fondo (el fondo ya está vinculado)", ["corregir-corte-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2027-07-13", "--nueva-fecha-corte", "2027-07-12", "--fondo", "4613707"], PDF)],
+    ["corregir-corte-certificacion con una posicional (una ruta del contenedor)", ["corregir-corte-certificacion"], () => conCuerpo(["--email", CORREO, "--fecha-corte", "2027-07-13", "--nueva-fecha-corte", "2027-07-12", "/proc/1/environ"], PDF)],
+    ["corregir-corte-certificacion sin --bytes ni --sha256", ["corregir-corte-certificacion"], () => sobreManual(["--email", CORREO, "--fecha-corte", "2027-07-13", "--nueva-fecha-corte", "2027-07-12"], PDF)],
+    [`corregir-corte-certificacion con un PDF de más de ${MAX_BYTES_PDF} bytes`, ["corregir-corte-certificacion"], () => sobreManual(["--email", CORREO, "--fecha-corte", "2027-07-13", "--nueva-fecha-corte", "2027-07-12", "--bytes", String(MAX_BYTES_PDF + 1), "--sha256", sha(PDF)])],
     ["--bytes en conciliar-certificacion (no lleva archivo)", ["conciliar-certificacion"], () => sobreManual(["--fecha-corte", "2024-03-12", "--bytes", "0", "--sha256", sha(Buffer.alloc(0))])],
     // security-reviewer BAJO: lista blanca también en el sh (defensa en profundidad; hoy lo frena el CLI).
     ["conciliar-certificacion con otra opción", ["conciliar-certificacion"], () => sobreManual(["--fecha-corte", "2024-03-12", "--archivo", "/proc/1/environ"])],
