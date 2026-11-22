@@ -8,7 +8,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const obtenerResumen = vi.hoisted(() => vi.fn());
 const exigirSesion = vi.hoisted(() => vi.fn());
 const ultimaConciliacion = vi.hoisted(() => vi.fn());
+const obtenerEvolucion = vi.hoisted(() => vi.fn());
 vi.mock("@/tablero/datos", () => ({ obtenerResumen }));
+// La evolución diaria y la TWR (frente graficas-tablero): se leen aparte, con el resumen ya leído.
+vi.mock("@/tablero/datos-evolucion", () => ({ obtenerEvolucion }));
 // La línea de la conciliación (PR-C): el resultado guardado de la última, sin recalcular.
 vi.mock("@/conciliacion/leer", () => ({ ultimaConciliacion }));
 vi.mock("@/lib/db", () => ({ db: {} }));
@@ -19,11 +22,13 @@ import Inicio from "@/app/page";
 import { D, dia, especie, resumenDe } from "./ficticio";
 
 const VERSION = "5.22.0";
+const SIN_EVOLUCION = { metodo: "twr-acciones-v1", puntos: [], rangos: [], omitidos: 0, sinCierre: [] };
 const DETALLE = "postgresql://usuario:clave-secreta@host-privado:5438";
 
 beforeEach(() => {
   exigirSesion.mockResolvedValue({ id: "u1", email: "dueno@ejemplo.invalid", rol: "DUENO" });
   ultimaConciliacion.mockResolvedValue(null);
+  obtenerEvolucion.mockResolvedValue(SIN_EVOLUCION);
 });
 
 afterEach(() => {
@@ -31,6 +36,7 @@ afterEach(() => {
   obtenerResumen.mockReset();
   exigirSesion.mockReset();
   ultimaConciliacion.mockReset();
+  obtenerEvolucion.mockReset();
 });
 
 describe("src/app/page.tsx", () => {
@@ -74,6 +80,25 @@ describe("src/app/page.tsx", () => {
     const html = renderToStaticMarkup(await Inicio());
     expect(html).toContain("No se pudo leer la base de 008");
     expect(registro).toHaveBeenCalledWith("[tablero] no se pudo leer la base (código: P1001)");
+  });
+
+  it("lee la evolución con el resumen ya leído y la pasa al tablero («Cómo ha ido»)", async () => {
+    const resumen = resumenDe([especie({ nemotecnico: "FICT1", cantidad: 10n, costoVivo: D(1000) })]);
+    obtenerResumen.mockResolvedValueOnce(resumen);
+    const html = renderToStaticMarkup(await Inicio());
+    expect(obtenerEvolucion).toHaveBeenCalledWith({}, resumen);
+    expect(obtenerResumen.mock.invocationCallOrder[0]!).toBeLessThan(obtenerEvolucion.mock.invocationCallOrder[0]!);
+    expect(html).toContain("Cómo ha ido");
+    expect(html).toContain("Todavía no hay un día con cierre de todas las especies que tiene");
+  });
+
+  it("si la base falla al leer la evolución, muestra «No se pudo leer la base» con solo el código", async () => {
+    obtenerResumen.mockResolvedValueOnce(resumenDe([]));
+    obtenerEvolucion.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError(`falló en ${DETALLE}`, { code: "P2024", clientVersion: VERSION }));
+    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const html = renderToStaticMarkup(await Inicio());
+    expect(html).toContain("No se pudo leer la base de 008");
+    expect(registro).toHaveBeenCalledWith("[tablero] no se pudo leer la base (código: P2024)");
   });
 
   it("un error que no es de la base se propaga (lo atiende error.tsx)", async () => {
