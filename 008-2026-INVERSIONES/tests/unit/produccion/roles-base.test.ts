@@ -16,6 +16,9 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { actualizarFondo } from "@/fondo/actualizar";
 import type { BuscarSfc } from "@/fondo/sfc";
+import { corregirDecision, registrarDecision, registrarDecisionConOrden } from "@/plan/decisiones";
+import { enlazarOrden } from "@/plan/enlaces";
+import { crearVersionPlan } from "@/plan/versiones";
 import { actualizarPrecios } from "@/precios/actualizar";
 import { leerCsvCierres } from "@/precios/csv-cierres";
 import { guardarCierresDeEspecies } from "@/precios/guardar";
@@ -147,6 +150,16 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     "UPDATE token_acceso SET \"venceEn\" = \"venceEn\" WHERE false",
     "UPDATE intento_ingreso SET resultado = resultado WHERE false",
     "DELETE FROM token_acceso WHERE false",
+    // El plan y el diario (área de edición): solo INSERT; nada se edita ni se borra, ni se bloquea con FOR UPDATE.
+    "UPDATE plan_version SET motivo = motivo WHERE false",
+    "UPDATE regla_plan SET detalle = detalle WHERE false",
+    "UPDATE decision SET motivo = motivo WHERE false",
+    "UPDATE enlace_decision_orden SET motivo = motivo WHERE false",
+    "DELETE FROM plan_version WHERE false",
+    "DELETE FROM decision WHERE false",
+    "DELETE FROM enlace_decision_orden WHERE false",
+    "TRUNCATE decision",
+    "SELECT id FROM decision WHERE false FOR UPDATE",
   ]) {
     it(`inv_app NO puede: ${sql}`, async () => {
       await negado(sql);
@@ -157,6 +170,40 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     await expect(
       app.$transaction([app.$executeRawUnsafe("SET LOCAL inv.reversion = 'on'"), app.$executeRawUnsafe("DELETE FROM orden WHERE false")]),
     ).rejects.toThrow(/42501|permission denied/);
+  });
+
+  // Área de edición del plan (fase B, PR-B): la web corre como inv_app y escribe el plan y el diario con las funciones
+  // REALES del dominio, que solo necesitan INSERT (el candado de la decisión es consultivo, no FOR UPDATE).
+  it("inv_app crea versiones, registra, enlaza y corrige decisiones con el dominio real (solo INSERT)", async () => {
+    const dueno = new PrismaClient({ datasources: { db: { url: conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA) } } });
+    const hoy = new Date("2026-06-30T00:00:00.000Z");
+    const dia = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+    try {
+      const u = await dueno.usuario.create({ data: { email: "roles-plan@ejemplo.invalid", rol: "DUENO" } });
+      const inst = await dueno.instrumento.create({ data: { tipo: "ACCION", nemotecnico: "FICTROL", nombre: "Acción ficticia de roles" } });
+      const carga = await dueno.cargaArchivo.create({ data: { tipoFuente: "TRII_ORDENES", nombreArchivo: "ordenes-roles.ficticio.csv", sha256: "7".repeat(64), estado: "CARGADO", cargadoPorId: u.id } });
+      const venta = async (k: number) => {
+        const fila = await dueno.filaFuente.create({ data: { tipoFuente: "TRII_ORDENES", claveNatural: `roles-plan-${k}`.padStart(64, "0"), ocurrencia: 1, primeraCargaId: carga.id, primeraFilaNo: k, crudo: { ficticio: true } } });
+        return dueno.orden.create({
+          data: {
+            filaFuenteId: fila.id, ejecutadaEn: new Date("2025-03-05T20:00:00.000Z"), fechaOperacion: dia("2025-03-05"), fechaLiquidacion: dia("2025-03-07"), instrumentoId: inst.id,
+            lado: "VENTA", estado: "APROBADO", cantidadCompletada: 37n, precioUnitario: new Prisma.Decimal("12.37"), totalInvertido: new Prisma.Decimal("457.69"),
+            comision: new Prisma.Decimal("4.61"), totalEstimado: new Prisma.Decimal("453.08"),
+          },
+        });
+      };
+      const [o1, o2] = [await venta(1), await venta(2)];
+      const v = await crearVersionPlan(app, { vigenteDesde: dia("2025-03-03"), motivo: "Plan ficticio de roles", autorId: u.id, reglas: [{ instrumentoId: inst.id, condicion: "NINGUNA", nivel: null, accion: "VENDER", cantidad: null, plazoHasta: null, detalle: "Vender (ficticia)" }] }, { hoy, ultimaEsperada: 0 });
+      const datos = { fechaDecision: dia("2025-03-04"), instrumentoId: inst.id, accion: "VENDER" as const, reglaId: v.reglaIds[0]!, motivo: "Vender (ficticio)", autorId: u.id };
+      const d = await registrarDecision(app, datos, { hoy });
+      await enlazarOrden(app, { ordenId: o1.id, decisionId: d.id, autorId: u.id });
+      const c = await corregirDecision(app, d.id, { ...datos, motivo: "Vender (ficticio, corregida)" }, { hoy });
+      expect(c.enlacesMovidos).toBe(1);
+      const conOrden = await registrarDecisionConOrden(app, { ...datos, motivo: "Con su orden (ficticio)" }, o2.id, { hoy });
+      expect(await dueno.enlaceDecisionOrden.count({ where: { decisionId: { in: [c.id, conOrden.id] }, reemplazadoPor: { is: null } } })).toBe(2);
+    } finally {
+      await dueno.$disconnect();
+    }
   });
 
   describe("inv_precios: el rol del servicio de precios", () => {

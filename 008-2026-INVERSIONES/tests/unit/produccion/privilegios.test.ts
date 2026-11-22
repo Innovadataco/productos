@@ -2,7 +2,9 @@
 // (contratos de esos frentes), por COLUMNA: UPDATE de "claveHash", "sesionVersion" y "bloqueadoHasta" en
 // usuario, UPDATE de "usadoEn" en token_acceso, INSERT en intento_ingreso y, del TOTP, UPDATE de
 // "totpSecreto", "totpActivadoEn", "totpUltimoPaso" y "presesionHash" en usuario, más INSERT y UPDATE de
-// "usadoEn" y "anuladoEn" en codigo_recuperacion. Nunca DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL.
+// "usadoEn" y "anuladoEn" en codigo_recuperacion. Y, del área de edición del plan (fase B, PR-B), INSERT y nada más en las
+// cuatro tablas del plan y del diario (plan_version, regla_plan, decision, enlace_decision_orden), que son de solo
+// inserción por sus disparadores. Nunca DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL.
 // inv_dueno es el dueño (crear-acceso-inicial.ts y --reiniciar-totp, en el migrador).
 //
 // Sin condiciones: si faltan las tablas o las columnas del login (20261121050319_login) o del TOTP
@@ -18,7 +20,7 @@ const grants = [...sql.matchAll(/GRANT\s+([A-Z]+(?:\s*\([^)]*\))?(?:\s*,\s*[A-Z]
 );
 
 describe("privilegios de inv_app", () => {
-  it("lectura en cada tabla, uso de secuencias y solo las escrituras del login y del TOTP, por columna", () => {
+  it("lectura en cada tabla, uso de secuencias, las escrituras del login y del TOTP por columna, y el INSERT del plan", () => {
     expect(grants.sort()).toEqual(
       [
         "SELECT %I",
@@ -29,6 +31,10 @@ describe("privilegios de inv_app", () => {
         "INSERT codigo_recuperacion",
         'UPDATE ("usadoEn", "anuladoEn") codigo_recuperacion',
         'UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") usuario',
+        "INSERT plan_version",
+        "INSERT regla_plan",
+        "INSERT decision",
+        "INSERT enlace_decision_orden",
       ].sort(),
     );
   });
@@ -57,6 +63,37 @@ describe("privilegios de inv_app", () => {
   it("parte de cero en cada corrida y deja _prisma_migrations sin acceso", () => {
     expect(sql).toMatch(/REVOKE ALL ON TABLE public\.%I FROM inv_app/);
     expect(sql).toMatch(/IF t\.relname <> '_prisma_migrations' THEN/);
+  });
+});
+
+// Área de edición del plan (fase B, PR-B): el dueño crea versiones y registra decisiones desde la web, que corre como
+// inv_app. Solo INSERT, y solo en las cuatro tablas del plan y del diario; nada se edita ni se borra (los disparadores
+// de solo inserción de la migración del plan siguen mandando, y sin UPDATE ni DELETE inv_app ni los intenta).
+const TABLAS_DEL_PLAN = ["decision", "enlace_decision_orden", "plan_version", "regla_plan"];
+
+describe("privilegios del plan y del diario (área de edición)", () => {
+  const delPlan = grants.filter((g) => TABLAS_DEL_PLAN.includes(g.split(" ").at(-1)!));
+
+  it("exactamente INSERT de tabla en las cuatro, y ningún otro privilegio sobre ellas", () => {
+    expect(delPlan.sort()).toEqual(TABLAS_DEL_PLAN.map((t) => `INSERT ${t}`).sort());
+    for (const t of TABLAS_DEL_PLAN) expect(sql, t).not.toMatch(new RegExp(`GRANT\\s+(?!INSERT\\s+ON)[^;]*\\bpublic\\.${t}\\b[^;]*TO\\s+inv_app`));
+  });
+
+  it("ningún otro INSERT de inv_app fuera del login, del TOTP y del plan", () => {
+    const inserts = grants.filter((g) => g.startsWith("INSERT ")).map((g) => g.split(" ").at(-1)!).sort();
+    expect(inserts).toEqual(["codigo_recuperacion", "intento_ingreso", ...TABLAS_DEL_PLAN].sort());
+  });
+
+  it("las cuatro tablas son de solo inserción en su migración (el disparador manda aunque alguien diera UPDATE)", () => {
+    const plan = leer008("prisma/migrations/20261121024044_plan_decisiones/migration.sql");
+    for (const t of TABLAS_DEL_PLAN) {
+      expect(plan, t).toMatch(new RegExp(`CREATE TRIGGER "${t}_solo_insercion"\\s+BEFORE UPDATE OR DELETE ON "${t}"`));
+    }
+  });
+
+  it("los INSERT del plan van después del REVOKE ALL de cada corrida (parten de cero)", () => {
+    const revoke = sql.indexOf("EXECUTE format('REVOKE ALL ON TABLE public.%I FROM inv_app', t.relname);");
+    for (const t of TABLAS_DEL_PLAN) expect(sql.indexOf(`GRANT INSERT ON TABLE public.${t} TO inv_app;`), t).toBeGreaterThan(revoke);
   });
 });
 
