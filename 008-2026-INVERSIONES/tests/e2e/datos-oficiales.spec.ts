@@ -152,6 +152,9 @@ test.describe("pantalla de datos oficiales", () => {
       expect(await a.getAttribute("target")).toBeNull();
     }
     expect(await page.content()).not.toMatch(/retenci[oó]n/i);
+    // El glosario para la familia; en escritorio, la pista de deslizar la tabla no se muestra.
+    await expect(p.decretos.locator("dl.do-glosario dt")).toHaveText(["Fecha ex", "Tenencia", "Bruto", "Neto", "Cuota", "Revisar"]);
+    await expect(p.decretos.locator(".do-desliza").first()).toBeHidden();
     await expect(page.locator("footer.pie")).toHaveText(PIE);
   });
 
@@ -250,11 +253,17 @@ test.describe("pantalla de datos oficiales", () => {
       test("con el teclado, la región de una tabla de los decretos se enfoca y se desplaza con las flechas", async ({ page }, info) => {
         const p = await PaginaDatosOficiales.abrir(page, info);
         const region = p.regionDecretos("Cruce con lo recibido de Trii");
+        await expect(p.decretos.locator(".do-desliza").first()).toBeVisible();
         await region.focus();
         await expect(region).toBeFocused();
         const antes = await region.evaluate((el) => el.scrollLeft);
         await page.keyboard.press("ArrowRight");
         await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(antes);
+        // La especie queda fija al desplazar: su celda sigue dentro de la región (revisión a11y-architect, MEDIO).
+        await region.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+        const caja = (await region.boundingBox())!;
+        const especie = (await p.tablaDecretos("Cruce con lo recibido de Trii").getByRole("rowheader").first().boundingBox())!;
+        expect(especie.x).toBeGreaterThanOrEqual(caja.x - 1);
       });
 
       test("con Mayús+Tab hacia arriba, nada de lo enfocado queda bajo el encabezado fijo (WCAG 2.4.11)", async ({ page }, info) => {

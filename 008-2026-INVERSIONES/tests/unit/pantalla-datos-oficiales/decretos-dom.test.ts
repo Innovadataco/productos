@@ -78,6 +78,18 @@ describe("la sección de dividendos decretados", () => {
     }
   });
 
+  it("explica sus palabras a la familia en un glosario corto, sin recomendar nada (revisión a11y-architect, MEDIO)", () => {
+    const glosario = seccion(pantalla()).querySelector("dl.do-glosario");
+    expect([...(glosario?.querySelectorAll("dt") ?? [])].map(texto)).toEqual(["Fecha ex", "Tenencia", "Bruto", "Neto", "Cuota", "Revisar"]);
+    for (const dd of glosario!.querySelectorAll("dd")) expect(texto(dd).length).toBeGreaterThan(20);
+  });
+
+  it("cada tabla trae la pista de que se desliza hacia los lados (la hoja la muestra solo en el celular)", () => {
+    const s = seccion(pantalla());
+    expect([...s.querySelectorAll(".do-desliza")].map(texto)).toEqual(["Deslice la tabla hacia los lados para ver todas las columnas.", "Deslice la tabla hacia los lados para ver todas las columnas."]);
+    expect(seccion(pantalla(DECRETOS_VACIOS)).querySelectorAll(".do-desliza")).toHaveLength(0);
+  });
+
   it("no trae formularios, botones ni campos", () => {
     expect(seccion(pantalla()).querySelectorAll("form, button, input, select, textarea")).toHaveLength(0);
   });

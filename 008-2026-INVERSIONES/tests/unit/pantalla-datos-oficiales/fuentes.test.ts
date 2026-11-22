@@ -75,6 +75,27 @@ describe("la referencia oficial de un decreto", () => {
     expect(referenciaOficial(ref).tipo).not.toBe("ENLACE");
   });
 
+  it.each([
+    "https://www.bvc.com.co\\@evil.ejemplo.invalid/x",
+    "https://www.bvc.com.co/x\ty",
+    "https://www.bvc.com.co/x\ny",
+    " https://www.bvc.com.co/x",
+    "https://WWW.BVC.COM.CO/x",
+    "https://www.bvc.com.co:443/x",
+    "https://www.bvc.com.co",
+    "https://www.bvc.com.co/x y",
+    'https://www.bvc.com.co/x"y',
+  ])("%j no es enlace: solo pasa la forma canónica, la misma que deja el analizador (revisión security-reviewer, MEDIO)", (ref) => {
+    expect(enlaceSeguro(ref, HOSTS_REFERENCIAS)).toBeNull();
+    expect(referenciaOficial(ref).tipo).not.toBe("ENLACE");
+  });
+
+  it("las fuentes de las series también: una forma no canónica no es enlace", () => {
+    expect(enlaceSeguro("https://www.dane.gov.co\\index.php")).toBeNull();
+    expect(enlaceSeguro("https://www.dane.gov.co:443/index.php")).toBeNull();
+    expect(enlaceSeguro("https://www.dane.gov.co/index.php")).toBe("https://www.dane.gov.co/index.php");
+  });
+
   it("los hosts de las fuentes de las series no sirven para una referencia, ni al revés", () => {
     expect(enlaceSeguro("https://www.dane.gov.co/index.php", HOSTS_REFERENCIAS)).toBeNull();
     expect(enlaceSeguro("https://www.bvc.com.co/ficticio/x")).toBeNull();

@@ -68,6 +68,23 @@ describe("datos-oficiales.css", () => {
     expect(sinComentarios).toMatch(/\.do-tabla th\.num\s*\{[^}]*text-align:\s*right/);
   });
 
+  it("los encabezados de columna de los decretos no bajan de 12 px (tablero.css los deja en 11; revisión a11y-architect, MEDIO)", () => {
+    expect(Number(/\.do-tabla th\[scope="col"\]\s*\{[^}]*font-size:\s*(\d+)px/.exec(sinComentarios)?.[1] ?? 0)).toBeGreaterThanOrEqual(12);
+  });
+
+  it("la especie (encabezado de fila) queda fija al desplazar la tabla, con fondo; la pista de desplazar solo en el celular (revisión a11y-architect, MEDIO)", () => {
+    expect(sinComentarios).toMatch(/\.do-tabla :is\(th\[scope="row"\], thead th:first-child\)\s*\{[^}]*position:\s*sticky[^}]*left:\s*0[^}]*background:\s*var\(--panel\)/);
+    const sinMedia = sinComentarios.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^{}]*\}/g, "");
+    const celular = /@media \(max-width: 620px\)\s*\{([\s\S]*?)\n\}/.exec(sinComentarios)?.[1] ?? "";
+    expect(sinMedia).toMatch(/\.do-desliza\s*\{[^}]*display:\s*none/);
+    expect(celular).toMatch(/\.do-desliza\s*\{[^}]*display:\s*block/);
+  });
+
+  it("en alto contraste, la fila en disputa conserva su franja como borde", () => {
+    const bloque = /@media \(forced-colors: active\)\s*\{([\s\S]*?)\n\}/.exec(sinComentarios)?.[1] ?? "";
+    expect(bloque).toMatch(/\.do-tabla tr\[data-disputa\] > th\s*\{[^}]*border-left:\s*3px solid CanvasText/);
+  });
+
   it("la región de cada tabla es relativa: el texto solo para el lector (.sr, absoluto) no se escapa y no estira la página a 375 px", () => {
     // El e2e a 375 px lo encontró: sin esto, el .sr de una celda lejana toma de referencia la página y la desborda.
     expect(sinComentarios).toMatch(/\.do-tabla\s*\{[^}]*position:\s*relative/);

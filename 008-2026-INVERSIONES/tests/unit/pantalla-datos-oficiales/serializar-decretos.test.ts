@@ -103,6 +103,11 @@ describe("aDecretosVista", () => {
     expect(() => aDecretosVista(huerfano)).toThrow(/especie/);
   });
 
+  it("una fila del cruce sin decreto ni pago (C5b no la da) es un defecto: lanza, no queda una clave vacía (revisión react-reviewer, MEDIO)", () => {
+    const vacia = lectura({ lectura: { cruce: { filas: [filaLeida({ decretos: [], pagos: [] })], sinTenencia: [] }, proximos: [] } });
+    expect(() => aDecretosVista(vacia)).toThrow(/sin decreto ni pago/);
+  });
+
   it("no cambia la lectura que recibe", () => {
     const l = lectura();
     const antes = l.lectura.cruce.filas.map((f) => f.fechaPago.getTime());
