@@ -21,6 +21,7 @@
 import { createHash } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import type { Llavero } from "../../cifrado/llavero";
+import { CODIGO_UNICIDAD, esErrorPrisma } from "../../lib/choques";
 import { diaIso } from "../../precios/horario";
 import { crearCarga, guardarFilaCruda, tomarCandado, verFila } from "../registro/carga";
 import type { Hallazgo } from "../registro/hallazgos";
@@ -196,7 +197,7 @@ async function crearDecreto(tx: Tx, data: Prisma.DividendoDecretadoUncheckedCrea
   try {
     await tx.dividendoDecretado.create({ data, select: { id: true } });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new ErrorDecretos("CONFLICTO_CONCURRENTE", linea);
+    if (esErrorPrisma(error, CODIGO_UNICIDAD)) throw new ErrorDecretos("CONFLICTO_CONCURRENTE", linea);
     throw error;
   }
 }

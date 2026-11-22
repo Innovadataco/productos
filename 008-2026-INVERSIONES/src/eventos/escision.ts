@@ -6,6 +6,7 @@
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { leerDecimal, leerFechaIso, leerNemotecnico, type ResultadoValor } from "../importacion/trii/valores";
+import { CODIGO_UNICIDAD, esErrorPrisma } from "../lib/choques";
 
 const ESCALA_RAZON = 10;
 const MAX_NOTA = 200;
@@ -81,7 +82,7 @@ export function validarEscision(d: DatosEscision): { ok: true; valor: EscisionVa
 
 /** P2002 (clave única): el mismo evento, o un pago de fracción que ya pertenece a otro evento. */
 function traducirChoque(error: unknown): unknown {
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") return error;
+  if (!esErrorPrisma(error, CODIGO_UNICIDAD)) return error;
   const objetivo = JSON.stringify(error.meta?.["target"] ?? "");
   return new ErrorEvento(/pago_fraccion|fechaPagoFraccion/.test(objetivo) ? "PAGO_FRACCION_DUPLICADO" : "EVENTO_DUPLICADO");
 }

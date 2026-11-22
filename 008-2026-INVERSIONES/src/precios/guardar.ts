@@ -25,6 +25,7 @@
  */
 import { Prisma, type EstadoPrecio, type PrismaClient } from "@prisma/client";
 import { candadoConciliar } from "../lib/candados";
+import { esUnicidad } from "../lib/choques";
 import { diaIso } from "./horario";
 import { aniosDelRango, leerCalendario, motivoOmision, retiraElVigente, type CalendarioBvc, type MotivoOmision } from "./negociacion";
 import type { Cierre, ResultadoYahoo } from "./yahoo";
@@ -111,7 +112,7 @@ export class ConflictoConcurrente extends Error {
   }
 }
 
-const esConflicto = (e: unknown): boolean => e instanceof ConflictoConcurrente || (e as { code?: unknown } | null)?.code === "P2002";
+const esConflicto = (e: unknown): boolean => e instanceof ConflictoConcurrente || esUnicidad(e);
 
 /** El resultado del candado que se guarda con el cierre: su estado y la referencia que lo sustenta. */
 export interface Verificacion {

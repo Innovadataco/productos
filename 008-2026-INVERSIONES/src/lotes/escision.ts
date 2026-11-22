@@ -5,6 +5,7 @@
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
 import type { ErrorCampo } from "../eventos/escision";
+import { CODIGO_UNICIDAD, esErrorPrisma } from "../lib/choques";
 import { leerCantidad, leerDecimal, leerFechaIso, leerNemotecnico, ESCALA_PRECIO, type ResultadoValor } from "../importacion/trii/valores";
 
 /**
@@ -80,7 +81,7 @@ export async function registrarLoteEscision(db: PrismaClient, datos: DatosLoteEs
     return await registrarEnTransaccion(db, v.valor);
   } catch (e) {
     // Índice único lote_escision_evento_key: dos registros simultáneos del mismo lote.
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") throw new ErrorLote("LOTE_YA_REGISTRADO");
+    if (esErrorPrisma(e, CODIGO_UNICIDAD)) throw new ErrorLote("LOTE_YA_REGISTRADO");
     throw e;
   }
 }
