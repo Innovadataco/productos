@@ -46,9 +46,15 @@ async function altaDeFamiliar(page: Page, info: TestInfo): Promise<CuentaConTotp
   return enrolarEnPagina(page, cuenta);
 }
 
-/** La huella de la base: el md5 del contenido de cada tabla de public fuera de las de autenticación, en orden estable. */
+/**
+ * La huella de la base: el md5 del contenido de cada tabla de public fuera de las de autenticación, en orden estable,
+ * y, de las cuentas, lo que una visita nunca cambia (rol, activo, clave): el login sí escribe intentos, la pre-sesión y
+ * el último paso del TOTP, pero nunca el rol ni el estado de una cuenta (revisión e2e-runner).
+ */
 async function huellaDeLaBase(): Promise<Record<string, string>> {
   const db = baseE2E();
+  const cuentas = await db.$queryRaw<{ h: string }[]>`
+    SELECT md5(coalesce(string_agg(concat_ws(':', "id", "rol"::text, "activo"::text, coalesce("claveHash", '-')), '|' ORDER BY "id"), '')) AS h FROM "usuario"`;
   const tablas = await db.$queryRaw<{ nombre: string }[]>`
     SELECT table_name::text AS nombre FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY 1`;
   const huellas = await Promise.all(
@@ -61,7 +67,7 @@ async function huellaDeLaBase(): Promise<Record<string, string>> {
         return [nombre, filas[0]?.h ?? ""] as const;
       }),
   );
-  return Object.fromEntries(huellas);
+  return { ...Object.fromEntries(huellas), "usuario (rol, activo, clave)": cuentas[0]?.h ?? "" };
 }
 
 /** Los pedidos del navegador que no son GET ni HEAD (lo que podría escribir), con su ruta. */
