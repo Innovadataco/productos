@@ -1,4 +1,5 @@
 /** Datos del tablero ya serializados (texto decimal), listos para cruzar del servidor al cliente. */
+import type { ClaveRango } from "@/tablero/evolucion";
 import type { MotivoSinComparar } from "@/tablero/movimiento";
 
 export interface MovimientoEspecieVista {
@@ -55,6 +56,43 @@ export interface Vista {
   readonly ultimaCarga: string | null;
   /** Nemotécnicos con ventas que sus lotes no cubren: no entran en filas, cerradas ni totales. */
   readonly incompletas: readonly string[];
+  /** Composición por valor (src/tablero/composicion.ts): hasta 8 tajadas, la última puede ser «Otras». */
+  readonly composicion: readonly TajadaVista[];
+}
+
+export interface TajadaVista {
+  readonly id: string;
+  readonly nemo: string;
+  readonly valor: string;
+  readonly pesoPct: string;
+  readonly miembros: readonly string[];
+}
+
+/** Un día de la evolución (src/tablero/evolucion.ts), en texto decimal. */
+export interface PuntoEvolucionVista {
+  readonly fecha: string;
+  readonly valor: string;
+  readonly costo: string;
+  /** TWR acumulada desde el primer punto, en porcentaje con 4 decimales. */
+  readonly twrPct: string;
+  readonly atrasadas: number;
+}
+
+export interface RangoEvolucionVista {
+  readonly clave: ClaveRango;
+  readonly desde: string;
+  readonly inicio: number;
+  readonly cubre: boolean;
+  /** TWR del rango calculada en el servidor, en porcentaje con 2 decimales. */
+  readonly twrPct: string;
+}
+
+export interface EvolucionVista {
+  readonly metodo: string;
+  readonly puntos: readonly PuntoEvolucionVista[];
+  readonly rangos: readonly RangoEvolucionVista[];
+  readonly omitidos: number;
+  readonly sinCierre: readonly string[];
 }
 
 /**

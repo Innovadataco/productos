@@ -7,10 +7,13 @@ import "server-only";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { posiciones, type Posicion } from "../lotes/posiciones";
 import { calcularTablero, type EntradaEspecie, type Tablero } from "./calculo";
+import { unCierrePorDia } from "./cierres";
 import { calcularMovimiento, calendarioDe, type Movimiento } from "./movimiento";
 
 const D = (v: Prisma.Decimal.Value) => new Prisma.Decimal(v);
 const DIAS_SERIE = 60;
+/** Filas leídas por día de la serie: alcanza para 60 días aunque haya dos fuentes vigentes el mismo día. */
+const FUENTES_POR_DIA = 2;
 
 export interface Resumen {
   /** Trae la fecha de referencia de los cierres (la más reciente entre las vivas), no un máximo global. */
@@ -22,7 +25,7 @@ export interface Resumen {
   readonly incompletas: readonly string[];
 }
 
-type CierreDb = { readonly fecha: Date; readonly precio: Prisma.Decimal; readonly estado: string };
+type CierreDb = { readonly id: string; readonly instrumentoId: string; readonly fecha: Date; readonly traidoEn: Date; readonly precio: Prisma.Decimal; readonly estado: string };
 
 interface Fuentes {
   readonly vivas: ReadonlyMap<string, Posicion>;
@@ -52,16 +55,22 @@ async function realizadaPorEspecie(db: PrismaClient): Promise<Map<string, Prisma
   return piezas.reduce((m, [id, v]) => m.set(id, (m.get(id) ?? D(0)).add(v)), new Map<string, Prisma.Decimal>());
 }
 
-/** Últimos cierres vigentes de cada especie, del más reciente al más viejo (consultas en paralelo). */
+/**
+ * Últimos cierres vigentes de cada especie, uno por día (src/tablero/cierres.ts: si dos fuentes cerraron el mismo día,
+ * el traído más recientemente), del más reciente al más viejo (consultas en paralelo).
+ */
 async function seriesPorEspecie(db: PrismaClient, ids: readonly string[]): Promise<Map<string, readonly CierreDb[]>> {
   const series = await Promise.all(
     ids.map((id) =>
       db.precioCierre.findMany({
-        where: { instrumentoId: id, reemplazadoEn: null }, orderBy: { fecha: "desc" }, take: DIAS_SERIE, select: { fecha: true, precio: true, estado: true },
+        where: { instrumentoId: id, reemplazadoEn: null },
+        orderBy: [{ fecha: "desc" }, { traidoEn: "desc" }, { id: "desc" }],
+        take: DIAS_SERIE * FUENTES_POR_DIA,
+        select: { id: true, instrumentoId: true, fecha: true, traidoEn: true, precio: true, estado: true },
       }),
     ),
   );
-  return new Map(ids.map((id, k) => [id, series[k] ?? []]));
+  return new Map(ids.map((id, k) => [id, unCierrePorDia(series[k] ?? []).reverse().slice(0, DIAS_SERIE)]));
 }
 
 function entrada(i: { readonly id: string; readonly nemotecnico: string | null }, f: Fuentes): EntradaEspecie {

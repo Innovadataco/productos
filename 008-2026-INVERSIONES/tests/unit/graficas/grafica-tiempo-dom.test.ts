@@ -35,6 +35,7 @@ afterEach(() => {
 
 const toque = () => m.contenedor.querySelector<HTMLElement>("[role=group]")!;
 const tip = () => m.contenedor.querySelector(".g-tip");
+const celdas = (tr: Element) => [...tr.children].map(texto).join(" ");
 const linea = (id: string) => m.contenedor.querySelector(`path.g-linea[data-serie="${id}"]`)!.getAttribute("d");
 
 describe("GraficaTiempo · accesible", () => {
@@ -231,7 +232,7 @@ describe("GraficaTiempo · datos", () => {
     expect(texto(tabla.querySelector("caption"))).toBe("Valor frente al costo");
     expect([...tabla.querySelectorAll("thead th")].map(texto)).toEqual(["Día", "Valor", "Costo"]);
     expect(tabla.querySelectorAll("tbody tr")).toHaveLength(4);
-    expect(texto(tabla.querySelector("tbody tr"))).toBe("día 2027-03-02 $4701 $4517");
+    expect(celdas(tabla.querySelector("tbody tr")!)).toBe("día 2027-03-02 $4701 $4517");
     await alternar(detalles, false);
     expect(m.contenedor.querySelector("table")).toBeNull();
   });
@@ -242,7 +243,7 @@ describe("GraficaTiempo · datos", () => {
       bandas: [{ id: "p5", nombre: "P5–P95", tono: "neutro", intensidad: "suave", bajo: [null, 4588, 4391, 4207, 4103], alto: [null, 4588, 4877, 5113, 5227] }],
     })));
     await alternar(m.contenedor.querySelector("details")!, true);
-    const filas = [...m.contenedor.querySelectorAll("tbody tr")].map(texto);
+    const filas = [...m.contenedor.querySelectorAll("tbody tr")].map(celdas);
     expect(filas[0]).toBe("día 2027-03-01 — —");
     expect(filas[3]).toBe("día 2027-03-04 $4699 $4207 – $5113");
   });

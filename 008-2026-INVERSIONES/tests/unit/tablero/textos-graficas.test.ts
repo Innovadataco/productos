@@ -10,7 +10,9 @@ import { resumenDe } from "./ficticio";
 import { evolucionFicticia, nueveEspecies } from "./ficticio-graficas";
 
 const PIE = "El sistema calcula y muestra; no recomienda comprar ni vender.";
-const PROHIBIDO = /\b(compre|compra[rd]?la?s?|venda|vend[ae]r?las?|vender|comprar|le recomendamos|recomendamos|le conviene|deber[íi]a (comprar|vender)|oportunidad de (compra|venta)|señal de (compra|venta))\b/i;
+// Formas que recomiendan (imperativos, «recomendamos», «le conviene», «debería comprar/vender», «señal de compra»…).
+// Los sustantivos que describen (las compras, las ventas) no recomiendan nada: el método de la TWR los nombra.
+const PROHIBIDO = /\b(compren?|vendan?|le recomendamos|recomendamos|recomendado|le conviene|convendr[íi]a|deber[íi]as? (comprar|vender)|oportunidad de (compra|venta)|se[ñn]al de (compra|venta)|es (buen )?momento de|aproveche)\b/i;
 
 const textoPintado = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ");
 
@@ -25,6 +27,7 @@ describe("textos de las gráficas", () => {
   it("el candado muerde", () => {
     expect("Le conviene vender FICTA").toMatch(PROHIBIDO);
     expect("Compre más").toMatch(PROHIBIDO);
-    expect("Costo de lo que tiene").not.toMatch(PROHIBIDO);
+    expect("Debería vender ya").toMatch(PROHIBIDO);
+    expect("Costo de lo que tiene; las compras cuentan al inicio del día").not.toMatch(PROHIBIDO);
   });
 });

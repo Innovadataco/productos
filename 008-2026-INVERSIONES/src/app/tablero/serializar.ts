@@ -1,7 +1,9 @@
 import type { Resumen } from "@/tablero/datos";
 import type { FilaTablero } from "@/tablero/calculo";
+import { componer, type Tajada } from "@/tablero/composicion";
+import type { Evolucion } from "@/tablero/evolucion";
 import type { Movimiento } from "@/tablero/movimiento";
-import type { FilaVista, MovimientoVista, Vista } from "./tipos";
+import type { EvolucionVista, FilaVista, MovimientoVista, TajadaVista, Vista } from "./tipos";
 
 // Columnas DATE (cierres): el día UTC es el día del dato.
 const dia = (d: Date) => d.toISOString().slice(0, 10);
@@ -28,6 +30,19 @@ function movimiento(m: Movimiento): MovimientoVista {
   };
 }
 
+const tajada = (t: Tajada): TajadaVista => ({ id: t.id, nemo: t.nemo, valor: t.valor.toString(), pesoPct: t.pesoPct.toFixed(2), miembros: t.miembros });
+
+/** La evolución en texto: valor y costo exactos; TWR en porcentaje (4 decimales por día, 2 por rango). */
+export function aEvolucionVista(e: Evolucion): EvolucionVista {
+  return {
+    metodo: e.metodo,
+    puntos: e.puntos.map((p) => ({ fecha: dia(p.fecha), valor: p.valor.toString(), costo: p.costo.toString(), twrPct: p.twr.mul(100).toFixed(4), atrasadas: p.atrasadas })),
+    rangos: e.rangos.map((r) => ({ clave: r.clave, desde: dia(r.desde), inicio: r.inicio, cubre: r.cubre, twrPct: r.twr.mul(100).toFixed(2) })),
+    omitidos: e.omitidos,
+    sinCierre: e.sinCierre,
+  };
+}
+
 export function aVista(r: Resumen): Vista {
   const t = r.tablero;
   return {
@@ -39,5 +54,6 @@ export function aVista(r: Resumen): Vista {
     especiesAtrasadas: t.especiesAtrasadas, movimiento: movimiento(r.movimiento),
     ultimaCarga: r.ultimaCarga ? diaColombia(r.ultimaCarga) : null,
     incompletas: r.incompletas,
+    composicion: componer(t.filas).map(tajada),
   };
 }
