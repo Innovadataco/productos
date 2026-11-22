@@ -187,6 +187,11 @@ describe("el cruce con lo recibido de Trii", () => {
     expect([...tr.children[7]!.querySelectorAll("li")].map(texto)).toEqual([TEXTO_MOTIVO.TENENCIA_NEGATIVA]);
   });
 
+  it("un REVISAR sin motivos (C5b no lo da) no inventa una explicación: «—»", () => {
+    const tr = filas(tabla(pantalla({ ...DECRETOS, cruce: [fila({ estado: "REVISAR", motivos: [] })] }), "t-cruce"))[0]!;
+    expect(texto(tr.children[7])).toBe("—");
+  });
+
   it("cada motivo de REVISAR tiene su texto, en el orden de C5b", () => {
     const todos = fila({ estado: "REVISAR", motivos: [...MOTIVOS_REVISAR] });
     const tr = filas(tabla(pantalla({ ...DECRETOS, cruce: [todos] }), "t-cruce"))[0]!;
