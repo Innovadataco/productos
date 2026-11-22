@@ -128,10 +128,19 @@ describe("inv-008-precios · redes: la interna para la base y una nueva con sali
 
   it("inv-008-red-precios es un puente con salida, con la subred del pool de Docker (sin ipam), sin IPv6 y sin aislar la puerta de enlace", () => {
     const red = compose.networks["inv-008-red-precios"];
-    expect(red).toEqual({ driver: "bridge" });
+    expect(red).toEqual({ driver: "bridge", driver_opts: { "com.docker.network.bridge.name": "br-inv008-prec" } });
     expect(red?.internal).toBeUndefined();
     expect(red?.ipam).toBeUndefined();
     expect(red?.enable_ipv6).toBeUndefined();
+  });
+
+  it("el puente tiene nombre fijo, br-inv008-prec (pedido de PI para su regla de firewall del host): cabe en los 15 caracteres de Linux y no lo repite otra red", () => {
+    const nombre = compose.networks["inv-008-red-precios"]?.driver_opts?.["com.docker.network.bridge.name"] ?? "";
+    expect(nombre).toBe("br-inv008-prec");
+    expect(nombre.length).toBeLessThanOrEqual(15);
+    expect(nombre).toMatch(/^[a-z0-9-]+$/);
+    const otros = Object.entries(compose.networks).filter(([n]) => n !== "inv-008-red-precios").map(([, r]) => r.driver_opts?.["com.docker.network.bridge.name"]);
+    expect(otros).not.toContain(nombre);
   });
 
   it("solo él usa inv-008-red-precios", () => {
