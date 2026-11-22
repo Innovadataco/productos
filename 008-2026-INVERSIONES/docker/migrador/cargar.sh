@@ -4,7 +4,8 @@
 # y el sobre por la entrada estándar (lo arma scripts/armar-sobre.sh en el Mac):
 #   - cabecera de EXACTAMENTE 4096 bytes: un argumento por línea, una línea vacía y relleno de líneas vacías. Con
 #     archivo trae --bytes <N> y --sha256 <H>, que se consumen aquí y no pasan al CLI;
-#   - el archivo (importar-trii, importar-plan, importar-certificacion, importar-precios e importar-valores-fondo).
+#   - el archivo (importar-trii, importar-plan, importar-certificacion, corregir-corte-certificacion, importar-precios e
+#     importar-valores-fondo).
 # Antes de leer nada comprueba que el contenedor no use swap: el temporal vive en el tmpfs /tmp, que con
 # mem = memswap no baja al disco. El archivo queda en un temporal 600 dentro de una carpeta 700 con nombre fijo
 # (trii.csv, ficha.md, certificacion.pdf, precios.csv o valores-fondo.csv: el nombre real no llega a la base), corre el
@@ -46,6 +47,7 @@ case "$comando" in
   importar-trii) cli=scripts/importar-trii.ts archivo=trii.csv tope=$TOPE_TRII ;;
   importar-plan) cli=scripts/importar-plan.ts archivo=ficha.md tope=$TOPE_FICHA ;;
   importar-certificacion) cli=scripts/importar-certificacion.ts archivo=certificacion.pdf tope=$TOPE_CERTIFICACION ;;
+  corregir-corte-certificacion) cli=scripts/corregir-corte-certificacion.ts archivo=certificacion.pdf tope=$TOPE_CERTIFICACION ;;
   importar-precios) cli=scripts/importar-precios.ts archivo=precios.csv tope=$TOPE_PRECIOS ;;
   importar-valores-fondo) cli=scripts/importar-valores-fondo.ts archivo=valores-fondo.csv tope=$TOPE_VALORES_FONDO ;;
   registrar-escision) cli=scripts/registrar-escision.ts ;;
@@ -176,6 +178,7 @@ if [ -n "$archivo" ]; then
   correo=""
   aplicar=0
   corte=""
+  nuevo=""
   fondo=""
   while [ $# -gt 0 ]; do
     case "$comando:$1" in
@@ -193,10 +196,16 @@ if [ -n "$archivo" ]; then
         aplicar=1
         shift
         ;;
-      importar-certificacion:--fecha-corte)
+      importar-certificacion:--fecha-corte | corregir-corte-certificacion:--fecha-corte)
         [ -z "$corte" ] || falla "--fecha-corte repetido"
         if [ $# -lt 2 ] || ! fecha_valida "$2"; then falla "--fecha-corte necesita una fecha AAAA-MM-DD"; fi
         corte="$2"
+        shift 2
+        ;;
+      corregir-corte-certificacion:--nueva-fecha-corte)
+        [ -z "$nuevo" ] || falla "--nueva-fecha-corte repetido"
+        if [ $# -lt 2 ] || ! fecha_valida "$2"; then falla "--nueva-fecha-corte necesita una fecha AAAA-MM-DD"; fi
+        nuevo="$2"
         shift 2
         ;;
       importar-certificacion:--fondo)
@@ -207,11 +216,12 @@ if [ -n "$archivo" ]; then
         ;;
       *:--aplicar) falla "--aplicar no es una opción de $comando" ;;
       *:--crear-dueno) falla "--crear-dueno no se acepta en producción: el dueño lo crea crear-acceso-inicial (orden obligatorio)" ;;
-      *) falla "opción no permitida para $comando (se admiten --email; en importar-plan, --aplicar; en importar-certificacion, --fecha-corte y --fondo)" ;;
+      *) falla "opción no permitida para $comando (se admiten --email; en importar-plan, --aplicar; en importar-certificacion, --fecha-corte y --fondo; en corregir-corte-certificacion, --fecha-corte y --nueva-fecha-corte)" ;;
     esac
   done
   case "$comando" in importar-precios | importar-valores-fondo) ;; *) [ -n "$correo" ] || falla "falta --email <correo-del-dueño>" ;; esac
-  [ "$comando" != importar-certificacion ] || [ -n "$corte" ] || falla "falta --fecha-corte AAAA-MM-DD"
+  case "$comando" in importar-certificacion | corregir-corte-certificacion) [ -n "$corte" ] || falla "falta --fecha-corte AAAA-MM-DD" ;; esac
+  [ "$comando" != corregir-corte-certificacion ] || [ -n "$nuevo" ] || falla "falta --nueva-fecha-corte AAAA-MM-DD"
   # El archivo: exactamente N bytes y su sha256 (frena un archivo truncado por un corte del SSH).
   head -c "$bytes" >"$dir/$archivo" || falla "no se pudo leer el archivo"
   [ "$(tamano "$dir/$archivo")" = "$bytes" ] || falla "el archivo llegó incompleto (corte del SSH): no se carga nada"
@@ -225,6 +235,8 @@ if [ -n "$archivo" ]; then
       # El PDF va al final: es el argumento suelto del CLI (y su nombre termina en .pdf, como exige).
       if [ -n "$fondo" ]; then set -- --email "$correo" --fecha-corte "$corte" --fondo "$fondo" "$dir/$archivo"; else set -- --email "$correo" --fecha-corte "$corte" "$dir/$archivo"; fi
       ;;
+    # El mismo PDF que se cargó, al final; sin --fondo (el fondo ya quedó vinculado).
+    corregir-corte-certificacion) set -- --email "$correo" --fecha-corte "$corte" --nueva-fecha-corte "$nuevo" "$dir/$archivo" ;;
     importar-precios | importar-valores-fondo) set -- --archivo "$dir/$archivo" ;;
   esac
 else

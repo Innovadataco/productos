@@ -85,7 +85,9 @@ describe("validarFechaCorte", () => {
 
   it("acepta un día hábil sembrado, no futuro y hasta 7 días antes de la generación del PDF", () => {
     expect(validarFechaCorte(dia("2024-01-04"), ctx)).toBeNull();
-    expect(validarFechaCorte(dia("2024-01-05"), ctx)).toBeNull();
+    // Generado a las 10:15 del mismo día: antes del cierre definitivo, no puede ser al cierre de ese día (frente
+    // certificacion-corte-real; antes se aceptaba y era el defecto).
+    expect(validarFechaCorte(dia("2024-01-05"), ctx)).toBe("FECHA_CORTE_ANTES_DEL_CIERRE");
     expect(validarFechaCorte(dia("2023-12-29"), { ...ctx, aniosSembrados: new Set([2023, 2024]) })).toBeNull();
     expect(MAX_DIAS_ANTES_DEL_PDF).toBe(7);
   });

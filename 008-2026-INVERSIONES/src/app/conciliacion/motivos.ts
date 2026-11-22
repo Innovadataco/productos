@@ -15,7 +15,7 @@ export const MOTIVOS = {
   por_cantidad: "El valor no cuadra porque la cantidad no cuadra.",
   precio_distinto: "El precio de cierre del sistema no es el precio con el que A&V valoró la especie.",
   diferencia_valor: "El valor difiere en más de 0,5 % del de la certificación.",
-  fecha_corte_dudosa: "Todos los precios difieren de los de A&V: puede que la fecha de corte no sea la correcta.",
+  fecha_corte_dudosa: "Los precios del día del corte no son los de A&V (todos difieren, o son los del día hábil anterior): puede que la fecha de corte no sea la correcta.",
   por_especies: "El total no cuadra por las especies que no cuadran.",
   fondo_sin_unidades: "No se pudo verificar: falta registrar las unidades del fondo.",
   sin_valor_unidad_al_corte: "No se pudo verificar: falta el valor de la unidad del fondo del día del corte.",

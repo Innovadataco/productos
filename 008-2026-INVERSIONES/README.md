@@ -58,7 +58,26 @@ npm run precios:actualizar                       # últimos 10 días de las espe
 npm run precios:actualizar -- --desde 2025-01-01 # carga histórica
 ```
 - Fuente: Yahoo Finance `<NEMO>.CL` (no oficial), cierre sin ajustar en COP. Un cierre revisado reemplaza al anterior, que queda como historia.
-- Verificación: si hay certificación de A&V de ese día, el cierre debe quedar a ±1 % de su precio de valoración (`VERIFICADO`). Si no hay referencia oficial, queda `NO_VERIFICADO`.
+- Verificación: si hay certificación de A&V vigente de ese día, el cierre debe quedar a ±1 % de su precio de valoración (`VERIFICADO`). Si no hay referencia oficial, queda `NO_VERIFICADO`. Una certificación retirada (corte equivocado, abajo) ya no es referencia.
 - Si Yahoo falla, no se guarda nada de esa especie y el comando lo informa (salida 3).
 
+## Certificación de A&V: el corte real
+```bash
+npx tsx scripts/importar-certificacion.ts --email <su-correo> --fecha-corte AAAA-MM-DD [--fondo <codigoFic>] <certificacion.pdf>
+npx tsx scripts/corregir-corte-certificacion.ts --email <su-correo> --fecha-corte AAAA-MM-DD --nueva-fecha-corte AAAA-MM-DD <certificacion.pdf>
+```
+El PDF no trae la fecha de corte en el texto: usted la da. Un PDF bajado durante la rueda es la foto del cierre del **día hábil anterior**, no la del día en que lo bajó. El sistema lo detecta de tres formas y nunca corrige la fecha solo:
+- **`FECHA_CORTE_ANTES_DEL_CIERRE`** (al importar): el PDF se generó ese mismo día antes de que el cierre fuera definitivo (17:00, la hora de los precios). Con una fecha posterior a la del PDF sale `FECHA_CORTE_POSTERIOR_AL_PDF`. Sin fecha de creación en el PDF, esta señal no bloquea.
+- **`CORTE_NO_COINCIDE`** (al importar): ya hay cierres guardados del día y del día hábil anterior, y los precios de valoración cuadran (±1 %) con los del día anterior y no con los del día pedido. Solo cuentan las especies con cierre en los dos días (al menos 2); si faltan cierres, no se puede saber y no bloquea.
+- **`fecha_corte_dudosa`** (al conciliar): la misma regla, con la fecha sugerida en el detalle del control.
+
+**Qué hacer.** El mensaje dice el día que sugiere y el comando exacto:
+- Si la certificación no está cargada, impórtela de nuevo con `--fecha-corte <día sugerido>` (la nueva corrida vuelve a validar la fecha).
+- Si ya está cargada con la fecha equivocada, corríjala con `corregir-corte-certificacion` y el **mismo PDF**. En una sola transacción: retira la certificación vieja (no se borra: queda como historia, con su carga en `REVERTIDO` y sus conciliaciones), la importa con el corte real y re-verifica los cierres de los dos días (los del corte viejo quedan sin referencia). Se rechaza sin cambiar nada si el PDF es otro archivo (`ARCHIVO_DISTINTO`), si el corte nuevo está ocupado (`CORTE_OCUPADO`) o no pasa la validación, o si ya se corrigió (`CORTE_RETIRADO`). Con `CONFLICTO_CONCURRENTE`, repita el mismo comando.
+- Después, concilie el corte nuevo: `npx tsx scripts/conciliar-certificacion.ts --fecha-corte <corte real>`. Conciliar el corte viejo da `CERTIFICACION_RETIRADA` con la fecha que lo reemplazó.
+- La fecha de una certificación retirada queda ocupada por su historia: otra certificación con esa fecha se rechaza con `CORTE_RETIRADO`.
+
 Este repo es público: aquí no hay datos reales. Los datos de prueba están inventados y marcados `.ficticio.`.
+
+---
+> v1.1 · 2026-11-21 · 20:26 (-05) · INV · Fábrica Inversiones (frente certificacion-corte-real) · primer pie de versión · certificación de A&V: el corte real (FECHA_CORTE_ANTES_DEL_CIERRE, CORTE_NO_COINCIDE, fecha_corte_dudosa) y su corrección con `corregir-corte-certificacion`

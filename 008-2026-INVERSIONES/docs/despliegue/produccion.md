@@ -595,6 +595,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 | 12 bis | La constitución del fondo (unidades y aporte del extracto del FIC), una sola vez: primero en ensayo y después con `--aplicar` | `registrar-movimiento-fondo` | `--email` y el correo, `--fondo` y su código de la SFC, `--fecha` y el día, `--unidades` y `--monto` (abajo); `--aplicar` solo la segunda vez | — |
 | 13 | Los precios, que se verifican al escribir contra la certificación ya cargada | `importar-precios` | vacía (`/dev/null`) | el CSV de cierres que exportó el Mac (abajo) |
 | 14 | La conciliación otra vez, con los valores del fondo y los precios ya cargados | `conciliar-certificacion` | `--fecha-corte` y la fecha | — |
+| 15 | Solo si el corte no es el real (abajo, «El corte real de la certificación»): corregirlo y conciliar el corte real | `corregir-corte-certificacion` y después `conciliar-certificacion` | `--email`, el correo, `--fecha-corte` y la fecha con que se cargó, `--nueva-fecha-corte` y la sugerida; luego `--fecha-corte` y la sugerida | el MISMO PDF del paso 11; luego — |
 
 **El fondo (pasos 10 y 12).** Producción no tiene salida a internet: el migrador no llega a la SFC (datos.gov.co).
 1. **Registrarlo (paso 10), por el sobre y sin red.** La cabecera (privada; valores inventados):
@@ -699,6 +700,31 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
    ```
 4. **Por el mismo camino que `precios:actualizar`:** mismas especies (acción activa con lotes), la misma fuente `yahoo`, versión con guarda, las omisiones de SPEC-13 (día no hábil y volumen 0 se omiten; el año sin calendario sale con 3) y la verificación contra la certificación del mismo día. Reimportar el mismo CSV no escribe nada.
 
+**El corte real de la certificación (paso 15).** Un PDF de A&V bajado durante la rueda es la foto del cierre del **día hábil anterior**, no la del día en que se bajó; el PDF no trae la fecha en el texto, la da el dueño. El sistema nunca corrige la fecha solo: dice el día que sugiere y el comando.
+- **En el paso 11** la importación se rechaza, sin guardar ningún hecho (queda la carga RECHAZADO con el código), con:
+  - `FECHA_CORTE_ANTES_DEL_CIERRE`: el PDF se generó ese mismo día antes de las 17:00 COT (la hora definitiva de los precios). Con una fecha posterior a la del PDF, `FECHA_CORTE_POSTERIOR_AL_PDF`. Sin fecha de creación en el PDF, no bloquea;
+  - `CORTE_NO_COINCIDE`: solo si ya hay cierres guardados del día y del día hábil anterior y los precios de valoración son los del día anterior (±1 %, al menos 2 especies con cierre en los dos días). En el orden de esta tabla los precios llegan en el paso 13, así que en el 11 casi nunca hay cierres: por eso existe el paso 15.
+  - Qué hacer: repetir el paso 11 con `--fecha-corte <día sugerido>` en la cabecera. Si la salida dice que el PDF ya está cargado, ir al paso 15.
+- **En el paso 14** la conciliación dice `fecha_corte_dudosa` y la línea «📅 Los precios de valoración cuadran con los cierres del <día>…» con el comando de corrección. Qué hacer: el paso 15.
+- **El paso 15**, por el sobre (cabecera privada; valores inventados):
+  ```text
+  --email
+  dueno@ejemplo.ficticio
+  --fecha-corte
+  2027-07-13
+  --nueva-fecha-corte
+  2027-07-12
+  ```
+  ```sh
+  scripts/armar-sobre.sh <cabecera-de-la-correccion> <carpeta-privada>/certificacion.pdf | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh corregir-corte-certificacion
+  ```
+  - `inv-cargar` admite solo `--email`, `--fecha-corte` y `--nueva-fecha-corte`, cada una una vez (sin `--fondo`: el fondo ya quedó vinculado), y el PDF en el temporal `certificacion.pdf`.
+  - En una sola transacción: exige la certificación vigente del corte viejo cargada con ese MISMO archivo (sha256) y el corte nuevo libre y válido como una importación; retira la vieja (no se borra: queda como historia, con sus cargas en `REVERTIDO` con quién y cuándo, sus filas y sus conciliaciones), importa el PDF con el corte real y re-verifica los cierres de los dos días (los del corte viejo quedan sin referencia; los del nuevo, contra la certificación). Imprime cuántos cambiaron.
+  - Rechazos, sin cambiar nada (queda la carga RECHAZADO): `SIN_CERTIFICACION`, `CORTE_RETIRADO` (ya se corrigió), `ARCHIVO_DISTINTO` (otro PDF), `CORTE_OCUPADO`, la validación de la fecha nueva o `CORTE_NO_COINCIDE` (el corte nuevo tampoco es el real: sugiere otro), y `CONFLICTO_CONCURRENTE` (otra corrida escribía a la vez: repetir). Salida: 0 · 1 · 64 si `inv-cargar` se niega.
+  - Después: `conciliar-certificacion` con `--fecha-corte <corte real>`. Conciliar el corte viejo da `CERTIFICACION_RETIRADA` con la fecha que lo reemplazó; la pantalla ya no lo ofrece. La fecha vieja queda ocupada por su historia: otra certificación con esa fecha se rechaza con `CORTE_RETIRADO`.
+  - Si una carga de precios (paso 13) coincide con una corrección que tarde más de 15 s, esa especie puede salir `GUARDADO_ERROR`: basta repetir el paso 13.
+- **Al desplegar este cambio** (frente certificacion-corte-real): el cálculo pasa a `conciliacion-v2`, así que toda conciliación guardada sale DESACTUALIZADA en la pantalla hasta repetir el paso 14 de su corte.
+
 **Qué esperar de cada paso:**
 - **Un CSV por llamada:** el tipo (órdenes, caja o dividendos) sale del encabezado, no del nombre. El nombre que guarda la base es fijo (`trii.csv`): el nombre real no llega al VPS.
 - **Antes de las escisiones,** `importar-trii` avisa que no hay eventos: es lo esperado en los pasos 1 y 2. En el paso 4 no debe salir.
@@ -706,11 +732,12 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 - **`construir-lotes` con salida 3:** son avisos, no un error. En el paso 5 puede dar 3 por la escisión; en el 7 debe dar 0, o 3 con los avisos explicados.
 - **`importar-plan` con salida 3:** había otra importación en curso: se reintenta.
 - **`registrar-fondo` (paso 10):** imprime el id interno del fondo, «creado» o «ya existía» y la clase; nunca el código ni el nombre.
-- **`importar-certificacion` (paso 11):** concilia al cargar; sin los cierres del día de corte, el valor sale `sin_precio_al_corte`, y el fondo, `fondo_sin_unidades` o `sin_valor_unidad_al_corte`. Es lo esperado: lo resuelven los pasos 12 a 14. Su «siguiente paso» en producción ya es este (vía B), no `precios:actualizar`.
+- **`importar-certificacion` (paso 11):** puede rechazar el corte (arriba, «El corte real de la certificación»). Si carga, concilia al cargar; sin los cierres del día de corte, el valor sale `sin_precio_al_corte`, y el fondo, `fondo_sin_unidades` o `sin_valor_unidad_al_corte`. Es lo esperado: lo resuelven los pasos 12 a 14. Su «siguiente paso» en producción ya es este (vía B), no `precios:actualizar`.
 - **`importar-valores-fondo` (paso 12):** imprime `CSV de valores del fondo · filas · fondos` y el reporte de `actualizar-fondo` (valores nuevos y revisados, el último dato de cada fondo por su id interno).
 - **`registrar-movimiento-fondo` (paso 12 bis):** el ensayo imprime el id interno del fondo y «No se escribió nada»; con `--aplicar`, los ids del fondo, del movimiento y del ajuste de caja. Después, el fondo deja `fondo_sin_unidades` en la conciliación del paso 14, y el efectivo deja `aporte_fic_sin_registrar`: pasa a cuadrar o a `partida_sin_fuente`, la brecha que ningún archivo explica todavía.
 - **`importar-precios` (paso 13):** imprime `CSV de cierres · filas · especies` y el reporte de `precios:actualizar`. Si el CSV cubre el día de corte, «verificados en el rango» cuenta los cierres de ese día que cuadran (±1 %) con la certificación; uno que no cuadra queda NO_VERIFICADO y lo muestra la conciliación del paso 14. Con salida 3: especies sin acción activa con lotes (`ESPECIE_NO_REGISTRADA`, por su línea del CSV), otro símbolo de Yahoo registrado (`SIMBOLO_DISTINTO`), un fallo del guardado o un año sin calendario: se para y se avisa.
-- **`conciliar-certificacion` (paso 14):** guarda una conciliación nueva, ahora con los valores del fondo y los precios; la anterior queda en la historia.
+- **`conciliar-certificacion` (paso 14):** guarda una conciliación nueva, ahora con los valores del fondo y los precios; la anterior queda en la historia. Con `fecha_corte_dudosa` y un día sugerido, sigue el paso 15.
+- **`corregir-corte-certificacion` (paso 15):** imprime qué se retiró y qué quedó (filas, cargas en `REVERTIDO`), los cierres re-verificados de cada día y el siguiente paso; nunca cifras, especies ni el correo.
 
 **Después de la carga:**
 1. **Revisión, de solo lectura:**
@@ -727,7 +754,8 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
-> v2.13 · 2026-11-21 · 20:50 (-05) · Inversiones · Fábrica Inversiones (frente fondo-movimientos-via-b) · §11: paso 12 bis `registrar-movimiento-fondo` (la constitución del fondo por el sobre: cabecera, ensayo y `--aplicar`, contraste con el valor de unidad del mismo día, lo que garantiza la base y lo que garantiza la app, salidas y la frase de parar); el CSV del paso 12 cubre el día de la constitución; riesgo residual del argv con sus cifras
+> v2.14 · 2026-11-21 · 22:05 (-05) · Inversiones · Fábrica Inversiones (frente fondo-movimientos-via-b; v2.14 sobre la v2.13 de main) · §11: paso 12 bis `registrar-movimiento-fondo` (la constitución del fondo por el sobre: cabecera, ensayo y `--aplicar`, contraste con el valor de unidad del mismo día, lo que garantiza la base y lo que garantiza la app, salidas y la frase de parar); el CSV del paso 12 cubre el día de la constitución; riesgo residual del argv con sus cifras
+> v2.13 · 2026-11-21 · 20:38 (-05) · Inversiones · Fábrica Inversiones (frente certificacion-corte-real) · §11: el corte real de la certificación (`FECHA_CORTE_ANTES_DEL_CIERRE`, `CORTE_NO_COINCIDE`, `fecha_corte_dudosa` con día sugerido), el paso 15 `corregir-corte-certificacion` por el sobre (lista blanca, qué deja, rechazos, conciliar el corte real) y reconciliar al desplegar por `conciliacion-v2` (la numeración v2.13 sigue a la v2.12 de main)
 > v2.12 · 2026-11-21 · 18:32 (-05) · Inversiones · Fábrica Inversiones (frente precios-integridad) · §2: `inv_precios` existe desde la primera corrida de `crear-roles-prod.sh` (NOLOGIN y sin clave sin su línea; quitarla lo desactiva), la restauración ya no depende de la línea (ensayada), los disparadores de `20261121231049_precios_integridad` y el riesgo residual completo; §4: permisos «si el rol existe»; §6 (A): `crear-roles-prod.sh` crea `inv_precios` y el guardián de una imagen anterior ve sobrantes; §10: las 4 migraciones con `lock_timeout`
 > v2.11 · 2026-11-21 · 17:48 (-05) · Inversiones · Fábrica Inversiones (frente fondo-carga) · §11: el fondo por la vía B: paso 10 `registrar-fondo` por el sobre (lista blanca), paso 12 los valores de unidad (`fondo:exportar` en el Mac con `umask 077` → `importar-valores-fondo` por el sobre, camino único), formato exacto del CSV, la regla T−2 (solo el valor del día del corte) y el hueco de las unidades del fondo; los pasos de los precios pasan de 10–12 a 11, 13 y 14 (la numeración v2.11 sigue a la v2.10 de main)
 > v2.10 · 2026-11-21 · 17:01 (-05) · Inversiones · Fábrica Inversiones (frente precios-rol) · §2: `INV_PRECIOS_DATABASE_URL` opcional, cómo la agrega Jelk sin verla (y sin escribir nada si `openssl` falla), cuándo llegan los permisos y por qué la línea no se quita (restauración); §4: los permisos por columna de `inv_precios`

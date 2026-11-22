@@ -98,7 +98,7 @@ describe("leerConciliacion", () => {
     const r = await conciliarCertificacion(db, { fechaCorte: c.fecha });
     const l = (await leerConciliacion(db, c.fecha))!;
     expect(l.frescura).toBe("AL_DIA");
-    expect(l.conciliacion).toMatchObject({ id: r.conciliacionId, fechaCorte: c.fecha, versionCalculo: "conciliacion-v1", resultado: r.resultado });
+    expect(l.conciliacion).toMatchObject({ id: r.conciliacionId, fechaCorte: c.fecha, versionCalculo: "conciliacion-v2", resultado: r.resultado });
     expect(l.conciliacion!.calculadaEn).toBeInstanceOf(Date);
     const de = (tipo: string, id: string | null) => l.conciliacion!.controles.find((x) => x.tipo === tipo && x.instrumentoId === id);
     expect(de("CANTIDAD", c.ids[0]!)).toMatchObject({ resultado: "CUADRA", instrumento: { nemotecnico: c.nemos[0], tipo: "ACCION" } });
@@ -189,7 +189,9 @@ describe("cortesDisponibles y ultimaConciliacion", () => {
 
   it("la última conciliación es la del corte más reciente, con el resultado de su última corrida", async () => {
     const u = await ultimaConciliacion(db);
+    // La más reciente VIGENTE: una retirada (corte equivocado) no cuenta (frente certificacion-corte-real).
     const reciente = await db.certificacion.findFirstOrThrow({
+      where: { retiradaEn: null },
       orderBy: { fechaCorte: "desc" },
       select: { fechaCorte: true, conciliaciones: { select: { resultado: true }, orderBy: [{ calculadaEn: "desc" }, { id: "desc" }], take: 1 } },
     });
