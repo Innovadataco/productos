@@ -163,6 +163,14 @@ describe("datosDeOperar contra la base", () => {
     expect(propias(v.reglas.seCumplen).map((r) => r.id)).toEqual([reglaIds[0]]);
     expect(propias(v.fechas).filter((f) => f.tipo === "EX_DIVIDENDO").map((f) => [f.especie, f.fecha])).toEqual([[NEMO.b, iso(sumarDias(fechas.hoy1, 31))]]);
   });
+
+  it("un día anterior a toda versión del plan: sin plan vigente y sin reglas; el estado y las fechas, igual", async () => {
+    const primera = await db.planVersion.findFirstOrThrow({ orderBy: { vigenteDesde: "asc" }, select: { vigenteDesde: true } });
+    const v = await datosDeOperar(db, sumarDias(primera.vigenteDesde, -1));
+    expect(v.reglas).toEqual({ version: null, seCumplen: [], cercanas: [], resto: [] });
+    expect(v.estado.especies.map((e) => e.nemo)).toEqual(expect.arrayContaining([NEMO.a, NEMO.b, NEMO.c]));
+    expect(v.fechas.filter((f) => f.tipo === "PLAZO")).toEqual([]);
+  });
 });
 
 describe("la página /operar contra la base", () => {
