@@ -29,9 +29,10 @@ const INSTANTES = [
 ] as const;
 
 describe("migración *_instantes_base", () => {
-  it("existe una sola, posterior a la última de main cuando se creó (rendimientos del fondo)", () => {
+  it("existe una sola, y corre después de la migración que crea las tablas del plan", () => {
     expect(propias).toHaveLength(1);
-    expect(propias[0]! > "20261122132300_rendimientos_fondo").toBe(true);
+    expect(carpetas).toContain("20261121024044_plan_decisiones");
+    expect(propias[0]! > "20261121024044_plan_decisiones").toBe(true);
   });
 
   it("es aditiva: el DEFAULT de los tres instantes, funciones y disparadores; no toca ni revisa filas", () => {
@@ -71,12 +72,18 @@ describe("migración *_instantes_base", () => {
       expect([...cuerpo.matchAll(/NEW\."([^"]+)"\s*:=/g)].map((m) => m[1]), tabla).toEqual([columna]);
     }
   });
+});
 
-  it("la cabecera dice la amenaza, por qué clock_timestamp(), la exención del dueño y el riesgo residual", () => {
-    const cabecera = crudo.replace(/\s*--\s*/g, " ");
-    for (const texto of [/antedatar/, /clock_timestamp\(\)/, /now\(\) es el inicio de la transacción/, /dueño/, /pg_restore|restauraci/, /Riesgo residual/i]) {
-      expect(cabecera).toMatch(texto);
-    }
+// La exención de los disparadores es «tener los privilegios del dueño de la tabla»: si inv_app o inv_precios fueran
+// miembros del dueño (GRANT inv_dueno TO …), con SET ROLE serían el dueño y fijarían el instante (security-reviewer,
+// MEDIO). El guardián ya lo exigía para las tablas de precios; ahora también para las tres de los instantes.
+describe("guardián del esquema: nadie de la web ni del servicio es miembro del dueño de las tablas de los instantes", () => {
+  const guardian = readFileSync(path.join(raiz, "scripts/verificar-esquema.sql"), "utf8");
+  it("la revisión de membresía nombra plan_version, decision y enlace_decision_orden (además de las de precios)", () => {
+    const m = /WHERE r\.rolname IN \('inv_app', 'inv_precios'\)\s+AND c\.oid IN \(([^)]*(?:\)[^)]*)*?)\)\s+AND pg_has_role\(r\.oid, c\.relowner, 'MEMBER'\)/.exec(guardian);
+    expect(m, "bloque de membresía").not.toBeNull();
+    const tablas = [...m![1]!.matchAll(/to_regclass\('public\.([a-z_]+)'\)/g)].map((x) => x[1]);
+    expect(tablas.sort()).toEqual(["decision", "enlace_decision_orden", "plan_version", "precio_cierre", "valor_unidad_fondo"]);
   });
 });
 

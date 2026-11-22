@@ -217,7 +217,7 @@ describe("con los privilegios de inv_app (solo INSERT en el plan): las funciones
     expect(await quien()).toBe(ROL);
   });
 
-  it("la versión que crea la app con estos privilegios lleva la hora de la base, no la del cliente", async () => {
+  it("la app crea la versión con estos privilegios sin nombrar el instante, y queda con la hora de la base", async () => {
     const ultima = (await db.planVersion.findFirst({ orderBy: { version: "desc" }, select: { version: true } }))!.version;
     const antes = (await db.$queryRaw<{ t: Date }[]>`SELECT clock_timestamp() AS t`)[0]!.t;
     const v = await crearVersionPlan(restringida, { vigenteDesde: mas(30), motivo: "Con la hora de la base (ficticia)", autorId: duenoId, reglas: [regla("VENDER", "Vender (ficticia)")] }, { hoy: HOY, ultimaEsperada: ultima });

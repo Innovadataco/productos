@@ -128,6 +128,27 @@ describe("los instantes del plan y del diario los pone la base", () => {
     expect(r.filas.fechaDecision.toISOString().slice(0, 10)).toBe("2019-02-12");
   });
 
+  it("en un INSERT de varias filas, el disparador fija el instante de cada una (FOR EACH ROW)", async () => {
+    const r = await enTransaccion(async (tx, ids) => {
+      const antes = await reloj(tx);
+      await tx.$executeRawUnsafe(`SET LOCAL ROLE ${NO_DUENO}`);
+      await tx.$executeRawUnsafe(
+        `INSERT INTO plan_version (id, version, "vigenteDesde", motivo, "aprobadaPorId", "creadaEn") VALUES
+           ('ib-m1', ${ids.version}, DATE '2019-02-04', 'Versión ficticia', '${ids.usuario}', ${ANTEDATADO}),
+           ('ib-m2', ${ids.version + 1}, DATE '2019-02-05', 'Versión ficticia', '${ids.usuario}', ${ANTEDATADO}),
+           ('ib-m3', ${ids.version + 2}, DATE '2019-02-06', 'Versión ficticia', '${ids.usuario}', ${ANTEDATADO})`,
+      );
+      await tx.$executeRawUnsafe("RESET ROLE");
+      const filas = await tx.$queryRawUnsafe<{ t: Date }[]>(`SELECT "creadaEn" AS t FROM plan_version WHERE id IN ('ib-m1', 'ib-m2', 'ib-m3')`);
+      return { antes, despues: await reloj(tx), filas };
+    });
+    expect(r.filas).toHaveLength(3);
+    for (const { t } of r.filas) {
+      expect(t.getTime()).toBeGreaterThanOrEqual(r.antes.getTime());
+      expect(t.getTime()).toBeLessThanOrEqual(r.despues.getTime());
+    }
+  });
+
   it("el dueño conserva el instante que manda (restauración de solo datos, reparaciones)", async () => {
     const r = await enTransaccion(async (tx, ids) => {
       for (const s of inserts(ids, "b", ANTEDATADO)) await tx.$executeRawUnsafe(s);
@@ -172,6 +193,8 @@ describe("los instantes del plan y del diario los pone la base", () => {
   });
 });
 
+// Rompe con DDL dentro de una transacción (toma ACCESS EXCLUSIVE de decision o plan_version hasta deshacerla): es
+// seguro porque la integración corre los archivos de a uno (fileParallelism: false en vitest.integracion.config.ts).
 describe("guardián del esquema: las piezas de los instantes", () => {
   /** Rompe algo, corre el guardián en la misma transacción y la deshace; devuelve su error o null. */
   async function guardianTras(romper: readonly string[]): Promise<string | null> {
@@ -194,6 +217,12 @@ describe("guardián del esquema: las piezas de los instantes", () => {
     }
     return error;
   }
+
+  // Control positivo (database-reviewer, MEDIO): con un md5 o una definición mal copiados, el guardián fallaría en cada
+  // despliegue real y los casos de abajo seguirían pasando.
+  it("pasa sin cambios: las tres funciones y los tres disparadores están como los dejó la migración", async () => {
+    expect(await guardianTras([])).toBeNull();
+  });
 
   it.each([
     ["falta un disparador", ['DROP TRIGGER "decision_instante" ON "decision"'], /disparador decision_instante/],

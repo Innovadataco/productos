@@ -696,17 +696,20 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
 
   // La exención de los disparadores de integridad de precios es «tener los privilegios del dueño de la tabla»: si
   // inv_precios o inv_app fueran miembros de inv_dueno, quedarían eximidos (o, con SET ROLE, serían el dueño).
-  it("el guardián falla si inv_precios o inv_app es miembro del dueño de las tablas de precios", async () => {
+  // También en las tablas de los instantes del plan y del diario (migración *_instantes_base): con SET ROLE inv_dueno,
+  // inv_app fijaría el instante (security-reviewer, MEDIO).
+  it("el guardián falla si inv_precios o inv_app es miembro del dueño de las tablas de precios o de los instantes", async () => {
     const guardian = () => ejecutarSql(ruta008("scripts/verificar-esquema.sql"), conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA));
+    const tablas = ["precio_cierre", "valor_unidad_fondo", "plan_version", "decision", "enlace_decision_orden"];
     for (const rol of ["inv_precios", "inv_app"]) {
-      const aviso = new RegExp(`rol con privilegios del dueño ${rol} en precio_cierre`);
+      const avisos = tablas.map((t) => new RegExp(`rol con privilegios del dueño ${rol} en ${t}\\b`));
       const antes = guardian();
-      expect(antes.stderr + antes.stdout).not.toMatch(aviso);
+      for (const aviso of avisos) expect(antes.stderr + antes.stdout).not.toMatch(aviso);
       await admin.$executeRawUnsafe(`GRANT inv_dueno TO ${rol}`);
       try {
         const r = guardian();
         expect(r.status).not.toBe(0);
-        expect(r.stderr + r.stdout).toMatch(aviso);
+        for (const aviso of avisos) expect(r.stderr + r.stdout).toMatch(aviso);
       } finally {
         await admin.$executeRawUnsafe(`REVOKE inv_dueno FROM ${rol}`);
       }
