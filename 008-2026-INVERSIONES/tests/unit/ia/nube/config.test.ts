@@ -78,21 +78,21 @@ describe("leerConfigNube · el tope (configuración, sin valor por omisión)", (
     ["37.911", 37_911_000n],
     ["4.37", 4_370_000n],
     ["0.000001", 1n],
-    ["12", 12_000_000n],
+    ["41", 41_000_000n],
     ["50", TECHO_TOPE_MICRO_USD],
     ["49.999999", TECHO_TOPE_MICRO_USD - 1n],
   ])("acepta «%s» USD como %s micro-USD", (tope, micro) => {
     expect(lista(leerConfigNube(entorno(LLAVE_FICTICIA, tope))).topeMicroUsd).toBe(micro);
   });
 
-  it.each(["12,5", "-3", "+3", "1e3", " 12", "12 ", "12.", ".5", "0", "0.000000", "0.0000001", "007", "abc", "١٢", "Infinity", "NaN", "0x10"])(
+  it.each(["41,7", "-4.37", "+4.37", "1e3", " 41", "41 ", "41.", ".5", "0", "0.000000", "0.0000001", "007", "abc", "٤١", "Infinity", "NaN", "0x10"])(
     "rechaza «%s» con TOPE_INVALIDO",
     (tope) => {
       expect(leerConfigNube(entorno(LLAVE_FICTICIA, tope))).toEqual({ lista: false, detalle: "TOPE_INVALIDO" });
     },
   );
 
-  it.each(["50.000001", "51", "999999"])("rechaza «%s» por encima del techo con TOPE_FUERA_DE_RANGO", (tope) => {
+  it.each(["50.000001", "53.17", "999999"])("rechaza «%s» por encima del techo con TOPE_FUERA_DE_RANGO", (tope) => {
     expect(leerConfigNube(entorno(LLAVE_FICTICIA, tope))).toEqual({ lista: false, detalle: "TOPE_FUERA_DE_RANGO" });
   });
 
