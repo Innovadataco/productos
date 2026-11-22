@@ -443,9 +443,13 @@ networks:
     driver: bridge
   # Con salida, solo para el servicio de precios (Yahoo y la SFC): un puente propio, con la subred del pool de Docker
   # (sin ipam), sin IPv6 y sin nadie más. No se aísla la puerta de enlace: por ella sale a internet. Que no abra
-  # conexiones a la IP del host lo garantiza su código (src/servicio-precios/direcciones.ts), no la red.
+  # conexiones a la IP del host lo garantiza su código (src/servicio-precios/direcciones.ts); además, el puente lleva
+  # un nombre fijo (br-inv008-prec, 14 caracteres: el tope de Linux es 15) para la regla de firewall del host que pone
+  # PI (lo que entra por ese puente, sin acceso al host). Un nombre fijo es único en el host: un solo proyecto a la vez.
   inv-008-red-precios:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-inv008-prec
 
 volumes:
   inv-008-db-datos:
