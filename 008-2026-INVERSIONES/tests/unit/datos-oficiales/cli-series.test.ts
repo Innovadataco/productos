@@ -24,7 +24,7 @@ const archivo = (nombre: string, contenido: string | Uint8Array) => {
   return ruta;
 };
 const local = (extra: Record<string, string> = {}) => entornoMinimo({ DATABASE_URL: INALCANZABLE, ...extra });
-const prod = () => ({ ...local(), NODE_ENV: "production" });
+const prod = (): NodeJS.ProcessEnv => ({ ...local(), NODE_ENV: "production" });
 const sinBase = (texto: string) => expect(texto, "no debía tocar la base").not.toContain("PrismaClient");
 
 describe("importar-series · como proceso, sin base", { timeout: 10 * POR_CLI_MS }, () => {
