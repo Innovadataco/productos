@@ -623,7 +623,7 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
   --email
   dueno@ejemplo.ficticio
   ```
-  - Para un comando sin argumentos va vacía (`/dev/null`). También para `importar-precios` e `importar-valores-fondo`, que no llevan opciones.
+  - Para un comando sin argumentos va vacía (`/dev/null`). También para `importar-precios`, `importar-valores-fondo` e `importar-series`, que no llevan opciones.
   - Para uno con argumentos sin datos reales, sirve `<(printf '%s\n' --ensayo)`.
   - Los valores reales nunca se escriben en la línea de comandos: quedarían en el historial.
 - **En la línea de comandos del VPS solo va el nombre del comando**, de una lista cerrada. Nada real queda en el registro de sudo ni en `ps` del host.
@@ -668,6 +668,8 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 | 13 | Los precios, que se verifican al escribir contra la certificación ya cargada | `importar-precios` | vacía (`/dev/null`) | el CSV de cierres que exportó el Mac (abajo) |
 | 14 | La conciliación otra vez, con los valores del fondo y los precios ya cargados | `conciliar-certificacion` | `--fecha-corte` y la fecha | — |
 | 15 | Solo si el corte no es el real (abajo, «El corte real de la certificación»): corregirlo y conciliar el corte real | `corregir-corte-certificacion` y después `conciliar-certificacion` | `--email`, el correo, `--fecha-corte` y la fecha con que se cargó, `--nueva-fecha-corte` y la sugerida; luego `--fecha-corte` y la sugerida | el MISMO PDF del paso 11; luego — |
+| 16 | Las series oficiales (TRM, TPM, IBR_3M_EA, IPC_INDICE), cada vez que haya un CSV nuevo; no dependen de los pasos 1 a 15 (abajo) | `importar-series` | vacía (`/dev/null`) | el CSV de series que exportó el Mac |
+| 17 | Los decretos de dividendos, después de los pasos 1 a 4 (la especie debe estar registrada), primero en ensayo y después con `--aplicar` (abajo) | `importar-decretos` | `--email` y el correo; `--aplicar` solo la segunda vez | el CSV de decretos del dueño |
 
 **El fondo (pasos 10 y 12).** Producción no tiene salida a internet: el migrador no llega a la SFC (datos.gov.co).
 1. **Registrarlo (paso 10), por el sobre y sin red.** La cabecera (privada; valores inventados):
@@ -797,6 +799,38 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
   - Si una carga de precios (paso 13) coincide con una corrección que tarde más de 15 s, esa especie puede salir `GUARDADO_ERROR`: basta repetir el paso 13.
 - **Al desplegar este cambio** (frente certificacion-corte-real): el cálculo pasa a `conciliacion-v2`, así que toda conciliación guardada sale DESACTUALIZADA en la pantalla hasta repetir el paso 14 de su corte.
 
+**Las series oficiales y los decretos (pasos 16 y 17).** No entran en la certificación ni en la conciliación (pasos 11 a 15): los decretos los leen las proyecciones, y las series, la lectura de la fase C. Por eso van al final y en cualquier momento después del despliegue que los trae; quién los corre es el mismo de toda la vía B (si la Fábrica puede cargar sola las series, que son públicas, está por decidir: P7 del plan de la fase C).
+1. **Las series (paso 16): se exportan en el Mac, que tiene red, y viajan en el sobre.** Producción no llega a la SFC, a BanRep ni al DANE.
+   - **En el Mac:** cada exportador escribe por stdout el mismo CSV canónico; hoy, en `main`, el de la TRM:
+     ```sh
+     npx tsx scripts/exportar-trm.ts --desde <fecha> > <carpeta>/series.csv.parcial && mv <carpeta>/series.csv.parcial <carpeta>/series.csv
+     ```
+     El `.parcial` y el `&& mv`, como con los precios: solo un CSV completo (salida 0) queda con su nombre. Los exportadores de BanRep (TPM e IBR_3M_EA) y del DANE (IPC_INDICE) escriben el mismo formato cuando entren a `main` (C2c y C2d). Son datos públicos, sin especies del portafolio.
+   - **El sobre:** `scripts/armar-sobre.sh /dev/null <carpeta>/series.csv | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh importar-series`. La cabecera va vacía: cualquier línea (`--email`, `--archivo`, `--aplicar`, una ruta) sale con 64. `inv-cargar` deja el CSV en el temporal `series.csv` (tope 2 MiB, el de `MAX_BYTES_CSV_SERIES`) y corre `scripts/importar-series.ts --archivo <temporal>`.
+   - **Qué hace:** valida el CSV **entero** antes de abrir la base (todo o nada) y guarda por el camino único de las series (`src/datos-oficiales/series/guardar.ts`): una vigencia igual no escribe; una distinta retira la anterior y entra la nueva. Reimportar el mismo CSV no escribe nada. La escritura es por serie: si se corta a mitad, queda lo guardado hasta ahí.
+   - **Formato:** el de `src/datos-oficiales/series/csv-series.ts` (encabezado exacto `serie,desde,hasta,valor,fuente`, ASCII y LF, la fuente exacta del catálogo, topes de bytes, filas y series). Ejemplo inventado:
+     ```text
+     serie,desde,hasta,valor,fuente
+     TRM,2027-02-03,2027-02-05,4719.38,sfc:32sa-8pi3
+     ```
+   - **Salida:** 0 bien · 3 con avisos (una serie con fallo del guardado, o días que una revisión dejó sin vigente) · 2 uso o archivo ilegible · 1 CSV rechazado (con línea y código) o error · 64 si `inv-cargar` se niega. Con cualquier salida distinta de 0, el CLI termina con «Vía B: pare la carga y avise al CEO de 008». Imprime conteos, códigos de serie y fechas; nunca valores.
+   - **Duración:** `cargar-prod.sh` tiene tomado el candado común mientras corre. Un CSV de series del tope no se ha medido en el VPS.
+2. **Los decretos (paso 17): el CSV del dueño, en ensayo y después con `--aplicar`.**
+   - **El CSV es privado:** dice qué especies tiene el dueño. Va en la carpeta privada del Mac (`umask 077`), nunca al repo. Formato: el de `src/datos-oficiales/decretos/csv.ts` (una fila por cuota, con su referencia oficial de la SFC o de la BVC).
+   - **La cabecera** (privada; valor inventado):
+     ```text
+     --email
+     dueno@ejemplo.ficticio
+     ```
+     ```sh
+     scripts/armar-sobre.sh <cabecera-de-los-decretos> <carpeta-privada>/decretos.csv | ssh <vps> <raíz>/repo/008-2026-INVERSIONES/scripts/cargar-prod.sh importar-decretos
+     ```
+     - `inv-cargar` admite solo `--email` (obligatoria) y `--aplicar` (opcional), cada una una vez; cualquier otra opción, una posicional, `--` o `--email=…` sale con 64. Deja el CSV en el temporal `decretos.csv` (tope 1 MiB, el de `MAX_BYTES_DECRETOS`) y arma, en orden fijo, `scripts/importar-decretos.ts --archivo <temporal> --email <correo> [--aplicar]`.
+     - **Primero sin `--aplicar` (ensayo):** valida, resuelve las especies y cuenta, sin escribir. Si sale 0, se agrega `--aplicar` como última línea de la cabecera y se repite.
+   - **`--aplicar` y el cruce:** mientras el sha desplegado no traiga el cruce de los decretos con los pagos de Trii (C5b, productos#1053), el CLI solo escribe en una base de pruebas: en producción, el ensayo dice que `--aplicar` está bloqueado (`CRUCE_PENDIENTE`) y `--aplicar` sale con 3 sin escribir nada. **Es lo esperado:** se para ahí. Con C5b desplegado, `--aplicar` escribe.
+   - **Qué hace con `--aplicar`:** escribe por el camino único de los decretos (`src/datos-oficiales/decretos/guardar.ts`), con el crudo de cada fila cifrado. Una fila distinta de lo registrado es la versión siguiente, que retira a la anterior; anular es la misma fila con `anulada=SI` y una nota. Reimportar el mismo CSV no escribe nada. La nota y la referencia quedan en claro en la base: no llevan cantidades, montos ni datos de la cuenta.
+   - **Salida:** 0 ensayo o aplicado · 1 error de la base o del cifrado · 2 uso o archivo ilegible · 3 rechazado, no escribió nada (`ESPECIE_NO_REGISTRADA`: falta la especie, este comando no las crea; `USUARIO_NO_AUTORIZADO`: el correo no es el del dueño; `CRUCE_PENDIENTE`, arriba; o los hallazgos del archivo por línea y columna) · 64 si `inv-cargar` se niega. Con cualquier salida distinta de 0, el CLI termina con «Vía B: pare la carga y avise al CEO de 008». Nunca imprime especies, valores, fechas, referencias, notas ni el correo: solo el modo, conteos, códigos, números de línea y el id de la carga.
+
 **Qué esperar de cada paso:**
 - **Un CSV por llamada:** el tipo (órdenes, caja o dividendos) sale del encabezado, no del nombre. El nombre que guarda la base es fijo (`trii.csv`): el nombre real no llega al VPS.
 - **Antes de las escisiones,** `importar-trii` avisa que no hay eventos: es lo esperado en los pasos 1 y 2. En el paso 4 no debe salir.
@@ -815,6 +849,8 @@ Después se repite el paso 1. El CNAME `inversiones` queda en el DNS hasta que s
 - **`importar-precios` (paso 13):** imprime `CSV de cierres · filas · especies` y el reporte de `precios:actualizar`. Si el CSV cubre el día de corte, «verificados en el rango» cuenta los cierres de ese día que cuadran (±1 %) con la certificación; uno que no cuadra queda NO_VERIFICADO y lo muestra la conciliación del paso 14. Con salida 3: especies sin acción activa con lotes (`ESPECIE_NO_REGISTRADA`, por su línea del CSV), otro símbolo de Yahoo registrado (`SIMBOLO_DISTINTO`), un fallo del guardado o un año sin calendario: se para y se avisa.
 - **`conciliar-certificacion` (paso 14):** guarda una conciliación nueva, ahora con los valores del fondo y los precios; la anterior queda en la historia. Con `fecha_corte_dudosa` y un día sugerido, sigue el paso 15.
 - **`corregir-corte-certificacion` (paso 15):** imprime qué se retiró y qué quedó (filas, cargas en `REVERTIDO`), los cierres re-verificados de cada día y el siguiente paso; nunca cifras, especies ni el correo.
+- **`importar-series` (paso 16):** imprime `CSV de series · filas · series` y, por serie, las filas nuevas, revisadas, retiradas y sin cambios, y hasta qué día llega. Si una serie está atrasada no lo dice la carga: lo dice la lectura de las series (su frescura).
+- **`importar-decretos` (paso 17):** imprime el modo (ENSAYO o APLICAR), las filas por registrar o registradas (nuevas, versiones, anulaciones, sin cambios) y, al aplicar, el id de la carga.
 
 **Después de la carga:**
 1. **Revisión, de solo lectura:**
@@ -831,6 +867,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.18 · 2026-11-22 · 04:14 (-05) · Inversiones · Fábrica Inversiones (frente datos-oficiales-carga, C3) · §11: pasos 16 `importar-series` y 17 `importar-decretos` por el sobre (orden, cabecera, temporal y tope, ensayo y `--aplicar`, `CRUCE_PENDIENTE` hasta C5b, salidas y la frase de parar); `importar-series` entre los comandos de cabecera vacía (v2.18 sobre la v2.17 de main)
 > v2.17 · 2026-11-22 · 00:25 (-05) · Inversiones · Fábrica Inversiones (frente familia-lectura) · §4.4: el acceso de un familiar en solo lectura (`acceso-familiar.sh`: alta, `--revocar`, `--reiniciar-totp`; solo Jelk; lista blanca e `inv_dueno`) (v2.17 sobre la v2.16 de main)
 > v2.16 · 2026-11-21 · 23:26 (-05) · Inversiones · Fábrica Inversiones (frente docs-tanda-21nov) · §1: `inv-008-precios` entre los servicios, la variable `precios` y `inv-008-red-precios` con salida; §4.3: espera de la medición (120 s o 600 s), verificación del servicio de precios, vuelta atrás con precios; §5: regla de la espera, piso de memoria con salida 3, reversa con el clon en el sha que corre o uno posterior, `INV_ESPERA_MEDICION_S`, y el servicio de precios (qué es, secreto, despliegue, `--ahora`, huella); §6: retención nueva; §11: salidas de `registrar-escision` y `lote-escision` (v2.16 sobre la v2.15)
 > v2.15 · 2026-11-21 · 23:01 (-05) · Inversiones · Fábrica Inversiones (frente limites-reaplicar) · §5 «Límites de memoria»: el reload diario del host deja `memory.swap.max` en `max`; `desplegar-prod.sh` y `reanudar-008.sh` reaplican mem = memswap con `docker update` (antes de tocar nada y antes del chequeo), el comando `reaplicar-limites-008.sh`, el aviso de `medir-memoria.sh`, el ensayo en Colima y lo que decide PI; reglas: la excepción de `docker update` (v2.15 sobre la v2.14 de main)
