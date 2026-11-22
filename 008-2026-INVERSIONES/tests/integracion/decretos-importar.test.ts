@@ -82,10 +82,10 @@ afterAll(async () => {
 });
 
 describe("importar-decretos · ensayo y rechazos (no escriben nada)", () => {
-  it("el ensayo valida, planifica y cuenta sin escribir nada; esta base (de pruebas) admitiría --aplicar", async () => {
+  it("el ensayo valida, planifica y cuenta sin escribir nada (sin decir nada de la base: la guarda de C4a se retiró)", async () => {
     const antes = await huella();
     const r = await importar([fila(nemo("A")), fila(nemo("A"), { cuota: "2", fecha_ex: "2021-09-08", fecha_pago: "2021-09-15" })], false);
-    expect(r).toEqual({ modo: "ENSAYO", estado: "LISTO", conteos: { filas: 2, nuevos: 2, versiones: 0, anulaciones: 0, sinCambios: 0 }, cargaId: null, aplicarPermitido: true });
+    expect(r).toEqual({ modo: "ENSAYO", estado: "LISTO", conteos: { filas: 2, nuevos: 2, versiones: 0, anulaciones: 0, sinCambios: 0 }, cargaId: null });
     expect(await huella()).toEqual(antes);
   });
 

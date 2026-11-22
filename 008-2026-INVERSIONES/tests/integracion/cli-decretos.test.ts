@@ -58,7 +58,8 @@ describe("importar-decretos como proceso", { timeout: 12 * POR_CLI_MS }, () => {
     comprobar(correr(["--archivo", join(carpeta, "no-existe.csv"), "--email", email]), 2, "ARCHIVO_ILEGIBLE");
     mkdirSync(join(carpeta, "carpeta.csv"));
     comprobar(correr(["--archivo", join(carpeta, "carpeta.csv"), "--email", email]), 2, "ARCHIVO_NO_REGULAR");
-    expect(correr([]).texto).toContain("NO cargue decretos reales");
+    // La ayuda ya no pide esperar el cruce (C5b): --aplicar escribe en la base de DATABASE_URL, sea cual sea.
+    expect(correr([]).texto).not.toMatch(/NO cargue decretos reales|CRUCE_PENDIENTE/);
   });
 
   it("rechazado (3): CSV inválido o especie no registrada, con la línea y el código; no escribe nada", async () => {

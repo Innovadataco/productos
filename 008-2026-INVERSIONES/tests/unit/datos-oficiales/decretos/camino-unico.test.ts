@@ -1,7 +1,7 @@
 // Candado del camino ÚNICO de escritura de dividendo_decretado (fase C, C4a): solo src/datos-oficiales/decretos/guardar.ts
 // crea (create) y retira (updateMany) decretos. La base no impone la cadena de versiones (condición de C1): un segundo
-// camino podría dejar una v2 sin v1, un número que no sigue al anterior, un retiro sin sucesor o saltarse la guarda
-// del cruce (CRUCE_PENDIENTE, hasta C5b). También: el tipo de fuente REGISTRO_DECRETOS solo aparece en
+// camino podría dejar una v2 sin v1, un número que no sigue al anterior o un retiro sin sucesor. También: el tipo de
+// fuente REGISTRO_DECRETOS solo aparece en
 // src/datos-oficiales/decretos/ (ninguna otra carga crea filas crudas de decretos). Recorre src/ y scripts/.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";

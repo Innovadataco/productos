@@ -9,7 +9,7 @@ const LOCAL = { produccion: false };
 const PROD = { produccion: true };
 const CONTEOS = { filas: 7, nuevos: 3, versiones: 2, anulaciones: 1, sinCambios: 1 };
 const ok = (r: Partial<Extract<ResultadoDecretos, { conteos: unknown }>>): ResultadoDecretos =>
-  ({ modo: "ENSAYO", estado: "LISTO", conteos: CONTEOS, cargaId: null, aplicarPermitido: true, ...r }) as ResultadoDecretos;
+  ({ modo: "ENSAYO", estado: "LISTO", conteos: CONTEOS, cargaId: null, ...r }) as ResultadoDecretos;
 const texto = (r: ResultadoDecretos, o = LOCAL) => {
   const s = salidaDecretos(r, o);
   return { codigo: s.codigoSalida, todo: [...s.lineas, ...s.errores].join("\n"), s };
@@ -29,10 +29,12 @@ describe("decretos · salida del CLI", () => {
     expect(prod.todo).not.toContain(PARE_VIA_B);
   });
 
-  it("ensayo en una base que no admite aplicar: 0, pero dice CRUCE_PENDIENTE y por qué (C5b, contaría dos veces)", () => {
-    const { codigo, todo } = texto(ok({ aplicarPermitido: false }));
-    expect(codigo).toBe(0);
-    expect(todo).toMatch(/CRUCE_PENDIENTE.*C5b.*dos veces/);
+  it("el ensayo ya no habla de una guarda del cruce (C5b la retiró): ni CRUCE_PENDIENTE, ni C5b, ni «bloqueado»", () => {
+    for (const o of [LOCAL, PROD]) {
+      const { codigo, todo } = texto(ok({}), o);
+      expect(codigo).toBe(0);
+      expect(todo).not.toMatch(/CRUCE_PENDIENTE|C5b|bloquead|dos veces/);
+    }
   });
 
   it("aplicado: 0 con el id de la carga; sin cambios: 0 y que no escribió", () => {
@@ -51,17 +53,17 @@ describe("decretos · salida del CLI", () => {
       modo: "APLICAR", estado: "RECHAZADO", total: 4,
       hallazgos: [
         { linea: 3, columna: "especie", codigo: "ESPECIE_NO_REGISTRADA" }, { linea: 5, columna: "especie", codigo: "ESPECIE_NO_REGISTRADA" },
-        { linea: 6, columna: "moneda", codigo: "MONEDA_NO_ADMITIDA" }, { linea: 0, columna: null, codigo: "CRUCE_PENDIENTE" },
+        { linea: 6, columna: "moneda", codigo: "MONEDA_NO_ADMITIDA" }, { linea: 0, columna: null, codigo: "USUARIO_NO_AUTORIZADO" },
       ],
     };
     const { codigo, todo, s } = texto(r);
     expect(codigo).toBe(3);
     expect(todo).toContain("Rechazado, no se escribió nada · 4 hallazgo(s)");
     expect(todo).toContain("línea 3 · especie · ESPECIE_NO_REGISTRADA");
-    expect(todo).toContain("todo el archivo · CRUCE_PENDIENTE");
+    expect(todo).toContain("todo el archivo · USUARIO_NO_AUTORIZADO");
     expect(todo.match(/ESPECIE_NO_REGISTRADA: /g)).toHaveLength(1);
     expect(todo).toMatch(/MONEDA_NO_ADMITIDA: .*P11/);
-    expect(todo).toMatch(/CRUCE_PENDIENTE: .*C5b/);
+    expect(todo).toMatch(/USUARIO_NO_AUTORIZADO: .*dueño activo/);
     expect(s.errores.at(-1)).not.toBe(PARE_VIA_B);
     expect(salidaDecretos(r, PROD).errores.at(-1)).toBe(PARE_VIA_B);
   });
@@ -74,7 +76,7 @@ describe("decretos · salida del CLI", () => {
 
   it("nunca recomienda comprar ni vender", () => {
     const todos = [
-      texto(ok({})).todo, texto(ok({ aplicarPermitido: false })).todo,
+      texto(ok({})).todo, texto(ok({}), PROD).todo,
       texto({ modo: "ENSAYO", estado: "RECHAZADO", total: 1, hallazgos: [{ linea: 0, columna: null, codigo: "CADENA_ROTA" }] }).todo,
     ].join("\n");
     expect(todos).not.toMatch(/\b(compr[ae]|vend[ae]|recomendamos)\b/i);

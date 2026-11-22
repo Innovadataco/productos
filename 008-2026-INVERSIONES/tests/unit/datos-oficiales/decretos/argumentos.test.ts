@@ -1,6 +1,7 @@
 // Argumentos y ayuda de scripts/importar-decretos.ts (fase C, C4a: src/datos-oficiales/decretos/argumentos.ts):
-// estrictos, sin repetir la ruta ni el correo, y la ayuda dice la condición que dejó C1 (no cargar decretos reales
-// hasta el cruce por ventana, C5b). En producción, la ayuda de la vía B: sin `npx tsx`. Datos inventados.
+// estrictos, sin repetir la ruta ni el correo, y la ayuda dice qué queda en claro en la base. La condición que dejó C1
+// (no cargar decretos reales hasta el cruce por ventana) se cumplió en C5b: la ayuda ya no la dice. En producción, la
+// ayuda de la vía B: sin `npx tsx`. Datos inventados.
 import { describe, expect, it } from "vitest";
 import { PARE_VIA_B } from "@/cli/via-b";
 import { USO_IMPORTAR_DECRETOS, USO_VIA_B_DECRETOS, leerArgumentosDecretos, salidaUso } from "@/datos-oficiales/decretos/argumentos";
@@ -46,12 +47,9 @@ describe("decretos · argumentos", () => {
 });
 
 describe("decretos · ayuda", () => {
-  it("dice el comando, el ensayo, las salidas y la condición de C1 (no cargar decretos reales hasta C5b)", () => {
+  it("dice el comando, el ensayo y las salidas; ya no la condición de C1 (C5b cruza por ventana)", () => {
     for (const texto of [USO_IMPORTAR_DECRETOS, USO_VIA_B_DECRETOS]) {
-      expect(texto).toMatch(/NO cargue decretos reales/);
-      expect(texto).toMatch(/C5b/);
-      expect(texto).toMatch(/dos veces/);
-      expect(texto).toMatch(/CRUCE_PENDIENTE/);
+      expect(texto).not.toMatch(/NO cargue decretos reales|C5b|dos veces|CRUCE_PENDIENTE|_test/);
       // Solo el crudo va cifrado: la nota y la referencia quedan en claro en la base (decisión de esquema de C1).
       expect(texto).toMatch(/nota y la referencia quedan en claro/);
       expect(texto).toMatch(/0 bien · 1 .* · 2 .* · 3 rechazado/);
