@@ -2,7 +2,7 @@
  * Qué hacer con las filas de una serie frente a sus vigentes en la base (fase C, C2a). Puro: lo usa el camino único
  * (guardar.ts) dentro de la transacción de cada lote, sobre lo que acaba de leer.
  * - Sin vigente que se solape: la fila entra NUEVA.
- * - Un solo vigente con el mismo desde, el mismo hasta y el mismo valor (como decimal: 9.5 = 9.50000000): SIN CAMBIOS.
+ * - Un solo vigente con el mismo desde, el mismo hasta y el mismo valor (como decimal: 9.53 = 9.53000000): SIN CAMBIOS.
  *   La fuente no entra en la comparación: si entrara, cada anexo mensual del DANE reescribiría toda la historia.
  * - Cualquier otra cosa: REVISIÓN. Se retiran TODOS los vigentes que se solapan con la fila (cada uno una sola vez,
  *   aunque toque varias filas) y la fila entra; los días de un retirado que ninguna fila nueva cubre se cuentan (la

@@ -15,9 +15,9 @@ describe("planificar", () => {
     expect(planificar(filas, [])).toEqual({ nuevas: filas, revisadas: [], sinCambios: 0, aRetirar: [], diasDescubiertos: 0, extremoRetirado: null });
   });
 
-  it("igual vigencia e igual valor (también con otra escala en la base): sin cambios", () => {
-    const p = planificar([fila("2027-03-08", "2027-03-08", "9.5"), fila("2027-03-09", "2027-03-09", "9.37")], [
-      vigente("a", "2027-03-08", "2027-03-08", "9.50000000"), vigente("b", "2027-03-09", "2027-03-09", "9.37"),
+  it("igual vigencia e igual valor (también con ceros de más en la base): sin cambios", () => {
+    const p = planificar([fila("2027-03-08", "2027-03-08", "9.53"), fila("2027-03-09", "2027-03-09", "9.37")], [
+      vigente("a", "2027-03-08", "2027-03-08", "9.53000000"), vigente("b", "2027-03-09", "2027-03-09", "9.37"),
     ]);
     expect(p).toEqual({ nuevas: [], revisadas: [], sinCambios: 2, aRetirar: [], diasDescubiertos: 0, extremoRetirado: null });
   });
@@ -76,7 +76,7 @@ describe("planificar", () => {
 });
 
 describe("finDeLote", () => {
-  const filas = [fila("2027-03-05", "2027-03-05", "1.7"), fila("2027-03-06", "2027-03-07", "1.7"), fila("2027-03-08", "2027-03-08", "1.7"), fila("2027-03-09", "2027-03-09", "1.7")];
+  const filas = [fila("2027-03-05", "2027-03-05", "1.73"), fila("2027-03-06", "2027-03-07", "1.73"), fila("2027-03-08", "2027-03-08", "1.73"), fila("2027-03-09", "2027-03-09", "1.73")];
 
   it("sin nada retirado, o si lo retirado termina antes de la fila siguiente, el corte no se mueve", () => {
     expect(finDeLote(filas, 1, null)).toBe(1);
