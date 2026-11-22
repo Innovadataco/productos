@@ -13,7 +13,8 @@
  *   ventana (C5b), solo se escribe en una base de pruebas (nombre terminado en `_test`, el de la conexión que escribe):
  *   si no, el motor contaría dos veces un pago de Trii que llega otro día. En otra base: CRUCE_PENDIENTE. C5b la quita
  *   (exigirCruce, basePermiteAplicar y el aviso de la ayuda en argumentos.ts, juntos).
- * - La transacción fija lock_timeout (10 s): con la tabla tomada por una migración no espera los 60 s. El orden
+ * - Después del candado consultivo, la transacción fija lock_timeout (10 s): con la tabla tomada por una migración no
+ *   espera los 60 s; la espera de otra carga de decretos la acota el timeout de la transacción. El orden
  *   de lectura es dividendo_decretado y después fila_fuente; la migración de C1 toma fila_fuente primero: una migración
  *   futura que tome las dos debe correr con las cargas detenidas (si se cruzan, PostgreSQL aborta una; nada se corrompe).
  * - El nombre del archivo del dueño no se guarda (puede nombrar una especie): la carga dice NOMBRE_ARCHIVO; la identifica
@@ -229,9 +230,11 @@ export type ResultadoGuardar =
 
 async function enTransaccion(tx: Tx, e: EntradaGuardar): Promise<ResultadoGuardar> {
   await exigirCruce(tx);
-  // Lo más que espera por un candado de tabla (una migración); el consultivo lo acota el timeout de la transacción.
-  await tx.$executeRaw`SET LOCAL lock_timeout = '10s'`;
+  // Primero el candado consultivo, sin lock_timeout (que también lo cortaría): otra carga de decretos puede tardar más
+  // de 10 s (2.000 cambios, unos 21 s); esa espera la acota el timeout de la transacción. Después, lo más que se espera
+  // por un candado de tabla (una migración) son 10 s.
   await tomarCandado(tx, TIPO_FUENTE);
+  await tx.$executeRaw`SET LOCAL lock_timeout = '10s'`;
   const versiones = await leerVersiones(tx, e.resueltos.map((r) => r.instrumentoId));
   const { planes, hallazgos } = planificarTodos(e.resueltos, versiones);
   if (hallazgos.length > 0) return { estado: "RECHAZADO", hallazgos };
