@@ -459,6 +459,20 @@ describe("inv_solo_retiro: para todos los roles (aquí, el superusuario), sin sa
     });
   }
 
+  // Falla cerrada (security-reviewer, BAJO): si el disparador no le pasa una columna de la tabla, jsonb_populate_record
+  // ignoraría la clave y la hora del cliente quedaría; con reemplazadoEn, la fila nacería retirada.
+  it("si el disparador no nombra una columna de la hora del registro, la inserción falla cerrada", async () => {
+    for (const argumentos of ["", "'otra'", "'reemplazadoEn'", "'traidoEn', 'otra'"]) {
+      expect(await enTransaccionDeshecha(async (tx) => {
+        await tx.$executeRawUnsafe('DROP TRIGGER "valor_serie_oficial_retiro" ON "valor_serie_oficial"');
+        await tx.$executeRawUnsafe(
+          `CREATE TRIGGER "valor_serie_oficial_retiro" BEFORE INSERT OR UPDATE OR DELETE ON "valor_serie_oficial" FOR EACH ROW EXECUTE FUNCTION "inv_solo_retiro"(${argumentos})`,
+        );
+        await serie(tx);
+      }), argumentos || "sin argumento").toMatch(/el disparador no nombra la columna de la hora del registro/);
+    }
+  });
+
   it("dividendo_decretado: al retirar no se puede marcar anulada (la anulación es una versión nueva)", async () => {
     expect(await enTransaccionDeshecha(async (tx) => {
       const id = await decreto(tx, await base(tx), { version: 2, nota: "nota ficticia" });
