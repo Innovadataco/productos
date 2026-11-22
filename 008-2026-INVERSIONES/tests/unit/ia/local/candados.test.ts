@@ -87,4 +87,21 @@ describe("candados de src/ia/local", () => {
     const otros = codigo.filter((p) => path.basename(p) !== "modelos.ts").map(leer);
     expect(otros.some((texto) => /MODELOS_APROBADOS|modelosAprobados|aprobados\s*[?]?:/.test(texto))).toBe(false);
   });
+
+  // E8: la lista la publica PI en un archivo. Solo modelos.ts lee la variable y el disco; ningún otro módulo de la
+  // puerta local mira el entorno ni abre archivos (la configuración entra por `crearGeneradorLocal`).
+  it("solo modelos.ts lee el entorno y el disco", () => {
+    expect(leeEntornoODisco('const d = process.env[VARIABLE_DIR_COMPARTIDA];')).toBe(true);
+    expect(leeEntornoODisco('import { readFileSync } from "node:fs";')).toBe(true);
+    expect(leeEntornoODisco('import { openSync } from "fs";')).toBe(true);
+    expect(leeEntornoODisco("const x = configuracion.destino;")).toBe(false);
+    const otros = codigo.filter((p) => path.basename(p) !== "modelos.ts");
+    expect(otros.filter((p) => leeEntornoODisco(leer(p))).map((p) => path.basename(p))).toEqual([]);
+    expect(leeEntornoODisco(leer(path.join(SRC_LOCAL, "modelos.ts")))).toBe(true);
+  });
 });
+
+/** ¿Lee el entorno (`process`) o importa el sistema de archivos? */
+function leeEntornoODisco(codigo: string): boolean {
+  return /\bprocess\b/.test(codigo) || /from\s+["'](?:node:)?fs(?:\/promises)?["']/.test(codigo);
+}
