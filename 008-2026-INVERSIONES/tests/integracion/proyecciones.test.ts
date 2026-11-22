@@ -1,10 +1,11 @@
 // Integración del lector del motor de proyecciones (hito 2 del PRD de visualización y proyecciones). Datos INVENTADOS
 // y cifras raras. La base se comparte con los demás archivos: todo se busca por los nemotécnicos de esta corrida y el
 // cálculo puro se corre sobre las entradas filtradas a lo de esta corrida.
-// Fechas: la historia de cierres y del fondo es de 2019-2020 (antes de 2022; cierres y fondo no entran en la guarda de
-// conciliacion.test.ts). Órdenes, dividendos y escisiones van en diciembre de 2027: después de todos los cortes de los
-// demás archivos, en el año sembrado (el importador exige el calendario) y nunca antes de 2023 (esa guarda). Los
-// cierres de las especies vivas terminan en 2020: no mueven la fecha de referencia del tablero (16-nov-2027).
+// Fechas: la historia de cierres y de valores del fondo es de 2019-2020 (antes de 2022; no entran en la guarda de
+// conciliacion.test.ts). Órdenes, dividendos, escisiones y los movimientos del fondo (con su ajuste de caja) van en
+// diciembre de 2027: después de todos los cortes de los demás archivos, en el año sembrado (el importador exige el
+// calendario) y nunca antes de 2023 (esa guarda). Los cierres de las especies vivas terminan en 2020: no mueven la
+// fecha de referencia del tablero (16-nov-2027).
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { cifrarCrudo } from "@/cifrado/campos";
@@ -99,17 +100,26 @@ beforeAll(async () => {
   fondoId = (await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `9${corrida}1`, nombre: "Fondo ficticio de proyecciones" } })).id;
   fondoVacioId = (await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `9${corrida}2`, nombre: "Fondo ficticio sin valores" } })).id;
   fondoCeroId = (await db.instrumento.create({ data: { tipo: "FIC", codigoFic: `9${corrida}3`, nombre: "Fondo ficticio retirado" } })).id;
-  await db.movimientoFondo.createMany({
-    data: [
-      { fondoId, fecha: dia("2019-01-03"), unidades: new Prisma.Decimal("1237.4321"), tipo: "CONSTITUCION", fuente: "MANUAL" },
-      { fondoId, fecha: dia("2019-05-08"), unidades: new Prisma.Decimal("311.2468"), tipo: "APORTE", fuente: "MANUAL" },
-      { fondoId, fecha: dia("2019-09-10"), unidades: new Prisma.Decimal("48.7519"), tipo: "RETIRO", fuente: "MANUAL" },
-      { fondoId, fecha: dia("2028-02-09"), unidades: new Prisma.Decimal("97.13"), tipo: "APORTE", fuente: "MANUAL" }, // después de hoy
-      { fondoId: fondoVacioId, fecha: dia("2019-01-03"), unidades: new Prisma.Decimal("7.31"), tipo: "CONSTITUCION", fuente: "MANUAL" },
-      { fondoId: fondoCeroId, fecha: dia("2019-01-03"), unidades: new Prisma.Decimal("7.13"), tipo: "CONSTITUCION", fuente: "MANUAL" },
-      { fondoId: fondoCeroId, fecha: dia("2019-02-06"), unidades: new Prisma.Decimal("7.13"), tipo: "RETIRO", fuente: "MANUAL" },
-    ],
-  });
+  // Una constitución o un aporte llevan su ajuste de caja APORTE_FIC de la misma fecha y con −monto (migración
+  // movimiento_fondo_reglas, como en fondo-corte.test.ts). En dic-2027: un ajuste antes de 2023 rompe la guarda de
+  // conciliacion.test.ts, y ninguna fecha de corte de los demás archivos llega a diciembre de 2027.
+  const pagado = async (fondo: string, fecha: string, unidades: string, monto: string, tipo: "CONSTITUCION" | "APORTE") => {
+    const ajuste = await db.ajusteCaja.create({
+      data: { fecha: dia(fecha), monto: new Prisma.Decimal(`-${monto}`), categoria: "APORTE_FIC", fuente: "MANUAL", motivo: "aporte ficticio", creadoPorId: duenoId },
+    });
+    await db.movimientoFondo.create({
+      data: { fondoId: fondo, fecha: dia(fecha), unidades: new Prisma.Decimal(unidades), monto: new Prisma.Decimal(monto), tipo, fuente: "MANUAL", ajusteCajaId: ajuste.id },
+    });
+  };
+  const retiro = (fondo: string, fecha: string, unidades: string) =>
+    db.movimientoFondo.create({ data: { fondoId: fondo, fecha: dia(fecha), unidades: new Prisma.Decimal(unidades), tipo: "RETIRO", fuente: "MANUAL" } });
+  await pagado(fondoId, "2027-12-20", "1237.4321", "15731.4129", "CONSTITUCION");
+  await pagado(fondoId, "2027-12-21", "311.2468", "3961.2273", "APORTE");
+  await retiro(fondoId, "2027-12-22", "48.7519");
+  await pagado(fondoId, "2028-02-09", "97.13", "1247.5361", "APORTE"); // después de hoy
+  await pagado(fondoVacioId, "2027-12-20", "7.31", "93.0817", "CONSTITUCION");
+  await pagado(fondoCeroId, "2027-12-20", "7.13", "91.3349", "CONSTITUCION");
+  await retiro(fondoCeroId, "2027-12-21", "7.13");
   const vu = (j: number) => new Prisma.Decimal((12731.4419 * 1.00013 ** j).toFixed(8));
   await db.valorUnidadFondo.createMany({
     data: [
