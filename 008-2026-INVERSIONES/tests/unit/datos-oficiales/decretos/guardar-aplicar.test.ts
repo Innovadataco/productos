@@ -1,6 +1,6 @@
 // La transacción del camino único de dividendo_decretado (fase C, C4a: guardarDecretos) contra una base de mentira que
-// anota cada llamada: la guarda del cruce corre ANTES de cualquier escritura y con la misma conexión que escribe
-// (CRUCE_PENDIENTE en una base que no es de pruebas), el retiro va antes de la inserción y, si no cuenta 1, la
+// anota cada llamada: desde C5b (el motor de proyecciones ya cruza por ventana) aplica en CUALQUIER base, sin consultar
+// su nombre (la guarda CRUCE_PENDIENTE de C4a se retiró), el retiro va antes de la inserción y, si no cuenta 1, la
 // inserción no ocurre (CONFLICTO_CONCURRENTE); un P2002 al insertar el decreto (otro escritor se adelantó con esa
 // vigente o esa versión) también es CONFLICTO_CONCURRENTE, pero uno en la fila cruda es un defecto propio y sube; la
 // transacción fija su lock_timeout; sin cambios no se crea la carga; otro error sube tal cual. La integración (tests/integracion/decretos-importar.test.ts) lo repite
@@ -37,7 +37,8 @@ function baseFalsa(o: Opciones = {}) {
     return valor;
   };
   const tx = {
-    $queryRaw: anotar("nombreDeLaBase", [{ nombre: o.base ?? "inversiones_test" }]),
+    // Una base que NO es de pruebas: si alguien volviera a preguntar su nombre, la llamada queda anotada.
+    $queryRaw: anotar("nombreDeLaBase", [{ nombre: o.base ?? "inversiones" }]),
     $executeRaw: async (partes: TemplateStringsArray) => {
       llamadas.push(partes.join("?").includes("lock_timeout") ? "lockTimeout" : "candado");
       return 0;
@@ -72,25 +73,26 @@ const vigente = (cambios: Record<string, unknown> = {}) => ({
 });
 
 describe("decretos · guardarDecretos (la transacción)", () => {
-  it("en una base que no es de pruebas: CRUCE_PENDIENTE, y la guarda es lo primero (ni candado ni lecturas ni escrituras)", async () => {
-    for (const base of ["inversiones", "inversiones_test_x", "otra"]) {
+  it("--aplicar funciona fuera de una base de pruebas (C5b retiró la guarda): aplica y nunca consulta el nombre de la base", async () => {
+    for (const base of ["inversiones", "inversiones_test_x", "otra", "inversiones_test"]) {
       const { db, llamadas } = baseFalsa({ base });
-      expect(await guardarDecretos(db, entrada()), base).toEqual({ estado: "RECHAZADO", hallazgos: [{ linea: 0, columna: null, codigo: "CRUCE_PENDIENTE" }] });
-      expect(llamadas, base).toEqual(["nombreDeLaBase"]);
+      expect(await guardarDecretos(db, entrada()), base).toMatchObject({ estado: "APLICADO", conteos: { nuevos: 1 } });
+      expect(llamadas, base).not.toContain("nombreDeLaBase");
+      expect(llamadas[0], base).toBe("candado");
     }
   });
 
-  it("un decreto nuevo: guarda, candado (sin lock_timeout: otra carga puede tardar más), lock_timeout, relee, crea la carga, la fila cruda (y su visto) y la v1", async () => {
+  it("un decreto nuevo: candado (sin lock_timeout: otra carga puede tardar más), lock_timeout, relee, crea la carga, la fila cruda (y su visto) y la v1", async () => {
     const { db, llamadas } = baseFalsa();
     const r = await guardarDecretos(db, entrada());
     expect(r).toEqual({ estado: "APLICADO", cargaId: "carga-1", conteos: { filas: 1, nuevos: 1, versiones: 0, anulaciones: 0, sinCambios: 0 } });
-    expect(llamadas).toEqual(["nombreDeLaBase", "candado", "lockTimeout", "leerVersiones", "crearCarga", "crearFilaFuente", "verFila", "crearDecreto"]);
+    expect(llamadas).toEqual(["candado", "lockTimeout", "leerVersiones", "crearCarga", "crearFilaFuente", "verFila", "crearDecreto"]);
   });
 
   it("un cambio: primero el retiro de la vigente y después la versión siguiente", async () => {
     const { db, llamadas } = baseFalsa({ guardadas: [vigente()] });
     expect(await guardarDecretos(db, entrada())).toMatchObject({ estado: "APLICADO", conteos: { versiones: 1 } });
-    expect(llamadas.slice(4)).toEqual(["crearCarga", "retirar", "crearFilaFuente", "verFila", "crearDecreto"]);
+    expect(llamadas.slice(3)).toEqual(["crearCarga", "retirar", "crearFilaFuente", "verFila", "crearDecreto"]);
   });
 
   it("si el retiro no cuenta 1 (otro lo retiró): CONFLICTO_CONCURRENTE con su línea, y la versión siguiente no se inserta", async () => {
@@ -115,12 +117,12 @@ describe("decretos · guardarDecretos (la transacción)", () => {
   it("sin cambios: no se crea la carga ni nada más", async () => {
     const { db, llamadas } = baseFalsa({ guardadas: [vigente({ valorPorAccion: new Prisma.Decimal("1873.204517") })] });
     expect(await guardarDecretos(db, entrada())).toEqual({ estado: "SIN_CAMBIOS", conteos: { filas: 1, nuevos: 0, versiones: 0, anulaciones: 0, sinCambios: 1 } });
-    expect(llamadas).toEqual(["nombreDeLaBase", "candado", "lockTimeout", "leerVersiones"]);
+    expect(llamadas).toEqual(["candado", "lockTimeout", "leerVersiones"]);
   });
 
   it("la cadena rota que aparece al releer dentro de la transacción rechaza sin escribir", async () => {
     const { db, llamadas } = baseFalsa({ guardadas: [vigente({ version: 2 })] });
     expect(await guardarDecretos(db, entrada())).toEqual({ estado: "RECHAZADO", hallazgos: [{ linea: 2, columna: null, codigo: "CADENA_ROTA" }] });
-    expect(llamadas).toEqual(["nombreDeLaBase", "candado", "lockTimeout", "leerVersiones"]);
+    expect(llamadas).toEqual(["candado", "lockTimeout", "leerVersiones"]);
   });
 });

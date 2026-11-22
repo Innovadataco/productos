@@ -47,7 +47,7 @@ export interface ValorUnidad {
 export interface DividendoLeido {
   readonly fechaPago: Date;
   readonly montoNeto: number;
-  /** Siempre nulo desde la fase C (migración *_datos_oficiales): el enlace no se guarda; el cruce llegará con C5b. */
+  /** Siempre nulo desde la fase C (migración *_datos_oficiales): el enlace no se guarda; el cruce es por ventana (C5b). */
   readonly decretadoId: string | null;
 }
 export interface DecretoLeido {

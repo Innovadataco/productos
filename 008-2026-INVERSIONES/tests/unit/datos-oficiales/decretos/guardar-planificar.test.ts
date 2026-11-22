@@ -1,12 +1,12 @@
 // La parte pura del camino único de dividendo_decretado (fase C, C4a: src/datos-oficiales/decretos/guardar.ts).
 // La base no impone la cadena de versiones (condición de C1): `planificar` debe morder una v2 sin v1, un número de
 // versión que no sigue al anterior, un retiro sin sucesor, dos vigentes y una vigente que no es la última
-// (CADENA_ROTA), y anular sin decreto (ANULACION_SIN_DECRETO). También la clave natural de la fila cruda, la guarda del
-// cruce por nombre de base y los conteos. Datos inventados.
+// (CADENA_ROTA), y anular sin decreto (ANULACION_SIN_DECRETO). También la clave natural de la fila cruda y los conteos
+// (la guarda del cruce por nombre de base se retiró en C5b). Datos inventados.
 import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import {
-  basePermiteAplicar, claveDecreto, claveNaturalDecreto, contar, hayCambios, mismoContenido, planificar, planificarTodos,
+  claveDecreto, claveNaturalDecreto, contar, hayCambios, mismoContenido, planificar, planificarTodos,
   type DecretoResuelto, type VersionGuardada,
 } from "@/datos-oficiales/decretos/guardar";
 import type { DecretoLeido } from "@/datos-oficiales/decretos/filas";
@@ -112,7 +112,7 @@ describe("decretos · planificar el archivo y contar", () => {
   });
 });
 
-describe("decretos · clave natural de la fila cruda y guarda del cruce", () => {
+describe("decretos · clave natural de la fila cruda", () => {
   it("la clave natural: sha256 de la clave del decreto y la versión; otra versión u otra clave dan otra; el contenido no cuenta", () => {
     const k = claveNaturalDecreto("ins-a", DECRETO, 1);
     expect(k).toMatch(/^[0-9a-f]{64}$/);
@@ -121,10 +121,4 @@ describe("decretos · clave natural de la fila cruda y guarda del cruce", () => 
       claveNaturalDecreto("ins-a", con({ tipo: "EXTRAORDINARIO" }), 1), claveNaturalDecreto("ins-a", con({ fechaAnuncio: dia("2021-03-18") }), 1)]).size).toBe(6);
   });
 
-  it("solo una base de pruebas (minúsculas, terminada en _test) admite aplicar hasta C5b", () => {
-    for (const si of ["inversiones_test", "inversiones_decretos_test", "x_test"]) expect(basePermiteAplicar(si), si).toBe(true);
-    for (const no of ["inversiones", "inversiones_test_x", "INVERSIONES_TEST", "inversiones-test", "test", "_test", "", "inversiones_test "]) {
-      expect(basePermiteAplicar(no), no).toBe(false);
-    }
-  });
 });

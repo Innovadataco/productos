@@ -18,8 +18,9 @@ const fuente = (archivo: string) => readFileSync(path.join(CARPETA, archivo), "u
 /** Importaciones con valor (no `import type` ni `export type`) de un archivo: import/export … from, import() y require(). */
 const IMPORTACION = /^(?:import|export)\s+(?!type\b)(?:[^"';()=]*?from\s+)?["']([^"']+)["']|\b(?:import|require)\(\s*["']([^"']+)["']\s*\)/gm;
 const importaciones = (texto: string) => [...texto.matchAll(IMPORTACION)].map((m) => (m[1] ?? m[2])!);
-/** Lo único que un módulo puro puede importar con valor fuera de su carpeta: módulos puros ya existentes. */
-const PUROS_DE_AFUERA = new Set(["../plan/tenencia", "../plan/fechas", "../precios/horario"]);
+/** Lo único que un módulo puro puede importar con valor fuera de su carpeta: módulos puros ya existentes. La ventana del
+ * cruce de los decretos (C5b) es pura (solo fechas; su prueba lo fija): el motor cruza igual que la pantalla. */
+const PUROS_DE_AFUERA = new Set(["../plan/tenencia", "../plan/fechas", "../precios/horario", "../datos-oficiales/decretos/ventana"]);
 
 describe("frontera del motor de proyecciones", () => {
   it("leer.ts y proyectar.ts cargan server-only como primera importación", async () => {
