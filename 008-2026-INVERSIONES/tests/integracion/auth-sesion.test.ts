@@ -57,10 +57,17 @@ describe("validarSesion", () => {
     expect(await validarSesion(db, await token(u.id), CLAVE, AHORA)).toEqual({ id: u.id, email: u.email, rol: "DUENO" });
   });
 
+  it("un familiar activo con clave, TOTP y la versión vigente tiene sesión, con su rol FAMILIA (frente familia-lectura)", async () => {
+    const u = await cuenta({ rol: "FAMILIA" });
+    expect(await validarSesion(db, await token(u.id), CLAVE, AHORA)).toEqual({ id: u.id, email: u.email, rol: "FAMILIA" });
+  });
+
   it.each([
     ["la cuenta está inactiva", { activo: false }, 1],
     ["la versión de sesión cambió (clave cambiada o «cerrar todas»)", { sesionVersion: 2 }, 1],
-    ["el rol es FAMILIA (todavía no entra)", { rol: "FAMILIA" as const }, 1],
+    ["el familiar está revocado (inactivo)", { rol: "FAMILIA" as const, activo: false }, 1],
+    ["el familiar no tiene el TOTP activo", { rol: "FAMILIA" as const, totp: false }, 1],
+    ["la versión de sesión del familiar cambió (revocado o «Salir»)", { rol: "FAMILIA" as const, sesionVersion: 2 }, 1],
     ["la cuenta ya no tiene clave", { claveHash: null }, 1],
     ["la cuenta no tiene el TOTP activo (sin enrolar o reiniciado)", { totp: false }, 1],
   ])("no hay sesión si %s", async (_caso, datos, version) => {

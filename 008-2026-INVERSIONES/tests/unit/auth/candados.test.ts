@@ -1,7 +1,8 @@
 // Candados del login (D-014): que nada quede fuera por descuido.
 // - El proxy no toca la base ni bcrypt (solo verifica la firma; la base se lee en cada página y API).
 // - El login lee solo sus variables: no existe ninguna que lo apague.
-// - Cada página y API nueva (de cualquier frente) revalida la sesión, salvo la lista pública.
+// - Cada página y API nueva (de cualquier frente) revalida la sesión, salvo la lista pública. El guardián del dueño
+//   (exigirDueno / exigirDuenoApi, frente familia-lectura) también la revalida. Las API se buscan en todo src/app.
 // - Ninguna Server Action: un cambio del matcher la dejaría sin proxy.
 // - TOTP: las páginas y API del segundo paso exigen la pre-sesión; /totp/codigos exige la sesión; el
 //   proxy no alcanza el cifrado, el TOTP, la pre-sesión del servidor ni la librería del QR.
@@ -109,7 +110,7 @@ describe("candados del login", () => {
     expect(paginas.length).toBeGreaterThan(0);
     for (const ruta of paginas) {
       if (PAGINAS_PUBLICAS.has(rel(ruta)) || PAGINAS_PRESESION.has(rel(ruta))) continue;
-      expect(leer(ruta), rel(ruta)).toMatch(/\bexigirSesion\(\)/);
+      expect(leer(ruta), rel(ruta)).toMatch(/\b(?:exigirSesion|exigirDueno)\(\)/);
     }
   });
 
@@ -130,9 +131,9 @@ describe("candados del login", () => {
   });
 
   it("cada API que no es pública revalida la sesión", () => {
-    for (const ruta of archivos(join(SRC, "app", "api"), (r) => /\/route\.ts$/.test(r))) {
+    for (const ruta of archivos(join(SRC, "app"), (r) => /\/route\.ts$/.test(r))) {
       if (APIS_PUBLICAS.has(rel(ruta)) || APIS_PRESESION.has(rel(ruta))) continue;
-      expect(leer(ruta), rel(ruta)).toMatch(/\b(exigirSesionApi|validarSesionApi)\(/);
+      expect(leer(ruta), rel(ruta)).toMatch(/\b(exigirSesionApi|validarSesionApi|exigirDuenoApi)\(/);
     }
   });
 
