@@ -13,7 +13,9 @@ import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "@/i
 import { CONDICIONALES, PALABRAS_BASE, palabrasFueraDelVocabulario } from "@/ia/validador/vocabulario";
 import { FRASES_VALIDAS, frase, paqueteFicticio } from "./apoyo/salidas.ficticio";
 
-const PROHIBIDOS = [...PATRONES_RECOMENDACION, ...PATRONES_PREDICCION, ...PATRONES_TRATO, ...PATRONES_CIFRA_EN_PALABRAS, ...PATRONES_IDIOMA, ...PATRONES_SIN_DATO];
+/** Los patrones que valen en cualquier lugar de la frase (los anclados al inicio, como el imperativo inicial, dependen del lugar). */
+const PROHIBIDOS = [...PATRONES_RECOMENDACION, ...PATRONES_PREDICCION, ...PATRONES_TRATO, ...PATRONES_CIFRA_EN_PALABRAS, ...PATRONES_IDIOMA, ...PATRONES_SIN_DATO]
+  .filter((p) => p.antes !== "^");
 
 describe("vocabulario cerrado", () => {
   it.each(TIPOS_RESUMEN)("%s: cada etiqueta del catálogo cabe en el vocabulario", (tipo) => {
@@ -52,8 +54,8 @@ describe("vocabulario cerrado", () => {
   });
 
   it("el condicional solo vale en ESCENARIOS", () => {
-    expect(palabrasFueraDelVocabulario("El valor quedaría.", "DIARIO")).toEqual(["quedaria"]);
-    expect(palabrasFueraDelVocabulario("El valor quedaría.", "REGLAS")).toEqual(["quedaria"]);
-    expect(palabrasFueraDelVocabulario("El valor quedaría.", "ESCENARIOS")).toEqual([]);
+    expect(palabrasFueraDelVocabulario("La especie quedaría.", "DIARIO")).toEqual(["quedaria"]);
+    expect(palabrasFueraDelVocabulario("La especie quedaría.", "REGLAS")).toEqual(["quedaria"]);
+    expect(palabrasFueraDelVocabulario("La especie quedaría.", "ESCENARIOS")).toEqual([]);
   });
 });

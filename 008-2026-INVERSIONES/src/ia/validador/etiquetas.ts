@@ -104,6 +104,25 @@ export interface HallazgoDeEtiqueta {
 }
 
 const ETIQUETA: CodigoValidador = "ETIQUETA_NO_COINCIDE";
+
+/**
+ * Palabras del catálogo con doble uso: fuera de su etiqueta son una valoración o un movimiento («alto», «justo», «una
+ * caída», «sin vender»). Solo valen sobre el dato que las lleva en su etiqueta (o sobre otro dato citado en la misma
+ * cláusula que las lleve); en cualquier otro lugar, ETIQUETA.DOBLE_USO.
+ */
+const DOBLE_USO: ReadonlySet<string> = new Set(["alto", "alta", "altos", "altas", "bajo", "baja", "bajos", "bajas", "caída", "caídas", "caida",
+  "caidas", "justo", "justa", "justos", "justas"]);
+
+/**
+ * Las raíces de las palabras de doble uso de los tokens. Se comparan tal cual (en minúsculas, con tilde): «bajó» es una
+ * marca, no la palabra «bajo». «sin vender» cuenta como una sola («sinvende»).
+ */
+function raicesDeDobleUso(tokens: readonly Token[]): readonly string[] {
+  const palabras = palabrasDe(tokens);
+  const sueltas = palabras.filter((p) => DOBLE_USO.has(p));
+  const sinVender = palabras.some((p, i) => p === "vender" && palabras[i - 1] === "sin") ? ["sin", "vender"] : [];
+  return raicesDe([...sueltas, ...sinVender]);
+}
 const palabrasDe = (tokens: readonly Token[]): readonly string[] => tokens.flatMap((t) => (t.tipo === "PALABRA" ? [t.texto] : []));
 
 /** Las palabras clave de una clave del tipo (la clave sale de un hecho del paquete, que es de ese tipo). */
@@ -118,8 +137,9 @@ function ajenas(clave: string, clavesDeLaClausula: ReadonlySet<string>, tipo: Ti
 
 /**
  * ETIQUETA_NO_COINCIDE de una frase: por cada cita que no es un nombre, la cobertura (ETIQUETA.COBERTURA), un nombre
- * que no es de su cadena de sujetos (ETIQUETA.SUJETO_AJENO) y, si su cadena llega a una especie, el nombre de esa
- * especie citado en la misma frase (ETIQUETA.SIN_SUJETO).
+ * que no es de su cadena de sujetos (ETIQUETA.SUJETO_AJENO), si su cadena llega a una especie, el nombre de esa
+ * especie citado en la misma frase (ETIQUETA.SIN_SUJETO), y las palabras de doble uso fuera de su dato
+ * (ETIQUETA.DOBLE_USO, también si no se atribuyen a ninguna cita).
  */
 export function revisarEtiquetas(atribucion: Atribucion, porId: HechosPorId, tipo: TipoResumen, citadasEnLaFrase: ReadonlySet<string>): readonly HallazgoDeEtiqueta[] {
   const patrones = new Set<string>();
@@ -133,7 +153,10 @@ export function revisarEtiquetas(atribucion: Atribucion, porId: HechosPorId, tip
   for (const destino of atribucion.destinos) {
     const hecho = hechoDe(destino.token);
     const tokens = atribucion.porCita.get(destino.lugar) as readonly Token[];
-    const quitar = ajenas(hecho.clave, clavesPorClausula.get(destino.clausula) as ReadonlySet<string>, tipo);
+    const clavesDeLaClausula = clavesPorClausula.get(destino.clausula) as ReadonlySet<string>;
+    const quitar = ajenas(hecho.clave, clavesDeLaClausula, tipo);
+    const explicadas = new Set([...clavesDeLaClausula].flatMap((c) => [...palabrasDeLaClave(tipo, c)]));
+    if (raicesDeDobleUso(tokens).some((r) => !explicadas.has(r))) patrones.add("ETIQUETA.DOBLE_USO");
     const raices = new Set(raicesDe(palabrasDe(tokens)).filter((r) => !quitar.has(r)));
     if (!claveCoincide(tipo, hecho.clave, raices)) patrones.add("ETIQUETA.COBERTURA");
     const cadena = cadenaDeSujetos(hecho, porId);
@@ -142,5 +165,6 @@ export function revisarEtiquetas(atribucion: Atribucion, porId: HechosPorId, tip
     // Si la cadena llega a una especie, la frase la nombra. Una regla cuyo ancla no cita especie (E1b) no tiene raíz.
     if (cadena.raiz !== undefined && !citadasEnLaFrase.has(cadena.raiz)) patrones.add("ETIQUETA.SIN_SUJETO");
   }
+  if (raicesDeDobleUso(atribucion.sinDestino).length > 0) patrones.add("ETIQUETA.DOBLE_USO");
   return Object.freeze([...patrones].map((patron) => Object.freeze({ codigo: ETIQUETA, patron })));
 }

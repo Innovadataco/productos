@@ -69,10 +69,10 @@ const MARCAS: readonly PatronMarca[] = [
     "cayendo", "descendió", "descendieron", "desciende", "disminuyó", "disminuyeron", "disminuye", "retrocedió", "retrocedieron", "retrocede",
     "perdió", "perdieron", "pierde", "pierden", "empeoró", "se redujo", "se redujeron", "se desvalorizó", "se desvalorizaron", "se contrajo",
     "se contrajeron", "se desplomó", "se desplomaron", "se hundió", "se hundieron", "cedió", "cedieron", "se debilitó", "se debilitaron",
-    "empeora", "empeoran"], BAJA),
+    "empeora", "empeoran", "tocó fondo"], BAJA),
   patronMarca("DIRECCION.BAJA_SUSTANTIVO", "MINUSCULAS", ["bajada", "descenso", "descensos", "disminución", "retroceso", "pérdida", "pérdidas",
     "a la baja", "reducción", "desvalorización", "contracción"], BAJA),
-  patronMarca("DIRECCION.IGUAL", "MINUSCULAS", ["mantuvo", "mantuvieron", "mantiene", "mantienen", "sin cambio", "sin cambios", "no cambió",
+  patronMarca("DIRECCION.IGUAL", "MINUSCULAS", ["mantuvo", "mantuvieron", "mantiene", "mantienen", "sin cambio", "sin cambios", "no cambió", "no cambio",
     "no cambiaron", "no varió", "no variaron", "estable", "estables", "sigue igual", "siguió igual", "quedó igual", "es igual", "es la misma",
     "es el mismo", "se sostuvo", "invariable", "sin variación", "sigue en", "siguió en", "continúa en", "continuó en", "se estancó",
     "se estancaron"], IGUAL),
@@ -93,7 +93,7 @@ const NEGADOS: readonly string[] = ["sub", "baj", "ca[eiy]", "crec", "aument", "
 
 const SIN_DATO: readonly Patron[] = [
   patron("DIRECCION.COMPARATIVO", "PLEGADO", ["mayor", "mayores", "menor", "menores", "superior", "superiores", "inferior", "inferiores", "mas alto",
-    "mas alta", "mas bajo", "mas baja", "por encima", "a mas", "a menos"]),
+    "mas alta", "mas bajo", "mas baja", "por encima", "a mas", "a menos", "mas que", "menos que"]),
   patron("DIRECCION.NEGADA", "PLEGADO", NEGADOS.map((raiz) => `${NEGACION}${raiz}\\p{L}*`)),
 ];
 

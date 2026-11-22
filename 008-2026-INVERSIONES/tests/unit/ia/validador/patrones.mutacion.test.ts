@@ -40,7 +40,7 @@ const EJEMPLOS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   },
   TRATO: {
     "TRATO.TU": "tu", "TRATO.TE": "contigo", "TRATO.VOSOTROS": "vosotros", "TRATO.VOS": "vos", "TRATO.VOSEO_VERBO": "tenés",
-    "TRATO.TU_VERBO": "tienes", "TRATO.TU_IMPERATIVO": "revisa",
+    "TRATO.TU_VERBO": "tienes", "TRATO.TU_IMPERATIVO": "revisa", "TRATO.IMPERATIVO_INICIAL": "suma",
   },
   CIFRA_EN_PALABRAS: {
     "CIFRA_EN_PALABRAS.UNIDADES": "tres", "CIFRA_EN_PALABRAS.DECENAS": "quince", "CIFRA_EN_PALABRAS.CENTENAS": "doscientos",
@@ -118,6 +118,8 @@ function detecta(p: Patron, alternativas: readonly string[], texto: string): boo
 
 /** El ejemplo puesto en una frase válida, de modo que solo lo rechace su lista (las marcas, contra un hecho que las contradice). */
 function plantillaPara(lista: string, p: Patron, ejemplo: string): string {
+  // Un patrón anclado al inicio de la frase («^») va al inicio, con mayúscula.
+  if (p.antes === "^") return `${ejemplo.charAt(0).toUpperCase()}${ejemplo.slice(1)} el valor de las acciones, que subió a {VALOR_ACCIONES}.`;
   if (lista !== "MARCA") return `El valor de las acciones subió a {VALOR_ACCIONES}, ${ejemplo}.`;
   const marca = (p as PatronMarca).marca;
   return marca.campo === "direccion" && marca.valor === "BAJA"

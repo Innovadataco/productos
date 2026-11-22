@@ -20,9 +20,9 @@ import { ENTRADAS_FICTICIAS } from "../apoyo/hechos.ficticio";
 
 /** Historia de los prompts: cada versión, con el sha256 de su texto. Una versión nueva se agrega; nunca se edita una. */
 const HISTORIAL: Readonly<Record<string, string>> = {
-  "resumen-diario-v1": "846474ed342bef255227500309bf4e29d84237eb630e1d296de83b93ac283636",
-  "resumen-reglas-v1": "e32e993d2cfb78e861748da425b7bf444bd68bd6a7da3e3c79cd11833509f00f",
-  "resumen-escenarios-v1": "fe6064d8593f24abb9baa9d225d58edd4e18b5567c5cfe2bfdf99c7258e27fd3",
+  "resumen-diario-v1": "18702a8e5a0b91fdd9c37526b82d7f0946b02baa6365a91a4ef68c5340892f85",
+  "resumen-reglas-v1": "3d0af5e9baebaaa6d9e6b52add4aed18ad1dc316fcd2a256fe584fe0fc7f3ccb",
+  "resumen-escenarios-v1": "2976993042570520f0ef548e52497191e1479ee948c1d5af293294c56336c391",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */

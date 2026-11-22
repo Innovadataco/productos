@@ -89,6 +89,9 @@ const TRATO: readonly Patron[] = [
   /** El imperativo de tú, el que dirige al lector («revisa», «mira», «cuídate»). */
   patron("TRATO.TU_IMPERATIVO", "PLEGADO", ["revisa", "mira", "aprovecha", "considera", "recuerda", "piensa", "evalua", "analiza", "vigila", "decide",
     "elige", "actua", "cuidate", "ten en cuenta", "invierte", "diversifica", "ahorra"]),
+  /** Al inicio de la frase, un verbo neutro en tercera persona se lee como orden de tú («Suma el valor…»). */
+  patron("TRATO.IMPERATIVO_INICIAL", "PLEGADO", ["suma", "cuenta", "paga", "marca", "registra", "muestra", "cierra", "indica", "representa",
+    "alcanza", "llega", "queda"], "^"),
 ];
 
 export const PATRONES_RECOMENDACION: readonly Patron[] = Object.freeze(RECOMENDACION);

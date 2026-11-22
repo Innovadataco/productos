@@ -26,8 +26,8 @@ const REGLAS_DE_REDACCION = [
   "- No recomiende comprar, vender ni mantener, ni diga qué debería hacer el lector.",
   "- No prediga ni diga qué va a pasar: describa solo lo que dicen los hechos.",
   "- Use solo las palabras de las etiquetas de los hechos, palabras de enlace (el, la, de, en, y, pero, mientras, también, "
-    + "además, según) y verbos neutros como es, son, fue, está, queda, quedó, quedaría, sería, tiene, suma, registra, alcanzó, "
-    + "llegó, faltan, cerró, subió, bajó o se mantuvo. Una palabra distinta hace rechazar el resumen.",
+    + "además, según) y verbos neutros como es, son, fue, está, queda, quedó, tiene, suma, registra, alcanzó, llegó, faltan, "
+    + "cerró, subió, bajó o se mantuvo. Una palabra distinta hace rechazar el resumen.",
   "- Escriba solo texto plano: sin viñetas, sin markdown, sin comillas, sin guiones, sin signos de interrogación o de "
     + "exclamación, sin saltos de línea, sin enlaces y sin emojis. Use mayúscula solo al inicio de la frase y en las siglas de "
     + "las etiquetas.",

@@ -51,8 +51,8 @@ describe("dirección: negación, sinónimos y comparativos", () => {
     expect(rechazo(VA, igual).motivos).toEqual([]);
   });
 
-  it("«igual de» ya no es una marca de estabilidad (falso positivo)", () => {
-    expect(rechazo(conCola("igual de alto")).motivos).toEqual([]);
+  it("«igual de» ya no es una marca de estabilidad (falso positivo; la palabra suelta la ve el vocabulario)", () => {
+    expect(rechazo(conCola("igual de alto")).motivos).not.toContain("DIRECCION_CONTRADICE");
   });
 });
 

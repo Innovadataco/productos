@@ -78,7 +78,7 @@ function analizarFrase(frase: FraseLeida, paquete: PaqueteHechos, porId: HechosP
   for (const h of revisarMarcas(preparado, atribucion, porId)) anotar(h.codigo, h.patron);
   for (const [codigo, patrones] of LISTAS) for (const id of coincidenciasEn(preparado, patrones)) anotar(codigo, id);
   if ((preparado.plegado.match(/\p{L}+/gu) ?? []).some(esNumeroFundido)) anotar("CIFRA_EN_PALABRAS", "CIFRA_EN_PALABRAS.FUNDIDA");
-  if (palabrasFueraDelVocabulario(texto).length > 0) anotar("IDIOMA", "IDIOMA.VOCABULARIO");
+  if (palabrasFueraDelVocabulario(texto, paquete.tipo).length > 0) anotar("IDIOMA", "IDIOMA.VOCABULARIO");
   const renderizado = renderizarFrase(texto, paquete);
   const largo = [...renderizado].length;
   if (largo === 0) anotar("LONGITUD", "LONGITUD.VACIA");
