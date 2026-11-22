@@ -47,14 +47,17 @@ describe("armarCuerpoNube · la forma exacta del cuerpo", () => {
       messages: [{ role: "user", content: jsonCanonico(pedido.vista) }],
       thinking: { type: "adaptive" },
       output_config: { effort: "low", format: { type: "json_schema", schema: ESQUEMA_ESTRICTO } },
+      // Revisión de seguridad (M4): capacidad y velocidad estándar explícitas, al precio que modela el tope.
+      service_tier: "standard_only",
+      speed: "standard",
     });
-    expect(Object.keys(cuerpo).sort()).toEqual(["max_tokens", "messages", "model", "output_config", "system", "thinking"]);
+    expect(Object.keys(cuerpo).sort()).toEqual(["max_tokens", "messages", "model", "output_config", "service_tier", "speed", "system", "thinking"]);
     expect(limiteMs).toBe(LIMITE_FICTICIO_MS);
   });
 
   it("sin temperature, top_p, top_k, fallbacks, betas, stream, herramientas ni metadatos", () => {
     const { cuerpo } = armado(pedidoFicticio().pedido);
-    for (const campo of ["temperature", "top_p", "top_k", "fallbacks", "betas", "stream", "tools", "tool_choice", "metadata", "stop_sequences", "speed", "inference_geo", "service_tier", "cache_control", "container"]) {
+    for (const campo of ["temperature", "top_p", "top_k", "fallbacks", "betas", "stream", "tools", "tool_choice", "metadata", "stop_sequences", "inference_geo", "cache_control", "container"]) {
       expect(cuerpo).not.toHaveProperty(campo);
     }
     expect(JSON.stringify(cuerpo)).not.toMatch(/"disabled"|budget_tokens/);

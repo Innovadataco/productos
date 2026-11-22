@@ -6,7 +6,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import {
-  CABECERAS_PERMITIDAS_NUBE, ErrorTransporteNube, MAX_BYTES_RESPUESTA_NUBE, URL_BASE_NUBE, URL_MENSAJES_NUBE, envolverFetch,
+  AGENTE_NUBE, CABECERAS_PERMITIDAS_NUBE, ErrorTransporteNube, MAX_BYTES_RESPUESTA_NUBE, URL_BASE_NUBE, URL_MENSAJES_NUBE, VERSION_API_NUBE, envolverFetch,
 } from "@/ia/nube/transporte";
 import { LlaveNube } from "@/ia/nube/config";
 import { LLAVE_FICTICIA, OTRA_LLAVE_FICTICIA } from "./apoyo/datos.ficticio";
@@ -34,6 +34,8 @@ describe("constantes del transporte", () => {
     expect(MAX_BYTES_RESPUESTA_NUBE).toBe(1_048_576);
     expect([...CABECERAS_PERMITIDAS_NUBE]).toEqual(["accept", "anthropic-version", "authorization", "content-type", "user-agent"]);
     expect(Object.isFrozen(CABECERAS_PERMITIDAS_NUBE)).toBe(true);
+    expect(VERSION_API_NUBE).toBe("2026-10-21");
+    expect(AGENTE_NUBE).toBe("inv-008-ia-nube");
   });
 
   it("el mensaje del error es solo su código", () => {
@@ -70,7 +72,8 @@ describe("envolverFetch · lo que sale", () => {
       "anthropic-version": "2026-10-21",
       authorization: `Bearer ${LLAVE_FICTICIA}`,
       "content-type": "application/json",
-      "user-agent": "Anthropic/JS ficticio",
+      // Revisión de seguridad (BAJO): el user-agent también es fijo; ni el SDK ni el entorno lo cambian.
+      "user-agent": AGENTE_NUBE,
     });
   });
 
