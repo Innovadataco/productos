@@ -48,7 +48,7 @@ describe("leerModoPuertas", () => {
   });
 
   it("la lista de modos es exacta y está congelada", () => {
-    expect([...MODOS_PUERTAS]).toEqual(["apagado", "local", "nube", "local-luego-nube", "nube-luego-local"]);
+    expect([...MODOS_PUERTAS]).toEqual(["apagado", "local", "nube", "local-luego-nube"]);
     expect(Object.isFrozen(MODOS_PUERTAS)).toBe(true);
   });
 });
@@ -59,7 +59,6 @@ describe("ordenDePuertas", () => {
     ["local", ["local"]],
     ["nube", ["nube"]],
     ["local-luego-nube", ["local", "nube"]],
-    ["nube-luego-local", ["nube", "local"]],
   ] as const)("%s → %j, congelado", (modo, orden) => {
     expect([...ordenDePuertas(modo)]).toEqual(orden);
     expect(Object.isFrozen(ordenDePuertas(modo))).toBe(true);
@@ -100,26 +99,6 @@ describe("generarConPuertas · orden y resultados", () => {
         { ok: false, puerta: "nube", motivo: "TOPE_MENSUAL", detalle: "TOPE_DEL_MES" },
       ],
     });
-  });
-
-  // E8: la nube primero y, si falla, la local.
-  it("nube-luego-local: la nube responde y la local no se llama", async () => {
-    const { resultado, falsos } = await correr("nube-luego-local", responder(), responder());
-    expect(resultado).toMatchObject({ estado: "EXITO", ok: true, exito: { puerta: "nube" }, fallosPrevios: [] });
-    expect(falsos.nube?.llamadas()).toHaveLength(1);
-    expect(falsos.local?.llamadas()).toHaveLength(0);
-  });
-
-  it("nube-luego-local: la nube falla y la local responde, con el fallo previo de la nube", async () => {
-    const { resultado, falsos } = await correr("nube-luego-local", responder(), { tipo: "FALLAR", motivo: "TOPE_MENSUAL", detalle: "TOPE_DEL_MES" });
-    expect(resultado).toEqual({
-      estado: "EXITO",
-      ok: true,
-      exito: expect.objectContaining({ ok: true, puerta: "local" }),
-      fallosPrevios: [{ ok: false, puerta: "nube", motivo: "TOPE_MENSUAL", detalle: "TOPE_DEL_MES" }],
-    });
-    expect(falsos.nube?.llamadas()).toHaveLength(1);
-    expect(falsos.local?.llamadas()).toHaveLength(1);
   });
 
   it("apagado: ningún generador se llama y el estado lo dice (no es un fallo)", async () => {

@@ -161,7 +161,7 @@ describe("configNubeDesde · la llave del entorno; el tope, el modelo y el esfue
   it("lista con el tope de la configuración (la variable del tope no cuenta) y sus ajustes", () => {
     const c = configNubeDesde(entorno, { topeMicroUsd: 4_613_000n, ...SONNET });
     expect(c).toMatchObject({ lista: true, topeMicroUsd: 4_613_000n, modelo: "claude-sonnet-5-5", esfuerzo: "medium" });
-    expect(JSON.stringify(c)).not.toContain(LLAVE_FICTICIA);
+    expect(JSON.stringify(c, (_k, v: unknown) => (typeof v === "bigint" ? String(v) : v))).not.toContain(LLAVE_FICTICIA);
   });
 
   it.each([
