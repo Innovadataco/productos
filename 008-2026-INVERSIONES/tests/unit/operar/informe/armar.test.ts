@@ -144,6 +144,11 @@ describe("sus reglas hoy", () => {
     expect(sinReferencia.reglas.resto[0]!.estado).toEqual({ tipo: "SIN_CIERRE_AL_DIA", ultimo: { precio: D("4613"), fecha: REFERENCIA } });
   });
 
+  it("un cierre negativo (la base no lo deja: CHECK precio > 0) tampoco cumple: «sin cierre al día», como en estadoDelNivel", () => {
+    const r = unica(conRegla({ id: "r", condicion: "CIERRE_BAJO", nivel: D("4751.39") }, cierreLeido("-13.71")));
+    expect(r.estado).toEqual({ tipo: "SIN_CIERRE_AL_DIA", ultimo: { precio: D("-13.71"), fecha: REFERENCIA } });
+  });
+
   it("una especie de regla que no está en el tablero se mide con su cierre (la fuente de /plan)", () => {
     const i = armarInforme(entradas({
       plan: plan([reglaDe("FICTICIA-Z", { id: "r", condicion: "CIERRE_SOBRE", nivel: D("901.37") })]),
