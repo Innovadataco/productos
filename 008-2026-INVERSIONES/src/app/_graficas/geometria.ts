@@ -49,7 +49,7 @@ const puntos = (xs: readonly number[], valores: readonly (number | null)[], e: E
 
 export interface CapaLinea { readonly id: string; readonly tono: Tono; readonly punteado: boolean; readonly d: string }
 export interface CapaRelleno { readonly arriba: Tono; readonly abajo: Tono; readonly d: string; readonly recorteArriba: string; readonly recorteAbajo: string; readonly base: number | null }
-export interface CapaBanda { readonly id: string; readonly tono: Tono; readonly intensidad: Banda["intensidad"]; readonly d: string }
+export interface CapaBanda { readonly id: string; readonly tono: Tono; readonly intensidad: Banda["intensidad"]; readonly degradado: boolean; readonly d: string }
 
 export function lineas(series: readonly SerieTiempo[], xs: readonly number[], e: Escalas): CapaLinea[] {
   return series.map((s) => ({ id: s.id, tono: s.tono, punteado: s.trazo === "punteado", d: rutaLinea(puntos(xs, s.valores, e)) }));
@@ -72,7 +72,7 @@ export function rellenos(lista: readonly Relleno[], series: readonly SerieTiempo
 }
 
 export function bandas(lista: readonly Banda[], xs: readonly number[], e: Escalas): CapaBanda[] {
-  return lista.map((b) => ({ id: b.id, tono: b.tono, intensidad: b.intensidad, d: rutaArea(puntos(xs, b.alto, e), puntos(xs, b.bajo, e)) }));
+  return lista.map((b) => ({ id: b.id, tono: b.tono, intensidad: b.intensidad, degradado: b.degradado === true, d: rutaArea(puntos(xs, b.alto, e), puntos(xs, b.bajo, e)) }));
 }
 
 /** Índice del último valor con dato de la ventana; null si no hay. */

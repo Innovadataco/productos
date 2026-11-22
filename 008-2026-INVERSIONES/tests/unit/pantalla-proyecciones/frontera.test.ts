@@ -44,7 +44,7 @@ describe("frontera de src/app/proyecciones", () => {
   const cliente = delCliente();
 
   it("encuentra el simulador y lo que importa; los módulos del servidor no entran", () => {
-    expect(cliente).toEqual(expect.arrayContaining(["Simulador.tsx", "Controles.tsx", "Indicadores.tsx", "Abanico.tsx", "Supuestos.tsx", "abanico.ts", "cola.ts", "opciones.ts"]));
+    expect(cliente).toEqual(expect.arrayContaining(["Simulador.tsx", "PanelControles.tsx", "Indicadores.tsx", "Supuestos.tsx", "GraficaAbanico.tsx", "abanico.ts", "cola.ts", "opciones.ts"]));
     for (const f of [...DEL_SERVIDOR, "page.tsx", "controles.ts", "turno.ts"]) expect(cliente).not.toContain(f);
   });
 

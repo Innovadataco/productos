@@ -52,8 +52,12 @@
 .g-linea { fill: none; stroke: var(--tono); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
 .g-punteado { stroke-dasharray: 5 5; }
 .g-relleno { fill: var(--tono); opacity: 0.18; }
-.g-banda { fill: var(--tono); }
+.g-banda { fill: var(--g-relleno-banda, var(--tono)); }
 .g-banda-suave { opacity: 0.14; } .g-banda-media { opacity: 0.28; }
+/* Banda con degradado (proyecciones): el tono entero cerca de «Hoy» y más tenue hacia el horizonte. */
+.g-banda-degradada.g-banda-suave { opacity: 0.3; } .g-banda-degradada.g-banda-media { opacity: 0.5; }
+.g-parada-ini { stop-color: var(--tono); stop-opacity: 1; } .g-parada-fin { stop-color: var(--tono); stop-opacity: 0.4; }
+.g-clave-degradada { background: linear-gradient(90deg, var(--tono), color-mix(in srgb, var(--tono) 40%, transparent)); }
 .g-base { stroke: var(--muted); stroke-width: 1; opacity: 0.7; }
 .g-mira, .g-corte-linea { stroke: var(--muted); stroke-width: 1; }
 .g-corte-linea { stroke-dasharray: 2 4; }

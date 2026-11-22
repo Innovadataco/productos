@@ -397,7 +397,6 @@ function Falta() {
         <li><b>Dividendos que vienen</b> con fecha ex y monto esperado</li>
         <li><b>Fondo inmobiliario</b> con su valor de unidad (SFC)</li>
         <li><b>Caja oficial</b> de A&amp;V en este resumen · su cuadre ya se ve en <a href="/conciliacion">Conciliación</a></li>
-        <li><b>Proyecciones</b> por escenarios, con sus supuestos a la vista</li>
       </ul>
     </section>
   );

@@ -6,7 +6,7 @@
 //   cifra anterior; el lector de pantalla oye siempre la final. Inventado.
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Abanico } from "@/app/proyecciones/Abanico";
+import { Abanico } from "@/app/proyecciones/GraficaAbanico";
 import { Indicadores } from "@/app/proyecciones/Indicadores";
 import { aVistaProyeccion } from "@/app/proyecciones/vista";
 import { montar, movimiento, reloj, texto, type Montaje } from "../graficas/dom";

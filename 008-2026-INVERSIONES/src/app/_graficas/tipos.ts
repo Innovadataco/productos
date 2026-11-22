@@ -39,6 +39,17 @@ export interface Banda {
   readonly intensidad: "suave" | "media";
   readonly bajo: readonly (number | null)[];
   readonly alto: readonly (number | null)[];
+  /** Relleno con un degradado horizontal (más intenso al principio de la banda, p. ej. en «Hoy»). */
+  readonly degradado?: boolean;
+}
+
+/**
+ * Lo que se TRAZA mientras se interpola un resultado (proyecciones): las mismas series y bandas con los valores del
+ * cuadro. Solo lo usan el SVG y los puntos; la leyenda, el detalle, el deslizador y la tabla siguen con los finales.
+ */
+export interface DibujoTiempo {
+  readonly series: readonly SerieTiempo[];
+  readonly bandas?: readonly Banda[];
 }
 
 /** Índices (inclusive) de `dias` que se ven. */
@@ -68,6 +79,8 @@ export interface PropsGraficaTiempo {
   readonly extraDetalle?: (indice: number) => string | null;
   /** Lo que va junto al título (p. ej. la TWR del rango). */
   readonly encabezado?: ReactNode;
+  /** Valores del cuadro de una interpolación (ver DibujoTiempo); sin él, se traza lo de `series` y `bandas`. */
+  readonly dibujo?: DibujoTiempo;
 }
 
 export interface Segmento {

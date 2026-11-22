@@ -7,6 +7,7 @@ export const SECCIONES = [
   { clave: "plan", texto: "Plan", href: "/plan" },
   { clave: "decisiones", texto: "Decisiones", href: "/decisiones" },
   { clave: "conciliacion", texto: "Conciliación", href: "/conciliacion" },
+  { clave: "proyecciones", texto: "Proyecciones", href: "/proyecciones" },
 ] as const;
 
 export type Seccion = (typeof SECCIONES)[number]["clave"];

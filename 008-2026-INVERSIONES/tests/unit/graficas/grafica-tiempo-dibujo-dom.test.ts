@@ -43,19 +43,21 @@ const banda = () => m.contenedor.querySelector<SVGPathElement>("path.g-banda")!;
 const toque = () => m.contenedor.querySelector<HTMLElement>("[role=slider]")!;
 
 describe("GraficaTiempo · dibujo (interpolación de un resultado)", () => {
-  it("sin `dibujo`, el trazo es el de las series; con `dibujo`, el SVG traza lo de `dibujo`", async () => {
+  it("sin `dibujo`, el trazo es el de las series; con `dibujo`, el SVG traza lo de `dibujo` sobre el dominio de los finales", async () => {
     await m.pintar(createElement(GraficaTiempo, base()));
     const final = linea();
     const bandaFinal = banda().getAttribute("d");
+    const marcas = () => [...m.contenedor.querySelectorAll(".g-tick-y")].map(texto);
+    const marcasFinales = marcas();
     const intermedia: SerieTiempo = { ...MEDIANA, valores: [null, 4613, 4657, 4703] };
     await m.pintar(createElement(GraficaTiempo, base({ dibujo: { series: [intermedia], bandas: [{ ...BANDA, alto: [null, 4613, 4791, 4889] }] } })));
     expect(linea()).not.toBe(final);
     expect(banda().getAttribute("d")).not.toBe(bandaFinal);
-    // El mismo dibujo que tendría una gráfica con esas series como finales.
-    const otra = montar();
-    await otra.pintar(createElement(GraficaTiempo, base({ series: [intermedia], bandas: [{ ...BANDA, alto: [null, 4613, 4791, 4889] }] })));
-    expect(linea()).toBe(otra.contenedor.querySelector("path.g-linea")!.getAttribute("d"));
-    otra.desmontar();
+    // El eje Y es el de los valores finales: no persigue cada cuadro (lo anima la propia gráfica).
+    expect(marcas()).toEqual(marcasFinales);
+    // Sin bandas en el dibujo, se trazan las finales.
+    await m.pintar(createElement(GraficaTiempo, base({ dibujo: { series: [intermedia] } })));
+    expect(banda().getAttribute("d")).toBe(bandaFinal);
   });
 
   it("la leyenda, el deslizador y la tabla dicen los valores finales, no los del cuadro", async () => {
