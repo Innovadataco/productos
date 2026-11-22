@@ -4,12 +4,13 @@
 # y el sobre por la entrada estándar (lo arma scripts/armar-sobre.sh en el Mac):
 #   - cabecera de EXACTAMENTE 4096 bytes: un argumento por línea, una línea vacía y relleno de líneas vacías. Con
 #     archivo trae --bytes <N> y --sha256 <H>, que se consumen aquí y no pasan al CLI;
-#   - el archivo (importar-trii, importar-plan, importar-certificacion, corregir-corte-certificacion, importar-precios e
-#     importar-valores-fondo).
+#   - el archivo (importar-trii, importar-plan, importar-certificacion, corregir-corte-certificacion, importar-precios,
+#     importar-valores-fondo, importar-series e importar-decretos).
 # Antes de leer nada comprueba que el contenedor no use swap: el temporal vive en el tmpfs /tmp, que con
 # mem = memswap no baja al disco. El archivo queda en un temporal 600 dentro de una carpeta 700 con nombre fijo
-# (trii.csv, ficha.md, certificacion.pdf, precios.csv o valores-fondo.csv: el nombre real no llega a la base), corre el
-# CLI y lo borra SIEMPRE (trap), también si el CLI falla o llega una señal. El tmpfs muere con el contenedor.
+# (trii.csv, ficha.md, certificacion.pdf, precios.csv, valores-fondo.csv, series.csv o decretos.csv: el nombre real no
+# llega a la base), corre el CLI y lo borra SIEMPRE (trap), también si el CLI falla o llega una señal. El tmpfs muere
+# con el contenedor.
 # Nunca imprime la cabecera ni el archivo: solo errores sin valores. Sale con 64 (EX_USAGE, distinto de los
 # códigos de los CLI, de 0 a 3) si se niega sin correr el CLI, o con el código del CLI.
 # Solo POSIX (busybox en la imagen; dash o bash en las pruebas). INV_CARGAR_* solo los usan las pruebas.
@@ -25,12 +26,16 @@ MAX_ARGUMENTOS=30
 MAX_LARGO=512
 TOPE_TRII=5242880
 TOPE_FICHA=262144
-# Los tres siguientes son los topes de sus CLI (una sola fuente; tests/unit/produccion/cargar-contenedor.test.ts y
-# cargar-fondo.test.ts los comparan): MAX_BYTES del PDF (src/importacion/av/pdf/documento.ts), MAX_BYTES_CSV
-# (src/precios/csv-cierres.ts) y MAX_BYTES_CSV_FONDO (src/fondo/csv-valores.ts).
+# Los cinco siguientes son los topes de sus CLI (una sola fuente; tests/unit/produccion/cargar-contenedor.test.ts,
+# cargar-fondo.test.ts y cargar-datos-oficiales.test.ts los comparan): MAX_BYTES del PDF
+# (src/importacion/av/pdf/documento.ts), MAX_BYTES_CSV (src/precios/csv-cierres.ts), MAX_BYTES_CSV_FONDO
+# (src/fondo/csv-valores.ts), MAX_BYTES_CSV_SERIES (src/datos-oficiales/series/csv-series.ts) y MAX_BYTES_DECRETOS
+# (src/datos-oficiales/decretos/csv.ts).
 TOPE_CERTIFICACION=15728640
 TOPE_PRECIOS=4194304
 TOPE_VALORES_FONDO=2097152
+TOPE_SERIES=2097152
+TOPE_DECRETOS=1048576
 
 NIEGA=64
 falla() {
@@ -50,6 +55,8 @@ case "$comando" in
   corregir-corte-certificacion) cli=scripts/corregir-corte-certificacion.ts archivo=certificacion.pdf tope=$TOPE_CERTIFICACION ;;
   importar-precios) cli=scripts/importar-precios.ts archivo=precios.csv tope=$TOPE_PRECIOS ;;
   importar-valores-fondo) cli=scripts/importar-valores-fondo.ts archivo=valores-fondo.csv tope=$TOPE_VALORES_FONDO ;;
+  importar-series) cli=scripts/importar-series.ts archivo=series.csv tope=$TOPE_SERIES ;;
+  importar-decretos) cli=scripts/importar-decretos.ts archivo=decretos.csv tope=$TOPE_DECRETOS ;;
   registrar-escision) cli=scripts/registrar-escision.ts ;;
   registrar-fondo) cli=scripts/actualizar-fondo.ts ;;
   registrar-movimiento-fondo) cli=scripts/registrar-movimiento-fondo.ts ;;
@@ -184,6 +191,7 @@ if [ -n "$archivo" ]; then
     case "$comando:$1" in
       importar-precios:*) falla "importar-precios no lleva opciones: el CSV de cierres llega en el sobre" ;;
       importar-valores-fondo:*) falla "importar-valores-fondo no lleva opciones: el CSV de valores del fondo llega en el sobre" ;;
+      importar-series:*) falla "importar-series no lleva opciones: el CSV de series llega en el sobre" ;;
       *:--email)
         [ -z "$correo" ] || falla "--email repetido"
         [ $# -ge 2 ] || falla "--email necesita un correo"
@@ -191,7 +199,7 @@ if [ -n "$archivo" ]; then
         correo="$2"
         shift 2
         ;;
-      importar-plan:--aplicar)
+      importar-plan:--aplicar | importar-decretos:--aplicar)
         [ "$aplicar" = 0 ] || falla "--aplicar repetido"
         aplicar=1
         shift
@@ -216,10 +224,10 @@ if [ -n "$archivo" ]; then
         ;;
       *:--aplicar) falla "--aplicar no es una opción de $comando" ;;
       *:--crear-dueno) falla "--crear-dueno no se acepta en producción: el dueño lo crea crear-acceso-inicial (orden obligatorio)" ;;
-      *) falla "opción no permitida para $comando (se admiten --email; en importar-plan, --aplicar; en importar-certificacion, --fecha-corte y --fondo; en corregir-corte-certificacion, --fecha-corte y --nueva-fecha-corte)" ;;
+      *) falla "opción no permitida para $comando (se admiten --email; en importar-plan e importar-decretos, --aplicar; en importar-certificacion, --fecha-corte y --fondo; en corregir-corte-certificacion, --fecha-corte y --nueva-fecha-corte)" ;;
     esac
   done
-  case "$comando" in importar-precios | importar-valores-fondo) ;; *) [ -n "$correo" ] || falla "falta --email <correo-del-dueño>" ;; esac
+  case "$comando" in importar-precios | importar-valores-fondo | importar-series) ;; *) [ -n "$correo" ] || falla "falta --email <correo-del-dueño>" ;; esac
   case "$comando" in importar-certificacion | corregir-corte-certificacion) [ -n "$corte" ] || falla "falta --fecha-corte AAAA-MM-DD" ;; esac
   [ "$comando" != corregir-corte-certificacion ] || [ -n "$nuevo" ] || falla "falta --nueva-fecha-corte AAAA-MM-DD"
   # El archivo: exactamente N bytes y su sha256 (frena un archivo truncado por un corte del SSH).
@@ -237,7 +245,12 @@ if [ -n "$archivo" ]; then
       ;;
     # El mismo PDF que se cargó, al final; sin --fondo (el fondo ya quedó vinculado).
     corregir-corte-certificacion) set -- --email "$correo" --fecha-corte "$corte" --nueva-fecha-corte "$nuevo" "$dir/$archivo" ;;
-    importar-precios | importar-valores-fondo) set -- --archivo "$dir/$archivo" ;;
+    importar-precios | importar-valores-fondo | importar-series) set -- --archivo "$dir/$archivo" ;;
+    # El CSV con --archivo (decretos.csv termina en .csv, como exige el CLI), el correo y --aplicar solo si vino: sin él,
+    # el CLI hace el ensayo. Si --aplicar puede escribir en esa base lo decide el CLI, no el sobre.
+    importar-decretos)
+      if [ "$aplicar" = 1 ]; then set -- --archivo "$dir/$archivo" --email "$correo" --aplicar; else set -- --archivo "$dir/$archivo" --email "$correo"; fi
+      ;;
   esac
 else
   [ -z "$bytes$sha" ] || falla "$comando no lleva archivo (sobran --bytes o --sha256)"
