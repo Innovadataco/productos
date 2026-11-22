@@ -98,7 +98,7 @@ describe("leerConciliacion", () => {
     const r = await conciliarCertificacion(db, { fechaCorte: c.fecha });
     const l = (await leerConciliacion(db, c.fecha))!;
     expect(l.frescura).toBe("AL_DIA");
-    expect(l.conciliacion).toMatchObject({ id: r.conciliacionId, fechaCorte: c.fecha, versionCalculo: "conciliacion-v2", resultado: r.resultado });
+    expect(l.conciliacion).toMatchObject({ id: r.conciliacionId, fechaCorte: c.fecha, versionCalculo: "conciliacion-v3", resultado: r.resultado });
     expect(l.conciliacion!.calculadaEn).toBeInstanceOf(Date);
     const de = (tipo: string, id: string | null) => l.conciliacion!.controles.find((x) => x.tipo === tipo && x.instrumentoId === id);
     expect(de("CANTIDAD", c.ids[0]!)).toMatchObject({ resultado: "CUADRA", instrumento: { nemotecnico: c.nemos[0], tipo: "ACCION" } });
