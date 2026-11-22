@@ -98,7 +98,7 @@ describe("conciliarCertificacion: acciones", () => {
     const c = await caso();
     await cierres(c, ["1000", "20", "32500"]);
     const r = await conciliarCertificacion(db, { fechaCorte: c.fecha });
-    expect(r).toMatchObject({ fechaCorte: c.fecha.toISOString().slice(0, 10), resultado: "NO_CUADRA", versionCalculo: "conciliacion-v2" });
+    expect(r).toMatchObject({ fechaCorte: c.fecha.toISOString().slice(0, 10), resultado: "NO_CUADRA", versionCalculo: "conciliacion-v3" });
     const cs = await controles(r.conciliacionId);
     for (const id of c.ids) {
       expect(cs.find((x) => x.tipo === "CANTIDAD" && x.instrumentoId === id)).toMatchObject({ resultado: "CUADRA", codigoMotivo: null });

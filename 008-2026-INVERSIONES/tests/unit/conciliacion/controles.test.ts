@@ -4,7 +4,10 @@
  *   (T+2 por liquidar), PENDIENTE_LIQUIDACION «t_mas_2»;
  * - VALOR por especie y total: cantidad del sistema × cierre del día exacto del corte, ±0,5 % del certificado;
  * - FONDO: unidades del sistema × valor de unidad del corte, ±0,5 %; sin unidades, «fondo_sin_unidades»;
- * - EFECTIVO: ±1 COP absoluto (libro de caja); si no, el porqué y la cifra sin explicar.
+ * - EFECTIVO: ±1 COP absoluto (libro de caja); si no, el porqué y la cifra sin explicar. v3 (frente
+ *   fondo-rendimientos): con el aporte registrado y sin ningún rendimiento del fondo registrado, una caja con más dinero
+ *   que el sistema dice «rendimientos_fic_sin_registrar»; con rendimientos registrados, el detalle dice cuántos y el
+ *   último día.
  * Datos inventados.
  */
 import { describe, expect, it } from "vitest";
@@ -17,7 +20,7 @@ const especie = (id: string, c: Partial<EntradasConciliacion["especies"][number]
 const base = (cambios: Partial<EntradasConciliacion> = {}): EntradasConciliacion => ({
   especies: [especie("A"), especie("B", { certificada: { cantidad: 20n, precioValoracion: "50", valorMercado: "1000" }, liquidada: 20n, operada: 20n, cierre: "50" })],
   fondos: [{ instrumentoId: "F", saldoCertificado: "5000", unidades: "100", valorUnidad: "50" }],
-  efectivo: { certificado: "300", liquidado: "300", operado: "300", hayFondo: true, aporteFondoRegistrado: true },
+  efectivo: { certificado: "300", liquidado: "300", operado: "300", hayFondo: true, aporteFondoRegistrado: true, rendimientosFic: { cantidad: 1, ultimo: "2027-03-17" } },
   diaAnterior: null,
   ...cambios,
 });
@@ -40,7 +43,8 @@ describe("calcularConciliacion: todo cuadra", () => {
     expect(uno(r, "FONDO", "F")).toMatchObject({ esperado: "5000", real: "5000" });
     expect(uno(r, "EFECTIVO")).toMatchObject({ esperado: "300", real: "300", tolerancia: TOLERANCIA_EFECTIVO_COP });
     // v2 (frente certificacion-corte-real): fecha_corte_dudosa también por el día hábil anterior, con fechaSugerida.
-    expect([VERSION_CALCULO, TOLERANCIA_VALOR, TOLERANCIA_EFECTIVO_COP]).toEqual(["conciliacion-v2", "0.005", "1"]);
+    // v3 (frente fondo-rendimientos): rendimientos_fic_sin_registrar y el detalle de los rendimientos contados.
+    expect([VERSION_CALCULO, TOLERANCIA_VALOR, TOLERANCIA_EFECTIVO_COP]).toEqual(["conciliacion-v3", "0.005", "1"]);
   });
 });
 
@@ -65,7 +69,7 @@ describe("CANTIDAD por especie", () => {
   });
 
   it("solo con T+2 pendiente (y el resto cuadra) el global es PARCIAL", () => {
-    const r = calcularConciliacion(base({ efectivo: { certificado: "300", liquidado: "200", operado: "300", hayFondo: true, aporteFondoRegistrado: true } }));
+    const r = calcularConciliacion(base({ efectivo: { certificado: "300", liquidado: "200", operado: "300", hayFondo: true, aporteFondoRegistrado: true, rendimientosFic: { cantidad: 1, ultimo: "2027-03-17" } } }));
     expect(uno(r, "EFECTIVO")).toMatchObject({ resultado: "PENDIENTE_LIQUIDACION", codigoMotivo: "t_mas_2" });
     expect(r.resultado).toBe("PARCIAL");
   });
@@ -164,12 +168,43 @@ describe("FONDO", () => {
 });
 
 describe("EFECTIVO (±1 COP)", () => {
-  const efectivo = (certificado: string, liquidado: string, operado = liquidado, hayFondo = true, aporteFondoRegistrado = true) =>
-    uno(calcularConciliacion(base({ efectivo: { certificado, liquidado, operado, hayFondo, aporteFondoRegistrado } })), "EFECTIVO");
+  const RENDIMIENTOS = { cantidad: 2, ultimo: "2027-03-17" };
+  const SIN_RENDIMIENTOS = { cantidad: 0, ultimo: null };
+  const efectivo = (certificado: string, liquidado: string, operado = liquidado, hayFondo = true, aporteFondoRegistrado = true, rendimientosFic: { cantidad: number; ultimo: string | null } = RENDIMIENTOS) =>
+    uno(calcularConciliacion(base({ efectivo: { certificado, liquidado, operado, hayFondo, aporteFondoRegistrado, rendimientosFic } })), "EFECTIVO");
 
   it("un peso de redondeo cuadra; uno y un centavo no", () => {
     expect(efectivo("300", "299").resultado).toBe("CUADRA");
     expect(efectivo("300", "298.99")).toMatchObject({ resultado: "NO_CUADRA", codigoMotivo: "partida_sin_fuente", detalle: { sinExplicar: "1.01" } });
+  });
+
+  it("con el aporte registrado y ningún rendimiento del fondo: más dinero en la caja que en el sistema dice rendimientos_fic_sin_registrar", () => {
+    expect(efectivo("48513.37", "300", "300", true, true, SIN_RENDIMIENTOS)).toEqual(expect.objectContaining({
+      resultado: "NO_CUADRA", codigoMotivo: "rendimientos_fic_sin_registrar", diferencia: "48213.37", detalle: { sinExplicar: "48213.37" },
+    }));
+  });
+
+  it("sin rendimientos, pero con MENOS dinero en la caja que en el sistema: los rendimientos no lo explican (partida_sin_fuente)", () => {
+    expect(efectivo("300", "1048.6233", "1048.6233", true, true, SIN_RENDIMIENTOS)).toMatchObject({ codigoMotivo: "partida_sin_fuente", detalle: { sinExplicar: "-748.6233" } });
+  });
+
+  it("sin fondo certificado no se habla de rendimientos del fondo", () => {
+    expect(efectivo("48513.37", "300", "300", false, false, SIN_RENDIMIENTOS).codigoMotivo).toBe("partida_sin_fuente");
+  });
+
+  it("con rendimientos registrados y una diferencia que queda: partida_sin_fuente, con cuántos rendimientos se contaron y el último día", () => {
+    expect(efectivo("1748.6233", "300")).toEqual(expect.objectContaining({
+      codigoMotivo: "partida_sin_fuente", detalle: { sinExplicar: "1448.6233", rendimientosFic: 2, ultimoRendimientoFic: "2027-03-17" },
+    }));
+  });
+
+  it("el aporte sin registrar va primero, aunque tampoco haya rendimientos", () => {
+    expect(efectivo("300", "5300", "5300", true, false, SIN_RENDIMIENTOS).codigoMotivo).toBe("aporte_fic_sin_registrar");
+  });
+
+  it("cuadrar o quedar por liquidar no depende de los rendimientos", () => {
+    expect(efectivo("300", "300", "300", true, true, SIN_RENDIMIENTOS)).toMatchObject({ resultado: "CUADRA", codigoMotivo: null, detalle: null });
+    expect(efectivo("300", "100", "300", true, true, SIN_RENDIMIENTOS)).toMatchObject({ resultado: "PENDIENTE_LIQUIDACION", codigoMotivo: "t_mas_2" });
   });
 
   it("con fondo y sin el aporte registrado en caja: aporte_fic_sin_registrar, con la cifra sin explicar", () => {
