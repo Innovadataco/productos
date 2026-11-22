@@ -20,6 +20,7 @@ import { importarArchivoTrii } from "../../src/importacion/trii/importar";
 import { construirLotes } from "../../src/lotes/construir";
 import { APP, DUENO_E2E, baseDePruebas, type BaseDePruebas } from "./base";
 import { sembrarConciliacion } from "./sembrar-conciliacion";
+import { sembrarDatosOficiales } from "./sembrar-datos-oficiales";
 import { sembrarGraficas } from "./sembrar-graficas";
 import { sembrarPlan } from "./sembrar-plan";
 import { sembrarProyecciones } from "./sembrar-proyecciones";
@@ -113,6 +114,7 @@ async function sembrar(base: BaseDePruebas): Promise<void> {
     await sembrarGraficas(db);
     // Cierres yahoo de 2019-2021 para que el motor de proyecciones tenga historia (sin tocar lo de las demás pantallas).
     await sembrarProyecciones(db);
+    await sembrarDatosOficiales(db);
   } finally {
     await db.$disconnect();
   }

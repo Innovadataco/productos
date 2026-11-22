@@ -1,0 +1,63 @@
+/*
+ * 008 · pantalla de datos oficiales (frente datos-oficiales-pantalla, C6a). Usa solo los tokens de tablero.css (--bg-2,
+ * --panel, --line, --fg, --muted, --gold, --gain, --loss, --glow, --display, --mono): claro y oscuro salen de ahí, sin
+ * colores fijos. Todo va dentro de .do (el contenido): no toca otras pantallas. El estado de la frescura se dice con
+ * texto y borde, no solo con color. No anima nada propio: la entrada de la gráfica es la del módulo común, que respeta
+ * «reducir movimiento». Candado: tests/unit/pantalla-datos-oficiales/estilos.test.ts.
+ */
+.do-hero h1 { font-size: clamp(40px, 6vw, 72px); line-height: 1; margin-bottom: 12px; }
+.do-lead { max-width: 64ch; margin: 0; color: var(--muted); font-size: 16px; }
+
+/* Dos tarjetas por fila si caben; a 375 px, una debajo de la otra. */
+.do-series { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(520px, 100%), 1fr)); gap: 16px; padding-block: 8px 28px; }
+.do-serie {
+  min-width: 0; display: grid; gap: 10px; align-content: start; padding: 18px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line);
+  background-image: radial-gradient(120% 70% at 0% 0%, var(--glow), transparent 62%);
+}
+.do-cabeza { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-start; justify-content: space-between; }
+.do-serie h2 { margin: 4px 0 0; font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1.05; text-wrap: balance; }
+.do-estado { flex: none; border: 1px solid var(--muted); color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.do-estado[data-estado="AL_DIA"] { border-color: var(--gain); color: var(--gain); }
+.do-estado[data-estado="ATRASADA"], .do-estado[data-estado="ERROR"] { border-color: var(--loss); color: var(--loss); }
+
+/* La cifra: grande y en la tipografía de los números; la unidad, al lado. */
+.do-valor { margin: 4px 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.do-cifra { font-family: var(--mono); font-size: clamp(30px, 8vw, 40px); font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.do-unidad { color: var(--muted); font-size: 14px; }
+.do-vigencia { margin: 0; font-size: 14px; color: var(--fg); }
+.do-vigencia[data-vale-hoy] { color: var(--gain); font-weight: 600; }
+.do-variacion { margin: 4px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--bg-2); border-left: 3px solid var(--gold); font-size: 14px; }
+.do-etiqueta { font-weight: 700; }
+.do-cifra-chica { font-family: var(--mono); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.do-variacion-nota { margin: 0; font-size: 13px; color: var(--muted); }
+.do-mensaje { margin: 4px 0 0; color: var(--muted); }
+
+/* Fuente, carga, entrada y frescura: la etiqueta toma su ancho y el valor (la fuente trae palabras largas) se parte. */
+.do-pares { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 4px 0 0; font-size: 13px; }
+.do-pares dt { color: var(--muted); }
+.do-pares dd { margin: 0; overflow-wrap: anywhere; }
+/* El enlace, de al menos 24 px de alto para el dedo (WCAG 2.5.8). */
+.do-pares a { display: inline-block; padding-block: 3px; color: var(--gold); text-underline-offset: 3px; }
+.do-codigo { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.do-sin-grafica { margin: 0; }
+
+/* La gráfica va dentro de la tarjeta: sin un segundo marco. «Ver los datos», de 44 px para el dedo. */
+.do-serie .g-figura { padding: 6px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; }
+.do .g-datos summary { min-height: 44px; line-height: 44px; }
+/*
+ * El encabezado es fijo (sticky): al llegar con el teclado (también con Mayús+Tab hacia arriba), lo enfocado se desplaza
+ * con este margen y nunca queda debajo (WCAG 2.4.11). En el celular el encabezado ocupa varias líneas (la navegación se
+ * parte): el margen es mayor. Lo comprueba el e2e a 375 px.
+ */
+.do :is(a, summary, [tabindex]) { scroll-margin-top: 128px; }
+
+@media (max-width: 620px) {
+  .do :is(a, summary, [tabindex]) { scroll-margin-top: 200px; }
+  .do-serie { padding: 14px 12px; }
+  .do-pares { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .do-pares dd + dt { margin-top: 6px; }
+}
+@media (forced-colors: active) {
+  .do-estado { border-color: CanvasText; }
+  .do-variacion { border: 1px solid CanvasText; }
+}
