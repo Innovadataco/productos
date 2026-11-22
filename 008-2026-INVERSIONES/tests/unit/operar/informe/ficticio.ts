@@ -63,7 +63,8 @@ export function entradas(o: OpcionesEntradas = {}): EntradasInforme {
 }
 
 /**
- * Un informe con todos los casos de la pantalla: una regla que se cumple (FICTICIA-A, tocada), una cercana
+ * Un informe con todos los casos de la pantalla: una regla tocada con el plazo vencido (FICTICIA-A), una que se cumple
+ * (FICTICIA-B, tocada y sin plazo), una cercana
  * (FICTICIA-B), una con el cierre atrasado (FICTICIA-C), una en el nivel, posturas, una por orden y una escrita; una
  * especie sin cierre, una atrasada y una incompleta; un ex-dividendo y un plazo en la ventana.
  */
@@ -81,12 +82,32 @@ export function entradasCompletas(): EntradasInforme {
       reglaDe("FICTICIA-B", { id: "r-b", condicion: "CIERRE_SOBRE", nivel: D("1259.17"), accion: "VENDER", cantidad: 13n, plazoHasta: dia("2027-04-02") }),
       reglaDe("FICTICIA-C", { id: "r-c", condicion: "CIERRE_BAJO", nivel: D("917.43"), accion: "COMPRAR", cantidad: 1n }),
       reglaDe("FICTICIA-A", { id: "r-n", condicion: "CIERRE_SOBRE", nivel: D("4597.31"), accion: "COMPRAR" }),
+      reglaDe("FICTICIA-B", { id: "r-t", condicion: "CIERRE_BAJO", nivel: D("1301.17"), accion: "VENDER", cantidad: 7n }),
       reglaDe("FICTICIA-B", { id: "r-p", condicion: "NINGUNA", accion: "NO_ACTUAR", cantidad: 43n, plazoHasta: dia("2027-05-14") }),
       regla({ id: "r-m", condicion: "MONTO_ORDEN_BAJO", nivel: D("1237911.47") }),
       regla({ id: "r-l", condicion: "LIBRE", detalle: "Orden límite siempre (ficticia)" }),
     ]),
     cierres: new Map([["FICTICIA-A", cierreLeido("4597.31")], ["FICTICIA-B", cierreLeido("1237")], ["FICTICIA-C", cierreLeido("899.11", dia("2027-03-12"))]]),
     proximos: [proximo({ id: "x-d", fechaEx: dia("2027-03-24"), fechaPago: dia("2027-03-31"), cuota: 2, tenencia: 0n })],
+  });
+}
+
+/**
+ * Los casos raros, para el candado de lenguaje: una regla de cierre de portafolio, una sin nivel y una sin cierre;
+ * tenencias positiva, de una acción y negativa; un ex-dividendo de una especie sin nemotécnico, y un plazo de portafolio.
+ */
+export function entradasRaras(): EntradasInforme {
+  return entradas({
+    plan: plan([
+      regla({ id: "q-1", condicion: "CIERRE_SOBRE", nivel: D("4751.39"), accion: "VENDER", cantidad: 1n, plazoHasta: dia("2027-03-30") }),
+      reglaDe("FICTICIA-A", { id: "q-2", condicion: "CIERRE_BAJO", nivel: null, accion: "COMPRAR" }),
+      reglaDe("FICTICIA-Z", { id: "q-3", condicion: "CIERRE_BAJO", nivel: D("917.43"), accion: "NO_ACTUAR", cantidad: 4613n }),
+    ]),
+    proximos: [
+      proximo({ id: "x-1", fechaEx: dia("2027-03-18"), tenencia: 37n, tipo: "EXTRAORDINARIO" }),
+      proximo({ id: "x-2", fechaEx: dia("2027-03-19"), tenencia: 1n }),
+      proximo({ id: "x-3", fechaEx: dia("2027-03-22"), tenencia: -13n, nemotecnico: null }),
+    ],
   });
 }
 

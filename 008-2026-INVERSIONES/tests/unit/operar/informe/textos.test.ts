@@ -2,8 +2,9 @@
 // plan, el estado frente al nivel (sin «Hoy» si la carga de precios se detuvo), los plazos, las fechas y el aviso fijo.
 // Datos inventados (FICTICIA-*).
 import { describe, expect, it } from "vitest";
+import { DIAS_FECHAS, UMBRAL_CERCANA_PCT } from "@/operar/informe/armar";
 import {
-  AVISO_DECISION, distancia, fraseRegla, textoEstadoRegla, textoFecha, textoPlazoRegla, textoPrecios, textoPreciosAtrasados, textoTenencia, textoVersion,
+  AVISO_DECISION, TITULOS_GRUPO, VACIOS_GRUPO, textoTituloFechas, distancia, fraseRegla, textoEstadoRegla, textoFecha, textoPlazoRegla, textoPrecios, textoPreciosAtrasados, textoTenencia, textoVersion,
 } from "@/app/operar/textos";
 import type { FechaVista, ReglaOperarVista } from "@/app/operar/tipos";
 
@@ -21,7 +22,7 @@ describe("el aviso fijo y los precios", () => {
   it("los precios: el último cierre disponible y su fecha, o que no hay; y cuándo se detuvo la carga", () => {
     expect(textoPrecios("2027-03-16")).toBe("Precios: último cierre disponible (16-mar-2027).");
     expect(textoPrecios(null)).toBe("Precios: todavía no hay cierres de las especies del portafolio.");
-    expect(textoPreciosAtrasados("2027-03-16")).toBe("Los precios no se han actualizado desde el 16-mar-2027.");
+    expect(textoPreciosAtrasados("2027-03-16")).toBe("Atención: los precios no se han actualizado desde el 16-mar-2027.");
   });
 
   it("la versión del plan que rige, o que no rige ninguna", () => {
@@ -64,6 +65,22 @@ describe("el estado de la regla hoy", () => {
     expect(textoEstadoRegla({ tipo: "POR_ORDEN" }, false)).toEqual({ principal: "008 no la mide con los cierres: aplica al monto de cada orden.", aviso: false });
     expect(textoEstadoRegla({ tipo: "POSTURA" }, false)).toEqual({ principal: "Es una postura del plan: no depende de un nivel de precio.", aviso: false });
     expect(textoEstadoRegla({ tipo: "SIN_NIVEL" }, false)).toEqual({ principal: "El plan no trae un nivel para medirla.", aviso: true });
+    expect(textoEstadoRegla({ tipo: "SIN_ESPECIE" }, false)).toEqual({ principal: "Es de portafolio y su condición es un cierre: 008 no la mide sin una especie.", aviso: true });
+  });
+
+  it("con el plazo vencido, una regla tocada nunca dice «se cumple»: dice que la condición se da y que el plazo venció", () => {
+    for (const atrasados of [false, true]) {
+      const t = textoEstadoRegla({ tipo: "TOCADA", lado: "BAJO", cierre: C }, atrasados, true);
+      expect(t).toEqual({ principal: "La condición se da con el cierre del 16-mar-2027 ($ 4.597,31, por debajo del nivel), pero su plazo venció.", aviso: true });
+      expect(t.principal.toLowerCase()).not.toContain("se cumple");
+    }
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "1.79", cierre: C }, false, true).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: está a +1,79 % del nivel.");
+  });
+
+  it("los títulos y vacíos de los grupos y el de las fechas salen de las constantes del armador", () => {
+    expect(TITULOS_GRUPO.cercanas).toBe(`Cerca de su nivel (a menos del ${UMBRAL_CERCANA_PCT.toString()} %)`);
+    expect(VACIOS_GRUPO.cercanas).toBe(`Ninguna regla está a menos del ${UMBRAL_CERCANA_PCT.toString()} % de su nivel.`);
+    expect(textoTituloFechas()).toBe(`Fechas de los próximos ${DIAS_FECHAS} días`);
   });
 
   it("la distancia lleva signo y dos decimales", () => {
@@ -93,8 +110,8 @@ describe("las fechas de los próximos días", () => {
 
   it("un plazo: el último día de su regla, con la acción y la condición del plan", () => {
     const plazo: FechaVista = { tipo: "PLAZO", fecha: "2027-04-02", id: "r-b", especie: "FICTICIA-B", accion: "VENDER", cantidad: "13", condicion: "CIERRE_SOBRE", nivel: "1259.17" };
-    expect(textoFecha(plazo)).toEqual({ cuando: "2-abr-2027", que: "Último día del plazo de su regla de FICTICIA-B", detalle: "vender 13 acciones si el cierre queda por encima de $ 1.259,17." });
-    expect(textoFecha({ ...plazo, especie: null, condicion: "LIBRE", accion: "NO_ACTUAR", cantidad: null, nivel: null }).que).toBe("Último día del plazo de su regla de portafolio");
+    expect(textoFecha(plazo)).toEqual({ cuando: "2-abr-2027", que: "Último día del plazo de su regla de FICTICIA-B, que dice", detalle: "vender 13 acciones si el cierre queda por encima de $ 1.259,17." });
+    expect(textoFecha({ ...plazo, especie: null, condicion: "LIBRE", accion: "NO_ACTUAR", cantidad: null, nivel: null }).que).toBe("Último día del plazo de su regla de portafolio, que dice");
   });
 
   it("las acciones de hoy: con, sin o por verificar", () => {

@@ -21,7 +21,7 @@ vi.mock("@/auth/sesion", () => ({ exigirSesion }));
 vi.mock("@/lib/db", () => ({ db: { soy: "la base" } }));
 vi.mock("@/app/operar/datos", () => ({ datosDeOperar }));
 
-import PaginaOperar from "@/app/operar/page";
+import PaginaOperar, { metadata } from "@/app/operar/page";
 import { Operar } from "@/app/operar/Operar";
 import { aVistaOperar } from "@/app/operar/serializar";
 import { AVISO_DECISION } from "@/app/operar/textos";
@@ -36,7 +36,8 @@ function pantalla(html: string): HTMLElement {
   return raiz;
 }
 const pintar = (vista = VISTA, soloLectura = false) => pantalla(renderToStaticMarkup(createElement(Operar, { vista, soloLectura })));
-const grupo = (raiz: HTMLElement, id: string) => raiz.querySelector(`section[aria-labelledby="${id}"]`);
+/** La sección de un h2 (una región con nombre) o el bloque de un h3 (un grupo de reglas, sin landmark). */
+const grupo = (raiz: HTMLElement, id: string) => raiz.querySelector(`section[aria-labelledby="${id}"]`) ?? raiz.querySelector(`#${id}`)?.closest(".op-grupo") ?? null;
 /** El texto de cada elemento de la lista; si trae párrafos, unidos por un espacio. */
 const items = (raiz: HTMLElement, id: string) =>
   [...(grupo(raiz, id)?.querySelectorAll("li") ?? [])].map((li) => (li.querySelector("p") ? [...li.querySelectorAll("p")].map(texto).join(" ") : texto(li)));
@@ -96,6 +97,10 @@ describe("src/app/operar/page.tsx", () => {
     expect(fuente).toMatch(/soloLectura=\{soloLectura\}/);
     expect(fuente).toMatch(/export const dynamic = "force-dynamic";/);
   });
+
+  it("el documento tiene su propio título", () => {
+    expect(metadata.title).toBe("Informe para operar");
+  });
 });
 
 describe("la pantalla", () => {
@@ -108,17 +113,23 @@ describe("la pantalla", () => {
   it("el título, el aviso fijo y los precios: último cierre disponible, y el aviso si la carga se detuvo", () => {
     const raiz = pintar();
     expect(texto(raiz.querySelector("h1"))).toBe("Informe para operar");
+    expect(texto(grupo(raiz, "t-hero"))).toContain("Informe del 17-mar-2027");
     const aviso = raiz.querySelector('[role="note"]');
     expect(texto(aviso)).toBe(`${AVISO_DECISION} Precios: último cierre disponible (16-mar-2027).`);
-    expect(raiz.querySelector('[role="status"]')).toBeNull();
+    // Contenido estático: sin región viva (role=status solo anuncia cambios después de la carga).
+    expect(raiz.querySelector('[role="status"], [aria-live]')).toBeNull();
     const detenida = pintar(aVistaOperar(armarInforme(entradasCompletas(), dia("2027-03-26"))));
-    expect(texto(detenida.querySelector('[role="status"]'))).toBe("Los precios no se han actualizado desde el 16-mar-2027.");
+    expect(detenida.querySelector('[role="status"], [aria-live]')).toBeNull();
+    expect(texto(detenida.querySelector('[role="note"]'))).toBe(`${AVISO_DECISION} Precios: último cierre disponible (16-mar-2027). Atención: los precios no se han actualizado desde el 16-mar-2027.`);
   });
 
   it("el estado: una fila por especie viva, el cierre y su fecha, la atrasada marcada, la sin cierre y los totales", () => {
     const raiz = pintar();
-    const tabla = raiz.querySelector('table[aria-labelledby="t-estado"]');
+    const tabla = grupo(raiz, "t-estado")?.querySelector("table") ?? null;
     expect(tabla?.closest('[role="region"]')?.getAttribute("tabindex")).toBe("0");
+    expect(texto(tabla?.querySelector("caption"))).toBe("Estado por especie: cantidad, último cierre, valor, peso y ganancia o pérdida sin vender");
+    expect(tabla?.hasAttribute("aria-labelledby")).toBe(false);
+    expect([...(tabla?.querySelectorAll("thead th") ?? [])].map(texto)).toEqual(["Especie", "Cantidad", "Último cierre", "Valor", "Peso", "Ganancia o pérdida sin vender", "Sobre el costo (%)"]);
     const filas = [...(tabla?.querySelectorAll("tbody tr") ?? [])].map((tr) => [...tr.querySelectorAll("th, td")].map(texto));
     expect(filas.map((f) => f[0])).toEqual(["FICTICIA-A", "FICTICIA-B", "FICTICIA-C", "FICTICIA-E"]);
     expect(filas[0]).toEqual(["FICTICIA-A", "37", "$ 4.597,31 · 16-mar-2027", "$ 170.100", "52,0 %", "+$ 11.183", "+7,0 %"]);
@@ -133,8 +144,9 @@ describe("la pantalla", () => {
     expect(texto(grupo(raiz, "t-reglas"))).toContain("Plan vigente: versión 7, desde el 4-ene-2027.");
     expect(texto(raiz.querySelector("#t-se-cumplen"))).toBe("Se cumplen o están en el nivel");
     expect(items(raiz, "t-se-cumplen")).toEqual([
-      "Su regla de FICTICIA-A dice: vender 37 acciones si el cierre queda por debajo de $ 4.613,17. Hoy se cumple: el cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel. Plazo: venció el 1-mar-2027.",
+      "Su regla de FICTICIA-A dice: vender 37 acciones si el cierre queda por debajo de $ 4.613,17. La condición se da con el cierre del 16-mar-2027 ($ 4.597,31, por debajo del nivel), pero su plazo venció. Plazo: venció el 1-mar-2027.",
       "Su regla de FICTICIA-A dice: comprar si el cierre queda por encima de $ 4.597,31. El cierre del 16-mar-2027 quedó en el nivel: $ 4.597,31. Plazo: sin plazo.",
+      "Su regla de FICTICIA-B dice: vender 7 acciones si el cierre queda por debajo de $ 1.301,17. Hoy se cumple: el cierre del 16-mar-2027 fue de $ 1.237, por debajo del nivel. Plazo: sin plazo.",
     ]);
     expect(items(raiz, "t-cercanas")).toEqual([
       "Su regla de FICTICIA-B dice: vender 13 acciones si el cierre queda por encima de $ 1.259,17. El cierre del 16-mar-2027 fue de $ 1.237: está a +1,79 % del nivel. Plazo: hasta el 2-abr-2027.",
@@ -146,20 +158,20 @@ describe("la pantalla", () => {
     expect(resto[0]).toContain("Plazo: hasta el 14-may-2027.");
     expect(resto.join(" ")).toContain("Su regla de portafolio dice: «Orden límite siempre (ficticia)».");
     expect(resto.join(" ")).toContain("008 no la mide con los cierres: aplica al monto de cada orden.");
-    expect(grupo(raiz, "t-se-cumplen")?.querySelectorAll(".aviso")).toHaveLength(1);
+    expect(grupo(raiz, "t-se-cumplen")?.querySelectorAll(".aviso")).toHaveLength(2);
   });
 
   it("con la carga de precios detenida, ninguna regla dice «Hoy se cumple»", () => {
     const raiz = pintar(aVistaOperar(armarInforme(entradasCompletas(), dia("2027-03-26"))));
     expect(texto(raiz)).not.toContain("Hoy se cumple");
-    expect(items(raiz, "t-se-cumplen")[0]).toContain("Se cumple con el último cierre disponible, del 16-mar-2027");
+    expect(items(raiz, "t-se-cumplen")[2]).toContain("Se cumple con el último cierre disponible, del 16-mar-2027: $ 1.237, por debajo del nivel.");
   });
 
   it("sin plan y sin especies: los avisos de vacío, nunca una tabla sin filas", () => {
     const raiz = pintar(aVistaOperar(armarInforme(entradas({ especies: [] }), HOY)));
     expect(texto(grupo(raiz, "t-reglas"))).toContain("Hoy no rige ninguna versión del plan.");
-    expect(grupo(raiz, "t-reglas")?.querySelectorAll("section")).toHaveLength(0);
-    expect(raiz.querySelector('table[aria-labelledby="t-estado"]')).toBeNull();
+    expect(grupo(raiz, "t-reglas")?.querySelectorAll(".op-grupo")).toHaveLength(0);
+    expect(raiz.querySelector("table")).toBeNull();
     expect(texto(grupo(raiz, "t-estado"))).toContain("No hay especies vivas en el portafolio.");
     expect(texto(grupo(raiz, "t-fechas"))).toContain("No hay ex-dividendos ni plazos de reglas en los próximos 30 días.");
     expect(texto(raiz.querySelector('[role="note"]'))).toContain("Precios: todavía no hay cierres de las especies del portafolio.");
@@ -176,8 +188,9 @@ describe("la pantalla", () => {
     const raiz = pintar();
     expect(items(raiz, "t-fechas")).toEqual([
       "24-mar-2027 · Ex-dividendo de FICTICIA-D: ordinario, cuota 2: $ 37,91 por acción; pago el 31-mar-2027; sin acciones hoy.",
-      "2-abr-2027 · Último día del plazo de su regla de FICTICIA-B: vender 13 acciones si el cierre queda por encima de $ 1.259,17.",
+      "2-abr-2027 · Último día del plazo de su regla de FICTICIA-B, que dice: vender 13 acciones si el cierre queda por encima de $ 1.259,17.",
     ]);
+    expect(texto(grupo(raiz, "t-fechas"))).toContain("Del 17-mar-2027 al 16-abr-2027.");
     const enlace = grupo(raiz, "t-escenarios")?.querySelector("a");
     expect([texto(enlace), enlace?.getAttribute("href")]).toEqual(["Proyecciones", "/proyecciones"]);
   });
@@ -191,5 +204,23 @@ describe("la pantalla", () => {
     const nombre = (e: Element) => e.getAttribute("aria-label") ?? texto(raiz.querySelector(`#${e.getAttribute("aria-labelledby")}`));
     const nombres = [...raiz.querySelectorAll('section[aria-labelledby], [role="region"]')].map(nombre);
     expect(new Set(nombres).size).toBe(nombres.length);
+    // Los grupos de reglas no son regiones: el h3 basta (menos ruido al navegar por landmarks).
+    expect(raiz.querySelectorAll(".op-grupo[aria-labelledby], section.op-grupo")).toHaveLength(0);
+    expect(raiz.querySelectorAll(".op-grupo h3")).toHaveLength(3);
+  });
+
+  it("las listas sin viñetas conservan su semántica (role=list)", () => {
+    const listas = [...pintar().querySelectorAll("ul.op-reglas, ol.op-fechas")];
+    expect(listas).toHaveLength(4);
+    for (const l of listas) expect(l.getAttribute("role")).toBe("list");
+  });
+
+  it("el color de la ganancia o pérdida sigue al signo del texto: lo que redondea a cero no lleva color", () => {
+    const [a, , c] = VISTA.estado.especies;
+    const vista = { ...VISTA, estado: { ...VISTA.estado, especies: [{ ...a!, sinVender: "-0.4", sinVenderPct: "-0.04" }, c!] } };
+    const filas = [...(pintar(vista).querySelectorAll("tbody tr"))].map((tr) => [...tr.querySelectorAll("td")].slice(4).map((td) => [texto(td), td.className]));
+    expect(filas[0]).toEqual([["$ 0", "num"], ["0,0 %", "num"]]);
+    expect(filas[1]).toEqual([["−$ 348", "num loss"], ["−2,0 %", "num loss"]]);
+    expect([...pintar().querySelectorAll("tbody tr")][0]!.querySelectorAll("td.gain")).toHaveLength(2);
   });
 });

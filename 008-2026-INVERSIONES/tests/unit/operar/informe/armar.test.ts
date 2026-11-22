@@ -158,7 +158,7 @@ describe("sus reglas hoy", () => {
     expect(i.estado.especies.map((e) => e.nemotecnico)).not.toContain("FICTICIA-Z");
   });
 
-  it("posturas, monto por orden, una regla de cierre sin especie y una sin nivel van al resto, sin medir", () => {
+  it("posturas, monto por orden, una regla de cierre de portafolio (sin especie, como en /plan) y una sin nivel van al resto, sin medir", () => {
     const i = armarInforme(entradas({
       plan: plan([
         reglaDe("FICTICIA-A", { id: "r-1", condicion: "NINGUNA", accion: "VENDER", cantidad: 13n }),
@@ -176,7 +176,7 @@ describe("sus reglas hoy", () => {
       "r-1": { tipo: "POSTURA" },
       "r-2": { tipo: "POSTURA" },
       "r-3": { tipo: "POR_ORDEN" },
-      "r-4": { tipo: "SIN_CIERRE_AL_DIA", ultimo: null },
+      "r-4": { tipo: "SIN_ESPECIE" },
       "r-5": { tipo: "SIN_NIVEL" },
     });
   });
