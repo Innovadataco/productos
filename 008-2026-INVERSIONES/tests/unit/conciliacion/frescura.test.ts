@@ -13,11 +13,12 @@ const D = (v: string) => new Prisma.Decimal(v);
 
 const entradas: EntradasConciliacion = {
   especies: [
-    { instrumentoId: "A", certificada: { cantidad: 80n, precioValoracion: "10", valorMercado: "800" }, liquidada: 100n, operada: 80n, pendientes: 1, cierre: "10", escisionSinLote: false },
-    { instrumentoId: "B", certificada: { cantidad: 20n, precioValoracion: "50", valorMercado: "1000" }, liquidada: 20n, operada: 20n, pendientes: 0, cierre: "51", escisionSinLote: false },
+    { instrumentoId: "A", certificada: { cantidad: 80n, precioValoracion: "10", valorMercado: "800" }, liquidada: 100n, operada: 80n, pendientes: 1, cierre: "10", cierreAnterior: null, escisionSinLote: false },
+    { instrumentoId: "B", certificada: { cantidad: 20n, precioValoracion: "50", valorMercado: "1000" }, liquidada: 20n, operada: 20n, pendientes: 0, cierre: "51", cierreAnterior: null, escisionSinLote: false },
   ],
   fondos: [{ instrumentoId: "F", saldoCertificado: "5000", unidades: null, valorUnidad: null }],
   efectivo: { certificado: "300", liquidado: "250", operado: "250", hayFondo: true, aporteFondoRegistrado: false },
+  diaAnterior: null,
 };
 const recalculada = { versionCalculo: VERSION_CALCULO, ...calcularConciliacion(entradas) };
 

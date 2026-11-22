@@ -12,6 +12,7 @@ import { Prisma, type PrismaClient, type ResultadoConciliacion, type TipoInstrum
 import { calcularConciliacion, VERSION_CALCULO } from "./controles";
 import { leerEntradas, ordenesAlCorte } from "./esperado";
 import { mismaConciliacion, type ControlGuardado } from "./frescura";
+import { certificacionVigente } from "./vigente";
 
 type Lector = Prisma.TransactionClient;
 
@@ -127,7 +128,8 @@ async function frescuraDe(tx: Lector, certificacionId: string, guardada: Concili
 
 export function leerConciliacion(db: PrismaClient, fechaCorte: Date): Promise<LecturaConciliacion | null> {
   return enSoloLectura(db, async (tx) => {
-    const cert = await tx.certificacion.findUnique({ where: { fechaCorte }, select: { id: true, fechaCorte: true } });
+    // Solo la vigente: una retirada (corte equivocado) es historia y no se muestra como la de esa fecha.
+    const cert = await certificacionVigente(tx, fechaCorte);
     if (!cert) return null;
     const conciliacion = await ultimaDelCorte(tx, cert.id);
     const porLiquidar = await porLiquidarAlCorte(tx, cert.fechaCorte);
@@ -140,6 +142,8 @@ export function leerConciliacion(db: PrismaClient, fechaCorte: Date): Promise<Le
 const cortes = (db: PrismaClient, cuantos: number): Promise<CorteDisponible[]> =>
   db.certificacion
     .findMany({
+      // Las retiradas (corte equivocado) no se ofrecen ni cuentan como el corte más reciente.
+      where: { retiradaEn: null },
       orderBy: { fechaCorte: "desc" },
       take: cuantos,
       select: { fechaCorte: true, conciliaciones: { select: { resultado: true }, orderBy: MAS_RECIENTE, take: 1 } },

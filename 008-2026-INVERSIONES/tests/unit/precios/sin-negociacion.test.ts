@@ -58,6 +58,8 @@ function baseFalsa(calendario: readonly { dia: Date; esHabil: boolean }[], previ
     simboloPrecio: { findFirst: async () => null },
     certificacionPosicion: { findFirst: async () => null },
     precioCierre,
+    // El candado compartido del día (frente certificacion-corte-real): la base falsa no tiene candados.
+    $executeRaw: async () => 0,
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(db),
   };
   return { db: db as unknown as PrismaClient, filas, llamadas };

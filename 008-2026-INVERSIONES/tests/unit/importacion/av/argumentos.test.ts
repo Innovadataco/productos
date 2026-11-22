@@ -4,7 +4,7 @@
  * salen con 2 y su uso ANTES de tocar la base, sin repetir el correo ni el código del fondo. Datos inventados.
  */
 import { describe, expect, it } from "vitest";
-import { ErrorArgumentosAv, leerArgumentosConciliar, leerArgumentosImportar } from "@/importacion/av/argumentos";
+import { ErrorArgumentosAv, leerArgumentosConciliar, leerArgumentosCorregir, leerArgumentosImportar } from "@/importacion/av/argumentos";
 import { POR_CLI_MS, comprobar, correr, entornoMinimo } from "../../../ayudas/cli";
 
 const codigo = (f: () => unknown): string => {
@@ -73,5 +73,42 @@ describe("CLI de la certificación como proceso (sin base)", { timeout: 4 * POR_
     const uso = "Uso: npx tsx scripts/conciliar-certificacion.ts --fecha-corte";
     comprobar(correr("conciliar-certificacion.ts", ["--ayuda"], ENTORNO), 2, uso, NUNCA);
     comprobar(correr("conciliar-certificacion.ts", [], ENTORNO), 2, "FECHA_CORTE_OBLIGATORIA", NUNCA);
+  });
+});
+
+// Frente certificacion-corte-real: corregir el corte de una certificación ya cargada. Las dos fechas son
+// obligatorias (nunca se infieren) y distintas; el PDF es el mismo archivo que se cargó.
+describe("leerArgumentosCorregir", () => {
+  const base = ["--email", "d@ejemplo.invalid", "--fecha-corte", "2027-07-13", "--nueva-fecha-corte", "2027-07-12"];
+
+  it("lee correo, las dos fechas y un solo PDF, en cualquier orden", () => {
+    expect(leerArgumentosCorregir([...base, "cert.ficticio.pdf"])).toEqual({
+      email: "d@ejemplo.invalid", fechaCorte: new Date("2027-07-13T00:00:00Z"), nuevaFechaCorte: new Date("2027-07-12T00:00:00Z"), archivo: "cert.ficticio.pdf",
+    });
+    expect(leerArgumentosCorregir(["c.PDF", ...base.slice(4), ...base.slice(0, 4)])).toMatchObject({ archivo: "c.PDF" });
+  });
+
+  it("las dos fechas son obligatorias, válidas y distintas", () => {
+    expect(codigo(() => leerArgumentosCorregir([...base.slice(0, 4), "c.pdf"]))).toBe("NUEVA_FECHA_CORTE_OBLIGATORIA");
+    expect(codigo(() => leerArgumentosCorregir([...base.slice(0, 2), ...base.slice(4), "c.pdf"]))).toBe("FECHA_CORTE_OBLIGATORIA");
+    expect(codigo(() => leerArgumentosCorregir([...base.slice(0, 5), "2027-02-30", "c.pdf"]))).toBe("NUEVA_FECHA_CORTE_INVALIDA");
+    expect(codigo(() => leerArgumentosCorregir([...base.slice(0, 5), "2027-07-13", "c.pdf"]))).toBe("MISMA_FECHA");
+  });
+
+  it("rechaza correo sin forma, --fondo (el fondo ya está vinculado), opciones repetidas y lo que no es un PDF", () => {
+    expect(codigo(() => leerArgumentosCorregir(["--email", "sin-arroba", ...base.slice(2), "c.pdf"]))).toBe("EMAIL_INVALIDO");
+    expect(codigo(() => leerArgumentosCorregir([...base, "--fondo", "4613707", "c.pdf"]))).toBe("OPCION_DESCONOCIDA");
+    expect(codigo(() => leerArgumentosCorregir([...base, "--fecha-corte", "2027-07-14", "c.pdf"]))).toBe("OPCION_REPETIDA");
+    expect(codigo(() => leerArgumentosCorregir([...base, "c.csv"]))).toBe("ARCHIVO_NO_PDF");
+    expect(codigo(() => leerArgumentosCorregir(base))).toBe("ARCHIVO_FALTANTE");
+  });
+});
+
+describe("corregir-corte-certificacion como proceso: argumentos inválidos", { timeout: 3 * POR_CLI_MS }, () => {
+  it("sale con 2 y su uso, sin repetir el correo y sin tocar la base", () => {
+    const correo = "dueno-37911@ejemplo.invalid";
+    const s = correr("corregir-corte-certificacion.ts", ["--email", correo, "--fecha-corte", "2027-07-13", "--nueva-fecha-corte", "2027-07-13", "c.pdf"], entornoMinimo({ DATABASE_URL: "postgresql://nadie@127.0.0.1:1/nada_test" }));
+    comprobar(s, 2, "MISMA_FECHA", [correo]);
+    expect(s.texto).toContain("Uso: npx tsx scripts/corregir-corte-certificacion.ts --email <correo-del-dueño> --fecha-corte AAAA-MM-DD --nueva-fecha-corte AAAA-MM-DD <certificacion.pdf>");
   });
 });

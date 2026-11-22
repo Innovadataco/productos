@@ -111,6 +111,8 @@ function baseFalsa(previas: readonly Fila[], ganchos: Ganchos = {}, referencia: 
       },
     },
     precioCierre,
+    // El candado compartido del día (frente certificacion-corte-real): la base falsa no tiene candados.
+    $executeRaw: async () => 0,
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(db),
   };
   return { db: db as unknown as PrismaClient, filas, llamadas };

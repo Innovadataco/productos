@@ -8,7 +8,8 @@
 //  - lote: solo "instrumentoId", por el filtro `lotes: { some: {} }` de las especies (ni cantidad, ni costos, ni fechas);
 //  - simbolo_precio: el símbolo de Yahoo y la clase de la SFC vigentes (findFirst también lee el id);
 //  - calendario_bvc: los días hábiles; certificacion y certificacion_posicion: el precio de valoración del día de corte
-//    (ni la cantidad, ni el valor de mercado, ni el saldo);
+//    de la certificación VIGENTE ("retiradaEn", frente certificacion-corte-real; ni la cantidad, ni el valor de
+//    mercado, ni el saldo);
 //  - precio_cierre: SELECT de todas sus columnas, porque create() hace INSERT … RETURNING de todas; INSERT de las que
 //    escribe create() (sin "reemplazadoEn": lo insertado nace vigente) y UPDATE solo de "reemplazadoEn";
 //  - valor_unidad_fondo: lo que leen la comparación y el último dato; INSERT de lo que escribe createMany() (sin
@@ -26,7 +27,7 @@ export const PERMISOS_PRECIOS: readonly Permiso[] = [
   { tabla: "lote", privilegio: "SELECT", columnas: ["instrumentoId"] },
   { tabla: "simbolo_precio", privilegio: "SELECT", columnas: ["id", "instrumentoId", "proveedor", "simbolo", "vigenteDesde", "vigenteHasta"] },
   { tabla: "calendario_bvc", privilegio: "SELECT", columnas: ["dia", "esHabil"] },
-  { tabla: "certificacion", privilegio: "SELECT", columnas: ["id", "fechaCorte"] },
+  { tabla: "certificacion", privilegio: "SELECT", columnas: ["id", "fechaCorte", "retiradaEn"] },
   { tabla: "certificacion_posicion", privilegio: "SELECT", columnas: ["certificacionId", "instrumentoId", "precioValoracion"] },
   { tabla: "precio_cierre", privilegio: "SELECT", columnas: PRECIO_CIERRE_COLUMNAS },
   { tabla: "precio_cierre", privilegio: "INSERT", columnas: PRECIO_CIERRE_COLUMNAS.filter((c) => c !== "reemplazadoEn") },

@@ -101,6 +101,8 @@ export function baseFalsa(o: OpcionesBaseFalsa = {}) {
       },
     },
     precioCierre,
+    // El candado compartido del día (frente certificacion-corte-real): la base falsa no tiene candados.
+    $executeRaw: async () => 0,
     $transaction: async (fn: (tx: unknown) => Promise<unknown>, opciones?: unknown) => {
       llamadas.opcionesTx.push(opciones);
       return fn(db);

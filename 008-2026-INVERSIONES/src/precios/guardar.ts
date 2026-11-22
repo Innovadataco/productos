@@ -5,7 +5,7 @@
  * tests/unit/precios/camino-unico.test.ts (nada más inserta en precio_cierre).
  * - Versionado: si Yahoo revisa un cierre, el anterior queda con `reemplazadoEn` (historia) y se
  *   inserta el nuevo.
- * - Candado: si hay certificación de A&V con fecha de corte igual, el cierre se compara con su
+ * - Candado: si hay certificación de A&V VIGENTE con fecha de corte igual, el cierre se compara con su
  *   precio de valoración: VERIFICADO si difiere ≤ 1 %, si no NO_VERIFICADO. Sin referencia oficial
  *   ese día, NO_VERIFICADO (nunca se presenta como verificado lo que no se comparó). Con una valoración
  *   ≤ 0 o una desviación que no cabe en `desviacionPct`, NO_VERIFICADO con la referencia y sin desviación.
@@ -24,6 +24,8 @@
  *   único) se deshace y se reintenta releyendo: lo que la otra corrida ya guardó igual queda «sin cambios».
  */
 import { Prisma, type EstadoPrecio, type PrismaClient } from "@prisma/client";
+import { candadoConciliar } from "../lib/candados";
+import { diaIso } from "./horario";
 import { aniosDelRango, leerCalendario, motivoOmision, retiraElVigente, type CalendarioBvc, type MotivoOmision } from "./negociacion";
 import type { Cierre, ResultadoYahoo } from "./yahoo";
 
@@ -101,8 +103,8 @@ export async function leerCalendarioBvc(db: Pick<PrismaClient, "calendarioBvc">,
   return leerCalendario(await db.calendarioBvc.findMany({ where: { dia: aniosDelRango(desde, hasta) }, select: { dia: true, esHabil: true } }));
 }
 
-/** Otra corrida reemplazó el vigente entre la lectura y el reemplazo: hay que releer. */
-class ConflictoConcurrente extends Error {
+/** Otra corrida reemplazó el vigente entre la lectura y el reemplazo: hay que releer (o repetir, en la corrección del corte). */
+export class ConflictoConcurrente extends Error {
   constructor() {
     super("conflicto");
     this.name = "ConflictoConcurrente";
@@ -121,9 +123,10 @@ export interface Verificacion {
 
 const SIN_REFERENCIA: Verificacion = { estado: "NO_VERIFICADO", fuenteReferencia: null, precioReferencia: null, desviacionPct: null };
 
-async function estadoDe(db: Pick<Prisma.TransactionClient, "certificacionPosicion">, instrumentoId: string, c: Cierre): Promise<Verificacion> {
+async function estadoDe(db: Pick<Prisma.TransactionClient, "certificacionPosicion">, instrumentoId: string, c: Pick<Cierre, "fecha" | "precio">): Promise<Verificacion> {
   const ref = await db.certificacionPosicion.findFirst({
-    where: { instrumentoId, certificacion: { fechaCorte: c.fecha } },
+    // Solo la certificación vigente: una retirada (corte equivocado) ya no es referencia de ese día.
+    where: { instrumentoId, certificacion: { fechaCorte: c.fecha, retiradaEn: null } },
     select: { precioValoracion: true, certificacion: { select: { fechaCorte: true } } },
   });
   if (!ref) return SIN_REFERENCIA;
@@ -163,6 +166,9 @@ function clasificar(vigente: (Verificacion & { readonly precio: Prisma.Decimal }
 /** Un intento, en una transacción: leer el vigente, compararlo, reemplazarlo con guarda e insertar. Todo o nada. */
 async function guardarCierreUnaVez(db: PrismaClient, instrumentoId: string, c: Cierre): Promise<Cambio> {
   return db.$transaction(async (tx) => {
+    // Compartido con las demás barras del día; exclusivo en la corrección del corte de una certificación: el cierre no
+    // se verifica contra una certificación que se está retirando (security-reviewer MEDIO).
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtext(${candadoConciliar(diaIso(c.fecha))}))`;
     const vigente = await tx.precioCierre.findFirst({ where: { instrumentoId, fecha: c.fecha, fuente: FUENTE, reemplazadoEn: null }, select: SELECCION_VIGENTE });
     const verificacion = await estadoDe(tx, instrumentoId, c);
     const cambio = clasificar(vigente, c.precio, verificacion);
@@ -185,6 +191,33 @@ async function guardarCierre(db: PrismaClient, instrumentoId: string, c: Cierre)
       if (!esConflicto(err) || intento >= MAX_INTENTOS_GUARDADO) throw err;
     }
   }
+}
+
+/**
+ * Re-verifica, DENTRO de la transacción dada, los cierres vigentes de Yahoo de esos días contra la certificación vigente
+ * de cada día. Lo usa la corrección del corte de una certificación (src/importacion/av/corregir.ts), en su misma
+ * transacción. Mismo mecanismo que «re-verificado»: si la verificación cambió, el vigente queda con `reemplazadoEn` y
+ * se inserta el mismo precio con la verificación nueva; si no, no se escribe. Sin reintentos: si otra corrida reemplazó
+ * el vigente a la vez, lanza y la transacción entera se deshace. Devuelve, por día y en el mismo orden, cuántos cambiaron.
+ */
+export async function reverificarCierres(tx: Prisma.TransactionClient, fechas: readonly Date[]): Promise<number[]> {
+  const conteos: number[] = [];
+  for (const fecha of fechas) {
+    const vigentes = await tx.precioCierre.findMany({
+      where: { fecha, fuente: FUENTE, reemplazadoEn: null }, orderBy: { instrumentoId: "asc" }, select: { ...SELECCION_VIGENTE, instrumentoId: true, moneda: true },
+    });
+    let cambiados = 0;
+    for (const v of vigentes) {
+      const verificacion = await estadoDe(tx, v.instrumentoId, { fecha, precio: v.precio.toString() });
+      if (mismaVerificacion(v, verificacion)) continue;
+      const { count } = await tx.precioCierre.updateMany({ where: { id: v.id, reemplazadoEn: null }, data: { reemplazadoEn: new Date() } });
+      if (count !== 1) throw new ConflictoConcurrente();
+      await tx.precioCierre.create({ data: { instrumentoId: v.instrumentoId, fecha, precio: v.precio, fuente: FUENTE, moneda: v.moneda, ...verificacion } });
+      cambiados += 1;
+    }
+    conteos.push(cambiados);
+  }
+  return conteos;
 }
 
 /**

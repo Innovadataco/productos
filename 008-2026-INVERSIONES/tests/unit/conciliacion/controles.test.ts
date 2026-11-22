@@ -11,13 +11,14 @@ import { describe, expect, it } from "vitest";
 import { calcularConciliacion, TOLERANCIA_EFECTIVO_COP, TOLERANCIA_VALOR, VERSION_CALCULO, type EntradasConciliacion } from "@/conciliacion/controles";
 
 const especie = (id: string, c: Partial<EntradasConciliacion["especies"][number]> = {}): EntradasConciliacion["especies"][number] => ({
-  instrumentoId: id, certificada: { cantidad: 100n, precioValoracion: "10", valorMercado: "1000" }, liquidada: 100n, operada: 100n, pendientes: 0, cierre: "10", escisionSinLote: false, ...c,
+  instrumentoId: id, certificada: { cantidad: 100n, precioValoracion: "10", valorMercado: "1000" }, liquidada: 100n, operada: 100n, pendientes: 0, cierre: "10", cierreAnterior: null, escisionSinLote: false, ...c,
 });
 
 const base = (cambios: Partial<EntradasConciliacion> = {}): EntradasConciliacion => ({
   especies: [especie("A"), especie("B", { certificada: { cantidad: 20n, precioValoracion: "50", valorMercado: "1000" }, liquidada: 20n, operada: 20n, cierre: "50" })],
   fondos: [{ instrumentoId: "F", saldoCertificado: "5000", unidades: "100", valorUnidad: "50" }],
   efectivo: { certificado: "300", liquidado: "300", operado: "300", hayFondo: true, aporteFondoRegistrado: true },
+  diaAnterior: null,
   ...cambios,
 });
 
@@ -38,7 +39,8 @@ describe("calcularConciliacion: todo cuadra", () => {
     expect(uno(r, "VALOR")).toMatchObject({ esperado: "2000", real: "2000", detalle: { alcance: "total_acciones" } });
     expect(uno(r, "FONDO", "F")).toMatchObject({ esperado: "5000", real: "5000" });
     expect(uno(r, "EFECTIVO")).toMatchObject({ esperado: "300", real: "300", tolerancia: TOLERANCIA_EFECTIVO_COP });
-    expect([VERSION_CALCULO, TOLERANCIA_VALOR, TOLERANCIA_EFECTIVO_COP]).toEqual(["conciliacion-v1", "0.005", "1"]);
+    // v2 (frente certificacion-corte-real): fecha_corte_dudosa también por el día hábil anterior, con fechaSugerida.
+    expect([VERSION_CALCULO, TOLERANCIA_VALOR, TOLERANCIA_EFECTIVO_COP]).toEqual(["conciliacion-v2", "0.005", "1"]);
   });
 });
 
@@ -99,6 +101,43 @@ describe("VALOR por especie y total (±0,5 % del certificado)", () => {
   it("si todas las especies (2 o más) difieren en precio, el total dice fecha_corte_dudosa", () => {
     const r = calcularConciliacion(base({ especies: [especie("A", { cierre: "11" }), especie("B", { cierre: "12" })] }));
     expect(uno(r, "VALOR")).toMatchObject({ resultado: "NO_CUADRA", codigoMotivo: "fecha_corte_dudosa" });
+  });
+
+  it("la regla de siempre (todas difieren del corte) sin cierres del día anterior: fecha_corte_dudosa sin fecha sugerida", () => {
+    const r = calcularConciliacion(base({ especies: [especie("A", { cierre: "11" }), especie("B", { cierre: "12" })], diaAnterior: "2027-08-31" }));
+    expect(uno(r, "VALOR")).toMatchObject({ codigoMotivo: "fecha_corte_dudosa", detalle: { alcance: "total_acciones" } });
+    expect(uno(r, "VALOR").detalle).not.toHaveProperty("fechaSugerida");
+  });
+
+  // El caso del defecto, con cifras inventadas: 9 especies valoradas EXACTO al cierre del día hábil anterior; 2 tienen
+  // el mismo cierre los dos días (por eso «todas difieren» no se cumplía y el total decía por_especies).
+  it("todas cuadran con el día hábil anterior y alguna también con el corte: fecha_corte_dudosa con la fecha sugerida", () => {
+    const valoraciones = ["2371", "63.17", "418.9", "1237", "46.13", "7913.6", "381.47", "29.11", "5023.7"];
+    const especies = valoraciones.map((pv, i) => {
+      const cierre = i < 2 ? pv : (Number(pv) * 1.0347).toFixed(2);
+      return especie(`E${i}`, { certificada: { cantidad: 37n, precioValoracion: pv, valorMercado: (Number(pv) * 37).toFixed(4) }, liquidada: 37n, operada: 37n, cierre, cierreAnterior: pv });
+    });
+    const r = calcularConciliacion(base({ especies, diaAnterior: "2027-09-01" }));
+    expect(de(r, "VALOR").length).toBe(1);
+    expect(uno(r, "VALOR")).toMatchObject({ resultado: "NO_CUADRA", codigoMotivo: "fecha_corte_dudosa", detalle: { alcance: "total_acciones", fechaSugerida: "2027-09-01" } });
+    expect(r.controles.filter((c) => c.codigoMotivo === "precio_distinto")).toHaveLength(7);
+  });
+
+  it("la regla de siempre y la nueva a la vez: fecha_corte_dudosa con la fecha sugerida", () => {
+    const especies = [especie("A", { cierre: "10.41", cierreAnterior: "10" }), especie("B", { certificada: { cantidad: 20n, precioValoracion: "50", valorMercado: "1000" }, liquidada: 20n, operada: 20n, cierre: "52.37", cierreAnterior: "50.13" })];
+    const r = calcularConciliacion(base({ especies, diaAnterior: "2027-09-01" }));
+    expect(uno(r, "VALOR")).toMatchObject({ codigoMotivo: "fecha_corte_dudosa", detalle: { alcance: "total_acciones", fechaSugerida: "2027-09-01" } });
+  });
+
+  it("si el total cuadra, los cierres del día anterior no cambian nada", () => {
+    const r = calcularConciliacion(base({ especies: [especie("A", { cierreAnterior: "9.37" }), especie("B", { certificada: { cantidad: 20n, precioValoracion: "50", valorMercado: "1000" }, liquidada: 20n, operada: 20n, cierre: "50", cierreAnterior: "50" })], diaAnterior: "2027-09-01" }));
+    expect(uno(r, "VALOR")).toMatchObject({ resultado: "CUADRA", codigoMotivo: null, detalle: { alcance: "total_acciones" } });
+  });
+
+  it("sin el día anterior (año sin calendario) la regla nueva no concluye: por_especies", () => {
+    const especies = [especie("A", { cierre: "10.41", cierreAnterior: "10" }), especie("B", { certificada: { cantidad: 20n, precioValoracion: "50", valorMercado: "1000" }, liquidada: 20n, operada: 20n, cierre: "50", cierreAnterior: "50" })];
+    expect(uno(calcularConciliacion(base({ especies, diaAnterior: null })), "VALOR")).toMatchObject({ codigoMotivo: "por_especies" });
+    expect(uno(calcularConciliacion(base({ especies, diaAnterior: "2027-09-01" })), "VALOR")).toMatchObject({ codigoMotivo: "fecha_corte_dudosa", detalle: { fechaSugerida: "2027-09-01" } });
   });
 
   it("si una especie no cuadra y las demás sí, el total puede cuadrar o decir por_especies", () => {
