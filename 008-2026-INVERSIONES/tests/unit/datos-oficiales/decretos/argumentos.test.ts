@@ -31,7 +31,7 @@ describe("decretos · argumentos", () => {
       [["--archivo", " ", "--email", EMAIL], "FALTA_ARCHIVO"],
       [["--archivo", RUTA, "--email", "no-es-correo"], "EMAIL_INVALIDO"],
       [["--archivo", RUTA, "--email=--d@x.invalid"], "EMAIL_INVALIDO"],
-      [["--archivo", RUTA, "--email", "d‮@x.invalid"], "EMAIL_INVALIDO"],
+      [["--archivo", RUTA, "--email", "d\u202e@x.invalid"], "EMAIL_INVALIDO"],
       [[], "FALTA_ARCHIVO"],
     ];
     for (const [argv, codigo] of casos) {

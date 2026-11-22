@@ -1,6 +1,23 @@
-/** Camino único de escritura de dividendo_decretado (fase C, C4a). PENDIENTE (rojo de C4a). */
-import type { Prisma, PrismaClient } from "@prisma/client";
+/**
+ * Camino ÚNICO de escritura de dividendo_decretado (fase C, C4a). Nada más en src/ ni en scripts/ crea ni retira un
+ * decreto (candado tests/unit/datos-oficiales/decretos/camino-unico.test.ts).
+ * - La base exige una sola versión vigente por clave (especie, anuncio, tipo, cuota) y que no se repita un número de
+ *   versión; la CADENA la garantiza este módulo: `planificar` solo acepta versiones 1..n con la n como única vigente
+ *   (si no, CADENA_ROTA: una v2 sin v1, un número que no sigue al anterior o un retiro sin sucesor), y un cambio retira
+ *   la vigente e inserta la n+1 en la misma transacción. Anular es una versión nueva `anulada` con su nota (P10).
+ * - Una sola transacción para todo el archivo: la guarda del cruce, el candado de REGISTRO_DECRETOS, se releen y se
+ *   vuelven a planificar las versiones, y por cada cambio se retira la vigente (debe contar 1), se guarda la fila cruda
+ *   cifrada y se inserta la versión siguiente. Si algo falla, no queda nada (tampoco la carga). Sin cambios, no se
+ *   escribe nada.
+ * - Guarda del cruce (condición de C1): hasta que el motor de proyecciones cruce los decretos con los pagos de Trii por
+ *   ventana (C5b), solo se escribe en una base de pruebas (nombre terminado en `_test`, el de la conexión que escribe):
+ *   si no, el motor contaría dos veces un pago de Trii que llega otro día. En otra base: CRUCE_PENDIENTE. C5b la quita.
+ */
+import { createHash } from "node:crypto";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import type { Llavero } from "../../cifrado/llavero";
+import { diaIso } from "../../precios/horario";
+import { crearCarga, guardarFilaCruda, tomarCandado, verFila } from "../registro/carga";
 import type { Hallazgo } from "../registro/hallazgos";
 import type { FilaDecreto } from "./csv";
 import type { DecretoLeido, TipoDecreto } from "./filas";
@@ -9,6 +26,7 @@ type Tx = Prisma.TransactionClient;
 type Db = PrismaClient | Tx;
 
 export const TIPO_FUENTE = "REGISTRO_DECRETOS" as const;
+const TRANSACCION = { timeout: 60_000, maxWait: 10_000 } as const;
 
 export type CodigoDecretos = "CRUCE_PENDIENTE" | "CADENA_ROTA" | "ANULACION_SIN_DECRETO" | "CONFLICTO_CONCURRENTE";
 
@@ -19,6 +37,7 @@ export class ErrorDecretos extends Error {
   }
 }
 
+/** Una versión guardada de un decreto, con lo que hace falta para planificar. */
 export interface VersionGuardada {
   readonly id: string;
   readonly instrumentoId: string;
@@ -36,6 +55,7 @@ export interface VersionGuardada {
   readonly filaFuenteId: string;
 }
 
+/** Una fila del CSV con su especie ya resuelta a un instrumento. */
 export interface DecretoResuelto {
   readonly fila: FilaDecreto;
   readonly instrumentoId: string;
@@ -60,22 +80,122 @@ export interface ConteosDecretos {
   readonly sinCambios: number;
 }
 
-const pendiente = (): never => {
-  throw new Error("PENDIENTE");
-};
+export const claveDecreto = (instrumentoId: string, tipo: TipoDecreto, fechaAnuncio: Date, cuota: number): string =>
+  `${instrumentoId}|${tipo}|${diaIso(fechaAnuncio)}|${cuota}`;
 
-export const claveDecreto = (_instrumentoId: string, _tipo: TipoDecreto, _fechaAnuncio: Date, _cuota: number): string => pendiente();
-export const claveNaturalDecreto = (_instrumentoId: string, _d: Pick<DecretoLeido, "tipo" | "fechaAnuncio" | "cuota">, _version: number): string => pendiente();
-export const mismoContenido = (_v: VersionGuardada, _d: DecretoLeido): boolean => pendiente();
-export const planificar = (_versiones: readonly VersionGuardada[], _d: DecretoLeido): Plan => pendiente();
-export const planificarTodos = (
-  _resueltos: readonly DecretoResuelto[], _versiones: ReadonlyMap<string, readonly VersionGuardada[]>,
-): { readonly planes: readonly Planificado[]; readonly hallazgos: readonly Hallazgo[] } => pendiente();
-export const contar = (_planes: readonly Planificado[]): ConteosDecretos => pendiente();
-export const hayCambios = (_c: ConteosDecretos): boolean => pendiente();
-export const leerVersiones = async (_db: Db, _ids: readonly string[]): Promise<ReadonlyMap<string, readonly VersionGuardada[]>> => pendiente();
-export const basePermiteAplicar = (_nombre: string): boolean => pendiente();
-export const nombreDeLaBase = async (_db: Db): Promise<string> => pendiente();
+/**
+ * La clave natural de la fila cruda de una versión: la clave del decreto (con el instrumento, no el texto: un alias de
+ * Trii no crea otra) y el número de versión. Así el único de fila_fuente es espejo de la clave de versión, y volver al
+ * contenido de la v1 en una v3 no choca con la fila de la v1.
+ */
+export function claveNaturalDecreto(instrumentoId: string, d: Pick<DecretoLeido, "tipo" | "fechaAnuncio" | "cuota">, version: number): string {
+  return createHash("sha256").update(JSON.stringify([TIPO_FUENTE, instrumentoId, d.tipo, diaIso(d.fechaAnuncio), d.cuota, version])).digest("hex");
+}
+
+/** La vigente, si la cadena es 1..n sin huecos ni repetidos y la n es la única vigente; si no, null. */
+function vigenteDeCadenaSana(versiones: readonly VersionGuardada[]): VersionGuardada | null {
+  const orden = [...versiones].sort((a, b) => a.version - b.version);
+  if (!orden.every((v, i) => v.version === i + 1)) return null;
+  const vigentes = orden.filter((v) => v.vigente);
+  const ultima = orden[orden.length - 1];
+  return vigentes.length === 1 && vigentes[0] === ultima ? ultima : null;
+}
+
+/** Mismo contenido: valor (como decimal), fechas, referencia, nota y anulada. La clave ya es la misma. */
+export function mismoContenido(v: VersionGuardada, d: DecretoLeido): boolean {
+  return (
+    v.valorPorAccion.equals(new Prisma.Decimal(d.valorPorAccion)) && v.fechaEx.getTime() === d.fechaEx.getTime() &&
+    v.fechaPago.getTime() === d.fechaPago.getTime() && v.referenciaOficial === d.referencia && v.nota === d.nota && v.anulada === d.anulada
+  );
+}
+
+/** Qué hacer con una fila, dadas TODAS las versiones guardadas de su clave. Puro. */
+export function planificar(versiones: readonly VersionGuardada[], d: DecretoLeido): Plan {
+  if (versiones.length === 0) return d.anulada ? { accion: "RECHAZO", codigo: "ANULACION_SIN_DECRETO" } : { accion: "NUEVO", version: 1 };
+  const vigente = vigenteDeCadenaSana(versiones);
+  if (!vigente) return { accion: "RECHAZO", codigo: "CADENA_ROTA" };
+  if (mismoContenido(vigente, d)) return { accion: "SIN_CAMBIOS", filaFuenteId: vigente.filaFuenteId };
+  return { accion: "NUEVA_VERSION", version: vigente.version + 1, retirarId: vigente.id };
+}
+
+export function planificarTodos(
+  resueltos: readonly DecretoResuelto[], versiones: ReadonlyMap<string, readonly VersionGuardada[]>,
+): { readonly planes: readonly Planificado[]; readonly hallazgos: readonly Hallazgo[] } {
+  const planes: Planificado[] = [];
+  const hallazgos: Hallazgo[] = [];
+  for (const resuelto of resueltos) {
+    const d = resuelto.fila.decreto;
+    const plan = planificar(versiones.get(claveDecreto(resuelto.instrumentoId, d.tipo, d.fechaAnuncio, d.cuota)) ?? [], d);
+    if (plan.accion === "RECHAZO") hallazgos.push({ linea: d.linea, columna: null, codigo: plan.codigo });
+    else planes.push({ resuelto, plan });
+  }
+  return { planes, hallazgos };
+}
+
+export function contar(planes: readonly Planificado[]): ConteosDecretos {
+  const de = (f: (p: Planificado) => boolean) => planes.filter(f).length;
+  const anulacion = (p: Planificado) => p.plan.accion === "NUEVA_VERSION" && p.resuelto.fila.decreto.anulada;
+  return {
+    filas: planes.length,
+    nuevos: de((p) => p.plan.accion === "NUEVO"),
+    versiones: de((p) => p.plan.accion === "NUEVA_VERSION" && !anulacion(p)),
+    anulaciones: de(anulacion),
+    sinCambios: de((p) => p.plan.accion === "SIN_CAMBIOS"),
+  };
+}
+
+export const hayCambios = (c: ConteosDecretos): boolean => c.nuevos + c.versiones + c.anulaciones > 0;
+
+/** Todas las versiones (vigentes y retiradas) de los decretos de esos instrumentos, por clave. */
+export async function leerVersiones(db: Db, instrumentoIds: readonly string[]): Promise<ReadonlyMap<string, readonly VersionGuardada[]>> {
+  const filas = await db.dividendoDecretado.findMany({
+    where: { instrumentoId: { in: [...new Set(instrumentoIds)] } },
+    select: {
+      id: true, instrumentoId: true, tipo: true, fechaAnuncio: true, cuota: true, version: true, reemplazadoEn: true, valorPorAccion: true,
+      fechaEx: true, fechaPago: true, referenciaOficial: true, nota: true, anulada: true, filaFuenteId: true,
+    },
+    orderBy: [{ version: "asc" }, { id: "asc" }],
+  });
+  const porClave = new Map<string, VersionGuardada[]>();
+  for (const { reemplazadoEn, tipo, ...f } of filas) {
+    const v: VersionGuardada = { ...f, tipo: tipo as TipoDecreto, vigente: reemplazadoEn === null };
+    const clave = claveDecreto(v.instrumentoId, v.tipo, v.fechaAnuncio, v.cuota);
+    porClave.set(clave, [...(porClave.get(clave) ?? []), v]);
+  }
+  return porClave;
+}
+
+/** Solo una base de pruebas (nombre en minúsculas terminado en `_test`) admite escribir decretos hasta C5b. */
+export const basePermiteAplicar = (nombre: string): boolean => /^[a-z0-9_]*_test$/.test(nombre);
+
+/** El nombre de la base de esa conexión (no el de la URL). */
+export async function nombreDeLaBase(db: Db): Promise<string> {
+  const filas = await db.$queryRaw<{ nombre: string }[]>`SELECT current_database() AS nombre`;
+  return filas[0]?.nombre ?? "";
+}
+
+async function exigirCruce(tx: Tx): Promise<void> {
+  if (!basePermiteAplicar(await nombreDeLaBase(tx))) throw new ErrorDecretos("CRUCE_PENDIENTE");
+}
+
+async function escribir(tx: Tx, cargaId: string, p: Planificado, llavero: Llavero): Promise<void> {
+  const { fila, instrumentoId } = p.resuelto;
+  const d = fila.decreto;
+  if (p.plan.accion === "SIN_CAMBIOS") return verFila(tx, cargaId, d.linea, p.plan.filaFuenteId);
+  if (p.plan.accion === "NUEVA_VERSION") {
+    // Primero el retiro: el índice único de la vigente no se puede diferir. La base pone la hora (inv_solo_retiro).
+    const { count } = await tx.dividendoDecretado.updateMany({ where: { id: p.plan.retirarId, reemplazadoEn: null }, data: { reemplazadoEn: new Date() } });
+    if (count !== 1) throw new ErrorDecretos("CONFLICTO_CONCURRENTE", d.linea);
+  }
+  const claveNatural = claveNaturalDecreto(instrumentoId, d, p.plan.version);
+  const filaFuenteId = await guardarFilaCruda(tx, { cargaId, tipoFuente: TIPO_FUENTE, claveNatural, filaNo: d.linea, crudo: fila.crudo }, llavero);
+  await tx.dividendoDecretado.create({
+    data: {
+      filaFuenteId, instrumentoId, tipo: d.tipo, valorPorAccion: new Prisma.Decimal(d.valorPorAccion), fechaAnuncio: d.fechaAnuncio, cuota: d.cuota,
+      fechaEx: d.fechaEx, fechaPago: d.fechaPago, moneda: "COP", referenciaOficial: d.referencia, nota: d.nota, version: p.plan.version, anulada: d.anulada,
+    },
+  });
+}
 
 export interface EntradaGuardar {
   readonly usuarioId: string;
@@ -90,4 +210,35 @@ export type ResultadoGuardar =
   | { readonly estado: "SIN_CAMBIOS"; readonly conteos: ConteosDecretos }
   | { readonly estado: "RECHAZADO"; readonly hallazgos: readonly Hallazgo[] };
 
-export const guardarDecretos = async (_db: PrismaClient, _e: EntradaGuardar): Promise<ResultadoGuardar> => pendiente();
+async function enTransaccion(tx: Tx, e: EntradaGuardar): Promise<ResultadoGuardar> {
+  await exigirCruce(tx);
+  await tomarCandado(tx, TIPO_FUENTE);
+  const versiones = await leerVersiones(tx, e.resueltos.map((r) => r.instrumentoId));
+  const { planes, hallazgos } = planificarTodos(e.resueltos, versiones);
+  if (hallazgos.length > 0) return { estado: "RECHAZADO", hallazgos };
+  const conteos = contar(planes);
+  if (!hayCambios(conteos)) return { estado: "SIN_CAMBIOS", conteos };
+  const cargaId = await crearCarga(tx, {
+    tipoFuente: TIPO_FUENTE, nombreArchivo: e.nombreArchivo, sha256: e.sha256, usuarioId: e.usuarioId,
+    filasTotal: conteos.filas, filasNuevas: conteos.filas - conteos.sinCambios, filasRepetidas: conteos.sinCambios,
+  });
+  for (const p of planes) await escribir(tx, cargaId, p, e.llavero);
+  return { estado: "APLICADO", cargaId, conteos };
+}
+
+/**
+ * Aplica las filas ya leídas y resueltas. Los rechazos (CRUCE_PENDIENTE, CADENA_ROTA, ANULACION_SIN_DECRETO y
+ * CONFLICTO_CONCURRENTE, también un P2002 de otra carga que se adelantó) vuelven como RECHAZADO sin haber escrito nada;
+ * cualquier otro error sube (puede haber ocurrido al confirmar).
+ */
+export async function guardarDecretos(db: PrismaClient, e: EntradaGuardar): Promise<ResultadoGuardar> {
+  try {
+    return await db.$transaction((tx) => enTransaccion(tx, e), TRANSACCION);
+  } catch (error) {
+    if (error instanceof ErrorDecretos) return { estado: "RECHAZADO", hallazgos: [{ linea: error.linea, columna: null, codigo: error.codigo }] };
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { estado: "RECHAZADO", hallazgos: [{ linea: 0, columna: null, codigo: "CONFLICTO_CONCURRENTE" }] };
+    }
+    throw error;
+  }
+}

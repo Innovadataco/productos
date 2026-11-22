@@ -27,7 +27,7 @@ describe("registro · lectura del CSV del dueño", () => {
   });
 
   it("quita el BOM y acepta CRLF", () => {
-    const r = leer("﻿alfa,beta,gama\r\nx1,y1,z1\r\n");
+    const r = leer("\ufeffalfa,beta,gama\r\nx1,y1,z1\r\n");
     expect(r.ok && r.filas.map((f) => f.celdas)).toEqual([["x1", "y1", "z1"]]);
   });
 
@@ -65,7 +65,7 @@ describe("registro · lectura del CSV del dueño", () => {
   });
 
   it("ninguna celda con controles, invisibles o dirección de texto (tampoco un salto dentro de comillas), por columna", () => {
-    const malas = ["x\ty", "x\u0085y", "x​y", "x‮y", "x⁦y", "x­y", "x\u007fy", "x﻿y"];
+    const malas = ["x\ty", "x\u0085y", "x\u200by", "x\u202ey", "x\u2066y", "x\u00ady", "x\u007fy", "x\ufeffy"];
     for (const mala of malas) {
       expect(hallazgos(leer(`alfa,beta,gama\nx1,${mala},z1\n`)), JSON.stringify(mala)).toEqual([{ linea: 2, columna: "beta", codigo: "CARACTER_NO_PERMITIDO" }]);
     }
