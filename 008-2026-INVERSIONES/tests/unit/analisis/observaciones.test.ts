@@ -54,6 +54,7 @@ describe("riesgo", () => {
       especie("FICTICIA-B", { riesgo: cubierta(0.4, 0.59999999) }),
       especie("FICTICIA-C", { riesgo: cubierta(0.05, 0.09) }),
       especie("FICTICIA-D", { riesgo: cubierta(0.15, null) }),
+      especie("FICTICIA-E", { riesgo: cubierta(0, 0.5) }),
     ];
     expect(de(obs(analisis({ especies })), "CONTRIBUCION_RIESGO_DESPROPORCIONADA")).toEqual([
       { clave: "CONTRIBUCION_RIESGO_DESPROPORCIONADA", umbral: 1.5, datos: { instrumentoId: "FICTICIA-A", pesoEnCubiertas: 0.4, contribucionPct: 0.6, veces: 1.5 } },
@@ -192,6 +193,14 @@ describe("guardas", () => {
     expect(() => observaciones(a, { reglas: [] }, dia("2021-06-16"))).toThrow(RangeError);
     expect(() => observaciones(a, { reglas: [] }, new Date("2021-06-15T05:00:00Z"))).toThrow(RangeError);
     expect(() => observaciones({ ...a, version: "analisis-v0" as typeof VERSION_ANALISIS }, { reglas: [] }, dia(HOY))).toThrow(RangeError);
+  });
+
+  it("solo un análisis de analizar: uno reconstruido desde JSON (el dinero en texto) se rechaza", () => {
+    const { a } = analisisConTodo();
+    const plano = JSON.parse(JSON.stringify(a)) as Analisis;
+    expect(() => observaciones(plano, { reglas: [] }, dia(HOY))).toThrow(RangeError);
+    const medidaPlana = { ...a, decisiones: { ...a.decisiones, medidas: a.decisiones.medidas.map((m) => ({ ...m, resultadoPesos: m.resultadoPesos.toString() })) } } as unknown as Analisis;
+    expect(() => observaciones(medidaPlana, { reglas: [] }, dia(HOY))).toThrow(RangeError);
   });
 
   it("valida el plan (ids repetidos)", () => {
