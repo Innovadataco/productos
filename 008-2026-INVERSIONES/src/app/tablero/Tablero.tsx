@@ -4,6 +4,7 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { Evolucion } from "./Evolucion";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { Foto } from "./Foto";
+import { MarcaSoloLectura } from "./SoloLectura";
 import { Linea, Peso } from "./Graficas";
 import { SECCIONES } from "./secciones";
 import type { EvolucionVista, FilaVista, LineaConciliacionVista, MovimientoVista, Vista } from "./tipos";
@@ -122,13 +123,13 @@ function Secciones() {
   );
 }
 
-function Encabezado({ vista }: { vista: Vista }) {
+function Encabezado({ vista, soloLectura }: { vista: Vista; soloLectura: boolean }) {
   const claro = useSyncExternalStore(suscribirTema, temaClaro, claroEnServidor);
   const alternarTema = () => { document.documentElement.dataset.theme = claro ? "dark" : "light"; };
   return (
     <header className="top">
       <div className="wrap fila-top">
-        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio</div>
+        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio{soloLectura ? <>{" "}<MarcaSoloLectura /></> : null}</div>
         <Secciones />
         <div className="meta">
           <FechaDeCierres vista={vista} /> · última carga <b>{fecha(vista.ultimaCarga)}</b>
@@ -422,14 +423,16 @@ interface PropsTablero {
   readonly conciliacion?: LineaConciliacionVista;
   /** La evolución diaria y la TWR (src/tablero/evolucion.ts). Opcional, como la conciliación; null = no se pudo calcular. */
   readonly evolucion?: EvolucionVista | null;
+  /** El familiar ve «Solo lectura» (frente familia-lectura); lo decide la página con la sesión revalidada. */
+  readonly soloLectura?: boolean;
 }
 
-export function Tablero({ vista, conciliacion, evolucion }: PropsTablero) {
+export function Tablero({ vista, conciliacion, evolucion, soloLectura = false }: PropsTablero) {
   const [elegida, setElegida] = useState<Elegida | null>(null);
   const elegir = (id: string, origen: HTMLElement | null) => setElegida({ id, origen });
   return (
     <>
-      <Encabezado vista={vista} />
+      <Encabezado vista={vista} soloLectura={soloLectura} />
       <main className="wrap">
         {conciliacion === undefined ? null : <LineaConciliacion linea={conciliacion} />}
         <Respuesta vista={vista} />

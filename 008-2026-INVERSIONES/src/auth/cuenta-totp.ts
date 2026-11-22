@@ -2,11 +2,13 @@
  * La cuenta del segundo paso, tomada con FOR NO KEY UPDATE dentro de la transacción (los intentos de una
  * misma cuenta se serializan: un código no entra dos veces aunque lleguen dos pedidos a la vez; NO KEY deja
  * pasar los INSERT con llave foránea a la cuenta, como los de intento_ingreso), y la regla de
- * la pre-sesión: solo vale si la cuenta sigue activa, es DUENO, tiene clave, la versión de sesión es la de
+ * la pre-sesión: solo vale si la cuenta sigue activa, es de un rol con acceso web (DUENO o FAMILIA, src/auth/roles.ts),
+ * tiene clave, la versión de sesión es la de
  * la pre-sesión y su `jti` es el que guardó el último paso de la clave (`presesionHash`).
  */
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { hashJti, type DatosPresesion } from "./presesion";
+import { tieneAccesoWeb } from "./roles";
 import { descifrarSecretoTotp, necesitaRecifrar, cifrarSecretoTotp } from "./secreto-totp";
 import { verificarTotp, type VerificacionTotp } from "./totp";
 
@@ -43,7 +45,7 @@ export function presesionVigente(cuenta: CuentaTotp | null, pre: DatosPresesion)
   return (
     cuenta !== null &&
     cuenta.activo &&
-    cuenta.rol === "DUENO" &&
+    tieneAccesoWeb(cuenta.rol) &&
     cuenta.claveHash !== null &&
     cuenta.sesionVersion === pre.sesionVersion &&
     cuenta.presesionHash !== null &&

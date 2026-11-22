@@ -1,3 +1,4 @@
+import { esSoloLectura } from "@/auth/roles";
 import { exigirSesion } from "@/auth/sesion";
 import { db } from "@/lib/db";
 import { SinBase, esErrorDeBase, registrarFalloDeBase } from "../_comun/sin-base";
@@ -17,8 +18,10 @@ const PIE = "El sistema calcula y muestra; no recomienda comprar ni vender.";
  */
 export default async function PaginaProyecciones() {
   let datos: DatosProyecciones;
+  let soloLectura: boolean;
   try {
     const usuario = await exigirSesion();
+    soloLectura = esSoloLectura(usuario);
     datos = await datosDeProyecciones(db, usuario.id);
   } catch (error) {
     if (!esErrorDeBase(error)) throw error;
@@ -27,7 +30,7 @@ export default async function PaginaProyecciones() {
   }
   return (
     <>
-      <Encabezado actual="proyecciones" />
+      <Encabezado actual="proyecciones" soloLectura={soloLectura} />
       <main className="wrap proy">
         <Simulador datos={datos} />
         <footer className="pie">{PIE}</footer>

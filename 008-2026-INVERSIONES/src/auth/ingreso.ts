@@ -23,6 +23,7 @@ import { prepararSegundoPaso, type PasoSiguiente } from "./enrolamiento";
 import { redDeIp } from "./ip";
 import { BLOQUEO_MS, FALLOS_POR_IP, FALLOS_POR_USUARIO, VENTANA_FALLOS_MS } from "./limites";
 import { generarJti } from "./presesion";
+import { tieneAccesoWeb } from "./roles";
 import { OPCIONES_TX, bloquearRed, fallosDeIp } from "./topes";
 
 export interface DatosIngreso {
@@ -57,8 +58,6 @@ interface FilaUsuario {
 
 type Tx = Prisma.TransactionClient;
 
-const ROL_PERMITIDO = "DUENO";
-
 async function bloquearFila(tx: Tx, email: string): Promise<FilaUsuario | null> {
   const filas = await tx.$queryRaw<FilaUsuario[]>`
     SELECT "id", "rol"::text AS "rol", "activo", "claveHash", "bloqueadoHasta", "sesionVersion", "totpActivadoEn",
@@ -67,14 +66,14 @@ async function bloquearFila(tx: Tx, email: string): Promise<FilaUsuario | null> 
   return filas[0] ?? null;
 }
 
-/** El resultado, en orden: existe, tiene clave, no está bloqueada, clave correcta, activa y rol. */
+/** El resultado, en orden: existe, tiene clave, no está bloqueada, clave correcta, activa y rol con acceso web (DUENO o FAMILIA). */
 function decidir(fila: FilaUsuario | null, claveOk: boolean, ahora: Date): ResultadoIngreso {
   if (!fila) return "USUARIO_INEXISTENTE";
   if (fila.claveHash === null) return "SIN_CLAVE";
   if (fila.bloqueadoHasta && fila.bloqueadoHasta > ahora) return "CUENTA_BLOQUEADA";
   if (!claveOk) return "CLAVE_INCORRECTA";
   if (!fila.activo) return "CUENTA_INACTIVA";
-  if (fila.rol !== ROL_PERMITIDO) return "ROL_NO_PERMITIDO";
+  if (!tieneAccesoWeb(fila.rol)) return "ROL_NO_PERMITIDO";
   return "EXITO";
 }
 

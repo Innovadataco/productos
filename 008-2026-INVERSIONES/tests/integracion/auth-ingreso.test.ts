@@ -51,6 +51,13 @@ describe("resultado de un intento", () => {
     expect(i).toMatchObject({ resultado: "EXITO", ip });
   });
 
+  it("un familiar activo con la clave correcta pasa el primer paso como el dueño (frente familia-lectura)", async () => {
+    const u = await usuario({ rol: "FAMILIA" });
+    const r = await ingresar(db, { email: u.email, clave: CLAVE, ip: ipNueva(), ahora: reloj(1)(30) });
+    expect(r).toEqual({ ok: true, usuarioId: u.id, sesionVersion: 1, jti: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/), paso: "enrolar" });
+    expect((await intentos(u.id)).map((i) => i.resultado)).toEqual(["EXITO"]);
+  });
+
   it("el correo no distingue mayúsculas", async () => {
     const u = await usuario();
     const r = await ingresar(db, { email: u.email.toUpperCase(), clave: CLAVE, ip: ipNueva(), ahora: reloj(2)() });
@@ -61,7 +68,8 @@ describe("resultado de un intento", () => {
     ["clave incorrecta", {}, MALA, "CLAVE_INCORRECTA"],
     ["cuenta sin clave", { conClave: false }, CLAVE, "SIN_CLAVE"],
     ["cuenta inactiva, aun con la clave correcta", { activo: false }, CLAVE, "CUENTA_INACTIVA"],
-    ["rol FAMILIA (todavía no entra), aun con la clave correcta", { rol: "FAMILIA" as const }, CLAVE, "ROL_NO_PERMITIDO"],
+    ["familiar revocado (inactivo), aun con la clave correcta", { rol: "FAMILIA" as const, activo: false }, CLAVE, "CUENTA_INACTIVA"],
+    ["familiar con la clave incorrecta", { rol: "FAMILIA" as const }, MALA, "CLAVE_INCORRECTA"],
   ])("%s: no entra y queda registrado", async (_caso, datos, clave, esperado) => {
     const u = await usuario(datos);
     const r = await ingresar(db, { email: u.email, clave, ip: ipNueva(), ahora: reloj(3)() });

@@ -300,6 +300,15 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
    ```
    - Corre `crear-acceso-inicial.ts` en el migrador, con `inv_dueno` y `APP_ORIGEN`.
    - Imprime **una vez** `${APP_ORIGEN}/definir-clave#t=<token>`. No se guarda en ningún archivo; `run --rm` borra el log del contenedor al terminar.
+   - **El acceso de un familiar (solo lectura, rol FAMILIA)** va por su propio comando, también **solo Jelk por SSH**, después de que el dueño ya entra:
+     ```sh
+     sudo <raíz>/repo/008-2026-INVERSIONES/scripts/acceso-familiar.sh --email <correo-del-familiar> [--revocar | --reiniciar-totp]
+     ```
+     - Sin bandera: alta (o recuperación de la clave). Imprime **una vez** el mismo enlace de un solo uso (30 minutos); se le entrega al familiar en persona o por un canal cifrado. Él define su clave y, en los 30 minutos siguientes, activa su propio TOTP al entrar.
+     - `--revocar`: lo deja inactivo y cierra sus sesiones (su enlace pendiente tampoco sirve). No se reactiva: un revocado no recibe enlace.
+     - `--reiniciar-totp`: borra su segundo factor (perdió el teléfono y los códigos), como el del dueño.
+     - Lista blanca en el `.sh` (antes de tocar Docker; ningún mensaje repite el correo) y en el CLI, que en producción exige `inv_dueno`. Nunca toca la cuenta del dueño.
+     - En la web, el familiar ve las cinco pantallas con «Solo lectura»; lo que escribe o administra es del dueño y lo bloquea el servidor (`exigirDueno` / `exigirDuenoApi`).
 5. **Verificar el login** en `127.0.0.1:5008` (la entrada, hasta la app): sin sesión, la app redirige a `/ingresar` y las API responden 401.
    ```sh
    curl -sI http://127.0.0.1:5008/ | head -3
@@ -822,6 +831,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.17 · 2026-11-22 · 00:25 (-05) · Inversiones · Fábrica Inversiones (frente familia-lectura) · §4.4: el acceso de un familiar en solo lectura (`acceso-familiar.sh`: alta, `--revocar`, `--reiniciar-totp`; solo Jelk; lista blanca e `inv_dueno`) (v2.17 sobre la v2.16 de main)
 > v2.16 · 2026-11-21 · 23:26 (-05) · Inversiones · Fábrica Inversiones (frente docs-tanda-21nov) · §1: `inv-008-precios` entre los servicios, la variable `precios` y `inv-008-red-precios` con salida; §4.3: espera de la medición (120 s o 600 s), verificación del servicio de precios, vuelta atrás con precios; §5: regla de la espera, piso de memoria con salida 3, reversa con el clon en el sha que corre o uno posterior, `INV_ESPERA_MEDICION_S`, y el servicio de precios (qué es, secreto, despliegue, `--ahora`, huella); §6: retención nueva; §11: salidas de `registrar-escision` y `lote-escision` (v2.16 sobre la v2.15)
 > v2.15 · 2026-11-21 · 23:01 (-05) · Inversiones · Fábrica Inversiones (frente limites-reaplicar) · §5 «Límites de memoria»: el reload diario del host deja `memory.swap.max` en `max`; `desplegar-prod.sh` y `reanudar-008.sh` reaplican mem = memswap con `docker update` (antes de tocar nada y antes del chequeo), el comando `reaplicar-limites-008.sh`, el aviso de `medir-memoria.sh`, el ensayo en Colima y lo que decide PI; reglas: la excepción de `docker update` (v2.15 sobre la v2.14 de main)
 > v2.14 · 2026-11-21 · 22:05 (-05) · Inversiones · Fábrica Inversiones (frente fondo-movimientos-via-b; v2.14 sobre la v2.13 de main) · §11: paso 12 bis `registrar-movimiento-fondo` (la constitución del fondo por el sobre: cabecera, ensayo y `--aplicar`, contraste con el valor de unidad del mismo día, lo que garantiza la base y lo que garantiza la app, salidas y la frase de parar); el CSV del paso 12 cubre el día de la constitución; riesgo residual del argv con sus cifras

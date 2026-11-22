@@ -131,11 +131,11 @@ function Contenido({ datos }: { readonly datos: DatosPlan }) {
   }
 }
 
-export function Plan({ datos }: { readonly datos: DatosPlan }) {
+export function Plan({ datos, soloLectura = false }: { readonly datos: DatosPlan; readonly soloLectura?: boolean }) {
   const inferencia = datos.estado === "VERSION" && datos.vista.hayInferencia;
   return (
     <>
-      <Encabezado actual="plan" />
+      <Encabezado actual="plan" soloLectura={soloLectura} />
       <main className="wrap plan">
         <Contenido datos={datos} />
         <footer className="pie">

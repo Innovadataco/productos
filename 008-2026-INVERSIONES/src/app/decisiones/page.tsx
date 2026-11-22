@@ -1,3 +1,4 @@
+import { esSoloLectura } from "@/auth/roles";
 import { exigirSesion } from "@/auth/sesion";
 import { db } from "@/lib/db";
 import { SinBase, esErrorDeBase, registrarFalloDeBase } from "../_comun/sin-base";
@@ -14,14 +15,16 @@ interface Props {
 
 export default async function PaginaDiario({ searchParams }: Props) {
   let vista: VistaDiario;
+  let soloLectura: boolean;
   try {
     // Revalida la sesión contra la base (D-014) antes de leer nada. Sin sesión, `redirect` lanza y pasa.
-    await exigirSesion();
+    const usuario = await exigirSesion();
+    soloLectura = esSoloLectura(usuario);
     vista = await datosDelDiario(db, (await searchParams).regla);
   } catch (error) {
     if (!esErrorDeBase(error)) throw error;
     registrarFalloDeBase("decisiones", error);
     return <SinBase />;
   }
-  return <Diario vista={vista} />;
+  return <Diario vista={vista} soloLectura={soloLectura} />;
 }

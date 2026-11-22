@@ -14,6 +14,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { Writable } from "node:stream";
 import { correoDeCli } from "../cli/correo";
 import { ErrorAcceso, emitirAcceso } from "./acceso";
+import { ROL_DUENO, conexionDelDueno } from "./conexion-dueno";
 import { ErrorOrigen, origenesPermitidos, type FuenteOrigen } from "./origen";
 import { reiniciarTotp } from "./reinicio-totp";
 
@@ -53,14 +54,9 @@ function leerOrden(argv: readonly string[]): Orden {
   return { email, reiniciarTotp: reiniciar === 1 };
 }
 
-/** El rol del migrador en producción: el dueño de las tablas (inv_app no puede ni debe reiniciar). */
-const ROL_DUENO = "inv_dueno";
-
 /** En producción, `--reiniciar-totp` solo corre conectado como inv_dueno (crear-acceso-inicial.sh). */
 async function exigirRolDueno(db: PrismaClient, env: FuenteOrigen): Promise<void> {
-  if (env.NODE_ENV !== "production") return;
-  const filas = await db.$queryRaw<{ rol: string }[]>`SELECT current_user::text AS "rol"`;
-  if (filas[0]?.rol !== ROL_DUENO) {
+  if (!(await conexionDelDueno(db, env))) {
     throw new ErrorRol(`En producción --reiniciar-totp corre con el rol ${ROL_DUENO} (scripts/crear-acceso-inicial.sh); esta conexión usa otro. No se reinicia nada.`);
   }
 }

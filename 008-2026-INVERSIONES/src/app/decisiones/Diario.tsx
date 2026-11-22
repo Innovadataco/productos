@@ -112,10 +112,10 @@ function Filtro({ vista }: { readonly vista: VistaDiario }) {
   return <p className="nota">{`Decisiones que citan la regla ${de} de la versión ${vista.filtro.version}. `}<a href="/decisiones">Ver todas las decisiones</a></p>;
 }
 
-export function Diario({ vista }: { readonly vista: VistaDiario }) {
+export function Diario({ vista, soloLectura = false }: { readonly vista: VistaDiario; readonly soloLectura?: boolean }) {
   return (
     <>
-      <Encabezado actual="decisiones" />
+      <Encabezado actual="decisiones" soloLectura={soloLectura} />
       <main className="wrap plan">
         <section className="hero plan-hero" aria-labelledby="t-hero">
           <div className="eyebrow">Plan de inversión</div>

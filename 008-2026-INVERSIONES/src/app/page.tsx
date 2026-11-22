@@ -1,3 +1,4 @@
+import { esSoloLectura } from "@/auth/roles";
 import { exigirSesion } from "@/auth/sesion";
 import { ultimaConciliacion } from "@/conciliacion/leer";
 import { db } from "@/lib/db";
@@ -31,9 +32,12 @@ export default async function Inicio() {
   let resumen: Resumen;
   let conciliacion: LineaConciliacionVista;
   let evolucion: EvolucionVista | null;
+  let soloLectura: boolean;
   try {
-    // Revalida la sesión contra la base (D-014). Sin sesión, `redirect` lanza y el catch la deja pasar.
-    await exigirSesion();
+    // Revalida la sesión contra la base (D-014). Sin sesión, `redirect` lanza y el catch la deja pasar. El familiar,
+    // en solo lectura (frente familia-lectura): ve la marca; lo que escribe lo bloquea el servidor.
+    const usuario = await exigirSesion();
+    soloLectura = esSoloLectura(usuario);
     resumen = await obtenerResumen(db);
     // La evolución diaria y la TWR sobre el mismo universo y la misma referencia del resumen (frente graficas-tablero),
     // y lo guardado de la última conciliación, sin recalcular (la frescura se ve en /conciliacion); las dos en paralelo.
@@ -45,5 +49,5 @@ export default async function Inicio() {
     registrarFalloDeBase("tablero", error);
     return <SinBase />;
   }
-  return <Tablero vista={aVista(resumen)} conciliacion={conciliacion} evolucion={evolucion} />;
+  return <Tablero vista={aVista(resumen)} conciliacion={conciliacion} evolucion={evolucion} soloLectura={soloLectura} />;
 }

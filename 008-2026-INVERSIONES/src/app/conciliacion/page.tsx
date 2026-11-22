@@ -1,3 +1,4 @@
+import { esSoloLectura } from "@/auth/roles";
 import { exigirSesion } from "@/auth/sesion";
 import { db } from "@/lib/db";
 import { SinBase, esErrorDeBase, registrarFalloDeBase } from "../_comun/sin-base";
@@ -13,14 +14,16 @@ interface Props {
 
 export default async function PaginaConciliacion({ searchParams }: Props) {
   let datos: DatosConciliacion;
+  let soloLectura: boolean;
   try {
     // Revalida la sesión contra la base (D-014) antes de leer nada. Sin sesión, `redirect` lanza y pasa.
-    await exigirSesion();
+    const usuario = await exigirSesion();
+    soloLectura = esSoloLectura(usuario);
     datos = await datosDeConciliacion(db, (await searchParams).corte);
   } catch (error) {
     if (!esErrorDeBase(error)) throw error;
     registrarFalloDeBase("conciliacion", error);
     return <SinBase />;
   }
-  return <Conciliacion datos={datos} />;
+  return <Conciliacion datos={datos} soloLectura={soloLectura} />;
 }

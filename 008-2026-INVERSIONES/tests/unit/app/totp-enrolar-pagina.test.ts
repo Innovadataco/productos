@@ -15,8 +15,9 @@ vi.mock("@/lib/db", () => ({ db: {} }));
 
 import Enrolar from "@/app/totp/enrolar/page";
 
+// Sirve al dueño y al familiar (frente familia-lectura): cada uno con su salida.
 const AVISO =
-  "No se pudo preparar el segundo factor. Corra crear-acceso-inicial --reiniciar-totp (o pida un enlace nuevo con crear-acceso-inicial) y vuelva a entrar con su clave antes de 30 minutos. Si se repite, revise el registro del servidor.";
+  "No se pudo preparar el segundo factor. Dueño: corra crear-acceso-inicial --reiniciar-totp (o pida un enlace nuevo con crear-acceso-inicial). Familiar: pídale al dueño que reinicie su segundo factor. Después, vuelva a entrar con su clave antes de 30 minutos. Si se repite, el dueño revisa el registro del servidor.";
 /** Los dos avisos ofrecen volver a ingresar (revisión react, MEDIO): la pre-sesión sigue viva y no hay otra salida. */
 const VOLVER = '<a class="acceso-boton" href="/ingresar">Volver a ingresar</a>';
 let registro: ReturnType<typeof vi.spyOn>;
