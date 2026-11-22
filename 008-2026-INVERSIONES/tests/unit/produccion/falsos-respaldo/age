@@ -1,0 +1,4 @@
+#!/bin/sh
+# Falso de age para respaldo-contenedor.test.ts. FALSO_AGE_RC: código de salida; FALSO_AGE_ESPERA: segundos que tarda después de cifrar.
+l="age"; for a in "$@"; do l="$l|$a"; done; printf '%s\n' "$l" >>"$FALSO_REGISTRO"
+[ "${FALSO_AGE_RC:-0}" = 0 ] || { cat >/dev/null; exit "$FALSO_AGE_RC"; }; printf "age-encryption.org/v1\n"; tr "A-Za-z" "N-ZA-Mn-za-m"; [ -z "${FALSO_AGE_ESPERA:-}" ] || sleep "$FALSO_AGE_ESPERA"

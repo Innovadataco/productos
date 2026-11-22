@@ -1,0 +1,4 @@
+#!/bin/sh
+# rm que falla, sin borrar nada, si algún argumento termina en FALSO_RM_FALLA (y si no, el del sistema).
+l="rm"; for a in "$@"; do l="$l|$a"; done; printf '%s\n' "$l" >>"$FALSO_REGISTRO"
+if [ -n "${FALSO_RM_FALLA:-}" ]; then for a in "$@"; do case "$a" in *"$FALSO_RM_FALLA") exit 1 ;; esac; done; fi; for d in /bin /usr/bin; do [ -x "$d/rm" ] && exec "$d/rm" "$@"; done; exit 127

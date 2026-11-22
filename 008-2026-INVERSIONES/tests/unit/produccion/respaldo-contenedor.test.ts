@@ -16,38 +16,17 @@ const SCRIPT = ruta008("docker/respaldo/respaldo.sh");
 const CLAVE = "f".repeat(64);
 const PUBLICA = `age1${"q".repeat(58)}`;
 
+// Falsos de pg_dump, age, chgrp, awk, rm y flock: archivos fijos del repo (ver «los falsos», abajo), cada uno
+// con su comentario. Registran cada llamada en FALSO_REGISTRO y responden según variables FALSO_*.
+const BIN_FALSOS = ruta008("tests/unit/produccion/falsos-respaldo");
+
 function preparar(extra: Record<string, string> = {}) {
   const dir = carpetaTemporal("respaldo-cont");
-  const bin = path.join(dir, "bin");
+  const bin = BIN_FALSOS;
   const respaldos = path.join(dir, "respaldos");
-  mkdirSync(bin);
   mkdirSync(respaldos);
   const registro = path.join(dir, "registro.txt");
   writeFileSync(registro, "");
-  const falso = (nombre: string, cuerpo: string) => {
-    writeFileSync(path.join(bin, nombre), `#!/bin/sh\nl="${nombre}"; for a in "$@"; do l="$l|$a"; done; printf '%s\\n' "$l" >>"$FALSO_REGISTRO"\n${cuerpo}\n`);
-    chmodSync(path.join(bin, nombre), 0o755);
-  };
-  // FALSO_PGDUMP_ESPERA y FALSO_AGE_ESPERA: segundos que tardan (para las carreras entre dos respaldos).
-  // FALSO_PGDUMP_SENAL: archivo que pg_dump deja justo antes de fallar (la prueba espera a verlo).
-  falso("pg_dump", 'printf "%s\\n" "PG:$PGUSER@$PGHOST:$PGPORT/$PGDATABASE" >>"$FALSO_REGISTRO"; [ -z "${FALSO_PGDUMP_ESPERA:-}" ] || sleep "$FALSO_PGDUMP_ESPERA"; [ "${FALSO_PGDUMP_RC:-0}" = 0 ] || { [ -z "${FALSO_PGDUMP_SENAL:-}" ] || : >"$FALSO_PGDUMP_SENAL"; exit "$FALSO_PGDUMP_RC"; }; printf "PGDMP-TEXTO-PLANO-secreto"');
-  falso("age", '[ "${FALSO_AGE_RC:-0}" = 0 ] || { cat >/dev/null; exit "$FALSO_AGE_RC"; }; printf "age-encryption.org/v1\\n"; tr "A-Za-z" "N-ZA-Mn-za-m"; [ -z "${FALSO_AGE_ESPERA:-}" ] || sleep "$FALSO_AGE_ESPERA"');
-  // chgrp que falla con FALSO_CHGRP_RC (y si no, el del sistema).
-  falso("chgrp", '[ "${FALSO_CHGRP_RC:-0}" = 0 ] || exit "$FALSO_CHGRP_RC"; for d in /usr/bin /bin; do [ -x "$d/chgrp" ] && exec "$d/chgrp" "$@"; done; exit 127');
-  // awk que, con FALSO_AWK_MUERE, imprime la última línea de su entrada (el respaldo más viejo) y muere: un
-  // cálculo de retención cortado a mitad. Sin la variable, el del sistema.
-  falso("awk", '[ -z "${FALSO_AWK_MUERE:-}" ] || { tail -n 1; exit 1; }; for d in /usr/bin /bin; do [ -x "$d/awk" ] && exec "$d/awk" "$@"; done; exit 127');
-  // rm que falla, sin borrar nada, si algún argumento termina en FALSO_RM_FALLA (y si no, el del sistema).
-  falso("rm", 'if [ -n "${FALSO_RM_FALLA:-}" ]; then for a in "$@"; do case "$a" in *"$FALSO_RM_FALLA") exit 1 ;; esac; done; fi; for d in /bin /usr/bin; do [ -x "$d/rm" ] && exec "$d/rm" "$@"; done; exit 127');
-  // flock de verdad en el Mac (que no lo trae) y en Linux: flock(2) con perl sobre el descriptor heredado,
-  // con la interfaz de BusyBox que usa la imagen (-n, -u y -x; sin -w). El candado queda tomado mientras el
-  // descriptor siga abierto en el proceso que lo pidió, como con el flock real.
-  falso(
-    "flock",
-    `modo=LOCK_EX; nb=0
-while [ $# -gt 1 ]; do case "$1" in -n) nb=1 ;; -u) modo=LOCK_UN ;; -x) ;; *) break ;; esac; shift; done
-exec perl -e 'use Fcntl qw(:flock); open(my $fh, ">&=", $ARGV[0]) or exit 2; my $op = $ARGV[1] eq "LOCK_UN" ? LOCK_UN : (LOCK_EX | ($ARGV[2] ? LOCK_NB : 0)); exit(flock($fh, $op) ? 0 : 1)' "$1" "$modo" "$nb"`,
-  );
   const env: Record<string, string> = {
     PATH: `${bin}:${process.env.PATH}`,
     HOME: dir,
@@ -272,7 +251,7 @@ describe("respaldo.sh · un solo respaldo a la vez (manual y bucle diario en el 
   it("control: el flock falso de la prueba muerde (si no, las carreras de abajo no prueban nada)", async () => {
     const r = preparar();
     const tomado = await r.sostener();
-    const otro = spawnSync("sh", ["-c", 'exec 7>"$1"; flock -n 7', "sh", r.candado], { env: { ...process.env, PATH: `${path.join(r.dir, "bin")}:${process.env.PATH}`, FALSO_REGISTRO: r.registro } });
+    const otro = spawnSync("sh", ["-c", 'exec 7>"$1"; flock -n 7', "sh", r.candado], { env: { ...process.env, PATH: `${r.bin}:${process.env.PATH}`, FALSO_REGISTRO: r.registro } });
     expect(otro.status).toBe(1);
     await tomado.soltar();
   });

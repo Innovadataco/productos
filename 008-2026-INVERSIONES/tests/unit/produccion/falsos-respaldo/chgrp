@@ -1,0 +1,4 @@
+#!/bin/sh
+# chgrp que falla con FALSO_CHGRP_RC (y si no, el del sistema).
+l="chgrp"; for a in "$@"; do l="$l|$a"; done; printf '%s\n' "$l" >>"$FALSO_REGISTRO"
+[ "${FALSO_CHGRP_RC:-0}" = 0 ] || exit "$FALSO_CHGRP_RC"; for d in /usr/bin /bin; do [ -x "$d/chgrp" ] && exec "$d/chgrp" "$@"; done; exit 127

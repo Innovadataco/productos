@@ -1,0 +1,4 @@
+#!/bin/sh
+# Falso de pg_dump para respaldo-contenedor.test.ts. FALSO_PGDUMP_RC: código de salida; FALSO_PGDUMP_ESPERA: segundos que tarda (para las carreras entre dos respaldos); FALSO_PGDUMP_SENAL: archivo que deja justo antes de fallar (la prueba espera a verlo).
+l="pg_dump"; for a in "$@"; do l="$l|$a"; done; printf '%s\n' "$l" >>"$FALSO_REGISTRO"
+printf "%s\n" "PG:$PGUSER@$PGHOST:$PGPORT/$PGDATABASE" >>"$FALSO_REGISTRO"; [ -z "${FALSO_PGDUMP_ESPERA:-}" ] || sleep "$FALSO_PGDUMP_ESPERA"; [ "${FALSO_PGDUMP_RC:-0}" = 0 ] || { [ -z "${FALSO_PGDUMP_SENAL:-}" ] || : >"$FALSO_PGDUMP_SENAL"; exit "$FALSO_PGDUMP_RC"; }; printf "PGDMP-TEXTO-PLANO-secreto"
