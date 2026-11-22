@@ -9,8 +9,10 @@
  *   largo, y el «3 meses» lo pone el código en la presentación del hecho;
  * - el nombre de la especie es un hecho propio (ESPECIE_NOMBRE); los hechos de una especie lo citan en `sujeto`;
  * - varias reglas por especie (decisión de la Fábrica, E1b): cada regla tiene su hecho ancla (REGLA_DEL_PLAN, solo en
- *   REGLAS). Los hechos de la regla (`CLAVES_DE_REGLA`) citan como `sujeto` a su ancla, y el ancla cita a la especie
- *   (o a nadie, si la regla es de portafolio). Así dos reglas de la misma especie no chocan en HECHO_REPETIDO.
+ *   REGLAS). El armador (src/ia/hechos/reglas.ts) hace que los hechos de la regla (`CLAVES_DE_REGLA`) citen como
+ *   `sujeto` a su ancla, y el ancla a la especie (o a nadie, si la regla es de portafolio): así dos reglas de la misma
+ *   especie no chocan en HECHO_REPETIDO. El contrato acepta además, por compatibilidad de hechos-v1, que un hecho de
+ *   regla cite directo a la especie; para llegar a la especie de cualquier hecho, `especieDe` de paquete.ts.
  */
 import type { TipoResumen, Unidad } from "./contrato";
 

@@ -67,7 +67,8 @@ export interface Hecho<C extends ClaveHecho = ClaveHecho> {
   readonly clave: C;
   /**
    * Id de un hecho anterior al que se refiere: el «nombre de especie» (ESPECIE_NOMBRE) o, si este es un hecho de regla
-   * (`CLAVES_DE_REGLA`), el ancla de su regla (REGLA_DEL_PLAN), que a su vez cita a la especie.
+   * (`CLAVES_DE_REGLA`), también el ancla de su regla (REGLA_DEL_PLAN), que a su vez cita a la especie. `especieDe`
+   * (paquete.ts) resuelve los dos saltos.
    */
   readonly sujeto?: IdHecho;
   /** Decimal canónico en texto (con signo, sin exponente ni ceros sobrantes), día ISO o, con unidad NOMBRE, el nombre. */
