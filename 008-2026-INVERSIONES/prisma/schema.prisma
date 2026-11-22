@@ -34,6 +34,7 @@ enum TipoFuente {
   TRII_DIVIDENDOS
   AV_CERTIFICACION
   AV_LOTES
+  REGISTRO_DECRETOS // CSV del dueño con los decretos de dividendos (fase C, C4a)
 }
 
 enum EstadoCarga {
@@ -308,12 +309,12 @@ model CargaArchivo {
 /// Fila cruda de un archivo. Clave natural = sha256 de los campos canónicos SIN estado ni
 /// comisión, + `ocurrencia` (n-ésima fila idéntica del archivo) para no fusionar filas legítimas.
 model FilaFuente {
-  id             String          @id @default(cuid())
+  id             String              @id @default(cuid())
   tipoFuente     TipoFuente
-  claveNatural   String          @db.Char(64)
-  ocurrencia     Int             @db.SmallInt
+  claveNatural   String              @db.Char(64)
+  ocurrencia     Int                 @db.SmallInt
   primeraCargaId String
-  primeraCarga   CargaArchivo    @relation(fields: [primeraCargaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  primeraCarga   CargaArchivo        @relation(fields: [primeraCargaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   primeraFilaNo  Int
   crudo          Json
   vistaEn        FilaDeCarga[]
@@ -321,6 +322,7 @@ model FilaFuente {
   orden          Orden?
   dividendo      Dividendo?
   filaLoteAv     FilaLoteAv?
+  decreto        DividendoDecretado?
 
   @@unique([tipoFuente, claveNatural, ocurrencia])
   @@index([primeraCargaId])
@@ -440,7 +442,8 @@ model Orden {
   @@map("orden")
 }
 
-/// Dividendo recibido. El CSV de Trii trae el NETO; bruto = decreto × acciones.
+/// Dividendo recibido. El CSV de Trii trae el NETO; bruto = decreto × acciones, y el cruce con el decreto se calcula
+/// al leer (la tabla es de solo inserción).
 model Dividendo {
   id            String              @id @default(cuid())
   filaFuenteId  String              @unique
@@ -450,6 +453,8 @@ model Dividendo {
   instrumento   Instrumento         @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   tipo          TipoDividendo       @default(ORDINARIO)
   montoNeto     Decimal             @db.Decimal(20, 4)
+  // Obsoletas desde la fase C (migración *_datos_oficiales): siempre nulas (dividendo_viejas_nulas_chk) y nadie las
+  // escribe (tests/unit/datos-oficiales/columnas-viejas.test.ts). Se borran en una migración posterior de «contrato».
   montoBruto    Decimal?            @db.Decimal(20, 4)
   retencion     Decimal?            @db.Decimal(20, 4)
   tasaRetencion Decimal?            @db.Decimal(9, 6)
@@ -465,19 +470,35 @@ model Dividendo {
   @@map("dividendo")
 }
 
-/// Lo que anunció el emisor (fuente del bruto).
+/// Lo que anunció el emisor (fuente del bruto), una fila por cuota, tal como lo publica la fuente oficial (la fecha ex
+/// no se calcula). Lo registra el dueño (vía B, REGISTRO_DECRETOS); solo inserción y retiro (inv_solo_retiro): un
+/// cambio es la versión v+1, que retira a la v, y un decreto mal registrado se anula con una versión nueva `anulada`.
+/// Vigente = reemplazadoEn nulo; quien lee toma solo las vigentes y no anuladas. Solo en pesos y en dinero (P11).
 model DividendoDecretado {
-  id             String        @id @default(cuid())
-  instrumentoId  String
-  instrumento    Instrumento   @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  tipo           TipoDividendo
-  valorPorAccion Decimal       @db.Decimal(20, 6)
-  fechaPago      DateTime      @db.Date
-  fuente         String
-  nota           String?
-  recibidos      Dividendo[]
+  id                String        @id @default(cuid())
+  filaFuenteId      String        @unique
+  filaFuente        FilaFuente    @relation(fields: [filaFuenteId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  instrumentoId     String
+  instrumento       Instrumento   @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  tipo              TipoDividendo // nunca FRACCION_ESCISION
+  valorPorAccion    Decimal       @db.Decimal(20, 6)
+  fechaAnuncio      DateTime      @db.Date
+  cuota             Int           @db.SmallInt // 1 a 12
+  fechaEx           DateTime      @db.Date
+  fechaPago         DateTime      @db.Date
+  moneda            Moneda        @default(COP)
+  // https de la SFC o de la BVC, o sfc:<radicado> (dividendo_decretado_referencia_chk)
+  referenciaOficial String
+  nota              String?
+  version           Int           @default(1)
+  anulada           Boolean       @default(false)
+  registradoEn      DateTime      @default(now()) @db.Timestamptz(6)
+  reemplazadoEn     DateTime?     @db.Timestamptz(6)
+  recibidos         Dividendo[] // obsoleta: dividendo."decretadoId" es siempre nulo
 
+  @@unique([instrumentoId, fechaAnuncio, tipo, cuota, version], map: "dividendo_decretado_version_key")
   @@index([instrumentoId, fechaPago])
+  @@index([instrumentoId, fechaEx])
   @@map("dividendo_decretado")
 }
 
@@ -680,6 +701,23 @@ model ValorUnidadFondo {
 
   @@index([fondoId, fechaValor])
   @@map("valor_unidad_fondo")
+}
+
+// ───────────── Datos oficiales ─────────────
+/// Lo que publica la fuente oficial (TRM de la SFC, tasas del Banco de la República, IPC del DANE), sin convertir: una
+/// vigencia por fila (TPM un día, TRM su vigencia, IPC un mes). La serie y su unidad, escala y rango viven en el catálogo
+/// del código (fase C, C2a). Solo inserción y retiro (inv_solo_retiro); vigentes sin solapes por serie.
+model ValorSerieOficial {
+  id            String    @id @default(cuid())
+  serie         String
+  desde         DateTime  @db.Date
+  hasta         DateTime  @db.Date
+  valor         Decimal   @db.Decimal(20, 8)
+  fuente        String // sfc:…, banrep:… o dane:…
+  traidoEn      DateTime  @default(now()) @db.Timestamptz(6)
+  reemplazadoEn DateTime? @db.Timestamptz(6)
+
+  @@map("valor_serie_oficial")
 }
 
 // ───────────── Precios ─────────────

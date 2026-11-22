@@ -114,6 +114,12 @@ async function serie(tx: Tx, cambios: Partial<Serie> = {}, retirado = false): Pr
   return id;
 }
 
+/**
+ * Violación de un índice único (23505) por sus columnas, como las nombra PostgreSQL: en SQL crudo, Prisma da el detalle
+ * («Key (…)=…») y no el nombre del índice. Las columnas distinguen la clave vigente de la de versión.
+ */
+const duplicado = (columnas: string) => new RegExp(`23505[\\s\\S]*Key \\(${columnas.replace(/"/g, '\\\\?"')}\\)=`);
+
 const retirar = (tabla: string, id: string) => `UPDATE "${tabla}" SET "reemplazadoEn" = now() WHERE "id" = '${id}'`;
 
 beforeAll(async () => {
@@ -204,7 +210,7 @@ describe("valor_serie_oficial: una sola vigencia vigente por día", () => {
       await tx.$executeRawUnsafe('ALTER TABLE "valor_serie_oficial" DROP CONSTRAINT "valor_serie_oficial_sin_solape_excl"');
       await serie(tx);
       await serie(tx, { hasta: "2027-03-09" });
-    })).toMatch(/valor_serie_oficial_vigente_key/);
+    })).toMatch(duplicado("serie, desde"));
   });
 
   it("la exclusión sola, sin el índice único", async () => {
@@ -233,9 +239,9 @@ describe("dividendo_decretado reformado: lo que entra", () => {
   it("la columna fuente pasó a llamarse referenciaOficial, y existe el tipo de fuente REGISTRO_DECRETOS", async () => {
     const columnas = await db.$queryRaw<{ column_name: string }[]>`
       SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'dividendo_decretado' ORDER BY 1`;
-    expect(columnas.map((c) => c.column_name)).toEqual([
+    expect(columnas.map((c) => c.column_name).sort()).toEqual([
       "anulada", "cuota", "fechaAnuncio", "fechaEx", "fechaPago", "filaFuenteId", "id", "instrumentoId", "moneda", "nota",
-      "referenciaOficial", "reemplazadoEn", "registradoEn", "tipo", "valorPorAccion", "version",
+      "reemplazadoEn", "referenciaOficial", "registradoEn", "tipo", "valorPorAccion", "version",
     ]);
     const tipos = await db.$queryRaw<{ v: string }[]>`SELECT unnest(enum_range(NULL::"TipoFuente"))::text AS v`;
     expect(tipos.map((t) => t.v)).toContain("REGISTRO_DECRETOS");
@@ -325,17 +331,17 @@ describe("dividendo_decretado reformado: lo que entra", () => {
       const fila = await b.fila();
       await decreto(tx, b, { cuota: 1 }, fila);
       await decreto(tx, b, { cuota: 2 }, fila);
-    })).toMatch(/dividendo_decretado_filaFuenteId_key/);
+    })).toMatch(duplicado('"filaFuenteId"'));
   });
 });
 
 describe("dividendo_decretado: una versión vigente por especie, anuncio, tipo y cuota", () => {
-  it("dos vigentes de la misma cuota no entran; otra cuota u otro tipo de la misma asamblea, sí", async () => {
+  it("dos vigentes de la misma cuota no entran (una v2 sin retirar la v1); otra cuota u otro tipo de la misma asamblea, sí", async () => {
     expect(await enTransaccionDeshecha(async (tx) => {
       const b = await base(tx);
       await decreto(tx, b);
-      await decreto(tx, b, { valor: "41.37" });
-    })).toMatch(/dividendo_decretado_vigente_key/);
+      await decreto(tx, b, { valor: "41.37", version: 2 });
+    })).toMatch(duplicado('"instrumentoId", "fechaAnuncio", tipo, cuota'));
     expect(await enTransaccionDeshecha(async (tx) => {
       const b = await base(tx);
       await decreto(tx, b);
@@ -358,7 +364,7 @@ describe("dividendo_decretado: una versión vigente por especie, anuncio, tipo y
       const v1 = await decreto(tx, b);
       await tx.$executeRawUnsafe(retirar("dividendo_decretado", v1));
       await decreto(tx, b, { valor: "37.93" });
-    })).toMatch(/dividendo_decretado_version_key/);
+    })).toMatch(duplicado('"instrumentoId", "fechaAnuncio", tipo, cuota, version'));
   });
 });
 
@@ -440,11 +446,12 @@ describe("dividendo: las columnas viejas quedan nulas (dividendo_viejas_nulas_ch
 
   it("un dividendo sin columnas viejas entra; con cualquiera de ellas, no (aunque cumpla los CHECK viejos)", async () => {
     expect(await enTransaccionDeshecha(async (tx) => dividendo(tx, await base(tx), {}))).toBeNull();
-    for (const viejas of [
+    const casos: ReadonlyArray<Record<string, string>> = [
       { montoBruto: "47.93", retencion: "0" },
       { montoBruto: "73.71", retencion: "25.78", tasaRetencion: "0.35" },
       { tasaRetencion: "0.1" },
-    ]) {
+    ];
+    for (const viejas of casos) {
       expect(await enTransaccionDeshecha(async (tx) => dividendo(tx, await base(tx), viejas)), JSON.stringify(viejas)).toMatch(/dividendo_viejas_nulas_chk/);
     }
     expect(await enTransaccionDeshecha(async (tx) => {
