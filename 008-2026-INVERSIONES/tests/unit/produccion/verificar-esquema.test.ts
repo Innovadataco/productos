@@ -222,3 +222,25 @@ describe("verificar-esquema.sql coincide con las migraciones", () => {
     expect(c).toBeGreaterThan(b);
   });
 });
+
+// Fase E (E3): inv_ia (el servicio de los resúmenes con IA) y resumen_ia. El disparador del instante de resumen_ia exime
+// a quien tenga los privilegios del dueño: si inv_ia, inv_app o inv_precios fueran miembros de él, con SET ROLE fijarían
+// la hora del registro; e inv_ia no puede ser miembro del dueño de ninguna de las tablas con disparadores que eximen al
+// dueño. Va en un bloque propio (el de inv_app e inv_precios queda como estaba).
+describe("guardián del esquema: inv_ia y resumen_ia", () => {
+  const guardian = leer008("scripts/verificar-esquema.sql");
+
+  it("revisa que inv_ia, inv_app e inv_precios no sean miembros del dueño de resumen_ia ni inv_ia del de las demás", () => {
+    const m = /WHERE r\.rolname IN \('inv_ia', 'inv_app', 'inv_precios'\)\s+AND c\.oid IN \(([^)]*(?:\)[^)]*)*?)\)\s+AND \(r\.rolname = 'inv_ia' OR c\.oid = to_regclass\('public\.resumen_ia'\)\)\s+AND pg_has_role\(r\.oid, c\.relowner, 'MEMBER'\)/.exec(guardian);
+    expect(m, "bloque de membresía de inv_ia").not.toBeNull();
+    const tablas = [...m![1]!.matchAll(/to_regclass\('public\.([a-z_]+)'\)/g)].map((x) => x[1]);
+    expect(tablas.sort()).toEqual(["decision", "enlace_decision_orden", "plan_version", "precio_cierre", "resumen_ia", "valor_unidad_fondo"]);
+  });
+
+  it("exige el índice único parcial de los PUBLICADO, los dos disparadores y la función del instante de resumen_ia", () => {
+    expect(guardian).toMatch(/\['resumen_ia', 'resumen_ia_publicado_key', 'CREATE UNIQUE INDEX resumen_ia_publicado_key ON public\.resumen_ia USING btree \(tipo, "fechaNegocio", "hechosHash", "promptHash", "modeloDigest"\) WHERE \(estado = ''PUBLICADO''::"EstadoResumenIa"\)'\]/);
+    expect(guardian).toMatch(/\['resumen_ia', 'resumen_ia_solo_insercion', 'CREATE TRIGGER resumen_ia_solo_insercion BEFORE DELETE OR UPDATE ON public\.resumen_ia FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion\(\)'\]/);
+    expect(guardian).toMatch(/\['resumen_ia', 'resumen_ia_instante', 'CREATE TRIGGER resumen_ia_instante BEFORE INSERT ON public\.resumen_ia FOR EACH ROW EXECUTE FUNCTION inv_resumen_ia_instante\(\)'\]/);
+    expect(guardian).toMatch(/\['inv_resumen_ia_instante', '[0-9a-f]{32}', ''\]/);
+  });
+});

@@ -293,3 +293,36 @@ describe("guardián del esquema: datos oficiales", () => {
     expect(await guardianTras(romper)).toContain("dividendo_decretado_filaFuenteId_fkey");
   });
 });
+
+// Fase E (E3): resumen_ia. Si una migración o un DROP le quita la unicidad de los PUBLICADO, la solo inserción, la hora
+// que pone la base o un CHECK, o si la función del instante cambia, el despliegue se detiene.
+describe("guardián del esquema: resumen_ia", () => {
+  it.each([
+    ["el índice único parcial de los PUBLICADO", ['DROP INDEX "resumen_ia_publicado_key"'], "resumen_ia_publicado_key"],
+    ["el disparador de solo inserción", ['DROP TRIGGER "resumen_ia_solo_insercion" ON "resumen_ia"'], "resumen_ia_solo_insercion"],
+    ["el disparador del instante", ['DROP TRIGGER "resumen_ia_instante" ON "resumen_ia"'], "resumen_ia_instante"],
+    ["el CHECK del texto y el estado", ['ALTER TABLE "resumen_ia" DROP CONSTRAINT "resumen_ia_estado_chk"'], "resumen_ia_estado_chk"],
+    ["el CHECK de la puerta de VISTA_NO_CIEGA", ['ALTER TABLE "resumen_ia" DROP CONSTRAINT "resumen_ia_puerta_chk"'], "resumen_ia_puerta_chk"],
+    ["la llave primaria", ['ALTER TABLE "resumen_ia" DROP CONSTRAINT "resumen_ia_pkey"'], "resumen_ia_pkey"],
+  ])("falla si se borra %s", async (_n, romper, nombre) => {
+    expect(await guardianTras(romper)).toContain(nombre);
+  });
+
+  // Sin depender de las filas que dejaron otras pruebas: el índice cambia de predicado o deja de ser único.
+  it.each([
+    ["cambia de predicado", 'CREATE UNIQUE INDEX "resumen_ia_publicado_key" ON "resumen_ia" ("tipo", "fechaNegocio", "hechosHash", "promptHash", "modeloDigest") WHERE false'],
+    ["deja de ser único", 'CREATE INDEX "resumen_ia_publicado_key" ON "resumen_ia" ("tipo", "fechaNegocio", "hechosHash", "promptHash", "modeloDigest") WHERE "estado" = \'PUBLICADO\''],
+  ])("falla si el índice de los PUBLICADO %s", async (_n, recrear) => {
+    expect(await guardianTras(['DROP INDEX "resumen_ia_publicado_key"', recrear])).toContain("resumen_ia_publicado_key");
+  });
+
+  it("falla si la función del instante cambia de código o pasa a SECURITY DEFINER", async () => {
+    const reemplazo = `CREATE OR REPLACE FUNCTION "inv_resumen_ia_instante"() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END; $$`;
+    expect(await guardianTras([reemplazo])).toContain("inv_resumen_ia_instante");
+    expect(await guardianTras(['ALTER FUNCTION "inv_resumen_ia_instante"() SECURITY DEFINER'])).toContain("inv_resumen_ia_instante");
+  });
+
+  it("falla si el disparador de solo inserción queda deshabilitado", async () => {
+    expect(await guardianTras(['ALTER TABLE "resumen_ia" DISABLE TRIGGER "resumen_ia_solo_insercion"'])).toContain("resumen_ia");
+  });
+});
