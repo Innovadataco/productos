@@ -203,18 +203,34 @@ describe("rendimiento_fondo · únicos", () => {
 });
 
 describe("rendimiento_fondo · solo inserción", () => {
+  // Con una retención (sin ajuste): la coherencia no se interpone y responde el disparador de solo inserción.
+  async function unaRetencion(tx: Tx) {
+    const u = await usuario(tx);
+    const f = await fondo(tx);
+    return retencion(tx, f.id, u.id);
+  }
+
   it("no se cambia ni se borra", async () => {
+    expect(
+      await enTransaccionDeshecha(async (tx) => {
+        const r = await unaRetencion(tx);
+        await tx.rendimientoFondo.update({ where: { id: r.id }, data: { valor: dec("1748.6234") } });
+      }),
+    ).toMatch(/solo inserción/);
+    expect(
+      await enTransaccionDeshecha(async (tx) => {
+        const r = await unaRetencion(tx);
+        await tx.rendimientoFondo.delete({ where: { id: r.id } });
+      }),
+    ).toMatch(/solo inserción/);
+  });
+
+  it("cambiar un rendimiento enlazado tampoco pasa (la coherencia con su ajuste lo frena antes)", async () => {
     expect(
       await enTransaccionDeshecha(async (tx) => {
         const r = await rendimiento(tx);
         await tx.rendimientoFondo.update({ where: { id: r.id }, data: { valor: dec("48213.372") } });
       }),
-    ).toMatch(/solo inserción/);
-    expect(
-      await enTransaccionDeshecha(async (tx) => {
-        const r = await rendimiento(tx);
-        await tx.rendimientoFondo.delete({ where: { id: r.id } });
-      }),
-    ).toMatch(/solo inserción/);
+    ).toMatch(/no es el valor del rendimiento/);
   });
 });
