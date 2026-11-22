@@ -18,14 +18,21 @@ function entradaConTodo(): EntradasProyeccion {
   const evento = dias[200]!;
   const caida = serieGeometrica(dias, 1237.4, 1.0003).map((c, j) => ({ ...c, precio: c.precio * (j >= 200 ? 0.3 : 1) * (j >= 100 ? 0.4 : 1) }));
   const conTodo = accion("o", 311, caida, {
-    movimientos: [{ fecha: dia("2019-01-08"), cantidad: 311n }, { fecha: dia("2019-09-09"), cantidad: 7n }],
+    movimientos: [{ fecha: dia("2019-01-08"), cantidad: 311n }, { fecha: dia("2019-07-05"), cantidad: 5n }, { fecha: dia("2019-09-09"), cantidad: 7n }],
     dividendos: [
       { fechaPago: dia("2019-01-04"), montoNeto: 41.37, decretadoId: null },
+      // Antes de la ex de su decreto (d3): DIVIDENDO_DECRETO_EN_DUDA.
+      { fechaPago: dia("2019-05-13"), montoNeto: 37.91, decretadoId: null },
+      // Junta dos decretos con ex distintas (d4 y d5) y la tenencia cambió entre ellas: DIVIDENDO_EX_DISTINTAS.
+      { fechaPago: dia("2019-07-18"), montoNeto: 47.93, decretadoId: null },
       { fechaPago: dia("2019-09-11"), montoNeto: 43.11, decretadoId: null },
     ],
     decretos: [
-      { id: "d1", fechaPago: dia("2019-10-09"), valorPorAccion: 3.47, recibido: false },
-      { id: "d2", fechaPago: dia("2027-04-14"), valorPorAccion: 3.13, recibido: false },
+      { id: "d1", fechaEx: dia("2019-10-02"), fechaPago: dia("2019-10-09"), valorPorAccion: 3.47, recibido: false },
+      { id: "d2", fechaEx: dia("2027-04-07"), fechaPago: dia("2027-04-14"), valorPorAccion: 3.13, recibido: false },
+      { id: "d3", fechaEx: dia("2019-05-14"), fechaPago: dia("2019-05-15"), valorPorAccion: 1.13, recibido: false },
+      { id: "d4", fechaEx: dia("2019-07-03"), fechaPago: dia("2019-07-17"), valorPorAccion: 2.71, recibido: false },
+      { id: "d5", fechaEx: dia("2019-07-10"), fechaPago: dia("2019-07-17"), valorPorAccion: 0.97, recibido: false },
     ],
   });
   const otra = accion("p", 13, serieGeometrica(dias, 905.6, 1.0001));
@@ -56,6 +63,17 @@ describe("supuestos", () => {
     const r = calcularProyeccion(entradaConTodo(), P());
     const vistos = new Set(r.supuestos.avisos.map((a) => a.codigo));
     expect(CODIGOS_AVISO.filter((c) => !vistos.has(c) && c !== "SIN_POSICIONES_PROYECTADAS" && c !== "SIN_POSICIONES_VALORADAS")).toEqual([]);
+    // Los de la regla de la fecha ex (los pide aparte: la lista de arriba solo ve los códigos que existen).
+    expect([...vistos]).toEqual(expect.arrayContaining(["DIVIDENDO_DECRETO_EN_DUDA", "DIVIDENDO_EX_DISTINTAS", "DIVIDENDO_SIN_TENENCIA", "DIVIDENDO_TENENCIA_CAMBIA"]));
+  });
+
+  it("los textos de los dividendos dicen qué tenencia se buscó: la de antes de la ex con decreto, la del pago sin él", () => {
+    const texto = (codigo: (typeof CODIGOS_AVISO)[number]) => textoAviso({ codigo, instrumentoId: "x", nombre: "XQZ", dia: "2019-03-05", dato: null });
+    expect(texto("DIVIDENDO_TENENCIA_CAMBIA")).toContain("sin decreto");
+    expect(texto("DIVIDENDO_SIN_TENENCIA")).toContain("fecha ex");
+    expect(texto("DIVIDENDO_DECRETO_EN_DUDA")).toContain("fecha ex");
+    expect(texto("DIVIDENDO_DECRETO_EN_DUDA")).toContain("dos fechas de pago");
+    expect(texto("DIVIDENDO_EX_DISTINTAS")).toContain("fechas ex distintas");
   });
 
   it("cada código de aviso tiene su texto", () => {

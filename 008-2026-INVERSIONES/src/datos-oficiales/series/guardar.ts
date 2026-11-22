@@ -20,6 +20,7 @@
  * - Los fallos salen con código, nombre y código del error, nunca su mensaje (el del 23P01 trae la clave y las fechas).
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
+import { CODIGO_SERIALIZACION, CODIGO_UNICIDAD, esExclusion, tieneCodigo } from "../../lib/choques";
 import { detalleDeError } from "../../precios/guardar";
 import type { ValorSerie } from "./csv-series";
 import { finDeLote, planificar, type PlanSerie, type VigenteSerie } from "./planificar";
@@ -38,7 +39,6 @@ export const ESPERA_MAXIMA_TX_SERIES_MS = 10_000;
 /** La base exige hasta ≤ desde + 31 (valor_serie_oficial_vigencia_chk): un vigente que toca la ventana empieza a lo sumo 31 días antes. */
 const MAX_DIAS_TRAS_DESDE = 31;
 const DIA_MS = 86_400_000;
-const CODIGOS_DE_CHOQUE: ReadonlySet<string> = new Set(["P2002", "P2034"]);
 
 export interface SerieAGuardar {
   readonly codigo: string;
@@ -85,13 +85,9 @@ class LoteSinCorte extends Error {
   }
 }
 
-/** ¿Chocó con otra escritura? Del 23P01 solo se mira el SQLSTATE; el mensaje nunca se muestra. */
-function esChoque(e: unknown): boolean {
-  if (e instanceof ConflictoConcurrente) return true;
-  const codigo = (e as { code?: unknown } | null)?.code;
-  if (typeof codigo === "string" && CODIGOS_DE_CHOQUE.has(codigo)) return true;
-  return e instanceof Error && e.name === "PrismaClientUnknownRequestError" && /\b23P01\b/.test(e.message);
-}
+/** ¿Chocó con otra escritura? P2002 o P2034 por su código, o la exclusión 23P01 (src/lib/choques.ts); el mensaje nunca se muestra. */
+const esChoque = (e: unknown): boolean =>
+  e instanceof ConflictoConcurrente || tieneCodigo(e, CODIGO_UNICIDAD, CODIGO_SERIALIZACION) || esExclusion(e);
 
 type Transaccion = Prisma.TransactionClient;
 

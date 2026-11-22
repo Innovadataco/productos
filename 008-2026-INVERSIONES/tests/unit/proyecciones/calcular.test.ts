@@ -33,7 +33,9 @@ describe("calcularProyeccion", () => {
     expect(r.parametros).toEqual(P({ horizonteMeses: 7 }));
     expect(r.hoy).toBe(iso(e.hoy));
     expect(r.supuestos.fraccionProyectada).toBe(1);
-    expect(r.versionMetodo).toMatch(/^bootstrap-circular-/);
+    // v2: los pagos de Trii con decreto se miden con su fecha ex (la regla del plan); con decretos, los mismos datos
+    // dan otro resultado que la v1, así que la versión lo dice. Sin decretos, los números son los de la v1.
+    expect(r.versionMetodo).toBe("bootstrap-circular-v2");
     expect(calcularProyeccion(e, P({ horizonteMeses: 7 }))).toEqual(r);
   });
 

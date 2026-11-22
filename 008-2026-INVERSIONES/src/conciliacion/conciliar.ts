@@ -7,6 +7,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { isoDia as dia } from "../importacion/av/fecha-corte";
 import { candadoConciliar } from "../lib/candados";
+import { CODIGO_SERIALIZACION, esErrorPrisma } from "../lib/choques";
 import { calcularConciliacion, VERSION_CALCULO, type Control } from "./controles";
 import { leerEntradas } from "./esperado";
 import { corteOcupado } from "./vigente";
@@ -19,7 +20,6 @@ export { candadoConciliar };
  * la transacción fallida se deshizo entera, así que no se duplica nada.
  */
 const MAX_INTENTOS = 2;
-const esSerializacion = (e: unknown): boolean => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034";
 
 export class ErrorConciliacion extends Error {
   /** Con CERTIFICACION_RETIRADA: la fecha de corte (AAAA-MM-DD) de la certificación que la reemplazó. */
@@ -73,7 +73,7 @@ export async function conciliarCertificacion(db: PrismaClient, opciones: { reado
     try {
       return await conciliarUnaVez(db, opciones);
     } catch (e) {
-      if (!esSerializacion(e) || intento >= MAX_INTENTOS) throw e;
+      if (!esErrorPrisma(e, CODIGO_SERIALIZACION) || intento >= MAX_INTENTOS) throw e;
     }
   }
 }

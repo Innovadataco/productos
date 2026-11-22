@@ -13,11 +13,14 @@ import "server-only";
  * - Dividendos pagados (sin las fracciones de escisión), decretos VIGENTES y no anulados (DECRETOS_QUE_CUENTAN de
  *   src/datos-oficiales/decretos/vigentes.ts, el único filtro: una corrección es una versión nueva que retira a la
  *   anterior y una anulación es una versión `anulada`; también los de pago futuro, solo para contarlos), los movimientos
- *   de la tenencia, las escisiones y los días no hábiles de calendario_bvc.
+ *   de la tenencia, las escisiones y los días no hábiles de calendario_bvc. De cada decreto, su fecha ex (con ella se
+ *   mide el pago de Trii que cruza, como en el plan). Los decretos se leen desde rangoDeDecretos de los pagos (desde
+ *   VENTANA_PAGO_DESPUES_DIAS antes del primer día de la historia): así todo pago leído ve los decretos cuya ventana
+ *   lo contiene. Sin cota superior a propósito: los de pago futuro se leen para contarlos (una fila por cuota).
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { enSoloLectura } from "../conciliacion/leer";
-import { DECRETOS_QUE_CUENTAN } from "../datos-oficiales/decretos/vigentes";
+import { DECRETOS_QUE_CUENTAN, rangoDeDecretos } from "../datos-oficiales/decretos/vigentes";
 import { posiciones, type ResultadoPosiciones } from "../lotes/posiciones";
 import { esFechaDeNegocio } from "../plan/fechas";
 import { movimientosDeEspecies } from "../plan/resultados-lote";
@@ -92,8 +95,8 @@ async function leerHistoria(tx: Lector, hoy: Date, ids: readonly string[], desti
       orderBy: [{ fechaPago: "asc" }, { id: "asc" }],
     }),
     tx.dividendoDecretado.findMany({
-      where: { instrumentoId: { in: [...ids] }, fechaPago: { gte: desde }, ...DECRETOS_QUE_CUENTAN },
-      select: { id: true, instrumentoId: true, fechaPago: true, valorPorAccion: true, _count: { select: { recibidos: true } } },
+      where: { instrumentoId: { in: [...ids] }, fechaPago: { gte: rangoDeDecretos({ desde, hasta: hoy }).desde }, ...DECRETOS_QUE_CUENTAN },
+      select: { id: true, instrumentoId: true, fechaEx: true, fechaPago: true, valorPorAccion: true, _count: { select: { recibidos: true } } },
       orderBy: [{ fechaPago: "asc" }, { id: "asc" }],
     }),
     movimientosDeEspecies(tx, ids, hoy),
@@ -102,7 +105,9 @@ async function leerHistoria(tx: Lector, hoy: Date, ids: readonly string[], desti
     cierres: agrupar(cierres, (c) => c.instrumentoId, (c): Cierre => ({ dia: c.fecha, precio: c.precio.toNumber() })),
     valores: agrupar(valores, (v) => v.fondoId, (v) => ({ dia: v.fechaValor, valorUnidad: v.valorUnidad.toNumber() })),
     dividendos: agrupar(dividendos, (d) => d.instrumentoId, (d) => ({ fechaPago: d.fechaPago, montoNeto: d.montoNeto.toNumber(), decretadoId: d.decretadoId })),
-    decretos: agrupar(decretos, (d) => d.instrumentoId, (d) => ({ id: d.id, fechaPago: d.fechaPago, valorPorAccion: d.valorPorAccion.toNumber(), recibido: d._count.recibidos > 0 })),
+    decretos: agrupar(decretos, (d) => d.instrumentoId, (d) => ({
+      id: d.id, fechaEx: d.fechaEx, fechaPago: d.fechaPago, valorPorAccion: d.valorPorAccion.toNumber(), recibido: d._count.recibidos > 0,
+    })),
     movimientos,
   };
 }

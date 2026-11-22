@@ -1,5 +1,7 @@
 // Rendimiento del motor (encargo: 5000 trayectorias × 10 años en menos de 1 s en el Mac, en el servidor). Portafolio
-// sintético de 12 acciones y un fondo, con 1500 ruedas de historia y dividendos.
+// sintético de 12 acciones y un fondo, con 1500 ruedas de historia, dividendos y sus decretos (con su fecha ex: la regla
+// del plan) más uno de pago futuro por acción. Los dividendos se miden una vez por proyección, no por trayectoria: la
+// prueba de escala no ve ese costo fijo; lo ven el tope del Mac y el catastrófico.
 // Un tope de tiempo fijo depende de la máquina: el CI corre la unidad con la cobertura v8 instrumentada y tardó 8,7 s
 // donde el Mac tarda 0,4 s. Por eso, en cualquier máquina, la prueba mide cómo ESCALA: 10 veces el trabajo (5000
 // contra 500 trayectorias, mismo horizonte e historia) no puede tardar más de 25 veces lo que tarda la corrida chica en
@@ -11,7 +13,7 @@
 import { describe, expect, it } from "vitest";
 import { calcularProyeccion } from "@/proyecciones/calcular";
 import type { AccionEntrada, EntradasProyeccion, ParametrosProyeccion } from "@/proyecciones/tipos";
-import { accion, diasHabiles, entradas, fondo, serieAleatoria, valoresDiarios } from "./ficticio";
+import { accion, dia, diasHabiles, entradas, fondo, serieAleatoria, valoresDiarios } from "./ficticio";
 
 const TOPE_MAC_MS = 1000;
 const TOPE_CATASTROFICO_MS = 60_000;
@@ -24,8 +26,14 @@ function portafolio(): EntradasProyeccion {
   const dias = diasHabiles("2015-01-05", 1500);
   const acciones: AccionEntrada[] = Array.from({ length: 12 }, (_, k) => {
     const cierres = serieAleatoria(dias, 811.3 + k * 371.17, 101 + k, 0.0002 + k * 0.00003, 0.012 + k * 0.001);
-    const dividendos = [3, 4, 5, 6, 7].map((anio) => ({ fechaPago: dias[anio * 240 - 600 + k]!, montoNeto: 4613.27 + k * 37.9, decretadoId: null }));
-    return accion(`a${k}`, 1237 + k * 113, cierres, { movimientos: [{ fecha: dias[0]!, cantidad: BigInt(1237 + k * 113) }], dividendos });
+    const indices = [3, 4, 5, 6, 7].map((anio) => anio * 240 - 600 + k);
+    const dividendos = indices.map((j) => ({ fechaPago: dias[j]!, montoNeto: 4613.27 + k * 37.9, decretadoId: null }));
+    const decretos = [
+      ...indices.map((j) => ({ id: `d${k}-${j}`, fechaEx: dias[j - 6]!, fechaPago: dias[j - 1]!, valorPorAccion: 3.71 + k * 0.13, recibido: false })),
+      // Después de hoy (el día siguiente al último valor del fondo, en diciembre de 2020).
+      { id: `d${k}-futuro`, fechaEx: dia("2021-03-10"), fechaPago: dia("2021-03-17"), valorPorAccion: 3.71, recibido: false },
+    ];
+    return accion(`a${k}`, 1237 + k * 113, cierres, { movimientos: [{ fecha: dias[0]!, cantidad: BigInt(1237 + k * 113) }], dividendos, decretos });
   });
   return entradas([...acciones, fondo("f", 1499.927, valoresDiarios("2014-12-01", 2200, 12_731.4419, 1.00011))]);
 }
@@ -57,6 +65,10 @@ describe("rendimiento", () => {
     if (enMac) process.stdout.write(`[proyecciones] chica ${antes.ms.toFixed(0)} y ${despues.ms.toFixed(0)} ms, grande ${grande.ms.toFixed(0)} ms: ${(grande.ms / referencia).toFixed(1)} veces\n`);
     expect(grande.resultado.puntos).toHaveLength(121);
     expect(grande.resultado.supuestos.posiciones.filter((p) => p.estado === "PROYECTADA")).toHaveLength(13);
+    // Cada pago de Trii entró por su decreto (con la tenencia antes de la ex), sin avisos; los futuros solo se cuentan.
+    expect(grande.resultado.supuestos.posiciones.filter((p) => p.tipo === "ACCION").map((p) => p.dividendosUsados)).toEqual(Array.from({ length: 12 }, () => 5));
+    expect(grande.resultado.supuestos.avisos.filter((a) => a.codigo.startsWith("DIVIDENDO") || a.codigo === "DECRETO_BRUTO")).toEqual([]);
+    expect(grande.resultado.supuestos.decretosFuturos).toBe(12);
     expect(grande.ms).toBeLessThan(ESCALA_MAXIMA * referencia);
     expect(grande.ms).toBeLessThan(TOPE_CATASTROFICO_MS);
   }, 180_000);
