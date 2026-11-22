@@ -27,6 +27,12 @@ Las capas 1 a 6 son de este frente (red y contenedor). Las 7 a 12 son de la app:
 - **Alcance, dicho derecho:** no impide sacar datos por la respuesta del túnel, y `Cf-Connecting-IP` en `127.0.0.1:5008` lo puede falsificar quien ya está en el host. Ver [produccion.md](produccion.md) («Alcance de la app sin salida»).
 - **En el host, al desplegar:** lo verifica `desplegar-prod.sh`; a mano, los comandos del primer despliegue con la entrada en [produccion.md](produccion.md) §5.
 
+**Servicio de precios (`inv-008-precios`, D-018): capa propia, fuera de las 12 de PI.**
+- **Qué:** un contenedor con la imagen de la app, solo la credencial de `inv_precios` y sin puertos. Su única red con salida es `inv-008-red-precios`, un puente propio de nombre fijo (`br-inv008-prec`); el resto de sus redes son internal. Usuario 10008, sistema de archivos de solo lectura, `cap_drop: ALL`, `no-new-privileges`, 96 MiB con mem = memswap.
+- **Evidencia en el repo:** `docker-compose.prod.yml` (el servicio y las dos redes de precios); `src/servicio-precios/buscador.ts` y `direcciones.ts` (solo dos hosts fijos, `redirect: "error"`, IPv4 pública y la conexión a la IP validada); `scripts/desplegar-prod.sh` (`verificar_servicio`: sin puertos, solo sus redes y la lista blanca de su entorno).
+- **Pruebas:** `tests/unit/produccion/servicio-precios-compose.test.ts`, `tests/unit/produccion/desplegar-precios.test.ts`, `tests/unit/precios/servicio-buscador.test.ts` y `tests/unit/precios/servicio-direcciones.test.ts`.
+- **Límite:** la red no filtra por destino. Lo limita el código. Una regla de `DOCKER-USER` o del firewall del host, que solo deje salir el puente hacia esos dos destinos, la pone PI: **pendiente, por verificar en el VPS**.
+
 ## Contenedor (4 a 6)
 
 | # | Requisito | Evidencia en el repo | Prueba local | En el host, al desplegar |
@@ -137,13 +143,13 @@ Lo que exige el TOTP antes de cargar datos es crear la cuenta del dueño y carga
 
 
 ## Convivencia (condiciones del CEO de PI)
-- **Pausa obligatoria en cada despliegue de PI.** El CEO de PI midió `MemAvailable` mínimo de 1.593 MB durante su build, y con los 1.152 MiB de Inversiones quedarían unos 0,4 GB.
-  - La pausa la hace PI con `docker stop` y `start` de los contenedores con la etiqueta `com.docker.compose.project=inv-008-prod`.
+- **Pausa condicional en los despliegues de PI (D-019, 2026-11-21).** Antes era obligatoria en cada despliegue. Ahora PI pausa Inversiones solo si su preflight de memoria arranca con `MemAvailable` < 1 GiB o `SwapFree` < 512 MB. El CEO de PI midió un `MemAvailable` mínimo de 1.593 MB durante su build; con los 1.152 MiB de Inversiones quedarían unos 0,4 GB.
+  - Cuando pausa, la hace PI con `docker stop` y `start` de los contenedores con la etiqueta `com.docker.compose.project=inv-008-prod`.
   - **Respeta la marca de pausa `<raíz>/estado/pausado`.**
-  - Procedimiento: [convivencia-pi.md](convivencia-pi.md#1--pausa-obligatoria-en-cada-despliegue-de-pi).
-- **Candado común** `/var/lock/despliegue-vps.lock`: lo toman, sin esperar, `desplegar-prod.sh`, `reanudar-008.sh`, `crear-roles-prod.sh`, `crear-acceso-inicial.sh` y `cargar-prod.sh`. `pausar-008.sh` no lo toma, para servir aunque PI esté desplegando.
+  - Procedimiento: [convivencia-pi.md](convivencia-pi.md#1--pausa-condicional-en-los-despliegues-de-pi-d-019).
+- **Candado común** `/var/lock/despliegue-vps.lock`: lo toman, sin esperar, `desplegar-prod.sh`, `reanudar-008.sh`, `crear-roles-prod.sh`, `crear-acceso-inicial.sh`, `cargar-prod.sh` y `reaplicar-limites-008.sh`. `pausar-008.sh` no lo toma, para servir aunque PI esté desplegando.
 - **Escritura:** solo tres destinos, `<raíz>/`, ese candado y `<respaldos>/`. Hay una prueba en rojo por cada ruta vecina.
-- **Memoria:** mem = memswap en cada contenedor, verificado al desplegar, más `cpu_shares` 256 y la medición antes de `up` y 10 minutos después.
+- **Memoria:** mem = memswap en cada contenedor, verificado al desplegar, más `cpu_shares` 256 y la medición antes de `up` y después de la espera (120 o 600 s; en la corta, con el piso de memoria, se extiende a 600 s; [produccion.md §5](produccion.md)).
 
 ## Ensayo local (salidas)
 Mac Studio, 2026-11-21, Colima arm64 con Docker 29.5.2 y containerd. Proyecto `inv-008-prueba`, sin puertos publicados, secretos ficticios y GitHub simulado. Imágenes construidas con `scripts/construir-imagen.sh`, del mismo código de este PR. Salidas reales, recortadas:
@@ -237,7 +243,8 @@ DEPLOY VERIFICADO 15e6b401… · / → 307 · API → 401 · /api/salud → ok, 
 **Lo que encontró esta ronda y se corrigió antes de la GATE 2:**
 - con el compose nuevo sobre la red interna de antes, Compose no la recreaba («container … is not connected to the network»): el `up` y la vuelta atrás fallaban y el sitio quedaba caído. Ahora `desplegar-prod.sh` hace un `down` sin `-v` antes (ronda 2 arriba);
 - sin `-v`, el `nc` de busybox no dice por qué no conectó: la prueba de no salida daba un falso rojo. Ahora usa `nc -z -v`;
-- la retención de imágenes de `desplegar-prod.sh` (`purgar_imagenes`) también corre en el modo de prueba y, en el Docker compartido del Mac, borró las imágenes `inv-008-*` de otros frentes en la primera corrida de esta ronda. Desde la segunda, el ensayo usa un `docker` envoltorio que no borra imágenes. El script no cambió: queda como hallazgo aparte.
+- la retención de imágenes de `desplegar-prod.sh` (`purgar_imagenes`) corría también en el modo de prueba y, en el Docker compartido del Mac, borró las imágenes `inv-008-*` de otros frentes en la primera corrida de esta ronda. Desde la segunda, el ensayo usó un `docker` envoltorio que no borra imágenes.
+  - En `main`, `purgar_imagenes` solo corre en el proyecto de producción (`retencion_permitida` en `scripts/desplegar-prod.sh`). El PR que lo cambió: **por verificar**.
 
 **Lo que NO se verificó en local:**
 - el puerto en `127.0.0.1:5008` del VPS: el override de los ensayos lo quita o lo pone en otro puerto del Mac;
@@ -250,6 +257,7 @@ DEPLOY VERIFICADO 15e6b401… · / → 307 · API → 401 · /api/salud → ok, 
 **Reinicio de Docker:** no se reinició el demonio de Docker del Mac, porque también corren ahí la base de desarrollo de Inversiones y la de PI. Que la pausa sobreviva un reinicio se demostró así: con la marca puesta, el proyecto queda con 0 contenedores, así que `restart: always` no tiene nada que levantar.
 
 ---
+> v2.9 · 2026-11-21 · 23:27 (-05) · Inversiones · Fábrica Inversiones (frente docs-tanda-21nov) · convivencia con PI en pausa condicional (D-019); candado común con `reaplicar-limites-008.sh`; medición con la espera de 120 o 600 s; capa propia del servicio de precios; nota de `purgar_imagenes` al día con `main` (v2.9 sobre la v2.8)
 > v2.8 · 2026-11-21 · 09:28 (-05) · Inversiones · Fábrica ECC (frente app-sin-salida) · capas 1, 3 y 5 con la entrada; capa propia «app sin salida» con la puerta de enlace aislada; ronda de ensayo app-sin-salida
 > v2.7 · 2026-11-21 · 07:34 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · respaldos: carpeta en 750, archivos 640, y `nosuid,noexec` en el montaje del host (revisado, por ahora aviso)
 > v2.6 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · referencias archivo:línea corregidas contra el código de este clon (base fd7105ad); puertos del firewall fuera del repo; candado común con sus cinco tomadores
