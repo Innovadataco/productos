@@ -26,7 +26,7 @@ const activas = new Map(
 const obligatorias = new Set([...compose.matchAll(/\$\{([A-Z0-9_]+):\?/g)].map((m) => m[1]!));
 const opcionales = new Set([...ejemplo.matchAll(/^# ([A-Z0-9_]+)=/gm)].map((m) => m[1]!));
 // Las que lee un script y todavía no interpola el compose. INV_PRECIOS_DATABASE_URL: la lee crear-roles-prod.sh para
-// crear inv_precios; el servicio de precios (PR 3) la llevará al compose y entonces sale de esta lista.
+// darle LOGIN y clave a inv_precios; el servicio de precios (PR 3) la llevará al compose y entonces sale de esta lista.
 const SOLO_DE_SCRIPTS = ["INV_PRECIOS_DATABASE_URL"];
 
 describe("plantilla del archivo de producción", () => {
@@ -42,7 +42,7 @@ describe("plantilla del archivo de producción", () => {
     }
   });
 
-  it("INV_PRECIOS_DATABASE_URL va solo comentada (sin ella se omite el rol) y con el formato del ESTADO", () => {
+  it("INV_PRECIOS_DATABASE_URL va solo comentada (sin ella el rol queda NOLOGIN y sin clave) y con el formato del ESTADO", () => {
     expect(activas.has("INV_PRECIOS_DATABASE_URL")).toBe(false);
     expect(ejemplo).toContain("\n# INV_PRECIOS_DATABASE_URL=postgresql://inv_precios:<clave>@inv-008-db:5432/inversiones?connection_limit=2\n");
   });

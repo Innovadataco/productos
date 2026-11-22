@@ -1,8 +1,9 @@
 // Roles de producción contra una PostgreSQL 16 real: crear-roles-prod.sql + migraciones como inv_dueno +
 // guardián del esquema + privilegios.sql, y luego inv_app intenta lo que nunca debe poder hacer. Después, inv_precios
-// (servicio de precios, PR 3): privilegios.sql pasa sin el rol (el despliegue de hoy), el rol se crea con el SQL de
-// crear-roles-prod.sh, privilegios.sql se reaplica, precios:actualizar y actualizar-fondo corren con él (buscadores
-// simulados) y lo prohibido falla. Todo en este archivo: los roles son globales del clúster.
+// (servicio de precios): privilegios.sql pasa sin el rol (mientras Jelk no corra crear-roles-prod.sh), el rol se crea
+// con el SQL de crear-roles-prod.sh (NOLOGIN y sin clave hasta su secreto), privilegios.sql se reaplica,
+// precios:actualizar y actualizar-fondo corren con él (buscadores simulados) y lo prohibido falla. Todo en este
+// archivo: los roles son globales del clúster.
 //
 // Corre SOLO en GitHub Actions (GITHUB_ACTIONS=true), contra la base efímera del job `app-008`
 // (DATABASE_URL_TEST, superusuario, nombre terminado en _test). Nunca en el Mac: los roles son globales
@@ -16,7 +17,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { actualizarFondo } from "@/fondo/actualizar";
 import type { BuscarSfc } from "@/fondo/sfc";
 import { actualizarPrecios } from "@/precios/actualizar";
-import type { Buscar } from "@/precios/yahoo";
+import { leerCsvCierres } from "@/precios/csv-cierres";
+import { guardarCierresDeEspecies } from "@/precios/guardar";
+import { importarPrecios, type LecturaValida } from "@/precios/importar";
+import type { Buscar, Cierre } from "@/precios/yahoo";
+import { ACEPTADOS, RECHAZOS, VERIFICACION_FALSA, idsDe, insertarCierre, sembrar as sembrarIntegridad, type Ids } from "../../ayudas/integridad-precios";
 import { carpetaTemporal, funcion, ruta008 } from "./falsos";
 import { filasPermisos, PERMISOS_PRECIOS } from "./permisos-precios";
 
@@ -182,7 +187,21 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     let fondo = "";
     const creaciones: Array<ReturnType<typeof ejecutarSql>> = [];
     let antesDelMigrador: unknown = null;
+    let sinSecreto: Array<Record<string, unknown>> = [];
+    let entrarSinSecreto = "";
     const urlPrecios = () => `${conBase("inv_precios", CLAVE_PRECIOS, BASE_PRUEBA)}&connection_limit=2`;
+    /** Abre una conexión nueva como inv_precios: «entró» o el error (sin la clave). */
+    const entrarComoPrecios = async (): Promise<string> => {
+      const intento = new PrismaClient({ datasources: { db: { url: urlPrecios() } } });
+      try {
+        await intento.$queryRawUnsafe("SELECT 1");
+        return "entró";
+      } catch (e) {
+        return String(e).replaceAll(CLAVE_PRECIOS, "<clave>");
+      } finally {
+        await intento.$disconnect();
+      }
+    };
     const negado = async (sql: string) => {
       await expect(precios.$executeRawUnsafe(sql)).rejects.toThrow(/42501|permission denied|must be owner/);
     };
@@ -219,8 +238,14 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       const archivo = path.join(carpetaTemporal("rol-precios"), "rol-precios.sql");
       writeFileSync(archivo, sqlRol.stdout);
       for (let i = 0; i < 2; i += 1) creaciones.push(ejecutarSql(archivo, superusuario(BASE_PRUEBA)));
+      // Sin su secreto (como lo deja el script cuando el archivo no trae la línea): NOLOGIN y sin clave, no entra.
+      sinSecreto = await admin.$queryRawUnsafe<Array<Record<string, unknown>>>(
+        "SELECT rolcanlogin, rolpassword IS NULL AS sin_clave FROM pg_authid WHERE rolname = 'inv_precios'",
+      );
+      entrarSinSecreto = await entrarComoPrecios();
+      // Con su secreto: la sentencia que emite el script (LOGIN y clave juntos), con la clave inventada en el texto.
       const enPrueba = new PrismaClient({ datasources: { db: { url: superusuario(BASE_PRUEBA) } } });
-      await enPrueba.$executeRawUnsafe(`ALTER ROLE inv_precios PASSWORD '${CLAVE_PRECIOS}'`);
+      await enPrueba.$executeRawUnsafe(`ALTER ROLE inv_precios WITH LOGIN PASSWORD '${CLAVE_PRECIOS}'`);
       await enPrueba.$disconnect();
       precios = new PrismaClient({ datasources: { db: { url: urlPrecios() } } });
       // Recién creado, antes del migrador: se conecta pero no lee nada (falla cerrada).
@@ -243,6 +268,12 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     it("el SQL de crear-roles-prod.sh crea el rol y es idempotente; recién creado no lee nada hasta el migrador", () => {
       expect(creaciones.map((c) => c.status), creaciones.map((c) => c.stderr).join("\n")).toEqual([0, 0]);
       expect(String(antesDelMigrador)).toMatch(/42501|permission denied/);
+    });
+
+    it("sin su secreto el rol existe NOLOGIN y sin clave, y no entra (así los GRANT de un respaldo siempre lo encuentran)", () => {
+      expect(sinSecreto).toEqual([{ rolcanlogin: false, sin_clave: true }]);
+      expect(entrarSinSecreto).not.toBe("entró");
+      expect(entrarSinSecreto).toMatch(/Authentication failed|not permitted to log in|credentials for `inv_precios` are not valid/i);
     });
 
     it("atributos del rol: LOGIN, NOINHERIT, sin superusuario, sin crear bases ni roles, sin replicación ni BYPASSRLS, 4 conexiones", async () => {
@@ -348,6 +379,151 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
         await negado(sql);
       });
     }
+
+    // Disparadores de integridad (migración *_precios_integridad) con el rol REAL: los mismos casos que corre la
+    // integración local como pg_write_all_data (tests/ayudas/integridad-precios.ts), más lo que solo se ve aquí: los
+    // privilegios por columna de verdad, inv_app con un permiso dado por error y el camino único (guardar.ts) en los
+    // bordes del 1 %, con re-verificación en las dos direcciones. Escenario propio (especie y fondo inactivos).
+    describe("integridad de los precios con inv_precios real (disparadores)", () => {
+      let ids: Ids;
+      const reaplicarPrivilegios = () => {
+        const r = ejecutarSql(ruta008("docker/migrador/privilegios.sql"), conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA));
+        expect(r.status, r.stderr).toBe(0);
+      };
+      const comoPrecios = (sql: readonly string[]) =>
+        sql.length === 1 ? precios.$executeRawUnsafe(sql[0]!) : precios.$transaction(sql.map((x) => precios.$executeRawUnsafe(x)));
+
+      beforeAll(async () => {
+        ids = idsDe(randomBytes(4).toString("hex"));
+        for (const x of sembrarIntegridad(ids)) await dueno.$executeRawUnsafe(x);
+      });
+
+      for (const caso of RECHAZOS.filter((c) => !c.deMas)) {
+        it(`inv_precios no puede (disparador): ${caso.nombre}`, async () => {
+          await expect(comoPrecios(caso.sql(ids))).rejects.toThrow(caso.error);
+        });
+      }
+
+      it("con privilegios dados por error (INSERT de reemplazadoEn, UPDATE de precio, estado o valorUnidad, DELETE) igual lo frena el disparador; privilegios.sql los quita", async () => {
+        const extras = [
+          'GRANT INSERT ("reemplazadoEn"), UPDATE (precio, estado), DELETE ON TABLE precio_cierre TO inv_precios',
+          'GRANT INSERT ("reemplazadoEn"), UPDATE ("valorUnidad"), DELETE ON TABLE valor_unidad_fondo TO inv_precios',
+        ];
+        for (const x of extras) await dueno.$executeRawUnsafe(x);
+        try {
+          for (const caso of RECHAZOS.filter((c) => c.deMas)) await expect(comoPrecios(caso.sql(ids)), caso.nombre).rejects.toThrow(caso.error);
+        } finally {
+          reaplicarPrivilegios();
+        }
+        await negado(`DELETE FROM precio_cierre WHERE id = '${ids.vigente}'`);
+        await negado(`UPDATE valor_unidad_fondo SET "valorUnidad" = "valorUnidad" WHERE id = '${ids.vufVigente}'`);
+      });
+
+      for (const caso of ACEPTADOS) {
+        it(`inv_precios sí puede: ${caso.nombre}`, async () => {
+          await comoPrecios(caso.sql(ids));
+          expect(await dueno.$queryRawUnsafe(caso.verificar(ids))).toEqual([{ ok: true }]);
+        });
+      }
+
+      it("la regla vale para cualquier rol que no sea dueño: inv_app con INSERT dado por error tampoco afirma un VERIFICADO falso", async () => {
+        await dueno.$executeRawUnsafe("GRANT INSERT ON TABLE precio_cierre TO inv_app");
+        try {
+          const falso = insertarCierre(ids, { id: "app", fecha: "DATE '2018-05-09'", precio: "3719.41", estado: "VERIFICADO" });
+          await expect(app.$executeRawUnsafe(falso)).rejects.toThrow(VERIFICACION_FALSA);
+        } finally {
+          reaplicarPrivilegios();
+        }
+      });
+
+      it("el dueño queda fuera: inv_dueno inserta un VERIFICADO sin certificación (fixtures y reparaciones)", async () => {
+        const propio = insertarCierre(ids, { id: "dueno", fecha: "DATE '2018-05-11'", precio: "3719.41", estado: "VERIFICADO" });
+        await expect(dueno.$executeRawUnsafe(propio)).resolves.toBe(1);
+      });
+
+      describe("el camino único (guardarCierresDeEspecies) como inv_precios, en los bordes", () => {
+        // Febrero de 2022 (calendario sembrado, sin festivos). Un día por caso; la referencia, por certificación.
+        const BORDES: ReadonlyArray<readonly [dia: string, valoracion: string | null, cierre: string, estado: string, referencia: string | null, desviacion: string | null]> = [
+          ["2022-02-14", "4613.27", "4659.4027", "VERIFICADO", "4613.27", "1"], // 1 % exacto
+          ["2022-02-15", "4613.27", "4659.402701", "NO_VERIFICADO", "4613.27", "1"], // 1 % + 1e-6: no cuadra aunque redondee a 1
+          ["2022-02-16", "4613.27", "4567.1373", "VERIFICADO", "4613.27", "1"], // −1 % exacto
+          ["2022-02-17", "0", "3719.41", "NO_VERIFICADO", "0", null], // valoración 0
+          ["2022-02-18", "237.13", "2608.429998", "NO_VERIFICADO", "237.13", "999.999999"], // lo más que cabe
+          ["2022-02-21", "237.13", "2608.43", "NO_VERIFICADO", "237.13", null], // 1000 %: no cabe
+          ["2022-02-22", null, "3719.41", "NO_VERIFICADO", null, null], // sin certificación (luego llega y se va)
+        ];
+        const utc = (d: string) => new Date(`${d}T00:00:00Z`);
+        const rango = { desde: utc("2022-02-14"), hasta: utc("2022-02-22"), ahora: new Date("2022-03-31T23:00:00Z") };
+        const correr = () => {
+          const cierres: Cierre[] = BORDES.map(([dia, , precio]) => ({ fecha: utc(dia), precio, volumen: 137 }));
+          return guardarCierresDeEspecies(precios, [{ instrumentoId: ids.inst, traer: async () => ({ ok: true, cierres }) }], rango);
+        };
+        const vigente = async (dia: string) => {
+          const v = await dueno.precioCierre.findFirst({ where: { instrumentoId: ids.inst, fecha: utc(dia), reemplazadoEn: null } });
+          return v && [v.estado, v.precioReferencia?.toString() ?? null, v.desviacionPct?.toString() ?? null];
+        };
+        const certificar = async (dia: string, valoracion: string) => {
+          const carga = await dueno.cargaArchivo.create({ data: { tipoFuente: "AV_CERTIFICACION", nombreArchivo: "cert.ficticio.pdf", sha256: randomBytes(32).toString("hex"), estado: "CARGADO", cargadoPorId: ids.usuario } });
+          const cert = await dueno.certificacion.create({ data: { cargaId: carga.id, fechaCorte: utc(dia), saldoEfectivo: new Prisma.Decimal(0) } });
+          await dueno.certificacionPosicion.create({ data: { certificacionId: cert.id, instrumentoId: ids.inst, cantidad: 37n, precioValoracion: new Prisma.Decimal(valoracion), valorMercado: new Prisma.Decimal(valoracion).mul(37) } });
+          return cert.id;
+        };
+
+        beforeAll(async () => {
+          for (const [dia, valoracion] of BORDES) if (valoracion !== null) await certificar(dia, valoracion);
+        });
+
+        it("guarda cada borde con el estado y la referencia que la base también calcula, sin fallas", async () => {
+          const r = await correr();
+          expect(r).toMatchObject({ especies: 1, cierresNuevos: BORDES.length, fallidas: [] });
+          for (const [dia, , , estado, referencia, desviacion] of BORDES) expect(await vigente(dia), dia).toEqual([estado, referencia, desviacion]);
+        });
+
+        it("una segunda corrida igual no escribe nada (la base y el código dicen lo mismo: sin versiones en bucle)", async () => {
+          expect(await correr()).toMatchObject({ cierresNuevos: 0, cierresRevisados: 0, cierresReverificados: 0, fallidas: [] });
+        });
+
+        it("re-verifica en las dos direcciones: llega la certificación (VERIFICADO) y el dueño la revierte (NO_VERIFICADO)", async () => {
+          const cert = await certificar("2022-02-22", "3724.89");
+          expect(await correr()).toMatchObject({ cierresReverificados: 1, fallidas: [] });
+          expect(await vigente("2022-02-22")).toEqual(["VERIFICADO", "3724.89", "0.147118"]);
+          await dueno.$transaction([
+            dueno.$executeRawUnsafe("SET LOCAL inv.reversion = 'on'"),
+            dueno.$executeRawUnsafe(`DELETE FROM certificacion_posicion WHERE "certificacionId" = '${cert}'`),
+            dueno.$executeRawUnsafe(`DELETE FROM certificacion WHERE id = '${cert}'`),
+          ]);
+          expect(await correr()).toMatchObject({ cierresReverificados: 1, fallidas: [] });
+          expect(await vigente("2022-02-22")).toEqual(["NO_VERIFICADO", null, null]);
+        });
+
+        it("la vía B (precios:importar) corre como inv_dueno por el mismo camino, sin fallas", async () => {
+          const csv = leerCsvCierres(new TextEncoder().encode("nemotecnico,fecha,cierre,volumen\nFICTPRA,2022-02-23,3713.29,137\n"));
+          expect(csv.ok).toBe(true);
+          const r = await importarPrecios(dueno, csv as LecturaValida, { ahora: rango.ahora });
+          expect(r.guardado).toMatchObject({ especies: 1, cierresNuevos: 1, fallidas: [] });
+        });
+      });
+    });
+
+    // Último del bloque: deja el rol como estaba (con LOGIN) para lo que sigue.
+    it("quitar la línea del secreto y volver a correr el script lo deja NOLOGIN y sin clave: ya no entra; con la línea vuelve", async () => {
+      const sinLogin = funcion(ruta008("scripts/crear-roles-prod.sh"), "sql_precios_sin_login", { PATH: process.env.PATH });
+      expect(sinLogin.status, sinLogin.stderr).toBe(0);
+      expect(sinLogin.stdout.trim()).toBe("ALTER ROLE inv_precios WITH NOLOGIN PASSWORD NULL;");
+      const archivo = path.join(carpetaTemporal("rol-precios-sin-login"), "sin-login.sql");
+      writeFileSync(archivo, sinLogin.stdout);
+      expect(ejecutarSql(archivo, superusuario(BASE_PRUEBA)).status).toBe(0);
+      try {
+        const estado = await admin.$queryRawUnsafe<Array<Record<string, unknown>>>(
+          "SELECT rolcanlogin, rolpassword IS NULL AS sin_clave FROM pg_authid WHERE rolname = 'inv_precios'",
+        );
+        expect(estado).toEqual([{ rolcanlogin: false, sin_clave: true }]);
+        expect(await entrarComoPrecios()).toMatch(/Authentication failed|not permitted to log in|credentials for `inv_precios` are not valid/i);
+      } finally {
+        await admin.$executeRawUnsafe(`ALTER ROLE inv_precios WITH LOGIN PASSWORD '${CLAVE_PRECIOS}'`);
+      }
+      expect(await entrarComoPrecios()).toBe("entró");
+    });
   });
 
   it("el guardián del esquema pasa en la base recién migrada (definiciones exactas de PostgreSQL 16)", () => {
@@ -365,6 +541,25 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     expect(r.stderr + r.stdout).toMatch(/orden_montos_chk/);
     expect(r.stderr + r.stdout).toMatch(/dividendo_solo_insercion/);
     await dueno.$disconnect();
+  });
+
+  // La exención de los disparadores de integridad de precios es «tener los privilegios del dueño de la tabla»: si
+  // inv_precios o inv_app fueran miembros de inv_dueno, quedarían eximidos (o, con SET ROLE, serían el dueño).
+  it("el guardián falla si inv_precios o inv_app es miembro del dueño de las tablas de precios", async () => {
+    const guardian = () => ejecutarSql(ruta008("scripts/verificar-esquema.sql"), conBase("inv_dueno", CLAVE_DUENO, BASE_PRUEBA));
+    for (const rol of ["inv_precios", "inv_app"]) {
+      const aviso = new RegExp(`rol con privilegios del dueño ${rol} en precio_cierre`);
+      const antes = guardian();
+      expect(antes.stderr + antes.stdout).not.toMatch(aviso);
+      await admin.$executeRawUnsafe(`GRANT inv_dueno TO ${rol}`);
+      try {
+        const r = guardian();
+        expect(r.status).not.toBe(0);
+        expect(r.stderr + r.stdout).toMatch(aviso);
+      } finally {
+        await admin.$executeRawUnsafe(`REVOKE inv_dueno FROM ${rol}`);
+      }
+    }
   });
 
   it("el guardián del esquema falla si falta un disparador escrito a mano", async () => {
