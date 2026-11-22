@@ -1,5 +1,19 @@
-/** Esqueleto (rojo). */
-import type { EntradaPaquete, IdHecho, PaqueteHechos, TipoResumen } from "./contrato";
+/**
+ * Construcción validada del paquete de hechos (`hechos-v1`). Cierra en fallo: ante la primera falla lanza
+ * `ErrorPaquete` con un código cerrado, la posición del hecho y el nombre del campo del contrato. El mensaje nunca
+ * repite un valor, una presentación, un nombre ni una clave recibida: solo el código, el hecho y el campo.
+ *
+ * Valida la entrada como `unknown` (los tipos de TypeScript no llegan al tiempo de ejecución), toma la etiqueta y la
+ * unidad del catálogo, copia campo por campo (nada de `...entrada`), congela todo y calcula el hash.
+ */
+import { CALIDADES, CERCANIAS, DIRECCIONES, FRESCURAS, MAX_AVISOS, MAX_HECHOS, MAX_LARGO_FUENTE, MAX_LARGO_PRESENTACION,
+  MAX_VERSIONES_CALCULO, PATRON_ID_HECHO, TIPOS_RESUMEN, VERSION_HECHOS,
+  type EntradaPaquete, type Hecho, type IdHecho, type PaqueteHechos, type TipoResumen } from "./contrato";
+import { CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, type ClaveDe, type EntradaCatalogo } from "./catalogo";
+import { esDecimalCanonico, esDiaIso, esNombreEspecie, esObjetoPlano, esTextoSeguro, type Registro } from "./formas";
+import { hashPaquete } from "./hash";
+import { esClaveProhibida } from "./prohibidas";
+
 export const CODIGOS_ERROR_PAQUETE = Object.freeze([
   "FORMA_INVALIDA", "CAMPO_DESCONOCIDO", "CAMPO_FALTANTE", "CLAVE_PROHIBIDA", "TIPO_INVALIDO", "HOY_INVALIDO",
   "VERSIONES_CALCULO_INVALIDAS", "AVISOS_INVALIDOS", "SIN_HECHOS", "DEMASIADOS_HECHOS", "ID_NO_CONSECUTIVO",
@@ -9,6 +23,17 @@ export const CODIGOS_ERROR_PAQUETE = Object.freeze([
   "CERCANIA_INVALIDA", "FRESCURA_INVALIDA", "DIRECCION_NO_APLICA", "CERCANIA_NO_APLICA", "OBLIGATORIO_INVALIDO",
 ] as const);
 export type CodigoErrorPaquete = (typeof CODIGOS_ERROR_PAQUETE)[number];
+
+const CAMPOS_RAIZ = Object.freeze(["tipo", "hoy", "versionesCalculo", "avisos", "hechos"] as const);
+const CAMPOS_HECHO = Object.freeze(["id", "clave", "valor", "presentacion", "fuente", "fecha", "calidad", "direccion", "cercania", "frescura", "obligatorio"] as const);
+const CAMPO_OPCIONAL_HECHO = "sujeto";
+const CLAVE_VERSION = /^[a-z][a-zA-Z]{0,31}$/;
+const VALOR_VERSION = /^[a-z][a-z0-9.-]{0,63}$/;
+const CODIGO_AVISO = /^[A-Z][A-Z0-9_]{0,63}$/;
+const ENTERO = /^-?[0-9]+$/;
+const DIGITO = /[0-9]/;
+const UNIDADES_ENTERAS: ReadonlySet<string> = new Set(["DIAS", "MESES", "ESPECIES"]);
+const UNIDADES_NO_NEGATIVAS: ReadonlySet<string> = new Set(["MESES", "ESPECIES"]);
 
 export class ErrorPaquete extends Error {
   override readonly name = "ErrorPaquete";
@@ -21,5 +46,155 @@ export class ErrorPaquete extends Error {
   }
 }
 
-export function idDeHecho(_posicion: number): IdHecho { throw new Error("SIN_IMPLEMENTAR"); }
-export function construirPaquete<T extends TipoResumen>(_entrada: EntradaPaquete<T>): PaqueteHechos<T> { throw new Error("SIN_IMPLEMENTAR"); }
+/** El id del hecho en la posición dada (1 → «H01»); fuera de 1 a 99, RangeError. */
+export function idDeHecho(posicion: number): IdHecho {
+  if (!Number.isInteger(posicion) || posicion < 1 || posicion > MAX_HECHOS) throw new RangeError("La posición de un hecho va de 1 a 99.");
+  return `H${String(posicion).padStart(2, "0")}` as IdHecho;
+}
+
+const esDe = <T extends string>(lista: readonly T[], valor: unknown): valor is T => typeof valor === "string" && (lista as readonly string[]).includes(valor);
+
+/** Solo los campos del contrato: los demás son CLAVE_PROHIBIDA o CAMPO_DESCONOCIDO (sin repetir su nombre). */
+function exigirCampos(registro: Registro, exigidos: readonly string[], opcional: string | null, hecho: IdHecho | null): void {
+  for (const clave of Object.keys(registro)) {
+    if (exigidos.includes(clave) || clave === opcional) continue;
+    throw new ErrorPaquete(esClaveProhibida(clave) ? "CLAVE_PROHIBIDA" : "CAMPO_DESCONOCIDO", hecho);
+  }
+  const faltante = exigidos.find((campo) => !Object.hasOwn(registro, campo) || registro[campo] === undefined);
+  if (faltante !== undefined) throw new ErrorPaquete("CAMPO_FALTANTE", hecho, faltante);
+}
+
+function validarVersiones(valor: unknown): Readonly<Record<string, string>> {
+  if (!esObjetoPlano(valor)) throw new ErrorPaquete("VERSIONES_CALCULO_INVALIDAS", null, "versionesCalculo");
+  const pares = Object.entries(valor);
+  const valido = pares.length <= MAX_VERSIONES_CALCULO
+    && pares.every(([clave, version]) => CLAVE_VERSION.test(clave) && !esClaveProhibida(clave) && typeof version === "string" && VALOR_VERSION.test(version));
+  if (!valido) throw new ErrorPaquete("VERSIONES_CALCULO_INVALIDAS", null, "versionesCalculo");
+  return Object.freeze(Object.fromEntries(pares as [string, string][]));
+}
+
+function validarAvisos(valor: unknown): readonly string[] {
+  if (!Array.isArray(valor) || valor.length > MAX_AVISOS) throw new ErrorPaquete("AVISOS_INVALIDOS", null, "avisos");
+  const avisos = Array.from(valor, (aviso: unknown) => aviso);
+  const valido = avisos.every((aviso) => typeof aviso === "string" && CODIGO_AVISO.test(aviso)) && new Set(avisos).size === avisos.length;
+  if (!valido) throw new ErrorPaquete("AVISOS_INVALIDOS", null, "avisos");
+  return Object.freeze(avisos as string[]);
+}
+
+function validarHechosCrudos(valor: unknown): readonly unknown[] {
+  if (!Array.isArray(valor)) throw new ErrorPaquete("FORMA_INVALIDA", null, "hechos");
+  if (valor.length === 0) throw new ErrorPaquete("SIN_HECHOS", null, "hechos");
+  if (valor.length > MAX_HECHOS) throw new ErrorPaquete("DEMASIADOS_HECHOS", null, "hechos");
+  return Array.from(valor, (hecho: unknown) => hecho);
+}
+
+interface Contexto {
+  readonly tipo: TipoResumen;
+  readonly hoy: string;
+  readonly previos: readonly Hecho[];
+  readonly especies: ReadonlySet<string>;
+}
+
+function validarSujeto(registro: Registro, catalogo: EntradaCatalogo, id: IdHecho, previos: readonly Hecho[]): IdHecho | undefined {
+  const sujeto = registro[CAMPO_OPCIONAL_HECHO];
+  if (sujeto === undefined) {
+    if (catalogo.sujeto === "EXIGIDO") throw new ErrorPaquete("SUJETO_FALTANTE", id, "sujeto");
+    return undefined;
+  }
+  if (catalogo.sujeto === "NINGUNO") throw new ErrorPaquete("SUJETO_NO_PERMITIDO", id, "sujeto");
+  const apuntado = typeof sujeto === "string" && PATRON_ID_HECHO.test(sujeto) ? previos.find((h) => h.id === sujeto) : undefined;
+  if (apuntado === undefined) throw new ErrorPaquete("SUJETO_INEXISTENTE", id, "sujeto");
+  if (apuntado.clave !== CLAVE_NOMBRE_ESPECIE) throw new ErrorPaquete("SUJETO_NO_ES_ESPECIE", id, "sujeto");
+  return apuntado.id;
+}
+
+function validarValor(valor: unknown, catalogo: EntradaCatalogo, id: IdHecho, especies: ReadonlySet<string>): string {
+  const { unidad } = catalogo;
+  if (unidad === "NOMBRE") {
+    if (!esNombreEspecie(valor)) throw new ErrorPaquete("NOMBRE_INVALIDO", id, "valor");
+    if (especies.has(valor.toLowerCase())) throw new ErrorPaquete("ESPECIE_REPETIDA", id, "valor");
+    return valor;
+  }
+  if (unidad === "FECHA") {
+    if (typeof valor !== "string" || !esDiaIso(valor)) throw new ErrorPaquete("VALOR_NO_FECHA", id, "valor");
+    return valor;
+  }
+  if (typeof valor !== "string" || !esDecimalCanonico(valor)) throw new ErrorPaquete("VALOR_NO_DECIMAL", id, "valor");
+  if (UNIDADES_ENTERAS.has(unidad) && !ENTERO.test(valor)) throw new ErrorPaquete("VALOR_NO_ENTERO", id, "valor");
+  if (UNIDADES_NO_NEGATIVAS.has(unidad) && valor.startsWith("-")) throw new ErrorPaquete("VALOR_NEGATIVO", id, "valor");
+  return valor;
+}
+
+/** Presentación, fuente, fecha, calidad, dirección, cercanía, frescura y si es obligatorio. */
+function validarResto(registro: Registro, catalogo: EntradaCatalogo, id: IdHecho, hoy: string): void {
+  const { presentacion, fuente, fecha } = registro;
+  const presentacionValida = esTextoSeguro(presentacion, MAX_LARGO_PRESENTACION) && (catalogo.unidad === "NOMBRE" || DIGITO.test(presentacion));
+  if (!presentacionValida) throw new ErrorPaquete("PRESENTACION_INVALIDA", id, "presentacion");
+  if (!esTextoSeguro(fuente, MAX_LARGO_FUENTE)) throw new ErrorPaquete("FUENTE_INVALIDA", id, "fuente");
+  if (typeof fecha !== "string" || !esDiaIso(fecha)) throw new ErrorPaquete("FECHA_INVALIDA", id, "fecha");
+  if (fecha > hoy) throw new ErrorPaquete("FECHA_FUTURA", id, "fecha");
+  if (!esDe(CALIDADES, registro.calidad)) throw new ErrorPaquete("CALIDAD_INVALIDA", id, "calidad");
+  if (!esDe(DIRECCIONES, registro.direccion)) throw new ErrorPaquete("DIRECCION_INVALIDA", id, "direccion");
+  if (!esDe(CERCANIAS, registro.cercania)) throw new ErrorPaquete("CERCANIA_INVALIDA", id, "cercania");
+  if (!esDe(FRESCURAS, registro.frescura)) throw new ErrorPaquete("FRESCURA_INVALIDA", id, "frescura");
+  if (!catalogo.admiteDireccion && registro.direccion !== "NO_APLICA") throw new ErrorPaquete("DIRECCION_NO_APLICA", id, "direccion");
+  if (!catalogo.admiteCercania && registro.cercania !== "NO_APLICA") throw new ErrorPaquete("CERCANIA_NO_APLICA", id, "cercania");
+  if (typeof registro.obligatorio !== "boolean") throw new ErrorPaquete("OBLIGATORIO_INVALIDO", id, "obligatorio");
+}
+
+function validarHecho(crudo: unknown, posicion: number, contexto: Contexto): Hecho {
+  const id = idDeHecho(posicion);
+  if (!esObjetoPlano(crudo)) throw new ErrorPaquete("FORMA_INVALIDA", id);
+  exigirCampos(crudo, CAMPOS_HECHO, CAMPO_OPCIONAL_HECHO, id);
+  if (crudo.id !== id) throw new ErrorPaquete("ID_NO_CONSECUTIVO", id, "id");
+  const catalogo = typeof crudo.clave === "string" ? entradaDeCatalogo(contexto.tipo, crudo.clave) : null;
+  if (catalogo === null) throw new ErrorPaquete("CLAVE_FUERA_DE_CATALOGO", id, "clave");
+  const sujeto = validarSujeto(crudo, catalogo, id, contexto.previos);
+  const valor = validarValor(crudo.valor, catalogo, id, contexto.especies);
+  validarResto(crudo, catalogo, id, contexto.hoy);
+  const r = crudo as unknown as Hecho;
+  return Object.freeze({
+    id,
+    clave: r.clave,
+    ...(sujeto === undefined ? {} : { sujeto }),
+    valor,
+    unidad: catalogo.unidad,
+    presentacion: r.presentacion,
+    etiqueta: catalogo.etiqueta,
+    fuente: r.fuente,
+    fecha: r.fecha,
+    calidad: r.calidad,
+    direccion: r.direccion,
+    cercania: r.cercania,
+    frescura: r.frescura,
+    obligatorio: r.obligatorio,
+  });
+}
+
+function validarHechos(crudos: readonly unknown[], tipo: TipoResumen, hoy: string): readonly Hecho[] {
+  const hechos: Hecho[] = [];
+  const especies = new Set<string>();
+  crudos.forEach((crudo, i) => {
+    const hecho = validarHecho(crudo, i + 1, { tipo, hoy, previos: hechos, especies });
+    if (hecho.clave === CLAVE_NOMBRE_ESPECIE) especies.add(hecho.valor.toLowerCase());
+    hechos.push(hecho);
+  });
+  return Object.freeze(hechos);
+}
+
+/**
+ * El paquete validado, congelado y con su hash. Orden de las validaciones: la raíz (campos, tipo, hoy, versiones de
+ * cálculo, avisos, hechos) y después hecho por hecho, campo por campo.
+ */
+export function construirPaquete<T extends TipoResumen>(entrada: EntradaPaquete<T>): PaqueteHechos<T> {
+  const crudo: unknown = entrada;
+  if (!esObjetoPlano(crudo)) throw new ErrorPaquete("FORMA_INVALIDA");
+  exigirCampos(crudo, CAMPOS_RAIZ, null, null);
+  if (!esDe(TIPOS_RESUMEN, crudo.tipo)) throw new ErrorPaquete("TIPO_INVALIDO", null, "tipo");
+  if (typeof crudo.hoy !== "string" || !esDiaIso(crudo.hoy)) throw new ErrorPaquete("HOY_INVALIDO", null, "hoy");
+  const versionesCalculo = validarVersiones(crudo.versionesCalculo);
+  const avisos = validarAvisos(crudo.avisos);
+  const hechos = validarHechos(validarHechosCrudos(crudo.hechos), crudo.tipo, crudo.hoy);
+  const sinHash: Omit<PaqueteHechos<T>, "hash"> = { version: VERSION_HECHOS, tipo: crudo.tipo as T, hoy: crudo.hoy, versionesCalculo, avisos, hechos: hechos as readonly Hecho<ClaveDe<T>>[] };
+  return Object.freeze({ ...sinHash, hash: hashPaquete(sinHash) });
+}

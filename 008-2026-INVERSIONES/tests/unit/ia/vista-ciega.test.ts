@@ -98,6 +98,8 @@ describe("guarda de la vista ciega · control positivo", () => {
 
   it.each([
     ["nula", null],
+    ["indefinida", undefined],
+    ["una función", () => ({ tipo: "DIARIO", hechos: [] })],
     ["un arreglo", []],
     ["sin hechos", { tipo: "DIARIO" }],
     ["con un hecho que no es objeto", { tipo: "DIARIO", hechos: ["H01"] }],
@@ -106,6 +108,15 @@ describe("guarda de la vista ciega · control positivo", () => {
     ["de una clase", new (class Vista { readonly tipo = "DIARIO"; readonly hechos = []; })()],
   ])("rechaza una vista %s por su forma", (_caso, vista) => {
     expect(fugasDeVistaCiega(vista, paqueteDiario())).toContain("FORMA_INVALIDA");
+  });
+
+  it("rechaza una vista demasiado profunda para recorrerla", () => {
+    const paquete = paqueteDiario();
+    const vista = vistaEditable(paquete);
+    let profundo: unknown = "x";
+    for (let i = 0; i < 70; i += 1) profundo = { a: profundo };
+    vista.extra = profundo;
+    expect(fugasDeVistaCiega(vista, paquete)).toEqual(["CAMPO_NO_PERMITIDO", "FORMA_INVALIDA"]);
   });
 
   it("rechaza un getter que cambiaría lo que sale después de revisado", () => {

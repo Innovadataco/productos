@@ -6,8 +6,10 @@
  * El pedido lo arma `armarPedido` desde el paquete completo: la vista la calcula `vistaCiega` (con su guarda) y el
  * hash del prompt lo calcula el código. Así nadie arma un pedido con una vista a mano ni con un hash que no cuadre.
  */
-/* Esqueleto (rojo). */
 import type { PaqueteCiego, PaqueteHechos, TipoResumen } from "./contrato";
+import { esObjetoPlano, type Registro } from "./formas";
+import { clonCongelado, jsonCanonico, sha256Hex } from "./hash";
+import { vistaCiega } from "./vista-ciega";
 
 export const PUERTAS = Object.freeze(["local", "nube"] as const);
 export type Puerta = (typeof PUERTAS)[number];
@@ -95,5 +97,52 @@ export interface EntradaPedido<T extends TipoResumen = TipoResumen> {
   readonly limiteMs: number;
 }
 
-export function revisarPedido(_pedido: PedidoGeneracion): PedidoGeneracion { throw new Error("SIN_IMPLEMENTAR"); }
-export function armarPedido<T extends TipoResumen>(_entrada: EntradaPedido<T>): PedidoGeneracion<T> { throw new Error("SIN_IMPLEMENTAR"); }
+function promptValido(prompt: unknown): prompt is PromptVersionado {
+  if (!esObjetoPlano(prompt)) return false;
+  const { texto, version } = prompt;
+  return typeof texto === "string" && texto.length > 0 && texto.length <= MAX_LARGO_PROMPT && texto.isWellFormed()
+    && typeof version === "string" && PATRON_VERSION_PROMPT.test(version);
+}
+
+function esquemaValido(esquema: unknown): esquema is EsquemaSalida {
+  if (!esObjetoPlano(esquema) || esquema.type !== "object") return false;
+  try {
+    return jsonCanonico(esquema).length <= MAX_LARGO_ESQUEMA;
+  } catch {
+    return false;
+  }
+}
+
+const limiteValido = (limiteMs: unknown): limiteMs is number =>
+  typeof limiteMs === "number" && Number.isInteger(limiteMs) && limiteMs >= LIMITE_MIN_MS && limiteMs <= LIMITE_MAX_MS;
+
+const CAMPOS_PEDIDO: readonly string[] = Object.freeze(["vista", "prompt", "esquemaSalida", "limiteMs"]);
+const CAMPOS_PROMPT: readonly string[] = Object.freeze(["texto", "version", "hash"]);
+const soloCampos = (registro: Registro, permitidos: readonly string[]): boolean => Object.keys(registro).every((clave) => permitidos.includes(clave));
+
+/**
+ * Revisa la forma de un pedido (sin campos de más, en el pedido ni en el prompt), el prompt con su hash, el esquema y
+ * el límite. Devuelve una copia con solo los campos del contrato. La vista la revisa la guarda, contra el paquete.
+ */
+export function revisarPedido(pedido: PedidoGeneracion): PedidoGeneracion {
+  const crudo: unknown = pedido;
+  if (!esObjetoPlano(crudo) || !esObjetoPlano(crudo.prompt)) throw new ErrorPedido("PROMPT_INVALIDO");
+  if (!soloCampos(crudo, CAMPOS_PEDIDO) || !soloCampos(crudo.prompt, CAMPOS_PROMPT)) throw new ErrorPedido("CAMPO_DESCONOCIDO");
+  const { prompt } = crudo;
+  if (!promptValido({ texto: prompt.texto, version: prompt.version })) throw new ErrorPedido("PROMPT_INVALIDO");
+  if (prompt.hash !== sha256Hex(prompt.texto as string)) throw new ErrorPedido("PROMPT_HASH_NO_COINCIDE");
+  if (!esquemaValido(crudo.esquemaSalida)) throw new ErrorPedido("ESQUEMA_INVALIDO");
+  if (!limiteValido(crudo.limiteMs)) throw new ErrorPedido("LIMITE_INVALIDO");
+  const { texto, version, hash } = pedido.prompt;
+  return { vista: pedido.vista, prompt: { texto, version, hash }, esquemaSalida: pedido.esquemaSalida, limiteMs: pedido.limiteMs };
+}
+
+/** El pedido para los generadores: la vista ciega del paquete, el prompt con su hash, el esquema y el límite. Congelado. */
+export function armarPedido<T extends TipoResumen>(entrada: EntradaPedido<T>): PedidoGeneracion<T> {
+  const { prompt, esquemaSalida, limiteMs } = entrada;
+  if (!promptValido(prompt)) throw new ErrorPedido("PROMPT_INVALIDO");
+  if (!esquemaValido(esquemaSalida)) throw new ErrorPedido("ESQUEMA_INVALIDO");
+  if (!limiteValido(limiteMs)) throw new ErrorPedido("LIMITE_INVALIDO");
+  const conHash: PromptConHash = Object.freeze({ texto: prompt.texto, version: prompt.version, hash: sha256Hex(prompt.texto) });
+  return Object.freeze({ vista: vistaCiega(entrada.paquete), prompt: conHash, esquemaSalida: clonCongelado(esquemaSalida), limiteMs });
+}

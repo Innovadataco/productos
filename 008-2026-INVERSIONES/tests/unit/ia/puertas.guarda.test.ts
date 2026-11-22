@@ -80,9 +80,9 @@ describe("guarda en generarConPuertas · control positivo", () => {
     expect(resultado).toMatchObject({ ok: true, exito: { puerta: "local" } });
     expect(local.llamadas()).toHaveLength(1);
     expect(nube.llamadas()).toHaveLength(0);
-    const recibido = JSON.stringify(local.llamadas()[0]?.vista);
-    expect(recibido.replace(/"H[0-9]{2}"/g, '""')).not.toMatch(/\p{N}/u);
-    for (const h of paquete.hechos) expect(recibido).not.toContain(h.presentacion);
-    expect(recibido.toLowerCase()).not.toContain("ficticia");
+    const sinIds = JSON.stringify(local.llamadas()[0]?.vista).replace(/"H[0-9]{2}"/g, '""');
+    expect(sinIds).not.toMatch(/\p{N}/u);
+    for (const h of paquete.hechos) expect(sinIds).not.toContain(h.presentacion);
+    expect(sinIds.toLowerCase()).not.toContain("ficticia");
   });
 });
