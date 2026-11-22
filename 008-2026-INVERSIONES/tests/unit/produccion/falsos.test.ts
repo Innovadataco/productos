@@ -5,10 +5,10 @@
 // puede escribir sobre el versionado.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, crearFalsos, DIR_008, entorno, idArchivo, ruta008, rutaEnPath } from "./falsos";
+import { appCargarFalsa, carpetaTemporal, crearFalsos, DIR_008, entorno, idArchivo, ruta008, rutaEnPath, TSX_CARGAR_FALSO } from "./falsos";
 
 // La primera ejecución de cada falso en un clon recién sacado pasa por la revisión de macOS: con el Mac cargado,
 // segundos. Ya revisado, cuesta milisegundos.
@@ -30,6 +30,17 @@ const resuelve = (falsos: ReturnType<typeof crearFalsos>, nombre: string) => {
   return ruta;
 };
 const sha256 = (ruta: string) => createHash("sha256").update(readFileSync(ruta)).digest("hex");
+
+describe("falsos.ts · appCargarFalsa (el /app de inv-cargar)", () => {
+  it("el tsx del /app es un enlace simbólico al versionado: ni una copia ni un enlace duro, y no sobrescribe", () => {
+    const dir = carpetaTemporal("falsos-app");
+    const tsx = path.join(appCargarFalsa(dir), "node_modules", ".bin", "tsx");
+    expect(lstatSync(tsx).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(tsx)).toBe(TSX_CARGAR_FALSO);
+    // Una segunda vez en la misma carpeta falla (EEXIST): nunca escribe sobre lo que haya.
+    expect(() => appCargarFalsa(dir)).toThrow(/EEXIST/);
+  });
+});
 
 describe("falsos.ts · crearFalsos", () => {
   it("hay falsos versionados que probar", () => {
@@ -83,6 +94,17 @@ describe("falsos.ts · crearFalsos", () => {
         expect(statSync(path.join(DIR_PRODUCCION, carpeta, nombre)).mode & 0o111, `${carpeta}/${nombre}`).toBe(0o111);
       }
     }
+  });
+
+  // En macOS, `cp <archivo> ""` copia al directorio actual (sale con 0): sin la guarda, el falso escribiría en el clon.
+  it("sleep: un cambio que no se puede hacer (falta su destino) sale con 97, no pasa en silencio", () => {
+    const falsos = crearFalsos(carpetaTemporal("falsos-sleep-sin-destino"));
+    const sinMeminfo = spawnSync("bash", ["-c", "sleep 7"], { env: entorno(falsos, { FALSO_SLEEP_MEMINFO: falsos.registro }) as NodeJS.ProcessEnv, encoding: "utf8" });
+    expect(sinMeminfo.status, sinMeminfo.stderr).toBe(97);
+    expect(sinMeminfo.stderr).toMatch(/falta INV_MEMINFO/);
+    const sinSalud = spawnSync("bash", ["-c", "sleep 7"], { env: entorno(falsos, { FALSO_SLEEP_ROMPE_SALUD: "{}" }) as NodeJS.ProcessEnv, encoding: "utf8" });
+    expect(sinSalud.status, sinSalud.stderr).toBe(97);
+    expect(sinSalud.stderr).toMatch(/falta FALSO_SALUD_ARCHIVO/);
   });
 
   it("cada llamada queda en el registro con el nombre del falso y sus argumentos", () => {
