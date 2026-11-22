@@ -35,8 +35,7 @@ test.describe("pantalla de proyecciones", () => {
   test("mover un control cambia las bandas (interpoladas) y los indicadores, y se anuncia; responde en menos de 2 s", async ({ page }, info) => {
     const p = await PaginaProyecciones.abrir(page, info);
     const antes = await p.bandaSuave().getAttribute("d");
-    const probabilidadAntes = await p.indicador("Probabilidad").textContent();
-    const inicio = Date.now();
+    const medianaAntes = await p.indicador("Valor mediano al final").textContent();
     const respuesta = page.waitForResponse((r) => r.url().endsWith("/api/proyecciones") && r.request().method() === "POST");
     await p.botonHorizonte("10 años").click();
     await expect(p.resultado).toHaveAttribute("aria-busy", "true");
@@ -45,15 +44,22 @@ test.describe("pantalla de proyecciones", () => {
     expect(r.headers()["cache-control"]).toBe("no-store");
     expect(await r.request().postDataJSON()).toEqual({ horizonteMeses: 120, aportePeriodico: 0, frecuenciaAporte: "MENSUAL", reinvertirDividendos: true, caidaInicialPct: 0 });
     await expect(p.resultado).toHaveAttribute("aria-busy", "false");
-    expect(Date.now() - inicio).toBeLessThan(RAPIDO_MS);
     // A mitad de la animación la banda ya no es la de antes; al final, tampoco, y es la definitiva.
     await expect.poll(() => p.bandaSuave().getAttribute("d")).not.toBe(antes);
     await p.esperarCalculo();
     const final = await p.bandaSuave().getAttribute("d");
     expect(final).not.toBe(antes);
     await expect(p.anuncio).toContainText("Proyección a 10 años");
-    await expect(p.indicador("Probabilidad")).not.toHaveText(probabilidadAntes ?? "");
+    await expect(p.indicador("Valor mediano al final")).not.toHaveText(medianaAntes ?? "");
     await expect(p.mira).toHaveAttribute("aria-valuetext", /^Mes 120 · /);
+    // Rapidez percibida (PRD: < 2 s), ya compilada la ruta en `next dev`: del clic al resultado, con los 350 ms de espera.
+    const inicio = Date.now();
+    await p.botonHorizonte("3 años").click();
+    await expect(p.resultado).toHaveAttribute("aria-busy", "true");
+    await expect(p.resultado).toHaveAttribute("aria-busy", "false");
+    const ms = Date.now() - inicio;
+    info.annotations.push({ type: "tiempo", description: `clic → resultado: ${ms} ms` });
+    expect(ms).toBeLessThan(RAPIDO_MS);
   });
 
   test("el aporte, su frecuencia, la reinversión y la caída inicial viajan y cambian el resultado", async ({ page }, info) => {
@@ -127,7 +133,8 @@ test.describe("pantalla de proyecciones", () => {
 
       test("se captura la pantalla completa y el abanico con el detalle de un mes", async ({ page }, info) => {
         const p = await PaginaProyecciones.abrir(page, info);
-        await p.esperarCalculo();
+        await p.dibujar();
+        await expect(p.abanico.locator("path.g-banda-suave")).toHaveAttribute("d", /^M.+Z$/);
         await p.capturar(`proyecciones-escritorio-${nombre}`);
         await p.abanico.scrollIntoViewIfNeeded();
         await p.mira.hover({ position: { x: 300, y: 80 } });
@@ -149,7 +156,7 @@ test.describe("pantalla de proyecciones", () => {
           expect(caja!.height, await control.evaluate((e) => e.outerHTML.slice(0, 80))).toBeGreaterThanOrEqual(44);
         }
         await p.botonHorizonte("3 años").tap();
-        await p.esperarCalculo();
+        await p.dibujar();
         await p.capturar(`proyecciones-375-${nombre}`);
       });
     });

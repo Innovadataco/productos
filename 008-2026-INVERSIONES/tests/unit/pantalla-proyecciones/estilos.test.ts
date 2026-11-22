@@ -56,6 +56,20 @@ describe("proyecciones.css", () => {
     expect(graficas).toMatch(/\.g-banda-degradada\.g-banda-suave\s*\{[^}]*opacity:\s*1;[^}]*fill-opacity/);
   });
 
+  it("el detalle de un mes no parte los rangos en dos líneas (hallazgo MEDIO de e2e-runner)", () => {
+    expect(sinComentarios).toMatch(/\.proy-resultado \.g-tip\s*\{[^}]*max-width:\s*320px/);
+    expect(sinComentarios).toMatch(/\.proy-resultado \.g-tip-fila b\s*\{[^}]*white-space:\s*nowrap/);
+  });
+
+  it("los cuatro indicadores en una fila en el escritorio, el destacado más ancho (captura de e2e-runner)", () => {
+    expect(sinComentarios).toMatch(/\.proy-indicadores\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.6fr\) repeat\(3, minmax\(0, 1fr\)\)/);
+  });
+
+  it("las claves de las bandas con degradado se distinguen en la leyenda (hallazgo BAJO de e2e-runner)", () => {
+    const graficas = readFileSync(fileURLToPath(new URL("../../../src/app/_graficas/graficas.css", import.meta.url)), "utf8");
+    expect(graficas).toMatch(/\.g-clave-banda\.g-clave-degradada\.g-banda-suave\s*\{\s*opacity:\s*0\.55/);
+  });
+
   it("lo que se mueve va dentro de prefers-reduced-motion: no-preference", () => {
     const fuera = sinComentarios.replace(/@media \(prefers-reduced-motion: no-preference\)\s*\{(?:[^{}]*\{[^}]*\})*[^{}]*\}/g, "");
     expect(fuera).not.toMatch(/\b(animation|transition)\s*:/);

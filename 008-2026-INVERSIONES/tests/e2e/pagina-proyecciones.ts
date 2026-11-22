@@ -45,8 +45,23 @@ export class PaginaProyecciones {
     return this.abanico.locator("path.g-banda-suave");
   }
 
+  /** La cifra (final) de un indicador por su nombre exacto: «Lo aportado» no debe tomar «… por debajo de lo aportado». */
   indicador(nombre: string): Locator {
-    return this.page.locator(".proy-indicador").filter({ hasText: nombre }).locator(".sr");
+    const exacto = new RegExp(`^${nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}: `);
+    return this.page.locator(".proy-indicador .sr").filter({ hasText: exacto });
+  }
+
+  /**
+   * Lleva el abanico a la pantalla (su entrada espera a verse: IntersectionObserver), espera a que se dibuje y vuelve
+   * arriba. Sin esto, una captura de página completa lo sacaría todavía oculto.
+   */
+  async dibujar(): Promise<void> {
+    await this.abanico.scrollIntoViewIfNeeded();
+    await expect(this.abanico.locator(".g-plot[data-visible]")).toHaveCount(1);
+    await this.esperarCalculo();
+    // Las cifras cuentan hacia arriba por cuadros (rAF, no son animaciones CSS): se espera a que terminen.
+    await expect(this.page.locator(".proy-indicador .cifra:not([data-fase='fin'])")).toHaveCount(0);
+    await this.page.evaluate(() => window.scrollTo(0, 0));
   }
 
   /** Espera a que termine el cálculo en curso y a que no quede animación corriendo. */
