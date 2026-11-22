@@ -6,13 +6,18 @@
  * Valida la entrada como `unknown` (los tipos de TypeScript no llegan al tiempo de ejecución), toma la etiqueta y la
  * unidad del catálogo, copia campo por campo (nada de `...entrada`), congela todo, calcula el hash y registra el
  * paquete: la vista ciega y las puertas solo aceptan paquetes construidos aquí (`esPaqueteConstruido`), no copias.
+ *
+ * Aditivo de E1b: la presentación debe ser exactamente `presentar(valor, unidad)` (PRESENTACION_NO_COINCIDE), y un
+ * hecho de regla (`CLAVES_DE_REGLA`) puede citar como sujeto al ancla de su regla (REGLA_DEL_PLAN), además de a la
+ * especie. El ancla solo cita a una especie y, como el nombre de la especie, puede repetirse (una por regla).
  */
 import { CALIDADES, CERCANIAS, DIRECCIONES, FRESCURAS, MAX_AVISOS, MAX_HECHOS, MAX_LARGO_FUENTE, MAX_LARGO_PRESENTACION,
   MAX_VERSIONES_CALCULO, PATRON_ID_HECHO, TIPOS_RESUMEN, VERSION_HECHOS,
   type EntradaPaquete, type Hecho, type IdHecho, type PaqueteHechos, type TipoResumen } from "./contrato";
-import { CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, type ClaveDe, type EntradaCatalogo } from "./catalogo";
+import { CLAVE_ANCLA_REGLA, CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, esClaveDeRegla, type ClaveDe, type EntradaCatalogo } from "./catalogo";
 import { esDe, esDecimalCanonico, esDiaIso, esNombreEspecie, esObjetoPlano, esTextoSeguro, type Registro } from "./formas";
 import { hashPaquete } from "./hash";
+import { ENTERO, UNIDADES_ENTERAS, UNIDADES_NO_NEGATIVAS, presentar } from "./presentar";
 import { esClaveProhibida } from "./prohibidas";
 
 export const CODIGOS_ERROR_PAQUETE = Object.freeze([
@@ -22,7 +27,7 @@ export const CODIGOS_ERROR_PAQUETE = Object.freeze([
   "VALOR_NO_DECIMAL", "VALOR_NO_FECHA", "VALOR_NO_ENTERO", "VALOR_NEGATIVO", "NOMBRE_INVALIDO", "ESPECIE_REPETIDA",
   "PRESENTACION_INVALIDA", "FUENTE_INVALIDA", "FECHA_INVALIDA", "FECHA_FUTURA", "CALIDAD_INVALIDA", "DIRECCION_INVALIDA",
   "CERCANIA_INVALIDA", "FRESCURA_INVALIDA", "DIRECCION_NO_APLICA", "CERCANIA_NO_APLICA", "OBLIGATORIO_INVALIDO",
-  "HECHO_REPETIDO", "VERSION_DISTINTA", "GUARDADO_NO_COINCIDE",
+  "HECHO_REPETIDO", "VERSION_DISTINTA", "GUARDADO_NO_COINCIDE", "PRESENTACION_NO_COINCIDE",
 ] as const);
 export type CodigoErrorPaquete = (typeof CODIGOS_ERROR_PAQUETE)[number];
 
@@ -32,10 +37,7 @@ const CAMPO_OPCIONAL_HECHO = "sujeto";
 const CLAVE_VERSION = /^[a-z][a-zA-Z]{0,31}$/;
 const VALOR_VERSION = /^[a-z][a-z0-9.-]{0,63}$/;
 const CODIGO_AVISO = /^[A-Z][A-Z0-9_]{0,63}$/;
-const ENTERO = /^-?[0-9]+$/;
 const DIGITO = /[0-9]/;
-const UNIDADES_ENTERAS: ReadonlySet<string> = new Set(["DIAS", "MESES", "ESPECIES"]);
-const UNIDADES_NO_NEGATIVAS: ReadonlySet<string> = new Set(["MESES", "ESPECIES"]);
 
 export class ErrorPaquete extends Error {
   override readonly name = "ErrorPaquete";
@@ -95,6 +97,10 @@ interface Contexto {
   readonly especies: ReadonlySet<string>;
 }
 
+/** El sujeto apunta a un nombre de especie o, si el hecho es de una regla, también al ancla de esa regla. */
+const destinoValido = (clave: string, apuntado: Hecho): boolean =>
+  apuntado.clave === CLAVE_NOMBRE_ESPECIE || (apuntado.clave === CLAVE_ANCLA_REGLA && esClaveDeRegla(clave));
+
 function validarSujeto(registro: Registro, catalogo: EntradaCatalogo, id: IdHecho, previos: readonly Hecho[]): IdHecho | undefined {
   const sujeto = registro[CAMPO_OPCIONAL_HECHO];
   if (sujeto === undefined) {
@@ -104,7 +110,7 @@ function validarSujeto(registro: Registro, catalogo: EntradaCatalogo, id: IdHech
   if (catalogo.politicaSujeto === "NINGUNO") throw new ErrorPaquete("SUJETO_NO_PERMITIDO", id, "sujeto");
   const apuntado = typeof sujeto === "string" && PATRON_ID_HECHO.test(sujeto) ? previos.find((h) => h.id === sujeto) : undefined;
   if (apuntado === undefined) throw new ErrorPaquete("SUJETO_INEXISTENTE", id, "sujeto");
-  if (apuntado.clave !== CLAVE_NOMBRE_ESPECIE) throw new ErrorPaquete("SUJETO_NO_ES_ESPECIE", id, "sujeto");
+  if (!destinoValido(String(registro.clave), apuntado)) throw new ErrorPaquete("SUJETO_NO_ES_ESPECIE", id, "sujeto");
   return apuntado.id;
 }
 
@@ -125,11 +131,12 @@ function validarValor(valor: unknown, catalogo: EntradaCatalogo, id: IdHecho, es
   return valor;
 }
 
-/** Presentación, fuente, fecha, calidad, dirección, cercanía, frescura y si es obligatorio. */
-function validarResto(registro: Registro, catalogo: EntradaCatalogo, id: IdHecho, hoy: string): void {
+/** Presentación (la de `presentar`, sobre el valor ya validado), fuente, fecha, calidad, dirección, cercanía, frescura y si es obligatorio. */
+function validarResto(registro: Registro, catalogo: EntradaCatalogo, id: IdHecho, hoy: string, valor: string): void {
   const { presentacion, fuente, fecha } = registro;
   const presentacionValida = esTextoSeguro(presentacion, MAX_LARGO_PRESENTACION) && (catalogo.unidad === "NOMBRE" || DIGITO.test(presentacion));
   if (!presentacionValida) throw new ErrorPaquete("PRESENTACION_INVALIDA", id, "presentacion");
+  if (presentacion !== presentar(valor, catalogo.unidad)) throw new ErrorPaquete("PRESENTACION_NO_COINCIDE", id, "presentacion");
   if (!esTextoSeguro(fuente, MAX_LARGO_FUENTE)) throw new ErrorPaquete("FUENTE_INVALIDA", id, "fuente");
   if (typeof fecha !== "string" || !esDiaIso(fecha)) throw new ErrorPaquete("FECHA_INVALIDA", id, "fecha");
   if (fecha > hoy) throw new ErrorPaquete("FECHA_FUTURA", id, "fecha");
@@ -151,7 +158,7 @@ function validarHecho(crudo: unknown, posicion: number, contexto: Contexto): Hec
   if (catalogo === null) throw new ErrorPaquete("CLAVE_FUERA_DE_CATALOGO", id, "clave");
   const sujeto = validarSujeto(crudo, catalogo, id, contexto.previos);
   const valor = validarValor(crudo.valor, catalogo, id, contexto.especies);
-  validarResto(crudo, catalogo, id, contexto.hoy);
+  validarResto(crudo, catalogo, id, contexto.hoy, valor);
   const r = crudo as unknown as Hecho;
   return Object.freeze({
     id,
@@ -171,7 +178,10 @@ function validarHecho(crudo: unknown, posicion: number, contexto: Contexto): Hec
   });
 }
 
-/** Un hecho por (clave, sujeto): dos «valor de las acciones», o dos «valor de la especie» de la misma especie, no. */
+/**
+ * Un hecho por (clave, sujeto): dos «valor de las acciones», o dos «valor de la especie» de la misma especie, no. Los
+ * nombres de especie y las anclas de regla quedan fuera: se distinguen por su id (dos reglas de una especie).
+ */
 function validarHechos(crudos: readonly unknown[], tipo: TipoResumen, hoy: string): readonly Hecho[] {
   const hechos: Hecho[] = [];
   const especies = new Set<string>();
@@ -179,7 +189,7 @@ function validarHechos(crudos: readonly unknown[], tipo: TipoResumen, hoy: strin
   crudos.forEach((crudo, i) => {
     const hecho = validarHecho(crudo, i + 1, { tipo, hoy, previos: hechos, especies });
     if (hecho.clave === CLAVE_NOMBRE_ESPECIE) especies.add(hecho.valor.toLowerCase());
-    else {
+    else if (hecho.clave !== CLAVE_ANCLA_REGLA) {
       const par = `${hecho.clave}|${hecho.sujeto ?? ""}`;
       if (pares.has(par)) throw new ErrorPaquete("HECHO_REPETIDO", hecho.id, "clave");
       pares.add(par);
@@ -255,4 +265,18 @@ export function leerPaquete(guardado: unknown): PaqueteHechos {
   });
   if (guardado.hash !== paquete.hash) throw new ErrorPaquete("GUARDADO_NO_COINCIDE", null, "hash");
   return paquete;
+}
+
+/**
+ * El nombre de la especie (hecho ESPECIE_NOMBRE) al que se refiere el hecho `id`, siguiendo su sujeto: directo, o a
+ * través del ancla de su regla (dos saltos). El propio nombre devuelve el mismo hecho. null si no se refiere a una
+ * especie (un hecho del portafolio, una regla de portafolio) o si el id no existe. Solo con paquetes construidos.
+ */
+export function especieDe(paquete: PaqueteHechos, id: IdHecho): Hecho | null {
+  if (!esPaqueteConstruido(paquete)) throw new TypeError("especieDe necesita un paquete construido por construirPaquete.");
+  const porId = (buscado: IdHecho | undefined): Hecho | undefined => paquete.hechos.find((h) => h.id === buscado);
+  const hecho = porId(id);
+  const sujeto = hecho?.clave === CLAVE_NOMBRE_ESPECIE ? hecho : porId(hecho?.sujeto);
+  const especie = sujeto?.clave === CLAVE_ANCLA_REGLA ? porId(sujeto.sujeto) : sujeto;
+  return especie?.clave === CLAVE_NOMBRE_ESPECIE ? especie : null;
 }
