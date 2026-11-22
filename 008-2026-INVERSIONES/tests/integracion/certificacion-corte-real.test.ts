@@ -84,24 +84,24 @@ describe("señal 2 · el PDF se generó antes del cierre definitivo del día ped
     expect(r.pistaCorte).toMatchObject({ tipo: "PDF", sugerido: { ok: true, dia: "2027-08-09" } });
   });
 
-  it("generado el 2027-08-12 a las 17:03 (ya definitivo) con ese corte: CARGADO", async () => {
-    const c = caso("2027-08-12", "17:03:29");
+  it("generado el 2027-08-05 a las 17:03 (ya definitivo) con ese corte: CARGADO", async () => {
+    const c = caso("2027-08-05", "17:03:29");
     await registrarFondo(c);
-    const r = await importarCertificacion(db, archivo(c, "2027-08-12"));
+    const r = await importarCertificacion(db, archivo(c, "2027-08-05"));
     expect([r.estado, r.errores]).toEqual(["CARGADO", []]);
   });
 
   it("si el mismo PDF ya está cargado (de antes de este control) con ese corte: lo dice en yaCargadaEn", async () => {
-    const c = caso("2027-08-19", "15:47:02");
+    const c = caso("2027-08-24", "15:47:02");
     // Una carga CARGADO del mismo archivo, como la que dejó el defecto (aquí sin certificación: basta la carga).
     await db.cargaArchivo.create({
-      data: { tipoFuente: "AV_CERTIFICACION", nombreArchivo: "certificacion-av-2027-08-19.pdf", sha256: sha(c), fechaCorte: dia("2027-08-19"), estado: "CARGADO", cargadoPorId: duenoId },
+      data: { tipoFuente: "AV_CERTIFICACION", nombreArchivo: "certificacion-av-2027-08-24.pdf", sha256: sha(c), fechaCorte: dia("2027-08-24"), estado: "CARGADO", cargadoPorId: duenoId },
     });
-    const r = await importarCertificacion(db, archivo(c, "2027-08-19"));
+    const r = await importarCertificacion(db, archivo(c, "2027-08-24", "2027-08-27"));
     expect(r.errores.map((e) => e.codigo)).toEqual(["FECHA_CORTE_ANTES_DEL_CIERRE"]);
-    expect(r.yaCargadaEn).toBe("2027-08-19");
-    const texto = (await cargarYConciliar(db, archivo(c, "2027-08-19"))).lineas.join("\n");
-    expect(texto).toContain("--fecha-corte 2027-08-19 --nueva-fecha-corte 2027-08-18");
+    expect(r.yaCargadaEn).toBe("2027-08-24");
+    const texto = (await cargarYConciliar(db, archivo(c, "2027-08-24", "2027-08-27"))).lineas.join("\n");
+    expect(texto).toContain("--fecha-corte 2027-08-24 --nueva-fecha-corte 2027-08-23");
   });
 });
 
