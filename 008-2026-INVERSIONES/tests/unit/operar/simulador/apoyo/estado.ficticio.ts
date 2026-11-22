@@ -14,6 +14,7 @@ import type {
   ReglaSimulada,
   ResultadoSimulacion,
   Simulacion,
+  Tenencia,
 } from "@/operar/simulador/tipos";
 
 export const D = (v: Prisma.Decimal.Value): Prisma.Decimal => new Prisma.Decimal(v);
@@ -28,8 +29,13 @@ export const posicion = (nemotecnico: string, cantidad: bigint, cierre: string |
   instrumentoId: idDe(nemotecnico),
   nemotecnico,
   cantidad,
-  cierre: cierre === null ? null : D(cierre),
+  cierre: cierre === null ? null : { precio: D(cierre) },
 });
+
+/** El valor de una tenencia, o null si no tiene cierre. */
+export const valor = (t: Tenencia): Prisma.Decimal | null => (t.valoracion.estado === "VALORADA" ? t.valoracion.valor : null);
+/** El peso de una tenencia, o null si no tiene cierre o el valor de las acciones es 0. */
+export const peso = (t: Tenencia): Prisma.Decimal | null => (t.valoracion.estado === "VALORADA" ? t.valoracion.pesoPct : null);
 
 export const regla = (cambios: Partial<ReglaSimulada> = {}): ReglaSimulada => ({
   id: "regla-ficticia",
@@ -84,7 +90,7 @@ export function exito(r: ResultadoSimulacion): Simulacion {
 
 /** El estado que deja una simulación: las cantidades de después y la caja de después; el resto, igual. */
 export function estadoDespues(estado: EstadoSimulado, s: Simulacion): EstadoSimulado {
-  const despues = new Map(s.especies.map((e) => [e.instrumentoId, e.cantidadDespues]));
+  const despues = new Map(s.especies.map((e) => [e.instrumentoId, e.despues.cantidad]));
   return {
     ...estado,
     posiciones: estado.posiciones.map((p) => ({ ...p, cantidad: despues.get(p.instrumentoId) ?? p.cantidad })),

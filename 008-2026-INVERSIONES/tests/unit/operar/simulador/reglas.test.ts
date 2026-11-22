@@ -13,11 +13,10 @@ const tipos = (reglas: readonly ReglaSimulada[], op = COMPRA_A, valor = VALOR) =
 describe("monto mínimo por orden (MONTO_ORDEN_BAJO)", () => {
   const minimo = (nivel: string, instrumentoId: string | null = null) => regla({ id: `monto-${nivel}`, condicion: "MONTO_ORDEN_BAJO", nivel: D(nivel), instrumentoId });
 
-  it("por debajo del mínimo afecta, con el monto mínimo; igual o por encima no", () => {
+  it("por debajo del mínimo afecta (el monto queda en la regla, no se copia); igual o por encima no", () => {
     const r = reglasAfectadas([minimo("170691.01")], COMPRA_A, VALOR, HOY);
-    expect(r).toHaveLength(1);
-    const a = r[0]!.afectaciones[0];
-    expect(a.tipo === "MONTO_ORDEN_BAJO" && a.montoMinimo.eq(D("170691.01"))).toBe(true);
+    expect(r.map((x) => x.afectaciones)).toEqual([[{ tipo: "MONTO_ORDEN_BAJO" }]]);
+    expect(r[0]!.regla.nivel!.eq(D("170691.01"))).toBe(true);
     expect(tipos([minimo("170690.99"), minimo("4613.37")])).toEqual([]);
   });
 
@@ -50,6 +49,11 @@ describe("precio del lado del nivel (CIERRE_BAJO y CIERRE_SOBRE)", () => {
     expect(r[0]!.afectaciones).toEqual([{ tipo: "PRECIO_DEL_LADO_DEL_NIVEL", frente: { estado: "EN_EL_NIVEL" } }]);
   });
 
+  it("una regla de cierre con otra acción y el nivel sin tocar: solo OTRA_ACCION (el texto cita su condición)", () => {
+    const r = regla({ id: "lejos", instrumentoId: idDe(A), condicion: "CIERRE_SOBRE", nivel: D("5137.11"), accion: "VENDER", cantidad: 41n });
+    expect(tipos([r])).toEqual([["lejos", ["OTRA_ACCION"]]]);
+  });
+
   it("del otro lado del nivel no afecta", () => {
     expect(tipos([cierre("CIERRE_BAJO", "4613.23"), cierre("CIERRE_SOBRE", "4613.29")])).toEqual([]);
   });
@@ -62,7 +66,7 @@ describe("precio del lado del nivel (CIERRE_BAJO y CIERRE_SOBRE)", () => {
 });
 
 describe("otra acción de la misma especie (OTRA_ACCION)", () => {
-  it("una regla de la especie con otra acción dice cuál, también «no actuar» y LIBRE", () => {
+  it("una regla de la especie con otra acción afecta, también «no actuar» y LIBRE (la acción queda en la regla)", () => {
     const r = reglasAfectadas(
       [
         regla({ id: "vende", instrumentoId: idDe(A), accion: "VENDER", cantidad: 41n }),
@@ -74,9 +78,9 @@ describe("otra acción de la misma especie (OTRA_ACCION)", () => {
       HOY,
     );
     expect(r.map((x) => x.afectaciones)).toEqual([
-      [{ tipo: "OTRA_ACCION", accionDelPlan: "VENDER" }],
-      [{ tipo: "OTRA_ACCION", accionDelPlan: "NO_ACTUAR" }],
-      [{ tipo: "OTRA_ACCION", accionDelPlan: "NO_ACTUAR" }],
+      [{ tipo: "OTRA_ACCION" }],
+      [{ tipo: "OTRA_ACCION" }],
+      [{ tipo: "OTRA_ACCION" }],
     ]);
   });
 

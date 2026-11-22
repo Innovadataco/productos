@@ -19,7 +19,7 @@ describe("simularOperacion", () => {
     const s = exito(simularOperacion(PLAN, operacion(A, "COMPRAR", 37n, "4613.2712"), CONTEXTO));
     expect(s.valorOrden.eq(D("170691.0344"))).toBe(true);
     // 170691,0344 / 16 = 10668,18965 → 10668,1897 (mitad hacia arriba)
-    expect(s.comision).toEqual({ estado: "ESTIMADA", valor: D("10668.1897"), tasa: D("0.0625"), ordenesBase: 2 });
+    expect(s.comision).toEqual({ estado: "ESTIMADA", lado: "COMPRA", valor: D("10668.1897"), ordenesBase: 2 });
     expect(s.cajaAntes.eq(D("37911.47"))).toBe(true);
     expect(s.cajaDespues.eq(D("37911.47").sub(D("170691.0344")).sub(D("10668.1897")))).toBe(true);
     expect(s.avisos.map((a) => a.codigo)).toEqual(["COMPRA_SUPERA_CAJA"]);
@@ -27,7 +27,7 @@ describe("simularOperacion", () => {
       ["monto", ["MONTO_ORDEN_BAJO"]],
       ["vende-a", ["PRECIO_DEL_LADO_DEL_NIVEL", "OTRA_ACCION"]],
     ]);
-    expect(s.especies.map((e) => [e.nemotecnico, e.cantidadAntes, e.cantidadDespues])).toEqual([
+    expect(s.especies.map((e) => [e.nemotecnico, e.antes.cantidad, e.despues.cantidad])).toEqual([
       [A, 1237n, 1274n],
       [B, 379n, 379n],
     ]);
@@ -36,7 +36,7 @@ describe("simularOperacion", () => {
   it("una venta usa la tasa de las ventas", () => {
     const s = exito(simularOperacion(PLAN, operacion(B, "VENDER", 41n, "11.37"), CONTEXTO));
     // 466,17 / 32 = 14,5678125 → 14,5678
-    expect(s.comision).toEqual({ estado: "ESTIMADA", valor: D("14.5678"), tasa: D("0.03125"), ordenesBase: 1 });
+    expect(s.comision).toEqual({ estado: "ESTIMADA", lado: "VENTA", valor: D("14.5678"), ordenesBase: 1 });
     expect(s.cajaDespues.eq(D("38363.0722"))).toBe(true);
     expect(s.reglasAfectadas.map((r) => r.regla.id)).toEqual(["monto", "compra-b"]);
   });
@@ -59,6 +59,7 @@ describe("simularOperacion", () => {
     const op = operacion(A, "COMPRAR", 37n, "11.71");
     expect(() => simularOperacion({ ...PLAN, posiciones: [posicion(A, -3n, "11.71")] }, op, CONTEXTO)).toThrow(RangeError);
     expect(() => simularOperacion(PLAN, op, { ...CONTEXTO, hoy: new Date(Number.NaN) })).toThrow(RangeError);
+    expect(() => simularOperacion(PLAN, null as unknown as typeof op, CONTEXTO)).toThrow(RangeError);
   });
 
   it("es determinista y no cambia sus entradas", () => {
