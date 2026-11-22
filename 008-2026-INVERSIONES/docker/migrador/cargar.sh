@@ -5,11 +5,11 @@
 #   - cabecera de EXACTAMENTE 4096 bytes: un argumento por línea, una línea vacía y relleno de líneas vacías. Con
 #     archivo trae --bytes <N> y --sha256 <H>, que se consumen aquí y no pasan al CLI;
 #   - el archivo (importar-trii, importar-plan, importar-certificacion, corregir-corte-certificacion, importar-precios,
-#     importar-valores-fondo, importar-series e importar-decretos).
+#     importar-valores-fondo, importar-series, importar-decretos y registrar-rendimientos-fondo).
 # Antes de leer nada comprueba que el contenedor no use swap: el temporal vive en el tmpfs /tmp, que con
 # mem = memswap no baja al disco. El archivo queda en un temporal 600 dentro de una carpeta 700 con nombre fijo
-# (trii.csv, ficha.md, certificacion.pdf, precios.csv, valores-fondo.csv, series.csv o decretos.csv: el nombre real no
-# llega a la base), corre el CLI y lo borra SIEMPRE (trap), también si el CLI falla o llega una señal. El tmpfs muere
+# (trii.csv, ficha.md, certificacion.pdf, precios.csv, valores-fondo.csv, series.csv, decretos.csv o
+# rendimientos-fondo.csv: el nombre real no llega a la base), corre el CLI y lo borra SIEMPRE (trap), también si el CLI falla o llega una señal. El tmpfs muere
 # con el contenedor.
 # Nunca imprime la cabecera ni el archivo: solo errores sin valores. Sale con 64 (EX_USAGE, distinto de los
 # códigos de los CLI, de 0 a 3) si se niega sin correr el CLI, o con el código del CLI.
@@ -26,16 +26,17 @@ MAX_ARGUMENTOS=30
 MAX_LARGO=512
 TOPE_TRII=5242880
 TOPE_FICHA=262144
-# Los cinco siguientes son los topes de sus CLI (una sola fuente; tests/unit/produccion/cargar-contenedor.test.ts,
-# cargar-fondo.test.ts y cargar-datos-oficiales.test.ts los comparan): MAX_BYTES del PDF
-# (src/importacion/av/pdf/documento.ts), MAX_BYTES_CSV (src/precios/csv-cierres.ts), MAX_BYTES_CSV_FONDO
-# (src/fondo/csv-valores.ts), MAX_BYTES_CSV_SERIES (src/datos-oficiales/series/csv-series.ts) y MAX_BYTES_DECRETOS
-# (src/datos-oficiales/decretos/csv.ts).
+# Los seis siguientes son los topes de sus CLI (una sola fuente; tests/unit/produccion/cargar-contenedor.test.ts,
+# cargar-fondo.test.ts, cargar-datos-oficiales.test.ts y cargar-rendimientos-fondo.test.ts los comparan): MAX_BYTES del
+# PDF (src/importacion/av/pdf/documento.ts), MAX_BYTES_CSV (src/precios/csv-cierres.ts), MAX_BYTES_CSV_FONDO
+# (src/fondo/csv-valores.ts), MAX_BYTES_CSV_SERIES (src/datos-oficiales/series/csv-series.ts), MAX_BYTES_DECRETOS
+# (src/datos-oficiales/decretos/csv.ts) y MAX_BYTES_RENDIMIENTOS (src/fondo/rendimientos/csv.ts).
 TOPE_CERTIFICACION=15728640
 TOPE_PRECIOS=4194304
 TOPE_VALORES_FONDO=2097152
 TOPE_SERIES=2097152
 TOPE_DECRETOS=1048576
+TOPE_RENDIMIENTOS_FONDO=262144
 
 NIEGA=64
 falla() {
@@ -57,6 +58,7 @@ case "$comando" in
   importar-valores-fondo) cli=scripts/importar-valores-fondo.ts archivo=valores-fondo.csv tope=$TOPE_VALORES_FONDO ;;
   importar-series) cli=scripts/importar-series.ts archivo=series.csv tope=$TOPE_SERIES ;;
   importar-decretos) cli=scripts/importar-decretos.ts archivo=decretos.csv tope=$TOPE_DECRETOS ;;
+  registrar-rendimientos-fondo) cli=scripts/registrar-rendimientos-fondo.ts archivo=rendimientos-fondo.csv tope=$TOPE_RENDIMIENTOS_FONDO ;;
   registrar-escision) cli=scripts/registrar-escision.ts ;;
   registrar-fondo) cli=scripts/actualizar-fondo.ts ;;
   registrar-movimiento-fondo) cli=scripts/registrar-movimiento-fondo.ts ;;
@@ -199,7 +201,7 @@ if [ -n "$archivo" ]; then
         correo="$2"
         shift 2
         ;;
-      importar-plan:--aplicar | importar-decretos:--aplicar)
+      importar-plan:--aplicar | importar-decretos:--aplicar | registrar-rendimientos-fondo:--aplicar)
         [ "$aplicar" = 0 ] || falla "--aplicar repetido"
         aplicar=1
         shift
@@ -216,7 +218,7 @@ if [ -n "$archivo" ]; then
         nuevo="$2"
         shift 2
         ;;
-      importar-certificacion:--fondo)
+      importar-certificacion:--fondo | registrar-rendimientos-fondo:--fondo)
         [ -z "$fondo" ] || falla "--fondo repetido"
         if [ $# -lt 2 ] || ! fondo_valido "$2"; then falla "--fondo necesita el código numérico del fondo (de 1 a 12 dígitos)"; fi
         fondo="$2"
@@ -224,12 +226,13 @@ if [ -n "$archivo" ]; then
         ;;
       *:--aplicar) falla "--aplicar no es una opción de $comando" ;;
       *:--crear-dueno) falla "--crear-dueno no se acepta en producción: el dueño lo crea crear-acceso-inicial (orden obligatorio)" ;;
-      *) falla "opción no permitida para $comando (se admiten --email; en importar-plan e importar-decretos, --aplicar; en importar-certificacion, --fecha-corte y --fondo; en corregir-corte-certificacion, --fecha-corte y --nueva-fecha-corte)" ;;
+      *) falla "opción no permitida para $comando (se admiten --email; en importar-plan e importar-decretos, --aplicar; en importar-certificacion, --fecha-corte y --fondo; en corregir-corte-certificacion, --fecha-corte y --nueva-fecha-corte; en registrar-rendimientos-fondo, --fondo y --aplicar)" ;;
     esac
   done
   case "$comando" in importar-precios | importar-valores-fondo | importar-series) ;; *) [ -n "$correo" ] || falla "falta --email <correo-del-dueño>" ;; esac
   case "$comando" in importar-certificacion | corregir-corte-certificacion) [ -n "$corte" ] || falla "falta --fecha-corte AAAA-MM-DD" ;; esac
   [ "$comando" != corregir-corte-certificacion ] || [ -n "$nuevo" ] || falla "falta --nueva-fecha-corte AAAA-MM-DD"
+  [ "$comando" != registrar-rendimientos-fondo ] || [ -n "$fondo" ] || falla "falta --fondo <código del fondo en la SFC>"
   # El archivo: exactamente N bytes y su sha256 (frena un archivo truncado por un corte del SSH).
   head -c "$bytes" >"$dir/$archivo" || falla "no se pudo leer el archivo"
   [ "$(tamano "$dir/$archivo")" = "$bytes" ] || falla "el archivo llegó incompleto (corte del SSH): no se carga nada"
@@ -250,6 +253,15 @@ if [ -n "$archivo" ]; then
     # el CLI hace el ensayo. Si --aplicar puede escribir en esa base lo decide el CLI, no el sobre.
     importar-decretos)
       if [ "$aplicar" = 1 ]; then set -- --archivo "$dir/$archivo" --email "$correo" --aplicar; else set -- --archivo "$dir/$archivo" --email "$correo"; fi
+      ;;
+    # Los rendimientos del fondo: el CSV con --archivo (rendimientos-fondo.csv termina en .csv), el correo, el código del
+    # fondo y --aplicar solo si vino (sin él, el CLI hace el ensayo). El rango y los valores los decide el CLI.
+    registrar-rendimientos-fondo)
+      if [ "$aplicar" = 1 ]; then
+        set -- --archivo "$dir/$archivo" --email "$correo" --fondo "$fondo" --aplicar
+      else
+        set -- --archivo "$dir/$archivo" --email "$correo" --fondo "$fondo"
+      fi
       ;;
   esac
 else
