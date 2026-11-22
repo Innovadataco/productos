@@ -19,6 +19,8 @@ export interface ObsFicticia {
   readonly estado?: string | null;
   /** Lo que se mete tal cual dentro de la Obs (mutaciones). */
   readonly extra?: string;
+  /** Values de más dentro de los Attributes de la Obs (mutaciones). */
+  readonly atributosExtra?: string;
 }
 
 export interface SerieFicticia {
@@ -57,7 +59,7 @@ function obs(o: ObsFicticia): string {
     "<generic:Obs>",
     o.dia === null ? "" : `<generic:ObsDimension value="${o.dia}" />`,
     o.valor === null || o.valor === undefined ? "" : `<generic:ObsValue value="${o.valor}" />`,
-    estado === null ? "" : `<generic:Attributes>${valor("OBS_STATUS", estado)}</generic:Attributes>`,
+    estado === null && !o.atributosExtra ? "" : `<generic:Attributes>${estado === null ? "" : valor("OBS_STATUS", estado)}${o.atributosExtra ?? ""}</generic:Attributes>`,
     o.extra ?? "",
     "</generic:Obs>",
   ].join("");

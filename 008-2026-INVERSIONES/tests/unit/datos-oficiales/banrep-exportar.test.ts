@@ -24,7 +24,7 @@ const nuncaPide: BuscarHttp = async () => {
   throw new Error("con --archivo no se pide nada a BanRep");
 };
 const tpmCon = (obs: readonly ObsFicticia[]) => bytesDe({ ...MENSAJE_TPM, series: [{ ...SERIE_TPM, obs }] });
-const exportar = (origen: OrigenBanrep, serie = TPM, desde = dia(1), hasta = dia(19)) => exportarBanrep({ serie, desde, hasta, hoy: HOY, origen });
+const exportar = (origen: OrigenBanrep, serie = TPM, desde = dia(15), hasta = dia(19)) => exportarBanrep({ serie, desde, hasta, hoy: HOY, origen });
 
 function sinDatos(lineas: readonly string[]): void {
   const texto = lineas.join("\n");
@@ -49,15 +49,15 @@ describe("exportarBanrep · lo que sale bien", () => {
   });
 
   it("con --archivo: el mismo lector y nunca pide a BanRep", async () => {
-    const r = await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(1), dia(19));
+    const r = await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(15), dia(19));
     expect(r).toMatchObject({ origen: "ARCHIVO", filas: 3, fallo: null });
     expect(reporteExportacionBanrep(r).lineas[0]).toContain("✅ TPM · archivo");
-    const conDoble = await exportarBanrep({ serie: TPM, desde: dia(1), hasta: dia(19), hoy: HOY, origen: { ...archivo(bytesDe(MENSAJE_TPM)), buscar: nuncaPide } as OrigenBanrep });
+    const conDoble = await exportarBanrep({ serie: TPM, desde: dia(15), hasta: dia(19), hoy: HOY, origen: { ...archivo(bytesDe(MENSAJE_TPM)), buscar: nuncaPide } as OrigenBanrep });
     expect(conDoble.filas).toBe(3);
   });
 
   it("la IBR (días hábiles): un fin de semana sin valor no es un día faltante", async () => {
-    const r = await exportar(archivo(bytesDe(MENSAJE_IBR)), IBR, dia(1), dia(22));
+    const r = await exportar(archivo(bytesDe(MENSAJE_IBR)), IBR, dia(15), dia(22));
     expect(r).toMatchObject({ serie: "IBR_3M_EA", filas: 3, diasFaltantes: 0, atrasada: false });
     expect(r.csv).toContain("IBR_3M_EA,2027-03-22,2027-03-22,12.437,banrep:DF_IBR_DAILY_HIST.IRIBRM03.ER\n");
     expect(reporteExportacionBanrep(r).codigoSalida).toBe(0);
@@ -68,7 +68,7 @@ describe("exportarBanrep · avisos (salida 3, el CSV sale con lo demás)", () =>
   it("descartes por razón", async () => {
     const r = await exportar(archivo(tpmCon([
       { dia: "20270317", valor: "7.31" }, { dia: "20270318", valor: "7.29", estado: "P" }, { dia: "20270319", valor: null }, { dia: "20270320", valor: "7.315" },
-    ])), TPM, dia(1), dia(20));
+    ])), TPM, dia(15), dia(20));
     expect(r.filas).toBe(1);
     const reporte = reporteExportacionBanrep(r);
     expect(reporte.codigoSalida).toBe(3);
@@ -77,16 +77,37 @@ describe("exportarBanrep · avisos (salida 3, el CSV sale con lo demás)", () =>
   });
 
   it("la serie atrasada: el último valor queda más de su umbral de frescura antes de --hasta", async () => {
-    const r = await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(1), dia(27));
+    const r = await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(15), dia(27));
     expect(r.atrasada).toBe(true);
     const reporte = reporteExportacionBanrep(r);
     expect(reporte.codigoSalida).toBe(3);
     expect(reporte.lineas).toContain("⚠️  ATRASADA · el último valor es del 2027-03-19: más de 7 días antes de --hasta (2027-03-27). BanRep puede no haber publicado todavía.");
-    expect((await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(1), dia(26))).atrasada).toBe(false);
+    expect((await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(15), dia(26))).atrasada).toBe(false);
+  });
+
+  // code-reviewer ALTO y security-reviewer MEDIO: un --archivo bajado con un startPeriod posterior (o BanRep que recorta el
+  // arranque) no puede dar un CSV recortado con salida 0.
+  it("el primer valor llega más de su umbral después de --desde: INICIO_TARDIO", async () => {
+    const r = await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(9), dia(19));
+    expect(r.inicioTardio).toBe(true);
+    const reporte = reporteExportacionBanrep(r);
+    expect(reporte.codigoSalida).toBe(3);
+    expect(reporte.lineas).toContain("⚠️  INICIO_TARDIO · el primer valor es del 2027-03-17: más de 7 días después de --desde (2027-03-09). ¿El --archivo se bajó con un startPeriod posterior, o BanRep no tiene esos días?");
+    expect((await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(10), dia(19))).inicioTardio).toBe(false);
+    const ibr = await exportar(archivo(bytesDe(MENSAJE_IBR)), IBR, new Date(Date.UTC(2021, 0, 4)), dia(22));
+    expect(ibr.inicioTardio).toBe(true);
+    expect(reporteExportacionBanrep(ibr).codigoSalida).toBe(3);
+  });
+
+  // security-reviewer BAJO: con salida 3 el CSV sale entero, pero «&& mv» no lo mueve: el reporte lo dice.
+  it("con avisos, el reporte dice que el .parcial no se movió y que lo decide usted", async () => {
+    const r = await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(15), dia(27));
+    expect(reporteExportacionBanrep(r).lineas.at(-1)).toBe("   Con avisos (salida 3) el CSV salió entero, pero «&& mv» no lo movió: revise los avisos y, si los acepta, muévalo usted.");
+    expect(reporteExportacionBanrep(await exportar(archivo(bytesDe(MENSAJE_TPM)))).lineas.join("\n")).not.toContain("&& mv");
   });
 
   it("la TPM es diaria de calendario: un día que falta entre el primero y el último se avisa", async () => {
-    const r = await exportar(archivo(tpmCon([{ dia: "20270317", valor: "7.31" }, { dia: "20270320", valor: "7.29" }])), TPM, dia(1), dia(20));
+    const r = await exportar(archivo(tpmCon([{ dia: "20270317", valor: "7.31" }, { dia: "20270320", valor: "7.29" }])), TPM, dia(15), dia(20));
     expect(r.diasFaltantes).toBe(2);
     const reporte = reporteExportacionBanrep(r);
     expect(reporte.codigoSalida).toBe(3);
@@ -98,11 +119,11 @@ describe("exportarBanrep · fallos (salida 1, sin CSV)", () => {
   it("BanRep bloquea por la red: BANREP_BLOQUEADO, con la URL pública para bajarlo en el navegador y --archivo", async () => {
     const captcha: BuscarHttp = async () => new Response(CAPTCHA_FICTICIO, { headers: { "content-type": "text/html" } });
     const r = await exportar(red(captcha));
-    expect(r).toMatchObject({ csv: null, filas: 0, fallo: { ok: false, codigo: "BANREP_BLOQUEADO", detalle: "TIPO" } });
+    expect(r).toMatchObject({ csv: null, filas: 0, fallo: { ok: false, codigo: "BANREP_BLOQUEADO", detalle: "HTML" } });
     const reporte = reporteExportacionBanrep(r);
     expect(reporte.codigoSalida).toBe(1);
     const texto = reporte.lineas.join("\n");
-    expect(texto).toContain("❌ BANREP_BLOQUEADO (TIPO) · BanRep no entregó el SDMX");
+    expect(texto).toContain("❌ BANREP_BLOQUEADO (HTML) · BanRep no entregó el SDMX");
     expect(texto).toContain(`Abra en su navegador ${URL_TPM}`);
     expect(texto).toContain("--archivo");
     expect(texto).toContain("Nada se evade");
@@ -121,6 +142,7 @@ describe("exportarBanrep · fallos (salida 1, sin CSV)", () => {
     ["la red", async () => Promise.reject(new TypeError("x")), "BANREP_RED"],
     ["un 500", async () => new Response("", { status: 500 }), "BANREP_HTTP_500"],
     ["un cuerpo vacío", async () => new Response("", { headers: { "content-type": "application/xml" } }), "BANREP_FORMATO"],
+    ["un tipo que no es XML ni HTML", async () => new Response("{}", { headers: { "content-type": "application/json" } }), "BANREP_TIPO"],
   ] as const)("%s: su código, la URL y --archivo", async (_caso, buscar, codigo) => {
     const r = await exportar(red(buscar as BuscarHttp));
     expect(r.fallo?.codigo).toBe(codigo);
@@ -139,7 +161,7 @@ describe("exportarBanrep · fallos (salida 1, sin CSV)", () => {
   });
 
   it("sin valores en el rango: SIN_FILAS, salida 1", async () => {
-    const r = await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(1), dia(16));
+    const r = await exportar(archivo(bytesDe(MENSAJE_TPM)), TPM, dia(15), dia(16));
     expect(r).toMatchObject({ csv: null, filas: 0, codigoCsv: "SIN_FILAS", fallo: null });
     const reporte = reporteExportacionBanrep(r);
     expect(reporte.codigoSalida).toBe(1);
@@ -152,7 +174,7 @@ describe("exportarBanrep · fallos (salida 1, sin CSV)", () => {
   });
 
   it("una fila que el importador rechazaría (fecha futura frente a hoy): FILA_INVALIDA, salida 1", async () => {
-    const r = await exportarBanrep({ serie: TPM, desde: dia(1), hasta: dia(19), hoy: dia(18), origen: archivo(bytesDe(MENSAJE_TPM)) });
+    const r = await exportarBanrep({ serie: TPM, desde: dia(15), hasta: dia(19), hoy: dia(18), origen: archivo(bytesDe(MENSAJE_TPM)) });
     expect(r).toMatchObject({ csv: null, codigoCsv: "FILA_INVALIDA" });
     expect(reporteExportacionBanrep(r).codigoSalida).toBe(1);
   });

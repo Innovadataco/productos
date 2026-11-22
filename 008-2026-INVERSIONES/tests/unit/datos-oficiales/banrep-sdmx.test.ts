@@ -70,6 +70,28 @@ describe("leerSdmxBanrep · página de bloqueo (captcha o HTML en vez de SDMX): 
     expect(texto(cuerpo)).toEqual(fallo("BANREP_BLOQUEADO", "HTML"));
   });
 
+  // code-reviewer MEDIO: páginas de bloqueo que no empiezan por <html> o <!doctype html> (comentarios, meta, title, div).
+  it.each([
+    ["un comentario y luego DOCTYPE html", "<!-- aviso ficticio --><!DOCTYPE html><html><body>x</body></html>"],
+    ["declaración, comentarios y espacios antes", "<?xml version='1.0'?>\n<!-- uno -->\n<!-- dos --> <html></html>"],
+    ["meta y title sueltos", "<meta charset=utf-8><title>Un momento ficticio</title>"],
+    ["un title suelto", "<title>Acceso ficticio</title>"],
+    ["un div bien formado", "<div>bloqueado ficticio</div>"],
+    ["un noscript", "<noscript>Active JavaScript</noscript>"],
+  ])("%s", (_caso, cuerpo) => {
+    expect(texto(cuerpo)).toEqual(fallo("BANREP_BLOQUEADO", "HTML"));
+  });
+
+  it("texto que el lector XML rechaza pero trae <html o <!doctype html al principio: también", () => {
+    expect(texto("Acceso denegado ficticio <html><body>x</body></html>")).toEqual(fallo("BANREP_BLOQUEADO", "HTML"));
+    expect(texto("\n\n<p>x</p><!DOCTYPE HTML>")).toEqual(fallo("BANREP_BLOQUEADO", "HTML"));
+  });
+
+  it("un comentario sin cerrar que trae <html es bloqueo; un texto suelto sin HTML lo rechaza el lector XML", () => {
+    expect(texto("<!-- sin cerrar <html")).toEqual(fallo("BANREP_BLOQUEADO", "HTML"));
+    expect(texto("Acceso denegado ficticio")).toEqual(fallo("BANREP_XML", "XML_MAL_FORMADO"));
+  });
+
   it("un XHTML bien formado (raíz html en su espacio de nombres) también", () => {
     expect(texto(`<html xmlns="${NS_XHTML}"><body><p>Desafío ficticio</p></body></html>`)).toEqual(fallo("BANREP_BLOQUEADO", "HTML"));
     expect(texto(`<x:body xmlns:x="${NS_XHTML}"/>`)).toEqual(fallo("BANREP_BLOQUEADO", "HTML"));
@@ -184,6 +206,19 @@ describe("leerSdmxBanrep · elección de la serie y su forma", () => {
   it("un hijo raro en la serie: BANREP_NO_SDMX", () => {
     expect(tpm({ series: [{ ...SERIE_TPM, extra: "<generic:Fict/>" }] })).toEqual(fallo("BANREP_NO_SDMX"));
   });
+
+  // code-reviewer BAJO: una serie AJENA con un hijo de más (p. ej. anotaciones) no tumba la pedida; su clave sí se exige.
+  it("una serie ajena con un hijo de más no estorba; una ajena sin clave legible sí (no se sabe cuál es)", () => {
+    const ajenaRara = seriesIbr().map((s) => (s.sujeto === "IRIBRM06" && s.unidad === "ER" ? { ...s, extra: "<generic:Annotations/>" } : s));
+    expect(leerSdmxBanrep(bytesDe({ ...MENSAJE_IBR, series: ajenaRara }), IBR, DESDE, HASTA).ok).toBe(true);
+    const ajenaSinClave = seriesIbr().map((s) => (s.sujeto === "IRIBRM06" && s.unidad === "ER" ? { ...s, sujeto: null } : s));
+    expect(leerSdmxBanrep(bytesDe({ ...MENSAJE_IBR, series: ajenaSinClave }), IBR, DESDE, HASTA)).toEqual(fallo("BANREP_NO_SDMX"));
+  });
+
+  it("la nominal del mismo plazo con un hijo de más tampoco estorba (se usa solo para la guarda)", () => {
+    const nominalRara = seriesIbr().map((s) => (s.sujeto === "IRIBRM03" && s.unidad === "NR" ? { ...s, extra: "<generic:Annotations/>" } : s));
+    expect(leerSdmxBanrep(bytesDe({ ...MENSAJE_IBR, series: nominalRara }), IBR, DESDE, HASTA).ok).toBe(true);
+  });
 });
 
 describe("leerSdmxBanrep · guarda de la unidad de la IBR (efectiva anual ≥ nominal, cuando vienen las dos)", () => {
@@ -198,6 +233,13 @@ describe("leerSdmxBanrep · guarda de la unidad de la IBR (efectiva anual ≥ no
     expect(ibr([{ dia: "20270317", valor: "6.913" }], [{ dia: "20270318", valor: "9.999" }]).ok).toBe(true);
     expect(ibr([{ dia: "20270317", valor: "6.913" }], [{ dia: "20270317", valor: "NaN" }]).ok).toBe(true);
     expect(ibr([{ dia: "20270317", valor: "6.913" }], [{ dia: "20270317", valor: "9.999", estado: "P" }]).ok).toBe(true);
+  });
+
+  // code-reviewer BAJO: un día repetido con valores distintos en la NOMINAL no se compara (ni falso aviso ni aviso tapado).
+  it("un día de la nominal repetido con valores distintos no se compara", () => {
+    expect(ibr([{ dia: "20270317", valor: "6.913" }], [{ dia: "20270317", valor: "1.237" }, { dia: "20270317", valor: "9.999" }]).ok).toBe(true);
+    expect(ibr([{ dia: "20270317", valor: "6.913" }], [{ dia: "20270317", valor: "9.999" }, { dia: "20270317", valor: "1.237" }]).ok).toBe(true);
+    expect(ibr([{ dia: "20270317", valor: "6.913" }], [{ dia: "20270317", valor: "9.999" }, { dia: "20270317", valor: "9.9990" }])).toEqual(fallo("BANREP_UNIDAD_DUDOSA"));
   });
 
   it("sin la nominal en el mensaje, no hay guarda", () => {

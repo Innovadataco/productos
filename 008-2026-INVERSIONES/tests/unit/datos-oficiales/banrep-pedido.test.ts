@@ -3,7 +3,7 @@
 // bloqueo (403, 429 o un tipo de contenido que no es XML, como la página del captcha) sale como BANREP_BLOQUEADO.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { serieBanrep } from "@/datos-oficiales/fuentes/banrep-series";
-import { ACCEPT_BANREP, BYTES_MAXIMOS_BANREP, TIEMPO_MAXIMO_BANREP_MS, TIPOS_SDMX, pedirSdmxBanrep } from "@/datos-oficiales/fuentes/banrep-pedido";
+import { ACCEPT_BANREP, BYTES_MAXIMOS_BANREP, TIEMPO_MAXIMO_BANREP_MS, TIPOS_SDMX, pedirSdmxBanrep, tlsDesactivado } from "@/datos-oficiales/fuentes/banrep-pedido";
 import type { BuscarHttp, InitHttp } from "@/lib/http-acotado";
 import { TOPES_XML } from "@/lib/xml-acotado";
 import { CAPTCHA_FICTICIO, MENSAJE_TPM, bytesDe } from "./banrep.ficticio";
@@ -56,10 +56,18 @@ describe("pedirSdmxBanrep · el pedido", () => {
 });
 
 describe("pedirSdmxBanrep · fallos", () => {
-  it("la página del captcha (text/html con 200) y otro tipo que no es XML: BANREP_BLOQUEADO (TIPO), sin leer el cuerpo", async () => {
-    expect(await pedir(responder(CAPTCHA_FICTICIO, { headers: { "content-type": "text/html;charset=utf-8" } }))).toEqual({ ok: false, codigo: "BANREP_BLOQUEADO", detalle: "TIPO" });
-    expect(await pedir(responder("{}", { headers: { "content-type": "application/json" } }))).toEqual({ ok: false, codigo: "BANREP_BLOQUEADO", detalle: "TIPO" });
-    expect(await pedir(responder("<a/>", { headers: {} }))).toEqual({ ok: false, codigo: "BANREP_BLOQUEADO", detalle: "TIPO" });
+  // code-reviewer MEDIO: un tipo inesperado (otro charset, octet-stream) no es un bloqueo. Solo una página HTML lo es.
+  it("la página del captcha (text/html o XHTML con 200): BANREP_BLOQUEADO (HTML), sin leer el cuerpo", async () => {
+    for (const tipo of ["text/html;charset=utf-8", "TEXT/HTML", "application/xhtml+xml"]) {
+      expect(await pedir(responder(CAPTCHA_FICTICIO, { headers: { "content-type": tipo } })), tipo).toEqual({ ok: false, codigo: "BANREP_BLOQUEADO", detalle: "HTML" });
+    }
+  });
+
+  it("otro tipo que no es XML ni HTML, u otro charset: BANREP_TIPO (no se adivina un bloqueo)", async () => {
+    for (const tipo of ["application/json", "application/octet-stream", "application/xml; charset=ISO-8859-1", "text/xml;charset=utf8"]) {
+      expect(await pedir(responder("<a/>", { headers: { "content-type": tipo } })), tipo).toEqual({ ok: false, codigo: "BANREP_TIPO", detalle: null });
+    }
+    expect(await pedir(async () => new Response(new Uint8Array([0x3c, 0x61, 0x2f, 0x3e])))).toEqual({ ok: false, codigo: "BANREP_TIPO", detalle: null });
   });
 
   it("403 y 429 son bloqueo, con su estado como detalle", async () => {
@@ -84,5 +92,15 @@ describe("pedirSdmxBanrep · fallos", () => {
     const p = pedir(() => new Promise(() => undefined));
     await vi.advanceTimersByTimeAsync(TIEMPO_MAXIMO_BANREP_MS);
     expect(await p).toEqual({ ok: false, codigo: "BANREP_RED", detalle: null });
+  });
+});
+
+// security-reviewer MEDIO: con NODE_TLS_REJECT_UNAUTHORIZED=0 en el entorno, Node no verifica el certificado y un
+// intermediario podría servir una serie falsa que el lector no distingue. El exportador se niega a pedir así.
+describe("tlsDesactivado", () => {
+  it("solo con NODE_TLS_REJECT_UNAUTHORIZED exactamente «0»", () => {
+    expect(tlsDesactivado({ NODE_TLS_REJECT_UNAUTHORIZED: "0" })).toBe(true);
+    for (const valor of [undefined, "1", "", " 0", "false"]) expect(tlsDesactivado({ NODE_TLS_REJECT_UNAUTHORIZED: valor }), String(valor)).toBe(false);
+    expect(tlsDesactivado({})).toBe(false);
   });
 });

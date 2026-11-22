@@ -32,6 +32,11 @@ const archivo = (nombre: string, contenido: string | Uint8Array) => {
 };
 
 interface Salida { readonly codigo: number | null; readonly stdout: string; readonly stderr: string }
+/** Precarga que deja fetch sin red: un caso por la red nunca sale del proceso, ni con el código en rojo. */
+const SIN_RED = join(carpeta, "sin-red.mjs");
+writeFileSync(SIN_RED, 'globalThis.fetch = () => Promise.reject(new TypeError("sin red en las pruebas"));\n');
+const conSinRed = (extra: Record<string, string> = {}) => ({ NODE_OPTIONS: `--import=${SIN_RED}`, ...extra });
+
 function correr(args: readonly string[], extra: Record<string, string> = {}): Salida {
   const r = spawnSync(TSX, [SCRIPT, ...args], { cwd: RAIZ, env: entornoMinimo(extra), encoding: "utf8", timeout: POR_CLI_MS });
   return { codigo: r.status, stdout: r.stdout, stderr: r.stderr };
@@ -76,6 +81,15 @@ describe("exportar-banrep · como proceso, sin red", { timeout: 12 * POR_CLI_MS 
     comprobar(correr(conArchivo(carpeta)), 2, "ARCHIVO_NO_REGULAR");
   });
 
+  // security-reviewer BAJO: un FIFO sin escritor no cuelga ni pasa (archivo-acotado abre con O_NONBLOCK y mira fstat).
+  it("--archivo que es un FIFO: 2 ARCHIVO_NO_REGULAR, sin colgarse", () => {
+    const fifo = join(carpeta, "descarga-fifo.ficticio.xml");
+    expect(spawnSync("mkfifo", [fifo]).status).toBe(0);
+    const r = spawnSync(TSX, [SCRIPT, ...conArchivo(fifo)], { cwd: RAIZ, env: entornoMinimo({}), encoding: "utf8", timeout: 20_000 });
+    expect(r.error?.message ?? null, "se colgó abriendo el FIFO").toBeNull();
+    comprobar({ codigo: r.status, stdout: r.stdout, stderr: r.stderr }, 2, "ARCHIVO_NO_REGULAR");
+  });
+
   it(`--archivo de más de ${TOPES_XML.bytes} bytes: 1 ARCHIVO_DEMASIADO_GRANDE, nada en stdout`, () => {
     const s = correr(conArchivo(archivo("grande.ficticio.xml", new Uint8Array(TOPES_XML.bytes + 1).fill(0x20))));
     comprobar(s, 1, "ARCHIVO_DEMASIADO_GRANDE");
@@ -105,6 +119,24 @@ describe("exportar-banrep · como proceso, sin red", { timeout: 12 * POR_CLI_MS 
   it("el --archivo es la página del captcha: 1 BANREP_BLOQUEADO y nada en stdout", () => {
     const s = correr(conArchivo(archivo("captcha.ficticio.html", CAPTCHA_FICTICIO)));
     comprobar(s, 1, "BANREP_BLOQUEADO (HTML)");
+    expect(s.stdout).toBe("");
+  });
+
+  // security-reviewer MEDIO: sin verificación de TLS un intermediario serviría una serie falsa que el lector no distingue.
+  it("por la red con NODE_TLS_REJECT_UNAUTHORIZED=0: 2 TLS_DESACTIVADO, sin pedir nada; con --archivo no estorba", () => {
+    const s = correr(["--serie", "TPM", "--desde", "2021-03-01", "--hasta", "2021-03-10"], conSinRed({ NODE_TLS_REJECT_UNAUTHORIZED: "0" }));
+    comprobar(s, 2, "TLS_DESACTIVADO");
+    expect(s.stderr).not.toContain("BANREP_RED");
+    expect(s.stdout).toBe("");
+    const conArchivoTls = correr(conArchivo(archivo("tpm-tls.ficticio.xml", xmlTpm())), conSinRed({ NODE_TLS_REJECT_UNAUTHORIZED: "0" }));
+    comprobar(conArchivoTls, 0, "✅ TPM · archivo");
+  });
+
+  it("por la red, sin respuesta (fetch sin red): 1 BANREP_RED con la URL pública y la indicación de --archivo", () => {
+    const s = correr(["--serie", "TPM", "--desde", "2021-03-01", "--hasta", "2021-03-10"], conSinRed());
+    comprobar(s, 1, "❌ BANREP_RED");
+    expect(s.stderr).toContain("Abra en su navegador https://totoro.banrep.gov.co/nsi-jax-ws/rest/data/ESTAT,DF_CBR_DAILY_HIST,1.0/all/ALL/?startPeriod=2021");
+    expect(s.stderr).toContain("--archivo");
     expect(s.stdout).toBe("");
   });
 

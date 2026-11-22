@@ -66,6 +66,18 @@ describe("observaciones · estado", () => {
   });
 });
 
+describe("observaciones · multiplicador por observación", () => {
+  // security-reviewer BAJO: UNIT_MULT también puede venir en una observación; distinto de 0, el valor vendría escalado.
+  it("UNIT_MULT = 0 en la observación pasa; otro valor: BANREP_OBS_INVALIDA", () => {
+    expect(valores(tpm([{ dia: "20270317", valor: "7.31", atributosExtra: '<generic:Value id="UNIT_MULT" value="0" />' }]))).toEqual(["7.31"]);
+    expect(tpm([{ dia: "20270317", valor: "7.31", atributosExtra: '<generic:Value id="UNIT_MULT" value="2" />' }])).toEqual({ ok: false, codigo: "BANREP_OBS_INVALIDA", detalle: null });
+  });
+
+  it("otros atributos de la observación no cambian el valor y se ignoran", () => {
+    expect(valores(tpm([{ dia: "20270317", valor: "7.31", atributosExtra: '<generic:Value id="OBS_CONF" value="F" />' }]))).toEqual(["7.31"]);
+  });
+});
+
 describe("observaciones · fecha y forma (fallan cerradas: BANREP_OBS_INVALIDA)", () => {
   it.each([[null], ["2027-03-17"], ["20270230"], ["18991231"], ["2027031"], ["202703170"], ["2027031a"]])("ObsDimension %s", (d) => {
     expect(tpm([{ dia: d, valor: "7.31" }])).toEqual({ ok: false, codigo: "BANREP_OBS_INVALIDA", detalle: null });
