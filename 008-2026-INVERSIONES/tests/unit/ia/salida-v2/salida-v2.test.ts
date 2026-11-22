@@ -75,6 +75,11 @@ describe("leerSalida · salida-v2", () => {
     expect(leerSalida(cruda([{ segmentos: [{ texto: "bajó a -" }, { ref: "H01" }, { texto: "%" }] }]))?.frases[0]?.texto).toBe("bajó a -{H01}%");
   });
 
+  it("dos refs seguidas quedan pegadas (el validador las rechaza) y una coma o dos puntos pegados a la ref reciben el espacio", () => {
+    expect(leerSalida(cruda([{ segmentos: [{ ref: "H02" }, { ref: "H03" }] }]))?.frases[0]?.texto).toBe("{H02}{H03}");
+    expect(leerSalida(cruda([{ segmentos: [{ texto: "valor:" }, { ref: "H01" }, { texto: "y" }, { ref: "H02" }] }]))?.frases[0]?.texto).toBe("valor: {H01} y {H02}");
+  });
+
   it.each([
     ["la forma vieja {texto, hechos}", cruda([{ hechos: ["H01"], texto: "El valor bajó a {H01}." }])],
     ["una frase sin segmentos", cruda([{}])],

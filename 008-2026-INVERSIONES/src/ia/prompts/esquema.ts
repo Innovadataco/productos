@@ -6,7 +6,8 @@
  * Es una constante en forma canónica (`clonCongelado`, como la copia `armarPedido`).
  *
  * Sin `minLength`, `maxLength`, `minItems` ni `maxItems`: rompen la gramática de Ollama y la salida estructurada de
- * Claude no los admite. Solo `ref` lleva `pattern` (el id, acotado). Cada objeto cierra sus campos
+ * Claude no los admite. Solo `ref` lleva `pattern` (el id, acotado; PI y la prueba contra Ollama real lo confirman o
+ * se quita: el validador revisa la ref de todos modos con `PATRON_REF`). Cada objeto cierra sus campos
  * (`additionalProperties: false`, que Claude exige). Los límites y todo lo demás los valida el validador al leer.
  */
 import type { EsquemaSalida } from "../generador";

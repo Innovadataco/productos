@@ -61,7 +61,6 @@ describe("forma de la frase", () => {
 
   it.each([
     ["signo pegado a la cita", "El valor de las acciones subió a -{VALOR_ACCIONES}."],
-    ["coma pegada entre citas", "Las especies con cierre atrasado son {ESPECIES_ATRASADAS},{ESPECIES_ATRASADAS}."],
     ["signo y símbolo después de la cita", "El valor de las acciones subió a {VALOR_ACCIONES}%."],
   ])("%s: FORMATO.CITA_PEGADA", (_caso, plantilla) => {
     expect(hallazgos(p, VA, plantilla)).toContain("FORMATO.CITA_PEGADA");

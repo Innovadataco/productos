@@ -37,7 +37,7 @@ const REGLAS_DE_REDACCION = [
     + "frase tiene hasta doscientos ochenta caracteres y el resumen completo, hasta mil doscientos.",
 ].join("\n");
 
-const RESPUESTA = 'Responda solo con un JSON de esta forma: {"frases":[{"segmentos":[{"texto":"El valor de las acciones bajó a"},'
+const RESPUESTA = 'Responda solo con un JSON de esta forma: {"frases":[{"segmentos":[{"texto":"El valor de las acciones es"},'
   + '{"ref":"H01"},{"texto":"."}]}]}. Cada segmento tiene una sola clave: «texto» o «ref». La prosa va en los segmentos de '
   + "texto y cada dato, en un segmento de referencia con su id. El ejemplo solo muestra la forma: use los datos y las etiquetas "
   + "de los hechos que recibe.";
