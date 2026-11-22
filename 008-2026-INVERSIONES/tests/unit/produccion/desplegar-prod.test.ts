@@ -4,16 +4,19 @@
 // (sha256, etiquetas y disco), las tres imágenes del mismo sha, respaldo antes de migrar, mem = memswap,
 // versión verificada antes y después de la espera (por la entrada, el camino del túnel), la app sin salida a
 // internet (con control positivo desde la entrada) y vuelta atrás automática si falla después de migrar. La
-// reversa (--sin-migrar) corre con el compose del sha que corre: nunca cruza a una topología vieja.
+// reversa (--sin-migrar) corre con el compose del sha que corre: nunca cruza a una topología vieja. La espera de la
+// medición después de up (acuerdo con el CEO de PI): 120 s si el despliegue es solo de código, 600 s si cambian los
+// servicios, los límites o la imagen base (o no se puede saber), y en la corta un piso de memoria que la extiende.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, correr, crearFalsos, crearRepo, entorno, envProduccionFicticio, funcion, git, ruta008, type Llamada } from "./falsos";
+import { carpetaTemporal, correr, crearFalsos, crearRepo, entorno, envProduccionFicticio, funcion, git, leer008, ruta008, type Entorno, type Llamada } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
 const COPIAR = [
+  "Dockerfile",
   "docker-compose.prod.yml",
   "scripts/produccion-comun.sh",
   "scripts/desplegar-prod.sh",
@@ -115,20 +118,21 @@ describe("desplegar-prod.sh · camino feliz", () => {
     expect([...pasos].sort((a, b) => a - b)).toEqual(pasos);
   });
 
-  it("verifica la versión dos veces: al levantar y después de la espera de 10 minutos", async () => {
+  it("verifica la versión dos veces: al levantar y después de la espera de la medición", async () => {
     const { falsos, env, script } = preparar();
     expect((await correr(script, [ID], env)).status).toBe(0);
     expect(falsos.llamadas().filter((l) => l[0] === "docker" && l[1] === "exec" && l.join(" ").includes("/api/salud"))).toHaveLength(2);
   });
 
-  it("deja las dos mediciones de memoria (antes y 10 min después de up) en un archivo", async () => {
+  it("deja las dos mediciones de memoria (antes de up y después de la espera, con los segundos reales) en un archivo", async () => {
     const { repo, base, env, script } = preparar();
     expect((await correr(script, [ID], env)).status).toBe(0);
     const dir = path.join(base, "estado", "mediciones");
     const archivos = readdirSync(dir);
     expect(archivos).toHaveLength(1);
     expect(archivos[0]).toMatch(new RegExp(`^${repo.sha}-\\d{8}-\\d{6}\\.txt$`));
-    expect(readFileSync(path.join(dir, archivos[0]!), "utf8")).toMatch(/antes de up[\s\S]*10 min después de up/);
+    // La etiqueta dice la espera que hubo (aquí INV_ESPERA_MEDICION_S=0), no «10 min» si no fueron 10 min.
+    expect(readFileSync(path.join(dir, archivos[0]!), "utf8")).toMatch(/== antes de up[\s\S]*== 0 s después de up/);
   });
 
   it("el migrador corre con run --rm y todo con el sha nuevo (INV_TAG)", async () => {
@@ -185,7 +189,7 @@ describe("desplegar-prod.sh · guardas que abortan sin DEPLOY VERIFICADO", () =>
     ["/api/salud con otra versión", { FALSO_SALUD: JSON.stringify({ estado: "ok", version: "local" }) }],
     ["/api/salud degradado", { FALSO_SALUD_DEGRADADO: "1" }],
     ["memoria con swap (Memory ≠ MemorySwap)", { FALSO_MEMSWAP: "402653184 805306368" }],
-    ["la salud cae durante la espera de 10 minutos", { FALSO_SLEEP_ROMPE_SALUD: JSON.stringify({ estado: "degradado", version: "x" }) }],
+    ["la salud cae durante la espera de la medición", { FALSO_SLEEP_ROMPE_SALUD: JSON.stringify({ estado: "degradado", version: "x" }) }],
     ["LA APP TIENE SALIDA a internet (llega a la IP de la sonda)", { FALSO_NC_APP_RC: "0", FALSO_NC_APP_MSG: "" }],
     ["la app no llega, pero por tiempo agotado y no por falta de ruta (ambiguo)", { FALSO_NC_APP_MSG: "nc: timed out" }],
     ["la app no llega porque el destino rechaza (Connection refused: sí hay ruta)", { FALSO_NC_APP_MSG: "nc: 203.0.113.7 (203.0.113.7:443): Connection refused" }],
@@ -272,6 +276,8 @@ describe("desplegar-prod.sh · guardas que abortan sin DEPLOY VERIFICADO", () =>
     expect(r.status).toBe(3);
     expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
     const ll = falsos.llamadas();
+    // La espera explícita (0 s) es menor que la completa: el piso la extiende hasta los 600 s antes de rendirse.
+    expect(ll.filter((l) => l[0] === "sleep").map((l) => l[1])).toEqual(["0", "600"]);
     expect(ll.some((l) => l.includes("down"))).toBe(false);
     // Las únicas detenciones son las de antes del migrador (app y respaldo diario).
     expect(ll.slice(indice(ll, compose("run", "inv-008-migrador"))).some((l) => l.includes("stop"))).toBe(false);
@@ -862,5 +868,396 @@ describe("desplegar-prod.sh · funciones puras", () => {
     for (const malo of ["", "?schema=public", "?connection_limit=0", "?connection_limit=9", "?connection_limit=05", "?connection_limit=", "?connection_limit=x", "?connection_limit=5&connection_limit=5", "?xconnection_limit=5"]) {
       expect(ok(malo), malo).not.toBe(0);
     }
+  });
+});
+
+// Acuerdo con el CEO de PI: la medición «después de up» espera 120 s si el despliegue es solo de código y 600 s si hay
+// un servicio nuevo, cambia un límite o cambia la imagen base, o si no se puede saber. Se decide sin red: el clon en el
+// sha nuevo contra el sha que corre (estado/sha-actual). En la espera corta, un piso de memoria (MemAvailable 1 GiB,
+// SwapFree 512 MiB) la extiende hasta 600 s; si sigue bajo, no hay DEPLOY VERIFICADO y los candados no se sueltan antes.
+describe("desplegar-prod.sh · espera de la medición: 120 s si es solo código, 600 s si cambian servicios, límites o la imagen base", () => {
+  type Preparado = ReturnType<typeof preparar>;
+  const sleeps = (p: Preparado) => p.falsos.llamadas().filter((l) => l[0] === "sleep").map((l) => l[1]);
+  const lineasEspera = (stderr: string) => stderr.split("\n").filter((l) => l.includes("espera de la medición"));
+  const MEMINFO_SANA = "MemTotal: 7913473 kB\nMemAvailable: 3617293 kB\nSwapTotal: 4191233 kB\nSwapFree: 2483117 kB\n";
+  const MEMINFO_SWAP_BAJO = "MemTotal: 7913473 kB\nMemAvailable: 3617293 kB\nSwapTotal: 4191233 kB\nSwapFree: 94613 kB\n";
+  const MEMINFO_MEM_BAJA = "MemTotal: 7913473 kB\nMemAvailable: 861937 kB\nSwapTotal: 4191233 kB\nSwapFree: 2483117 kB\n";
+  const COMPOSE = "docker-compose.prod.yml";
+
+  /** Lo que corre es repo.sha (estado/sha-actual) y no hay INV_ESPERA_MEDICION_S: la espera la decide la comparación. */
+  function conCorriendo(meminfo = MEMINFO_SANA): Preparado {
+    const p = preparar();
+    delete p.env.INV_ESPERA_MEDICION_S;
+    writeFileSync(p.env.INV_MEMINFO!, meminfo);
+    const estado = path.join(p.base, "estado");
+    mkdirSync(estado, { recursive: true });
+    writeFileSync(path.join(estado, "sha-actual"), `${p.repo.sha}\n`);
+    writeFileSync(path.join(estado, "imagen-actual"), `sha256:${"a".repeat(64)}\n`);
+    return p;
+  }
+
+  /** Un commit con `cambiar` aplicado al clon (que queda en él) y el despliegue de ese sha. */
+  async function desplegarCambio(p: Preparado, cambiar: (dir008: string) => void = () => {}, extra: Entorno = {}) {
+    cambiar(p.repo.dir008);
+    git(p.repo.dir, ["add", "-A"]);
+    git(p.repo.dir, ["commit", "-q", "--allow-empty", "-m", "cambio"]);
+    const nuevo = git(p.repo.dir, ["rev-parse", "HEAD"]);
+    const r = await correr(p.script, [ID], { ...p.env, FALSO_SHA: nuevo, FALSO_SALUD: JSON.stringify({ estado: "ok", version: nuevo }), ...extra });
+    return { r, nuevo };
+  }
+
+  /** Reemplaza `de` por `a` en un archivo del clon. Exige que `de` esté: si no, el caso no probaría nada. */
+  function editar(dir008: string, archivo: string, de: string, a: string) {
+    const ruta = path.join(dir008, archivo);
+    const texto = readFileSync(ruta, "utf8");
+    expect(texto, `${archivo} trae «${de}»`).toContain(de);
+    writeFileSync(ruta, texto.replace(de, a));
+  }
+
+  /**
+   * Un sleep falso propio de la prueba (reemplaza el de falsos/ solo en su carpeta temporal): registra la llamada igual,
+   * anota qué descriptores de los candados (8, el propio; 9, el común con PI) siguen abiertos y, en el sleep de
+   * `enSegundos`, cambia el meminfo o la salud.
+   */
+  function sleepQueMira(p: Preparado, cambio: { enSegundos?: string; meminfo?: string; salud?: string } = {}) {
+    const fds = path.join(p.base, "sleep-fds.txt");
+    const meminfoNuevo = path.join(p.base, "meminfo-despues");
+    if (cambio.meminfo) writeFileSync(meminfoNuevo, cambio.meminfo);
+    const lineas = [
+      "#!/usr/bin/env bash",
+      `linea="sleep"; for a in "$@"; do linea="$linea"$'\\t'"$a"; done; printf '%s\\n' "$linea" >>"$FALSO_REGISTRO"`,
+      `abiertos=""; for fd in 8 9; do if { true >&"$fd"; } 2>/dev/null; then abiertos="$abiertos $fd"; fi; done`,
+      `printf '%s:%s\\n' "$1" "$abiertos" >>"${fds}"`,
+      `if [ "$1" = "${cambio.enSegundos ?? "nunca"}" ]; then`,
+      cambio.meminfo ? `  cp "${meminfoNuevo}" "$INV_MEMINFO"` : "  :",
+      cambio.salud ? `  printf '%s' '${cambio.salud}' >"$FALSO_SALUD_ARCHIVO"` : "  :",
+      "fi",
+    ];
+    writeFileSync(path.join(p.falsos.bin, "sleep"), lineas.join("\n") + "\n", { mode: 0o755 });
+    return () => readFileSync(fds, "utf8").trim().split("\n");
+  }
+
+  const medicionesDe = (p: Preparado) => {
+    const dir = path.join(p.base, "estado", "mediciones");
+    return readFileSync(path.join(dir, readdirSync(dir)[0]!), "utf8");
+  };
+
+  it("solo código (mismo compose y mismos FROM): espera 120 s, lo dice en una línea y despliega", async () => {
+    const p = conCorriendo();
+    const { r, nuevo } = await desplegarCambio(p, (d) => writeFileSync(path.join(d, "codigo.ficticio.ts"), "export const x = 4613;\n"));
+    expect(r.status, r.stderr).toBe(0);
+    expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${nuevo}`);
+    expect(sleeps(p)).toEqual(["120"]);
+    const lineas = lineasEspera(r.stderr);
+    expect(lineas).toHaveLength(1);
+    expect(lineas[0]).toMatch(/espera de la medición: 120 s · solo código/);
+    expect(lineas[0]).toContain(p.repo.sha);
+    expect(medicionesDe(p)).toMatch(/== antes de up[\s\S]*== 120 s después de up/);
+  });
+
+  it("un cambio del compose que no toca servicios, límites ni imágenes (un comentario, una variable): 120 s", async () => {
+    const p = conCorriendo();
+    const { r } = await desplegarCambio(p, (d) => {
+      editar(d, COMPOSE, "# cpu_shares bajo: PI tiene prioridad.", "# cpu_shares bajo: PI tiene prioridad siempre.");
+      editar(d, COMPOSE, "RESPALDO_HORA: ${INV_RESPALDO_HORA:-0230}", "RESPALDO_HORA: ${INV_RESPALDO_HORA:-0317}");
+    });
+    expect(r.status, r.stderr).toBe(0);
+    expect(sleeps(p)).toEqual(["120"]);
+  });
+
+  const cambios600: Array<[string, (d: string) => void, RegExp]> = [
+    ["un mem_limit cambiado", (d) => editar(d, COMPOSE, "mem_limit: 384m", "mem_limit: 437m"), /inv-008-app mem_limit 437m/],
+    ["solo un memswap_limit cambiado", (d) => editar(d, COMPOSE, "memswap_limit: 384m", "memswap_limit: 437m"), /inv-008-app memswap_limit 437m/],
+    ["los cpus de un servicio", (d) => editar(d, COMPOSE, "cpus: 0.05", "cpus: 0.07"), /inv-008-vigia cpus 0\.07/],
+    [
+      "un servicio nuevo",
+      (d) => editar(d, COMPOSE, "\n  inv-008-vigia:\n", "\n  inv-008-nuevo:\n    image: inv-008-vigia:${INV_TAG:-sin-desplegar}\n    mem_limit: 37m\n    memswap_limit: 37m\n\n  inv-008-vigia:\n"),
+      /servicio inv-008-nuevo/,
+    ],
+    ["otra imagen de la base (otro digest)", (d) => editar(d, COMPOSE, "postgres:16-alpine@sha256:1d5b", "postgres:16-alpine@sha256:9d5b"), /inv-008-db image/],
+    ["un FROM del Dockerfile (la imagen base)", (d) => editar(d, "Dockerfile", "FROM alpine:3.24@", "FROM alpine:3.27@"), /imagen base.*alpine:3\.27/],
+  ];
+  for (const [nombre, cambiar, detalle] of cambios600) {
+    it(`${nombre}: espera 600 s y dice por qué en una línea`, async () => {
+      const p = conCorriendo();
+      const { r, nuevo } = await desplegarCambio(p, cambiar);
+      expect(r.status, r.stderr).toBe(0);
+      expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${nuevo}`);
+      expect(sleeps(p)).toEqual(["600"]);
+      const lineas = lineasEspera(r.stderr);
+      expect(lineas).toHaveLength(1);
+      expect(lineas[0]).toMatch(/espera de la medición: 600 s · /);
+      expect(lineas[0]).toMatch(detalle);
+    });
+  }
+
+  it("primer despliegue (sin estado/sha-actual): 600 s", async () => {
+    const p = preparar();
+    delete p.env.INV_ESPERA_MEDICION_S;
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(sleeps(p)).toEqual(["600"]);
+    expect(lineasEspera(r.stderr)).toEqual([expect.stringMatching(/espera de la medición: 600 s · sin un sha que corre/)]);
+  });
+
+  // La reversa compara lo mismo: el compose del clon (que no se mueve) y el FROM del sha de la imagen, contra lo que corre.
+  const reversas: Array<[string, (d: string) => void, string]> = [
+    ["con el mismo Dockerfile y el mismo compose", () => {}, "120"],
+    ["a una imagen de otro FROM", (d) => editar(d, "Dockerfile", "FROM alpine:3.24@", "FROM alpine:3.27@"), "600"],
+  ];
+  for (const [nombre, cambiar, espera] of reversas) {
+    it(`reversa (--sin-migrar) ${nombre}: ${espera} s`, async () => {
+      const p = conCorriendo();
+      const viejo = p.repo.sha;
+      cambiar(p.repo.dir008);
+      git(p.repo.dir, ["add", "-A"]);
+      git(p.repo.dir, ["commit", "-q", "--allow-empty", "-m", "lo que corre"]);
+      const corre = git(p.repo.dir, ["rev-parse", "HEAD"]);
+      const estado = path.join(p.base, "estado");
+      writeFileSync(path.join(estado, "sha-actual"), `${corre}\n`);
+      writeFileSync(path.join(estado, "sha-anterior"), `${viejo}\n`);
+      writeFileSync(path.join(estado, "imagen-anterior"), `${ID}\n`);
+      const r = await correr(p.script, [`inv-008-app:${viejo}`, "--sin-migrar"], p.env);
+      expect(r.status, r.stderr).toBe(0);
+      expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${viejo}`);
+      expect(sleeps(p)).toEqual([espera]);
+      expect(lineasEspera(r.stderr)).toHaveLength(1);
+    });
+  }
+
+  it("INV_ESPERA_MEDICION_S explícito sigue mandando (como hoy) y la línea dice qué daba la comparación", async () => {
+    const p = conCorriendo();
+    const { r } = await desplegarCambio(p, (d) => editar(d, COMPOSE, "mem_limit: 384m", "mem_limit: 437m"), { INV_ESPERA_MEDICION_S: "613" });
+    expect(r.status, r.stderr).toBe(0);
+    expect(sleeps(p)).toEqual(["613"]);
+    expect(lineasEspera(r.stderr)).toEqual([expect.stringMatching(/espera de la medición: 613 s · INV_ESPERA_MEDICION_S explícito \(la comparación daba 600 s: /)]);
+  });
+
+  it("INV_ESPERA_MEDICION_S con ceros a la izquierda se lee en base 10 (0613 son 613 s, no 395 en octal)", async () => {
+    const p = conCorriendo();
+    const { r } = await desplegarCambio(p, () => {}, { INV_ESPERA_MEDICION_S: "0613" });
+    expect(r.status, r.stderr).toBe(0);
+    expect(sleeps(p)).toEqual(["613"]);
+  });
+
+  for (const malo of ["abc", "-1", "1e3", "123457", " 37"]) {
+    it(`INV_ESPERA_MEDICION_S inválido («${malo}»): se niega antes de tomar los candados`, async () => {
+      const p = preparar({ INV_ESPERA_MEDICION_S: malo });
+      const r = await correr(p.script, [ID], p.env);
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toMatch(/INV_ESPERA_MEDICION_S debe ser un entero/);
+      expect(p.falsos.llamadas().some((l) => l[0] === "flock")).toBe(false);
+    });
+  }
+
+  it("120 s con SwapFree bajo el piso: extiende hasta 600 s con los candados tomados, mide otra vez y, si sigue bajo, sale con 3 sin DEPLOY VERIFICADO", async () => {
+    const p = conCorriendo(MEMINFO_SWAP_BAJO);
+    const candados = sleepQueMira(p);
+    const { r, nuevo } = await desplegarCambio(p);
+    expect(r.status, r.stderr).toBe(3);
+    expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
+    expect(sleeps(p)).toEqual(["120", "480"]);
+    // La espera corta y la extensión corren con los descriptores de los dos candados abiertos (no se sueltan antes).
+    expect(candados()).toEqual(["120: 8 9", "480: 8 9"]);
+    expect(r.stderr).toMatch(/memoria bajo el piso a los 120 s \(SwapFree 92 MiB < 512 MiB\): se extiende la espera 480 s/);
+    expect(r.stderr).toMatch(/MEMORIA BAJO EL PISO después de 600 s \(SwapFree 92 MiB < 512 MiB\): sin DEPLOY VERIFICADO/);
+    expect(r.stderr).toMatch(/pausar-008\.sh/);
+    expect(medicionesDe(p)).toMatch(/== antes de up[\s\S]*== 120 s después de up[\s\S]*== 600 s después de up \(espera extendida\)/);
+    // Sin corte automático ni vuelta atrás: el sha nuevo corre, respondió sano y queda registrado. El corte es manual.
+    expect(readFileSync(path.join(p.base, "estado", "sha-actual"), "utf8").trim()).toBe(nuevo);
+    const ll = p.falsos.llamadas();
+    expect(ll.slice(indice(ll, compose("run", "inv-008-migrador"))).some((l) => l.includes("stop") || l.includes("down"))).toBe(false);
+    expect(readFileSync(path.join(p.base, "tags.txt"), "utf8").trim().split("\n").at(-1)).toMatch(new RegExp(`^up ${nuevo} `));
+  });
+
+  it("120 s con MemAvailable bajo 1 GiB: también extiende y, si sigue bajo, sale con 3 sin DEPLOY VERIFICADO", async () => {
+    const p = conCorriendo(MEMINFO_MEM_BAJA);
+    const { r } = await desplegarCambio(p);
+    expect(r.status).toBe(3);
+    expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
+    expect(sleeps(p)).toEqual(["120", "480"]);
+    expect(r.stderr).toMatch(/la memoria sigue bajo el piso a los 600 s \(MemAvailable 841 MiB < 1024 MiB\)/);
+  });
+
+  it("120 s bajo el piso que se recupera en la extensión: mide otra vez, sigue y termina con DEPLOY VERIFICADO", async () => {
+    const p = conCorriendo(MEMINFO_SWAP_BAJO);
+    sleepQueMira(p, { enSegundos: "480", meminfo: MEMINFO_SANA });
+    const { r, nuevo } = await desplegarCambio(p);
+    expect(r.status, r.stderr).toBe(0);
+    expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${nuevo}`);
+    expect(sleeps(p)).toEqual(["120", "480"]);
+    expect(r.stderr).toMatch(/la memoria volvió sobre el piso a los 600 s/);
+  });
+
+  it("si la salud cae durante la extensión, vuelve a la imagen que corría (como en cualquier falla después del up)", async () => {
+    const p = conCorriendo(MEMINFO_SWAP_BAJO);
+    sleepQueMira(p, { enSegundos: "480", salud: JSON.stringify({ estado: "degradado", version: "x" }) });
+    const { r } = await desplegarCambio(p);
+    expect(r.status).not.toBe(0);
+    expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
+    expect(r.stderr).toMatch(/vuelta atrás/i);
+    expect(readFileSync(path.join(p.base, "tags.txt"), "utf8").trim().split("\n").at(-1)).toMatch(new RegExp(`^up ${p.repo.sha} .*inv-008-app`));
+    expect(readFileSync(path.join(p.base, "estado", "sha-actual"), "utf8").trim()).toBe(p.repo.sha);
+  });
+
+  it("el piso es solo del camino corto: con 600 s y SwapFree bajo no extiende (convivencia mira MemAvailable y OOM)", async () => {
+    const p = conCorriendo(MEMINFO_SWAP_BAJO);
+    const { r, nuevo } = await desplegarCambio(p, (d) => editar(d, COMPOSE, "mem_limit: 384m", "mem_limit: 437m"));
+    expect(r.status, r.stderr).toBe(0);
+    expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${nuevo}`);
+    expect(sleeps(p)).toEqual(["600"]);
+  });
+
+  it("ningún script de producción suelta los candados antes de salir (ni flock -u ni cierra los descriptores 8 y 9)", () => {
+    for (const archivo of ["scripts/desplegar-prod.sh", "scripts/produccion-comun.sh"]) {
+      expect(leer008(archivo), archivo).not.toMatch(/flock\s+-u|[89]>&-|[89]<&-/);
+    }
+  });
+});
+
+describe("desplegar-prod.sh · funciones de la espera: resumen del compose y del Dockerfile, piso de memoria", () => {
+  const script = ruta008("scripts/desplegar-prod.sh");
+  const resumenCompose = (texto: string) => funcion(script, "resumen_compose", process.env, texto).stdout.trim().split("\n");
+  const resumenDockerfile = (texto: string) => funcion(script, "resumen_dockerfile", process.env, texto).stdout.trim().split("\n");
+
+  it("resumen_compose del compose real: los seis servicios, sus límites e imágenes, y nada del bloque literal del relé", () => {
+    const r = resumenCompose(leer008("docker-compose.prod.yml"));
+    expect(r.filter((l) => l.startsWith("servicio "))).toEqual([
+      "servicio inv-008-app",
+      "servicio inv-008-db",
+      "servicio inv-008-entrada",
+      "servicio inv-008-migrador",
+      "servicio inv-008-respaldo",
+      "servicio inv-008-vigia",
+    ]);
+    for (const l of ["inv-008-app mem_limit 384m", "inv-008-app memswap_limit 384m", "inv-008-app cpus 0.5", "inv-008-app cpu_shares 256", "inv-008-app image inv-008-app:${INV_TAG:-sin-desplegar}"]) {
+      expect(r).toContain(l);
+    }
+    expect(r).not.toContain("INDETERMINADO");
+    expect(r.some((l) => /const|process|servidor/.test(l))).toBe(false);
+  });
+
+  it("resumen_compose: la sangría de los servicios se detecta (4 espacios) y la salida va ordenada", () => {
+    expect(resumenCompose("services:\n    uno:\n        image: x\n        mem_limit: 37m\n    dos:\n        image: y\n")).toEqual([
+      "dos image y",
+      "servicio dos",
+      "servicio uno",
+      "uno image x",
+      "uno mem_limit 37m",
+    ]);
+  });
+
+  it("resumen_compose: los límites de deploy van con su ruta (un límite no se confunde con una reserva)", () => {
+    const texto = "services:\n  uno:\n    deploy:\n      resources:\n        limits:\n          memory: 37m\n          cpus: '0.37'\n        reservations:\n          cpus: '0.13'\n";
+    expect(resumenCompose(texto)).toEqual(["servicio uno", "uno deploy.resources.limits.cpus '0.37'", "uno deploy.resources.limits.memory 37m", "uno deploy.resources.reservations.cpus '0.13'"]);
+  });
+
+  it("resumen_compose: el contenido de un bloque literal (| o >-) no se lee como YAML; los comentarios tampoco", () => {
+    const texto = "services:\n  uno:\n    entrypoint:\n      - |\n        memory: 99m\n        cpus: 9\n      - otro\n    command: >-\n      mem_limit: 77m\n    # mem_limit: 55m\n    mem_limit: 37m  # el de verdad\n";
+    expect(resumenCompose(texto)).toEqual(["servicio uno", "uno mem_limit 37m"]);
+  });
+
+  const indeterminados: Array<[string, string]> = [
+    ["sin services", "name: x\nvolumes:\n  datos:\n"],
+    ["un alias", "x-lim: &lim 37m\nservices:\n  uno:\n    mem_limit: *lim\n"],
+    ["un alias en una lista", "services:\n  uno:\n    networks:\n      - *red\n"],
+    ["una fusión <<", "x-base: &base\n  mem_limit: 37m\nservices:\n  uno:\n    <<: *base\n"],
+    ["include", "include:\n  - otro.yml\nservices:\n  uno:\n    image: x\n"],
+    ["extends", "services:\n  uno:\n    extends:\n      service: dos\n"],
+    ["una etiqueta !reset", "services:\n  uno:\n    mem_limit: !reset null\n"],
+    ["un límite interpolado (depende del archivo de producción, fuera de git)", "services:\n  uno:\n    mem_limit: ${INV_LIMITE:-37m}\n"],
+    ["una imagen interpolada que no es la de INV_TAG", "services:\n  uno:\n    image: ${OTRA_IMAGEN}\n"],
+    // Revisión de seguridad (MEDIO): formas del YAML que el resumen no lee y que esconderían un cambio de límites.
+    ["una clave entre comillas dobles", 'services:\n  uno:\n    "mem_limit": 1237m\n'],
+    ["una clave entre comillas simples", "services:\n  uno:\n    'mem_limit': 1237m\n"],
+    ["un mapa en línea (flow)", "services:\n  uno:\n    deploy: {resources: {limits: {memory: 1237m}}}\n"],
+    ["un servicio en línea (flow)", "services:\n  uno: {image: x, mem_limit: 1237m}\n"],
+    ["un mapa en línea dentro de una lista", "services:\n  uno:\n    volumes:\n      - {type: tmpfs, target: /x}\n"],
+  ];
+  for (const [nombre, texto] of indeterminados) {
+    it(`resumen_compose con ${nombre}: INDETERMINADO (la espera completa)`, () => {
+      expect(resumenCompose(texto)).toContain("INDETERMINADO");
+    });
+  }
+
+  it("resumen_dockerfile del Dockerfile real: sus FROM en orden y nada indeterminado (sus LABEL y RUN de varias líneas no cuentan)", () => {
+    const esperado = leer008("Dockerfile").split("\n").filter((l) => /^FROM\s/i.test(l));
+    expect(esperado.length).toBeGreaterThan(1);
+    expect(resumenDockerfile(leer008("Dockerfile"))).toEqual(esperado);
+  });
+
+  it("resumen_dockerfile: FROM en minúscula, ARG globales y la continuación de un FROM cuentan; un ARG de etapa y lo que continúa otra instrucción no", () => {
+    const texto = ["# syntax=docker/dockerfile:1", "ARG BASE=node:22", "from ${BASE} AS uno", "ARG DE_ETAPA=37", "LABEL a=b \\", "FROM falso-dentro-de-un-label", "FROM alpine \\", "  AS dos", ""].join("\n");
+    expect(resumenDockerfile(texto)).toEqual(["ARG BASE=node:22", "from ${BASE} AS uno", "FROM alpine \\   AS dos"]);
+  });
+
+  for (const [nombre, texto] of [
+    ["sin FROM", "ARG X=37\nRUN true\n"],
+    ["con otro carácter de escape (# escape=)", "# escape=`\nFROM alpine `\n  AS uno\n"],
+  ] as const) {
+    it(`resumen_dockerfile ${nombre}: INDETERMINADO`, () => {
+      expect(resumenDockerfile(texto)).toContain("INDETERMINADO");
+    });
+  }
+
+  const piso = (meminfo: string) => {
+    const archivo = path.join(carpetaTemporal("piso"), "meminfo");
+    writeFileSync(archivo, meminfo);
+    return funcion(script, "INV_PROYECTO_ACTIVO=inv-008-prueba; memoria_bajo_piso", { ...process.env, INV_MEMINFO: archivo });
+  };
+  const meminfo = (disponible: number, swapLibre: number) => `MemTotal: 7913473 kB\nMemAvailable: ${disponible} kB\nSwapTotal: 4191233 kB\nSwapFree: ${swapLibre} kB\n`;
+
+  it("memoria_bajo_piso: MemAvailable < 1 GiB o SwapFree < 512 MiB; en el borde exacto, no", () => {
+    expect(piso(meminfo(1048576, 524288)).stdout).toBe("");
+    expect(piso(meminfo(1048575, 524288)).stdout).toBe("MemAvailable 1023 MiB < 1024 MiB\n");
+    expect(piso(meminfo(1048576, 524287)).stdout).toBe("SwapFree 511 MiB < 512 MiB\n");
+    expect(piso(meminfo(861937, 94613)).stdout).toBe("MemAvailable 841 MiB < 1024 MiB y SwapFree 92 MiB < 512 MiB\n");
+  });
+
+  it("memoria_bajo_piso: sin SwapFree legible, o sin swap (SwapFree 0), cuenta como bajo el piso: no se da por buena una memoria sin medir", () => {
+    expect(piso("MemTotal: 7913473 kB\nMemAvailable: 3617293 kB\n").stdout).toMatch(/no se pudo leer SwapFree/);
+    expect(piso(meminfo(3617293, 0)).stdout).toBe("SwapFree 0 MiB < 512 MiB\n");
+  });
+
+  it("los awk de la espera usan solo ERE portable (mawk del VPS): sin anclas dentro de un grupo ni \\t entre corchetes", () => {
+    const fuente = leer008("scripts/desplegar-prod.sh");
+    for (const f of ["resumen_compose", "resumen_dockerfile"]) {
+      const desde = fuente.indexOf(`${f}() {`);
+      const cuerpo = fuente.slice(desde, fuente.indexOf("\n}\n", desde));
+      expect(desde, f).toBeGreaterThan(-1);
+      expect(cuerpo.length, f).toBeGreaterThan(200);
+      expect(cuerpo, f).not.toMatch(/\(\^|\|\$\)|\[[^\]]*\\t[^\]]*\]/);
+    }
+  });
+
+  it("diferencias: si solo cambia el orden lo dice (la decisión ya es la espera completa)", () => {
+    expect(funcion(script, "diferencias $'FROM a AS x\\nFROM b AS y' $'FROM b AS y\\nFROM a AS x'").stdout).toBe("mismas líneas en otro orden");
+  });
+
+  it("diferencias: sin caracteres de control en el log y cada línea acotada", () => {
+    const r = funcion(script, `diferencias 'servicio uno' $'servicio uno\\nuno image x\\033[31m${"y".repeat(300)}'`).stdout;
+    expect(r).toContain("ahora «uno image x");
+    expect(r).not.toMatch(/[\u0000-\u0008\u000b-\u001f\u007f]/);
+    expect(r.length).toBeLessThan(220);
+  });
+
+  it("archivo_en_sha lee el commit del clon aunque haya un objeto de reemplazo o un GIT_DIR en el entorno (git corre como root)", () => {
+    const repo = crearRepo([], { "nota.ficticio.txt": "original 4613\n" });
+    const otraNota = path.join(carpetaTemporal("reemplazo"), "nota.txt");
+    writeFileSync(otraNota, "reemplazo 1237\n");
+    const original = git(repo.dir, ["rev-parse", `${repo.sha}:008-2026-INVERSIONES/nota.ficticio.txt`]);
+    git(repo.dir, ["replace", original, git(repo.dir, ["hash-object", "-w", otraNota])]);
+    const leer = (env: Entorno) => funcion(script, `INV_DIR_008='${repo.dir008}'; archivo_en_sha '${repo.sha}' nota.ficticio.txt`, env).stdout;
+    expect(leer(process.env)).toBe("original 4613\n");
+    const otro = crearRepo([], { "nota.ficticio.txt": "de otro repo 37911\n" });
+    expect(leer({ ...process.env, GIT_DIR: path.join(otro.dir, ".git") })).toBe("original 4613\n");
+  });
+
+  it("motivo_espera_completa: sin un sha que corre de 40 hex (también una opción disfrazada) o con uno que el clon no tiene, da la espera completa", () => {
+    const repo = crearRepo(["docker-compose.prod.yml", "Dockerfile"]);
+    const motivo = (corre: string) => funcion(script, `INV_DIR_008='${repo.dir008}'; motivo_espera_completa '${corre}' '${repo.sha}'`).stdout.trim();
+    expect(motivo(repo.sha)).toBe("");
+    for (const malo of ["", "latest", "--output=x", "A".repeat(40)]) expect(motivo(malo), malo).toMatch(/sin un sha que corre/);
+    expect(motivo("7".repeat(40))).toMatch(/no se pudo leer/);
   });
 });
