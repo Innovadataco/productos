@@ -6,14 +6,41 @@
  *   dividendo del día / precio del día anterior) − 1, el dividendo reinvertido el día del pago, como la historia de las
  *   proyecciones. Limitación conocida: si la fecha ex cae dentro y el pago fuera, el total queda por debajo.
  */
+import { primerIndiceDesde } from "../proyecciones/ajustes";
 import type { Historia } from "../proyecciones/tipos";
-import type { VentanaRendimiento } from "./tipos";
+import { restarMeses } from "./dias";
+import { redondear } from "./numeros";
+import { VENTANAS_MESES, type VentanaMeses, type VentanaRendimiento } from "./tipos";
 
-export function rendimientosEnVentanas(h: Historia): readonly VentanaRendimiento[] {
-  throw new Error("sin implementar");
+function unaColumna(h: Historia): void {
+  if (h.K !== 1) throw new RangeError("La historia propia tiene una sola columna.");
 }
+
+/** Índice acumulado desde el primer día: 1 y después Π de `paso(t)`. */
+const acumular = (h: Historia, paso: (t: number) => number): number[] => {
+  const indice = [1];
+  for (let t = 0; t < h.T; t += 1) indice.push(indice[t]! * paso(t));
+  return indice;
+};
 
 /** Índice del precio ajustado: 1 el primer día y después Π factores. */
 export function indicePrecio(h: Historia): number[] {
-  throw new Error("sin implementar");
+  unaColumna(h);
+  return acumular(h, (t) => h.factores[t]!);
+}
+
+export function rendimientosEnVentanas(h: Historia): readonly VentanaRendimiento[] {
+  const precio = indicePrecio(h);
+  const total = acumular(h, (t) => h.factores[t]! + h.rendimientos[t]!);
+  const fin = h.dias.length - 1;
+  const hasta = h.dias[fin]!;
+  return VENTANAS_MESES.map((meses: VentanaMeses): VentanaRendimiento => {
+    // La última rueda ≤ objetivo: la anterior a la primera > objetivo.
+    const base = primerIndiceDesde(h.dias, restarMeses(hasta, meses) + "\u0000") - 1;
+    if (base < 0) return { meses, estado: "HISTORIA_NO_ALCANZA" };
+    return {
+      meses, estado: "CALCULADA", desde: h.dias[base]!, hasta, ruedas: fin - base,
+      precio: redondear(precio[fin]! / precio[base]! - 1), total: redondear(total[fin]! / total[base]! - 1),
+    };
+  });
 }

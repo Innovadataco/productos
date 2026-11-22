@@ -8,9 +8,11 @@
 export const DECIMALES_METRICA = 8;
 
 export function redondear(x: number): number {
-  throw new Error("sin implementar");
+  if (!Number.isFinite(x)) throw new RangeError("Una métrica debe ser un número finito.");
+  return Number(x.toFixed(DECIMALES_METRICA)) + 0;
 }
 
 export function compararTexto(a: string, b: string): number {
-  throw new Error("sin implementar");
+  if (a < b) return -1;
+  return a > b ? 1 : 0;
 }

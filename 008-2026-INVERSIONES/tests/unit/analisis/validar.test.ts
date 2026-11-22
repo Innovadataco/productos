@@ -26,6 +26,12 @@ describe("validarEntradas", () => {
     expect(() => validarEntradas({ ...e, tablero: calcularTablero([cerrada("FICTICIA-Z", { precio: D("1237.4"), fecha: dia("2021-12-01") })]) })).toThrow(RangeError);
   });
 
+  it("un cierre del tablero con precio cero o negativo viola el contrato", () => {
+    const e = base();
+    const cero = { id: "FICTICIA-A", cantidad: 37, cierres: [], cierreTablero: { precio: D(0), fecha: dias[3]! } };
+    expect(() => validarEntradas({ ...e, tablero: calcularTablero([entradaTablero(cero)]) })).toThrow(RangeError);
+  });
+
   it("ni ids repetidos en el tablero ni en la historia", () => {
     const e = base();
     expect(() => validarEntradas({ ...e, tablero: { ...e.tablero, filas: [...e.tablero.filas, ...e.tablero.filas] } })).toThrow(RangeError);

@@ -59,6 +59,20 @@ describe("análisis · identidad y orden", () => {
     expect(analizar(iguales).especies.map((x) => x.instrumentoId)).toEqual(["FICTICIA-C", "FICTICIA-D"]);
   });
 
+  it("varias sin valor van al final, por id", () => {
+    const sinValor = (id: string): EspecieFicticia => ({ id, cantidad: 13, cierres: [], cierreTablero: null, soloTablero: true });
+    const a = analizar(portafolio([sinValor("FICTICIA-Y"), especie("FICTICIA-A", 37, 1237.4, 1), sinValor("FICTICIA-X")]));
+    expect(a.especies.map((x) => x.instrumentoId)).toEqual(["FICTICIA-A", "FICTICIA-X", "FICTICIA-Y"]);
+  });
+
+  it("una especie que está en la historia sin cierres de Yahoo (el tablero sí tiene cierre): sin cierres propios", () => {
+    const ultimo = DIAS.at(-1)!;
+    const sinYahoo = { id: "FICTICIA-W", cantidad: 13, cierres: [], cierreTablero: { precio: D("905.61"), fecha: ultimo } };
+    const w = de(analizar(portafolio([especie("FICTICIA-A", 37, 1237.4, 1), sinYahoo])), "FICTICIA-W");
+    expect(w).toMatchObject({ historia: { estado: "SIN_CIERRES" }, riesgo: { estado: "SIN_HISTORIA", motivo: "SIN_CIERRES", dias: 0 } });
+    expect(w.valor!.eq(D("905.61").mul(13))).toBe(true);
+  });
+
   it("una especie sin cierre en el tablero: sin valor, sin peso y sin riesgo", () => {
     const sin = portafolio([especie("FICTICIA-A", 37, 1237.4, 1), { ...especie("FICTICIA-N", 13, 905.61, 1), cierreTablero: null }]);
     expect(de(analizar(sin), "FICTICIA-N")).toMatchObject({ valor: null, peso: null, cierre: { estado: "SIN_CIERRE" }, riesgo: { estado: "SIN_VALOR" }, efectoCaida: null, dividendo12m: null });
