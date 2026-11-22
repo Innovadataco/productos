@@ -16,6 +16,8 @@ export function baseDe(codigo: string): SerieBase {
 }
 
 const punto = (desde: string, hasta: string, valor: string): PuntoVista => ({ desde, hasta, valor });
+/** Como lo guarda la base: sin ceros sobrantes en la fracción. */
+const canonico = (texto: string) => texto.replace(/0+$/, "").replace(/\.$/, "");
 
 export const TRM: SerieConDatos = {
   ...baseDe("TRM"), estado: "CON_DATOS",
@@ -50,7 +52,7 @@ export const IPC: SerieConDatos = {
   ...baseDe("IPC_INDICE"), estado: "CON_DATOS",
   ultimo: { valor: "134.93", desde: "2021-02-01", hasta: "2021-02-28", fuente: "dane:anex-IPC-Indices", traidoEn: "2021-03-09 20:57" },
   frescura: { estado: "AL_DIA", dias: 17, umbralDias: 45, valeHoy: false },
-  historia: meses.map((m, k) => punto(`${m}-01`, finDeMes(m), k === meses.length - 1 ? "134.93" : (131.37 + k * 0.27).toFixed(2))),
+  historia: meses.map((m, k) => punto(`${m}-01`, finDeMes(m), k === meses.length - 1 ? "134.93" : canonico((131.37 + k * 0.27).toFixed(2)))),
   variacion: VARIACION,
 };
 

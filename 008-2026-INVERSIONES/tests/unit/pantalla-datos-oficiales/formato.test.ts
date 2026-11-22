@@ -78,8 +78,8 @@ describe("frescura y estado", () => {
   });
 
   it("la variación que falta: sin base o sin poder calcularla", () => {
-    expect(textoVariacionFaltante({ estado: "SIN_BASE", mesBase: "2020-02-01" })).toBe("Falta el índice de feb-2020 (el mismo mes del año anterior): no se calcula.");
-    expect(textoVariacionFaltante({ estado: "NO_SE_PUDO" })).toBe("No se pudo calcular con los índices guardados.");
+    expect(textoVariacionFaltante({ estado: "SIN_BASE", mesBase: "2020-02-01" })).toBe("falta el índice de feb-2020 (el mismo mes del año anterior): no se calcula.");
+    expect(textoVariacionFaltante({ estado: "NO_SE_PUDO" })).toBe("no se pudo calcular con los índices guardados.");
   });
 
   it("el pie: informa y no recomienda", () => {

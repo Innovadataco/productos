@@ -138,7 +138,8 @@ test.describe("pantalla de datos oficiales", () => {
     page.on("request", (r) => { if (!["GET", "HEAD"].includes(r.method())) pedidos.push(`${r.method()} ${new URL(r.url()).pathname}`); });
     const p = await PaginaDatosOficiales.abrir(page, info);
     await expect(page.locator("header .solo-lectura")).toHaveText("Solo lectura");
-    await expect(page.locator("form, button, input, select, textarea")).toHaveCount(0);
+    // En la página (el encabezado y el contenido): `next dev` agrega su propio botón de herramientas fuera de ellos.
+    await expect(page.locator("header, main").locator("form, button, input, select, textarea")).toHaveCount(0);
     await p.mira(TITULOS_GRAFICAS[0]).focus();
     await page.keyboard.press("Home");
     await p.figura(TITULOS_GRAFICAS[0]).getByText("Ver los datos").click();

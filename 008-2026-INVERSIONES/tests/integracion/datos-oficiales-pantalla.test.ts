@@ -43,14 +43,15 @@ const SERIES: readonly SerieAGuardar[] = [
   },
 ];
 
+const espiarTransaccion = () => vi.spyOn(db, "$transaction");
 let vista: VistaDatosOficiales;
-let transaccion: ReturnType<typeof vi.spyOn>;
+let transaccion: ReturnType<typeof espiarTransaccion>;
 
 beforeAll(async () => {
   const base = (await db.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db ?? "";
   if (!base.endsWith("_test")) throw new Error(`Se negó a correr sobre «${base}»`);
   for (const balance of await guardarSeries(db, SERIES)) expect(balance.fallo, balance.codigo).toBeNull();
-  transaccion = vi.spyOn(db, "$transaction");
+  transaccion = espiarTransaccion();
   vista = await datosOficiales(db, HOY);
 });
 
