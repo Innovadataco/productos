@@ -19,7 +19,7 @@ const NUNCA = ["7.31", "7.29", "13.47", "6.913", "12.437", "carpeta-ficticia", "
 
 const archivo = (bytes: Uint8Array): OrigenBanrep => ({ tipo: "ARCHIVO", bytes });
 const red = (buscar: BuscarHttp): OrigenBanrep => ({ tipo: "RED", buscar });
-const xml = (bytes: Uint8Array): BuscarHttp => async () => new Response(bytes, { headers: { "content-type": "application/xml" } });
+const xml = (bytes: Uint8Array): BuscarHttp => async () => new Response(new Uint8Array(bytes), { headers: { "content-type": "application/xml" } });
 const nuncaPide: BuscarHttp = async () => {
   throw new Error("con --archivo no se pide nada a BanRep");
 };

@@ -25,7 +25,7 @@ describe("pedirSdmxBanrep · el pedido", () => {
     const xml = bytesDe(MENSAJE_TPM);
     const r = await pedir(async (url, init) => {
       llamadas.push([url, init]);
-      return new Response(xml, { headers: XML });
+      return new Response(new Uint8Array(xml), { headers: XML });
     });
     expect(r).toEqual({ ok: true, bytes: xml });
     expect(llamadas).toHaveLength(1);
