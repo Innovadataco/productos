@@ -35,6 +35,7 @@ enum TipoFuente {
   AV_CERTIFICACION
   AV_LOTES
   REGISTRO_DECRETOS // CSV del dueño con los decretos de dividendos (fase C, C4a)
+  REGISTRO_RENDIMIENTOS_FIC // CSV del dueño con los rendimientos del FIC pagados en efectivo y su retención
 }
 
 enum EstadoCarga {
@@ -87,6 +88,7 @@ enum CategoriaAjusteCaja {
   INTERES
   CUSTODIA
   OTRO
+  RENDIMIENTO_FIC // rendimiento del fondo pagado en efectivo (+, entra a la caja); no es un aporte
 }
 
 enum FuenteAjuste {
@@ -120,6 +122,12 @@ enum TipoMovimientoFondo {
   APORTE
   RETIRO
   AJUSTE
+}
+
+/// Lo que dice el encargo del fondo: el pago del rendimiento («PAGO DE RDTOS») y su retención en la fuente («RTE/FTE»).
+enum TipoRendimientoFondo {
+  RENDIMIENTO
+  RETENCION
 }
 
 enum EstadoPrecio {
@@ -323,6 +331,7 @@ model FilaFuente {
   dividendo      Dividendo?
   filaLoteAv     FilaLoteAv?
   decreto        DividendoDecretado?
+  rendimiento    RendimientoFondo?
 
   @@unique([tipoFuente, claveNatural, ocurrencia])
   @@index([primeraCargaId])
@@ -363,6 +372,7 @@ model Instrumento {
   posCert              CertificacionPosicion[]
   fondosCert           CertificacionFondo[]
   movsFondo            MovimientoFondo[]
+  rendimientosFondo    RendimientoFondo[]
   valoresUnidad        ValorUnidadFondo[]
   precios              PrecioCierre[]
   controles            ControlConciliacion[]
@@ -517,6 +527,7 @@ model AjusteCaja {
   creadoEn            DateTime            @default(now()) @db.Timestamptz(6)
   moneda              Moneda              @default(COP)
   movimientoFondo     MovimientoFondo?
+  rendimientoFondo    RendimientoFondo?
   eventoId            String?
   evento              EventoCorporativo?  @relation(fields: [eventoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
@@ -687,6 +698,28 @@ model MovimientoFondo {
 
   @@index([fondoId, fecha])
   @@map("movimiento_fondo")
+}
+
+/// Rendimientos del fondo pagados en efectivo y su retención, de solo inserción (frente fondo-rendimientos). Un hecho por
+/// fila del CSV del dueño (fila cruda cifrada) y uno por (fondo, fecha, tipo). El PAGO llega NETO a la caja: solo el
+/// RENDIMIENTO se enlaza a su AjusteCaja RENDIMIENTO_FIC (+valor, la misma fecha); la RETENCION queda como hecho del fondo
+/// y no mueve la caja (restarla otra vez descontaría dos veces). En SQL (migración rendimientos_fondo): valor > 0 sin NaN,
+/// fecha finita, el enlace por tipo, la coherencia con el ajuste y que el fondo sea un FIC. La escribe solo
+/// src/fondo/rendimientos/guardar.ts.
+model RendimientoFondo {
+  id           String               @id @default(cuid())
+  filaFuenteId String               @unique
+  filaFuente   FilaFuente           @relation(fields: [filaFuenteId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  fondoId      String
+  fondo        Instrumento          @relation(fields: [fondoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  fecha        DateTime             @db.Date
+  tipo         TipoRendimientoFondo
+  valor        Decimal              @db.Decimal(20, 4)
+  ajusteCajaId String?              @unique
+  ajusteCaja   AjusteCaja?          @relation(fields: [ajusteCajaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([fondoId, fecha, tipo])
+  @@map("rendimiento_fondo")
 }
 
 model ValorUnidadFondo {

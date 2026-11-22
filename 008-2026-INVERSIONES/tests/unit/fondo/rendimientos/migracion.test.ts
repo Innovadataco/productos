@@ -17,7 +17,7 @@ const sentencias = (sql: string) => sinComentarios(sql).split(";").map((s) => s.
 
 describe("migración de los tipos de los rendimientos del fondo", () => {
   it("solo agrega RENDIMIENTO_FIC a CategoriaAjusteCaja y REGISTRO_RENDIMIENTOS_FIC a TipoFuente", () => {
-    expect(sentencias(leer("20261122090000_rendimientos_fondo_tipos"))).toEqual([
+    expect(sentencias(leer("20261122132200_rendimientos_fondo_tipos"))).toEqual([
       `ALTER TYPE "CategoriaAjusteCaja" ADD VALUE 'RENDIMIENTO_FIC'`,
       `ALTER TYPE "TipoFuente" ADD VALUE 'REGISTRO_RENDIMIENTOS_FIC'`,
     ]);
@@ -25,7 +25,7 @@ describe("migración de los tipos de los rendimientos del fondo", () => {
 });
 
 describe("migración de la tabla rendimiento_fondo", () => {
-  const sql = leer("20261122090100_rendimientos_fondo");
+  const sql = leer("20261122132300_rendimientos_fondo");
   const codigo = sinComentarios(sql);
   const lista = sentencias(sql);
 

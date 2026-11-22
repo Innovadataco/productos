@@ -85,6 +85,7 @@ describe("reglas escritas a mano en la migración", () => {
       "orden_solo_insercion",
       "plan_version_solo_insercion",
       "regla_plan_solo_insercion",
+      "rendimiento_fondo_solo_insercion",
     ]);
   });
 
