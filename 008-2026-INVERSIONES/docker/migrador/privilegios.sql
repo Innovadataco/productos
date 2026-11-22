@@ -24,8 +24,9 @@
 -- de cero en cada corrida y vuelve a dar solo esto, todo POR COLUMNA (lista única: tests/unit/produccion/permisos-precios.ts):
 --   SELECT de las columnas que leen precios:actualizar (src/precios/actualizar.ts y guardar.ts) y actualizar-fondo
 --          (src/fondo/actualizar.ts y clase.ts), medidas con el SQL que genera Prisma: de lote, solo "instrumentoId"
---          (el filtro de especies con lote); de la certificación, solo la fecha de corte y el precio de valoración
---          (las lee también el disparador precio_cierre_insercion, que es SECURITY INVOKER: sin ellas, falla cerrado);
+--          (el filtro de especies con lote); de la certificación, solo la fecha de corte, si está retirada (la referencia
+--          es solo la vigente) y el precio de valoración (las lee también el disparador precio_cierre_insercion, que es
+--          SECURITY INVOKER: sin ellas, falla cerrado);
 --          de precio_cierre, todas (create() hace RETURNING de todas);
 --   INSERT en precio_cierre y valor_unidad_fondo, sin "reemplazadoEn" (lo que inserta nace vigente);
 --   UPDATE solo de "reemplazadoEn" en esas dos tablas (versionado y retiro).
@@ -99,7 +100,7 @@ BEGIN
     GRANT SELECT ("instrumentoId") ON TABLE public.lote TO inv_precios;
     GRANT SELECT (id, "instrumentoId", proveedor, simbolo, "vigenteDesde", "vigenteHasta") ON TABLE public.simbolo_precio TO inv_precios;
     GRANT SELECT (dia, "esHabil") ON TABLE public.calendario_bvc TO inv_precios;
-    GRANT SELECT (id, "fechaCorte") ON TABLE public.certificacion TO inv_precios;
+    GRANT SELECT (id, "fechaCorte", "retiradaEn") ON TABLE public.certificacion TO inv_precios;
     GRANT SELECT ("certificacionId", "instrumentoId", "precioValoracion") ON TABLE public.certificacion_posicion TO inv_precios;
 
     -- Cierres diarios (camino único de escritura, src/precios/guardar.ts).

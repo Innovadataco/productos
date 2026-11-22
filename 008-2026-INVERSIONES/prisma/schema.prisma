@@ -293,7 +293,7 @@ model CargaArchivo {
   cargadoPorId   String
   cargadoPor     Usuario        @relation(fields: [cargadoPorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   cargadoEn      DateTime       @default(now()) @db.Timestamptz(6)
-  revertidaPorId String? // solo DUENO (Jelkin autoriza)
+  revertidaPorId String? // solo DUENO (Jelkin autoriza); con revertidaEn, solo junto con REVERTIDO (disparador)
   revertidaEn    DateTime?      @db.Timestamptz(6)
   filasNacidas   FilaFuente[]
   filas          FilaDeCarga[]
@@ -602,6 +602,13 @@ model Certificacion {
   fechaCorte         DateTime                @unique @db.Date
   saldoEfectivo      Decimal                 @db.Decimal(20, 4)
   referenciaEfectivo String? // de qué fila del PDF salió el saldo («p2:f17»)
+  /// Retiro (corte equivocado): la reemplaza otra certificación vigente del MISMO archivo con su corte real. Una sola
+  /// vez y sin tocar nada más (disparador); lo retirado y sus conciliaciones quedan como historia. Lo hace solo
+  /// src/importacion/av/corregir.ts. Una retirada no admite conciliaciones, posiciones ni fondos nuevos.
+  retiradaEn         DateTime?               @db.Timestamptz(6)
+  reemplazadaPorId   String?                 @unique
+  reemplazadaPor     Certificacion?          @relation("ReemplazoDeCertificacion", fields: [reemplazadaPorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reemplazaA         Certificacion?          @relation("ReemplazoDeCertificacion")
   posiciones         CertificacionPosicion[]
   fondos             CertificacionFondo[]
   conciliaciones     Conciliacion[]
