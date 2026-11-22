@@ -45,6 +45,12 @@ export const CERTIFICACIONES: ReadonlyArray<readonly [dia: string, valoracion: s
   ["2018-05-21", "237.13"],
 ];
 const SIN_CERTIFICACION = "2018-05-09";
+/**
+ * Frente certificacion-corte-real: una certificación RETIRADA (cargada con el corte equivocado) el 2018-05-25,
+ * reemplazada por la del mismo archivo con corte 2018-05-28. La referencia del día es solo la VIGENTE.
+ */
+export const DIA_RETIRADA = "2018-05-25";
+export const DIA_REEMPLAZO = "2018-05-28";
 
 /** Lo que siembra el dueño (o el superusuario): exento de los disparadores. */
 export function sembrar(ids: Ids): string[] {
@@ -57,11 +63,22 @@ export function sembrar(ids: Ids): string[] {
       `INSERT INTO certificacion_posicion ("certificacionId", "instrumentoId", cantidad, "precioValoracion", "valorMercado") VALUES ('${cert}', '${ids.inst}', 37, ${valoracion}, ${valoracion} * 37)`,
     ];
   });
+  const sha = "c".repeat(63) + "7";
+  const retiro = [
+    `INSERT INTO carga_archivo (id, "tipoFuente", "nombreArchivo", sha256, "fechaCorte", estado, "cargadoPorId") VALUES ('int-carga-ret-${ids.sufijo}', 'AV_CERTIFICACION', 'cert.ficticio.pdf', '${sha}', DATE '${DIA_RETIRADA}', 'CARGADO', '${ids.usuario}')`,
+    `INSERT INTO certificacion (id, "cargaId", "fechaCorte", "saldoEfectivo") VALUES ('int-cert-ret-${ids.sufijo}', 'int-carga-ret-${ids.sufijo}', DATE '${DIA_RETIRADA}', 0)`,
+    `INSERT INTO certificacion_posicion ("certificacionId", "instrumentoId", cantidad, "precioValoracion", "valorMercado") VALUES ('int-cert-ret-${ids.sufijo}', '${ids.inst}', 37, 4613.27, 4613.27 * 37)`,
+    `INSERT INTO carga_archivo (id, "tipoFuente", "nombreArchivo", sha256, "fechaCorte", estado, "cargadoPorId") VALUES ('int-carga-nue-${ids.sufijo}', 'AV_CERTIFICACION', 'cert.ficticio.pdf', '${sha}', DATE '${DIA_REEMPLAZO}', 'CARGADO', '${ids.usuario}')`,
+    `INSERT INTO certificacion (id, "cargaId", "fechaCorte", "saldoEfectivo") VALUES ('int-cert-nue-${ids.sufijo}', 'int-carga-nue-${ids.sufijo}', DATE '${DIA_REEMPLAZO}', 0)`,
+    `INSERT INTO certificacion_posicion ("certificacionId", "instrumentoId", cantidad, "precioValoracion", "valorMercado") VALUES ('int-cert-nue-${ids.sufijo}', '${ids.inst}', 37, 4613.27, 4613.27 * 37)`,
+    `UPDATE certificacion SET "retiradaEn" = now(), "reemplazadaPorId" = 'int-cert-nue-${ids.sufijo}' WHERE id = 'int-cert-ret-${ids.sufijo}'`,
+  ];
   return [
     `INSERT INTO usuario (id, email, rol) VALUES ('${ids.usuario}', 'integridad-${ids.sufijo}@ejemplo.invalid', 'DUENO')`,
     `INSERT INTO instrumento (id, tipo, nemotecnico, nombre, activo) VALUES ('${ids.inst}', 'ACCION', 'FICTINT${ids.sufijo.toUpperCase()}', 'Ficticia integridad', false)`,
     `INSERT INTO instrumento (id, tipo, "codigoFic", nombre, activo) VALUES ('${ids.fondo}', 'FIC', 'fict-int-${ids.sufijo}', 'Fondo ficticio integridad', false)`,
     ...certs,
+    ...retiro,
     `INSERT INTO precio_cierre (id, "instrumentoId", fecha, precio, fuente, estado, "reemplazadoEn") VALUES ('${ids.retirado}', '${ids.inst}', DATE '2018-05-22', 3719.41, 'yahoo', 'NO_VERIFICADO', now())`,
     `INSERT INTO precio_cierre (id, "instrumentoId", fecha, precio, fuente, estado) VALUES ('${ids.vigente}', '${ids.inst}', DATE '2018-05-23', 3719.41, 'yahoo', 'NO_VERIFICADO')`,
     `INSERT INTO precio_cierre (id, "instrumentoId", fecha, precio, fuente, estado) VALUES ('${ids.vigente2}', '${ids.inst}', DATE '2018-05-24', 3719.41, 'yahoo', 'NO_VERIFICADO')`,
@@ -152,6 +169,8 @@ export const RECHAZOS: readonly Rechazo[] = [
     sql: (i) => [insertarCierre(i, { id: "a5b", fecha: dia("2018-05-08"), estado: "VERIFICADO", fuenteReferencia: ref("2018-05-08"), ...CUADRA, desviacionPct: null })] },
   { nombre: "desviacionPct corrida en 0,000002 (fuera de la tolerancia de un ulp)", error: VERIFICACION_FALSA,
     sql: (i) => [insertarCierre(i, { id: "a5c", fecha: dia("2018-05-08"), estado: "VERIFICADO", fuenteReferencia: ref("2018-05-08"), ...CUADRA, desviacionPct: "0.516772" })] },
+  { nombre: "VERIFICADO contra una certificación retirada (corte equivocado): ya no es la referencia del día", error: VERIFICACION_FALSA,
+    sql: (i) => [insertarCierre(i, { id: "a4d", fecha: dia(DIA_RETIRADA), estado: "VERIFICADO", fuenteReferencia: ref(DIA_RETIRADA), ...CUADRA })] },
   { nombre: "fuente 'manual'", error: /el servicio solo guarda cierres de yahoo/,
     sql: (i) => [insertarCierre(i, { id: "a6a", fecha: dia(SIN_CERTIFICACION), precio: PRECIO, estado: "NO_VERIFICADO", fuente: "manual" })] },
   { nombre: "fuente 'YAHOO' (otra forma)", error: /el servicio solo guarda cierres de yahoo/,
@@ -227,6 +246,12 @@ export const ACEPTADOS: readonly Aceptado[] = [
   { nombre: "NO_VERIFICADO que no cuadra, con su referencia",
     sql: (i) => [insertarCierre(i, { id: "ok1b", fecha: dia("2018-05-16"), estado: "NO_VERIFICADO", fuenteReferencia: ref("2018-05-16"), ...NO_CUADRA })],
     verificar: (i) => cierreOk(i, "ok1b", `estado = 'NO_VERIFICADO' AND "precioReferencia" = 4613.27`) },
+  { nombre: "el día de una certificación retirada no tiene referencia: NO_VERIFICADO sin referencia",
+    sql: (i) => [insertarCierre(i, { id: "ok1c", fecha: dia(DIA_RETIRADA), estado: "NO_VERIFICADO", precio: CUADRA.precio })],
+    verificar: (i) => cierreOk(i, "ok1c", `estado = 'NO_VERIFICADO' AND "fuenteReferencia" IS NULL AND "precioReferencia" IS NULL`) },
+  { nombre: "el día del reemplazo (vigente): VERIFICADO contra él",
+    sql: (i) => [insertarCierre(i, { id: "ok1d", fecha: dia(DIA_REEMPLAZO), estado: "VERIFICADO", fuenteReferencia: ref(DIA_REEMPLAZO), ...CUADRA })],
+    verificar: (i) => cierreOk(i, "ok1d", `estado = 'VERIFICADO' AND "fuenteReferencia" = '${ref(DIA_REEMPLAZO)}'`) },
   { nombre: "desviacionPct corrida en un ulp (0,000001): dentro de la tolerancia",
     sql: (i) => [insertarCierre(i, { id: "ok2", fecha: dia("2018-05-14"), estado: "VERIFICADO", fuenteReferencia: ref("2018-05-14"), ...CUADRA, desviacionPct: "0.516771" })],
     verificar: (i) => cierreOk(i, "ok2", `estado = 'VERIFICADO'`) },

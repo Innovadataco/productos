@@ -62,6 +62,31 @@ describe("migración *_precios_integridad", () => {
   });
 });
 
+// Frente certificacion-corte-real: con el retiro de una certificación (corte equivocado), la referencia del día es la
+// VIGENTE. Una migración posterior redefine inv_precio_cierre_insercion SOLO con ese filtro: lo demás, idéntico.
+describe("inv_precio_cierre_insercion · la referencia es la certificación vigente", () => {
+  const definiciones = carpetas.flatMap((c) => {
+    const texto = readFileSync(path.join(dirMigraciones, c, "migration.sql"), "utf8").replace(/--.*$/gm, "");
+    return [...texto.matchAll(/CREATE (?:OR REPLACE )?FUNCTION "inv_precio_cierre_insercion"\(\)([\s\S]*?)\$\$;/g)].map((m) => ({ carpeta: c, cuerpo: m[1]! }));
+  });
+  const original = funciones.find((f) => f.nombre === "inv_precio_cierre_insercion")?.cuerpo ?? "";
+  const ultima = definiciones.at(-1);
+  const plano = (t: string) => t.replace(/\s+/g, " ").trim();
+  const FILTRO_VIEJO = 'WHERE p."instrumentoId" = NEW."instrumentoId" AND c."fechaCorte" = NEW."fecha";';
+  const FILTRO_NUEVO = 'WHERE p."instrumentoId" = NEW."instrumentoId" AND c."fechaCorte" = NEW."fecha" AND c."retiradaEn" IS NULL;';
+
+  it("la última definición es posterior a la migración del retiro y filtra retiradaEn IS NULL", () => {
+    expect(ultima?.carpeta ?? "").not.toBe(propias[0]);
+    expect((ultima?.carpeta ?? "") > "20261122010000_certificacion_retiro").toBe(true);
+    expect(ultima?.cuerpo ?? "").toContain(FILTRO_NUEVO);
+  });
+
+  it("fuera del filtro, la última definición es idéntica a la de *_precios_integridad (mismas reglas)", () => {
+    expect(original).toContain(FILTRO_VIEJO);
+    expect(plano(ultima?.cuerpo ?? "")).toBe(plano(original.replace(FILTRO_VIEJO, FILTRO_NUEVO)));
+  });
+});
+
 describe("la regla del disparador es la misma de src/precios y src/fondo", () => {
   it("fuente de los cierres: FUENTE de guardar.ts", () => {
     expect(FUENTE).toBe("yahoo");
