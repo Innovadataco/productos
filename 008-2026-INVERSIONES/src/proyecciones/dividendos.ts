@@ -4,9 +4,14 @@
  * - Pagos de Trii: la base guarda el neto por TODA la tenencia, sin fecha ex ni valor por acción. Por acción =
  *   neto / tenencia del día del pago (la misma regla de src/plan/dividendos.ts). Se omite (y se avisa) si ese día
  *   no había tenencia o si la tenencia cambió en los VENTANA_EX_DIAS anteriores: no se sabe qué acciones cobraron.
- * - Decretos: entran con su valor por acción (BRUTO, con aviso) solo si no tienen un pago recibido enlazado ni un pago
- *   de la especie el mismo día. Los de pago futuro solo se cuentan: la tasa histórica ya los representa.
+ * - Decretos: entran con su valor por acción (BRUTO, con aviso) solo si ningún pago de Trii de la especie que ENTRÓ a la
+ *   historia cae en la ventana del cruce (src/datos-oficiales/decretos/ventana.ts, la misma de la pantalla): ese pago ya
+ *   es el dividendo y sumar el decreto lo contaría dos veces (C5b). Si el pago se omitió (sin tenencia o con la tenencia
+ *   cambiando), el decreto entra: así no se pierde. Es conservador: si dos ventanas se tocan, un solo pago descarta los
+ *   dos decretos (el cruce de la pantalla los marca PAGO_EN_DISPUTA). Los de pago futuro solo se cuentan: la tasa
+ *   histórica ya los representa. `recibido` y el enlace (`decretadoId`) son de las columnas viejas, siempre vacías.
  */
+import { enVentanaDePago } from "../datos-oficiales/decretos/ventana";
 import { sumarDias } from "../plan/fechas";
 import { constanteEn, tenenciaEn } from "../plan/tenencia";
 import { diaIso } from "../precios/horario";
@@ -32,17 +37,21 @@ const aviso = (a: AccionEntrada, codigo: AvisoCrudo["codigo"], fecha: Date): Avi
 export function dividendosPorAccion(a: AccionEntrada, hoy: Date): DividendosEspecie {
   const pagos: PagoPorAccion[] = [];
   const avisos: AvisoCrudo[] = [];
+  const entraron: Date[] = [];
   for (const d of a.dividendos) {
     const tenencia = tenenciaEn(a.movimientos, d.fechaPago);
     if (tenencia <= 0n) avisos.push(aviso(a, "DIVIDENDO_SIN_TENENCIA", d.fechaPago));
     else if (!constanteEn(a.movimientos, sumarDias(d.fechaPago, -VENTANA_EX_DIAS), d.fechaPago)) avisos.push(aviso(a, "DIVIDENDO_TENENCIA_CAMBIA", d.fechaPago));
-    else pagos.push({ dia: diaIso(d.fechaPago), porAccion: d.montoNeto / Number(tenencia), origen: "PAGO" });
+    else {
+      pagos.push({ dia: diaIso(d.fechaPago), porAccion: d.montoNeto / Number(tenencia), origen: "PAGO" });
+      entraron.push(d.fechaPago);
+    }
   }
-  const diasConPago = new Set(a.dividendos.map((d) => diaIso(d.fechaPago)));
+  const cruzado = (fechaPago: Date) => entraron.some((f) => enVentanaDePago(fechaPago, f));
   const enlazados = new Set(a.dividendos.flatMap((d) => (d.decretadoId ? [d.decretadoId] : [])));
   let decretosFuturos = 0;
   for (const dc of a.decretos) {
-    if (dc.recibido || enlazados.has(dc.id) || diasConPago.has(diaIso(dc.fechaPago))) continue;
+    if (dc.recibido || enlazados.has(dc.id) || cruzado(dc.fechaPago)) continue;
     if (dc.fechaPago > hoy) {
       decretosFuturos += 1;
       continue;
