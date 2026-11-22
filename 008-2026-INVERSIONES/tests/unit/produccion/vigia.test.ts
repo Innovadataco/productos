@@ -10,13 +10,14 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, utimesSync 
 import { createServer, type Server } from "node:http";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { chmodSync } from "node:fs";
 import { carpetaTemporal, crearFalsos, entorno, idArchivo, ruta008, rutaEnPath, type Entorno, type Falsos } from "./falsos";
 
 // Cada prueba corre scripts de bash con varios procesos: con la suite en paralelo puede pasar de 5 s.
 vi.setConfig({ testTimeout: 60_000 });
 
 const VIGIA = ruta008("docker/vigia/vigia.sh");
+/** El curl del vigía: un archivo fijo del repo, que registra la llamada y habla con el Telegram falso por el socket. */
+const CURL_VIGIA = ruta008("tests/unit/produccion/falsos-vigia/curl");
 const TOKEN = "123456:TOKEN-FICTICIO-NUNCA-EN-EL-MENSAJE";
 const ID_OOM = "4f3c2b1a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b";
 
@@ -73,15 +74,7 @@ function preparar() {
   };
   fijarMemoria(4000);
   fijarOom(0);
-  // curl envuelto: registra sus argumentos y habla con el Telegram falso por el socket.
-  const envoltorio = path.join(dir, "curl-real");
-  mkdirSync(envoltorio);
-  writeFileSync(
-    path.join(envoltorio, "curl"),
-    `#!/usr/bin/env bash\nl="curl"; for a in "$@"; do l="$l"$'\\t'"$a"; done; printf '%s\\n' "$l" >>"$FALSO_REGISTRO"\nexec /usr/bin/curl --unix-socket "$FALSO_TELEGRAM_SOCKET" "$@"\n`,
-  );
-  chmodSync(path.join(envoltorio, "curl"), 0o755);
-  const env = entorno(falsos, {
+  const base = entorno(falsos, {
     VIGIA_MEMINFO: meminfo,
     VIGIA_CGROUP: cgroup,
     VIGIA_ESTADO_DIR: estado,
@@ -91,7 +84,8 @@ function preparar() {
     FALSO_TELEGRAM_SOCKET: socket,
     VIGIA_OOM_CALMA_S: "0",
   });
-  env.PATH = `${envoltorio}:${env.PATH}`;
+  // El curl del vigía, primero en el PATH: tapa al de falsos/ (la API de GitHub) sin tocarlo.
+  const env: Entorno = { ...base, PATH: `${path.dirname(CURL_VIGIA)}:${base.PATH}` };
   const pasada = (extra: Record<string, string> = {}) =>
     new Promise<{ status: number | null; stdout: string; stderr: string }>((ok) => {
       const hijo = spawn("sh", [VIGIA, "--una-pasada"], { env: { ...env, ...extra } as NodeJS.ProcessEnv });
@@ -105,9 +99,6 @@ function preparar() {
 }
 
 const textos = () => mensajes.map((m) => m.cuerpo.text);
-
-/** El curl del vigía: un archivo fijo del repo, que registra la llamada y habla con el Telegram falso por el socket. */
-const CURL_VIGIA = ruta008("tests/unit/produccion/falsos-vigia/curl");
 
 describe("vigía · el curl falso", () => {
   // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para

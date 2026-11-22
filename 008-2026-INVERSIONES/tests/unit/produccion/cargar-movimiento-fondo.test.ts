@@ -4,11 +4,11 @@
 // rango y la fecha) y se niega con 64 sin correr el CLI, sin temporales y sin repetir valores. El código del CLI pasa
 // tal cual. Correo, código, fecha y cifras inventados (no redondos; 2027).
 import { spawn } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, idArchivo, ruta008, TSX_CARGAR_FALSO, type Entorno } from "./falsos";
+import { appCargarFalsa, carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, idArchivo, ruta008, TSX_CARGAR_FALSO, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -43,25 +43,13 @@ function ejecutar(programa: string, args: string[], env: Entorno, entrada: Buffe
   });
 }
 
-/** Un /app falso con un tsx que registra su argv (una línea, separado por tabuladores). */
+/** Un /app falso propio de la prueba, con el tsx versionado (falsos-cargar/tsx), que registra su argv, el cwd, los permisos y el sha del temporal. */
 function preparar() {
   const dir = carpetaTemporal("cargar-movimiento-fondo");
-  const app = path.join(dir, "app");
+  const app = appCargarFalsa(dir);
   const tmp = path.join(dir, "tmp");
-  mkdirSync(path.join(app, "node_modules", ".bin"), { recursive: true });
   mkdirSync(tmp);
   const registro = path.join(dir, "tsx.txt");
-  const tsx = path.join(app, "node_modules", ".bin", "tsx");
-  writeFileSync(
-    tsx,
-    [
-      "#!/usr/bin/env bash",
-      'printf "argv" >>"$FALSO_TSX_REGISTRO"; for a in "$@"; do printf "\\t%s" "$a" >>"$FALSO_TSX_REGISTRO"; done; printf "\\n" >>"$FALSO_TSX_REGISTRO"',
-      'exit "${FALSO_TSX_RC:-0}"',
-      "",
-    ].join("\n"),
-  );
-  chmodSync(tsx, 0o755);
   const swap = path.join(dir, "memory.swap.max");
   writeFileSync(swap, "0\n");
   const env: Entorno = { PATH: process.env.PATH, INV_CARGAR_APP: app, INV_CARGAR_TMP: tmp, INV_CARGAR_SWAP: swap, FALSO_TSX_REGISTRO: registro };

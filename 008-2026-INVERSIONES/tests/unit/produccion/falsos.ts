@@ -1,7 +1,7 @@
 // Apoyo de las pruebas de producción: ejecutables falsos en PATH (docker, curl, flock, df, ps, npm, sleep)
 // que registran cada llamada, y repos git temporales. No es una prueba (no termina en .test.ts).
 import { spawn, spawnSync, type SpawnSyncReturns } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,6 +22,19 @@ export function carpetaTemporal(prefijo: string): string {
 const DIR_FALSOS = fileURLToPath(new URL("./falsos", import.meta.url));
 /** El tsx falso del /app de inv-cargar (cargar-*.test.ts): versionado, como los de ./falsos/. */
 export const TSX_CARGAR_FALSO = fileURLToPath(new URL("./falsos-cargar/tsx", import.meta.url));
+
+/**
+ * /app falso de inv-cargar en `<dir>/app`, propio de la prueba, con `node_modules/.bin/tsx` como enlace simbólico al
+ * tsx versionado: corre el archivo del repo, nunca uno nuevo. `symlinkSync` no sobrescribe (falla si ya existe), y
+ * ninguna prueba debe escribir por ese enlace: pisaría el del repo. Candado: el inodo, en cada cargar-*.test.ts.
+ */
+export function appCargarFalsa(dir: string): string {
+  const app = path.join(dir, "app");
+  const bin = path.join(app, "node_modules", ".bin");
+  mkdirSync(bin, { recursive: true });
+  symlinkSync(TSX_CARGAR_FALSO, path.join(bin, "tsx"));
+  return app;
+}
 
 /** Identidad del archivo que se ejecuta (sigue los enlaces): dispositivo e inodo. */
 export function idArchivo(ruta: string): string {

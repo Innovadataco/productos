@@ -18,6 +18,8 @@ const readFileSync008 = leer008;
 vi.setConfig({ testTimeout: 60_000 });
 
 const COMUN = ruta008("scripts/produccion-comun.sh");
+/** El findmnt falso: un archivo fijo del repo (ver «montaje del host», abajo). */
+const FINDMNT_FALSO = ruta008("tests/unit/produccion/falsos-montaje/findmnt");
 const env = (extra: Record<string, string>) => {
   const limpio = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("INV_")));
   return { ...limpio, ...extra };
@@ -337,14 +339,13 @@ describe("configuración no secreta · la carpeta de respaldos (inv-008.conf)", 
 // de respaldos, que hace el CEO de PI. Mientras no lo confirme, los scripts AVISAN (no bloquean); volverlo fatal es
 // cambiar una constante (INV_MONTAJE_RESPALDOS_FATAL=1).
 describe("montaje del host de la carpeta de respaldos · nosuid y noexec (por ahora avisa)", () => {
+  /** findmnt falso versionado: registra la llamada en `<dir>/registro.txt` e imprime `opciones`. */
   const findmntFalso = (opciones: string | null) => {
     const dir = carpetaTemporal("findmnt");
-    const bin = path.join(dir, "bin");
-    mkdirSync(bin);
-    // null: un findmnt que falla sin imprimir nada (el VPS no puede leer el montaje).
-    const cuerpo = opciones === null ? "exit 1" : `printf '%s\\n' '${opciones}'`;
-    writeFileSync(path.join(bin, "findmnt"), `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >"${dir}/args.txt"\n${cuerpo}\n`, { mode: 0o755 });
-    return { dir, env: env({ PATH: `${bin}:/usr/bin:/bin` }) };
+    // null: un findmnt que falla sin imprimir nada (el VPS no puede leer el montaje). Las tres variables siempre:
+    // env() no limpia las FALSO_* heredadas.
+    const falso = { FALSO_REGISTRO: path.join(dir, "registro.txt"), FALSO_FINDMNT_OPCIONES: opciones ?? "", FALSO_FINDMNT_RC: opciones === null ? "1" : "0" };
+    return { dir, env: env({ PATH: `${path.dirname(FINDMNT_FALSO)}:/usr/bin:/bin`, ...falso }) };
   };
   const revisar = (opciones: string | null, extra = "") => {
     const f = findmntFalso(opciones);
@@ -354,7 +355,7 @@ describe("montaje del host de la carpeta de respaldos · nosuid y noexec (por ah
   // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
   // todo el Mac: con la máquina cargada son segundos por archivo. Por eso findmnt es un archivo fijo del repo.
   it("findmnt es el falso versionado (falsos-montaje/findmnt), el mismo archivo en todas las pruebas: no se crea uno nuevo", () => {
-    const versionado = idArchivo(ruta008("tests/unit/produccion/falsos-montaje/findmnt"));
+    const versionado = idArchivo(FINDMNT_FALSO);
     for (const opciones of ["rw,nosuid,noexec", null]) expect(idArchivo(rutaEnPath(findmntFalso(opciones).env, "findmnt")), String(opciones)).toBe(versionado);
   });
 
