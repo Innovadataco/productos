@@ -8,17 +8,23 @@
  *   certificado. Sin cierre: «sin_precio_al_corte» (nunca el día anterior).
  * - FONDO: unidades del sistema × valor de unidad de la SFC del corte, ±0,5 %. Sin unidades: «fondo_sin_unidades»
  *   (no se derivan del saldo: sería inventar el dato).
- * - EFECTIVO: ±1 COP absoluto (libro de caja; decisión del CEO). Si no, el porqué y la cifra sin explicar.
+ * - EFECTIVO: ±1 COP absoluto (libro de caja; decisión del CEO). Si no, el porqué y la cifra sin explicar:
+ *   «aporte_fic_sin_registrar» si hay fondo certificado sin su aporte; si no, «rendimientos_fic_sin_registrar» si el
+ *   aporte está y ningún rendimiento del fondo (pagado en efectivo) está registrado hasta el corte, y la caja
+ *   certificada tiene MÁS dinero que la del sistema (lo único que un rendimiento faltante puede explicar); si no,
+ *   «partida_sin_fuente». Con rendimientos registrados, el detalle dice cuántos se contaron y el último día.
  * - El total que no cuadra dice «fecha_corte_dudosa» si todas las especies (2 o más) difieren del cierre del corte, o
  *   si todas cuadran con el cierre del día hábil anterior (`corteReal`, frente certificacion-corte-real), aunque
  *   alguna también cuadre con el del corte; en ese caso el detalle lleva `fechaSugerida` (ese día hábil anterior).
  * Resultado global: CUADRA si todo cuadra; PARCIAL si lo único pendiente es T+2; NO_CUADRA en otro caso.
  * v2: la regla del día hábil anterior y `fechaSugerida` (una conciliación v1 guardada queda DESACTUALIZADA).
+ * v3 (frente fondo-rendimientos): «rendimientos_fic_sin_registrar» y el detalle de los rendimientos contados en el
+ * EFECTIVO (las v2 guardadas quedan DESACTUALIZADAS hasta reconciliar).
  */
 import { Prisma } from "@prisma/client";
 import { corteReal } from "./corte-real";
 
-export const VERSION_CALCULO = "conciliacion-v2";
+export const VERSION_CALCULO = "conciliacion-v3";
 export const TOLERANCIA_VALOR = "0.005";
 export const TOLERANCIA_EFECTIVO_COP = "1";
 const ESCALA = 6;
@@ -51,12 +57,20 @@ export interface FondoEntrada {
   readonly valorUnidad: string | null;
 }
 
+/** Los rendimientos (pagados en efectivo) de los fondos certificados, registrados hasta el corte. */
+export interface RendimientosFicEntrada {
+  readonly cantidad: number;
+  /** El día (AAAA-MM-DD) del último, o null si no hay. */
+  readonly ultimo: string | null;
+}
+
 export interface EfectivoEntrada {
   readonly certificado: string;
   readonly liquidado: string;
   readonly operado: string;
   readonly hayFondo: boolean;
   readonly aporteFondoRegistrado: boolean;
+  readonly rendimientosFic: RendimientosFicEntrada;
 }
 
 export interface EntradasConciliacion {
@@ -166,8 +180,18 @@ function controlEfectivo(e: EfectivoEntrada): Control {
   const valores = { esperado: txt(D(e.liquidado)), real: txt(real), diferencia: txt(diferencia), tolerancia: TOLERANCIA_EFECTIVO_COP };
   if (diferencia.abs().lte(TOLERANCIA_EFECTIVO_COP)) return control("EFECTIVO", null, valores);
   if (real.sub(e.operado).abs().lte(TOLERANCIA_EFECTIVO_COP)) return control("EFECTIVO", null, { ...valores, resultado: "PENDIENTE_LIQUIDACION", codigoMotivo: "t_mas_2", detalle: { operado: txt(D(e.operado)) } });
-  const motivo = e.hayFondo && !e.aporteFondoRegistrado ? "aporte_fic_sin_registrar" : "partida_sin_fuente";
-  return control("EFECTIVO", null, { ...valores, resultado: "NO_CUADRA", codigoMotivo: motivo, detalle: { sinExplicar: txt(diferencia) } });
+  const r = e.rendimientosFic;
+  const detalle: Readonly<Record<string, string | number>> = r.cantidad > 0 && r.ultimo !== null
+    ? { sinExplicar: txt(diferencia), rendimientosFic: r.cantidad, ultimoRendimientoFic: r.ultimo }
+    : { sinExplicar: txt(diferencia) };
+  return control("EFECTIVO", null, { ...valores, resultado: "NO_CUADRA", codigoMotivo: motivoEfectivo(e, diferencia), detalle });
+}
+
+/** El porqué de un EFECTIVO que no cuadra (ver la cabecera); `diferencia` = real − esperado. */
+function motivoEfectivo(e: EfectivoEntrada, diferencia: Prisma.Decimal): string {
+  if (e.hayFondo && !e.aporteFondoRegistrado) return "aporte_fic_sin_registrar";
+  if (e.hayFondo && e.rendimientosFic.cantidad === 0 && diferencia.gt(0)) return "rendimientos_fic_sin_registrar";
+  return "partida_sin_fuente";
 }
 
 export function calcularConciliacion(e: EntradasConciliacion): Conciliado {
