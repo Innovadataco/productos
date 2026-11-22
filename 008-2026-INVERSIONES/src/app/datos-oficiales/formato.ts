@@ -9,7 +9,7 @@
  * Lo de la gráfica (formatos de los ejes, el detalle de un punto y el resumen) también vive aquí, para probarlo sin DOM.
  */
 import { etiquetaTick, fecha, numero } from "@/app/tablero/formato";
-import type { DiaIso, FormaVigencia, FrescuraVista, SerieBase, SerieConDatos, SerieVista, VariacionVista, Ventana } from "./tipos";
+import type { DiaIso, FormaVigencia, FrescuraVista, SerieBase, SerieConDatos, SerieGrafica, SerieVista, VariacionVista, Ventana } from "./tipos";
 
 export const SIN_DATO = "—";
 export const PIE_DATOS_OFICIALES = "008 informa; no recomienda comprar ni vender.";
@@ -91,28 +91,37 @@ const EN_LA_VENTANA: Readonly<Record<Ventana, string>> = { ANIO: "en el último 
 /** Los decimales del eje: hasta 2 (las marcas «bonitas» no piden más), sin ceros a la derecha. */
 const DECIMALES_EJE = 2;
 
-const sufijo = (s: SerieBase): string => (s.unidad.startsWith("%") ? " %" : "");
+const sufijo = (s: SerieGrafica): string => (s.unidad.startsWith("%") ? " %" : "");
 const sinCeros = (texto: string): string => (texto.includes(",") ? texto.replace(/0+$/, "").replace(/,$/, "") : texto);
 
-export const tituloGrafica = (s: SerieBase): string => `${s.nombre}, ${TEXTO_VENTANA[s.ventana]}`;
+/** Lo que necesita la gráfica (y nada más: es lo que viaja al navegador). */
+export const paraGrafica = (s: SerieConDatos): SerieGrafica => ({
+  codigo: s.codigo, nombre: s.nombre, unidad: s.unidad, escala: s.escala, vigencia: s.vigencia, ventana: s.ventana, historia: s.historia,
+});
+
+export const tituloGrafica = (s: SerieGrafica): string => `${s.nombre}, ${TEXTO_VENTANA[s.ventana]}`;
 
 /** Lo que se dibuja: el valor de cada vigencia como número (solo para trazar; los textos salen del decimal). */
-export const valores = (s: SerieConDatos): number[] => s.historia.map((p) => Number(p.valor));
+export const valores = (s: SerieGrafica): number[] => s.historia.map((p) => Number(p.valor));
 
-export const formatoY = (s: SerieBase) => (v: number): string => `${numero(v, s.escala)}${sufijo(s)}`;
-export const formatoEje = (s: SerieBase) => (v: number): string => `${sinCeros(numero(v, DECIMALES_EJE))}${sufijo(s)}`;
-export const formatoDia = (s: SerieBase) => (dia: DiaIso): string => (s.vigencia === "MES" ? mes(dia) : fecha(dia));
+export const formatoY = (s: SerieGrafica) => (v: number): string => `${numero(v, s.escala)}${sufijo(s)}`;
+export const formatoEje = (s: SerieGrafica) => (v: number): string => `${sinCeros(numero(v, DECIMALES_EJE))}${sufijo(s)}`;
+export const formatoDia = (s: SerieGrafica) => (dia: DiaIso): string => (s.vigencia === "MES" ? mes(dia) : fecha(dia));
 export { etiquetaTick as formatoTick };
 
 /** En el detalle de un punto: hasta cuándo vale un tramo de varios días (un día o un mes no lo necesitan). */
-export const extraDetalle = (s: SerieConDatos) => (i: number): string | null => {
+export const extraDetalle = (s: SerieGrafica) => (i: number): string | null => {
   const p = s.historia[i];
   if (!p || s.vigencia === "MES" || p.hasta === p.desde) return null;
   return `Vigente hasta el ${fecha(p.hasta)}`;
 };
 
-/** El texto alternativo de la gráfica, con las cifras exactas (del decimal, no del número trazado). */
-export function resumenGrafica(s: SerieConDatos): string {
+/**
+ * El texto alternativo de la gráfica, con las cifras exactas (del decimal, no del número trazado). El mínimo y el máximo
+ * se ELIGEN comparando el número trazado: con las escalas del catálogo (hasta 3 decimales y menos de 15 cifras) la
+ * comparación es exacta; las cifras que se escriben salen siempre del texto.
+ */
+export function resumenGrafica(s: SerieGrafica): string {
   const nums = valores(s);
   const indice = (mejor: (a: number, b: number) => boolean) => nums.reduce((k, v, i) => (mejor(v, nums[k]!) ? i : k), 0);
   const [primero, ultimo, min, max] = [s.historia[0]!, s.historia[s.historia.length - 1]!, s.historia[indice((a, b) => a < b)]!, s.historia[indice((a, b) => a > b)]!];
@@ -123,7 +132,7 @@ export function resumenGrafica(s: SerieConDatos): string {
 }
 
 /** Sin dos puntos en la ventana no hay línea: la nota que va en su lugar (null si hay gráfica). */
-export function notaSinGrafica(s: SerieConDatos): string | null {
+export function notaSinGrafica(s: SerieGrafica): string | null {
   if (s.historia.length >= 2) return null;
   return s.historia.length === 0
     ? `No hay valores ${EN_LA_VENTANA[s.ventana]}: el último cargado es anterior.`

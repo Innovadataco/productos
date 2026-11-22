@@ -10,7 +10,7 @@
  */
 import { Encabezado } from "../_plan/Encabezado";
 import {
-  PIE_DATOS_OFICIALES, TEXTO_ENTRADA, TEXTO_ESTADO, cifra, conSigno, detalleFrescura, estadoDe, lineaVigencia, mes, sigla, textoVariacionFaltante, traidoEl,
+  PIE_DATOS_OFICIALES, TEXTO_ENTRADA, TEXTO_ESTADO, cifra, conSigno, detalleFrescura, estadoDe, lineaVigencia, mes, paraGrafica, sigla, textoVariacionFaltante, traidoEl,
 } from "./formato";
 import { enlaceDeFuente } from "./fuentes";
 import { fecha } from "../tablero/formato";
@@ -23,11 +23,15 @@ const MENSAJE: Readonly<Record<"SIN_DATOS" | "ERROR", string>> = {
   ERROR: "No se pudo leer esta serie; las demás sí. Quedó registrado para revisarlo.",
 };
 
-function Fuente({ origen, fuente }: { readonly origen: string; readonly fuente: string }) {
+/** La fuente: el enlace dice al lector adónde lleva (la página oficial de esa serie, sitio externo); lo visible es el origen. */
+function Fuente({ origen, fuente, serie }: { readonly origen: string; readonly fuente: string; readonly serie: string }) {
   const href = enlaceDeFuente(fuente);
+  const enlace = (h: string) => (
+    <a href={h} rel="noopener noreferrer" referrerPolicy="no-referrer">{origen}<span className="sr"> (página oficial de {serie}, sitio externo)</span></a>
+  );
   return (
     <>
-      {href === null ? origen : <a href={href} rel="noopener noreferrer" referrerPolicy="no-referrer">{origen}</a>}{" "}
+      {href === null ? origen : enlace(href)}{" "}
       <span className="do-codigo">{fuente}</span>
     </>
   );
@@ -62,7 +66,7 @@ function Pares({ s }: { readonly s: SerieVista }) {
   return (
     <dl className="do-pares">
       <dt>Fuente</dt>
-      <dd><Fuente origen={s.origen} fuente={conDatos?.ultimo.fuente ?? s.fuente} /></dd>
+      <dd><Fuente origen={s.origen} fuente={conDatos?.ultimo.fuente ?? s.fuente} serie={s.nombre} /></dd>
       {conDatos ? <><dt>Traído el</dt><dd>{traidoEl(conDatos.ultimo.traidoEn)}</dd></> : null}
       <dt>Cómo entra</dt>
       <dd>{TEXTO_ENTRADA[s.entrada]}</dd>
@@ -81,11 +85,11 @@ function Tarjeta({ s }: { readonly s: SerieVista }) {
           <div className="eyebrow">{sigla(s.codigo)}</div>
           <h2 id={id}>{s.nombre}</h2>
         </div>
-        <span className="do-estado" data-estado={estado}>{TEXTO_ESTADO[estado]}</span>
+        <span className="do-estado" data-estado={estado}><span className="sr">Estado de la serie: </span><span className="do-estado-texto">{TEXTO_ESTADO[estado]}</span></span>
       </div>
       {s.estado === "CON_DATOS" ? <Cifra s={s} /> : <p className="do-mensaje">{MENSAJE[s.estado]}</p>}
       <Pares s={s} />
-      {s.estado === "CON_DATOS" ? <GraficaSerie serie={s} /> : null}
+      {s.estado === "CON_DATOS" ? <GraficaSerie serie={paraGrafica(s)} /> : null}
     </article>
   );
 }
@@ -109,7 +113,7 @@ export function DatosOficiales({ datos, soloLectura = false }: PropsDatosOficial
             Si la última no cubre hoy, se dice.
           </p>
         </section>
-        <section className="do-series" aria-label="Series oficiales">
+        <section className="do-series">
           {datos.series.map((s) => <Tarjeta key={s.codigo} s={s} />)}
         </section>
         <footer className="pie">{PIE_DATOS_OFICIALES}</footer>

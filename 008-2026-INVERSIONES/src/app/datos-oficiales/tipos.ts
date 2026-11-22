@@ -79,6 +79,9 @@ export interface SerieConDatos extends SerieBase {
   readonly variacion: VariacionVista | null;
 }
 
+/** Lo único que va al navegador: lo que dibuja la gráfica (revisión react-reviewer, MEDIO: el payload). */
+export type SerieGrafica = Pick<SerieConDatos, "codigo" | "nombre" | "unidad" | "escala" | "vigencia" | "ventana" | "historia">;
+
 export interface SerieSinDatos extends SerieBase {
   readonly estado: "SIN_DATOS";
 }

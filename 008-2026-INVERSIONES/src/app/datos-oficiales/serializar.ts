@@ -4,7 +4,8 @@
  * - Las columnas DATE son el día UTC; la hora de la carga va en Colombia (UTC−5 fijo: Colombia no tiene horario de
  *   verano), como en la conciliación.
  * - «vale hoy» (valeHoy) es cubreHoy de la lectura: nada más lo enciende.
- * - Sin datos o con error, la vista lleva solo lo del catálogo: ninguna cifra.
+ * - Sin datos o con error, la vista lleva solo lo del catálogo: ninguna cifra. Una frescura incoherente con un último
+ *   (frescura.ts no la da) también sale ERROR: no se inventa un número de días.
  */
 import type { SerieCatalogo } from "@/datos-oficiales/catalogo";
 import type { CifraOficial } from "@/datos-oficiales/series/consulta";
@@ -59,9 +60,8 @@ function variacion(v: LecturaVariacion): VariacionVista {
 export function aSerieVista(l: LecturaSerie): SerieVista {
   const comun = base(l.serie, l.ventana);
   if (l.estado !== "CON_DATOS") return { ...comun, estado: l.estado };
-  // Con un último que ya empezó, frescura.ts nunca da SIN_DATOS ni dias null; si llegara, se muestra atrasada (nunca al día).
-  const { dias, umbralDias, cubreHoy } = l.frescura;
-  const estado = dias === null || l.frescura.estado !== "AL_DIA" ? "ATRASADA" : "AL_DIA";
+  const { estado, dias, umbralDias, cubreHoy } = l.frescura;
+  if (estado === "SIN_DATOS" || dias === null) return { ...comun, estado: "ERROR" };
   return {
     ...comun,
     estado: "CON_DATOS",

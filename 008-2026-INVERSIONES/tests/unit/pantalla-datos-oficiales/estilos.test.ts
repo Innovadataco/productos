@@ -18,7 +18,8 @@ describe("datos-oficiales.css", () => {
   it("todo queda dentro de la pantalla (.do o .do-*): no toca las otras", () => {
     const selectores = sinComentarios.replace(/@media[^{]*\{/g, "").split("}").map((b) => b.split("{")[0]!.trim()).filter(Boolean);
     expect(selectores.length).toBeGreaterThan(5);
-    for (const sel of selectores) for (const parte of sel.split(",")) expect(parte.trim(), parte).toMatch(/^\.do\b/);
+    // Las comas dentro de :is(…) no separan selectores.
+    for (const sel of selectores) for (const parte of sel.split(/,(?![^(]*\))/)) expect(parte.trim(), parte).toMatch(/^\.do\b/);
   });
 
   it("«Ver los datos» de cada gráfica mide al menos 44 px", () => {

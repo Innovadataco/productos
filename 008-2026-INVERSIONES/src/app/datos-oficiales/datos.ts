@@ -34,19 +34,19 @@ function inicioDeVentana(ventana: Ventana, hoy: Date): Date {
   return inicio.getTime() < DIA_MINIMO_LECTURA_MS ? new Date(DIA_MINIMO_LECTURA_MS) : inicio;
 }
 
-/** El primer día del mismo mes del año anterior. */
-const mesBaseDe = (desde: Date): Date => new Date(Date.UTC(desde.getUTCFullYear() - 1, desde.getUTCMonth(), 1));
+/** El primer día del mes de `d`, `anios` años antes. */
+const primerDiaDelMes = (d: Date, anios = 0): Date => new Date(Date.UTC(d.getUTCFullYear() - anios, d.getUTCMonth(), 1));
 
 const registrar = (codigo: string, error: ErrorLecturaSeries): void => {
   console.error(`[datos-oficiales] ${codigo}: ${error.codigo}`);
 };
 
 async function leerVariacion(tx: LectorSeries, ultimo: CifraOficial): Promise<LecturaVariacion> {
-  const mesBase = mesBaseDe(ultimo.desde);
+  const mesBase = primerDiaDelMes(ultimo.desde, 1);
   try {
     const base = await valorVigenteEn(tx, ultimo.serie, mesBase);
     if (base === null) return { estado: "SIN_BASE", mesBase };
-    return { estado: "CALCULADA", cifra: variacionIndice(base, ultimo), mesBase, mesFinal: new Date(Date.UTC(ultimo.desde.getUTCFullYear(), ultimo.desde.getUTCMonth(), 1)) };
+    return { estado: "CALCULADA", cifra: variacionIndice(base, ultimo), mesBase, mesFinal: primerDiaDelMes(ultimo.desde) };
   } catch (error) {
     if (!(error instanceof ErrorLecturaSeries)) throw error;
     registrar(`${ultimo.serie} (variación)`, error);

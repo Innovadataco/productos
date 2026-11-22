@@ -3,17 +3,18 @@
  * La gráfica de una serie oficial en su ventana (frente datos-oficiales-pantalla, C6a), con la gráfica de tiempo del
  * módulo común (src/app/_graficas: SVG propio, «reducir movimiento», deslizador por teclado y «Ver los datos»). Un
  * punto por vigencia, en su `desde` (el IPC, uno por mes); el detalle de un tramo de varios días dice hasta cuándo vale.
- * Recibe solo textos y números del servidor; los formatos (formato.ts) son deterministas, así hidrata sin diferencias.
+ * Recibe del servidor solo lo que dibuja (SerieGrafica: textos y números); los formatos (formato.ts) son deterministas,
+ * así hidrata sin diferencias.
  * Con menos de dos valores en la ventana, una nota en lugar de la gráfica.
  */
 import { useMemo } from "react";
 import { GraficaTiempo } from "@/app/_graficas";
 import { extraDetalle, formatoDia, formatoEje, formatoTick, formatoY, notaSinGrafica, resumenGrafica, tituloGrafica, valores } from "./formato";
-import type { SerieConDatos } from "./tipos";
+import type { SerieGrafica } from "./tipos";
 
 const ALTO = 200;
 
-export function GraficaSerie({ serie }: { readonly serie: SerieConDatos }) {
+export function GraficaSerie({ serie }: { readonly serie: SerieGrafica }) {
   const props = useMemo(() => ({
     dias: serie.historia.map((p) => p.desde),
     series: [{ id: serie.codigo, nombre: serie.nombre, tono: "valor" as const, valores: valores(serie) }],
