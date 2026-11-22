@@ -1,7 +1,7 @@
 /**
  * Los textos de los prompts, en español y de usted. Son constantes: no llevan ningún dato del paquete (el cotejo de
- * `armarPedido` es literal) ni dígitos fuera de la cita de ejemplo «{H01}» (así nunca chocan con un valor o una
- * presentación). Los límites van en palabras y son los de `LIMITES_SALIDA`. Cambiar un texto es otra versión del prompt.
+ * `armarPedido` es literal) ni dígitos fuera del id «H01» de la forma de ejemplo (así nunca chocan con un valor o una
+ * presentación). Versión v2: el modelo da segmentos de texto y de referencia, nunca la cita dentro de la prosa. Los límites van en palabras y son los de `LIMITES_SALIDA`. Cambiar un texto es otra versión del prompt.
  */
 const PRESENTACION = "Usted redacta, en español de Colombia y tratando al lector de usted, un resumen breve";
 
@@ -14,10 +14,12 @@ const REGLAS_DE_REDACCION = [
   "Reglas:",
   "- No escriba cifras: ni dígitos, ni números en palabras, ni porcentajes, ni montos, ni fechas, ni meses, ni días de la "
     + "semana, ni «ayer» o «mañana».",
-  "- Cite cada dato con su referencia entre llaves, por ejemplo {H01}: el sistema la cambia por la cifra exacta. No escriba "
-    + "la unidad después de la referencia.",
-  "- Nombre cada dato con su etiqueta, justo antes de su referencia, y no mezcle datos distintos en una misma parte de la frase.",
-  "- Para un dato de una especie, cite también, en la misma frase, el nombre de la especie con la referencia de su sujeto.",
+  "- Cada frase es una lista de segmentos. Un segmento de texto lleva solo prosa; un segmento de referencia lleva solo el id de "
+    + "un hecho, por ejemplo H01, y el sistema lo cambia por la cifra exacta. Nunca escriba el id ni llaves dentro de la prosa. "
+    + "No escriba la unidad después de la referencia.",
+  "- Nombre cada dato con su etiqueta, en el texto justo antes de su referencia, y no mezcle datos distintos en una misma parte "
+    + "de la frase.",
+  "- Para un dato de una especie, cite también, en la misma frase, el nombre de la especie con una referencia a su sujeto.",
   "- Cite todos los hechos obligatorios. Cada frase cita al menos un hecho.",
   "- Diga que un dato subió solo si su dirección es SUBE; que bajó, solo si es BAJA; que se mantuvo, solo si es IGUAL. Si es "
     + "NO_APLICA, no hable de movimiento.",
@@ -35,8 +37,10 @@ const REGLAS_DE_REDACCION = [
     + "frase tiene hasta doscientos ochenta caracteres y el resumen completo, hasta mil doscientos.",
 ].join("\n");
 
-const RESPUESTA = 'Responda solo con un JSON de esta forma: {"frases":[{"hechos":["H01"],"texto":"..."}]}. En cada frase, '
-  + "«hechos» lista, sin repetir, los ids que cita su texto.";
+const RESPUESTA = 'Responda solo con un JSON de esta forma: {"frases":[{"segmentos":[{"texto":"El valor de las acciones bajó a"},'
+  + '{"ref":"H01"},{"texto":"."}]}]}. Cada segmento tiene una sola clave: «texto» o «ref». La prosa va en los segmentos de '
+  + "texto y cada dato, en un segmento de referencia con su id. El ejemplo solo muestra la forma: use los datos y las etiquetas "
+  + "de los hechos que recibe.";
 
 const armar = (tema: string): string => [`${PRESENTACION} ${tema}`, ENTRADA, REGLAS_DE_REDACCION, RESPUESTA].join("\n\n");
 
@@ -54,5 +58,5 @@ export const TEXTO_PROMPT_ESCENARIOS = armar(
   "de los escenarios de la proyección de un portafolio de inversiones: el bajo, el central y el alto en cada horizonte, lo "
     + "aportado, la probabilidad de terminar por debajo de lo aportado, la caída máxima y la volatilidad. Son escenarios "
     + "ilustrativos, no pronósticos: use el condicional (por ejemplo, «en el escenario central a corto plazo, el valor "
-    + "quedaría en {H01}») y nunca el futuro.",
+    + "quedaría en» y, enseguida, la referencia del dato) y nunca el futuro.",
 );

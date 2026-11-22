@@ -10,7 +10,7 @@ import { esPaqueteConstruido } from "../paquete";
 import { ErrorValidador, LIMITES_SALIDA } from "./codigos";
 import { cadenaDeSujetos, esNombre, hechosPorId, type HechosPorId } from "./hechos";
 import { renderizarFrase } from "./render";
-import { citasDe } from "./texto";
+import { segmentosDe } from "./segmentos";
 import type { ResultadoValidacion } from "./tipos";
 import { validarSalida } from "./validar";
 
@@ -105,11 +105,11 @@ function repartir({ datos, sueltos }: Seleccion, paquete: PaqueteHechos): readon
   return frases.map(textoDe);
 }
 
-/** La salida cruda de la plantilla, en el formato del esquema («hechos» con las citas de cada frase, sin repetir). */
+/** La salida cruda de la plantilla, en el formato del esquema `salida-v2` (los segmentos de cada frase: texto y refs). */
 export function salidaDePlantilla(paquete: PaqueteHechos): string {
   if (!esPaqueteConstruido(paquete)) throw new ErrorValidador("PAQUETE_NO_CONSTRUIDO");
   const textos = repartir(seleccionar(paquete, hechosPorId(paquete)), paquete);
-  const frases = textos.map((texto) => ({ hechos: [...new Set(citasDe(texto).map((c) => c.id))], texto }));
+  const frases = textos.map((texto) => ({ segmentos: segmentosDe(texto) }));
   return JSON.stringify({ frases });
 }
 

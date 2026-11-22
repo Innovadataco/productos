@@ -61,7 +61,7 @@ describe("correrCaso", () => {
   });
 
   it("RECHAZADO: una recomendación no se publica; quedan los códigos y los hallazgos, sin texto", async () => {
-    const malo = JSON.stringify({ frases: [{ texto: "Le recomiendo vender ya {H01}.", hechos: ["H01"] }] });
+    const malo = JSON.stringify({ frases: [{ segmentos: [{ texto: "Le recomiendo vender ya" }, { ref: "H01" }, { texto: "." }] }] });
     const r = await correrCaso(entrada({ tipo: "RESPONDER", salidaCruda: malo }).e);
     expect(r.estado).toBe("RECHAZADO");
     expect(r.motivos).toContain("RECOMENDACION");

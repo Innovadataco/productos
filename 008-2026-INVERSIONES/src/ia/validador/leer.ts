@@ -1,13 +1,21 @@
 /**
- * Lectura de la salida cruda de un modelo (control SALIDA_INVALIDA). Total: con cualquier entrada devuelve la salida
- * leída o null, sin lanzar. Solo admite un texto de hasta MAX_SALIDA_CRUDA con el JSON exacto del esquema,
- * `{frases:[{texto, hechos:[texto]}]}`, sin campos de más (un `__proto__` del JSON es un campo de más). No toca un
- * valor que no sea texto (un Proxy, p. ej., se descarta solo por su `typeof`). Devuelve una copia congelada.
+ * Lectura de la salida cruda de un modelo (control SALIDA_INVALIDA), versión `salida-v2`. Total: con cualquier entrada
+ * devuelve la salida leída o null, sin lanzar. Solo admite un texto de hasta MAX_SALIDA_CRUDA con el JSON exacto del
+ * esquema, `{frases:[{segmentos:[{texto} | {ref}]}]}`, sin campos de más (un `__proto__` del JSON es un campo de más).
+ * La forma vieja (`{texto, hechos}`) es SALIDA_INVALIDA. No toca un valor que no sea texto (un Proxy, p. ej., se
+ * descarta solo por su `typeof`). Un texto con llaves (la cita no se escribe en la prosa) o una ref fuera del patrón
+ * de id también lo es.
+ *
+ * El texto de cada frase lo arma el código: los segmentos unidos, con `{Hnn}` en el lugar de cada ref (`segmentos.ts`);
+ * `hechos` son las refs, sin repetir, en orden. Devuelve una copia congelada.
  */
 import { MAX_SALIDA_CRUDA } from "../generador";
+import { esRef, segmentoValido, unirSegmentos, type Segmento } from "./segmentos";
 
 export interface FraseLeida {
+  /** La frase armada por el código: la prosa del modelo con la cita `{Hnn}` de cada ref. */
   readonly texto: string;
+  /** Las refs de los segmentos, sin repetir, en orden: los hechos que cita la frase. */
   readonly hechos: readonly string[];
 }
 
@@ -24,16 +32,22 @@ function conCampos(valor: unknown, campos: readonly string[]): valor is Registro
   return claves.length === campos.length && campos.every((campo) => Object.hasOwn(valor, campo));
 }
 
+function leerSegmento(valor: unknown): Segmento | null {
+  if (conCampos(valor, ["texto"])) return typeof valor.texto === "string" ? { texto: valor.texto } : null;
+  if (conCampos(valor, ["ref"])) return typeof valor.ref === "string" ? { ref: valor.ref } : null;
+  return null;
+}
+
 function leerFrase(valor: unknown): FraseLeida | null {
-  if (!conCampos(valor, ["texto", "hechos"])) return null;
-  const { texto, hechos } = valor;
-  if (typeof texto !== "string" || !Array.isArray(hechos)) return null;
-  const ids: string[] = [];
-  for (const id of hechos as readonly unknown[]) {
-    if (typeof id !== "string") return null;
-    ids.push(id);
+  if (!conCampos(valor, ["segmentos"]) || !Array.isArray(valor.segmentos)) return null;
+  const segmentos: Segmento[] = [];
+  for (const crudo of valor.segmentos as readonly unknown[]) {
+    const segmento = leerSegmento(crudo);
+    if (segmento === null || !segmentoValido(segmento)) return null;
+    segmentos.push(segmento);
   }
-  return Object.freeze({ texto, hechos: Object.freeze(ids) });
+  const hechos = [...new Set(segmentos.filter(esRef).map((s) => s.ref))];
+  return Object.freeze({ texto: unirSegmentos(segmentos), hechos: Object.freeze(hechos) });
 }
 
 export function leerSalida(salidaCruda: unknown): SalidaLeida | null {

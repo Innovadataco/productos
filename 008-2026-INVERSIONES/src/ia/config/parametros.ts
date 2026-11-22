@@ -7,7 +7,7 @@ import "server-only";
  *
  * Lo que NO se configura (y por qué, en la pantalla), como en PI: los JSON Schemas de salida, el validador (sus límites y
  * su vocabulario: cambiarlos es otra versión del validador), la vista ciega, la resolución del destino y la semilla fija
- * de la local; y, propio de 008, el `keep_alive` corto con un pedido a la vez y el `num_ctx` por omisión del modelo (008
+ * de la local; y, propio de 008, el `keep_alive` corto con un pedido a la vez y el `num_ctx` fijo (`NUM_CTX_LOCAL`, aprobado por PI: 008
  * no deja un modelo residente en el Mac de PI ni lo hace recargar). La temperatura de la local SÍ se configura (de 0 a 1,
  * 0 por omisión), como en PI.
  */

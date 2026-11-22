@@ -79,7 +79,7 @@ describe("generar · camino feliz", () => {
       prompt: jsonCanonico(pedido.vista),
       format: ESQUEMA_FICTICIO,
       stream: false,
-      options: { temperature: 0, seed: 42 },
+      options: { num_ctx: 8192, temperature: 0, seed: 42 },
       keep_alive: "30s",
     });
   });

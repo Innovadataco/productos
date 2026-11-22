@@ -3,7 +3,7 @@
  * prosa y el CÓDIGO arma el texto. Cubre el esquema, la lectura, el validador, el tope de obligatorios y `num_ctx`.
  */
 import { describe, expect, it } from "vitest";
-import { TIPOS_RESUMEN } from "@/ia/contrato";
+import { TIPOS_RESUMEN, type Hecho } from "@/ia/contrato";
 import { armarDiario, armarEscenarios, armarReglas } from "@/ia/hechos";
 import { OPCIONES_GENERACION, OPCIONES_SMOKE, cuerpoGenerar, cuerpoSmoke } from "@/ia/local/ollama";
 import { ESQUEMA_SALIDA, VERSION_ESQUEMA_SALIDA } from "@/ia/prompts/esquema";
@@ -63,15 +63,16 @@ describe("el esquema salida-v2", () => {
 
 describe("leerSalida · salida-v2", () => {
   it("arma el texto con la cita de cada ref, sin repetir la lista de hechos", () => {
-    const leida = leerSalida(cruda([{ segmentos: [{ texto: "El valor de las acciones bajó a " }, { ref: "H01" }, { texto: "." }] }]));
-    expect(leida).toEqual({ frases: [{ texto: "El valor de las acciones bajó a {H01}.", hechos: ["H01"] }] });
+    const leida = leerSalida(cruda([{ segmentos: [{ texto: "El valor de las acciones subió a " }, { ref: "H01" }, { texto: "." }] }]));
+    expect(leida).toEqual({ frases: [{ texto: "El valor de las acciones subió a {H01}.", hechos: ["H01"] }] });
     expect(Object.isFrozen(leida?.frases[0])).toBe(true);
   });
 
-  it("pone el espacio que el modelo olvidó entre un texto y una ref, pero no antes de la puntuación", () => {
+  it("pone el espacio que el modelo olvidó entre una palabra y una ref, pero deja literal un signo o una puntuación", () => {
     const leida = leerSalida(cruda([{ segmentos: [{ texto: "El valor bajó a" }, { ref: "H01" }, { texto: "y la ganancia a" }, { ref: "H02" }, { texto: "." }] }]));
     expect(leida?.frases[0]?.texto).toBe("El valor bajó a {H01} y la ganancia a {H02}.");
     expect(leida?.frases[0]?.hechos).toEqual(["H01", "H02"]);
+    expect(leerSalida(cruda([{ segmentos: [{ texto: "bajó a -" }, { ref: "H01" }, { texto: "%" }] }]))?.frases[0]?.texto).toBe("bajó a -{H01}%");
   });
 
   it.each([
@@ -102,11 +103,11 @@ describe("validarSalida · salida-v2", () => {
 
   it("publica la salida que antes caía en FRASE_SIN_CITA: el código intercala la presentación del hecho", () => {
     const id = idDe(paquete, "VALOR_ACCIONES");
-    const r = validarSalida(cruda([{ segmentos: [{ texto: "El valor de las acciones bajó a" }, { ref: id }, { texto: "." }] }]), paquete);
-    expect(r.ok).toBe(true);
+    const r = validarSalida(cruda([{ segmentos: [{ texto: "El valor de las acciones subió a" }, { ref: id }, { texto: "." }] }]), paquete);
+    expect(r.ok ? [] : r.hallazgos).toEqual([]);
     if (!r.ok) return;
     const presentacion = paquete.hechos.find((h) => h.id === id)?.presentacion as string;
-    expect(r.resumen.texto).toBe(`El valor de las acciones bajó a ${presentacion}.`);
+    expect(r.resumen.texto).toBe(`El valor de las acciones subió a ${presentacion}.`);
     expect(r.resumen.citados).toEqual([id]);
   });
 
@@ -146,7 +147,11 @@ describe("obligatorios: como mucho seis por tipo", () => {
     const paquete = armarReglas(muchas);
     const obligatorios = paquete.hechos.filter((h) => h.obligatorio);
     expect(obligatorios.length).toBeLessThanOrEqual(TOPE);
-    for (const h of obligatorios) if (h.sujeto !== undefined) expect(paquete.hechos.find((x) => x.id === h.sujeto)?.obligatorio ?? true).toBe(true);
+    const nombreDe = (id: string | undefined): Hecho | undefined => {
+      const h = paquete.hechos.find((x) => x.id === id);
+      return h === undefined || h.clave === "ESPECIE_NOMBRE" ? h : nombreDe(h.sujeto);
+    };
+    for (const h of obligatorios) if (h.clave !== "ESPECIE_NOMBRE") expect(nombreDe(h.sujeto)?.obligatorio ?? true).toBe(true);
   });
 });
 

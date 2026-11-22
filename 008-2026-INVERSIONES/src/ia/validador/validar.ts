@@ -5,8 +5,11 @@
  * construido, el aviso fijo y las cifras usadas. El paquete tiene que ser el mismo objeto que salió de
  * `construirPaquete` (si no, ErrorValidador: es un defecto del código, no del modelo). Nunca lanza por la salida cruda.
  *
+ * La salida es `salida-v2` (segmentos de texto y refs): `leerSalida` arma el texto con la cita de cada ref; la forma
+ * vieja es SALIDA_INVALIDA.
+ *
  * Controles por frase, sobre el texto en NFC: caracteres y forma (CIFRA_SUELTA, IDIOMA, FORMATO), cifras en palabras,
- * citas y lista de hechos (HECHO_DESCONOCIDO, HECHO_NO_CITADO, FORMATO), etiquetas y sujeto (ETIQUETA_NO_COINCIDE),
+ * citas (HECHO_DESCONOCIDO, HECHO_NO_CITADO), etiquetas y sujeto (ETIQUETA_NO_COINCIDE),
  * marcas (DIRECCION_CONTRADICE), recomendación, predicción, trato e idioma (también el vocabulario cerrado: toda
  * palabra fuera de él rechaza, `vocabulario.ts`); después del render, el largo (LONGITUD), la
  * palabra repetida (FORMATO) y el cotejo de cada número contra el paquete (RENDER_CIFRA). De la salida entera: el número
@@ -51,19 +54,13 @@ interface FraseAnalizada {
 type Anotar = (codigo: CodigoValidador, patron: string) => void;
 
 /**
- * Las citas del texto contra el paquete y contra la lista `hechos` de la frase. Devuelve las conocidas, en orden. Una
- * frase sin ninguna cita de un dato (solo nombres, o nada) no está respaldada por el paquete: HECHO_NO_CITADO.
+ * Las citas del texto (las refs de los segmentos, puestas por el código) contra el paquete. Devuelve las conocidas, en
+ * orden. Una frase sin ninguna cita de un dato (solo nombres, o nada) no está respaldada por el paquete: HECHO_NO_CITADO.
  */
-function revisarCitas(frase: FraseLeida, texto: string, porId: HechosPorId, anotar: Anotar): readonly IdHecho[] {
+function revisarCitas(texto: string, porId: HechosPorId, anotar: Anotar): readonly IdHecho[] {
   const citas = citasDe(texto).map((c) => c.id);
   const conocidas = citas.filter((id): id is IdHecho => esIdHecho(id) && porId.has(id));
   if (conocidas.length < citas.length) anotar("HECHO_DESCONOCIDO", "HECHO_DESCONOCIDO.CITA");
-  if (frase.hechos.some((id) => !esIdHecho(id) || !porId.has(id))) anotar("HECHO_DESCONOCIDO", "HECHO_DESCONOCIDO.LISTA");
-  const enTexto = new Set(citas);
-  const lista = new Set(frase.hechos);
-  if (lista.size !== frase.hechos.length || lista.size !== enTexto.size || [...lista].some((id) => !enTexto.has(id))) {
-    anotar("FORMATO", "FORMATO.LISTA_HECHOS");
-  }
   if (!conocidas.some((id) => !esNombre(porId.get(id)))) anotar("HECHO_NO_CITADO", "HECHO_NO_CITADO.FRASE_SIN_CITA");
   return conocidas;
 }
@@ -71,7 +68,7 @@ function revisarCitas(frase: FraseLeida, texto: string, porId: HechosPorId, anot
 function analizarFrase(frase: FraseLeida, paquete: PaqueteHechos, porId: HechosPorId, anotar: Anotar): FraseAnalizada {
   const texto = frase.texto.normalize("NFC");
   for (const h of revisarCaracteres(frase.texto)) anotar(h.codigo, h.patron);
-  const conocidas = revisarCitas(frase, texto, porId, anotar);
+  const conocidas = revisarCitas(texto, porId, anotar);
   const preparado = prepararTexto(texto);
   const atribucion = atribuir(clausulasDe(preparado.minusculas), (id) => porId.has(id) && !esNombre(porId.get(id)));
   for (const h of revisarEtiquetas(atribucion, porId, paquete.tipo, new Set(conocidas))) anotar(h.codigo, h.patron);

@@ -107,7 +107,7 @@ describe("sondaLocal · smoke", () => {
     const { local, falso } = generador((_l, i) => json(i === 0 ? tagsDelFicticio() : generacionFicticia(SMOKE)));
     await local.sondaLocal({ smoke: true, limiteMs: LIMITE_MS });
     expect(JSON.parse(falso.llamadas()[1]?.body as string)).toEqual({
-      model: MODELO_LOCAL_FICTICIO, prompt: "Responda solo: ok", stream: false, options: { temperature: 0, seed: 42, num_predict: 5 }, keep_alive: "30s",
+      model: MODELO_LOCAL_FICTICIO, prompt: "Responda solo: ok", stream: false, options: { num_ctx: 8192, temperature: 0, seed: 42, num_predict: 5 }, keep_alive: "30s",
     });
   });
 
