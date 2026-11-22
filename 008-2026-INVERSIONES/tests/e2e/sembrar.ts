@@ -20,6 +20,7 @@ import { importarArchivoTrii } from "../../src/importacion/trii/importar";
 import { construirLotes } from "../../src/lotes/construir";
 import { APP, DUENO_E2E, baseDePruebas, type BaseDePruebas } from "./base";
 import { sembrarConciliacion } from "./sembrar-conciliacion";
+import { sembrarGraficas } from "./sembrar-graficas";
 import { sembrarPlan } from "./sembrar-plan";
 
 const FIXTURES = new URL("./fixtures/", import.meta.url);
@@ -107,6 +108,8 @@ async function sembrar(base: BaseDePruebas): Promise<void> {
     await sembrarCierres(db);
     await sembrarConciliacion(db, id);
     await sembrarPlan(db, id);
+    // Al final: cierres generados para la evolución del tablero, sin tocar lo que miran las demás pantallas.
+    await sembrarGraficas(db);
   } finally {
     await db.$disconnect();
   }

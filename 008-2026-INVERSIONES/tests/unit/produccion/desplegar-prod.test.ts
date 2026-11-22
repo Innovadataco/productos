@@ -1120,17 +1120,21 @@ describe("desplegar-prod.sh · funciones de la espera: resumen del compose y del
   const resumenCompose = (texto: string) => funcion(script, "resumen_compose", process.env, texto).stdout.trim().split("\n");
   const resumenDockerfile = (texto: string) => funcion(script, "resumen_dockerfile", process.env, texto).stdout.trim().split("\n");
 
-  it("resumen_compose del compose real: los seis servicios, sus límites e imágenes, y nada del bloque literal del relé", () => {
+  it("resumen_compose del compose real: los siete servicios (con precios, D-018), sus límites e imágenes, y nada del bloque literal del relé", () => {
     const r = resumenCompose(leer008("docker-compose.prod.yml"));
     expect(r.filter((l) => l.startsWith("servicio "))).toEqual([
       "servicio inv-008-app",
       "servicio inv-008-db",
       "servicio inv-008-entrada",
       "servicio inv-008-migrador",
+      "servicio inv-008-precios",
       "servicio inv-008-respaldo",
       "servicio inv-008-vigia",
     ]);
-    for (const l of ["inv-008-app mem_limit 384m", "inv-008-app memswap_limit 384m", "inv-008-app cpus 0.5", "inv-008-app cpu_shares 256", "inv-008-app image inv-008-app:${INV_TAG:-sin-desplegar}"]) {
+    for (const l of [
+      "inv-008-app mem_limit 384m", "inv-008-app memswap_limit 384m", "inv-008-app cpus 0.5", "inv-008-app cpu_shares 256", "inv-008-app image inv-008-app:${INV_TAG:-sin-desplegar}",
+      "inv-008-precios mem_limit 96m", "inv-008-precios memswap_limit 96m", "inv-008-precios cpus 0.25", "inv-008-precios cpu_shares 256", "inv-008-precios image inv-008-app:${INV_TAG:-sin-desplegar}",
+    ]) {
       expect(r).toContain(l);
     }
     expect(r).not.toContain("INDETERMINADO");

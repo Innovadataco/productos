@@ -283,6 +283,13 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       expect(filas).toEqual([{ rolcanlogin: true, rolinherit: false, rolsuper: false, rolcreatedb: false, rolcreaterole: false, rolreplication: false, rolbypassrls: false, rolconnlimit: 4 }]);
     });
 
+    it("topes por sesión del rol (revisión de base M3): statement_timeout 60s e idle_in_transaction_session_timeout 30s", async () => {
+      const filas = await admin.$queryRawUnsafe<Array<{ ajuste: string }>>(
+        "SELECT unnest(rolconfig) AS ajuste FROM pg_roles WHERE rolname = 'inv_precios' ORDER BY 1",
+      );
+      expect(filas.map((f) => f.ajuste)).toEqual(["idle_in_transaction_session_timeout=30s", "statement_timeout=60s"]);
+    });
+
     it("el catálogo tiene exactamente los permisos de la lista, por columna; nada de tabla, secuencia ni por defecto", async () => {
       const columnas = await dueno.$queryRawUnsafe<Array<{ fila: string }>>(
         `SELECT c.relname || '.' || a.attname || ' ' || x.privilege_type AS fila

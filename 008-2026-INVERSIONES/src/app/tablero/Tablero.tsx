@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
+import { Evolucion } from "./Evolucion";
 import { cop, fecha, n, numero, pct } from "./formato";
+import { Foto } from "./Foto";
 import { Linea, Peso } from "./Graficas";
 import { SECCIONES } from "./secciones";
-import type { FilaVista, LineaConciliacionVista, MovimientoVista, Vista } from "./tipos";
+import type { EvolucionVista, FilaVista, LineaConciliacionVista, MovimientoVista, Vista } from "./tipos";
 
 const MOVIMIENTO_REDUCIDO = "(prefers-reduced-motion: reduce)";
 const SISTEMA_CLARO = "(prefers-color-scheme: light)";
@@ -330,17 +332,30 @@ function FilaPosicion({ f, activa, idBoton, elegir }: { f: FilaVista; activa: bo
   );
 }
 
-function Posiciones({ vista }: { vista: Vista }) {
+/** La especie del panel de detalle y desde dónde se abrió (una gráfica): a ese botón vuelve el foco al cerrar. */
+interface Elegida {
+  readonly id: string;
+  readonly origen: HTMLElement | null;
+}
+
+interface PropsPosiciones {
+  readonly vista: Vista;
+  readonly elegida: Elegida | null;
+  readonly elegir: (id: string, origen: HTMLElement | null) => void;
+  readonly alCerrar: () => void;
+}
+
+function Posiciones({ vista, elegida, elegir, alCerrar }: PropsPosiciones) {
   const [orden, setOrden] = useState<Orden>("valor");
-  const [elegida, setElegida] = useState<string | null>(null);
   const base = useId();
   const idBoton = (id: string) => `${base}-especie-${id}`;
   const filas = useMemo(() => [...vista.filas].sort(orden === "nemo" ? porNemo : porCifra(orden)), [vista.filas, orden]);
-  const sel = filas.find((f) => f.id === elegida) ?? null;
-  /** Devuelve el foco al botón de la especie antes de quitar el panel. */
+  const sel = filas.find((f) => f.id === elegida?.id) ?? null;
+  const elegirDesdeTabla = (id: string) => elegir(id, null);
+  /** Devuelve el foco a donde se abrió (la gráfica o el botón de la especie) antes de quitar el panel. */
   const cerrar = () => {
-    if (elegida) document.getElementById(idBoton(elegida))?.focus();
-    setElegida(null);
+    if (elegida) (elegida.origen?.isConnected ? elegida.origen : document.getElementById(idBoton(elegida.id)))?.focus();
+    alCerrar();
   };
   const col = (k: Orden, t: string) => (
     <th scope="col" aria-sort={orden === k ? sentido(k) : undefined}><button type="button" onClick={() => setOrden(k)}>{t}</button></th>
@@ -361,7 +376,7 @@ function Posiciones({ vista }: { vista: Vista }) {
               <th scope="col">Comisiones</th>
             </tr></thead>
             <tbody>
-              {filas.map((f) => <FilaPosicion key={f.id} f={f} activa={f.id === elegida} idBoton={idBoton(f.id)} elegir={setElegida} />)}
+              {filas.map((f) => <FilaPosicion key={f.id} f={f} activa={f.id === elegida?.id} idBoton={idBoton(f.id)} elegir={elegirDesdeTabla} />)}
             </tbody>
           </table>
         </div>
@@ -382,7 +397,7 @@ function Falta() {
         <li><b>Dividendos que vienen</b> con fecha ex y monto esperado</li>
         <li><b>Fondo inmobiliario</b> con su valor de unidad (SFC)</li>
         <li><b>Caja oficial</b> de A&amp;V en este resumen · su cuadre ya se ve en <a href="/conciliacion">Conciliación</a></li>
-        <li><b>Rentabilidad TWR</b> y escenarios</li>
+        <li><b>Proyecciones</b> por escenarios, con sus supuestos a la vista</li>
       </ul>
     </section>
   );
@@ -406,17 +421,23 @@ interface PropsTablero {
   readonly vista: Vista;
   /** Opcional: sin el dato (pruebas de otras partes del tablero) no se pinta la línea. */
   readonly conciliacion?: LineaConciliacionVista;
+  /** La evolución diaria y la TWR (src/tablero/evolucion.ts). Opcional, como la conciliación; null = no se pudo calcular. */
+  readonly evolucion?: EvolucionVista | null;
 }
 
-export function Tablero({ vista, conciliacion }: PropsTablero) {
+export function Tablero({ vista, conciliacion, evolucion }: PropsTablero) {
+  const [elegida, setElegida] = useState<Elegida | null>(null);
+  const elegir = (id: string, origen: HTMLElement | null) => setElegida({ id, origen });
   return (
     <>
       <Encabezado vista={vista} />
       <main className="wrap">
         {conciliacion === undefined ? null : <LineaConciliacion linea={conciliacion} />}
         <Respuesta vista={vista} />
+        {evolucion === undefined ? null : <Evolucion evolucion={evolucion} />}
         <Movimientos mov={vista.movimiento} />
-        <Posiciones vista={vista} />
+        <Foto vista={vista} elegir={elegir} />
+        <Posiciones vista={vista} elegida={elegida} elegir={elegir} alCerrar={() => setElegida(null)} />
         <Falta />
         <footer className="pie">El sistema calcula y muestra; no recomienda comprar ni vender. Datos de su base local.</footer>
       </main>
