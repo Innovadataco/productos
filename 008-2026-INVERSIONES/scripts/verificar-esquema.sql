@@ -15,8 +15,8 @@
 --    ningún disparador de más en el esquema, y ninguno deshabilitado, ni siquiera los internos de las FK;
 --  - las funciones escritas a mano: una sola por nombre, con el md5 exacto de su código, sin SECURITY DEFINER y con su
 --    SET exacto (proconfig): un ALTER FUNCTION … SECURITY DEFINER no cambia el md5;
---  - que inv_app e inv_precios no sean miembros del dueño de precio_cierre ni de valor_unidad_fondo (los disparadores
---    de integridad eximen al dueño);
+--  - que inv_app e inv_precios no sean miembros del dueño de precio_cierre ni de valor_unidad_fondo, ni de plan_version,
+--    decision y enlace_decision_orden (los disparadores de integridad de precios y los de los instantes eximen al dueño);
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 con search_path = public (sacadas de una base recién
 -- migrada); el guardián fija ese search_path para que otro no dé un falso positivo. La lista de nombres sale de
@@ -260,9 +260,11 @@ DECLARE
     ['conciliacion', 'conciliacion_certificacion_vigente', 'CREATE TRIGGER conciliacion_certificacion_vigente BEFORE INSERT ON public.conciliacion FOR EACH ROW EXECUTE FUNCTION inv_certificacion_vigente()'],
     ['conciliacion', 'conciliacion_solo_insercion', 'CREATE TRIGGER conciliacion_solo_insercion BEFORE DELETE OR UPDATE ON public.conciliacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['control_conciliacion', 'control_conciliacion_solo_insercion', 'CREATE TRIGGER control_conciliacion_solo_insercion BEFORE DELETE OR UPDATE ON public.control_conciliacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['decision', 'decision_instante', 'CREATE TRIGGER decision_instante BEFORE INSERT ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_decision_instante()'],
     ['decision', 'decision_solo_insercion', 'CREATE TRIGGER decision_solo_insercion BEFORE DELETE OR UPDATE ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['dividendo', 'dividendo_solo_insercion', 'CREATE TRIGGER dividendo_solo_insercion BEFORE DELETE OR UPDATE ON public.dividendo FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['dividendo_decretado', 'dividendo_decretado_retiro', 'CREATE TRIGGER dividendo_decretado_retiro BEFORE INSERT OR DELETE OR UPDATE ON public.dividendo_decretado FOR EACH ROW EXECUTE FUNCTION inv_solo_retiro(''registradoEn'')'],
+    ['enlace_decision_orden', 'enlace_decision_orden_instante', 'CREATE TRIGGER enlace_decision_orden_instante BEFORE INSERT ON public.enlace_decision_orden FOR EACH ROW EXECUTE FUNCTION inv_enlace_decision_orden_instante()'],
     ['enlace_decision_orden', 'enlace_decision_orden_solo_insercion', 'CREATE TRIGGER enlace_decision_orden_solo_insercion BEFORE DELETE OR UPDATE ON public.enlace_decision_orden FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['fila_de_carga', 'fila_de_carga_solo_insercion', 'CREATE TRIGGER fila_de_carga_solo_insercion BEFORE DELETE OR UPDATE ON public.fila_de_carga FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['fila_fuente', 'fila_fuente_solo_insercion', 'CREATE TRIGGER fila_fuente_solo_insercion BEFORE DELETE OR UPDATE ON public.fila_fuente FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
@@ -272,6 +274,7 @@ DECLARE
     ['movimiento_fondo', 'movimiento_fondo_coherente', 'CREATE TRIGGER movimiento_fondo_coherente BEFORE INSERT OR UPDATE ON public.movimiento_fondo FOR EACH ROW EXECUTE FUNCTION inv_movimiento_fondo_coherente()'],
     ['movimiento_fondo', 'movimiento_fondo_solo_insercion', 'CREATE TRIGGER movimiento_fondo_solo_insercion BEFORE DELETE OR UPDATE ON public.movimiento_fondo FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['orden', 'orden_solo_insercion', 'CREATE TRIGGER orden_solo_insercion BEFORE DELETE OR UPDATE ON public.orden FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['plan_version', 'plan_version_instante', 'CREATE TRIGGER plan_version_instante BEFORE INSERT ON public.plan_version FOR EACH ROW EXECUTE FUNCTION inv_plan_version_instante()'],
     ['plan_version', 'plan_version_solo_insercion', 'CREATE TRIGGER plan_version_solo_insercion BEFORE DELETE OR UPDATE ON public.plan_version FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['precio_cierre', 'precio_cierre_insercion', 'CREATE TRIGGER precio_cierre_insercion BEFORE INSERT ON public.precio_cierre FOR EACH ROW EXECUTE FUNCTION inv_precio_cierre_insercion()'],
     ['precio_cierre', 'precio_cierre_retiro', 'CREATE TRIGGER precio_cierre_retiro BEFORE DELETE OR UPDATE ON public.precio_cierre FOR EACH ROW EXECUTE FUNCTION inv_retiro_vigente()'],
@@ -292,8 +295,11 @@ DECLARE
     ['inv_certificacion_solo_retiro', '177e253d815166e075e30b75316c539a', ''],
     ['inv_certificacion_vigente', '4f29f5a78b3129f7ace16487160c5c4e', ''],
     ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301', ''],
+    ['inv_decision_instante', '0d4631b4ec6f4b4a688af968e5fb5a5d', ''],
+    ['inv_enlace_decision_orden_instante', 'a7a550804fa3c435fa5553518e427de9', ''],
     ['inv_lote_fijo', '6906ddebe6b9194201de631eac40241a', ''],
     ['inv_movimiento_fondo_coherente', '53cb26c826f67c555b19e1b8ad9dffd0', ''],
+    ['inv_plan_version_instante', 'abf0179024dd5f3151006171b5d76bb5', ''],
     ['inv_precio_cierre_insercion', '6bdf12a80eeee52cff6a412139ffe5c1', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_rendimiento_fondo_coherente', '9a6b541c07fa34227bf9a3476e9c48ca', ''],
     ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public, pg_temp'],
@@ -419,12 +425,13 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- Los disparadores de integridad de precios eximen a quien tenga los privilegios del dueño de la tabla: si inv_app o
-  -- inv_precios fueran miembros de él (GRANT inv_dueno TO …), quedarían eximidos o, con SET ROLE, serían el dueño.
+  -- Los disparadores de integridad de precios y los de los instantes del plan (migración *_instantes_base) eximen a quien
+  -- tenga los privilegios del dueño de la tabla: si inv_app o inv_precios fueran miembros de él (GRANT inv_dueno TO …),
+  -- quedarían eximidos o, con SET ROLE, serían el dueño (y fijarían el instante del registro).
   FOR x IN
     SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
     WHERE r.rolname IN ('inv_app', 'inv_precios')
-      AND c.oid IN (to_regclass('public.precio_cierre'), to_regclass('public.valor_unidad_fondo'))
+      AND c.oid IN (to_regclass('public.precio_cierre'), to_regclass('public.valor_unidad_fondo'), to_regclass('public.plan_version'), to_regclass('public.decision'), to_regclass('public.enlace_decision_orden'))
       AND pg_has_role(r.oid, c.relowner, 'MEMBER')
     ORDER BY 1
   LOOP

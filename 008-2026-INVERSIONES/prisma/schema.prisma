@@ -826,7 +826,7 @@ model PlanVersion {
   motivo        String
   aprobadaPorId String
   aprobadaPor   Usuario     @relation(fields: [aprobadaPorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  creadaEn      DateTime    @default(now()) @db.Timestamptz(6)
+  creadaEn      DateTime    @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_plan_version_instante)
   reglas        ReglaPlan[]
   decisiones    Decision[]
 
@@ -871,7 +871,7 @@ model Decision {
   decididaPorId  String
   decididaPor    Usuario               @relation(fields: [decididaPorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   fechaDecision  DateTime              @db.Date
-  registradaEn   DateTime              @default(now()) @db.Timestamptz(6)
+  registradaEn   DateTime              @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_decision_instante)
   reemplazaId    String?               @unique
   reemplaza      Decision?             @relation("CorreccionDecision", fields: [reemplazaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   reemplazadaPor Decision?             @relation("CorreccionDecision")
@@ -899,7 +899,7 @@ model EnlaceDecisionOrden {
   motivo         String? // obligatorio en una corrección
   creadoPorId    String
   creadoPor      Usuario              @relation(fields: [creadoPorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  creadoEn       DateTime             @default(now()) @db.Timestamptz(6)
+  creadoEn       DateTime             @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_enlace_decision_orden_instante)
 
   @@unique([id, ordenId])
   @@unique([reemplazaId, ordenId])

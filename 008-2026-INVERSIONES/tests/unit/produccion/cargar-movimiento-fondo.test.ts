@@ -4,11 +4,11 @@
 // rango y la fecha) y se niega con 64 sin correr el CLI, sin temporales y sin repetir valores. El código del CLI pasa
 // tal cual. Correo, código, fecha y cifras inventados (no redondos; 2027).
 import { spawn } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, ruta008, type Entorno } from "./falsos";
+import { appCargarFalsa, carpetaTemporal, correr, crearFalsos, entorno, envProduccionFicticio, idArchivo, ruta008, TSX_CARGAR_FALSO, type Entorno } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -43,32 +43,20 @@ function ejecutar(programa: string, args: string[], env: Entorno, entrada: Buffe
   });
 }
 
-/** Un /app falso con un tsx que registra su argv (una línea, separado por tabuladores). */
+/** Un /app falso propio de la prueba, con el tsx versionado (falsos-cargar/tsx), que registra su argv, el cwd, los permisos y el sha del temporal. */
 function preparar() {
   const dir = carpetaTemporal("cargar-movimiento-fondo");
-  const app = path.join(dir, "app");
+  const app = appCargarFalsa(dir);
   const tmp = path.join(dir, "tmp");
-  mkdirSync(path.join(app, "node_modules", ".bin"), { recursive: true });
   mkdirSync(tmp);
   const registro = path.join(dir, "tsx.txt");
-  const tsx = path.join(app, "node_modules", ".bin", "tsx");
-  writeFileSync(
-    tsx,
-    [
-      "#!/usr/bin/env bash",
-      'printf "argv" >>"$FALSO_TSX_REGISTRO"; for a in "$@"; do printf "\\t%s" "$a" >>"$FALSO_TSX_REGISTRO"; done; printf "\\n" >>"$FALSO_TSX_REGISTRO"',
-      'exit "${FALSO_TSX_RC:-0}"',
-      "",
-    ].join("\n"),
-  );
-  chmodSync(tsx, 0o755);
   const swap = path.join(dir, "memory.swap.max");
   writeFileSync(swap, "0\n");
   const env: Entorno = { PATH: process.env.PATH, INV_CARGAR_APP: app, INV_CARGAR_TMP: tmp, INV_CARGAR_SWAP: swap, FALSO_TSX_REGISTRO: registro };
   const llamadas = () => (existsSync(registro) ? readFileSync(registro, "utf8").trim().split("\n").map((l) => l.split("\t")) : []);
   const argv = () => llamadas().find((l) => l[0] === "argv")?.slice(1) ?? null;
   const carga = (sobreDe: Buffer, extra: Entorno = {}) => ejecutar("sh", [CARGAR, COMANDO], { ...env, ...extra }, sobreDe);
-  return { tmp, llamadas, argv, carga };
+  return { app, tmp, llamadas, argv, carga };
 }
 
 /** Sobre armado a mano: cabecera de 4096 bytes (los argumentos, una línea vacía y relleno) y el cuerpo. */
@@ -83,6 +71,15 @@ function con(opcion: string, valor: string | null): string[] {
   const i = BASE.indexOf(opcion);
   return valor === null ? [...BASE.slice(0, i), ...BASE.slice(i + 2)] : [...BASE.slice(0, i + 1), valor, ...BASE.slice(i + 2)];
 }
+
+describe("inv-cargar · el tsx falso del /app", () => {
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo. Por eso el tsx es un archivo fijo del repo
+  // (falsos-cargar/tsx), el mismo en todas las pruebas; el /app sí es propio de cada una.
+  it("el tsx del /app es el versionado, el mismo archivo en todas las pruebas: no se crea uno nuevo", () => {
+    for (const p of [preparar(), preparar()]) expect(idArchivo(path.join(p.app, "node_modules", ".bin", "tsx"))).toBe(idArchivo(TSX_CARGAR_FALSO));
+  });
+});
 
 describe("inv-cargar · registrar-movimiento-fondo arma el argv del CLI en orden fijo", () => {
   for (const [nombre, cabecera, esperado] of [

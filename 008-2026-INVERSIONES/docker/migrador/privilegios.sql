@@ -9,17 +9,21 @@
 --   intento_ingreso     INSERT
 --   codigo_recuperacion INSERT y UPDATE ("usadoEn", "anuladoEn") (un disparador admite una sola marca)
 --   plan_version, regla_plan, decision y enlace_decision_orden: solo INSERT, por COLUMNA y con todas las columnas de
---                       cada tabla (fase B, el dueño edita el plan y el diario desde la web; migración
+--                       cada tabla MENOS sus instantes (fase B, el dueño edita el plan y el diario desde la web; migración
 --                       20261121024044_plan_decisiones). Por columna, así una columna nueva no le llega hasta que se
 --                       agregue aquí (falla cerrada). Son de solo inserción por sus disparadores: una versión nueva
 --                       reemplaza entera a la anterior y una decisión se corrige con otra que la reemplaza. El candado
 --                       de una decisión es consultivo (src/plan/bloqueos.ts): sin UPDATE, `SELECT … FOR UPDATE` no le
 --                       está permitido. Quién escribe lo decide el guardián del dueño en cada ruta (exigirDuenoApi); la
---                       familia no. Riesgo residual: con la clave de inv_app se pueden insertar versiones, reglas,
---                       decisiones y enlaces falsos (con un autor que exista), y fijar sus instantes ("creadaEn",
---                       "registradaEn", "creadoEn"): Prisma los manda en cada INSERT (genera `now()` en el cliente, no
---                       usa el DEFAULT de la base), así que no se pueden quitar de la lista sin cambiar el esquema.
---                       Nada de lo que ya está se edita ni se borra.
+--                       familia no. Los instantes ("creadaEn", "registradaEn", "creadoEn") los pone la base (migración
+--                       20261122152704_instantes_base: DEFAULT clock_timestamp(), que Prisma ya no pisa porque el esquema
+--                       los declara `dbgenerated`, y un disparador que los fija para todo rol que no sea el dueño): inv_app
+--                       no los puede nombrar (42501), así que no puede antedatar nada. Riesgo residual: con la clave de
+--                       inv_app se pueden insertar versiones, reglas, decisiones y enlaces falsos (con un autor que
+--                       exista), con el id, el número de versión, la fecha de la decisión y la vigencia que quiera (una
+--                       versión con un número mayor y una vigencia pasada pasa a ser la vigente de esos días: la app lo
+--                       impide, VIGENCIA_RETROCEDE, la base no); lo que no puede es mentir sobre cuándo se registraron, y
+--                       ese instante lo delata. Nada de lo que ya está se edita ni se borra.
 -- Nunca TRUNCATE, REFERENCES, TRIGGER ni DDL. Sin UPDATE ni DELETE en las tablas de solo inserción,
 -- `SET LOCAL inv.reversion = 'on'` no le sirve a inv_app para saltarse sus disparadores.
 -- El UPDATE por columna de usuario lo acota el disparador usuario_transiciones (migración
@@ -92,12 +96,13 @@ BEGIN
   GRANT UPDATE ("usadoEn", "anuladoEn") ON TABLE public.codigo_recuperacion TO inv_app;
   GRANT UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") ON TABLE public.usuario TO inv_app;
 
-  -- Escrituras del plan y del diario (área de edición, fase B): solo INSERT, por columna (todas las de cada tabla: Prisma
-  -- las manda todas, también los instantes). Nada se edita ni se borra. (El RETURNING lo cubre el SELECT de arriba.)
-  GRANT INSERT (id, version, "vigenteDesde", motivo, "aprobadaPorId", "creadaEn") ON TABLE public.plan_version TO inv_app;
+  -- Escrituras del plan y del diario (área de edición, fase B): solo INSERT, por columna (todas las de cada tabla menos los
+  -- instantes, que pone la base; Prisma ya no los manda). Nada se edita ni se borra. (El RETURNING, también el de los
+  -- instantes, lo cubre el SELECT de arriba.) El REVOKE ALL de cada tabla quita también los permisos de columna viejos.
+  GRANT INSERT (id, version, "vigenteDesde", motivo, "aprobadaPorId") ON TABLE public.plan_version TO inv_app;
   GRANT INSERT (id, "planVersionId", "instrumentoId", condicion, nivel, accion, cantidad, "plazoHasta", detalle) ON TABLE public.regla_plan TO inv_app;
-  GRANT INSERT (id, "planVersionId", "reglaId", "instrumentoId", accion, cantidad, excepcion, motivo, "decididaPorId", "fechaDecision", "registradaEn", "reemplazaId") ON TABLE public.decision TO inv_app;
-  GRANT INSERT (id, "ordenId", "decisionId", "reemplazaId", motivo, "creadoPorId", "creadoEn") ON TABLE public.enlace_decision_orden TO inv_app;
+  GRANT INSERT (id, "planVersionId", "reglaId", "instrumentoId", accion, cantidad, excepcion, motivo, "decididaPorId", "fechaDecision", "reemplazaId") ON TABLE public.decision TO inv_app;
+  GRANT INSERT (id, "ordenId", "decisionId", "reemplazaId", motivo, "creadoPorId") ON TABLE public.enlace_decision_orden TO inv_app;
 
   -- inv_precios: solo si el rol existe (desde la primera corrida de crear-roles-prod.sh). Sin él, el despliegue sigue igual.
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'inv_precios') THEN

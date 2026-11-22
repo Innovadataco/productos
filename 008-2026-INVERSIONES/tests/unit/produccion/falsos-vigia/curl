@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# curl del vigía (vigia.test.ts lo antepone al PATH): registra la llamada y habla con el Telegram falso por el socket
+# Unix de FALSO_TELEGRAM_SOCKET, con el curl del sistema. Sin socket sale con 97 sin llamar a curl: nunca a la red.
+linea_falso="$(basename "$0")"; for a in "$@"; do linea_falso="$linea_falso"$'\t'"$a"; done; printf '%s\n' "$linea_falso" >>"$FALSO_REGISTRO" # una sola escritura: atómica entre procesos
+[ -n "${FALSO_TELEGRAM_SOCKET:-}" ] || { echo "curl falso del vigía: falta FALSO_TELEGRAM_SOCKET" >&2; exit 97; }
+exec /usr/bin/curl --unix-socket "$FALSO_TELEGRAM_SOCKET" "$@"

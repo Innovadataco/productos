@@ -26,8 +26,14 @@ const TEXTO_AVISO: Readonly<Record<CodigoAviso, (a: AvisoCrudo, n: string) => st
   ESCISION_SIN_CIERRE_DESTINO: (a, n) => `${n}: la escisión que mueve su precio el ${a.dia} no tiene cierre del destino ese día; ${DIA_EN_CERO}.`,
   ESCISION_ENCADENADA: (a, n) => `${n}: la escisión del ${a.dia} sigue en cadena el mismo día; ${DIA_EN_CERO}.`,
   SALTO_SIN_EVENTO: (a, n) => `${n}: el ${a.dia} el precio cambió más de lo que cabe en un día sin un evento registrado (posible desdoblamiento); ${DIA_EN_CERO}.`,
-  DIVIDENDO_SIN_TENENCIA: (a, n) => `${n}: el dividendo del ${a.dia} no tiene tenencia ese día; no se usa.`,
-  DIVIDENDO_TENENCIA_CAMBIA: (a, n) => `${n}: la tenencia cambió en los ${VENTANA_EX_DIAS} días previos al dividendo del ${a.dia}; no se sabe qué acciones lo cobraron y no se usa.`,
+  DIVIDENDO_SIN_TENENCIA: (a, n) =>
+    `${n}: el dividendo del ${a.dia} no tiene tenencia que lo cobrara (la del día anterior a la fecha ex de su decreto o, sin decreto, la del día del pago); no se usa.`,
+  DIVIDENDO_TENENCIA_CAMBIA: (a, n) =>
+    `${n}: la tenencia cambió en los ${VENTANA_EX_DIAS} días previos al dividendo del ${a.dia}, un pago sin decreto registrado; no se sabe qué acciones lo cobraron y no se usa.`,
+  DIVIDENDO_DECRETO_EN_DUDA: (a, n) =>
+    `${n}: el dividendo del ${a.dia} cabe en las ventanas de decretos con dos fechas de pago o llegó antes de la fecha ex de su decreto; no se sabe qué acciones lo cobraron y no se usa.`,
+  DIVIDENDO_EX_DISTINTAS: (a, n) =>
+    `${n}: el dividendo del ${a.dia} junta decretos con fechas ex distintas y la tenencia cambió entre ellas; no se puede repartir y no se usa.`,
   DECRETO_BRUTO: (a, n) => `${n}: el decreto con pago el ${a.dia} entra con su valor bruto por acción (sin la retención).`,
   ANIO_SIN_CALENDARIO: (a) => `El calendario de la BVC de ${a.dato} no está sembrado: sus festivos no se pueden descartar.`,
   SIN_POSICIONES_PROYECTADAS: () => `Ninguna posición tiene ${MINIMO_DIAS} días con cierre: las bandas no muestran riesgo y no son una certeza.`,

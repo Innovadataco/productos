@@ -5,26 +5,42 @@
 // puede escribir sobre el versionado.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
-import { carpetaTemporal, crearFalsos, DIR_008, entorno, ruta008 } from "./falsos";
+import { describe, expect, it, vi } from "vitest";
+import { appCargarFalsa, carpetaTemporal, crearFalsos, DIR_008, entorno, idArchivo, ruta008, rutaEnPath, TSX_CARGAR_FALSO } from "./falsos";
 
-const DIR_FALSOS = ruta008("tests/unit/produccion/falsos");
+// La primera ejecución de cada falso en un clon recién sacado pasa por la revisión de macOS: con el Mac cargado,
+// segundos. Ya revisado, cuesta milisegundos.
+vi.setConfig({ testTimeout: 60_000 });
+
+const DIR_PRODUCCION = ruta008("tests/unit/produccion");
+const DIR_FALSOS = path.join(DIR_PRODUCCION, "falsos");
 const NOMBRES = readdirSync(DIR_FALSOS).sort();
+/** Todas las carpetas de falsos versionados: ./falsos/ y las propias de un archivo de pruebas (./falsos-*). */
+const CARPETAS_FALSOS = readdirSync(DIR_PRODUCCION, { withFileTypes: true })
+  .filter((e) => e.isDirectory() && (e.name === "falsos" || e.name.startsWith("falsos-")))
+  .map((e) => e.name)
+  .sort();
 
-/** Identidad del archivo (sigue los enlaces): dispositivo e inodo. */
-const idArchivo = (ruta: string) => {
-  const s = statSync(ruta);
-  return `${s.dev}:${s.ino}`;
-};
 /** Ruta que bash ejecutaría para `nombre` con el PATH de esos falsos. */
 const resuelve = (falsos: ReturnType<typeof crearFalsos>, nombre: string) => {
-  const r = spawnSync("bash", ["-c", 'command -v "$1"', "bash", nombre], { env: entorno(falsos) as NodeJS.ProcessEnv, encoding: "utf8" });
-  expect(r.status, `${nombre}: ${r.stderr}`).toBe(0);
-  return r.stdout.trim();
+  const ruta = rutaEnPath(entorno(falsos), nombre);
+  expect(ruta, `${nombre} no está en el PATH de los falsos`).not.toBe("");
+  return ruta;
 };
 const sha256 = (ruta: string) => createHash("sha256").update(readFileSync(ruta)).digest("hex");
+
+describe("falsos.ts · appCargarFalsa (el /app de inv-cargar)", () => {
+  it("el tsx del /app es un enlace simbólico al versionado: ni una copia ni un enlace duro, y no sobrescribe", () => {
+    const dir = carpetaTemporal("falsos-app");
+    const tsx = path.join(appCargarFalsa(dir), "node_modules", ".bin", "tsx");
+    expect(lstatSync(tsx).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(tsx)).toBe(TSX_CARGAR_FALSO);
+    // Una segunda vez en la misma carpeta falla (EEXIST): nunca escribe sobre lo que haya.
+    expect(() => appCargarFalsa(dir)).toThrow(/EEXIST/);
+  });
+});
 
 describe("falsos.ts · crearFalsos", () => {
   it("hay falsos versionados que probar", () => {
@@ -56,19 +72,39 @@ describe("falsos.ts · crearFalsos", () => {
     expect([sha256(versionado), idArchivo(versionado)]).toEqual([antesSha, antesId]);
   });
 
-  it("los falsos versionados son ejecutables, en git (100755) y en disco", () => {
-    const r = spawnSync("git", ["-C", DIR_008, "ls-files", "-s", "--", "tests/unit/produccion/falsos"], { encoding: "utf8" });
-    expect(r.status, r.stderr).toBe(0);
-    const modos = Object.fromEntries(
-      r.stdout
-        .trim()
-        .split("\n")
-        .map((l) => [path.basename(l.split("\t")[1]!), l.split(" ")[0]]),
-    );
-    for (const nombre of NOMBRES) {
-      expect(modos[nombre], nombre).toBe("100755");
-      expect(statSync(path.join(DIR_FALSOS, nombre)).mode & 0o111, nombre).toBe(0o111);
+  it("hay carpetas de falsos que revisar, además de ./falsos/", () => {
+    expect(CARPETAS_FALSOS).toEqual(expect.arrayContaining(["falsos", "falsos-cargar", "falsos-montaje", "falsos-vigia"]));
+  });
+
+  it("los falsos versionados de todas las carpetas son ejecutables, en git (100755) y en disco", () => {
+    for (const carpeta of CARPETAS_FALSOS) {
+      const r = spawnSync("git", ["-C", DIR_008, "ls-files", "-s", "--", `tests/unit/produccion/${carpeta}`], { encoding: "utf8" });
+      expect(r.status, r.stderr).toBe(0);
+      const modos = Object.fromEntries(
+        r.stdout
+          .trim()
+          .split("\n")
+          .filter(Boolean)
+          .map((l) => [path.basename(l.split("\t")[1]!), l.split(" ")[0]]),
+      );
+      const nombres = readdirSync(path.join(DIR_PRODUCCION, carpeta)).sort();
+      expect(nombres.length, carpeta).toBeGreaterThan(0);
+      for (const nombre of nombres) {
+        expect(modos[nombre], `${carpeta}/${nombre}`).toBe("100755");
+        expect(statSync(path.join(DIR_PRODUCCION, carpeta, nombre)).mode & 0o111, `${carpeta}/${nombre}`).toBe(0o111);
+      }
     }
+  });
+
+  // En macOS, `cp <archivo> ""` copia al directorio actual (sale con 0): sin la guarda, el falso escribiría en el clon.
+  it("sleep: un cambio que no se puede hacer (falta su destino) sale con 97, no pasa en silencio", () => {
+    const falsos = crearFalsos(carpetaTemporal("falsos-sleep-sin-destino"));
+    const sinMeminfo = spawnSync("bash", ["-c", "sleep 7"], { env: entorno(falsos, { FALSO_SLEEP_MEMINFO: falsos.registro }) as NodeJS.ProcessEnv, encoding: "utf8" });
+    expect(sinMeminfo.status, sinMeminfo.stderr).toBe(97);
+    expect(sinMeminfo.stderr).toMatch(/falta INV_MEMINFO/);
+    const sinSalud = spawnSync("bash", ["-c", "sleep 7"], { env: entorno(falsos, { FALSO_SLEEP_ROMPE_SALUD: "{}" }) as NodeJS.ProcessEnv, encoding: "utf8" });
+    expect(sinSalud.status, sinSalud.stderr).toBe(97);
+    expect(sinSalud.stderr).toMatch(/falta FALSO_SALUD_ARCHIVO/);
   });
 
   it("cada llamada queda en el registro con el nombre del falso y sus argumentos", () => {

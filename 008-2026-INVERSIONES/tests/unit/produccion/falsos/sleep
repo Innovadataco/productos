@@ -1,5 +1,23 @@
 #!/usr/bin/env bash
 linea_falso="$(basename "$0")"; for a in "$@"; do linea_falso="$linea_falso"$'\t'"$a"; done; printf '%s\n' "$linea_falso" >>"$FALSO_REGISTRO" # una sola escritura: atómica entre procesos
-# FALSO_SLEEP_ROMPE_SALUD: al «dormir», la salud de la app cambia (para la verificación después de la espera).
-[ -z "${FALSO_SLEEP_ROMPE_SALUD:-}" ] || printf '%s' "$FALSO_SLEEP_ROMPE_SALUD" >"$FALSO_SALUD_ARCHIVO"
+# FALSO_SLEEP_FDS: archivo donde anota «<segundos>: <descriptores>» con los de los candados (8, el propio; 9, el común
+# con PI) que siguen abiertos al dormir.
+if [ -n "${FALSO_SLEEP_FDS:-}" ]; then
+  abiertos=""; for fd in 8 9; do if { true >&"$fd"; } 2>/dev/null; then abiertos="$abiertos $fd"; fi; done
+  printf '%s:%s\n' "${1:-}" "$abiertos" >>"$FALSO_SLEEP_FDS"
+fi
+# FALSO_SLEEP_EN: los cambios de abajo, solo en el sleep con ese argumento; sin ella, en cada sleep. Si un cambio no
+# se puede hacer (falta su destino), sale con 97: la prueba no pasa sin haber cambiado nada.
+if [ -z "${FALSO_SLEEP_EN:-}" ] || [ "${1:-}" = "$FALSO_SLEEP_EN" ]; then
+  # FALSO_SLEEP_ROMPE_SALUD: al «dormir», la salud de la app cambia (para la verificación después de la espera).
+  if [ -n "${FALSO_SLEEP_ROMPE_SALUD:-}" ]; then
+    [ -n "${FALSO_SALUD_ARCHIVO:-}" ] || { echo "sleep falso: falta FALSO_SALUD_ARCHIVO" >&2; exit 97; }
+    printf '%s' "$FALSO_SLEEP_ROMPE_SALUD" >"$FALSO_SALUD_ARCHIVO" || exit 97
+  fi
+  # FALSO_SLEEP_MEMINFO: al «dormir», el meminfo pasa a ser el de ese archivo (la memoria cambia durante la espera).
+  if [ -n "${FALSO_SLEEP_MEMINFO:-}" ]; then
+    [ -n "${INV_MEMINFO:-}" ] || { echo "sleep falso: falta INV_MEMINFO" >&2; exit 97; }
+    cp "$FALSO_SLEEP_MEMINFO" "$INV_MEMINFO" || exit 97
+  fi
+fi
 exit 0

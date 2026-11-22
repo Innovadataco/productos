@@ -130,7 +130,7 @@ export async function corregirDecision(
       const enlaces = await tx.enlaceDecisionOrden.findMany({
         where: { decisionId: anterior.id, reemplazadoPor: { is: null } },
         select: { orden: { select: { id: true, estado: true, instrumentoId: true, lado: true, fechaOperacion: true } } },
-        orderBy: { creadoEn: "asc" },
+        orderBy: [{ creadoEn: "asc" }, { id: "asc" }],
       });
       for (const { orden } of enlaces) {
         exigirEnlaceCoherente(orden, { ...datos, reemplazada: false });

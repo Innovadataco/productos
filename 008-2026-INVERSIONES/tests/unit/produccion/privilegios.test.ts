@@ -4,7 +4,7 @@
 // "totpSecreto", "totpActivadoEn", "totpUltimoPaso" y "presesionHash" en usuario, más INSERT y UPDATE de
 // "usadoEn" y "anuladoEn" en codigo_recuperacion. Y, del área de edición del plan (fase B, PR-B), INSERT y nada más en las
 // cuatro tablas del plan y del diario (plan_version, regla_plan, decision, enlace_decision_orden), que son de solo
-// inserción por sus disparadores. Nunca DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL.
+// inserción por sus disparadores, sin sus instantes (los pone la base). Nunca DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL.
 // inv_dueno es el dueño (crear-acceso-inicial.ts y --reiniciar-totp, en el migrador).
 //
 // Sin condiciones: si faltan las tablas o las columnas del login (20261121050319_login) o del TOTP
@@ -65,14 +65,14 @@ describe("privilegios de inv_app", () => {
 
 // Área de edición del plan (fase B, PR-B): el dueño crea versiones y registra decisiones desde la web, que corre como
 // inv_app. Solo INSERT, solo en las cuatro tablas del plan y del diario, y POR COLUMNA con todas las columnas de cada
-// una (una columna nueva no le llega hasta que se agregue: falla cerrada). Los instantes (`creadaEn`, `registradaEn`,
-// `creadoEn`) van en la lista porque Prisma los manda en cada INSERT (genera `now()` en el cliente): quitarlos
-// rompería la app (lo prueba tests/integracion/plan-edicion.test.ts con los privilegios de este archivo) y que los
-// ponga la base exigiría cambiar el esquema. Es riesgo residual, dicho en privilegios.sql. Nada se edita ni se borra:
-// los disparadores de solo inserción de la migración del plan siguen mandando, y sin UPDATE ni DELETE inv_app ni los
-// intenta.
+// una (una columna nueva no le llega hasta que se agregue: falla cerrada) MENOS los instantes (`creadaEn`,
+// `registradaEn`, `creadoEn`): los pone la base (migración *_instantes_base: DEFAULT clock_timestamp() y un disparador
+// para todo rol que no sea el dueño), y Prisma ya no los manda (`dbgenerated` en el esquema). Así inv_app no puede
+// antedatar una decisión: nombrar un instante da 42501 (lo prueban tests/integracion/plan-edicion.test.ts con los
+// privilegios de este archivo y roles-base.test.ts con inv_app real). Nada se edita ni se borra: los disparadores de
+// solo inserción de la migración del plan siguen mandando, y sin UPDATE ni DELETE inv_app ni los intenta.
 const TABLAS_DEL_PLAN = ["decision", "enlace_decision_orden", "plan_version", "regla_plan"];
-/** Los instantes con DEFAULT de la base que Prisma igual manda (por eso van en la lista). */
+/** Los instantes que pone la base: nunca en un INSERT de inv_app. */
 const INSTANTES = ["creadaEn", "registradaEn", "creadoEn"];
 
 /** Columnas escalares de una tabla según prisma/schema.prisma (los campos de relación son de otro modelo). */
@@ -103,13 +103,21 @@ describe("privilegios del plan y del diario (área de edición)", () => {
     }
   });
 
-  it("cada INSERT trae exactamente las columnas de su tabla según el esquema (también los instantes, que manda Prisma)", () => {
+  it("cada INSERT trae exactamente las columnas de su tabla según el esquema, menos los instantes (los pone la base)", () => {
     for (const t of TABLAS_DEL_PLAN) {
-      const esperadas = columnasDe(t);
-      expect(esperadas.length, t).toBeGreaterThan(5);
+      const delEsquema = columnasDe(t);
+      expect(delEsquema.length, t).toBeGreaterThan(5);
+      const esperadas = delEsquema.filter((c) => !INSTANTES.includes(c));
       expect([...INSERT_DEL_PLAN[t]!].sort(), t).toEqual([...esperadas].sort());
     }
-    for (const instante of INSTANTES) expect(Object.values(INSERT_DEL_PLAN).some((cs) => cs.includes(instante)), instante).toBe(true);
+    // Control positivo: cada instante es de verdad una columna de alguna de las cuatro tablas.
+    for (const instante of INSTANTES) expect(TABLAS_DEL_PLAN.some((t) => columnasDe(t).includes(instante)), instante).toBe(true);
+  });
+
+  it("ningún GRANT a inv_app en las tablas del plan nombra un instante (ni de INSERT ni de nada)", () => {
+    const delPlan = [...sql.matchAll(/GRANT[^;]*\bON\s+TABLE\s+public\.([a-z_]+)\s+TO\s+inv_app\b/g)].filter((m) => TABLAS_DEL_PLAN.includes(m[1]!));
+    expect(delPlan.length).toBe(TABLAS_DEL_PLAN.length);
+    for (const m of delPlan) for (const instante of INSTANTES) expect(m[0], instante).not.toContain(`"${instante}"`);
   });
 
   it("ningún otro INSERT de inv_app fuera del login, del TOTP y del plan", () => {

@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { carpetaTemporal, correr, crearFalsos, crearRepo, entorno, envProduccionFicticio, funcion, git, leer008, ruta008, type Entorno, type Llamada } from "./falsos";
+import { carpetaTemporal, correr, crearFalsos, crearRepo, entorno, envProduccionFicticio, funcion, git, idArchivo, leer008, ruta008, rutaEnPath, type Entorno, type Llamada } from "./falsos";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -915,27 +915,32 @@ describe("desplegar-prod.sh · espera de la medición: 120 s si es solo código,
   }
 
   /**
-   * Un sleep falso propio de la prueba (en su carpeta temporal, primera en el PATH: tapa al de falsos/ sin tocarlo): registra la llamada igual,
-   * anota qué descriptores de los candados (8, el propio; 9, el común con PI) siguen abiertos y, en el sleep de
-   * `enSegundos`, cambia el meminfo o la salud.
+   * Variables para el sleep versionado de falsos/ (no escribe un sleep propio): anota qué descriptores de los candados
+   * (8, el propio; 9, el común con PI) siguen abiertos en cada sleep y, en el sleep de `enSegundos`, cambia el meminfo
+   * o la salud. Sin `cambio`, solo anota. Se pasan como `extra` de desplegarCambio.
    */
-  function sleepQueMira(p: Preparado, cambio: { enSegundos?: string; meminfo?: string; salud?: string } = {}) {
+  function sleepQueMira(p: Preparado, cambio?: { enSegundos: string; meminfo?: string; salud?: string }) {
     const fds = path.join(p.base, "sleep-fds.txt");
     const meminfoNuevo = path.join(p.base, "meminfo-despues");
-    if (cambio.meminfo) writeFileSync(meminfoNuevo, cambio.meminfo);
-    const lineas = [
-      "#!/usr/bin/env bash",
-      `linea="sleep"; for a in "$@"; do linea="$linea"$'\\t'"$a"; done; printf '%s\\n' "$linea" >>"$FALSO_REGISTRO"`,
-      `abiertos=""; for fd in 8 9; do if { true >&"$fd"; } 2>/dev/null; then abiertos="$abiertos $fd"; fi; done`,
-      `printf '%s:%s\\n' "$1" "$abiertos" >>"${fds}"`,
-      `if [ "$1" = "${cambio.enSegundos ?? "nunca"}" ]; then`,
-      cambio.meminfo ? `  cp "${meminfoNuevo}" "$INV_MEMINFO"` : "  :",
-      cambio.salud ? `  printf '%s' '${cambio.salud}' >"$FALSO_SALUD_ARCHIVO"` : "  :",
-      "fi",
-    ];
-    writeFileSync(path.join(p.falsos.bin, "sleep"), lineas.join("\n") + "\n", { mode: 0o755 });
-    return () => readFileSync(fds, "utf8").trim().split("\n");
+    if (cambio?.meminfo) writeFileSync(meminfoNuevo, cambio.meminfo);
+    const env: Entorno = {
+      FALSO_SLEEP_FDS: fds,
+      ...(cambio ? { FALSO_SLEEP_EN: cambio.enSegundos } : {}),
+      ...(cambio?.meminfo ? { FALSO_SLEEP_MEMINFO: meminfoNuevo } : {}),
+      ...(cambio?.salud ? { FALSO_SLEEP_ROMPE_SALUD: cambio.salud } : {}),
+    };
+    return { env, candados: () => readFileSync(fds, "utf8").trim().split("\n") };
   }
+
+  // En macOS, la primera ejecución de cada ejecutable NUEVO pasa por la revisión del sistema, en una sola fila para
+  // todo el Mac: con la máquina cargada son segundos por archivo. Por eso sleepQueMira no escribe un sleep propio:
+  // usa el versionado de falsos/, que responde según variables FALSO_SLEEP_*.
+  it("sleepQueMira no crea un sleep nuevo: el del PATH es el versionado (falsos/sleep) y la carpeta propia queda vacía", () => {
+    const p = conCorriendo();
+    sleepQueMira(p, { enSegundos: "480", meminfo: MEMINFO_SANA });
+    expect(readdirSync(p.falsos.bin)).toEqual([]);
+    expect(idArchivo(rutaEnPath(p.env, "sleep"))).toBe(idArchivo(ruta008("tests/unit/produccion/falsos/sleep")));
+  });
 
   const medicionesDe = (p: Preparado) => {
     const dir = path.join(p.base, "estado", "mediciones");
@@ -1052,13 +1057,13 @@ describe("desplegar-prod.sh · espera de la medición: 120 s si es solo código,
 
   it("120 s con SwapFree bajo el piso: extiende hasta 600 s con los candados tomados, mide otra vez y, si sigue bajo, sale con 3 sin DEPLOY VERIFICADO", async () => {
     const p = conCorriendo(MEMINFO_SWAP_BAJO);
-    const candados = sleepQueMira(p);
-    const { r, nuevo } = await desplegarCambio(p);
+    const mira = sleepQueMira(p);
+    const { r, nuevo } = await desplegarCambio(p, undefined, mira.env);
     expect(r.status, r.stderr).toBe(3);
     expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
     expect(sleeps(p)).toEqual(["120", "480"]);
     // La espera corta y la extensión corren con los descriptores de los dos candados abiertos (no se sueltan antes).
-    expect(candados()).toEqual(["120: 8 9", "480: 8 9"]);
+    expect(mira.candados()).toEqual(["120: 8 9", "480: 8 9"]);
     expect(r.stderr).toMatch(/memoria bajo el piso a los 120 s \(SwapFree 92 MiB < 512 MiB\): se extiende la espera 480 s/);
     expect(r.stderr).toMatch(/MEMORIA BAJO EL PISO después de 600 s \(SwapFree 92 MiB < 512 MiB\): sin DEPLOY VERIFICADO/);
     expect(r.stderr).toMatch(/pausar-008\.sh/);
@@ -1081,8 +1086,8 @@ describe("desplegar-prod.sh · espera de la medición: 120 s si es solo código,
 
   it("120 s bajo el piso que se recupera en la extensión: mide otra vez, sigue y termina con DEPLOY VERIFICADO", async () => {
     const p = conCorriendo(MEMINFO_SWAP_BAJO);
-    sleepQueMira(p, { enSegundos: "480", meminfo: MEMINFO_SANA });
-    const { r, nuevo } = await desplegarCambio(p);
+    const mira = sleepQueMira(p, { enSegundos: "480", meminfo: MEMINFO_SANA });
+    const { r, nuevo } = await desplegarCambio(p, undefined, mira.env);
     expect(r.status, r.stderr).toBe(0);
     expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${nuevo}`);
     expect(sleeps(p)).toEqual(["120", "480"]);
@@ -1091,8 +1096,8 @@ describe("desplegar-prod.sh · espera de la medición: 120 s si es solo código,
 
   it("si la salud cae durante la extensión, vuelve a la imagen que corría (como en cualquier falla después del up)", async () => {
     const p = conCorriendo(MEMINFO_SWAP_BAJO);
-    sleepQueMira(p, { enSegundos: "480", salud: JSON.stringify({ estado: "degradado", version: "x" }) });
-    const { r } = await desplegarCambio(p);
+    const mira = sleepQueMira(p, { enSegundos: "480", salud: JSON.stringify({ estado: "degradado", version: "x" }) });
+    const { r } = await desplegarCambio(p, undefined, mira.env);
     expect(r.status).not.toBe(0);
     expect(r.stdout).not.toMatch(/DEPLOY VERIFICADO/);
     expect(r.stderr).toMatch(/vuelta atrás/i);

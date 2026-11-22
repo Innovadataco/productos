@@ -7,6 +7,7 @@
 //     pg_read_all_data (lee todo, en todo PostgreSQL 16) recibe EXACTAMENTE los INSERT que privilegios.sql le da a
 //     inv_app en esas tablas, y un cliente de una sola conexión hace SET ROLE. La prueba con inv_app real es
 //     tests/unit/produccion/roles-base.test.ts (solo CI).
+//  4. Los instantes («cuándo se registró») los pone la base: esos INSERT no los traen y nombrarlos da 42501.
 // Las vigencias no retroceden y la base es compartida: se empieza después de la última versión (como plan.test.ts) y en
 // fechas viejas (plan-pagina.test.ts necesita versiones lejos de hoy).
 import { readFileSync } from "node:fs";
@@ -23,6 +24,8 @@ const db = new PrismaClient();
 const corrida = Date.now().toString(36).toUpperCase().slice(-6);
 const ROL = "pg_read_all_data";
 const TABLAS_DEL_PLAN = ["decision", "enlace_decision_orden", "plan_version", "regla_plan"];
+/** Los instantes que pone la base (migración *_instantes_base): nunca en los INSERT de inv_app. */
+const INSTANTES = ["creadaEn", "registradaEn", "creadoEn"];
 /** El «hoy» de estas pruebas: lejos de las vigencias, para que las decisiones caigan en las versiones de aquí. */
 const HOY = new Date("2026-06-30T00:00:00.000Z");
 let base = new Date("2025-03-03T00:00:00.000Z");
@@ -202,16 +205,24 @@ describe("con los privilegios de inv_app (solo INSERT en el plan): las funciones
     expect(await db.enlaceDecisionOrden.count({ where: { ordenId: otraVenta.id, decisionId: conOrden.id } })).toBe(1);
   });
 
-  it("Prisma manda los instantes en cada INSERT: sin ellos en la lista de privilegios.sql, la app no podría escribir", async () => {
-    // Por qué los instantes van en la lista (y quedan como riesgo residual): con el mismo rol, sin INSERT de «creadaEn»,
-    // crear una versión falla. Se le quita ese permiso al rol de la prueba y se le repone al final.
-    const ultima = (await db.planVersion.findFirst({ orderBy: { version: "desc" }, select: { version: true } }))!.version;
-    await db.$executeRawUnsafe(`REVOKE INSERT ("creadaEn") ON TABLE public.plan_version FROM ${ROL}`);
-    try {
-      await expect(crearVersionPlan(restringida, { vigenteDesde: mas(30), motivo: "Sin el instante (ficticia)", autorId: duenoId, reglas: [regla("VENDER", "Vender (ficticia)")] }, { hoy: HOY, ultimaEsperada: ultima })).rejects.toThrow(/42501|permission denied/);
-    } finally {
-      await db.$executeRawUnsafe(`GRANT INSERT ("creadaEn") ON TABLE public.plan_version TO ${ROL}`);
+  it("los instantes los pone la base: privilegios.sql no los da y nombrarlos da 42501 (la app no puede antedatar)", async () => {
+    // El caso de arriba (crear, registrar, enlazar y corregir con estos privilegios) ya prueba que Prisma no los manda.
+    const columnas = insertsDelPlan().map((g) => g.columnas).join(" ");
+    for (const instante of INSTANTES) expect(columnas, instante).not.toContain(`"${instante}"`);
+    for (const [tabla, columna] of [["plan_version", "creadaEn"], ["decision", "registradaEn"], ["enlace_decision_orden", "creadoEn"]] as const) {
+      // Sin filas: el permiso de columna se revisa al empezar, antes del disparador y de las FK.
+      const sql = `INSERT INTO ${tabla} (id, "${columna}") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`;
+      await expect(restringida.$executeRawUnsafe(sql), sql).rejects.toThrow(/42501|permission denied/);
     }
+    expect(await quien()).toBe(ROL);
+  });
+
+  it("la app crea la versión con estos privilegios sin nombrar el instante, y queda con la hora de la base", async () => {
+    const ultima = (await db.planVersion.findFirst({ orderBy: { version: "desc" }, select: { version: true } }))!.version;
+    const antes = (await db.$queryRaw<{ t: Date }[]>`SELECT clock_timestamp() AS t`)[0]!.t;
+    const v = await crearVersionPlan(restringida, { vigenteDesde: mas(30), motivo: "Con la hora de la base (ficticia)", autorId: duenoId, reglas: [regla("VENDER", "Vender (ficticia)")] }, { hoy: HOY, ultimaEsperada: ultima });
+    const fila = (await db.$queryRaw<{ ok: boolean }[]>`SELECT "creadaEn" >= ${antes}::timestamptz AND "creadaEn" <= clock_timestamp() AS ok FROM plan_version WHERE id = ${v.id}`)[0];
+    expect(fila?.ok).toBe(true);
   });
 
   it("los disparadores de solo inserción siguen mandando aunque el rol tuviera UPDATE (defensa en profundidad)", async () => {
