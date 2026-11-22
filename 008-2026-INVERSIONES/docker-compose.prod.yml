@@ -376,7 +376,9 @@ services:
   #   host vista desde el contenedor).
   # - Huella para el vigía (PR 4) en el volumen inv-008-precios-estado (/estado): bucle (latido y estado, cada
   #   minuto: es el healthcheck), ultima-corrida y corrida.candado, en clave=valor (src/servicio-precios/estado.ts).
-  # - 96m sin swap, también con el hijo: POR MEDIR.
+  # - 96m sin swap, también con el hijo. Medido en el Mac (arm64 nativo, 2026-11-21; el VPS es amd64 y se mide allí con
+  #   medir-memoria.sh): en espera 14 MiB (pico 17) y 13 pids; una corrida de 10 días, pico de 41 MiB y 34 pids; la
+  #   carga de un año, pico de 52 MiB. Sin OOM y sin /tmp (no lo necesita).
   inv-008-precios:
     image: inv-008-app:${INV_TAG:-sin-desplegar}
     pull_policy: never
