@@ -342,9 +342,13 @@ describe("montaje del host de la carpeta de respaldos · nosuid y noexec (por ah
   /** findmnt falso versionado: registra la llamada en `<dir>/registro.txt` e imprime `opciones`. */
   const findmntFalso = (opciones: string | null) => {
     const dir = carpetaTemporal("findmnt");
-    // null: un findmnt que falla sin imprimir nada (el VPS no puede leer el montaje). Las tres variables siempre:
-    // env() no limpia las FALSO_* heredadas.
-    const falso = { FALSO_REGISTRO: path.join(dir, "registro.txt"), FALSO_FINDMNT_OPCIONES: opciones ?? "", FALSO_FINDMNT_RC: opciones === null ? "1" : "0" };
+    // null: un findmnt que falla sin imprimir nada (el VPS no puede leer el montaje). Sus opciones serían las buenas:
+    // si el falso no fallara, el caso no avisaría. Las tres variables siempre: env() no limpia las FALSO_* heredadas.
+    const falso = {
+      FALSO_REGISTRO: path.join(dir, "registro.txt"),
+      FALSO_FINDMNT_OPCIONES: opciones ?? "rw,nosuid,nodev,noexec,relatime",
+      FALSO_FINDMNT_RC: opciones === null ? "1" : "0",
+    };
     return { dir, env: env({ PATH: `${path.dirname(FINDMNT_FALSO)}:/usr/bin:/bin`, ...falso }) };
   };
   const revisar = (opciones: string | null, extra = "") => {
