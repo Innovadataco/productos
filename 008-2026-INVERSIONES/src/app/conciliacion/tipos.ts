@@ -2,6 +2,7 @@
  * La conciliación ya serializada para la pantalla (texto decimal exacto; el formato va en el componente).
  * Sin encargo, cuenta, titular ni crudo: la lectura (src/conciliacion/leer.ts) ni siquiera los trae.
  */
+import type { Procedencia, ProcedenciaCompuesta } from "@/app/_comun/fecha-dato/tipos";
 import type { Frescura } from "@/conciliacion/leer";
 import type { Estado } from "./motivos";
 
@@ -57,6 +58,16 @@ export interface CuentasVista {
   readonly sinVerificar: number;
 }
 
+/**
+ * De dónde y de cuándo es cada «Valor sistema» (frente fecha-hora-datos): el cierre o el valor de unidad del corte con
+ * que se calculó, por id de la especie o del fondo; el total de acciones, por el cierre más viejo que lo compone.
+ */
+export interface ProcedenciasVista {
+  readonly especies: Readonly<Record<string, Procedencia>>;
+  readonly fondos: Readonly<Record<string, Procedencia>>;
+  readonly total: ProcedenciaCompuesta | null;
+}
+
 export interface ConciliacionVista {
   readonly resultado: Estado;
   /** Día y hora en Colombia: «AAAA-MM-DD HH:MM». */
@@ -69,6 +80,7 @@ export interface ConciliacionVista {
   readonly cuentas: CuentasVista;
   /** Controles de un tipo que esta pantalla no sabe mostrar (el cálculo v1 no los produce). */
   readonly noReconocidos: number;
+  readonly procedencias: ProcedenciasVista;
 }
 
 export interface VistaCorte {

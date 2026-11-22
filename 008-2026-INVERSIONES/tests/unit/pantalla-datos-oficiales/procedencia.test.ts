@@ -7,12 +7,12 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DatosOficiales } from "@/app/datos-oficiales/DatosOficiales";
-import type { SerieConDatos } from "@/app/datos-oficiales/tipos";
+import type { SerieConDatos, SerieVista } from "@/app/datos-oficiales/tipos";
 import { IBR, IPC, TPM, TRM, datos, sinDatos } from "./ficticio";
 
 const texto = (el: Element | null | undefined) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
 
-function tarjetas(series = [TRM, TPM, IBR, IPC]): HTMLElement[] {
+function tarjetas(series: readonly SerieVista[] = [TRM, TPM, IBR, IPC]): HTMLElement[] {
   const raiz = document.createElement("div");
   raiz.innerHTML = renderToStaticMarkup(createElement(DatosOficiales, { datos: datos(series) }));
   return [...raiz.querySelectorAll<HTMLElement>("article.do-serie")];

@@ -4,11 +4,17 @@
  * especie, a los cierres del tablero. Cada cifra lleva a su origen: el clic abre el detalle de la especie (y al
  * cerrarlo el foco vuelve aquí). Las cifras vienen del servidor (src/tablero/composicion.ts y calculo.ts).
  */
+import { FechaDatoCompuesta } from "@/app/_comun/fecha-dato/FechaDato";
+import { textoProcedencia } from "@/app/_comun/fecha-dato/textos";
 import { Barras, Dona, type FilaBarra, type Segmento } from "@/app/_graficas";
 import { cop, fecha, n, numero, pct } from "./formato";
+import { procedenciaDeCierre, procedenciaDeFilas } from "./procedencia";
 import type { FilaVista, Vista } from "./tipos";
 
-const estadoCierre = (f: FilaVista) => (f.cierre ? `${f.cierre.verificado ? "verificado A&V" : "sin verificar"} · ${fecha(f.cierre.fecha)}` : "sin cierre");
+/** El estado y la fecha del cierre y, desde frente fecha-hora-datos, cuándo lo trajo 008 y de dónde. */
+const estadoCierre = (f: FilaVista) => (f.cierre
+  ? `${f.cierre.verificado ? "verificado A&V" : "sin verificar"} · ${fecha(f.cierre.fecha)} · ${textoProcedencia(procedenciaDeCierre(f.cierre), { sinFecha: true })}`
+  : "sin cierre");
 const detalle = (f: FilaVista) => `costo ${cop(n(f.costo))} · valor ${f.valor ? cop(n(f.valor)) : "—"} · ${estadoCierre(f)}`;
 
 function segmentos(vista: Vista): Segmento[] {
@@ -36,6 +42,7 @@ export function Foto({ vista, elegir }: { readonly vista: Vista; readonly elegir
   const tajadas = segmentos(vista);
   const filas = barras(vista);
   const sinPrecio = vista.filas.filter((f) => f.valor === null).map((f) => f.nemo);
+  const compuesta = procedenciaDeFilas(vista.filas);
   return (
     <section className="bloque entra d3" aria-labelledby="t-foto">
       <div className="cabeza"><div><div className="eyebrow"><Cuando vista={vista} /></div><h2 id="t-foto">Cómo está repartido</h2></div></div>
@@ -50,6 +57,7 @@ export function Foto({ vista, elegir }: { readonly vista: Vista; readonly elegir
           resumen={`Rentabilidad sin vender sobre su costo: ${filas.map((f) => `${f.nombre} ${f.texto}`).join("; ")}.`}
         />
       </div>
+      {compuesta ? <FechaDatoCompuesta compuesta={compuesta} /> : null}
       {sinPrecio.length > 0 ? <p className="nota aviso">Sin cierre (no entra aquí): {sinPrecio.join(" · ")}.</p> : null}
       <p className="nota">Rentabilidad sin vender = ganancia sin vender sobre el costo de lo que tiene (la columna % de la tabla). Toque una especie para ver su detalle.</p>
     </section>

@@ -22,7 +22,15 @@ export interface Resumen {
   readonly incompletas: readonly string[];
 }
 
-type CierreDb = { readonly instrumentoId: string; readonly fecha: Date; readonly precio: Prisma.Decimal; readonly estado: string };
+type CierreDb = {
+  readonly instrumentoId: string;
+  readonly fecha: Date;
+  readonly precio: Prisma.Decimal;
+  readonly estado: string;
+  /** Cuándo lo trajo 008 y de qué fuente (frente fecha-hora-datos): la pantalla dice de dónde y de cuándo es. */
+  readonly fuente: string;
+  readonly traidoEn: Date;
+};
 
 interface Fuentes {
   readonly vivas: ReadonlyMap<string, Posicion>;
@@ -62,11 +70,11 @@ async function seriesPorEspecie(db: PrismaClient, ids: readonly string[]): Promi
   const series = new Map<string, CierreDb[]>(ids.map((id) => [id, []]));
   if (ids.length === 0) return series;
   const filas = await db.$queryRaw<CierreDb[]>`
-    SELECT "instrumentoId", "fecha", "precio", "estado"
+    SELECT "instrumentoId", "fecha", "precio", "estado", "fuente", "traidoEn"
     FROM (
       SELECT u.*, ROW_NUMBER() OVER (PARTITION BY u."instrumentoId" ORDER BY u."fecha" DESC) AS n
       FROM (
-        SELECT DISTINCT ON ("instrumentoId", "fecha") "instrumentoId", "fecha", "precio", "estado"::text AS "estado"
+        SELECT DISTINCT ON ("instrumentoId", "fecha") "instrumentoId", "fecha", "precio", "estado"::text AS "estado", "fuente", "traidoEn"
         FROM "precio_cierre"
         WHERE "instrumentoId" = ANY(${[...ids]}::text[]) AND "reemplazadoEn" IS NULL
         ORDER BY "instrumentoId", "fecha" DESC, "traidoEn" DESC, "id" DESC
@@ -84,7 +92,7 @@ function entrada(i: { readonly id: string; readonly nemotecnico: string | null }
   const ultimo = serie[0];
   return {
     instrumentoId: i.id, nemotecnico: i.nemotecnico ?? "?", cantidad: viva?.cantidad ?? 0n, costoVivo: viva?.costoVivo ?? D(0),
-    cierre: ultimo ? { precio: ultimo.precio, fecha: ultimo.fecha, verificado: ultimo.estado === "VERIFICADO" } : null,
+    cierre: ultimo ? { precio: ultimo.precio, fecha: ultimo.fecha, verificado: ultimo.estado === "VERIFICADO", traidoEn: ultimo.traidoEn, fuente: ultimo.fuente } : null,
     realizada: f.realizada.get(i.id) ?? D(0), dividendos: f.dividendos.get(i.id) ?? D(0), comisiones: f.comisiones.get(i.id) ?? D(0),
     lotesVivos: viva?.lotesVivos ?? 0,
     serie: [...serie].reverse().map((p) => ({ fecha: p.fecha, precio: p.precio })),
