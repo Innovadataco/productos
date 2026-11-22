@@ -908,3 +908,59 @@ model EnlaceDecisionOrden {
   @@index([creadoPorId])
   @@map("enlace_decision_orden")
 }
+
+// ───────────── Resúmenes con IA (fase E) ─────────────
+
+/// Los tres resúmenes (src/ia/contrato.ts, TIPOS_RESUMEN).
+enum TipoResumenIa {
+  DIARIO
+  REGLAS
+  ESCENARIOS
+}
+
+/// PUBLICADO: pasó el validador y tiene texto. RECHAZADO: el modelo respondió y el validador lo rechazó. FALLIDO: no
+/// hubo salida del modelo (puerta caída, tiempo, tope, puerta apagada o la guarda de la vista ciega).
+enum EstadoResumenIa {
+  PUBLICADO
+  RECHAZADO
+  FALLIDO
+}
+
+/// Las dos puertas (src/ia/generador.ts, PUERTAS), con los mismos valores del contrato.
+enum PuertaIa {
+  local
+  nube
+}
+
+/// Registro de cada corrida de un resumen con IA, de SOLO INSERCIÓN (inv_solo_insercion) y escrito por inv_ia. Una fila
+/// por intento de puerta. tipo, fechaNegocio, hechos, hechosHash y hechosVersion salen del paquete construido
+/// (src/ia/registro/fila.ts), y la base exige que cuadren (resumen_ia_hechos_chk). A lo sumo un PUBLICADO por (tipo,
+/// fechaNegocio, hechosHash, promptHash, modeloDigest): índice único parcial resumen_ia_publicado_key, escrito a mano en
+/// la migración (Prisma 5.22 no modela índices parciales). Los CHECK, los disparadores y la función del instante también
+/// van a mano en la migración *_resumen_ia, y el guardián del esquema los vigila.
+model ResumenIa {
+  id               String          @id @default(cuid())
+  tipo             TipoResumenIa
+  fechaNegocio     DateTime        @db.Date // el `hoy` del paquete
+  estado           EstadoResumenIa
+  puerta           PuertaIa? // nula solo en un FALLIDO por VISTA_NO_CIEGA (no se llamó a ningún generador)
+  texto            String? // el texto renderizado: no nulo si y solo si PUBLICADO
+  salidaModelo     String? // la salida cruda del modelo: no nula si y solo si no es FALLIDO
+  hechos           Json // el paquete completo (leerPaquete lo reconstruye)
+  hechosHash       String
+  hechosVersion    String
+  modelo           String?
+  modeloDigest     String?
+  opciones         Json // las opciones del pedido al modelo (temperatura, semilla…)
+  promptVersion    String
+  promptHash       String
+  validadorVersion String
+  motivos          String[] // códigos: vacía en un PUBLICADO; en un FALLIDO, el motivo de fallo primero y sus detalles
+  latenciaMs       Int?
+  tokensEntrada    Int?
+  tokensSalida     Int?
+  generadoEn       DateTime        @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_resumen_ia_instante)
+
+  @@index([puerta, generadoEn], map: "resumen_ia_gasto_idx")
+  @@map("resumen_ia")
+}
