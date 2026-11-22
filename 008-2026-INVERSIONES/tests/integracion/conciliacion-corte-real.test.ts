@@ -49,7 +49,7 @@ describe("conciliación con la certificación al cierre del día hábil anterior
     await cierres("2027-09-02", ["2371", "65.83"]);
 
     const resumen = await conciliarCertificacion(db, { fechaCorte: corte });
-    expect(resumen).toMatchObject({ resultado: "NO_CUADRA", versionCalculo: "conciliacion-v2", corteSugerido: "2027-09-01" });
+    expect(resumen).toMatchObject({ resultado: "NO_CUADRA", versionCalculo: "conciliacion-v3", corteSugerido: "2027-09-01" });
     expect(resumen.motivos).toContain("fecha_corte_dudosa");
     const total = await db.controlConciliacion.findFirstOrThrow({ where: { conciliacionId: resumen.conciliacionId, tipo: "VALOR", instrumentoId: null }, select: { codigoMotivo: true, detalle: true } });
     expect(total).toEqual({ codigoMotivo: "fecha_corte_dudosa", detalle: { alcance: "total_acciones", fechaSugerida: "2027-09-01" } });

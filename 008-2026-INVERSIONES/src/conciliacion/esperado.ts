@@ -5,12 +5,14 @@
  * - el cierre vigente del día EXACTO del corte (Yahoo primero) y el del día hábil anterior según calendario_bvc (solo
  *   para ver si la certificación es la foto de ese día: nunca se valora con él);
  * - las unidades del fondo (MovimientoFondo) y su valor de unidad de la SFC del día del corte;
- * - la caja: depósitos − retiros aprobados, ventas − compras por `totalEstimado`, dividendos netos y ajustes.
+ * - la caja: depósitos − retiros aprobados, ventas − compras por `totalEstimado`, dividendos netos y ajustes (entre
+ *   ellos, los rendimientos del fondo pagados en efectivo, RENDIMIENTO_FIC; su retención no es caja);
+ * - cuántos rendimientos de los fondos certificados están registrados hasta el corte, y el último día.
  * Solo lectura, con `select` explícito: nunca se lee el encargo ni el crudo.
  */
 import { Prisma, type LadoOrden, type TipoMovimientoCaja } from "@prisma/client";
 import { leerCalendarioCorte, ultimoHabilAnterior } from "../importacion/av/fecha-corte";
-import type { EntradasConciliacion, EspecieEntrada, FondoEntrada } from "./controles";
+import type { EntradasConciliacion, EspecieEntrada, FondoEntrada, RendimientosFicEntrada } from "./controles";
 
 type Lector = Prisma.TransactionClient;
 const D = (v: Prisma.Decimal.Value) => new Prisma.Decimal(v);
@@ -146,6 +148,19 @@ export async function cajaAlCorte(
   return { liquidado: liquidado.toString(), operado: operado.toString(), aporteFondoRegistrado: conAporte.length === new Set(fondos).size };
 }
 
+/**
+ * Los RENDIMIENTO (pagados en efectivo) de esos fondos con fecha ≤ corte: cuántos y el último día. Lo sirve el único
+ * rendimiento_fondo (fondoId, fecha, tipo) (database-reviewer): no se quita ni se reordena sin revisar esta consulta.
+ */
+export async function rendimientosFicAlCorte(db: Lector, corte: Date, fondos: readonly string[]): Promise<RendimientosFicEntrada> {
+  const r = await db.rendimientoFondo.aggregate({
+    where: { fondoId: { in: [...fondos] }, tipo: "RENDIMIENTO", fecha: { lte: corte } },
+    _count: { _all: true },
+    _max: { fecha: true },
+  });
+  return { cantidad: r._count._all, ultimo: r._max.fecha === null ? null : r._max.fecha.toISOString().slice(0, 10) };
+}
+
 /** Todo lo que necesita `calcularConciliacion` para una certificación. */
 export async function leerEntradas(db: Lector, certificacionId: string): Promise<{ fechaCorte: Date; entradas: EntradasConciliacion }> {
   const cert = await db.certificacion.findUniqueOrThrow({
@@ -163,6 +178,9 @@ export async function leerEntradas(db: Lector, certificacionId: string): Promise
   const diaAnterior = ultimo.ok ? ultimo.dia : null;
   const especies = await especiesAlCorte(db, corte, certificadas, ordenes, diaAnterior === null ? null : new Date(`${diaAnterior}T00:00:00Z`));
   const fondos = await fondosAlCorte(db, corte, cert.fondos);
-  const caja = await cajaAlCorte(db, corte, cert.fondos.map((f) => f.instrumentoId), ordenes);
-  return { fechaCorte: corte, entradas: { especies, fondos, efectivo: { certificado: cert.saldoEfectivo.toString(), ...caja, hayFondo: cert.fondos.length > 0 }, diaAnterior } };
+  const idsFondos = cert.fondos.map((f) => f.instrumentoId);
+  const caja = await cajaAlCorte(db, corte, idsFondos, ordenes);
+  const rendimientosFic = await rendimientosFicAlCorte(db, corte, idsFondos);
+  const efectivo = { certificado: cert.saldoEfectivo.toString(), ...caja, hayFondo: cert.fondos.length > 0, rendimientosFic };
+  return { fechaCorte: corte, entradas: { especies, fondos, efectivo, diaAnterior } };
 }

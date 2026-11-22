@@ -21,6 +21,8 @@ export const MOTIVOS = {
   sin_valor_unidad_al_corte: "No se pudo verificar: falta el valor de la unidad del fondo del día del corte.",
   diferencia_fondo: "El saldo del fondo difiere en más de 0,5 % del de la certificación.",
   aporte_fic_sin_registrar: "Falta registrar el aporte al fondo: la caja del sistema todavía cuenta ese dinero como efectivo.",
+  rendimientos_fic_sin_registrar:
+    "La caja tiene más dinero del que explica el sistema y no hay rendimientos del fondo registrados: si el fondo paga rendimientos en efectivo, falta registrarlos.",
   partida_sin_fuente: "Hay una diferencia en la caja que ningún archivo cargado explica.",
 } as const satisfies Readonly<Record<string, string>>;
 

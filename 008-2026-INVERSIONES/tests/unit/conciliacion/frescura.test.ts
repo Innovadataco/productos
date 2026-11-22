@@ -17,7 +17,7 @@ const entradas: EntradasConciliacion = {
     { instrumentoId: "B", certificada: { cantidad: 20n, precioValoracion: "50", valorMercado: "1000" }, liquidada: 20n, operada: 20n, pendientes: 0, cierre: "51", cierreAnterior: null, escisionSinLote: false },
   ],
   fondos: [{ instrumentoId: "F", saldoCertificado: "5000", unidades: null, valorUnidad: null }],
-  efectivo: { certificado: "300", liquidado: "250", operado: "250", hayFondo: true, aporteFondoRegistrado: false },
+  efectivo: { certificado: "300", liquidado: "250", operado: "250", hayFondo: true, aporteFondoRegistrado: false, rendimientosFic: { cantidad: 0, ultimo: null } },
   diaAnterior: null,
 };
 const recalculada = { versionCalculo: VERSION_CALCULO, ...calcularConciliacion(entradas) };

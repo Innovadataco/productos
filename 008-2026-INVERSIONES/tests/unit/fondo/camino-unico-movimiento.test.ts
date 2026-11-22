@@ -1,7 +1,10 @@
-// Candado del camino ÚNICO de escritura de movimiento_fondo y ajuste_caja (frente fondo-movimientos): solo
-// src/fondo/movimiento.ts (registrarConstitucion) los escribe, dentro de una transacción con candado por fondo, y la
-// base exige la coherencia entre los dos. Otro camino podría dejar un aporte sin su movimiento (o al revés), que la
-// conciliación contaría en la caja sin marcar el aporte como registrado.
+// Candado del camino ÚNICO de escritura de movimiento_fondo y ajuste_caja (frentes fondo-movimientos y
+// fondo-rendimientos): solo dos módulos los escriben, cada uno su categoría de caja y siempre dentro de una transacción
+// con el candado del fondo, y la base exige la coherencia entre el hecho y su ajuste:
+// - src/fondo/movimiento.ts (registrarConstitucion): la constitución y su ajuste APORTE_FIC;
+// - src/fondo/rendimientos/guardar.ts (guardarRendimientos): el rendimiento del fondo y su ajuste RENDIMIENTO_FIC.
+// Otro camino podría dejar un ajuste sin su hecho (o al revés), que la conciliación contaría en la caja sin saber de
+// dónde salió. El candado de rendimiento_fondo está en tests/unit/fondo/rendimientos/camino-unico.test.ts.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -21,11 +24,15 @@ function archivos(dir: string): string[] {
 const todos = () => ["src", "scripts"].flatMap((d) => archivos(path.join(RAIZ, d)));
 const relativo = (a: string) => path.relative(RAIZ, a).split(path.sep).join("/");
 
-describe("movimiento_fondo y ajuste_caja · un solo camino de escritura", () => {
-  it("solo src/fondo/movimiento.ts los crea, y nada los edita ni los borra", () => {
+describe("movimiento_fondo y ajuste_caja · un camino de escritura por categoría", () => {
+  it("solo src/fondo/movimiento.ts y src/fondo/rendimientos/guardar.ts los crean, y nada los edita ni los borra", () => {
     const usos = new Set<string>();
     for (const a of todos()) for (const m of readFileSync(a, "utf8").matchAll(ESCRITURA)) usos.add(`${relativo(a)} ${m[1]}.${m[2]}`);
-    expect([...usos].sort()).toEqual(["src/fondo/movimiento.ts ajusteCaja.create", "src/fondo/movimiento.ts movimientoFondo.create"]);
+    expect([...usos].sort()).toEqual([
+      "src/fondo/movimiento.ts ajusteCaja.create",
+      "src/fondo/movimiento.ts movimientoFondo.create",
+      "src/fondo/rendimientos/guardar.ts ajusteCaja.create",
+    ]);
   });
 
   it("el patrón de SQL crudo reconoce el nombre con esquema y con comillas (code-reviewer, MEDIO)", () => {

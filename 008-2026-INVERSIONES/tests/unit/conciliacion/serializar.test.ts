@@ -137,6 +137,34 @@ describe("aVistaCorte", () => {
   });
 });
 
+describe("aVistaCorte · el efectivo con los rendimientos del fondo (conciliacion-v3, code-reviewer MEDIO)", () => {
+  const conEfectivo = (detalle: ControlLeido["detalle"]) => {
+    const controles = CONTROLES.map((x) => (x.tipo === "EFECTIVO" ? { ...x, detalle } : x));
+    return aVistaCorte({ ...LECTURA, conciliacion: { ...LECTURA.conciliacion!, controles } }).conciliacion!.efectivo!;
+  };
+
+  it("si la caja contó rendimientos del fondo, el porqué dice cuántos y el último día (así se ve si falta uno)", () => {
+    expect(conEfectivo({ sinExplicar: "750", rendimientosFic: 2, ultimoRendimientoFic: "2027-05-19" }).porque).toEqual([
+      MOTIVOS.partida_sin_fuente,
+      "Rendimientos del fondo contados en la caja: 2; el último, del 2027-05-19.",
+    ]);
+  });
+
+  it("un detalle sin esa forma no se pinta (solo el motivo)", () => {
+    for (const detalle of [
+      { sinExplicar: "750" },
+      { sinExplicar: "750", rendimientosFic: "2", ultimoRendimientoFic: "2027-05-19" },
+      { sinExplicar: "750", rendimientosFic: 0, ultimoRendimientoFic: "2027-05-19" },
+      { sinExplicar: "750", rendimientosFic: 2.5, ultimoRendimientoFic: "2027-05-19" },
+      { sinExplicar: "750", rendimientosFic: 2, ultimoRendimientoFic: "19/05/2027" },
+      { sinExplicar: "750", rendimientosFic: 2, ultimoRendimientoFic: "2027-05-19<script>" },
+      { sinExplicar: "750", rendimientosFic: 2 },
+    ]) {
+      expect(conEfectivo(detalle).porque, JSON.stringify(detalle)).toEqual([MOTIVOS.partida_sin_fuente]);
+    }
+  });
+});
+
 describe("aCortes", () => {
   const cortes: CorteDisponible[] = [
     { fechaCorte: dia("2024-11-22"), resultado: "NO_CUADRA" },

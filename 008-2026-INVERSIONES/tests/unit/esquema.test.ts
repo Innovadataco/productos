@@ -43,6 +43,7 @@ describe("candado del esquema", () => {
     ["Certificacion", "saldoEfectivo"],
     ["DividendoDecretado", "valorPorAccion"],
     ["ValorSerieOficial", "valor"],
+    ["RendimientoFondo", "valor"],
   ])("%s.%s es Decimal con precisión explícita", (modelo, campo) => {
     expect(campos(modelo).get(campo)).toMatch(/^Decimal\??\s+.*@db\.Decimal\(\d+, \d+\)/);
   });
@@ -61,7 +62,7 @@ describe("candado del esquema", () => {
   });
 
   it("los hechos importados apuntan a su fila de origen (trazabilidad)", () => {
-    for (const modelo of ["MovimientoCaja", "Orden", "Dividendo", "FilaLoteAv", "DividendoDecretado"]) {
+    for (const modelo of ["MovimientoCaja", "Orden", "Dividendo", "FilaLoteAv", "DividendoDecretado", "RendimientoFondo"]) {
       expect(campos(modelo).get("filaFuenteId"), modelo).toMatch(/^String\s+@unique/);
     }
   });
