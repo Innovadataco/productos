@@ -191,6 +191,8 @@ describe("leerEntradas", () => {
       { fechaPago: dia("2027-12-20"), montoNeto: 733.19, decretadoId: null },
       { fechaPago: dia("2027-12-22"), montoNeto: 47.93, decretadoId: null },
     ]);
+    // El del 20 queda fuera de la cota (su ventana termina un día antes del primer día leído).
+    expect(a.decretos.some((x) => iso(x.fechaPago) === "2017-12-20")).toBe(false);
     // Solo las versiones vigentes y no anuladas, con su fecha ex y su valor, desde el borde de la cota.
     expect(a.decretos.map((x) => [iso(x.fechaPago), iso(x.fechaEx), x.valorPorAccion, x.recibido])).toEqual([
       ["2017-12-21", "2017-12-14", 2.17, false], ["2020-07-15", "2020-07-08", 3.47, false], ["2027-12-22", "2027-12-15", 0.0391, false], ["2028-04-12", "2028-04-05", 3.13, false],
@@ -245,6 +247,8 @@ describe("la proyección sobre lo leído", () => {
     expect(await db.calendarioBvc.count({ where: { dia: { gte: dia("2019-01-01"), lt: dia("2021-01-01") } } }), "2019-2020 no deben estar sembrados").toBe(0);
     const codigos = r.supuestos.avisos.map((x) => [x.codigo, x.dia ?? x.dato]);
     expect(codigos).toContainEqual(["DECRETO_BRUTO", "2020-07-15"]);
+    // El decreto de 2017 se lee (para cruzar los pagos del borde) pero queda antes de la ventana: no entra ni se avisa.
+    expect(codigos.filter(([c]) => c === "DECRETO_BRUTO")).toEqual([["DECRETO_BRUTO", "2020-07-15"]]);
     expect(codigos).toContainEqual(["ANIO_SIN_CALENDARIO", 2019]);
     // La escisión de 2027 cae después del último cierre del origen: no mueve ningún retorno de la ventana.
     expect(codigos.some(([c]) => c === "SALTO_SIN_EVENTO" || String(c).startsWith("ESCISION") || String(c).startsWith("DIVIDENDO"))).toBe(false);

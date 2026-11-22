@@ -182,6 +182,20 @@ describe("dividendos en la historia", () => {
     expect(h.posiciones[0]).toMatchObject({ dividendosUsados: 1, primerDividendo: "2019-11-18" });
   });
 
+  it("el aviso DECRETO_BRUTO solo sale para los decretos que entran a la ventana (revisión: el de antes no entra y no se avisa)", () => {
+    const a = accion("a", 1237, cierres, {
+      movimientos: COMPRA,
+      decretos: [
+        { id: "antes", fechaEx: dia("2018-12-12"), fechaPago: dia("2018-12-19"), valorPorAccion: 2.17, recibido: false },
+        { id: "primero", fechaEx: dias[0]!, fechaPago: dias[0]!, valorPorAccion: 2.19, recibido: false },
+        { id: "dentro", fechaEx: dia("2019-10-02"), fechaPago: dia("2019-10-09"), valorPorAccion: 3.47, recibido: false },
+      ],
+    });
+    const h = armarHistoria(entradas([a]));
+    expect(h.avisos.filter((x) => x.codigo === "DECRETO_BRUTO").map((x) => x.dia)).toEqual(["2019-10-09"]);
+    expect(h.posiciones[0]).toMatchObject({ dividendosUsados: 1, primerDividendo: "2019-10-09" });
+  });
+
   it("los pagos del primer día de la ventana o de antes, y los posteriores al último día, no entran", () => {
     const a = accion("a", 1237, cierres, {
       movimientos: [{ fecha: dia("2018-12-03"), cantidad: 1237n }],

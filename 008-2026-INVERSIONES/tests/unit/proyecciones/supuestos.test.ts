@@ -72,6 +72,7 @@ describe("supuestos", () => {
     expect(texto("DIVIDENDO_TENENCIA_CAMBIA")).toContain("sin decreto");
     expect(texto("DIVIDENDO_SIN_TENENCIA")).toContain("fecha ex");
     expect(texto("DIVIDENDO_DECRETO_EN_DUDA")).toContain("fecha ex");
+    expect(texto("DIVIDENDO_DECRETO_EN_DUDA")).toContain("dos fechas de pago");
     expect(texto("DIVIDENDO_EX_DISTINTAS")).toContain("fechas ex distintas");
   });
 
