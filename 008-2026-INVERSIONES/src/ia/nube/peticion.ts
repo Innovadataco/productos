@@ -89,15 +89,16 @@ const CUALQUIER_DIGITO = /\p{N}/u;
 const esId = (valor: unknown): boolean => typeof valor === "string" && esIdHecho(valor);
 
 /**
- * Un hecho ciego con cada campo dentro de su lista cerrada: el id y el sujeto (opcional) son ids, la clave es del
+ * Un hecho ciego con cada campo dentro de su lista cerrada: el id, el sujeto y la especie (opcionales) son ids, la clave es del
  * catálogo del tipo y la etiqueta es la del catálogo para esa clave, las marcas son de sus listas y `obligatorio` es
  * booleano. Así ningún texto libre (un nombre, un valor escrito en letras) sale en un campo de texto.
  */
 function hechoCiegoValido(tipo: TipoResumen, hecho: unknown): boolean {
   if (!esObjetoPlano(hecho) || !soloCampos(hecho, CAMPOS_HECHO_CIEGO)) return false;
-  const { id, clave, etiqueta, sujeto, direccion, cercania, frescura, calidad, obligatorio } = hecho;
+  const { id, clave, etiqueta, sujeto, especie, direccion, cercania, frescura, calidad, obligatorio } = hecho;
   const catalogo = typeof clave === "string" ? entradaDeCatalogo(tipo, clave) : null;
   return esId(id) && catalogo !== null && etiqueta === catalogo.etiqueta && (!Object.hasOwn(hecho, "sujeto") || esId(sujeto))
+    && (!Object.hasOwn(hecho, "especie") || esId(especie))
     && esDe(DIRECCIONES, direccion) && esDe(CERCANIAS, cercania) && esDe(FRESCURAS, frescura) && esDe(CALIDADES, calidad)
     && typeof obligatorio === "boolean";
 }

@@ -30,6 +30,12 @@
 --                       de inv_app se pueden insertar versiones falsas (con un autor que exista y el número que quiera): la
 --                       de mayor número manda, y podría encender la nube con un tope de hasta USD 50 si además existen la
 --                       llave y el servicio; lo que no puede es fecharla, editarla ni borrarla, y la historia la delata.
+--   tarifa_comision     solo INSERT, por COLUMNA, con todas sus columnas MENOS "creadaEn" (fase E, O5: el dueño carga la
+--                       tarifa real de cada casa de bolsa desde /edicion/tarifas; migración 20261122230000_tarifa_comision).
+--                       Es de solo inserción por su disparador; la hora la pone la base. Riesgo residual: con la clave de
+--                       inv_app se pueden insertar tarifas falsas (con un autor que exista): solo cambian la comisión que
+--                       muestra el simulador, que no escribe nada; no se pueden fechar, editar ni borrar. Ni inv_ia ni
+--                       inv_precios la leen.
 -- Nunca TRUNCATE, REFERENCES, TRIGGER ni DDL. Sin UPDATE ni DELETE en las tablas de solo inserción,
 -- `SET LOCAL inv.reversion = 'on'` no le sirve a inv_app para saltarse sus disparadores.
 -- El UPDATE por columna de usuario lo acota el disparador usuario_transiciones (migración
@@ -135,6 +141,9 @@ BEGIN
 
   -- La configuración de la IA (fase E, E8): solo INSERT, por columna y sin "creadaEn" (la pone la base). Nada se edita.
   GRANT INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", motivo, "autorId") ON TABLE public.config_ia TO inv_app;
+
+  -- La tarifa de comisión (fase E, O5): solo INSERT, por columna y sin "creadaEn" (la pone la base). Nada se edita.
+  GRANT INSERT (id, version, comisionista, lado, porcentaje, "minimoPorOrden", "fijoPorOrden", "ivaPct", "otrosCargos", "vigenteDesde", motivo, "autorId") ON TABLE public.tarifa_comision TO inv_app;
 
   -- inv_precios: solo si el rol existe (desde la primera corrida de crear-roles-prod.sh). Sin él, el despliegue sigue igual.
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'inv_precios') THEN

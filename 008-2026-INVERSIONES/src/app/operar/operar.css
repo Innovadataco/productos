@@ -1,8 +1,9 @@
 /* 008 · /operar (frente operar-informe). Solo los tokens de tablero.css (--bg-2, --panel, --line, --fg, --muted,
    --gold, --loss): claro y oscuro salen de ahí, sin colores fijos. Todo va dentro de .operar (o de la página que lo
    contiene): no toca otras pantallas. Candado: tests/unit/operar/informe/estilos.test.ts. */
-/* El encabezado es fijo y a 375 px ocupa varias líneas: el foco del teclado no queda debajo (WCAG 2.4.11). */
-html:has(main.operar) { scroll-padding-top: 176px; }
+/* El encabezado es fijo y a 375 px ocupa varias líneas (183,5 px con «Análisis» en el menú): el foco del teclado no
+   queda debajo (WCAG 2.4.11). */
+html:has(main.operar) { scroll-padding-top: 240px; }
 .operar .op-aviso {
   max-width: 860px; margin: 18px 0 0; padding: 12px 16px; border-radius: 14px; background: var(--panel);
   border: 1px solid var(--line); border-left: 3px solid var(--gold); font-size: 14px;

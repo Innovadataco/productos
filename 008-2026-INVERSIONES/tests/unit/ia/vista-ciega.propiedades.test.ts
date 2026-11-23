@@ -30,7 +30,8 @@ describe("vista ciega · propiedad con paquetes al azar", () => {
       expect(hayDigitosFueraDeIds(json), `corrida ${i}`).toBe(false);
       expect(fugasEn(json, paquete), `corrida ${i}`).toEqual([]);
       expect(json.toLowerCase()).not.toContain("ficticia");
-      expect(clavesProhibidasEn(vista)).toEqual([]);
+      // La única clave con raíz prohibida que lleva la vista es `especie` (un id), como campo directo de un hecho.
+      expect(clavesProhibidasEn(vista).filter((ruta) => !/^hechos\[\d+\]\.especie$/.test(ruta))).toEqual([]);
       expect(clavesProhibidasEn(paquete)).toEqual([]);
       expect(camposDeMas(vista)).toEqual([]);
       expect(fugasDeVistaCiega(vista, paquete)).toEqual([]);

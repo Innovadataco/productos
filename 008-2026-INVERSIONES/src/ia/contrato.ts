@@ -116,19 +116,26 @@ export interface EntradaPaquete<T extends TipoResumen = TipoResumen> {
   readonly hechos: readonly EntradaHecho<ClaveDe<T>>[];
 }
 
-/** Los campos de un hecho que ve el modelo. Lista cerrada: cualquier otro campo en la vista es una fuga. */
-export const CAMPOS_HECHO_CIEGO = Object.freeze(["id", "clave", "etiqueta", "sujeto", "direccion", "cercania", "frescura", "calidad", "obligatorio"] as const);
+/**
+ * Los campos de un hecho que ve el modelo. Lista cerrada: cualquier otro campo en la vista es una fuga. `especie` no
+ * está en el `Hecho`: la vista la deriva con `especieDe` (el id del nombre de la especie, ya resuelto) para que el
+ * modelo no tenga que recorrer la cadena de `sujeto`. Es un id, nunca el nombre.
+ */
+export const CAMPOS_HECHO_CIEGO = Object.freeze(["id", "clave", "etiqueta", "sujeto", "especie", "direccion", "cercania", "frescura", "calidad", "obligatorio"] as const);
 /** Los campos de la vista: sin `version` (lleva un dígito), sin `hoy`, `avisos`, `versionesCalculo` ni `hash`. */
 export const CAMPOS_PAQUETE_CIEGO = Object.freeze(["tipo", "hechos"] as const);
 
-type CampoCiego = (typeof CAMPOS_HECHO_CIEGO)[number];
+/** Los campos ciegos que vienen del `Hecho` (todos menos `especie`, que deriva la vista). */
+type CampoCiego = Exclude<(typeof CAMPOS_HECHO_CIEGO)[number], "especie">;
 type CampoCiegoDelPaquete = (typeof CAMPOS_PAQUETE_CIEGO)[number];
 
 /**
  * Un hecho tal como lo ve el modelo. Los demás campos del hecho quedan como `never`: un `Hecho` completo NO es
  * asignable a un `HechoCiego` (el compilador ve la fuga, no solo la guarda en ejecución).
  */
-export type HechoCiego<C extends ClaveHecho = ClaveHecho> = Pick<Hecho<C>, CampoCiego> & { readonly [K in Exclude<keyof Hecho, CampoCiego>]?: never };
+export type HechoCiego<C extends ClaveHecho = ClaveHecho> = Pick<Hecho<C>, CampoCiego>
+  & { readonly especie?: IdHecho }
+  & { readonly [K in Exclude<keyof Hecho, CampoCiego>]?: never };
 
 /** Lo ÚNICO que recibe un modelo: ni valores, ni presentaciones, ni nombres, ni fechas, ni fuentes. */
 export type PaqueteCiego<T extends TipoResumen = TipoResumen> = {

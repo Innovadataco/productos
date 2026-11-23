@@ -3,6 +3,7 @@
  * libre de reglas y decisiones, acción y cantidad, y lo que nombra una especie. Ningún campo del contrato cae.
  */
 import { describe, expect, it } from "vitest";
+import { CAMPOS_HECHO_CIEGO } from "@/ia/contrato";
 import { CLAVES_PROHIBIDAS, clavesProhibidasEn, esClaveProhibida, normalizarClave } from "@/ia/prohibidas";
 
 /** Los nombres de campo del contrato (paquete, hecho y vista). */
@@ -33,6 +34,11 @@ describe("claves prohibidas", () => {
 
   it("ningún campo del contrato es una clave prohibida", () => {
     for (const campo of CAMPOS_DEL_CONTRATO) expect(esClaveProhibida(campo), campo).toBe(false);
+  });
+
+  it("de la vista, solo «especie» cae en una raíz: la guarda la deja pasar solo como id en un hecho (vista-ciega.especie.test.ts)", () => {
+    expect(CAMPOS_HECHO_CIEGO.filter(esClaveProhibida)).toEqual(["especie"]);
+    expect(clavesProhibidasEn({ hechos: [{ id: "H02", especie: "H01" }] })).toEqual(["hechos[0].especie"]);
   });
 
   it("normaliza quitando tildes, mayúsculas y lo que no es letra", () => {
