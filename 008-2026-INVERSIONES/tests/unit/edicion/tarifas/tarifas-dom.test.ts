@@ -147,6 +147,20 @@ describe("FormularioTarifa (navegador)", () => {
     expect(ir).not.toHaveBeenCalled();
   });
 
+  it("accesibilidad (revisión de React): sin error el resumen no cita un id que no existe; el error de los cargos se enlaza al grupo y se limpia al cambiar los cargos", async () => {
+    await m.pintar(createElement(FormularioTarifa, { datos: DATOS }));
+    expect(m.contenedor.querySelector(".edicion-resumen")?.hasAttribute("aria-labelledby")).toBe(false);
+    await act(async () => boton(TEXTOS_TARIFAS.AGREGAR_CARGO)!.click());
+    await enviar();
+    await responder({ error: "Revise", campos: [{ campo: "otrosCargos", codigo: "CARGOS_DEMASIADOS" }, { campo: "otrosCargos.0.valor", codigo: "MONTO_INVALIDO" }] }, 400);
+    const grupo = m.contenedor.querySelector("fieldset")!;
+    expect(grupo.getAttribute("aria-describedby")).toBe("tarifa-otrosCargos");
+    expect(texto(document.getElementById("tarifa-otrosCargos"))).toBe(mensajeTarifa("CARGOS_DEMASIADOS"));
+    await act(async () => boton(TEXTOS_TARIFAS.QUITAR_CARGO)!.click());
+    expect(m.contenedor.querySelector(".edicion-error")).toBeNull();
+    expect(m.contenedor.querySelector("fieldset")!.hasAttribute("aria-describedby")).toBe(false);
+  });
+
   it("hasta 3 cargos: el botón de agregar desaparece y se puede quitar uno", async () => {
     await m.pintar(createElement(FormularioTarifa, { datos: DATOS }));
     for (let i = 0; i < 3; i++) await act(async () => boton(TEXTOS_TARIFAS.AGREGAR_CARGO)!.click());

@@ -91,6 +91,8 @@ describe("validarContexto: tarifas mal formadas (error de quien llama)", () => {
     ["un cargo sin nombre", { COMPRA: tarifa({ otrosCargos: [{ nombre: "", tipo: "FIJO", valor: D("1") }] }) }],
     ["un cargo de tipo desconocido", { COMPRA: tarifa({ otrosCargos: [{ nombre: "x", tipo: "OTRO" as never, valor: D("1") }] }) }],
     ["un monto que no es Decimal", { COMPRA: tarifa({ porcentaje: "0.2731" as never }) }],
+    ["una vigencia que no es un día a medianoche UTC", { COMPRA: tarifa({ vigenteDesde: new Date(Date.UTC(2027, 0, 11, 5)) }) }],
+    ["una vigencia inválida", { COMPRA: tarifa({ vigenteDesde: new Date(Number.NaN) }) }],
     ["no es un objeto", null],
   ];
   it.each(malas)("lanza RangeError con %s", (_n, tarifas) => {

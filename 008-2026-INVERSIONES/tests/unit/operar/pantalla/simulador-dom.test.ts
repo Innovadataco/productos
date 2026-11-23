@@ -106,6 +106,25 @@ describe("Simulador", () => {
     expect(texto(m.contenedor.querySelector("[role=alert]"))).toContain(T.FALLO);
   });
 
+  it("accesibilidad (revisión de React): el error toma el foco y se anuncia una vez; el resultado, con una línea corta", async () => {
+    await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+    expect(m.contenedor.querySelector("form")?.getAttribute("aria-labelledby")).toBe("t-simulador");
+    await enviar();
+    expect(m.contenedor.querySelector("button[type=submit]")?.getAttribute("aria-disabled")).toBe("true");
+    await responder({ ok: false, errores: ["Error ficticio."] }, 200);
+    const alerta = m.contenedor.querySelector("[role=alert]")!;
+    expect(alerta.closest("[aria-live]")).toBeNull();
+    expect(document.activeElement).toBe(alerta);
+    expect(m.contenedor.querySelector("button[type=submit]")?.getAttribute("aria-disabled")).toBeNull();
+    await enviar();
+    await responder({ ok: true, vista: VISTA }, 200);
+    expect(texto(m.contenedor.querySelector("[role=status]"))).toBe(T.LISTO);
+    expect(m.contenedor.querySelector(".op-sim-resultado")?.closest("[aria-live],[role=status]")).toBeNull();
+    const region = m.contenedor.querySelector(".tabla[role=region]")!;
+    expect(region.getAttribute("aria-label")).toBeNull();
+    expect(texto(document.getElementById(region.getAttribute("aria-labelledby")!))).toBe(T.PESOS);
+  });
+
   it("sin especies no hay formulario", async () => {
     await m.pintar(createElement(Simulador, { especies: [] }));
     expect(m.contenedor.querySelector("form")).toBeNull();
