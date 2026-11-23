@@ -7,6 +7,7 @@ import { Prisma } from "@prisma/client";
 import { cantidadEs, nivelEs } from "@/plan/edicion/formato";
 import { textoAfectacion, textoAviso, textoComision, textoError, textoPesosRedondos, textoRegla, NOTA_CAJA_SIN_COMISION, NOTA_VALORACION } from "@/operar/simulador/textos";
 import type { ComisionEstimada, PosicionSimulada, ResultadoSimulacion, Tenencia } from "@/operar/simulador/tipos";
+import type { VistaAnalisisSimulacion } from "@/operar/analisis/vista";
 import { fecha } from "../tablero/formato";
 import type { EspecieSimulable, FuenteComision, RespuestaSimulacion } from "./tipos-simulador";
 
@@ -29,7 +30,7 @@ export const especiesSimulables = (posiciones: readonly PosicionSimulada[]): Esp
   posiciones.map((p) => ({ id: p.instrumentoId, nemotecnico: p.nemotecnico, cantidad: cantidadEs(p.cantidad) }));
 
 /** La respuesta de la ruta: la vista o los errores del dueño, ya como texto. `cajaAl` es el corte de la caja (null sin certificación; «ESCRITA» si la escribió el dueño). */
-export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: string, posiciones: readonly PosicionSimulada[], cajaAl: Date | null | "ESCRITA"): RespuestaSimulacion {
+export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: string, posiciones: readonly PosicionSimulada[], cajaAl: Date | null | "ESCRITA", analisis: VistaAnalisisSimulacion | null = null): RespuestaSimulacion {
   if (!r.ok) return { ok: false, errores: r.errores.map(textoError) };
   const s = r.simulacion;
   const operada = posiciones.find((p) => p.instrumentoId === instrumentoId)?.nemotecnico ?? "";
@@ -55,6 +56,7 @@ export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: stri
       reglas: s.reglasAfectadas.map((a) => ({ texto: textoRegla(a.regla, operada), afectaciones: a.afectaciones.map((x) => textoAfectacion(x, a.regla)) })),
       avisos: s.avisos.map(textoAviso),
       notas: [NOTA_VALORACION, ...(conComision ? [] : [NOTA_CAJA_SIN_COMISION])],
+      analisis,
     },
   };
 }

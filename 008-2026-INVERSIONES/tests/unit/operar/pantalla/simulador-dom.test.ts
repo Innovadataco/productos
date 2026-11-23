@@ -24,6 +24,12 @@ const VISTA: VistaSimulacion = {
   valorAccionesAntes: "$ 5.711.154,47", valorAccionesDespues: "$ 5.725.004,28",
   reglas: [{ texto: "Su regla de FICTICIA-A dice: vender 41.", afectaciones: ["Su plan para esta especie dice: vender 41."] }],
   avisos: ["Aviso ficticio."], notas: ["Nota ficticia."],
+  analisis: {
+    filas: [{ titulo: "Peso de FICTICIA-A", antes: "21,13 %", despues: "52,37 %" }],
+    escenarios: [{ titulo: "A 12 meses (p5 · p50 · p95)", antes: "$ 37.911 · $ 47.114 · $ 57.311", despues: "$ 35.717 · $ 47.391 · $ 59.138" }],
+    aparecen: ["concentración alta en FICTICIA-A"], desaparecen: [],
+    frases: ["Frase ficticia del análisis."], rotulo: "Análisis calculado por Inversiones · la IA lo redactará cuando el servicio de IA esté conectado",
+  },
 };
 
 let m: Montaje;
@@ -60,14 +66,16 @@ describe("Simulador", () => {
     await cambiar(control("sim-cantidad"), "7");
     await cambiar(control("sim-precio"), "11,71");
     await cambiar(control("sim-comisionista"), "AV");
+    await cambiar(control("sim-saldo"), "37.911,47");
     await enviar();
     expect(texto(m.contenedor)).toContain(T.CALCULANDO);
     const [url, init] = fetchFalso.mock.calls[0]!;
     expect(url).toBe("/api/operar/simular");
-    expect(JSON.parse(String(init.body))).toEqual({ instrumentoId: "id-ficticia-b", lado: "VENDER", cantidad: "7", precioLimite: "11,71", comisionista: "AV" });
+    expect(JSON.parse(String(init.body))).toEqual({ instrumentoId: "id-ficticia-b", lado: "VENDER", cantidad: "7", precioLimite: "11,71", comisionista: "AV", saldoComisionista: "37.911,47" });
     await responder({ ok: true, vista: VISTA }, 200);
     const todo = texto(m.contenedor);
     for (const t of ["$ 13.839,81", "$ 49,9523", "Comisión (de su tarifa)", "antes: $ 37.911,47", "después: $ 24.021,7077", "Caja certificada", "Su regla de FICTICIA-A dice", "Aviso ficticio.", "Nota ficticia."]) expect(todo).toContain(t);
+    for (const t of [T.ANALISIS, "Peso de FICTICIA-A", "después: 52,37 %", "A 12 meses (p5 · p50 · p95)", T.APARECEN, "concentración alta en FICTICIA-A", "Frase ficticia del análisis.", "la IA lo redactará"]) expect(todo).toContain(t);
     expect(m.contenedor.querySelector(".op-sim-operada th")?.textContent).toBe("FICTICIA-A");
   });
 
@@ -78,6 +86,16 @@ describe("Simulador", () => {
     expect(texto(m.contenedor)).toContain(T.SIN_REGLAS);
     expect(texto(m.contenedor)).toContain("Comisión (no se estima)");
     expect(m.contenedor.querySelector(".op-sim-avisos")).toBeNull();
+  });
+
+  it("sin análisis ni escenarios, lo dice", async () => {
+    await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+    await enviar();
+    await responder({ ok: true, vista: { ...VISTA, analisis: null } }, 200);
+    expect(texto(m.contenedor)).toContain(T.SIN_ANALISIS);
+    await enviar();
+    await responder({ ok: true, vista: { ...VISTA, analisis: { ...VISTA.analisis!, escenarios: [] } } }, 200);
+    expect(texto(m.contenedor)).toContain(T.SIN_ESCENARIOS);
   });
 
   it("los errores del dueño salen en una alerta", async () => {

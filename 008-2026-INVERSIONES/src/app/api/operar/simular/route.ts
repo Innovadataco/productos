@@ -6,10 +6,32 @@ import { leerPedidoSimulacion } from "@/operar/pantalla/entrada";
 import { permitidoSimular } from "@/operar/pantalla/frecuencia";
 import { leerEntradasSimulador } from "@/operar/pantalla/leer";
 import { simularOperacion } from "@/operar/simulador/simular";
+import { textoRegla } from "@/operar/simulador/textos";
+import type { EstadoSimulado, OperacionSimulada, Simulacion } from "@/operar/simulador/tipos";
+import { analizarSimulacion } from "@/operar/pantalla/analisis";
+import { aVistaAnalisis, type VistaAnalisisSimulacion } from "@/operar/analisis/vista";
 import { fechaEnBogota } from "@/precios/horario";
 import { aRespuestaSimulacion } from "@/app/operar/serializar-simulacion";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * El análisis del antes y el después (motores de src/analisis/ y src/proyecciones/, sin cambiar sus cálculos). Si falla,
+ * la simulación sale igual, sin análisis; al registro, solo el nombre del error.
+ */
+async function analisisDe(usuarioId: string, hoy: Date, operacion: OperacionSimulada, s: Simulacion, estado: EstadoSimulado): Promise<VistaAnalisisSimulacion | null> {
+  const id = operacion.instrumentoId;
+  try {
+    const cantidadDespues = s.especies.find((e) => e.instrumentoId === id)?.despues.cantidad ?? 0n;
+    const a = await analizarSimulacion(db, { hoy, usuarioId, instrumentoId: id, cantidadDespues, reglas: estado.reglas });
+    const nombre = estado.posiciones.find((p) => p.instrumentoId === id)?.nemotecnico ?? "";
+    const regla = estado.reglas.find((r) => r.instrumentoId === id);
+    return aVistaAnalisis({ ...a, operadaId: id, lado: operacion.lado, plan: regla === undefined ? null : textoRegla(regla, nombre) });
+  } catch (error) {
+    console.error(`[operar:simular] análisis no calculado (${error instanceof Error ? error.name : "desconocido"})`);
+    return null;
+  }
+}
 
 /** Cinco campos cortos en JSON caben de sobra en 1 KB. */
 const CUERPO_MAX_BYTES = 1024;
@@ -42,7 +64,8 @@ export async function POST(pedido: Request): Promise<Response> {
     // Con el saldo escrito por el dueño, la caja es ese valor (no se guarda); si no, la certificada de A&V.
     const estado = saldo === null ? entradas.estado : { ...entradas.estado, caja: saldo };
     const resultado = simularOperacion(estado, operacion, entradas.contexto);
-    return respuestaJson(aRespuestaSimulacion(resultado, operacion.instrumentoId, estado.posiciones, saldo === null ? entradas.caja.fechaCorte : "ESCRITA"), 200);
+    const analisis = resultado.ok ? await analisisDe(sesion.usuario.id, entradas.contexto.hoy, operacion, resultado.simulacion, estado) : null;
+    return respuestaJson(aRespuestaSimulacion(resultado, operacion.instrumentoId, estado.posiciones, saldo === null ? entradas.caja.fechaCorte : "ESCRITA", analisis), 200);
   } catch (error) {
     console.error(`[operar:simular] no se pudo simular (${error instanceof Error ? error.name : "desconocido"})`);
     return respuestaJson({ error: NO_SE_PUDO }, 500);
