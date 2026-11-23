@@ -26,6 +26,9 @@ const HISTORIAL: Readonly<Record<string, string>> = {
   "resumen-diario-v2": "f30294e2a06dbdf47f63abe3348003a9e8fb0d362ffcf271de88857219605732",
   "resumen-reglas-v2": "d26e9308ba4006e3b8494d087770f8ceac0eaf40ae9367568bedf0794f3632b1",
   "resumen-escenarios-v2": "c1ba2a25244f0a612ed255c1f6506df4376ad8dad293a7ae06ed9c74e814698f",
+  "resumen-diario-v3": "8204774fa57c501de65404a76c1884ce9af8278f05b1078ab99f31cb5a7d42a0",
+  "resumen-reglas-v3": "276f369f69801eaeecb61bb6d3262802190c56b2f642cfc6746389c2c836faa3",
+  "resumen-escenarios-v3": "f3ea6626c67314fa2c9140f5033814b5dfcc171a83e9347121f8a64cda1cdd97",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */
