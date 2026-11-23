@@ -4,10 +4,11 @@
  * se recortan al tope del contrato (99 hechos: el grupo que no cabe se salta y se cuenta), se numeran de H01 en adelante
  * y se resuelve cada `sujeto` (en el borrador, el propio borrador al que se refiere: nada de textos que se puedan
  * escribir mal) al id de un hecho anterior del MISMO grupo. La presentación sale de `presentar` con la unidad del catálogo.
- * Lo obligatorio arrastra al nombre de su especie, a través del ancla de la regla (que no se vuelve obligatoria): el
- * texto que cite el hecho obligatorio tiene que poder decir de qué especie habla.
+ * Lo obligatorio NO arrastra al nombre de su especie: el validador ya exige, en la misma frase de cada dato de especie
+ * citado, el nombre de su especie (ETIQUETA.SIN_SUJETO), así que marcarlo obligatorio no agregaba garantía y confundía
+ * al modelo (medido con qwen2.5:14b: citaba los nombres obligatorios en el lugar de otro dato).
  *
- * Obligatorios (salida-v2): como mucho `MAX_OBLIGATORIOS` por paquete, contando los nombres arrastrados: caben en las seis
+ * Obligatorios (salida-v2): como mucho `MAX_OBLIGATORIOS` por paquete, contando el nombre que cada uno exige: caben en las seis
  * frases del límite. Cada armador marca lo más importante de su tipo (DIARIO: `OBLIGATORIOS_DIARIO`, el valor de las
  * acciones, la variación del día, la ganancia total y la conciliación que no cuadra; ESCENARIOS: el escenario central de cada
  * horizonte y la probabilidad de terminar por debajo de lo aportado; REGLAS: lo que toca o está cerca, por prioridad).
@@ -64,18 +65,6 @@ function sujetosDe(hechos: readonly BorradorHecho[]): readonly (number | null)[]
   });
 }
 
-/** Los índices de los nombres de especie que quedan obligatorios porque un hecho obligatorio los alcanza por su cadena. */
-function nombresObligatorios(hechos: readonly BorradorHecho[], sujetos: readonly (number | null)[]): ReadonlySet<number> {
-  const marcados = new Set<number>();
-  hechos.forEach((hecho, i) => {
-    if (!hecho.obligatorio) return;
-    for (let actual = sujetos[i] ?? null; actual !== null; actual = sujetos[actual] ?? null) {
-      if (hechos[actual]?.clave === CLAVE_NOMBRE_ESPECIE) marcados.add(actual);
-    }
-  });
-  return marcados;
-}
-
 function presentacionDe(tipo: TipoResumen, hecho: BorradorHecho): string {
   const entrada = entradaDeCatalogo(tipo, hecho.clave);
   if (entrada === null) throw new ErrorArmado("CLAVE_FUERA_DE_CATALOGO", hecho.clave);
@@ -89,7 +78,6 @@ function presentacionDe(tipo: TipoResumen, hecho: BorradorHecho): string {
 /** Los hechos del grupo, numerados desde `primero` (posición 1 = H01). */
 function numerarGrupo<C extends ClaveHecho>(tipo: TipoResumen, grupo: Grupo<C>, primero: number): readonly EntradaHecho<C>[] {
   const sujetos = sujetosDe(grupo.hechos);
-  const obligatorios = nombresObligatorios(grupo.hechos, sujetos);
   const id = (i: number): IdHecho => idDeHecho(primero + i);
   return grupo.hechos.map((hecho, i): EntradaHecho<C> => {
     const sujeto = sujetos[i] ?? null;
@@ -105,7 +93,7 @@ function numerarGrupo<C extends ClaveHecho>(tipo: TipoResumen, grupo: Grupo<C>, 
       direccion: hecho.direccion,
       cercania: hecho.cercania,
       frescura: hecho.frescura,
-      obligatorio: hecho.obligatorio || obligatorios.has(i),
+      obligatorio: hecho.obligatorio,
     };
   });
 }
@@ -120,7 +108,7 @@ function elegir<C extends ClaveHecho>(grupos: readonly Grupo<C>[], tope: number)
   return { elegidos, recortados: ordenados.length - elegidos.length };
 }
 
-/** El tope de hechos obligatorios de un paquete, con los nombres de especie que arrastran. */
+/** El tope de hechos obligatorios de un paquete, contando el nombre de especie que cada uno exige en su frase. */
 export const MAX_OBLIGATORIOS = 6;
 
 /** El id del nombre de especie al que llega el hecho por su cadena de sujetos, o null. */
@@ -134,7 +122,7 @@ function raizDe<C extends ClaveHecho>(hecho: EntradaHecho<C>, porId: ReadonlyMap
   return null;
 }
 
-/** Deja obligatorios, en orden, los hechos que caben en el tope junto con el nombre que arrastran; quita la marca a los demás. */
+/** Deja obligatorios, en orden, los hechos que caben en el tope junto con el nombre que exigen; quita la marca a los demás. */
 function limitarObligatorios<C extends ClaveHecho>(hechos: readonly EntradaHecho<C>[], tope: number): readonly EntradaHecho<C>[] {
   const porId = new Map(hechos.map((h) => [h.id, h]));
   const dejados = new Set<string>();

@@ -146,7 +146,7 @@ describe("obligatorios: como mucho seis por tipo", () => {
     expect(resumenSinIa(paquete).ok).toBe(true);
   });
 
-  it("REGLAS con muchas reglas: el tope se aplica por prioridad y el nombre de cada obligatorio sigue arrastrado", () => {
+  it("REGLAS con muchas reglas: el tope se aplica por prioridad, contando el nombre que exige cada obligatorio (que ya no es obligatorio)", () => {
     const base = entradaReglasFicticia();
     const muchas = { ...base, reglas: [...base.reglas, ...base.reglas, ...base.reglas, ...base.reglas] };
     const paquete = armarReglas(muchas);
@@ -156,7 +156,10 @@ describe("obligatorios: como mucho seis por tipo", () => {
       const h = paquete.hechos.find((x) => x.id === id);
       return h === undefined || h.clave === "ESPECIE_NOMBRE" ? h : nombreDe(h.sujeto);
     };
-    for (const h of obligatorios) if (h.clave !== "ESPECIE_NOMBRE") expect(nombreDe(h.sujeto)?.obligatorio ?? true).toBe(true);
+    const nombres = new Set(obligatorios.flatMap((h) => nombreDe(h.sujeto)?.id ?? []));
+    expect(nombres.size).toBeGreaterThan(0);
+    expect(obligatorios.length + nombres.size).toBeLessThanOrEqual(TOPE);
+    for (const id of nombres) expect(paquete.hechos.find((x) => x.id === id)?.obligatorio).toBe(false);
   });
 });
 

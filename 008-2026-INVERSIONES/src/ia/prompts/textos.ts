@@ -77,7 +77,8 @@ export const TEXTO_PROMPT_DIARIO = armar(
   "del día de un portafolio de inversiones: el valor de las acciones y su variación del día, las ganancias, los dividendos "
     + "y las comisiones, los cierres atrasados, la conciliación, las tasas y el fondo. Son obligatorios el valor de las acciones, la variación del día, la ganancia total y la conciliación que no cuadra, "
     + "cuando están en la lista: escriba primero una frase por cada uno, en ese orden, y después, si sobran frases, los demás "
-    + "hechos.",
+    + "hechos. Si uno de ellos no está en la lista, no escriba su frase ni use para ella el id de otro hecho. Cada frase lleva "
+    + "la referencia de su dato: un verbo como subió o bajó nunca reemplaza la referencia.",
   ejemplos(
     frase("El valor de las acciones es", null, "."),
     frase("La variación del día del valor de las acciones es", null, "."),
