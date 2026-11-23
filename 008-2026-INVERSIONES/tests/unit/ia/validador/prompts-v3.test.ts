@@ -27,7 +27,7 @@ describe("prompts · sin lenguaje de consejo ni de juicio", () => {
   });
 
   it("control positivo: el detector muerde una frase plantada en el prompt", () => {
-    const plantado = `${PROMPTS.DIARIO.texto} ${["Le", "conviene"].join(" ")} revisar.`;
+    const plantado = `${PROMPTS.DIARIO.texto} ${["Con", "viene"].join("")} revisar.`;
     expect(prohibidasEn(plantado)).toEqual(["conviene"]);
     expect(prohibidasEn(`${PROMPTS.REGLAS.texto} ${["Es", "buen", "momento"].join(" ")}.`)).toEqual(["buen momento"]);
   });

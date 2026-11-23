@@ -30,11 +30,20 @@ type ParteDiario = Parte<ClaveDiario>;
 
 const PRIORIDAD = Object.freeze({ PORTAFOLIO: 1, CONCILIACION: 2, SERIES: 3, ESPECIES: 4 });
 
+/**
+ * Las claves que el resumen DIARIO tiene que citar (si el hecho está en el paquete). Ninguna es de una especie: el
+ * armador no arrastra nombres de especie como obligatorios. Caben en el tope (`MAX_OBLIGATORIOS`) y en las frases.
+ */
+export const OBLIGATORIOS_DIARIO: readonly ClaveDiario[] = Object.freeze([
+  "VALOR_ACCIONES", "VARIACION_DIA_VALOR", "GANANCIA_TOTAL", "ESPECIES_SIN_PRECIO", "ESPECIES_ATRASADAS", "CONCILIACION_NO_CUADRA",
+]);
+const esObligatorio = (clave: ClaveDiario): boolean => OBLIGATORIOS_DIARIO.includes(clave);
+
 /** La comparación del día: el neto, o null si no se pudo comparar. */
 const netoDelDia = (m: MovimientoParaHechos): string | null => (m.motivo === null && m.neto !== null ? deDecimal(m.neto) : null);
 
 function conteos(e: EntradaArmadoDiario, marcas: Marcas): readonly Borrador[] {
-  const conteo = (clave: ClaveDiario, n: number): readonly Borrador[] => (n > 0 ? [borrador(clave, deEntero(n), FUENTES.TABLERO, marcas, { obligatorio: true })] : []);
+  const conteo = (clave: ClaveDiario, n: number): readonly Borrador[] => (n > 0 ? [borrador(clave, deEntero(n), FUENTES.TABLERO, marcas, { obligatorio: esObligatorio(clave) })] : []);
   return [...conteo("ESPECIES_SIN_PRECIO", e.tablero.especiesSinPrecio), ...conteo("ESPECIES_ATRASADAS", e.tablero.especiesAtrasadas)];
 }
 
@@ -52,17 +61,17 @@ function portafolio(e: EntradaArmadoDiario, hoy: DiaIso): ParteDiario {
   const referencia = diaDe(t.fechaReferencia);
   const { marcas, avisos } = marcasDeMercado(referencia, hoy, e.calendario, "CALCULO");
   const neto = netoDelDia(e.movimiento);
-  const conSigno = (clave: ClaveDiario, valor: string, obligatorio = false): Borrador =>
-    borrador(clave, valor, FUENTES.TABLERO, marcas, { direccion: direccionDelSigno(valor), obligatorio });
+  const conSigno = (clave: ClaveDiario, valor: string): Borrador =>
+    borrador(clave, valor, FUENTES.TABLERO, marcas, { direccion: direccionDelSigno(valor), obligatorio: esObligatorio(clave) });
   const viejo = cierreMasViejo(e, hoy, referencia);
   const hechos: readonly Borrador[] = [
-    borrador("VALOR_ACCIONES", deDecimal(t.valorAcciones), FUENTES.TABLERO, marcas, { direccion: neto === null ? "NO_APLICA" : direccionDelSigno(neto), obligatorio: true }),
+    borrador("VALOR_ACCIONES", deDecimal(t.valorAcciones), FUENTES.TABLERO, marcas, { direccion: neto === null ? "NO_APLICA" : direccionDelSigno(neto), obligatorio: esObligatorio("VALOR_ACCIONES") }),
     conSigno("GANANCIA_SIN_VENDER", deDecimal(t.sinVender)),
     conSigno("GANANCIA_POR_VENTAS", deDecimal(t.porVentas)),
     borrador("DIVIDENDOS_RECIBIDOS", deDecimal(t.dividendos), FUENTES.TABLERO, marcas),
     borrador("COMISIONES_PAGADAS", deDecimal(t.comisiones), FUENTES.TABLERO, marcas),
-    conSigno("GANANCIA_TOTAL", deDecimal(t.gananciaTotal), true),
-    ...(neto === null ? [] : [conSigno("VARIACION_DIA_VALOR", neto, true)]),
+    conSigno("GANANCIA_TOTAL", deDecimal(t.gananciaTotal)),
+    ...(neto === null ? [] : [conSigno("VARIACION_DIA_VALOR", neto)]),
     ...conteos(e, marcas),
     borrador("FECHA_CIERRE_RECIENTE", referencia, FUENTES.TABLERO, marcas),
     ...viejo.hechos,
@@ -83,7 +92,7 @@ function conciliacion(e: EntradaArmadoDiario, hoy: DiaIso): ParteDiario {
   if (resultado === null) return { grupos: [], avisos: ["CONCILIACION_PENDIENTE"] };
   const corte = diaDe(e.conciliacion.fechaCorte);
   const { marcas, avisos } = marcasDeMercado(corte, hoy, e.calendario, "CALCULO");
-  const hecho = borrador(CLAVE_DEL_RESULTADO[resultado], corte, FUENTES.CONCILIACION, marcas, { obligatorio: resultado === "NO_CUADRA" });
+  const hecho = borrador(CLAVE_DEL_RESULTADO[resultado], corte, FUENTES.CONCILIACION, marcas, { obligatorio: esObligatorio(CLAVE_DEL_RESULTADO[resultado]) });
   return { grupos: [{ prioridad: PRIORIDAD.CONCILIACION, hechos: [hecho] }], avisos };
 }
 

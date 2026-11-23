@@ -5,7 +5,7 @@
  * - el pedido se revisa con `revisarPedido` del contrato (forma, prompt con su hash, esquema y límite): si no,
  *   PEDIDO_INVALIDO;
  * - la vista son datos puros con solo los campos ciegos y SOLO valores cerrados del contrato: un tipo de la lista, a
- *   lo sumo MAX_HECHOS hechos, ids y sujetos «Hnn», una clave del catálogo de ese tipo con SU etiqueta, y dirección,
+ *   lo sumo MAX_HECHOS hechos, ids, sujetos y especies «Hnn», una clave del catálogo de ese tipo con SU etiqueta, y dirección,
  *   cercanía, frescura y calidad de sus listas, con `obligatorio` booleano. Así no pasa texto libre (un nombre en
  *   letras, una cifra): si no, PEDIDO_NO_CIEGO.
  * No lanza. Lo que sigue es la copia revisada y congelada, no el objeto recibido.
@@ -27,6 +27,7 @@ function esHechoCiego(tipo: TipoResumen, hecho: unknown): boolean {
   const h: Registro = hecho;
   const entrada = typeof h.clave === "string" ? entradaDeCatalogo(tipo, h.clave) : null;
   return entrada !== null && h.etiqueta === entrada.etiqueta && esId(h.id) && (h.sujeto === undefined || esId(h.sujeto))
+    && (h.especie === undefined || esId(h.especie))
     && esDe(DIRECCIONES, h.direccion) && esDe(CERCANIAS, h.cercania) && esDe(FRESCURAS, h.frescura) && esDe(CALIDADES, h.calidad)
     && typeof h.obligatorio === "boolean";
 }
