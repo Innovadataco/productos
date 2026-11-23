@@ -122,15 +122,15 @@ describe("la temperatura de la configuración (aditiva: sin ella, 0)", () => {
     const { pedido } = pedidoFicticio();
     expect(cuerpoGenerar(MODELO_LOCAL_FICTICIO, pedido)).toBe(cuerpoGenerar(MODELO_LOCAL_FICTICIO, pedido, 0));
     const cuerpo = JSON.parse(cuerpoGenerar(MODELO_LOCAL_FICTICIO, pedido, 37)) as { options: unknown };
-    expect(cuerpo.options).toEqual({ seed: 42, temperature: 0.37 });
-    expect(JSON.parse(cuerpoGenerar(MODELO_LOCAL_FICTICIO, pedido, 100)).options).toEqual({ seed: 42, temperature: 1 });
-    expect(JSON.parse(cuerpoGenerar(MODELO_LOCAL_FICTICIO, pedido, 5)).options).toEqual({ seed: 42, temperature: 0.05 });
+    expect(cuerpo.options).toEqual({ num_ctx: 8192, seed: 42, temperature: 0.37 });
+    expect(JSON.parse(cuerpoGenerar(MODELO_LOCAL_FICTICIO, pedido, 100)).options).toEqual({ num_ctx: 8192, seed: 42, temperature: 1 });
+    expect(JSON.parse(cuerpoGenerar(MODELO_LOCAL_FICTICIO, pedido, 5)).options).toEqual({ num_ctx: 8192, seed: 42, temperature: 0.05 });
   });
 
   it("el prompt que contiene el marcador no cambia la temperatura (el marcador solo vive en el valor de options)", () => {
     const { pedido } = pedidoFicticio();
     const cuerpo = JSON.parse(cuerpoGenerar(MODELO_LOCAL_FICTICIO, pedido, 20)) as { options: unknown; system: string };
-    expect(cuerpo.options).toEqual({ seed: 42, temperature: 0.2 });
+    expect(cuerpo.options).toEqual({ num_ctx: 8192, seed: 42, temperature: 0.2 });
     expect(cuerpo.system).toBe(pedido.prompt.texto);
   });
 
@@ -144,7 +144,7 @@ describe("la temperatura de la configuración (aditiva: sin ella, 0)", () => {
     const local = crearGeneradorLocal({ ...CONFIG_FICTICIA, temperaturaCentesimas: 37 }, { fetch: falso.fetch });
     expect(await local.generar(pedidoFicticio().pedido, vivo())).toMatchObject({ ok: true });
     const generar = falso.llamadas().find((l) => l.url === URL_GENERAR);
-    expect((JSON.parse(String(generar?.body)) as { options: unknown }).options).toEqual({ seed: 42, temperature: 0.37 });
+    expect((JSON.parse(String(generar?.body)) as { options: unknown }).options).toEqual({ num_ctx: 8192, seed: 42, temperature: 0.37 });
   });
 });
 

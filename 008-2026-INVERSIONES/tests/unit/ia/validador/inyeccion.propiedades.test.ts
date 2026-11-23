@@ -8,7 +8,9 @@
  */
 import { describe, expect, it } from "vitest";
 import { TIPOS_RESUMEN, type PaqueteHechos } from "@/ia/contrato";
+import { leerSalida } from "@/ia/validador/leer";
 import { resumenSinIa, salidaDePlantilla } from "@/ia/validador/plantilla";
+import { segmentosDe } from "@/ia/validador/segmentos";
 import { validarSalida } from "@/ia/validador/validar";
 import { crearPrng, type Prng } from "@/proyecciones/prng";
 import { elegir } from "../apoyo/aleatorio.ficticio";
@@ -30,8 +32,9 @@ function cifraAlAzar(prng: Prng): string {
   return separador === "" || largo < 2 ? digitos : `${digitos.slice(0, 1)}${separador}${digitos.slice(1)}`;
 }
 
-const frasesDe = (cruda: string): FraseCruda[] => (JSON.parse(cruda) as { frases: FraseCruda[] }).frases;
-const conFrases = (frases: readonly FraseCruda[]): string => JSON.stringify({ frases });
+/** Las frases de la plantilla (`salida-v2`) como texto con citas, para inyectar sobre el texto; `conFrases` las vuelve a partir en segmentos. */
+const frasesDe = (cruda: string): FraseCruda[] => [...(leerSalida(cruda)?.frases ?? [])];
+const conFrases = (frases: readonly FraseCruda[]): string => JSON.stringify({ frases: frases.map((f) => ({ segmentos: segmentosDe(f.texto) })) });
 
 function insertar(frases: readonly FraseCruda[], prng: Prng, armar: (texto: string) => string): string {
   const i = prng.enteroMenorQue(frases.length);
@@ -69,7 +72,9 @@ describe.each(TIPOS_RESUMEN)("inyección de cifras · %s", (tipo) => {
     for (const paquete of paquetes) {
       for (let k = 0; k < 4; k += 1) {
         const cruda = insertar(frasesDe(salidaDePlantilla(paquete)), prng, enPosicion(prng, cifraAlAzar(prng)));
-        expect(motivos(cruda, paquete)).toContain("CIFRA_SUELTA");
+        // Un dígito metido dentro de una cita deja una llave mal formada: la lectura lo rechaza (SALIDA_INVALIDA).
+        const hallados = motivos(cruda, paquete);
+        expect(hallados.includes("CIFRA_SUELTA") || hallados.includes("SALIDA_INVALIDA")).toBe(true);
       }
     }
   });

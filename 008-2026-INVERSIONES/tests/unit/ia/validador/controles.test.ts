@@ -61,10 +61,7 @@ describe("forma de la frase", () => {
 
   it.each([
     ["signo pegado a la cita", "El valor de las acciones subió a -{VALOR_ACCIONES}."],
-    ["dos citas pegadas", "Las especies con cierre atrasado son {ESPECIES_ATRASADAS}{ESPECIES_ATRASADAS}."],
-    ["coma pegada entre citas", "Las especies con cierre atrasado son {ESPECIES_ATRASADAS},{ESPECIES_ATRASADAS}."],
-    ["letra pegada a la cita", "El valor de las acciones subió a{VALOR_ACCIONES}."],
-    ["letra después de la cita", "El valor de las acciones subió a {VALOR_ACCIONES}x."],
+    ["signo y símbolo después de la cita", "El valor de las acciones subió a {VALOR_ACCIONES}%."],
   ])("%s: FORMATO.CITA_PEGADA", (_caso, plantilla) => {
     expect(hallazgos(p, VA, plantilla)).toContain("FORMATO.CITA_PEGADA");
   });
@@ -74,8 +71,6 @@ describe("forma de la frase", () => {
   });
 
   it.each([
-    ["llave suelta", "El valor de las acciones subió a {VALOR_ACCIONES} {.", "FORMATO.LLAVE_SUELTA"],
-    ["cita mal formada", "El valor de las acciones subió a {VALOR_ACCIONES} y {Hx}.", "FORMATO.LLAVE_SUELTA"],
     ["sin punto final", "El valor de las acciones subió a {VALOR_ACCIONES}", "FORMATO.PUNTO_FINAL"],
     ["dos oraciones", "El valor de las acciones subió. Es {VALOR_ACCIONES}.", "FORMATO.PUNTO_INTERNO"],
     ["una dirección web", "El valor de las acciones subió a {VALOR_ACCIONES} en www.ejemplo.com.", "FORMATO.PUNTO_INTERNO"],
@@ -93,21 +88,6 @@ describe("forma de la frase", () => {
     expect(r).not.toContain("FORMATO.MAYUSCULA_INTERNA");
   });
 
-  it("la lista de hechos tiene que ser el conjunto de las citas, sin repetir", () => {
-    const va = hechoDe(p, "VALOR_ACCIONES").id;
-    const gt = hechoDe(p, "GANANCIA_TOTAL").id;
-    const base = frase(p, VA);
-    const conGanancia = frase(p, "La ganancia total bajó a {GANANCIA_TOTAL}.");
-    const patrones = (cruda: string): readonly string[] => {
-      const r = validarSalida(cruda, p);
-      return r.ok ? [] : r.hallazgos.map((h) => h.patron);
-    };
-    expect(patrones(salida(base, { ...conGanancia, hechos: [] }))).toContain("FORMATO.LISTA_HECHOS");
-    expect(patrones(salida(base, { ...conGanancia, hechos: [gt, va] }))).toContain("FORMATO.LISTA_HECHOS");
-    expect(patrones(salida(base, { ...conGanancia, hechos: [gt, gt] }))).toContain("FORMATO.LISTA_HECHOS");
-    expect(validarSalida(salida(base, conGanancia), p).ok).toBe(true);
-  });
-
   it("la misma palabra dos veces seguidas en el texto renderizado (la unidad repetida) es FORMATO", () => {
     const reglas = paqueteFicticio("REGLAS");
     const ultima = hechoDe(reglas, "REGLA_DIAS_AL_PLAZO").presentacion.split(" ").at(-1) ?? "";
@@ -120,13 +100,11 @@ describe("forma de la frase", () => {
 describe("citas y hechos", () => {
   const p = paqueteFicticio("DIARIO");
 
-  it("una cita a un id que no está en el paquete, o un id de la lista que no está, es HECHO_DESCONOCIDO", () => {
+  it("una ref a un id que no está en el paquete es HECHO_DESCONOCIDO", () => {
     const enTexto = validarSalida(salida(frase(p, VA), { texto: "La ganancia total bajó a {H99}.", hechos: ["H99"] }), p);
     expect(enTexto.ok ? [] : enTexto.hallazgos.map((h) => h.patron)).toContain("HECHO_DESCONOCIDO.CITA");
     const cero = validarSalida(salida(frase(p, VA), { texto: "La ganancia total bajó a {H00}.", hechos: ["H00"] }), p);
     expect(cero.ok ? [] : cero.motivos).toContain("HECHO_DESCONOCIDO");
-    const enLista = validarSalida(salida({ ...frase(p, VA), hechos: [hechoDe(p, "VALOR_ACCIONES").id, "VALOR"] }), p);
-    expect(enLista.ok ? [] : enLista.hallazgos.map((h) => h.patron)).toContain("HECHO_DESCONOCIDO.LISTA");
   });
 
   it("un obligatorio sin citar y una frase sin ninguna cita son HECHO_NO_CITADO", () => {

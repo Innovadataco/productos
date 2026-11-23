@@ -1,17 +1,18 @@
 /**
  * Lectura de la salida cruda (SALIDA_INVALIDA): solo un texto JSON de hasta MAX_SALIDA_CRUDA con la forma exacta
- * `{frases:[{texto, hechos:[texto]}]}`, sin campos de más (ni `__proto__`). Total: nunca lanza ni toca un Proxy.
+ * `{frases:[{segmentos:[{texto}|{ref}]}]}` (salida-v2; el detalle de los segmentos, en salida-v2.test.ts), sin campos de más (ni `__proto__`). Total: nunca lanza ni toca un Proxy.
  */
 import { describe, expect, it } from "vitest";
 import { MAX_SALIDA_CRUDA } from "@/ia/generador";
 import { leerSalida } from "@/ia/validador/leer";
 
-const valida = JSON.stringify({ frases: [{ hechos: ["H01"], texto: "Texto ficticio {H01}." }] });
+const valida = JSON.stringify({ frases: [{ segmentos: [{ texto: "Texto ficticio " }, { ref: "H01" }, { texto: "." }] }] });
 
 describe("leerSalida", () => {
   it("lee la forma exacta y devuelve una copia congelada", () => {
     const leida = leerSalida(valida);
     expect(leida).toEqual({ frases: [{ texto: "Texto ficticio {H01}.", hechos: ["H01"] }] });
+    expect(Object.isFrozen(leida?.frases[0]?.hechos)).toBe(true);
     expect(Object.isFrozen(leida)).toBe(true);
     expect(Object.isFrozen(leida?.frases)).toBe(true);
     expect(Object.isFrozen(leida?.frases[0])).toBe(true);
@@ -47,20 +48,19 @@ describe("leerSalida", () => {
     ["frase que no es objeto", '{"frases":["texto"]}'],
     ["frase nula", '{"frases":[null]}'],
     ["frase arreglo", '{"frases":[[]]}'],
-    ["sin texto", '{"frases":[{"hechos":[]}]}'],
-    ["sin hechos", '{"frases":[{"texto":"x"}]}'],
-    ["texto no es texto", '{"frases":[{"hechos":[],"texto":7}]}'],
-    ["hechos no es arreglo", '{"frases":[{"hechos":"H01","texto":"x"}]}'],
-    ["un id que no es texto", '{"frases":[{"hechos":[1],"texto":"x"}]}'],
-    ["campo de más en la frase", '{"frases":[{"hechos":[],"texto":"x","tono":"y"}]}'],
-    ["__proto__ en la frase", '{"frases":[{"hechos":[],"texto":"x","__proto__":{}}]}'],
+    ["sin segmentos", '{"frases":[{}]}'],
+    ["la forma vieja", '{"frases":[{"hechos":["H01"],"texto":"x {H01}."}]}'],
+    ["segmentos no es arreglo", '{"frases":[{"segmentos":"H01"}]}'],
+    ["un segmento con texto que no es texto", '{"frases":[{"segmentos":[{"texto":7}]}]}'],
+    ["campo de más en la frase", '{"frases":[{"segmentos":[],"tono":"y"}]}'],
+    ["__proto__ en la frase", '{"frases":[{"segmentos":[],"__proto__":{}}]}'],
   ])("rechaza: %s", (_caso, cruda) => {
     expect(leerSalida(cruda)).toBeNull();
   });
 
   it("rechaza la salida de más de MAX_SALIDA_CRUDA caracteres sin leerla; la del tope justo se lee", () => {
-    const prefijo = '{"frases":[{"hechos":[],"texto":"';
-    const sufijo = '"}]}';
+    const prefijo = '{"frases":[{"segmentos":[{"texto":"';
+    const sufijo = '"}]}]}';
     const justa = `${prefijo}${"a".repeat(MAX_SALIDA_CRUDA - prefijo.length - sufijo.length)}${sufijo}`;
     expect(justa.length).toBe(MAX_SALIDA_CRUDA);
     expect(leerSalida(justa)).not.toBeNull();

@@ -38,7 +38,7 @@ describe("armarDiario · el paquete del tablero", () => {
       ["GANANCIA_TOTAL", "1336.82", null, "2027-03-16", "CALCULADO", "SUBE", "RECIENTE", true],
       ["VARIACION_DIA_VALOR", "-211.37", null, "2027-03-16", "CALCULADO", "BAJA", "RECIENTE", true],
       ["ESPECIES_ATRASADAS", "1", null, "2027-03-16", "CALCULADO", "NO_APLICA", "RECIENTE", true],
-      ["FECHA_CIERRE_RECIENTE", "2027-03-16", null, "2027-03-16", "CALCULADO", "NO_APLICA", "RECIENTE", true],
+      ["FECHA_CIERRE_RECIENTE", "2027-03-16", null, "2027-03-16", "CALCULADO", "NO_APLICA", "RECIENTE", false],
       ["FECHA_CIERRE_MAS_ANTIGUO", "2027-03-15", null, "2027-03-15", "ATRASADO", "NO_APLICA", "ATRASADO", false],
       ["CONCILIACION_PARCIAL", "2027-02-26", null, "2027-02-26", "ATRASADO", "NO_APLICA", "ATRASADO", false],
       ["TASA_TRM", "4137.19", null, "2027-03-17", "VERIFICADO", "SUBE", "HOY", false],

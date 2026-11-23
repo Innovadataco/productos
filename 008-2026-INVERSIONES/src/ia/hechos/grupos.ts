@@ -6,6 +6,13 @@
  * escribir mal) al id de un hecho anterior del MISMO grupo. La presentación sale de `presentar` con la unidad del catálogo.
  * Lo obligatorio arrastra al nombre de su especie, a través del ancla de la regla (que no se vuelve obligatoria): el
  * texto que cite el hecho obligatorio tiene que poder decir de qué especie habla.
+ *
+ * Obligatorios (salida-v2): como mucho `MAX_OBLIGATORIOS` por paquete, contando los nombres arrastrados: caben en las seis
+ * frases del límite. Cada armador marca lo más importante de su tipo (DIARIO: valor de las acciones, variación del día,
+ * ganancia total, especies sin precio o atrasadas y conciliación que no cuadra; ESCENARIOS: el escenario central de cada
+ * horizonte y la probabilidad de terminar por debajo de lo aportado; REGLAS: lo que toca o está cerca, por prioridad).
+ * Si aun así pasan del tope (REGLAS con muchas especies), `limitarObligatorios` deja los primeros en el orden del
+ * paquete (el de la prioridad de los grupos) y los demás quedan sin obligación.
  */
 import { CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, type ClaveAnclaRegla, type ClaveDe, type ClaveDeRegla, type ClaveHecho, type ClaveNombreEspecie } from "../catalogo";
 import { MAX_HECHOS, type Calidad, type Cercania, type DiaIso, type Direccion, type EntradaHecho, type Frescura, type IdHecho, type TipoResumen } from "../contrato";
@@ -113,6 +120,35 @@ function elegir<C extends ClaveHecho>(grupos: readonly Grupo<C>[], tope: number)
   return { elegidos, recortados: ordenados.length - elegidos.length };
 }
 
+/** El tope de hechos obligatorios de un paquete, con los nombres de especie que arrastran. */
+export const MAX_OBLIGATORIOS = 6;
+
+/** El id del nombre de especie al que llega el hecho por su cadena de sujetos, o null. */
+function raizDe<C extends ClaveHecho>(hecho: EntradaHecho<C>, porId: ReadonlyMap<string, EntradaHecho<C>>): string | null {
+  for (let actual = hecho.sujeto, pasos = 0; actual !== undefined && pasos < porId.size; pasos += 1) {
+    const h = porId.get(actual);
+    if (h === undefined) return null;
+    if (h.clave === CLAVE_NOMBRE_ESPECIE) return h.id;
+    actual = h.sujeto;
+  }
+  return null;
+}
+
+/** Deja obligatorios, en orden, los hechos que caben en el tope junto con el nombre que arrastran; quita la marca a los demás. */
+function limitarObligatorios<C extends ClaveHecho>(hechos: readonly EntradaHecho<C>[], tope: number): readonly EntradaHecho<C>[] {
+  const porId = new Map(hechos.map((h) => [h.id, h]));
+  const dejados = new Set<string>();
+  for (const h of hechos) {
+    if (!h.obligatorio || h.clave === CLAVE_NOMBRE_ESPECIE) continue;
+    const raiz = raizDe(h, porId);
+    const nuevos = raiz === null || dejados.has(raiz) ? 1 : 2;
+    if (dejados.size + nuevos > tope) continue;
+    dejados.add(h.id);
+    if (raiz !== null) dejados.add(raiz);
+  }
+  return hechos.map((h) => (h.obligatorio && !dejados.has(h.id) ? { ...h, obligatorio: false } : h));
+}
+
 /** Los hechos listos para `construirPaquete` (sin etiqueta ni unidad: las pone el catálogo). El tope nunca pasa de 99. */
 export function numerarGrupos<T extends TipoResumen>(tipo: T, grupos: readonly Grupo<ClaveDe<T>>[], tope: number = MAX_HECHOS): Numerados<ClaveDe<T>> {
   const { elegidos, recortados } = elegir(grupos, Math.min(tope, MAX_HECHOS));
@@ -120,5 +156,5 @@ export function numerarGrupos<T extends TipoResumen>(tipo: T, grupos: readonly G
     (acc, grupo) => ({ hechos: [...acc.hechos, ...numerarGrupo(tipo, grupo, acc.hechos.length + 1)] }),
     { hechos: [] },
   );
-  return { hechos, recortados };
+  return { hechos: limitarObligatorios(hechos, MAX_OBLIGATORIOS), recortados };
 }

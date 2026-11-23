@@ -86,7 +86,7 @@ export function armarEscenarios(e: EntradaArmadoEscenarios): PaqueteHechos<"ESCE
   const inicial = pesos(r.valorHoy);
   const proyeccion: readonly Borrador[] = [
     borrador("VALOR_INICIAL", inicial, FUENTES.PROYECCION, calculo),
-    ...HORIZONTES.map((h) => borrador(`HORIZONTE_${h}`, deEntero(HORIZONTES_ESCENARIOS[h]), FUENTES.PROYECCION, calculo, { obligatorio: true })),
+    ...HORIZONTES.map((h) => borrador(`HORIZONTE_${h}`, deEntero(HORIZONTES_ESCENARIOS[h]), FUENTES.PROYECCION, calculo)),
     ...HORIZONTES.flatMap((h) => hechosDelHorizonte(r, h, inicial, { calculo, estimacion })),
     borrador("PROBABILIDAD_BAJO_APORTADO", porcentaje(r.probabilidadBajoAportado), FUENTES.PROYECCION, estimacion, { obligatorio: true }),
     borrador("CAIDA_MAXIMA_MEDIANA", porcentaje(Math.abs(r.caidaMaximaMediana)), FUENTES.PROYECCION, estimacion),

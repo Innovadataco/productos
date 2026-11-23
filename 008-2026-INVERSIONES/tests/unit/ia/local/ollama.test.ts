@@ -16,8 +16,8 @@ const falloModelo = (detalle: string) => ({ ok: false, puerta: "local", motivo: 
 
 describe("constantes del pedido", () => {
   it("temperatura 0, semilla 42 y keep_alive corto; el smoke, además, con pocos tokens", () => {
-    expect(OPCIONES_GENERACION).toEqual({ temperature: 0, seed: 42 });
-    expect(OPCIONES_SMOKE).toEqual({ temperature: 0, seed: 42, num_predict: 5 });
+    expect(OPCIONES_GENERACION).toEqual({ num_ctx: 8192, temperature: 0, seed: 42 });
+    expect(OPCIONES_SMOKE).toEqual({ num_ctx: 8192, temperature: 0, seed: 42, num_predict: 5 });
     expect(KEEP_ALIVE_LOCAL).toBe("30s");
     expect(PROMPT_SMOKE).toBe("Responda solo: ok");
     expect(Object.isFrozen(OPCIONES_GENERACION) && Object.isFrozen(OPCIONES_SMOKE)).toBe(true);
@@ -34,7 +34,7 @@ describe("cuerpoGenerar", () => {
       prompt: jsonCanonico(pedido.vista),
       format: ESQUEMA_FICTICIO,
       stream: false,
-      options: { temperature: 0, seed: 42 },
+      options: { num_ctx: 8192, temperature: 0, seed: 42 },
       keep_alive: "30s",
     });
     expect(texto).toBe(jsonCanonico(JSON.parse(texto)));
@@ -60,7 +60,7 @@ describe("cuerpoGenerar", () => {
 describe("cuerpoSmoke", () => {
   it("una generación mínima, sin format ni system, con el mismo keep_alive", () => {
     const texto = cuerpoSmoke(MODELO_LOCAL_FICTICIO);
-    expect(JSON.parse(texto)).toEqual({ model: MODELO_LOCAL_FICTICIO, prompt: "Responda solo: ok", stream: false, options: { temperature: 0, seed: 42, num_predict: 5 }, keep_alive: "30s" });
+    expect(JSON.parse(texto)).toEqual({ model: MODELO_LOCAL_FICTICIO, prompt: "Responda solo: ok", stream: false, options: { num_ctx: 8192, temperature: 0, seed: 42, num_predict: 5 }, keep_alive: "30s" });
     expect(texto).toBe(jsonCanonico(JSON.parse(texto)));
   });
 });

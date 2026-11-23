@@ -23,6 +23,9 @@ const HISTORIAL: Readonly<Record<string, string>> = {
   "resumen-diario-v1": "18702a8e5a0b91fdd9c37526b82d7f0946b02baa6365a91a4ef68c5340892f85",
   "resumen-reglas-v1": "3d0af5e9baebaaa6d9e6b52add4aed18ad1dc316fcd2a256fe584fe0fc7f3ccb",
   "resumen-escenarios-v1": "2976993042570520f0ef548e52497191e1479ee948c1d5af293294c56336c391",
+  "resumen-diario-v2": "f30294e2a06dbdf47f63abe3348003a9e8fb0d362ffcf271de88857219605732",
+  "resumen-reglas-v2": "d26e9308ba4006e3b8494d087770f8ceac0eaf40ae9367568bedf0794f3632b1",
+  "resumen-escenarios-v2": "c1ba2a25244f0a612ed255c1f6506df4376ad8dad293a7ae06ed9c74e814698f",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */
@@ -45,7 +48,7 @@ describe("prompts versionados", () => {
     expect(new Set(TIPOS_RESUMEN.map((t) => PROMPTS[t].texto)).size).toBe(TIPOS_RESUMEN.length);
     expect(Object.isFrozen(PROMPTS)).toBe(true);
     expect(Object.isFrozen(VERSIONES_PROMPT)).toBe(true);
-    expect(Object.keys(HISTORIAL).sort()).toEqual(TIPOS_RESUMEN.map((t) => VERSIONES_PROMPT[t]).sort());
+    expect(Object.keys(HISTORIAL)).toEqual(expect.arrayContaining(TIPOS_RESUMEN.map((t) => VERSIONES_PROMPT[t])));
   });
 
   it("promptDe con un tipo que no existe lanza (cierra en fallo)", () => {
@@ -53,9 +56,9 @@ describe("prompts versionados", () => {
     expect(() => promptDe("constructor" as TipoResumen)).toThrow(RangeError);
   });
 
-  it.each(TIPOS_RESUMEN)("%s: sin dígitos fuera de la cita de ejemplo «H01»", (tipo) => {
+  it.each(TIPOS_RESUMEN)("%s: sin dígitos fuera del id de ejemplo «H01»", (tipo) => {
     const texto = PROMPTS[tipo].texto;
-    expect(texto).toContain("{H01}");
+    expect(texto).toContain('{"ref":"H01"}');
     expect(texto.replace(/H01/g, "")).not.toMatch(/\p{N}/u);
   });
 
@@ -67,7 +70,7 @@ describe("prompts versionados", () => {
 
   it.each(TIPOS_RESUMEN)("%s: dice que no escriba cifras, que cite, que no recomiende y que no prediga", (tipo) => {
     const texto = PROMPTS[tipo].texto.toLowerCase();
-    for (const instruccion of ["no escriba cifras", "{h01}", "no recomiende", "no prediga", "cite todos los hechos obligatorios", "solo con un json"]) {
+    for (const instruccion of ["no escriba cifras", "segmento de referencia", "nunca escriba el id ni llaves dentro de la prosa", "no recomiende", "no prediga", "cite todos los hechos obligatorios", "solo con un json"]) {
       expect(texto).toContain(instruccion);
     }
   });
@@ -80,7 +83,7 @@ describe("prompts versionados", () => {
 });
 
 describe("esquema de salida", () => {
-  const PROHIBIDAS = ["minLength", "maxLength", "minItems", "maxItems", "pattern", "format", "minimum", "maximum", "multipleOf", "enum"];
+  const PROHIBIDAS = ["minLength", "maxLength", "minItems", "maxItems", "format", "minimum", "maximum", "multipleOf", "enum"];
 
   function recorrer(valor: unknown, visitar: (registro: Record<string, unknown>) => void): void {
     if (Array.isArray(valor)) valor.forEach((v) => recorrer(v, visitar));
@@ -90,24 +93,14 @@ describe("esquema de salida", () => {
     }
   }
 
-  it("es {frases:[{texto, hechos:[ids]}]} y está congelado a fondo", () => {
-    expect(ESQUEMA_SALIDA).toEqual({
-      type: "object",
-      properties: {
-        frases: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: { hechos: { type: "array", items: { type: "string" } }, texto: { type: "string" } },
-            required: ["texto", "hechos"],
-            additionalProperties: false,
-          },
-        },
-      },
-      required: ["frases"],
-      additionalProperties: false,
-    });
+  it("está congelado a fondo (la forma exacta, en salida-v2.test.ts)", () => {
     recorrer(ESQUEMA_SALIDA, (r) => expect(Object.isFrozen(r)).toBe(true));
+  });
+
+  it("solo `ref` lleva `pattern` (el id); el resto de restricciones, ninguna", () => {
+    const conPatron: Record<string, unknown>[] = [];
+    recorrer(ESQUEMA_SALIDA, (r) => { if ("pattern" in r) conPatron.push(r); });
+    expect(conPatron).toEqual([{ type: "string", pattern: "^H[0-9]{2}$" }]);
   });
 
   it("no usa restricciones que rompen la gramática de Ollama o que la salida estructurada de Claude no admite", () => {

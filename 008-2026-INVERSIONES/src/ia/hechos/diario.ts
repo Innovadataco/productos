@@ -64,7 +64,7 @@ function portafolio(e: EntradaArmadoDiario, hoy: DiaIso): ParteDiario {
     conSigno("GANANCIA_TOTAL", deDecimal(t.gananciaTotal), true),
     ...(neto === null ? [] : [conSigno("VARIACION_DIA_VALOR", neto, true)]),
     ...conteos(e, marcas),
-    borrador("FECHA_CIERRE_RECIENTE", referencia, FUENTES.TABLERO, marcas, { obligatorio: true }),
+    borrador("FECHA_CIERRE_RECIENTE", referencia, FUENTES.TABLERO, marcas),
     ...viejo.hechos,
   ];
   return { grupos: [{ prioridad: PRIORIDAD.PORTAFOLIO, hechos }], avisos: [...avisos, ...viejo.avisos] };

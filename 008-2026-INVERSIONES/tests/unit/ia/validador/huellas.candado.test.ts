@@ -13,18 +13,19 @@ import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "@/i
 import { CONDICIONALES, PALABRAS_BASE } from "@/ia/validador/vocabulario";
 
 /** Las huellas de la versión vigente del validador. */
-const HUELLAS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  "validador-v1": {
-    RECOMENDACION: "8117a2dd839c94f79ed3878b0de971b75e5b4f6f3c2d1ff97c9b96d1e690cfec",
-    PREDICCION: "cab62560bbe9cb1ea05e7975e516f9b4748e4bc7117e286264fc489e921ca416",
-    TRATO: "7bef84c177a32fad5a3c4036474868cc9f764a15f6e8c226b5f203fe93f92709",
-    CIFRA_EN_PALABRAS: "26f2383b38c21986bd04a040a812f8fcfd54556cbae5fac46a03013bc1e79f1a",
-    IDIOMA: "de090ea3b88aeee081eeaaf22e5f7d9d377fd3575198785e766b3b47d5a8c021",
-    MARCA: "f9b1712e4e272918675185cb6343482eb194adf54d58163211f795dd3d7272aa",
-    SIN_DATO: "37afc2a06de4fa8b22bfb1a432548878569d7aa6847311d284c7c18315a82735",
-    VOCABULARIO: "465c96414006feec69381c0f09c0dc90685e91aef6efe45fa9464cb69668f466",
-  },
+const HUELLAS_V1: Readonly<Record<string, string>> = {
+  RECOMENDACION: "8117a2dd839c94f79ed3878b0de971b75e5b4f6f3c2d1ff97c9b96d1e690cfec",
+  PREDICCION: "cab62560bbe9cb1ea05e7975e516f9b4748e4bc7117e286264fc489e921ca416",
+  TRATO: "7bef84c177a32fad5a3c4036474868cc9f764a15f6e8c226b5f203fe93f92709",
+  CIFRA_EN_PALABRAS: "26f2383b38c21986bd04a040a812f8fcfd54556cbae5fac46a03013bc1e79f1a",
+  IDIOMA: "de090ea3b88aeee081eeaaf22e5f7d9d377fd3575198785e766b3b47d5a8c021",
+  MARCA: "f9b1712e4e272918675185cb6343482eb194adf54d58163211f795dd3d7272aa",
+  SIN_DATO: "37afc2a06de4fa8b22bfb1a432548878569d7aa6847311d284c7c18315a82735",
+  VOCABULARIO: "465c96414006feec69381c0f09c0dc90685e91aef6efe45fa9464cb69668f466",
 };
+
+/** v2 cambia solo la lectura de la salida (segmentos): las listas son las mismas de v1. */
+const HUELLAS: Readonly<Record<string, Readonly<Record<string, string>>>> = { "validador-v1": HUELLAS_V1, "validador-v2": HUELLAS_V1 };
 
 const huella = (patrones: readonly Patron[]): string => sha256Hex(JSON.stringify(patrones.map((p) => [p.id, p.sobre, p.antes, p.alternativas])));
 

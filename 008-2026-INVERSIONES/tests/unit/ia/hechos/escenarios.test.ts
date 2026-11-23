@@ -28,9 +28,9 @@ describe("armarEscenarios · el paquete de la proyección", () => {
     expect(paquete.avisos).toEqual(["HISTORIA_CORTA", "ANIO_SIN_CALENDARIO"]);
     expect(paquete.hechos.map((h) => [h.clave, h.valor, h.calidad, h.direccion, h.obligatorio])).toEqual([
       ["VALOR_INICIAL", "37911.47", "CALCULADO", "NO_APLICA", false],
-      ["HORIZONTE_CORTO", "3", "CALCULADO", "NO_APLICA", true],
-      ["HORIZONTE_MEDIO", "6", "CALCULADO", "NO_APLICA", true],
-      ["HORIZONTE_LARGO", "12", "CALCULADO", "NO_APLICA", true],
+      ["HORIZONTE_CORTO", "3", "CALCULADO", "NO_APLICA", false],
+      ["HORIZONTE_MEDIO", "6", "CALCULADO", "NO_APLICA", false],
+      ["HORIZONTE_LARGO", "12", "CALCULADO", "NO_APLICA", false],
       ["ESCENARIO_BAJO_CORTO", "33917.29", "ESTIMADO", "BAJA", false],
       ["ESCENARIO_CENTRAL_CORTO", "38411.74", "ESTIMADO", "SUBE", true],
       ["ESCENARIO_ALTO_CORTO", "43177.02", "ESTIMADO", "SUBE", false],

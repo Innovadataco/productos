@@ -7,6 +7,7 @@
 import type { ClaveHecho } from "@/ia/catalogo";
 import type { EntradaHecho, EntradaPaquete, Hecho, IdHecho, PaqueteHechos, TipoResumen } from "@/ia/contrato";
 import { construirPaquete } from "@/ia/paquete";
+import { segmentosDe } from "@/ia/validador/segmentos";
 import type { Prng } from "@/proyecciones/prng";
 import { entradaAlAzar } from "../../apoyo/aleatorio.ficticio";
 import { ENTRADAS_FICTICIAS } from "../../apoyo/hechos.ficticio";
@@ -38,9 +39,12 @@ export function frase(paquete: PaqueteHechos, plantilla: string, hechos?: readon
   return { texto, hechos: hechos ?? citasDe(texto) };
 }
 
-/** La salida cruda en el orden de claves del esquema (`hechos` antes que `texto`). */
+/**
+ * La salida cruda `salida-v2`: el texto de cada frase se parte en segmentos (cada `{Hnn}` es una ref; lo demás, texto).
+ * `hechos` ya no viaja en la salida (la forma vieja es SALIDA_INVALIDA): solo lo usan las pruebas de la plantilla.
+ */
 export const salida = (...frases: readonly FraseFicticia[]): string =>
-  JSON.stringify({ frases: frases.map((f) => ({ hechos: f.hechos, texto: f.texto })) });
+  JSON.stringify({ frases: frases.map((f) => ({ segmentos: segmentosDe(f.texto) })) });
 
 /** La salida cruda de frases dadas por plantilla. */
 export const salidaDe = (paquete: PaqueteHechos, ...plantillas: readonly string[]): string =>

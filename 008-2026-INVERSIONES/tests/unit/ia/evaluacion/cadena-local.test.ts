@@ -3,7 +3,7 @@
  * Ollama falso de las pruebas de E4a y pasa por la red vigilada del arnés. La lista de modelos se reemplaza con
  * `vi.mock` (como en las pruebas de la puerta local): en main solo está aprobado `ornith:9b`, sin digest.
  * Verifica: una sonda (solo tags) y después tags + generate por corrida, solo esas dos rutas, temperatura 0, semilla 42
- * y keep_alive corto, sin num_ctx; y que ni la IP ni el puerto inventados quedan en los registros.
+ * y keep_alive corto, con num_ctx fijo; y que ni la IP ni el puerto inventados quedan en los registros.
  */
 import { describe, expect, it, vi } from "vitest";
 import { crearGeneradorLocal } from "@/ia/local/generador";
@@ -53,10 +53,9 @@ describe("la cadena del arnés con el cliente real de la puerta local", () => {
     expect(red.conteo()).toEqual({ tags: 5, generar: 4, rechazados: 0 });
     for (const l of ollama.llamadas().filter((x) => x.method === "POST")) {
       const cuerpo = JSON.parse(l.body ?? "{}") as { options: Record<string, unknown>; keep_alive: string; stream: boolean };
-      expect(cuerpo.options).toEqual({ seed: 42, temperature: 0 });
+      expect(cuerpo.options).toEqual({ num_ctx: 8192, seed: 42, temperature: 0 });
       expect(cuerpo.keep_alive).toBe(KEEP_ALIVE_LOCAL);
       expect(cuerpo.stream).toBe(false);
-      expect(l.body).not.toContain("num_ctx");
     }
     const texto = JSON.stringify(registros);
     expect(texto).not.toContain(IP_FICTICIA);

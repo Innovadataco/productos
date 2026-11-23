@@ -15,9 +15,8 @@
  * Los cuerpos se arman con el JSON canónico: el orden queda fijo. Hechos de la documentación de Ollama (api.md): el
  * digest de tags viene sin prefijo y `keep_alive` vale por omisión 5m; `thinking` en generate no está documentado.
  *
- * No se fija `num_ctx`: un valor distinto del que tiene cargado el modelo de PI podría hacer que Ollama lo recargue
- * (sin verificar). Riesgo abierto: si la vista pasa del contexto por omisión del modelo, Ollama puede recortar el
- * prompt sin avisar; se mide en E7 (`prompt_eval_count` frente al contexto del modelo en el Mac).
+ * `num_ctx` es la constante `NUM_CTX_LOCAL` en `options` de TODOS los pedidos (generación y sonda), por orden de PI: así
+ * Ollama no recarga el modelo al alternar pedidos. Se mide en E7 (`prompt_eval_count` frente a ese contexto).
  */
 import type { PedidoGeneracion } from "../generador";
 import { esObjetoPlano } from "../formas";
@@ -29,8 +28,10 @@ import { falloLocal, type FalloLocal } from "./errores";
  * Ollama aplica a todos el `keep_alive` del último pedido, uno corto también lo descarga antes para PI. Se mide en E7.
  */
 export const KEEP_ALIVE_LOCAL = "30s";
-export const OPCIONES_GENERACION = Object.freeze({ temperature: 0, seed: 42 });
-export const OPCIONES_SMOKE = Object.freeze({ temperature: 0, seed: 42, num_predict: 5 });
+/** Contexto fijo de TODO pedido local (aprobado por PI): constante del código, no se expone en ninguna pantalla. */
+export const NUM_CTX_LOCAL = 8192;
+export const OPCIONES_GENERACION = Object.freeze({ num_ctx: NUM_CTX_LOCAL, temperature: 0, seed: 42 });
+export const OPCIONES_SMOKE = Object.freeze({ num_ctx: NUM_CTX_LOCAL, temperature: 0, seed: 42, num_predict: 5 });
 export const PROMPT_SMOKE = "Responda solo: ok";
 /** Tope de entradas de `/api/tags` que se revisan. */
 export const MAX_MODELOS_TAGS = 1024;
@@ -83,7 +84,7 @@ export function cuerpoGenerar(modelo: string, pedido: PedidoGeneracion, temperat
     options: MARCA_OPCIONES,
     keep_alive: KEEP_ALIVE_LOCAL,
   });
-  const opciones = `{"seed":${OPCIONES_GENERACION.seed},"temperature":${temperaturaJson(temperaturaCentesimas)}}`;
+  const opciones = `{"num_ctx":${OPCIONES_GENERACION.num_ctx},"seed":${OPCIONES_GENERACION.seed},"temperature":${temperaturaJson(temperaturaCentesimas)}}`;
   return base.replace(`"options":"${MARCA_OPCIONES}"`, `"options":${opciones}`);
 }
 
