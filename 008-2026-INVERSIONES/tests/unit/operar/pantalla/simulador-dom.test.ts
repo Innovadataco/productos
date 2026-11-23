@@ -118,8 +118,9 @@ describe("Simulador", () => {
     expect(m.contenedor.querySelector("button[type=submit]")?.getAttribute("aria-disabled")).toBeNull();
     await enviar();
     await responder({ ok: true, vista: VISTA }, 200);
-    expect(texto(m.contenedor.querySelector("[role=status]"))).toBe(T.LISTO);
-    expect(m.contenedor.querySelector(".op-sim-resultado")?.closest("[aria-live],[role=status]")).toBeNull();
+    // Sin regiones vivas en <main> (contrato de /operar, tests/e2e/operar.spec.ts): el resultado toma el foco en su título.
+    expect(m.contenedor.querySelector("[role=status], [aria-live]")).toBeNull();
+    expect(document.activeElement).toBe(m.contenedor.querySelector(".op-sim-resultado h3"));
     const region = m.contenedor.querySelector(".tabla[role=region]")!;
     expect(region.getAttribute("aria-label")).toBeNull();
     expect(texto(document.getElementById(region.getAttribute("aria-labelledby")!))).toBe(T.PESOS);
