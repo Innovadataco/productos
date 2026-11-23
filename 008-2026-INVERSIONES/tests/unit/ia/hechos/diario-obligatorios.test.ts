@@ -11,10 +11,16 @@ import { MAX_OBLIGATORIOS } from "@/ia/hechos/grupos";
 const diarios = casosInventados().filter((c) => c.tipo === "DIARIO");
 
 describe("obligatorios del DIARIO", () => {
-  it("la lista está congelada, cabe en el tope y lleva los cuatro esenciales", () => {
+  it("la lista está congelada, cabe en el tope y son solo los cuatro esenciales (medido con qwen2.5:14b: no cita seis)", () => {
     expect(Object.isFrozen(OBLIGATORIOS_DIARIO)).toBe(true);
     expect(OBLIGATORIOS_DIARIO.length).toBeLessThanOrEqual(MAX_OBLIGATORIOS);
-    expect(OBLIGATORIOS_DIARIO).toEqual(expect.arrayContaining(["VALOR_ACCIONES", "VARIACION_DIA_VALOR", "GANANCIA_TOTAL", "CONCILIACION_NO_CUADRA"]));
+    expect([...OBLIGATORIOS_DIARIO]).toEqual(["VALOR_ACCIONES", "VARIACION_DIA_VALOR", "GANANCIA_TOTAL", "CONCILIACION_NO_CUADRA"]);
+  });
+
+  it("las especies sin precio o atrasadas siguen en el paquete, pero ya no son obligatorias", () => {
+    const conConteos = diarios.flatMap((c) => c.paquete.hechos.filter((h) => h.clave === "ESPECIES_SIN_PRECIO" || h.clave === "ESPECIES_ATRASADAS"));
+    expect(conConteos.length).toBeGreaterThan(0);
+    expect(conConteos.every((h) => !h.obligatorio)).toBe(true);
   });
 
   it.each(diarios.map((c) => [c.id, c] as const))("%s: solo obligatorios de la lista, sin nombres de especie", (_id, caso) => {

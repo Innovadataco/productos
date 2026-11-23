@@ -18,6 +18,13 @@ describe("prompts v3 · especie resuelta", () => {
     expect(texto).toContain("(especie, si aplica)");
     expect(texto).toContain("cite el id de su campo especie");
     expect(texto).not.toContain("siga el campo sujeto");
+    expect(texto).toContain("Las dos referencias son distintas");
+  });
+
+  it("DIARIO: nombra como obligatorios solo los cuatro esenciales", () => {
+    const texto = PROMPTS.DIARIO.texto;
+    expect(texto).toContain("Son obligatorios el valor de las acciones, la variación del día, la ganancia total y la conciliación que no cuadra");
+    expect(texto).not.toContain("Casi siempre son obligatorios el valor de las acciones");
   });
 });
 
