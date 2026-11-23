@@ -2,8 +2,8 @@
  * Grupos de hechos de los armadores: se ordenan por prioridad (los empates, en el orden de llegada), entran enteros
  * hasta el tope de noventa y nueve hechos (los que no caben se cuentan), se numeran de H01 en adelante, el sujeto (el
  * propio borrador al que se refiere, no un texto) se resuelve al id de un hecho anterior del mismo grupo, la
- * presentación sale de `presentar` y lo obligatorio no arrastra al nombre de su especie ni al ancla de la regla (el
- * validador exige el nombre en la frase con ETIQUETA.SIN_SUJETO).
+ * presentación sale de `presentar` y lo obligatorio arrastra al nombre de su especie (a través del ancla de la regla,
+ * que no se vuelve obligatoria).
  */
 import { describe, expect, it } from "vitest";
 import type { ClaveReglas } from "@/ia/catalogo";
@@ -90,10 +90,10 @@ describe("numerarGrupos", () => {
     expect(numerarGrupos("REGLAS", especies, 137).hechos).toHaveLength(MAX_HECHOS - 1);
   });
 
-  it("lo obligatorio ya no arrastra al nombre de su especie ni al ancla (el validador exige el nombre con ETIQUETA.SIN_SUJETO)", () => {
+  it("lo obligatorio arrastra al nombre de su especie, a través del ancla, sin volver obligatoria el ancla", () => {
     const { hechos } = numerarGrupos("REGLAS", [grupo(1, especieConReglas(ALFA, ["4591.37"], true)), grupo(1, especieConReglas(BETA, ["2491.73"]))]);
     expect(hechos.map((h) => [h.valor, h.obligatorio])).toEqual([
-      [ALFA, false], ["2027-02-03", false], ["4591.37", true], [BETA, false], ["2027-02-03", false], ["2491.73", false],
+      [ALFA, true], ["2027-02-03", false], ["4591.37", true], [BETA, false], ["2027-02-03", false], ["2491.73", false],
     ]);
   });
 

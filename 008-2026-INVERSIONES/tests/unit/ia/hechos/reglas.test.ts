@@ -25,7 +25,7 @@ describe("armarReglas · el paquete del plan", () => {
     expect(paquete.versionesCalculo).toEqual({ hechos: "armadores-v1" });
     expect(paquete.avisos).toEqual(["PROXIMO_SIN_NOMBRE", "DIVIDENDOS_PROXIMOS_OMITIDOS"]);
     expect(filas(paquete.hechos)).toEqual([
-      ["H01", "ESPECIE_NOMBRE", ALFA, null, HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
+      ["H01", "ESPECIE_NOMBRE", ALFA, null, HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", true],
       ["H02", "CIERRE_ESPECIE", "4613.27", "H01", "2027-03-16", "VERIFICADO", "NO_APLICA", "NO_APLICA", "RECIENTE", false],
       ["H03", "FECHA_CIERRE_ESPECIE", "2027-03-16", "H01", "2027-03-16", "VERIFICADO", "NO_APLICA", "NO_APLICA", "RECIENTE", false],
       ["H04", "REGLA_DEL_PLAN", "2027-02-03", "H01", HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
@@ -45,7 +45,7 @@ describe("armarReglas · el paquete del plan", () => {
       ["H18", "DIVIDENDO_POR_ACCION", "41.37", "H01", HOY, "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H19", "DIVIDENDO_FECHA_PAGO", "2027-04-21", "H01", HOY, "NO_VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
       ["H20", "DIVIDENDO_BRUTO_ESTIMADO", "30578.79", "H01", HOY, "ESTIMADO", "NO_APLICA", "NO_APLICA", "HOY", false],
-      ["H21", "ESPECIE_NOMBRE", BETA, null, HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
+      ["H21", "ESPECIE_NOMBRE", BETA, null, HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", true],
       ["H22", "CIERRE_ESPECIE", "2713.9", "H21", "2027-03-15", "ATRASADO", "NO_APLICA", "NO_APLICA", "ATRASADO", false],
       ["H23", "FECHA_CIERRE_ESPECIE", "2027-03-15", "H21", "2027-03-15", "ATRASADO", "NO_APLICA", "NO_APLICA", "ATRASADO", false],
       ["H24", "REGLA_DEL_PLAN", "2027-02-03", "H21", HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", false],
