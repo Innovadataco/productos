@@ -34,6 +34,8 @@ describe("privilegios de inv_app", () => {
         ...Object.entries(INSERT_DEL_PLAN).map(([t, cs]) => `INSERT (${cs.map((c) => (/[A-Z]/.test(c) ? `"${c}"` : c)).join(", ")}) ${t}`),
         // E8: la configuración de la IA, por columna y sin "creadaEn" (bloque «config_ia» de abajo).
         'INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", motivo, "autorId") config_ia',
+        // O5: la tarifa de comisión, por columna y sin "creadaEn" (bloque «tarifa_comision» de abajo).
+        'INSERT (id, version, comisionista, lado, porcentaje, "minimoPorOrden", "fijoPorOrden", "ivaPct", "otrosCargos", "vigenteDesde", motivo, "autorId") tarifa_comision',
       ].sort(),
     );
   });
@@ -124,7 +126,7 @@ describe("privilegios del plan y del diario (área de edición)", () => {
 
   it("ningún otro INSERT de inv_app fuera del login, del TOTP y del plan", () => {
     const inserts = grants.filter((g) => g.startsWith("INSERT ")).map((g) => g.split(" ").at(-1)!).sort();
-    expect(inserts).toEqual(["codigo_recuperacion", "config_ia", "intento_ingreso", ...TABLAS_DEL_PLAN].sort());
+    expect(inserts).toEqual(["codigo_recuperacion", "config_ia", "intento_ingreso", "tarifa_comision", ...TABLAS_DEL_PLAN].sort());
   });
 
   it("las cuatro tablas son de solo inserción en su migración (el disparador manda aunque alguien diera UPDATE)", () => {
@@ -272,6 +274,32 @@ describe("privilegios de la configuración de la IA (config_ia)", () => {
   it("su migración la hace de solo inserción", () => {
     const sqls = migracionesTexto();
     expect(sqls).toMatch(/CREATE TRIGGER "config_ia_solo_insercion" BEFORE UPDATE OR DELETE ON "config_ia"/);
+  });
+});
+
+// Fase E (O5): la tarifa de comisión. El dueño la carga desde /edicion/tarifas, que corre como inv_app: solo INSERT, POR
+// COLUMNA con todas las de tarifa_comision MENOS "creadaEn" (la pone la base), y nada más. Ni inv_ia ni inv_precios.
+describe("privilegios de la tarifa de comisión (tarifa_comision)", () => {
+  const grantsTarifa = [...sql.matchAll(/GRANT\s+([A-Z]+)\s*(?:\(([^)]*)\))?\s+ON\s+TABLE\s+public\.tarifa_comision\s+TO\s+(\w+)\s*;/g)];
+
+  it("un solo GRANT, a inv_app: INSERT por columna, con todas las columnas del esquema menos creadaEn", () => {
+    expect(grantsTarifa).toHaveLength(1);
+    expect(grantsTarifa[0]![1]).toBe("INSERT");
+    expect(grantsTarifa[0]![3]).toBe("inv_app");
+    const columnas = grantsTarifa[0]![2]!.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    const delEsquema = columnasDe("tarifa_comision");
+    expect(delEsquema).toContain("creadaEn");
+    expect([...columnas].sort()).toEqual(delEsquema.filter((c) => c !== "creadaEn").sort());
+    expect(sql).not.toMatch(/GRANT[^;]*\bpublic\.tarifa_comision\b[^;]*TO\s+inv_(ia|precios)/);
+  });
+
+  it("va después del REVOKE ALL de cada corrida", () => {
+    const revoke = sql.indexOf("EXECUTE format('REVOKE ALL ON TABLE public.%I FROM inv_app', t.relname);");
+    expect(sql.search(/GRANT INSERT \([^)]*\) ON TABLE public\.tarifa_comision TO inv_app;/)).toBeGreaterThan(revoke);
+  });
+
+  it("su migración la hace de solo inserción", () => {
+    expect(migracionesTexto()).toMatch(/CREATE TRIGGER "tarifa_comision_solo_insercion" BEFORE UPDATE OR DELETE ON "tarifa_comision"/);
   });
 });
 

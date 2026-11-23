@@ -19,7 +19,8 @@
 --    decision y enlace_decision_orden (los disparadores de integridad de precios y los de los instantes eximen al dueño);
 --    ni inv_ia del de ninguna de ellas ni del de resumen_ia, ni inv_app o inv_precios del de resumen_ia (fase E: el
 --    disparador de la hora del registro de los resúmenes con IA también exime al dueño); ni inv_app, inv_ia o inv_precios
---    del de config_ia (fase E, E8: el instante de la configuración de la IA);
+--    del de config_ia (fase E, E8: el instante de la configuración de la IA), ni del de tarifa_comision (fase E, O5: el
+--    instante de la tarifa de comisión);
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 con search_path = public (sacadas de una base recién
 -- migrada); el guardián fija ese search_path para que otro no dé un falso positivo. La lista de nombres sale de
@@ -41,6 +42,7 @@ DECLARE
     ['codigo_recuperacion', 'codigo_recuperacion_codigoHash_key', 'CREATE UNIQUE INDEX "codigo_recuperacion_codigoHash_key" ON public.codigo_recuperacion USING btree ("codigoHash")'],
     ['codigo_recuperacion', 'codigo_recuperacion_vigentes_idx', 'CREATE INDEX codigo_recuperacion_vigentes_idx ON public.codigo_recuperacion USING btree ("usuarioId") WHERE (("usadoEn" IS NULL) AND ("anuladoEn" IS NULL))'],
     ['config_ia', 'config_ia_version_key', 'CREATE UNIQUE INDEX config_ia_version_key ON public.config_ia USING btree (version)'],
+    ['tarifa_comision', 'tarifa_comision_version_key', 'CREATE UNIQUE INDEX tarifa_comision_version_key ON public.tarifa_comision USING btree (version)'],
     ['decision', 'decision_reemplazaId_key', 'CREATE UNIQUE INDEX "decision_reemplazaId_key" ON public.decision USING btree ("reemplazaId")'],
     ['dividendo', 'dividendo_filaFuenteId_key', 'CREATE UNIQUE INDEX "dividendo_filaFuenteId_key" ON public.dividendo USING btree ("filaFuenteId")'],
     ['dividendo_decretado', 'dividendo_decretado_filaFuenteId_key', 'CREATE UNIQUE INDEX "dividendo_decretado_filaFuenteId_key" ON public.dividendo_decretado USING btree ("filaFuenteId")'],
@@ -105,6 +107,13 @@ DECLARE
     ['config_ia', 'config_ia_tope_chk', 'CHECK ((("topeMensualUsd" IS NULL) OR (("topeMensualUsd" >= 1.00) AND ("topeMensualUsd" <= 50.00))))'],
     ['config_ia', 'config_ia_usa_chk', 'CHECK ((((modo <> ALL (ARRAY[''local''::text, ''local-luego-nube''::text])) OR (("ollamaHost" IS NOT NULL) AND (NOT ((((tareas -> ''DIARIO''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))) AND (NOT ((((tareas -> ''REGLAS''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))) AND (NOT ((((tareas -> ''ESCENARIOS''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))))) AND ((modo <> ALL (ARRAY[''nube''::text, ''local-luego-nube''::text])) OR ("topeMensualUsd" IS NOT NULL))))'],
     ['config_ia', 'config_ia_version_chk', 'CHECK ((version >= 1))'],
+    ['tarifa_comision', 'tarifa_comision_cargos_chk', 'CHECK (((jsonb_typeof("otrosCargos") = ''array''::text) AND (jsonb_array_length("otrosCargos") <= 3) AND ((jsonb_array_length("otrosCargos") <= 0) OR ((jsonb_typeof(("otrosCargos" -> 0)) = ''object''::text) AND ((("otrosCargos" -> 0) - ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) = ''{}''::jsonb) AND (("otrosCargos" -> 0) ?& ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) AND (jsonb_typeof((("otrosCargos" -> 0) -> ''nombre''::text)) = ''string''::text) AND ((char_length((("otrosCargos" -> 0) ->> ''nombre''::text)) >= 1) AND (char_length((("otrosCargos" -> 0) ->> ''nombre''::text)) <= 60)) AND ((("otrosCargos" -> 0) ->> ''nombre''::text) ~ ''[^[:space:]]''::text) AND ((("otrosCargos" -> 0) ->> ''nombre''::text) !~ ''[[:cntrl:]]''::text) AND ((("otrosCargos" -> 0) ->> ''tipo''::text) = ANY (ARRAY[''PCT''::text, ''FIJO''::text])) AND (jsonb_typeof((("otrosCargos" -> 0) -> ''valor''::text)) = ''string''::text) AND ((("otrosCargos" -> 0) ->> ''valor''::text) ~ ''^[0-9]{1,8}([.][0-9]{1,4})?$''::text) AND (((("otrosCargos" -> 0) ->> ''tipo''::text) <> ''PCT''::text) OR ((("otrosCargos" -> 0) ->> ''valor''::text) ~ ''^(100([.]0{1,4})?|[0-9]{1,2}([.][0-9]{1,4})?)$''::text)))) AND ((jsonb_array_length("otrosCargos") <= 1) OR ((jsonb_typeof(("otrosCargos" -> 1)) = ''object''::text) AND ((("otrosCargos" -> 1) - ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) = ''{}''::jsonb) AND (("otrosCargos" -> 1) ?& ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) AND (jsonb_typeof((("otrosCargos" -> 1) -> ''nombre''::text)) = ''string''::text) AND ((char_length((("otrosCargos" -> 1) ->> ''nombre''::text)) >= 1) AND (char_length((("otrosCargos" -> 1) ->> ''nombre''::text)) <= 60)) AND ((("otrosCargos" -> 1) ->> ''nombre''::text) ~ ''[^[:space:]]''::text) AND ((("otrosCargos" -> 1) ->> ''nombre''::text) !~ ''[[:cntrl:]]''::text) AND ((("otrosCargos" -> 1) ->> ''tipo''::text) = ANY (ARRAY[''PCT''::text, ''FIJO''::text])) AND (jsonb_typeof((("otrosCargos" -> 1) -> ''valor''::text)) = ''string''::text) AND ((("otrosCargos" -> 1) ->> ''valor''::text) ~ ''^[0-9]{1,8}([.][0-9]{1,4})?$''::text) AND (((("otrosCargos" -> 1) ->> ''tipo''::text) <> ''PCT''::text) OR ((("otrosCargos" -> 1) ->> ''valor''::text) ~ ''^(100([.]0{1,4})?|[0-9]{1,2}([.][0-9]{1,4})?)$''::text)))) AND ((jsonb_array_length("otrosCargos") <= 2) OR ((jsonb_typeof(("otrosCargos" -> 2)) = ''object''::text) AND ((("otrosCargos" -> 2) - ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) = ''{}''::jsonb) AND (("otrosCargos" -> 2) ?& ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) AND (jsonb_typeof((("otrosCargos" -> 2) -> ''nombre''::text)) = ''string''::text) AND ((char_length((("otrosCargos" -> 2) ->> ''nombre''::text)) >= 1) AND (char_length((("otrosCargos" -> 2) ->> ''nombre''::text)) <= 60)) AND ((("otrosCargos" -> 2) ->> ''nombre''::text) ~ ''[^[:space:]]''::text) AND ((("otrosCargos" -> 2) ->> ''nombre''::text) !~ ''[[:cntrl:]]''::text) AND ((("otrosCargos" -> 2) ->> ''tipo''::text) = ANY (ARRAY[''PCT''::text, ''FIJO''::text])) AND (jsonb_typeof((("otrosCargos" -> 2) -> ''valor''::text)) = ''string''::text) AND ((("otrosCargos" -> 2) ->> ''valor''::text) ~ ''^[0-9]{1,8}([.][0-9]{1,4})?$''::text) AND (((("otrosCargos" -> 2) ->> ''tipo''::text) <> ''PCT''::text) OR ((("otrosCargos" -> 2) ->> ''valor''::text) ~ ''^(100([.]0{1,4})?|[0-9]{1,2}([.][0-9]{1,4})?)$''::text))))))'],
+    ['tarifa_comision', 'tarifa_comision_comisionista_chk', 'CHECK ((comisionista = ANY (ARRAY[''TRII''::text, ''AV''::text])))'],
+    ['tarifa_comision', 'tarifa_comision_iva_chk', 'CHECK ((("ivaPct" >= (0)::numeric) AND ("ivaPct" <= (100)::numeric)))'],
+    ['tarifa_comision', 'tarifa_comision_montos_chk', 'CHECK ((("minimoPorOrden" >= (0)::numeric) AND ("minimoPorOrden" < (100000000)::numeric) AND ("fijoPorOrden" >= (0)::numeric) AND ("fijoPorOrden" < (100000000)::numeric)))'],
+    ['tarifa_comision', 'tarifa_comision_motivo_chk', 'CHECK (((motivo ~ ''[^[:space:]]''::text) AND (char_length(motivo) <= 2000)))'],
+    ['tarifa_comision', 'tarifa_comision_porcentaje_chk', 'CHECK (((porcentaje >= (0)::numeric) AND (porcentaje <= (100)::numeric)))'],
+    ['tarifa_comision', 'tarifa_comision_version_chk', 'CHECK ((version >= 1))'],
     ['control_conciliacion', 'control_conciliacion_motivo_chk', 'CHECK (((("codigoMotivo" IS NULL) OR ("codigoMotivo" ~ ''^[a-z0-9_]{1,40}$''::text)) AND ((resultado = ''CUADRA''::"ResultadoControl") OR ("codigoMotivo" IS NOT NULL))))'],
     ['control_conciliacion', 'control_conciliacion_tolerancia_chk', 'CHECK (((tolerancia IS NULL) OR (tolerancia >= (0)::numeric)))'],
     ['decision', 'decision_cantidad_chk', 'CHECK ((((cantidad IS NULL) OR (cantidad > 0)) AND ((accion <> ''NO_ACTUAR''::"AccionPlan") OR (cantidad IS NOT NULL))))'],
@@ -202,6 +211,8 @@ DECLARE
     ['conciliacion', 'conciliacion_certificacionId_fechaCorte_fkey', 'FOREIGN KEY ("certificacionId", "fechaCorte") REFERENCES certificacion(id, "fechaCorte") ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['config_ia', 'config_ia_pkey', 'PRIMARY KEY (id)'],
     ['config_ia', 'config_ia_autorId_fkey', 'FOREIGN KEY ("autorId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['tarifa_comision', 'tarifa_comision_pkey', 'PRIMARY KEY (id)'],
+    ['tarifa_comision', 'tarifa_comision_autorId_fkey', 'FOREIGN KEY ("autorId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['control_conciliacion', 'control_conciliacion_pkey', 'PRIMARY KEY (id)'],
     ['control_conciliacion', 'control_conciliacion_conciliacionId_fkey', 'FOREIGN KEY ("conciliacionId") REFERENCES conciliacion(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['control_conciliacion', 'control_conciliacion_instrumentoId_fkey', 'FOREIGN KEY ("instrumentoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
@@ -288,6 +299,8 @@ DECLARE
     ['conciliacion', 'conciliacion_solo_insercion', 'CREATE TRIGGER conciliacion_solo_insercion BEFORE DELETE OR UPDATE ON public.conciliacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['config_ia', 'config_ia_instante', 'CREATE TRIGGER config_ia_instante BEFORE INSERT ON public.config_ia FOR EACH ROW EXECUTE FUNCTION inv_config_ia_instante()'],
     ['config_ia', 'config_ia_solo_insercion', 'CREATE TRIGGER config_ia_solo_insercion BEFORE DELETE OR UPDATE ON public.config_ia FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['tarifa_comision', 'tarifa_comision_instante', 'CREATE TRIGGER tarifa_comision_instante BEFORE INSERT ON public.tarifa_comision FOR EACH ROW EXECUTE FUNCTION inv_tarifa_comision_instante()'],
+    ['tarifa_comision', 'tarifa_comision_solo_insercion', 'CREATE TRIGGER tarifa_comision_solo_insercion BEFORE DELETE OR UPDATE ON public.tarifa_comision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['control_conciliacion', 'control_conciliacion_solo_insercion', 'CREATE TRIGGER control_conciliacion_solo_insercion BEFORE DELETE OR UPDATE ON public.control_conciliacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['decision', 'decision_instante', 'CREATE TRIGGER decision_instante BEFORE INSERT ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_decision_instante()'],
     ['decision', 'decision_solo_insercion', 'CREATE TRIGGER decision_solo_insercion BEFORE DELETE OR UPDATE ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
@@ -327,6 +340,7 @@ DECLARE
     ['inv_certificacion_vigente', '4f29f5a78b3129f7ace16487160c5c4e', ''],
     ['inv_codigo_un_solo_uso', '6e20837f8ea30d38453ae6082f4e9301', ''],
     ['inv_config_ia_instante', 'abf0179024dd5f3151006171b5d76bb5', ''],
+    ['inv_tarifa_comision_instante', 'abf0179024dd5f3151006171b5d76bb5', ''],
     ['inv_decision_instante', '0d4631b4ec6f4b4a688af968e5fb5a5d', ''],
     ['inv_enlace_decision_orden_instante', 'a7a550804fa3c435fa5553518e427de9', ''],
     ['inv_lote_fijo', '6906ddebe6b9194201de631eac40241a', ''],
@@ -489,6 +503,18 @@ BEGIN
     SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
     WHERE r.rolname IN ('inv_app', 'inv_ia', 'inv_precios')
       AND c.oid = to_regclass('public.config_ia')
+      AND pg_has_role(r.oid, c.relowner, 'MEMBER')
+    ORDER BY 1
+  LOOP
+    distintos := distintos || ('rol con privilegios del dueño ' || x);
+  END LOOP;
+
+  -- Fase E (O5): el disparador del instante de tarifa_comision también exime al dueño. Ni inv_app (que la escribe), ni
+  -- inv_ia, ni inv_precios pueden ser miembros del dueño de tarifa_comision.
+  FOR x IN
+    SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
+    WHERE r.rolname IN ('inv_app', 'inv_ia', 'inv_precios')
+      AND c.oid = to_regclass('public.tarifa_comision')
       AND pg_has_role(r.oid, c.relowner, 'MEMBER')
     ORDER BY 1
   LOOP

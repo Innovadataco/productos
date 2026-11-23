@@ -264,3 +264,24 @@ describe("guardián del esquema: config_ia", () => {
     expect(md5("inv_config_ia_instante")).toBe(md5("inv_plan_version_instante"));
   });
 });
+
+// Fase E (O5): tarifa_comision. El disparador de su instante exime al dueño, como los demás: ni inv_app (la pantalla que
+// la escribe), ni inv_ia, ni inv_precios pueden ser miembros del dueño de tarifa_comision. Bloque propio.
+describe("guardián del esquema: tarifa_comision", () => {
+  const guardian = leer008("scripts/verificar-esquema.sql");
+
+  it("revisa que inv_app, inv_ia e inv_precios no sean miembros del dueño de tarifa_comision", () => {
+    expect(guardian).toMatch(/WHERE r\.rolname IN \('inv_app', 'inv_ia', 'inv_precios'\)\s+AND c\.oid = to_regclass\('public\.tarifa_comision'\)\s+AND pg_has_role\(r\.oid, c\.relowner, 'MEMBER'\)/);
+  });
+
+  it("exige la solo inserción, el instante, su función, la unicidad de la versión y las CHECK de tarifa_comision", () => {
+    expect(guardian).toMatch(/\['tarifa_comision', 'tarifa_comision_solo_insercion', 'CREATE TRIGGER tarifa_comision_solo_insercion BEFORE DELETE OR UPDATE ON public\.tarifa_comision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion\(\)'\]/);
+    expect(guardian).toMatch(/\['tarifa_comision', 'tarifa_comision_instante', 'CREATE TRIGGER tarifa_comision_instante BEFORE INSERT ON public\.tarifa_comision FOR EACH ROW EXECUTE FUNCTION inv_tarifa_comision_instante\(\)'\]/);
+    expect(guardian).toMatch(/\['tarifa_comision', 'tarifa_comision_version_key', 'CREATE UNIQUE INDEX tarifa_comision_version_key ON public\.tarifa_comision USING btree \(version\)'\]/);
+    for (const c of ["cargos", "comisionista", "iva", "montos", "motivo", "porcentaje", "version"]) expect(guardian).toContain(`['tarifa_comision', 'tarifa_comision_${c}_chk', 'CHECK `);
+    // El mismo código que la del plan (fija "creadaEn"): el mismo md5.
+    const md5 = (f: string) => new RegExp(`\\['${f}', '([0-9a-f]{32})', ''\\]`).exec(guardian)?.[1];
+    expect(md5("inv_tarifa_comision_instante")).toBeDefined();
+    expect(md5("inv_tarifa_comision_instante")).toBe(md5("inv_plan_version_instante"));
+  });
+});
