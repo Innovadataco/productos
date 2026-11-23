@@ -183,6 +183,11 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     "DELETE FROM config_ia WHERE false",
     "TRUNCATE config_ia",
     `INSERT INTO config_ia (id, "creadaEn") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`,
+    // O5: la tarifa de comisión, solo INSERT y sin su instante.
+    "UPDATE tarifa_comision SET motivo = motivo WHERE false",
+    "DELETE FROM tarifa_comision WHERE false",
+    "TRUNCATE tarifa_comision",
+    `INSERT INTO tarifa_comision (id, "creadaEn") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`,
     // Sin objetos temporales: las funciones de los instantes no fijan search_path (todo va calificado con pg_catalog).
     "CREATE TEMP TABLE intruso (id int)",
   ]) {
@@ -806,6 +811,9 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       'SELECT "motivo" FROM config_ia LIMIT 1',
       'SELECT "autorId" FROM config_ia LIMIT 1',
       "INSERT INTO config_ia (id) VALUES ('x')",
+      // O5: inv_ia no lee ni escribe la tarifa de comisión.
+      "SELECT version FROM tarifa_comision LIMIT 1",
+      "INSERT INTO tarifa_comision (id) VALUES ('x')",
       'SELECT "precioValoracion" FROM certificacion_posicion LIMIT 1',
       "SELECT * FROM instrumento LIMIT 1",
       "UPDATE resumen_ia SET texto = 'x' WHERE false",

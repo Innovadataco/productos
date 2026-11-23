@@ -24,6 +24,7 @@ const PANTALLAS = [
   { ruta: "/decisiones", titulo: "Diario de decisiones" },
   { ruta: "/conciliacion", titulo: /./ },
   { ruta: "/proyecciones", titulo: "Proyecciones" },
+  { ruta: "/analisis", titulo: "Análisis del portafolio" },
 ] as const;
 /** Las tablas del login y del TOTP: las únicas que una visita puede tocar (intentos, pre-sesión, último paso). */
 const TABLAS_DE_AUTENTICACION = new Set(["usuario", "intento_ingreso", "token_acceso", "codigo_recuperacion", "_prisma_migrations"]);

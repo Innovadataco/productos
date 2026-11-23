@@ -6,7 +6,7 @@
  */
 import type { AccionPlan, CondicionRegla, LadoOrden, Prisma } from "@prisma/client";
 import { cantidadEs, nivelEs } from "@/plan/edicion/formato";
-import type { Afectacion, AvisoSimulacion, ComisionEstimada, ErrorSimulacion, FrenteAlNivel, ReglaSimulada } from "./tipos";
+import type { Afectacion, AvisoSimulacion, ComisionEstimada, Comisionista, ErrorSimulacion, FrenteAlNivel, ReglaSimulada } from "./tipos";
 
 export const ETIQUETA_COMISION = "estimada con su historia; la tarifa real puede ser distinta";
 export const COMISION_SIN_HISTORIA = "sin historia: no se estima";
@@ -26,8 +26,13 @@ export function textoPesos(d: Prisma.Decimal): string {
   return `${signo}$ ${nivelEs(d.abs().toFixed())}`;
 }
 
+export const ETIQUETA_TARIFA = "calculada con su tarifa";
+const NOMBRE_COMISIONISTA: Readonly<Record<Comisionista, string>> = { TRII: "Trii", AV: "Acciones & Valores" };
+
+/** «calculada con su tarifa de Trii para compra · versión 3». */
 export function textoComision(c: ComisionEstimada): string {
   if (c.estado === "SIN_HISTORIA") return COMISION_SIN_HISTORIA;
+  if (c.estado === "TARIFA") return `${ETIQUETA_TARIFA} de ${NOMBRE_COMISIONISTA[c.tarifa.comisionista]} para ${LADOS[c.lado]} · versión ${cantidadEs(BigInt(c.tarifa.version))}`;
   const ordenes = c.ordenesBase === 1 ? "orden" : "órdenes";
   return `${ETIQUETA_COMISION} · con ${cantidadEs(BigInt(c.ordenesBase))} ${ordenes} de ${LADOS[c.lado]}`;
 }

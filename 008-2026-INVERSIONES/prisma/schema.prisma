@@ -204,6 +204,7 @@ model Usuario {
   tokensAcceso        TokenAcceso[]
   codigosRecuperacion CodigoRecuperacion[]
   configsIa           ConfigIa[]
+  tarifasComision     TarifaComision[]
 
   @@map("usuario")
 }
@@ -992,4 +993,31 @@ model ConfigIa {
 
   @@index([autorId])
   @@map("config_ia")
+}
+
+/// Tarifa de comisión de una casa de bolsa (fase E, O5): la carga el dueño en /edicion/tarifas, por comisionista (TRII o
+/// AV) y por lado (compra o venta). Versionada y de SOLO INSERCIÓN (inv_solo_insercion): cada cambio es una versión nueva
+/// (número único en toda la tabla) con su autor, su motivo y la hora que pone la base (inv_tarifa_comision_instante).
+/// La vigente de un comisionista y un lado en un día es la de mayor versión con vigenteDesde hasta ese día. La comisión:
+/// max(valor × porcentaje / 100, mínimo) + fijo; el IVA (%) sobre esa comisión; los otros cargos (% sobre el valor o un
+/// fijo) aparte (src/operar/simulador/tarifa.ts). Las listas y los límites van como CHECK a mano en la migración
+/// *_tarifa_comision (espejo de src/operar/tarifa/parametros.ts). La escribe inv_app (INSERT por columna sin creadaEn).
+model TarifaComision {
+  id             String    @id @default(cuid())
+  version        Int       @unique
+  comisionista   String // TRII o AV (COMISIONISTAS)
+  lado           LadoOrden
+  porcentaje     Decimal   @db.Decimal(7, 4) // de 0 a 100, sobre el valor de la orden
+  minimoPorOrden Decimal   @db.Decimal(20, 4) // pesos; la comisión por porcentaje no baja de aquí
+  fijoPorOrden   Decimal   @db.Decimal(20, 4) // pesos por orden, además
+  ivaPct         Decimal   @db.Decimal(5, 2) // de 0 a 100, sobre la comisión
+  otrosCargos    Json // [{ "nombre": "…", "tipo": "PCT" | "FIJO", "valor": "1.2345" }], hasta 3
+  vigenteDesde   DateTime  @db.Date
+  motivo         String
+  autorId        String
+  autor          Usuario   @relation(fields: [autorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creadaEn       DateTime  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_tarifa_comision_instante)
+
+  @@index([autorId])
+  @@map("tarifa_comision")
 }

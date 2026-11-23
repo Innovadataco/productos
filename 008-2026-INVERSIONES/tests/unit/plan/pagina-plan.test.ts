@@ -202,7 +202,7 @@ describe("sin recomendaciones ni comandos", () => {
   it("el encabezado lleva a las otras pantallas y marca la actual", async () => {
     const raiz = await pantalla();
     const nav = [...raiz.querySelectorAll('header nav a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
-    expect(nav).toEqual([["Portafolio", "/", null], ["Plan", "/plan", "page"], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null], ["Proyecciones", "/proyecciones", null], ["Datos oficiales", "/datos-oficiales", null]]);
+    expect(nav).toEqual([["Portafolio", "/", null], ["Plan", "/plan", "page"], ["Operar", "/operar", null], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null], ["Proyecciones", "/proyecciones", null], ["Datos oficiales", "/datos-oficiales", null], ["Análisis", "/analisis", null]]);
   });
 });
 

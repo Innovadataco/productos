@@ -1,0 +1,20 @@
+/* 008 · /analisis (frente analisis-pantalla, A2). Solo los tokens de tablero.css (--panel, --line, --fg, --muted, --gold,
+   --loss): claro y oscuro salen de ahí, sin colores fijos. Todo va dentro de .analisis: no toca otras pantallas. */
+/* El encabezado es fijo y a 375 px ocupa varias líneas: el foco del teclado no queda debajo (WCAG 2.4.11). Con «Análisis»
+   en el menú mide 183,5 px a 375 px (e2e); con «Operar» (#1082) crece otra línea: 240 px cubre las dos. */
+html:has(main.analisis) { scroll-padding-top: 240px; }
+.analisis h3 { margin: 22px 0 10px; font-size: 18px; font-weight: 800; }
+.analisis .an-referencia { color: var(--muted); font-size: 14px; }
+.analisis table.an-ancha { min-width: 960px; }
+.analisis table.an-matriz { min-width: 360px; }
+.analisis td.num, .analisis th.num { white-space: nowrap; }
+.analisis .an-lista, .analisis .an-composicion ul { margin: 0; padding-left: 20px; }
+.analisis .an-lista li + li, .analisis .an-composicion li + li { margin-top: 4px; }
+.analisis .an-composicion { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 16px 12px; overflow-wrap: anywhere; }
+.analisis .an-horizonte p { margin: 0; }
+.analisis .an-horizonte p + p { margin-top: 4px; }
+.analisis .an-puntos { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.analisis .an-puntos li { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: 12px; padding: 12px 14px; overflow-wrap: anywhere; }
+.analisis .an-puntos p { margin: 0; }
+.analisis .nota { font-size: 14px; }
+.analisis .an-umbral { margin-top: 4px; font-size: 14px; color: var(--muted); }

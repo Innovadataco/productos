@@ -104,10 +104,11 @@ describe("src/app/operar/page.tsx", () => {
 });
 
 describe("la pantalla", () => {
-  it("la navegación: las secciones de siempre y «Operar» después de «Plan», como actual y una sola vez", () => {
+  it("la navegación: las secciones comunes, con «Operar» después de «Plan», como actual y una sola vez", () => {
     const nav = [...pintar().querySelectorAll('header nav[aria-label="Secciones"] a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
-    const esperadas = SECCIONES.map((s) => [s.texto, s.href, null]);
-    expect(nav).toEqual([esperadas[0], esperadas[1], ["Operar", "/operar", "page"], ...esperadas.slice(2)]);
+    expect(nav).toEqual(SECCIONES.map((s) => [s.texto, s.href, s.clave === "operar" ? "page" : null]));
+    expect(nav.map(([t]) => t).slice(1, 3)).toEqual(["Plan", "Operar"]);
+    expect(nav.filter(([t]) => t === "Operar")).toHaveLength(1);
   });
 
   it("el título, el aviso fijo y los precios: último cierre disponible, y el aviso si la carga se detuvo", () => {

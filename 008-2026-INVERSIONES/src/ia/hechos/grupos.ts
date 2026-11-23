@@ -8,8 +8,8 @@
  * texto que cite el hecho obligatorio tiene que poder decir de qué especie habla.
  *
  * Obligatorios (salida-v2): como mucho `MAX_OBLIGATORIOS` por paquete, contando los nombres arrastrados: caben en las seis
- * frases del límite. Cada armador marca lo más importante de su tipo (DIARIO: valor de las acciones, variación del día,
- * ganancia total, especies sin precio o atrasadas y conciliación que no cuadra; ESCENARIOS: el escenario central de cada
+ * frases del límite. Cada armador marca lo más importante de su tipo (DIARIO: `OBLIGATORIOS_DIARIO`, el valor de las
+ * acciones, la variación del día, la ganancia total y la conciliación que no cuadra; ESCENARIOS: el escenario central de cada
  * horizonte y la probabilidad de terminar por debajo de lo aportado; REGLAS: lo que toca o está cerca, por prioridad).
  * Si aun así pasan del tope (REGLAS con muchas especies), `limitarObligatorios` deja los primeros en el orden del
  * paquete (el de la prioridad de los grupos) y los demás quedan sin obligación.

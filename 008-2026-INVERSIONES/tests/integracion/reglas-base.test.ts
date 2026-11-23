@@ -88,6 +88,7 @@ describe("reglas escritas a mano en la migración", () => {
       "regla_plan_solo_insercion",
       "rendimiento_fondo_solo_insercion",
       "resumen_ia_solo_insercion",
+      "tarifa_comision_solo_insercion",
     ]);
   });
 

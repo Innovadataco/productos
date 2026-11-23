@@ -75,7 +75,7 @@ describe("src/app/proyecciones/page.tsx", () => {
     const raiz = pantalla(renderToStaticMarkup(await PaginaProyecciones()));
     const nav = [...raiz.querySelectorAll('header nav[aria-label="Secciones"] a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
     expect(nav).toEqual([
-      ["Portafolio", "/", null], ["Plan", "/plan", null], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null], ["Proyecciones", "/proyecciones", "page"], ["Datos oficiales", "/datos-oficiales", null],
+      ["Portafolio", "/", null], ["Plan", "/plan", null], ["Operar", "/operar", null], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null], ["Proyecciones", "/proyecciones", "page"], ["Datos oficiales", "/datos-oficiales", null], ["Análisis", "/analisis", null],
     ]);
   });
 

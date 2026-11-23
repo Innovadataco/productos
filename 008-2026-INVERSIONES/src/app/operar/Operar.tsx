@@ -1,16 +1,18 @@
 /**
  * Pantalla /operar (frente operar-informe, hito O1 de la fase E): el informe para el día de operar, determinista y sin
  * IA. El aviso fijo arriba; después el estado del portafolio, sus reglas hoy, las fechas de los próximos días y el
- * enlace a los escenarios (no se recalculan aquí). Componente del servidor: sin estado, sin formularios ni botones.
+ * enlace a los escenarios (no se recalculan aquí). Componente del servidor; la sección «¿Y si…?» (Simulador) es de cliente y no guarda nada.
  */
-import { EncabezadoOperar } from "./EncabezadoOperar";
+import { Encabezado } from "../_plan/Encabezado";
 import { Estado } from "./Estado";
 import { Fechas } from "./Fechas";
 import { Reglas } from "./Reglas";
+import { Simulador } from "./Simulador";
 import { AVISO_DECISION, PIE_OPERAR, textoDelDia, textoPrecios, textoPreciosAtrasados } from "./textos";
 import type { VistaOperar } from "./tipos";
 import "../_plan/plan.css";
 import "./operar.css";
+import "./simulador.css";
 
 function Portada({ vista }: { readonly vista: VistaOperar }) {
   return (
@@ -40,12 +42,13 @@ function Escenarios() {
 export function Operar({ vista, soloLectura = false }: { readonly vista: VistaOperar; readonly soloLectura?: boolean }) {
   return (
     <>
-      <EncabezadoOperar soloLectura={soloLectura} />
+      <Encabezado actual="operar" soloLectura={soloLectura} />
       <main className="wrap plan operar">
         <Portada vista={vista} />
         <Estado estado={vista.estado} referencia={vista.referencia} />
         <Reglas reglas={vista.reglas} preciosAtrasados={vista.preciosAtrasados} />
         <Fechas fechas={vista.fechas} hoy={vista.hoy} hasta={vista.hasta} />
+        {vista.especies === undefined ? null : <Simulador especies={vista.especies} />}
         <Escenarios />
         <footer className="pie"><p>{PIE_OPERAR}</p></footer>
       </main>

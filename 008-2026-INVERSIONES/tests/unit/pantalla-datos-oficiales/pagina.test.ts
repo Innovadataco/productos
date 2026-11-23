@@ -91,12 +91,12 @@ describe("src/app/datos-oficiales/page.tsx", () => {
     expect(raiz.querySelector("header .solo-lectura")?.textContent ?? null).toBe(marca);
   });
 
-  it("la navegación lleva «Datos oficiales» como pantalla actual, al final de las demás", async () => {
+  it("la navegación lleva «Datos oficiales» como pantalla actual, antes de «Análisis»", async () => {
     const raiz = pantalla(renderToStaticMarkup(await PaginaDatosOficiales()));
     const nav = [...raiz.querySelectorAll('header nav[aria-label="Secciones"] a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
     expect(nav).toEqual([
-      ["Portafolio", "/", null], ["Plan", "/plan", null], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null],
-      ["Proyecciones", "/proyecciones", null], ["Datos oficiales", "/datos-oficiales", "page"],
+      ["Portafolio", "/", null], ["Plan", "/plan", null], ["Operar", "/operar", null], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null],
+      ["Proyecciones", "/proyecciones", null], ["Datos oficiales", "/datos-oficiales", "page"], ["Análisis", "/analisis", null],
     ]);
   });
 

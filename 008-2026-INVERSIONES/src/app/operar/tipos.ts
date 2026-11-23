@@ -3,6 +3,7 @@
  * la misma forma del informe (src/operar/informe/tipos.ts). El formato (pesos, fechas en palabras) va en textos.ts y en
  * los componentes.
  */
+import type { EspecieSimulable } from "./tipos-simulador";
 import type { AccionPlan, CondicionRegla, TipoDividendo } from "@prisma/client";
 import type { GrupoRegla } from "@/operar/informe/tipos";
 
@@ -80,4 +81,6 @@ export interface VistaOperar {
   readonly estado: EstadoVista;
   readonly reglas: ReglasVista;
   readonly fechas: readonly FechaVista[];
+  /** Las especies del simulador «¿Y si…?» (vivas y cerradas); sin el campo, la sección no se muestra. */
+  readonly especies?: readonly EspecieSimulable[];
 }

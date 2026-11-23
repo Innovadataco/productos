@@ -10,9 +10,9 @@ import { sha256Hex } from "../hash";
 import { TEXTO_PROMPT_DIARIO, TEXTO_PROMPT_ESCENARIOS, TEXTO_PROMPT_REGLAS } from "./textos";
 
 export const VERSIONES_PROMPT = Object.freeze({
-  DIARIO: "resumen-diario-v2",
-  REGLAS: "resumen-reglas-v2",
-  ESCENARIOS: "resumen-escenarios-v2",
+  DIARIO: "resumen-diario-v3",
+  REGLAS: "resumen-reglas-v3",
+  ESCENARIOS: "resumen-escenarios-v3",
 } as const satisfies Record<TipoResumen, string>);
 
 const conHash = (texto: string, version: string): PromptConHash => Object.freeze({ texto, version, hash: sha256Hex(texto) });

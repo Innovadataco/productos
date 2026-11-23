@@ -132,7 +132,9 @@ test.describe("pantalla /operar", () => {
         ];
         for (const l of textos) expect(await contraste(l), await l.evaluate((e) => `${e.tagName}.${e.className}`)).toBeGreaterThanOrEqual(4.5);
         expect(prohibidasEn(await main.innerText())).toEqual([]);
-        await expect(main.locator("form, input, button, textarea, select")).toHaveCount(0);
+        // El único formulario es el del simulador «¿Y si…?» (O2/O5, no guarda nada); el informe no tiene controles.
+        await expect(main.locator(":is(form, input, button, textarea, select):not(section.op-simulador *)")).toHaveCount(0);
+        await expect(main.locator("section.op-simulador form")).toHaveCount(1);
         await page.screenshot({ path: info.outputPath(`operar-375-${nombre}.png`), fullPage: true });
       });
     });

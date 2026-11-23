@@ -24,10 +24,12 @@ describe("navegación del tablero", () => {
     expect([...(nav?.querySelectorAll("a") ?? [])].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")])).toEqual([
       ["Portafolio", "/", "page"],
       ["Plan", "/plan", null],
+      ["Operar", "/operar", null],
       ["Decisiones", "/decisiones", null],
       ["Conciliación", "/conciliacion", null],
       ["Proyecciones", "/proyecciones", null],
       ["Datos oficiales", "/datos-oficiales", null],
+      ["Análisis", "/analisis", null],
     ]);
   });
 

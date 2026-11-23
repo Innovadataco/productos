@@ -18,6 +18,7 @@ import type { EntradasInforme } from "@/operar/informe/tipos";
 import { calendarioBvc, leerReglas, leerVersiones, ultimosCierres } from "@/plan/lectura";
 import { obtenerResumen } from "@/tablero/datos";
 import { vigenteEn } from "../plan/vista";
+import { especiesSimulables } from "./serializar-simulacion";
 import { aVistaOperar } from "./serializar";
 import type { VistaOperar } from "./tipos";
 
@@ -38,6 +39,9 @@ export async function leerEntradas(db: PrismaClient, hoy: Date): Promise<Entrada
   };
 }
 
+/** El informe y las especies del simulador «¿Y si…?» (las filas del tablero que ya se leyeron, vivas y cerradas). */
 export async function datosDeOperar(db: PrismaClient, hoy: Date): Promise<VistaOperar> {
-  return aVistaOperar(armarInforme(await leerEntradas(db, hoy), hoy));
+  const entradas = await leerEntradas(db, hoy);
+  const especies = especiesSimulables([...entradas.tablero.filas, ...entradas.tablero.cerradas]);
+  return { ...aVistaOperar(armarInforme(entradas, hoy)), especies };
 }
