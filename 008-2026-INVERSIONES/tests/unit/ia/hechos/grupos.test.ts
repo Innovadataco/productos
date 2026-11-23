@@ -90,10 +90,10 @@ describe("numerarGrupos", () => {
     expect(numerarGrupos("REGLAS", especies, 137).hechos).toHaveLength(MAX_HECHOS - 1);
   });
 
-  it("lo obligatorio arrastra al nombre de su especie, a través del ancla, sin volver obligatoria el ancla", () => {
+  it("lo obligatorio ya no arrastra al nombre de su especie ni al ancla (el validador exige el nombre con ETIQUETA.SIN_SUJETO)", () => {
     const { hechos } = numerarGrupos("REGLAS", [grupo(1, especieConReglas(ALFA, ["4591.37"], true)), grupo(1, especieConReglas(BETA, ["2491.73"]))]);
     expect(hechos.map((h) => [h.valor, h.obligatorio])).toEqual([
-      [ALFA, true], ["2027-02-03", false], ["4591.37", true], [BETA, false], ["2027-02-03", false], ["2491.73", false],
+      [ALFA, false], ["2027-02-03", false], ["4591.37", true], [BETA, false], ["2027-02-03", false], ["2491.73", false],
     ]);
   });
 
