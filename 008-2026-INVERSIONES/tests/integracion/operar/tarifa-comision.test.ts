@@ -165,7 +165,7 @@ describe("lectores de la app", () => {
     expect(d.ultimaVersion).toBe(t.version);
     const av = d.vigentes.find((v) => v.comisionista === "Acciones & Valores" && v.lado === "Compra");
     expect(av?.tarifa?.version).toBe(t.version);
-    expect(av?.control).toBe("Sin órdenes para contrastar: 008 solo tiene las órdenes de Trii.");
+    expect(av?.control).toBe("Sin órdenes para contrastar: Inversiones solo tiene las órdenes de Trii.");
     expect((await datosEdicionTarifas(db, "no-es-version")).guardada).toBeNull();
   });
 });
