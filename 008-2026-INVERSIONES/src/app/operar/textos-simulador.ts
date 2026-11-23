@@ -14,7 +14,7 @@ export const TEXTOS_SIMULADOR = {
   PRECIO: "Precio límite ($)",
   COMISIONISTA: "Comisionista",
   SALDO: "Saldo disponible en el comisionista ($, opcional)",
-  AYUDA_SALDO: "Si lo escribe, la caja usa ese valor (no se guarda); si no, la certificada por Acciones & Valores.",
+  AYUDA_SALDO: "Como en la ficha (37.911,47), sin signo $. Si lo escribe, la caja usa ese valor (no se guarda); si no, la certificada por Acciones & Valores.",
   ANALISIS: "Análisis del antes y el después",
   ESCENARIOS: "Escenarios a 12 meses (pesos; sin aportes, con los parámetros por omisión de Proyecciones)",
   SIN_ESCENARIOS: "Los escenarios no se calcularon en esta simulación (el cálculo está ocupado o no hay historia).",
