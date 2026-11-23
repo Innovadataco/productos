@@ -27,7 +27,7 @@ function esHechoCiego(tipo: TipoResumen, hecho: unknown): boolean {
   const h: Registro = hecho;
   const entrada = typeof h.clave === "string" ? entradaDeCatalogo(tipo, h.clave) : null;
   return entrada !== null && h.etiqueta === entrada.etiqueta && esId(h.id) && (h.sujeto === undefined || esId(h.sujeto))
-    && (h.especie === undefined || esId(h.especie))
+    && (!Object.hasOwn(h, "especie") || esId(h.especie))
     && esDe(DIRECCIONES, h.direccion) && esDe(CERCANIAS, h.cercania) && esDe(FRESCURAS, h.frescura) && esDe(CALIDADES, h.calidad)
     && typeof h.obligatorio === "boolean";
 }

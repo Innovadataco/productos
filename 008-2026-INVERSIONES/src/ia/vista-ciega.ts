@@ -22,7 +22,7 @@
  * Ningún mensaje lleva datos: solo los códigos.
  */
 import { CAMPOS_HECHO_CIEGO, CAMPOS_PAQUETE_CIEGO, esIdHecho, type Hecho, type IdHecho, type HechoCiego, type PaqueteCiego, type PaqueteHechos, type TipoResumen } from "./contrato";
-import { entradaDeCatalogo, type ClaveHecho } from "./catalogo";
+import { CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, type ClaveHecho } from "./catalogo";
 import { esObjetoPlano, soloCampos, sonDatosPuros, type Registro } from "./formas";
 import { esPaqueteConstruido, especieDe } from "./paquete";
 import { clavesProhibidasEn } from "./prohibidas";
@@ -38,8 +38,7 @@ const ID_COMO_TEXTO = /"H[0-9]{2}"/g;
 const CUALQUIER_DIGITO = /\p{N}/u;
 /** `sujeto` y `especie` son opcionales: solo los llevan los hechos que se refieren a otro o a una especie. */
 const CAMPOS_EXIGIDOS_HECHO: readonly string[] = CAMPOS_HECHO_CIEGO.filter((campo) => campo !== "sujeto" && campo !== "especie");
-/** La ruta del campo `especie` de un hecho, la única clave prohibida que la vista puede llevar (y solo con un id). */
-const RUTA_ESPECIE_DE_HECHO = /^hechos\[(\d+)\]\.especie$/;
+
 
 export class ErrorVistaCiega extends Error {
   override readonly name = "ErrorVistaCiega";
@@ -85,7 +84,7 @@ const CAMPOS_COMPARADOS: readonly (keyof Hecho & keyof HechoCiego)[] = CAMPOS_HE
 
 /** La especie que lleva el hecho en la vista: el id de su nombre (`especieDe`), salvo en el propio nombre; o undefined. */
 function especieDeLaVista(paquete: PaqueteHechos, hecho: Hecho): IdHecho | undefined {
-  return hecho.unidad === "NOMBRE" ? undefined : especieDe(paquete, hecho.id)?.id;
+  return hecho.clave === CLAVE_NOMBRE_ESPECIE ? undefined : especieDe(paquete, hecho.id)?.id;
 }
 
 /** ¿Es la vista de ESTE paquete? Mismo tipo, mismos hechos en el mismo orden, la etiqueta del catálogo y la especie. */
@@ -100,11 +99,17 @@ function corresponde(vista: Registro, hechos: readonly Registro[], paquete: Paqu
   });
 }
 
-/** ¿Es la ruta el campo `especie` de un hecho, con un id por valor? Es la única clave prohibida que se deja pasar. */
-function esEspecieConId(hechos: readonly Registro[], ruta: string): boolean {
-  const indice = RUTA_ESPECIE_DE_HECHO.exec(ruta)?.[1];
-  const valor = indice === undefined ? undefined : hechos[Number(indice)]?.especie;
-  return typeof valor === "string" && esIdHecho(valor);
+/**
+ * La vista sin el campo `especie` de los hechos que lo llevan con un id: la única clave prohibida que se deja pasar.
+ * Se quita por estructura (campo directo de un hecho de `hechos`), nunca por el texto de una ruta.
+ */
+function sinEspecieConId(vista: Registro, hechos: readonly Registro[]): Registro {
+  const limpiar = (hecho: Registro): Registro => {
+    if (typeof hecho.especie !== "string" || !esIdHecho(hecho.especie)) return hecho;
+    const { especie: _especie, ...resto } = hecho;
+    return resto;
+  };
+  return { ...vista, hechos: hechos.map(limpiar) };
 }
 
 /** Todos los códigos de fuga de la vista frente al paquete; vacío si la vista es ciega y es la de ese paquete. */
@@ -117,7 +122,7 @@ export function fugasDeVistaCiega(vista: unknown, paquete: PaqueteHechos): reado
   const sinIds = minusculas(JSON.stringify(vista).replace(ID_COMO_TEXTO, '""'));
   if (CUALQUIER_DIGITO.test(sinIds)) codigos.push("DIGITO_FUERA_DE_REFERENCIA");
   codigos.push(...fugasDeDatos(sinIds, paquete));
-  if (clavesProhibidasEn(vista).some((ruta) => !esEspecieConId(forma.hechos, ruta))) codigos.push("CLAVE_PROHIBIDA");
+  if (clavesProhibidasEn(sinEspecieConId(vista as Registro, forma.hechos)).length > 0) codigos.push("CLAVE_PROHIBIDA");
   if (!corresponde(vista as Registro, forma.hechos, paquete)) codigos.push("NO_CORRESPONDE");
   return Object.freeze(codigos);
 }

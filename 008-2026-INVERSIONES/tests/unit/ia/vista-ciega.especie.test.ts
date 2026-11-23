@@ -76,13 +76,16 @@ describe("vista ciega · especie plantada", () => {
     ["un texto sin dígitos en especie", (v) => { v.hechos[1]!.especie = "alfa"; }, ["CLAVE_PROHIBIDA", "NO_CORRESPONDE"]],
     ["la clave especie en la raíz", (v) => { v.especie = "H01"; }, ["CAMPO_NO_PERMITIDO", "CLAVE_PROHIBIDA"]],
     ["la clave especie anidada", (v) => { v.hechos[1]!.especie = { id: "H01" }; }, ["CLAVE_PROHIBIDA", "NO_CORRESPONDE"]],
+    ["una ruta de texto que imita la de un hecho", (v) => { v["hechos[1].especie"] = "H01"; }, ["CAMPO_NO_PERMITIDO", "DIGITO_FUERA_DE_REFERENCIA", "CLAVE_PROHIBIDA"]],
+    ["otra clave con la raíz (especies)", (v) => { v.hechos[1]!.especies = "H01"; }, ["CAMPO_NO_PERMITIDO", "CLAVE_PROHIBIDA"]],
+    ["especie con mayúscula", (v) => { v.hechos[1]!.Especie = "H01"; }, ["CAMPO_NO_PERMITIDO", "CLAVE_PROHIBIDA"]],
   ];
 
   it.each(PLANTADOS)("rechaza %s, con sus códigos", (_caso, plantar, codigos) => {
     const vista = editable(paquete);
     plantar(vista);
     const halladas = fugasDeVistaCiega(vista, paquete);
-    for (const codigo of codigos) expect(halladas).toContain(codigo);
+    expect([...halladas].sort()).toEqual([...codigos].sort());
   });
 
   it("las barreras sin paquete rechazan una especie que no es un id", () => {
@@ -91,5 +94,8 @@ describe("vista ciega · especie plantada", () => {
     expect(vistaParaNube(vista)).toBeNull();
     const pedido = armarPedido({ paquete, prompt: PROMPT_FICTICIO, esquemaSalida: ESQUEMA_FICTICIO, limiteMs: LIMITE_FICTICIO_MS });
     expect(barreraLocal({ ...pedido, vista }).ok).toBe(false);
+    const conIndefinida = editable(paquete);
+    conIndefinida.hechos[2]!.especie = undefined;
+    expect(barreraLocal({ ...pedido, vista: conIndefinida }).ok).toBe(false);
   });
 });
