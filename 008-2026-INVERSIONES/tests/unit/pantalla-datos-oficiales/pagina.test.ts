@@ -95,7 +95,7 @@ describe("src/app/datos-oficiales/page.tsx", () => {
     const raiz = pantalla(renderToStaticMarkup(await PaginaDatosOficiales()));
     const nav = [...raiz.querySelectorAll('header nav[aria-label="Secciones"] a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
     expect(nav).toEqual([
-      ["Portafolio", "/", null], ["Plan", "/plan", null], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null],
+      ["Portafolio", "/", null], ["Plan", "/plan", null], ["Operar", "/operar", null], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null],
       ["Proyecciones", "/proyecciones", null], ["Datos oficiales", "/datos-oficiales", "page"],
     ]);
   });

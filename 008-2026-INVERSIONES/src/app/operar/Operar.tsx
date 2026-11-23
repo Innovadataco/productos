@@ -3,7 +3,7 @@
  * IA. El aviso fijo arriba; después el estado del portafolio, sus reglas hoy, las fechas de los próximos días y el
  * enlace a los escenarios (no se recalculan aquí). Componente del servidor: sin estado, sin formularios ni botones.
  */
-import { EncabezadoOperar } from "./EncabezadoOperar";
+import { Encabezado } from "../_plan/Encabezado";
 import { Estado } from "./Estado";
 import { Fechas } from "./Fechas";
 import { Reglas } from "./Reglas";
@@ -40,7 +40,7 @@ function Escenarios() {
 export function Operar({ vista, soloLectura = false }: { readonly vista: VistaOperar; readonly soloLectura?: boolean }) {
   return (
     <>
-      <EncabezadoOperar soloLectura={soloLectura} />
+      <Encabezado actual="operar" soloLectura={soloLectura} />
       <main className="wrap plan operar">
         <Portada vista={vista} />
         <Estado estado={vista.estado} referencia={vista.referencia} />
