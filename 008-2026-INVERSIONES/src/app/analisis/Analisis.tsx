@@ -52,7 +52,7 @@ function PorEspecie({ vista }: Props) {
     <section className="bloque" aria-labelledby="t-especies">
       <div className="cabeza"><div><div className="eyebrow">Historia propia de cada una</div><h2 id="t-especies">Por especie</h2></div></div>
       {vista.especies.length === 0 ? <p className="nota">Sin especies vivas en el tablero.</p> : (
-      <div className="tabla" role="region" aria-label="Por especie" tabIndex={0}>
+      <div className="tabla" role="region" aria-label="Tabla por especie" tabIndex={0}>
         <table className="an-ancha">
           <caption className="sr">Por especie: peso, rendimiento total por ventana, volatilidad, caída máxima, dividendo y contribución al riesgo</caption>
           <thead>

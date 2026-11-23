@@ -2,8 +2,8 @@
 // importador de Trii, lotes armados a mano (como operar/informe.test.ts), cierres ficticios y un fondo FIC con su ajuste
 // de caja y su valor de unidad. La base la comparten todos los archivos, en un orden que no se garantiza: la prueba
 // elige su «hoy» a partir de lo que ya hay (nada posterior queda fuera de la historia) y solo afirma sobre lo suyo
-// (AN<corrida>*). Órdenes, cierres y el fondo en diciembre de 2027 (el año sembrado del calendario; después de los cortes
-// de los demás archivos). Datos inventados.
+// (AN<corrida>*). Órdenes y el aporte al fondo en diciembre de 2027 (el año sembrado del calendario; después de los cortes
+// de los demás archivos); cierres y valor de unidad en 2020. Datos inventados.
 import { Prisma, PrismaClient } from "@prisma/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -22,8 +22,10 @@ const NEMO = { a: `AN${corrida}A`, b: `AN${corrida}B` } as const;
 const FONDO = `Fondo ficticio de análisis ${corrida}`;
 const ENCABEZADO = "Fecha y hora,Símbolo de la acción,Tipo de orden,Estado,Acciones completadas,Acciones pendientes,Precio por acción,Total invertido,Valor comisión,Total estimado";
 const dia = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
-const DIAS_CIERRE = ["2027-12-13", "2027-12-14", "2027-12-15", "2027-12-16", "2027-12-17"];
-const VALOR_UNIDAD_DIA = "2027-12-15";
+// Cierres y valor de unidad de 2020: antes de 2022 y sin mover la fecha de referencia del tablero de los demás archivos
+// (tablero.test.ts la fija en el 16-nov-2027); dentro de la ventana de ANIOS_HISTORIA_MAX años de la historia.
+const DIAS_CIERRE = ["2020-03-16", "2020-03-17", "2020-03-18", "2020-03-19", "2020-03-20"];
+const VALOR_UNIDAD_DIA = "2020-03-18";
 let hoy = dia("2027-12-17");
 let vista: VistaAnalisis;
 

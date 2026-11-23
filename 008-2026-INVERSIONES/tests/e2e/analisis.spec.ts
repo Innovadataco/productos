@@ -59,13 +59,14 @@ test.describe("pantalla /analisis", () => {
         const tabla = page.getByRole("table", { name: /^Por especie/ });
         await expect(tabla.getByRole("columnheader", { name: /de precios diarios/ })).toHaveCount(1);
         await expect(tabla.getByRole("rowheader").first()).toHaveText(/^FICT/);
-        const caja = page.getByRole("region", { name: "Por especie", exact: true });
+        const caja = page.getByRole("region", { name: "Tabla por especie", exact: true });
         await caja.focus();
         await page.keyboard.press("ArrowRight");
         await expect.poll(() => caja.evaluate((e) => e.scrollLeft)).toBeGreaterThan(0);
 
         // Puntos para revisar: cada uno con su umbral a la vista (o la frase de que no hay).
-        const puntos = page.getByRole("region", { name: "Puntos para revisar", exact: true }).locator("li");
+        // Solo los puntos (la misma sección lista después los avisos de la historia de precios, sin umbral).
+        const puntos = page.getByRole("region", { name: "Puntos para revisar", exact: true }).locator(".an-puntos > li");
         const cuantos = await puntos.count();
         for (let k = 0; k < cuantos; k += 1) await expect(puntos.nth(k).locator(".an-umbral")).toHaveText(/^umbral: /);
         if (cuantos === 0) await expect(page.getByRole("region", { name: "Puntos para revisar", exact: true })).toContainText("Ningún dato cruza");
