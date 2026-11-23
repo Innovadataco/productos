@@ -6,10 +6,32 @@ import { leerPedidoSimulacion } from "@/operar/pantalla/entrada";
 import { permitidoSimular } from "@/operar/pantalla/frecuencia";
 import { leerEntradasSimulador } from "@/operar/pantalla/leer";
 import { simularOperacion } from "@/operar/simulador/simular";
+import { textoRegla } from "@/operar/simulador/textos";
+import type { EstadoSimulado, OperacionSimulada, Simulacion } from "@/operar/simulador/tipos";
+import { analizarSimulacion } from "@/operar/pantalla/analisis";
+import { aVistaAnalisis, type VistaAnalisisSimulacion } from "@/operar/analisis/vista";
 import { fechaEnBogota } from "@/precios/horario";
 import { aRespuestaSimulacion } from "@/app/operar/serializar-simulacion";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * El análisis del antes y el después (motores de src/analisis/ y src/proyecciones/, sin cambiar sus cálculos). Si falla,
+ * la simulación sale igual, sin análisis; al registro, solo el nombre del error.
+ */
+async function analisisDe(usuarioId: string, hoy: Date, operacion: OperacionSimulada, s: Simulacion, estado: EstadoSimulado): Promise<VistaAnalisisSimulacion | null> {
+  const id = operacion.instrumentoId;
+  try {
+    const cantidadDespues = s.especies.find((e) => e.instrumentoId === id)?.despues.cantidad ?? 0n;
+    const a = await analizarSimulacion(db, { hoy, usuarioId, instrumentoId: id, cantidadDespues, reglas: estado.reglas });
+    const nombre = estado.posiciones.find((p) => p.instrumentoId === id)?.nemotecnico ?? "";
+    const regla = estado.reglas.find((r) => r.instrumentoId === id);
+    return aVistaAnalisis({ ...a, operadaId: id, lado: operacion.lado, plan: regla === undefined ? null : textoRegla(regla, nombre) });
+  } catch (error) {
+    console.error(`[operar:simular] análisis no calculado (${error instanceof Error ? error.name : "desconocido"})`);
+    return null;
+  }
+}
 
 /** Cinco campos cortos en JSON caben de sobra en 1 KB. */
 const CUERPO_MAX_BYTES = 1024;
@@ -20,7 +42,7 @@ const DEMASIADAS = "Demasiadas simulaciones seguidas. Intente de nuevo en un mom
 /**
  * POST /api/operar/simular · el simulador «¿Y si…?» de /operar (O2 con la tarifa de O5): Origin de la lista (CSRF) →
  * sesión revalidada contra la base (el dueño y la familia: no escribe nada) → límite por usuario (429 con Retry-After) →
- * cuerpo JSON de 1 KB con EXACTAMENTE cinco claves (especie, lado, cantidad, precio límite y comisionista; «hoy» lo
+ * cuerpo JSON de 1 KB con EXACTAMENTE seis claves (especie, lado, cantidad, precio límite, comisionista y el saldo en el comisionista, que puede ir vacío; «hoy» lo
  * pone el servidor) → lectura de su portafolio, su plan, su historia y la tarifa vigente → el motor. Los errores de lo
  * escrito vuelven como texto con 200 y `ok: false`; un cuerpo ilegible, 400. Nada se guarda. Siempre `no-store`. Ante
  * un error, un mensaje genérico; al registro, solo el nombre del error (los RangeError del motor traen ids, nunca montos).
@@ -37,10 +59,13 @@ export async function POST(pedido: Request): Promise<Response> {
     const leido = cuerpo.ok ? leerPedidoSimulacion(cuerpo.valor) : null;
     if (leido === null) return respuestaJson({ error: PEDIDO_INVALIDO }, 400);
     if (!leido.ok) return respuestaJson({ error: PEDIDO_INVALIDO, campos: leido.campos }, 400);
-    const { operacion, comisionista } = leido.valor;
+    const { operacion, comisionista, saldo } = leido.valor;
     const entradas = await leerEntradasSimulador(db, fechaEnBogota(new Date()), comisionista);
-    const resultado = simularOperacion(entradas.estado, operacion, entradas.contexto);
-    return respuestaJson(aRespuestaSimulacion(resultado, operacion.instrumentoId, entradas.estado.posiciones, entradas.caja.fechaCorte), 200);
+    // Con el saldo escrito por el dueño, la caja es ese valor (no se guarda); si no, la certificada de A&V.
+    const estado = saldo === null ? entradas.estado : { ...entradas.estado, caja: saldo };
+    const resultado = simularOperacion(estado, operacion, entradas.contexto);
+    const analisis = resultado.ok ? await analisisDe(sesion.usuario.id, entradas.contexto.hoy, operacion, resultado.simulacion, estado) : null;
+    return respuestaJson(aRespuestaSimulacion(resultado, operacion.instrumentoId, estado.posiciones, saldo === null ? entradas.caja.fechaCorte : "ESCRITA", analisis), 200);
   } catch (error) {
     console.error(`[operar:simular] no se pudo simular (${error instanceof Error ? error.name : "desconocido"})`);
     return respuestaJson({ error: NO_SE_PUDO }, 500);

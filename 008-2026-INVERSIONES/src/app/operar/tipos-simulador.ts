@@ -2,6 +2,8 @@
  * Lo que viaja entre el simulador «¿Y si…?» de /operar y POST /api/operar/simular: solo texto ya formateado por el
  * servidor (src/app/operar/serializar-simulacion.ts), así la pantalla de cliente no calcula ni importa el dominio.
  */
+import type { VistaAnalisisSimulacion } from "@/operar/analisis/vista";
+
 export interface EspecieSimulable {
   readonly id: string;
   readonly nemotecnico: string;
@@ -33,6 +35,8 @@ export interface VistaSimulacion {
   readonly reglas: readonly { readonly texto: string; readonly afectaciones: readonly string[] }[];
   readonly avisos: readonly string[];
   readonly notas: readonly string[];
+  /** El análisis del antes y el después; null si no se pudo calcular. */
+  readonly analisis: VistaAnalisisSimulacion | null;
 }
 
 export type RespuestaSimulacion =

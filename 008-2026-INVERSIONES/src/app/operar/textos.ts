@@ -12,7 +12,7 @@ import { precio } from "../_plan/formato";
 import { textoAccionRegla, textoPlazo } from "../_plan/textos";
 import type { CierreVista, EstadoReglaVista, FechaVista, ReglaOperarVista, ReglasVista } from "./tipos";
 
-export const AVISO_DECISION = "Información calculada por 008 con su plan. La decisión es suya. 008 no recomienda comprar ni vender.";
+export const AVISO_DECISION = "Información calculada por Inversiones con su plan. La decisión es suya. Inversiones no recomienda comprar ni vender.";
 export const PIE_OPERAR = "Esta pantalla solo muestra: no registra órdenes ni decisiones.";
 
 const UMBRAL = `${UMBRAL_CERCANA_PCT.toString()} %`;
@@ -88,6 +88,12 @@ export function fraseRegla(r: ReglaOperarVista): string {
 export const textoPlazoRegla = (plazo: string | null, vencido: boolean): string => `Plazo: ${textoPlazo(plazo, vencido)}.`;
 
 /** «+1,79 %», «−2,99 %»: con signo y dos decimales (los de `estadoDelNivel`). */
+/** «le falta bajar 0,65 % para tocar su nivel» (distancia negativa) o «le falta subir 1,79 %…» (positiva). */
+export function faltaParaElNivel(pct: string): string {
+  const v = n(pct);
+  return `le falta ${v < 0 ? "bajar" : "subir"} ${numero(Math.abs(v), 2)} % para tocar su nivel.`;
+}
+
 export function distancia(pct: string): string {
   const v = n(pct);
   return `${v > 0 ? "+" : ""}${numero(v, 2)} %`;
@@ -125,7 +131,7 @@ export function textoEstadoRegla(e: EstadoReglaVista, preciosAtrasados: boolean,
     case "EN_EL_NIVEL":
       return { principal: `El cierre del ${fecha(e.cierre.fecha)} quedó en el nivel: ${precio(e.cierre.precio)}.`, aviso: false };
     case "A_DISTANCIA":
-      return { principal: `El cierre del ${fecha(e.cierre.fecha)} fue de ${precio(e.cierre.precio)}: está a ${distancia(e.distanciaPct)} del nivel.`, aviso: false };
+      return { principal: `El cierre del ${fecha(e.cierre.fecha)} fue de ${precio(e.cierre.precio)}: ${faltaParaElNivel(e.distanciaPct)}`, aviso: false };
     case "SIN_CIERRE_AL_DIA":
       return {
         principal: e.ultimo
@@ -134,11 +140,11 @@ export function textoEstadoRegla(e: EstadoReglaVista, preciosAtrasados: boolean,
         aviso: true,
       };
     case "POR_ORDEN":
-      return { principal: "008 no la mide con los cierres: aplica al monto de cada orden.", aviso: false };
+      return { principal: "Inversiones no la mide con los cierres: aplica al monto de cada orden.", aviso: false };
     case "POSTURA":
       return { principal: "Es una postura del plan: no depende de un nivel de precio.", aviso: false };
     case "SIN_ESPECIE":
-      return { principal: "Es de portafolio y su condición es un cierre: 008 no la mide sin una especie.", aviso: true };
+      return { principal: "Es de portafolio y su condición es un cierre: Inversiones no la mide sin una especie.", aviso: true };
     case "SIN_NIVEL":
       return { principal: "El plan no trae un nivel para medirla.", aviso: true };
   }

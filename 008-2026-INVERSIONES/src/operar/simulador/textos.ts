@@ -4,7 +4,7 @@
  * punto flotante: pesos y cantidades con el formateador exacto del plan (es-CO, «.» de miles y «,» decimal). Lo que
  * el dueño escribió sale en una línea y sin caracteres de control ni de dirección; la pantalla lo muestra como cita.
  */
-import type { AccionPlan, CondicionRegla, LadoOrden, Prisma } from "@prisma/client";
+import { Prisma, type AccionPlan, type CondicionRegla, type LadoOrden } from "@prisma/client";
 import { cantidadEs, nivelEs } from "@/plan/edicion/formato";
 import type { Afectacion, AvisoSimulacion, ComisionEstimada, Comisionista, ErrorSimulacion, FrenteAlNivel, ReglaSimulada } from "./tipos";
 
@@ -24,6 +24,11 @@ const INVISIBLES = /[\u0000-\u001F\u007F-\u009F\u200E\u200F\u202A-\u202E\u2066-\
 export function textoPesos(d: Prisma.Decimal): string {
   const signo = d.isNeg() && !d.isZero() ? MENOS : "";
   return `${signo}$ ${nivelEs(d.abs().toFixed())}`;
+}
+
+/** Montos en pesos sin decimales (mitad hacia arriba, solo para mostrar): «$ 37.911»; negativos con «−». */
+export function textoPesosRedondos(d: Prisma.Decimal): string {
+  return textoPesos(d.toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP));
 }
 
 export const ETIQUETA_TARIFA = "calculada con su tarifa";
@@ -50,7 +55,7 @@ export function textoError(e: ErrorSimulacion): string {
     case "PRECIO_FUERA_DE_ESCALA":
       return "El precio límite tiene más de 6 decimales o es demasiado grande para calcularlo con exactitud.";
     case "ESPECIE_DESCONOCIDA":
-      return "La especie no está en su portafolio en 008: no hay cantidad ni cierre para simular.";
+      return "La especie no está en su portafolio en Inversiones: no hay cantidad ni cierre para simular.";
     case "VENTA_SUPERA_TENENCIA":
       return `La venta es de ${cantidadEs(e.pide)} acciones y usted tiene ${cantidadEs(e.tiene)}.`;
     case "ORDEN_FUERA_DE_RANGO":

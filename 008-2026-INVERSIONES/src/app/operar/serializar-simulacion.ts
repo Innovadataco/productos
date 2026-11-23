@@ -5,13 +5,15 @@
  */
 import { Prisma } from "@prisma/client";
 import { cantidadEs, nivelEs } from "@/plan/edicion/formato";
-import { textoAfectacion, textoAviso, textoComision, textoError, textoPesos, textoRegla, NOTA_CAJA_SIN_COMISION, NOTA_VALORACION } from "@/operar/simulador/textos";
+import { textoAfectacion, textoAviso, textoComision, textoError, textoPesosRedondos, textoRegla, NOTA_CAJA_SIN_COMISION, NOTA_VALORACION } from "@/operar/simulador/textos";
 import type { ComisionEstimada, PosicionSimulada, ResultadoSimulacion, Tenencia } from "@/operar/simulador/tipos";
+import type { VistaAnalisisSimulacion } from "@/operar/analisis/vista";
 import { fecha } from "../tablero/formato";
 import type { EspecieSimulable, FuenteComision, RespuestaSimulacion } from "./tipos-simulador";
 
 export const SIN_CIERRE = "sin cierre";
 export const SIN_PESO = "—";
+export const CAJA_ESCRITA = "Caja: saldo disponible en el comisionista, escrito por usted (no se guarda).";
 export const CAJA_SIN_CERTIFICACION = "Sin certificación de Acciones & Valores: la caja de antes es 0.";
 export const textoCajaCertificada = (dia: string): string => `Caja certificada por Acciones & Valores al ${fecha(dia)}.`;
 
@@ -27,8 +29,8 @@ export function textoPeso(t: Tenencia): string {
 export const especiesSimulables = (posiciones: readonly PosicionSimulada[]): EspecieSimulable[] =>
   posiciones.map((p) => ({ id: p.instrumentoId, nemotecnico: p.nemotecnico, cantidad: cantidadEs(p.cantidad) }));
 
-/** La respuesta de la ruta: la vista o los errores del dueño, ya como texto. `cajaAl` es el corte de la caja (null sin certificación). */
-export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: string, posiciones: readonly PosicionSimulada[], cajaAl: Date | null): RespuestaSimulacion {
+/** La respuesta de la ruta: la vista o los errores del dueño, ya como texto. `cajaAl` es el corte de la caja (null sin certificación; «ESCRITA» si la escribió el dueño). */
+export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: string, posiciones: readonly PosicionSimulada[], cajaAl: Date | null | "ESCRITA", analisis: VistaAnalisisSimulacion | null = null): RespuestaSimulacion {
   if (!r.ok) return { ok: false, errores: r.errores.map(textoError) };
   const s = r.simulacion;
   const operada = posiciones.find((p) => p.instrumentoId === instrumentoId)?.nemotecnico ?? "";
@@ -44,16 +46,17 @@ export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: stri
         pesoAntes: textoPeso(e.antes),
         pesoDespues: textoPeso(e.despues),
       })),
-      valorOrden: textoPesos(s.valorOrden),
-      comision: { fuente: FUENTES[s.comision.estado], valor: conComision ? textoPesos(s.comision.valor) : null, texto: textoComision(s.comision) },
-      cajaAntes: textoPesos(s.cajaAntes),
-      cajaDespues: textoPesos(s.cajaDespues),
-      cajaFuente: cajaAl === null ? CAJA_SIN_CERTIFICACION : textoCajaCertificada(cajaAl.toISOString().slice(0, 10)),
-      valorAccionesAntes: textoPesos(s.valorAccionesAntes),
-      valorAccionesDespues: textoPesos(s.valorAccionesDespues),
+      valorOrden: textoPesosRedondos(s.valorOrden),
+      comision: { fuente: FUENTES[s.comision.estado], valor: conComision ? textoPesosRedondos(s.comision.valor) : null, texto: textoComision(s.comision) },
+      cajaAntes: textoPesosRedondos(s.cajaAntes),
+      cajaDespues: textoPesosRedondos(s.cajaDespues),
+      cajaFuente: cajaAl === "ESCRITA" ? CAJA_ESCRITA : cajaAl === null ? CAJA_SIN_CERTIFICACION : textoCajaCertificada(cajaAl.toISOString().slice(0, 10)),
+      valorAccionesAntes: textoPesosRedondos(s.valorAccionesAntes),
+      valorAccionesDespues: textoPesosRedondos(s.valorAccionesDespues),
       reglas: s.reglasAfectadas.map((a) => ({ texto: textoRegla(a.regla, operada), afectaciones: a.afectaciones.map((x) => textoAfectacion(x, a.regla)) })),
       avisos: s.avisos.map(textoAviso),
       notas: [NOTA_VALORACION, ...(conComision ? [] : [NOTA_CAJA_SIN_COMISION])],
+      analisis,
     },
   };
 }

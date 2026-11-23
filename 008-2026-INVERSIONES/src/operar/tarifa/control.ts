@@ -20,9 +20,14 @@ export type ControlTarifa =
 export const explica = (tarifa: TarifaSimulada, orden: OrdenHistorica): boolean =>
   comisionConTarifa(orden.totalInvertido, tarifa).sub(orden.comision).abs().lte(TOLERANCIA);
 
-export function controlarTarifa(tarifa: TarifaSimulada, ordenes: readonly OrdenHistorica[]): ControlTarifa {
+/** Desde el `vigenteDesde` de la versión (inclusive) y hasta el de la versión siguiente (exclusive; null = sin siguiente). */
+const mientrasRige = (tarifa: TarifaSimulada, hasta: Date | null) => (o: OrdenHistorica): boolean =>
+  o.fecha.getTime() >= tarifa.vigenteDesde.getTime() && (hasta === null || o.fecha.getTime() < hasta.getTime());
+
+/** Cada versión se compara solo con las órdenes de mientras rige: una orden de antes se cobró con otra tarifa. */
+export function controlarTarifa(tarifa: TarifaSimulada, ordenes: readonly OrdenHistorica[], hasta: Date | null = null): ControlTarifa {
   if (tarifa.comisionista !== "TRII") return { estado: "SIN_ORDENES" };
-  const base = ordenes.filter((o) => o.lado === tarifa.lado && o.estado === "APROBADO" && o.totalInvertido.gt(0));
+  const base = ordenes.filter((o) => o.lado === tarifa.lado && o.estado === "APROBADO" && o.totalInvertido.gt(0)).filter(mientrasRige(tarifa, hasta));
   if (base.length === 0) return { estado: "SIN_ORDENES" };
   return { estado: "CONTRASTADA", explicadas: base.filter((o) => explica(tarifa, o)).length, total: base.length };
 }

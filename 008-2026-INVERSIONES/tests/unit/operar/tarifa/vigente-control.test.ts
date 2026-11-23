@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import { controlarTarifa, explica } from "@/operar/tarifa/control";
 import { vigenteDe, vigentesDe } from "@/operar/tarifa/vigente";
+import { textoControl } from "@/app/edicion/tarifas/datos";
 import { orden } from "../simulador/apoyo/estado.ficticio";
 import { tarifa, tarifaSimple } from "./apoyo/tarifa.ficticio";
 
@@ -61,6 +62,23 @@ describe("controlarTarifa", () => {
       orden("VENTA", "4613.27", "12.5988"),
     ];
     expect(controlarTarifa(t, ordenes)).toEqual({ estado: "CONTRASTADA", explicadas: 1, total: 2 });
+  });
+
+  it("compara cada versión solo con las órdenes desde su vigenteDesde y hasta la versión siguiente", () => {
+    const ordenes = [
+      orden("COMPRA", "4613.27", "12.5988", "APROBADO", dia("2027-01-08")),
+      orden("COMPRA", "4613.27", "12.5988", "APROBADO", dia("2027-01-11")),
+      orden("COMPRA", "4613.27", "41.37", "APROBADO", dia("2027-02-23")),
+      orden("COMPRA", "4613.27", "12.5988", "APROBADO", dia("2027-03-02")),
+    ];
+    expect(controlarTarifa(t, ordenes)).toEqual({ estado: "CONTRASTADA", explicadas: 2, total: 3 });
+    expect(controlarTarifa(t, ordenes, dia("2027-03-02"))).toEqual({ estado: "CONTRASTADA", explicadas: 1, total: 2 });
+    expect(controlarTarifa(t, ordenes.slice(0, 1))).toEqual({ estado: "SIN_ORDENES" });
+  });
+
+  it("dice «explica X de N desde que rige»", () => {
+    expect(textoControl({ estado: "CONTRASTADA", explicadas: 37, total: 41 }, "TRII", "COMPRA")).toBe("La tarifa explica 37 de 41 órdenes de compra desde que rige (hasta 1 peso de diferencia por orden).");
+    expect(textoControl({ estado: "SIN_ORDENES" }, "AV", "COMPRA")).toBe("Sin órdenes para contrastar: Inversiones solo tiene las órdenes de Trii.");
   });
 
   it("sin órdenes de ese lado, o de A&V (008 solo tiene las de Trii), no hay con qué contrastar", () => {

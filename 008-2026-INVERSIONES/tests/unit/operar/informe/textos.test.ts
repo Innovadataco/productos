@@ -16,7 +16,7 @@ const C = { precio: "4597.31", fecha: "2027-03-16" };
 
 describe("el aviso fijo y los precios", () => {
   it("dice que la decisión es del dueño y que 008 no recomienda", () => {
-    expect(AVISO_DECISION).toBe("Información calculada por 008 con su plan. La decisión es suya. 008 no recomienda comprar ni vender.");
+    expect(AVISO_DECISION).toBe("Información calculada por Inversiones con su plan. La decisión es suya. Inversiones no recomienda comprar ni vender.");
   });
 
   it("los precios: el último cierre disponible y su fecha, o que no hay; y cuándo se detuvo la carga", () => {
@@ -47,13 +47,15 @@ describe("«Su regla … dice …»: acción, cantidad, condición y nivel del p
 
 describe("el estado de la regla hoy", () => {
   it("tocada: «Hoy se cumple», con el cierre y el lado; con la carga detenida, «con el último cierre disponible»", () => {
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "-0.65", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: le falta bajar 0,65 % para tocar su nivel.");
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "2.37", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: le falta subir 2,37 % para tocar su nivel.");
     expect(textoEstadoRegla({ tipo: "TOCADA", lado: "BAJO", cierre: C }, false)).toEqual({ principal: "Hoy se cumple: el cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel.", aviso: false });
     expect(textoEstadoRegla({ tipo: "TOCADA", lado: "SOBRE", cierre: C }, true)).toEqual({ principal: "Se cumple con el último cierre disponible, del 16-mar-2027: $ 4.597,31, por encima del nivel.", aviso: false });
   });
 
   it("en el nivel, a distancia y sin cierre al día (este con aviso); nunca «se cumple» si no está tocada", () => {
     expect(textoEstadoRegla({ tipo: "EN_EL_NIVEL", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 quedó en el nivel: $ 4.597,31.");
-    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "1.79", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: está a +1,79 % del nivel.");
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "1.79", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: le falta subir 1,79 % para tocar su nivel.");
     expect(textoEstadoRegla({ tipo: "SIN_CIERRE_AL_DIA", ultimo: { precio: "899.11", fecha: "2027-03-12" } }, false)).toEqual({ principal: "Sin cierre al día: el último cierre es del 12-mar-2027 ($ 899,11).", aviso: true });
     expect(textoEstadoRegla({ tipo: "SIN_CIERRE_AL_DIA", ultimo: null }, true)).toEqual({ principal: "Sin cierre al día: no hay un cierre de esta especie.", aviso: true });
     for (const e of [{ tipo: "EN_EL_NIVEL", cierre: C }, { tipo: "A_DISTANCIA", distanciaPct: "1.79", cierre: C }, { tipo: "SIN_CIERRE_AL_DIA", ultimo: C }] as const) {
@@ -62,10 +64,10 @@ describe("el estado de la regla hoy", () => {
   });
 
   it("por orden, postura y sin nivel", () => {
-    expect(textoEstadoRegla({ tipo: "POR_ORDEN" }, false)).toEqual({ principal: "008 no la mide con los cierres: aplica al monto de cada orden.", aviso: false });
+    expect(textoEstadoRegla({ tipo: "POR_ORDEN" }, false)).toEqual({ principal: "Inversiones no la mide con los cierres: aplica al monto de cada orden.", aviso: false });
     expect(textoEstadoRegla({ tipo: "POSTURA" }, false)).toEqual({ principal: "Es una postura del plan: no depende de un nivel de precio.", aviso: false });
     expect(textoEstadoRegla({ tipo: "SIN_NIVEL" }, false)).toEqual({ principal: "El plan no trae un nivel para medirla.", aviso: true });
-    expect(textoEstadoRegla({ tipo: "SIN_ESPECIE" }, false)).toEqual({ principal: "Es de portafolio y su condición es un cierre: 008 no la mide sin una especie.", aviso: true });
+    expect(textoEstadoRegla({ tipo: "SIN_ESPECIE" }, false)).toEqual({ principal: "Es de portafolio y su condición es un cierre: Inversiones no la mide sin una especie.", aviso: true });
   });
 
   it("con el plazo vencido, una regla tocada nunca dice «se cumple»: dice que la condición se da y que el plazo venció", () => {
@@ -74,7 +76,7 @@ describe("el estado de la regla hoy", () => {
       expect(t).toEqual({ principal: "La condición se da con el cierre del 16-mar-2027 ($ 4.597,31, por debajo del nivel), pero su plazo venció.", aviso: true });
       expect(t.principal.toLowerCase()).not.toContain("se cumple");
     }
-    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "1.79", cierre: C }, false, true).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: está a +1,79 % del nivel.");
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "1.79", cierre: C }, false, true).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: le falta subir 1,79 % para tocar su nivel.");
   });
 
   it("los títulos y vacíos de los grupos y el de las fechas salen de las constantes del armador", () => {

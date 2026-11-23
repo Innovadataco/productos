@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { COMISIONISTAS_SIMULADOR, LADOS_SIMULADOR, ORIGEN_COMISION, TEXTOS_SIMULADOR as T, mensajeDeEstado } from "./textos-simulador";
 import type { EspecieSimulable, RespuestaSimulacion, VistaSimulacion } from "./tipos-simulador";
+import type { VistaAnalisisSimulacion } from "@/operar/analisis/vista";
 
 type Estado =
   | { readonly tipo: "listo" }
@@ -36,6 +37,24 @@ function Par({ titulo, antes, despues }: { readonly titulo: string; readonly ant
       <dt>{titulo}</dt>
       <dd>{`${T.ANTES}: ${antes}`}</dd>
       <dd>{`${T.DESPUES}: ${despues}`}</dd>
+    </div>
+  );
+}
+
+function Analisis({ a }: { readonly a: VistaAnalisisSimulacion | null }) {
+  if (a === null) return <p className="nota">{T.SIN_ANALISIS}</p>;
+  return (
+    <div className="op-sim-analisis">
+      <h4>{T.ANALISIS}</h4>
+      <dl className="op-sim-cifras">{a.filas.map((f) => <Par key={f.titulo} titulo={f.titulo} antes={f.antes} despues={f.despues} />)}</dl>
+      <h4>{T.ESCENARIOS}</h4>
+      {a.escenarios.length === 0 ? <p className="nota">{T.SIN_ESCENARIOS}</p> : (
+        <dl className="op-sim-cifras">{a.escenarios.map((f) => <Par key={f.titulo} titulo={f.titulo} antes={f.antes} despues={f.despues} />)}</dl>
+      )}
+      {a.aparecen.length === 0 ? null : <><h4>{T.APARECEN}</h4><ul>{a.aparecen.map((x, i) => <li key={`${i}-${x}`}>{x}</li>)}</ul></>}
+      {a.desaparecen.length === 0 ? null : <><h4>{T.DESAPARECEN}</h4><ul>{a.desaparecen.map((x, i) => <li key={`${i}-${x}`}>{x}</li>)}</ul></>}
+      <div className="op-sim-texto">{a.frases.map((f, i) => <p key={`${i}-${f}`}>{f}</p>)}</div>
+      <p className="nota">{a.rotulo}</p>
     </div>
   );
 }
@@ -80,6 +99,7 @@ function Resultado({ vista, titulo }: { readonly vista: VistaSimulacion; readonl
         <><h4>{T.AVISOS}</h4><ul className="op-sim-avisos">{vista.avisos.map((a, i) => <li key={`${i}-${a}`}>{a}</li>)}</ul></>
       )}
       {vista.notas.map((n, i) => <p key={`${i}-${n}`} className="nota">{n}</p>)}
+      <Analisis a={vista.analisis ?? null} />
     </div>
   );
 }
@@ -90,6 +110,7 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
   const [cantidad, setCantidad] = useState("");
   const [precio, setPrecio] = useState("");
   const [comisionista, setComisionista] = useState<string>(COMISIONISTAS_SIMULADOR[0].valor);
+  const [saldo, setSaldo] = useState("");
   const [estado, setEstado] = useState<Estado>({ tipo: "listo" });
   const enCurso = useRef(false);
   const alerta = useRef<HTMLDivElement | null>(null);
@@ -108,7 +129,7 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
     enCurso.current = true;
     setEstado({ tipo: "calculando" });
     try {
-      setEstado(await simular({ instrumentoId: especie, lado, cantidad, precioLimite: precio, comisionista }));
+      setEstado(await simular({ instrumentoId: especie, lado, cantidad, precioLimite: precio, comisionista, saldoComisionista: saldo }));
     } finally {
       enCurso.current = false;
     }
@@ -139,6 +160,9 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
           <select id="sim-comisionista" value={comisionista} onChange={(e) => setComisionista(e.target.value)}>
             {COMISIONISTAS_SIMULADOR.map((c) => <option key={c.valor} value={c.valor}>{c.texto}</option>)}
           </select>
+          <label htmlFor="sim-saldo">{T.SALDO}</label>
+          <input id="sim-saldo" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={saldo} onChange={(e) => setSaldo(e.target.value)} aria-describedby="sim-ayuda-saldo" />
+          <p className="nota op-sim-ayuda" id="sim-ayuda-saldo">{T.AYUDA_SALDO}</p>
           <button type="submit" className="op-sim-boton" aria-busy={calculando} aria-disabled={calculando ? true : undefined}>{T.BOTON}</button>
         </form>
       )}

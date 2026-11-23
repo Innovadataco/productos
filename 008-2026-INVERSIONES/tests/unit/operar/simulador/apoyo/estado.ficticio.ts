@@ -49,7 +49,8 @@ export const regla = (cambios: Partial<ReglaSimulada> = {}): ReglaSimulada => ({
   ...cambios,
 });
 
-export const orden = (lado: LadoOrden, totalInvertido: string, comision: string, estado: EstadoOrden = "APROBADO"): OrdenHistorica => ({
+export const orden = (lado: LadoOrden, totalInvertido: string, comision: string, estado: EstadoOrden = "APROBADO", fecha = new Date(Date.UTC(2027, 2, 17))): OrdenHistorica => ({
+  fecha,
   lado,
   estado,
   totalInvertido: D(totalInvertido),

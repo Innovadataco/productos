@@ -15,9 +15,15 @@ const exigirSesionApi = vi.hoisted(() => vi.fn());
 const exigirDuenoApi = vi.hoisted(() => vi.fn());
 const leerEntradasSimulador = vi.hoisted(() => vi.fn());
 const crearVersionTarifa = vi.hoisted(() => vi.fn());
+const analizarSimulacion = vi.hoisted(() => vi.fn());
+const COMPARACION = {
+  concentracion: { antes: null, despues: null }, volatilidad: { antes: null, despues: null }, pesoOperada: { antes: 0.2113, despues: 0.2371 },
+  contribucionOperada: { antes: null, despues: null }, puntos: { aparecen: [], desaparecen: [] },
+};
 vi.mock("@/auth/sesion", () => ({ exigirSesionApi, exigirDuenoApi }));
 vi.mock("@/lib/db", () => ({ db: { soy: "la base" } }));
 vi.mock("@/operar/pantalla/leer", () => ({ leerEntradasSimulador }));
+vi.mock("@/operar/pantalla/analisis", () => ({ analizarSimulacion }));
 vi.mock("@/operar/tarifa/crear", () => ({ crearVersionTarifa }));
 
 import { POST as simular } from "@/app/api/operar/simular/route";
@@ -29,7 +35,7 @@ const DUENO = { ok: true, usuario: { id: "u-dueno-4613", email: "dueno@ejemplo.i
 const FAMILIA = { ok: true, usuario: { id: "u-familia-379", email: "familia@ejemplo.invalid", rol: "FAMILIA" } };
 const pedido = (ruta: string, cuerpo: unknown, cabeceras: Record<string, string> = {}) =>
   new Request(`${ORIGEN}${ruta}`, { method: "POST", headers: { "content-type": "application/json", origin: ORIGEN, ...cabeceras }, body: typeof cuerpo === "string" ? cuerpo : JSON.stringify(cuerpo) });
-const cuerpoSim = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", ...cambios });
+const cuerpoSim = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", saldoComisionista: "", ...cambios });
 
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development");
@@ -37,12 +43,13 @@ beforeEach(() => {
   exigirDuenoApi.mockResolvedValue(DUENO);
   leerEntradasSimulador.mockResolvedValue({ estado: ESTADO, contexto: { ...CONTEXTO, tarifas: { COMPRA: tarifa() } }, caja: { fechaCorte: new Date(Date.UTC(2027, 2, 12)) } });
   crearVersionTarifa.mockResolvedValue({ version: 3 });
+  analizarSimulacion.mockResolvedValue({ comparacion: COMPARACION, escenarios: null, nombres: new Map([[idDe(A), A]]) });
   reiniciarFrecuenciaSimulador();
 });
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
-  for (const f of [exigirSesionApi, exigirDuenoApi, leerEntradasSimulador, crearVersionTarifa]) f.mockReset();
+  for (const f of [exigirSesionApi, exigirDuenoApi, leerEntradasSimulador, crearVersionTarifa, analizarSimulacion]) f.mockReset();
 });
 
 describe("POST /api/operar/simular", () => {
@@ -52,8 +59,24 @@ describe("POST /api/operar/simular", () => {
     expect(r.headers.get("cache-control")).toBe("no-store");
     const cuerpo = (await r.json()) as { ok: boolean; vista: { comision: { fuente: string; valor: string } } };
     expect(cuerpo.ok).toBe(true);
-    expect(cuerpo.vista.comision).toMatchObject({ fuente: "TARIFA", valor: "$ 49,9523" });
+    expect(cuerpo.vista.comision).toMatchObject({ fuente: "TARIFA", valor: "$ 50" });
     expect(leerEntradasSimulador).toHaveBeenCalledWith({ soy: "la base" }, expect.any(Date), "TRII");
+  });
+
+  it("con el saldo escrito, la caja es ese valor y se rotula; el análisis sale del motor y, si falla, la simulación sigue sin él", async () => {
+    const r = await simular(pedido("/api/operar/simular", cuerpoSim({ saldoComisionista: "4.613,27" })));
+    const cuerpo = (await r.json()) as { vista: { cajaAntes: string; cajaFuente: string; analisis: { frases: string[]; filas: { antes: string }[] } | null } };
+    expect(cuerpo.vista.cajaAntes).toBe("$ 4.613");
+    expect(cuerpo.vista.cajaFuente).toContain("escrito por usted");
+    expect(cuerpo.vista.analisis?.filas[0]?.antes).toBe("21,13 %");
+    expect(cuerpo.vista.analisis?.frases[0]).toMatch(/^Con esta compra, FICTICIA-A pasa de 21,13 % a 23,71 %/);
+    expect(analizarSimulacion).toHaveBeenCalledWith({ soy: "la base" }, expect.objectContaining({ instrumentoId: idDe(A), cantidadDespues: 1240n }));
+    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    analizarSimulacion.mockRejectedValue(new RangeError("detalle con cifras 4613"));
+    const sin = (await (await simular(pedido("/api/operar/simular", cuerpoSim()))).json()) as { ok: boolean; vista: { analisis: unknown } };
+    expect(sin.ok).toBe(true);
+    expect(sin.vista.analisis).toBeNull();
+    expect(registro.mock.calls.flat().join(" ")).not.toContain("4613");
   });
 
   it("la familia también simula (no escribe nada)", async () => {
