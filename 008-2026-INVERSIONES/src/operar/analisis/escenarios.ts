@@ -9,6 +9,7 @@
  *   aportado del total de la cartera y arranca cada trayectoria en total × (1 − caída inicial); por eso el después se
  *   pasa a la escala del antes (× aportado / total) con la caída inicial que lo devuelve a su valor real. Así los
  *   percentiles son los del portafolio de después y la probabilidad se mide contra lo aportado de antes.
+ * Con el valor de partida en cero o menos (antes o después) no hay escenarios.
  * Puro y sin mutar la entrada.
  */
 import { armarHistoria, type ArmadoHistoria } from "@/proyecciones/historia";
@@ -36,17 +37,19 @@ export function valorPartida(a: ArmadoHistoria, e: EntradaEscenario): ValorParti
 }
 
 function escenario(a: ArmadoHistoria, e: EntradaEscenario, partida: ValorPartida, aportado: number, p: ParametrosProyeccion): ResumenEscenario {
-  const escala = partida.total > 0 && aportado > 0 ? aportado / partida.total : 1;
+  const escala = aportado / partida.total;
   const queda = (1 - p.caidaInicialPct / CIEN) / escala;
   const cartera = { valores: Float64Array.from(a.columnas, (c) => c.valorHoy * escala), fijo: (a.valorFijo + e.accionesSinHistoria + e.caja) * escala };
   return resumenEscenario(simular(a.historia, cartera, { ...p, caidaInicialPct: (1 - queda) * CIEN }), partida);
 }
 
-export function escenariosAntesDespues(antes: EntradaEscenario, despues: EntradaEscenario, p: ParametrosProyeccion): AntesDespues<ResumenEscenario> {
+/** null si el valor de partida del antes o del después no es positivo: sin base para lo aportado, no se inventan cifras. */
+export function escenariosAntesDespues(antes: EntradaEscenario, despues: EntradaEscenario, p: ParametrosProyeccion): AntesDespues<ResumenEscenario> | null {
   const armadoAntes = armarHistoria(antes.historia);
   const armadoDespues = armarHistoria(despues.historia);
   const partidaAntes = valorPartida(armadoAntes, antes);
   const partidaDespues = valorPartida(armadoDespues, despues);
+  if (!(partidaAntes.total > 0) || !(partidaDespues.total > 0)) return null;
   return {
     antes: escenario(armadoAntes, antes, partidaAntes, partidaAntes.total, p),
     despues: escenario(armadoDespues, despues, partidaDespues, partidaAntes.total, p),

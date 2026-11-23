@@ -19,7 +19,7 @@ export const TEXTOS_SIMULADOR = {
   PARTIDA: "Valor de partida de los escenarios (pesos)",
   ESCENARIOS: "Escenarios a 12 meses (pesos; acciones, fondo y caja; sin aportes, con los parámetros por omisión de Proyecciones)",
   VARIACION: "variación",
-  SIN_ESCENARIOS: "Los escenarios no se calcularon en esta simulación (el cálculo está ocupado o no hay historia).",
+  SIN_ESCENARIOS: "Los escenarios no se calcularon en esta simulación (el cálculo está ocupado, no hay historia o el valor de partida no es positivo).",
   APARECEN: "Puntos para revisar que aparecen",
   DESAPARECEN: "Puntos para revisar que desaparecen",
   SIN_ANALISIS: "El análisis del antes y el después no se pudo calcular en esta simulación.",

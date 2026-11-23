@@ -50,7 +50,8 @@ function parametros() {
 
 /** La entrada de un escenario: la historia, la caja y, si la historia no trae la especie operada, su valor al cierre. */
 function entradaEscenario(historia: EntradasAnalisis["historia"], tablero: Tablero, caja: Prisma.Decimal, instrumentoId: string): EntradaEscenario {
-  const enHistoria = historia.posiciones.some((p) => p.tipo === "ACCION" && p.instrumentoId === instrumentoId);
+  // Sin cierres en la historia, el motor tampoco la valora: su valor sale del tablero, como parte fija.
+  const enHistoria = historia.posiciones.some((p) => p.tipo === "ACCION" && p.instrumentoId === instrumentoId && p.cierres.length > 0);
   const fila = enHistoria ? undefined : tablero.filas.find((f) => f.instrumentoId === instrumentoId);
   return { historia, caja: caja.toNumber(), accionesSinHistoria: fila?.valor?.toNumber() ?? 0 };
 }
