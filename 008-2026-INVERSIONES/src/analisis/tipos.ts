@@ -4,7 +4,8 @@
  * - Entradas: las arman lectores que ya existen (A2 los llama): `leerEntradas` (src/proyecciones/leer.ts), el tablero
  *   de `calcularTablero` (src/tablero/calculo.ts) y `resultadosDeDecisiones` (src/plan/resultados-lote.ts).
  * - Portafolio: las ACCIONES vivas del tablero, con sus pesos (el dueño del valor y del peso es el tablero). El fondo
- *   FIC queda fuera en la v1.
+ *   FIC no entra en ninguna métrica; desde A2 puede llegar como entrada opcional (`fondos`) y solo da su valor y su peso
+ *   sobre el total (`conFondo`, fondo.ts).
  * - Dinero en `Prisma.Decimal`; métricas estadísticas en `number`, redondeadas a DECIMALES_METRICA (numeros.ts); días
  *   `AAAA-MM-DD`. El motor no da formato: eso es de la pantalla.
  * - Sin nombres: solo ids (la pantalla los cruza con el tablero). Aun así, el análisis NO es un paquete de hechos para la
@@ -35,6 +36,17 @@ export interface EntradasAnalisis {
   readonly tablero: Tablero;
   /** De `resultadosDeDecisiones`, que calcula con src/plan/resultado.ts. */
   readonly decisiones: readonly ResultadoDecision[];
+  /** Opcional (A2): los fondos FIC con su valor (`fondosDeHistoria`, fondo.ts). Sin ella la salida no trae `conFondo`. */
+  readonly fondos?: readonly FondoParaAnalisis[];
+}
+
+/** Un fondo FIC con valor: unidades × valor de unidad, y el día de ese valor (la SFC publica con T−2). */
+export interface FondoParaAnalisis {
+  readonly instrumentoId: string;
+  /** Positivo. */
+  readonly valor: Prisma.Decimal;
+  /** Fecha de negocio, en o antes de hoy. */
+  readonly dia: Date;
 }
 
 /** Lo que el motor necesita de una regla. Ni la acción, ni la cantidad, ni el texto libre: nunca entran al análisis. */
@@ -266,6 +278,24 @@ export interface ResumenDecisiones {
   readonly medidas: readonly MedidaDecision[];
 }
 
+export interface FondoAnalizado {
+  readonly instrumentoId: string;
+  readonly valor: Prisma.Decimal;
+  readonly dia: Dia;
+  /** valor / valor total; null si el total es cero. */
+  readonly peso: number | null;
+}
+
+/** El portafolio con el fondo: solo valores y pesos. El riesgo, la concentración y las especies siguen sin el fondo. */
+export interface PortafolioConFondo {
+  /** Valor de las acciones más el de los fondos. */
+  readonly valorTotal: Prisma.Decimal;
+  /** Valor de las acciones / valor total; null si el total es cero. */
+  readonly pesoAcciones: number | null;
+  /** En el orden de la entrada. */
+  readonly fondos: readonly FondoAnalizado[];
+}
+
 /** Un aviso de la historia (src/proyecciones/tipos.ts) sin el nombre de la especie. */
 export type AvisoAnalisis = Omit<AvisoCrudo, "nombre">;
 
@@ -289,4 +319,6 @@ export interface Analisis {
   readonly decisiones: ResumenDecisiones;
   /** Los de las historias, sin el nombre, sin repetir y ordenados. */
   readonly avisos: readonly AvisoAnalisis[];
+  /** Solo si llegó la entrada `fondos` (A2): la clave no aparece sin ella. */
+  readonly conFondo?: PortafolioConFondo;
 }

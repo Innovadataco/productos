@@ -13,6 +13,7 @@ import { calendarioDe, estadoCierre } from "./cierres";
 import { concentracionDe } from "./concentracion";
 import { resumirDecisiones } from "./decisiones";
 import { proximaFechaEx, rendimientoDividendo12m } from "./dividendo";
+import { portafolioConFondo, validarFondos } from "./fondo";
 import { historiaPropia } from "./historia-propia";
 import { compararTexto, redondear } from "./numeros";
 import { riesgoComun, type ResultadoRiesgoComun } from "./riesgo-comun";
@@ -70,6 +71,7 @@ function unicos(avisos: readonly AvisoCrudo[]): readonly AvisoAnalisis[] {
 
 export function analizar(e: EntradasAnalisis): Analisis {
   validarEntradas(e);
+  if (e.fondos !== undefined) validarFondos(e.fondos, e);
   const calendario = calendarioDe(e.historia.noHabiles);
   const acciones = new Map(e.historia.posiciones.filter((p): p is AccionEntrada => p.tipo === "ACCION").map((a) => [a.instrumentoId, a]));
   const vivas = [...e.tablero.filas].sort(porValor);
@@ -91,5 +93,7 @@ export function analizar(e: EntradasAnalisis): Analisis {
     riesgo: comun.portafolio,
     decisiones: resumirDecisiones(e.decisiones),
     avisos: unicos([...porEspecie.flatMap((x) => x.avisos), ...comun.avisos]),
+    // Aditivo (A2): sin la entrada, la clave no aparece y la salida de siempre no cambia.
+    ...(e.fondos === undefined ? {} : { conFondo: portafolioConFondo(e.fondos, e.tablero.valorAcciones) }),
   };
 }
