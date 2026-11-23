@@ -71,6 +71,16 @@ describe("POST /api/operar/simular", () => {
     expect(cuerpo.vista.analisis?.filas[0]?.antes).toBe("21,13 %");
     expect(cuerpo.vista.analisis?.frases[0]).toMatch(/^Con esta compra, FICTICIA-A pasa de 21,13 % a 23,71 %/);
     expect(analizarSimulacion).toHaveBeenCalledWith({ soy: "la base" }, expect.objectContaining({ instrumentoId: idDe(A), cantidadDespues: 1240n }));
+    // La caja del simulador llega al análisis (antes, la escrita; después, con la orden y la comisión) y se rotula.
+    const caja = (analizarSimulacion.mock.calls[0]![1] as { caja: { antes: { toFixed(): string }; despues: { lt(x: unknown): boolean } } }).caja;
+    expect(caja.antes.toFixed()).toBe("4613.27");
+    expect(caja.despues.lt(caja.antes)).toBe(true);
+    expect((cuerpo.vista.analisis as unknown as { notaCaja: string }).notaCaja).toContain("antes, el saldo que usted escribió; después, esa caja menos el valor de la orden y la comisión");
+    const certificada = (await (await simular(pedido("/api/operar/simular", cuerpoSim()))).json()) as { vista: { analisis: { notaCaja: string } } };
+    expect(certificada.vista.analisis.notaCaja).toContain("antes, la certificada por Acciones & Valores");
+    leerEntradasSimulador.mockResolvedValueOnce({ estado: ESTADO, contexto: CONTEXTO, caja: { fechaCorte: null } });
+    const sinCertificacion = (await (await simular(pedido("/api/operar/simular", cuerpoSim()))).json()) as { vista: { analisis: { notaCaja: string } } };
+    expect(sinCertificacion.vista.analisis.notaCaja).toContain("antes, 0 (no hay certificación de Acciones & Valores)");
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     analizarSimulacion.mockRejectedValue(new RangeError("detalle con cifras 4613"));
     const sin = (await (await simular(pedido("/api/operar/simular", cuerpoSim()))).json()) as { ok: boolean; vista: { analisis: unknown } };

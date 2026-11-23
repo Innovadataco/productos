@@ -33,7 +33,7 @@ interface Estado {
 }
 
 function operar(e: Estado, lado: LadoSimulado, id: string, cantidad: bigint, precio: string, contexto: ContextoSimulacion): Estado & { readonly comision: number } {
-  const posiciones = [...e.entradas.tablero.filas, ...e.entradas.tablero.cerradas].map((f) => ({ instrumentoId: f.instrumentoId, nemotecnico: f.nemotecnico, cantidad: f.cantidad, cierre: f.cierre }));
+  const posiciones = [...e.entradas.tablero.filas, ...e.entradas.tablero.cerradas].map((f) => ({ instrumentoId: f.instrumentoId, nemotecnico: f.nemotecnico, cantidad: f.cantidad, cierre: f.cierre === null ? null : { precio: f.cierre.precio.toDecimalPlaces(6) } }));
   const r = simularOperacion({ posiciones, caja: e.caja, reglas: [] }, { instrumentoId: id, lado, cantidad, precioLimite: D(precio) }, contexto);
   if (!r.ok) throw new Error(`la operación inventada no pasó: ${r.errores.map((x) => x.codigo).join()}`);
   const s = r.simulacion;

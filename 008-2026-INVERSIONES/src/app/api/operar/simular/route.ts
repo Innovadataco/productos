@@ -8,6 +8,7 @@ import { leerEntradasSimulador } from "@/operar/pantalla/leer";
 import { simularOperacion } from "@/operar/simulador/simular";
 import { textoRegla } from "@/operar/simulador/textos";
 import type { EstadoSimulado, OperacionSimulada, Simulacion } from "@/operar/simulador/tipos";
+import type { FuenteCaja } from "@/operar/analisis/tipos";
 import { analizarSimulacion } from "@/operar/pantalla/analisis";
 import { aVistaAnalisis, type VistaAnalisisSimulacion } from "@/operar/analisis/vista";
 import { fechaEnBogota } from "@/precios/horario";
@@ -19,14 +20,14 @@ export const dynamic = "force-dynamic";
  * El análisis del antes y el después (motores de src/analisis/ y src/proyecciones/, sin cambiar sus cálculos). Si falla,
  * la simulación sale igual, sin análisis; al registro, solo el nombre del error.
  */
-async function analisisDe(usuarioId: string, hoy: Date, operacion: OperacionSimulada, s: Simulacion, estado: EstadoSimulado): Promise<VistaAnalisisSimulacion | null> {
+async function analisisDe(usuarioId: string, hoy: Date, operacion: OperacionSimulada, s: Simulacion, estado: EstadoSimulado, caja: FuenteCaja): Promise<VistaAnalisisSimulacion | null> {
   const id = operacion.instrumentoId;
   try {
     const cantidadDespues = s.especies.find((e) => e.instrumentoId === id)?.despues.cantidad ?? 0n;
-    const a = await analizarSimulacion(db, { hoy, usuarioId, instrumentoId: id, cantidadDespues, reglas: estado.reglas });
+    const a = await analizarSimulacion(db, { hoy, usuarioId, instrumentoId: id, cantidadDespues, reglas: estado.reglas, caja: { antes: s.cajaAntes, despues: s.cajaDespues } });
     const nombre = estado.posiciones.find((p) => p.instrumentoId === id)?.nemotecnico ?? "";
     const regla = estado.reglas.find((r) => r.instrumentoId === id);
-    return aVistaAnalisis({ ...a, operadaId: id, lado: operacion.lado, plan: regla === undefined ? null : textoRegla(regla, nombre) });
+    return aVistaAnalisis({ ...a, operadaId: id, lado: operacion.lado, plan: regla === undefined ? null : textoRegla(regla, nombre), caja });
   } catch (error) {
     console.error(`[operar:simular] análisis no calculado (${error instanceof Error ? error.name : "desconocido"})`);
     return null;
@@ -64,7 +65,8 @@ export async function POST(pedido: Request): Promise<Response> {
     // Con el saldo escrito por el dueño, la caja es ese valor (no se guarda); si no, la certificada de A&V.
     const estado = saldo === null ? entradas.estado : { ...entradas.estado, caja: saldo };
     const resultado = simularOperacion(estado, operacion, entradas.contexto);
-    const analisis = resultado.ok ? await analisisDe(sesion.usuario.id, entradas.contexto.hoy, operacion, resultado.simulacion, estado) : null;
+    const fuenteCaja: FuenteCaja = saldo !== null ? "ESCRITA" : entradas.caja.fechaCorte === null ? "SIN_CERTIFICACION" : "AV";
+    const analisis = resultado.ok ? await analisisDe(sesion.usuario.id, entradas.contexto.hoy, operacion, resultado.simulacion, estado, fuenteCaja) : null;
     return respuestaJson(aRespuestaSimulacion(resultado, operacion.instrumentoId, estado.posiciones, saldo === null ? entradas.caja.fechaCorte : "ESCRITA", analisis), 200);
   } catch (error) {
     console.error(`[operar:simular] no se pudo simular (${error instanceof Error ? error.name : "desconocido"})`);

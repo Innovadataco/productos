@@ -8,7 +8,7 @@ import type { Observacion } from "@/analisis/catalogo";
 import type { LadoSimulado } from "../simulador/tipos";
 import { textoPesosRedondos } from "../simulador/textos";
 import { nivelEs } from "@/plan/edicion/formato";
-import type { AntesDespues, ComparacionAnalisis, ResumenEscenario } from "./tipos";
+import type { AntesDespues, ComparacionAnalisis, FuenteCaja, ResumenEscenario } from "./tipos";
 
 export const ROTULO_ANALISIS = "Análisis calculado por Inversiones · la IA lo redactará cuando el servicio de IA esté conectado";
 
@@ -25,6 +25,29 @@ export const hhiEs = (x: number | null): string => (x === null ? SIN_DATO : deci
 /** Pesos de la proyección, sin decimales. */
 export const pesosEs = (x: number): string => textoPesosRedondos(new Prisma.Decimal(x));
 
+const MAS = "+";
+const MENOS = "−";
+/** La variación del después frente al antes, en %: «+0,59 %», «−5,79 %», «0 %»; sin dato si el antes no es positivo. */
+export function variacionEs(antes: number, despues: number): string {
+  if (!(antes > 0)) return SIN_DATO;
+  const pct = new Prisma.Decimal(despues).sub(antes).div(antes).mul(100).toDecimalPlaces(DECIMALES_PCT, Prisma.Decimal.ROUND_HALF_UP);
+  const signo = pct.isZero() ? "" : pct.isNeg() ? MENOS : MAS;
+  return `${signo}${nivelEs(pct.abs().toFixed(DECIMALES_PCT))} %`;
+}
+
+const CAJA_ANTES: Readonly<Record<FuenteCaja, string>> = {
+  ESCRITA: "el saldo que usted escribió",
+  AV: "la certificada por Acciones & Valores",
+  SIN_CERTIFICACION: "0 (no hay certificación de Acciones & Valores)",
+};
+const CAJA_DESPUES: Readonly<Record<LadoSimulado, string>> = {
+  COMPRAR: "esa caja menos el valor de la orden y la comisión",
+  VENDER: "esa caja más el valor de la orden y menos la comisión",
+};
+/** El rótulo de la caja de los escenarios: de dónde sale la de antes y qué se le resta o se le suma después. */
+export const notaCaja = (caja: FuenteCaja, lado: LadoSimulado): string =>
+  `La caja entra en los escenarios como parte fija, sin rendimiento: antes, ${CAJA_ANTES[caja]}; después, ${CAJA_DESPUES[lado]}.`;
+
 export interface DatosTexto {
   readonly comparacion: ComparacionAnalisis;
   readonly escenarios: AntesDespues<ResumenEscenario> | null;
@@ -33,6 +56,8 @@ export interface DatosTexto {
   readonly lado: LadoSimulado;
   /** Lo que dice el plan del dueño para la especie (el texto de su regla), o null si no hay regla que la toque. */
   readonly plan: string | null;
+  /** De dónde sale la caja de antes (se rotula). */
+  readonly caja: FuenteCaja;
 }
 
 function concentracionFrase(d: DatosTexto, nombre: string): string {
@@ -54,7 +79,12 @@ function escenarioFrase(e: DatosTexto["escenarios"]): string {
   const antes = e?.antes.puntos.at(-1);
   const despues = e?.despues.puntos.at(-1);
   if (e === null || antes === undefined || despues === undefined) return "Los escenarios no se calcularon en esta simulación.";
-  return `En el escenario central a ${despues.mes} meses (mediana), el portafolio pasa de ${pesosEs(antes.p50)} a ${pesosEs(despues.p50)}; la probabilidad de quedar por debajo de lo aportado, de ${pctEs(e.antes.probabilidadBajoAportado)} a ${pctEs(e.despues.probabilidadBajoAportado)}.`;
+  const partida = pesosEs(e.antes.partida.total);
+  return (
+    `Contando la caja como parte fija, sin rendimiento, el portafolio parte de ${partida} antes y de ${pesosEs(e.despues.partida.total)} después; ` +
+    `en el escenario central a ${despues.mes} meses (mediana) pasa de ${pesosEs(antes.p50)} a ${pesosEs(despues.p50)} (${variacionEs(antes.p50, despues.p50)}) ` +
+    `y la probabilidad de quedar por debajo de lo aportado (${partida}, que la operación no cambia), de ${pctEs(e.antes.probabilidadBajoAportado)} a ${pctEs(e.despues.probabilidadBajoAportado)}.`
+  );
 }
 
 /** El punto para revisar en palabras, con los nombres de las especies. */

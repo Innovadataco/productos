@@ -101,7 +101,7 @@ const ESCENARIOS = {
 };
 
 describe("frasesAnalisis", () => {
-  const DATOS = { comparacion: COMPARACION, escenarios: ESCENARIOS, nombres: NOMBRES, operadaId: "FICTICIA-B", lado: "COMPRAR", plan: "Su regla de FICTB dice: vender 41 si el cierre queda por encima de $ 4.600,13.", caja: "AV" as const };
+  const DATOS = { comparacion: COMPARACION, escenarios: ESCENARIOS, nombres: NOMBRES, operadaId: "FICTICIA-B", lado: "COMPRAR" as const, plan: "Su regla de FICTB dice: vender 41 si el cierre queda por encima de $ 4.600,13.", caja: "AV" as const };
   const frases = frasesAnalisis(DATOS);
 
   it("arma de 3 a 5 frases con las cifras del antes y el después", () => {

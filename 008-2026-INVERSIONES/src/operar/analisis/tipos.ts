@@ -36,8 +36,24 @@ export interface PuntoEscenario {
   readonly p95: number;
 }
 
-/** De una proyección: p5, p50 y p95 a 3, 6 y 12 meses (en pesos) y la probabilidad de quedar por debajo de lo aportado. */
+/** El valor de partida de un escenario (pesos): las acciones y el fondo a su último valor y la caja, que es parte fija. */
+export interface ValorPartida {
+  readonly acciones: number;
+  /** null si el fondo no entra (no hay fondo con valor). */
+  readonly fondo: number | null;
+  readonly caja: number;
+  readonly total: number;
+}
+
+/** De dónde sale la caja de antes: la que escribió el dueño, la certificada por A&V o 0 si no hay certificación. */
+export type FuenteCaja = "ESCRITA" | "AV" | "SIN_CERTIFICACION";
+
+/**
+ * De una simulación: el valor de partida, p5, p50 y p95 a 3, 6 y 12 meses (en pesos) y la probabilidad de quedar por
+ * debajo de lo aportado (el valor de partida de antes: la operación no lo cambia).
+ */
 export interface ResumenEscenario {
+  readonly partida: ValorPartida;
   readonly puntos: readonly PuntoEscenario[];
   readonly probabilidadBajoAportado: number;
 }

@@ -1,12 +1,12 @@
 /**
  * La comparación del antes y el después con el motor de src/analisis/ (concentración, volatilidad, contribución al
- * riesgo y puntos para revisar) y el resumen de los escenarios de src/proyecciones/. Solo elige y compara: no calcula
- * métricas propias. Puro.
+ * riesgo y puntos para revisar) y el resumen de los escenarios de src/proyecciones/ (que arma escenarios.ts, con la
+ * caja). Solo elige y compara: no calcula métricas propias. Puro.
  */
 import type { Observacion } from "@/analisis/catalogo";
 import type { Analisis } from "@/analisis/tipos";
-import type { ResultadoProyeccion } from "@/proyecciones/tipos";
-import type { ComparacionAnalisis, ConcentracionResumida, ResumenEscenario } from "./tipos";
+import type { PuntoProyeccion } from "@/proyecciones/tipos";
+import type { ComparacionAnalisis, ConcentracionResumida, ResumenEscenario, ValorPartida } from "./tipos";
 
 /** Los meses de los escenarios que se muestran (horizonte de 12). */
 export const MESES_ESCENARIO = [3, 6, 12] as const;
@@ -55,10 +55,16 @@ export function compararAnalisis(e: EntradaComparacion): ComparacionAnalisis {
   };
 }
 
-export function resumenEscenario(r: ResultadoProyeccion): ResumenEscenario {
+/** Lo que se toma de una simulación del motor de proyecciones. */
+export interface SimulacionResumible {
+  readonly puntos: readonly PuntoProyeccion[];
+  readonly probabilidadBajoAportado: number;
+}
+
+export function resumenEscenario(r: SimulacionResumible, partida: ValorPartida): ResumenEscenario {
   const puntos = MESES_ESCENARIO.flatMap((mes) => {
     const p = r.puntos.find((x) => x.mes === mes);
     return p === undefined ? [] : [{ mes, p5: p.p5, p50: p.p50, p95: p.p95 }];
   });
-  return { puntos, probabilidadBajoAportado: r.probabilidadBajoAportado };
+  return { partida, puntos, probabilidadBajoAportado: r.probabilidadBajoAportado };
 }
