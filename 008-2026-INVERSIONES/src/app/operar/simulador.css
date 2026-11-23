@@ -11,7 +11,8 @@
   justify-self: start; margin-top: 8px; font: inherit; font-weight: 800; min-height: 44px; padding: 10px 20px; border-radius: 999px;
   border: 2px solid var(--gold); background: var(--panel); color: var(--fg); cursor: pointer;
 }
-.operar .op-sim-boton[aria-busy="true"] { cursor: progress; }
+.operar .op-sim-boton[aria-busy="true"] { cursor: progress; opacity: 0.7; }
+.operar .op-sim-errores:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .operar .op-sim-salida { margin-top: 10px; }
 .operar .op-sim-errores { padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--loss); background: var(--panel); }
 .operar .op-sim-errores p, .operar .op-sim-errores ul { margin: 0; }

@@ -5,7 +5,7 @@
  * también lo usa. Todo se muestra como texto (React escapa): nada de HTML del servidor. Se envía con `fetch` (un
  * formulario nativo, con `Referrer-Policy: no-referrer`, mandaría `Origin: null` y la ruta lo rechazaría).
  */
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { COMISIONISTAS_SIMULADOR, LADOS_SIMULADOR, ORIGEN_COMISION, TEXTOS_SIMULADOR as T, mensajeDeEstado } from "./textos-simulador";
 import type { EspecieSimulable, RespuestaSimulacion, VistaSimulacion } from "./tipos-simulador";
 
@@ -55,9 +55,9 @@ function Resultado({ vista }: { readonly vista: VistaSimulacion }) {
         <Par titulo={T.VALOR_ACCIONES} antes={vista.valorAccionesAntes} despues={vista.valorAccionesDespues} />
       </dl>
       <p className="nota">{vista.cajaFuente}</p>
-      <div className="tabla" role="region" aria-label={T.PESOS} tabIndex={0}>
+      <div className="tabla" role="region" aria-labelledby="sim-pesos" tabIndex={0}>
         <table className="angosta">
-          <caption>{T.PESOS}</caption>
+          <caption id="sim-pesos">{T.PESOS}</caption>
           <thead><tr><th scope="col">{T.ESPECIE}</th><th scope="col">{`Acciones ${T.ANTES}`}</th><th scope="col">{`Acciones ${T.DESPUES}`}</th><th scope="col">{`Peso ${T.ANTES}`}</th><th scope="col">{`Peso ${T.DESPUES}`}</th></tr></thead>
           <tbody>
             {vista.especies.map((e) => (
@@ -72,14 +72,14 @@ function Resultado({ vista }: { readonly vista: VistaSimulacion }) {
       {vista.reglas.length === 0 ? <p className="nota">{T.SIN_REGLAS}</p> : (
         <ul className="op-sim-reglas">
           {vista.reglas.map((r, i) => (
-            <li key={i}><p>{r.texto}</p>{r.afectaciones.map((a, j) => <p key={j} className="nota">{a}</p>)}</li>
+            <li key={`${i}-${r.texto}`}><p>{r.texto}</p>{r.afectaciones.map((a, j) => <p key={`${j}-${a}`} className="nota">{a}</p>)}</li>
           ))}
         </ul>
       )}
       {vista.avisos.length === 0 ? null : (
-        <><h4>{T.AVISOS}</h4><ul className="op-sim-avisos">{vista.avisos.map((a, i) => <li key={i}>{a}</li>)}</ul></>
+        <><h4>{T.AVISOS}</h4><ul className="op-sim-avisos">{vista.avisos.map((a, i) => <li key={`${i}-${a}`}>{a}</li>)}</ul></>
       )}
-      {vista.notas.map((n, i) => <p key={i} className="nota">{n}</p>)}
+      {vista.notas.map((n, i) => <p key={`${i}-${n}`} className="nota">{n}</p>)}
     </div>
   );
 }
@@ -92,22 +92,33 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
   const [comisionista, setComisionista] = useState<string>(COMISIONISTAS_SIMULADOR[0].valor);
   const [estado, setEstado] = useState<Estado>({ tipo: "listo" });
   const enCurso = useRef(false);
+  const alerta = useRef<HTMLDivElement | null>(null);
+
+  // Los errores toman el foco (como el resumen del área de edición); el resultado se anuncia con una línea corta.
+  useEffect(() => {
+    if (estado.tipo === "errores") alerta.current?.focus();
+  }, [estado]);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (enCurso.current) return;
     enCurso.current = true;
     setEstado({ tipo: "calculando" });
-    setEstado(await simular({ instrumentoId: especie, lado, cantidad, precioLimite: precio, comisionista }));
-    enCurso.current = false;
+    try {
+      setEstado(await simular({ instrumentoId: especie, lado, cantidad, precioLimite: precio, comisionista }));
+    } finally {
+      enCurso.current = false;
+    }
   }
+
+  const calculando = estado.tipo === "calculando";
 
   return (
     <section className="bloque op-simulador" aria-labelledby="t-simulador">
       <div className="cabeza"><div><div className="eyebrow">{T.EYEBROW}</div><h2 id="t-simulador">{T.TITULO}</h2></div></div>
       <p>{T.INTRO}</p>
       {especies.length === 0 ? <p className="nota">{T.SIN_ESPECIES}</p> : (
-        <form className="op-sim-form" noValidate onSubmit={enviar}>
+        <form className="op-sim-form" noValidate onSubmit={enviar} aria-labelledby="t-simulador">
           <label htmlFor="sim-especie">{T.ESPECIE}</label>
           <select id="sim-especie" value={especie} onChange={(e) => setEspecie(e.target.value)}>
             {especies.map((e) => <option key={e.id} value={e.id}>{`${e.nemotecnico} (${e.cantidad} acciones)`}</option>)}
@@ -116,6 +127,7 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
           <select id="sim-lado" value={lado} onChange={(e) => setLado(e.target.value)}>
             {LADOS_SIMULADOR.map((l) => <option key={l.valor} value={l.valor}>{l.texto}</option>)}
           </select>
+          <p className="nota op-sim-ayuda" id="sim-ayuda">{T.AYUDA_NUMERO}</p>
           <label htmlFor="sim-cantidad">{T.CANTIDAD}</label>
           <input id="sim-cantidad" type="text" inputMode="numeric" autoComplete="off" maxLength={32} value={cantidad} onChange={(e) => setCantidad(e.target.value)} aria-describedby="sim-ayuda" />
           <label htmlFor="sim-precio">{T.PRECIO}</label>
@@ -124,14 +136,13 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
           <select id="sim-comisionista" value={comisionista} onChange={(e) => setComisionista(e.target.value)}>
             {COMISIONISTAS_SIMULADOR.map((c) => <option key={c.valor} value={c.valor}>{c.texto}</option>)}
           </select>
-          <p className="nota op-sim-ayuda" id="sim-ayuda">{T.AYUDA_NUMERO}</p>
-          <button type="submit" className="op-sim-boton" aria-busy={estado.tipo === "calculando"}>{T.BOTON}</button>
+          <button type="submit" className="op-sim-boton" aria-busy={calculando} aria-disabled={calculando ? true : undefined}>{T.BOTON}</button>
         </form>
       )}
-      <div className="op-sim-salida" aria-live="polite">
-        {estado.tipo === "calculando" ? <p>{T.CALCULANDO}</p> : null}
+      <div className="op-sim-salida">
+        <p className="nota" role="status">{calculando ? T.CALCULANDO : estado.tipo === "resultado" ? T.LISTO : ""}</p>
         {estado.tipo === "errores" ? (
-          <div className="op-sim-errores" role="alert"><p>{T.ERRORES}</p><ul>{estado.errores.map((e, i) => <li key={i}>{e}</li>)}</ul></div>
+          <div className="op-sim-errores" role="alert" tabIndex={-1} ref={alerta}><p>{T.ERRORES}</p><ul>{estado.errores.map((e, i) => <li key={`${i}-${e}`}>{e}</li>)}</ul></div>
         ) : null}
         {estado.tipo === "resultado" ? <Resultado vista={estado.vista} /> : null}
       </div>

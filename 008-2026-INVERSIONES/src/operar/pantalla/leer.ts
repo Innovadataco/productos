@@ -14,8 +14,7 @@ import { vigenteEn } from "@/app/plan/vista";
 import { leerReglas, leerVersiones } from "@/plan/lectura";
 import { obtenerResumen } from "@/tablero/datos";
 import type { Comisionista, ContextoSimulacion, EstadoSimulado, PosicionSimulada, ReglaSimulada } from "../simulador/tipos";
-import { leerOrdenesHistoricas, leerTarifas } from "../tarifa/leer";
-import { vigentesDe } from "../tarifa/vigente";
+import { leerOrdenesHistoricas, leerTarifasVigentes } from "../tarifa/leer";
 
 export interface CajaLeida {
   /** Día de corte de la certificación de donde sale la caja; null si no hay ninguna vigente (la caja es 0). */
@@ -58,10 +57,10 @@ async function leerReglasDeHoy(db: PrismaClient, hoy: Date): Promise<ReglaSimula
 export async function leerEntradasSimulador(db: PrismaClient, hoy: Date, comisionista: Comisionista): Promise<EntradasSimulador> {
   // El tablero primero y solo (abre sus propias lecturas en paralelo): así no compite por el pool con el resto.
   const posiciones = await leerPosiciones(db);
-  const [caja, reglas, ordenes, tarifas] = await Promise.all([leerCaja(db), leerReglasDeHoy(db, hoy), leerOrdenesHistoricas(db), leerTarifas(db)]);
+  const [caja, reglas, ordenes, tarifas] = await Promise.all([leerCaja(db), leerReglasDeHoy(db, hoy), leerOrdenesHistoricas(db), leerTarifasVigentes(db, comisionista, hoy)]);
   return {
     estado: { posiciones, caja: caja.caja, reglas },
-    contexto: { ordenes, hoy, tarifas: vigentesDe(tarifas, comisionista, hoy) },
+    contexto: { ordenes, hoy, tarifas },
     caja: { fechaCorte: caja.fechaCorte },
   };
 }

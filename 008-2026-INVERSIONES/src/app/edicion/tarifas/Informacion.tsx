@@ -5,9 +5,9 @@ import type { DatosEdicionTarifas } from "./tipos-tarifas";
 export function Vigentes({ datos }: { readonly datos: DatosEdicionTarifas }) {
   return (
     <section className="tarifa-bloque" aria-labelledby="t-vigentes">
+      <h2 id="t-vigentes">{TEXTOS_TARIFAS.VIGENTES}</h2>
       <p>{TEXTOS_TARIFAS.INTRO}</p>
       <p className="nota">{TEXTOS_TARIFAS.FORMULA}</p>
-      <h2 id="t-vigentes">{TEXTOS_TARIFAS.VIGENTES}</h2>
       <ul className="tarifa-vigentes">
         {datos.vigentes.map((v) => (
           <li key={`${v.comisionista}-${v.lado}`} className="tarifa-vigente">

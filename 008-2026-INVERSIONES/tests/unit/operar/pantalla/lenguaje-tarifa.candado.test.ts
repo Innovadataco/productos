@@ -12,7 +12,7 @@ import { ETIQUETA_TARIFA, textoComision } from "@/operar/simulador/textos";
 import { prohibidasEn } from "../informe/lenguaje";
 import { tarifa } from "../tarifa/apoyo/tarifa.ficticio";
 
-const CODIGOS = ["FORMATO_INVALIDO", "VACIO", "DEMASIADO_LARGO", "PORCENTAJE_INVALIDO", "MONTO_INVALIDO", "COMISIONISTA_INVALIDO", "LADO_INVALIDO", "TIPO_CARGO_INVALIDO", "NOMBRE_INVALIDO", "CARGOS_DEMASIADOS", "FECHA_INVALIDA", "VIGENCIA_DEMASIADO_LEJANA", "TARIFA_CAMBIO", "AUTOR_INEXISTENTE", "OTRO"];
+const CODIGOS = ["FORMATO_INVALIDO", "VACIO", "DEMASIADO_LARGO", "PORCENTAJE_INVALIDO", "IVA_INVALIDO", "MONTO_INVALIDO", "COMISIONISTA_INVALIDO", "LADO_INVALIDO", "TIPO_CARGO_INVALIDO", "NOMBRE_INVALIDO", "CARGOS_DEMASIADOS", "FECHA_INVALIDA", "VIGENCIA_DEMASIADO_LEJANA", "TARIFA_CAMBIO", "AUTOR_INEXISTENTE", "OTRO"];
 const SRC = path.join(__dirname, "..", "..", "..", "..", "src");
 const FUENTES = [
   "app/operar/Simulador.tsx", "app/operar/textos-simulador.ts", "app/operar/tipos-simulador.ts", "app/operar/serializar-simulacion.ts",

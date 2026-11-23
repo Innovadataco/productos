@@ -1,19 +1,19 @@
 /**
- * Qué lee /edicion/tarifas (O5): las versiones guardadas (la historia), la vigente de hoy de cada comisionista y lado con
- * su control contra las órdenes pasadas, y la última versión (contra ella se crea la nueva). Solo lectura.
+ * Qué lee /edicion/tarifas (O5): las últimas versiones guardadas (la historia, acotada; la primera es la última versión,
+ * contra la que se crea la nueva), la vigente de hoy de cada comisionista y lado con su control contra las órdenes
+ * pasadas. Solo lectura.
  */
 import "server-only";
 import type { LadoOrden, PrismaClient } from "@prisma/client";
 import { textoPesos } from "@/operar/simulador/textos";
 import type { CargoTarifa, Comisionista, TarifaSimulada } from "@/operar/simulador/tipos";
 import { controlarTarifa, type ControlTarifa } from "@/operar/tarifa/control";
-import { leerOrdenesHistoricas, leerTarifas, type TarifaLeida } from "@/operar/tarifa/leer";
+import { leerOrdenesHistoricas, leerTarifas, leerTarifasVigentes, type TarifaLeida } from "@/operar/tarifa/leer";
 import { COMISIONISTAS, LADOS_TARIFA, MAX_OTROS_CARGOS, TIPOS_CARGO } from "@/operar/tarifa/parametros";
-import { vigenteDe } from "@/operar/tarifa/vigente";
 import { nivelEs } from "@/plan/edicion/formato";
 import { fechaEnBogota } from "@/precios/horario";
 import { fecha } from "../../tablero/formato";
-import type { DatosEdicionTarifas, TarifaVista, VigenteVista } from "./tipos-tarifas";
+import type { DatosEdicionTarifas, TarifaResumida, TarifaVista, VigenteVista } from "./tipos-tarifas";
 
 export const NOMBRES_COMISIONISTA: Readonly<Record<Comisionista, string>> = { TRII: "Trii", AV: "Acciones & Valores" };
 export const NOMBRES_LADO: Readonly<Record<LadoOrden, string>> = { COMPRA: "Compra", VENTA: "Venta" };
@@ -25,7 +25,7 @@ const DESFASE_BOGOTA_MS = 5 * 3_600_000;
 const pct = (d: TarifaSimulada["porcentaje"]): string => `${nivelEs(d.toFixed())} %`;
 const cargoTexto = (c: CargoTarifa): string => `${c.nombre}: ${c.tipo === "PCT" ? `${pct(c.valor)} del valor` : textoPesos(c.valor)}`;
 
-/** «0,25 % del valor (mínimo $ 4.613) · fijo $ 0 · IVA 19 % sobre la comisión · sin otros cargos». */
+/** «0,2731 % del valor (mínimo $ 7,13) · fijo $ 0 · IVA 17,31 % sobre la comisión · sin otros cargos». */
 export function detalleTarifa(t: TarifaSimulada): string {
   const otros = t.otrosCargos.length === 0 ? "sin otros cargos" : t.otrosCargos.map(cargoTexto).join(" · ");
   return `${pct(t.porcentaje)} del valor (mínimo ${textoPesos(t.minimoPorOrden)}) · fijo ${textoPesos(t.fijoPorOrden)} · IVA ${pct(t.ivaPct)} sobre la comisión · ${otros}`;
@@ -37,12 +37,12 @@ function fechaHora(instante: Date): string {
   return `${fecha(bogota.slice(0, 10))} ${bogota.slice(11, 16)}`;
 }
 
+const resumida = (t: TarifaSimulada): TarifaResumida => ({ version: t.version, desde: fecha(t.vigenteDesde.toISOString().slice(0, 10)), detalle: detalleTarifa(t) });
+
 const aVista = (t: TarifaLeida): TarifaVista => ({
-  version: t.version,
+  ...resumida(t),
   comisionista: NOMBRES_COMISIONISTA[t.comisionista],
   lado: NOMBRES_LADO[t.lado],
-  desde: fecha(t.vigenteDesde.toISOString().slice(0, 10)),
-  detalle: detalleTarifa(t),
   motivo: t.motivo,
   creada: fechaHora(t.creadaEn),
 });
@@ -65,14 +65,14 @@ const versionGuardada = (v: string | string[] | undefined, historia: readonly Ta
 
 export async function datosEdicionTarifas(db: PrismaClient, guardada: string | string[] | undefined): Promise<DatosEdicionTarifas> {
   const hoy = fechaEnBogota(new Date());
-  const [tarifas, ordenes] = await Promise.all([leerTarifas(db), leerOrdenesHistoricas(db)]);
-  const vigentes: VigenteVista[] = COMISIONISTAS.flatMap((c) =>
+  const [tarifas, ordenes, ...porComisionista] = await Promise.all([leerTarifas(db, HISTORIA), leerOrdenesHistoricas(db), ...COMISIONISTAS.map((c) => leerTarifasVigentes(db, c, hoy))]);
+  const vigentes: VigenteVista[] = COMISIONISTAS.flatMap((c, i) =>
     LADOS_TARIFA.map((l) => {
-      const t = vigenteDe(tarifas, c, l, hoy);
+      const t = porComisionista[i]?.[l];
       return {
         comisionista: NOMBRES_COMISIONISTA[c],
         lado: NOMBRES_LADO[l],
-        tarifa: t === undefined ? null : aVista(t),
+        tarifa: t === undefined ? null : resumida(t),
         control: t === undefined ? "" : textoControl(controlarTarifa(t, ordenes), c, l),
       };
     }),
@@ -81,7 +81,7 @@ export async function datosEdicionTarifas(db: PrismaClient, guardada: string | s
     ultimaVersion: tarifas[0]?.version ?? 0,
     hoy: hoy.toISOString().slice(0, 10),
     vigentes,
-    historia: tarifas.slice(0, HISTORIA).map(aVista),
+    historia: tarifas.map(aVista),
     comisionistas: COMISIONISTAS.map((c) => ({ valor: c, texto: NOMBRES_COMISIONISTA[c] })),
     lados: LADOS_TARIFA.map((l) => ({ valor: l, texto: NOMBRES_LADO[l] })),
     tiposCargo: TIPOS_CARGO.map((t) => ({ valor: t, texto: NOMBRES_TIPO[t] })),

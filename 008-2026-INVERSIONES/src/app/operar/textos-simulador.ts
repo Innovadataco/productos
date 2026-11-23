@@ -16,6 +16,7 @@ export const TEXTOS_SIMULADOR = {
   AYUDA_NUMERO: "Como en la ficha: 3.172 o 4.613,27.",
   BOTON: "Simular",
   CALCULANDO: "Calculando…",
+  LISTO: "Simulación calculada: el resultado está abajo.",
   RESULTADO: "Resultado de la simulación",
   ERRORES: "No se pudo simular con lo escrito:",
   VALOR_ORDEN: "Valor de la orden",

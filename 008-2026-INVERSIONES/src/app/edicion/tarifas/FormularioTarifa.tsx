@@ -76,9 +76,15 @@ export function FormularioTarifa({ datos }: { readonly datos: DatosEdicionTarifa
   };
   const cambiar = (campo: keyof Valores, v: string) => setValores((x) => ({ ...x, [campo]: v }));
   const cambiarCargo = (clave: number, cambio: Partial<CargoEditable>) => setCargos((cs) => cs.map((c) => (c.clave === clave ? { ...c, ...cambio } : c)));
+  // Los errores de los cargos van por posición: al agregar o quitar uno ya no apuntan al mismo cargo, se limpian.
   const agregar = () => {
+    envio.limpiar();
     setCargos((cs) => [...cs, { clave: siguiente, nombre: "", tipo: datos.tiposCargo[0]?.valor ?? "", valor: "" }]);
     setSiguiente((n) => n + 1);
+  };
+  const quitar = (clave: number) => {
+    envio.limpiar();
+    setCargos((cs) => cs.filter((x) => x.clave !== clave));
   };
 
   async function guardar(evento: FormEvent<HTMLFormElement>) {
@@ -100,10 +106,10 @@ export function FormularioTarifa({ datos }: { readonly datos: DatosEdicionTarifa
   return (
     <form className="edicion-form" noValidate onSubmit={guardar} aria-labelledby="t-tarifa-nueva">
       <h2 id="t-tarifa-nueva">{TEXTOS_TARIFAS.NUEVA}</h2>
-      <div className="edicion-resumen" tabIndex={-1} ref={envio.resumen} aria-labelledby="tarifa-resumen-titulo">
+      <div className="edicion-resumen" tabIndex={-1} ref={envio.resumen}>
         {estado.tipo === "error" ? (
           <>
-            <p className="edicion-resumen-titulo" id="tarifa-resumen-titulo">{campos.length > 0 ? TEXTOS_TARIFAS.ERRORES : estado.mensaje}</p>
+            <p className="edicion-resumen-titulo">{campos.length > 0 ? TEXTOS_TARIFAS.ERRORES : estado.mensaje}</p>
             {campos.length > 0 ? (
               <ul>{campos.map((c, i) => <li key={`${c.campo}-${i}`}><a href={`#${idDe(c.campo)}`}>{`${etiquetaDeCampo(c.campo)}: ${mensajeTarifa(c.codigo)}`}</a></li>)}</ul>
             ) : null}
@@ -127,7 +133,7 @@ export function FormularioTarifa({ datos }: { readonly datos: DatosEdicionTarifa
         {texto("fijoPorOrden")}
         {texto("ivaPct")}
       </div>
-      <fieldset className="edicion-regla">
+      <fieldset className="edicion-regla" aria-describedby={errorDe("otrosCargos") ? idDe("otrosCargos") : undefined}>
         <legend>{TEXTOS_TARIFAS.OTROS_CARGOS}</legend>
         <p className="edicion-ayuda">{AYUDAS_TARIFA.cargo}</p>
         {errorDe("otrosCargos") ? <p className="edicion-error" id={idDe("otrosCargos")}>{errorDe("otrosCargos")}</p> : null}
@@ -145,7 +151,7 @@ export function FormularioTarifa({ datos }: { readonly datos: DatosEdicionTarifa
                 {(a) => <input {...a} type="text" inputMode="decimal" autoComplete="off" value={c.valor} onChange={(e) => cambiarCargo(c.clave, { valor: e.target.value })} />}
               </Campo>
             </div>
-            <button type="button" className="edicion-quitar" onClick={() => setCargos((cs) => cs.filter((x) => x.clave !== c.clave))}>
+            <button type="button" className="edicion-quitar" onClick={() => quitar(c.clave)}>
               {`${TEXTOS_TARIFAS.QUITAR_CARGO} (${i + 1})`}
             </button>
           </div>

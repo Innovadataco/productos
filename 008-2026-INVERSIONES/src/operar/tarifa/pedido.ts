@@ -11,6 +11,7 @@ import { leerMontoEs } from "@/plan/importar/valores-es";
 import type { Comisionista } from "../simulador/tipos";
 import {
   COMISIONISTAS,
+  DECIMALES_IVA,
   DECIMALES_TARIFA,
   DIAS_MAX_ADELANTE,
   LADOS_TARIFA,
@@ -64,6 +65,12 @@ function decimalDe(v: unknown): Prisma.Decimal | null {
 function porcentaje(e: Errores, campo: string, v: unknown): string | undefined {
   const d = decimalDe(v);
   return d !== null && d.lte(CIEN) ? d.toFixed() : e.anotar(campo, "PORCENTAJE_INVALIDO");
+}
+
+/** El IVA: un porcentaje de 0 a 100 con hasta 2 decimales (la columna es DECIMAL(5,2): más decimales se redondearían). */
+function iva(e: Errores, v: unknown): string | undefined {
+  const d = decimalDe(v);
+  return d !== null && d.lte(CIEN) && d.decimalPlaces() <= DECIMALES_IVA ? d.toFixed() : e.anotar("ivaPct", "IVA_INVALIDO");
 }
 
 function monto(e: Errores, campo: string, v: unknown): string | undefined {
@@ -124,7 +131,7 @@ export function leerPedidoTarifa(valor: unknown, hoy: Date): LecturaTarifa {
     porcentaje: porcentaje(e, "porcentaje", r["porcentaje"]),
     minimoPorOrden: monto(e, "minimoPorOrden", r["minimoPorOrden"]),
     fijoPorOrden: monto(e, "fijoPorOrden", r["fijoPorOrden"]),
-    ivaPct: porcentaje(e, "ivaPct", r["ivaPct"]),
+    ivaPct: iva(e, r["ivaPct"]),
     otrosCargos: cargos(e, r["otrosCargos"]),
     vigenteDesde: vigencia(e, r["vigenteDesde"], hoy),
     motivo: motivo(e, r["motivo"]),

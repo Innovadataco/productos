@@ -43,7 +43,7 @@ const LADOS_ORDEN = { COMPRA: true, VENTA: true } satisfies Record<LadoOrden, tr
 const COMISIONISTAS_VALIDOS = { TRII: true, AV: true } satisfies Record<Comisionista, true>;
 const CIEN = new Prisma.Decimal(100);
 /** Decimales de los porcentajes y los montos de la tarifa (la escala de `tarifa_comision`). */
-const DECIMALES_TARIFA = 4;
+export const DECIMALES_TARIFA = 4;
 /** Tope exclusivo del mínimo, el fijo y los cargos fijos de una tarifa (cien millones de pesos, como su CHECK). */
 export const TOPE_CARGO_TARIFA = new Prisma.Decimal(100_000_000);
 /** Otros cargos por tarifa, como mucho (como su CHECK). */
@@ -125,6 +125,7 @@ function validarTarifa(lado: string, t: TarifaSimulada | undefined): void {
   if (t === undefined) return;
   exigir(typeof t === "object" && t !== null && t.lado === lado, `la tarifa del lado ${lado} no es de ese lado`);
   exigir(typeof t.version === "number" && t.version >= 1 && clave(COMISIONISTAS_VALIDOS, t.comisionista), `la tarifa ${t.version} no tiene versión o comisionista válidos`);
+  exigir(diaValido(t.vigenteDesde), `la vigencia de la tarifa ${t.version} no es un día a medianoche UTC`);
   exigir(porcentajeValido(t.porcentaje) && porcentajeValido(t.ivaPct), `la tarifa ${t.version} tiene un porcentaje fuera de 0 a 100`);
   exigir(cargoValido(t.minimoPorOrden) && cargoValido(t.fijoPorOrden), `la tarifa ${t.version} tiene un mínimo o un fijo fuera de rango`);
   exigir(Array.isArray(t.otrosCargos) && t.otrosCargos.length <= MAX_OTROS_CARGOS, `la tarifa ${t.version} tiene más de ${MAX_OTROS_CARGOS} otros cargos`);

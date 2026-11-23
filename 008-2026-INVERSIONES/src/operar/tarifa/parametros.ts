@@ -1,17 +1,20 @@
 /**
- * Las listas y los límites de la tarifa de comisión (O5), en un solo lugar. La migración *_tarifa_comision los repite
- * como CHECK y una prueba espejo los compara (tests/unit/operar/tarifa/esquema.test.ts). Puro.
+ * Las listas y los límites de la tarifa de comisión (O5), en un solo lugar para quien los usa. La migración
+ * *_tarifa_comision los repite como CHECK y una prueba espejo los compara (tests/unit/operar/tarifa/esquema.test.ts). Puro.
+ * Los que también valida el motor (comisionistas, tope de los montos, cuántos cargos y sus decimales) nacen en
+ * src/operar/simulador y se re-exportan de allí: el candado de pureza del motor no le deja importar fuera de su carpeta,
+ * así que la dependencia va de la tarifa al motor y no al revés (una sola definición de cada uno).
  */
 export { COMISIONISTAS, type Comisionista } from "../simulador/tipos";
-export { MAX_OTROS_CARGOS, TOPE_CARGO_TARIFA } from "../simulador/validar";
+export { DECIMALES_TARIFA, MAX_OTROS_CARGOS, TOPE_CARGO_TARIFA } from "../simulador/validar";
 
 /** Los dos lados de una orden, en el orden del formulario. */
 export const LADOS_TARIFA = ["COMPRA", "VENTA"] as const;
 export const TIPOS_CARGO = ["PCT", "FIJO"] as const;
 /** Porcentaje e IVA: de 0 a 100. */
 export const MAX_PORCENTAJE = "100";
-/** Decimales de los porcentajes, los montos y los cargos (la escala de la tabla y de `orden.comision`). */
-export const DECIMALES_TARIFA = 4;
+/** Decimales del IVA (la columna es DECIMAL(5,2)). */
+export const DECIMALES_IVA = 2;
 export const MAX_NOMBRE_CARGO = 60;
 export const MAX_MOTIVO = 2000;
 /** Una tarifa no rige a más de un año de hoy (un error de tipeo en el año, no una tarifa real). */

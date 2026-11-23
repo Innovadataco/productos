@@ -1,11 +1,14 @@
 /** Lo que /edicion/tarifas (O5) le pasa a su formulario y a sus secciones: solo texto, ya formateado en el servidor. */
-export interface TarifaVista {
+export interface TarifaResumida {
   readonly version: number;
+  readonly desde: string;
+  /** «0,2731 % del valor (mínimo $ 7,13) · fijo $ 0 · IVA 17,31 % sobre la comisión · sin otros cargos». */
+  readonly detalle: string;
+}
+
+export interface TarifaVista extends TarifaResumida {
   readonly comisionista: string;
   readonly lado: string;
-  readonly desde: string;
-  /** «0,25 % del valor (mínimo $ 4.613) · fijo $ 0 · IVA 19 % sobre la comisión · Bolsa: 0,03 % del valor». */
-  readonly detalle: string;
   readonly motivo: string;
   readonly creada: string;
 }
@@ -14,7 +17,7 @@ export interface VigenteVista {
   readonly comisionista: string;
   readonly lado: string;
   /** null si ese comisionista y lado no tienen tarifa vigente hoy. */
-  readonly tarifa: TarifaVista | null;
+  readonly tarifa: TarifaResumida | null;
   /** «La tarifa explica 37 de 41 órdenes de compra pasadas…» o por qué no se contrasta. */
   readonly control: string;
 }

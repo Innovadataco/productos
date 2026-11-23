@@ -41,7 +41,7 @@ describe("leerPedidoTarifa", () => {
     ["porcentaje", "0,27311", "PORCENTAJE_INVALIDO"],
     ["porcentaje", "-1", "PORCENTAJE_INVALIDO"],
     ["porcentaje", 0.25, "PORCENTAJE_INVALIDO"],
-    ["ivaPct", "1.5", "PORCENTAJE_INVALIDO"],
+    ["ivaPct", "1.5", "IVA_INVALIDO"],
     // La columna es DECIMAL(5,2): con más de 2 decimales la base redondearía en silencio (revisión de seguridad).
     ["ivaPct", "17,315", "IVA_INVALIDO"],
     ["minimoPorOrden", "100.000.000", "MONTO_INVALIDO"],

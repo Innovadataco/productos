@@ -48,6 +48,7 @@ const MENSAJES: Readonly<Record<string, string>> = {
   VACIO: "Falta este dato.",
   DEMASIADO_LARGO: "Es demasiado largo: hasta 2.000 caracteres.",
   PORCENTAJE_INVALIDO: "Escriba un porcentaje de 0 a 100, con hasta 4 decimales.",
+  IVA_INVALIDO: "Escriba un porcentaje de 0 a 100, con hasta 2 decimales.",
   MONTO_INVALIDO: "Escriba un monto de 0 o más (menos de cien millones), con hasta 4 decimales.",
   COMISIONISTA_INVALIDO: "Elija un comisionista de la lista.",
   LADO_INVALIDO: "Elija compra o venta.",

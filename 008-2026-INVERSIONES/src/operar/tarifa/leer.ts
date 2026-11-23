@@ -6,7 +6,7 @@ import "server-only";
  * lanza (la base cambió por fuera): mejor un error que una comisión inventada.
  */
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { COMISIONISTAS, type CargoTarifa, type Comisionista, type OrdenHistorica, type TarifaSimulada } from "../simulador/tipos";
+import { COMISIONISTAS, type CargoTarifa, type Comisionista, type OrdenHistorica, type TarifaSimulada, type TarifasVigentes } from "../simulador/tipos";
 
 export interface TarifaLeida extends TarifaSimulada {
   readonly motivo: string;
@@ -31,19 +31,39 @@ function cargosDe(v: Prisma.JsonValue): CargoTarifa[] {
   return v.map(cargoDe);
 }
 
-/** Todas las versiones, de la más nueva a la más vieja (la historia de la pantalla y la fuente de la vigente). */
-export async function leerTarifas(db: Pick<PrismaClient, "tarifaComision">): Promise<TarifaLeida[]> {
-  const filas = await db.tarifaComision.findMany({
-    orderBy: { version: "desc" },
-    select: { version: true, comisionista: true, lado: true, porcentaje: true, minimoPorOrden: true, fijoPorOrden: true, ivaPct: true, otrosCargos: true, vigenteDesde: true, motivo: true, creadaEn: true },
-  });
-  return filas.map(({ otrosCargos, comisionista, ...f }) => {
-    if (!esComisionista(comisionista)) throw new RangeError("Tarifa: un comisionista guardado no es de la lista.");
-    return { ...f, comisionista, otrosCargos: cargosDe(otrosCargos) };
-  });
+/** Lo que el motor necesita de una tarifa (sin el motivo ni la hora de la versión). */
+const COLUMNAS_TARIFA = { version: true, comisionista: true, lado: true, porcentaje: true, minimoPorOrden: true, fijoPorOrden: true, ivaPct: true, otrosCargos: true, vigenteDesde: true } as const;
+
+/** Una fila de la base como tarifa del motor: el comisionista de la lista y los cargos como Decimal. */
+function aTarifa<T extends { readonly comisionista: string; readonly otrosCargos: Prisma.JsonValue }>({ otrosCargos, comisionista, ...f }: T): Omit<T, "comisionista" | "otrosCargos"> & Pick<TarifaSimulada, "comisionista" | "otrosCargos"> {
+  if (!esComisionista(comisionista)) throw new RangeError("Tarifa: un comisionista guardado no es de la lista.");
+  return { ...f, comisionista, otrosCargos: cargosDe(otrosCargos) };
 }
 
-/** La historia de órdenes que pide la comisión (las de Trii: las cargas de órdenes son TRII_ORDENES). */
+/** Las `cuantas` versiones más nuevas, de la más nueva a la más vieja (la historia de /edicion/tarifas). */
+export async function leerTarifas(db: Pick<PrismaClient, "tarifaComision">, cuantas: number): Promise<TarifaLeida[]> {
+  const filas = await db.tarifaComision.findMany({ orderBy: { version: "desc" }, take: cuantas, select: { ...COLUMNAS_TARIFA, motivo: true, creadaEn: true } });
+  return filas.map(aTarifa);
+}
+
+/**
+ * Las vigentes de un comisionista en el día (medianoche UTC), por lado: la de mayor versión con «vigente desde» hasta ese
+ * día (la regla de vigente.ts), una por lado, sin el motivo (revisión de base: no se lee toda la historia).
+ */
+export async function leerTarifasVigentes(db: Pick<PrismaClient, "tarifaComision">, comisionista: Comisionista, dia: Date): Promise<TarifasVigentes> {
+  const filas = await db.tarifaComision.findMany({
+    where: { comisionista, vigenteDesde: { lte: dia } },
+    orderBy: [{ lado: "asc" }, { version: "desc" }],
+    distinct: ["lado"],
+    select: COLUMNAS_TARIFA,
+  });
+  return Object.fromEntries(filas.map((f) => [f.lado, aTarifa(f)]));
+}
+
+/**
+ * La historia de órdenes que cuenta para la comisión y su control: solo las aprobadas con valor (revisión de base: no
+ * todas). Son de Trii: las cargas de órdenes son TRII_ORDENES.
+ */
 export async function leerOrdenesHistoricas(db: Pick<Lector, "orden">): Promise<OrdenHistorica[]> {
-  return db.orden.findMany({ select: { lado: true, estado: true, totalInvertido: true, comision: true }, orderBy: { id: "asc" } });
+  return db.orden.findMany({ where: { estado: "APROBADO", totalInvertido: { gt: 0 } }, select: { lado: true, estado: true, totalInvertido: true, comision: true } });
 }

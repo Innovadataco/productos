@@ -147,7 +147,7 @@ describe("tarifa_comision · privilegios de inv_app (pg_read_all_data con los GR
 describe("lectores de la app", () => {
   it("leerTarifas: de la más nueva a la más vieja, con los cargos como Decimal; las órdenes de la historia", async () => {
     await crear({ otrosCargos: [{ nombre: "Leída", tipo: "PCT", valor: "0.0137" }], motivo: `leida-${corrida}` });
-    const tarifas = await leerTarifas(db);
+    const tarifas = await leerTarifas(db, 50);
     expect(tarifas.map((t) => t.version)).toEqual([...tarifas.map((t) => t.version)].sort((a, b) => b - a));
     const mia = tarifas[0]!;
     expect(mia.motivo).toBe(`leida-${corrida}`);
