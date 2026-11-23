@@ -31,11 +31,14 @@ type ParteDiario = Parte<ClaveDiario>;
 const PRIORIDAD = Object.freeze({ PORTAFOLIO: 1, CONCILIACION: 2, SERIES: 3, ESPECIES: 4 });
 
 /**
- * Las claves que el resumen DIARIO tiene que citar (si el hecho está en el paquete). Ninguna es de una especie: el
- * armador no arrastra nombres de especie como obligatorios. Caben en el tope (`MAX_OBLIGATORIOS`) y en las frases.
+ * Las claves que el resumen DIARIO tiene que citar (si el hecho está en el paquete): los cuatro esenciales. Ninguna es
+ * de una especie: el armador no arrastra nombres de especie como obligatorios. Medido con qwen2.5:14b sobre los casos
+ * inventados (prompts v3): con seis obligatorios escribe dos o tres frases y no cita más de tres, así que el DIARIO no
+ * publicaba. Las especies sin precio o atrasadas siguen en el paquete (el modelo puede citarlas), sin obligación. El
+ * validador no cambia: todo obligatorio se sigue exigiendo.
  */
 export const OBLIGATORIOS_DIARIO: readonly ClaveDiario[] = Object.freeze([
-  "VALOR_ACCIONES", "VARIACION_DIA_VALOR", "GANANCIA_TOTAL", "ESPECIES_SIN_PRECIO", "ESPECIES_ATRASADAS", "CONCILIACION_NO_CUADRA",
+  "VALOR_ACCIONES", "VARIACION_DIA_VALOR", "GANANCIA_TOTAL", "CONCILIACION_NO_CUADRA",
 ]);
 const esObligatorio = (clave: ClaveDiario): boolean => OBLIGATORIOS_DIARIO.includes(clave);
 

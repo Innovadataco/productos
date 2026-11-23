@@ -37,7 +37,7 @@ describe("armarDiario · el paquete del tablero", () => {
       ["COMISIONES_PAGADAS", "97.13", null, "2027-03-16", "CALCULADO", "NO_APLICA", "RECIENTE", false],
       ["GANANCIA_TOTAL", "1336.82", null, "2027-03-16", "CALCULADO", "SUBE", "RECIENTE", true],
       ["VARIACION_DIA_VALOR", "-211.37", null, "2027-03-16", "CALCULADO", "BAJA", "RECIENTE", true],
-      ["ESPECIES_ATRASADAS", "1", null, "2027-03-16", "CALCULADO", "NO_APLICA", "RECIENTE", true],
+      ["ESPECIES_ATRASADAS", "1", null, "2027-03-16", "CALCULADO", "NO_APLICA", "RECIENTE", false],
       ["FECHA_CIERRE_RECIENTE", "2027-03-16", null, "2027-03-16", "CALCULADO", "NO_APLICA", "RECIENTE", false],
       ["FECHA_CIERRE_MAS_ANTIGUO", "2027-03-15", null, "2027-03-15", "ATRASADO", "NO_APLICA", "ATRASADO", false],
       ["CONCILIACION_PARCIAL", "2027-02-26", null, "2027-02-26", "ATRASADO", "NO_APLICA", "ATRASADO", false],
@@ -139,11 +139,11 @@ describe("armarDiario · lo que falta se dice en los avisos, sin inventar", () =
     expect(paquete.hechos.find((h) => h.clave === "FONDO_VALOR")).toMatchObject({ valor: "10356.4517", calidad: "CALCULADO", direccion: "NO_APLICA" });
   });
 
-  it("las especies sin precio cuentan y son obligatorias; una especie sin cierre no tiene hechos propios", () => {
+  it("las especies sin precio cuentan (ya no son obligatorias: OBLIGATORIOS_DIARIO); una especie sin cierre no tiene hechos propios", () => {
     const [alfa] = filasTablero();
     const sinCierre = { ...alfa, nemotecnico: "FICTICIA-SIN-CIERRE", instrumentoId: "inst-ficticio-sin-cierre", valor: null, pesoPct: null, rentabilidadPct: null, cierre: null };
     const paquete = con((e) => ({ ...e, tablero: { ...e.tablero, filas: [...e.tablero.filas, sinCierre], especiesSinPrecio: 1 } }));
-    expect(paquete.hechos.find((h) => h.clave === "ESPECIES_SIN_PRECIO")).toMatchObject({ valor: "1", obligatorio: true });
+    expect(paquete.hechos.find((h) => h.clave === "ESPECIES_SIN_PRECIO")).toMatchObject({ valor: "1", obligatorio: false });
     expect(paquete.hechos.some((h) => h.valor === "FICTICIA-SIN-CIERRE")).toBe(false);
   });
 

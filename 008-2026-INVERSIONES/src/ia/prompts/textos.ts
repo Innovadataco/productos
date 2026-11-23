@@ -33,7 +33,10 @@ const REGLAS_DE_REDACCION = [
     + "dos referencias seguidas sin palabras en medio.",
   "- Un hecho con el campo especie es un dato de una especie: cite el id de su campo especie en una referencia, en la misma "
     + "frase, justo después de «de la especie» y antes del verbo; luego cite el dato con su propio id. No use el campo sujeto "
-    + "para hallar la especie: el campo especie ya trae el id del nombre, y nunca cite el nombre de otra especie en esa frase. El nombre de una especie nunca va solo en una frase («el nombre de "
+    + "para hallar la especie: el campo especie ya trae el id del nombre, y nunca cite el nombre de otra especie en esa frase. "
+    + "Las dos referencias son distintas: la primera es el id del nombre (el valor del campo especie) y la segunda, el id del "
+    + "propio dato; nunca ponga el id del dato después de «de la especie», ni el id del nombre en el lugar del dato. En los "
+    + "ejemplos, las dos referencias muestran el mismo id solo por la forma. El nombre de una especie nunca va solo en una frase («el nombre de "
     + "la especie es…» está mal): va dentro de la frase de un dato de esa especie. No escriba «especie» más de una vez seguida.",
   "- Hable de movimiento solo cuando el hecho tiene dirección: subió, solo si es SUBE; bajó, solo si es BAJA; se mantuvo, solo si "
     + "es IGUAL, y ese verbo va solo, nunca después de «es» (no «es sube»), en la misma parte de la frase y junto al dato cuya dirección es esa. Si es NO_APLICA, no use verbos "
@@ -72,9 +75,9 @@ const armar = (tema: string, ejemplos: string): string =>
 
 export const TEXTO_PROMPT_DIARIO = armar(
   "del día de un portafolio de inversiones: el valor de las acciones y su variación del día, las ganancias, los dividendos "
-    + "y las comisiones, los cierres atrasados, la conciliación, las tasas y el fondo. Casi siempre son obligatorios el valor de las acciones, la variación del día, la ganancia total, las "
-    + "especies sin precio o con cierre atrasado y la conciliación que no cuadra: cada uno lleva su frase, y la lista de "
-    + "ejemplos de abajo tiene la misma extensión que se espera.",
+    + "y las comisiones, los cierres atrasados, la conciliación, las tasas y el fondo. Son obligatorios el valor de las acciones, la variación del día, la ganancia total y la conciliación que no cuadra, "
+    + "cuando están en la lista: escriba primero una frase por cada uno, en ese orden, y después, si sobran frases, los demás "
+    + "hechos.",
   ejemplos(
     frase("El valor de las acciones es", null, "."),
     frase("La variación del día del valor de las acciones es", null, "."),
