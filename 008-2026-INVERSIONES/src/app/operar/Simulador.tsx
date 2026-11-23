@@ -31,12 +31,13 @@ async function simular(cuerpo: Readonly<Record<string, string>>): Promise<Estado
   }
 }
 
-function Par({ titulo, antes, despues }: { readonly titulo: string; readonly antes: string; readonly despues: string }) {
+function Par({ titulo, antes, despues, variacion }: { readonly titulo: string; readonly antes: string; readonly despues: string; readonly variacion?: string | undefined }) {
   return (
     <div className="op-sim-par">
       <dt>{titulo}</dt>
       <dd>{`${T.ANTES}: ${antes}`}</dd>
       <dd>{`${T.DESPUES}: ${despues}`}</dd>
+      {variacion === undefined ? null : <dd>{`${T.VARIACION}: ${variacion}`}</dd>}
     </div>
   );
 }
@@ -49,7 +50,12 @@ function Analisis({ a }: { readonly a: VistaAnalisisSimulacion | null }) {
       <dl className="op-sim-cifras">{a.filas.map((f) => <Par key={f.titulo} titulo={f.titulo} antes={f.antes} despues={f.despues} />)}</dl>
       <h4>{T.ESCENARIOS}</h4>
       {a.escenarios.length === 0 ? <p className="nota">{T.SIN_ESCENARIOS}</p> : (
-        <dl className="op-sim-cifras">{a.escenarios.map((f) => <Par key={f.titulo} titulo={f.titulo} antes={f.antes} despues={f.despues} />)}</dl>
+        <>
+          <dl className="op-sim-cifras">{a.escenarios.map((f) => <Par key={f.titulo} titulo={f.titulo} antes={f.antes} despues={f.despues} variacion={f.variacion} />)}</dl>
+          <h4>{T.PARTIDA}</h4>
+          <dl className="op-sim-cifras">{a.partida.map((f) => <Par key={f.titulo} titulo={f.titulo} antes={f.antes} despues={f.despues} />)}</dl>
+          <p className="nota">{a.notaCaja}</p>
+        </>
       )}
       {a.aparecen.length === 0 ? null : <><h4>{T.APARECEN}</h4><ul>{a.aparecen.map((x, i) => <li key={`${i}-${x}`}>{x}</li>)}</ul></>}
       {a.desaparecen.length === 0 ? null : <><h4>{T.DESAPARECEN}</h4><ul>{a.desaparecen.map((x, i) => <li key={`${i}-${x}`}>{x}</li>)}</ul></>}

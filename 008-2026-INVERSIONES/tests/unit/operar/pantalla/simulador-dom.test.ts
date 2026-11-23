@@ -26,7 +26,9 @@ const VISTA: VistaSimulacion = {
   avisos: ["Aviso ficticio."], notas: ["Nota ficticia."],
   analisis: {
     filas: [{ titulo: "Peso de FICTICIA-A", antes: "21,13 %", despues: "52,37 %" }],
-    escenarios: [{ titulo: "A 12 meses (p5 · p50 · p95)", antes: "$ 37.911 · $ 47.114 · $ 57.311", despues: "$ 35.717 · $ 47.391 · $ 59.138" }],
+    escenarios: [{ titulo: "A 12 meses (p5 · p50 · p95)", antes: "$ 37.911 · $ 47.114 · $ 57.311", despues: "$ 35.717 · $ 47.391 · $ 59.138", variacion: "−5,79 % · +0,59 % · +3,19 %" }],
+    partida: [{ titulo: "Caja (parte fija, sin rendimiento)", antes: "$ 9.372", despues: "$ 4.745" }],
+    notaCaja: "Nota ficticia de la caja de los escenarios.",
     aparecen: ["concentración alta en FICTICIA-A"], desaparecen: [],
     frases: ["Frase ficticia del análisis."], rotulo: "Análisis calculado por Inversiones · la IA lo redactará cuando el servicio de IA esté conectado",
   },
@@ -75,7 +77,7 @@ describe("Simulador", () => {
     await responder({ ok: true, vista: VISTA }, 200);
     const todo = texto(m.contenedor);
     for (const t of ["$ 13.839,81", "$ 49,9523", "Comisión (de su tarifa)", "antes: $ 37.911,47", "después: $ 24.021,7077", "Caja certificada", "Su regla de FICTICIA-A dice", "Aviso ficticio.", "Nota ficticia."]) expect(todo).toContain(t);
-    for (const t of [T.ANALISIS, "Peso de FICTICIA-A", "después: 52,37 %", "A 12 meses (p5 · p50 · p95)", T.APARECEN, "concentración alta en FICTICIA-A", "Frase ficticia del análisis.", "la IA lo redactará"]) expect(todo).toContain(t);
+    for (const t of [T.ANALISIS, "Peso de FICTICIA-A", "después: 52,37 %", "A 12 meses (p5 · p50 · p95)", T.APARECEN, "concentración alta en FICTICIA-A", "Frase ficticia del análisis.", "la IA lo redactará", T.PARTIDA, "Caja (parte fija, sin rendimiento)", "antes: $ 9.372", "después: $ 4.745", "variación: −5,79 % · +0,59 % · +3,19 %", "Nota ficticia de la caja de los escenarios."]) expect(todo).toContain(t);
     expect(m.contenedor.querySelector(".op-sim-operada th")?.textContent).toBe("FICTICIA-A");
   });
 

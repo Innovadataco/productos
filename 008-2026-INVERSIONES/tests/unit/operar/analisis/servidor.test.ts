@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { reiniciarTurnoParaPruebas } from "@/app/proyecciones/turno";
 import { aVistaAnalisis } from "@/operar/analisis/vista";
-import { diasHabiles, portafolio, retornosRepetidos, serieDeRetornos, type EspecieFicticia } from "../../analisis/fixtures/portafolio.ficticio";
+import { cerrada, D, diasHabiles, portafolio, retornosRepetidos, serieDeRetornos, type EspecieFicticia } from "../../analisis/fixtures/portafolio.ficticio";
 
 const DIAS = diasHabiles("2019-01-02", 300);
 const especie = (id: string, cantidad: number, inicial: number, escala: number): EspecieFicticia => ({
@@ -19,7 +19,11 @@ vi.mock("@/proyecciones/leer", () => ({ leerEntradas }));
 
 const { analizarSimulacion } = await import("@/operar/pantalla/analisis");
 const DB = {} as never;
-const PEDIDO = { hoy: ENTRADAS.hoy, usuarioId: "usuario-ficticio", instrumentoId: "FICTICIA-B", cantidadDespues: 113n, reglas: [] };
+const CIERRE_B = ENTRADAS.tablero.filas.find((f) => f.instrumentoId === "FICTICIA-B")!.cierre!.precio;
+const COMISION = D("137.91");
+/** Compra de 102 de FICTICIA-B a su cierre: de la caja salen el valor de la orden y la comisión. */
+const CAJA = { antes: D("793713.41"), despues: D("793713.41").sub(CIERRE_B.mul(102)).sub(COMISION) };
+const PEDIDO = { hoy: ENTRADAS.hoy, usuarioId: "usuario-ficticio", instrumentoId: "FICTICIA-B", cantidadDespues: 113n, reglas: [], caja: CAJA };
 
 beforeEach(() => {
   reiniciarTurnoParaPruebas();
@@ -32,11 +36,17 @@ describe("analizarSimulacion", () => {
     const a = await analizarSimulacion(DB, PEDIDO);
     expect(a.comparacion.pesoOperada.despues!).toBeGreaterThan(a.comparacion.pesoOperada.antes!);
     expect(a.escenarios?.antes.puntos.map((p) => p.mes)).toEqual([3, 6, 12]);
-    expect(a.escenarios!.despues.puntos[2]!.p50).toBeGreaterThan(a.escenarios!.antes.puntos[2]!.p50);
+    // El defecto: el después sumaba la compra sin restar la caja que sale. Con la caja, el valor de partida solo baja la comisión.
+    const { antes, despues } = a.escenarios!;
+    expect(antes.partida.caja).toBeCloseTo(793713.41, 6);
+    expect(despues.partida.caja).toBeCloseTo(CAJA.despues.toNumber(), 6);
+    expect(despues.partida.acciones - antes.partida.acciones).toBeCloseTo(CIERRE_B.mul(102).toNumber(), 4);
+    expect(antes.partida.total - despues.partida.total).toBeCloseTo(137.91, 4);
     expect(a.nombres.get("FICTICIA-B")).toBe("FICTB");
-    const vista = aVistaAnalisis({ ...a, operadaId: "FICTICIA-B", lado: "COMPRAR", plan: null });
+    const vista = aVistaAnalisis({ ...a, operadaId: "FICTICIA-B", lado: "COMPRAR", plan: null, caja: "AV" });
     expect(vista.filas.map((f) => f.titulo)).toEqual(["Peso de FICTB", "Primera especie", "Tres primeras especies", "HHI", "Volatilidad anual del portafolio", "Contribución de FICTB al riesgo"]);
     expect(vista.escenarios).toHaveLength(4);
+    expect(vista.partida.map((f) => f.titulo)).toEqual(["Acciones", "Caja (parte fija, sin rendimiento)", "Valor de partida"]);
     expect(vista.frases.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -48,6 +58,17 @@ describe("analizarSimulacion", () => {
     soltar();
     await ocupado;
     expect(a.escenarios).toBeNull();
-    expect(aVistaAnalisis({ ...a, operadaId: "FICTICIA-B", lado: "VENDER", plan: null }).escenarios).toEqual([]);
+    expect(aVistaAnalisis({ ...a, operadaId: "FICTICIA-B", lado: "VENDER", plan: null, caja: "AV" }).escenarios).toEqual([]);
+  });
+
+  it("una especie que la historia no trae (cerrada en el tablero) entra al después como parte fija, a su cierre", async () => {
+    const conCerrada = portafolio([especie("FICTICIA-A", 37, 1237.4, 1), especie("FICTICIA-B", 11, 4613.27, 2.3)], { cerradas: [cerrada("FICTICIA-D", { precio: D("317.43"), fecha: DIAS.at(-1)! })] });
+    obtenerResumen.mockResolvedValue({ tablero: conCerrada.tablero });
+    leerEntradas.mockResolvedValue(conCerrada.historia);
+    const caja = { antes: D("4613.27"), despues: D("4613.27").sub(D("317.43").mul(7)) };
+    const a = await analizarSimulacion(DB, { ...PEDIDO, instrumentoId: "FICTICIA-D", cantidadDespues: 7n, caja });
+    const { antes, despues } = a.escenarios!;
+    expect(despues.partida.acciones - antes.partida.acciones).toBeCloseTo(7 * 317.43, 6);
+    expect(despues.partida.total).toBeCloseTo(antes.partida.total, 6);
   });
 });
