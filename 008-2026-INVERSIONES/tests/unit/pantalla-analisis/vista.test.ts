@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { analizar } from "@/analisis/analizar";
 import { CLAVES_OBSERVACION, CRITERIOS } from "@/analisis/catalogo";
 import { observaciones } from "@/analisis/observaciones";
+import { textoUmbral } from "@/app/analisis/textos";
 import { aVistaAnalisis, type EntradaVista } from "@/app/analisis/vista";
 import { analisis, analisisConTodo, cubierta, especie, HOY, riesgo, sinValor, vacio } from "../analisis/fixtures/analisis.ficticio";
 import { D, dia, diasHabiles, portafolio, retornosRepetidos, serieDeRetornos } from "../analisis/fixtures/portafolio.ficticio";
@@ -83,7 +84,7 @@ describe("vista · portafolio", () => {
     expect(v.portafolio.ventana).toContain("15-jun-2020");
     expect(v.portafolio.concentracion.join(" ")).toContain("FICTA");
     expect(v.portafolio.concentracion.join(" ")).toContain("53,7 %");
-    expect(v.portafolio.matriz).toEqual({ nombres: ["FICTA", "FICTB"], filas: [{ nombre: "FICTA", celdas: ["1,00", "sin variación"] }, { nombre: "FICTB", celdas: ["sin variación", "1,00"] }] });
+    expect(v.portafolio.matriz).toEqual({ ids: ["FICTICIA-A", "FICTICIA-B"], nombres: ["FICTA", "FICTB"], filas: [{ id: "FICTICIA-A", nombre: "FICTA", celdas: ["1,00", "sin variación"] }, { id: "FICTICIA-B", nombre: "FICTB", celdas: ["sin variación", "1,00"] }] });
   });
 
   it("sin historia común: no hay matriz ni volatilidad, y lo dice", () => {
@@ -94,14 +95,14 @@ describe("vista · portafolio", () => {
 
   it("el efecto de una caída como la mayor de cada especie, en pesos y sobre el valor de las acciones", () => {
     const a = analisis({ especies: [especie("FICTICIA-A", { efectoCaida: { pesos: D("-1153.31"), fraccionPortafolio: -0.25 } })] });
-    expect(aVistaAnalisis(entrada({ analisis: a })).portafolio.efectos).toEqual([{ nombre: "FICTA", pesos: "−$ 1.153", fraccion: "−25,0 %" }]);
+    expect(aVistaAnalisis(entrada({ analisis: a })).portafolio.efectos).toEqual([{ id: "FICTICIA-A", nombre: "FICTA", pesos: "−$ 1.153", fraccion: "−25,0 %" }]);
   });
 });
 
 describe("vista · el fondo", () => {
   it("sin la entrada de fondos: solo las acciones", () => {
     const v = aVistaAnalisis(entrada());
-    expect(v.composicion.filas).toEqual([{ nombre: "Acciones", valor: "$ 4.613", peso: null, procedencia: null }]);
+    expect(v.composicion.filas).toEqual([{ id: "acciones", nombre: "Acciones", valor: "$ 4.613", peso: null, procedencia: null }]);
     expect(v.composicion.total).toBeNull();
   });
 
@@ -110,8 +111,8 @@ describe("vista · el fondo", () => {
     const proc = { dia: "2021-06-11", traidoEn: "2021-06-13 07:41", fuente: "sfc:qhpu-8ixx" };
     const v = aVistaAnalisis(entrada({ analisis: analisis({ conFondo }), procedencias: { acciones: [], fondos: new Map([["FICTICIA-FIC", proc]]) } }));
     expect(v.composicion.filas).toEqual([
-      { nombre: "Acciones", valor: "$ 4.613", peso: "10,8 %", procedencia: null },
-      { nombre: "Fondo ficticio", valor: "$ 37.911", peso: "89,2 %", procedencia: proc },
+      { id: "acciones", nombre: "Acciones", valor: "$ 4.613", peso: "10,8 %", procedencia: null },
+      { id: "FICTICIA-FIC", nombre: "Fondo ficticio", valor: "$ 37.911", peso: "89,2 %", procedencia: proc },
     ]);
     expect(v.composicion.total).toBe("$ 42.525");
     expect(v.composicion.nota).toContain("solo de las acciones");
@@ -165,5 +166,43 @@ describe("vista · puntos para revisar", () => {
 
   it("sin observaciones: lo dice", () => {
     expect(aVistaAnalisis(entrada()).puntos).toEqual([]);
+  });
+});
+
+describe("vista · revisión (code-reviewer y react-reviewer)", () => {
+  it("MEDIO 1 · un dividendo con pagos descartados no se pinta como un 0 limpio: lo dice", () => {
+    const a = analisis({ especies: [especie("FICTICIA-A", { dividendo12m: { fraccion: 0, pagos: 0, conBruto: false, descartados: 2 } })] });
+    expect(aVistaAnalisis(entrada({ analisis: a })).especies[0]!.dividendo).toBe("0,0 % (2 pagos sin tenencia clara)");
+  });
+
+  it("MEDIO 2 · con decisiones pero ninguna con veredicto, no hay un «$ 0» inventado", () => {
+    const d30 = { ...vacio(30), decisiones: 3, pendientes: 3 };
+    const [h30] = aVistaAnalisis(entrada({ analisis: analisis({ decisiones: { d30, d90: vacio(90), medidas: [] } }) })).decisiones.horizontes;
+    expect(h30!.lineas.join(" ")).not.toContain("$ 0");
+    expect(h30!.lineas.join(" ")).toContain("Ninguna tiene veredicto todavía");
+  });
+
+  it("MEDIO 3 · cada fila lleva su id estable (los nombres pueden repetirse)", () => {
+    const nombres = new Map([["FICTICIA-A", "Acciones"], ["FICTICIA-B", "Acciones"]]);
+    const a = analisis({ especies: [especie("FICTICIA-A"), especie("FICTICIA-B")], riesgo: riesgo(["FICTICIA-A", "FICTICIA-B"], [[1, 0.37], [0.37, 1]]) });
+    const v = aVistaAnalisis(entrada({ analisis: a, nombres }));
+    expect(v.especies.map((e) => e.id)).toEqual(["FICTICIA-A", "FICTICIA-B"]);
+    expect(v.portafolio.matriz!.ids).toEqual(["FICTICIA-A", "FICTICIA-B"]);
+    expect(v.composicion.filas[0]!.id).toBe("acciones");
+  });
+
+  it("MEDIO 4 · el conector del umbral sale de la comparación del catálogo, no de un texto fijo", () => {
+    const esperado: Record<string, RegExp> = { MAYOR_QUE: /^umbral: más de /, MAYOR_O_IGUAL: / o más/, MENOR_QUE: /^umbral: menos de /, DE_CERO_HASTA: / o menos/, VALOR_ABSOLUTO_HASTA: / o menos/, PASA_EL_NIVEL: /nivel/ };
+    for (const clave of CLAVES_OBSERVACION) expect(textoUmbral(clave), clave).toMatch(esperado[CRITERIOS[clave].comparacion]!);
+  });
+
+  it("BAJO · una especie sin caída histórica no sale como «$ 0» en el efecto", () => {
+    const a = analisis({ especies: [especie("FICTICIA-A", { efectoCaida: { pesos: D(0), fraccionPortafolio: 0 } })] });
+    expect(aVistaAnalisis(entrada({ analisis: a })).portafolio.efectos).toEqual([{ id: "FICTICIA-A", nombre: "FICTA", pesos: "sin caída histórica", fraccion: null }]);
+  });
+
+  it("BAJO · un peso que no se puede calcular (total cero) se dice", () => {
+    const conFondo = { valorTotal: D(0), pesoAcciones: null, fondos: [] };
+    expect(aVistaAnalisis(entrada({ analisis: analisis({ valorAcciones: D(0), conFondo }) })).composicion.filas[0]!.peso).toBe("sin valor");
   });
 });

@@ -62,3 +62,10 @@ describe("la zona y la pantalla", () => {
     expect(pintada()).toContain("no recomienda comprar ni vender");
   });
 });
+
+describe("revisión (react-reviewer, MEDIO) · claves", () => {
+  it("las listas de la pantalla no usan el nombre como clave (puede repetirse): usan el id de la vista", () => {
+    const fuente = readFileSync(join(ZONA, "Analisis.tsx"), "utf8");
+    expect(fuente).not.toMatch(/key=\{(?:[a-z]\.)?nombre\}|key=\{x\}|key=\{t\}|key=\{l\}/);
+  });
+});
