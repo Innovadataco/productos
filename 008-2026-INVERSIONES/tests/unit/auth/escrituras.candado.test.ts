@@ -81,9 +81,12 @@ const PAGINAS_DE_AUTENTICACION = new Set(["src/app/totp/page.tsx", "src/app/totp
  */
 const GUARDAR_PRECIOS = join(SRC, "precios", "guardar.ts");
 const ACTUALIZAR_PRECIOS = join(SRC, "precios", "actualizar.ts");
+/** El aviso de atraso del fondo: lo usa el export de hechos (src/ia/evaluacion/exportar/fondo.ts) que lee la tarjeta de resumen. */
+const GUARDAR_FONDO = join(SRC, "fondo", "guardar.ts");
 const CONSTANTES_DE_ESCRITORES: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   [GUARDAR_PRECIOS, new Set(["FUENTE", "TOLERANCIA_VERIFICACION"])],
   [ACTUALIZAR_PRECIOS, new Set(["FUENTE"])],
+  [GUARDAR_FONDO, new Set(["DIAS_ATRASO_AVISO"])],
 ]);
 /** La administración de accesos: solo la corren los comandos de Jelk (scripts/), nunca la app. */
 const ADMINISTRACION = ["src/auth/familia.ts", "src/auth/familia-cli.ts", "src/auth/acceso-cli.ts", "src/auth/reinicio-totp.ts", "src/auth/conexion-dueno.ts"];

@@ -1,6 +1,9 @@
 import { esSoloLectura } from "@/auth/roles";
 import { exigirSesion } from "@/auth/sesion";
 import { db } from "@/lib/db";
+import { resumenDelDia } from "../_comun/resumen-ia/leer";
+import { TarjetaResumenIa } from "../_comun/resumen-ia/TarjetaResumenIa";
+import type { VistaResumenIa } from "../_comun/resumen-ia/tipos";
 import { SinBase, esErrorDeBase, registrarFalloDeBase } from "../_comun/sin-base";
 import { Encabezado } from "../_plan/Encabezado";
 import { datosDeProyecciones, type DatosProyecciones } from "./datos";
@@ -19,10 +22,13 @@ const PIE = "El sistema calcula y muestra; no recomienda comprar ni vender.";
 export default async function PaginaProyecciones() {
   let datos: DatosProyecciones;
   let soloLectura: boolean;
+  let resumenIa: VistaResumenIa;
   try {
     const usuario = await exigirSesion();
     soloLectura = esSoloLectura(usuario);
     datos = await datosDeProyecciones(db, usuario.id);
+    // El resumen ESCENARIOS (E5), después del cálculo inicial: los dos usan el turno del usuario y en paralelo chocarían.
+    resumenIa = await resumenDelDia(db, "ESCENARIOS", usuario.id);
   } catch (error) {
     if (!esErrorDeBase(error)) throw error;
     registrarFalloDeBase("proyecciones", error);
@@ -33,6 +39,8 @@ export default async function PaginaProyecciones() {
       <Encabezado actual="proyecciones" soloLectura={soloLectura} />
       <main className="wrap proy">
         <Simulador datos={datos} />
+        {/* Después del simulador: su h2 no va antes del h1 de la pantalla. */}
+        <TarjetaResumenIa vista={resumenIa} />
         <footer className="pie">{PIE}</footer>
       </main>
     </>

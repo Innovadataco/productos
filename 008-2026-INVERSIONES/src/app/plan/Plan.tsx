@@ -4,6 +4,8 @@
  */
 import type { ReactNode } from "react";
 import { FechaDato } from "../_comun/fecha-dato/FechaDato";
+import { TarjetaResumenIa } from "../_comun/resumen-ia/TarjetaResumenIa";
+import type { VistaResumenIa } from "../_comun/resumen-ia/tipos";
 import { fecha, n, numero } from "../tablero/formato";
 import { Encabezado } from "../_plan/Encabezado";
 import { precio } from "../_plan/formato";
@@ -145,13 +147,22 @@ function Contenido({ datos, soloLectura }: { readonly datos: DatosPlan; readonly
   }
 }
 
-export function Plan({ datos, soloLectura = false }: { readonly datos: DatosPlan; readonly soloLectura?: boolean }) {
+interface PropsPlan {
+  readonly datos: DatosPlan;
+  readonly soloLectura?: boolean;
+  /** La tarjeta del resumen REGLAS (E5), solo en la vista de hoy (sin `?version=`). */
+  readonly resumenIa?: VistaResumenIa;
+}
+
+export function Plan({ datos, soloLectura = false, resumenIa }: PropsPlan) {
   const inferencia = datos.estado === "VERSION" && datos.vista.hayInferencia;
   return (
     <>
       <Encabezado actual="plan" soloLectura={soloLectura} />
       <main className="wrap plan">
         <Contenido datos={datos} soloLectura={soloLectura} />
+        {/* Después del contenido: su h2 no va antes del h1 de la portada. */}
+        {resumenIa === undefined ? null : <TarjetaResumenIa vista={resumenIa} />}
         <footer className="pie">
           {inferencia ? <p>{NOTA_INFERENCIA}</p> : null}
           <p>{PIE_PLAN}</p>

@@ -5,6 +5,7 @@
 import { Prisma } from "@prisma/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { vistaResumenFicticia } from "../resumen-ia/vista.ficticio";
 import { AVISO } from "@/proyecciones/tipos";
 import { aVistaProyeccion } from "@/app/proyecciones/vista";
 import { resultadoFicticio } from "./ficticio";
@@ -12,6 +13,8 @@ import { resultadoFicticio } from "./ficticio";
 const exigirSesion = vi.hoisted(() => vi.fn());
 const datosDeProyecciones = vi.hoisted(() => vi.fn());
 vi.mock("@/auth/sesion", () => ({ exigirSesion }));
+const resumenDelDia = vi.hoisted(() => vi.fn());
+vi.mock("@/app/_comun/resumen-ia/leer", () => ({ resumenDelDia }));
 vi.mock("@/lib/db", () => ({ db: { soy: "la base" } }));
 vi.mock("@/app/proyecciones/datos", () => ({ datosDeProyecciones }));
 
@@ -28,6 +31,7 @@ function pantalla(html: string): HTMLElement {
 }
 
 beforeEach(() => {
+  resumenDelDia.mockImplementation(async (_db: unknown, tipo: "DIARIO" | "REGLAS" | "ESCENARIOS") => vistaResumenFicticia(tipo));
   exigirSesion.mockResolvedValue({ id: "u-4613", email: "dueno@ejemplo.invalid", rol: "DUENO" });
   datosDeProyecciones.mockResolvedValue(DATOS);
 });

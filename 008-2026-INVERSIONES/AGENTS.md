@@ -110,6 +110,7 @@ El modelo (local o en la nube) solo recibe la vista ciega del paquete de hechos;
 | Guarda de las puertas: `generarConPuertas` rechaza una vista con un dato plantado antes de llamar a cualquier generador | `tests/unit/ia/puertas.guarda.test.ts`, `revision.seguridad.test.ts` |
 | Presentación: cada `presentacion` es `presentar(valor, unidad)` (`src/ia/presentar.ts`); `construirPaquete` rechaza otra con `PRESENTACION_NO_COINCIDE` | `tests/unit/ia/hechos/presentar.test.ts`, `tests/unit/ia/paquete.test.ts` |
 | Armadores (`src/ia/hechos/`): la acción y la cantidad de las reglas, la tenencia, el texto libre, el encargo, las cuentas y los ids no entran al paquete; sin base, red, reloj ni azar | `tests/unit/ia/hechos/candado.test.ts`, `tests/unit/ia/hechos/pureza.candado.test.ts` |
+| Tarjeta de resumen (E5, `src/app/_comun/resumen-ia/`): un PUBLICADO solo se muestra si vuelve a pasar `validarSalida`; si no, el resumen sin IA; DESACTUALIZADO por el hash de los hechos de hoy (del export de E7); solo texto plano; sin lenguaje de consejo fuera del aviso fijo (`prohibidasEn`, con control positivo); la lectura del publicado no alcanza el módulo que escribe | `tests/unit/resumen-ia/*.test.ts`, `tests/integracion/resumen-ia-pantalla.test.ts`, `tests/e2e/zz-resumen-ia.spec.ts` (a 375 px, claro y oscuro; escribe una fila de `resumen_ia` en la base e2e) |
 
 ## Datos (regla dura)
 - **Los datos reales nunca entran al repo**: ni montos, ni cuentas, ni posiciones, ni extractos, ni capturas; tampoco en seeds, tests o fixtures. Viven solo en la base de datos del servidor y en sus secretos.
@@ -169,6 +170,7 @@ Procedimiento completo: [`docs/despliegue/produccion.md`](docs/despliegue/produc
 - Tocar carpetas o workflows de otros productos.
 
 ---
+> v1.34 · 2026-11-22 · 20:28 (-05) · INV · Fábrica Inversiones (frente ia-resumenes-pantalla, E5) · fila de la tarjeta de resumen en «Fase E · candados de la IA»
 > v1.33 · 2026-11-22 · 13:38 (-05) · INV · Fábrica Inversiones (frente ia-hechos, E1b) · sección «Fase E · candados de la IA»: vista ciega, guarda de las puertas, presentación y armadores de hechos (v1.33 sobre la v1.32 de main)
 > v1.32 · 2026-11-22 · 08:53 (-05) · INV · Fábrica Inversiones (frente fondo-rendimientos; v1.32 sobre la v1.31 de main) · comando `registrar-rendimientos-fondo` (rendimientos del FIC y su retención; vía B, paso 12 ter) y `conciliacion-v3` en `conciliar-certificacion` (v1.31 sobre la v1.30 de main)
 > v1.31 · 2026-11-22 · 07:32 (-05) · INV · Fábrica Inversiones (frente plan-edicion, fase B PR-B) · área de edición del plan y del diario: guardianes `candados-edicion` y e2e `zz-edicion`; `inv_app` con INSERT solo en las tablas del plan y del diario (v1.31 sobre la v1.30 de main)
