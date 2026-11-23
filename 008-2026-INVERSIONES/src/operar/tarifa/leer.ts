@@ -65,5 +65,6 @@ export async function leerTarifasVigentes(db: Pick<PrismaClient, "tarifaComision
  * todas). Son de Trii: las cargas de órdenes son TRII_ORDENES.
  */
 export async function leerOrdenesHistoricas(db: Pick<Lector, "orden">): Promise<OrdenHistorica[]> {
-  return db.orden.findMany({ where: { estado: "APROBADO", totalInvertido: { gt: 0 } }, select: { lado: true, estado: true, totalInvertido: true, comision: true } });
+  const filas = await db.orden.findMany({ where: { estado: "APROBADO", totalInvertido: { gt: 0 } }, select: { fechaOperacion: true, lado: true, estado: true, totalInvertido: true, comision: true } });
+  return filas.map(({ fechaOperacion, ...o }) => ({ ...o, fecha: fechaOperacion }));
 }

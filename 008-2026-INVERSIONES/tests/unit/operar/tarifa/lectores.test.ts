@@ -18,7 +18,7 @@ describe("leerOrdenesHistoricas", () => {
     const arg = findMany.mock.calls[0]![0];
     expect(arg.where).toEqual({ estado: "APROBADO", totalInvertido: { gt: 0 } });
     expect(arg.orderBy).toBeUndefined();
-    expect(arg.select).toEqual({ lado: true, estado: true, totalInvertido: true, comision: true });
+    expect(arg.select).toEqual({ fechaOperacion: true, lado: true, estado: true, totalInvertido: true, comision: true });
   });
 });
 

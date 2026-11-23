@@ -80,6 +80,8 @@ export interface OperacionSimulada {
 
 /** Una orden de la historia (los campos de `orden` que pide la comisión). */
 export interface OrdenHistorica {
+  /** Día de la operación (medianoche UTC, como `orden.fechaOperacion`): el control de la tarifa cuenta desde que rige. */
+  readonly fecha: Date;
   readonly lado: LadoOrden;
   readonly estado: EstadoOrden;
   /** Sin comisión. */

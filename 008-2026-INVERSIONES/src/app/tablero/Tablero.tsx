@@ -133,7 +133,7 @@ function Encabezado({ vista, soloLectura }: { vista: Vista; soloLectura: boolean
   return (
     <header className="top">
       <div className="wrap fila-top">
-        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio{soloLectura ? <>{" "}<MarcaSoloLectura /></> : null}</div>
+        <div className="marca"><span className="sello" aria-hidden="true">Inv</span>Inversiones · Mi portafolio{soloLectura ? <>{" "}<MarcaSoloLectura /></> : null}</div>
         <Secciones />
         <div className="meta">
           <FechaDeCierres vista={vista} /> · última carga <b>{fecha(vista.ultimaCarga)}</b>

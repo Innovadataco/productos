@@ -133,7 +133,7 @@ describe("la pantalla", () => {
     expect([...(tabla?.querySelectorAll("thead th") ?? [])].map(texto)).toEqual(["Especie", "Cantidad", "Último cierre", "Valor", "Peso", "Ganancia o pérdida sin vender", "Sobre el costo (%)"]);
     const filas = [...(tabla?.querySelectorAll("tbody tr") ?? [])].map((tr) => [...tr.querySelectorAll("th, td")].map(texto));
     expect(filas.map((f) => f[0])).toEqual(["FICTICIA-A", "FICTICIA-B", "FICTICIA-C", "FICTICIA-E"]);
-    expect(filas[0]).toEqual(["FICTICIA-A", "37", "$ 4.597,31 · 16-mar-2027", "$ 170.100", "52,00 %", "+$ 11.183", "+7,0 %"]);
+    expect(filas[0]).toEqual(["FICTICIA-A", "37", "$ 4.597,31 · 16-mar-2027", "$ 170.100", "52,02 %", "+$ 11.183", "+7,0 %"]);
     expect(filas[2]![2]).toBe("$ 899,11 · 12-mar-2027 cierre atrasado");
     expect(filas[3]!.slice(2)).toEqual(["sin cierre", "—", "—", "—", "—"]);
     expect([...(tabla?.querySelectorAll("tfoot th, tfoot td") ?? [])].map(texto)).toEqual(["Total", "", "", "$ 326.965", "", "+$ 18.905", ""]);

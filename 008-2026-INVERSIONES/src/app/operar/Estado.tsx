@@ -7,7 +7,7 @@ import { precio } from "../_plan/formato";
 import type { EspecieVista, EstadoVista } from "./tipos";
 
 const SIN_DATO = "—";
-const DECIMALES_PESO = 1;
+const DECIMALES_PESO = 2;
 const CAPTION = "Estado por especie: cantidad, último cierre, valor, peso y ganancia o pérdida sin vender";
 
 /** La celda de una ganancia o pérdida: el color sigue al signo del TEXTO (lo que redondea a cero no lleva color). */

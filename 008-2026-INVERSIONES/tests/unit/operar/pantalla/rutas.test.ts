@@ -29,7 +29,7 @@ const DUENO = { ok: true, usuario: { id: "u-dueno-4613", email: "dueno@ejemplo.i
 const FAMILIA = { ok: true, usuario: { id: "u-familia-379", email: "familia@ejemplo.invalid", rol: "FAMILIA" } };
 const pedido = (ruta: string, cuerpo: unknown, cabeceras: Record<string, string> = {}) =>
   new Request(`${ORIGEN}${ruta}`, { method: "POST", headers: { "content-type": "application/json", origin: ORIGEN, ...cabeceras }, body: typeof cuerpo === "string" ? cuerpo : JSON.stringify(cuerpo) });
-const cuerpoSim = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", ...cambios });
+const cuerpoSim = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", saldoComisionista: "", ...cambios });
 
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development");
@@ -52,7 +52,7 @@ describe("POST /api/operar/simular", () => {
     expect(r.headers.get("cache-control")).toBe("no-store");
     const cuerpo = (await r.json()) as { ok: boolean; vista: { comision: { fuente: string; valor: string } } };
     expect(cuerpo.ok).toBe(true);
-    expect(cuerpo.vista.comision).toMatchObject({ fuente: "TARIFA", valor: "$ 49,9523" });
+    expect(cuerpo.vista.comision).toMatchObject({ fuente: "TARIFA", valor: "$ 50" });
     expect(leerEntradasSimulador).toHaveBeenCalledWith({ soy: "la base" }, expect.any(Date), "TRII");
   });
 

@@ -47,14 +47,20 @@ const aVista = (t: TarifaLeida): TarifaVista => ({
   creada: fechaHora(t.creadaEn),
 });
 
-/** «La tarifa explica 37 de 41 órdenes de compra pasadas (hasta 1 peso de diferencia por orden).» */
+/** «La tarifa explica 37 de 41 órdenes de compra desde que rige (hasta 1 peso de diferencia por orden).» */
 export function textoControl(c: ControlTarifa, comisionista: Comisionista, lado: LadoOrden): string {
   const deLado = NOMBRES_LADO[lado].toLowerCase();
   if (c.estado === "SIN_ORDENES") {
-    return comisionista === "TRII" ? `Sin órdenes de ${deLado} para contrastar.` : "Sin órdenes para contrastar: 008 solo tiene las órdenes de Trii.";
+    return comisionista === "TRII" ? `Sin órdenes de ${deLado} para contrastar.` : "Sin órdenes para contrastar: Inversiones solo tiene las órdenes de Trii.";
   }
   const ordenes = c.total === 1 ? "orden" : "órdenes";
-  return `La tarifa explica ${c.explicadas} de ${c.total} ${ordenes} de ${deLado} pasadas (hasta 1 peso de diferencia por orden).`;
+  return `La tarifa explica ${c.explicadas} de ${c.total} ${ordenes} de ${deLado} desde que rige (hasta 1 peso de diferencia por orden).`;
+}
+
+/** El `vigenteDesde` de la versión siguiente del mismo comisionista y lado (la más próxima posterior); null si no hay. */
+function siguienteDesde(historia: readonly TarifaLeida[], t: TarifaSimulada): Date | null {
+  const posteriores = historia.filter((h) => h.comisionista === t.comisionista && h.lado === t.lado && h.vigenteDesde.getTime() > t.vigenteDesde.getTime());
+  return posteriores.reduce<Date | null>((min, h) => (min === null || h.vigenteDesde < min ? h.vigenteDesde : min), null);
 }
 
 const versionGuardada = (v: string | string[] | undefined, historia: readonly TarifaLeida[]): number | null => {
@@ -73,7 +79,7 @@ export async function datosEdicionTarifas(db: PrismaClient, guardada: string | s
         comisionista: NOMBRES_COMISIONISTA[c],
         lado: NOMBRES_LADO[l],
         tarifa: t === undefined ? null : resumida(t),
-        control: t === undefined ? "" : textoControl(controlarTarifa(t, ordenes), c, l),
+        control: t === undefined ? "" : textoControl(controlarTarifa(t, ordenes, siguienteDesde(tarifas, t)), c, l),
       };
     }),
   );

@@ -6,7 +6,7 @@
 export const TEXTOS_SIMULADOR = {
   EYEBROW: "Simulador",
   TITULO: "¿Y si…?",
-  INTRO: "Escriba la operación que piensa y 008 calcula sus efectos con sus datos: los pesos antes y después, la caja, el valor, la comisión y las reglas de su plan que toca. No se guarda nada ni se envía ninguna orden.",
+  INTRO: "Escriba la operación que piensa e Inversiones calcula sus efectos con sus datos: los pesos antes y después, la caja, el valor, la comisión y las reglas de su plan que toca. No se guarda nada ni se envía ninguna orden.",
   SIN_ESPECIES: "No hay especies en el portafolio para simular.",
   ESPECIE: "Especie",
   LADO: "Operación",
