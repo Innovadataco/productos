@@ -6,6 +6,7 @@
 import { Prisma } from "@prisma/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { vistaResumenFicticia } from "../resumen-ia/vista.ficticio";
 import { AHORA, CALENDARIO, CIERRES, REFERENCIA, REGLAS_V1, VERSIONES } from "./ficticio-pantallas";
 
 const exigirSesion = vi.hoisted(() => vi.fn());
@@ -15,6 +16,8 @@ const ultimosCierres = vi.hoisted(() => vi.fn());
 const calendarioBvc = vi.hoisted(() => vi.fn());
 const obtenerResumen = vi.hoisted(() => vi.fn());
 vi.mock("@/auth/sesion", () => ({ exigirSesion }));
+const resumenDelDia = vi.hoisted(() => vi.fn());
+vi.mock("@/app/_comun/resumen-ia/leer", () => ({ resumenDelDia }));
 vi.mock("@/lib/db", () => ({ db: {} }));
 vi.mock("@/plan/lectura", () => ({ leerVersiones, leerReglas, ultimosCierres, calendarioBvc }));
 vi.mock("@/tablero/datos", () => ({ obtenerResumen }));
@@ -35,6 +38,7 @@ const celdas = (tr: Element | undefined) => [...(tr?.querySelectorAll("th, td") 
 const columnas = (raiz: HTMLElement) => [...raiz.querySelectorAll("thead th")].map(texto);
 
 beforeEach(() => {
+  resumenDelDia.mockImplementation(async (_db: unknown, tipo: "DIARIO" | "REGLAS" | "ESCENARIOS") => vistaResumenFicticia(tipo));
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(AHORA);
   exigirSesion.mockResolvedValue({ id: "u1", email: "dueno@ejemplo.invalid", rol: "DUENO" });

@@ -2,6 +2,8 @@
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { FechaDato, FechaDatoCompuesta } from "@/app/_comun/fecha-dato/FechaDato";
+import { TarjetaResumenIa } from "@/app/_comun/resumen-ia/TarjetaResumenIa";
+import type { VistaResumenIa } from "@/app/_comun/resumen-ia/tipos";
 import { Evolucion } from "./Evolucion";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { Foto } from "./Foto";
@@ -446,9 +448,11 @@ interface PropsTablero {
   readonly evolucion?: EvolucionVista | null;
   /** El familiar ve «Solo lectura» (frente familia-lectura); lo decide la página con la sesión revalidada. */
   readonly soloLectura?: boolean;
+  /** La tarjeta del resumen DIARIO (E5), ya armada en el servidor. Opcional: sin ella no se pinta. */
+  readonly resumenIa?: VistaResumenIa;
 }
 
-export function Tablero({ vista, conciliacion, evolucion, soloLectura = false }: PropsTablero) {
+export function Tablero({ vista, conciliacion, evolucion, soloLectura = false, resumenIa }: PropsTablero) {
   const [elegida, setElegida] = useState<Elegida | null>(null);
   const elegir = (id: string, origen: HTMLElement | null) => setElegida({ id, origen });
   return (
@@ -457,6 +461,7 @@ export function Tablero({ vista, conciliacion, evolucion, soloLectura = false }:
       <main className="wrap">
         {conciliacion === undefined ? null : <LineaConciliacion linea={conciliacion} />}
         <Respuesta vista={vista} />
+        {resumenIa === undefined ? null : <TarjetaResumenIa vista={resumenIa} />}
         {evolucion === undefined ? null : <Evolucion evolucion={evolucion} />}
         <Movimientos mov={vista.movimiento} filas={vista.filas} />
         <Foto vista={vista} elegir={elegir} />

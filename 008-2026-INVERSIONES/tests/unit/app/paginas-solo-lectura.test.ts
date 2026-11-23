@@ -5,6 +5,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { vistaResumenFicticia } from "../resumen-ia/vista.ficticio";
 
 const exigirSesion = vi.hoisted(() => vi.fn());
 const datosDelPlan = vi.hoisted(() => vi.fn());
@@ -16,6 +17,8 @@ const obtenerResumen = vi.hoisted(() => vi.fn());
 const obtenerEvolucion = vi.hoisted(() => vi.fn());
 const ultimaConciliacion = vi.hoisted(() => vi.fn());
 vi.mock("@/auth/sesion", () => ({ exigirSesion }));
+const resumenDelDia = vi.hoisted(() => vi.fn());
+vi.mock("@/app/_comun/resumen-ia/leer", () => ({ resumenDelDia }));
 vi.mock("@/lib/db", () => ({ db: {} }));
 vi.mock("@/app/plan/datos", () => ({ datosDelPlan }));
 vi.mock("@/app/decisiones/datos", () => ({ datosDelDiario }));
@@ -57,6 +60,7 @@ async function marca(pagina: () => Promise<ReactElement>): Promise<string | null
 
 beforeEach(() => {
   vi.resetAllMocks();
+  resumenDelDia.mockImplementation(async (_db: unknown, tipo: "DIARIO" | "REGLAS" | "ESCENARIOS") => vistaResumenFicticia(tipo));
   datosDelPlan.mockResolvedValue({ estado: "SIN_PLAN" });
   datosDelDiario.mockResolvedValue({ decisiones: [], truncado: false, resumen: { d30: CERO, d90: CERO }, inicioPlan: null, sinDecision: [], anteriores: [], filtro: null, filtroInvalido: false });
   datosDeDecision.mockResolvedValue({ estado: "NO_EXISTE" });
@@ -77,5 +81,29 @@ describe("cada página de lectura pinta «Solo lectura» según el rol de la ses
   it.each(PAGINAS)("%s: con el dueño, no hay marca", async (_nombre, pagina) => {
     exigirSesion.mockResolvedValue({ id: "u-dueno", email: "dueno@ejemplo.invalid", rol: "DUENO" });
     expect(await marca(pagina)).toBeNull();
+  });
+});
+
+describe("la tarjeta del resumen (E5), también para la familia en solo lectura", () => {
+  const CON_RESUMEN = [
+    ["Portafolio (/)", "DIARIO", () => Inicio()],
+    ["Plan", "REGLAS", () => PaginaPlan({ searchParams: vacio })],
+    ["Proyecciones", "ESCENARIOS", () => PaginaProyecciones()],
+  ] as const;
+
+  it.each(CON_RESUMEN)("%s: pide el resumen %s con el id de la sesión y lo pinta", async (_nombre, tipo, pagina) => {
+    exigirSesion.mockResolvedValue({ id: "u-familiar", email: "familiar@ejemplo.invalid", rol: "FAMILIA" });
+    const raiz = document.createElement("div");
+    raiz.innerHTML = renderToStaticMarkup(await pagina());
+    expect(resumenDelDia).toHaveBeenCalledWith(expect.anything(), tipo, "u-familiar");
+    expect(raiz.querySelector(`#t-resumen-ia-${tipo.toLowerCase()}`)?.textContent).toBe(`Resumen ficticio ${tipo}`);
+  });
+
+  it("el plan de otra versión (?version=) no pide ni pinta el resumen", async () => {
+    exigirSesion.mockResolvedValue({ id: "u-dueno", email: "dueno@ejemplo.invalid", rol: "DUENO" });
+    const raiz = document.createElement("div");
+    raiz.innerHTML = renderToStaticMarkup(await PaginaPlan({ searchParams: Promise.resolve({ version: "3" }) }));
+    expect(resumenDelDia).not.toHaveBeenCalled();
+    expect(raiz.querySelector("section.resumen-ia")).toBeNull();
   });
 });

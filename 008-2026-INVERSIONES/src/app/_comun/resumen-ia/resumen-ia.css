@@ -1,0 +1,11 @@
+/* Tarjeta de resumen (E5), con los tokens de tablero.css (claro y oscuro). Se parte en el celular: nada de anchos fijos. */
+.resumen-ia { padding-block: 24px; border-top: 1px solid var(--line); }
+.resumen-ia-cuerpo { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; max-width: 46em; overflow-wrap: anywhere; }
+.resumen-ia h2 { font-family: var(--display); font-weight: 400; font-size: 32px; line-height: 1.05; margin: 6px 0 12px; }
+.resumen-ia-frases { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 16px; line-height: 1.5; }
+.resumen-ia-aviso, .resumen-ia-nota, .resumen-ia-vigencia { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.resumen-ia-desactualizado { margin: 10px 0 0; font-size: 13px; font-weight: 700; color: var(--loss); }
+.resumen-ia-cifras { margin-top: 12px; font-size: 13px; }
+.resumen-ia-cifras summary { cursor: pointer; font-weight: 600; }
+.resumen-ia-cifras ul { margin: 8px 0 0; padding-left: 1.1em; display: grid; gap: 4px; color: var(--muted); }
+.resumen-ia-pie { margin: 12px 0 0; font-size: 12px; color: var(--muted); }

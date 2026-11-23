@@ -7,7 +7,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ultimoPublicado = vi.hoisted(() => vi.fn());
-vi.mock("@/ia/registro/registro", () => ({ ultimoPublicado }));
+vi.mock("@/app/_comun/resumen-ia/publicado", () => ({ publicadoDelDia: ultimoPublicado }));
 
 import { reiniciarMemoParaPruebas, resumenDelDia, TTL_MEMO_MS } from "@/app/_comun/resumen-ia/leer";
 import { TEXTOS_RESUMEN_IA } from "@/app/_comun/resumen-ia/textos";

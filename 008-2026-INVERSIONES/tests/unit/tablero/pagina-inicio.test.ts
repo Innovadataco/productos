@@ -4,6 +4,7 @@
 import { Prisma } from "@prisma/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { vistaResumenFicticia } from "../resumen-ia/vista.ficticio";
 
 const obtenerResumen = vi.hoisted(() => vi.fn());
 const exigirSesion = vi.hoisted(() => vi.fn());
@@ -15,6 +16,8 @@ vi.mock("@/tablero/datos-evolucion", () => ({ obtenerEvolucion }));
 // La línea de la conciliación (PR-C): el resultado guardado de la última, sin recalcular.
 vi.mock("@/conciliacion/leer", () => ({ ultimaConciliacion }));
 vi.mock("@/lib/db", () => ({ db: {} }));
+const resumenDelDia = vi.hoisted(() => vi.fn());
+vi.mock("@/app/_comun/resumen-ia/leer", () => ({ resumenDelDia }));
 // La sesión (D-014) se revalida contra la base en cada visita; aquí, una sesión válida falsa.
 vi.mock("@/auth/sesion", () => ({ exigirSesion }));
 
@@ -26,6 +29,7 @@ const SIN_EVOLUCION = { metodo: "twr-acciones-v1", puntos: [], rangos: [], omiti
 const DETALLE = "postgresql://usuario:clave-secreta@host-privado:5438";
 
 beforeEach(() => {
+  resumenDelDia.mockImplementation(async (_db: unknown, tipo: "DIARIO" | "REGLAS" | "ESCENARIOS") => vistaResumenFicticia(tipo));
   exigirSesion.mockResolvedValue({ id: "u1", email: "dueno@ejemplo.invalid", rol: "DUENO" });
   ultimaConciliacion.mockResolvedValue(null);
   obtenerEvolucion.mockResolvedValue(SIN_EVOLUCION);

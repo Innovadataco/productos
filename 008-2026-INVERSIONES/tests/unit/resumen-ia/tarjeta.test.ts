@@ -10,6 +10,7 @@ import { elegirResumen } from "@/app/_comun/resumen-ia/elegir";
 import { TarjetaResumenIa } from "@/app/_comun/resumen-ia/TarjetaResumenIa";
 import { TEXTOS_RESUMEN_IA } from "@/app/_comun/resumen-ia/textos";
 import type { VistaResumenIa } from "@/app/_comun/resumen-ia/tipos";
+import { AVISOS } from "@/ia/validador/resumen";
 import { prohibidasEn } from "../operar/informe/lenguaje";
 import { paqueteFicticio, publicadoFicticio } from "./apoyo.ficticio";
 
@@ -101,12 +102,13 @@ describe("candado de lenguaje de la tarjeta", () => {
 
   it("control positivo: el detector muerde una frase de consejo plantada en la tarjeta", () => {
     const plantada = { ...conIa("DIARIO"), frases: ["Le recomendamos vender ya; es buen momento."] };
-    expect(prohibidasEn(sinAviso(plantada))).toEqual(expect.arrayContaining(["le recomendamos", "buen momento"]));
+    expect(prohibidasEn(sinAviso(plantada))).toEqual(expect.arrayContaining(["recomendamos", "buen momento"]));
   });
 
   it("el aviso es exactamente el que pone el validador (no se edita en la pantalla)", () => {
     const paquete = paqueteFicticio("ESCENARIOS");
     const v = elegirResumen({ tipo: "ESCENARIOS", publicado: null, hoy: { paquete, motivo: null } }).vista;
-    expect(v.aviso).toMatch(/no es una recomendación|no recomienda/i);
+    expect(v.aviso).toBe(AVISOS.ESCENARIOS);
+    expect(conIa("DIARIO").aviso).toBe(AVISOS.DIARIO);
   });
 });

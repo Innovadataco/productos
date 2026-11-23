@@ -23,7 +23,8 @@ describe("elegirResumen · publicado que pasa el validador", () => {
     expect(vista.pie).toBe(`Redactado por IA local (${MODELO_FICTICIO}) · cifras calculadas por 008 y cotejadas`);
     expect(vista.redactadoEn).toBe("2027-03-17 18:41");
     expect(vista.cifras.map((c) => c.id)).toEqual(esperado.resumen.cifrasUsadas.map((c) => c.id));
-    expect(vista.cifras[0]).toMatchObject({ fuente: "fuente-ficticia", fecha: "2027-03-16", calidad: TEXTOS_RESUMEN_IA.calidad.VERIFICADO });
+    const primera = esperado.resumen.cifrasUsadas[0]!;
+    expect(vista.cifras[0]).toMatchObject({ fuente: "fuente-ficticia", fecha: "2027-03-16", fechaPresentada: primera.fechaPresentada, calidad: TEXTOS_RESUMEN_IA.calidad[primera.calidad] });
   });
 
   it("la puerta nube dice «IA en la nube»", () => {
