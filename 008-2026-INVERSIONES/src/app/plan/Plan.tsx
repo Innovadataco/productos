@@ -160,8 +160,9 @@ export function Plan({ datos, soloLectura = false, resumenIa }: PropsPlan) {
     <>
       <Encabezado actual="plan" soloLectura={soloLectura} />
       <main className="wrap plan">
-        {resumenIa === undefined ? null : <TarjetaResumenIa vista={resumenIa} />}
         <Contenido datos={datos} soloLectura={soloLectura} />
+        {/* Después del contenido: su h2 no va antes del h1 de la portada. */}
+        {resumenIa === undefined ? null : <TarjetaResumenIa vista={resumenIa} />}
         <footer className="pie">
           {inferencia ? <p>{NOTA_INFERENCIA}</p> : null}
           <p>{PIE_PLAN}</p>

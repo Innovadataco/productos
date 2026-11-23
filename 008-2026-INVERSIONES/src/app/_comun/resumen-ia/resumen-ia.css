@@ -8,4 +8,4 @@
 .resumen-ia-cifras { margin-top: 12px; font-size: 13px; }
 .resumen-ia-cifras summary { cursor: pointer; font-weight: 600; }
 .resumen-ia-cifras ul { margin: 8px 0 0; padding-left: 1.1em; display: grid; gap: 4px; color: var(--muted); }
-.resumen-ia-pie { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+.resumen-ia-pie { margin: 12px 0 0; font-size: 13px; color: var(--muted); }

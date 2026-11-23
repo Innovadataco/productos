@@ -38,8 +38,9 @@ export default async function PaginaProyecciones() {
     <>
       <Encabezado actual="proyecciones" soloLectura={soloLectura} />
       <main className="wrap proy">
-        <TarjetaResumenIa vista={resumenIa} />
         <Simulador datos={datos} />
+        {/* Después del simulador: su h2 no va antes del h1 de la pantalla. */}
+        <TarjetaResumenIa vista={resumenIa} />
         <footer className="pie">{PIE}</footer>
       </main>
     </>

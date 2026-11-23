@@ -52,7 +52,8 @@ function vistaDe(tipo: TipoResumen, r: ResumenValidado, extra: Pick<VistaResumen
   });
 }
 
-function noDisponible(tipo: TipoResumen, motivo: string | null): VistaResumenIa {
+/** La tarjeta sin resumen, con la nota de su motivo. */
+export function noDisponible(tipo: TipoResumen, motivo: string | null): VistaResumenIa {
   return Object.freeze({
     tipo, titulo: TEXTOS_RESUMEN_IA.titulos[tipo], estado: "NO_DISPONIBLE", frases: Object.freeze([]), aviso: null, cifras: Object.freeze([]),
     pie: TEXTOS_RESUMEN_IA.noDisponible, vigencia: null, redactadoEn: null,
@@ -61,7 +62,7 @@ function noDisponible(tipo: TipoResumen, motivo: string | null): VistaResumenIa 
 }
 
 function vigencia(publicado: ResumenPublicado, hoy: PaqueteDeHoy): VigenciaResumenIa {
-  if (hoy.paquete === null) return "SIN_COMPROBAR";
+  if (hoy.paquete === null || hoy.paquete.tipo !== publicado.tipo) return "SIN_COMPROBAR";
   return hoy.paquete.hash === publicado.hechosHash ? "AL_DIA" : "DESACTUALIZADO";
 }
 
