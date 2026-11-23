@@ -53,7 +53,7 @@ describe("analizar · con el fondo como entrada opcional", () => {
     expect(a.conFondo!.valorTotal.toString()).toBe(total.toString());
     expect(a.conFondo!.pesoAcciones).toBeCloseTo(base.tablero.valorAcciones.div(total).toNumber(), 8);
     expect(a.conFondo!.fondos).toEqual([{ instrumentoId: "FICTICIA-FIC", valor: valorFondo, dia: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), peso: expect.any(Number) }]);
-    expect(a.conFondo!.pesoAcciones + a.conFondo!.fondos[0]!.peso).toBeCloseTo(1, 7);
+    expect(a.conFondo!.pesoAcciones! + a.conFondo!.fondos[0]!.peso!).toBeCloseTo(1, 7);
     const { conFondo: _, ...resto } = a;
     expect(resto).toStrictEqual(analizar(base));
   });
