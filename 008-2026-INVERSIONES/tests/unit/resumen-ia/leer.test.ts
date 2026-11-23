@@ -129,4 +129,52 @@ describe("resumenDelDia", () => {
     expect(lineas).toContain("ErrorFicticio");
     expect(lineas).not.toContain("FICTICIA-ALFA");
   });
+
+  // Revisión (code-reviewer MEDIO 1): dos visitas a la vez comparten la corrida en vuelo.
+  it("dos visitas a la vez (usuarios distintos) comparten una sola corrida del export", async () => {
+    let soltar: (r: ResultadoExportacion) => void = () => undefined;
+    const paquetes = vi.fn(() => new Promise<ResultadoExportacion>((r) => { soltar = r; }));
+    const a = resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes });
+    const b = resumenDelDia(db, "REGLAS", "u-familiar", { ahora: AHORA, paquetes });
+    await vi.waitFor(() => expect(paquetes).toHaveBeenCalled());
+    soltar(exportacion());
+    const [va, vb] = await Promise.all([a, b]);
+    expect(paquetes).toHaveBeenCalledTimes(1);
+    expect([va.estado, vb.estado]).toEqual(["SIN_IA", "SIN_IA"]);
+  });
+
+  it("el mismo usuario en dos pantallas a la vez: la segunda espera la corrida en vuelo, sin EN_VUELO", async () => {
+    let soltar: (r: ResultadoExportacion) => void = () => undefined;
+    const paquetes = vi.fn(() => new Promise<ResultadoExportacion>((r) => { soltar = r; }));
+    const a = resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes });
+    const b = resumenDelDia(db, "ESCENARIOS", "u-ficticio", { ahora: AHORA, paquetes });
+    await vi.waitFor(() => expect(paquetes).toHaveBeenCalled());
+    soltar(exportacion());
+    expect((await b).estado).toBe("SIN_IA");
+    expect((await a).estado).toBe("SIN_IA");
+    expect(paquetes).toHaveBeenCalledTimes(1);
+  });
+
+  it("un reloj que vuelve atrás no usa lo guardado", async () => {
+    const paquetes = vi.fn().mockResolvedValue(exportacion());
+    await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes });
+    await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: new Date(AHORA.getTime() - 1), paquetes });
+    expect(paquetes).toHaveBeenCalledTimes(2);
+  });
+
+  // Revisión (code-reviewer MEDIO 2, security-reviewer BAJO 1): la tarjeta no tumba la página.
+  it("un error inesperado al leer el publicado: la tarjeta sigue sin él, registrando solo el nombre", async () => {
+    ultimoPublicado.mockRejectedValue(new TypeError("FICTICIA-ALFA 4613"));
+    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: vi.fn().mockResolvedValue(exportacion()) });
+    expect(vista.estado).toBe("SIN_IA");
+    const lineas = error.mock.calls.map((c) => String(c[0])).join(" ");
+    expect(lineas).toContain("TypeError");
+    expect(lineas).not.toContain("FICTICIA-ALFA");
+  });
+
+  it("un paquete que no es construido (el validador lanza): no disponible, no un 500", async () => {
+    const roto = { ...paqueteFicticio("DIARIO") };
+    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: vi.fn().mockResolvedValue(exportacion({ paquetes: [roto] })) });
+    expect(vista).toMatchObject({ estado: "NO_DISPONIBLE", nota: TEXTOS_RESUMEN_IA.notaMomento });
+  });
 });

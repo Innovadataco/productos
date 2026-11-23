@@ -107,3 +107,12 @@ describe("elegirResumen · sin publicado", () => {
     expect(GENERADO_FICTICIO).toBeInstanceOf(Date);
   });
 });
+
+describe("elegirResumen · revisión", () => {
+  it("un paquete de hoy de otro tipo no da la vigencia: SIN_COMPROBAR", () => {
+    const guardado = paqueteFicticio("DIARIO");
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(guardado), hoy: { paquete: paqueteFicticio("REGLAS"), motivo: null } });
+    expect(vista).toMatchObject({ estado: "IA", vigencia: "SIN_COMPROBAR" });
+  });
+});
+

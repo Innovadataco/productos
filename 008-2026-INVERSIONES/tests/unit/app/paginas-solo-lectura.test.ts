@@ -99,6 +99,18 @@ describe("la tarjeta del resumen (E5), también para la familia en solo lectura"
     expect(raiz.querySelector(`#t-resumen-ia-${tipo.toLowerCase()}`)?.textContent).toBe(`Resumen ficticio ${tipo}`);
   });
 
+  // Revisión (react-reviewer MEDIO): el h2 de la tarjeta va después del h1 de la página.
+  it.each(CON_RESUMEN)("%s: la tarjeta va después del título principal (orden de encabezados)", async (_nombre, tipo, pagina) => {
+    exigirSesion.mockResolvedValue({ id: "u-dueno", email: "dueno@ejemplo.invalid", rol: "DUENO" });
+    const raiz = document.createElement("div");
+    raiz.innerHTML = renderToStaticMarkup(await pagina());
+    const h1 = raiz.querySelector("h1");
+    const h2 = raiz.querySelector(`#t-resumen-ia-${tipo.toLowerCase()}`);
+    expect(h1).not.toBeNull();
+    expect(h2).not.toBeNull();
+    expect(h1!.compareDocumentPosition(h2!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("el plan de otra versión (?version=) no pide ni pinta el resumen", async () => {
     exigirSesion.mockResolvedValue({ id: "u-dueno", email: "dueno@ejemplo.invalid", rol: "DUENO" });
     const raiz = document.createElement("div");
