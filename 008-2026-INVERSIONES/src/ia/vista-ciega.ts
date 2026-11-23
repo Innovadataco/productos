@@ -82,18 +82,22 @@ const CAMPOS_COMPARADOS: readonly (keyof Hecho & keyof HechoCiego)[] = CAMPOS_HE
   (campo): campo is Exclude<typeof campo, "etiqueta" | "especie"> => campo !== "etiqueta" && campo !== "especie",
 );
 
-/** La especie que lleva el hecho en la vista: el id de su nombre (`especieDe`), salvo en el propio nombre; o undefined. */
-function especieDeLaVista(paquete: PaqueteHechos, hecho: Hecho): IdHecho | undefined {
-  return hecho.clave === CLAVE_NOMBRE_ESPECIE ? undefined : especieDe(paquete, hecho.id)?.id;
+/**
+ * La especie que lleva cada hecho en la vista, en el orden del paquete: el id de su nombre (`especieDe`), salvo en el
+ * propio nombre; o undefined. Se calcula una vez por paquete.
+ */
+function especiesDeLaVista(paquete: PaqueteHechos): readonly (IdHecho | undefined)[] {
+  return paquete.hechos.map((hecho) => (hecho.clave === CLAVE_NOMBRE_ESPECIE ? undefined : especieDe(paquete, hecho.id)?.id));
 }
 
 /** ¿Es la vista de ESTE paquete? Mismo tipo, mismos hechos en el mismo orden, la etiqueta del catálogo y la especie. */
 function corresponde(vista: Registro, hechos: readonly Registro[], paquete: PaqueteHechos): boolean {
   if (vista.tipo !== paquete.tipo || hechos.length !== paquete.hechos.length) return false;
+  const especies = especiesDeLaVista(paquete);
   return hechos.every((ciego, i) => {
     const hecho = paquete.hechos[i] as Hecho;
     const iguales = CAMPOS_COMPARADOS.every((campo) => ciego[campo] === hecho[campo]);
-    const especie = especieDeLaVista(paquete, hecho);
+    const especie = especies[i];
     const mismaEspecie = especie === undefined ? !Object.hasOwn(ciego, "especie") : ciego.especie === especie;
     return iguales && mismaEspecie && ciego.etiqueta === entradaDeCatalogo(paquete.tipo, hecho.clave)?.etiqueta;
   });
@@ -153,8 +157,7 @@ export function asegurarVistaCiega(vista: unknown, paquete: PaqueteHechos): asse
 }
 
 /** La anotación de tipo hace que TypeScript rechace un campo de más (verificación por exceso de propiedades). */
-function proyectar<C extends ClaveHecho>(hecho: Hecho<C>, paquete: PaqueteHechos): HechoCiego<C> {
-  const especie = especieDeLaVista(paquete, hecho);
+function proyectar<C extends ClaveHecho>(hecho: Hecho<C>, especie: IdHecho | undefined): HechoCiego<C> {
   const ciego: HechoCiego<C> = {
     id: hecho.id,
     clave: hecho.clave,
@@ -173,7 +176,8 @@ function proyectar<C extends ClaveHecho>(hecho: Hecho<C>, paquete: PaqueteHechos
 /** La vista ciega del paquete, ya pasada por la guarda (si la proyección filtrara algo, lanza). Congelada. */
 export function vistaCiega<T extends TipoResumen>(paquete: PaqueteHechos<T>): PaqueteCiego<T> {
   if (!esPaqueteConstruido(paquete)) throw new ErrorVistaCiega(["PAQUETE_NO_CONSTRUIDO"]);
-  const vista: PaqueteCiego<T> = Object.freeze({ tipo: paquete.tipo, hechos: Object.freeze(paquete.hechos.map((hecho) => proyectar(hecho, paquete))) });
+  const especies = especiesDeLaVista(paquete);
+  const vista: PaqueteCiego<T> = Object.freeze({ tipo: paquete.tipo, hechos: Object.freeze(paquete.hechos.map((hecho, i) => proyectar(hecho, especies[i]))) });
   asegurarVistaCiega(vista, paquete);
   return vista;
 }
