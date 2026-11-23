@@ -47,7 +47,7 @@ describe("correrDiaria", () => {
     expect(r.porTipo).toEqual({ DIARIO: "PUBLICADO" });
     expect(m.registradas).toHaveLength(1);
     expect(m.registradas[0]).toMatchObject({ estado: "PUBLICADO", paquete: DIARIO, validadorVersion: VERSION_VALIDADOR, opciones: { seed: 42 } });
-    expect((m.registradas[0] as { texto: string }).texto.length).toBeGreaterThan(0);
+    expect((m.registradas[0] as unknown as { texto: string }).texto.length).toBeGreaterThan(0);
     expect(m.generador.llamadas()[0]?.limiteMs).toBe(VIGENTE_FICTICIA.limiteSegundos * 1000);
   });
 
@@ -57,7 +57,7 @@ describe("correrDiaria", () => {
     const r = await correrDiaria(m.deps, config(), HOY);
     expect(r.porTipo).toEqual({ DIARIO: "RECHAZADO" });
     expect(m.registradas[0]).toMatchObject({ estado: "RECHAZADO" });
-    expect((m.registradas[0] as { motivos: string[] }).motivos).toContain("RECOMENDACION");
+    expect((m.registradas[0] as unknown as { motivos: string[] }).motivos).toContain("RECOMENDACION");
     expect(m.esperas).toEqual([]);
   });
 

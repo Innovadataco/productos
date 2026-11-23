@@ -21,7 +21,7 @@ function montar(extra: Partial<DependenciasBucle> = {}) {
     programar: () => () => undefined,
     leerConfig: vi.fn(async () => VIGENTE_FICTICIA),
     esHabil: vi.fn(async () => true),
-    correr: vi.fn(async () => ({ estado: "HECHA" as const, porTipo: { DIARIO: "PUBLICADO" } })),
+    correr: vi.fn(async () => ({ estado: "HECHA" as const, porTipo: { DIARIO: "PUBLICADO" as const } })),
     ...extra,
   };
   const latido = (): string => readFileSync(path.join(dir, "bucle"), "utf8");
