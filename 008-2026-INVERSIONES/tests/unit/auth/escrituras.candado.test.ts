@@ -71,6 +71,7 @@ const ESCRITURA_PROPIA: ReadonlyMap<string, string> = new Map([
 /** Calculan y responden sin guardar: además, no pueden alcanzar ningún módulo que escriba (regla 3). */
 const CALCULO_SIN_GUARDAR: ReadonlyMap<string, string> = new Map([
   ["src/app/api/proyecciones/route.ts", "el simulador de Proyecciones: lo que se mueve no se guarda"],
+  ["src/app/api/operar/simular/route.ts", "el simulador «¿Y si…?» de /operar (O2 con la tarifa de O5): calcula los efectos y no guarda nada"],
 ]);
 /** Las páginas del segundo paso: solo leen, pero alcanzan los módulos del TOTP (que escriben en otras funciones). */
 const PAGINAS_DE_AUTENTICACION = new Set(["src/app/totp/page.tsx", "src/app/totp/enrolar/page.tsx"]);

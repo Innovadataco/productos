@@ -357,3 +357,33 @@ describe("guardián del esquema: config_ia", () => {
     expect(await guardianTras(['ALTER TABLE "config_ia" DISABLE TRIGGER "config_ia_solo_insercion"'])).toContain("config_ia");
   });
 });
+
+// Fase E (O5): tarifa_comision. Si una migración o un DROP le quita la solo inserción, la hora que pone la base, la
+// unicidad de la versión o una CHECK, o si la función del instante cambia, el despliegue se detiene.
+describe("guardián del esquema: tarifa_comision", () => {
+  it.each([
+    ["el disparador de solo inserción", ['DROP TRIGGER "tarifa_comision_solo_insercion" ON "tarifa_comision"'], "tarifa_comision_solo_insercion"],
+    ["el disparador del instante", ['DROP TRIGGER "tarifa_comision_instante" ON "tarifa_comision"'], "tarifa_comision_instante"],
+    ["la unicidad de la versión", ['DROP INDEX "tarifa_comision_version_key"'], "tarifa_comision_version_key"],
+    ["la CHECK de los cargos", ['ALTER TABLE "tarifa_comision" DROP CONSTRAINT "tarifa_comision_cargos_chk"'], "tarifa_comision_cargos_chk"],
+    ["la CHECK del porcentaje", ['ALTER TABLE "tarifa_comision" DROP CONSTRAINT "tarifa_comision_porcentaje_chk"'], "tarifa_comision_porcentaje_chk"],
+    ["la llave del autor", ['ALTER TABLE "tarifa_comision" DROP CONSTRAINT "tarifa_comision_autorId_fkey"'], "tarifa_comision_autorId_fkey"],
+  ])("falla si se borra %s", async (_n, romper, nombre) => {
+    expect(await guardianTras(romper)).toContain(nombre);
+  });
+
+  it("falla si la CHECK de los montos se afloja (otro techo)", async () => {
+    const otra = 'ALTER TABLE "tarifa_comision" ADD CONSTRAINT "tarifa_comision_montos_chk" CHECK ("minimoPorOrden" >= 0 AND "fijoPorOrden" >= 0)';
+    expect(await guardianTras(['ALTER TABLE "tarifa_comision" DROP CONSTRAINT "tarifa_comision_montos_chk"', otra])).toContain("tarifa_comision_montos_chk");
+  });
+
+  it("falla si la función del instante cambia de código o pasa a SECURITY DEFINER", async () => {
+    const reemplazo = `CREATE OR REPLACE FUNCTION "inv_tarifa_comision_instante"() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END; $$`;
+    expect(await guardianTras([reemplazo])).toContain("inv_tarifa_comision_instante");
+    expect(await guardianTras(['ALTER FUNCTION "inv_tarifa_comision_instante"() SECURITY DEFINER'])).toContain("inv_tarifa_comision_instante");
+  });
+
+  it("falla si el disparador de solo inserción queda deshabilitado", async () => {
+    expect(await guardianTras(['ALTER TABLE "tarifa_comision" DISABLE TRIGGER "tarifa_comision_solo_insercion"'])).toContain("tarifa_comision");
+  });
+});
