@@ -87,10 +87,43 @@ export interface OrdenHistorica {
   readonly comision: Decimal;
 }
 
+/** Las casas de bolsa de la tarifa (O5): Trii y Acciones & Valores. */
+export const COMISIONISTAS = ["TRII", "AV"] as const;
+export type Comisionista = (typeof COMISIONISTAS)[number];
+
+/** Un cargo además de la comisión: un porcentaje del valor de la orden o un fijo en pesos (sin IVA). */
+export interface CargoTarifa {
+  readonly nombre: string;
+  readonly tipo: "PCT" | "FIJO";
+  readonly valor: Decimal;
+}
+
+/**
+ * La tarifa vigente de un comisionista para un lado (O5, `tarifa_comision`), tal como la cargó el dueño. La comisión:
+ * max(valor × porcentaje / 100, mínimo) + fijo; el IVA (%) sobre esa comisión; los otros cargos aparte.
+ */
+export interface TarifaSimulada {
+  readonly version: number;
+  readonly comisionista: Comisionista;
+  readonly lado: LadoOrden;
+  readonly porcentaje: Decimal;
+  readonly minimoPorOrden: Decimal;
+  readonly fijoPorOrden: Decimal;
+  readonly ivaPct: Decimal;
+  readonly otrosCargos: readonly CargoTarifa[];
+  /** Medianoche UTC, como `@db.Date`. */
+  readonly vigenteDesde: Date;
+}
+
+/** Las tarifas vigentes de un comisionista, por lado; sin la de un lado, la comisión de ese lado sale de la historia. */
+export type TarifasVigentes = Readonly<Partial<Record<LadoOrden, TarifaSimulada>>>;
+
 export interface ContextoSimulacion {
   readonly ordenes: readonly OrdenHistorica[];
   /** El día de hoy en Colombia a medianoche UTC (`fechaEnBogota`): las reglas con el plazo vencido no rigen. */
   readonly hoy: Date;
+  /** Opcional (O5): la tarifa real vigente; con la de ese lado, la comisión sale de ella y no de la historia. */
+  readonly tarifas?: TarifasVigentes;
 }
 
 /**
@@ -117,8 +150,12 @@ export type TasaComision =
   | { readonly estado: "ESTIMABLE"; readonly lado: LadoOrden; readonly sumaComisiones: Decimal; readonly sumaValor: Decimal; readonly ordenesBase: number }
   | { readonly estado: "SIN_HISTORIA" };
 
-/** La comisión estimada lleva el lado de la historia en que se basa y cuántas órdenes de ese lado contó. */
+/**
+ * La comisión de la orden: con la tarifa vigente (TARIFA, con la tarifa que se usó), estimada con la historia (lleva el
+ * lado y cuántas órdenes de ese lado contó) o sin historia (no se estima).
+ */
 export type ComisionEstimada =
+  | { readonly estado: "TARIFA"; readonly lado: LadoOrden; readonly valor: Decimal; readonly tarifa: TarifaSimulada }
   | { readonly estado: "ESTIMADA"; readonly lado: LadoOrden; readonly valor: Decimal; readonly ordenesBase: number }
   | { readonly estado: "SIN_HISTORIA" };
 
@@ -156,7 +193,7 @@ export interface Simulacion {
   readonly valorAccionesAntes: Decimal;
   readonly valorAccionesDespues: Decimal;
   readonly cajaAntes: Decimal;
-  /** Compra: caja − valor − comisión; venta: caja + valor − comisión. Sin historia, sin comisión. */
+  /** Compra: caja − valor − comisión; venta: caja + valor − comisión. Sin tarifa ni historia, sin comisión. */
   readonly cajaDespues: Decimal;
   /** cantidad × precio límite, sin comisión. */
   readonly valorOrden: Decimal;

@@ -4,7 +4,7 @@
  * - Valoración: cantidad × último cierre; 0 sin acciones; «sin cierre» con acciones y sin precio (como el tablero).
  * - Peso: valor / valor de las acciones × 100, sin redondear (la misma cuenta del tablero, para que «antes» cuadre
  *   con él). Las especies sin cierre quedan fuera del total y sin peso; si el total es 0, ninguna tiene peso.
- * - Caja: compra, caja − valor − comisión; venta, caja + valor − comisión; sin historia, sin comisión.
+ * - Caja: compra, caja − valor − comisión; venta, caja + valor − comisión; sin tarifa ni historia, sin comisión.
  * - Avisos: comprar por más de la caja (no es error: la caja puede estar atrasada) y las especies sin cierre.
  */
 import { Prisma } from "@prisma/client";
@@ -47,7 +47,7 @@ function cantidadesYValores(estado: EstadoSimulado, op: OperacionSimulada) {
 function avisosDe(op: OperacionSimulada, caja: Decimal, necesario: Decimal, comision: ComisionEstimada, sinCierre: readonly EspecieNombrada[]): AvisoSimulacion[] {
   const especies = noVacia(sinCierre);
   return [
-    ...(op.lado === "COMPRAR" && necesario.gt(caja) ? [{ codigo: "COMPRA_SUPERA_CAJA", caja, necesario, conComision: comision.estado === "ESTIMADA" } as const] : []),
+    ...(op.lado === "COMPRAR" && necesario.gt(caja) ? [{ codigo: "COMPRA_SUPERA_CAJA", caja, necesario, conComision: comision.estado !== "SIN_HISTORIA" } as const] : []),
     ...(especies === null ? [] : [{ codigo: "ESPECIES_SIN_CIERRE", especies } as const]),
   ];
 }
@@ -64,7 +64,7 @@ export function calcularEfectos(estado: EstadoSimulado, op: OperacionSimulada, v
       despues: tenencia(f.despues, f.valorDespues, valorAccionesDespues),
     }),
   );
-  const valorComision = comision.estado === "ESTIMADA" ? comision.valor : CERO;
+  const valorComision = comision.estado === "SIN_HISTORIA" ? CERO : comision.valor;
   const cajaDespues = op.lado === "COMPRAR" ? estado.caja.sub(valorOrden).sub(valorComision) : estado.caja.add(valorOrden).sub(valorComision);
   const sinCierre = filas.filter((f) => f.valorAntes === null || f.valorDespues === null).map((f) => ({ instrumentoId: f.p.instrumentoId, nemotecnico: f.p.nemotecnico }));
   const avisos = avisosDe(op, estado.caja, valorOrden.add(valorComision), comision, sinCierre);

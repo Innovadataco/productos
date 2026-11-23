@@ -11,6 +11,9 @@
 import { Prisma, type AccionPlan, type CondicionRegla, type EstadoOrden, type LadoOrden } from "@prisma/client";
 import {
   DECIMALES_PRECIO,
+  type CargoTarifa,
+  type Comisionista,
+  type TarifaSimulada,
   type ContextoSimulacion,
   type ErrorSimulacion,
   type EstadoSimulado,
@@ -37,6 +40,14 @@ const ACCIONES = { COMPRAR: true, VENDER: true, NO_ACTUAR: true } satisfies Reco
 /** true = la condición lleva nivel (como `regla_plan_nivel_chk`). */
 const CON_NIVEL = { NINGUNA: false, LIBRE: false, CIERRE_BAJO: true, CIERRE_SOBRE: true, MONTO_ORDEN_BAJO: true } satisfies Record<CondicionRegla, boolean>;
 const LADOS_ORDEN = { COMPRA: true, VENTA: true } satisfies Record<LadoOrden, true>;
+const COMISIONISTAS_VALIDOS = { TRII: true, AV: true } satisfies Record<Comisionista, true>;
+const CIEN = new Prisma.Decimal(100);
+/** Decimales de los porcentajes y los montos de la tarifa (la escala de `tarifa_comision`). */
+const DECIMALES_TARIFA = 4;
+/** Tope exclusivo del mínimo, el fijo y los cargos fijos de una tarifa (cien millones de pesos, como su CHECK). */
+export const TOPE_CARGO_TARIFA = new Prisma.Decimal(100_000_000);
+/** Otros cargos por tarifa, como mucho (como su CHECK). */
+export const MAX_OTROS_CARGOS = 3;
 const ESTADOS_ORDEN = { APROBADO: true, CANCELADO: true } satisfies Record<EstadoOrden, true>;
 
 // Propias del objeto: `in` aceptaría claves heredadas como «toString».
@@ -100,10 +111,35 @@ export function validarOrdenes(ordenes: readonly OrdenHistorica[]): void {
   }
 }
 
-/** Lanza RangeError si el contexto no es válido: «hoy» a medianoche UTC y órdenes como las de la base. */
+/** Un porcentaje de 0 a 100 con hasta 4 decimales (la escala de `tarifa_comision.porcentaje`). */
+const porcentajeValido = (v: unknown): boolean => finito(v) && !v.isNeg() && v.lte(CIEN) && v.decimalPlaces() <= DECIMALES_TARIFA;
+/** Un monto de 0 o más con hasta 4 decimales y bajo el tope de un cargo de la tarifa. */
+const cargoValido = (v: unknown): boolean => finito(v) && !v.isNeg() && v.lt(TOPE_CARGO_TARIFA) && v.decimalPlaces() <= DECIMALES_TARIFA;
+
+function validarCargo(c: CargoTarifa, version: number): void {
+  exigir(typeof c === "object" && c !== null && typeof c.nombre === "string" && c.nombre.length > 0, `un cargo de la tarifa ${version} no tiene nombre`);
+  exigir(c.tipo === "PCT" ? porcentajeValido(c.valor) : c.tipo === "FIJO" && cargoValido(c.valor), `un cargo de la tarifa ${version} no es un porcentaje ni un fijo válido`);
+}
+
+function validarTarifa(lado: string, t: TarifaSimulada | undefined): void {
+  if (t === undefined) return;
+  exigir(typeof t === "object" && t !== null && t.lado === lado, `la tarifa del lado ${lado} no es de ese lado`);
+  exigir(typeof t.version === "number" && t.version >= 1 && clave(COMISIONISTAS_VALIDOS, t.comisionista), `la tarifa ${t.version} no tiene versión o comisionista válidos`);
+  exigir(porcentajeValido(t.porcentaje) && porcentajeValido(t.ivaPct), `la tarifa ${t.version} tiene un porcentaje fuera de 0 a 100`);
+  exigir(cargoValido(t.minimoPorOrden) && cargoValido(t.fijoPorOrden), `la tarifa ${t.version} tiene un mínimo o un fijo fuera de rango`);
+  exigir(Array.isArray(t.otrosCargos) && t.otrosCargos.length <= MAX_OTROS_CARGOS, `la tarifa ${t.version} tiene más de ${MAX_OTROS_CARGOS} otros cargos`);
+  t.otrosCargos.forEach((c) => validarCargo(c, t.version));
+}
+
+/** Lanza RangeError si el contexto no es válido: «hoy» a medianoche UTC, órdenes como las de la base y tarifas bien formadas. */
 export function validarContexto(contexto: ContextoSimulacion): void {
   exigir(diaValido(contexto.hoy), "«hoy» no es un día a medianoche UTC");
   validarOrdenes(contexto.ordenes);
+  if (contexto.tarifas === undefined) return;
+  exigir(typeof contexto.tarifas === "object" && contexto.tarifas !== null, "las tarifas no son un objeto");
+  exigir(Object.keys(contexto.tarifas).every((k) => clave(LADOS_ORDEN, k)), "las tarifas traen un lado desconocido");
+  validarTarifa("COMPRA", contexto.tarifas.COMPRA);
+  validarTarifa("VENTA", contexto.tarifas.VENTA);
 }
 
 function erroresDeLaCantidad(cantidad: unknown): ErrorSimulacion[] {
