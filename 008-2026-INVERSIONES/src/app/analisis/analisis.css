@@ -15,4 +15,5 @@ html:has(main.analisis) { scroll-padding-top: 176px; }
 .analisis .an-puntos { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
 .analisis .an-puntos li { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: 12px; padding: 12px 14px; overflow-wrap: anywhere; }
 .analisis .an-puntos p { margin: 0; }
+.analisis .nota { font-size: 14px; }
 .analisis .an-umbral { margin-top: 4px; font-size: 14px; color: var(--muted); }

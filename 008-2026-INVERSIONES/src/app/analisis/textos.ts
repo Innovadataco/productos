@@ -4,7 +4,7 @@
  * un juicio ni una acción. El candado de lenguaje (tests/unit/pantalla-analisis/lenguaje.candado.test.ts) recorre este
  * archivo y la pantalla pintada.
  */
-import { CRITERIOS, type ClaveObservacion, type Observacion } from "@/analisis/catalogo";
+import { CRITERIOS, type ClaveObservacion, type Comparacion, type Observacion } from "@/analisis/catalogo";
 import { cop, fecha, numero, pct } from "../tablero/formato";
 
 const CIEN = 100;
@@ -18,6 +18,7 @@ export const NOTA_VENTANAS = "Las ventanas son el rendimiento total del período
 export const NOTA_FONDO = "El riesgo, la concentración y la tabla por especie son solo de las acciones: el fondo entra solo en el valor y su peso.";
 export const SIN_PUNTOS = "Ningún dato cruza hoy un umbral del catálogo.";
 export const SIN_DECISIONES = "Sin decisiones registradas.";
+export const SIN_VEREDICTO_TODAVIA = "Ninguna tiene veredicto todavía: no hay resultado en pesos.";
 export const DIARIO_PARCIAL = "El diario tiene más decisiones de las que se leen de una vez: esta cuenta es parcial (las más recientes).";
 
 export const SIN_HISTORIA = "sin historia";
@@ -26,6 +27,8 @@ export const SIN_CIERRE = "sin cierre";
 export const SIN_RIESGO = "sin riesgo que repartir";
 export const SIN_VARIACION = "sin variación";
 export const SIN_CAIDA = "sin caída";
+export const SIN_CAIDA_HISTORICA = "sin caída histórica";
+export const SIN_VALOR = "sin valor";
 
 /** Una fracción como porcentaje sin signo, con un decimal: 0,2137 → «21,4 %». */
 export const porcentaje = (fraccion: number, decimales = 1): string => `${numero(fraccion * CIEN, decimales)} %`;
@@ -35,26 +38,51 @@ export const conSigno = (fraccion: number): string => pct(fraccion * CIEN);
 const plural = (n: number, uno: string, varios: string): string => `${n} ${n === 1 ? uno : varios}`;
 const dias = (n: number): string => plural(n, "día", "días");
 
-/** El umbral de cada clave, como lo compara el motor (`cumple`), con los números del catálogo. */
-const UMBRALES: Readonly<Record<ClaveObservacion, string>> = {
-  CONCENTRACION_ALTA: `más de ${porcentaje(CRITERIOS.CONCENTRACION_ALTA.umbral, 0)}`,
-  CONCENTRACION_TOP_TRES: `más de ${porcentaje(CRITERIOS.CONCENTRACION_TOP_TRES.umbral, 0)}, con ${CRITERIOS.CONCENTRACION_TOP_TRES.auxiliares.minimoEspecies} especies o más`,
-  CORRELACION_ALTA: `${numero(CRITERIOS.CORRELACION_ALTA.umbral, 2)} o más`,
-  CONTRIBUCION_RIESGO_DESPROPORCIONADA:
-    `${numero(CRITERIOS.CONTRIBUCION_RIESGO_DESPROPORCIONADA.umbral, 1)} veces su peso o más, con un aporte de al menos ${porcentaje(CRITERIOS.CONTRIBUCION_RIESGO_DESPROPORCIONADA.auxiliares.contribucionMinima, 0)}`,
-  REGLA_CUMPLIDA: "el nivel de su regla",
-  REGLA_CERCANA: `${numero(CRITERIOS.REGLA_CERCANA.umbral)} % o menos`,
-  REGLA_VENCE_PRONTO: `${dias(CRITERIOS.REGLA_VENCE_PRONTO.umbral)} o menos`,
-  REGLA_VENCIDA: `${dias(CRITERIOS.REGLA_VENCIDA.umbral)} o más después del plazo`,
-  PRECIO_ATRASADO: `${plural(CRITERIOS.PRECIO_ATRASADO.umbral, "rueda", "ruedas")} sin cierre o más`,
-  PRECIOS_SIN_ACTUALIZAR: `${plural(CRITERIOS.PRECIOS_SIN_ACTUALIZAR.umbral, "rueda", "ruedas")} de atraso o más`,
-  DECISION_RESULTADO_NEGATIVO:
-    `resultado menor que ${cop(CRITERIOS.DECISION_RESULTADO_NEGATIVO.auxiliares.resultadoPesosMenorQue)}, conocido hace ${dias(CRITERIOS.DECISION_RESULTADO_NEGATIVO.umbral)} o menos`,
-  EX_DIVIDENDO_PRONTO: `${dias(CRITERIOS.EX_DIVIDENDO_PRONTO.umbral)} o menos`,
-  HISTORIA_INSUFICIENTE: `menos de ${dias(CRITERIOS.HISTORIA_INSUFICIENTE.umbral)}`,
+/** El conector de cada comparación del catálogo (`cumple`): el texto sigue a la comparación, no al revés. */
+function comparado(c: Comparacion, medida: string): string {
+  switch (c) {
+    case "MAYOR_QUE":
+      return `más de ${medida}`;
+    case "MAYOR_O_IGUAL":
+      return `${medida} o más`;
+    case "MENOR_QUE":
+      return `menos de ${medida}`;
+    case "DE_CERO_HASTA":
+    case "VALOR_ABSOLUTO_HASTA":
+      return `${medida} o menos`;
+    case "PASA_EL_NIVEL":
+      return "el nivel de su regla";
+  }
+}
+
+/** La medida de cada clave con los números del catálogo, y lo que la acompaña. */
+const MEDIDAS: Readonly<Record<ClaveObservacion, { readonly medida: string; readonly ademas?: string }>> = {
+  CONCENTRACION_ALTA: { medida: porcentaje(CRITERIOS.CONCENTRACION_ALTA.umbral, 0) },
+  CONCENTRACION_TOP_TRES: { medida: porcentaje(CRITERIOS.CONCENTRACION_TOP_TRES.umbral, 0), ademas: `con ${CRITERIOS.CONCENTRACION_TOP_TRES.auxiliares.minimoEspecies} especies o más` },
+  CORRELACION_ALTA: { medida: numero(CRITERIOS.CORRELACION_ALTA.umbral, 2) },
+  CONTRIBUCION_RIESGO_DESPROPORCIONADA: {
+    medida: `${numero(CRITERIOS.CONTRIBUCION_RIESGO_DESPROPORCIONADA.umbral, 1)} veces su peso`,
+    ademas: `con un aporte de al menos ${porcentaje(CRITERIOS.CONTRIBUCION_RIESGO_DESPROPORCIONADA.auxiliares.contribucionMinima, 0)}`,
+  },
+  REGLA_CUMPLIDA: { medida: "" },
+  REGLA_CERCANA: { medida: `${numero(CRITERIOS.REGLA_CERCANA.umbral)} %` },
+  REGLA_VENCE_PRONTO: { medida: dias(CRITERIOS.REGLA_VENCE_PRONTO.umbral) },
+  REGLA_VENCIDA: { medida: dias(CRITERIOS.REGLA_VENCIDA.umbral), ademas: "después del plazo" },
+  PRECIO_ATRASADO: { medida: `${plural(CRITERIOS.PRECIO_ATRASADO.umbral, "rueda", "ruedas")} sin cierre` },
+  PRECIOS_SIN_ACTUALIZAR: { medida: `${plural(CRITERIOS.PRECIOS_SIN_ACTUALIZAR.umbral, "rueda", "ruedas")} de atraso` },
+  DECISION_RESULTADO_NEGATIVO: {
+    medida: `conocido hace ${dias(CRITERIOS.DECISION_RESULTADO_NEGATIVO.umbral)}`,
+    ademas: `con un resultado menor que ${cop(CRITERIOS.DECISION_RESULTADO_NEGATIVO.auxiliares.resultadoPesosMenorQue)}`,
+  },
+  EX_DIVIDENDO_PRONTO: { medida: dias(CRITERIOS.EX_DIVIDENDO_PRONTO.umbral) },
+  HISTORIA_INSUFICIENTE: { medida: dias(CRITERIOS.HISTORIA_INSUFICIENTE.umbral) },
 };
 
-export const textoUmbral = (clave: ClaveObservacion): string => `umbral: ${UMBRALES[clave]}`;
+export function textoUmbral(clave: ClaveObservacion): string {
+  const { medida, ademas } = MEDIDAS[clave];
+  const base = comparado(CRITERIOS[clave].comparacion, medida);
+  return `umbral: ${ademas === undefined ? base : `${base}, ${ademas}`}`;
+}
 
 type Nombre = (id: string | null) => string;
 
@@ -76,7 +104,7 @@ export function textoObservacion(o: Observacion, nombre: Nombre): string {
     case "REGLA_CERCANA":
       return `${deRegla(o.datos.instrumentoId, nombre)}: el último cierre está a ${numero(Math.abs(o.datos.distanciaPct), 2)} % de su nivel.`;
     case "REGLA_VENCE_PRONTO":
-      return `${deRegla(o.datos.instrumentoId, nombre)} tiene plazo hasta el ${fecha(o.datos.plazo)} (en ${dias(o.datos.dias)}).`;
+      return `${deRegla(o.datos.instrumentoId, nombre)} tiene plazo hasta el ${fecha(o.datos.plazo)} (${o.datos.dias === 0 ? "hoy" : `en ${dias(o.datos.dias)}`}).`;
     case "REGLA_VENCIDA":
       return `${deRegla(o.datos.instrumentoId, nombre)} tenía plazo hasta el ${fecha(o.datos.plazo)} (hace ${dias(o.datos.dias)}) y sigue en el plan vigente.`;
     case "PRECIO_ATRASADO":
@@ -88,7 +116,7 @@ export function textoObservacion(o: Observacion, nombre: Nombre): string {
     case "DECISION_RESULTADO_NEGATIVO":
       return `Una decisión dio ${cop(o.datos.resultadoPesos.toNumber(), true)} a ${o.datos.horizonteDias} días; se conoció el ${fecha(o.datos.conocidoEl)} (hace ${dias(o.datos.dias)}).`;
     case "EX_DIVIDENDO_PRONTO":
-      return `${nombre(o.datos.instrumentoId)}: fecha ex de un dividendo el ${fecha(o.datos.fechaEx)} (en ${dias(o.datos.dias)}).`;
+      return `${nombre(o.datos.instrumentoId)}: fecha ex de un dividendo el ${fecha(o.datos.fechaEx)} (${o.datos.dias === 0 ? "hoy" : `en ${dias(o.datos.dias)}`}).`;
     case "HISTORIA_INSUFICIENTE":
       return `${nombre(o.datos.instrumentoId)}: ${dias(o.datos.dias)} con cierre en la ventana común; no entra en el riesgo del portafolio.`;
   }

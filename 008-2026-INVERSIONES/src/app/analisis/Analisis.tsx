@@ -34,12 +34,12 @@ function Composicion({ vista }: Props) {
       <h3>Composición</h3>
       <ul>
         {c.filas.map((f) => (
-          <li key={f.nombre}>
-            <b>{f.nombre}</b>: {f.valor}{f.peso === null ? null : ` · ${f.peso}`}
+          <li key={f.id}>
+            <strong>{f.nombre}</strong>: {f.valor}{f.peso === null ? null : ` · ${f.peso}`}
             {f.procedencia ? <>{" "}<FechaDato procedencia={f.procedencia} etiqueta="Valor de unidad" /></> : null}
           </li>
         ))}
-        {c.total === null ? null : <li><b>Total</b>: {c.total}</li>}
+        {c.total === null ? null : <li><strong>Total</strong>: {c.total}</li>}
       </ul>
       {c.sinValor ? <p className="nota aviso">{c.sinValor}</p> : null}
       <p className="nota">{c.nota}</p>
@@ -51,6 +51,7 @@ function PorEspecie({ vista }: Props) {
   return (
     <section className="bloque" aria-labelledby="t-especies">
       <div className="cabeza"><div><div className="eyebrow">Historia propia de cada una</div><h2 id="t-especies">Por especie</h2></div></div>
+      {vista.especies.length === 0 ? <p className="nota">Sin especies vivas en el tablero.</p> : (
       <div className="tabla" role="region" aria-label="Por especie" tabIndex={0}>
         <table className="an-ancha">
           <caption className="sr">Por especie: peso, rendimiento total por ventana, volatilidad, caída máxima, dividendo y contribución al riesgo</caption>
@@ -64,7 +65,7 @@ function PorEspecie({ vista }: Props) {
           </thead>
           <tbody>
             {vista.especies.map((e) => (
-              <tr key={e.nombre}>
+              <tr key={e.id}>
                 <th scope="row">{e.nombre}</th><td className="num">{e.peso}</td>
                 {e.ventanas.map((t, k) => <td key={k} className="num">{t}</td>)}
                 <td className="num">{e.volatilidad}</td><td className="num">{e.caida}</td><td className="num">{e.dividendo}</td><td className="num">{e.contribucion}</td>
@@ -73,7 +74,7 @@ function PorEspecie({ vista }: Props) {
           </tbody>
         </table>
       </div>
-      {vista.especies.length === 0 ? <p className="nota">Sin especies vivas en el tablero.</p> : null}
+      )}
       <p className="nota">{NOTA_VENTANAS}</p>
       <p className="nota">{NOTA_VOLATILIDAD}</p>
     </section>
@@ -87,10 +88,10 @@ function Matriz({ vista }: Props) {
     <div className="tabla" role="region" aria-label="Matriz de correlación" tabIndex={0}>
       <table className="an-matriz">
         <caption className="sr">Matriz de correlación de los retornos diarios de precio</caption>
-        <thead><tr><th scope="col">Especie</th>{m.nombres.map((x) => <th key={x} scope="col" className="num">{x}</th>)}</tr></thead>
+        <thead><tr><th scope="col">Especie</th>{m.nombres.map((x, k) => <th key={m.ids[k]} scope="col" className="num">{x}</th>)}</tr></thead>
         <tbody>
           {m.filas.map((f) => (
-            <tr key={f.nombre}><th scope="row">{f.nombre}</th>{f.celdas.map((c, k) => <td key={k} className="num">{c}</td>)}</tr>
+            <tr key={f.id}><th scope="row">{f.nombre}</th>{f.celdas.map((c, k) => <td key={k} className="num">{c}</td>)}</tr>
           ))}
         </tbody>
       </table>
@@ -105,16 +106,16 @@ function Portafolio({ vista }: Props) {
       <div className="cabeza"><div><div className="eyebrow">Concentración y riesgo</div><h2 id="t-portafolio">Portafolio</h2></div></div>
       <Composicion vista={vista} />
       <h3>Concentración</h3>
-      <ul className="an-lista">{p.concentracion.map((t) => <li key={t}>{t}</li>)}</ul>
+      <ul className="an-lista">{p.concentracion.map((t, k) => <li key={k}>{t}</li>)}</ul>
       <h3>{`${vista.titulos.volatilidad} del portafolio`}</h3>
-      <p><b>{p.volatilidad}</b>{p.ventana ? ` · ${p.ventana}` : null}{p.cubierta ? ` ${p.cubierta}` : null}</p>
+      <p><strong>{p.volatilidad}</strong>{p.ventana ? ` · ${p.ventana}` : null}{p.cubierta ? ` ${p.cubierta}` : null}</p>
       <h3>Correlación</h3>
       <Matriz vista={vista} />
       <h3>Efecto de una caída</h3>
       <p className="nota">Si cada especie cae como en su mayor caída histórica (las demás quietas), así cambia el valor de las acciones:</p>
       {p.efectos.length === 0
         ? <p className="nota">Sin especies con historia propia.</p>
-        : <ul className="an-lista">{p.efectos.map((e) => <li key={e.nombre}><b>{e.nombre}</b>: {e.pesos} ({e.fraccion} del valor de las acciones)</li>)}</ul>}
+        : <ul className="an-lista">{p.efectos.map((e) => <li key={e.id}><strong>{e.nombre}</strong>: {e.pesos}{e.fraccion === null ? null : ` (${e.fraccion} del valor de las acciones)`}</li>)}</ul>}
     </section>
   );
 }
@@ -126,7 +127,7 @@ function Decisiones({ vista }: Props) {
       {vista.decisiones.horizontes.map((h) => (
         <div key={h.titulo} className="an-horizonte">
           <h3>{h.titulo}</h3>
-          {h.lineas.map((l) => <p key={l}>{l}</p>)}
+          {h.lineas.map((l, k) => <p key={k}>{l}</p>)}
         </div>
       ))}
       {vista.decisiones.truncado ? <p className="nota aviso">{vista.decisiones.truncado}</p> : null}
@@ -149,7 +150,7 @@ function Puntos({ vista }: Props) {
       {vista.avisos.length === 0 ? null : (
         <>
           <h3>Avisos de la historia de precios</h3>
-          <ul className="an-lista">{vista.avisos.map((t) => <li key={t}>{t}</li>)}</ul>
+          <ul className="an-lista">{vista.avisos.map((t, k) => <li key={k}>{t}</li>)}</ul>
         </>
       )}
     </section>
