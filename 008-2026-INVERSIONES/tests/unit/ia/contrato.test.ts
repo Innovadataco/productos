@@ -32,7 +32,7 @@ describe("constantes del contrato", () => {
   });
 
   it("la vista ciega lleva solo estos campos: ni valor, ni presentación, ni unidad, ni fuente, ni fecha", () => {
-    expect([...CAMPOS_HECHO_CIEGO]).toEqual(["id", "clave", "etiqueta", "sujeto", "direccion", "cercania", "frescura", "calidad", "obligatorio"]);
+    expect([...CAMPOS_HECHO_CIEGO]).toEqual(["id", "clave", "etiqueta", "sujeto", "especie", "direccion", "cercania", "frescura", "calidad", "obligatorio"]);
     expect([...CAMPOS_PAQUETE_CIEGO]).toEqual(["tipo", "hechos"]);
     for (const prohibido of ["valor", "presentacion", "unidad", "fuente", "fecha"]) expect(CAMPOS_HECHO_CIEGO).not.toContain(prohibido);
     for (const prohibido of ["version", "hoy", "avisos", "versionesCalculo", "hash"]) expect(CAMPOS_PAQUETE_CIEGO).not.toContain(prohibido);
