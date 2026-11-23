@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import type { PaqueteCiego, PaqueteHechos } from "@/ia/contrato";
-import { construirPaquete } from "@/ia/paquete";
+import { construirPaquete, especieDe } from "@/ia/paquete";
 import { CODIGOS_FUGA_VISTA, ErrorVistaCiega, asegurarVistaCiega, fugasDeVistaCiega, vistaCiega } from "@/ia/vista-ciega";
 import { CAMPOS_HECHO_CIEGO_PERMITIDOS, camposDeMas, fugasEn, hayDigitosFueraDeIds } from "./apoyo/detectores";
 import { ENTRADAS_FICTICIAS, ESPECIE_ALFA, entradaDiario } from "./apoyo/hechos.ficticio";
@@ -23,7 +23,8 @@ describe("vistaCiega", () => {
     expect(vista.tipo).toBe(tipo);
     vista.hechos.forEach((ciego, i) => {
       const original = paquete.hechos[i];
-      const esperados = CAMPOS_HECHO_CIEGO_PERMITIDOS.filter((c) => c !== "sujeto" || original?.sujeto !== undefined);
+      const conEspecie = original !== undefined && original.unidad !== "NOMBRE" && especieDe(paquete, original.id) !== null;
+      const esperados = CAMPOS_HECHO_CIEGO_PERMITIDOS.filter((c) => (c !== "sujeto" || original?.sujeto !== undefined) && (c !== "especie" || conEspecie));
       expect(Object.keys(ciego).sort()).toEqual([...esperados].sort());
       expect(ciego).toMatchObject({ id: original?.id, clave: original?.clave, etiqueta: original?.etiqueta, calidad: original?.calidad });
     });
@@ -75,7 +76,7 @@ describe("guarda de la vista ciega · control positivo", () => {
     ["un porcentaje es-CO con coma", (v) => { v.hechos[6]!.etiqueta = "peso de la especie en el portafolio 12,4 %"; }, ["DIGITO_FUERA_DE_REFERENCIA", "PRESENTACION_DEL_PAQUETE", "NO_CORRESPONDE"]],
     ["el nombre de la especie en una etiqueta", (v) => { v.hechos[0]!.etiqueta = `nombre de la especie ${ESPECIE_ALFA}`; }, ["NOMBRE_DE_ESPECIE", "NO_CORRESPONDE"]],
     ["el nombre de la especie en minúsculas", (v) => { v.hechos[0]!.etiqueta = `nombre de la especie ${ESPECIE_ALFA.toLowerCase()}`; }, ["NOMBRE_DE_ESPECIE", "NO_CORRESPONDE"]],
-    ["el nombre de la especie como campo", (v) => { v.hechos[0]!.especie = ESPECIE_ALFA; }, ["CAMPO_NO_PERMITIDO", "NOMBRE_DE_ESPECIE", "CLAVE_PROHIBIDA"]],
+    ["el nombre de la especie como campo", (v) => { v.hechos[0]!.especie = ESPECIE_ALFA; }, ["NOMBRE_DE_ESPECIE", "CLAVE_PROHIBIDA", "NO_CORRESPONDE"]],
     ["una especie ficticia que no está en el paquete", (v) => { v.hechos[0]!.etiqueta = "nombre de la especie FICTICIA-OMEGA"; }, ["NO_CORRESPONDE"]],
     ["una clave prohibida en un hecho", (v) => { v.hechos[3]!.correo = "persona@ficticia.invalid"; }, ["CAMPO_NO_PERMITIDO", "CLAVE_PROHIBIDA"]],
     ["una clave prohibida anidada en la raíz", (v) => { v.extra = { cuenta: { cantidad: "x" } }; }, ["CAMPO_NO_PERMITIDO", "CLAVE_PROHIBIDA"]],

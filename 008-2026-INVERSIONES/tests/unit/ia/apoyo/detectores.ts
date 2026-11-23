@@ -6,7 +6,7 @@ import type { PaqueteHechos } from "@/ia/contrato";
 
 /** Los únicos campos que puede tener la vista, escritos a mano en la prueba (no se leen de `src/`). */
 export const CAMPOS_VISTA_PERMITIDOS = Object.freeze(["tipo", "hechos"]);
-export const CAMPOS_HECHO_CIEGO_PERMITIDOS = Object.freeze(["id", "clave", "etiqueta", "sujeto", "direccion", "cercania", "frescura", "calidad", "obligatorio"]);
+export const CAMPOS_HECHO_CIEGO_PERMITIDOS = Object.freeze(["id", "clave", "etiqueta", "sujeto", "especie", "direccion", "cercania", "frescura", "calidad", "obligatorio"]);
 
 const IDS = /"H[0-9]{2}"/g;
 
