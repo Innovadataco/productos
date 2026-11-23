@@ -41,7 +41,7 @@ function operar(e: Estado, lado: LadoSimulado, id: string, cantidad: bigint, pre
   return { entradas: { ...e.entradas, ...portafolioDespues(e.entradas, id, despues) }, caja: s.cajaDespues, comision: s.comision.estado === "SIN_HISTORIA" ? 0 : s.comision.valor.toNumber() };
 }
 const entrada = (e: Estado): EntradaEscenario => ({ historia: e.entradas.historia, caja: e.caja.toNumber(), accionesSinHistoria: 0 });
-const comparar = (antes: Estado, despues: Estado) => escenariosAntesDespues(entrada(antes), entrada(despues), P);
+const comparar = (antes: Estado, despues: Estado) => escenariosAntesDespues(entrada(antes), entrada(despues), P)!;
 
 describe("escenarios del antes y el después con la caja como parte fija", () => {
   const antes: Estado = { entradas: MIXTO, caja: D("93713.41") };
@@ -109,5 +109,26 @@ describe("escenarios del antes y el después con la caja como parte fija", () =>
     const con = comparar(quieto, operar(quieto, "COMPRAR", "FICTICIA-E", 7n, "317.43", CON_COMISION));
     expect(con.antes.probabilidadBajoAportado).toBe(0);
     expect(con.despues.probabilidadBajoAportado).toBe(1);
+  });
+
+  it("con aportes, caída inicial y dividendos sin reinvertir, la ida y vuelta sigue igual al antes y la comisión baja cada percentil", () => {
+    const otros: ParametrosProyeccion = { ...P, aportePeriodico: 371.13, frecuenciaAporte: "TRIMESTRAL", caidaInicialPct: 5, reinvertirDividendos: false };
+    const ida = operar(antes, "COMPRAR", "FICTICIA-B", 13n, "4613.27", SIN_COMISION);
+    const vuelta = operar(ida, "VENDER", "FICTICIA-B", 13n, "4613.27", SIN_COMISION);
+    const igual = escenariosAntesDespues(entrada(antes), entrada(vuelta), otros)!;
+    igual.antes.puntos.forEach((p, i) => expect(Math.abs(igual.despues.puntos[i]!.p50 - p.p50) / p.p50).toBeLessThan(1e-9));
+    const compra = operar(antes, "COMPRAR", "FICTICIA-C", 31n, PRECIO_PLANO, CON_COMISION);
+    const e = escenariosAntesDespues(entrada(antes), entrada(compra), otros)!;
+    // La caída inicial (5 %) también le pega a la caja, como a todo el portafolio del motor; la comisión sale antes. Los
+    // aportes se reparten con los pesos de cada lado, que cambian un poco: por eso la tolerancia es de centavos.
+    e.antes.puntos.forEach((p, i) => expect(p.p50 - e.despues.puntos[i]!.p50).toBeCloseTo(compra.comision * 0.95, 0));
+  });
+
+  it("sin valor de partida positivo (la compra deja el total en cero o menos), no hay escenarios: no se inventan cifras", () => {
+    const quieto: Estado = { entradas: QUIETO, caja: D("13.71") };
+    const base = entrada(quieto);
+    expect(escenariosAntesDespues(base, { ...base, caja: -(23 * 905.61 + 41 * 317.43) - 37.11 }, P)).toBeNull();
+    expect(escenariosAntesDespues({ ...base, caja: -(23 * 905.61 + 41 * 317.43) }, base, P)).toBeNull();
+    expect(escenariosAntesDespues(base, base, P)).not.toBeNull();
   });
 });
