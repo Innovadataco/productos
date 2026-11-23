@@ -2,13 +2,13 @@
 // convertir) y la respuesta como texto (pesos exactos, pesos porcentuales a 2 decimales, la fuente de la comisión y de
 // la caja). Datos inventados (FICTICIA-*, 2027).
 import { describe, expect, it } from "vitest";
-import { aRespuestaSimulacion, CAJA_SIN_CERTIFICACION, especiesSimulables, textoCajaCertificada, textoPeso } from "@/app/operar/serializar-simulacion";
+import { aRespuestaSimulacion, CAJA_ESCRITA, CAJA_SIN_CERTIFICACION, especiesSimulables, textoCajaCertificada, textoPeso } from "@/app/operar/serializar-simulacion";
 import { leerPedidoSimulacion } from "@/operar/pantalla/entrada";
 import { simularOperacion } from "@/operar/simulador/simular";
 import { A, B, C, CONTEXTO, D, ESTADO, SIN_HISTORIA, idDe, operacion, regla } from "../simulador/apoyo/estado.ficticio";
 import { tarifa } from "../tarifa/apoyo/tarifa.ficticio";
 
-const cuerpo = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", ...cambios });
+const cuerpo = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", saldoComisionista: "", ...cambios });
 
 describe("leerPedidoSimulacion", () => {
   it("convierte cantidad y precio sin punto flotante", () => {
@@ -18,6 +18,22 @@ describe("leerPedidoSimulacion", () => {
     expect(r.valor.operacion.cantidad).toBe(1237n);
     expect(r.valor.operacion.precioLimite.toFixed()).toBe("4613.27");
     expect(r.valor.comisionista).toBe("TRII");
+  });
+
+  it("el saldo disponible en el comisionista es opcional: vacío es null; escrito, se convierte como en la ficha", () => {
+    const vacio = leerPedidoSimulacion(cuerpo());
+    expect(vacio?.ok && vacio.valor.saldo).toBeNull();
+    const escrito = leerPedidoSimulacion(cuerpo({ saldoComisionista: "37.911,47" }));
+    expect(escrito?.ok && escrito.valor.saldo?.toFixed()).toBe("37911.47");
+    const malo = leerPedidoSimulacion(cuerpo({ saldoComisionista: "abc" }));
+    expect(malo).toEqual({ ok: false, campos: ["saldoComisionista"] });
+    expect(leerPedidoSimulacion(cuerpo({ saldoComisionista: "-4.613" }))).toEqual({ ok: false, campos: ["saldoComisionista"] });
+  });
+
+  it("con el saldo escrito, la caja se rotula «escrito por usted»", () => {
+    const r = aRespuestaSimulacion(simularOperacion(ESTADO, operacion(A, "COMPRAR", 3n, "4613.27"), CONTEXTO), idDe(A), ESTADO.posiciones, "ESCRITA");
+    expect(r.ok && r.vista.cajaFuente).toBe(CAJA_ESCRITA);
+    expect(CAJA_ESCRITA).toBe("Caja: saldo disponible en el comisionista, escrito por usted (no se guarda).");
   });
 
   it("un cuerpo sin las claves exactas es null (400 sin campos)", () => {
@@ -46,10 +62,10 @@ describe("aRespuestaSimulacion", () => {
     const r = aRespuestaSimulacion(simularOperacion(ESTADO, op, { ...CONTEXTO, tarifas: { COMPRA: tarifa() } }), op.instrumentoId, ESTADO.posiciones, new Date(Date.UTC(2027, 2, 12)));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.vista.valorOrden).toBe("$ 13.839,81");
-    expect(r.vista.comision).toEqual({ fuente: "TARIFA", valor: "$ 49,9523", texto: "calculada con su tarifa de Trii para compra · versión 3" });
-    expect(r.vista.cajaAntes).toBe("$ 37.911,47");
-    expect(r.vista.cajaDespues).toBe("$ 24.021,7077");
+    expect(r.vista.valorOrden).toBe("$ 13.840");
+    expect(r.vista.comision).toEqual({ fuente: "TARIFA", valor: "$ 50", texto: "calculada con su tarifa de Trii para compra · versión 3" });
+    expect(r.vista.cajaAntes).toBe("$ 37.911");
+    expect(r.vista.cajaDespues).toBe("$ 24.022");
     expect(r.vista.cajaFuente).toBe(textoCajaCertificada("2027-03-12"));
     expect(r.vista.especies.find((e) => e.operada)?.nemotecnico).toBe(A);
     expect(r.vista.especies.find((e) => e.nemotecnico === A)).toMatchObject({ cantidadAntes: "1.237", cantidadDespues: "1.240" });

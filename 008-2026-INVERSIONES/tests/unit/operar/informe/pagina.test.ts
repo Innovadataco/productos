@@ -133,7 +133,7 @@ describe("la pantalla", () => {
     expect([...(tabla?.querySelectorAll("thead th") ?? [])].map(texto)).toEqual(["Especie", "Cantidad", "Último cierre", "Valor", "Peso", "Ganancia o pérdida sin vender", "Sobre el costo (%)"]);
     const filas = [...(tabla?.querySelectorAll("tbody tr") ?? [])].map((tr) => [...tr.querySelectorAll("th, td")].map(texto));
     expect(filas.map((f) => f[0])).toEqual(["FICTICIA-A", "FICTICIA-B", "FICTICIA-C", "FICTICIA-E"]);
-    expect(filas[0]).toEqual(["FICTICIA-A", "37", "$ 4.597,31 · 16-mar-2027", "$ 170.100", "52,0 %", "+$ 11.183", "+7,0 %"]);
+    expect(filas[0]).toEqual(["FICTICIA-A", "37", "$ 4.597,31 · 16-mar-2027", "$ 170.100", "52,00 %", "+$ 11.183", "+7,0 %"]);
     expect(filas[2]![2]).toBe("$ 899,11 · 12-mar-2027 cierre atrasado");
     expect(filas[3]!.slice(2)).toEqual(["sin cierre", "—", "—", "—", "—"]);
     expect([...(tabla?.querySelectorAll("tfoot th, tfoot td") ?? [])].map(texto)).toEqual(["Total", "", "", "$ 326.965", "", "+$ 18.905", ""]);
@@ -150,7 +150,7 @@ describe("la pantalla", () => {
       "Su regla de FICTICIA-B dice: vender 7 acciones si el cierre queda por debajo de $ 1.301,17. Hoy se cumple: el cierre del 16-mar-2027 fue de $ 1.237, por debajo del nivel. Plazo: sin plazo.",
     ]);
     expect(items(raiz, "t-cercanas")).toEqual([
-      "Su regla de FICTICIA-B dice: vender 13 acciones si el cierre queda por encima de $ 1.259,17. El cierre del 16-mar-2027 fue de $ 1.237: está a +1,79 % del nivel. Plazo: hasta el 2-abr-2027.",
+      "Su regla de FICTICIA-B dice: vender 13 acciones si el cierre queda por encima de $ 1.259,17. El cierre del 16-mar-2027 fue de $ 1.237: le falta subir 1,79 % para tocar su nivel. Plazo: hasta el 2-abr-2027.",
     ]);
     const resto = items(raiz, "t-resto");
     expect(resto).toHaveLength(4);
@@ -158,7 +158,7 @@ describe("la pantalla", () => {
     expect(resto[0]).toContain("no actuar (43 acciones), sin condición. Es una postura del plan");
     expect(resto[0]).toContain("Plazo: hasta el 14-may-2027.");
     expect(resto.join(" ")).toContain("Su regla de portafolio dice: «Orden límite siempre (ficticia)».");
-    expect(resto.join(" ")).toContain("008 no la mide con los cierres: aplica al monto de cada orden.");
+    expect(resto.join(" ")).toContain("Inversiones no la mide con los cierres: aplica al monto de cada orden.");
     expect(grupo(raiz, "t-se-cumplen")?.querySelectorAll(".aviso")).toHaveLength(2);
   });
 

@@ -42,7 +42,7 @@ describe("errores", () => {
     expect(textoError({ codigo: "CANTIDAD_FUERA_DE_RANGO" })).toBe("La cantidad es demasiado grande para calcularla con exactitud.");
     expect(textoError({ codigo: "PRECIO_NO_POSITIVO" })).toBe("El precio límite no es un número mayor que cero.");
     expect(textoError({ codigo: "PRECIO_FUERA_DE_ESCALA" })).toBe("El precio límite tiene más de 6 decimales o es demasiado grande para calcularlo con exactitud.");
-    expect(textoError({ codigo: "ESPECIE_DESCONOCIDA" })).toBe("La especie no está en su portafolio en 008: no hay cantidad ni cierre para simular.");
+    expect(textoError({ codigo: "ESPECIE_DESCONOCIDA" })).toBe("La especie no está en su portafolio en Inversiones: no hay cantidad ni cierre para simular.");
     expect(textoError({ codigo: "VENTA_SUPERA_TENENCIA", tiene: 1237n, pide: 4613n })).toBe("La venta es de 4.613 acciones y usted tiene 1.237.");
     expect(textoError({ codigo: "ORDEN_FUERA_DE_RANGO" })).toBe("El valor de la orden, o el de la posición que deja, es demasiado grande para calcularlo con exactitud.");
   });

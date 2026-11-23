@@ -16,7 +16,7 @@ const C = { precio: "4597.31", fecha: "2027-03-16" };
 
 describe("el aviso fijo y los precios", () => {
   it("dice que la decisión es del dueño y que 008 no recomienda", () => {
-    expect(AVISO_DECISION).toBe("Información calculada por 008 con su plan. La decisión es suya. 008 no recomienda comprar ni vender.");
+    expect(AVISO_DECISION).toBe("Información calculada por Inversiones con su plan. La decisión es suya. Inversiones no recomienda comprar ni vender.");
   });
 
   it("los precios: el último cierre disponible y su fecha, o que no hay; y cuándo se detuvo la carga", () => {
@@ -47,6 +47,8 @@ describe("«Su regla … dice …»: acción, cantidad, condición y nivel del p
 
 describe("el estado de la regla hoy", () => {
   it("tocada: «Hoy se cumple», con el cierre y el lado; con la carga detenida, «con el último cierre disponible»", () => {
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "-0.65", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: le falta bajar 0,65 % para tocar su nivel.");
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "2.37", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: le falta subir 2,37 % para tocar su nivel.");
     expect(textoEstadoRegla({ tipo: "TOCADA", lado: "BAJO", cierre: C }, false)).toEqual({ principal: "Hoy se cumple: el cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel.", aviso: false });
     expect(textoEstadoRegla({ tipo: "TOCADA", lado: "SOBRE", cierre: C }, true)).toEqual({ principal: "Se cumple con el último cierre disponible, del 16-mar-2027: $ 4.597,31, por encima del nivel.", aviso: false });
   });
