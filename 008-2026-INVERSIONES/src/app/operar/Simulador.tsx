@@ -5,7 +5,7 @@
  * también lo usa. Todo se muestra como texto (React escapa): nada de HTML del servidor. Se envía con `fetch` (un
  * formulario nativo, con `Referrer-Policy: no-referrer`, mandaría `Origin: null` y la ruta lo rechazaría).
  */
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { COMISIONISTAS_SIMULADOR, LADOS_SIMULADOR, ORIGEN_COMISION, TEXTOS_SIMULADOR as T, mensajeDeEstado } from "./textos-simulador";
 import type { EspecieSimulable, RespuestaSimulacion, VistaSimulacion } from "./tipos-simulador";
 
@@ -40,10 +40,10 @@ function Par({ titulo, antes, despues }: { readonly titulo: string; readonly ant
   );
 }
 
-function Resultado({ vista }: { readonly vista: VistaSimulacion }) {
+function Resultado({ vista, titulo }: { readonly vista: VistaSimulacion; readonly titulo: RefObject<HTMLHeadingElement | null> }) {
   return (
     <div className="op-sim-resultado">
-      <h3>{T.RESULTADO}</h3>
+      <h3 tabIndex={-1} ref={titulo}>{T.RESULTADO}</h3>
       <dl className="op-sim-cifras">
         <div className="op-sim-par"><dt>{T.VALOR_ORDEN}</dt><dd>{vista.valorOrden}</dd></div>
         <div className="op-sim-par">
@@ -93,10 +93,13 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
   const [estado, setEstado] = useState<Estado>({ tipo: "listo" });
   const enCurso = useRef(false);
   const alerta = useRef<HTMLDivElement | null>(null);
+  const titulo = useRef<HTMLHeadingElement | null>(null);
 
-  // Los errores toman el foco (como el resumen del área de edición); el resultado se anuncia con una línea corta.
+  // Sin regiones vivas en <main> (el contrato de /operar): los errores toman el foco (como el resumen del área de
+  // edición) y el resultado lo toma en su título, así el lector de pantalla lo anuncia una vez.
   useEffect(() => {
     if (estado.tipo === "errores") alerta.current?.focus();
+    if (estado.tipo === "resultado") titulo.current?.focus();
   }, [estado]);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
@@ -140,11 +143,11 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
         </form>
       )}
       <div className="op-sim-salida">
-        <p className="nota" role="status">{calculando ? T.CALCULANDO : estado.tipo === "resultado" ? T.LISTO : ""}</p>
+        {calculando ? <p className="nota">{T.CALCULANDO}</p> : null}
         {estado.tipo === "errores" ? (
           <div className="op-sim-errores" role="alert" tabIndex={-1} ref={alerta}><p>{T.ERRORES}</p><ul>{estado.errores.map((e, i) => <li key={`${i}-${e}`}>{e}</li>)}</ul></div>
         ) : null}
-        {estado.tipo === "resultado" ? <Resultado vista={estado.vista} /> : null}
+        {estado.tipo === "resultado" ? <Resultado vista={estado.vista} titulo={titulo} /> : null}
       </div>
       <p className="nota">{T.TARIFAS}</p>
     </section>
