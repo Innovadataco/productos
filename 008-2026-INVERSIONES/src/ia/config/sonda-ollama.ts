@@ -15,9 +15,10 @@ import { crearGeneradorLocal } from "../local/generador";
 import type { BuscarLocal } from "../local/http";
 import { identificarModelos, type ModeloInstalado } from "../local/identificar";
 import type { ListaModelosPi } from "../local/modelos";
-import { crearSemaforo } from "../local/semaforo";
+import { crearSemaforo, type Semaforo } from "../local/semaforo";
 import { destinoDe, type ConfigIaVigente } from "./leer";
 import { TAREAS_IA } from "./parametros";
+import { VARIABLE_TOKEN_SERVICIO_IA, sondaServicio, tokenServicioValido, type BuscarServicio } from "./sonda-servicio";
 
 /** La variable que enciende la sonda directa en desarrollo (su único valor válido es «directa»). */
 export const VARIABLE_SONDA_OLLAMA = "INV_IA_SONDA_OLLAMA";
@@ -49,9 +50,11 @@ export const SONDA_PENDIENTE: SondaOllama = Object.freeze({
   probar: () => Promise.resolve({ ...PENDIENTE, etapa: "PING", latenciaMs: 0 }),
 });
 
-/** La directa (desarrollo): el cliente de la puerta local de E4a sobre `fetch`, un pedido a la vez. */
-export function sondaDirecta(fetch: BuscarLocal): SondaOllama {
-  const semaforo = crearSemaforo();
+/**
+ * La directa: el cliente de la puerta local de E4a sobre `fetch`, un pedido a la vez. La usan el desarrollo y el servicio
+ * inv-008-ia (E6), que le pasa SU turno para que la corrida diaria y los pedidos a demanda no vayan a la vez al Mac.
+ */
+export function sondaDirecta(fetch: BuscarLocal, semaforo: Semaforo = crearSemaforo()): SondaOllama {
   return Object.freeze({
     tipo: "DIRECTA",
     async identificar(destino: string): Promise<IdentificacionCruda> {
@@ -76,12 +79,23 @@ export function sondaDirecta(fetch: BuscarLocal): SondaOllama {
 /** La directa del proceso: una sola (un solo turno al Mac para todas las acciones). */
 let directaDelProceso: SondaOllama | null = null;
 
-/** La sonda del entorno: la directa solo fuera de producción y con la variable exacta; si no, la pendiente. */
+/** La del servicio inv-008-ia del proceso, con el token con el que se creó (si el token cambia, se crea otra). */
+let servicioDelProceso: { readonly token: string; readonly sonda: SondaOllama } | null = null;
+
+/**
+ * La sonda del entorno: la directa solo fuera de producción y con la variable exacta; si no, la del servicio inv-008-ia
+ * (E6) cuando el entorno trae su token con la forma debida; si no, la pendiente.
+ */
 export function sondaDelEntorno(entorno: Readonly<Record<string, string | undefined>>): SondaOllama {
   const directa = entorno.NODE_ENV !== "production" && entorno[VARIABLE_SONDA_OLLAMA] === "directa";
-  if (!directa) return SONDA_PENDIENTE;
-  directaDelProceso ??= sondaDirecta(globalThis.fetch as unknown as BuscarLocal);
-  return directaDelProceso;
+  if (directa) {
+    directaDelProceso ??= sondaDirecta(globalThis.fetch as unknown as BuscarLocal);
+    return directaDelProceso;
+  }
+  const token = entorno[VARIABLE_TOKEN_SERVICIO_IA];
+  if (!tokenServicioValido(token)) return SONDA_PENDIENTE;
+  if (servicioDelProceso?.token !== token) servicioDelProceso = { token, sonda: sondaServicio((url, init) => globalThis.fetch(url, init) as ReturnType<BuscarServicio>, token) };
+  return servicioDelProceso.sonda;
 }
 
 export interface ModeloIdentificado extends ModeloInstalado {

@@ -3,7 +3,8 @@
 # (git archive del sha + buildx --platform linux/amd64); el VPS de PI no construye nada.
 #
 #   runner   → inv-008-app: la app (Next standalone) y el bundle de precios (precios/servicio-precios.mjs, de
-#              esbuild, sin tsx), que correrá el servicio inv-008-precios con esta misma imagen y otro entrypoint.
+#              esbuild, sin tsx), que correrá el servicio inv-008-precios con esta misma imagen y otro entrypoint;
+#              y el bundle de IA (ia/servicio-ia.mjs), igual, para el servicio inv-008-ia.
 #   migrador → inv-008-migrador: prisma migrate deploy + guardián del esquema + privilegios de inv_app y
 #              los comandos de carga (inv-cargar: el sobre por stdin, sin copias en el VPS) y de acceso
 #              inicial (tsx, rol inv_dueno). Lleva el node_modules completo
@@ -36,6 +37,9 @@ COPY . .
 ENV NODE_OPTIONS=--max-old-space-size=3072
 # El bundle de precios va DESPUÉS de next build, que vacía .next al empezar.
 RUN npx prisma generate && npm run build && npm run build:precios
+# El bundle del servicio de IA (inv-008-ia), igual: después de next build. La condición react-server resuelve los
+# `import "server-only"` de src/ia/config a su módulo vacío (fuera de Next no hay quien la ponga).
+RUN npx esbuild src/servicio-ia/entrada.ts --bundle --platform=node --format=esm --target=node22 --conditions=react-server --external:@prisma/client --outfile=.next/ia/servicio-ia.mjs
 
 FROM base AS runner
 ARG APP_VERSION
@@ -53,6 +57,10 @@ COPY --from=builder /app/.next/static ./.next/static
 RUN mkdir -p -m 0755 /app/precios
 COPY --from=builder --chmod=0444 /app/.next/precios/servicio-precios.mjs ./precios/servicio-precios.mjs
 RUN test "$(stat -c '%u:%g %a' precios)" = "0:0 755" && test "$(stat -c '%u:%g %a' precios/servicio-precios.mjs)" = "0:0 444" && test ! -e node_modules/tsx && test ! -e node_modules/esbuild && test ! -e node_modules/@esbuild || { echo "el bundle de precios no es de root (carpeta 0755, archivo 0444), o la imagen trae tsx o esbuild" >&2; exit 1; }
+# El bundle del servicio de IA (src/servicio-ia/entrada.ts), con las mismas reglas: de root, 0444, en una carpeta 0755.
+RUN mkdir -p -m 0755 /app/ia
+COPY --from=builder --chmod=0444 /app/.next/ia/servicio-ia.mjs ./ia/servicio-ia.mjs
+RUN test "$(stat -c '%u:%g %a' ia)" = "0:0 755" && test "$(stat -c '%u:%g %a' ia/servicio-ia.mjs)" = "0:0 444" || { echo "el bundle de IA no es de root (carpeta 0755, archivo 0444)" >&2; exit 1; }
 # El build falla si el standalone no trae el engine de Prisma para musl (si no, fallaría en el VPS).
 RUN test -f node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node || { echo "falta el engine de Prisma linux-musl-openssl-3.0.x en el standalone" >&2; exit 1; }
 # Ningún .env en la imagen (next build copia el .env de la carpeta al standalone): el build falla si hay uno.
@@ -63,6 +71,8 @@ USER 10008:10008
 # standalone, no se construye).
 RUN test ! -w precios/servicio-precios.mjs || { echo "el usuario 10008 puede escribir el bundle de precios" >&2; exit 1; }
 RUN node precios/servicio-precios.mjs --ayuda >/dev/null
+RUN test ! -w ia/servicio-ia.mjs || { echo "el usuario 10008 puede escribir el bundle de IA" >&2; exit 1; }
+RUN node ia/servicio-ia.mjs --ayuda >/dev/null
 EXPOSE 5008
 CMD ["node", "server.js"]
 

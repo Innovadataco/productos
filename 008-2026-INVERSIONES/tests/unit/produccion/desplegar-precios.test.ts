@@ -95,7 +95,7 @@ describe("desplegar-prod.sh · servicio de precios: se levanta y se verifica sol
     expect(r.status, r.stderr).toBe(0);
     expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${p.repo.sha}`);
     const final = ups(p).at(-1)!;
-    expect(final).toMatch(/ inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-precios$/);
+    expect(final).toMatch(/ inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-precios$/);
     expect(final).not.toContain("--scale");
     expect(r.stderr).toContain("la imagen trae el servicio de precios");
     expect(r.stderr).toContain("el servicio de precios corre la imagen enviada");
@@ -132,7 +132,7 @@ describe("desplegar-prod.sh · servicio de precios: se levanta y se verifica sol
     const r = await correr(p.script, [ID], p.env);
     expect(r.status, r.stderr).toBe(0);
     expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${p.repo.sha}`);
-    expect(ups(p).at(-1)).toMatch(/ --scale inv-008-precios=0 inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-precios$/);
+    expect(ups(p).at(-1)).toMatch(/ --scale inv-008-precios=0 inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-precios$/);
     expect(r.stderr).toContain("la imagen no trae el servicio de precios");
     expect(p.falsos.llamadas().some(enLaRedDePrecios)).toBe(false);
   });
@@ -175,7 +175,7 @@ describe("desplegar-prod.sh · servicio de precios en la vuelta atrás", () => {
     const r = await correr(p.script, [ID], { ...env, FALSO_SALUD_PRECIOS: "unhealthy" });
     expect(r.status).not.toBe(0);
     const vuelta = ups(p).at(-1)!;
-    expect(vuelta).toMatch(new RegExp(`^up ${p.repo.sha} .* --scale inv-008-precios=0 inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-precios$`));
+    expect(vuelta).toMatch(new RegExp(`^up ${p.repo.sha} .* --scale inv-008-precios=0 inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-precios$`));
     expect(r.stderr).toContain("vuelta atrás");
   });
 
@@ -186,7 +186,7 @@ describe("desplegar-prod.sh · servicio de precios en la vuelta atrás", () => {
     const r = await correr(p.script, [ID], { ...env, FALSO_SALUD_PRECIOS: "unhealthy" });
     expect(r.status).not.toBe(0);
     const vuelta = ups(p).at(-1)!;
-    expect(vuelta).toMatch(new RegExp(`^up ${p.repo.sha} .* inv-008-respaldo inv-008-precios$`));
+    expect(vuelta).toMatch(new RegExp(`^up ${p.repo.sha} .* inv-008-respaldo inv-008-ia inv-008-precios$`));
     expect(vuelta).not.toContain("--scale");
   });
 });

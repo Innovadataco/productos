@@ -18,8 +18,9 @@
 # (mem = memswap, sin reiniciar; si no se puede, aborta sin tocar nada más) → medición → (redes de una versión
 # anterior: down sin -v) → base y respaldo → roles → PI otra vez → (si migra) app vieja detenida → respaldo cifrado →
 # (si migra) respaldo diario detenido → migrador (migraciones, guardián del esquema y privilegios) → app,
-# entrada, vigía y respaldo → imagen, salud por la entrada, la app y la base sin puertos y solo en redes internal
-# con la puerta de enlace aislada → la app sin salida a internet (con control positivo desde la entrada) →
+# entrada, vigía, respaldo, IA y precios → imagen, salud por la entrada, la app y la base sin puertos y solo en redes
+# internal con la puerta de enlace aislada; el servicio de IA healthy, sin puertos y con su entorno → la app sin salida
+# a internet (con control positivo desde la entrada) → la salida del servicio de IA (avisa; aborta si se exige) →
 # límites reaplicados otra vez y mem = memswap → la espera y la medición (en la corta, piso de memoria: bajo él, se
 # extiende a 600 s) → salud otra vez → estado → retención (solo en producción) → convivencia y piso →
 # DEPLOY VERIFICADO <sha>. Si algo falla
@@ -39,7 +40,14 @@ ESPERA_COMPLETA_S=600
 # El piso de la espera corta: MemAvailable bajo UMBRAL_CORTE_KB (1 GiB, el criterio de corte) o SwapFree bajo
 # 512 MiB, el mismo par del preflight de memoria de PI (convivencia-pi.md §1).
 PISO_SWAPFREE_KB=524288
-PERMANENTES=(inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo)
+PERMANENTES=(inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia)
+# El servicio de IA (E6, D-026) es un permanente más: con una imagen anterior a él queda en espera (lo resuelve su
+# entrypoint en el compose), así que no necesita el trato del de precios (--scale 0).
+IA="inv-008-ia"
+# El puente de su red con salida: nombre fijo para la regla de firewall del host que pone PI.
+PUENTE_IA="br-inv008-ia"
+# Lo único que el servicio de IA recibe del compose, además del ENV de la imagen: lista blanca de NOMBRES.
+PROPIAS_IA=(DATABASE_URL INV_IA_SERVICIO_TOKEN INV_IA_DIR_COMPARTIDA TZ)
 # El servicio de precios (D-018) entra con los permanentes solo si la imagen lo trae (imagen_con_servicio_precios).
 PRECIOS="inv-008-precios"
 # El puente de su red con salida: nombre fijo para la regla de firewall del host que pone PI.
@@ -590,6 +598,49 @@ verificar_precios() {
   informar "el servicio de precios corre la imagen enviada, healthy, sin puertos, solo en la red interna y la suya ($PUENTE_PRECIOS)"
 }
 
+# El entorno del servicio de IA, por NOMBRES y con lista blanca: el ENV de la imagen enviada más PROPIAS_IA; cualquier
+# otra (una clave de cifrado, la de otro servicio, la llave de la nube) aborta. De su credencial se miran solo el usuario
+# y el host (nunca se imprime ni se guarda la URL): inv_ia en inv-008-db, o vacía. Del token, solo si está.
+verificar_entorno_ia() {
+  local cid="$1" permitidas ajenas destino
+  permitidas="$( { docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$ID" | cut -d= -f1; printf '%s\n' "${PROPIAS_IA[@]}"; } | LC_ALL=C sort -u)" ||
+    morir "no se pudo leer el entorno de la imagen enviada"
+  ajenas="$(entorno_de "$cid" | cut -d= -f1 | LC_ALL=C sort -u | LC_ALL=C comm -23 - <(printf '%s\n' "$permitidas") | LC_ALL=C tr -cd '[:alnum:]_\n' | tr '\n' ' ')" ||
+    morir "no se pudo leer el entorno del servicio de IA"
+  [ -z "${ajenas// /}" ] || morir "el servicio de IA recibe variables que no son suyas: $ajenas"
+  # Sin `grep -q` en la tubería: con pipefail, su salida temprana (SIGPIPE) se leería como «no está».
+  entorno_de "$cid" | grep '^INV_IA_SERVICIO_TOKEN=.' >/dev/null ||
+    informar "⚠️  el servicio de IA corre sin INV_IA_SERVICIO_TOKEN: no atiende los pedidos de la app («Identificar» y «Probar» quedan pendientes; produccion.md §2)"
+  if ! entorno_de "$cid" | grep '^DATABASE_URL=.' >/dev/null; then
+    informar "⚠️  el servicio de IA corre sin INV_IA_DATABASE_URL: queda en espera y no hace resúmenes (produccion.md §2)"
+    return 0
+  fi
+  destino="$(entorno_de "$cid" | sed -n 's|^DATABASE_URL=postgres\(ql\)\{0,1\}://\([^:@/]*\)\(:[^@/]*\)\{0,1\}@\([^:/?]*\).*|\2@\4|p')"
+  [ "$destino" = "inv_ia@inv-008-db" ] || morir "la DATABASE_URL del servicio de IA no es la de inv_ia en inv-008-db"
+  informar "el servicio de IA corre con la credencial de inv_ia"
+}
+
+# El servicio de IA (E6): corriendo de una vez con la imagen enviada y healthy (su latido), sin puertos, solo en la red
+# interna y en la suya, que tiene salida, el puente PUENTE_IA y nadie más, y con su entorno.
+verificar_ia() {
+  local cid redes esperadas red_ia="${INV_PROYECTO_ACTIVO}_inv-008-red-ia" datos
+  cid="$("${COMPOSE[@]}" ps -q "$IA")"
+  [ -n "$cid" ] || morir "no hay contenedor del servicio de IA"
+  verificar_corriendo "el servicio de IA" "$cid"
+  [ "$(docker inspect -f '{{.State.Health.Status}}' "$cid")" = healthy ] || morir "el servicio de IA no está healthy (su latido, /estado/bucle): revise sus logs"
+  [ -z "$(docker port "$cid")" ] || morir "el servicio de IA publica puertos"
+  docker exec "$cid" test -r /app/ia/servicio-ia.mjs || morir "la imagen enviada no trae el bundle del servicio de IA (/app/ia/servicio-ia.mjs)"
+  redes="$(docker inspect -f '{{range $nombre, $_ := .NetworkSettings.Networks}}{{$nombre}} {{end}}' "$cid")" || morir "no se pudieron leer las redes del servicio de IA"
+  esperadas="${INV_PROYECTO_ACTIVO}_inv-008-red-ia ${INV_PROYECTO_ACTIVO}_inv-008-red-interna "
+  [ "$redes" = "$esperadas" ] || morir "el servicio de IA está en otras redes ($redes): solo la interna y la suya"
+  datos="$(docker inspect --type network -f '{{.Internal}}|{{index .Options "com.docker.network.bridge.name"}}|{{len .Containers}}' "$red_ia")" ||
+    morir "no se pudo leer la red $red_ia"
+  [ "$datos" = "false|$PUENTE_IA|1" ] ||
+    morir "la red del servicio de IA no es la esperada (internal|puente|contenedores: $datos): con salida, el puente $PUENTE_IA y solo el servicio"
+  verificar_entorno_ia "$cid"
+  informar "el servicio de IA corre la imagen enviada, healthy, sin puertos, solo en la red interna y la suya ($PUENTE_IA)"
+}
+
 verificar_servicio() {
   local cid salud
   cid="$("${COMPOSE[@]}" ps -q inv-008-app)"
@@ -612,6 +663,7 @@ verificar_servicio() {
   verificar_aislado "la base" "$cid"
   informar "la app corre la imagen enviada, sin puertos y solo en redes internal; /api/salud por la entrada responde ok con la versión $SHA"
   [ "$CON_PRECIOS" = 0 ] || verificar_precios
+  verificar_ia
 }
 
 # Imprime, una por línea, las redes internal del proyecto que YA existen sin la puerta de enlace aislada (de una
@@ -674,7 +726,33 @@ verificar_sin_salida() {
   if ipv4_resuelta_en "$cid" >/dev/null; then
     morir "la app resuelve nombres de internet ($SONDA_SALIDA_DESTINO): no debe tener DNS externo"
   fi
+  IP_SONDA="$ip"
   informar "la app no tiene salida a internet: sin ruta a $ip:$SONDA_SALIDA_PUERTO ni DNS externo; la entrada sí llega (control positivo)"
+}
+
+# El servicio de IA sí tiene una red con salida (su puente, PUENTE_IA): por ella llega al Ollama del Mac, por la tailnet.
+# A INTERNET no debe llegar, pero eso no lo corta el compose (una red de Docker no filtra por destino): lo cortan su
+# código (solo una IPv4 de la tailnet, src/ia/local/destino.ts) y la regla de firewall del host que pone PI sobre ese
+# puente (I-464). Aquí se prueba la red, contra la misma IP pública de la sonda que la entrada acaba de alcanzar
+# (IP_SONDA, el control positivo de verificar_sin_salida: nunca una IP escrita en el repo).
+# D-026: la IA se activa SIN esperar la regla de PI. Por eso, si el servicio llega a internet se AVISA y el despliegue
+# sigue; con INV_IA_EXIGIR_SIN_SALIDA=1 (cuando PI confirme su regla) se aborta, con vuelta atrás.
+verificar_salida_ia() {
+  local cid salida rc=0
+  [ -n "$IP_SONDA" ] || morir "no hay IP de la sonda (verificar_sin_salida va antes): la salida del servicio de IA no se puede probar"
+  cid="$("${COMPOSE[@]}" ps -q "$IA")"
+  [ -n "$cid" ] || morir "no hay contenedor del servicio de IA"
+  # Sin nc (o si el exec no corre), un código distinto de 0 no probaría nada.
+  docker exec "$cid" sh -c 'command -v nc' >/dev/null 2>&1 || morir "el contenedor del servicio de IA no tiene nc: su salida a internet no se puede probar"
+  salida="$(docker exec "$cid" nc -z -v -w 5 "$IP_SONDA" "$SONDA_SALIDA_PUERTO" 2>&1)" || rc=$?
+  salida="$(printf '%s' "$salida" | head -n 1 | head -c 200)"
+  if [ "$rc" != 0 ]; then
+    informar "el servicio de IA no llega a internet: $IP_SONDA:$SONDA_SALIDA_PUERTO falló («${salida:-sin mensaje}», código $rc); la entrada sí llegó (control positivo)"
+    return 0
+  fi
+  [ "${INV_IA_EXIGIR_SIN_SALIDA:-0}" != 1 ] ||
+    morir "EL SERVICIO DE IA TIENE SALIDA A INTERNET: llegó a $SONDA_SALIDA_DESTINO ($IP_SONDA:$SONDA_SALIDA_PUERTO) por su puente $PUENTE_IA. Falta la regla de firewall de PI"
+  informar "⚠️  EL SERVICIO DE IA TIENE SALIDA A INTERNET por su puente $PUENTE_IA (llegó a $IP_SONDA:$SONDA_SALIDA_PUERTO): falta la regla de firewall del host que pone PI (I-464). Su código solo abre conexiones a la tailnet; se sigue por D-026. Con INV_IA_EXIGIR_SIN_SALIDA=1 esto aborta el despliegue"
 }
 
 registrar_estado() {
@@ -747,6 +825,8 @@ ESPERA=""
 BAJO_PISO=""
 CON_PRECIOS=0
 UP_PERMANENTES=()
+# La IP pública de la sonda que alcanzó la entrada (la fija verificar_sin_salida; la usa verificar_salida_ia).
+IP_SONDA=""
 vuelta_atras() {
   local codigo=$? sha="$SHA_VUELTA"
   [ -n "$sha" ] || [ "$DETENIDOS" = 0 ] || sha="$SHA_CORRIA"
@@ -869,12 +949,16 @@ main() {
 
   revisar_pi "antes de up"
   respaldos_siguen_validos || morir "la carpeta de respaldos dejó de pasar la validación antes del up"
-  informar "app, entrada, vigía, respaldo y precios: up --wait"
+  local problema_ia
+  problema_ia="$(problema_dir_compartida_ia "$INV_ENV_PROD")"
+  [ -z "$problema_ia" ] || morir "$problema_ia (produccion.md §2)"
+  informar "app, entrada, vigía, respaldo, IA y precios: up --wait"
   "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${UP_PERMANENTES[@]}"
   # La app y el respaldo ya están arriba: si algo falla después, se vuelve solo si hay otra imagen.
   DETENIDOS=0
   verificar_servicio
   verificar_sin_salida
+  verificar_salida_ia
   # Otra vez, por si el reload del host pasó durante el despliegue (lo que el up no recreó). Si falla, vuelta atrás.
   reaplicar_limites
   verificar_memswap

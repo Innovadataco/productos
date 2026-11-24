@@ -503,7 +503,7 @@ describe("desplegar-prod.sh · la app sin salida a internet, detrás de la entra
   it("revisa una por una las redes de la app y de la base: todas internal y con la puerta de enlace aislada", async () => {
     const { falsos, env, script } = preparar();
     expect((await correr(script, [ID], env)).status).toBe(0);
-    const redes = falsos.llamadas().filter((l) => l[0] === "docker" && l[1] === "inspect" && l.join(" ").includes(".Internal"));
+    const redes = falsos.llamadas().filter((l) => l[0] === "docker" && l[1] === "inspect" && l.join(" ").includes(".Internal") && !l.join(" ").includes("bridge.name"));
     expect(new Set(redes.map((l) => l.at(-1)))).toEqual(new Set(["inv-008-prueba_inv-008-red-entrada", "inv-008-prueba_inv-008-red-interna"]));
     for (const l of redes) {
       expect(l.join(" ")).toContain('{{index .Options "com.docker.network.bridge.gateway_mode_ipv4"}}');
@@ -1125,12 +1125,13 @@ describe("desplegar-prod.sh · funciones de la espera: resumen del compose y del
   const resumenCompose = (texto: string) => funcion(script, "resumen_compose", process.env, texto).stdout.trim().split("\n");
   const resumenDockerfile = (texto: string) => funcion(script, "resumen_dockerfile", process.env, texto).stdout.trim().split("\n");
 
-  it("resumen_compose del compose real: los siete servicios (con precios, D-018), sus límites e imágenes, y nada del bloque literal del relé", () => {
+  it("resumen_compose del compose real: los ocho servicios (con precios, D-018, e IA, E6), sus límites e imágenes, y nada del bloque literal del relé", () => {
     const r = resumenCompose(leer008("docker-compose.prod.yml"));
     expect(r.filter((l) => l.startsWith("servicio "))).toEqual([
       "servicio inv-008-app",
       "servicio inv-008-db",
       "servicio inv-008-entrada",
+      "servicio inv-008-ia",
       "servicio inv-008-migrador",
       "servicio inv-008-precios",
       "servicio inv-008-respaldo",
@@ -1268,5 +1269,55 @@ describe("desplegar-prod.sh · funciones de la espera: resumen del compose y del
     expect(motivo(repo.sha)).toBe("");
     for (const malo of ["", "latest", "--output=x", "A".repeat(40)]) expect(motivo(malo), malo).toMatch(/sin un sha que corre/);
     expect(motivo("7".repeat(40))).toMatch(/no se pudo leer/);
+  });
+});
+
+// El servicio de IA (E6) de punta a punta con el docker falso: se verifica con los permanentes y se prueba su salida.
+describe("desplegar-prod.sh · servicio de IA (inv-008-ia)", () => {
+  it("verifica el servicio de IA y dice que no llega a internet (la regla de PI corta)", async () => {
+    const p = preparar();
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain("el servicio de IA corre con la credencial de inv_ia");
+    expect(r.stderr).toContain("el servicio de IA no llega a internet");
+    expect(r.stderr).not.toContain("clave-ficticia-37911");
+    expect(r.stderr).not.toContain("token-ficticio-4613");
+  });
+
+  it("si llega a internet: AVISA y despliega (D-026); con INV_IA_EXIGIR_SIN_SALIDA=1, aborta", async () => {
+    const aviso = preparar({ FALSO_NC_IA_RC: "0" });
+    const r = await correr(aviso.script, [ID], aviso.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain("⚠️  EL SERVICIO DE IA TIENE SALIDA A INTERNET");
+    const estricto = preparar({ FALSO_NC_IA_RC: "0", INV_IA_EXIGIR_SIN_SALIDA: "1" });
+    const e = await correr(estricto.script, [ID], estricto.env);
+    expect(e.status).not.toBe(0);
+    expect(e.stdout).not.toContain("DEPLOY VERIFICADO");
+  });
+
+  it.each([
+    ["no está healthy", { FALSO_SALUD_IA: "unhealthy" }, "el servicio de IA no está healthy"],
+    ["publica un puerto", { FALSO_PUERTO_IA: "8008/tcp -> 0.0.0.0:8008\n" }, "el servicio de IA publica puertos"],
+    ["está en otra red", { FALSO_REDES_IA: "inv-008-prueba_inv-008-red inv-008-prueba_inv-008-red-interna" }, "el servicio de IA está en otras redes"],
+    ["su red tiene a alguien más", { FALSO_RED_IA: "false|br-inv008-ia|2" }, "la red del servicio de IA no es la esperada"],
+    ["recibe una clave ajena", { FALSO_ENV_IA: "TZ=America/Bogota\nCIFRADO_CLAVE_V1=x\n" }, "recibe variables que no son suyas: CIFRADO_CLAVE_V1"],
+    ["trae la credencial de otro rol", { FALSO_ENV_IA: "DATABASE_URL=postgresql://inv_app:clave-ficticia-37911@inv-008-db:5432/inversiones\n" }, "no es la de inv_ia en inv-008-db"],
+    ["la imagen no trae el bundle", { FALSO_BUNDLE_IA_RC: "1" }, "no trae el bundle del servicio de IA"],
+    ["el contenedor no tiene nc", { FALSO_NC_IA_FALTA: "1" }, "no tiene nc: su salida a internet no se puede probar"],
+  ])("%s: no hay DEPLOY VERIFICADO", async (_n, extra, mensaje) => {
+    const p = preparar(extra);
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain(mensaje);
+    expect(r.stderr).not.toContain("clave-ficticia-37911");
+    expect(r.stdout).not.toContain("DEPLOY VERIFICADO");
+  });
+
+  it("sin la credencial ni el token: despliega y avisa que queda en espera", async () => {
+    const p = preparar({ FALSO_ENV_IA: "TZ=America/Bogota\nDATABASE_URL=\nINV_IA_SERVICIO_TOKEN=\n" });
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain("sin INV_IA_DATABASE_URL: queda en espera");
+    expect(r.stderr).toContain("sin INV_IA_SERVICIO_TOKEN");
   });
 });

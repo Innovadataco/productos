@@ -428,6 +428,51 @@ leer_variable_env() {
   printf '%s' "$valor"
 }
 
+# La carpeta compartida con PI (INV_IA_DIR_COMPARTIDA del archivo de producción $1), donde PI publica la lista de
+# modelos locales permitidos; la app y el servicio de IA la montan en solo lectura. Es opcional: sin la línea (o vacía)
+# se monta un volumen vacío y los dos quedan «sin lista de PI». Si está, debe ser una ruta absoluta y sencilla
+# (letras, números, punto, guion, guion bajo y barras, sin «..») de una carpeta propia (ni del sistema ni de un solo
+# nivel) que YA exista, sin enlaces en su ruta, y que venga del archivo de producción y no del entorno del shell: Docker
+# crearía como root una ruta que no existe. Imprime por qué no sirve; sin salida = sirve (o no está). No imprime la ruta.
+problema_dir_compartida_ia() {
+  local dir real
+  # Compose le da prioridad a la variable del shell sobre el --env-file: así entraría una ruta sin revisar.
+  if [ -n "${INV_IA_DIR_COMPARTIDA+x}" ]; then
+    echo "INV_IA_DIR_COMPARTIDA viene del entorno del shell: debe ir solo en el archivo de producción (quítela del entorno)"
+    return 0
+  fi
+  dir="$(leer_variable_env "$1" INV_IA_DIR_COMPARTIDA)" || return 0
+  [ -n "$dir" ] || return 0
+  case "$dir" in
+    /*) ;;
+    *) echo "INV_IA_DIR_COMPARTIDA no es una ruta absoluta"; return 0 ;;
+  esac
+  if printf '%s' "$dir" | LC_ALL=C grep -q '[^A-Za-z0-9._/-]' || [[ "$dir" == *..* ]] || [[ "$dir" == *//* ]]; then
+    echo "INV_IA_DIR_COMPARTIDA trae caracteres fuera de la lista, «..» o barras dobles"
+    return 0
+  fi
+  # Nunca una carpeta del sistema (se montaría, de solo lectura, en un contenedor con salida) ni una de un solo nivel.
+  # Los nombres van sin la barra inicial: el candado de los scripts no deja escribir rutas del sistema.
+  local sis
+  for sis in etc root home proc sys dev run boot usr bin sbin lib lib64 var/run var/lib/docker var/log; do
+    case "${dir%/}/" in
+      "/$sis/"*) echo "INV_IA_DIR_COMPARTIDA es una carpeta del sistema: no se monta"; return 0 ;;
+    esac
+  done
+  case "${dir%/}" in
+    "" | /[!/]*/?*) ;;
+    *) echo "INV_IA_DIR_COMPARTIDA es de un solo nivel: debe ser una carpeta propia, de dos niveles o más"; return 0 ;;
+  esac
+  [ -n "${dir%/}" ] || { echo "INV_IA_DIR_COMPARTIDA es una carpeta del sistema: no se monta"; return 0; }
+  if [ -L "$dir" ] || [ ! -d "$dir" ]; then
+    echo "INV_IA_DIR_COMPARTIDA no es una carpeta que exista (o es un enlace): la crea y la llena PI"
+    return 0
+  fi
+  # Ningún padre puede ser un enlace: la ruta escrita debe ser la real.
+  real="$(cd "$dir" && pwd -P)" || { echo "INV_IA_DIR_COMPARTIDA no se pudo resolver"; return 0; }
+  [ "$real" = "${dir%/}" ] || echo "INV_IA_DIR_COMPARTIDA no es su ruta real (algún padre es un enlace)"
+}
+
 # Lee `ps -eo args` por stdin. Imprime OCUPADO si PI (u otro proyecto) está desplegando o construyendo;
 # si no, LIBRE. Mira el PROGRAMA (primer y segundo token), no el texto suelto de la línea: un editor o una
 # shell que solo mencionan «docker compose» no cuentan. Cuenta:

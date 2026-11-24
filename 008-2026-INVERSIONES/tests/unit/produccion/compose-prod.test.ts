@@ -66,7 +66,7 @@ const s = (nombre: string): Servicio => {
   if (!srv) throw new Error(`falta el servicio ${nombre}`);
   return srv;
 };
-const SERVICIOS = ["inv-008-db", "inv-008-app", "inv-008-entrada", "inv-008-migrador", "inv-008-respaldo", "inv-008-vigia", "inv-008-precios"];
+const SERVICIOS = ["inv-008-db", "inv-008-app", "inv-008-entrada", "inv-008-migrador", "inv-008-respaldo", "inv-008-vigia", "inv-008-precios", "inv-008-ia"];
 const internal = (red: string) => compose.networks[red]?.internal === true;
 const quienes = (red: string) =>
   Object.entries(compose.services)
@@ -79,7 +79,7 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(compose.name).toBe("inv-008-prod");
   });
 
-  it("tiene exactamente sus 7 servicios (la entrada es el relé del túnel hacia la app; precios, el servicio de D-018)", () => {
+  it("tiene exactamente sus 8 servicios (la entrada es el relé del túnel hacia la app; precios, el servicio de D-018; IA, el de E6)", () => {
     expect(Object.keys(compose.services).sort()).toEqual([...SERVICIOS].sort());
   });
 
@@ -106,9 +106,10 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(quienes("inv-008-red-entrada")).toEqual(["inv-008-app", "inv-008-entrada"]);
   });
 
-  it("las únicas redes con salida: inv-008-red (la entrada para publicar y el vigía para Telegram) e inv-008-red-precios (solo precios)", () => {
+  it("las únicas redes con salida: inv-008-red (la entrada para publicar y el vigía para Telegram), inv-008-red-precios (solo precios) e inv-008-red-ia (solo IA)", () => {
     const conSalida = Object.keys(compose.networks).filter((red) => !internal(red));
-    expect(conSalida.sort()).toEqual(["inv-008-red", "inv-008-red-precios"]);
+    expect(conSalida.sort()).toEqual(["inv-008-red", "inv-008-red-ia", "inv-008-red-precios"]);
+    expect(quienes("inv-008-red-ia")).toEqual(["inv-008-ia"]);
     expect(quienes("inv-008-red")).toEqual(["inv-008-entrada", "inv-008-vigia"]);
     expect(quienes("inv-008-red-precios")).toEqual(["inv-008-precios"]);
     expect(s("inv-008-entrada").networks).toEqual(["inv-008-red", "inv-008-red-entrada"]);
@@ -165,7 +166,11 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     // precios: solo su volumen tmpfs de la huella (servicio-precios-compose.test.ts).
     expect(s("inv-008-precios").volumes).toEqual(["inv-008-precios-estado:/estado"]);
     for (const [nombre, srv] of Object.entries(compose.services)) {
-      if (!["inv-008-vigia", "inv-008-db", "inv-008-respaldo", "inv-008-precios"].includes(nombre)) expect(srv.volumes, nombre).toBeUndefined();
+      if (!["inv-008-vigia", "inv-008-db", "inv-008-respaldo", "inv-008-precios", "inv-008-app", "inv-008-ia"].includes(nombre)) expect(srv.volumes, nombre).toBeUndefined();
+    }
+    // La app y el servicio de IA: solo la carpeta de la lista de modelos de PI, en solo lectura (servicio-ia-compose.test.ts).
+    for (const nombre of ["inv-008-app", "inv-008-ia"]) {
+      expect(s(nombre).volumes, nombre).toEqual(["${INV_IA_DIR_COMPARTIDA:-inv-008-ia-sin-lista}:/compartido-pi:ro"]);
     }
   });
 
@@ -202,12 +207,12 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(texto).not.toMatch(/INV_RESPALDOS_DIR:\?/);
   });
 
-  it("las únicas rutas del host son /proc/meminfo y /sys/fs/cgroup (vigía, solo lectura) y la carpeta de respaldos", () => {
+  it("las únicas rutas del host son /proc/meminfo y /sys/fs/cgroup (vigía, solo lectura), la carpeta de respaldos y la compartida con PI (por interpolación)", () => {
     const delHost = Object.values(compose.services)
       .flatMap((srv) => srv.volumes ?? [])
       .map((v) => (typeof v === "string" ? v.split(":")[0]! : v.source))
       .filter((origen) => origen.startsWith("/") || origen.startsWith("$"));
-    expect(delHost.sort()).toEqual(["/proc/meminfo", "/sys/fs/cgroup", BIND_RESPALDOS.source].sort());
+    expect([...new Set(delHost)].sort()).toEqual(["/proc/meminfo", "/sys/fs/cgroup", BIND_RESPALDOS.source, "${INV_IA_DIR_COMPARTIDA"].sort());
   });
 
   it("ningún servicio deja volcados de memoria (ulimits core 0): el host los escribiría en disco", () => {
@@ -320,9 +325,9 @@ describe("docker-compose.prod.yml · variables: un solo archivo de producción, 
     expect(s("inv-008-db").environment?.POSTGRES_PASSWORD).toBe("${INV_POSTGRES_CLAVE:?falta INV_POSTGRES_CLAVE}");
   });
 
-  it("la app recibe solo su URL (rol inv_app), AUTH_SECRET, las claves de cifrado y APP_ORIGEN", () => {
+  it("la app recibe solo su URL (rol inv_app), AUTH_SECRET, las claves de cifrado, APP_ORIGEN y, de la IA, el token del servicio y la carpeta de la lista de PI", () => {
     const env = s("inv-008-app").environment ?? {};
-    expect(claves("inv-008-app")).toEqual(["APP_ORIGEN", "AUTH_SECRET", "CIFRADO_CLAVE_ACTIVA", "CIFRADO_CLAVE_V1", "DATABASE_URL", "NODE_OPTIONS", "TZ"]);
+    expect(claves("inv-008-app")).toEqual(["APP_ORIGEN", "AUTH_SECRET", "CIFRADO_CLAVE_ACTIVA", "CIFRADO_CLAVE_V1", "DATABASE_URL", "INV_IA_DIR_COMPARTIDA", "INV_IA_SERVICIO_TOKEN", "NODE_OPTIONS", "TZ"]);
     expect(env.DATABASE_URL).toBe("${INV_APP_DATABASE_URL:?falta INV_APP_DATABASE_URL}");
     expect(env.AUTH_SECRET).toBe("${INV_AUTH_SECRET:?falta INV_AUTH_SECRET}");
     expect(env.CIFRADO_CLAVE_ACTIVA).toBe("${INV_CIFRADO_CLAVE_ACTIVA:?falta INV_CIFRADO_CLAVE_ACTIVA}");
@@ -362,6 +367,9 @@ describe("docker-compose.prod.yml · variables: un solo archivo de producción, 
         // ÚNICA excepción, exacta (D-018): la credencial de precios es opcional, vacía si falta. Sin el secreto el
         // servicio queda en espera; con :? se romperían la pausa y los up de todo el proyecto.
         if (nombre === "inv-008-precios" && k === "DATABASE_URL") expect(v).toBe("${INV_PRECIOS_DATABASE_URL:-}");
+        // Y las del servicio de IA (E6), igual de exactas: su credencial y el token que comparte con la app.
+        else if (nombre === "inv-008-ia" && k === "DATABASE_URL") expect(v).toBe("${INV_IA_DATABASE_URL:-}");
+        else if (["inv-008-ia", "inv-008-app"].includes(nombre) && k === "INV_IA_SERVICIO_TOKEN") expect(v).toBe("${INV_IA_SERVICIO_TOKEN:-}");
         else expect(v, `${nombre} · ${k}`).toMatch(/^\$\{[A-Z0-9_]+:\?[^}]+\}$/);
       }
     }
