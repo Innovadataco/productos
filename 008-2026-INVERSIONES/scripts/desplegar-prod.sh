@@ -608,9 +608,10 @@ verificar_entorno_ia() {
   ajenas="$(entorno_de "$cid" | cut -d= -f1 | LC_ALL=C sort -u | LC_ALL=C comm -23 - <(printf '%s\n' "$permitidas") | LC_ALL=C tr -cd '[:alnum:]_\n' | tr '\n' ' ')" ||
     morir "no se pudo leer el entorno del servicio de IA"
   [ -z "${ajenas// /}" ] || morir "el servicio de IA recibe variables que no son suyas: $ajenas"
-  entorno_de "$cid" | grep -q '^INV_IA_SERVICIO_TOKEN=.' ||
+  # Sin `grep -q` en la tubería: con pipefail, su salida temprana (SIGPIPE) se leería como «no está».
+  entorno_de "$cid" | grep '^INV_IA_SERVICIO_TOKEN=.' >/dev/null ||
     informar "⚠️  el servicio de IA corre sin INV_IA_SERVICIO_TOKEN: no atiende los pedidos de la app («Identificar» y «Probar» quedan pendientes; produccion.md §2)"
-  if ! entorno_de "$cid" | grep -q '^DATABASE_URL=.'; then
+  if ! entorno_de "$cid" | grep '^DATABASE_URL=.' >/dev/null; then
     informar "⚠️  el servicio de IA corre sin INV_IA_DATABASE_URL: queda en espera y no hace resúmenes (produccion.md §2)"
     return 0
   fi
@@ -741,7 +742,10 @@ verificar_salida_ia() {
   [ -n "$IP_SONDA" ] || morir "no hay IP de la sonda (verificar_sin_salida va antes): la salida del servicio de IA no se puede probar"
   cid="$("${COMPOSE[@]}" ps -q "$IA")"
   [ -n "$cid" ] || morir "no hay contenedor del servicio de IA"
+  # Sin nc (o si el exec no corre), un código distinto de 0 no probaría nada.
+  docker exec "$cid" sh -c 'command -v nc' >/dev/null 2>&1 || morir "el contenedor del servicio de IA no tiene nc: su salida a internet no se puede probar"
   salida="$(docker exec "$cid" nc -z -v -w 5 "$IP_SONDA" "$SONDA_SALIDA_PUERTO" 2>&1)" || rc=$?
+  salida="$(printf '%s' "$salida" | head -n 1 | head -c 200)"
   if [ "$rc" != 0 ]; then
     informar "el servicio de IA no llega a internet: $IP_SONDA:$SONDA_SALIDA_PUERTO falló («${salida:-sin mensaje}», código $rc); la entrada sí llegó (control positivo)"
     return 0

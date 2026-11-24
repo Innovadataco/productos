@@ -32,6 +32,16 @@ export function proximaRanura(ahora: Date): Date {
   }
 }
 
+/**
+ * La ranura de la hora `hora` en el día de Colombia de `ahora`, o null si ese día es sábado o domingo. Sirve para
+ * recuperar la corrida del día cuando el servicio arranca después de su hora.
+ */
+export function ranuraDeHoy(ahora: Date, hora: HoraResumen): Date | null {
+  const local = new Date(ahora.getTime() - DESFASE_COT_MS);
+  const medianoche = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) + DESFASE_COT_MS;
+  return esFinDeSemana(medianoche) ? null : new Date(medianoche + Number(hora.slice(0, 2)) * HORA_MS);
+}
+
 /** La hora de Colombia de un instante como la guarda config_ia («19:00»), o null si no es una de la lista. */
 export function horaDeRanura(instante: Date): HoraResumen | null {
   const texto = new Date(instante.getTime() - DESFASE_COT_MS).toISOString().slice(11, 16);

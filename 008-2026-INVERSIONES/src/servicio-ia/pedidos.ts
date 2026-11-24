@@ -44,7 +44,8 @@ const RUTAS: readonly string[] = [RUTA_IDENTIFICAR, RUTA_PROBAR];
 const error = (estado: number, codigo: string): RespuestaIa => Object.freeze({ estado, cuerpo: Object.freeze({ error: codigo }) });
 const sha256 = (texto: string): Buffer => createHash("sha256").update(texto, "utf8").digest();
 
-function autorizado(autorizacion: string | undefined, token: string): boolean {
+/** ¿La cabecera `authorization` trae el token? En tiempo constante. La usan la atención y el filtro previo del servidor. */
+export function tokenAutorizado(autorizacion: string | undefined, token: string): boolean {
   if (typeof autorizacion !== "string" || !autorizacion.startsWith(PREFIJO)) return false;
   return timingSafeEqual(sha256(autorizacion.slice(PREFIJO.length)), sha256(token));
 }
@@ -84,7 +85,7 @@ async function probar(deps: DependenciasPedidos, cuerpo: string): Promise<Respue
 export function crearAtencion(deps: DependenciasPedidos): Atender {
   let enCurso = false;
   return async (pedido) => {
-    if (!autorizado(pedido.autorizacion, deps.token)) return error(401, "NO_AUTORIZADO");
+    if (!tokenAutorizado(pedido.autorizacion, deps.token)) return error(401, "NO_AUTORIZADO");
     if (!RUTAS.includes(pedido.ruta)) return error(404, "RUTA_DESCONOCIDA");
     if (pedido.metodo !== "POST") return error(405, "METODO_NO_PERMITIDO");
     if (enCurso) return error(429, "OCUPADO");

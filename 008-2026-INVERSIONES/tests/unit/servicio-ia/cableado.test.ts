@@ -37,3 +37,28 @@ describe("digestsDe y opcionesDe", () => {
     expect(opcionesDe({ ...VIGENTE_FICTICIA, temperaturaCentesimas: 37 })).toEqual({ num_ctx: 8192, seed: 42, temperaturaCentesimas: 37 });
   });
 });
+
+describe("servir · sin la credencial", () => {
+  it("queda EN ESPERA: late, lo dice, no crea el cliente de la base y sale con 0 al recibir SIGTERM", async () => {
+    const { mkdtempSync, readFileSync } = await import("node:fs");
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const { servir, VARIABLE_ESTADO_DIR } = await import("@/servicio-ia/cableado");
+    const dir = mkdtempSync(path.join(os.tmpdir(), "inv-008-ia-servir-"));
+    const lineas: string[] = [];
+    const oyentes = new Map<string, (s: NodeJS.Signals) => void>();
+    const proceso = {
+      env: { [VARIABLE_ESTADO_DIR]: dir },
+      stdout: { write: (t: string) => void lineas.push(t) },
+      once: (s: string, f: (x: NodeJS.Signals) => void) => void oyentes.set(s, f),
+      removeListener: (s: string) => void oyentes.delete(s),
+    };
+    const crearDb = vi.fn();
+    const fin = servir(proceso, vi.fn() as never, crearDb as never);
+    await vi.waitFor(() => expect(readFileSync(path.join(dir, "bucle"), "utf8")).toContain("estado=SIN_SECRETO"));
+    oyentes.get("SIGTERM")?.("SIGTERM");
+    expect(await fin).toBe(0);
+    expect(crearDb).not.toHaveBeenCalled();
+    expect(lineas.join("")).toContain("sin INV_IA_DATABASE_URL");
+  });
+});

@@ -13,10 +13,15 @@ import { ARCHIVO_BUCLE, escribirAtomico } from "../servicio-precios/estado";
 import { textoCot } from "../servicio-precios/programa";
 import type { Credencial } from "./configuracion";
 import { codigoDeError, type ResumenCorrida } from "./corrida";
-import { horaDeRanura, proximaRanura } from "./programa";
+import { horaDeRanura, proximaRanura, ranuraDeHoy } from "./programa";
 
 export const TIC_MS = 60_000;
 export const SALIDA = { BIEN: 0, FALLO: 1, USO: 2 } as const;
+/** Intentos de una ranura si algo pasajero falla (la base parpadea a la hora del resumen), con pausa entre ellos. */
+export const INTENTOS_RANURA = 3;
+export const PAUSA_RANURA_MS = 60_000;
+/** Lo más que espera el cierre (el servidor y la base) antes de salir: Docker da 15 s. */
+export const TOPE_CIERRE_MS = 10_000;
 
 export type Programar = (accion: () => void, cadaMs: number) => () => void;
 
@@ -30,6 +35,7 @@ export interface DependenciasBucle {
   /** ¿Hay rueda en la BVC ese día (la fecha de Colombia, a medianoche UTC)? */
   esHabil(hoy: Date): Promise<boolean>;
   correr(config: ConfigIaVigente, hoy: Date): Promise<ResumenCorrida>;
+  esperar(ms: number): Promise<void>;
 }
 
 export interface Bucle {
@@ -60,12 +66,9 @@ export function crearBucle(deps: DependenciasBucle): Bucle {
     return fila;
   };
 
-  /** Lo de una ranura: la configuración, su hora, el día hábil y la corrida. */
-  const atenderRanura = async (ranura: Date): Promise<void> => {
+  /** La corrida del día de `ranura` con esa configuración, si es día hábil. */
+  const correrDia = async (config: ConfigIaVigente, ranura: Date): Promise<void> => {
     const hora = textoCot(ranura);
-    const config = await deps.leerConfig();
-    if (config === null || config.modo === "apagado") return deps.registrar(`ranura de las ${hora}: la IA está apagada (sin configuración o en modo apagado); no se hace nada`);
-    if (config.horaResumen !== horaDeRanura(ranura)) return;
     const hoy = fechaEnBogota(ranura);
     if (!(await deps.esHabil(hoy))) return deps.registrar(`ranura de las ${hora}: no es día hábil en la BVC; no hay resumen`);
     deps.registrar(`corrida de las ${hora} empieza (configuración v${config.version}, modo ${config.modo})`);
@@ -74,13 +77,43 @@ export function crearBucle(deps: DependenciasBucle): Bucle {
     const tipos = Object.entries(r.porTipo).map(([tipo, e]) => `${tipo} → ${e}`).join(" · ");
     deps.registrar(`corrida de las ${hora} terminó: ${tipos === "" ? r.estado : tipos} · ${segundos(deps.ahora() - inicio)} s`);
   };
-  const lanzar = (ranura: Date): void => {
-    enCurso = atenderRanura(ranura)
-      .catch((error: unknown) => deps.registrar(`la corrida no se pudo hacer: ${codigoDeError(error)}`))
-      .finally(() => {
-        enCurso = null;
-      });
+  /** Lo de una ranura: la configuración, su hora, el día hábil y la corrida. */
+  const atenderRanura = async (ranura: Date): Promise<void> => {
+    const config = await deps.leerConfig();
+    if (config === null || config.modo === "apagado") return deps.registrar(`ranura de las ${textoCot(ranura)}: la IA está apagada (sin configuración o en modo apagado); no se hace nada`);
+    if (config.horaResumen !== horaDeRanura(ranura)) return;
+    await correrDia(config, ranura);
   };
+  /**
+   * Al arrancar DESPUÉS de la hora de hoy (un despliegue, un reinicio): la corrida del día, una vez. No duplica: lo ya
+   * PUBLICADO se salta (`yaPublicado`); lo que quedó RECHAZADO o FALLIDO se intenta de nuevo.
+   */
+  const recuperarHoy = async (): Promise<void> => {
+    const config = await deps.leerConfig();
+    if (config === null || config.modo === "apagado") return;
+    const ranura = ranuraDeHoy(new Date(arranque), config.horaResumen);
+    if (ranura === null || ranura.getTime() >= arranque) return;
+    deps.registrar(`el servicio arrancó después de la hora del resumen (${textoCot(ranura)}): se recupera la corrida de hoy`);
+    await correrDia(config, ranura);
+  };
+  /** Con reintentos: un fallo pasajero (la base, a la hora del resumen) no pierde el día. Una corrida a la vez. */
+  const lanzar = (tarea: () => Promise<void>): void => {
+    const conReintentos = async (): Promise<void> => {
+      for (let intento = 1; ; intento += 1) {
+        try {
+          return await tarea();
+        } catch (error) {
+          if (intento >= INTENTOS_RANURA || detenido) return deps.registrar(`la corrida no se pudo hacer: ${codigoDeError(error)}`);
+          deps.registrar(`la corrida falló (${codigoDeError(error)}): intento ${intento + 1} de ${INTENTOS_RANURA} en ${PAUSA_RANURA_MS / 1000} s`);
+          await deps.esperar(PAUSA_RANURA_MS);
+        }
+      }
+    };
+    enCurso = conReintentos().finally(() => {
+      enCurso = null;
+    });
+  };
+  let porRecuperar = deps.credencial.ok;
 
   deps.registrar(`arranca: el resumen a la hora de config_ia, en días hábiles de la BVC; la próxima ranura: ${textoCot(new Date(proxima))}`);
   if (!deps.credencial.ok) deps.registrar(deps.credencial.motivo);
@@ -94,7 +127,12 @@ export function crearBucle(deps: DependenciasBucle): Bucle {
         proxima = proximaRanura(new Date(t)).getTime();
         if (!deps.credencial.ok) deps.registrar(`ranura de las ${textoCot(ranura)} omitida: ${deps.credencial.estado}`);
         else if (enCurso) deps.registrar(`ranura de las ${textoCot(ranura)} omitida: la corrida anterior sigue en curso`);
-        else lanzar(ranura);
+        else lanzar(() => atenderRanura(ranura));
+        porRecuperar = false;
+      }
+      if (porRecuperar && !enCurso) {
+        porRecuperar = false;
+        lanzar(recuperarHoy);
       }
       await latir();
     },
@@ -116,7 +154,7 @@ export interface Senales {
 /**
  * El bucle permanente: un tic ya y luego cada TIC_MS, hasta SIGTERM o SIGINT. Al detenerse NO espera la corrida en
  * curso (un pedido al modelo puede tardar minutos y Docker da 15 s): deja DETENIDO, llama a `alDetener` (cierra el
- * servidor y la base) y devuelve 0. Lo que quedó a medias no se registra; la siguiente corrida no lo duplica.
+ * servidor y la base, con un tope de TOPE_CIERRE_MS por si se cuelga) y devuelve 0. Lo que quedó a medias no se registra; la siguiente corrida no lo duplica.
  */
 export function iniciarBucle(deps: DependenciasBucle, senales: Senales, alDetener: () => Promise<void> = () => Promise.resolve()): Promise<number> {
   const bucle = crearBucle(deps);
@@ -128,9 +166,12 @@ export function iniciarBucle(deps: DependenciasBucle, senales: Senales, alDetene
       senales.removeListener("SIGINT", parar);
       cancelar();
       deps.registrar(`detenido por ${senal}`);
-      void bucle
-        .detener()
-        .then(alDetener)
+      let tope: ReturnType<typeof setTimeout> | undefined;
+      const vencido = new Promise<void>((r) => {
+        tope = setTimeout(r, TOPE_CIERRE_MS);
+      });
+      void Promise.race([bucle.detener().then(alDetener), vencido])
+        .finally(() => clearTimeout(tope))
         .catch((error: unknown) => deps.registrar(`el cierre falló: ${codigoDeError(error)}`))
         .then(() => resolver(SALIDA.BIEN));
     };

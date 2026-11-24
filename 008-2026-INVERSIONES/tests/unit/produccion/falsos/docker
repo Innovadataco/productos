@@ -189,6 +189,7 @@ case "${1:-}" in
         printf '%b' "${FALSO_NSLOOKUP_APP-$no_resuelve_app}"
         exit "${FALSO_NSLOOKUP_APP_RC:-1}" ;;
       *" test -r /app/ia/servicio-ia.mjs "*) exit "${FALSO_BUNDLE_IA_RC:-0}" ;;
+      *" command -v nc "*) [ "${FALSO_NC_IA_FALTA:-}" != 1 ] || exit 127; exit 0 ;;
       *" nc "*)
         # El servicio de IA: por defecto no llega (la regla de PI corta: tiempo agotado); FALSO_NC_IA_RC=0: llega.
         if [ "$cid_exec" = "${FALSO_CID_IA-cidia}" ]; then

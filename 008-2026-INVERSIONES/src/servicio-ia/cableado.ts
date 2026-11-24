@@ -27,7 +27,7 @@ import { textoCot } from "../servicio-precios/programa";
 import { iniciarBucle, type DependenciasBucle, type Programar, type Senales } from "./bucle";
 import { leerTokenServicio, revisarCredencialIa } from "./configuracion";
 import { correrDiaria, type DependenciasCorrida } from "./corrida";
-import { crearAtencion } from "./pedidos";
+import { crearAtencion, tokenAutorizado } from "./pedidos";
 import { crearServidor } from "./servidor";
 
 /** Lo que el servicio usa del proceso de node (process, o uno falso en las pruebas). */
@@ -72,16 +72,16 @@ const programarConIntervalo: Programar = (accion, cadaMs) => {
   const intervalo = setInterval(accion, cadaMs);
   return () => clearInterval(intervalo);
 };
-const esperar = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 const hoyEnColombia = (): string => diaIso(fechaEnBogota(new Date()));
 
 /** `servicio-ia.mjs bucle`: el servicio permanente. `fetchReal` es el `fetch` de node, tomado antes de anularlo. */
 export function servir(proceso: Proceso, fetchReal: BuscarLocal, crearDb: () => PrismaClient = () => new PrismaClient()): Promise<number> {
   const registrar = (mensaje: string): void => void proceso.stdout.write(`${textoCot(new Date())} [ia] ${mensaje}\n`);
   const credencial = revisarCredencialIa(proceso.env.DATABASE_URL);
+  const esperar = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
   const base = { dir: proceso.env[VARIABLE_ESTADO_DIR] || ESTADO_DIR_POR_DEFECTO, ahora: Date.now, registrar, credencial, programar: programarConIntervalo };
   const sinBase = (): Promise<never> => Promise.reject(new Error("SIN_CREDENCIAL"));
-  if (!credencial.ok) return iniciarBucle({ ...base, leerConfig: sinBase, esHabil: sinBase, correr: sinBase }, proceso);
+  if (!credencial.ok) return iniciarBucle({ ...base, leerConfig: sinBase, esHabil: sinBase, correr: sinBase, esperar }, proceso);
 
   const db = crearDb();
   const semaforo = crearSemaforo();
@@ -105,10 +105,11 @@ export function servir(proceso: Proceso, fetchReal: BuscarLocal, crearDb: () => 
       return esDiaHabil(hoy, new Set(festivos.map((f) => diaIso(f.dia))));
     },
     correr: (config, hoy) => correrDiaria(corrida, config, hoy),
+    esperar,
   };
 
   const token = leerTokenServicio(proceso.env[VARIABLE_TOKEN_SERVICIO_IA]);
-  const servidor = token.ok ? crearServidor(crearAtencion({ token: token.token, leerConfig, sonda: sondaDirecta(fetchLocal, semaforo) })) : null;
+  const servidor = token.ok ? crearServidor(crearAtencion({ token: token.token, leerConfig, sonda: sondaDirecta(fetchLocal, semaforo) }), (a) => tokenAutorizado(a, token.token)) : null;
   if (!token.ok) registrar(token.motivo);
   if (LISTA_MODELOS_PI.estado !== "LISTA") registrar(`sin lista de PI de modelos permitidos (${LISTA_MODELOS_PI.motivo}): la puerta local no puede generar`);
   servidor?.on("error", (error) => registrar(`el endpoint interno falló: ${(error as NodeJS.ErrnoException).code ?? "ERROR"}`));

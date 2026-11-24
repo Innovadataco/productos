@@ -34,6 +34,9 @@ describe("crearBucle", () => {
     const m = montar();
     const bucle = crearBucle(m.deps);
     await bucle.tic();
+    // El primer tic mira si hay que recuperar la corrida de hoy (lee la configuración): después, en espera.
+    await bucle.esperar();
+    await bucle.tic();
     expect(m.latido()).toContain("estado=ESPERANDO");
     expect(m.deps.correr).not.toHaveBeenCalled();
   });
