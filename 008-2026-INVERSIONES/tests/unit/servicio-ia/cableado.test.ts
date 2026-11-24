@@ -48,7 +48,7 @@ describe("servir · sin la credencial", () => {
     const lineas: string[] = [];
     const oyentes = new Map<string, (s: NodeJS.Signals) => void>();
     const proceso = {
-      env: { [VARIABLE_ESTADO_DIR]: dir },
+      env: { [VARIABLE_ESTADO_DIR]: dir } as NodeJS.ProcessEnv,
       stdout: { write: (t: string) => void lineas.push(t) },
       once: (s: string, f: (x: NodeJS.Signals) => void) => void oyentes.set(s, f),
       removeListener: (s: string) => void oyentes.delete(s),
