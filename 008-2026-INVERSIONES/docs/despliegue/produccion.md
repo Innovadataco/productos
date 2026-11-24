@@ -85,6 +85,7 @@ COMPOSE="env INV_RESPALDOS_DIR=$R INV_RUTA_PAUSA=$B/repo/008-2026-INVERSIONES/sc
 | respaldo | la URL con `inv_dueno`, la clave **pública** de `age` y el gid de `respaldo` |
 | vigía | Telegram y la ruta de la pausa |
 | precios | su URL con `inv_precios` (`INV_PRECIOS_DATABASE_URL`, §2); si la línea no existe, el servicio queda en espera |
+| IA (`inv-008-ia`) | su URL con `inv_ia` (`INV_IA_DATABASE_URL`), el token de la app (`INV_IA_SERVICIO_TOKEN`) y la carpeta de la lista de PI; sin la URL queda en espera (§5) |
 
 - **Límite conocido:** el valor de esas variables se ve con `docker inspect <contenedor>` (root y el grupo `docker`). Las **imágenes** no traen ninguno.
 
@@ -393,6 +394,34 @@ docker run --rm --entrypoint age-keygen inv-008-vigia:<sha>
 - **Lo que no arregla:** entre el reload de la noche y la siguiente reaplicación, lo que corre puede usar swap. **La solución de fondo, en el host, la decide PI.** Inversiones no toca systemd, el crontab ni el host.
 - **Ensayo en el Mac** (Colima, Docker 29.5.2, driver `cgroupfs`, proyecto `inv-008-prueba`, 2026-11-21): con `memory.swap.max` puesto a mano en `max` en la base de prueba, `docker inspect` seguía diciendo `Memory = MemorySwap`; el comando, corrido dentro de la máquina virtual (desde el Mac el cgroup no se ve), lo devolvió a 0, y la segunda corrida dio 0 corregidos.
 - **Por verificar en el VPS:** que `docker update` con los mismos valores reescriba `memory.swap.max` con el driver `systemd`. Si no lo hiciera, el script lo detecta en la relectura y aborta antes de migrar.
+
+### El servicio de IA (`inv-008-ia`, E6, D-026)
+
+Es el único que llega al Ollama del Mac, por la tailnet y por el mismo camino que PI. La app sigue sin salida a internet: solo le habla a este servicio por la red interna.
+
+- **Qué hace:**
+  - **El resumen diario:** a la hora de `config_ia` (19:00 por omisión), en días hábiles de la BVC. Arma los hechos del día, le pide el texto al modelo con la vista ciega, lo valida y registra `PUBLICADO`, `RECHAZADO` o `FALLIDO` en `resumen_ia`. No duplica un `PUBLICADO`. Si el modelo no está disponible, reintenta hasta 3 veces, cada 5 minutos.
+  - **Los pedidos de la app:** «Identificar modelos» y «Probar» de `/edicion/ia`, en `http://inv-008-ia:8008` (fijo en el código, sin publicar), con el token compartido y uno a la vez.
+  - Con la configuración en `apagado`, o sin configuración, no hace nada.
+- **El destino de Ollama va en `config_ia`, en la base, y nunca en el repo ni en el archivo de producción.** Lo guarda Jelk en `/edicion/ia`. El código solo acepta una IPv4 de la tailnet y las rutas `/api/tags` y `/api/generate`.
+- **Convivencia con PI (se mantiene):** `qwen2.5:14b`, `num_ctx` 8192, `keep_alive` corto y un pedido a la vez (un solo turno para el resumen y los pedidos de la app).
+- **Variables del archivo de producción, las tres opcionales** (plantilla: `env-inversiones-production.example`):
+  - `INV_IA_DATABASE_URL`: la del rol `inv_ia`, con el formato `postgresql://inv_ia:<clave>@inv-008-db:5432/inversiones?connection_limit=2`. Sin ella el servicio queda sano y en espera (`SIN_SECRETO`).
+  - `INV_IA_SERVICIO_TOKEN`: el token que comparten la app y el servicio (43 a 128 caracteres de base64url). Sin él, el servicio no abre el endpoint y la pantalla dice que la conexión está pendiente.
+  - `INV_IA_DIR_COMPARTIDA`: la carpeta del VPS donde PI publica `modelos-ia-local-permitidos.json` (<ver ESTADO en la gestión>). Debe existir antes de desplegar. Sin ella, la app y el servicio quedan «sin lista de PI» y la puerta local no genera.
+- **Cómo se ponen, sin ver los valores** (después, `crear-roles-prod.sh` le da `LOGIN` y la clave a `inv_ia`, y un despliegue o `reanudar-008.sh` recrea los contenedores):
+
+  ```bash
+  sudo sh -c 'umask 077; f=<raíz>/.env.inversiones.production; if ! grep -q "^INV_IA_DATABASE_URL=" "$f"; then k="$(openssl rand -hex 32)" && [ ${#k} -eq 64 ] && printf "INV_IA_DATABASE_URL=postgresql://inv_ia:%s@inv-008-db:5432/inversiones?connection_limit=2\n" "$k" >> "$f"; fi'
+  sudo sh -c 'umask 077; f=<raíz>/.env.inversiones.production; if ! grep -q "^INV_IA_SERVICIO_TOKEN=" "$f"; then k="$(openssl rand -hex 32)" && [ ${#k} -eq 64 ] && printf "INV_IA_SERVICIO_TOKEN=%s\n" "$k" >> "$f"; fi'
+  sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-roles-prod.sh
+  ```
+
+- **Red:** la interna (la base y la app) y `inv-008-red-ia`, con salida y solo para él, sobre el puente de nombre fijo `br-inv008-ia`. La red de Docker no filtra por destino: lo limitan el código y la regla de firewall del host que pone PI sobre ese puente.
+- **Qué revisa el despliegue:** que esté `healthy`, sin puertos, solo en sus dos redes y con su entorno (por nombres); y si llega a internet por su puente. Por D-026, si llega solo **avisa**; con `INV_IA_EXIGIR_SIN_SALIDA=1` aborta con vuelta atrás (úsese cuando PI confirme su regla). El control de que la app no sale a internet no cambió.
+- **Límites:** 128 MiB sin swap, `cpus` 0.25 y 64 pids. **Sin medir en el VPS:** se mide con `medir-memoria.sh` en el primer despliegue (el compose cambia de servicios, así que la espera es la de 600 s).
+- **Con una imagen anterior al servicio** (una vuelta atrás) no se cae: su arranque ve que falta el bundle y queda en espera.
+- **Ver qué hizo:** `"${COMPOSE[@]}" logs --tail 50 inv-008-ia`. El log solo trae tipos, estados y códigos, nunca cifras ni el destino.
 
 ### El servicio de precios (`inv-008-precios`, D-018)
 - **Qué es:** un contenedor permanente con la imagen de la app y otro entrypoint, `node --max-old-space-size=64 /app/precios/servicio-precios.mjs bucle` (`scripts/servicio-precios.ts`, `src/servicio-precios/`):
@@ -913,6 +942,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.21 · 2026-11-23 · 20:11 (-05) · Inversiones · Fábrica Inversiones (frente servicio-ia) · §1 y §5: el servicio `inv-008-ia` (E6, D-026), sus tres variables opcionales, su red y el control de su salida
 > v2.20 · 2026-11-22 · 08:52 (-05) · Inversiones · Fábrica Inversiones (frente fondo-rendimientos) · §11: paso 12 ter `registrar-rendimientos-fondo` (el CSV de rendimientos del FIC y su retención por el sobre: formato, cabecera, ensayo y `--aplicar`, confirmar antes que el pago llega neto, la retención no mueve la caja, lo que garantiza la base y la app, no se corrige, salidas, conciliar después), `conciliacion-v3` al desplegar y la reversa solo antes de cargar rendimientos; riesgo residual del argv (v2.20 sobre la v2.19 de main)
 > v2.19 · 2026-11-22 · 06:24 (-05) · Inversiones · Fábrica Inversiones (frente datos-oficiales-docs, C8) · §10: conteo previo a la migración de C1; §11: exportadores de las series (TRM, BanRep con `--archivo` si bloquea, IPC solo con `--archivo`), `--aplicar` de decretos sin la guarda de C5b y P7 por decidir (v2.19 sobre la v2.18 de main)
 > v2.18 · 2026-11-22 · 04:14 (-05) · Inversiones · Fábrica Inversiones (frente datos-oficiales-carga, C3) · §11: pasos 16 `importar-series` y 17 `importar-decretos` por el sobre (orden, cabecera, temporal y tope, ensayo y `--aplicar`, `CRUCE_PENDIENTE` hasta C5b, salidas y la frase de parar); `importar-series` entre los comandos de cabecera vacía (v2.18 sobre la v2.17 de main)

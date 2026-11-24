@@ -26,6 +26,19 @@ INV_APP_DATABASE_URL=postgresql://inv_app:<clave>@inv-008-db:5432/inversiones?sc
 # verla: produccion.md §2)
 # INV_PRECIOS_DATABASE_URL=postgresql://inv_precios:<clave>@inv-008-db:5432/inversiones?connection_limit=2
 
+# OPCIONALES · el servicio de IA (inv-008-ia, E6, D-026). Sin ellas nada se cae: el servicio queda en espera.
+# - La URL del rol inv_ia (el servicio de los resúmenes): la misma regla de inv_precios (el rol existe siempre; sin la
+#   línea queda NOLOGIN y sin clave). Clave DISTINTA de las otras tres.   openssl rand -hex 32   (produccion.md §2)
+# INV_IA_DATABASE_URL=postgresql://inv_ia:<clave>@inv-008-db:5432/inversiones?connection_limit=2
+# - El token que comparten la app y el servicio de IA para los pedidos a demanda («Identificar» y «Probar»): 43 a 128
+#   caracteres de base64url.   openssl rand -base64 48 | tr -d '\n=' | tr '+/' '-_'
+# INV_IA_SERVICIO_TOKEN=
+# - La carpeta del VPS donde PI publica modelos-ia-local-permitidos.json (ruta absoluta, ya creada; se monta en solo
+#   lectura). Su valor no va en el repo: <ver ESTADO en la gestión>. Sin ella, «sin lista de PI».
+# INV_IA_DIR_COMPARTIDA=
+# El destino del Ollama (IP de la tailnet y puerto) NO va en este archivo ni en el repo: lo guarda Jelk en /edicion/ia
+# (queda en config_ia, en la base).
+
 # Secreto de sesión del login, 32 bytes o más.   openssl rand -base64 48 | tr -d '\n'
 INV_AUTH_SECRET=
 
@@ -57,6 +70,7 @@ INV_RESPALDO_GID=
 # INV_RESPALDO_HORA=0230
 
 # ---
+# v1.4 · 2026-11-23 · 20:11 (-05) · Inversiones · Fábrica Inversiones (frente servicio-ia) · INV_IA_DATABASE_URL, INV_IA_SERVICIO_TOKEN e INV_IA_DIR_COMPARTIDA, opcionales
 # v1.3 · 2026-11-21 · 18:32 (-05) · Inversiones · Fábrica Inversiones (frente precios-integridad) · inv_precios existe siempre: sin la línea queda NOLOGIN y sin clave
 # v1.2 · 2026-11-21 · 16:49 (-05) · Inversiones · Fábrica Inversiones (frente precios-rol) · INV_PRECIOS_DATABASE_URL del rol inv_precios, opcional y comentada hasta el servicio de precios
 # v1.1 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · formato de CIFRADO_CLAVE_ACTIVA (v<n>) según el código; quién escribe INV_RESPALDO_GID; el respaldo diario también usa inv_dueno
