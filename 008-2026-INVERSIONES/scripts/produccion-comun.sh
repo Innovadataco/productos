@@ -428,6 +428,28 @@ leer_variable_env() {
   printf '%s' "$valor"
 }
 
+# La carpeta compartida con PI (INV_IA_DIR_COMPARTIDA del archivo de producción $1), donde PI publica la lista de
+# modelos locales permitidos; la app y el servicio de IA la montan en solo lectura. Es opcional: sin la línea (o vacía)
+# se monta un volumen vacío y los dos quedan «sin lista de PI». Si está, debe ser una ruta absoluta y sencilla
+# (letras, números, punto, guion, guion bajo y barras, sin «..») de una carpeta que YA exista y no sea un enlace: Docker
+# crearía como root una ruta que no existe. Imprime por qué no sirve; sin salida = sirve (o no está). No imprime la ruta.
+problema_dir_compartida_ia() {
+  local dir
+  dir="$(leer_variable_env "$1" INV_IA_DIR_COMPARTIDA)" || return 0
+  [ -n "$dir" ] || return 0
+  case "$dir" in
+    /*) ;;
+    *) echo "INV_IA_DIR_COMPARTIDA no es una ruta absoluta"; return 0 ;;
+  esac
+  if printf '%s' "$dir" | LC_ALL=C grep -q '[^A-Za-z0-9._/-]' || [[ "$dir" == *..* ]] || [[ "$dir" == *//* ]]; then
+    echo "INV_IA_DIR_COMPARTIDA trae caracteres fuera de la lista, «..» o barras dobles"
+    return 0
+  fi
+  if [ -L "$dir" ] || [ ! -d "$dir" ]; then
+    echo "INV_IA_DIR_COMPARTIDA no es una carpeta que exista (o es un enlace): la crea y la llena PI"
+  fi
+}
+
 # Lee `ps -eo args` por stdin. Imprime OCUPADO si PI (u otro proyecto) está desplegando o construyendo;
 # si no, LIBRE. Mira el PROGRAMA (primer y segundo token), no el texto suelto de la línea: un editor o una
 # shell que solo mencionan «docker compose» no cuentan. Cuenta:

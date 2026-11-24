@@ -44,6 +44,7 @@ if [ "${1:-}" = "compose" ]; then
         *" inv-008-entrada "*) printf '%s\n' "${FALSO_CID_ENTRADA-cidentrada}" ;;
         *" inv-008-db "*) printf '%s\n' "${FALSO_CID_DB-ciddb}" ;;
         *" inv-008-precios "*) printf '%s\n' "${FALSO_CID_PRECIOS-cidprecios}" ;;
+        *" inv-008-ia "*) printf '%s\n' "${FALSO_CID_IA-cidia}" ;;
         # FALSO_CIDS_PS: los ids de todo el proyecto (con \n), si se quiere otra lista que la app y la base.
         *" -q "*) if [ -n "${FALSO_CIDS_PS+x}" ]; then printf '%b' "$FALSO_CIDS_PS"; else printf '%s\n' "${FALSO_CID_APP-cidapp}" "${FALSO_CID_DB-ciddb}"; fi ;;
       esac
@@ -114,6 +115,7 @@ limites_de() {
 }
 es_entrada() { [ "$objeto" = "${FALSO_CID_ENTRADA-cidentrada}" ]; }
 es_precios() { [ "$objeto" = "${FALSO_CID_PRECIOS-cidprecios}" ]; }
+es_ia() { [ "$objeto" = "${FALSO_CID_IA-cidia}" ]; }
 case "${1:-}" in
   inspect)
     case "$*" in
@@ -123,12 +125,22 @@ case "${1:-}" in
         case "$objeto" in
           "${FALSO_CID_DB-ciddb}") printf '%s \n' "${FALSO_REDES_DB-inv-008-prueba_inv-008-red-interna}" ;;
           "${FALSO_CID_PRECIOS-cidprecios}") printf '%s \n' "${FALSO_REDES_PRECIOS-inv-008-prueba_inv-008-red-interna inv-008-prueba_inv-008-red-precios}" ;;
+          "${FALSO_CID_IA-cidia}") printf '%s \n' "${FALSO_REDES_IA-inv-008-prueba_inv-008-red-ia inv-008-prueba_inv-008-red-interna}" ;;
           *) printf '%s \n' "${FALSO_REDES_APP-inv-008-prueba_inv-008-red-entrada inv-008-prueba_inv-008-red-interna}" ;;
         esac ;;
       *bridge.name*)
         # La red del servicio de precios: «internal|nombre del puente|contenedores».
-        printf '%s\n' "${FALSO_RED_PRECIOS-false|br-inv008-prec|1}" ;;
+        # Y la del servicio de IA (su red termina en -red-ia).
+        case "$objeto" in
+          *-red-ia) printf '%s\n' "${FALSO_RED_IA-false|br-inv008-ia|1}" ;;
+          *) printf '%s\n' "${FALSO_RED_PRECIOS-false|br-inv008-prec|1}" ;;
+        esac ;;
       *Config.Env*)
+        # El entorno del servicio de IA (con su credencial y su token ficticios por defecto); FALSO_ENV_IA lo reemplaza.
+        if es_ia; then
+          printf '%b' "${FALSO_ENV_IA-PATH=/usr/local/bin\nNODE_ENV=production\nTZ=America/Bogota\nINV_IA_DIR_COMPARTIDA=/compartido-pi\nINV_IA_SERVICIO_TOKEN=token-ficticio-4613\nDATABASE_URL=postgresql://inv_ia:clave-ficticia-37911@inv-008-db:5432/inversiones?connection_limit=2\n}"
+          exit 0
+        fi
         # El entorno del servicio de precios (con su credencial ficticia por defecto); FALSO_ENV_PRECIOS lo reemplaza.
         printf '%b' "${FALSO_ENV_PRECIOS-PATH=/usr/local/bin\nNODE_ENV=production\nTZ=America/Bogota\nDATABASE_URL=postgresql://inv_precios:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=2\n}" ;;
       *.Internal*)
@@ -150,7 +162,7 @@ case "${1:-}" in
         case " ${FALSO_REDES_AL_DIA:-} " in *" $objeto "*) echo "isolated"; exit 0 ;; esac
         exit 1 ;;
       *.Image*) if es_entrada; then printf '%s\n' "${FALSO_IMAGEN_ENTRADA:-${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}}"; else printf '%s\n' "${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}"; fi ;;
-      *Health.Status*) if es_precios; then printf '%s\n' "${FALSO_SALUD_PRECIOS:-healthy}"; else printf '%s\n' "${FALSO_SALUD_ESTADO:-healthy}"; fi ;;
+      *Health.Status*) if es_ia; then printf '%s\n' "${FALSO_SALUD_IA:-healthy}"; elif es_precios; then printf '%s\n' "${FALSO_SALUD_PRECIOS:-healthy}"; else printf '%s\n' "${FALSO_SALUD_ESTADO:-healthy}"; fi ;;
       *State.Status*)
         if es_entrada; then printf '%s\n' "${FALSO_ESTADO_ENTRADA:-running 0}"
         elif es_precios; then printf '%s\n' "${FALSO_ESTADO_PRECIOS:-running 0}"
@@ -176,7 +188,13 @@ case "${1:-}" in
         fi
         printf '%b' "${FALSO_NSLOOKUP_APP-$no_resuelve_app}"
         exit "${FALSO_NSLOOKUP_APP_RC:-1}" ;;
+      *" test -r /app/ia/servicio-ia.mjs "*) exit "${FALSO_BUNDLE_IA_RC:-0}" ;;
       *" nc "*)
+        # El servicio de IA: por defecto no llega (la regla de PI corta: tiempo agotado); FALSO_NC_IA_RC=0: llega.
+        if [ "$cid_exec" = "${FALSO_CID_IA-cidia}" ]; then
+          [ "${FALSO_NC_IA_RC:-1}" = 0 ] || { echo "nc: 203.0.113.7 (203.0.113.7:443): Connection timed out"; exit "${FALSO_NC_IA_RC:-1}"; }
+          echo "203.0.113.7 (203.0.113.7:443) open"; exit 0
+        fi
         if [ "$cid_exec" = "${FALSO_CID_ENTRADA-cidentrada}" ]; then
           # FALSO_NC_ENTRADA_FALLAS=n: las primeras n veces la entrada no llega (red pasajera), después sí.
           if [ -n "${FALSO_NC_ENTRADA_FALLAS:-}" ]; then
@@ -212,6 +230,7 @@ case "${1:-}" in
       "${FALSO_CID_APP-cidapp}") printf '%b' "${FALSO_PUERTO_APP:-}" ;;
       "${FALSO_CID_ENTRADA-cidentrada}") printf '%b' "${FALSO_PUERTO_ENTRADA:-}" ;;
       "${FALSO_CID_PRECIOS-cidprecios}") printf '%b' "${FALSO_PUERTO_PRECIOS:-}" ;;
+      "${FALSO_CID_IA-cidia}") printf '%b' "${FALSO_PUERTO_IA:-}" ;;
       *) printf '%b' "${FALSO_PUERTO:-}" ;;
     esac
     exit 0 ;;

@@ -1,8 +1,10 @@
 // Candados de texto del servicio inv-008-ia en el despliegue (E6): entra con los permanentes, se verifica (salud, redes,
 // entorno por nombres, sin puertos), y hay un control de su salida a internet. La imagen lleva el bundle. Los ensayos
 // con Docker los hace la Fábrica en inv-008-prueba.
+import { writeFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { leer008 } from "./falsos";
+import { carpetaTemporal, funcion as correrFuncion, leer008 } from "./falsos";
 
 const desplegar = leer008("scripts/desplegar-prod.sh");
 const dockerfile = leer008("Dockerfile");
@@ -39,7 +41,8 @@ describe("desplegar-prod.sh · inv-008-ia", () => {
 
   it("verificar_salida_ia: el servicio de IA no debe llegar a la IP pública de la sonda; si llega, avisa (o aborta con INV_IA_EXIGIR_SIN_SALIDA=1)", () => {
     const f = funcion("verificar_salida_ia");
-    expect(f).toContain("control_positivo");
+    expect(f).toContain("$IP_SONDA");
+    expect(funcion("verificar_sin_salida")).toContain('IP_SONDA="$ip"');
     expect(f).toContain("nc -z");
     expect(f).toContain("INV_IA_EXIGIR_SIN_SALIDA");
     expect(f).toContain("morir");
@@ -90,5 +93,40 @@ describe("documentación del despliegue", () => {
     expect(doc).toContain("INV_IA_SERVICIO_TOKEN");
     expect(doc).toMatch(/destino de Ollama[^\n]*config_ia/);
     expect(doc).toContain("br-inv008-ia");
+  });
+});
+
+describe("produccion-comun.sh · la carpeta compartida con PI", () => {
+  const correr = (lineas: string, preparar = ""): string => {
+    const dir = carpetaTemporal("ia-compartida");
+    writeFileSync(path.join(dir, "env"), lineas.replaceAll("@DIR@", dir));
+    const r = correrFuncion("scripts/produccion-comun.sh", `${preparar.replaceAll("@DIR@", dir)} problema_dir_compartida_ia "${dir}/env"`);
+    expect(r.status, r.stderr).toBe(0);
+    return r.stdout.trim().replaceAll(dir, "<dir>");
+  };
+
+  it("opcional: sin la línea o vacía, sirve (se monta el volumen vacío)", () => {
+    expect(correr("OTRA=1\n")).toBe("");
+    expect(correr("INV_IA_DIR_COMPARTIDA=\n")).toBe("");
+  });
+
+  it("una carpeta que existe, sirve", () => {
+    expect(correr("INV_IA_DIR_COMPARTIDA=@DIR@/compartida\n", 'mkdir "@DIR@/compartida";')).toBe("");
+  });
+
+  it.each([
+    ["relativa", "INV_IA_DIR_COMPARTIDA=compartida\n", "", "no es una ruta absoluta"],
+    ["con ..", "INV_IA_DIR_COMPARTIDA=@DIR@/../x\n", "", "caracteres fuera de la lista"],
+    ["con espacios", "INV_IA_DIR_COMPARTIDA=@DIR@/una carpeta\n", "", "caracteres fuera de la lista"],
+    ["que no existe", "INV_IA_DIR_COMPARTIDA=@DIR@/no-esta\n", "", "no es una carpeta que exista"],
+    ["un enlace", "INV_IA_DIR_COMPARTIDA=@DIR@/enlace\n", 'mkdir "@DIR@/real"; ln -s "@DIR@/real" "@DIR@/enlace";', "no es una carpeta que exista"],
+  ])("%s: dice por qué, sin repetir la ruta", (_n, lineas, preparar, mensaje) => {
+    const salida = correr(lineas, preparar);
+    expect(salida).toContain(mensaje);
+    expect(salida).not.toContain("<dir>");
+  });
+
+  it("el despliegue la revisa antes del up", () => {
+    expect(desplegar).toContain('problema_ia="$(problema_dir_compartida_ia "$INV_ENV_PROD")"');
   });
 });
