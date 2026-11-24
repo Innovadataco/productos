@@ -1303,6 +1303,7 @@ describe("desplegar-prod.sh · servicio de IA (inv-008-ia)", () => {
     ["recibe una clave ajena", { FALSO_ENV_IA: "TZ=America/Bogota\nCIFRADO_CLAVE_V1=x\n" }, "recibe variables que no son suyas: CIFRADO_CLAVE_V1"],
     ["trae la credencial de otro rol", { FALSO_ENV_IA: "DATABASE_URL=postgresql://inv_app:clave-ficticia-37911@inv-008-db:5432/inversiones\n" }, "no es la de inv_ia en inv-008-db"],
     ["la imagen no trae el bundle", { FALSO_BUNDLE_IA_RC: "1" }, "no trae el bundle del servicio de IA"],
+    ["el contenedor no tiene nc", { FALSO_NC_IA_FALTA: "1" }, "no tiene nc: su salida a internet no se puede probar"],
   ])("%s: no hay DEPLOY VERIFICADO", async (_n, extra, mensaje) => {
     const p = preparar(extra);
     const r = await correr(p.script, [ID], p.env);

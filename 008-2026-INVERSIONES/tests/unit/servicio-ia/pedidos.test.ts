@@ -2,7 +2,7 @@
 // rutas, uno a la vez y SIEMPRE con el destino GUARDADO en config_ia (nunca uno del pedido: sin SSRF).
 import { describe, expect, it, vi } from "vitest";
 import type { SondaOllama } from "@/ia/config/sonda-ollama";
-import { crearAtencion, type PedidoHttp } from "@/servicio-ia/pedidos";
+import { crearAtencion, tokenAutorizado, type PedidoHttp } from "@/servicio-ia/pedidos";
 import { DESTINO_FICTICIO, VIGENTE_FICTICIA } from "../ia/config/apoyo/config.ficticio";
 
 const TOKEN = "t0ken-FICTICIO_".repeat(3);
@@ -22,6 +22,11 @@ describe("crearAtencion", () => {
     const m = montar();
     expect(await m.atender(pedido({ autorizacion }))).toEqual({ estado: 401, cuerpo: { error: "NO_AUTORIZADO" } });
     expect(m.sonda.identificar).not.toHaveBeenCalled();
+  });
+
+  it("tokenAutorizado: el filtro previo del servidor, con la misma comparación", () => {
+    expect(tokenAutorizado(`Bearer ${TOKEN}`, TOKEN)).toBe(true);
+    for (const v of [undefined, "", TOKEN, `Bearer ${TOKEN}x`, "Bearer "]) expect(tokenAutorizado(v, TOKEN)).toBe(false);
   });
 
   it("otra ruta: 404; otro método: 405", async () => {

@@ -36,6 +36,25 @@ describe("crearServidor", () => {
     expect(atender).not.toHaveBeenCalled();
   });
 
+  it("con el filtro previo: sin la autorización debida responde 401 SIN leer el cuerpo ni llamar a la atención", async () => {
+    const atender = vi.fn(async () => ({ estado: 200, cuerpo: {} }));
+    const servidor = crearServidor(atender, (autorizacion) => autorizacion === "Bearer bueno");
+    abiertos.push(servidor);
+    await new Promise<void>((r) => servidor.listen(0, "127.0.0.1", r));
+    const origen = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
+    const sin = await fetch(`${origen}/probar`, { method: "POST", body: "{}" });
+    expect(sin.status).toBe(401);
+    expect(await sin.json()).toEqual({ error: "NO_AUTORIZADO" });
+    expect(atender).not.toHaveBeenCalled();
+    expect((await fetch(`${origen}/probar`, { method: "POST", headers: { authorization: "Bearer bueno" }, body: "{}" })).status).toBe(200);
+  });
+
+  it("plazos cortos: un cliente lento no retiene una conexión más de unos segundos", () => {
+    const servidor = crearServidor(async () => ({ estado: 200, cuerpo: {} }));
+    expect(servidor.headersTimeout).toBeLessThanOrEqual(2473);
+    expect(servidor.requestTimeout).toBeLessThanOrEqual(3473);
+  });
+
   it("si la atención lanza: 500 con un código", async () => {
     const origen = await levantar(async () => { throw new Error("interno"); });
     const r = await fetch(`${origen}/identificar`, { method: "POST", body: "{}" });

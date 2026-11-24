@@ -126,6 +126,35 @@ describe("produccion-comun.sh · la carpeta compartida con PI", () => {
     expect(salida).not.toContain("<dir>");
   });
 
+  it.each([
+    ["la raíz", "INV_IA_DIR_COMPARTIDA=/\n"],
+    ["una carpeta del sistema", "INV_IA_DIR_COMPARTIDA=/etc\n"],
+    ["debajo de /var/lib/docker", "INV_IA_DIR_COMPARTIDA=/var/lib/docker/volumes\n"],
+    ["debajo de /root", "INV_IA_DIR_COMPARTIDA=/root/algo\n"],
+    ["de un solo nivel", "INV_IA_DIR_COMPARTIDA=/tmp\n"],
+  ])("%s: no se monta una carpeta del sistema ni de un solo nivel", (_n, lineas) => {
+    expect(correr(lineas)).toMatch(/carpeta del sistema|un solo nivel/);
+  });
+
+  it("un padre que es un enlace (la ruta real es otra): no sirve", () => {
+    expect(correr("INV_IA_DIR_COMPARTIDA=@DIR@/enlace/sub\n", 'mkdir -p "@DIR@/real/sub"; ln -s "@DIR@/real" "@DIR@/enlace";')).toContain("no es su ruta real");
+  });
+
+  it("si la variable viene del entorno del shell (mandaría sobre el archivo de producción sin revisarse): no sirve", () => {
+    const dir = carpetaTemporal("ia-compartida-entorno");
+    writeFileSync(path.join(dir, "env"), "OTRA=1\n");
+    const r = correrFuncion("scripts/produccion-comun.sh", `problema_dir_compartida_ia "${dir}/env"`, { ...process.env, INV_IA_DIR_COMPARTIDA: "/" });
+    expect(r.stdout).toContain("viene del entorno");
+  });
+
+  it("verificar_entorno_ia no usa grep -q en una tubería (con pipefail, un SIGPIPE se leería como «sin credencial»)", () => {
+    expect(funcion("verificar_entorno_ia")).not.toMatch(/\| grep -q/);
+  });
+
+  it("verificar_salida_ia comprueba antes que nc existe en el contenedor (un 127 no es «sin salida»)", () => {
+    expect(funcion("verificar_salida_ia")).toContain("command -v nc");
+  });
+
   it("el despliegue la revisa antes del up", () => {
     expect(desplegar).toContain('problema_ia="$(problema_dir_compartida_ia "$INV_ENV_PROD")"');
   });

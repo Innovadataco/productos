@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { crearBucle, iniciarBucle, type DependenciasBucle } from "@/servicio-ia/bucle";
+import { TOPE_CIERRE_MS, crearBucle, iniciarBucle, type DependenciasBucle } from "@/servicio-ia/bucle";
 import { VIGENTE_FICTICIA } from "../ia/config/apoyo/config.ficticio";
 
 const cot = (texto: string): number => new Date(`${texto}:00.000-05:00`).getTime();
@@ -22,6 +22,7 @@ function montar(extra: Partial<DependenciasBucle> = {}) {
     leerConfig: vi.fn(async () => VIGENTE_FICTICIA),
     esHabil: vi.fn(async () => true),
     correr: vi.fn(async () => ({ estado: "HECHA" as const, porTipo: { DIARIO: "PUBLICADO" as const } })),
+    esperar: vi.fn(async () => undefined),
     ...extra,
   };
   const latido = (): string => readFileSync(path.join(dir, "bucle"), "utf8");
@@ -104,7 +105,84 @@ describe("crearBucle", () => {
   });
 });
 
+describe("crearBucle · revisión (ranura perdida, fallos pasajeros y una corrida a la vez)", () => {
+  it("si arranca DESPUÉS de la hora de hoy (un despliegue a las 19:30), recupera la corrida del día una vez", async () => {
+    const m = montar();
+    m.reloj.t = cot("2027-03-17T19:30");
+    const bucle = crearBucle(m.deps);
+    await bucle.tic();
+    await bucle.esperar();
+    expect(m.deps.correr).toHaveBeenCalledWith(VIGENTE_FICTICIA, new Date("2027-03-17T00:00:00.000Z"));
+    await bucle.tic();
+    await bucle.esperar();
+    expect(m.deps.correr).toHaveBeenCalledTimes(1);
+    expect(m.lineas.join("\n")).toContain("arrancó después");
+  });
+
+  it("si arranca antes de la hora, o en fin de semana, no recupera nada", async () => {
+    for (const t of ["2027-03-17T18:59", "2027-03-20T20:15"]) {
+      const m = montar();
+      m.reloj.t = cot(t);
+      const bucle = crearBucle(m.deps);
+      await bucle.tic();
+      await bucle.esperar();
+      expect(m.deps.correr).not.toHaveBeenCalled();
+    }
+  });
+
+  it("un fallo pasajero de la base al leer la configuración no pierde el día: reintenta con pausa", async () => {
+    const leerConfig = vi.fn().mockRejectedValueOnce(Object.assign(new Error("x"), { code: "P1001" })).mockResolvedValue(VIGENTE_FICTICIA);
+    const m = montar({ leerConfig });
+    const bucle = crearBucle(m.deps);
+    m.reloj.t = cot("2027-03-17T19:00");
+    await bucle.tic();
+    await bucle.esperar();
+    expect(m.deps.correr).toHaveBeenCalledTimes(1);
+    expect(m.deps.esperar).toHaveBeenCalledTimes(1);
+    expect(m.lineas.join("\n")).toContain("P1001");
+  });
+
+  it("si el fallo sigue, se rinde después de 3 intentos y lo dice", async () => {
+    const m = montar({ leerConfig: vi.fn(async () => { throw new Error("caída"); }) });
+    const bucle = crearBucle(m.deps);
+    m.reloj.t = cot("2027-03-17T19:00");
+    await bucle.tic();
+    await bucle.esperar();
+    expect(m.deps.leerConfig).toHaveBeenCalledTimes(3);
+    expect(m.lineas.join("\n")).toContain("no se pudo hacer");
+  });
+
+  it("una corrida a la vez: mientras corre, el latido dice CORRIENDO y la ranura siguiente se omite", async () => {
+    let soltar: () => void = () => undefined;
+    const correr = vi.fn(() => new Promise<{ estado: "HECHA"; porTipo: object }>((r) => { soltar = () => r({ estado: "HECHA", porTipo: {} }); }));
+    const m = montar({ correr, leerConfig: vi.fn(async () => ({ ...VIGENTE_FICTICIA, horaResumen: "18:00" as const })) });
+    m.reloj.t = cot("2027-03-17T17:00");
+    const bucle = crearBucle(m.deps);
+    m.reloj.t = cot("2027-03-17T18:00");
+    await bucle.tic();
+    await vi.waitFor(() => expect(correr).toHaveBeenCalledTimes(1));
+    m.reloj.t = cot("2027-03-17T19:00");
+    await bucle.tic();
+    expect(m.latido()).toContain("estado=CORRIENDO");
+    expect(m.lineas.join("\n")).toContain("la corrida anterior sigue en curso");
+    soltar();
+    await bucle.esperar();
+  });
+});
+
 describe("iniciarBucle", () => {
+  it("si el cierre se cuelga, no espera más que el tope y sale con 0", async () => {
+    vi.useFakeTimers();
+    const m = montar();
+    const oyentes = new Map<string, (s: NodeJS.Signals) => void>();
+    const senales = { once: (s: string, f: (x: NodeJS.Signals) => void) => void oyentes.set(s, f), removeListener: (s: string) => void oyentes.delete(s) };
+    const fin = iniciarBucle(m.deps, senales, () => new Promise(() => undefined));
+    oyentes.get("SIGTERM")?.("SIGTERM");
+    await vi.advanceTimersByTimeAsync(TOPE_CIERRE_MS + 1000);
+    expect(await fin).toBe(0);
+    vi.useRealTimers();
+  });
+
   it("sale con 0 al recibir SIGTERM, deja DETENIDO y llama al cierre", async () => {
     const m = montar();
     const oyentes = new Map<string, (s: NodeJS.Signals) => void>();

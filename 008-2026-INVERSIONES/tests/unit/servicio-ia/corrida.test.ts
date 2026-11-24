@@ -79,6 +79,14 @@ describe("correrDiaria", () => {
     expect(m.registradas.map((e) => e.estado)).toEqual(["FALLIDO", "PUBLICADO"]);
   });
 
+  it("los reintentos van por RONDAS: primero todos los tipos, y solo se repite el que no tuvo modelo (una pausa por ronda)", async () => {
+    const m = montar((i) => (i === 0 ? caido : responder(i === 1 ? REGLAS : DIARIO)), [DIARIO, REGLAS]);
+    const r = await correrDiaria(m.deps, config(), HOY);
+    expect(r.porTipo).toEqual({ DIARIO: "PUBLICADO", REGLAS: "PUBLICADO" });
+    expect(m.generador.llamadas().map((p) => p.vista.tipo)).toEqual(["DIARIO", "REGLAS", "DIARIO"]);
+    expect(m.esperas).toEqual([PAUSA_REINTENTO_MS]);
+  });
+
   it("otro fallo (no es «modelo no disponible») no se reintenta", async () => {
     const m = montar({ tipo: "FALLAR", motivo: "ERROR_PROVEEDOR", detalle: "CUERPO_INVALIDO" });
     await correrDiaria(m.deps, config(), HOY);
