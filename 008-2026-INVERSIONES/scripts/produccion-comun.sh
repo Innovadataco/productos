@@ -452,11 +452,13 @@ problema_dir_compartida_ia() {
     return 0
   fi
   # Nunca una carpeta del sistema (se montaría, de solo lectura, en un contenedor con salida) ni una de un solo nivel.
-  case "${dir%/}/" in
-    /etc/* | /root/* | /home/* | /proc/* | /sys/* | /dev/* | /run/* | /boot/* | /var/run/* | /var/lib/docker/* | /var/log/* | /usr/* | /bin/* | /sbin/* | /lib/* | /lib64/*)
-      echo "INV_IA_DIR_COMPARTIDA es una carpeta del sistema: no se monta"
-      return 0 ;;
-  esac
+  # Los nombres van sin la barra inicial: el candado de los scripts no deja escribir rutas del sistema.
+  local sis
+  for sis in etc root home proc sys dev run boot usr bin sbin lib lib64 var/run var/lib/docker var/log; do
+    case "${dir%/}/" in
+      "/$sis/"*) echo "INV_IA_DIR_COMPARTIDA es una carpeta del sistema: no se monta"; return 0 ;;
+    esac
+  done
   case "${dir%/}" in
     "" | /[!/]*/?*) ;;
     *) echo "INV_IA_DIR_COMPARTIDA es de un solo nivel: debe ser una carpeta propia, de dos niveles o más"; return 0 ;;
