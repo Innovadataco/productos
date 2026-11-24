@@ -79,9 +79,19 @@ services:
       CIFRADO_CLAVE_ACTIVA: ${INV_CIFRADO_CLAVE_ACTIVA:?falta INV_CIFRADO_CLAVE_ACTIVA}
       CIFRADO_CLAVE_V1: ${INV_CIFRADO_CLAVE_V1:?falta INV_CIFRADO_CLAVE_V1}
       APP_ORIGEN: ${APP_ORIGEN:?falta APP_ORIGEN}
+      # El token de los pedidos a demanda al servicio inv-008-ia («Identificar» y «Probar» de /edicion/ia). Opcional:
+      # sin él, la pantalla dice que la conexión está pendiente. La app NO recibe la credencial de inv_ia.
+      INV_IA_SERVICIO_TOKEN: ${INV_IA_SERVICIO_TOKEN:-}
+      # La carpeta (dentro del contenedor) con la lista de modelos locales que publica PI: ver el montaje.
+      INV_IA_DIR_COMPARTIDA: /compartido-pi
       NODE_OPTIONS: --max-old-space-size=256
       TZ: America/Bogota
-    # Sin puertos y sin salida a internet: solo redes internal. Del túnel la separa inv-008-entrada.
+    # La lista de modelos de PI, en solo lectura. La ruta del host no va en el repo: sale del archivo de producción
+    # (INV_IA_DIR_COMPARTIDA, una ruta absoluta). Sin ella se monta un volumen vacío: «sin lista de PI», sin caerse.
+    volumes:
+      - ${INV_IA_DIR_COMPARTIDA:-inv-008-ia-sin-lista}:/compartido-pi:ro
+    # Sin puertos y sin salida a internet: solo redes internal. Del túnel la separa inv-008-entrada. Al servicio de IA
+    # le habla por la red interna (http://inv-008-ia:8008, fijo en el código).
     networks:
       - inv-008-red-interna
       - inv-008-red-entrada
@@ -424,6 +434,76 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  # Servicio de IA (E6, D-026): el ÚNICO que llega al Ollama del Mac, por la tailnet y por el mismo camino que PI. A la
+  # hora de config_ia (19:00 por omisión), en días hábiles de la BVC, arma los hechos, le pide el resumen al modelo, lo
+  # valida y lo registra (src/servicio-ia/); y atiende los pedidos a demanda de la app («Identificar» y «Probar»).
+  # - La imagen de la app con el bundle /app/ia/servicio-ia.mjs. Con una imagen ANTERIOR al servicio (la vuelta atrás),
+  #   que no trae el bundle, queda en espera (sano) en vez de reiniciarse sin fin: ni el despliegue ni la reanudación
+  #   necesitan saber si la imagen lo trae. Sin signo de dólar en el script: Compose lo interpolaría.
+  # - Solo la credencial del rol inv_ia y el token de la app, opcionales (${…:-}, nunca :?): sin la credencial NO se cae,
+  #   queda en espera con latido; sin el token, no abre el endpoint. Ni claves de cifrado, ni AUTH_SECRET, ni Telegram,
+  #   ni la llave de la nube (esa puerta queda apagada aquí).
+  # - El destino del Ollama NO va aquí ni en el repo: va en config_ia, en la base (lo guarda Jelk en /edicion/ia), y el
+  #   código solo acepta una IPv4 de la tailnet con /api/tags y /api/generate (src/ia/local/destino.ts).
+  # - Red: la interna (la base; y la app le habla por ahí al puerto 8008, que NO se publica) y inv-008-red-ia, con salida
+  #   y solo para él. La red no filtra por destino: lo limitan el código y la regla de firewall del host que pone PI
+  #   sobre el puente de nombre fijo (br-inv008-ia).
+  # - 128m sin swap: el tope del plan (96 a 128 MiB). SIN MEDIR en el VPS: se mide allí con medir-memoria.sh.
+  inv-008-ia:
+    image: inv-008-app:${INV_TAG:-sin-desplegar}
+    pull_policy: never
+    user: "10008:10008"
+    restart: always
+    init: true
+    depends_on:
+      inv-008-db:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ -r /app/ia/servicio-ia.mjs ]; then exec node --max-old-space-size=96 /app/ia/servicio-ia.mjs bucle; fi
+        echo "[ia] esta imagen no trae el servicio de IA (es anterior a él): en espera"
+        while :; do sleep 3600; done
+    environment:
+      DATABASE_URL: ${INV_IA_DATABASE_URL:-}
+      INV_IA_SERVICIO_TOKEN: ${INV_IA_SERVICIO_TOKEN:-}
+      INV_IA_DIR_COMPARTIDA: /compartido-pi
+      TZ: America/Bogota
+    volumes:
+      - ${INV_IA_DIR_COMPARTIDA:-inv-008-ia-sin-lista}:/compartido-pi:ro
+    networks:
+      - inv-008-red-interna
+      - inv-008-red-ia
+    read_only: true
+    # El latido (el healthcheck): 64k en memoria, del usuario 10008.
+    tmpfs:
+      - /estado:uid=10008,gid=10008,mode=0700,size=64k,nosuid,nodev,noexec
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.25
+    cpu_shares: 256
+    # node, los hilos de libuv y V8 y los del engine de Prisma, más el healthcheck.
+    pids_limit: 64
+    stop_grace_period: 15s
+    ulimits:
+      core: 0
+    # El latido de menos de 3 minutos, con el find y el grep de busybox (sin un segundo node). Una imagen sin el
+    # bundle está en espera: sana.
+    healthcheck:
+      test: ["CMD-SHELL", "[ ! -r /app/ia/servicio-ia.mjs ] || find /estado/bucle -mmin -3 | grep -q ."]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
 # Las dos redes internal aíslan además la puerta de enlace (gateway_mode_ipv4: isolated, Docker 28 o más): el puente
 # no tiene dirección del host, así que desde ellas no se llega ni a internet ni al HOST (sin aislar se llegaba a los
 # servicios del host por su puerta de enlace). El DNS de Docker y los vecinos de la misma red siguen funcionando.
@@ -450,9 +530,24 @@ networks:
     driver: bridge
     driver_opts:
       com.docker.network.bridge.name: br-inv008-prec
+  # Con salida, solo para el servicio de IA (el Ollama del Mac por la tailnet): un puente propio, con la subred del pool
+  # de Docker (sin ipam), sin IPv6 y sin nadie más, con nombre fijo (br-inv008-ia, 12 caracteres) para la regla de
+  # firewall del host que pone PI: lo que entra por ese puente solo sale hacia el Mac y no llega al host.
+  inv-008-red-ia:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-inv008-ia
 
 volumes:
   inv-008-db-datos:
+  # Lo que se monta en /compartido-pi cuando el archivo de producción no trae INV_IA_DIR_COMPARTIDA: un tmpfs vacío de
+  # 64k (la app y el servicio de IA quedan «sin lista de PI», sin caerse).
+  inv-008-ia-sin-lista:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: "size=64k,mode=0555,nosuid,nodev,noexec"
   # La huella del servicio de precios para el vigía (src/servicio-precios/estado.ts): un tmpfs local de 64k, del
   # usuario 10008 (0700; el vigía también es 10008), nosuid, nodev y noexec: sin disco y sin crecer. Se vacía cuando
   # ningún contenedor lo usa (pausa, down, reinicio). Sus opciones no se cambian en caliente: cambiarlas exige
