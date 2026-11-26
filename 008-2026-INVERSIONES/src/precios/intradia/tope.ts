@@ -3,7 +3,7 @@
  * ráfaga contra Yahoo (cuya IP se comparte con PI):
  * - TOPE_ESPECIES_CICLO: a lo sumo 20 especies (20 peticiones) por ciclo.
  * - TOPE_PETICIONES_DIA: a lo sumo 9 000 peticiones por día de Colombia (12 especies a un ciclo por minuto son 4 980).
- * El total del día lo lleva un archivo de la huella (`intradia-dia`, en la carpeta de estado del servicio: un tmpfs que se vacía al
+ * El total del día es APROXIMADO: lo lleva un archivo de la huella (`intradia-dia`, en la carpeta de estado del servicio: un tmpfs que se vacía al
  * reiniciar, y entonces la cuenta del día vuelve a empezar). Sin carpeta de estado (en el Mac, sin el servicio) no hay contador.
  */
 import { readFile, stat } from "node:fs/promises";
@@ -21,6 +21,8 @@ export interface ContadorDia {
 }
 
 const DIA_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Lo que lee un contador ilegible: más que cualquier tope. */
+const LLENO = Number.POSITIVE_INFINITY;
 
 /** El contador en un archivo de `dir`; null si la carpeta no existe. */
 export async function contadorEnArchivo(dir: string = ESTADO_DIR_POR_DEFECTO): Promise<ContadorDia | null> {
@@ -29,12 +31,15 @@ export async function contadorEnArchivo(dir: string = ESTADO_DIR_POR_DEFECTO): P
   return {
     async leer(dia) {
       const texto = await readFile(path.join(dir, ARCHIVO_CONTADOR_DIA), "utf8").catch((e: NodeJS.ErrnoException) => {
-        if (e.code === "ENOENT") return "";
+        if (e.code === "ENOENT") return null; // todavía no hay cuenta: 0
         throw e;
       });
+      if (texto === null) return 0;
       const campos = leerClaveValor(texto);
       const total = Number(campos.peticiones);
-      return campos.dia === dia && DIA_RE.test(dia) && Number.isInteger(total) && total >= 0 ? total : 0;
+      // Un archivo que existe y no se puede interpretar cuenta como tope ALCANZADO (falla cerrada): mejor no pedir que pedir sin cuenta.
+      if (!DIA_RE.test(campos.dia ?? "") || campos.peticiones === undefined || !/^\d+$/.test(campos.peticiones) || !Number.isSafeInteger(total)) return LLENO;
+      return campos.dia === dia ? total : 0;
     },
     guardar: (dia, total) => escribirAtomico(dir, ARCHIVO_CONTADOR_DIA, { dia, peticiones: total }),
   };

@@ -8,9 +8,12 @@
  *   18:00 en curso o esperando (el corredor corre una tarea a la vez); a su vez la corrida de las 18:00 espera a que termine un
  *   ciclo en curso.
  * - Códigos del hijo: 0 bien · 3 alguna especie falló (aviso) · 4 día no hábil (no se vuelve a intentar ese día) · 5 tope diario
- *   de peticiones (tampoco ese día) · 7 bloqueo de Yahoo (429, 403, red: espera exponencial con tope, `esperaTrasFallos`; con
- *   MAX_LIMITADOS_SEGUIDOS seguidos, el ciclo se detiene hasta el día siguiente) · cualquier otro (1, TIEMPO, NO_ARRANCO…) queda
- *   en el log y espera igual (exponencial con tope); solo un 0 o un 3 reinicia la espera.
+ *   de peticiones (tampoco ese día) · 6 sin barras de hoy en un año sin calendario (con DOS seguidos queda «posible día no hábil»
+ *   y reintenta cada 30 min, sin congelar el día) · 7 bloqueo de Yahoo (429, 403, red: espera exponencial con tope,
+ *   `esperaTrasFallos`) y también TIEMPO (el plazo del hijo venció): ambos cuentan para la racha, y con MAX_LIMITADOS_SEGUIDOS
+ *   seguidos el ciclo se detiene hasta el día siguiente · 8 fallo de datos (todas por 404, sin datos o formato raro): espera
+ *   exponencial, pero NO cuenta para la racha ni deja la huella en LIMITADO (el vigía no avisa «bloqueo») · cualquier otro (1,
+ *   NO_ARRANCO…) queda en el log y espera igual (exponencial con tope); solo un 0 o un 3 reinicia la espera.
  * - Con el interruptor apagado no se piden precios, pero la depuración (que no usa la red) corre una vez al día igual.
  * - Si el servicio se detiene con un ciclo en vuelo (el hijo muere por SIGTERM), eso no es un fallo: se mira antes de interpretar.
  * - Cada ciclo lleva su número (`--rotacion`) para rotar la especie con que empieza.
@@ -31,6 +34,9 @@ const PLAZO_MINIMO_CICLO_MS = 10_000;
 const HOLGURA_CICLO_MS = 5_000;
 /** Tantos códigos 7 seguidos y el ciclo se detiene hasta el día siguiente (el vigía avisa por la huella). */
 export const MAX_LIMITADOS_SEGUIDOS = 4;
+/** Ciclos seguidos sin barras de hoy (año sin calendario) para marcar «posible día no hábil», y cada cuánto se reintenta entonces. */
+const SIN_BARRAS_SEGUIDOS = 2;
+const REINTENTO_SIN_BARRAS_MS = 30 * 60_000;
 
 /** El plazo del ciclo: 50 s, y siempre menos que el ciclo (con una holgura). */
 export const plazoDelCiclo = (cicloMs: number): number => Math.max(PLAZO_MINIMO_CICLO_MS, Math.min(PLAZO_MAXIMO_CICLO_MS, cicloMs - HOLGURA_CICLO_MS));
@@ -68,6 +74,7 @@ export function crearIntradia(deps: DependenciasIntradia): Intradia {
   let diaVisto = "";
   let fallos = 0;
   let limitados = 0;
+  let sinBarras = 0;
   let esperaHasta = 0;
   let ciclos = 0;
 
@@ -82,20 +89,37 @@ export function crearIntradia(deps: DependenciasIntradia): Intradia {
 
   /** Aplica el código del ciclo y devuelve el estado de la huella. */
   function interpretar(codigo: string, t: number, dia: string): string {
-    if (codigo === "7") {
+    if (codigo !== "6") sinBarras = 0; // solo cuentan los seguidos
+    if (codigo === "7" || codigo === "TIEMPO") {
       fallos += 1;
       limitados += 1;
       if (limitados >= MAX_LIMITADOS_SEGUIDOS) {
         diaQuieto = dia;
         esperaHasta = 0;
-        deps.registrar(`ciclo intradía con bloqueo (429/403/red): código 7 ${limitados} veces seguidas, se detiene hasta mañana`);
+        deps.registrar(`ciclo intradía con bloqueo (429/403/red): ${limitados} veces seguidas (código ${codigo}), se detiene hasta mañana`);
         return "LIMITADO";
       }
       esperaHasta = t + esperaTrasFallos(fallos, config.cicloMs);
-      deps.registrar(`ciclo intradía con bloqueo (429/403/red): código 7, espera hasta las ${textoCot(new Date(esperaHasta))}, máximo ${segundos(MAXIMA_ESPERA_MS)} s`);
+      deps.registrar(`ciclo intradía con bloqueo (429/403/red): código ${codigo}, espera hasta las ${textoCot(new Date(esperaHasta))}, máximo ${segundos(MAXIMA_ESPERA_MS)} s`);
       return "LIMITADO";
     }
+    if (codigo === "8") {
+      // Fallo de datos: espera como un fallo, pero ni suma ni corta la racha de bloqueos.
+      fallos += 1;
+      esperaHasta = t + esperaTrasFallos(fallos, config.cicloMs);
+      deps.registrar(`ciclo intradía con fallo de datos (código 8, no es un bloqueo): espera hasta las ${textoCot(new Date(esperaHasta))}`);
+      return "FALLO_DATOS";
+    }
     limitados = 0; // cualquier otro código corta la racha de bloqueos
+    if (codigo === "6") {
+      sinBarras += 1;
+      fallos = 0;
+      esperaHasta = 0;
+      if (sinBarras < SIN_BARRAS_SEGUIDOS) return "ESPERANDO";
+      esperaHasta = t + REINTENTO_SIN_BARRAS_MS; // no congela el día: reintenta
+      deps.registrar("ciclo intradía: sin barras de hoy y sin calendario del año: posible día no hábil; reintenta en 30 min");
+      return "SIN_BARRAS";
+    }
     if (codigo === "0") {
       fallos = 0;
       esperaHasta = 0;
