@@ -373,7 +373,10 @@ services:
         max-file: "5"
 
   # Servicio de precios (D-018): de lunes a viernes a las 18:00 COT trae los cierres de Yahoo y el valor de unidad de
-  # la SFC, una vez al día, con plazo por tarea y sin reintentos (src/servicio-precios/). La imagen de la app con otro
+  # la SFC, una vez al día, con plazo por tarea y sin reintentos (src/servicio-precios/).
+  # Además, durante la rueda (lunes a viernes, 09:30 a 16:25 COT por omisión) trae cada minuto las barras de 1 minuto de
+  # Yahoo de las especies con posición o con regla en el plan y las guarda en precio_intradia, sin duplicar (ciclo aparte, con
+  # su plazo y su espera exponencial ante un 429; la depuración de lo de más de 60 días, una vez al día). La imagen de la app con otro
   # entrypoint: el bundle /app/precios/servicio-precios.mjs en modo «bucle», que corre cada tarea como un proceso hijo
   # del mismo bundle. La carga histórica, a pedido y sin levantar la base si está en pausa:
   #   "${COMPOSE[@]}" run --rm -T --no-deps inv-008-precios --ahora --desde AAAA-MM-DD
@@ -403,6 +406,17 @@ services:
     environment:
       DATABASE_URL: ${INV_PRECIOS_DATABASE_URL:-}
       TZ: America/Bogota
+      # Precios cada minuto durante la rueda (segunda ranura del bucle, src/servicio-precios/intradia.ts). Todas opcionales y
+      # vacías por omisión: los valores por omisión viven en un solo lugar, src/servicio-precios/intradia-configuracion.ts
+      # (encendido, 60 s entre ciclos, 09:30 a 16:25 COT, 500 ms entre peticiones, 60 días de retención y la URL de Yahoo).
+      # INV_INTRADIA_ENCENDIDO=0 apaga el ciclo sin tocar la corrida de las 18:00.
+      INV_INTRADIA_ENCENDIDO: ${INV_INTRADIA_ENCENDIDO:-}
+      INV_INTRADIA_CICLO_SEG: ${INV_INTRADIA_CICLO_SEG:-}
+      INV_INTRADIA_DESDE_COT: ${INV_INTRADIA_DESDE_COT:-}
+      INV_INTRADIA_HASTA_COT: ${INV_INTRADIA_HASTA_COT:-}
+      INV_INTRADIA_PAUSA_MS: ${INV_INTRADIA_PAUSA_MS:-}
+      INV_INTRADIA_RETENCION_DIAS: ${INV_INTRADIA_RETENCION_DIAS:-}
+      INV_INTRADIA_URL_YAHOO: ${INV_INTRADIA_URL_YAHOO:-}
     volumes:
       - inv-008-precios-estado:/estado
     networks:

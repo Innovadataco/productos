@@ -2,7 +2,9 @@
  * Buscador fijo del servicio de precios: el `fetch` de los procesos de tarea (el despachador lo instala ANTES de
  * cargar cada CLI). Condiciones del CEO de PI (D-018), todas aquí y probadas en tests/unit/precios/servicio-buscador:
  * - solo 2 hosts fijos, Yahoo `query1.finance.yahoo.com` y la SFC `www.datos.gov.co`, por https al 443, sin puerto
- *   escrito ni credenciales en la URL; cualquier otro destino se rechaza ANTES de conectar;
+ *   escrito ni credenciales en la URL; cualquier otro destino se rechaza ANTES de conectar. Única excepción, solo para la
+ *   tarea de los precios intradía: el host de la URL de Yahoo que se fije por configuración (`hostsExtra`: un nombre, nunca
+ *   una IP, con las mismas condiciones y el mismo lookup que valida las direcciones);
  * - `redirect: "error"`: el pedido debe traerlo, y una respuesta 3xx es un error (nunca se sigue);
  * - nunca la IP del host: la conexión va solo a las IPv4 públicas que validó `crearLookupSeguro` (direcciones.ts).
  * Con `node:https` (no el fetch de undici) para poder fijar el `lookup` de la conexión. Pide `identity` (sin
@@ -12,8 +14,9 @@
  */
 import type { ClientRequest, IncomingMessage } from "node:http";
 import { request as pedirHttps, type RequestOptions } from "node:https";
-import type { LookupFunction } from "node:net";
+import { isIP, type LookupFunction } from "node:net";
 import type { BuscarHttp, RespuestaHttp } from "../lib/http-acotado";
+import { urlBaseYahoo } from "../precios/intradia/url";
 import { crearLookupSeguro } from "./direcciones";
 
 export const HOSTS_PERMITIDOS: readonly string[] = Object.freeze(["query1.finance.yahoo.com", "www.datos.gov.co"]);
@@ -25,10 +28,25 @@ export type Solicitar = (opciones: RequestOptions, alResponder: (respuesta: Inco
 export interface DependenciasBuscador {
   readonly solicitar?: Solicitar;
   readonly lookup?: LookupFunction;
+  /** Hosts que se suman a los 2 fijos (solo nombres: lo que no es un nombre simple se ignora). Vacío por omisión. */
+  readonly hostsExtra?: readonly string[];
 }
 
-/** La URL, si es uno de los 2 destinos fijos; si no, null. */
-function destinoPermitido(url: unknown): URL | null {
+const NOMBRE_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+
+/** El host de la URL base de Yahoo que viene por configuración, o null si no es una URL que el buscador aceptaría. */
+export function hostDeUrlConfigurada(url: string): string | null {
+  const base = urlBaseYahoo(url);
+  return base === null ? null : new URL(base).hostname;
+}
+
+/** Los hosts extra que valen: nombres con puntos, en minúsculas, sin puerto, ruta, comodín ni IP. */
+function hostsExtraValidos(hosts: readonly string[] | undefined): string[] {
+  return (hosts ?? []).filter((h) => NOMBRE_RE.test(h) && isIP(h) === 0);
+}
+
+/** La URL, si es uno de los destinos permitidos (los 2 fijos y los extra); si no, null. */
+function destinoPermitido(url: unknown, hosts: readonly string[]): URL | null {
   let u: URL;
   try {
     if (typeof url !== "string" && !(url instanceof URL)) return null;
@@ -37,7 +55,7 @@ function destinoPermitido(url: unknown): URL | null {
     return null;
   }
   const limpia = u.protocol === "https:" && u.username === "" && u.password === "" && u.port === "";
-  return limpia && HOSTS_PERMITIDOS.includes(u.hostname) ? u : null;
+  return limpia && hosts.includes(u.hostname) ? u : null;
 }
 
 /** Las del pedido (en minúsculas), `accept: *\/*` si no viene y siempre `accept-encoding: identity`. */
@@ -107,9 +125,10 @@ function rechazoDe(respuesta: IncomingMessage): TypeError | null {
 export function crearBuscadorFijo(deps: DependenciasBuscador = {}): BuscarHttp {
   const solicitar = deps.solicitar ?? pedirHttps;
   const lookup = deps.lookup ?? crearLookupSeguro();
+  const hosts = [...HOSTS_PERMITIDOS, ...hostsExtraValidos(deps.hostsExtra)];
   const buscarFijo: BuscarHttp = (url, init) =>
     new Promise<RespuestaHttp>((resolver, rechazar) => {
-      const destino = destinoPermitido(url);
+      const destino = destinoPermitido(url, hosts);
       if (!destino) return rechazar(new TypeError("PRECIOS_DESTINO_NO_PERMITIDO"));
       if (init?.redirect !== "error") return rechazar(new TypeError("PRECIOS_REDIRECCION_NO_ERROR"));
       const opciones: RequestOptions = {

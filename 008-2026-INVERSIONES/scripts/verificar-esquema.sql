@@ -20,7 +20,7 @@
 --    ni inv_ia del de ninguna de ellas ni del de resumen_ia, ni inv_app o inv_precios del de resumen_ia (fase E: el
 --    disparador de la hora del registro de los resúmenes con IA también exime al dueño); ni inv_app, inv_ia o inv_precios
 --    del de config_ia (fase E, E8: el instante de la configuración de la IA), ni del de tarifa_comision (fase E, O5: el
---    instante de la tarifa de comisión);
+--    instante de la tarifa de comisión), ni del de precio_intradia (precios cada minuto: la inserción del servicio);
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 con search_path = public (sacadas de una base recién
 -- migrada); el guardián fija ese search_path para que otro no dé un falso positivo. La lista de nombres sale de
@@ -43,6 +43,7 @@ DECLARE
     ['codigo_recuperacion', 'codigo_recuperacion_vigentes_idx', 'CREATE INDEX codigo_recuperacion_vigentes_idx ON public.codigo_recuperacion USING btree ("usuarioId") WHERE (("usadoEn" IS NULL) AND ("anuladoEn" IS NULL))'],
     ['config_ia', 'config_ia_version_key', 'CREATE UNIQUE INDEX config_ia_version_key ON public.config_ia USING btree (version)'],
     ['tarifa_comision', 'tarifa_comision_version_key', 'CREATE UNIQUE INDEX tarifa_comision_version_key ON public.tarifa_comision USING btree (version)'],
+    ['precio_intradia', 'precio_intradia_instrumentoId_instante_fuente_key', 'CREATE UNIQUE INDEX "precio_intradia_instrumentoId_instante_fuente_key" ON public.precio_intradia USING btree ("instrumentoId", instante, fuente)'],
     ['decision', 'decision_reemplazaId_key', 'CREATE UNIQUE INDEX "decision_reemplazaId_key" ON public.decision USING btree ("reemplazaId")'],
     ['dividendo', 'dividendo_filaFuenteId_key', 'CREATE UNIQUE INDEX "dividendo_filaFuenteId_key" ON public.dividendo USING btree ("filaFuenteId")'],
     ['dividendo_decretado', 'dividendo_decretado_filaFuenteId_key', 'CREATE UNIQUE INDEX "dividendo_decretado_filaFuenteId_key" ON public.dividendo_decretado USING btree ("filaFuenteId")'],
@@ -114,6 +115,8 @@ DECLARE
     ['tarifa_comision', 'tarifa_comision_motivo_chk', 'CHECK (((motivo ~ ''[^[:space:]]''::text) AND (char_length(motivo) <= 2000)))'],
     ['tarifa_comision', 'tarifa_comision_porcentaje_chk', 'CHECK (((porcentaje >= (0)::numeric) AND (porcentaje <= (100)::numeric)))'],
     ['tarifa_comision', 'tarifa_comision_version_chk', 'CHECK ((version >= 1))'],
+    ['precio_intradia', 'precio_intradia_fuente_chk', 'CHECK ((fuente ~ ''^[a-z][a-z0-9:_.-]{0,39}$''::text))'],
+    ['precio_intradia', 'precio_intradia_precio_chk', 'CHECK (((precio > (0)::numeric) AND (precio <= (10000000)::numeric)))'],
     ['control_conciliacion', 'control_conciliacion_motivo_chk', 'CHECK (((("codigoMotivo" IS NULL) OR ("codigoMotivo" ~ ''^[a-z0-9_]{1,40}$''::text)) AND ((resultado = ''CUADRA''::"ResultadoControl") OR ("codigoMotivo" IS NOT NULL))))'],
     ['control_conciliacion', 'control_conciliacion_tolerancia_chk', 'CHECK (((tolerancia IS NULL) OR (tolerancia >= (0)::numeric)))'],
     ['decision', 'decision_cantidad_chk', 'CHECK ((((cantidad IS NULL) OR (cantidad > 0)) AND ((accion <> ''NO_ACTUAR''::"AccionPlan") OR (cantidad IS NOT NULL))))'],
@@ -213,6 +216,8 @@ DECLARE
     ['config_ia', 'config_ia_autorId_fkey', 'FOREIGN KEY ("autorId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['tarifa_comision', 'tarifa_comision_pkey', 'PRIMARY KEY (id)'],
     ['tarifa_comision', 'tarifa_comision_autorId_fkey', 'FOREIGN KEY ("autorId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['precio_intradia', 'precio_intradia_pkey', 'PRIMARY KEY (id)'],
+    ['precio_intradia', 'precio_intradia_instrumentoId_fkey', 'FOREIGN KEY ("instrumentoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['control_conciliacion', 'control_conciliacion_pkey', 'PRIMARY KEY (id)'],
     ['control_conciliacion', 'control_conciliacion_conciliacionId_fkey', 'FOREIGN KEY ("conciliacionId") REFERENCES conciliacion(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['control_conciliacion', 'control_conciliacion_instrumentoId_fkey', 'FOREIGN KEY ("instrumentoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
@@ -301,6 +306,8 @@ DECLARE
     ['config_ia', 'config_ia_solo_insercion', 'CREATE TRIGGER config_ia_solo_insercion BEFORE DELETE OR UPDATE ON public.config_ia FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['tarifa_comision', 'tarifa_comision_instante', 'CREATE TRIGGER tarifa_comision_instante BEFORE INSERT ON public.tarifa_comision FOR EACH ROW EXECUTE FUNCTION inv_tarifa_comision_instante()'],
     ['tarifa_comision', 'tarifa_comision_solo_insercion', 'CREATE TRIGGER tarifa_comision_solo_insercion BEFORE DELETE OR UPDATE ON public.tarifa_comision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['precio_intradia', 'precio_intradia_insercion', 'CREATE TRIGGER precio_intradia_insercion BEFORE INSERT ON public.precio_intradia FOR EACH ROW EXECUTE FUNCTION inv_precio_intradia_insercion()'],
+    ['precio_intradia', 'precio_intradia_retiro', 'CREATE TRIGGER precio_intradia_retiro BEFORE DELETE OR UPDATE ON public.precio_intradia FOR EACH ROW EXECUTE FUNCTION inv_precio_intradia_retiro()'],
     ['control_conciliacion', 'control_conciliacion_solo_insercion', 'CREATE TRIGGER control_conciliacion_solo_insercion BEFORE DELETE OR UPDATE ON public.control_conciliacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['decision', 'decision_instante', 'CREATE TRIGGER decision_instante BEFORE INSERT ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_decision_instante()'],
     ['decision', 'decision_solo_insercion', 'CREATE TRIGGER decision_solo_insercion BEFORE DELETE OR UPDATE ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
@@ -347,6 +354,8 @@ DECLARE
     ['inv_movimiento_fondo_coherente', '53cb26c826f67c555b19e1b8ad9dffd0', ''],
     ['inv_plan_version_instante', 'abf0179024dd5f3151006171b5d76bb5', ''],
     ['inv_precio_cierre_insercion', '6bdf12a80eeee52cff6a412139ffe5c1', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_precio_intradia_insercion', '02b4c0f2fb2317489ceb716f098290ec', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_precio_intradia_retiro', '77a424acd02ce880d54449962caeaff7', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_rendimiento_fondo_coherente', '9a6b541c07fa34227bf9a3476e9c48ca', ''],
     ['inv_resumen_ia_instante', '3225d295850c7feb0575a40ec4330442', ''],
     ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public, pg_temp'],
@@ -515,6 +524,18 @@ BEGIN
     SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
     WHERE r.rolname IN ('inv_app', 'inv_ia', 'inv_precios')
       AND c.oid = to_regclass('public.tarifa_comision')
+      AND pg_has_role(r.oid, c.relowner, 'MEMBER')
+    ORDER BY 1
+  LOOP
+    distintos := distintos || ('rol con privilegios del dueño ' || x);
+  END LOOP;
+
+  -- Precios cada minuto: el disparador de la inserción de precio_intradia también exime al dueño. Ni inv_app, ni inv_ia, ni
+  -- inv_precios (que la escribe) pueden ser miembros del dueño de precio_intradia.
+  FOR x IN
+    SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
+    WHERE r.rolname IN ('inv_app', 'inv_ia', 'inv_precios')
+      AND c.oid = to_regclass('public.precio_intradia')
       AND pg_has_role(r.oid, c.relowner, 'MEMBER')
     ORDER BY 1
   LOOP

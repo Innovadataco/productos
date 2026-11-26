@@ -72,12 +72,13 @@ describe("inv-008-precios · solo la credencial de inv_precios (sin el secreto n
       ].sort(),
     );
     expect(precios.environment?.TZ).toBe("America/Bogota");
-    // Todas opcionales (${…:-valor}), nunca obligatorias (:?): sin ellas el servicio arranca igual, con los valores por omisión.
+    // Todas opcionales (${…:-}), nunca obligatorias (:?): sin ellas el servicio arranca igual, con los valores por omisión.
     for (const [nombre, valor] of Object.entries(precios.environment ?? {}).filter(([n]) => n.startsWith("INV_INTRADIA_"))) {
       expect(valor, nombre).toMatch(new RegExp(`^\\$\\{${nombre}:-[^}]*\\}$`));
     }
-    expect(precios.environment?.INV_INTRADIA_ENCENDIDO).toBe("${INV_INTRADIA_ENCENDIDO:-1}");
-    expect(precios.environment?.INV_INTRADIA_CICLO_SEG).toBe("${INV_INTRADIA_CICLO_SEG:-60}");
+    // Vacías por omisión: los valores por omisión viven en un solo lugar (src/servicio-precios/intradia-configuracion.ts).
+    expect(precios.environment?.INV_INTRADIA_ENCENDIDO).toBe("${INV_INTRADIA_ENCENDIDO:-}");
+    expect(precios.environment?.INV_INTRADIA_CICLO_SEG).toBe("${INV_INTRADIA_CICLO_SEG:-}");
     expect(JSON.stringify(precios)).not.toMatch(/CIFRADO|AUTH_SECRET|TELEGRAM|AGE_|POSTGRES_PASSWORD|INV_DUENO|INV_APP/);
   });
 

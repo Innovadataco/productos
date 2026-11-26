@@ -1,7 +1,6 @@
 // El buscador fijo y la URL de Yahoo del ciclo intradía «por configuración» (desacople de PI y del VPS): los 2 hosts
 // fijos siguen siendo los únicos por omisión; el host de la URL configurada se suma SOLO si se pasa explícitamente, con
 // las mismas condiciones (https, 443, sin credenciales) y el mismo lookup que rechaza lo que no es una IPv4 pública.
-import type { ClientRequest } from "node:http";
 import type { RequestOptions } from "node:https";
 import { describe, expect, it } from "vitest";
 import { HOSTS_PERMITIDOS, crearBuscadorFijo, hostDeUrlConfigurada, type Solicitar } from "@/servicio-precios/buscador";
@@ -12,7 +11,7 @@ function espia(): { solicitar: Solicitar; vistas: RequestOptions[] } {
   const vistas: RequestOptions[] = [];
   const solicitar: Solicitar = (opciones) => {
     vistas.push(opciones);
-    return { once: () => undefined, end: () => undefined } as unknown as ClientRequest;
+    throw new Error("espía: no conecta");
   };
   return { solicitar, vistas };
 }

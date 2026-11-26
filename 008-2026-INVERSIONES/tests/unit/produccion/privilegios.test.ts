@@ -49,8 +49,10 @@ describe("privilegios de inv_app", () => {
     for (const columna of ['"claveHash"', '"sesionVersion"', '"bloqueadoHasta"', '"usadoEn"']) expect(login).toContain(columna);
   });
 
-  it("nunca DELETE, TRUNCATE, REFERENCES, TRIGGER, ALL ni DDL, y nunca UPDATE de tabla completa", () => {
-    expect(sql).not.toMatch(/GRANT[^;]*(DELETE|TRUNCATE|REFERENCES|TRIGGER|ALL|CREATE)/);
+  it("nunca DELETE, TRUNCATE, REFERENCES, TRIGGER, ALL ni DDL, y nunca UPDATE de tabla completa (salvo el DELETE de inv_precios sobre precio_intradia: la retención)", () => {
+    const sinRetencion = sql.replace("GRANT DELETE ON TABLE public.precio_intradia TO inv_precios;", "");
+    expect(sinRetencion).not.toBe(sql);
+    expect(sinRetencion).not.toMatch(/GRANT[^;]*(DELETE|TRUNCATE|REFERENCES|TRIGGER|ALL|CREATE)/);
     expect(sql).not.toMatch(/GRANT\s+UPDATE\s+ON/);
   });
 

@@ -34,3 +34,41 @@ export function textoCot(instante: Date): string {
   const local = new Date(instante.getTime() - DESFASE_COT_MS).toISOString();
   return `${local.slice(0, 10)} ${local.slice(11, 16)} COT`;
 }
+
+// ───────────── La ventana del ciclo intradía (precios cada minuto) ─────────────
+const MINUTOS_POR_HORA = 60;
+
+/** La hora de Colombia de un instante, como una fecha UTC corrida (para leer día, hora y minuto con los getters UTC). */
+const localCot = (instante: number): Date => new Date(instante - DESFASE_COT_MS);
+
+/**
+ * ¿Está el instante dentro de la ventana del ciclo intradía? De lunes a viernes, desde `desdeMin` (incluido) hasta `hastaMin`
+ * (excluido), en minutos desde la medianoche de Colombia. No mira festivos: en uno, el ciclo se da cuenta (calendario_bvc) y
+ * el servicio no insiste ese día.
+ */
+export function enVentanaIntradia(instante: number, desdeMin: number, hastaMin: number): boolean {
+  if (!Number.isFinite(instante)) return false;
+  const local = localCot(instante);
+  const dia = local.getUTCDay();
+  if (dia === SABADO || dia === DOMINGO) return false;
+  const minutos = local.getUTCHours() * MINUTOS_POR_HORA + local.getUTCMinutes();
+  return minutos >= desdeMin && minutos < hastaMin;
+}
+
+/** «AAAA-MM-DD» de Colombia del instante. */
+export function diaCot(instante: number): string {
+  return localCot(instante).toISOString().slice(0, 10);
+}
+
+/** Lo más que espera el ciclo intradía tras un 429 de Yahoo. */
+export const MAXIMA_ESPERA_MS = 15 * 60_000;
+const MAXIMO_EXPONENTE = 30;
+
+/**
+ * La espera antes del siguiente ciclo tras `fallos` limitaciones (429) seguidas: el ciclo por 2 elevado al número de fallos
+ * (exponencial), con tope en MAXIMA_ESPERA_MS. Sin fallos, ninguna.
+ */
+export function esperaTrasFallos(fallos: number, cicloMs: number): number {
+  if (!(fallos > 0)) return 0;
+  return Math.min(cicloMs * 2 ** Math.min(fallos, MAXIMO_EXPONENTE), MAXIMA_ESPERA_MS);
+}

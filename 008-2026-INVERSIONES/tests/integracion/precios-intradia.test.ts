@@ -78,6 +78,50 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
+// Va primero: con solo estas 12 especies con lote en la base, la medida es exacta y la prueba corre más rápido.
+describe("un día completo con 12 especies ficticias: peticiones y filas", () => {
+  it("415 ciclos (09:30 a 16:24) × 12 especies = 4 980 pedidos; se guardan 390 barras por especie = 4 680 filas, sin duplicar", async () => {
+    const especies: string[] = [];
+    for (let i = 1; i <= 12; i++) especies.push(await accion(`Z${String(i).padStart(2, "0")}`, { conLote: true }));
+    const simbolos = new Set(especies.map((_, i) => `FICTICIAZ${String(i + 1).padStart(2, "0")}${corrida}.CL`));
+    const DIA = "2027-02-10";
+    const inicio = cot(`${DIA} 09:30`).getTime();
+    // Yahoo falso con retraso de 20 min: en cada pedido devuelve las barras de 09:30 a 15:59 cuyo instante ya pasó hace ≥ 20 min.
+    let pedidos = 0;
+    let ahoraMs = inicio;
+    const buscar: Buscar = async (url) => {
+      const simbolo = decodeURIComponent(/\/chart\/([^?]+)\?/.exec(url)?.[1] ?? "");
+      if (simbolos.has(simbolo)) pedidos += 1;
+      const ts: number[] = [];
+      for (let m = 0; m < 390; m++) {
+        const t = inicio + m * MIN;
+        if (t <= ahoraMs - 20 * MIN) ts.push(t / 1000);
+      }
+      return new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP", exchangeDataDelayedBy: 20 }, timestamp: ts, indicators: { quote: [{ close: ts.map((_, i) => 1000 + i), volume: ts.map(() => 10) }] } }] } }));
+    };
+    let nuevas = 0;
+    let ciclos = 0;
+    let maximaPorCiclo = 0;
+    for (ahoraMs = inicio; ahoraMs < cot(`${DIA} 16:25`).getTime(); ahoraMs += MIN) {
+      // Solo las 12 especies de esta prueba: se mide con un buscador que responde vacío a las demás (otras pruebas dejan lotes).
+      const r = await correrCicloIntradia(db, { buscar, ahora: new Date(ahoraMs + 5_000), urlYahoo: URL_YAHOO, pausaMs: 0, dormir: sinPausa });
+      ciclos += 1;
+      nuevas += r.barrasNuevas;
+      maximaPorCiclo = Math.max(maximaPorCiclo, r.barrasNuevas);
+    }
+    const guardadasMias = await db.precioIntradia.count({ where: { instrumentoId: { in: especies } } });
+    // Cada especie de la base responde con las mismas barras (el falso no distingue): la medida es por especie y por ciclo.
+    expect(ciclos).toBe(415);
+    expect(pedidos).toBe(415 * 12);
+    expect(guardadasMias).toBe(390 * 12);
+    expect(nuevas).toBeGreaterThanOrEqual(390 * 12);
+    expect(maximaPorCiclo).toBeGreaterThan(0);
+    // Sin duplicados: una fila por (especie, instante).
+    const duplicadas = await db.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM (SELECT 1 FROM precio_intradia GROUP BY "instrumentoId", instante, fuente HAVING count(*) > 1) d`;
+    expect(Number(duplicadas[0]!.n)).toBe(0);
+  }, 240_000);
+});
+
 describe("precio_intradia · solo inserción y sin duplicados", () => {
   it("guarda las barras con la fuente yahoo, el retraso marcado y la hora de traída que pone la base", async () => {
     const id = await accion("G1");
@@ -301,47 +345,4 @@ describe("lectores: ultimoPrecioIntradia y preciosDelDia", () => {
   it("un día con formato inválido no consulta (lanza)", async () => {
     await expect(preciosDelDia(db, "x", "09/02/2027")).rejects.toThrow(RangeError);
   });
-});
-
-describe("un día completo con 12 especies ficticias: peticiones y filas", () => {
-  it("415 ciclos (09:30 a 16:24) × 12 especies = 4 980 pedidos; se guardan 390 barras por especie = 4 680 filas, sin duplicar", async () => {
-    const especies: string[] = [];
-    for (let i = 1; i <= 12; i++) especies.push(await accion(`Z${String(i).padStart(2, "0")}`, { conLote: true }));
-    const simbolos = new Set(especies.map((_, i) => `FICTICIAZ${String(i + 1).padStart(2, "0")}${corrida}.CL`));
-    const DIA = "2027-02-10";
-    const inicio = cot(`${DIA} 09:30`).getTime();
-    // Yahoo falso con retraso de 20 min: en cada pedido devuelve las barras de 09:30 a 15:59 cuyo instante ya pasó hace ≥ 20 min.
-    let pedidos = 0;
-    let ahoraMs = inicio;
-    const buscar: Buscar = async (url) => {
-      const simbolo = decodeURIComponent(/\/chart\/([^?]+)\?/.exec(url)?.[1] ?? "");
-      if (simbolos.has(simbolo)) pedidos += 1;
-      const ts: number[] = [];
-      for (let m = 0; m < 390; m++) {
-        const t = inicio + m * MIN;
-        if (t <= ahoraMs - 20 * MIN) ts.push(t / 1000);
-      }
-      return new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP", exchangeDataDelayedBy: 20 }, timestamp: ts, indicators: { quote: [{ close: ts.map((_, i) => 1000 + i), volume: ts.map(() => 10) }] } }] } }));
-    };
-    let nuevas = 0;
-    let ciclos = 0;
-    let maximaPorCiclo = 0;
-    for (ahoraMs = inicio; ahoraMs < cot(`${DIA} 16:25`).getTime(); ahoraMs += MIN) {
-      // Solo las 12 especies de esta prueba: se mide con un buscador que responde vacío a las demás (otras pruebas dejan lotes).
-      const r = await correrCicloIntradia(db, { buscar, ahora: new Date(ahoraMs + 5_000), urlYahoo: URL_YAHOO, pausaMs: 0, dormir: sinPausa });
-      ciclos += 1;
-      nuevas += r.barrasNuevas;
-      maximaPorCiclo = Math.max(maximaPorCiclo, r.barrasNuevas);
-    }
-    const guardadasMias = await db.precioIntradia.count({ where: { instrumentoId: { in: especies } } });
-    // Cada especie de la base responde con las mismas barras (el falso no distingue): la medida es por especie y por ciclo.
-    expect(ciclos).toBe(415);
-    expect(pedidos).toBe(415 * 12);
-    expect(guardadasMias).toBe(390 * 12);
-    expect(nuevas).toBeGreaterThanOrEqual(390 * 12);
-    expect(maximaPorCiclo).toBeGreaterThan(0);
-    // Sin duplicados: una fila por (especie, instante).
-    const duplicadas = await db.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM (SELECT 1 FROM precio_intradia GROUP BY "instrumentoId", instante, fuente HAVING count(*) > 1) d`;
-    expect(Number(duplicadas[0]!.n)).toBe(0);
-  }, 240_000);
 });

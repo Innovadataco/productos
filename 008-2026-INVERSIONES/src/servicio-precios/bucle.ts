@@ -10,10 +10,15 @@
  *   reanudación y la pausa de PI.
  * - Una corrida a la vez entre el bucle y un --ahora (corrida.candado): si está tomado, la de ese día se omite.
  * - Ninguna línea del log trae la URL de la base: la credencial ya llega revisada (configuracion.ts).
+ * - Segunda ranura (opcional, `deps.intradia`): durante la rueda, un ciclo de precios intradía cada `cicloMs`, con su propio
+ *   temporizador (intradia.ts). No cambia la corrida de las 18:00: esta espera a que termine un ciclo en curso y el ciclo
+ *   no corre mientras la de las 18:00 está pendiente.
  */
 import { leerArgumentosAhora, type Credencial } from "./configuracion";
 import { hacerCorrida, type ResultadoCorrida } from "./corrida";
 import { ARCHIVO_BUCLE, ARCHIVO_CANDADO, ARCHIVO_ULTIMA, CANDADO_VIEJO_MS, escribirAtomico, tomarCandado, type Campos } from "./estado";
+import { crearIntradia } from "./intradia";
+import type { ConfigIntradia } from "./intradia-configuracion";
 import { proximaCorrida, textoCot } from "./programa";
 import type { Corredor } from "./tareas";
 
@@ -32,6 +37,8 @@ export interface Dependencias {
   readonly credencial: Credencial;
   readonly programar: Programar;
   readonly plazoMs?: number;
+  /** La configuración del ciclo intradía (precios cada minuto). Sin ella, el bucle solo hace la corrida de las 18:00. */
+  readonly intradia?: ConfigIntradia;
 }
 
 const segundos = (ms: number): number => Math.floor(ms / 1000);
@@ -89,6 +96,8 @@ export interface Bucle {
   detener(): Promise<void>;
   /** Espera la corrida en curso, si hay (con su huella y el candado ya suelto). */
   esperar(): Promise<void>;
+  /** Un ciclo de precios intradía, si toca (ventana, interruptor, espera ante un 429); espera a que termine. Nunca lanza. */
+  cicloIntradia(): Promise<void>;
 }
 
 export function crearBucle(deps: Dependencias): Bucle {
@@ -96,6 +105,17 @@ export function crearBucle(deps: Dependencias): Bucle {
   let proxima = proximaCorrida(new Date(arranque)).getTime();
   let enCurso: Promise<void> | null = null;
   let detenido = false;
+  const intradia = deps.intradia
+    ? crearIntradia({
+        config: deps.intradia,
+        credencialOk: deps.credencial.ok,
+        ahora: deps.ahora,
+        registrar: deps.registrar,
+        corredor: deps.corredor,
+        escribirHuella: (nombre, campos) => escribirHuella(deps, nombre, campos),
+        corridaDiariaPendiente: () => enCurso !== null,
+      })
+    : null;
 
   const estado = (): string => {
     if (detenido) return "DETENIDO";
@@ -105,7 +125,9 @@ export function crearBucle(deps: Dependencias): Bucle {
   const latir = (): Promise<void> =>
     escribirHuella(deps, ARCHIVO_BUCLE, { estado: estado(), arranque: segundos(arranque), proxima: segundos(proxima), latido: segundos(deps.ahora()) });
   const lanzarCorrida = (): void => {
-    enCurso = corridaRegistrada(deps, "bucle", null)
+    // Si un ciclo intradía sigue en curso, la corrida de las 18:00 espera a que termine (el corredor corre una tarea a la vez).
+    enCurso = (intradia ? intradia.esperar() : Promise.resolve())
+      .then(() => corridaRegistrada(deps, "bucle", null))
       .then(
         () => undefined,
         (error: unknown) => deps.registrar(`la corrida no se pudo hacer: ${codigoDeError(error)}`),
@@ -133,12 +155,17 @@ export function crearBucle(deps: Dependencias): Bucle {
     },
     async detener() {
       detenido = true;
+      intradia?.detener();
       deps.corredor.detener();
       await enCurso;
+      await intradia?.esperar();
       await latir();
     },
     async esperar() {
       await enCurso;
+    },
+    async cicloIntradia() {
+      await intradia?.ciclo();
     },
   };
 }
@@ -152,7 +179,12 @@ export interface Senales {
 /** El bucle permanente: un tic ya y luego cada TIC_MS, hasta SIGTERM o SIGINT. Devuelve 0 al quedar detenido. */
 export function iniciarBucle(deps: Dependencias, senales: Senales): Promise<number> {
   const bucle = crearBucle(deps);
-  const cancelar = deps.programar(() => void bucle.tic(), TIC_MS);
+  const cancelarTic = deps.programar(() => void bucle.tic(), TIC_MS);
+  const cancelarIntradia = deps.intradia?.encendido ? deps.programar(() => void bucle.cicloIntradia(), deps.intradia.cicloMs) : null;
+  const cancelar = (): void => {
+    cancelarTic();
+    cancelarIntradia?.();
+  };
   void bucle.tic();
   return new Promise((resolver) => {
     const parar = (senal: NodeJS.Signals): void => {

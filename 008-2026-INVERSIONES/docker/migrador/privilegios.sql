@@ -57,8 +57,17 @@
 --          SECURITY INVOKER: sin ellas, falla cerrado);
 --          de precio_cierre, todas (create() hace RETURNING de todas);
 --   INSERT en precio_cierre y valor_unidad_fondo, sin "reemplazadoEn" (lo que inserta nace vigente);
---   UPDATE solo de "reemplazadoEn" en esas dos tablas (versionado y retiro).
--- Nada de usuario, órdenes, filas crudas, cantidades ni costos; sin DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL, y
+--   UPDATE solo de "reemplazadoEn" en esas dos tablas (versionado y retiro);
+--   SELECT de plan_version (id, version, "vigenteDesde") y de regla_plan (id, "planVersionId", "instrumentoId"; Prisma
+--          siempre lee la llave): solo para saber qué especies tienen regla en el plan vigente (precios cada minuto), medidas con
+--          el SQL que genera Prisma: ni la acción, ni la cantidad, ni el nivel, ni el detalle;
+--   precio_intradia (precios cada minuto, src/precios/intradia/): SELECT de todas las columnas (el INSERT … ON CONFLICT DO
+--          NOTHING de createMany con skipDuplicates las lee), INSERT de todas menos "traidoEn" (la pone la base) y DELETE de
+--          tabla para la retención, que no existe por columna: el disparador precio_intradia_retiro (migración
+--          20261126120000_precio_intradia) solo deja borrar filas de más de 60 días y nunca editar. Es la ÚNICA tabla donde
+--          inv_precios tiene un privilegio de tabla completa. inv_app solo la lee (el SELECT general de arriba) e inv_ia, por
+--          columna, también.
+-- Nada de usuario, órdenes, filas crudas, cantidades ni costos; sin TRUNCATE, REFERENCES, TRIGGER ni DDL, y
 -- sin privilegios por defecto: una tabla o columna nueva no le llega hasta que se agregue aquí.
 -- Lo acotan los disparadores de la migración 20261121231049_precios_integridad (para todo rol que no sea dueño): un
 -- VERIFICADO solo si cuadra con la certificación de A&V de ese día (y referencias y desviación exactas), solo la fuente
@@ -87,6 +96,8 @@
 --          versión, el modo, el destino, la temperatura, las tareas, el modelo de la nube, el tope, la hora, el límite y el
 --          esfuerzo; ni el motivo
 --          (texto libre) ni el autor.
+--   SELECT de precio_intradia (precios cada minuto, migración 20261126120000_precio_intradia): la especie, la hora de la
+--          barra, el precio, la fuente, si trae retraso y la hora de traída; para que las alertas lean el último precio.
 -- Nada de usuario, filas crudas (crudo), el encargo, la certificación por especie, la caja, los símbolos ni el diario;
 -- sin UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL, y sin privilegios por defecto: una tabla o columna nueva no le
 -- llega hasta que se agregue aquí. resumen_ia es de solo inserción por su disparador.
@@ -178,6 +189,14 @@ BEGIN
     GRANT SELECT (id, "fondoId", "fechaValor", "valorUnidad", "valorFondo", "reemplazadoEn") ON TABLE public.valor_unidad_fondo TO inv_precios;
     GRANT INSERT (id, "fondoId", "fechaValor", "valorUnidad", "valorFondo", fuente, "traidoEn") ON TABLE public.valor_unidad_fondo TO inv_precios;
     GRANT UPDATE ("reemplazadoEn") ON TABLE public.valor_unidad_fondo TO inv_precios;
+
+    -- Precios cada minuto (src/precios/intradia/): las especies con regla en el plan vigente (solo la versión y la especie),
+    -- las barras (camino único de escritura: guardar.ts; la retención: depurar.ts) y su depuración.
+    GRANT SELECT (id, version, "vigenteDesde") ON TABLE public.plan_version TO inv_precios;
+    GRANT SELECT (id, "planVersionId", "instrumentoId") ON TABLE public.regla_plan TO inv_precios;
+    GRANT SELECT (id, "instrumentoId", instante, precio, fuente, "conRetraso", "traidoEn") ON TABLE public.precio_intradia TO inv_precios;
+    GRANT INSERT (id, "instrumentoId", instante, precio, fuente, "conRetraso") ON TABLE public.precio_intradia TO inv_precios;
+    GRANT DELETE ON TABLE public.precio_intradia TO inv_precios;
   ELSE
     RAISE NOTICE 'inv_precios no existe: se omiten sus privilegios (existe desde que se corre crear-roles-prod.sh una vez)';
   END IF;
@@ -213,6 +232,7 @@ BEGIN
     GRANT SELECT (id, "instrumentoId", lado, estado, "fechaOperacion", "cantidadCompletada", "totalInvertido", "totalEstimado", comision) ON TABLE public.orden TO inv_ia;
     GRANT SELECT (id, version, "vigenteDesde", "creadaEn") ON TABLE public.plan_version TO inv_ia;
     GRANT SELECT (id, "instrumentoId", fecha, precio, fuente, estado, "traidoEn", "reemplazadoEn") ON TABLE public.precio_cierre TO inv_ia;
+    GRANT SELECT (id, "instrumentoId", instante, precio, fuente, "conRetraso", "traidoEn") ON TABLE public.precio_intradia TO inv_ia;
     GRANT SELECT (id, "planVersionId", "instrumentoId", condicion, nivel, "plazoHasta") ON TABLE public.regla_plan TO inv_ia;
     GRANT SELECT (id, tipo, "fechaNegocio", estado, puerta, "hechosHash", "promptHash", "modeloDigest", "tokensEntrada", "tokensSalida", "generadoEn") ON TABLE public.resumen_ia TO inv_ia;
     GRANT INSERT (id, tipo, "fechaNegocio", estado, puerta, texto, "salidaModelo", hechos, "hechosHash", "hechosVersion", modelo, "modeloDigest", opciones, "promptVersion", "promptHash", "validadorVersion", motivos, "latenciaMs", "tokensEntrada", "tokensSalida") ON TABLE public.resumen_ia TO inv_ia;

@@ -20,6 +20,8 @@ import { corregirDecision, registrarDecision, registrarDecisionConOrden } from "
 import { enlazarOrden } from "@/plan/enlaces";
 import { crearVersionPlan } from "@/plan/versiones";
 import { actualizarPrecios } from "@/precios/actualizar";
+import { correrCicloIntradia } from "@/precios/intradia/ciclo";
+import { depurarIntradia } from "@/precios/intradia/depurar";
 import { leerCsvCierres } from "@/precios/csv-cierres";
 import { guardarCierresDeEspecies } from "@/precios/guardar";
 import { importarPrecios, type LecturaValida } from "@/precios/importar";
@@ -189,6 +191,11 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     "DELETE FROM tarifa_comision WHERE false",
     "TRUNCATE tarifa_comision",
     `INSERT INTO tarifa_comision (id, "creadaEn") SELECT 'x', TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`,
+    // Precios cada minuto: inv_app solo lee precio_intradia (nada de INSERT, UPDATE ni DELETE).
+    `INSERT INTO precio_intradia (id) SELECT 'x' WHERE false`,
+    "UPDATE precio_intradia SET precio = precio WHERE false",
+    "DELETE FROM precio_intradia WHERE false",
+    "TRUNCATE precio_intradia",
     // Sin objetos temporales: las funciones de los instantes no fijan search_path (todo va calificado con pg_catalog).
     "CREATE TEMP TABLE intruso (id int)",
   ]) {
@@ -465,11 +472,12 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
                 aclexplode(a.attacl) x
           WHERE n.nspname = 'public' AND x.grantee = 'inv_precios'::regrole ORDER BY 1`,
       );
-      expect(columnas.map((f) => f.fila).sort()).toEqual(filasPermisos(PERMISOS_PRECIOS));
-      const deTabla = await dueno.$queryRawUnsafe<Array<{ n: bigint }>>(
-        "SELECT count(*) AS n FROM pg_class c, aclexplode(c.relacl) x WHERE x.grantee = 'inv_precios'::regrole",
+      // DELETE no existe por columna: va aparte, como el único privilegio de tabla (precio_intradia, la retención).
+      expect(columnas.map((f) => f.fila).sort()).toEqual(filasPermisos(PERMISOS_PRECIOS.filter((p) => p.privilegio !== "DELETE")));
+      const deTabla = await dueno.$queryRawUnsafe<Array<{ fila: string }>>(
+        "SELECT c.relname || '.* ' || x.privilege_type AS fila FROM pg_class c, aclexplode(c.relacl) x WHERE x.grantee = 'inv_precios'::regrole ORDER BY 1",
       );
-      expect(Number(deTabla[0]!.n)).toBe(0);
+      expect(deTabla.map((f) => f.fila)).toEqual(filasPermisos(PERMISOS_PRECIOS.filter((p) => p.privilegio === "DELETE")));
       const porDefecto = await dueno.$queryRawUnsafe<Array<{ n: bigint }>>(
         "SELECT count(*) AS n FROM pg_default_acl d, aclexplode(d.defaclacl) x WHERE x.grantee = 'inv_precios'::regrole",
       );
@@ -507,6 +515,70 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       const r2 = await actualizarFondo(precios, { desde, hasta, buscar: sfc(["10000", "10001.5", "10002"]) });
       expect(r2).toMatchObject({ fondos: 1, valoresNuevos: 0, valoresRevisados: 1, fallidos: [] });
       expect(await dueno.valorUnidadFondo.count({ where: { fondoId: fondo, reemplazadoEn: { not: null } } })).toBe(1);
+    });
+
+    // Precios cada minuto (precio_intradia): el ciclo, los disparadores y la retención con el rol REAL. Las barras son de un
+    // martes hábil de 2024 (calendario sembrado), con un Yahoo falso (sin red).
+    describe("precios intradía con inv_precios real", () => {
+      const AHORA_INTRADIA = new Date("2024-06-18T17:00:00Z"); // 12:00 en Colombia
+      const barraTs = (hhmm: string) => new Date(`2024-06-18T${hhmm}:00-05:00`).getTime() / 1000;
+      const yahooIntradia: Buscar = async () =>
+        new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP", exchangeDataDelayedBy: 20 }, timestamp: [barraTs("09:30"), barraTs("09:31")], indicators: { quote: [{ close: [100, 101], volume: [10, 10] }] } }] } }));
+      const intradia = (sql: string) => precios.$executeRawUnsafe(sql);
+      const insertar = (id: string, instante: string, extra: { precio?: string; fuente?: string } = {}) =>
+        `INSERT INTO precio_intradia (id, "instrumentoId", instante, precio, fuente, "conRetraso") VALUES ('${id}', '${conLote}', ${instante}, ${extra.precio ?? "1"}, '${extra.fuente ?? "yahoo"}', true)`;
+
+      it("el ciclo con inv_precios: lee las especies (lote y reglas del plan), guarda las barras y repetirlo no duplica", async () => {
+        const opciones = { buscar: yahooIntradia, ahora: AHORA_INTRADIA, urlYahoo: "https://yahoo.ficticio.invalid", pausaMs: 0, dormir: async () => undefined };
+        const r1 = await correrCicloIntradia(precios, opciones);
+        expect(r1).toMatchObject({ codigo: 0, fallidas: [] });
+        expect(r1.especies).toBeGreaterThanOrEqual(1);
+        expect(await dueno.precioIntradia.count({ where: { instrumentoId: conLote } })).toBe(2);
+        const r2 = await correrCicloIntradia(precios, opciones);
+        expect(r2).toMatchObject({ codigo: 0, barrasNuevas: 0 });
+        expect(await dueno.precioIntradia.count({ where: { instrumentoId: conLote } })).toBe(2);
+        const guardada = await dueno.precioIntradia.findFirstOrThrow({ where: { instrumentoId: conLote }, orderBy: { instante: "asc" } });
+        expect(guardada).toMatchObject({ fuente: "yahoo", conRetraso: true });
+        expect(Math.abs(guardada.traidoEn.getTime() - Date.now())).toBeLessThan(120_000); // la hora de traída la pone la base
+      });
+
+      it("el festivo del calendario BVC (Jueves Santo de 2024): código 4 y sin pedidos", async () => {
+        let pedidos = 0;
+        const buscar: Buscar = async () => {
+          pedidos += 1;
+          return new Response("{}");
+        };
+        const r = await correrCicloIntradia(precios, { buscar, ahora: new Date("2024-03-28T17:00:00Z"), urlYahoo: "https://yahoo.ficticio.invalid", pausaMs: 0 });
+        expect(r.codigo).toBe(4);
+        expect(pedidos).toBe(0);
+      });
+
+      it("los disparadores: solo yahoo, nada del futuro, sin precio sobre el tope ni no positivo; la hora de traída la pone la base", async () => {
+        await expect(intradia(insertar("i-fuente", "now()", { fuente: "otra" }))).rejects.toThrow(/solo guarda precios de yahoo/);
+        await expect(intradia(insertar("i-futuro", "now() + interval '1 hour'"))).rejects.toThrow(/no hay precios del futuro/);
+        await expect(intradia(insertar("i-tope", "now() - interval '1 hour'", { precio: "10000001" }))).rejects.toThrow(/precio_intradia_precio_chk/);
+        await expect(intradia(insertar("i-cero", "now() - interval '1 hour'", { precio: "0" }))).rejects.toThrow(/precio_intradia_precio_chk/);
+        await negado(`INSERT INTO precio_intradia (id, "instrumentoId", instante, precio, fuente, "conRetraso", "traidoEn") SELECT 'x', 'x', now(), 1, 'yahoo', true, TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`);
+      });
+
+      it("la solo inserción: UPDATE nunca; DELETE solo de lo de más de 60 días, y depurarIntradia lo hace con el rol real", async () => {
+        await intradia(insertar("i-reciente", "now() - interval '2 days'"));
+        await dueno.$executeRawUnsafe(insertar("i-viejo", "now() - interval '61 days'"));
+        await negado("UPDATE precio_intradia SET precio = precio WHERE false");
+        await expect(intradia(`DELETE FROM precio_intradia WHERE id = 'i-reciente'`)).rejects.toThrow(/solo inserci/);
+        await expect(intradia(`DELETE FROM precio_intradia WHERE id = 'i-viejo' OR id = 'i-reciente'`)).rejects.toThrow(/solo inserci/);
+        expect(await depurarIntradia(precios, new Date(), 60)).toBeGreaterThanOrEqual(1);
+        expect(await dueno.precioIntradia.count({ where: { id: "i-viejo" } })).toBe(0);
+        expect(await dueno.precioIntradia.count({ where: { id: "i-reciente" } })).toBe(1);
+      });
+
+      it("inv_precios no lee nada más del plan que la versión y la especie de las reglas", async () => {
+        await negado("SELECT accion FROM regla_plan");
+        await negado("SELECT cantidad FROM regla_plan");
+        await negado("SELECT nivel FROM regla_plan");
+        await negado("SELECT motivo FROM plan_version");
+        await negado("SELECT id FROM decision");
+      });
     });
 
     it("privilegios.sql parte de cero: lo que se le haya dado de más a inv_precios se le quita al reaplicarlo", async () => {

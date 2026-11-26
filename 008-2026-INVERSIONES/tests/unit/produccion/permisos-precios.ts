@@ -18,8 +18,8 @@
 //    skipDuplicates hace ON CONFLICT DO NOTHING) e INSERT de todas MENOS "traidoEn" (la pone la base); y la ÚNICA
 //    excepción de la lista, el DELETE de tabla (no existe por columna) para la depuración de la retención: el disparador
 //    precio_intradia_retiro solo deja borrar filas de más de 60 días y nunca editar;
-//  - plan_version y regla_plan: SELECT de lo mínimo para saber qué especies tienen regla en el plan vigente (la versión
-//    y su vigencia; de la regla, solo la especie): ni la acción, ni la cantidad, ni el nivel, ni el detalle.
+//  - plan_version y regla_plan: SELECT de lo mínimo para saber qué especies tienen regla en el plan vigente, medido con el
+//    SQL que genera Prisma (la versión y su vigencia; de la regla, su llave, su versión y la especie): ni la acción, ni la cantidad, ni el nivel, ni el detalle.
 // Nada de usuario, órdenes, filas crudas, cantidades ni costos. Sin TRUNCATE, y de tabla completa solo ese DELETE.
 
 // DELETE no existe por columna: su lista de columnas va vacía y `filasPermisos` lo escribe como «tabla.* DELETE».
@@ -45,7 +45,7 @@ export const PERMISOS_PRECIOS: readonly Permiso[] = [
   { tabla: "valor_unidad_fondo", privilegio: "INSERT", columnas: ["id", "fondoId", "fechaValor", "valorUnidad", "valorFondo", "fuente", "traidoEn"] },
   { tabla: "valor_unidad_fondo", privilegio: "UPDATE", columnas: ["reemplazadoEn"] },
   { tabla: "plan_version", privilegio: "SELECT", columnas: ["id", "version", "vigenteDesde"] },
-  { tabla: "regla_plan", privilegio: "SELECT", columnas: ["planVersionId", "instrumentoId"] },
+  { tabla: "regla_plan", privilegio: "SELECT", columnas: ["id", "planVersionId", "instrumentoId"] },
   { tabla: "precio_intradia", privilegio: "SELECT", columnas: PRECIO_INTRADIA_COLUMNAS },
   { tabla: "precio_intradia", privilegio: "INSERT", columnas: PRECIO_INTRADIA_COLUMNAS.filter((c) => c !== "traidoEn") },
   { tabla: "precio_intradia", privilegio: "DELETE", columnas: [] },

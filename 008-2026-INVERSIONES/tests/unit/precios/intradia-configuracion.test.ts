@@ -67,4 +67,13 @@ describe("leerConfigIntradia", () => {
       expect(c.avisos.join(" ")).not.toContain("ficticio");
     }
   });
+
+  it("una IP como nombre del servidor se rechaza (net no la resuelve: saltaría la validación del lookup del buscador fijo)", () => {
+    const ip = (...o: number[]): string => o.join(".");
+    for (const mala of [`https://${ip(11, 37, 91, 47)}`, `https://${ip(172, 17, 0, 1)}`, "https://[::1]", "https://[2001:db8::1]"]) {
+      const c = leerConfigIntradia({ INV_INTRADIA_URL_YAHOO: mala });
+      expect(c.urlYahoo).toBe(CONFIG_INTRADIA_POR_OMISION.urlYahoo);
+      expect(c.avisos).toHaveLength(1);
+    }
+  });
 });
