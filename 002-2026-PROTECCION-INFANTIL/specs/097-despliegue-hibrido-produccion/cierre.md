@@ -10,7 +10,7 @@
   puertos 80/3000/5050/5432/8642/9119).
 - **US2 — Docker**: Docker Engine 29.6.2 + compose plugin v5.3.1 (repo oficial). Gesmovil intacto.
 - **US3 — PI contenerizada**: `Dockerfile` multi-stage (Next.js standalone, node:22-alpine,
-  no-root) + `docker-compose.prod.yml` (app `127.0.0.1:5005→3000`, worker, db pgvector:pg16),
+  no-root) + `docker-compose.prod.yml` (app `<IP-INTERNA>:5005→3000`, worker, db pgvector:pg16),
   `restart: always` en todo. Migraciones (50) aplicadas; seed limpio ejecutado (BD de prod
   NUEVA, sin datos de la Mac). Imágenes etiquetadas por commit (`pi-app:<sha>` + `latest`).
 - **US4 — Secretos**: `.env.production` (600, root) solo en el VPS, valores fuertes aleatorios.
@@ -21,9 +21,9 @@
   - Nota de formato: `PARAM_ENCRYPTION_KEY` exige base64 de 32 bytes o string UTF-8 de 32
     chars (NO hex); la primera generada en hex se descartó sin cifrar datos.
 - **US5 — Cerebro híbrido**: Mac expone Ollama SOLO a la tailnet (`tailscale serve --bg
-  --tcp=11434 tcp://localhost:11434`, sin Funnel). `OLLAMA_BASE_URL=http://100.91.87.86:11434`
+  --tcp=<PUERTO-OLLAMA> tcp://localhost:<PUERTO-OLLAMA>`, sin Funnel). `OLLAMA_BASE_URL=http://<IP-TAILNET-MAC>:<PUERTO-OLLAMA>`
   en el VPS. Worker reporta `Ollama health: OK`.
-- **US6 — Exposición**: ingress `pi.innovadataco.com → http://127.0.0.1:5005` agregado al
+- **US6 — Exposición**: ingress `pi.innovadataco.com → http://<IP-INTERNA>:5005` agregado al
   tunnel "hermes" existente (sin tocar las rutas hermes; backup `config.yml.bak-097`), CNAME
   creado con `cloudflared tunnel route dns`. **MX intactos** (`1 smtp.google.com.`).
   https://pi.innovadataco.com responde 200 con headers de seguridad (CSP, X-Frame-Options
@@ -37,11 +37,11 @@
 
 1. **BD de PI no expuesta** ✅ — servicio db SIN `ports:` (solo red interna de Docker);
    verificado `docker port pi-db` vacío y nada escuchando en 5434. El Postgres de Gesmovil
-   (0.0.0.0:5432) no se tocó.
-2. **Ollama solo red privada** ✅ — verificado desde el VPS: `http://100.91.87.86:11434`
-   responde (tailnet); `http://186.155.159.214:11434` (IP pública de la Mac) → **timeout**.
+   (<IP-INTERNA>:5432) no se tocó.
+2. **Ollama solo red privada** ✅ — verificado desde el VPS: `http://<IP-TAILNET-MAC>:<PUERTO-OLLAMA>`
+   responde (tailnet); `http://<IP-PUBLICA-MAC>:<PUERTO-OLLAMA>` (IP pública de la Mac) → **timeout**.
    **PENDIENTE CEO**: ACL en el admin console de Tailscale para que solo el nodo del VPS
-   (100.113.13.77) alcance `mac-studio-de-idc:11434` (requiere dueño de la tailnet; no
+   (<IP-TAILNET-VPS>) alcance `mac-studio-de-idc:<PUERTO-OLLAMA>` (requiere dueño de la tailnet; no
    automatizable desde CLI).
 3. **SSH solo por llave** ⏸️ — drop-in PREPARADO en
    `/etc/ssh/sshd_config.d/60-pi-hardening.conf.PENDIENTE` (PasswordAuthentication no,
@@ -83,7 +83,7 @@
 ## Pendientes (no bloquean)
 
 1. **Cloudflare Access** sobre pi.innovadataco.com (dashboard Zero Trust — acción del CEO).
-2. **ACL Tailscale** VPS→Mac:11434 en el admin console (acción del CEO).
+2. **ACL Tailscale** VPS→Mac:<PUERTO-OLLAMA> en el admin console (acción del CEO).
 3. **Hardening SSH**: preparado, NO aplicado por decisión del CEO (2026-07-27).
 4. CI/CD automático (US7 prevé deploy manual documentado).
 5. Reporte de prueba `RPT-9SA2BA` en prod (evidencia E2E; borrable por el CEO).

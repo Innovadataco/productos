@@ -7,22 +7,22 @@ internet
    │  HTTPS (solo subdominio pi.innovadataco.com)
    ▼
 Cloudflare Tunnel (servicio cloudflared-hermes, tunnel "hermes" — ya existía)
-   │  http://127.0.0.1:5005 (SOLO localhost)
+   │  http://<IP-INTERNA>:5005 (SOLO localhost)
    ▼
 VPS Hostinger (Docker)                    Mac Studio (cerebro IA)
-├─ pi-app    (Next.js standalone :3000)   Ollama :11434 (localhost)
+├─ pi-app    (Next.js standalone :3000)   Ollama :<PUERTO-OLLAMA> (localhost)
 ├─ pi-worker (pg-boss, UN worker)              ▲
 ├─ pi-monitor (vigilante infra: 6 probes →    │ SOLO tailnet
-│   HealthProbe, incidentes + email)          │ tailscale serve --tcp=11434
-├─ pi-db     (Postgres+pgvector)               │ (100.91.87.86, Mac)
-│     └─ red interna de Docker, SIN puerto     │ tailscale serve --tcp=11434
-│        publicado al host                     │ (100.91.87.86, Mac)
-└─ OLLAMA_BASE_URL=http://100.91.87.86:11434 ──┘
+│   HealthProbe, incidentes + email)          │ tailscale serve --tcp=<PUERTO-OLLAMA>
+├─ pi-db     (Postgres+pgvector)               │ (<IP-TAILNET-MAC>, Mac)
+│     └─ red interna de Docker, SIN puerto     │ tailscale serve --tcp=<PUERTO-OLLAMA>
+│        publicado al host                     │ (<IP-TAILNET-MAC>, Mac)
+└─ OLLAMA_BASE_URL=http://<IP-TAILNET-MAC>:<PUERTO-OLLAMA> ──┘
 ```
 
 **Convivencia con Gesmovil (intocable)**: Apache :80, Node 3000/5050 (pm2),
-Postgres 0.0.0.0:5432, hermes 8642/9119. PI no publica NINGÚN puerto al host salvo
-127.0.0.1:5005; su Postgres vive solo en la red interna de Docker.
+Postgres <IP-INTERNA>:5432, hermes 8642/9119. PI no publica NINGÚN puerto al host salvo
+<IP-INTERNA>:5005; su Postgres vive solo en la red interna de Docker.
 
 ## Rutas
 
@@ -42,7 +42,7 @@ cd /opt/proteccion-infantil/repo/002-2026-PROTECCION-INFANTIL
 
 Hace: `git pull --ff-only` → build etiquetado `pi-app:<sha>` (+ `latest`) →
 `docker compose --env-file .env.production -f docker-compose.prod.yml up -d` →
-`prisma migrate deploy` → healthcheck `http://127.0.0.1:5005/api/health`.
+`prisma migrate deploy` → healthcheck `http://<IP-INTERNA>:5005/api/health`.
 
 CI/CD automático: fuera de alcance (pendiente futuro).
 
@@ -79,11 +79,11 @@ PI_APP_TAG=<sha-anterior> ./scripts/deploy-prod.sh --skip-pull
 
 1. **BD de PI no expuesta**: sin `ports:` en el servicio db; solo red interna de Docker.
    Verificar: `docker port pi-db` → vacío.
-2. **Ollama solo tailnet**: en la Mac, Ollama escucha en `localhost:11434` y
-   `tailscale serve --bg --tcp=11434 tcp://localhost:11434` lo expone SOLO a la tailnet
-   (sin Funnel). Verificado: `curl http://<ip-pública-mac>:11434` → timeout.
+2. **Ollama solo tailnet**: en la Mac, Ollama escucha en `localhost:<PUERTO-OLLAMA>` y
+   `tailscale serve --bg --tcp=<PUERTO-OLLAMA> tcp://localhost:<PUERTO-OLLAMA>` lo expone SOLO a la tailnet
+   (sin Funnel). Verificado: `curl http://<IP-PUBLICA-MAC>:<PUERTO-OLLAMA>` → timeout.
    ACL recomendada en el admin console de Tailscale (acción del CEO, dueño de la tailnet):
-   permitir `100.113.13.77 (VPS) → mac-studio-de-idc:11434` y denegar el resto.
+   permitir `<IP-TAILNET-VPS> (VPS) → mac-studio-de-idc:<PUERTO-OLLAMA>` y denegar el resto.
 3. **SSH solo por llave**: drop-in preparado en
    `/etc/ssh/sshd_config.d/60-pi-hardening.conf.PENDIENTE` (PasswordAuthentication no,
    PermitRootLogin prohibit-password). Se aplica SOLO con confirmación del CEO:
