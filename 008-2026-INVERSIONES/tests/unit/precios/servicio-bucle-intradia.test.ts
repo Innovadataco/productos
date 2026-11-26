@@ -258,7 +258,7 @@ describe("el ciclo intradía del bucle", () => {
     const corredor: Corredor = {
       async correr(tarea, args) {
         if (args.includes("--depurar")) return { tarea, codigo: "0", duracionMs: 1 };
-        await bucle.detener(); // el servicio recibe SIGTERM mientras el hijo corre: el hijo muere por la señal
+        void bucle.detener(); // el servicio recibe SIGTERM mientras el hijo corre: el hijo muere por la señal
         return { tarea, codigo: "SENAL_SIGTERM", duracionMs: 1 };
       },
       detener: () => undefined,
