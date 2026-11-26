@@ -140,16 +140,38 @@ describe("el ciclo intradía del bucle", () => {
     expect(mensajes.some((m) => m.includes("429") || m.includes("limit"))).toBe(true);
   });
 
-  it("otros fallos (1, TIEMPO, NO_ARRANCO) quedan en el log y NO paran el ciclo ni lo hacen esperar", async () => {
-    for (const codigo of ["1", "TIEMPO", "NO_ARRANCO", "3"]) {
-      const { deps, falso, adelantar, mensajes } = armar({ codigos: [codigo, "0"] });
+  it("el código 3 (aviso) queda en el log y no hace esperar; 1, TIEMPO y NO_ARRANCO también esperan (exponencial), sin parar el servicio", async () => {
+    const trae = (f: { llamadas: Array<{ args: readonly string[] }> }) => f.llamadas.filter((l) => !l.args.includes("--depurar")).length;
+    {
+      const { deps, falso, adelantar, mensajes } = armar({ codigos: ["3", "0"] });
       const bucle = crearBucle(deps);
       await bucle.cicloIntradia();
       adelantar(CICLO);
       await bucle.cicloIntradia();
-      expect(falso.llamadas.filter((l) => !l.args.includes("--depurar"))).toHaveLength(2);
+      expect(trae(falso)).toBe(2);
+      expect(mensajes.some((m) => m.includes("código 3"))).toBe(true);
+    }
+    for (const codigo of ["1", "TIEMPO", "NO_ARRANCO"]) {
+      const { deps, falso, adelantar, mensajes } = armar({ codigos: [codigo, codigo, "0"] });
+      const bucle = crearBucle(deps);
+      await bucle.cicloIntradia();
+      adelantar(CICLO);
+      await bucle.cicloIntradia(); // dentro de la espera
+      expect(trae(falso), codigo).toBe(1);
+      adelantar(CICLO);
+      await bucle.cicloIntradia();
+      expect(trae(falso), codigo).toBe(2);
+      adelantar(3 * CICLO); // el segundo fallo seguido espera 4 ciclos: el fallo de TIEMPO no reinicia la cuenta
+      await bucle.cicloIntradia();
+      expect(trae(falso), codigo).toBe(2);
       expect(mensajes.some((m) => m.includes(codigo)), codigo).toBe(true);
     }
+  });
+
+  it("con DETENIDO (el servicio se apaga) no registra un fallo ni escribe la huella", async () => {
+    const { deps, mensajes } = armar({ codigos: ["DETENIDO"] });
+    await crearBucle(deps).cicloIntradia();
+    expect(mensajes.some((m) => m.includes("falló"))).toBe(false);
   });
 
   it("si el ciclo anterior sigue en curso, el nuevo se omite y lo dice", async () => {

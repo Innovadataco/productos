@@ -110,7 +110,7 @@ export function leerConfigIntradia(env: Entorno): ConfigIntradia {
   const encendido = interruptor(env, avisos);
   const ciclo = enteroEn(env, "INV_INTRADIA_CICLO_SEG", 30, 3600, avisos);
   const pausa = enteroEn(env, "INV_INTRADIA_PAUSA_MS", 0, 5000, avisos);
-  const retencion = enteroEn(env, "INV_INTRADIA_RETENCION_DIAS", 60, 365, avisos);
+  const dias = enteroEn(env, "INV_INTRADIA_RETENCION_DIAS", 60, 365, avisos);
   const { desdeMin, hastaMin } = ventana(env, avisos);
   return {
     encendido,
@@ -119,7 +119,7 @@ export function leerConfigIntradia(env: Entorno): ConfigIntradia {
     hastaMin,
     pausaMs: pausa ?? CONFIG_INTRADIA_POR_OMISION.pausaMs,
     urlYahoo: url(env, avisos),
-    retencionDias: retencion ?? CONFIG_INTRADIA_POR_OMISION.retencionDias,
+    retencionDias: dias ?? CONFIG_INTRADIA_POR_OMISION.retencionDias,
     avisos,
   };
 }

@@ -80,6 +80,12 @@ describe("parsearBarrasIntradia", () => {
     expect(r.ok && r.barras.map((b) => b.precio)).toEqual(["3"]);
   });
 
+  it("una hora con segundos (la última negociación, no una barra de minuto) no entra", () => {
+    const t = seg("2027-02-09 09:30");
+    const r = parsearBarrasIntradia(respuesta([t + 31, t + 0.5, t + 60], [1, 2, 3]), AHORA);
+    expect(r.ok && r.barras.map((b) => b.precio)).toEqual(["3"]);
+  });
+
   it("la misma barra repetida dentro de la respuesta queda una vez (gana la última con precio)", () => {
     const t = seg("2027-02-09 09:30");
     const r = parsearBarrasIntradia(respuesta([t, t], [10, 11]), AHORA);

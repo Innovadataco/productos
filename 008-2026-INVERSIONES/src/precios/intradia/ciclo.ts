@@ -10,6 +10,7 @@
  *   especie, nunca su nemotécnico ni cifras; las demás siguen.
  * - Día no hábil (fin de semana o festivo de calendario_bvc): no pide nada y sale con 4. Un año que calendario_bvc no cubre se
  *   trata como hábil si es entre semana (Yahoo no trae barras de un día sin negociación) y se avisa en `sinCalendario`.
+ * Si todas las peticiones del ciclo fallan por HTTP o por red, también sale con 7 (Yahoo bloquea o está caído: no se insiste cada minuto).
  * Salida: 0 bien · 3 alguna especie falló · 4 día no hábil · 7 Yahoo limitó (429). Un error de la base se propaga (el CLI sale con 1).
  */
 import type { PrismaClient } from "@prisma/client";
@@ -43,6 +44,8 @@ export interface OpcionesCicloIntradia {
   readonly pausaMs: number;
   /** La espera (inyectable en las pruebas). */
   readonly dormir?: (ms: number) => Promise<void>;
+  /** Desde qué especie se empieza (módulo el número de especies): rotarlo evita que, si el ciclo se corta por el plazo, las últimas queden siempre sin precios. */
+  readonly arranque?: number;
 }
 
 /** El código con que Yahoo avisa que se pidió de más. */
@@ -56,7 +59,9 @@ export async function correrCicloIntradia(db: PrismaClient, opciones: OpcionesCi
   const sinCalendario = !calendario.aniosCubiertos.has(hoy.getUTCFullYear());
   if (!esDiaHabil(hoy, calendario.noHabiles)) return { codigo: 4, especies: 0, peticiones: 0, barrasNuevas: 0, fallidas: [], sinCalendario };
 
-  const especies = await especiesIntradia(db, hoy);
+  const todas = await especiesIntradia(db, hoy);
+  const desde = todas.length === 0 ? 0 : Math.abs(Math.trunc(opciones.arranque ?? 0)) % todas.length;
+  const especies = [...todas.slice(desde), ...todas.slice(0, desde)];
   const fallidas: FalloIntradia[] = [];
   let peticiones = 0;
   let barrasNuevas = 0;
@@ -76,6 +81,8 @@ export async function correrCicloIntradia(db: PrismaClient, opciones: OpcionesCi
     }
     barrasNuevas += await guardarBarras(db, especie.id, r.barras, r.conRetraso);
   }
-  const codigo = limitado ? 7 : fallidas.length > 0 ? 3 : 0;
+  // Todas las peticiones fallaron por HTTP o por red (Yahoo bloquea o está caído): se trata como una limitación, con la misma espera.
+  const bloqueado = peticiones > 0 && fallidas.length === peticiones && fallidas.every((f) => f.codigo.startsWith("YAHOO_HTTP_") || f.codigo === "YAHOO_RED");
+  const codigo = limitado || bloqueado ? 7 : fallidas.length > 0 ? 3 : 0;
   return { codigo, especies: especies.length, peticiones, barrasNuevas, fallidas, sinCalendario };
 }

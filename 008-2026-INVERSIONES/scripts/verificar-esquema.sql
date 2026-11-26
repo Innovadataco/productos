@@ -354,7 +354,7 @@ DECLARE
     ['inv_movimiento_fondo_coherente', '53cb26c826f67c555b19e1b8ad9dffd0', ''],
     ['inv_plan_version_instante', 'abf0179024dd5f3151006171b5d76bb5', ''],
     ['inv_precio_cierre_insercion', '6bdf12a80eeee52cff6a412139ffe5c1', 'search_path=pg_catalog, public, pg_temp'],
-    ['inv_precio_intradia_insercion', '02b4c0f2fb2317489ceb716f098290ec', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_precio_intradia_insercion', 'ab17efeaf4b1931d00bc4d64732c37c5', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_precio_intradia_retiro', '77a424acd02ce880d54449962caeaff7', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_rendimiento_fondo_coherente', '9a6b541c07fa34227bf9a3476e9c48ca', ''],
     ['inv_resumen_ia_instante', '3225d295850c7feb0575a40ec4330442', ''],

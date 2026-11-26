@@ -289,6 +289,28 @@ describe("correrCicloIntradia", () => {
     expect(JSON.stringify(r)).not.toContain("FICTICIA");
   });
 
+  it("si TODAS las peticiones fallan por HTTP o por red (Yahoo bloquea o cae), sale con 7 para esperar más; con un fallo suelto, 3", async () => {
+    await accion("B1", { conLote: true });
+    const cae: Buscar = async () => new Response("{}", { status: 503 });
+    const r = await ciclo(cae);
+    expect(r.codigo).toBe(7);
+    expect(r.fallidas.length).toBe(r.peticiones);
+  });
+
+  it("el arranque rota el orden de las especies: con otro arranque el primer pedido es de otra especie", async () => {
+    await accion("O1", { conLote: true });
+    await accion("O2", { conLote: true });
+    const primera = async (arranque: number) => {
+      const yahoo = yahooFalso({});
+      await correrCicloIntradia(db, { buscar: yahoo.buscar, ahora: AHORA, urlYahoo: URL_YAHOO, pausaMs: 0, dormir: sinPausa, arranque });
+      return yahoo.pedidos[0];
+    };
+    const a = await primera(0);
+    const b = await primera(1);
+    expect(a).not.toBe(b);
+    expect(await primera(1_000_000_000)).toBeDefined();
+  });
+
   it("espacia los pedidos con la pausa configurada (n−1 pausas) y no duerme si hay una sola especie o pausa 0", async () => {
     const pausas: number[] = [];
     const yahoo = yahooFalso({});

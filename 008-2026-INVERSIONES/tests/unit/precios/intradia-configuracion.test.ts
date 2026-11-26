@@ -60,7 +60,7 @@ describe("leerConfigIntradia", () => {
 
   it("la URL de Yahoo, por configuración: solo https, sin credenciales, puerto, ruta ni consulta; sin la barra final", () => {
     expect(leerConfigIntradia({ INV_INTRADIA_URL_YAHOO: "https://yahoo.ficticio.invalid/" }).urlYahoo).toBe("https://yahoo.ficticio.invalid");
-    for (const mala of ["http://yahoo.ficticio.invalid", "https://u:p@yahoo.ficticio.invalid", "https://yahoo.ficticio.invalid:8443", "https://yahoo.ficticio.invalid/v8", "https://yahoo.ficticio.invalid/?a=1", "yahoo", "ftp://x.invalid"]) {
+    for (const mala of ["http://yahoo.ficticio.invalid", "https://u:p@yahoo.ficticio.invalid", "https://yahoo.ficticio.invalid:8443", "https://yahoo.ficticio.invalid/v8", "https://yahoo.ficticio.invalid/?a=1", "yahoo", "ftp://x.invalid", "https://yahoo.ficticio.invalid.", "https://localhost", "https://a_b.ficticio.invalid"]) {
       const c = leerConfigIntradia({ INV_INTRADIA_URL_YAHOO: mala });
       expect(c.urlYahoo).toBe(CONFIG_INTRADIA_POR_OMISION.urlYahoo);
       expect(c.avisos).toHaveLength(1);

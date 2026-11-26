@@ -18,7 +18,7 @@ import { leerConfigIntradia } from "../src/servicio-precios/intradia-configuraci
 async function trabajar(db: PrismaClient, depurar: boolean): Promise<Reporte> {
   const config = leerConfigIntradia(process.env);
   if (depurar) return reporteDepuracion(await depurarIntradia(db, new Date(), config.retencionDias));
-  return reporteCiclo(await correrCicloIntradia(db, { buscar: fetch, ahora: new Date(), urlYahoo: config.urlYahoo, pausaMs: config.pausaMs }));
+  return reporteCiclo(await correrCicloIntradia(db, { buscar: fetch, ahora: new Date(), urlYahoo: config.urlYahoo, pausaMs: config.pausaMs, arranque: Math.floor(Date.now() / 60_000) }));
 }
 
 async function main(): Promise<number> {

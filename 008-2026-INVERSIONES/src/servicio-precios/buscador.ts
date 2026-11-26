@@ -16,7 +16,7 @@ import type { ClientRequest, IncomingMessage } from "node:http";
 import { request as pedirHttps, type RequestOptions } from "node:https";
 import { isIP, type LookupFunction } from "node:net";
 import type { BuscarHttp, RespuestaHttp } from "../lib/http-acotado";
-import { urlBaseYahoo } from "../precios/intradia/url";
+import { NOMBRE_RE, urlBaseYahoo } from "../precios/intradia/url";
 import { crearLookupSeguro } from "./direcciones";
 
 export const HOSTS_PERMITIDOS: readonly string[] = Object.freeze(["query1.finance.yahoo.com", "www.datos.gov.co"]);
@@ -31,8 +31,6 @@ export interface DependenciasBuscador {
   /** Hosts que se suman a los 2 fijos (solo nombres: lo que no es un nombre simple se ignora). Vacío por omisión. */
   readonly hostsExtra?: readonly string[];
 }
-
-const NOMBRE_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
 
 /** El host de la URL base de Yahoo que viene por configuración, o null si no es una URL que el buscador aceptaría. */
 export function hostDeUrlConfigurada(url: string): string | null {

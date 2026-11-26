@@ -6,6 +6,9 @@
 
 import { isIP } from "node:net";
 
+/** Un nombre de servidor con puntos, en minúsculas: la misma regla que aplica el buscador fijo a los hosts extra. */
+export const NOMBRE_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+
 /** La URL base normalizada («https://host», sin barra final), o null si no cumple. */
 export function urlBaseYahoo(texto: string): string | null {
   let u: URL;
@@ -16,6 +19,6 @@ export function urlBaseYahoo(texto: string): string | null {
   }
   const limpia = u.protocol === "https:" && u.username === "" && u.password === "" && u.port === "" && u.search === "" && u.hash === "" && (u.pathname === "/" || u.pathname === "");
   // Una IP (v4 o v6) como nombre saltaría la validación del lookup del buscador fijo (net no resuelve una IP): solo nombres.
-  const esNombre = u.hostname !== "" && isIP(u.hostname) === 0 && !u.hostname.includes(":") && !u.hostname.startsWith("[");
+  const esNombre = NOMBRE_RE.test(u.hostname) && isIP(u.hostname) === 0;
   return limpia && esNombre ? `https://${u.hostname}` : null;
 }

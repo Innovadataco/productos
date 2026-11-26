@@ -7,6 +7,8 @@
  *   respuesta marca (`meta.exchangeDataDelayedBy` mayor que 0), no una suposición.
  * - Solo entran las barras de HOY en Colombia, ya cerradas (con más de MARGEN_BARRA_ABIERTA_MS) y con negociación: antes de
  *   abrir, Yahoo devuelve la última rueda y no se guarda como de hoy; una barra con volumen 0 es «sin negociación».
+ * - La primera barra que llega es la que queda (ON CONFLICT DO NOTHING): supone que una barra con más de un minuto ya no se revisa;
+ *   por verificar con datos reales en rueda (con el retraso de ~20 min no pasa).
  * - Una respuesta rara (series de otro largo, un precio sobre el tope, volumen corrupto) se rechaza entera: YAHOO_FORMATO.
  */
 import { pedirJsonAcotado } from "../../lib/http-acotado";
@@ -77,7 +79,8 @@ export function parsearBarrasIntradia(cuerpo: unknown, ahora: Date): ResultadoBa
     const t: unknown = ts[i];
     const valor: unknown = cierres[i];
     if (typeof valor === "number" && Number.isFinite(valor) && valor > PRECIO_MAXIMO_COP) return { ok: false, codigo: "YAHOO_FORMATO" };
-    const ms = typeof t === "number" && Number.isFinite(t) ? t * 1000 : Number.NaN;
+    // Las barras de 1 minuto caen en el minuto exacto: una hora con segundos sería la última negociación, no una barra.
+    const ms = typeof t === "number" && Number.isInteger(t) && t % 60 === 0 ? t * 1000 : Number.NaN;
     const instante = new Date(ms);
     const precio = typeof valor === "number" ? canonico(valor) : null;
     if (Number.isNaN(instante.getTime()) || precio === null || volumenes[i] === 0) continue;

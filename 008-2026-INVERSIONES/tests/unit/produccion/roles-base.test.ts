@@ -520,17 +520,22 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     // Precios cada minuto (precio_intradia): el ciclo, los disparadores y la retención con el rol REAL. Las barras son de un
     // martes hábil de 2024 (calendario sembrado), con un Yahoo falso (sin red).
     describe("precios intradía con inv_precios real", () => {
-      const AHORA_INTRADIA = new Date("2024-06-18T17:00:00Z"); // 12:00 en Colombia
-      const barraTs = (hhmm: string) => new Date(`2024-06-18T${hhmm}:00-05:00`).getTime() / 1000;
+      // La base solo acepta barras de hoy o de ayer en un minuto exacto (disparador de inserción): el ciclo corre con el reloj
+      // de hoy y barras de hace 5 y 6 minutos. En un fin de semana o un festivo el ciclo sale con 4 (lo cubre el caso del
+      // festivo), y de 00:00 a 01:00 de Colombia las barras caerían en el día anterior: en esos casos no se afirma nada más.
+      const minutoActual = Math.floor(Date.now() / 60_000) * 60;
+      const barraTs = (haceMin: number) => minutoActual - haceMin * 60;
       const yahooIntradia: Buscar = async () =>
-        new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP", exchangeDataDelayedBy: 20 }, timestamp: [barraTs("09:30"), barraTs("09:31")], indicators: { quote: [{ close: [100, 101], volume: [10, 10] }] } }] } }));
+        new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP", exchangeDataDelayedBy: 20 }, timestamp: [barraTs(6), barraTs(5)], indicators: { quote: [{ close: [100, 101], volume: [10, 10] }] } }] } }));
+      const horaCot = new Date(Date.now() - 5 * 3_600_000).getUTCHours();
       const intradia = (sql: string) => precios.$executeRawUnsafe(sql);
       const insertar = (id: string, instante: string, extra: { precio?: string; fuente?: string } = {}) =>
         `INSERT INTO precio_intradia (id, "instrumentoId", instante, precio, fuente, "conRetraso") VALUES ('${id}', '${conLote}', ${instante}, ${extra.precio ?? "1"}, '${extra.fuente ?? "yahoo"}', true)`;
 
       it("el ciclo con inv_precios: lee las especies (lote y reglas del plan), guarda las barras y repetirlo no duplica", async () => {
-        const opciones = { buscar: yahooIntradia, ahora: AHORA_INTRADIA, urlYahoo: "https://yahoo.ficticio.invalid", pausaMs: 0, dormir: async () => undefined };
+        const opciones = { buscar: yahooIntradia, ahora: new Date(), urlYahoo: "https://yahoo.ficticio.invalid", pausaMs: 0, dormir: async () => undefined };
         const r1 = await correrCicloIntradia(precios, opciones);
+        if (r1.codigo === 4 || horaCot < 1) return;
         expect(r1).toMatchObject({ codigo: 0, fallidas: [] });
         expect(r1.especies).toBeGreaterThanOrEqual(1);
         expect(await dueno.precioIntradia.count({ where: { instrumentoId: conLote } })).toBe(2);
@@ -554,15 +559,18 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       });
 
       it("los disparadores: solo yahoo, nada del futuro, sin precio sobre el tope ni no positivo; la hora de traída la pone la base", async () => {
-        await expect(intradia(insertar("i-fuente", "now()", { fuente: "otra" }))).rejects.toThrow(/solo guarda precios de yahoo/);
+        const hora = "date_trunc('minute', now() - interval '1 hour')";
+        await expect(intradia(insertar("i-fuente", hora, { fuente: "otra" }))).rejects.toThrow(/solo guarda precios de yahoo/);
         await expect(intradia(insertar("i-futuro", "now() + interval '1 hour'"))).rejects.toThrow(/no hay precios del futuro/);
-        await expect(intradia(insertar("i-tope", "now() - interval '1 hour'", { precio: "10000001" }))).rejects.toThrow(/precio_intradia_precio_chk/);
-        await expect(intradia(insertar("i-cero", "now() - interval '1 hour'", { precio: "0" }))).rejects.toThrow(/precio_intradia_precio_chk/);
+        await expect(intradia(insertar("i-segundos", "now() - interval '1 hour 7 seconds 3 milliseconds'"))).rejects.toThrow(/minuto exacto/);
+        await expect(intradia(insertar("i-antigua", "date_trunc('minute', now() - interval '3 days')"))).rejects.toThrow(/minuto exacto/);
+        await expect(intradia(insertar("i-tope", hora, { precio: "10000001" }))).rejects.toThrow(/precio_intradia_precio_chk/);
+        await expect(intradia(insertar("i-cero", hora, { precio: "0" }))).rejects.toThrow(/precio_intradia_precio_chk/);
         await negado(`INSERT INTO precio_intradia (id, "instrumentoId", instante, precio, fuente, "conRetraso", "traidoEn") SELECT 'x', 'x', now(), 1, 'yahoo', true, TIMESTAMPTZ '2019-02-11 10:37:00+00' WHERE false`);
       });
 
       it("la solo inserción: UPDATE nunca; DELETE solo de lo de más de 60 días, y depurarIntradia lo hace con el rol real", async () => {
-        await intradia(insertar("i-reciente", "now() - interval '2 days'"));
+        await dueno.$executeRawUnsafe(insertar("i-reciente", "now() - interval '2 days'"));
         await dueno.$executeRawUnsafe(insertar("i-viejo", "now() - interval '61 days'"));
         await negado("UPDATE precio_intradia SET precio = precio WHERE false");
         await expect(intradia(`DELETE FROM precio_intradia WHERE id = 'i-reciente'`)).rejects.toThrow(/solo inserci/);
