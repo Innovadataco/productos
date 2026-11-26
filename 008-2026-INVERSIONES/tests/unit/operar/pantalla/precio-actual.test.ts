@@ -49,9 +49,9 @@ describe("el pedido: la clave «precioActual»", () => {
   });
 
   it("el tope es de un millón de pesos por acción, y ese valor sí entra", () => {
-    expect(PRECIO_ACTUAL_MAX.toFixed()).toBe("1000000");
+    expect(PRECIO_ACTUAL_MAX.toFixed()).toBe(String(10 ** 6));
     const r = leer("1.000.000");
-    expect(r?.ok && r.valor.precioActual?.toFixed()).toBe("1000000");
+    expect(r?.ok && r.valor.precioActual?.toFixed()).toBe(PRECIO_ACTUAL_MAX.toFixed());
     expect(leer("1.000.000,01")).toEqual({ ok: false, campos: ["precioActual"] });
   });
 
