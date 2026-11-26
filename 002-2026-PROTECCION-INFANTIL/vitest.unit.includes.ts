@@ -925,4 +925,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // Inversiones) ANTES de todo build/pull y aborta (exit 3) si no lo obtiene; además neutraliza el stdin.
     // Estático (orden + exit 3) + prueba viva con lock ocupado donde hay flock(1). Puro (texto + bash + tmp).
     "scripts/deploy-candado-comun.candado.test.ts",
+    // SPEC-978: el respaldo diario JAMÁS escribe un dump en claro (análisis estático del pipe
+    // pg_dump|age), aborta ante flag desconocido y falla cerrado sin destinatario. Mutación. Puro.
+    "scripts/respaldo/respaldar-bd.candado.test.ts",
 ];
