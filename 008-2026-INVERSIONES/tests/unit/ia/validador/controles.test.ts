@@ -172,12 +172,12 @@ describe("marcas: dirección, cercanía y «hoy»", () => {
     expect(validarSalida(salidaDe(p, VA, "{ESPECIE_NOMBRE}: hoy el peso de la especie en el portafolio se mantuvo en {PESO_ESPECIE}."), p).ok).toBe(true);
     expect(hallazgos(p, "Hoy el valor de las acciones subió a {VALOR_ACCIONES}.")).toContain("FRESCURA.HOY");
     const deHoy = paqueteFicticio("DIARIO", { VALOR_ACCIONES: { frescura: "HOY" } });
-    expect(validarSalida(salidaDe(deHoy, "Hoy el valor de las acciones subió a {VALOR_ACCIONES}."), deHoy).ok).toBe(true);
+    expect(validarSalida(salidaDe(deHoy, "Hoy el valor de las acciones subió a {VALOR_ACCIONES}.", FRASES_VALIDAS.DIARIO[1] as string), deHoy).ok).toBe(true);
   });
 
   it("la dirección cambiada en el paquete cambia el veredicto (la marca sale del paquete, no del texto)", () => {
     const baja = paqueteFicticio("DIARIO", { VALOR_ACCIONES: { direccion: "BAJA" } });
     expect(hallazgos(baja, VA)).toContain("DIRECCION.SUBE_VERBO");
-    expect(validarSalida(salidaDe(baja, "El valor de las acciones bajó a {VALOR_ACCIONES}."), baja).ok).toBe(true);
+    expect(validarSalida(salidaDe(baja, "El valor de las acciones bajó a {VALOR_ACCIONES}.", FRASES_VALIDAS.DIARIO[1] as string), baja).ok).toBe(true);
   });
 });

@@ -27,7 +27,7 @@ import { revisarEtiquetasSinCita } from "./etiqueta-sin-cita";
 import { esNombre, hechosPorId, type HechosPorId } from "./hechos";
 import { leerSalida, type FraseLeida } from "./leer";
 import { revisarMarcas } from "./marcas";
-import { componerConObligatorias, TIPOS_OBLIGATORIAS_DEL_CODIGO } from "./obligatorias";
+import { aportaElModelo, componerConObligatorias, escribeElCodigo } from "./obligatorias";
 import { coincidenciasEn, prepararTexto, type Patron } from "./patron";
 import { esNumeroFundido } from "./numeros";
 import { palabrasFueraDelVocabulario } from "./vocabulario";
@@ -113,14 +113,17 @@ export function validarSalida<T extends TipoResumen>(salidaCruda: unknown, paque
   const porId = hechosPorId(paquete);
   const { minFrases, maxFrases, maxLargoTotal } = LIMITES_SALIDA;
   // En los tipos cuyos obligatorios escribe el código, la salida se compone con esas frases (`obligatorias.ts`); el modelo
-  // tiene que traer al menos una frase propia, y el conjunto no pasa del máximo.
-  const { frases, delCodigo } = componerConObligatorias(paquete, leida);
-  const sinFraseDelModelo = TIPOS_OBLIGATORIAS_DEL_CODIGO.includes(paquete.tipo) && leida.frases.length < minFrases;
+  // tiene que traer al menos una frase propia que aporte (cite un hecho que no sea obligatorio), y el conjunto no pasa del máximo.
+  const { frases } = componerConObligatorias(paquete, leida);
+  const delCodigoEscribe = escribeElCodigo(paquete.tipo);
+  const sinFraseDelModelo = delCodigoEscribe && leida.frases.length < minFrases;
   if (frases.length < minFrases || frases.length > maxFrases || sinFraseDelModelo) anotarEn(null)("LONGITUD", "LONGITUD.FRASES");
   const analizadas = frases.map((frase, i) => analizarFrase(frase, paquete, porId, anotarEn(i)));
   if (analizadas.reduce((total, f) => total + f.largo, 0) > maxLargoTotal) anotarEn(null)("LONGITUD", "LONGITUD.TOTAL");
   const citados = new Set(analizadas.flatMap((f) => f.resumen.citados));
   if (paquete.hechos.some((h) => h.obligatorio && !citados.has(h.id))) anotarEn(null)("HECHO_NO_CITADO", "HECHO_NO_CITADO.OBLIGATORIO");
+  // Última: una salida ya rechazada por otra causa conserva sus códigos; la que estaría bien pero no aporta nada, se rechaza.
+  if (hallazgos.length === 0 && delCodigoEscribe && !aportaElModelo(paquete, leida)) anotarEn(null)("LONGITUD", "LONGITUD.SIN_APORTE_DEL_MODELO");
   if (hallazgos.length > 0) return rechazo(hallazgos);
   return Object.freeze({ ok: true, resumen: armarResumen(paquete, analizadas.map((f) => f.resumen)) });
 }

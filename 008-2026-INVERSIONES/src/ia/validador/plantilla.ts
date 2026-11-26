@@ -8,17 +8,17 @@
 import type { PaqueteHechos, TipoResumen } from "../contrato";
 import { esPaqueteConstruido } from "../paquete";
 import { ErrorValidador } from "./codigos";
-import { frasesDeLaPlantilla } from "./frases-plantilla";
+import { frasesDeLaPlantillaSinIa } from "./frases-plantilla";
 import { segmentosDe } from "./segmentos";
 import type { ResultadoValidacion } from "./tipos";
 import { validarSalida } from "./validar";
 
-export { frasesDePlantilla } from "./frases-plantilla";
+export { frasesParaLosHechos } from "./frases-plantilla";
 
 /** La salida cruda de la plantilla, en el formato del esquema `salida-v2` (los segmentos de cada frase: texto y refs). */
 export function salidaDePlantilla(paquete: PaqueteHechos): string {
   if (!esPaqueteConstruido(paquete)) throw new ErrorValidador("PAQUETE_NO_CONSTRUIDO");
-  const frases = frasesDeLaPlantilla(paquete).map((texto) => ({ segmentos: segmentosDe(texto) }));
+  const frases = frasesDeLaPlantillaSinIa(paquete).map((texto) => ({ segmentos: segmentosDe(texto) }));
   return JSON.stringify({ frases });
 }
 

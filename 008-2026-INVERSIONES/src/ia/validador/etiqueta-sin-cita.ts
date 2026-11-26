@@ -19,20 +19,23 @@ const palabrasDe = (texto: string): readonly string[] => (texto.match(/\p{L}+/gu
 
 interface Etiqueta {
   readonly palabras: readonly string[];
-  /** Los ids de los hechos del paquete con esa etiqueta que la exigen (obligatorios o con dirección). */
+  /** Los ids de los hechos del paquete con esa etiqueta. */
   readonly ids: ReadonlySet<string>;
+  /** ¿Alguno de ellos es obligatorio o tiene dirección? Solo entonces la etiqueta se exige; las demás solo cubren a las contenidas. */
+  readonly exigible: boolean;
 }
 
-/** Las etiquetas exigibles del paquete, por texto de etiqueta. */
-function etiquetasExigibles(paquete: PaqueteHechos): readonly Etiqueta[] {
-  const porTexto = new Map<string, Set<string>>();
+/** Las etiquetas de los hechos del paquete (que no son nombres), por texto de etiqueta. */
+function etiquetasDelPaquete(paquete: PaqueteHechos): readonly Etiqueta[] {
+  const porTexto = new Map<string, { readonly ids: Set<string>; exigible: boolean }>();
   for (const h of paquete.hechos) {
-    if (esNombre(h) || (!h.obligatorio && h.direccion === "NO_APLICA")) continue;
-    const ids = porTexto.get(h.etiqueta) ?? new Set<string>();
-    ids.add(h.id);
-    porTexto.set(h.etiqueta, ids);
+    if (esNombre(h)) continue;
+    const entrada = porTexto.get(h.etiqueta) ?? { ids: new Set<string>(), exigible: false };
+    entrada.ids.add(h.id);
+    entrada.exigible ||= h.obligatorio || h.direccion !== "NO_APLICA";
+    porTexto.set(h.etiqueta, entrada);
   }
-  return [...porTexto].map(([texto, ids]) => ({ palabras: palabrasDe(texto), ids })).filter((e) => e.palabras.length > 0);
+  return [...porTexto].map(([texto, e]) => ({ palabras: palabrasDe(texto), ids: e.ids, exigible: e.exigible })).filter((e) => e.palabras.length > 0);
 }
 
 interface Aparicion {
@@ -62,11 +65,11 @@ const contenida = (a: Aparicion, otras: readonly Aparicion[]): boolean =>
 
 /** Los patrones de ETIQUETA_NO_COINCIDE por etiquetas nombradas sin su cita (vacío si no hay). */
 export function revisarEtiquetasSinCita(clausulas: readonly (readonly Token[])[], paquete: PaqueteHechos): readonly string[] {
-  const etiquetas = etiquetasExigibles(paquete);
+  const etiquetas = etiquetasDelPaquete(paquete);
   for (const clausula of clausulas) {
     const citadas = new Set(clausula.flatMap((t) => (t.tipo === "CITA" ? [t.id] : [])));
     const vistas = apariciones(clausula, etiquetas);
-    const sinCita = vistas.some((a) => !contenida(a, vistas) && ![...a.etiqueta.ids].some((id) => citadas.has(id)));
+    const sinCita = vistas.some((a) => a.etiqueta.exigible && !contenida(a, vistas) && ![...a.etiqueta.ids].some((id) => citadas.has(id)));
     if (sinCita) return [PATRON_SIN_CITA];
   }
   return [];

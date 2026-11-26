@@ -1,5 +1,5 @@
 /**
- * La plantilla publica IGUAL que antes del refactor de `frasesDePlantilla` (T4): la salida cruda de `salidaDePlantilla`
+ * La plantilla publica IGUAL que antes del refactor de `frasesParaLosHechos` (T4): la salida cruda de `salidaDePlantilla`
  * para los casos inventados originales (los 40) y 211 paquetes al azar con semilla fija no cambia ni un carácter. La huella
  * se tomó con el código anterior; si cambia, la plantilla cambió de conducta (y, con ella, lo que publica el nivel 0).
  */

@@ -8,9 +8,9 @@ import { describe, expect, it } from "vitest";
 import type { Hecho, PaqueteHechos } from "@/ia/contrato";
 import { VERSION_VALIDADOR } from "@/ia/validador/codigos";
 import { diagnosticarSalida } from "@/ia/validador/diagnostico";
-import { componerConObligatorias, TIPOS_OBLIGATORIAS_DEL_CODIGO } from "@/ia/validador/obligatorias";
+import { aportaElModelo, componerConObligatorias, escribeElCodigo, TIPOS_OBLIGATORIAS_DEL_CODIGO } from "@/ia/validador/obligatorias";
 import { leerSalida } from "@/ia/validador/leer";
-import { frasesDePlantilla, resumenSinIa, salidaDePlantilla } from "@/ia/validador/plantilla";
+import { frasesParaLosHechos, resumenSinIa, salidaDePlantilla } from "@/ia/validador/plantilla";
 import { validarSalida } from "@/ia/validador/validar";
 import { crearPrng } from "@/proyecciones/prng";
 import { construirPaquete } from "@/ia/paquete";
@@ -60,17 +60,17 @@ describe("el código escribe los obligatorios que el modelo no cita", () => {
 
   it("el modelo cita todos: el código no agrega nada y sale lo del modelo", () => {
     const p = diario();
-    const r = validar(p, VALOR, GANANCIA, ATRASADAS);
-    expect(textosDe(r)).toEqual([VALOR, GANANCIA, ATRASADAS].map((t) => renderizado(p, t)));
+    const r = validar(p, VALOR, GANANCIA, ATRASADAS, SOLO_ESPECIE);
+    expect(textosDe(r)).toEqual([VALOR, GANANCIA, ATRASADAS, SOLO_ESPECIE].map((t) => renderizado(p, t)));
   });
 
   it("el modelo cita algunos: el código escribe solo los que faltan", () => {
     const p = diario();
-    const r = validar(p, GANANCIA);
+    const r = validar(p, GANANCIA, SOLO_ESPECIE);
     expect(r.ok).toBe(true);
     const textos = textosDe(r);
-    const delCodigo = frasesDePlantilla(p, [hechoDe(p, "VALOR_ACCIONES"), hechoDe(p, "ESPECIES_ATRASADAS")]).map((t) => presentado(p, t));
-    expect(textos).toEqual([...delCodigo, renderizado(p, GANANCIA)]);
+    const delCodigo = frasesParaLosHechos(p, [hechoDe(p, "VALOR_ACCIONES"), hechoDe(p, "ESPECIES_ATRASADAS")]).map((t) => presentado(p, t));
+    expect(textos).toEqual([...delCodigo, renderizado(p, GANANCIA), renderizado(p, SOLO_ESPECIE)]);
   });
 
   it("es determinista: la misma salida da el mismo resultado", () => {
@@ -132,9 +132,13 @@ describe("el modelo tiene que aportar algo que no sea un obligatorio", () => {
     expect(patronesDe(r)).toContain("LONGITUD.SIN_APORTE_DEL_MODELO");
   });
 
-  it("citar solo el nombre de una especie tampoco es aportar", () => {
+  it("aportaElModelo: citar solo obligatorios y nombres no es aportar; un hecho que no lo es, sí", () => {
     const p = diario();
-    expect(patronesDe(validar(p, VALOR, "{ESPECIE_NOMBRE} es el nombre de la especie."))).toContain("LONGITUD.SIN_APORTE_DEL_MODELO");
+    const id = (c: Parameters<typeof hechoDe>[1]): string => hechoDe(p, c).id;
+    const de = (...hechos: string[]) => ({ frases: [{ texto: "x", hechos }] });
+    expect(aportaElModelo(p, de(id("ESPECIE_NOMBRE"), id("VALOR_ACCIONES")))).toBe(false);
+    expect(aportaElModelo(p, de(id("ESPECIE_NOMBRE"), id("VALOR_ESPECIE")))).toBe(true);
+    expect(aportaElModelo(p, de("H99"))).toBe(false);
   });
 
   it("un obligatorio y un hecho que no lo es: se publica", () => {
@@ -182,11 +186,11 @@ describe("HECHO_NO_CITADO.OBLIGATORIO solo salta si las frases del código no ca
       const p = construirPaquete({ ...entrada, hechos: entrada.hechos.map((h) => ({ ...h, obligatorio: true })) });
       const uno = p.hechos.find((h) => h.unidad !== "NOMBRE");
       if (uno === undefined) continue;
-      const delModelo = frasesDePlantilla(p, [uno]);
+      const delModelo = frasesParaLosHechos(p, [uno]);
       const r = validarSalida(JSON.stringify({ frases: delModelo.map((t) => ({ segmentos: leerSegmentos(t) })) }), p);
       const citadosPorElModelo = new Set(delModelo.flatMap((t) => [...t.matchAll(/\{(H[0-9]{2})\}/gu)].map((m) => m[1])));
       const faltantes = p.hechos.filter((h) => !citadosPorElModelo.has(h.id));
-      const escritos = new Set(frasesDePlantilla(p, faltantes).flatMap((t) => [...t.matchAll(/\{(H[0-9]{2})\}/gu)].map((m) => m[1])));
+      const escritos = new Set(frasesParaLosHechos(p, faltantes).flatMap((t) => [...t.matchAll(/\{(H[0-9]{2})\}/gu)].map((m) => m[1])));
       const sinLugar = faltantes.some((h) => h.unidad !== "NOMBRE" && !escritos.has(h.id)) || faltantes.some((h) => h.unidad === "NOMBRE" && !escritos.has(h.id));
       if (sinLugar) {
         noCaben += 1;
@@ -212,12 +216,15 @@ describe("propiedad: la salida del modelo con cualquier subconjunto de los oblig
       const obligatorios = obligatoriosDe(p);
       if (obligatorios.length === 0 || !resumenSinIa(p).ok) continue;
       const elegidos = obligatorios.filter((_h, j) => (prng.enteroMenorQue(2) === 1 ? true : j === 0));
-      const delModelo = frasesDePlantilla(p, elegidos);
+      // El modelo tiene que aportar: además de los obligatorios elegidos, una frase de un hecho que no lo es (ni un nombre).
+      const aporte = p.hechos.find((h) => !h.obligatorio && h.unidad !== "NOMBRE");
+      if (aporte === undefined) continue;
+      const delModelo = [...frasesParaLosHechos(p, elegidos), ...frasesParaLosHechos(p, [aporte])];
       const cruda = JSON.stringify({ frases: delModelo.map((t) => ({ segmentos: leerSegmentos(t) })) });
       const r = validarSalida(cruda, p);
       if (!r.ok) {
         // Solo puede rechazar por el largo conjunto (las frases del modelo y las del código no caben juntas).
-        expect(r.motivos.every((m) => m === "LONGITUD" || m === "HECHO_NO_CITADO"), r.motivos.join(",")).toBe(true);
+        expect(r.motivos.every((m) => m === "LONGITUD" || m === "HECHO_NO_CITADO"), r.hallazgos.map((h) => h.patron).join(",")).toBe(true);
         continue;
       }
       for (const h of obligatorios) expect(r.resumen.citados, h.id).toContain(h.id);

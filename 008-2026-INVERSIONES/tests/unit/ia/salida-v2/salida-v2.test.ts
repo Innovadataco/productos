@@ -108,12 +108,13 @@ describe("validarSalida · salida-v2", () => {
 
   it("publica la salida que antes caía en FRASE_SIN_CITA: el código intercala la presentación del hecho", () => {
     const id = idDe(paquete, "VALOR_ACCIONES");
-    const r = validarSalida(cruda([{ segmentos: [{ texto: "El valor de las acciones subió a" }, { ref: id }, { texto: "." }] }]), paquete);
+    const especie = [{ ref: idDe(paquete, "ESPECIE_NOMBRE") }, { texto: ": el valor de la especie subió a" }, { ref: idDe(paquete, "VALOR_ESPECIE") }, { texto: "." }];
+    const r = validarSalida(cruda([{ segmentos: [{ texto: "El valor de las acciones subió a" }, { ref: id }, { texto: "." }] }, { segmentos: especie }]), paquete);
     expect(r.ok ? [] : r.hallazgos).toEqual([]);
     if (!r.ok) return;
     const presentacion = paquete.hechos.find((h) => h.id === id)?.presentacion as string;
-    expect(r.resumen.texto).toBe(`El valor de las acciones subió a ${presentacion}.`);
-    expect(r.resumen.citados).toEqual([id]);
+    expect(r.resumen.frases[0]?.texto).toBe(`El valor de las acciones subió a ${presentacion}.`);
+    expect(r.resumen.citados).toContain(id);
   });
 
   it("la forma vieja da SALIDA_INVALIDA", () => {

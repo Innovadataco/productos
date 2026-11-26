@@ -108,7 +108,7 @@ function repartir({ datos, sueltos }: Seleccion, paquete: PaqueteHechos): readon
 
 
 /** Las frases (con citas `{Hnn}`) de la plantilla sin IA: los obligatorios del paquete, o el primer dato si no hay. */
-export function frasesDeLaPlantilla(paquete: PaqueteHechos): readonly string[] {
+export function frasesDeLaPlantillaSinIa(paquete: PaqueteHechos): readonly string[] {
   if (!esPaqueteConstruido(paquete)) throw new ErrorValidador("PAQUETE_NO_CONSTRUIDO");
   return repartir(seleccionar(paquete, hechosPorId(paquete)), paquete);
 }
@@ -118,7 +118,7 @@ export function frasesDeLaPlantilla(paquete: PaqueteHechos): readonly string[] {
  * etiqueta y el nombre de su especie delante, y los nombres dados que no van delante de un dato, dentro de una frase.
  * Dentro de los límites de la salida; lo que no cabe se queda sin escribir. Sin datos, no hay frases.
  */
-export function frasesDePlantilla(paquete: PaqueteHechos, hechos: readonly Hecho[]): readonly string[] {
+export function frasesParaLosHechos(paquete: PaqueteHechos, hechos: readonly Hecho[]): readonly string[] {
   if (!esPaqueteConstruido(paquete)) throw new ErrorValidador("PAQUETE_NO_CONSTRUIDO");
   const dados = new Set(hechos.map((h) => h.id));
   const delPaquete = paquete.hechos.filter((h) => dados.has(h.id));
