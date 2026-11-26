@@ -67,13 +67,14 @@ describe("armarDiario · el paquete del tablero", () => {
     const fuentes = new Map(paquete.hechos.map((h) => [h.clave, h.fuente]));
     expect(fuentes.get("TASA_TRM")).toBe(fuenteDe("TRM"));
     expect(fuentes.get("VARIACION_ANUAL_IPC")).toBe(fuenteDe("IPC_INDICE"));
-    expect(fuentes.get("FONDO_VALOR_UNIDAD")).toBe(FUENTE_SFC);
+    expect(fuentes.get("FONDO_VALOR_UNIDAD")).toBe("valor de unidad de la Superintendencia Financiera (SFC)");
     expect(fuentes.get("CIERRE_ESPECIE")).toBe("cierres de la BVC");
-    expect(fuentes.get("VALOR_ACCIONES")).toBe("cálculo de 008 sobre los cierres");
+    expect(fuentes.get("VALOR_ACCIONES")).toBe("cálculo de Inversiones sobre los cierres");
   });
 
-  it("la fuente del fondo es la constante de la SFC, no un texto de quien llama", () => {
-    expect(FUENTES.FONDO).toBe(FUENTE_SFC);
+  it("la fuente del fondo es la constante del armador, no un texto de quien llama, y ya no es el identificador del conjunto de la SFC", () => {
+    expect(FUENTES.FONDO).toBe("valor de unidad de la Superintendencia Financiera (SFC)");
+    expect(FUENTES.FONDO).not.toBe(FUENTE_SFC);
   });
 
   it("la vista ciega del paquete pasa la guarda", () => {
