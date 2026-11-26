@@ -38,12 +38,18 @@ describe("contadorEnArchivo", () => {
     expect(readFileSync(path.join(dir, ARCHIVO_CONTADOR_DIA), "utf8")).toBe("formato=1\ndia=2027-02-09\npeticiones=41\n");
   });
 
-  it("un archivo dañado cuenta como 0 y un error de lectura que no es «no existe» se propaga", async () => {
+  it("un archivo que existe y no se puede interpretar cuenta como tope ALCANZADO (falla cerrada); otro día válido, 0", async () => {
     const dir = carpeta();
     const c = (await contadorEnArchivo(dir))!;
-    writeFileSync(path.join(dir, ARCHIVO_CONTADOR_DIA), "dia=2027-02-09\npeticiones=abc\n");
+    for (const roto of ["dia=2027-02-09\npeticiones=abc\n", "", "basura sin igual", "peticiones=3\n", "dia=ayer\npeticiones=3\n", "dia=2027-02-09\npeticiones=-4\n", "dia=2027-02-09\npeticiones=1.5\n"]) {
+      writeFileSync(path.join(dir, ARCHIVO_CONTADOR_DIA), roto);
+      expect(await c.leer("2027-02-09"), JSON.stringify(roto)).toBe(Number.POSITIVE_INFINITY);
+    }
+    writeFileSync(path.join(dir, ARCHIVO_CONTADOR_DIA), "dia=2027-02-08\npeticiones=50\n");
     expect(await c.leer("2027-02-09")).toBe(0);
-    // un directorio con el nombre del archivo: EISDIR, no ENOENT
+  });
+
+  it("un error de lectura que no es «no existe» se propaga", async () => {
     const otra = carpeta();
     const d = (await contadorEnArchivo(otra))!;
     mkdirSync(path.join(otra, ARCHIVO_CONTADOR_DIA));
@@ -60,10 +66,17 @@ describe("reporteCiclo · avisos y códigos nuevos", () => {
     expect(r.lineas.join("\n")).toMatch(/Tope diario/);
   });
 
-  it("un día no hábil por falta de calendario (código 4 con peticiones) trae su aviso; el festivo normal, no", () => {
-    const sin = reporteCiclo({ ...base, codigo: 4, peticiones: 2, especies: 2, sinCalendario: true, avisos: ["calendario_bvc no cubre este año y ninguna especie trae barras de hoy: se trata el día como no hábil"] });
-    expect(sin.lineas.join("\n")).toMatch(/se trata el día como no hábil/);
+  it("sin barras en un año sin calendario (código 6) trae su aviso; el festivo normal (4), no", () => {
+    const sin = reporteCiclo({ ...base, codigo: 6, peticiones: 2, especies: 2, sinCalendario: true, avisos: ["sin barras de hoy y sin calendario del año: posible día no hábil"] });
+    expect(sin.codigoSalida).toBe(6);
+    expect(sin.lineas.join("\n")).toMatch(/posible día no hábil/);
     expect(reporteCiclo({ ...base, codigo: 4, avisos: [] }).lineas).toHaveLength(1);
+  });
+
+  it("el fallo de datos (8) dice que no es un bloqueo", () => {
+    const r = reporteCiclo({ ...base, codigo: 8, peticiones: 2, especies: 2, avisos: [] });
+    expect(r.codigoSalida).toBe(8);
+    expect(r.lineas.join("\n")).toMatch(/Fallo de datos/);
   });
 
   it("el bloqueo (7) dice «bloqueo (429/403/red)»", () => {

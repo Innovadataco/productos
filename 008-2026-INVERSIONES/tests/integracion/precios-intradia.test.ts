@@ -362,20 +362,49 @@ describe("correrCicloIntradia · bloqueo, topes y año sin calendario (especies 
         expect(pedidos).toHaveLength(1);
       });
     }
-    for (const [nombre, buscar] of [["404", estado(404)], ["503", estado(503)], ["sin datos", vacia]] as const) {
-      it(`${cuantas} especies, TODAS fallan con ${nombre}: sale con 7`, async () => {
+    // Bloqueo (7): todas por red o por servidor caído. Fallo de datos (8): todas por 404, sin datos o formato raro.
+    const cae: Buscar = async () => {
+      throw new Error("sin red");
+    };
+    for (const [nombre, buscar, esperado] of [["404", estado(404), 8], ["sin datos", vacia, 8], ["503", estado(503), 7], ["red", cae, 7]] as const) {
+      it(`${cuantas} especies, TODAS fallan con ${nombre}: sale con ${esperado}`, async () => {
         const r = await con(cuantas, buscar);
         expect(r.peticiones).toBe(cuantas);
-        expect(r.codigo).toBe(7);
+        expect(r.codigo).toBe(esperado);
       });
     }
   }
 
-  it("TODAS fallan con una respuesta de formato raro (YAHOO_FORMATO): también 7", async () => {
+  it("TODAS fallan con una respuesta de formato raro (YAHOO_FORMATO): fallo de datos (8), no bloqueo", async () => {
     const raro: Buscar = async () => new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp: [1, 2], indicators: { quote: [{ close: [1] }] } }] } }), { status: 200 });
     const r = await con(2, raro);
     expect(r.fallidas.map((f) => f.codigo)).toEqual(["YAHOO_FORMATO", "YAHOO_FORMATO"]);
+    expect(r.codigo).toBe(8);
+  });
+
+  it("fallos mezclados (404 y red), todos fallidos: no es un bloqueo puro, es un fallo de datos (8)", async () => {
+    let n = 0;
+    const mezcla: Buscar = async () => {
+      n += 1;
+      if (n === 1) return new Response("{}", { status: 404 });
+      throw new Error("sin red");
+    };
+    expect((await con(2, mezcla)).codigo).toBe(8);
+  });
+
+  it("1 especie con 404 es un fallo de datos (8) y NO corta: se pidió una sola vez; 12 con 429 sí es un bloqueo (7) y corta en la primera", async () => {
+    expect((await con(1, estado(404))).codigo).toBe(8);
+    const pedidos: string[] = [];
+    const r = await con(12, async (url) => (pedidos.push(String(url)), new Response("{}", { status: 429 })));
     expect(r.codigo).toBe(7);
+    expect(pedidos).toHaveLength(1);
+  });
+
+  it("un bloqueo (429) entre otras respuestas buenas o de datos sigue siendo 7", async () => {
+    let n = 0;
+    const r = await con(3, async () => (++n === 2 ? new Response("{}", { status: 403 }) : new Response("{}", { status: 404 })));
+    expect(r.codigo).toBe(7);
+    expect(n).toBe(2);
   });
 
   it("un 404 de una especie NO es un bloqueo: no corta, las demás se piden y, si alguna responde bien, sale con 3", async () => {
@@ -428,6 +457,20 @@ describe("correrCicloIntradia · bloqueo, topes y año sin calendario (especies 
     expect(r4.peticiones).toBe(5);
   });
 
+  it("si guardar el contador falla, no tapa el resultado: devuelve el código real y deja un aviso", async () => {
+    const contadorDia = {
+      leer: async () => 0,
+      guardar: async () => {
+        throw new Error("disco lleno");
+      },
+    };
+    const r = await con(2, estado(404), { contadorDia });
+    expect(r.codigo).toBe(8);
+    expect(r.peticiones).toBe(2);
+    expect(r.avisos.join(" ")).toMatch(/no se pudo guardar el contador de peticiones del día/);
+    expect(JSON.stringify(r)).not.toContain("disco lleno");
+  });
+
   it("el tope de peticiones por día es 9000 por omisión", async () => {
     const r = await con(2, estado(404), { contadorDia: { leer: async () => 9000, guardar: async () => undefined } });
     expect(r.codigo).toBe(5);
@@ -435,10 +478,11 @@ describe("correrCicloIntradia · bloqueo, topes y año sin calendario (especies 
 
   const SIN_BARRAS: Buscar = async () => new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp: [], indicators: { quote: [{ close: [] }] } }] } }), { status: 200 });
 
-  it("año sin calendario_bvc y ninguna barra de hoy pasada la hora en que ya debería haberlas: se trata como día no hábil (código 4) con aviso", async () => {
+  it("año sin calendario_bvc y ninguna barra de hoy pasada la hora en que ya debería haberlas: código 6 (sin barras, posible día no hábil) con aviso; el servicio decide tras dos seguidos", async () => {
     const r = await con(2, SIN_BARRAS, { ahora: cot("2031-02-11 11:00") });
-    expect(r).toMatchObject({ codigo: 4, sinCalendario: true });
-    expect(r.avisos.join(" ")).toMatch(/calendario/);
+    expect(r).toMatchObject({ codigo: 6, sinCalendario: true });
+    expect(r.avisos.join(" ")).toMatch(/sin barras de hoy y sin calendario del año: posible día no hábil/);
+    expect(r.avisos.join(" ")).not.toMatch(/no hay rueda/);
   });
 
   it("año sin calendario_bvc pero antes de las 10:30 (Yahoo entrega con ~20 min de retraso): sin barras todavía NO es un día no hábil", async () => {
@@ -471,6 +515,56 @@ describe("guardarBarras · barras viejas", () => {
     const nuevas = await guardarBarras(db, id, [{ instante: hace(3 * 24 * 60), precio: "1" }, { instante: hace(10), precio: "2" }, { instante: hace(5), precio: "3" }], true, ahora);
     expect(nuevas).toBe(2);
     expect((await filas(id)).map((f) => f.precio.toString())).toEqual(["2", "3"]);
+  });
+});
+
+describe("precio_intradia_retiro · la salida del dueño con inv.reversion", () => {
+  class Revertir extends Error {}
+  /** Una fila reciente, el intento y el resultado, todo en una transacción que SIEMPRE se deshace. */
+  async function intentar(opciones: { rol?: string; marca: boolean; sql: string }): Promise<{ error: string | null; filas: number }> {
+    let resultado: { error: string | null; filas: number } = { error: "sin correr", filas: -1 };
+    await db
+      .$transaction(async (tx) => {
+        const inst = await tx.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `FICTICIARV${Date.now().toString(36).slice(-4)}${Math.floor(Math.random() * 1e6)}`, nombre: "Ficticia SA", activo: true } });
+        const reciente = new Date(Math.floor(Date.now() / MIN) * MIN - 5 * MIN);
+        await tx.precioIntradia.create({ data: { instrumentoId: inst.id, instante: reciente, precio: new Prisma.Decimal(10), fuente: "yahoo", conRetraso: true } });
+        if (opciones.marca) await tx.$executeRawUnsafe("SET LOCAL inv.reversion = 'on'");
+        if (opciones.rol) await tx.$executeRawUnsafe(`SET LOCAL ROLE ${opciones.rol}`);
+        await tx.$executeRawUnsafe("SAVEPOINT intento");
+        try {
+          const filas = await tx.$executeRawUnsafe(opciones.sql.replace("$ID", inst.id));
+          resultado = { error: null, filas };
+        } catch (e) {
+          resultado = { error: String(e), filas: 0 };
+        }
+        throw new Revertir();
+      })
+      .catch((e: unknown) => {
+        if (!(e instanceof Revertir)) throw e;
+      });
+    return resultado;
+  }
+  // Sin WHERE: pg_write_all_data escribe pero no lee, y un WHERE exigiría SELECT. Todo se deshace al final.
+  const UPDATE = "UPDATE precio_intradia SET precio = 11";
+  const DELETE = "DELETE FROM precio_intradia";
+
+  for (const [nombre, sql] of [["UPDATE", UPDATE], ["DELETE", DELETE]] as const) {
+    it(`${nombre} de una fila reciente: ni el dueño sin la marca ni un rol que no es el dueño, ni siquiera con la marca`, async () => {
+      expect((await intentar({ marca: false, sql })).error, "dueño sin marca").toMatch(/solo inserción/);
+      expect((await intentar({ marca: true, rol: "pg_write_all_data", sql })).error, "otro rol con la marca").toMatch(/solo inserción/);
+      expect((await intentar({ marca: false, rol: "pg_write_all_data", sql })).error, "otro rol sin la marca").toMatch(/solo inserción/);
+    });
+
+    it(`${nombre}: el dueño, con SET LOCAL inv.reversion = 'on' dentro de la transacción, sí puede`, async () => {
+      const r = await intentar({ marca: true, sql });
+      expect(r.error).toBeNull();
+      expect(r.filas).toBeGreaterThanOrEqual(1);
+    });
+  }
+
+  it("la marca no sobrevive a la transacción: la siguiente vuelve a estar cerrada (SET LOCAL)", async () => {
+    await intentar({ marca: true, sql: UPDATE });
+    expect((await intentar({ marca: false, sql: UPDATE })).error).toMatch(/solo inserción/);
   });
 });
 

@@ -203,6 +203,95 @@ describe("el ciclo intradía del bucle", () => {
     expect(trae()).toBe(7);
   });
 
+  it("código 8 (fallo de datos: todas por 404, sin datos o formato raro): espera exponencial pero NO cuenta para la racha de 4 ni deja la huella en LIMITADO", async () => {
+    const { deps, falso, adelantar, mensajes } = armar({ codigos: ["8"] });
+    const bucle = crearBucle(deps);
+    const trae = () => falso.llamadas.filter((l) => !l.args.includes("--depurar")).length;
+    for (let i = 0; i < 6; i++) {
+      await bucle.cicloIntradia();
+      adelantar(16 * 60_000);
+    }
+    expect(trae()).toBe(6); // seis ciclos con 8 y el día sigue abierto
+    expect(huella(deps.dir)).toMatchObject({ estado: "FALLO_DATOS", codigo: "8", limitados: "0" });
+    expect(mensajes.some((m) => m.includes("hasta mañana"))).toBe(false);
+    expect(mensajes.some((m) => m.includes("fallo de datos"))).toBe(true);
+  });
+
+  it("el código 8 espera de forma exponencial (el segundo seguido espera 4 ciclos)", async () => {
+    const { deps, falso, adelantar } = armar({ codigos: ["8"] });
+    const bucle = crearBucle(deps);
+    const trae = () => falso.llamadas.filter((l) => !l.args.includes("--depurar")).length;
+    await bucle.cicloIntradia();
+    adelantar(CICLO);
+    await bucle.cicloIntradia(); // dentro de la espera de 2 ciclos
+    expect(trae()).toBe(1);
+    adelantar(CICLO);
+    await bucle.cicloIntradia();
+    expect(trae()).toBe(2);
+    adelantar(3 * CICLO);
+    await bucle.cicloIntradia();
+    expect(trae()).toBe(2);
+  });
+
+  it("un 8 entre bloqueos no los borra ni los suma: 7, 8, 7, 7, 7 detiene el día (4 bloqueos)", async () => {
+    const { deps, falso, adelantar } = armar({ codigos: ["7", "8", "7", "7", "7", "0"] });
+    const bucle = crearBucle(deps);
+    const trae = () => falso.llamadas.filter((l) => !l.args.includes("--depurar")).length;
+    for (let i = 0; i < 7; i++) {
+      await bucle.cicloIntradia();
+      adelantar(16 * 60_000);
+    }
+    expect(trae()).toBe(5);
+    expect(huella(deps.dir)).toMatchObject({ estado: "LIMITADO", limitados: "4" });
+  });
+
+  it("TIEMPO cuenta para la racha de bloqueos: TIEMPO, 7, TIEMPO, 7 detiene el día", async () => {
+    const { deps, falso, adelantar } = armar({ codigos: ["TIEMPO", "7", "TIEMPO", "7", "0"] });
+    const bucle = crearBucle(deps);
+    const trae = () => falso.llamadas.filter((l) => !l.args.includes("--depurar")).length;
+    for (let i = 0; i < 6; i++) {
+      await bucle.cicloIntradia();
+      adelantar(16 * 60_000);
+    }
+    expect(trae()).toBe(4);
+    expect(huella(deps.dir)).toMatchObject({ estado: "LIMITADO", limitados: "4" });
+  });
+
+  it("código 6 (sin barras de hoy y sin calendario del año): el primero no cambia el ritmo; con dos SEGUIDOS queda «posible día no hábil», reintenta cada 30 min y NO congela el día", async () => {
+    const { deps, falso, adelantar, mensajes } = armar({ codigos: ["6", "6", "6", "0"] });
+    const bucle = crearBucle(deps);
+    const trae = () => falso.llamadas.filter((l) => !l.args.includes("--depurar")).length;
+    await bucle.cicloIntradia(); // 1.º: sin espera
+    expect(trae()).toBe(1);
+    expect(huella(deps.dir)).toMatchObject({ estado: "ESPERANDO", codigo: "6" });
+    adelantar(CICLO);
+    await bucle.cicloIntradia(); // 2.º seguido: ahora sí
+    expect(trae()).toBe(2);
+    expect(huella(deps.dir)).toMatchObject({ estado: "SIN_BARRAS", codigo: "6" });
+    expect(mensajes.some((m) => m.includes("sin barras de hoy y sin calendario del año: posible día no hábil"))).toBe(true);
+    expect(mensajes.some((m) => m.includes("no hay rueda") || m.includes("hasta mañana"))).toBe(false);
+    adelantar(CICLO);
+    await bucle.cicloIntradia(); // dentro de los 30 min: no
+    expect(trae()).toBe(2);
+    adelantar(30 * 60_000);
+    await bucle.cicloIntradia(); // pasados 30 min: reintenta (sigue 6)
+    expect(trae()).toBe(3);
+    adelantar(30 * 60_000);
+    await bucle.cicloIntradia(); // llegan barras: 0, todo normal
+    expect(trae()).toBe(4);
+    expect(huella(deps.dir)).toMatchObject({ estado: "ESPERANDO", codigo: "0" });
+  });
+
+  it("los 6 deben ser seguidos: 6, 0, 6 no marca nada", async () => {
+    const { deps, adelantar } = armar({ codigos: ["6", "0", "6", "0"] });
+    const bucle = crearBucle(deps);
+    for (let i = 0; i < 4; i++) {
+      await bucle.cicloIntradia();
+      adelantar(CICLO);
+      expect(huella(deps.dir).estado, String(i)).not.toBe("SIN_BARRAS");
+    }
+  });
+
   it("código 5 (tope diario de peticiones): no se vuelve a intentar ese día, la huella dice TOPE_DIA y el log lo avisa", async () => {
     const { deps, falso, adelantar, ir, mensajes } = armar({ codigos: ["5", "0"] });
     const bucle = crearBucle(deps);
