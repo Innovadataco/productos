@@ -1,13 +1,12 @@
 import { esSoloLectura } from "@/auth/roles";
 import { exigirSesion } from "@/auth/sesion";
 import { ultimaConciliacion } from "@/conciliacion/leer";
-import { calendarioBvc } from "@/plan/lectura";
-import { CALENDARIO_DE_RESPALDO } from "@/precios/atraso";
 import type { CalendarioBvc } from "@/precios/negociacion";
 import { db } from "@/lib/db";
 import type { PrismaClient } from "@prisma/client";
 import { obtenerResumen, type Resumen } from "@/tablero/datos";
 import { obtenerEvolucion } from "@/tablero/datos-evolucion";
+import { calendarioConRespaldo } from "./_comun/calendario-con-respaldo";
 import { resumenDelDia } from "./_comun/resumen-ia/leer";
 import type { VistaResumenIa } from "./_comun/resumen-ia/tipos";
 import { SinBase, esErrorDeBase, registrarFalloDeBase } from "./_comun/sin-base";
@@ -33,20 +32,6 @@ async function leerEvolucion(base: PrismaClient, resumen: Resumen): Promise<Evol
   }
 }
 
-/**
- * El calendario solo sirve para el aviso de dato viejo (frente fuente-retraso): si no se puede leer, el tablero se pinta
- * igual, con el aviso aproximado (los días de semana, sin festivos: CALENDARIO_DE_RESPALDO), y se registra solo el nombre
- * del error.
- */
-async function leerCalendario(base: PrismaClient): Promise<CalendarioBvc> {
-  try {
-    return await calendarioBvc(base);
-  } catch (error) {
-    console.error(`[tablero] no se pudo leer el calendario de la BVC (${error instanceof Error ? error.name : "desconocido"})`);
-    return CALENDARIO_DE_RESPALDO;
-  }
-}
-
 export default async function Inicio() {
   let resumen: Resumen;
   let conciliacion: LineaConciliacionVista;
@@ -66,7 +51,7 @@ export default async function Inicio() {
     const [evo, ultima] = await Promise.all([leerEvolucion(db, resumen), ultimaConciliacion(db)]);
     resumenIa = await resumenDelDia(db, "DIARIO", usuario.id);
     // El calendario de la BVC cuenta los días hábiles de atraso de cada cierre (frente fuente-retraso).
-    calendario = await leerCalendario(db);
+    calendario = await calendarioConRespaldo(db, "tablero");
     evolucion = evo;
     conciliacion = aLineaDelTablero(ultima);
   } catch (error) {

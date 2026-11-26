@@ -25,7 +25,8 @@ export default async function PaginaAnalisis() {
   try {
     const usuario = await exigirSesion();
     soloLectura = esSoloLectura(usuario);
-    vista = await datosDeAnalisis(db, fechaEnBogota(new Date()));
+    const ahora = new Date();
+    vista = await datosDeAnalisis(db, fechaEnBogota(ahora), ahora);
   } catch (error) {
     if (!esErrorDeBase(error)) throw error;
     registrarFalloDeBase("analisis", error);
