@@ -64,10 +64,11 @@ describe("el ciclo intradía del bucle", () => {
     const { deps, falso, adelantar } = armar();
     const bucle = crearBucle(deps);
     await bucle.cicloIntradia();
-    expect(falso.llamadas.map((l) => [l.tarea, [...l.args]])).toEqual([["intradia", ["--depurar"]], ["intradia", []]]);
+    expect(falso.llamadas.map((l) => [l.tarea, [...l.args]])).toEqual([["intradia", ["--depurar"]], ["intradia", ["--rotacion", "0"]]]);
     adelantar(CICLO);
     await bucle.cicloIntradia();
-    expect(falso.llamadas.slice(2).map((l) => [l.tarea, [...l.args]])).toEqual([["intradia", []]]);
+    // la rotación usa un contador de ciclos (no el reloj): el siguiente ciclo lleva 1
+    expect(falso.llamadas.slice(2).map((l) => [l.tarea, [...l.args]])).toEqual([["intradia", ["--rotacion", "1"]]]);
   });
 
   it("el plazo de cada ciclo es menor que el ciclo (nunca se encima con el siguiente)", async () => {
@@ -85,12 +86,42 @@ describe("el ciclo intradía del bucle", () => {
     expect(falso.llamadas.filter((l) => l.args.includes("--depurar"))).toHaveLength(2);
   });
 
-  it("apagado, sin secreto o sin configuración: no trae nada", async () => {
-    for (const o of [{ config: { encendido: false } }, { credencialOk: false }, { config: null }] as const) {
+  it("sin secreto o sin configuración: no trae nada", async () => {
+    for (const o of [{ credencialOk: false }, { config: null }] as const) {
       const { deps, falso } = armar(o);
       await crearBucle(deps).cicloIntradia();
-      expect(falso.llamadas).toEqual([]);
+      expect(falso.llamadas, JSON.stringify(o)).toEqual([]);
     }
+  });
+
+  it("apagado: NO trae precios, pero la depuración (que no usa la red) corre una vez al día, también fuera de la ventana y en fin de semana", async () => {
+    for (const inicio of ["2027-02-09 10:00", "2027-02-09 20:00", "2027-02-13 12:00"]) {
+      const { deps, falso, adelantar, ir } = armar({ inicio, config: { encendido: false } });
+      const bucle = crearBucle(deps);
+      await bucle.cicloIntradia();
+      adelantar(CICLO);
+      await bucle.cicloIntradia();
+      expect(falso.llamadas.map((l) => [l.tarea, [...l.args]]), inicio).toEqual([["intradia", ["--depurar"]]]);
+      ir("2027-02-15 10:00");
+      await bucle.cicloIntradia();
+      expect(falso.llamadas, inicio).toHaveLength(2);
+    }
+  });
+
+  it("apagado y sin secreto: ni siquiera depura", async () => {
+    const { deps, falso } = armar({ config: { encendido: false }, credencialOk: false });
+    await crearBucle(deps).cicloIntradia();
+    expect(falso.llamadas).toEqual([]);
+  });
+
+  it("encendido, la depuración corre una sola vez por día aunque el ciclo falle", async () => {
+    const { deps, falso, adelantar } = armar({ codigos: ["1", "1", "1"] });
+    const bucle = crearBucle(deps);
+    for (let i = 0; i < 3; i++) {
+      await bucle.cicloIntradia();
+      adelantar(20 * CICLO);
+    }
+    expect(falso.llamadas.filter((l) => l.args.includes("--depurar"))).toHaveLength(1);
   });
 
   it("fuera de la ventana (antes, después, fin de semana): no trae nada", async () => {
@@ -137,7 +168,54 @@ describe("el ciclo intradía del bucle", () => {
     adelantar(CICLO);
     await bucle.cicloIntradia();
     expect(trae()).toBe(4);
-    expect(mensajes.some((m) => m.includes("429") || m.includes("limit"))).toBe(true);
+    expect(mensajes.some((m) => m.includes("bloqueo (429/403/red)"))).toBe(true);
+    expect(mensajes.some((m) => m.includes("limitado por Yahoo (429"))).toBe(false);
+  });
+
+  it("4 códigos 7 seguidos: el ciclo se detiene hasta el día siguiente y la huella queda en LIMITADO con limitados=4", async () => {
+    const { deps, falso, adelantar, ir, mensajes } = armar({ codigos: ["7", "7", "7", "7", "0"] });
+    const bucle = crearBucle(deps);
+    const trae = () => falso.llamadas.filter((l) => !l.args.includes("--depurar")).length;
+    for (let i = 0; i < 4; i++) {
+      await bucle.cicloIntradia();
+      adelantar(16 * 60_000); // pasa cualquier espera (tope de 15 min)
+    }
+    expect(trae()).toBe(4);
+    expect(huella(deps.dir)).toMatchObject({ estado: "LIMITADO", codigo: "7", limitados: "4" });
+    expect(mensajes.some((m) => m.includes("hasta mañana"))).toBe(true);
+    adelantar(60 * 60_000);
+    await bucle.cicloIntradia(); // sigue el mismo día: no trae
+    expect(trae()).toBe(4);
+    ir("2027-02-10 10:00");
+    await bucle.cicloIntradia(); // al día siguiente vuelve
+    expect(trae()).toBe(5);
+    expect(huella(deps.dir)).toMatchObject({ estado: "ESPERANDO", limitados: "0" });
+  });
+
+  it("los 7 deben ser seguidos: 7, 7, 0, 7, 7, 7 no detiene el día", async () => {
+    const { deps, falso, adelantar } = armar({ codigos: ["7", "7", "0", "7", "7", "7", "0"] });
+    const bucle = crearBucle(deps);
+    const trae = () => falso.llamadas.filter((l) => !l.args.includes("--depurar")).length;
+    for (let i = 0; i < 7; i++) {
+      await bucle.cicloIntradia();
+      adelantar(16 * 60_000);
+    }
+    expect(trae()).toBe(7);
+  });
+
+  it("código 5 (tope diario de peticiones): no se vuelve a intentar ese día, la huella dice TOPE_DIA y el log lo avisa", async () => {
+    const { deps, falso, adelantar, ir, mensajes } = armar({ codigos: ["5", "0"] });
+    const bucle = crearBucle(deps);
+    const trae = () => falso.llamadas.filter((l) => !l.args.includes("--depurar")).length;
+    await bucle.cicloIntradia();
+    adelantar(5 * CICLO);
+    await bucle.cicloIntradia();
+    expect(trae()).toBe(1);
+    expect(huella(deps.dir)).toMatchObject({ estado: "TOPE_DIA", codigo: "5" });
+    expect(mensajes.some((m) => m.includes("tope diario"))).toBe(true);
+    ir("2027-02-10 10:00");
+    await bucle.cicloIntradia();
+    expect(trae()).toBe(2);
   });
 
   it("el código 3 (aviso) queda en el log y no hace esperar; 1, TIEMPO y NO_ARRANCO también esperan (exponencial), sin parar el servicio", async () => {
@@ -172,6 +250,23 @@ describe("el ciclo intradía del bucle", () => {
     const { deps, mensajes } = armar({ codigos: ["DETENIDO"] });
     await crearBucle(deps).cicloIntradia();
     expect(mensajes.some((m) => m.includes("falló"))).toBe(false);
+  });
+
+  it("una SIGTERM en vuelo por detener() (el hijo sale con SENAL_SIGTERM) tampoco es un fallo: DETENIDO se mira antes de interpretar el código", async () => {
+    const { deps, mensajes } = armar();
+    let bucle!: ReturnType<typeof crearBucle>;
+    const corredor: Corredor = {
+      async correr(tarea, args) {
+        if (args.includes("--depurar")) return { tarea, codigo: "0", duracionMs: 1 };
+        await bucle.detener(); // el servicio recibe SIGTERM mientras el hijo corre: el hijo muere por la señal
+        return { tarea, codigo: "SENAL_SIGTERM", duracionMs: 1 };
+      },
+      detener: () => undefined,
+    };
+    bucle = crearBucle({ ...deps, corredor });
+    await bucle.cicloIntradia();
+    expect(mensajes.filter((m) => m.includes("falló") || m.includes("SENAL_SIGTERM"))).toEqual([]);
+    expect(() => huella(deps.dir)).toThrow(); // sin huella de ese ciclo
   });
 
   it("si el ciclo anterior sigue en curso, el nuevo se omite y lo dice", async () => {
@@ -258,11 +353,11 @@ describe("iniciarBucle y el temporizador del ciclo intradía", () => {
     expect(programados.every((p) => p.cancelado)).toBe(true);
   });
 
-  it("apagado: solo el tic de un minuto", async () => {
+  it("apagado: además del tic, el temporizador del ciclo (solo depura una vez al día, sin red)", async () => {
     const { deps, programados } = armar({ config: { encendido: false } });
     const s = new Map<string, (senal: NodeJS.Signals) => void>();
     const promesa = iniciarBucle(deps, { once: (n, f) => void s.set(n, f), removeListener: () => undefined });
-    expect(programados.map((p) => p.ms)).toEqual([TIC_MS]);
+    expect(programados.map((p) => p.ms).sort((a, b) => a - b)).toEqual([TIC_MS, CICLO].sort((a, b) => a - b));
     s.get("SIGINT")!("SIGINT");
     await promesa;
     void senales;
