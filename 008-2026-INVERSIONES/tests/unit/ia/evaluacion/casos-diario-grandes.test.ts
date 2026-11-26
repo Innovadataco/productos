@@ -8,7 +8,13 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { casosInventados, elegirCasos } from "@/ia/evaluacion/casos";
 import { CANTIDAD_INVENTADOS, SEMILLA_INVENTADOS, entradasInventadas } from "@/ia/evaluacion/inventados.ficticio";
+import { jsonCanonico } from "@/ia/hash";
+import { OBLIGATORIOS_DIARIO } from "@/ia/hechos/diario";
+import { NUM_CTX_LOCAL } from "@/ia/local/ollama";
+import { RESERVA_SALIDA_TOKENS, cabeEnElContexto, tokensEstimados } from "@/ia/local/presupuesto";
+import { promptDe } from "@/ia/prompts/prompts";
 import { resumenSinIa } from "@/ia/validador/plantilla";
+import { vistaCiega } from "@/ia/vista-ciega";
 
 const HUELLA_DIARIO_01_A_15 = "1176d136a097f5f95a057d38be9fb0c3cfd9066602d7310faa7b426d1bb96301";
 const HUELLA_REGLAS = "24a257fec37a3550cab4c1bf9046889338c5b74ed06c5f604fd11489d202ab29";
@@ -85,5 +91,32 @@ describe("elegirCasos", () => {
     const r = elegirCasos(casos, ["DIARIO-01"]);
     expect(Object.isFrozen(r)).toBe(true);
     expect(casos).toHaveLength(42);
+  });
+});
+
+describe("el DIARIO más grande que queda después del filtro cabe en el contexto, con margen", () => {
+  /** Los caracteres del pedido (el prompt y la vista, como los cuenta la puerta local) de un caso. */
+  const caracteres = (id: string): number => promptDe("DIARIO").texto.length + jsonCanonico(vistaCiega((caso(id) as NonNullable<ReturnType<typeof caso>>).paquete)).length;
+  /** Tokens de holgura que se exigen: si el prompt o la vista crecen más, esta prueba falla y hay que decidir qué recortar. */
+  const MARGEN_TOKENS = 200;
+
+  it("DIARIO-16 es ese caso: 4 especies, las 4 series, el fondo y los 4 obligatorios", () => {
+    const p = caso("DIARIO-16")?.paquete;
+    const claves = new Set(p?.hechos.map((h) => h.clave));
+    for (const clave of ["TASA_TRM", "TASA_TPM", "TASA_IBR", "VARIACION_ANUAL_IPC", "FONDO_VALOR", "FONDO_VALOR_UNIDAD", "FONDO_FECHA_VALOR"]) expect(claves.has(clave as never), clave).toBe(true);
+    expect(p?.hechos.filter((h) => h.clave === "ESPECIE_NOMBRE")).toHaveLength(4);
+    expect(p?.hechos.filter((h) => h.obligatorio).map((h) => h.clave).sort()).toEqual([...OBLIGATORIOS_DIARIO].sort());
+  });
+
+  it("es el mayor de los DIARIO por tamaño, y su pedido estimado más la reserva cabe en num_ctx con el margen", () => {
+    const tamanos = casos.filter((c) => c.tipo === "DIARIO").map((c) => [c.id, caracteres(c.id)] as const);
+    const mayor = Math.max(...tamanos.map(([, n]) => n));
+    expect(caracteres("DIARIO-16")).toBeGreaterThanOrEqual(mayor - 50);
+    for (const [id, n] of tamanos) expect(cabeEnElContexto(n), id).toBe(true);
+    expect(tokensEstimados(mayor) + RESERVA_SALIDA_TOKENS + MARGEN_TOKENS).toBeLessThanOrEqual(NUM_CTX_LOCAL);
+  });
+
+  it("control positivo: un prompt 700 caracteres más largo ya no tendría el margen", () => {
+    expect(tokensEstimados(caracteres("DIARIO-16") + 700) + RESERVA_SALIDA_TOKENS + MARGEN_TOKENS).toBeGreaterThan(NUM_CTX_LOCAL);
   });
 });

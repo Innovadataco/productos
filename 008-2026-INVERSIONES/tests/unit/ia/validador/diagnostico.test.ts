@@ -14,6 +14,13 @@ describe("enmascarar", () => {
   it("deja las citas como {Hnn} y cambia el resto de los dígitos por #", () => {
     expect(enmascarar("Subió {H03} y cerró en 4613,27 el 2027-03-17.")).toBe("Subió {Hnn} y cerró en ####,## el ####-##-##.");
   });
+  it("enmascara también los números escritos en palabras y los caracteres numéricos que no son dígitos", () => {
+    expect(enmascarar("subió a dos mil y veintiuno, ¼ y ² y Ⅳ")).toBe("subió a # # y #, # y # y #");
+    expect(enmascarar("treintaiuno dosmil primero marzo")).toBe("# # # #");
+  });
+  it("no enmascara palabras comunes de la frase", () => {
+    expect(enmascarar("el valor de las acciones subió, y cerró")).toBe("el valor de las acciones subió, y cerró");
+  });
   it("no toca un texto sin dígitos ni citas", () => {
     expect(enmascarar("Sin cifras.")).toBe("Sin cifras.");
   });
