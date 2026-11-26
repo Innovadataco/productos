@@ -468,7 +468,7 @@ export function Tablero({ vista, conciliacion, evolucion, soloLectura = false, r
         <Foto vista={vista} elegir={elegir} />
         <Posiciones vista={vista} elegida={elegida} elegir={elegir} alCerrar={() => setElegida(null)} />
         <Falta />
-        <p className="nota" id="fuentes-de-precios">{pieDePrecios()}</p>
+        <p className="nota">{pieDePrecios()}</p>
         <footer className="pie">El sistema calcula y muestra; no recomienda comprar ni vender. Datos de su base local.</footer>
       </main>
     </>

@@ -91,7 +91,7 @@ describe("atrasoParaAviso", () => {
 describe("camposDeAtraso (lo que viaja a la pantalla)", () => {
   it("exacto: solo el número; aproximado: el número y los años sin festivos; sin aviso: null", () => {
     expect(camposDeAtraso({ dias: 3, aproximado: false, aniosSinFestivos: [], respaldo: false, tope: false })).toEqual({ habilesAtras: 3 });
-    expect(camposDeAtraso({ dias: 3, aproximado: true, aniosSinFestivos: [2027], respaldo: false, tope: false })).toEqual({ habilesAtras: 3, aniosSinFestivos: [2027], respaldo: false, tope: false });
+    expect(camposDeAtraso({ dias: 3, aproximado: true, aniosSinFestivos: [2027], respaldo: false, tope: false })).toEqual({ habilesAtras: 3, aniosSinFestivos: [2027] });
     expect(camposDeAtraso(null)).toEqual({ habilesAtras: null });
     expect(camposDeAtraso({ dias: 4, aproximado: true, aniosSinFestivos: [], respaldo: true, tope: false })).toEqual({ habilesAtras: 4, calendarioNoLeido: true });
     expect(camposDeAtraso({ dias: MAX_HABILES, aproximado: true, aniosSinFestivos: [], respaldo: false, tope: true })).toEqual({ habilesAtras: MAX_HABILES, masDelTope: true });

@@ -31,12 +31,10 @@ const DIA_MAX = 31;
 const HORA_MAX = 23;
 const MINUTO_MAX = 59;
 
-/** El nombre de la fuente (tabla de src/precios/fuentes.ts); una que no conoce, tal cual (no se inventa un nombre). */
-export const nombreFuente = nombreDeFuente;
 
 /** «A», «A y B», «A, B y C»: los nombres sin repetir, en el orden del código de su fuente. */
 export function nombresDeFuentes(codigos: readonly (string | null)[]): string {
-  const nombres = [...new Set([...codigos].sort(porCodigo).map(nombreFuente))];
+  const nombres = [...new Set([...codigos].sort(porCodigo).map(nombreDeFuente))];
   if (nombres.length === 0) return SIN_FUENTE;
   return nombres.length === 1 ? nombres[0]! : `${nombres.slice(0, -1).join(", ")} y ${nombres.at(-1)!}`;
 }
@@ -114,7 +112,7 @@ export function piezasProcedencia(p: Procedencia, o: OpcionesProcedencia = {}): 
   const dato = piezasDelDato(p, o);
   const retraso = (p.tipo ?? "CIERRE") === "RUEDA" ? retrasoEnRueda(p.fuente) : null;
   const cola: Pieza[] = retraso === null ? piezasTraido(p.traidoEn, p.dia) : [{ texto: retraso }];
-  return [...dato, ...(dato.length === 0 ? [] : [SEPARADOR]), { texto: nombreFuente(p.fuente) }, SEPARADOR, ...cola];
+  return [...dato, ...(dato.length === 0 ? [] : [SEPARADOR]), { texto: nombreDeFuente(p.fuente) }, SEPARADOR, ...cola];
 }
 
 /** Un valor que suma cierres: el más antiguo que lo compone, si hay fechas distintas; si no, el cierre de ese día. */
@@ -136,11 +134,14 @@ const listaDeAnios = (anios: readonly number[]): string => (anios.length < 2 ? a
 /**
  * «dato de hace 3 días hábiles» si el cierre lleva más de un día hábil sin renovarse; null si no hay que avisar. Si el
  * calendario no cubre un año del tramo, el número es una cota superior y se dice con su matiz:
- * «dato de hace unos 3 días hábiles (sin festivos de 2027 en el calendario)».
+ * «dato de hace unos 3 días hábiles (sin festivos de 2027 en el calendario)»; si no se pudo leer, «(no se pudo leer el
+ * calendario)»; si el cierre pasa el tope de la cuenta, «dato de hace más de N días hábiles».
  */
-export function avisoAtraso(p: Pick<Procedencia, "habilesAtras" | "aniosSinFestivos">): string | null {
+export function avisoAtraso(p: Pick<Procedencia, "habilesAtras" | "aniosSinFestivos" | "calendarioNoLeido" | "masDelTope">): string | null {
   const n = p.habilesAtras;
   if (n == null || n < MINIMO_AVISO) return null;
+  if (p.masDelTope === true) return `dato de hace más de ${n} días hábiles`;
+  if (p.calendarioNoLeido === true) return `dato de hace unos ${n} días hábiles (no se pudo leer el calendario)`;
   const anios = p.aniosSinFestivos ?? [];
   return anios.length === 0 ? `dato de hace ${n} días hábiles` : `dato de hace unos ${n} días hábiles (sin festivos de ${listaDeAnios(anios)} en el calendario)`;
 }

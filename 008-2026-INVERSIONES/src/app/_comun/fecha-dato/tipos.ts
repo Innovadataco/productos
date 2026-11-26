@@ -28,6 +28,10 @@ export interface Procedencia {
   readonly habilesAtras?: number | null;
   /** Años del tramo que el calendario no cubre: con ellos, `habilesAtras` es aproximado (una cota superior). Ausente: exacto. */
   readonly aniosSinFestivos?: readonly number[];
+  /** No se pudo leer el calendario: `habilesAtras` es aproximado y no se nombra un año. */
+  readonly calendarioNoLeido?: boolean;
+  /** El cierre es más viejo que el tope de la cuenta: `habilesAtras` es el tope («más de»). */
+  readonly masDelTope?: boolean;
 }
 
 /** Un valor que suma varios datos (el valor del portafolio, un total): se muestra por su dato MÁS VIEJO. */

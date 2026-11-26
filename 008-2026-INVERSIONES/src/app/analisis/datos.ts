@@ -58,12 +58,11 @@ const paraAnalisis = (r: ReglaParaAnalisis): ReglaParaAnalisis => ({ id: r.id, i
  * calendario de la BVC cuenta los días hábiles de atraso de cada cierre (si el calendario no se lee, el aviso es aproximado).
  */
 export async function datosDeAnalisis(db: PrismaClient, hoy: Date, ahora: Date = new Date()): Promise<VistaAnalisis> {
-  const [resumen, versiones] = await Promise.all([obtenerResumen(db), leerVersiones(db)]);
+  const [resumen, versiones, calendario] = await Promise.all([obtenerResumen(db), leerVersiones(db), calendarioConRespaldo(db, "analisis")]);
   const historia = await leerEntradas(db, hoy);
   const diario = await leerDiario(db, hoy, null);
   const vigente = vigenteEn(versiones, hoy);
   const reglas = vigente ? await leerReglas(db, vigente.id) : [];
-  const calendario = await calendarioConRespaldo(db, "analisis");
   const fondos = fondosDeHistoria(historia);
   const analisis = analizar({ hoy, historia, tablero: resumen.tablero, decisiones: [...diario.resultados.values()], fondos: fondos.fondos });
   return aVistaAnalisis({

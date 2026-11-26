@@ -19,6 +19,8 @@ export interface CalendarioBvc {
   readonly noHabiles: ReadonlySet<string>;
   /** Años con al menos una fila en calendario_bvc; los demás se consideran NO sembrados (como en la importación). */
   readonly aniosCubiertos: ReadonlySet<number>;
+  /** Solo el respaldo de las pantallas: la LECTURA del calendario falló (no es un calendario que simplemente no cubre un año). */
+  readonly respaldo?: boolean;
 }
 
 export interface FilaCalendario {

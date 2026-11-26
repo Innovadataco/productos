@@ -9,7 +9,7 @@ import type { FilaVista } from "./tipos";
 
 type CierreVista = NonNullable<FilaVista["cierre"]>;
 
-export const procedenciaDeCierre = (c: CierreVista): Procedencia => ({ dia: c.fecha, traidoEn: c.traidoEn, fuente: c.fuente, habilesAtras: c.habilesAtras, aniosSinFestivos: c.aniosSinFestivos });
+export const procedenciaDeCierre = (c: CierreVista): Procedencia => ({ dia: c.fecha, traidoEn: c.traidoEn, fuente: c.fuente, habilesAtras: c.habilesAtras, aniosSinFestivos: c.aniosSinFestivos, calendarioNoLeido: c.calendarioNoLeido, masDelTope: c.masDelTope });
 
 /** Las filas con cierre, compuestas por su cierre más viejo; null si ninguna tiene cierre. */
 export const procedenciaDeFilas = (filas: readonly FilaVista[]): ProcedenciaCompuesta | null =>

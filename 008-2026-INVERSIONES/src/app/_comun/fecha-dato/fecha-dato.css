@@ -7,6 +7,9 @@
   /* Una medida de lectura: en una celda de tabla no ensancha la columna más allá de esto. */
   max-width: 28em;
 }
+/* En una celda de tabla, «anywhere» deja la columna en su mínimo y parte la línea letra por letra: ahí se parte solo por
+   palabras (break-word), la columna no baja de una medida legible y la nota no pasa de unos 3 renglones. */
+td .fecha-dato { overflow-wrap: break-word; min-width: 11em; max-width: 18em; }
 /* En una cuadrícula (las tarjetas de «Qué movió»): toda la fila, debajo de la especie, la barra y el aporte. */
 .fecha-dato-ancho { grid-column: 1 / -1; }
 .fecha-dato-linea { display: block; }
