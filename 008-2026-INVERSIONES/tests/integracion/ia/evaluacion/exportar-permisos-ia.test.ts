@@ -27,10 +27,13 @@ const dia = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const dec = (v: string) => new Prisma.Decimal(v);
 const PRIMERA_VIGENCIA = dia("2025-03-03");
 const HOY_BASE = dia("2027-09-14");
+const ROL = "pg_use_reserved_connections";
 const ORD = "Fecha y hora,Símbolo de la acción,Tipo de orden,Estado,Acciones completadas,Acciones pendientes,Precio por acción,Total invertido,Valor comisión,Total estimado\n";
 
 let ia: RolIa;
+/** Fijados una vez en beforeAll, antes de sembrar (planVigente), y solo leídos después. */
 let hoy = HOY_BASE;
+let vigenteDesde = PRIMERA_VIGENCIA;
 
 const conteos = async (): Promise<readonly number[]> =>
   Promise.all([db.usuario.count(), db.instrumento.count(), db.planVersion.count(), db.reglaPlan.count(), db.precioCierre.count(), db.resumenIa.count()]);
@@ -51,14 +54,24 @@ async function sembrarPortafolio(duenoId: string): Promise<string> {
 }
 
 /** La versión no retrocede (la base es compartida): la vigencia es la de la última, y hoy no queda antes de ella. */
-async function sembrarPlan(duenoId: string, instrumentoId: string): Promise<void> {
+async function planVigente(): Promise<{ readonly vigenteDesde: Date; readonly hoy: Date }> {
   const ultima = await db.planVersion.findFirst({ orderBy: { version: "desc" }, select: { vigenteDesde: true } });
-  const vigenteDesde = ultima?.vigenteDesde ?? PRIMERA_VIGENCIA;
-  if (vigenteDesde > hoy) hoy = vigenteDesde;
-  await crearVersionPlan(db, {
-    vigenteDesde, motivo: "Plan ficticio del export con inv_ia", autorId: duenoId,
-    reglas: [{ instrumentoId, condicion: "CIERRE_BAJO", nivel: "26.93", accion: "COMPRAR", cantidad: 13n, plazoHasta: null, detalle: "Regla ficticia del export con inv_ia" }],
-  }, { hoy });
+  const desde = ultima?.vigenteDesde ?? PRIMERA_VIGENCIA;
+  return { vigenteDesde: desde, hoy: desde > HOY_BASE ? desde : HOY_BASE };
+}
+
+/**
+ * Dos versiones con la MISMA vigencia: rige la de mayor número (la segunda), no la primera. Así la equivalencia con
+ * vigenteEn cubre el desempate por número; las programadas y las anteriores las ponen los demás archivos de la base.
+ */
+async function sembrarPlan(duenoId: string, instrumentoId: string): Promise<void> {
+  const version = (nivel: string, detalle: string) =>
+    crearVersionPlan(db, {
+      vigenteDesde, motivo: `Plan ficticio del export con inv_ia ${detalle}`, autorId: duenoId,
+      reglas: [{ instrumentoId, condicion: "CIERRE_BAJO", nivel, accion: "COMPRAR", cantidad: 13n, plazoHasta: null, detalle: `Regla ficticia del export con inv_ia ${detalle}` }],
+    }, { hoy });
+  await version("25.17", "(la que no rige)");
+  await version("26.93", "(la que rige)");
 }
 
 async function sembrarDecreto(duenoId: string, instrumentoId: string): Promise<void> {
@@ -102,13 +115,14 @@ async function sembrarConciliacion(duenoId: string): Promise<void> {
 beforeAll(async () => {
   const base = (await db.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db ?? "";
   if (!base.endsWith("_test")) throw new Error(`Se negó a correr sobre «${base}»: solo bases *_test`);
+  ({ vigenteDesde, hoy } = await planVigente());
   const duenoId = (await db.usuario.create({ data: { email: `dueno-exp-ia-${corrida.toLowerCase()}@ejemplo.invalid`, rol: "DUENO" } })).id;
   const instrumentoId = await sembrarPortafolio(duenoId);
   await sembrarPlan(duenoId, instrumentoId);
   await sembrarDecreto(duenoId, instrumentoId);
   await sembrarFondo(duenoId);
   await sembrarConciliacion(duenoId);
-  ia = await conRolIa(db, "pg_use_reserved_connections");
+  ia = await conRolIa(db, ROL);
 }, 60_000);
 
 afterAll(async () => {
@@ -118,18 +132,22 @@ afterAll(async () => {
 
 describe("exportarHechos con los privilegios de inv_ia (la corrida diaria del servicio)", () => {
   it("el cliente es de verdad el rol restringido", async () => {
-    const r = await ia.cliente.$queryRaw<{ u: string }[]>`SELECT current_user::text AS u`;
-    expect(r[0]?.u).toBe("pg_use_reserved_connections");
+    expect(await ia.usuario()).toBe(ROL);
   });
 
   it("arma las tres tareas sin permiso negado, igual que como dueño, y no escribe nada", async () => {
     const antes = await conteos();
     const comoIa = await exportarHechos(ia.cliente, hoy);
+    // Si Prisma hubiera reabierto la conexión, correría como dueño y la prueba pasaría en falso.
+    expect(await ia.usuario()).toBe(ROL);
     const comoDueno = await exportarHechos(db, hoy);
     expect(await conteos()).toEqual(antes);
     const tipos = [...comoIa.paquetes.map((p) => p.tipo), ...comoIa.omitidos.map((o) => o.tipo)].sort();
     expect(tipos).toEqual(["DIARIO", "ESCENARIOS", "REGLAS"]);
-    expect(comoIa.paquetes.map((p) => p.tipo).sort()).toEqual(["DIARIO", "ESCENARIOS", "REGLAS"]);
+    // Sola, esta siembra arma las tres. En la corrida completa la base trae datos de otros archivos posteriores a hoy, y el
+    // armador DIARIO puede omitirse por los datos (FECHA_FUTURA) igual para los dos roles: sus lecturas ya corrieron
+    // antes del armado (exportar.ts lee todo fuera de `intentar`), y un permiso negado no se omite: se propaga.
+    expect(comoIa.paquetes.map((p) => p.tipo)).toContain("REGLAS");
     expect(comoIa.paquetes.map((p) => p.hash)).toEqual(comoDueno.paquetes.map((p) => p.hash));
     expect(comoIa.omitidos).toEqual(comoDueno.omitidos);
     expect(comoIa.avisos).toEqual(comoDueno.avisos);
@@ -143,14 +161,21 @@ describe("exportarHechos con los privilegios de inv_ia (la corrida diaria del se
   });
 
   it("los lectores acotados del plan dan lo mismo que los de la página (como dueño), sin el motivo ni la acción", async () => {
-    const pagina = vigenteEn(await leerVersiones(db), hoy);
+    const versiones = await leerVersiones(db);
+    expect(versiones.filter((v) => v.vigenteDesde.getTime() === vigenteDesde.getTime()).length).toBeGreaterThanOrEqual(2);
+    // Cada vigencia de la base, el día antes y el día después (programadas, desempates y anteriores), y un día sin plan.
+    const dias = [...versiones.flatMap((v) => [-1, 0, 1].map((d) => new Date(v.vigenteDesde.getTime() + d * 86_400_000))), hoy, dia("2001-01-02")];
+    for (const h of dias) {
+      const esperada = vigenteEn(versiones, h);
+      expect(await versionVigenteParaHechos(ia.cliente, h), h.toISOString()).toEqual(esperada === null ? null : { id: esperada.id, vigenteDesde: esperada.vigenteDesde });
+    }
     const acotada = await versionVigenteParaHechos(ia.cliente, hoy);
-    expect(acotada).toEqual({ id: pagina?.id, vigenteDesde: pagina?.vigenteDesde });
     const deLaPagina = (await leerReglas(db, acotada!.id)).map((r) => ({ instrumentoId: r.instrumentoId, nemotecnico: r.nemotecnico, condicion: r.condicion, nivel: r.nivel, plazoHasta: r.plazoHasta }));
     const reglas = await reglasParaHechos(ia.cliente, acotada!.id);
     expect(reglas).toEqual(deLaPagina);
     expect(reglas.some((r) => r.nemotecnico === ESPECIE)).toBe(true);
     for (const r of reglas) expect(Object.keys(r).sort()).toEqual(["condicion", "instrumentoId", "nemotecnico", "nivel", "plazoHasta"]);
+    expect(reglas.map((r) => r.nivel?.toString())).toEqual(["26.93"]);
     expect(await versionVigenteParaHechos(ia.cliente, dia("2001-01-02"))).toBeNull();
   });
 });

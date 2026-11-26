@@ -789,10 +789,14 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
     });
 
     it("la corrida diaria del servicio: exportarHechos arma las tres tareas como inv_ia (con los lectores acotados del plan)", async () => {
-      const hoy = new Date("2024-06-20T00:00:00Z");
+      // Hoy = la vigencia de la última versión sembrada arriba: así rige un plan y corren los lectores de sus reglas.
+      const hoy = (await dueno.planVersion.findFirstOrThrow({ orderBy: { version: "desc" }, select: { vigenteDesde: true } })).vigenteDesde;
       const r = await exportarHechos(ia, hoy);
+      const comoDueno = await exportarHechos(dueno, hoy);
       expect([...r.paquetes.map((p) => p.tipo), ...r.omitidos.map((o) => o.tipo)].sort()).toEqual(["DIARIO", "ESCENARIOS", "REGLAS"]);
-      expect((await exportarHechos(dueno, hoy)).paquetes.map((p) => p.hash)).toEqual(r.paquetes.map((p) => p.hash));
+      expect(r.omitidos.find((o) => o.tipo === "REGLAS")?.codigo).not.toBe("SIN_PLAN_VIGENTE");
+      expect(r.paquetes.map((p) => p.hash)).toEqual(comoDueno.paquetes.map((p) => p.hash));
+      expect(r.omitidos).toEqual(comoDueno.omitidos);
     });
 
     it("el registro corre como inv_ia: registra con la hora de la base, no repite y suma el gasto; el último lo lee inv_app", async () => {
