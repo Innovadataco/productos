@@ -1,7 +1,7 @@
 /**
  * Los textos de la procedencia de cada dato (frentes fecha-hora-datos y fuente-retraso). La línea, corta para 375 px:
- * «Cierre 25-nov · Yahoo (BVC) · traído 18:00»; en la rueda, «Precio de las 11:42 · Yahoo (BVC) · hasta 20 min de retraso». El detalle, aparte: la fuente,
- * su retraso conocido y cuándo se trajo en hora de Colombia; la tabla de fuentes vive en src/precios/fuentes.ts. El
+ * «Cierre 25-nov · Yahoo (BVC) · traído 18:00»; en la rueda, «Precio de las 11:42 · Yahoo (BVC) · hasta 20 min de retraso». Sin detalle aparte: la
+ * fuente, el retraso y cuándo se trajo van una sola vez, en la línea; la tabla de fuentes vive en src/precios/fuentes.ts. El
  * aviso de dato viejo («dato de hace 3 días hábiles») y el de fechas distintas salen de sus propias funciones.
  * Se arman por piezas: las que son fechas u horas llevan el atributo de <time>, y el texto plano sale de las MISMAS
  * piezas. Puro y determinista (sin Intl ni Date): lo pintan el servidor y el navegador. Sin comandos y sin recomendar
@@ -9,7 +9,7 @@
  */
 import { fecha } from "@/app/tablero/formato";
 import { MINIMO_AVISO } from "@/precios/atraso";
-import { fuenteDe, nombreDeFuente, retrasoDe, SIN_FUENTE } from "@/precios/fuentes";
+import { fuenteDe, nombreDeFuente, SIN_FUENTE } from "@/precios/fuentes";
 import { porCodigo } from "./componer";
 import { dateTimeColombia } from "./hora";
 import type { DiaIso, InstanteColombia, Procedencia, ProcedenciaCompuesta } from "./tipos";
@@ -22,7 +22,6 @@ export interface Pieza {
 
 export { SIN_FUENTE };
 export const SIN_HORA = "sin la hora en que se trajo";
-export const SIN_RETRASO = "sin dato de esta fuente";
 
 const DIA_ISO = /^\d{4}-(\d{2})-(\d{2})$/;
 const INSTANTE = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})$/;
@@ -136,34 +135,6 @@ export function avisoAtraso(p: Pick<Procedencia, "habilesAtras">): string | null
   const n = p.habilesAtras;
   return n == null || n < MINIMO_AVISO ? null : `dato de hace ${n} días hábiles`;
 }
-
-const mayuscula = (t: string): string => t.charAt(0).toUpperCase() + t.slice(1);
-
-/** El retraso conocido de las fuentes: sin nombre si es una sola; con el nombre de cada una si son varias. */
-function textoRetraso(codigos: readonly (string | null)[]): string {
-  const por = codigos.map((c) => {
-    const partes = [retrasoDe(c, "CIERRE"), retrasoDe(c, "RUEDA")].filter((x): x is string => x !== null);
-    return { nombre: nombreFuente(c), texto: partes.length === 0 ? SIN_RETRASO : partes.join("; ") };
-  });
-  return por.length === 1 ? por[0]!.texto : por.map((r) => `${r.nombre}: ${r.texto}`).join(" · ");
-}
-
-/** El detalle: la fuente, su retraso conocido, cuándo se trajo (hora de Colombia) y la nota de la fuente si la tiene. */
-function detalle(codigos: readonly (string | null)[], traidoEn: InstanteColombia | null): string {
-  const unicos = [...new Set([...codigos].sort(porCodigo))];
-  const h = leerInstante(traidoEn);
-  const [primero] = unicos;
-  const nota = unicos.length === 1 && primero !== undefined ? (fuenteDe(primero)?.nota ?? null) : null;
-  return [
-    `${unicos.length > 1 ? "Fuentes" : "Fuente"}: ${nombresDeFuentes(unicos)}.`,
-    `Retraso conocido: ${textoRetraso(unicos)}.`,
-    h === null ? `${mayuscula(SIN_HORA)}.` : `Traído el ${diaTexto(h.dia, true)} a las ${h.hhmm} (hora de Colombia).`,
-    ...(nota === null ? [] : [nota]),
-  ].join(" ");
-}
-
-export const detalleProcedencia = (p: Procedencia): string => detalle([p.fuente], p.traidoEn);
-export const detalleCompuesta = (c: ProcedenciaCompuesta): string => detalle(c.fuentes, c.masVieja.traidoEn);
 
 const unir = (piezas: readonly Pieza[]): string => piezas.map((p) => p.texto).join("");
 
