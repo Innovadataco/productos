@@ -1,15 +1,17 @@
 // `servicio-ia.mjs ahora`: la corrida diaria UNA vez, a mano, con las mismas reglas que la programada (apagada, día
 // hábil, sin duplicar) y sin las pausas largas. Con dobles: sin base, sin red y sin Ollama.
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { ConfigIaVigente } from "@/ia/config/leer";
-import { REINTENTOS_AHORA, bucleEnCurso, conUnaConexion, correrAhora, salidaDe, type DependenciasAhora } from "@/servicio-ia/ahora";
+import { REINTENTOS_AHORA, bucleEnCurso, conUnaConexion, correrAhora, duracionMaximaMs, salidaDe, type DependenciasAhora } from "@/servicio-ia/ahora";
 import { PAUSA_REINTENTO_MS, type ResumenCorrida } from "@/servicio-ia/corrida";
 import { VIGENTE_FICTICIA } from "../ia/config/apoyo/config.ficticio";
 
 const HOY = new Date("2027-03-17T00:00:00.000Z");
+/** Un instante de ese día en Colombia (UTC−5), lejos de la ranura de las 19:00 de la configuración ficticia. */
+const aLas = (hhmm: string): number => Date.parse(`2027-03-17T${hhmm}:00.000-05:00`);
 const hecha = (porTipo: ResumenCorrida["porTipo"]): ResumenCorrida => ({ estado: "HECHA", porTipo });
 
 function montar(extra: Partial<DependenciasAhora> = {}) {
@@ -17,6 +19,7 @@ function montar(extra: Partial<DependenciasAhora> = {}) {
   const deps: DependenciasAhora = {
     registrar: (m) => void lineas.push(m),
     hoy: () => HOY,
+    instante: () => aLas("10:13"),
     leerConfig: vi.fn(async (): Promise<ConfigIaVigente | null> => ({ ...VIGENTE_FICTICIA, modo: "local" })),
     esHabil: vi.fn(async () => true),
     bucleCorriendo: vi.fn(async () => false),
@@ -60,6 +63,27 @@ describe("correrAhora", () => {
     expect(m.lineas.join("\n")).toMatch(/en curso/);
   });
 
+  it("no corre si la ranura programada de hoy empezaría mientras esta corre (dos corridas a la vez al Mac): salida 1", async () => {
+    const m = montar({ instante: () => aLas("18:55") });
+    expect(await correrAhora(m.deps)).toBe(1);
+    expect(m.deps.correr).not.toHaveBeenCalled();
+    expect(m.lineas.join("\n")).toMatch(/19:00/);
+  });
+
+  it.each(["18:37", "19:23"])("a las %s (lejos antes o ya pasada la ranura) sí corre", async (hhmm) => {
+    const m = montar({ instante: () => aLas(hhmm) });
+    expect(await correrAhora(m.deps)).toBe(0);
+    expect(m.deps.correr).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["P2037", "P2024", "P1001"])("sin conexión a la base (%s): lo dice con el código y el porqué probable (salida 1)", async (code) => {
+    const m = montar({ leerConfig: vi.fn(async () => Promise.reject(Object.assign(new Error("x"), { code }))) });
+    expect(await correrAhora(m.deps)).toBe(1);
+    const todo = m.lineas.join("\n");
+    expect(todo).toContain(code);
+    expect(todo).toMatch(/conexiones? del rol inv_ia/);
+  });
+
   it.each(["ERROR", "FALLIDO"] as const)("una tarea en %s da salida 1", async (estado) => {
     const m = montar({ correr: vi.fn(async () => hecha({ DIARIO: "PUBLICADO", REGLAS: estado })) });
     expect(await correrAhora(m.deps)).toBe(1);
@@ -86,6 +110,12 @@ describe("salidaDe", () => {
   });
 });
 
+describe("duracionMaximaMs", () => {
+  it("los tres tipos, cada uno con su intento y su reintento al límite de la configuración, más la pausa", () => {
+    expect(duracionMaximaMs({ ...VIGENTE_FICTICIA, limiteSegundos: 97 })).toBe(3 * 2 * 97_000 + REINTENTOS_AHORA.pausaMs);
+  });
+});
+
 describe("REINTENTOS_AHORA", () => {
   it("como mucho un reintento, sin la pausa de 5 min de la programada", () => {
     expect(REINTENTOS_AHORA.maximo).toBeLessThanOrEqual(1);
@@ -103,6 +133,11 @@ describe("bucleEnCurso", () => {
     expect(await bucleEnCurso(dirCon("formato=1\nestado=CORRIENDO\narranque=1237\n"))).toBe(true);
     expect(await bucleEnCurso(dirCon("formato=1\nestado=ESPERANDO\narranque=1237\n"))).toBe(false);
     expect(await bucleEnCurso(dirCon(null))).toBe(false);
+  });
+  it("otro error al leer el latido (no es que falte) sube: correrAhora lo convierte en salida 1", async () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "inv-008-ia-ahora-"));
+    mkdirSync(path.join(dir, "bucle"));
+    await expect(bucleEnCurso(dir)).rejects.toMatchObject({ code: "EISDIR" });
   });
 });
 

@@ -1,7 +1,8 @@
 // El cableado real del servicio inv-008-ia que se puede probar sin base ni red: el `fetch` acotado (solo el destino de
 // la tailnet y las dos rutas de Ollama) y los digests de la clave de «ya publicado».
 import { describe, expect, it, vi } from "vitest";
-import { digestsDe, fetchAcotado, opcionesDe } from "@/servicio-ia/cableado";
+import { REINTENTOS_AHORA } from "@/servicio-ia/ahora";
+import { dependenciasReales, digestsDe, fetchAcotado, opcionesDe } from "@/servicio-ia/cableado";
 import { DESTINO_FICTICIO, DIGEST_QWEN, LISTA_FICTICIA, SIN_LISTA, VIGENTE_FICTICIA } from "../ia/config/apoyo/config.ficticio";
 
 const init = { method: "GET", headers: {}, signal: new AbortController().signal, redirect: "manual" } as const;
@@ -95,5 +96,20 @@ describe("servirAhora", () => {
     const todo = lineas.join("");
     expect(todo).toMatch(/apagada/);
     expect(todo).not.toContain("clave-ficticia-4613");
+  });
+});
+
+describe("dependenciasReales", () => {
+  const esperar = async (): Promise<void> => undefined;
+  it("sin política es la de la programada (la del bucle, sin cambios); con REINTENTOS_AHORA la lleva la corrida", () => {
+    expect(dependenciasReales({} as never, vi.fn() as never, () => undefined, esperar).corrida.reintentos).toBeUndefined();
+    expect(dependenciasReales({} as never, vi.fn() as never, () => undefined, esperar, REINTENTOS_AHORA).corrida.reintentos).toBe(REINTENTOS_AHORA);
+  });
+
+  it("el fetch de la corrida es el acotado: un destino fuera de la tailnet no sale", async () => {
+    const real = vi.fn();
+    const { fetchLocal } = dependenciasReales({} as never, real as never, () => undefined, esperar, REINTENTOS_AHORA);
+    await expect(fetchLocal("https://api.telegram.org/", init)).rejects.toThrow(/DESTINO_NO_PERMITIDO/);
+    expect(real).not.toHaveBeenCalled();
   });
 });
