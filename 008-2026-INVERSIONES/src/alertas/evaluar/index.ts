@@ -11,7 +11,7 @@ import type { CondicionRegla, Prisma } from "@prisma/client";
 import { diaIso, fechaEnBogota } from "../../precios/horario";
 import { tenenciaEn, type MovimientoTenencia } from "../../plan/tenencia";
 import type { Alerta, BasePrecio, PrecioEvaluado, PrecioUltimo } from "../tipos";
-import type { Umbrales } from "../umbrales";
+import { validarUmbrales, type Umbrales } from "../umbrales";
 import { evaluarFechasEx, type DecretoParaAlerta } from "./fecha-ex";
 import { evaluarFrescura } from "./frescura";
 import { evaluarMovimiento } from "./mercado";
@@ -50,15 +50,22 @@ export interface EntradaEvaluacion {
 const BASES: readonly BasePrecio[] = ["CIERRE", "INTRADIA"];
 
 /** El precio de hoy por base: la barra solo cuenta si es de hoy y el intradía está encendido. */
-function precioDe(base: BasePrecio, e: EspecieEvaluada, hoy: Date, intradiaActivo: boolean): PrecioEvaluado | null {
+function precioDe(base: BasePrecio, e: EspecieEvaluada, hoy: Date, ahora: Date, intradiaActivo: boolean): PrecioEvaluado | null {
   if (base === "CIERRE") return e.cierreHoy === null ? null : { base, precio: e.cierreHoy };
   const u = e.intradia;
-  if (!intradiaActivo || u === null || fechaEnBogota(u.instante).getTime() !== hoy.getTime()) return null;
+  // Una barra del futuro (reloj adelantado, dato dañado) no es un precio de hoy.
+  if (!intradiaActivo || u === null || u.instante.getTime() > ahora.getTime() || fechaEnBogota(u.instante).getTime() !== hoy.getTime()) return null;
   return { base, precio: u.precio, instante: u.instante, conRetraso: u.conRetraso };
 }
 
 export function evaluarAlertas(entrada: EntradaEvaluacion): Alerta[] {
-  const { ahora, umbrales, intradiaActivo, noHabiles, especies, decretos } = entrada;
+  const { ahora, intradiaActivo, noHabiles, especies } = entrada;
+  // Los umbrales se validan otra vez: un NaN o un negativo apagaría o dispararía todo en silencio.
+  const validos = validarUmbrales(entrada.umbrales);
+  if (!validos.ok) throw new RangeError(`evaluarAlertas: umbrales inválidos: ${validos.errores.join("; ")}`);
+  const umbrales = validos.umbrales;
+  // Un decreto con fecha ex inválida se descarta solo a sí mismo.
+  const decretos = entrada.decretos.filter((d) => !Number.isNaN(d.fechaEx.getTime()));
   const hoy = fechaEnBogota(ahora);
   const dia = diaIso(hoy);
   // El orden de BASES importa: gana la primera alerta de cada clave.
@@ -67,7 +74,7 @@ export function evaluarAlertas(entrada: EntradaEvaluacion): Alerta[] {
 
   for (const base of BASES) {
     for (const e of especies) {
-      const precio = precioDe(base, e, hoy, intradiaActivo);
+      const precio = precioDe(base, e, hoy, ahora, intradiaActivo);
       for (const r of e.reglas) {
         const a = evaluarNivel({ reglaId: r.id, instrumentoId: e.instrumentoId, condicion: r.condicion, nivel: r.nivel, precio, dia }, umbrales);
         if (a) candidatas.push(a);
@@ -77,7 +84,7 @@ export function evaluarAlertas(entrada: EntradaEvaluacion): Alerta[] {
       if (m) candidatas.push(m);
     }
     const posiciones: PosicionCaida[] = especies.map((e) => ({
-      instrumentoId: e.instrumentoId, tenencia: tenenciaEn(e.movimientos, hoy), precio: precioDe(base, e, hoy, intradiaActivo)?.precio ?? null, cierreAnterior: e.cierreAnterior,
+      instrumentoId: e.instrumentoId, tenencia: tenenciaEn(e.movimientos, hoy), precio: precioDe(base, e, hoy, ahora, intradiaActivo)?.precio ?? null, cierreAnterior: e.cierreAnterior,
     }));
     const caida = evaluarCaida({ dia, base, posiciones }, umbrales);
     if (caida) candidatas.push(caida);

@@ -7,6 +7,8 @@ import type { Prisma } from "@prisma/client";
 export const TIPOS_ALERTA = ["NIVEL_CRUZADO", "NIVEL_CERCA", "MOVIMIENTO_DIA", "CAIDA_PORTAFOLIO", "DATO_VIEJO", "FECHA_EX"] as const;
 export type TipoAlerta = (typeof TIPOS_ALERTA)[number];
 export type Sentido = "BAJO" | "SOBRE";
+/** DATO_VIEJO se distingue por el sentido: RUEDA (la barra intradía está vieja) o CIERRE_FALTANTE (falta el cierre del día). */
+export type SentidoAlerta = Sentido | "RUEDA" | "CIERRE_FALTANTE";
 /** De dónde sale el precio: la última barra del día o el cierre del día. */
 export type BasePrecio = "INTRADIA" | "CIERRE";
 
@@ -49,11 +51,11 @@ export interface Alerta {
   readonly tipo: TipoAlerta;
   readonly instrumentoId: string | null;
   readonly reglaId: string | null;
-  readonly sentido: Sentido | null;
+  readonly sentido: SentidoAlerta | null;
   readonly base: BasePrecio | null;
   readonly datos: DatosAlerta;
 }
 
-export function claveDeAlerta(dia: string, tipo: TipoAlerta, instrumentoId: string | null, reglaId: string | null, sentido: Sentido | null): string {
+export function claveDeAlerta(dia: string, tipo: TipoAlerta, instrumentoId: string | null, reglaId: string | null, sentido: SentidoAlerta | null): string {
   return [dia, tipo, instrumentoId ?? "-", reglaId ?? "-", sentido ?? "-"].join("|");
 }

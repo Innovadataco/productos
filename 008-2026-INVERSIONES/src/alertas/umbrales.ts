@@ -47,10 +47,10 @@ export function validarUmbrales(entrada: unknown): ResultadoUmbrales {
   const errores: string[] = [];
   const salida: Record<string, number | boolean> = { ...UMBRALES_OMISION };
   for (const clave of Object.keys(crudo)) {
-    if (!(clave in UMBRALES_OMISION)) errores.push(`${clave}: umbral desconocido`);
+    if (!Object.hasOwn(UMBRALES_OMISION, clave)) errores.push(`${clave}: umbral desconocido`);
   }
   for (const [campo, { min, max, entero }] of Object.entries(RANGOS_UMBRALES)) {
-    if (!(campo in crudo)) continue;
+    if (!Object.hasOwn(crudo, campo)) continue;
     const v = crudo[campo];
     if (typeof v !== "number" || !Number.isFinite(v)) errores.push(`${campo}: debe ser un número`);
     else if (v < min || v > max) errores.push(`${campo}: debe estar entre ${min} y ${max}`);
@@ -58,7 +58,7 @@ export function validarUmbrales(entrada: unknown): ResultadoUmbrales {
     else salida[campo] = v;
   }
   for (const campo of CAMPOS_ACTIVA) {
-    if (!(campo in crudo)) continue;
+    if (!Object.hasOwn(crudo, campo)) continue;
     if (typeof crudo[campo] !== "boolean") errores.push(`${campo}: debe ser verdadero o falso`);
     else salida[campo] = crudo[campo];
   }

@@ -29,7 +29,8 @@ export function evaluarCaida(e: EntradaCaida, umbrales: Umbrales): Alerta | null
   let actual = new Exacto(0);
   let anterior = new Exacto(0);
   for (const p of tenidas) {
-    if (p.precio === null || p.cierreAnterior === null) return null;
+    // Falla cerrada: sin precio, o con un precio o cierre que no es positivo, el valor sería falso.
+    if (p.precio === null || p.cierreAnterior === null || !p.precio.gt(0) || !p.cierreAnterior.gt(0)) return null;
     const t = aExacto(p.tenencia);
     actual = actual.add(t.mul(aExacto(p.precio)));
     anterior = anterior.add(t.mul(aExacto(p.cierreAnterior)));

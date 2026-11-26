@@ -35,7 +35,7 @@ export function evaluarFechasEx(e: EntradaFechasEx, umbrales: Umbrales): Alerta[
   if (!umbrales.alertaExActiva) return [];
   const alertas: Alerta[] = [];
   for (const d of e.decretos) {
-    if (!d.vigente || d.anulada || d.fechaEx < e.hoy) continue;
+    if (!d.vigente || d.anulada || Number.isNaN(d.fechaEx.getTime()) || d.fechaEx < e.hoy) continue;
     const ayerDeLaEx = sumarDias(d.fechaEx, -1);
     const tenencia = tenenciaEn(e.movimientos.get(d.instrumentoId) ?? [], ayerDeLaEx < e.hoy ? ayerDeLaEx : e.hoy);
     if (tenencia <= 0n) continue;

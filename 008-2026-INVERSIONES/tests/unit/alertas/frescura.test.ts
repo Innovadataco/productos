@@ -14,7 +14,7 @@ describe("evaluarFrescura con el intradía activo", () => {
   it("es viejo después de 30 min más 20 de retraso: 50 min no salta, 51 sí", () => {
     const u = barra("2027-03-01", "11:00");
     expect(evaluarFrescura(entrada(cot("2027-03-01", "11:50"), { ultimo: u }), UMBRALES_OMISION)).toBeNull();
-    expect(evaluarFrescura(entrada(cot("2027-03-01", "11:51"), { ultimo: u }), UMBRALES_OMISION)).toMatchObject({ tipo: "DATO_VIEJO", base: "INTRADIA", sentido: null, datos: { minutosDeEdad: 51, umbralMin: 50 } });
+    expect(evaluarFrescura(entrada(cot("2027-03-01", "11:51"), { ultimo: u }), UMBRALES_OMISION)).toMatchObject({ tipo: "DATO_VIEJO", base: "INTRADIA", sentido: "RUEDA", datos: { minutosDeEdad: 51, umbralMin: 50 } });
   });
   it("respeta el umbral configurado", () => {
     const u = barra("2027-03-01", "11:00");
