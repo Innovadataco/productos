@@ -22,7 +22,8 @@ export interface EntradaNivel {
 
 export function evaluarNivel(entrada: EntradaNivel, umbrales: Umbrales): Alerta | null {
   const { reglaId, instrumentoId, condicion, nivel, precio, dia = "" } = entrada;
-  if (precio === null) return null;
+  // Un precio no positivo no es un precio: `estadoDelNivel` toma el cero como positivo y lo daría por cruzado.
+  if (precio === null || !precio.precio.gt(0)) return null;
   const estado = estadoDelNivel(condicion, nivel, precio.precio);
   const sentidoRegla: Sentido = condicion === "CIERRE_BAJO" ? "BAJO" : "SOBRE";
   const comunes = { dia, instrumentoId, reglaId, base: precio.base } as const;
