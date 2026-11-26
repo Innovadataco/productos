@@ -1,12 +1,20 @@
 /**
- * La URL base de Yahoo del ciclo intradía, que va por configuración (INV_INTRADIA_URL_YAHOO; desacople de PI y del VPS: ningún
- * destino fijo escrito en el servicio, salvo el valor por omisión). Solo se acepta lo que el buscador fijo del servicio
- * también aceptaría: https, sin credenciales, sin puerto, sin ruta ni consulta, y con un nombre (nunca una IP). La barra final se quita.
+ * Los hosts de Yahoo del ciclo intradía: una lista blanca FIJA de dos (query1 y query2). Lo único que va por configuración es
+ * cuál de los dos usa el ciclo (INV_INTRADIA_HOST_YAHOO = query1 o query2); la URL ya no es libre. El buscador fijo del servicio
+ * toma de aquí sus hosts de Yahoo. `urlBaseYahoo` normaliza una URL base: https, sin credenciales, sin puerto, ruta ni consulta,
+ * y con un nombre (nunca una IP); la barra final se quita.
  */
 
 import { isIP } from "node:net";
 
-/** Un nombre de servidor con puntos, en minúsculas: la misma regla que aplica el buscador fijo a los hosts extra. */
+/** Los dos hosts de Yahoo que el ciclo intradía puede usar, por su selector. Lista fija: no se amplía por configuración. */
+export const HOSTS_YAHOO_INTRADIA = Object.freeze({
+  query1: "query1.finance.yahoo.com",
+  query2: "query2.finance.yahoo.com",
+} as const);
+export type SelectorHostYahoo = keyof typeof HOSTS_YAHOO_INTRADIA;
+
+/** Un nombre de servidor con puntos, en minúsculas: la forma que acepta `urlBaseYahoo`. */
 export const NOMBRE_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
 
 /** La URL base normalizada («https://host», sin barra final), o null si no cumple. */

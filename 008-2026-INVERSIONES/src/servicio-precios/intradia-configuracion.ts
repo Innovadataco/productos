@@ -13,12 +13,12 @@
  *   INV_INTRADIA_PAUSA_MS       milisegundos entre una petición y la siguiente dentro de un ciclo, de 0 a 5000 (por omisión, 500).
  *   INV_INTRADIA_RETENCION_DIAS días que se conservan las barras, de 60 a 365 (por omisión, 60: la base no deja borrar lo más
  *                               joven que 60, y 60 días corridos son siempre al menos 30 días hábiles).
- *   INV_INTRADIA_URL_YAHOO      la URL base de Yahoo (por omisión, la de query1): solo https, sin credenciales, puerto, ruta ni
- *                               consulta, y su nombre no puede ser una IP (el buscador fijo la suma a sus hosts permitidos).
+ *   INV_INTRADIA_HOST_YAHOO     el host de Yahoo: query1 o query2 (por omisión, query1). Lista fija (HOSTS_YAHOO_INTRADIA): no hay URL
+ *                               libre; cualquier otro valor da INTRADIA_URL_INVALIDA, cae a query1 y deja un aviso.
  * Lo inválido cae al valor por omisión y deja un aviso que NO repite lo que llegó (puede ser un valor que no debe verse en el
  * log); el interruptor, ante la duda, apaga.
  */
-import { urlBaseYahoo } from "../precios/intradia/url";
+import { HOSTS_YAHOO_INTRADIA } from "../precios/intradia/url";
 
 export interface ConfigIntradia {
   readonly encendido: boolean;
@@ -38,7 +38,7 @@ export const CONFIG_INTRADIA_POR_OMISION: ConfigIntradia = Object.freeze({
   desdeMin: 9 * 60 + 30,
   hastaMin: 16 * 60 + 25,
   pausaMs: 500,
-  urlYahoo: "https://query1.finance.yahoo.com",
+  urlYahoo: `https://${HOSTS_YAHOO_INTRADIA.query1}`,
   retencionDias: 60,
   avisos: Object.freeze([]) as readonly string[],
 });
@@ -97,12 +97,12 @@ function ventana(env: Entorno, avisos: string[]): { desdeMin: number; hastaMin: 
   return { desdeMin: d, hastaMin: h };
 }
 
+/** La URL base de Yahoo según el selector (query1 o query2); cualquier otro valor cae a query1 con el aviso. */
 function url(env: Entorno, avisos: string[]): string {
-  const v = valorDe(env, "INV_INTRADIA_URL_YAHOO");
+  const v = valorDe(env, "INV_INTRADIA_HOST_YAHOO");
   if (v === null) return CONFIG_INTRADIA_POR_OMISION.urlYahoo;
-  const base = urlBaseYahoo(v);
-  if (base !== null) return base;
-  avisos.push("INV_INTRADIA_URL_YAHOO inválida (https, sin credenciales, puerto, ruta ni consulta): se usa la de por omisión");
+  if (Object.hasOwn(HOSTS_YAHOO_INTRADIA, v)) return `https://${HOSTS_YAHOO_INTRADIA[v as keyof typeof HOSTS_YAHOO_INTRADIA]}`;
+  avisos.push("INTRADIA_URL_INVALIDA: INV_INTRADIA_HOST_YAHOO inválida (query1 o query2): se usa query1");
   return CONFIG_INTRADIA_POR_OMISION.urlYahoo;
 }
 

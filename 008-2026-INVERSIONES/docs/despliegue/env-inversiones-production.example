@@ -33,13 +33,13 @@ INV_APP_DATABASE_URL=postgresql://inv_app:<clave>@inv-008-db:5432/inversiones?sc
 #   minuto (la corrida de las 18:00 sigue igual).
 # INV_INTRADIA_ENCENDIDO=
 # - Segundos entre ciclos (30 a 3600), la ventana en HH:MM de Colombia (hasta, no después de las 17:30), los milisegundos entre
-#   peticiones (0 a 5000), los días de retención (60 a 365) y la URL base de Yahoo (https, solo el nombre del servidor).
+#   peticiones (0 a 5000), los días de retención (60 a 365) y el host de Yahoo (query1 o query2; lista fija, no admite una URL).
 # INV_INTRADIA_CICLO_SEG=
 # INV_INTRADIA_DESDE_COT=
 # INV_INTRADIA_HASTA_COT=
 # INV_INTRADIA_PAUSA_MS=
 # INV_INTRADIA_RETENCION_DIAS=
-# INV_INTRADIA_URL_YAHOO=
+# INV_INTRADIA_HOST_YAHOO=
 
 # OPCIONALES · el servicio de IA (inv-008-ia, E6, D-026). Sin ellas nada se cae: el servicio queda en espera.
 # - La URL del rol inv_ia (el servicio de los resúmenes): la misma regla de inv_precios (el rol existe siempre; sin la

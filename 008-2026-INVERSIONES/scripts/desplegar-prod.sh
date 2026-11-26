@@ -54,7 +54,7 @@ PRECIOS="inv-008-precios"
 PUENTE_PRECIOS="br-inv008-prec"
 # Lo único que el servicio de precios recibe del compose, además del ENV de la imagen: lista blanca de NOMBRES. Las
 # INV_INTRADIA_* son la configuración (opcional) de su ciclo de precios cada minuto (src/servicio-precios/intradia-configuracion.ts).
-PROPIAS_PRECIOS=(DATABASE_URL TZ INV_INTRADIA_ENCENDIDO INV_INTRADIA_CICLO_SEG INV_INTRADIA_DESDE_COT INV_INTRADIA_HASTA_COT INV_INTRADIA_PAUSA_MS INV_INTRADIA_RETENCION_DIAS INV_INTRADIA_URL_YAHOO)
+PROPIAS_PRECIOS=(DATABASE_URL TZ INV_INTRADIA_ENCENDIDO INV_INTRADIA_CICLO_SEG INV_INTRADIA_DESDE_COT INV_INTRADIA_HASTA_COT INV_INTRADIA_PAUSA_MS INV_INTRADIA_RETENCION_DIAS INV_INTRADIA_HOST_YAHOO)
 # La sonda de la prueba de no salida: el único destino de internet de 008 en producción (el vigía, Telegram). Lo
 # resuelve y lo alcanza la ENTRADA (control positivo); desde la app no debe haber ruta.
 SONDA_SALIDA_DESTINO="api.telegram.org"
