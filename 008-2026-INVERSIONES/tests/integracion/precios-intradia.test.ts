@@ -190,26 +190,36 @@ describe("especiesIntradia · con lote o con regla en el plan vigente", () => {
     const reglaVieja = await accion("E3");
     const sinNada = await accion("E4");
     const inactiva = await accion("E5", { activo: false, conLote: true });
-    const ultima = (await db.planVersion.findFirst({ orderBy: { version: "desc" }, select: { version: true } }))?.version ?? 0;
-    const crear = (version: number, vigenteDesde: string) => db.planVersion.create({ data: { version, vigenteDesde: new Date(`${vigenteDesde}T00:00:00Z`), motivo: "ficticio", aprobadaPorId: usuarioId } });
-    const vieja = await crear(ultima + 1, "2027-01-01");
-    const vigente = await crear(ultima + 2, "2027-02-01");
-    await crear(ultima + 3, "2027-12-01"); // futura: no es la vigente de febrero
-    const regla = (planVersionId: string, instrumentoId: string | null) =>
-      db.reglaPlan.create({ data: { planVersionId, instrumentoId, condicion: "CIERRE_BAJO", nivel: new Prisma.Decimal(100), accion: "NO_ACTUAR", detalle: "ficticio" } });
-    await regla(vieja.id, reglaVieja);
-    await regla(vigente.id, conRegla);
-    await regla(vigente.id, null); // regla del portafolio: sin especie
-    await regla(vigente.id, conLote); // con lote y con regla: una sola vez
+    // Dentro de una transacción que se revierte: las tablas del plan son de solo inserción y lo escrito aquí rompería las
+    // pruebas del plan (vigencias de 2027) en la base compartida.
+    class Revertir extends Error {}
+    await db
+      .$transaction(async (tx) => {
+        const ultima = (await tx.planVersion.findFirst({ orderBy: { version: "desc" }, select: { version: true } }))?.version ?? 0;
+        const crear = (version: number, vigenteDesde: string) => tx.planVersion.create({ data: { version, vigenteDesde: new Date(`${vigenteDesde}T00:00:00Z`), motivo: "ficticio", aprobadaPorId: usuarioId } });
+        const vieja = await crear(ultima + 1, "2027-01-01");
+        const vigente = await crear(ultima + 2, "2027-02-01");
+        await crear(ultima + 3, "2027-12-01"); // futura: no es la vigente de febrero
+        const regla = (planVersionId: string, instrumentoId: string | null) =>
+          tx.reglaPlan.create({ data: { planVersionId, instrumentoId, condicion: "CIERRE_BAJO", nivel: new Prisma.Decimal(100), accion: "NO_ACTUAR", detalle: "ficticio" } });
+        await regla(vieja.id, reglaVieja);
+        await regla(vigente.id, conRegla);
+        await regla(vigente.id, null); // regla del portafolio: sin especie
+        await regla(vigente.id, conLote); // con lote y con regla: una sola vez
 
-    const especies = await especiesIntradia(db, new Date("2027-02-09T00:00:00Z"));
-    const ids = especies.map((e) => e.id);
-    expect(ids).toEqual(expect.arrayContaining([conLote, conRegla]));
-    expect(ids).not.toContain(reglaVieja);
-    expect(ids).not.toContain(sinNada);
-    expect(ids).not.toContain(inactiva);
-    expect(ids.filter((i) => i === conLote)).toHaveLength(1);
-    expect(especies.find((e) => e.id === conRegla)?.nemotecnico).toBe(`FICTICIAE2${corrida}`);
+        const especies = await especiesIntradia(tx, new Date("2027-02-09T00:00:00Z"));
+        const ids = especies.map((e) => e.id);
+        expect(ids).toEqual(expect.arrayContaining([conLote, conRegla]));
+        expect(ids).not.toContain(reglaVieja);
+        expect(ids).not.toContain(sinNada);
+        expect(ids).not.toContain(inactiva);
+        expect(ids.filter((i) => i === conLote)).toHaveLength(1);
+        expect(especies.find((e) => e.id === conRegla)?.nemotecnico).toBe(`FICTICIAE2${corrida}`);
+        throw new Revertir();
+      })
+      .catch((e: unknown) => {
+        if (!(e instanceof Revertir)) throw e;
+      });
   });
 });
 
