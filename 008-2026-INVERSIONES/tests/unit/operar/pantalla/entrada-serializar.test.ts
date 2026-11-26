@@ -8,7 +8,7 @@ import { simularOperacion } from "@/operar/simulador/simular";
 import { A, B, C, CONTEXTO, D, ESTADO, SIN_HISTORIA, idDe, operacion, regla } from "../simulador/apoyo/estado.ficticio";
 import { tarifa } from "../tarifa/apoyo/tarifa.ficticio";
 
-const cuerpo = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", saldoComisionista: "", ...cambios });
+const cuerpo = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", saldoComisionista: "", precioActual: "", ...cambios });
 
 describe("leerPedidoSimulacion", () => {
   it("convierte cantidad y precio sin punto flotante", () => {

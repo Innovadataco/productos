@@ -35,7 +35,7 @@ const DUENO = { ok: true, usuario: { id: "u-dueno-4613", email: "dueno@ejemplo.i
 const FAMILIA = { ok: true, usuario: { id: "u-familia-379", email: "familia@ejemplo.invalid", rol: "FAMILIA" } };
 const pedido = (ruta: string, cuerpo: unknown, cabeceras: Record<string, string> = {}) =>
   new Request(`${ORIGEN}${ruta}`, { method: "POST", headers: { "content-type": "application/json", origin: ORIGEN, ...cabeceras }, body: typeof cuerpo === "string" ? cuerpo : JSON.stringify(cuerpo) });
-const cuerpoSim = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", saldoComisionista: "", ...cambios });
+const cuerpoSim = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", saldoComisionista: "", precioActual: "", ...cambios });
 
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development");
@@ -87,6 +87,30 @@ describe("POST /api/operar/simular", () => {
     expect(sin.ok).toBe(true);
     expect(sin.vista.analisis).toBeNull();
     expect(registro.mock.calls.flat().join(" ")).not.toContain("4613");
+  });
+
+  it("con el precio actual escrito, la especie operada se valora con él, se dice en el informe y se le pasa al análisis; no se guarda", async () => {
+    const conFecha = { ...ESTADO, posiciones: ESTADO.posiciones.map((p) => (p.cierre === null ? p : { ...p, cierre: { ...p.cierre, fecha: new Date(Date.UTC(2027, 2, 12)) } })) };
+    leerEntradasSimulador.mockResolvedValue({ estado: conFecha, contexto: { ...CONTEXTO, tarifas: { COMPRA: tarifa() } }, caja: { fechaCorte: new Date(Date.UTC(2027, 2, 12)) } });
+    const r = await simular(pedido("/api/operar/simular", cuerpoSim({ precioActual: "5.000" })));
+    expect(r.status).toBe(200);
+    const cuerpo = (await r.json()) as { vista: { valorAccionesAntes: string; notas: string[] } };
+    expect(cuerpo.vista.valorAccionesAntes).toBe("$ 6.189.438");
+    expect(cuerpo.vista.notas[0]).toBe("Valorado con el precio escrito: $ 5.000 (trii Pro), no con el cierre del 12-mar-2027.");
+    expect(analizarSimulacion).toHaveBeenCalledWith({ soy: "la base" }, expect.objectContaining({ precioActual: expect.objectContaining({}) }));
+    expect((analizarSimulacion.mock.calls[0]![1] as { precioActual: { toFixed(): string } }).precioActual.toFixed()).toBe("5000");
+    // Sin precio escrito, el análisis no recibe ninguno.
+    await simular(pedido("/api/operar/simular", cuerpoSim()));
+    expect((analizarSimulacion.mock.calls[1]![1] as { precioActual: unknown }).precioActual).toBeNull();
+  });
+
+  it("un precio actual inválido es 400 con su campo, sin leer la base", async () => {
+    for (const malo of ["0", "-3", "abc", "1.000.001", "12,345"]) {
+      const r = await simular(pedido("/api/operar/simular", cuerpoSim({ precioActual: malo })));
+      expect(r.status, malo).toBe(400);
+      expect(((await r.json()) as { campos: string[] }).campos).toEqual(["precioActual"]);
+    }
+    expect(leerEntradasSimulador).not.toHaveBeenCalled();
   });
 
   it("la familia también simula (no escribe nada)", async () => {

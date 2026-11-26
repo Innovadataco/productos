@@ -73,12 +73,28 @@ describe("Simulador", () => {
     expect(texto(m.contenedor)).toContain(T.CALCULANDO);
     const [url, init] = fetchFalso.mock.calls[0]!;
     expect(url).toBe("/api/operar/simular");
-    expect(JSON.parse(String(init.body))).toEqual({ instrumentoId: "id-ficticia-b", lado: "VENDER", cantidad: "7", precioLimite: "11,71", comisionista: "AV", saldoComisionista: "37.911,47" });
+    expect(JSON.parse(String(init.body))).toEqual({ instrumentoId: "id-ficticia-b", lado: "VENDER", cantidad: "7", precioLimite: "11,71", comisionista: "AV", saldoComisionista: "37.911,47", precioActual: "" });
     await responder({ ok: true, vista: VISTA }, 200);
     const todo = texto(m.contenedor);
     for (const t of ["$ 13.839,81", "$ 49,9523", "Comisión (de su tarifa)", "antes: $ 37.911,47", "después: $ 24.021,7077", "Caja certificada", "Su regla de FICTICIA-A dice", "Aviso ficticio.", "Nota ficticia."]) expect(todo).toContain(t);
     for (const t of [T.ANALISIS, "Peso de FICTICIA-A", "después: 52,37 %", "A 12 meses (p5 · p50 · p95)", T.APARECEN, "concentración alta en FICTICIA-A", "Frase ficticia del análisis.", "la IA lo redactará", T.PARTIDA, "Caja (parte fija, sin rendimiento)", "antes: $ 9.372", "después: $ 4.745", "variación: −5,79 % · +0,59 % · +3,19 %", "Nota ficticia de la caja de los escenarios."]) expect(todo).toContain(t);
     expect(m.contenedor.querySelector(".op-sim-operada th")?.textContent).toBe("FICTICIA-A");
+  });
+
+  it("el precio actual de trii Pro: un campo opcional con su ayuda, que viaja en el pedido tal como se escribió", async () => {
+    await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+    expect(T.PRECIO_ACTUAL).toBe("Precio actual (trii Pro) ($, opcional)");
+    expect(T.AYUDA_PRECIO_ACTUAL).toBe(
+      "El precio que ve en trii Pro, como en la ficha (2.345,5), sin signo $. Si lo escribe, la especie se valora a ese precio y no al último cierre; no se guarda. Hasta un millón de pesos y dos decimales.",
+    );
+    expect(texto(m.contenedor.querySelector("label[for=sim-precio-actual]"))).toBe(T.PRECIO_ACTUAL);
+    expect(texto(m.contenedor.querySelector("#sim-ayuda-precio-actual"))).toBe(T.AYUDA_PRECIO_ACTUAL);
+    const campo = control<HTMLInputElement>("sim-precio-actual");
+    expect(campo.getAttribute("aria-describedby")).toBe("sim-ayuda-precio-actual");
+    expect(campo.value).toBe("");
+    await cambiar(campo, "2.345,5");
+    await enviar();
+    expect(JSON.parse(String(fetchFalso.mock.calls[0]![1].body))).toMatchObject({ precioActual: "2.345,5" });
   });
 
   it("sin reglas ni avisos, y sin valor de comisión, lo dice", async () => {
