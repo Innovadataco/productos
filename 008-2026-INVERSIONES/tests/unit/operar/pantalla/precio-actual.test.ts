@@ -131,13 +131,19 @@ describe("el informe lo dice", () => {
     expect(NOTA_VALORACION_CON_PRECIO).toBe("Es el precio de la especie operada; las demás se valoran a su último cierre y la caja se mueve al precio límite de la orden.");
     const r = respuesta("2000");
     expect(r.ok && r.vista.notas.slice(0, 2)).toEqual([textoPrecioEscrito(D("2000"), FECHA), NOTA_VALORACION_CON_PRECIO]);
-    expect(r.ok && r.vista.notas).toHaveLength(2);
+    expect(r.ok && r.vista.notas).toHaveLength(3);
+  });
+
+  it("con precio escrito, una nota fija dice que los escenarios parten de la historia de cierres", () => {
+    const r = respuesta("2000");
+    expect(r.ok && r.vista.notas).toContain("Los escenarios a 12 meses parten de la historia de cierres, no del precio escrito.");
   });
 
   it("sin precio escrito, la nota es la de siempre (el último cierre)", () => {
     const op = operacion(A, "COMPRAR", 3n, "4613.27");
     const r = aRespuestaSimulacion(simularOperacion(ESTADO, op, CONTEXTO), idDe(A), ESTADO.posiciones, "ESCRITA");
     expect(r.ok && r.vista.notas[0]).toBe("Las acciones se valoran a su último cierre; la caja se mueve al precio límite de la orden.");
+    expect(r.ok && r.vista.notas.some((nota) => nota.includes("escenarios a 12 meses"))).toBe(false);
   });
 
   it("el valor de las acciones de la vista sale del precio escrito", () => {
