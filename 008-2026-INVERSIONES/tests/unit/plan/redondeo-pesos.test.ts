@@ -44,6 +44,11 @@ describe("los pesos van con dos decimales y una sola constante", () => {
     const con = todos.filter((r) => /\bconst DECIMALES_PESO\s*=/.test(readFileSync(r, "utf8"))).map((r) => relative(SRC, r));
     expect(con).toEqual(["operar/analisis/decimales.ts"]);
   });
+  it("analisis/texto.ts no la reexporta: cada uso la importa de decimales", () => {
+    expect(readFileSync(join(SRC, "operar/analisis/texto.ts"), "utf8")).not.toMatch(/export\s*\{\s*DECIMALES_PESO/);
+    const importan = todos.filter((r) => /import\s*\{[^}]*\bDECIMALES_PESO\b[^}]*\}\s*from\s*"[^"]*analisis\/texto"/.test(readFileSync(r, "utf8")));
+    expect(importan.map((r) => relative(SRC, r))).toEqual([]);
+  });
   it.each(["app/tablero/Tablero.tsx", "app/tablero/Foto.tsx"])("%s muestra el peso con DECIMALES_PESO y no con 1 decimal", (ruta) => {
     const codigo = readFileSync(join(SRC, ruta), "utf8");
     expect(codigo).toMatch(/numero\(n\((f|t)\.pesoPct\), DECIMALES_PESO\)/);
