@@ -5,7 +5,7 @@ import "server-only";
  * llega al Ollama del Mac.
  * - La dirección del servicio sale de configuración (`INV_IA_SERVICIO_URL`; por omisión `http://inv-008-ia:8008`, el
  *   nombre del servicio en la red interna del compose) y se VALIDA (`leerOrigenServicioIa`): http, sin usuario ni ruta, un
- *   solo nombre de servicio (sin puntos: ni dominios ni IP de internet) y un puerto alto. Nunca sale del pedido: no hay a
+ *   solo nombre de servicio (sin puntos: ni dominios ni IP de internet; en producción, solo `inv-008-ia`) y un puerto alto. Nunca sale del pedido: no hay a
  *   dónde desviarlo (sin SSRF). Sin rutas fijas de PI en el código (decisión de Jelk del 26-nov: se separa de PI).
  * - El token compartido (`INV_IA_SERVICIO_TOKEN`, del archivo de producción) va en `authorization: Bearer`.
  * - El destino del Ollama NO viaja: el servicio usa el GUARDADO en config_ia, y la temperatura y el límite guardados.
@@ -41,7 +41,8 @@ export type OrigenLeido = { readonly ok: true; readonly origen: string } | { rea
 /**
  * La dirección del servicio de IA de la configuración, revisada: `http://<nombre>:<puerto>` y nada más (sin usuario, ruta,
  * consulta ni ancla). Un solo nombre de servicio (sin puntos), un puerto de 1024 a 65535 escrito, y el bucle local
- * (127.0.0.1) solo fuera de producción, para las pruebas con un servicio falso. Si no cuadra, no se usa (el motivo no
+ * (127.0.0.1) solo fuera de producción, para las pruebas con un servicio falso. En producción, el host es solo
+ * `inv-008-ia` (lista cerrada). Si no cuadra, no se usa (el motivo no
  * repite el valor: podría traer una clave).
  */
 export function leerOrigenServicioIa(entorno: Readonly<Record<string, string | undefined>>): OrigenLeido {
@@ -63,7 +64,24 @@ export function leerOrigenServicioIa(entorno: Readonly<Record<string, string | u
   const bucleLocal = u.hostname === BUCLE_LOCAL && entorno.NODE_ENV !== "production";
   if (!bucleLocal && !NOMBRE_SERVICIO.test(u.hostname)) return invalida("el nombre");
   if (!bucleLocal && u.hostname === "localhost") return invalida("el nombre");
+  // En producción, lista cerrada: solo el servicio del compose. Otro nombre de una sola etiqueta (la base, la app, un alias
+  // como ip6-localhost) llevaría el token compartido a quien no es.
+  if (entorno.NODE_ENV === "production" && u.hostname !== HOST_SERVICIO_IA) return invalida("el nombre");
   return { ok: true, origen: `http://${u.hostname}:${u.port}` };
+}
+
+const motivosAvisados = new Set<string>();
+
+/** Solo para las pruebas: vuelve a avisar. */
+export function reiniciarAvisosOrigenParaPruebas(): void {
+  motivosAvisados.clear();
+}
+
+/** Deja una línea con el MOTIVO de una dirección inválida (nunca el valor), una vez por motivo y no una por pedido. */
+export function avisarOrigenInvalido(motivo: string): void {
+  if (motivosAvisados.has(motivo)) return;
+  motivosAvisados.add(motivo);
+  console.error(`[ia-servicio] ${motivo}: no se usa y la app queda sin conexión con el servicio de IA`);
 }
 /** 32 bytes al azar en base64url son 43 caracteres: ese es el mínimo. */
 export const PATRON_TOKEN_SERVICIO = /^[A-Za-z0-9_-]{43,128}$/;

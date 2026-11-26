@@ -18,7 +18,7 @@ import type { ListaModelosPi } from "../local/modelos";
 import { crearSemaforo, type Semaforo } from "../local/semaforo";
 import { destinoDe, type ConfigIaVigente } from "./leer";
 import { TAREAS_IA } from "./parametros";
-import { VARIABLE_TOKEN_SERVICIO_IA, leerOrigenServicioIa, sondaServicio, tokenServicioValido, type BuscarServicio } from "./sonda-servicio";
+import { VARIABLE_TOKEN_SERVICIO_IA, avisarOrigenInvalido, leerOrigenServicioIa, sondaServicio, tokenServicioValido, type BuscarServicio } from "./sonda-servicio";
 
 /** La variable que enciende la sonda directa en desarrollo (su único valor válido es «directa»). */
 export const VARIABLE_SONDA_OLLAMA = "INV_IA_SONDA_OLLAMA";
@@ -95,7 +95,10 @@ export function sondaDelEntorno(entorno: Readonly<Record<string, string | undefi
   const token = entorno[VARIABLE_TOKEN_SERVICIO_IA];
   if (!tokenServicioValido(token)) return SONDA_PENDIENTE;
   const origen = leerOrigenServicioIa(entorno);
-  if (!origen.ok) return SONDA_PENDIENTE;
+  if (!origen.ok) {
+    avisarOrigenInvalido(origen.motivo);
+    return SONDA_PENDIENTE;
+  }
   if (servicioDelProceso?.token !== token || servicioDelProceso.origen !== origen.origen) {
     servicioDelProceso = { token, origen: origen.origen, sonda: sondaServicio((url, init) => globalThis.fetch(url, init) as ReturnType<BuscarServicio>, token, origen.origen) };
   }

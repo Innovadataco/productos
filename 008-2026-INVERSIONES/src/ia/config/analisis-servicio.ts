@@ -12,7 +12,7 @@ import "server-only";
 import { esDe, esObjetoPlano } from "../formas";
 import { TAREAS_IA, type TareaIa } from "./parametros";
 import {
-  RUTA_ANALIZAR, RUTA_ESTADO_ANALISIS, leerOrigenServicioIa, tokenServicioValido, VARIABLE_TOKEN_SERVICIO_IA, type BuscarServicio,
+  RUTA_ANALIZAR, RUTA_ESTADO_ANALISIS, avisarOrigenInvalido, leerOrigenServicioIa, tokenServicioValido, VARIABLE_TOKEN_SERVICIO_IA, type BuscarServicio,
 } from "./sonda-servicio";
 
 /** El servicio responde enseguida (no espera al modelo): un plazo corto basta. */
@@ -120,6 +120,9 @@ export function clienteAnalisisDelEntorno(entorno: Readonly<Record<string, strin
   const token = entorno[VARIABLE_TOKEN_SERVICIO_IA];
   if (!tokenServicioValido(token)) return null;
   const origen = leerOrigenServicioIa(entorno);
-  if (!origen.ok) return null;
+  if (!origen.ok) {
+    avisarOrigenInvalido(origen.motivo);
+    return null;
+  }
   return clienteAnalisis((url, init) => globalThis.fetch(url, init) as ReturnType<BuscarServicio>, token, origen.origen);
 }
