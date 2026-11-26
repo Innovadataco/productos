@@ -57,4 +57,11 @@ describe("textoDeAlerta", () => {
   it("lleva la especie por delante", () => {
     expect(textoDeAlerta(alerta({ tipo: "DATO_VIEJO", base: "CIERRE", datos: {} }), "FICTICIA-A")).toMatch(/^FICTICIA-A/);
   });
+  it("con datos incompletos escribe «?» en vez de fallar", () => {
+    expect(textoDeAlerta(alerta({ tipo: "NIVEL_CRUZADO", sentido: "BAJO", base: "CIERRE", datos: {} }), "FICTICIA-A")).toContain("(?)");
+    expect(textoDeAlerta(alerta({ tipo: "MOVIMIENTO_DIA", sentido: "BAJO", base: "CIERRE", datos: {} }), "FICTICIA-A")).toContain("? por debajo");
+    expect(textoDeAlerta(alerta({ tipo: "DATO_VIEJO", base: "INTRADIA", datos: { instante: barra } }), "FICTICIA-A")).toContain("lleva ? minutos");
+    expect(textoDeAlerta(alerta({ tipo: "FECHA_EX", datos: {} }), "FICTICIA-A")).toBe("FICTICIA-A: la fecha ex del decreto es el ?.");
+    expect(textoDeAlerta(alerta({ tipo: "NIVEL_CRUZADO", sentido: "BAJO", base: "INTRADIA", datos: { precio: D("1") } }), "FICTICIA-A")).toContain("la última barra intradía");
+  });
 });
