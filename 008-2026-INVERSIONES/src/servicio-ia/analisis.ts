@@ -17,6 +17,7 @@
 import { corridaDe } from "../ia/config/cableado";
 import type { ConfigIaVigente } from "../ia/config/leer";
 import type { TareaIa } from "../ia/config/parametros";
+import { PATRON_NOMBRE_MODELO_LOCAL } from "../ia/local/modelos";
 import { codigoDeError, type EstadoTipo } from "./corrida";
 
 /** El mínimo entre un análisis y el siguiente: 2 minutos, en total. */
@@ -33,7 +34,7 @@ export interface EstadoAnalisis {
   readonly enEspera: TareaIa | null;
   /** Los segundos que faltan para poder pedir otro (0 si ya se puede). */
   readonly reintentarEnS: number;
-  readonly ultimo: { readonly tarea: TareaIa; readonly estado: EstadoTipo | "ERROR" } | null;
+  readonly ultimo: { readonly tarea: TareaIa; readonly estado: EstadoTipo | "ERROR" | "DESCARTADO" } | null;
 }
 
 export interface DependenciasAnalisis {
@@ -69,7 +70,25 @@ export function crearAnalisisDemanda(deps: DependenciasAnalisis): AnalisisDemand
 
   const faltanMs = (): number => (ultimoFinMs === null ? 0 : Math.max(0, ultimoFinMs + ESPERA_MINIMA_MS - deps.ahora()));
 
-  /** Corre la tarea con la config recién leída; al terminar deja el registro y, si hay una en espera, la programa. */
+  /** El nombre del modelo para el registro: solo con la forma de siempre (el de config_ia podría traer saltos de línea). */
+  const modeloParaLog = (config: ConfigIaVigente, tarea: TareaIa): string => {
+    const m = config.tareas[tarea].modeloLocal;
+    return m === null ? "sin modelo" : PATRON_NOMBRE_MODELO_LOCAL.test(m) ? m : "MODELO_INVALIDO";
+  };
+
+  /** Un registro que falla no puede romper el estado ni dejar la espera sin programar. */
+  const anotar = (mensaje: string): void => {
+    try {
+      deps.registrar(mensaje);
+    } catch {
+      // sin registro no hay nada más que hacer: el servicio sigue.
+    }
+  };
+
+  const linea = (tarea: TareaIa, config: ConfigIaVigente, inicio: number, fin: number, estado: string, codigo: string | null): string =>
+    `análisis a demanda · tarea=${tarea} · modelo=${modeloParaLog(config, tarea)} · inicio=${new Date(inicio).toISOString()} · fin=${new Date(fin).toISOString()} · ms=${fin - inicio} · estado=${estado}${codigo === null ? "" : ` · código=${codigo}`}`;
+
+  /** Corre la tarea (el lugar ya está reservado); al terminar deja el registro y, si hay una en espera, la programa. */
   async function correr(tarea: TareaIa, config: ConfigIaVigente): Promise<void> {
     const inicio = deps.ahora();
     let estado: EstadoTipo | "ERROR" = "ERROR";
@@ -78,32 +97,36 @@ export function crearAnalisisDemanda(deps: DependenciasAnalisis): AnalisisDemand
       estado = await deps.correr(config, tarea);
     } catch (error) {
       codigo = codigoDeError(error);
-    } finally {
-      const fin = deps.ahora();
-      ultimoFinMs = fin;
-      ultimo = Object.freeze({ tarea, estado });
-      enCurso = null;
-      const modelo = config.tareas[tarea].modeloLocal ?? "sin modelo";
-      deps.registrar(
-        `análisis a demanda · tarea=${tarea} · modelo=${modelo} · inicio=${new Date(inicio).toISOString()} · fin=${new Date(fin).toISOString()} · ms=${fin - inicio} · estado=${estado}${codigo === null ? "" : ` · código=${codigo}`}`,
-      );
-      if (enEspera !== null) deps.programar(() => void arrancarEnEspera(), faltanMs());
     }
+    const fin = deps.ahora();
+    ultimoFinMs = fin;
+    ultimo = Object.freeze({ tarea, estado });
+    enCurso = null;
+    // Primero la espera, después el registro: si el registro falla, la espera no se pierde.
+    if (enEspera !== null) deps.programar(() => void arrancarEnEspera().catch(() => undefined), faltanMs());
+    anotar(linea(tarea, config, inicio, fin, estado, codigo));
   }
 
   async function arrancarEnEspera(): Promise<void> {
     const tarea = enEspera;
     if (tarea === null || enCurso !== null) return;
+    // Se reserva el lugar ANTES de leer la configuración: un pedido que llegue en ese hueco ya ve «en curso».
     enEspera = null;
+    enCurso = tarea;
     let config: ConfigIaVigente | null = null;
     try {
       config = await deps.leerConfig();
     } catch {
+      config = null;
+    }
+    // Si mientras esperaba se apagó el interruptor (o la tarea), o la base no contesta, no arranca: queda dicho.
+    if (config === null || motivoDeNo(config, tarea) !== null) {
+      const ahora = deps.ahora();
+      enCurso = null;
+      ultimo = Object.freeze({ tarea, estado: "DESCARTADO" as const });
+      anotar(`análisis a demanda · tarea=${tarea} · modelo=${config === null ? "sin modelo" : modeloParaLog(config, tarea)} · inicio=${new Date(ahora).toISOString()} · fin=${new Date(ahora).toISOString()} · ms=0 · estado=DESCARTADO`);
       return;
     }
-    // Si mientras esperaba se apagó el interruptor (o la tarea), no arranca.
-    if (config === null || motivoDeNo(config, tarea) !== null) return;
-    enCurso = tarea;
     await correr(tarea, config);
   }
 
@@ -122,7 +145,7 @@ export function crearAnalisisDemanda(deps: DependenciasAnalisis): AnalisisDemand
       const faltan = faltanMs();
       if (faltan > 0) return descarte("ESPERA_MINIMA", Math.ceil(faltan / MS_POR_S));
       enCurso = tarea;
-      void correr(tarea, config);
+      void correr(tarea, config).catch(() => undefined);
       return Object.freeze({ ok: true, lugar: "EN_CURSO" });
     },
     estado(): EstadoAnalisis {

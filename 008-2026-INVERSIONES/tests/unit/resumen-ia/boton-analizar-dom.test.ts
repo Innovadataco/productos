@@ -47,6 +47,7 @@ afterEach(() => {
 });
 
 const boton = () => m.contenedor.querySelector<HTMLButtonElement>("button.resumen-ia-analizar")!;
+const deshabilitado = () => boton().getAttribute("aria-disabled") === "true";
 const mensaje = () => texto(m.contenedor.querySelector(".resumen-ia-analizar-estado"));
 // Los relojes son falsos, pero la lectura del cuerpo de una Response usa macrotareas reales: se dejan pasar antes y después.
 const macrotarea = () => new Promise<void>((r) => setImmediate(r));
@@ -62,7 +63,7 @@ describe("BotonAnalizar", () => {
   it("al cargar: el botón con su texto y una sola lectura del estado (GET), sin pedir nada", async () => {
     await montarBoton();
     expect(texto(boton())).toBe("Analizar con IA");
-    expect(boton().disabled).toBe(false);
+    expect(deshabilitado()).toBe(false);
     expect(boton().type).toBe("button");
     expect(llamadas.map((l) => `${l.init.method ?? "GET"} ${l.url}`)).toEqual(["GET /api/ia/analizar"]);
   });
@@ -76,9 +77,19 @@ describe("BotonAnalizar", () => {
     expect(post.init.body).toBe('{"tarea":"REGLAS"}');
     expect((post.init.headers as Record<string, string>)["content-type"]).toBe("application/json");
     expect(mensaje()).toBe("Analizando…");
-    expect(boton().disabled).toBe(true);
-    expect(boton().getAttribute("aria-busy")).toBe("true");
+    expect(deshabilitado()).toBe(true);
+    expect(boton().hasAttribute("disabled")).toBe(false); // sigue enfocable: no pierde el foco
+    expect(m.contenedor.querySelector(".resumen-ia-analizar-caja")?.getAttribute("aria-busy")).toBe("true");
     expect(m.contenedor.querySelector(".resumen-ia-analizar-estado")?.getAttribute("role")).toBe("status");
+  });
+
+  it("un segundo clic mientras analiza no manda otro pedido (el botón sigue enfocable pero se ignora)", async () => {
+    await montarBoton();
+    await act(async () => { boton().click(); });
+    await asentar();
+    await act(async () => { boton().click(); });
+    await asentar();
+    expect(llamadas.filter((l) => l.init.method === "POST")).toHaveLength(1);
   });
 
   it("sondea el estado cada poco y, al terminar su tarea, refresca la pantalla y vuelve a quedar libre", async () => {
@@ -92,7 +103,7 @@ describe("BotonAnalizar", () => {
     await asentar(SONDEO_MS);
     expect(refrescar).toHaveBeenCalledTimes(1);
     expect(mensaje()).toBe(textoEspera(120));
-    expect(boton().disabled).toBe(true);
+    expect(deshabilitado()).toBe(true);
   });
 
   it("deja de sondear cuando termina (no queda un reloj girando)", async () => {
@@ -112,7 +123,7 @@ describe("BotonAnalizar", () => {
     await act(async () => { boton().click(); });
     await asentar();
     expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.enEspera);
-    expect(boton().disabled).toBe(true);
+    expect(deshabilitado()).toBe(true);
     await asentar(SONDEO_MS);
     expect(refrescar).not.toHaveBeenCalled();
   });
@@ -123,7 +134,7 @@ describe("BotonAnalizar", () => {
     await act(async () => { boton().click(); });
     await asentar();
     expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.ocupado);
-    expect(boton().disabled).toBe(false);
+    expect(deshabilitado()).toBe(false);
     expect(refrescar).not.toHaveBeenCalled();
   });
 
@@ -133,9 +144,9 @@ describe("BotonAnalizar", () => {
     await act(async () => { boton().click(); });
     await asentar();
     expect(mensaje()).toBe("Puede volver a analizar en 1 min 15 s.");
-    expect(boton().disabled).toBe(true);
+    expect(deshabilitado()).toBe(true);
     await asentar(76_000);
-    expect(boton().disabled).toBe(false);
+    expect(deshabilitado()).toBe(false);
   });
 
   it.each([
@@ -154,7 +165,7 @@ describe("BotonAnalizar", () => {
     await act(async () => { boton().click(); });
     await asentar();
     expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton[clave as "apagado"]);
-    expect(boton().disabled).toBe(false);
+    expect(deshabilitado()).toBe(false);
   });
 
   it("si la red falla al pedir: mensaje de error y el botón sigue disponible", async () => {
@@ -163,7 +174,7 @@ describe("BotonAnalizar", () => {
     await act(async () => { boton().click(); });
     await asentar();
     expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.error);
-    expect(boton().disabled).toBe(false);
+    expect(deshabilitado()).toBe(false);
     expect(texto(m.contenedor)).not.toContain("4613");
   });
 
@@ -171,27 +182,27 @@ describe("BotonAnalizar", () => {
     estado = { ...LIBRE, enCurso: "DIARIO" };
     await montarBoton("DIARIO");
     expect(mensaje()).toBe("Analizando…");
-    expect(boton().disabled).toBe(true);
+    expect(deshabilitado()).toBe(true);
   });
 
   it("con la espera mínima vigente al cargar: deshabilitado y dice cuándo", async () => {
     estado = { ...LIBRE, reintentarEnS: 90 };
     await montarBoton();
     expect(mensaje()).toBe("Puede volver a analizar en 1 min 30 s.");
-    expect(boton().disabled).toBe(true);
+    expect(deshabilitado()).toBe(true);
   });
 
   it("un análisis en curso de OTRA tarea no marca este botón como analizando", async () => {
     estado = { ...LIBRE, enCurso: "REGLAS" };
     await montarBoton("DIARIO");
     expect(mensaje()).toBe("");
-    expect(boton().disabled).toBe(false);
+    expect(deshabilitado()).toBe(false);
   });
 
   it("si el estado no se puede leer (servicio caído): el botón queda disponible, sin mensaje alarmante", async () => {
     fetchFalso.mockResolvedValueOnce(new Response("{}", { status: 503 }));
     await montarBoton();
-    expect(boton().disabled).toBe(false);
+    expect(deshabilitado()).toBe(false);
     expect(mensaje()).toBe("");
   });
 

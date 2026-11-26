@@ -111,10 +111,10 @@ export function FormularioIa({ datos }: { readonly datos: DatosEdicionIa }) {
         <Texto id="ia-limite" modo="numeric" etiqueta={ETIQUETAS_IA.limiteSegundos!} valor={valores.limiteSegundos} ayuda={`De ${opciones.limites.limiteMin} a ${opciones.limites.limiteMax} (el límite de PI).`} onCambio={(v) => cambiar({ limiteSegundos: v })} error={errorDe("limiteSegundos")} />
       </div>
       <div className="edicion-campo edicion-casilla">
-        <input id="ia-analisis-demanda" type="checkbox" checked={valores.analisisDemanda} onChange={(e) => cambiar({ analisisDemanda: e.target.checked })} aria-describedby="ia-analisis-demanda-ayuda" />
+        <input id="ia-analisis-demanda" type="checkbox" checked={valores.analisisDemanda} onChange={(e) => cambiar({ analisisDemanda: e.target.checked })} aria-invalid={errorDe("analisisDemanda") ? true : undefined} aria-describedby={errorDe("analisisDemanda") ? "ia-analisis-demanda-ayuda ia-analisis-demanda-error" : "ia-analisis-demanda-ayuda"} />
         <label htmlFor="ia-analisis-demanda">{ETIQUETAS_IA.analisisDemanda}</label>
         <p className="edicion-ayuda" id="ia-analisis-demanda-ayuda">{TEXTOS_IA.AYUDA_ANALISIS}</p>
-        {errorDe("analisisDemanda") ? <p className="edicion-error">{errorDe("analisisDemanda")}</p> : null}
+        {errorDe("analisisDemanda") ? <p className="edicion-error" id="ia-analisis-demanda-error">{errorDe("analisisDemanda")}</p> : null}
       </div>
 
       <fieldset className="edicion-regla" aria-describedby="ia-destino-aviso">

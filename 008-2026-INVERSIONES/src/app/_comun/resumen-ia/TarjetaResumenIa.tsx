@@ -60,7 +60,7 @@ export function TarjetaResumenIa({ vista }: { readonly vista: VistaResumenIa }) 
         {vista.aviso === null ? null : <p className="resumen-ia-aviso">{vista.aviso}</p>}
         <Cifras vista={vista} />
         <Pie vista={vista} />
-        {vista.puedeAnalizar ? <BotonAnalizar tarea={vista.tipo} /> : null}
+        {vista.puedeAnalizar ? <BotonAnalizar key={vista.tipo} tarea={vista.tipo} /> : null}
       </div>
     </section>
   );

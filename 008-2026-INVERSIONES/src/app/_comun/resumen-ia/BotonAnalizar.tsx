@@ -44,7 +44,7 @@ async function leerEstado(): Promise<EstadoServicio | null> {
   }
 }
 
-/** El texto fijo de un pedido que no se aceptó, según el estado HTTP y el código; null si es una espera mínima (lleva los segundos). */
+/** El texto fijo de un pedido que no se aceptó, según el estado HTTP y el código (la espera mínima, con sus segundos, se atiende antes). */
 function textoDeRechazo(estado: number, codigo: unknown): string {
   if (codigo === "OCUPADO") return T.ocupado;
   if (codigo === "ANALISIS_APAGADO") return T.apagado;
@@ -115,6 +115,7 @@ export function BotonAnalizar({ tarea }: { readonly tarea: TipoResumen }) {
   // Mientras se analiza (o espera su turno): sondeo corto del estado.
   useEffect(() => {
     if (fase === "libre") return undefined;
+    let vivo = true;
     const reloj = setInterval(() => {
       sondeos.current += 1;
       if (sondeos.current > MAX_SONDEOS) {
@@ -125,10 +126,14 @@ export function BotonAnalizar({ tarea }: { readonly tarea: TipoResumen }) {
         return;
       }
       void leerEstado().then((e) => {
-        if (e !== null) aplicar(e);
+        // Una respuesta tardía de un sondeo que ya se cerró (terminó, cambió la fase o se desmontó) no se aplica.
+        if (vivo && e !== null) aplicar(e);
       });
     }, SONDEO_MS);
-    return () => clearInterval(reloj);
+    return () => {
+      vivo = false;
+      clearInterval(reloj);
+    };
   }, [fase, aplicar, poner]);
 
   useEffect(() => () => { if (desbloqueo.current !== null) clearTimeout(desbloqueo.current); }, []);
@@ -160,8 +165,9 @@ export function BotonAnalizar({ tarea }: { readonly tarea: TipoResumen }) {
 
   const ocupado = fase !== "libre";
   return (
-    <div className="resumen-ia-analizar-caja">
-      <button type="button" className="resumen-ia-analizar" disabled={ocupado || bloqueado} aria-busy={ocupado ? true : undefined} onClick={() => void pedir()}>
+    <div className="resumen-ia-analizar-caja" aria-busy={ocupado ? true : undefined}>
+      {/* aria-disabled y no disabled: el botón no pierde el foco al empezar el análisis; pedir() ya ignora el clic. */}
+      <button type="button" className="resumen-ia-analizar" aria-disabled={ocupado || bloqueado} onClick={() => void pedir()}>
         {T.etiqueta}
       </button>
       <p className="resumen-ia-analizar-estado" role="status" aria-live="polite">{mensaje}</p>

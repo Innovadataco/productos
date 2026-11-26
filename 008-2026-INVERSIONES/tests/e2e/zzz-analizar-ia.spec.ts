@@ -14,7 +14,6 @@
 import { Prisma } from "@prisma/client";
 import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { emitirAccesoFamiliar } from "../../src/auth/familia";
-import { ORIGENES_DESARROLLO } from "../../src/auth/origen";
 import type { EntradaPaquete } from "../../src/ia/contrato";
 import { sha256Hex } from "../../src/ia/hash";
 import { construirPaquete } from "../../src/ia/paquete";
@@ -184,7 +183,8 @@ test.describe("el dueño, con el interruptor encendido", () => {
 });
 
 test.describe("la tarjeta con el último análisis válido y su fecha", () => {
-  test.use({ viewport: ANCHO_CELULAR });
+  // El botón lee el estado al cargar y la app de pruebas no tiene el servicio de IA (503): el navegador lo registra.
+  test.use({ viewport: ANCHO_CELULAR, erroresEsperados: [/\/api\/ia\/analizar$/] });
 
   for (const tema of ["light", "dark"] as const) {
     test(`un análisis de AYER sale con su fecha y hora y el aviso de desactualizado · ${tema === "light" ? "claro" : "oscuro"}`, async ({ page }, info) => {
@@ -206,7 +206,8 @@ test.describe("la tarjeta con el último análisis válido y su fecha", () => {
 });
 
 test.describe("la familia (solo lectura)", () => {
-  test.use({ viewport: ANCHO_CELULAR });
+  // Las respuestas 403 son lo que se prueba: el navegador las registra como «Failed to load resource».
+  test.use({ viewport: ANCHO_CELULAR, erroresEsperados: [/\/api\/ia\/analizar$/] });
 
   test("no ve el botón en ninguna pantalla y la ruta le responde 403, aunque el interruptor esté encendido", async ({ page }, info) => {
     await guardarConfig(true);
@@ -225,10 +226,12 @@ test.describe("la familia (solo lectura)", () => {
       await expect(tarjetaDe(page, p.tipo)).toBeVisible();
       await expect(page.getByRole("button", { name: BOTON })).toHaveCount(0);
     }
-    const origen = ORIGENES_DESARROLLO[0]!;
-    const pedido = await page.request.post("/api/ia/analizar", { data: { tarea: "DIARIO" }, headers: { origin: origen } });
-    expect(pedido.status()).toBe(403);
-    const estado = await page.request.get("/api/ia/analizar");
-    expect(estado.status()).toBe(403);
+    // Desde el navegador (con su Origin y su sesión), como lo haría la pantalla.
+    const respuestas = await page.evaluate(async () => {
+      const pedido = await fetch("/api/ia/analizar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tarea: "DIARIO" }) });
+      const estado = await fetch("/api/ia/analizar");
+      return { pedido: pedido.status, estado: estado.status };
+    });
+    expect(respuestas).toEqual({ pedido: 403, estado: 403 });
   });
 });

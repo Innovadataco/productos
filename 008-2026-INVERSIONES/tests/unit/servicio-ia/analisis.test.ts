@@ -134,6 +134,80 @@ describe("1 en curso y 1 en espera", () => {
   });
 });
 
+describe("la espera que arranca (carrera con un pedido nuevo)", () => {
+  it("mientras el que espera lee la configuración, un pedido nuevo NO arranca otro: queda en espera y solo corre uno", async () => {
+    let ahora = T0;
+    const corridas: { terminar(): void }[] = [];
+    const lineas: string[] = [];
+    const temporizadores: (() => void)[] = [];
+    let soltarConfig: (c: ConfigIaVigente) => void = () => undefined;
+    let lecturas = 0;
+    let activas = 0;
+    let maximo = 0;
+    const analisis = crearAnalisisDemanda({
+      leerConfig: () => (++lecturas !== 3 ? Promise.resolve(ENCENDIDA) : new Promise((r) => { soltarConfig = r; })),
+      correr: () => new Promise<EstadoTipo>((resolver) => { activas += 1; maximo = Math.max(maximo, activas); corridas.push({ terminar: () => { activas -= 1; resolver("PUBLICADO"); } }); }),
+      ahora: () => ahora, programar: (a) => void temporizadores.push(a), registrar: (m) => void lineas.push(m),
+    });
+    await analisis.pedir("DIARIO");
+    await analisis.pedir("REGLAS");
+    corridas[0]!.terminar();
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    ahora += ESPERA_MINIMA_MS;
+    temporizadores[0]!();
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    // El que espera está leyendo la configuración (tercera lectura, pendiente): entra un pedido nuevo.
+    const intruso = analisis.pedir("DIARIO");
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    soltarConfig(ENCENDIDA);
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    // El lugar ya estaba reservado: el nuevo pasa a esperar, no arranca.
+    expect(await intruso).toEqual({ ok: true, lugar: "EN_ESPERA" });
+    expect(maximo).toBe(1);
+  });
+
+  it("si al arrancar el que espera la configuración ya no lo permite, queda registrado (no se pierde en silencio) y el servicio sigue libre", async () => {
+    const m = montar();
+    await m.analisis.pedir("DIARIO");
+    await m.analisis.pedir("REGLAS");
+    m.corridas[0]!.terminar();
+    await m.asentar();
+    m.cambiarConfig({ ...ENCENDIDA, analisisDemanda: false });
+    m.avanzar(ESPERA_MINIMA_MS);
+    m.temporizadores[0]!.accion();
+    await m.asentar();
+    expect(m.lineas.some((l) => l.includes("tarea=REGLAS") && l.includes("estado=DESCARTADO"))).toBe(true);
+    expect(m.analisis.estado()).toMatchObject({ enCurso: null, enEspera: null });
+  });
+
+  it("un registrar que lanza no deja el servicio atascado: la espera igual se programa", async () => {
+    let ahora = T0;
+    const temporizadores: (() => void)[] = [];
+    const corridas: { terminar(): void }[] = [];
+    const analisis = crearAnalisisDemanda({
+      leerConfig: async () => ENCENDIDA,
+      correr: () => new Promise<EstadoTipo>((r) => void corridas.push({ terminar: () => r("PUBLICADO") })),
+      ahora: () => ahora, programar: (a) => void temporizadores.push(a), registrar: () => { throw new Error("log caído"); },
+    });
+    await analisis.pedir("DIARIO");
+    await analisis.pedir("REGLAS");
+    corridas[0]!.terminar();
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    expect(temporizadores).toHaveLength(1);
+    expect(analisis.estado().enCurso).toBeNull();
+    ahora += 1;
+  });
+
+  it("el nombre del modelo que no tiene la forma de siempre no va crudo al registro", async () => {
+    const m = montar({ ...ENCENDIDA, tareas: { ...ENCENDIDA.tareas, DIARIO: { activo: true, modeloLocal: "falso\nlinea=inventada" } } });
+    await m.analisis.pedir("DIARIO");
+    m.corridas[0]!.terminar();
+    await m.asentar();
+    expect(m.lineas[0]).toContain("modelo=MODELO_INVALIDO");
+    expect(m.lineas[0]).not.toContain("inventada");
+  });
+});
+
 describe("mínimo de 2 minutos entre análisis, en total y no por tarea", () => {
   it("la espera es de 120 s", () => {
     expect(ESPERA_MINIMA_MS).toBe(120_000);

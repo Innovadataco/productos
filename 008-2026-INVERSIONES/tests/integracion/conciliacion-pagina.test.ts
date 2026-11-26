@@ -12,6 +12,8 @@ import { CERTIFICACION_FICTICIA, generarCertificacionPdf, type EspecCertificacio
 
 const exigirSesion = vi.hoisted(() => vi.fn());
 vi.mock("@/auth/sesion", () => ({ exigirSesion }));
+// El tablero trae el botón «Analizar con IA» si el interruptor de config_ia está encendido: su useRouter pide el router de Next.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 import Pagina from "@/app/conciliacion/page";
 import Inicio from "@/app/page";
