@@ -41,14 +41,15 @@ export async function origenDeLaSerie(serie: string): Promise<Origen> {
 }
 
 /**
- * «traído 18:04 · <fuente>» si se trajo el mismo día del dato; si no, «traído 26-nov 09:10 · <fuente>» (con el año si
- * cambia respecto del día del dato). Como lo pinta la app para una fuente que no tiene nombre propio.
+ * «<fuente> · traído 18:04» si se trajo el mismo día del dato; si no, «<fuente> · traído 26-nov 09:10» (con el año si
+ * cambia respecto del día del dato). Como lo pinta la app para una fuente que no tiene nombre propio (y, como todo
+ * cierre, sin retraso: el retraso solo va en un precio de la rueda).
  */
 export function traido(o: Origen, diaDelDato: string): string {
   const mismoDia = o.traido.dia === diaDelDato;
   const conAnio = o.traido.dia.slice(0, 4) !== diaDelDato.slice(0, 4);
   const cuando = mismoDia ? o.traido.hhmm : `${conAnio ? fecha(o.traido.dia) : fecha(o.traido.dia).replace(/-\d{4}$/, "")} ${o.traido.hhmm}`;
-  return `traído ${cuando} · ${o.fuente}`;
+  return `${o.fuente} · traído ${cuando}`;
 }
 
 /** El día del dato como lo dice la línea: «22-nov», o «22-nov-2024» si se trajo en otro año. */

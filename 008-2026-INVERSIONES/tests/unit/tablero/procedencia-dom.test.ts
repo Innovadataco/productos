@@ -25,10 +25,10 @@ const MISMO_DIA = aVista(resumenDe([
   especie({ nemotecnico: "FICTB", cantidad: 7n, costoVivo: D(7919), cierre: cierre("1211.09", "2027-03-31", "2027-04-01T12:13:00Z") }),
 ]));
 
-const TRAIDO_A = "traído 18:04 · Yahoo (BVC)";
-const TRAIDO_B = "traído 1-abr 07:13 · Yahoo (BVC)";
-const TRAIDO_C = "traído 17:41 · bvc-ficticia";
-const COMPUESTA = "Cierre más antiguo 12-mar · traído 17:41 · bvc-ficticia y Yahoo (BVC)";
+const TRAIDO_A = "Yahoo (BVC) · traído 18:04";
+const TRAIDO_B = "Yahoo (BVC) · traído 1-abr 07:13";
+const TRAIDO_C = "bvc-ficticia · traído 17:41";
+const COMPUESTA = "Cierre más antiguo 12-mar · bvc-ficticia y Yahoo (BVC) · traído 17:41";
 const AVISO = "Cierres de fechas distintas: del 12-mar-2027 al 31-mar-2027.";
 
 let m: Montaje;

@@ -34,6 +34,18 @@ async function detalleOcultoPeroPresente(zona: Locator): Promise<void> {
   expect(await zona.locator("[title]").count()).toBe(0);
 }
 
+/** Ninguna línea de procedencia se sale de su celda ni de la pantalla (el retraso alarga la línea: a 375 px se parte, no desborda). */
+async function lineasDentroDeSuCelda(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const fuera = [...document.querySelectorAll(".fecha-dato-linea")].filter((l) => {
+      const celda = l.closest("td, th, li, section, article, div");
+      if (celda === null) return false;
+      return l.getBoundingClientRect().right > celda.getBoundingClientRect().right + 1 || l.getBoundingClientRect().right > window.innerWidth;
+    });
+    return fuera.length;
+  });
+}
+
 /** Contraste WCAG del texto de cada nota contra el primer fondo opaco de sus ancestros (y que ninguna se salga a lo ancho). */
 async function revisarNotas(page: Page): Promise<{ readonly peor: number; readonly cuantas: number; readonly desborde: number }> {
   return page.evaluate(() => {
@@ -100,6 +112,8 @@ for (const tema of ["light", "dark"] as const) {
       expect(r.cuantas).toBeGreaterThan(5);
       expect(r.peor, "contraste de las notas").toBeGreaterThanOrEqual(4.5);
       expect(r.desborde).toBeLessThanOrEqual(0);
+      expect(await lineasDentroDeSuCelda(page), "líneas fuera de su celda").toBe(0);
+      expect((await notas(page.locator("main"))).filter((l) => /retraso/.test(l)), "un cierre no lleva retraso").toEqual([]);
     });
 
     test("plan: el «Último cierre» de cada regla con cuándo se trajo, de dónde y si el dato es viejo", async ({ page }, info) => {

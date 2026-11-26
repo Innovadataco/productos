@@ -7,6 +7,7 @@ import {
   avisoAtraso, avisoMezcladas, detalleCompuesta, detalleProcedencia, nombreFuente, nombresDeFuentes, piezasCompuesta, piezasProcedencia, textoCompuesta, textoProcedencia,
 } from "@/app/_comun/fecha-dato/textos";
 import type { Procedencia, ProcedenciaCompuesta } from "@/app/_comun/fecha-dato/tipos";
+import { FUENTES } from "@/precios/fuentes";
 import { prohibidasEn } from "../operar/informe/lenguaje";
 
 const PROHIBIDO =
@@ -46,31 +47,55 @@ describe("nombreFuente", () => {
 
 describe("la línea de un dato: tipo y fecha, fuente y cuándo se trajo", () => {
   it("un cierre del mismo día en que se trajo: «Cierre 17-mar · Yahoo (BVC) · traído 18:04»", () => {
-    expect(textoProcedencia(p(), { etiqueta: "Cierre" })).toBe("Cierre 17-mar · traído 18:04 · Yahoo (BVC)");
-    expect(textoProcedencia(p({ fuente: "sfc:qhpu-8ixx" }), { etiqueta: "Valor de unidad" })).toBe("Valor de unidad 17-mar · traído 18:04 · SFC");
-    expect(textoProcedencia(p())).toBe("Dato 17-mar · traído 18:04 · Yahoo (BVC)");
+    expect(textoProcedencia(p(), { etiqueta: "Cierre" })).toBe("Cierre 17-mar · Yahoo (BVC) · traído 18:04");
+    expect(textoProcedencia(p({ fuente: "sfc:qhpu-8ixx" }), { etiqueta: "Valor de unidad" })).toBe("Valor de unidad 17-mar · SFC · traído 18:04");
+    expect(textoProcedencia(p())).toBe("Dato 17-mar · Yahoo (BVC) · traído 18:04");
   });
 
   it("traído otro día: con su día; con otro año, los días con año", () => {
-    expect(textoProcedencia(p({ dia: "2027-03-16", traidoEn: "2027-03-17 08:13" }), { etiqueta: "Cierre" })).toBe("Cierre 16-mar · traído 17-mar 08:13 · Yahoo (BVC)");
-    expect(textoProcedencia(p({ dia: "2024-11-22", traidoEn: "2027-01-13 18:41" }), { etiqueta: "Cierre" })).toBe("Cierre 22-nov-2024 · traído 13-ene-2027 18:41 · Yahoo (BVC)");
+    expect(textoProcedencia(p({ dia: "2027-03-16", traidoEn: "2027-03-17 08:13" }), { etiqueta: "Cierre" })).toBe("Cierre 16-mar · Yahoo (BVC) · traído 17-mar 08:13");
+    expect(textoProcedencia(p({ dia: "2024-11-22", traidoEn: "2027-01-13 18:41" }), { etiqueta: "Cierre" })).toBe("Cierre 22-nov-2024 · Yahoo (BVC) · traído 13-ene-2027 18:41");
   });
 
   it("sin la fecha del dato, cuando la celda ya la dice", () => {
-    expect(textoProcedencia(p({ dia: "2027-03-16", traidoEn: "2027-03-17 08:13" }), { sinFecha: true })).toBe("traído 17-mar 08:13 · Yahoo (BVC)");
-    expect(textoProcedencia(p(), { sinFecha: true, etiqueta: "Cierre" })).toBe("Cierre · traído 18:04 · Yahoo (BVC)");
+    expect(textoProcedencia(p({ dia: "2027-03-16", traidoEn: "2027-03-17 08:13" }), { sinFecha: true })).toBe("Yahoo (BVC) · traído 17-mar 08:13");
+    expect(textoProcedencia(p(), { sinFecha: true, etiqueta: "Cierre" })).toBe("Cierre · Yahoo (BVC) · traído 18:04");
   });
 
-  it("un precio de la rueda dice la hora del precio, no «cierre»", () => {
+  it("un precio de la rueda dice la hora del precio, la fuente y su retraso (sin «traído»)", () => {
     const r = p({ tipo: "RUEDA", horaDato: "11:42", traidoEn: "2027-03-17 11:44" });
-    expect(textoProcedencia(r)).toBe("Precio del 17-mar a las 11:42 · traído 11:44 · Yahoo (BVC)");
-    expect(textoProcedencia(r, { sinFecha: true })).toBe("Precio de las 11:42 · traído 11:44 · Yahoo (BVC)");
-    expect(textoProcedencia(p({ tipo: "RUEDA" }))).toBe("Precio en rueda del 17-mar · traído 18:04 · Yahoo (BVC)");
+    expect(textoProcedencia(r)).toBe("Precio del 17-mar a las 11:42 · Yahoo (BVC) · hasta 20 min de retraso");
+    expect(textoProcedencia(r, { sinFecha: true })).toBe("Precio de las 11:42 · Yahoo (BVC) · hasta 20 min de retraso");
+    expect(textoProcedencia(p({ tipo: "RUEDA" }))).toBe("Precio en rueda del 17-mar · Yahoo (BVC) · hasta 20 min de retraso");
+  });
+
+  it("el retraso sale de la tabla de fuentes (retrasoRueda), no está fijo en el texto", () => {
+    const yahoo = FUENTES.find((f) => f.codigo === "yahoo")!;
+    expect(textoProcedencia(p({ tipo: "RUEDA", horaDato: "11:42" }), { sinFecha: true })).toContain(yahoo.retrasoRueda!);
+  });
+
+  it("un cierre no lleva retraso: la fuente y cuándo se trajo", () => {
+    expect(textoProcedencia(p(), { etiqueta: "Cierre" })).not.toMatch(/retraso/);
+    expect(textoProcedencia(p({ tipo: "CIERRE" }), { etiqueta: "Cierre" })).toBe("Cierre 17-mar · Yahoo (BVC) · traído 18:04");
+  });
+
+  it("una fuente sin retraso (sfc:) o desconocida, en la rueda: sin retraso, con cuándo se trajo", () => {
+    for (const fuente of ["sfc:qhpu-8ixx", "e2e-ficticio", null]) {
+      const t = textoProcedencia(p({ fuente, tipo: "RUEDA", horaDato: "11:42", traidoEn: "2027-03-17 11:44" }), { sinFecha: true });
+      expect(t, String(fuente)).not.toMatch(/retraso/);
+      expect(t, String(fuente)).toMatch(/ · traído 11:44$/);
+    }
+    expect(textoProcedencia(p({ fuente: "sfc:x", tipo: "RUEDA", horaDato: "11:42", traidoEn: "2027-03-17 11:44" }), { sinFecha: true })).toBe("Precio de las 11:42 · SFC · traído 11:44");
+  });
+
+  it("el retraso es una pieza de texto plano, sin <time>", () => {
+    const piezas = piezasProcedencia(p({ tipo: "RUEDA", horaDato: "11:42" }), { sinFecha: true });
+    expect(piezas.at(-1)).toEqual({ texto: "hasta 20 min de retraso" });
   });
 
   it("sin la hora en que se trajo (o mal escrita), lo dice; nunca inventa una", () => {
     for (const traidoEn of [null, "", "2027-03-17", "2027-03-17T18:04", "2027-13-17 18:04", "2027-03-17 24:00", "2027-03-17 18:60", "2027-03-32 18:04"]) {
-      expect(textoProcedencia(p({ traidoEn }), { etiqueta: "Cierre" }), String(traidoEn)).toBe("Cierre 17-mar-2027 · sin la hora en que se trajo · Yahoo (BVC)");
+      expect(textoProcedencia(p({ traidoEn }), { etiqueta: "Cierre" }), String(traidoEn)).toBe("Cierre 17-mar-2027 · Yahoo (BVC) · sin la hora en que se trajo");
     }
   });
 
@@ -81,7 +106,7 @@ describe("la línea de un dato: tipo y fecha, fuente y cuándo se trajo", () => 
     ]);
     expect(piezasProcedencia(p({ dia: "malo" })).filter((x) => x.dateTime !== undefined).map((x) => x.dateTime)).toEqual(["2027-03-17T18:04-05:00"]);
     expect(piezasProcedencia(p({ tipo: "RUEDA", horaDato: "11:42", traidoEn: "2027-03-17 11:44" })).filter((x) => x.dateTime !== undefined).map((x) => x.dateTime)).toEqual([
-      "2027-03-17", "2027-03-17T11:42-05:00", "2027-03-17T11:44-05:00",
+      "2027-03-17", "2027-03-17T11:42-05:00",
     ]);
   });
 });
@@ -118,13 +143,13 @@ describe("el aviso de dato viejo", () => {
 describe("un valor que suma varios datos", () => {
   it("con fechas distintas: el cierre más antiguo, cuándo se trajo y las fuentes, y el aviso con las dos puntas", () => {
     const c = compuesta({ fuentes: ["yahoo", "e2e-ficticio"] });
-    expect(textoCompuesta(c)).toBe("Cierre más antiguo 1-mar · traído 2-mar 18:40 · e2e-ficticio y Yahoo (BVC)");
+    expect(textoCompuesta(c)).toBe("Cierre más antiguo 1-mar · e2e-ficticio y Yahoo (BVC) · traído 2-mar 18:40");
     expect(avisoMezcladas(c)).toBe("Cierres de fechas distintas: del 1-mar-2021 al 17-mar-2021.");
   });
 
   it("todos del mismo día: el cierre de ese día y sin aviso", () => {
     const c = compuesta({ masVieja: p(), masReciente: "2027-03-17", mezcladas: false });
-    expect(textoCompuesta(c)).toBe("Cierre 17-mar · traído 18:04 · Yahoo (BVC)");
+    expect(textoCompuesta(c)).toBe("Cierre 17-mar · Yahoo (BVC) · traído 18:04");
     expect(avisoMezcladas(c)).toBeNull();
   });
 

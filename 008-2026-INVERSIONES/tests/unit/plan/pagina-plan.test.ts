@@ -100,15 +100,15 @@ describe("la versión vigente, con cierres y distancia al nivel", () => {
     expect(a[6]).toContain("sin verificar");
     expect(a.slice(7, 9)).toEqual(["a +9,1 % del nivel", "2"]);
     expect(celdas(fila(raiz, "FICTB")).slice(5, 8)).toEqual([
-      "venció el 31-oct-2024", expect.stringMatching(/^\$ 1\.913 · 22-nov-2024verificado A&Vtraído 14-ene-2027 07:07 · Yahoo \(BVC\)/), "tocada · cierre bajo el nivel",
+      "venció el 31-oct-2024", expect.stringMatching(/^\$ 1\.913 · 22-nov-2024verificado A&VYahoo \(BVC\) · traído 14-ene-2027 07:07/), "tocada · cierre bajo el nivel",
     ]);
   });
 
   it("cada «Último cierre» dice cuándo lo trajo 008 (hora de Colombia) y de qué fuente; sin cierre, nada (frente fecha-hora-datos)", async () => {
     const raiz = await pantalla();
     const nota = (especie: string) => [...(fila(raiz, especie)?.querySelectorAll("td")[5]?.querySelectorAll(".fecha-dato-linea") ?? [])].map(texto);
-    expect(nota("FICTA")).toEqual(["traído 13-ene-2027 18:41 · Yahoo (BVC)"]);
-    expect(nota("FICTC")).toEqual(["traído 13-ene-2027 18:41 · bvc-ficticia"]);
+    expect(nota("FICTA")).toEqual(["Yahoo (BVC) · traído 13-ene-2027 18:41"]);
+    expect(nota("FICTC")).toEqual(["bvc-ficticia · traído 13-ene-2027 18:41"]);
     expect(nota("FICTP")).toEqual([]);
     for (const tr of [...raiz.querySelectorAll("tbody tr")].filter((t) => texto(t.querySelector("th")) === "Portafolio")) expect(tr.querySelector(".fecha-dato")).toBeNull();
   });

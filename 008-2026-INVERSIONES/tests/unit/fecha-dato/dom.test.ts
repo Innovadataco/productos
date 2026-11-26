@@ -36,7 +36,7 @@ describe("FechaDato", () => {
     const raiz = pintar(createElement(FechaDato, { procedencia: P, etiqueta: "Cierre" }));
     expect(raiz.querySelector(".fecha-dato")).not.toBeNull();
     expect(linea(raiz)).toBe(textoProcedencia(P, { etiqueta: "Cierre" }));
-    expect(linea(raiz)).toBe("Cierre 17-mar · traído 18:04 · Yahoo (BVC)");
+    expect(linea(raiz)).toBe("Cierre 17-mar · Yahoo (BVC) · traído 18:04");
     expect(tiempos(raiz)).toEqual([["2027-03-17", "17-mar"], ["2027-03-17T18:04-05:00", "18:04"]]);
   });
 
@@ -52,7 +52,7 @@ describe("FechaDato", () => {
   it("sin la fecha, cuando la celda ya la dice; sin la hora en que se trajo, lo dice y no pinta <time> de hora", () => {
     expect(linea(pintar(createElement(FechaDato, { procedencia: P, sinFecha: true })))).toBe(textoProcedencia(P, { sinFecha: true }));
     const sinHora = pintar(createElement(FechaDato, { procedencia: { ...P, traidoEn: null }, etiqueta: "Cierre" }));
-    expect(linea(sinHora)).toBe("Cierre 17-mar-2027 · sin la hora en que se trajo · Yahoo (BVC)");
+    expect(linea(sinHora)).toBe("Cierre 17-mar-2027 · Yahoo (BVC) · sin la hora en que se trajo");
     expect(tiempos(sinHora)).toEqual([["2027-03-17", "17-mar-2027"]]);
   });
 
@@ -64,10 +64,13 @@ describe("FechaDato", () => {
     for (const h of [1, 0, null, undefined]) expect(pintar(createElement(FechaDato, { procedencia: { ...P, habilesAtras: h } })).querySelector(".fecha-dato-aviso"), String(h)).toBeNull();
   });
 
-  it("un precio de la rueda dice el retraso de la fuente en el detalle", () => {
+  it("un precio de la rueda dice el retraso DENTRO de la línea visible; un cierre, ninguno", () => {
     const raiz = pintar(createElement(FechaDato, { procedencia: { ...P, tipo: "RUEDA", horaDato: "11:42", traidoEn: "2027-03-17 11:44" } }));
-    expect(linea(raiz)).toBe("Precio del 17-mar a las 11:42 · traído 11:44 · Yahoo (BVC)");
-    expect(detalle(raiz)).toMatch(/en la rueda, hasta 20 min de retraso/);
+    expect(linea(raiz)).toBe("Precio del 17-mar a las 11:42 · Yahoo (BVC) · hasta 20 min de retraso");
+    expect(texto(raiz.querySelector(".fecha-dato-linea"))).toMatch(/hasta 20 min de retraso$/);
+    expect(raiz.querySelectorAll(".fecha-dato-linea")).toHaveLength(1);
+    const cierre = pintar(createElement(FechaDato, { procedencia: P, etiqueta: "Cierre" }));
+    expect(linea(cierre)).not.toMatch(/retraso/);
   });
 
   it("es una nota: sin role, sin región viva y sin nada que se pueda tocar", () => {

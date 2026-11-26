@@ -268,15 +268,15 @@ describe("src/app/conciliacion/page.tsx · de dónde y de cuándo es cada «Valo
   it("cada especie: el cierre del corte, cuándo lo trajo 008 (hora de Colombia) y la fuente, en su «Valor sistema»", async () => {
     const raiz = await pantalla();
     const celdas = [...fila(raiz, "FICTA")!.querySelectorAll("th, td")];
-    expect(notas(celdas[5])).toEqual(["Cierre 22-nov-2024 · traído 13-ene-2027 18:41 · Yahoo (BVC)"]);
+    expect(notas(celdas[5])).toEqual(["Cierre 22-nov-2024 · Yahoo (BVC) · traído 13-ene-2027 18:41"]);
     expect(texto(celdas[5])).toMatch(/^\$ 110\.000Cierre 22-nov-2024/);
     expect(notas(fila(raiz, "FICTC"))).toEqual([]);
   });
 
   it("el total de acciones, con el cierre más viejo que lo compone; el fondo, con su valor de unidad", async () => {
     const raiz = await pantalla();
-    expect(notas(fila(raiz, "Total de acciones"))).toEqual(["Cierre 22-nov-2024 · traído 13-ene-2027 18:41 · Yahoo (BVC)"]);
-    expect(notas(fila(raiz, "Fondo ficticio uno"))).toEqual(["Valor de unidad 22-nov-2024 · traído 14-ene-2027 07:07 · SFC"]);
+    expect(notas(fila(raiz, "Total de acciones"))).toEqual(["Cierre 22-nov-2024 · Yahoo (BVC) · traído 13-ene-2027 18:41"]);
+    expect(notas(fila(raiz, "Fondo ficticio uno"))).toEqual(["Valor de unidad 22-nov-2024 · SFC · traído 14-ene-2027 07:07"]);
     expect(notas(fila(raiz, "Efectivo"))).toEqual([]);
   });
 
