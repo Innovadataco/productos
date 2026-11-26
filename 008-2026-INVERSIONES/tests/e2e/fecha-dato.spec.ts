@@ -9,6 +9,7 @@
  */
 import { expect, type Locator, type Page } from "@playwright/test";
 import { fecha } from "../../src/app/tablero/formato";
+import { textoProcedencia } from "../../src/app/_comun/fecha-dato/textos";
 import { PaginaConciliacion } from "./pagina-conciliacion";
 import { PaginaDatosOficiales } from "./pagina-datos-oficiales";
 import { PaginaPlan } from "./pagina-plan";
@@ -32,15 +33,13 @@ async function sinDetalleOculto(zona: Locator): Promise<void> {
   expect(await zona.locator("[title]").count()).toBe(0);
 }
 
-/** Ninguna línea de procedencia se sale de su celda ni de la pantalla (el retraso alarga la línea: a 375 px se parte, no desborda). */
-async function lineasDentroDeSuCelda(page: Page): Promise<number> {
+/** Ninguna línea de procedencia se sale de su celda (el retraso alarga la línea: a 375 px se parte; el desborde de la página se mide aparte). */
+async function lineasDentroDeSuCelda(page: Page): Promise<string[]> {
   return page.evaluate(() => {
-    const fuera = [...document.querySelectorAll(".fecha-dato-linea")].filter((l) => {
-      const celda = l.closest("td, th, li, section, article, div");
-      if (celda === null) return false;
-      return l.getBoundingClientRect().right > celda.getBoundingClientRect().right + 1 || l.getBoundingClientRect().right > window.innerWidth;
-    });
-    return fuera.length;
+    const caja = (l: Element) => l.closest("td, th, li, section, article, div")!;
+    return [...document.querySelectorAll(".fecha-dato-linea")]
+      .filter((l) => l.getBoundingClientRect().right > caja(l).getBoundingClientRect().right + 1)
+      .map((l) => `${caja(l).tagName}.${caja(l).className} «${l.textContent}» ${Math.round(l.getBoundingClientRect().right)} > ${Math.round(caja(l).getBoundingClientRect().right)}`);
   });
 }
 
@@ -110,8 +109,18 @@ for (const tema of ["light", "dark"] as const) {
       expect(r.cuantas).toBeGreaterThan(5);
       expect(r.peor, "contraste de las notas").toBeGreaterThanOrEqual(4.5);
       expect(r.desborde).toBeLessThanOrEqual(0);
-      expect(await lineasDentroDeSuCelda(page), "líneas fuera de su celda").toBe(0);
+      expect(await lineasDentroDeSuCelda(page), "líneas fuera de su celda").toEqual([]);
       expect((await notas(page.locator("main"))).filter((l) => /retraso/.test(l)), "un cierre no lleva retraso").toEqual([]);
+
+      // No hay datos de rueda en la base: se pone, en la celda «Cierre» de la primera fila, la línea de rueda tal como la arma
+      // la app (con retraso) y se mide a 375 px que no se sale de la celda, no desborda la página y conserva el contraste.
+      const rueda = textoProcedencia({ dia: "2027-03-17", traidoEn: "2027-03-17 11:44", fuente: "yahoo", tipo: "RUEDA", horaDato: "11:42" }, { sinFecha: true });
+      expect(rueda).toMatch(/hasta 20 min de retraso$/);
+      await page.locator("td.num .fecha-dato-linea").first().evaluate((el, t) => { el.textContent = t; }, rueda);
+      expect(await lineasDentroDeSuCelda(page), "la línea de rueda, fuera de su celda").toEqual([]);
+      const conRueda = await revisarNotas(page);
+      expect(conRueda.desborde).toBeLessThanOrEqual(0);
+      expect(conRueda.peor, "contraste con la línea de rueda").toBeGreaterThanOrEqual(4.5);
     });
 
     test("plan: el «Último cierre» de cada regla con cuándo se trajo, de dónde y si el dato es viejo", async ({ page }, info) => {
