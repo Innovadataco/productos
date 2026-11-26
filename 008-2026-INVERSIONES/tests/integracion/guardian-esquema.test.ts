@@ -387,3 +387,34 @@ describe("guardián del esquema: tarifa_comision", () => {
     expect(await guardianTras(['ALTER TABLE "tarifa_comision" DISABLE TRIGGER "tarifa_comision_solo_insercion"'])).toContain("tarifa_comision");
   });
 });
+
+// Precios cada minuto: precio_intradia. Si una migración o un DROP le quita un disparador, la unicidad, una CHECK, o si
+// una de sus funciones cambia o pasa a SECURITY DEFINER, el despliegue se detiene.
+describe("guardián del esquema: precio_intradia", () => {
+  it.each([
+    ["el disparador de la inserción", ['DROP TRIGGER "precio_intradia_insercion" ON "precio_intradia"'], "precio_intradia_insercion"],
+    ["el disparador del retiro", ['DROP TRIGGER "precio_intradia_retiro" ON "precio_intradia"'], "precio_intradia_retiro"],
+    ["la unicidad (sin duplicados)", ['DROP INDEX "precio_intradia_instrumentoId_instante_fuente_key"'], "precio_intradia_instrumentoId_instante_fuente_key"],
+    ["la CHECK del precio", ['ALTER TABLE "precio_intradia" DROP CONSTRAINT "precio_intradia_precio_chk"'], "precio_intradia_precio_chk"],
+    ["la CHECK de la fuente", ['ALTER TABLE "precio_intradia" DROP CONSTRAINT "precio_intradia_fuente_chk"'], "precio_intradia_fuente_chk"],
+    ["la llave de la especie", ['ALTER TABLE "precio_intradia" DROP CONSTRAINT "precio_intradia_instrumentoId_fkey"'], "precio_intradia_instrumentoId_fkey"],
+  ])("falla si se borra %s", async (_n, romper, nombre) => {
+    expect(await guardianTras(romper)).toContain(nombre);
+  });
+
+  it("falla si la CHECK del precio se afloja", async () => {
+    const otra = 'ALTER TABLE "precio_intradia" ADD CONSTRAINT "precio_intradia_precio_chk" CHECK ("precio" > -1)';
+    expect(await guardianTras(['ALTER TABLE "precio_intradia" DROP CONSTRAINT "precio_intradia_precio_chk"', otra])).toContain("precio_intradia_precio_chk");
+  });
+
+  it("falla si una de sus funciones cambia de código, pierde el search_path o pasa a SECURITY DEFINER", async () => {
+    const reemplazo = `CREATE OR REPLACE FUNCTION "inv_precio_intradia_retiro"() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$ BEGIN RETURN OLD; END; $$`;
+    expect(await guardianTras([reemplazo])).toContain("inv_precio_intradia_retiro");
+    expect(await guardianTras(['ALTER FUNCTION "inv_precio_intradia_insercion"() SECURITY DEFINER'])).toContain("inv_precio_intradia_insercion");
+    expect(await guardianTras(['ALTER FUNCTION "inv_precio_intradia_retiro"() RESET search_path'])).toContain("inv_precio_intradia_retiro");
+  });
+
+  it("falla si un disparador queda deshabilitado", async () => {
+    expect(await guardianTras(['ALTER TABLE "precio_intradia" DISABLE TRIGGER "precio_intradia_retiro"'])).toContain("precio_intradia");
+  });
+});

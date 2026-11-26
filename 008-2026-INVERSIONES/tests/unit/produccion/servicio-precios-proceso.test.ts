@@ -77,6 +77,7 @@ describe("el uso nombra los modos nuevos", () => {
     expect(s.stdout).toMatch(/^ {2}--ahora \[--desde AAAA-MM-DD\]/m);
     expect(s.stdout).toMatch(/^ {2}precios\b/m);
     expect(s.stdout).toMatch(/^ {2}fondo\b/m);
+    expect(s.stdout).toMatch(/^ {2}intradia\b/m);
   });
 
   it("bucle no lleva argumentos: con uno, sale con 2 y el uso", async () => {
