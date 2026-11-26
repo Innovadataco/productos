@@ -62,3 +62,38 @@ describe("servir · sin la credencial", () => {
     expect(lineas.join("")).toContain("sin INV_IA_DATABASE_URL");
   });
 });
+
+describe("servirAhora", () => {
+  const URL_FICTICIA = "postgresql://inv_ia:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=2";
+  const procesoCon = (env: Record<string, string>) => {
+    const lineas: string[] = [];
+    return { lineas, proceso: { env: env as unknown as NodeJS.ProcessEnv, stdout: { write: (t: string) => void lineas.push(t) }, once: vi.fn(), removeListener: vi.fn() } };
+  };
+
+  it("sin la credencial: lo dice, no crea el cliente de la base y sale con 1", async () => {
+    const { servirAhora } = await import("@/servicio-ia/cableado");
+    const { proceso, lineas } = procesoCon({});
+    const crearDb = vi.fn();
+    expect(await servirAhora(proceso, vi.fn() as never, crearDb as never)).toBe(1);
+    expect(crearDb).not.toHaveBeenCalled();
+    expect(lineas.join("")).toContain("sin INV_IA_DATABASE_URL");
+  });
+
+  it("con la credencial: una sola conexión, la configuración de la base (apagada: nada) y cierra la base; nunca repite la URL", async () => {
+    const { mkdtempSync } = await import("node:fs");
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const { servirAhora, VARIABLE_ESTADO_DIR } = await import("@/servicio-ia/cableado");
+    const dir = mkdtempSync(path.join(os.tmpdir(), "inv-008-ia-ahora-"));
+    const { proceso, lineas } = procesoCon({ DATABASE_URL: URL_FICTICIA, [VARIABLE_ESTADO_DIR]: dir });
+    const desconectar = vi.fn(async () => undefined);
+    const db = { configIa: { findFirst: vi.fn(async () => null) }, $disconnect: desconectar };
+    const crearDb = vi.fn(() => db);
+    expect(await servirAhora(proceso, vi.fn() as never, crearDb as never)).toBe(0);
+    expect(new URL(crearDb.mock.calls[0]![0] as string).searchParams.get("connection_limit")).toBe("1");
+    expect(desconectar).toHaveBeenCalledTimes(1);
+    const todo = lineas.join("");
+    expect(todo).toMatch(/apagada/);
+    expect(todo).not.toContain("clave-ficticia-4613");
+  });
+});
