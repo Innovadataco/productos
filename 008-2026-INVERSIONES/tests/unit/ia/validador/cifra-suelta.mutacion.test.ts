@@ -27,7 +27,8 @@ describe("CIFRA_SUELTA apagada: RENDER_CIFRA sigue mordiendo", () => {
   it("la presentación exacta del paquete escrita por el modelo, sin la cita", () => {
     const escrita = presentacionDe(p, "GANANCIA_TOTAL");
     const r = validarSalida(salidaDe(p, `El valor de las acciones subió a {VALOR_ACCIONES} y la ganancia total es ${escrita}.`), p);
-    expect(r.ok ? [] : r.motivos).toEqual(["RENDER_CIFRA"]);
+    // Además de la cifra suelta, la etiqueta «ganancia total» va sin su cita (ETIQUETA.SIN_CITA).
+    expect(r.ok ? [] : r.motivos).toEqual(["ETIQUETA_NO_COINCIDE", "RENDER_CIFRA"]);
   });
 
   it("la presentación exacta repetida junto a su propia cita", () => {

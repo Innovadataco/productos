@@ -4,13 +4,14 @@
  * subió» se atribuía a otro dato y un DIARIO podía publicar una dirección falsa. Datos inventados.
  */
 import { describe, expect, it } from "vitest";
+import type { PaqueteHechos } from "@/ia/contrato";
 import { armarDiario } from "@/ia/hechos";
 import { validarSalida } from "@/ia/validador/validar";
 import { entradaDiarioFicticia } from "../hechos/apoyo.ficticio";
 import { paqueteFicticio, salidaDe } from "./apoyo/salidas.ficticio";
 
 const p = paqueteFicticio("DIARIO");
-const patrones = (cruda: string, paquete = p): readonly string[] => {
+const patrones = (cruda: string, paquete: PaqueteHechos = p): readonly string[] => {
   const r = validarSalida(cruda, paquete);
   return r.ok ? [] : r.hallazgos.map((h) => h.patron);
 };

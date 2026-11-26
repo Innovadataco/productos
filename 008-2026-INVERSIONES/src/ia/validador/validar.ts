@@ -23,6 +23,7 @@ import { revisarCaracteres } from "./caracteres";
 import { CODIGOS_VALIDADOR, ErrorValidador, LIMITES_SALIDA, type CodigoValidador } from "./codigos";
 import { cotejarCifras } from "./cotejo";
 import { revisarEtiquetas } from "./etiquetas";
+import { revisarEtiquetasSinCita } from "./etiqueta-sin-cita";
 import { esNombre, hechosPorId, type HechosPorId } from "./hechos";
 import { leerSalida, type FraseLeida } from "./leer";
 import { revisarMarcas } from "./marcas";
@@ -73,7 +74,9 @@ function analizarFrase(frase: FraseLeida, paquete: PaqueteHechos, porId: HechosP
   for (const h of revisarCaracteres(frase.texto)) anotar(h.codigo, h.patron);
   const conocidas = revisarCitas(texto, porId, anotar);
   const preparado = prepararTexto(texto);
-  const atribucion = atribuir(clausulasDe(preparado.minusculas), (id) => porId.has(id) && !esNombre(porId.get(id)));
+  const clausulas = clausulasDe(preparado.minusculas);
+  const atribucion = atribuir(clausulas, (id) => porId.has(id) && !esNombre(porId.get(id)));
+  for (const patron of revisarEtiquetasSinCita(clausulas, paquete)) anotar("ETIQUETA_NO_COINCIDE", patron);
   for (const h of revisarEtiquetas(atribucion, porId, paquete.tipo, new Set(conocidas))) anotar(h.codigo, h.patron);
   for (const h of revisarMarcas(preparado, atribucion, porId)) anotar(h.codigo, h.patron);
   for (const [codigo, patrones] of LISTAS) for (const id of coincidenciasEn(preparado, patrones)) anotar(codigo, id);
