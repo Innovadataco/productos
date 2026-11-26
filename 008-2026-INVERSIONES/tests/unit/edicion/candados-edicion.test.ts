@@ -45,7 +45,7 @@ const violacionesComunes = (t: string): string[] => [
   ...["crudo", "encargo", "claveHash", "totpSecreto"].filter((c) => new RegExp(`\\b${c}\\s*:`).test(t)),
 ];
 
-const PAGINAS = ["plan", "decision", "enlace", "tarifas"].map((p) => join(EDICION, p, "page.tsx"));
+const PAGINAS = [join(EDICION, "page.tsx"), ...["plan", "decision", "enlace", "tarifas"].map((p) => join(EDICION, p, "page.tsx"))];
 const RUTAS = ["src/app/api/plan/versiones/route.ts", "src/app/api/decisiones/route.ts", "src/app/api/decisiones/enlaces/route.ts", "src/app/api/operar/tarifas/route.ts"];
 
 describe("candados del área de edición · controles positivos", () => {
@@ -75,11 +75,21 @@ describe("candados del área de edición · el árbol real", () => {
     for (const r of RUTAS) expect(existsSync(join(RAIZ, r)), r).toBe(true);
   });
 
-  it("cada página exige al dueño antes de leer nada", () => {
+  it("cada página exige al dueño antes de leer nada (la que lee, lee después del guardián; el índice no lee)", () => {
     for (const p of archivos(EDICION).filter((r) => r.endsWith("page.tsx"))) {
-      expect(leer(p), rel(p)).toMatch(/await exigirDueno\(\);[\s\S]*datos\w*\(/);
-      expect(leer(p), rel(p)).not.toMatch(/exigirSesion\(/);
+      const fuente = leer(p);
+      const guardian = fuente.indexOf("await exigirDueno();");
+      expect(guardian, rel(p)).toBeGreaterThanOrEqual(0);
+      expect(fuente.slice(0, guardian), rel(p)).not.toMatch(/\bdatos\w*\(/);
+      if (p !== join(EDICION, "page.tsx")) expect(fuente.slice(guardian), rel(p)).toMatch(/\bdatos\w*\(/);
+      expect(fuente, rel(p)).not.toMatch(/exigirSesion\(/);
     }
+  });
+
+  it("el índice /edicion no lee nada más que la sesión: no importa la base ni las lecturas (revisión code-reviewer, BAJO)", () => {
+    const fuente = leer(join(EDICION, "page.tsx"));
+    expect(importacionesDeValor(fuente).filter((m) => /^@\/lib\/db$|lecturas|\/datos$|@prisma\/client/.test(m))).toEqual([]);
+    expect(fuente).not.toMatch(/\bdb\./);
   });
 
   it("los componentes de cliente solo importan React, tipos y los módulos puros del área", () => {

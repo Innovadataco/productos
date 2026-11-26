@@ -28,7 +28,7 @@ export default async function PaginaEdicionTarifas({ searchParams }: Props) {
     return <SinBase />;
   }
   return (
-    <PaginaEdicion seccion="plan" titulo={TEXTOS_TARIFAS.TITULO} volver={{ href: "/operar", texto: "Volver a Operar" }}>
+    <PaginaEdicion seccion="configuracion" titulo={TEXTOS_TARIFAS.TITULO} volver={{ href: "/operar", texto: "Volver a Operar" }}>
       <Vigentes datos={datos} />
       <FormularioTarifa datos={datos} />
       <Historia datos={datos} />

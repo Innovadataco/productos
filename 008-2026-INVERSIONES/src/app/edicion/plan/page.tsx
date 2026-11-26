@@ -26,7 +26,7 @@ export default async function PaginaEdicionPlan({ searchParams }: Props) {
     return <SinBase />;
   }
   return (
-    <PaginaEdicion seccion="plan" titulo={TEXTOS_PLAN.TITULO} volver={{ href: "/plan", texto: "Volver al plan" }}>
+    <PaginaEdicion seccion="configuracion" titulo={TEXTOS_PLAN.TITULO} volver={{ href: "/plan", texto: "Volver al plan" }}>
       <FormularioPlan datos={datos} />
     </PaginaEdicion>
   );

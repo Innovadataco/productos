@@ -10,6 +10,16 @@ import type { CampoConError } from "./tipos";
 
 export { fecha } from "../tablero/formato";
 
+/** /edicion · el índice de la configuración (frente menu-configuracion): cada entrada con su línea de para qué sirve. */
+export const TEXTOS_CONFIGURACION = {
+  TITULO: "Configuración",
+  ENTRADAS: [
+    { clave: "ia", texto: "Configuración de la IA", href: "/edicion/ia", para: "Qué modelo usa cada tarea de la IA, local o en la nube, y el tope mensual de gasto de la nube." },
+    { clave: "tarifas", texto: "Tarifas de comisión", href: "/edicion/tarifas", para: "La tarifa real de cada casa de bolsa, por lado, que usa el simulador «¿Y si…?» de Operar." },
+    { clave: "plan", texto: "Editar el plan", href: "/edicion/plan", para: "Una versión nueva del plan con sus reglas; la anterior queda en la historia." },
+  ],
+} as const;
+
 export const PIE_EDICION =
   "El sistema registra lo que usted decide; no recomienda comprar ni vender. Nada se edita ni se borra: un cambio es una versión nueva o una corrección, y lo anterior queda en la historia.";
 

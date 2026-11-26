@@ -49,6 +49,7 @@ describe("/edicion/ia", () => {
   it("el título, el flujo de PI, los avisos fijos y el pie", async () => {
     const raiz = await pantalla(PaginaIa(consulta()));
     expect(texto(raiz.querySelector("h1"))).toBe(TEXTOS_IA.TITULO);
+    expect(raiz.querySelector('nav[aria-label="Secciones"] a[aria-current="page"]')?.getAttribute("href")).toBe("/edicion");
     const todo = texto(raiz);
     expect(todo).toContain("Encender la nube tiene costo y envía a Anthropic los hechos ciegos (sin cifras, especies ni cuentas)");
     expect(todo).toContain("En producción, el servidor solo puede llegar a la dirección y al puerto del Mac que autorizó PI. Cualquier otra dirección queda bloqueada por el firewall y la prueba falla");

@@ -29,7 +29,7 @@ export default async function PaginaEdicionIa({ searchParams }: Props) {
     return <SinBase />;
   }
   return (
-    <PaginaEdicion seccion="plan" titulo={TEXTOS_IA.TITULO} volver={{ href: "/plan", texto: "Volver al plan" }}>
+    <PaginaEdicion seccion="configuracion" titulo={TEXTOS_IA.TITULO} volver={{ href: "/plan", texto: "Volver al plan" }}>
       <Resumen datos={datos} />
       <EstadoPuertas puertas={datos.puertas} />
       <FormularioIa datos={datos} />

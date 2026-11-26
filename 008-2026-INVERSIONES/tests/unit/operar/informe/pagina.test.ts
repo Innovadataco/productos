@@ -109,6 +109,11 @@ describe("la pantalla", () => {
     expect(nav).toEqual(SECCIONES.map((s) => [s.texto, s.href, s.clave === "operar" ? "page" : null]));
     expect(nav.map(([t]) => t).slice(1, 3)).toEqual(["Plan", "Operar"]);
     expect(nav.filter(([t]) => t === "Operar")).toHaveLength(1);
+    // El dueño ve «Configuración» al final (frente menu-configuracion); la familia, la lista de siempre sin ella.
+    expect(nav.at(-1)).toEqual(["Configuración", "/edicion", null]);
+    const familia = [...pintar(VISTA, true).querySelectorAll('header nav[aria-label="Secciones"] a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
+    expect(familia).toEqual(nav.slice(0, -1));
+    expect(familia.map(([t]) => t)).not.toContain("Configuración");
   });
 
   it("el título, el aviso fijo y los precios: último cierre disponible, y el aviso si la carga se detuvo", () => {

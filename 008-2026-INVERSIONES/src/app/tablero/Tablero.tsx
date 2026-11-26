@@ -10,7 +10,7 @@ import { Foto } from "./Foto";
 import { procedenciaDeCierre, procedenciaDeFilas } from "./procedencia";
 import { MarcaSoloLectura } from "./SoloLectura";
 import { Linea, Peso } from "./Graficas";
-import { SECCIONES } from "./secciones";
+import { seccionesVisibles } from "./secciones";
 import type { EvolucionVista, FilaVista, LineaConciliacionVista, MovimientoVista, Vista } from "./tipos";
 
 const MOVIMIENTO_REDUCIDO = "(prefers-reduced-motion: reduce)";
@@ -116,12 +116,12 @@ function FechaDeCierres({ vista }: { vista: Vista }) {
   return <>Cierre <b>{fecha(ref)}</b></>;
 }
 
-/** Las otras pantallas (plan, diario y conciliación); el portafolio es la actual. */
-function Secciones() {
+/** Las otras pantallas; el portafolio es la actual. El familiar (solo lectura) no ve «Configuración». */
+function Secciones({ soloLectura }: { readonly soloLectura: boolean }) {
   return (
     <nav aria-label="Secciones">
       <ul className="secciones">
-        {SECCIONES.map((s) => <li key={s.clave}><a href={s.href} aria-current={s.clave === "portafolio" ? "page" : undefined}>{s.texto}</a></li>)}
+        {seccionesVisibles(soloLectura).map((s) => <li key={s.clave}><a href={s.href} aria-current={s.clave === "portafolio" ? "page" : undefined}>{s.texto}</a></li>)}
       </ul>
     </nav>
   );
@@ -134,7 +134,7 @@ function Encabezado({ vista, soloLectura }: { vista: Vista; soloLectura: boolean
     <header className="top">
       <div className="wrap fila-top">
         <div className="marca"><span className="sello" aria-hidden="true">Inv</span>Inversiones · Mi portafolio{soloLectura ? <>{" "}<MarcaSoloLectura /></> : null}</div>
-        <Secciones />
+        <Secciones soloLectura={soloLectura} />
         <div className="meta">
           <FechaDeCierres vista={vista} /> · última carga <b>{fecha(vista.ultimaCarga)}</b>
         </div>

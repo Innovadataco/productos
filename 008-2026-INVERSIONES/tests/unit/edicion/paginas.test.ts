@@ -54,11 +54,11 @@ describe("páginas del área de edición", () => {
     expect(datosEdicionEnlace).not.toHaveBeenCalled();
   });
 
-  it("/edicion/plan: el formulario con la sección «Plan» marcada y el pie; lee con lo que vino en ?base", async () => {
+  it("/edicion/plan: el formulario con la sección «Configuración» marcada y el pie; lee con lo que vino en ?base", async () => {
     const raiz = await pantalla(PaginaPlan(consulta({ base: "2" })));
     expect(datosEdicionPlan).toHaveBeenCalledWith({ soy: "la base" }, "2");
     expect(texto(raiz.querySelector("h1"))).toBe("Nueva versión del plan");
-    expect(raiz.querySelector('nav[aria-label="Secciones"] a[aria-current="page"]')?.getAttribute("href")).toBe("/plan");
+    expect(raiz.querySelector('nav[aria-label="Secciones"] a[aria-current="page"]')?.getAttribute("href")).toBe("/edicion");
     expect(raiz.querySelector("form")).not.toBeNull();
     expect(texto(raiz.querySelector("footer"))).toContain(PIE_EDICION);
   });

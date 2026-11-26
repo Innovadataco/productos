@@ -62,6 +62,7 @@ describe("/edicion/tarifas (servidor)", () => {
     expect(datosEdicionTarifas).toHaveBeenCalledWith({ soy: "la base" }, "3");
     const todo = texto(raiz);
     expect(texto(raiz.querySelector("h1"))).toBe(TEXTOS_TARIFAS.TITULO);
+    expect(raiz.querySelector('nav[aria-label="Secciones"] a[aria-current="page"]')?.getAttribute("href")).toBe("/edicion");
     expect(todo).toContain("La tarifa explica 37 de 41 órdenes de compra pasadas");
     expect(todo).toContain(TEXTOS_TARIFAS.SIN_TARIFA);
     expect(todo).toContain(TEXTOS_TARIFAS.FORMULA);
