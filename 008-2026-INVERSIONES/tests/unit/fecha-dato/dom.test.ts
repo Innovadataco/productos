@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // El componente de la procedencia (frente fecha-hora-datos), pintado en el servidor y leído en un DOM: dice lo mismo que
 // sus textos puros, con <time> para el día del dato y la hora de Colombia, y en un valor compuesto el aviso de fechas
-// distintas solo si las hay. No es un control ni una región viva (no lleva role, ni enlaces, ni botones): es una nota.
+// distintas y el de dato viejo solo si los hay. Lleva además el detalle de la fuente y su retraso en un texto accesible
+// (visualmente oculto, no un tooltip). No es un control ni una región viva (sin role, enlaces ni botones): es una nota.
 // Datos inventados.
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -9,7 +10,7 @@ import { hydrateRoot } from "react-dom/client";
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { FechaDato, FechaDatoCompuesta } from "@/app/_comun/fecha-dato/FechaDato";
-import { avisoMezcladas, textoCompuesta, textoProcedencia } from "@/app/_comun/fecha-dato/textos";
+import { avisoAtraso, avisoMezcladas, detalleCompuesta, detalleProcedencia, textoCompuesta, textoProcedencia } from "@/app/_comun/fecha-dato/textos";
 import type { Procedencia, ProcedenciaCompuesta } from "@/app/_comun/fecha-dato/tipos";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -26,25 +27,52 @@ function pintar(el: ReturnType<typeof createElement>): HTMLElement {
 const texto = (el: Element | null | undefined) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
 const tiempos = (raiz: HTMLElement) => [...raiz.querySelectorAll("time")].map((t) => [t.getAttribute("datetime"), texto(t)]);
 
+const linea = (raiz: HTMLElement) => texto(raiz.querySelector(".fecha-dato-linea"));
+const detalle = (raiz: HTMLElement) => texto(raiz.querySelector(".fecha-dato-detalle"));
+const VIEJO: Procedencia = { ...P, habilesAtras: 3 };
+
 describe("FechaDato", () => {
-  it("dice lo mismo que textoProcedencia, en una sola nota con su clase", () => {
+  it("la línea dice lo mismo que textoProcedencia, en una sola nota con su clase", () => {
     const raiz = pintar(createElement(FechaDato, { procedencia: P, etiqueta: "Cierre" }));
-    const nota = raiz.querySelector(".fecha-dato");
-    expect(nota).not.toBeNull();
-    expect(texto(nota)).toBe(textoProcedencia(P, { etiqueta: "Cierre" }));
-    expect(tiempos(raiz)).toEqual([["2027-03-17", "17-mar-2027"], ["2027-03-17T18:04-05:00", "17-mar-2027 a las 18:04"]]);
+    expect(raiz.querySelector(".fecha-dato")).not.toBeNull();
+    expect(linea(raiz)).toBe(textoProcedencia(P, { etiqueta: "Cierre" }));
+    expect(linea(raiz)).toBe("Cierre 17-mar · traído 18:04 · Yahoo (BVC)");
+    expect(tiempos(raiz)).toEqual([["2027-03-17", "17-mar"], ["2027-03-17T18:04-05:00", "18:04"]]);
+  });
+
+  it("el detalle de la fuente y su retraso es texto del documento (accesible), no un tooltip de ratón", () => {
+    const raiz = pintar(createElement(FechaDato, { procedencia: P, etiqueta: "Cierre" }));
+    expect(detalle(raiz)).toBe(detalleProcedencia(P));
+    expect(detalle(raiz)).toMatch(/hasta 20 min de retraso/);
+    expect(detalle(raiz)).toMatch(/cierre oficial del día/);
+    expect(detalle(raiz)).toMatch(/hora de Colombia/);
+    expect(renderToStaticMarkup(createElement(FechaDato, { procedencia: P }))).not.toMatch(/title=|aria-hidden/);
   });
 
   it("sin la fecha, cuando la celda ya la dice; sin la hora en que se trajo, lo dice y no pinta <time> de hora", () => {
-    expect(texto(pintar(createElement(FechaDato, { procedencia: P, sinFecha: true })))).toBe(textoProcedencia(P, { sinFecha: true }));
+    expect(linea(pintar(createElement(FechaDato, { procedencia: P, sinFecha: true })))).toBe(textoProcedencia(P, { sinFecha: true }));
     const sinHora = pintar(createElement(FechaDato, { procedencia: { ...P, traidoEn: null }, etiqueta: "Cierre" }));
-    expect(texto(sinHora)).toBe("Cierre del 17-mar-2027 · sin la hora en que se trajo · BVC por Yahoo");
+    expect(linea(sinHora)).toBe("Cierre 17-mar-2027 · sin la hora en que se trajo · Yahoo (BVC)");
     expect(tiempos(sinHora)).toEqual([["2027-03-17", "17-mar-2027"]]);
   });
 
+  it("dato de más de un día hábil: el aviso «dato de hace N días hábiles», aparte de la línea; si no, nada", () => {
+    const raiz = pintar(createElement(FechaDato, { procedencia: VIEJO, etiqueta: "Cierre" }));
+    expect(texto(raiz.querySelector(".fecha-dato-aviso"))).toBe(avisoAtraso(VIEJO));
+    expect(texto(raiz.querySelector(".fecha-dato-aviso"))).toBe("dato de hace 3 días hábiles");
+    expect(linea(raiz)).toBe(textoProcedencia(VIEJO, { etiqueta: "Cierre" }));
+    for (const h of [1, 0, null, undefined]) expect(pintar(createElement(FechaDato, { procedencia: { ...P, habilesAtras: h } })).querySelector(".fecha-dato-aviso"), String(h)).toBeNull();
+  });
+
+  it("un precio de la rueda dice el retraso de la fuente en el detalle", () => {
+    const raiz = pintar(createElement(FechaDato, { procedencia: { ...P, tipo: "RUEDA", horaDato: "11:42", traidoEn: "2027-03-17 11:44" } }));
+    expect(linea(raiz)).toBe("Precio del 17-mar a las 11:42 · traído 11:44 · Yahoo (BVC)");
+    expect(detalle(raiz)).toMatch(/en la rueda, hasta 20 min de retraso/);
+  });
+
   it("es una nota: sin role, sin región viva y sin nada que se pueda tocar", () => {
-    const html = renderToStaticMarkup(createElement(FechaDato, { procedencia: P }));
-    expect(html).not.toMatch(/role=|aria-live|<a |<button|<input|tabindex/i);
+    const html = renderToStaticMarkup(createElement(FechaDato, { procedencia: VIEJO }));
+    expect(html).not.toMatch(/role=|aria-live|<a |<button|<input|<details|tabindex/i);
     expect(html).not.toMatch(/class="[^"]*\b(sr|cifra|nota|pill|chip)\b/);
   });
 });
@@ -53,20 +81,28 @@ describe("FechaDatoCompuesta", () => {
   it("con fechas distintas: el cierre más antiguo y el aviso con las dos puntas", () => {
     const raiz = pintar(createElement(FechaDatoCompuesta, { compuesta: MEZCLADAS }));
     const aviso = raiz.querySelector(".fecha-dato-aviso");
-    expect(texto(raiz.querySelector(".fecha-dato-linea"))).toBe(textoCompuesta(MEZCLADAS));
+    expect(linea(raiz)).toBe(textoCompuesta(MEZCLADAS));
+    expect(detalle(raiz)).toBe(detalleCompuesta(MEZCLADAS));
     expect(texto(aviso)).toBe(avisoMezcladas(MEZCLADAS));
-    expect(texto(raiz)).toBe(`${textoCompuesta(MEZCLADAS)} ${avisoMezcladas(MEZCLADAS)}`);
-    expect(tiempos(raiz)).toEqual([["2021-03-01", "1-mar-2021"], ["2021-03-02T18:40-05:00", "2-mar-2021 a las 18:40"], ["2021-03-01", "1-mar-2021"], ["2021-03-17", "17-mar-2021"]]);
+    expect(tiempos(raiz)).toEqual([["2021-03-01", "1-mar"], ["2021-03-02T18:40-05:00", "2-mar 18:40"], ["2021-03-01", "1-mar-2021"], ["2021-03-17", "17-mar-2021"]]);
   });
 
-  it("todos del mismo día: sin aviso", () => {
+  it("todos del mismo día: sin aviso de fechas", () => {
     const raiz = pintar(createElement(FechaDatoCompuesta, { compuesta: MISMO_DIA }));
-    expect(texto(raiz)).toBe(textoCompuesta(MISMO_DIA));
+    expect(linea(raiz)).toBe(textoCompuesta(MISMO_DIA));
     expect(raiz.querySelector(".fecha-dato-aviso")).toBeNull();
   });
 
+  it("el dato más viejo con más de un día hábil de atraso: el aviso de dato viejo", () => {
+    const c: ProcedenciaCompuesta = { ...MISMO_DIA, masVieja: VIEJO };
+    const avisos = [...pintar(createElement(FechaDatoCompuesta, { compuesta: c })).querySelectorAll(".fecha-dato-aviso")].map(texto);
+    expect(avisos).toEqual(["dato de hace 3 días hábiles"]);
+    const con = [...pintar(createElement(FechaDatoCompuesta, { compuesta: { ...MEZCLADAS, masVieja: { ...MEZCLADAS.masVieja, habilesAtras: 5 } } })).querySelectorAll(".fecha-dato-aviso")].map(texto);
+    expect(con).toEqual([avisoMezcladas(MEZCLADAS), "dato de hace 5 días hábiles"]);
+  });
+
   it("es una nota: sin role ni región viva", () => {
-    expect(renderToStaticMarkup(createElement(FechaDatoCompuesta, { compuesta: MEZCLADAS }))).not.toMatch(/role=|aria-live|<a |<button/i);
+    expect(renderToStaticMarkup(createElement(FechaDatoCompuesta, { compuesta: MEZCLADAS }))).not.toMatch(/role=|aria-live|<a |<button|<details/i);
   });
 });
 
