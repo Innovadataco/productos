@@ -19,6 +19,8 @@ const corrida = Date.now().toString(36).toUpperCase().slice(-5);
 const cot = (texto: string): Date => new Date(`${texto.replace(" ", "T")}:00-05:00`);
 const URL_YAHOO = "https://query2.finance.yahoo.com";
 const MIN = 60_000;
+/** «Ahora» de las pruebas que guardan barras del 9 de febrero de 2027: la misma noche, para que ninguna sea del futuro ni de hace más de un día. */
+const DESPUES = new Date(`2027-02-09T20:00:00-05:00`);
 let n = 0;
 let usuarioId = "";
 let cargaId = "";
@@ -43,6 +45,9 @@ async function accion(sufijo: string, opciones: { activo?: boolean; conLote?: bo
   }
   return id;
 }
+/** Siembra barras directamente (como el dueño de la base: sin el filtro de `guardarBarras`) para probar los lectores con días distintos. */
+const sembrar = (instrumentoId: string, barras: readonly BarraIntradia[], conRetraso = true) =>
+  db.precioIntradia.createMany({ data: barras.map((b) => ({ instrumentoId, instante: b.instante, precio: new Prisma.Decimal(b.precio), fuente: "yahoo", conRetraso })) });
 const filas = (instrumentoId: string) => db.precioIntradia.findMany({ where: { instrumentoId }, orderBy: { instante: "asc" } });
 
 /** Yahoo falso: devuelve, por símbolo, las barras (instante en segundos Unix y cierre) o un estado HTTP. */
@@ -125,7 +130,7 @@ describe("un día completo con 12 especies ficticias: peticiones y filas", () =>
 describe("precio_intradia · solo inserción y sin duplicados", () => {
   it("guarda las barras con la fuente yahoo, el retraso marcado y la hora de traída que pone la base", async () => {
     const id = await accion("G1");
-    const nuevas = await guardarBarras(db, id, [barra("09:30", "1234.5"), barra("09:31", "1240")], true);
+    const nuevas = await guardarBarras(db, id, [barra("09:30", "1234.5"), barra("09:31", "1240")], true, DESPUES);
     expect(nuevas).toBe(2);
     const guardadas = await filas(id);
     expect(guardadas.map((f) => [f.instante.toISOString(), f.precio.toString(), f.fuente, f.conRetraso])).toEqual([
@@ -137,9 +142,9 @@ describe("precio_intradia · solo inserción y sin duplicados", () => {
 
   it("traer lo mismo otra vez no duplica ni cambia lo guardado (la primera barra gana); una barra nueva sí entra", async () => {
     const id = await accion("G2");
-    await guardarBarras(db, id, [barra("09:30", "100")], true);
-    expect(await guardarBarras(db, id, [barra("09:30", "999"), barra("09:31", "101")], true)).toBe(1);
-    expect(await guardarBarras(db, id, [barra("09:30", "999"), barra("09:31", "101")], true)).toBe(0);
+    await guardarBarras(db, id, [barra("09:30", "100")], true, DESPUES);
+    expect(await guardarBarras(db, id, [barra("09:30", "999"), barra("09:31", "101")], true, DESPUES)).toBe(1);
+    expect(await guardarBarras(db, id, [barra("09:30", "999"), barra("09:31", "101")], true, DESPUES)).toBe(0);
     expect((await filas(id)).map((f) => f.precio.toString())).toEqual(["100", "101"]);
   });
 
@@ -150,13 +155,13 @@ describe("precio_intradia · solo inserción y sin duplicados", () => {
   it("la misma barra de dos especies distintas entra para las dos", async () => {
     const a = await accion("G4");
     const b = await accion("G5");
-    await guardarBarras(db, a, [barra("09:30", "10")], true);
-    expect(await guardarBarras(db, b, [barra("09:30", "10")], true)).toBe(1);
+    await guardarBarras(db, a, [barra("09:30", "10")], true, DESPUES);
+    expect(await guardarBarras(db, b, [barra("09:30", "10")], true, DESPUES)).toBe(1);
   });
 
   it("la base no deja editar una fila ni borrar una reciente (solo inserción)", async () => {
     const id = await accion("S1");
-    await guardarBarras(db, id, [barra("09:30", "10")], true);
+    await guardarBarras(db, id, [barra("09:30", "10")], true, DESPUES);
     await expect(db.$executeRawUnsafe(`UPDATE precio_intradia SET precio = 11 WHERE "instrumentoId" = '${id}'`)).rejects.toThrow(/solo inserci/);
     await expect(db.$executeRawUnsafe(`DELETE FROM precio_intradia WHERE "instrumentoId" = '${id}'`)).rejects.toThrow(/solo inserci|retenci/);
     expect(await filas(id)).toHaveLength(1);
@@ -492,7 +497,7 @@ describe("lectores: ultimoPrecioIntradia y preciosDelDia", () => {
   it("el último precio trae el instante, la fuente y el retraso; sin barras es null", async () => {
     const id = await accion("R1");
     expect(await ultimoPrecioIntradia(db, id)).toBeNull();
-    await guardarBarras(db, id, [barra("09:30", "10"), barra("11:42", "12.5"), barra("10:00", "11")], true);
+    await sembrar(id, [barra("09:30", "10"), barra("11:42", "12.5"), barra("10:00", "11")]);
     const u = await ultimoPrecioIntradia(db, id);
     expect(u).not.toBeNull();
     expect([u!.instante.toISOString(), u!.precio.toString(), u!.fuente, u!.conRetraso]).toEqual([cot("2027-02-09 11:42").toISOString(), "12.5", "yahoo", true]);
@@ -500,7 +505,7 @@ describe("lectores: ultimoPrecioIntradia y preciosDelDia", () => {
 
   it("los precios del día: solo las barras de ese día de Colombia, en orden de instante", async () => {
     const id = await accion("R2");
-    await guardarBarras(db, id, [barra("15:59", "9", "2027-02-08"), barra("09:31", "11"), barra("09:30", "10"), barra("23:30", "8", "2027-02-09"), barra("09:30", "20", "2027-02-10")], false);
+    await sembrar(id, [barra("15:59", "9", "2027-02-08"), barra("09:31", "11"), barra("09:30", "10"), barra("23:30", "8", "2027-02-09"), barra("09:30", "20", "2027-02-10")], false);
     const dia = await preciosDelDia(db, id, "2027-02-09");
     expect(dia.map((p) => [p.instante.toISOString(), p.precio.toString()])).toEqual([
       [cot("2027-02-09 09:30").toISOString(), "10"],
