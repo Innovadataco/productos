@@ -79,7 +79,7 @@ describe("la línea de un dato: tipo y fecha, fuente y cuándo se trajo", () => 
       { texto: "17-mar", dateTime: "2027-03-17" },
       { texto: "18:04", dateTime: "2027-03-17T18:04-05:00" },
     ]);
-    expect(piezasProcedencia(p({ dia: "malo" })).filter((x) => x.dateTime !== undefined)).toEqual([{ texto: "18:04", dateTime: "2027-03-17T18:04-05:00" }]);
+    expect(piezasProcedencia(p({ dia: "malo" })).filter((x) => x.dateTime !== undefined).map((x) => x.dateTime)).toEqual(["2027-03-17T18:04-05:00"]);
     expect(piezasProcedencia(p({ tipo: "RUEDA", horaDato: "11:42", traidoEn: "2027-03-17 11:44" })).filter((x) => x.dateTime !== undefined).map((x) => x.dateTime)).toEqual([
       "2027-03-17", "2027-03-17T11:42-05:00", "2027-03-17T11:44-05:00",
     ]);

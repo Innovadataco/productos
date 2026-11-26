@@ -11,3 +11,8 @@
 .fecha-dato-ancho { grid-column: 1 / -1; }
 .fecha-dato-linea { display: block; }
 .fecha-dato-aviso { display: block; color: var(--loss); }
+/* El detalle de la fuente y su retraso: oculto a la vista, no al lector de pantalla (clip, nunca display:none). */
+.fecha-dato-detalle {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden;
+  clip: rect(0, 0, 0, 0); clip-path: inset(50%); white-space: nowrap;
+}
