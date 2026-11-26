@@ -97,6 +97,50 @@ describe("Simulador", () => {
     expect(JSON.parse(String(fetchFalso.mock.calls[0]![1].body))).toMatchObject({ precioActual: "2.345,5" });
   });
 
+  describe("los campos con error", () => {
+    const IDS: Readonly<Record<string, string>> = { cantidad: "sim-cantidad", precioLimite: "sim-precio", saldoComisionista: "sim-saldo", precioActual: "sim-precio-actual" };
+    const invalido = (id: string) => control(id).getAttribute("aria-invalid");
+    const describe_ = (id: string) => (control(id).getAttribute("aria-describedby") ?? "").split(" ");
+
+    it("el campo que la ruta rechaza lleva aria-invalid y su descripción incluye el mensaje de error, además de su ayuda", async () => {
+      await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+      await enviar();
+      await responder({ error: "x", campos: ["precioActual"] }, 400);
+      const alerta = m.contenedor.querySelector<HTMLElement>(".op-sim-errores")!;
+      expect(alerta.id).not.toBe("");
+      expect(invalido("sim-precio-actual")).toBe("true");
+      expect(describe_("sim-precio-actual")).toEqual(["sim-ayuda-precio-actual", alerta.id]);
+      for (const id of ["sim-cantidad", "sim-precio", "sim-saldo"]) expect(invalido(id), id).toBeNull();
+      expect(describe_("sim-saldo")).toEqual(["sim-ayuda-saldo"]);
+    });
+
+    it("con varios campos, cada uno queda marcado y los demás no", async () => {
+      await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+      await enviar();
+      await responder({ error: "x", campos: ["cantidad", "precioLimite", "saldoComisionista", "precioActual", "inventado"] }, 400);
+      for (const id of Object.values(IDS)) expect(invalido(id), id).toBe("true");
+      expect(describe_("sim-cantidad")).toEqual(["sim-ayuda", m.contenedor.querySelector(".op-sim-errores")!.id]);
+    });
+
+    it("al volver a enviar, o con un resultado, las marcas se quitan", async () => {
+      await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+      await enviar();
+      await responder({ error: "x", campos: ["precioActual"] }, 400);
+      await enviar();
+      expect(invalido("sim-precio-actual")).toBeNull();
+      expect(describe_("sim-precio-actual")).toEqual(["sim-ayuda-precio-actual"]);
+      await responder({ ok: true, vista: VISTA }, 200);
+      expect(invalido("sim-precio-actual")).toBeNull();
+    });
+
+    it("un error sin campos (sesión, demasiadas, fallo) no marca ninguno", async () => {
+      await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+      await enviar();
+      await responder("no es json", 500);
+      for (const id of Object.values(IDS)) expect(invalido(id), id).toBeNull();
+    });
+  });
+
   it("sin reglas ni avisos, y sin valor de comisión, lo dice", async () => {
     await m.pintar(createElement(Simulador, { especies: ESPECIES }));
     await enviar();
