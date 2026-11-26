@@ -206,6 +206,53 @@ describe("BotonAnalizar", () => {
     expect(mensaje()).toBe("");
   });
 
+  describe("sondeo que falla mientras se muestra «Analizando…»", () => {
+    const sinEstado = "No se pudo consultar el estado del análisis; intente de nuevo";
+    const fallar = (como: "rechaza" | "503") => {
+      fetchFalso.mockImplementation(async (url: string, init: RequestInit = {}) => {
+        llamadas.push({ url, init });
+        if ((init.method ?? "GET") === "GET") {
+          if (como === "rechaza") throw new TypeError("fetch failed 4613");
+          return new Response("{}", { status: 503 });
+        }
+        return new Response(JSON.stringify(respuestaPedido.cuerpo), { status: respuestaPedido.estado });
+      });
+    };
+
+    it.each(["rechaza", "503"] as const)("a las 2 fallas seguidas (%s): texto fijo, botón habilitado y estado libre", async (como) => {
+      await montarBoton();
+      await act(async () => { boton().click(); });
+      await asentar();
+      expect(mensaje()).toBe("Analizando…");
+      fallar(como);
+      await asentar(SONDEO_MS);
+      expect(mensaje()).toBe("Analizando…"); // una sola falla todavía no avisa
+      await asentar(SONDEO_MS);
+      expect(mensaje()).toBe(sinEstado);
+      expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.sinEstado);
+      expect(deshabilitado()).toBe(false);
+      expect(m.contenedor.querySelector(".resumen-ia-analizar-caja")?.hasAttribute("aria-busy")).toBe(false);
+      expect(texto(m.contenedor)).not.toContain("4613");
+      const antes = llamadas.length;
+      await asentar(SONDEO_MS * 3); // ya no sondea
+      expect(llamadas.length).toBe(antes);
+    });
+
+    it("una lectura buena entre dos fallas reinicia la cuenta (no son seguidas)", async () => {
+      await montarBoton();
+      estado = { ...LIBRE, enCurso: "DIARIO" };
+      await act(async () => { boton().click(); });
+      await asentar();
+      fetchFalso.mockRejectedValueOnce(new TypeError("x"));
+      await asentar(SONDEO_MS);
+      await asentar(SONDEO_MS); // buena
+      fetchFalso.mockRejectedValueOnce(new TypeError("x"));
+      await asentar(SONDEO_MS);
+      expect(mensaje()).toBe("Analizando…");
+      expect(deshabilitado()).toBe(true);
+    });
+  });
+
   it("los textos fijos del botón: sin lenguaje de consejo (con control positivo), sin «008» y sin códigos", () => {
     const fijos = JSON.stringify(Object.values(TEXTOS_RESUMEN_IA.boton)) + textoEspera(75);
     expect(prohibidasEn(fijos)).toEqual([]);
