@@ -23,10 +23,10 @@ describe("candado de lenguaje de los precios intradía", () => {
 
   it("ninguna línea del CLI ni aviso de la configuración recomienda, aconseja ni juzga", () => {
     const lineas = [
-      ...reporteCiclo({ codigo: 0, especies: 3, peticiones: 3, barrasNuevas: 12, fallidas: [], sinCalendario: false }).lineas,
-      ...reporteCiclo({ codigo: 3, especies: 3, peticiones: 3, barrasNuevas: 0, fallidas: [{ instrumentoId: "id-ficticio", codigo: "YAHOO_HTTP_404" }], sinCalendario: true }).lineas,
-      ...reporteCiclo({ codigo: 4, especies: 0, peticiones: 0, barrasNuevas: 0, fallidas: [], sinCalendario: false }).lineas,
-      ...reporteCiclo({ codigo: 7, especies: 3, peticiones: 2, barrasNuevas: 1, fallidas: [], sinCalendario: false }).lineas,
+      ...reporteCiclo({ codigo: 0, especies: 3, peticiones: 3, barrasNuevas: 12, fallidas: [], sinCalendario: false, avisos: [] }).lineas,
+      ...reporteCiclo({ codigo: 3, especies: 3, peticiones: 3, barrasNuevas: 0, fallidas: [{ instrumentoId: "id-ficticio", codigo: "YAHOO_HTTP_404" }], sinCalendario: true, avisos: [] }).lineas,
+      ...reporteCiclo({ codigo: 4, especies: 0, peticiones: 0, barrasNuevas: 0, fallidas: [], sinCalendario: false, avisos: [] }).lineas,
+      ...reporteCiclo({ codigo: 7, especies: 3, peticiones: 2, barrasNuevas: 1, fallidas: [], sinCalendario: false, avisos: [] }).lineas,
       ...reporteDepuracion(5).lineas,
       ...leerConfigIntradia({ INV_INTRADIA_ENCENDIDO: "x", INV_INTRADIA_CICLO_SEG: "x", INV_INTRADIA_DESDE_COT: "x", INV_INTRADIA_PAUSA_MS: "x", INV_INTRADIA_RETENCION_DIAS: "x", INV_INTRADIA_HOST_YAHOO: "x" }).avisos,
     ];

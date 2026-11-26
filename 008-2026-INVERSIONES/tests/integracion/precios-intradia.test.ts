@@ -270,7 +270,7 @@ describe("correrCicloIntradia", () => {
   it("un año sin calendario sembrado: un día entre semana se trata como hábil y lo dice (sin inventar un festivo)", async () => {
     await accion("L5", { conLote: true });
     const yahoo = yahooFalso({});
-    const r = await ciclo(yahoo.buscar, { ahora: cot("2031-02-11 11:00") });
+    const r = await ciclo(yahoo.buscar, { ahora: cot("2031-02-11 09:40") });
     expect(r.codigo).not.toBe(4);
     expect(r.sinCalendario).toBe(true);
   });
@@ -330,6 +330,142 @@ describe("correrCicloIntradia", () => {
     const sin: number[] = [];
     await ciclo(yahoo.buscar, { pausaMs: 0, dormir: async (ms) => void sin.push(ms) });
     expect(sin).toEqual([]);
+  });
+});
+
+describe("correrCicloIntradia · bloqueo, topes y año sin calendario (especies inyectadas)", () => {
+  const AHORA = cot("2027-02-09 11:50");
+  const lista = (cuantas: number) => Array.from({ length: cuantas }, (_, k) => ({ id: `id-ficticio-${k + 1}`, nemotecnico: `FICTICIAZZ${k + 1}` }));
+  const con = (cuantas: number, buscar: Buscar, extra: Partial<Parameters<typeof correrCicloIntradia>[1]> = {}) =>
+    correrCicloIntradia(db, { buscar, ahora: AHORA, urlYahoo: URL_YAHOO, pausaMs: 0, dormir: sinPausa, especies: async () => lista(cuantas), ...extra });
+  /** Una respuesta con ese estado HTTP (Response no deja construir un 999: se le fija a mano). */
+  const http = (codigo: number): Response => {
+    if (codigo <= 599) return new Response("{}", { status: codigo });
+    const r = new Response("{}", { status: 500 });
+    Object.defineProperty(r, "status", { value: codigo });
+    return r;
+  };
+  const estado = (codigo: number): Buscar => async () => http(codigo);
+  const vacia: Buscar = async () => new Response(JSON.stringify({ chart: { result: null } }), { status: 200 });
+
+  for (const cuantas of [1, 2, 12]) {
+    for (const codigo of [429, 401, 403, 999]) {
+      it(`${cuantas} especies, Yahoo responde ${codigo}: corta en la primera petición y sale con 7`, async () => {
+        const pedidos: string[] = [];
+        const r = await con(cuantas, async (url) => (pedidos.push(String(url)), http(codigo)));
+        expect(r.codigo).toBe(7);
+        expect(pedidos).toHaveLength(1);
+      });
+    }
+    for (const [nombre, buscar] of [["404", estado(404)], ["503", estado(503)], ["sin datos", vacia]] as const) {
+      it(`${cuantas} especies, TODAS fallan con ${nombre}: sale con 7`, async () => {
+        const r = await con(cuantas, buscar);
+        expect(r.peticiones).toBe(cuantas);
+        expect(r.codigo).toBe(7);
+      });
+    }
+  }
+
+  it("TODAS fallan con una respuesta de formato raro (YAHOO_FORMATO): también 7", async () => {
+    const raro: Buscar = async () => new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp: [1, 2], indicators: { quote: [{ close: [1] }] } }] } }), { status: 200 });
+    const r = await con(2, raro);
+    expect(r.fallidas.map((f) => f.codigo)).toEqual(["YAHOO_FORMATO", "YAHOO_FORMATO"]);
+    expect(r.codigo).toBe(7);
+  });
+
+  it("un 404 de una especie NO es un bloqueo: no corta, las demás se piden y, si alguna responde bien, sale con 3", async () => {
+    const pedidos: string[] = [];
+    const buscar: Buscar = async (url) => {
+      pedidos.push(String(url));
+      return pedidos.length === 1 ? new Response("{}", { status: 404 }) : new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp: [], indicators: { quote: [{ close: [] }] } }] } }), { status: 200 });
+    };
+    const r = await con(3, buscar);
+    expect(pedidos).toHaveLength(3);
+    expect(r.codigo).toBe(3);
+    expect(r.fallidas).toEqual([{ instrumentoId: "id-ficticio-1", codigo: "YAHOO_HTTP_404" }]);
+  });
+
+  it("tope de especies por ciclo: con 25 y tope 20 pide 20, deja un aviso y no es un fallo", async () => {
+    const pedidos: string[] = [];
+    const r = await con(25, async (url) => (pedidos.push(String(url)), new Response("{}", { status: 404 })), { topeEspecies: 20 });
+    expect(r.especies).toBe(20);
+    expect(pedidos).toHaveLength(20);
+    expect(r.avisos.join(" ")).toMatch(/tope de especies por ciclo/);
+  });
+
+  it("el tope de especies es 20 por omisión", async () => {
+    const r = await con(21, estado(404));
+    expect(r.especies).toBe(20);
+    expect(r.avisos.length).toBeGreaterThan(0);
+  });
+
+  it("tope de peticiones por día: al llegar, el ciclo sale con 5 sin pedir nada y avisa; antes, recorta el cupo", async () => {
+    let guardado = { dia: "", total: 0 };
+    const contadorDia = {
+      leer: async (dia: string) => (guardado.dia === dia ? guardado.total : 0),
+      guardar: async (dia: string, total: number) => void (guardado = { dia, total }),
+    };
+    const pedidos: string[] = [];
+    const buscar: Buscar = async (url) => (pedidos.push(String(url)), new Response("{}", { status: 404 }));
+    const r1 = await con(5, buscar, { topePeticionesDia: 7, contadorDia });
+    expect(r1.peticiones).toBe(5);
+    expect(guardado).toEqual({ dia: "2027-02-09", total: 5 });
+    const r2 = await con(5, buscar, { topePeticionesDia: 7, contadorDia });
+    expect(r2.peticiones).toBe(2); // el cupo que queda
+    expect(r2.avisos.join(" ")).toMatch(/tope de peticiones por día/);
+    const antes = pedidos.length;
+    const r3 = await con(5, buscar, { topePeticionesDia: 7, contadorDia });
+    expect(r3).toMatchObject({ codigo: 5, peticiones: 0 });
+    expect(pedidos).toHaveLength(antes);
+    expect(r3.avisos.join(" ")).toMatch(/tope de peticiones por día/);
+    // otro día: el contador empieza de cero
+    const r4 = await con(5, buscar, { topePeticionesDia: 7, contadorDia, ahora: cot("2027-02-10 11:50") });
+    expect(r4.peticiones).toBe(5);
+  });
+
+  it("el tope de peticiones por día es 9000 por omisión", async () => {
+    const r = await con(2, estado(404), { contadorDia: { leer: async () => 9000, guardar: async () => undefined } });
+    expect(r.codigo).toBe(5);
+  });
+
+  const SIN_BARRAS: Buscar = async () => new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp: [], indicators: { quote: [{ close: [] }] } }] } }), { status: 200 });
+
+  it("año sin calendario_bvc y ninguna barra de hoy pasada la hora en que ya debería haberlas: se trata como día no hábil (código 4) con aviso", async () => {
+    const r = await con(2, SIN_BARRAS, { ahora: cot("2031-02-11 11:00") });
+    expect(r).toMatchObject({ codigo: 4, sinCalendario: true });
+    expect(r.avisos.join(" ")).toMatch(/calendario/);
+  });
+
+  it("año sin calendario_bvc pero antes de las 10:30 (Yahoo entrega con ~20 min de retraso): sin barras todavía NO es un día no hábil", async () => {
+    const r = await con(2, SIN_BARRAS, { ahora: cot("2031-02-11 09:40") });
+    expect(r.codigo).toBe(0);
+  });
+
+  it("año sin calendario_bvc con barras de hoy en alguna especie: es un día hábil (código 0)", async () => {
+    const t = Math.floor(cot("2031-02-11 09:30").getTime() / 1000);
+    const conBarras: Buscar = async () => new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp: [t], indicators: { quote: [{ close: [100], volume: [5] }] } }] } }), { status: 200 });
+    const guardadas: number[] = [];
+    const r = await con(1, conBarras, { ahora: cot("2031-02-11 11:00"), guardar: async (_id, barras) => (guardadas.push(barras.length), barras.length) });
+    expect(r).toMatchObject({ codigo: 0, barrasNuevas: 1 });
+    expect(guardadas).toEqual([1]);
+  });
+
+  it("con calendario sembrado, un día sin barras NO se reclasifica (solo vale para años sin calendario)", async () => {
+    const r = await con(2, SIN_BARRAS, { ahora: cot("2027-02-09 11:00") });
+    expect(r.codigo).toBe(0);
+    expect(r.sinCalendario).toBe(false);
+  });
+});
+
+describe("guardarBarras · barras viejas", () => {
+  it("una barra de más de un día no tumba el INSERT de la especie: se descarta y las demás se guardan", async () => {
+    const id = await accion("V1");
+    const ahora = new Date();
+    const hace = (min: number) => new Date(Math.floor((ahora.getTime() - min * MIN) / MIN) * MIN);
+    // Se conecta como dueño (la prueba): el disparador lo deja pasar, así que se prueba el filtro del código con un cliente que sí lo aplica.
+    const nuevas = await guardarBarras(db, id, [{ instante: hace(3 * 24 * 60), precio: "1" }, { instante: hace(10), precio: "2" }, { instante: hace(5), precio: "3" }], true, ahora);
+    expect(nuevas).toBe(2);
+    expect((await filas(id)).map((f) => f.precio.toString())).toEqual(["2", "3"]);
   });
 });
 
