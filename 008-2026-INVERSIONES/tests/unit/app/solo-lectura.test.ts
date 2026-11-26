@@ -62,6 +62,19 @@ describe("la marca «Solo lectura»", () => {
     expect(encabezado(pintar(false)).querySelector(".solo-lectura")).toBeNull();
     expect(encabezado(pintar(undefined)).querySelector(".solo-lectura")).toBeNull();
   });
+
+  it.each(PANTALLAS)("%s: el familiar no ve «Configuración» ni ningún enlace a /edicion en el encabezado", (_nombre, pintar) => {
+    const header = encabezado(pintar(true));
+    expect(header.querySelector('a[href^="/edicion"]')).toBeNull();
+    expect(header.textContent ?? "").not.toContain("Configuración");
+  });
+
+  it("el encabezado común: el dueño ve «Configuración» al final del menú, hacia /edicion", () => {
+    for (const s of [false, undefined]) {
+      const enlaces = [...encabezado(createElement(Encabezado, { actual: "proyecciones", soloLectura: s })).querySelectorAll('nav[aria-label="Secciones"] a')];
+      expect([enlaces.at(-1)?.textContent, enlaces.at(-1)?.getAttribute("href")]).toEqual(["Configuración", "/edicion"]);
+    }
+  });
 });
 
 describe("cada página deriva la marca de la sesión revalidada", () => {

@@ -74,6 +74,12 @@ describe("src/app/analisis/page.tsx", () => {
     const nav = [...(await pantalla()).querySelectorAll('header nav[aria-label="Secciones"] a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
     expect(nav).toEqual(SECCIONES.map((s) => [s.texto, s.href, s.clave === "analisis" ? "page" : null]));
     expect(nav.filter(([t]) => t === "Análisis")).toEqual([["Análisis", "/analisis", "page"]]);
+    // El dueño ve «Configuración» al final (frente menu-configuracion); la familia, la lista de siempre sin ella.
+    expect(nav.at(-1)).toEqual(["Configuración", "/edicion", null]);
+    exigirSesion.mockResolvedValueOnce({ id: "u-familia", rol: "FAMILIA" });
+    const familia = [...(await pantalla()).querySelectorAll('header nav[aria-label="Secciones"] a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
+    expect(familia).toEqual(nav.slice(0, -1));
+    expect(familia.map(([t]) => t)).not.toContain("Configuración");
   });
 
   it("el familiar ve «Solo lectura»; el dueño no; y no hay formularios ni botones", async () => {
