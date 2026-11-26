@@ -1,5 +1,5 @@
 /**
- * Las entradas INVENTADAS de los 40 casos del arnés (E7): 15 DIARIO, 15 REGLAS y 10 ESCENARIOS, desde una semilla fija
+ * Las entradas INVENTADAS de los 42 casos del arnés: 17 DIARIO (los dos últimos, grandes: diez especies), 15 REGLAS y 10 ESCENARIOS, desde una semilla fija
  * (`crearPrng` del motor de proyecciones). Cada tipo tiene su propio azar derivado de la semilla, así agregar un caso de
  * un tipo no cambia los de los otros. Solo para el CI y las métricas de robustez: lo que ve Jelk sale de su portafolio
  * (el export por la vía B, `--paquetes`). Nada sale de una base ni de datos reales.
@@ -12,7 +12,7 @@ import { entradaEscenariosInventada } from "./inventados/escenarios.ficticio";
 import { entradaReglasInventada } from "./inventados/reglas.ficticio";
 
 export const SEMILLA_INVENTADOS = 37_911;
-export const CANTIDAD_INVENTADOS: Readonly<Record<TipoResumen, number>> = Object.freeze({ DIARIO: 15, REGLAS: 15, ESCENARIOS: 10 });
+export const CANTIDAD_INVENTADOS: Readonly<Record<TipoResumen, number>> = Object.freeze({ DIARIO: 17, REGLAS: 15, ESCENARIOS: 10 });
 
 /** Desplazamiento de la semilla por tipo (números primos, sin significado). */
 const DESPLAZAMIENTO: Readonly<Record<TipoResumen, number>> = Object.freeze({ DIARIO: 0, REGLAS: 7919, ESCENARIOS: 104_729 });

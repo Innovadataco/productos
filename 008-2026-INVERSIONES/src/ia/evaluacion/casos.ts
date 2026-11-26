@@ -1,5 +1,5 @@
 /**
- * Los casos del arnés (E7): los 40 inventados (armados con los armadores reales de E1b desde las entradas con semilla
+ * Los casos del arnés (E7): los 42 inventados (armados con los armadores reales de E1b desde las entradas con semilla
  * fija), su hash (para que el informe compare corridas de los MISMOS casos) y un recorte balanceado por tipo.
  */
 import { TIPOS_RESUMEN, type TipoResumen } from "../contrato";
@@ -12,7 +12,7 @@ const ANCHO_NUMERO = 2;
 
 const id = (tipo: TipoResumen, i: number): string => `${tipo}-${String(i + 1).padStart(ANCHO_NUMERO, "0")}`;
 
-/** Los 40 casos inventados de la semilla: DIARIO-01…15, REGLAS-01…15 y ESCENARIOS-01…10. Congelados. */
+/** Los 42 casos inventados de la semilla: DIARIO-01…17, REGLAS-01…15 y ESCENARIOS-01…10. Congelados. */
 export function casosInventados(semilla: number = SEMILLA_INVENTADOS): readonly CasoEvaluacion[] {
   const e = entradasInventadas(semilla);
   const casos: CasoEvaluacion[] = [
@@ -38,4 +38,14 @@ export function limitarCasos(casos: readonly CasoEvaluacion[], maximo: number): 
   const largo = Math.max(0, ...porTipo.map((l) => l.length));
   const intercalados = Array.from({ length: largo }, (_, i) => porTipo.flatMap((l) => (i < l.length ? [l[i] as CasoEvaluacion] : []))).flat();
   return Object.freeze(intercalados.slice(0, maximo));
+}
+
+/**
+ * Los casos de los ids dados, en el orden de la lista completa (no en el de los ids), congelados; null si alguno no existe
+ * (el arnés lo cierra en fallo sin repetir el id). Sin ids, ninguno.
+ */
+export function elegirCasos(casos: readonly CasoEvaluacion[], ids: readonly string[]): readonly CasoEvaluacion[] | null {
+  const pedidos = new Set(ids);
+  if (ids.some((id) => !casos.some((c) => c.id === id))) return null;
+  return Object.freeze(casos.filter((c) => pedidos.has(c.id)));
 }

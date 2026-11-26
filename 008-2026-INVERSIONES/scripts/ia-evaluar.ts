@@ -1,8 +1,8 @@
 /**
  * La evaluación de la IA local (E7), en el Mac: corre un modelo de Ollama (por la tailnet, la instancia de PI) sobre los
  * casos y mide cuántos resúmenes publica el validador, por qué rechaza, cuánto tarda y si repite.
- *   npm run ia:evaluar -- casos [--semilla N | --paquetes <archivo.json>]
- *   npm run ia:evaluar -- correr --modelo <nombre> --salida <carpeta> […]   (con INV_IA_LOCAL_DESTINO exportada desde un archivo
+ *   npm run ia:evaluar -- casos [--semilla N | --paquetes <archivo.json>] [--casos <id,id>]
+ *   npm run ia:evaluar -- correr --modelo <nombre> --salida <carpeta> […] [--casos <id,id>]   (con INV_IA_LOCAL_DESTINO exportada desde un archivo
  *   0600 fuera del repo, nunca escrita en la línea de comandos: quedaría en el historial)
  *   npm run ia:evaluar -- informe --salida <carpeta> --fuentes <modelo,modelo|plantilla> [--pares N|todos]
  * Los casos son los 40 inventados (CI y robustez) o los del portafolio (`--paquetes`, el JSON de exportar-hechos-ia por
@@ -18,7 +18,7 @@ import { crearGeneradorLocal } from "../src/ia/local/generador";
 import { leerArchivoAcotado } from "../src/lib/archivo-acotado";
 import { ErrorArchivos, abrirCorridas, escribirPlantilla } from "../src/ia/evaluacion/archivos";
 import { ErrorArgumentosEvaluacion, leerArgumentosEvaluacion, USO_EVALUAR, VARIABLE_DESTINO, type ArgumentosEvaluacion } from "../src/ia/evaluacion/argumentos";
-import { casosInventados, hashDeCasos, limitarCasos } from "../src/ia/evaluacion/casos";
+import { casosInventados, elegirCasos, hashDeCasos, limitarCasos } from "../src/ia/evaluacion/casos";
 import { LIMITE_EVALUACION_MS } from "../src/ia/evaluacion/corrida";
 import { evaluarModelo } from "../src/ia/evaluacion/evaluar";
 import { ErrorExportacion, leerExportacion, MAX_BYTES_EXPORTACION } from "../src/ia/evaluacion/exportacion";
@@ -44,6 +44,12 @@ class Negativa extends Error {
 
 const CON_CODIGO = [ErrorArgumentosEvaluacion, ErrorSalida, ErrorArchivos, ErrorExportacion, ErrorPares, ErrorLocal, Negativa];
 const codigoDe = (e: unknown): string | null => (CON_CODIGO.some((c) => e instanceof c) ? (e as { codigo: string }).codigo : null);
+
+/** Los casos pedidos con `--casos` (todos, si no se pidió ninguno); un id que no existe es CASO_DESCONOCIDO, sin repetirlo. */
+function conLosIds(todos: readonly CasoEvaluacion[], ids: readonly string[] | null): readonly CasoEvaluacion[] {
+  if (ids === null) return todos;
+  return elegirCasos(todos, ids) ?? ((): never => { throw new Negativa("CASO_DESCONOCIDO"); })();
+}
 
 function casosDe(semilla: number | null, paquetes: string | null): readonly CasoEvaluacion[] {
   if (paquetes === null) return casosInventados(semilla ?? undefined);
@@ -71,7 +77,7 @@ const esperar = (ms: number, senal: AbortSignal): Promise<void> =>
   });
 
 async function correr(a: Correr): Promise<number> {
-  const todos = casosDe(a.semilla, a.paquetes);
+  const todos = conLosIds(casosDe(a.semilla, a.paquetes), a.casos);
   const casos = a.maxCasos === null ? todos : limitarCasos(todos, a.maxCasos);
   const origen = a.paquetes === null ? "INVENTADOS" : "PAQUETES";
   // Con el portafolio, los textos traen cifras reales: nunca en un temporal (donde viven los scratchpads), sea cual sea
@@ -114,7 +120,7 @@ async function correr(a: Correr): Promise<number> {
 async function main(): Promise<number> {
   const a = leerArgumentosEvaluacion(process.argv.slice(2), process.env);
   if (a.comando === "casos") {
-    const casos = casosDe(a.semilla, a.paquetes);
+    const casos = conLosIds(casosDe(a.semilla, a.paquetes), a.casos);
     for (const linea of lineasDeCasos(casos, a.paquetes === null ? "INVENTADOS" : "PAQUETES")) console.error(linea);
     return 0;
   }

@@ -1,14 +1,15 @@
 /**
  * Los argumentos de `npm run ia:evaluar -- <subcomando> …` (E7). Tres subcomandos, cada uno con su lista blanca de
  * opciones (cada una una sola vez, siempre con valor):
- * - `casos [--semilla N | --paquetes <archivo.json>]`: arma los casos y dice cuántos son; sin red ni variables;
+ * - `casos [--semilla N | --paquetes <archivo.json>] [--casos <ids>]`: arma los casos y dice cuántos son; sin red ni variables;
  * - `correr --modelo <nombre> --salida <carpeta> [--paquetes <archivo.json> | --semilla N] [--pasadas 1|2]
- *   [--max-casos N] [--pausa-s N]`: corre el modelo sobre los casos (el destino llega por la variable de entorno);
+ *   [--max-casos N | --casos <ids>] [--pausa-s N]`: corre el modelo sobre los casos (el destino llega por la variable de entorno);
+ *   `--casos` son ids separados por coma (p. ej. DIARIO-16,DIARIO-17) y no se combina con `--max-casos`;
  * - `informe --salida <carpeta> --fuentes <a,b[,c[,d]]> [--pares N|todos] [--semilla N]`: métricas y pares.
  * Las rutas van absolutas. Cierra en fallo con un código; el mensaje nunca repite el valor recibido.
  */
 import { PATRON_MODELO } from "../generador";
-import { SEMILLA_INVENTADOS } from "./inventados.ficticio";
+import { CANTIDAD_INVENTADOS, SEMILLA_INVENTADOS } from "./inventados.ficticio";
 import { MAX_PAUSA_MS } from "./evaluar";
 import { MAX_FUENTES, MIN_FUENTES } from "./pares";
 import type { Pasada } from "./tipos";
@@ -21,29 +22,32 @@ export const VARIABLE_DESTINO = "INV_IA_LOCAL_DESTINO";
 export const PAUSA_POR_OMISION_MS = 2000;
 export const PARES_POR_OMISION = 10;
 const MAX_SEMILLA = 4_294_967_295;
-const MAX_CASOS = 40;
+/** Todos los casos inventados: el tope de `--max-casos` y de los ids de `--casos`. */
+const MAX_CASOS = Object.values(CANTIDAD_INVENTADOS).reduce((suma, n) => suma + n, 0);
+/** Un id de caso: el tipo en mayúsculas, un guion y su número, o el nombre en mayúsculas de un caso exportado. */
+const PATRON_ID_CASO = /^[A-Z][A-Z0-9_]{0,15}(?:-[0-9]{1,3})?$/u;
 const MAX_PARES = 30;
 const MS_POR_SEGUNDO = 1000;
 
 export const USO_EVALUAR = [
   "Uso: npm run ia:evaluar -- <casos|correr|informe> …",
-  "  casos   [--semilla N | --paquetes <archivo.json>]",
-  `  correr  --modelo <nombre> --salida <carpeta absoluta> [--paquetes <archivo.json> | --semilla N] [--pasadas 1|2] [--max-casos N] [--pausa-s N]   (destino en ${VARIABLE_DESTINO})`,
+  "  casos   [--semilla N | --paquetes <archivo.json>] [--casos <id,id>]",
+  `  correr  --modelo <nombre> --salida <carpeta absoluta> [--paquetes <archivo.json> | --semilla N] [--pasadas 1|2] [--max-casos N | --casos <id,id>] [--pausa-s N]   (destino en ${VARIABLE_DESTINO})`,
   "  informe --salida <carpeta absoluta> --fuentes <modelo,modelo|plantilla> [--pares N|todos] [--semilla N]",
 ].join("\n");
 
 export type ArgumentosEvaluacion =
-  | { readonly comando: "casos"; readonly semilla: number | null; readonly paquetes: string | null }
+  | { readonly comando: "casos"; readonly semilla: number | null; readonly paquetes: string | null; readonly casos: readonly string[] | null }
   | {
     readonly comando: "correr"; readonly modelo: string; readonly salida: string; readonly semilla: number | null; readonly paquetes: string | null;
-    readonly pasadas: Pasada; readonly maxCasos: number | null; readonly pausaMs: number;
+    readonly casos: readonly string[] | null; readonly pasadas: Pasada; readonly maxCasos: number | null; readonly pausaMs: number;
   }
   | { readonly comando: "informe"; readonly salida: string; readonly fuentes: readonly string[]; readonly pares: number | "TODOS"; readonly semilla: number };
 
 export const CODIGOS_ERROR_ARGUMENTOS = Object.freeze([
   "USO", "OPCION_DESCONOCIDA", "ARGUMENTO_SUELTO", "FALTA_VALOR", "OPCION_REPETIDA", "FALTA_MODELO", "FALTA_SALIDA", "SALIDA_RELATIVA", "PAQUETES_RELATIVA",
   "SEMILLA_CON_PAQUETES", "MODELO_INVALIDO", "SEMILLA_INVALIDA", "PASADAS_INVALIDAS", "MAX_CASOS_INVALIDO", "PAUSA_INVALIDA", "FALTAN_FUENTES",
-  "FUENTES_INVALIDAS", "PARES_INVALIDOS", "NPM_SE_QUEDO",
+  "FUENTES_INVALIDAS", "PARES_INVALIDOS", "CASOS_INVALIDOS", "CASOS_CON_MAX_CASOS", "NPM_SE_QUEDO",
 ] as const);
 export type CodigoErrorArgumentos = (typeof CODIGOS_ERROR_ARGUMENTOS)[number];
 
@@ -55,8 +59,8 @@ export class ErrorArgumentosEvaluacion extends Error {
 }
 
 const OPCIONES: Readonly<Record<ArgumentosEvaluacion["comando"], readonly string[]>> = Object.freeze({
-  casos: ["--semilla", "--paquetes"],
-  correr: ["--modelo", "--salida", "--semilla", "--paquetes", "--pasadas", "--max-casos", "--pausa-s"],
+  casos: ["--semilla", "--paquetes", "--casos"],
+  correr: ["--modelo", "--salida", "--semilla", "--paquetes", "--pasadas", "--max-casos", "--casos", "--pausa-s"],
   informe: ["--salida", "--fuentes", "--pares", "--semilla"],
 });
 
@@ -94,6 +98,14 @@ function semillaYPaquetes(v: ReadonlyMap<string, string>): { readonly semilla: n
   return { semilla: paquetes === null ? (entero(v.get("--semilla"), 0, MAX_SEMILLA, "SEMILLA_INVALIDA") ?? SEMILLA_INVENTADOS) : null, paquetes };
 }
 
+/** Los ids de `--casos`: separados por coma, cada uno con la forma de un id, sin repetir y no más que casos inventados hay. */
+function idsDeCasos(texto: string | undefined): readonly string[] | null {
+  if (texto === undefined) return null;
+  const ids = texto.split(",");
+  const validos = ids.length <= MAX_CASOS && ids.every((id) => PATRON_ID_CASO.test(id)) && new Set(ids).size === ids.length;
+  return validos ? Object.freeze(ids) : falla("CASOS_INVALIDOS");
+}
+
 function correr(v: ReadonlyMap<string, string>): ArgumentosEvaluacion {
   const modelo = v.get("--modelo") ?? falla("FALTA_MODELO");
   // «plantilla» es la línea base en el informe: ningún modelo se llama así.
@@ -101,8 +113,11 @@ function correr(v: ReadonlyMap<string, string>): ArgumentosEvaluacion {
   const salida = absoluta(v.get("--salida") ?? falla("FALTA_SALIDA"), "SALIDA_RELATIVA") as string;
   const pasadas = (entero(v.get("--pasadas"), 1, 2, "PASADAS_INVALIDAS") ?? 2) as Pasada;
   const pausa = entero(v.get("--pausa-s"), 0, MAX_PAUSA_MS / MS_POR_SEGUNDO, "PAUSA_INVALIDA");
+  const maxCasos = entero(v.get("--max-casos"), 1, MAX_CASOS, "MAX_CASOS_INVALIDO");
+  const casos = idsDeCasos(v.get("--casos"));
+  if (casos !== null && maxCasos !== null) falla("CASOS_CON_MAX_CASOS");
   return {
-    comando: "correr", modelo, salida, ...semillaYPaquetes(v), pasadas, maxCasos: entero(v.get("--max-casos"), 1, MAX_CASOS, "MAX_CASOS_INVALIDO"),
+    comando: "correr", modelo, salida, ...semillaYPaquetes(v), casos, pasadas, maxCasos,
     pausaMs: pausa === null ? PAUSA_POR_OMISION_MS : pausa * MS_POR_SEGUNDO,
   };
 }
@@ -125,6 +140,6 @@ export function leerArgumentosEvaluacion(argv: readonly string[], entorno: Reado
   if (comando !== "casos" && comando !== "correr" && comando !== "informe") return falla("USO");
   if (Object.values(OPCIONES).flat().some((o) => entorno[`npm_config_${o.slice(2).replace(/-/g, "_")}`] !== undefined)) falla("NPM_SE_QUEDO");
   const v = leerOpciones(comando, resto);
-  if (comando === "casos") return { comando, ...semillaYPaquetes(v) };
+  if (comando === "casos") return { comando, ...semillaYPaquetes(v), casos: idsDeCasos(v.get("--casos")) };
   return comando === "correr" ? correr(v) : informe(v);
 }
