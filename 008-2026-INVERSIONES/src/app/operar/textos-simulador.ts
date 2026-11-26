@@ -17,6 +17,9 @@ export const TEXTOS_SIMULADOR = {
   AYUDA_SALDO:
     "Escriba el saldo que ve en Trii, como en la ficha (37.911,47), sin signo $: esa es la caja de la simulación y no se guarda. " +
     "Si lo deja vacío, la caja es la certificada por Acciones & Valores, que puede no ser su saldo en Trii.",
+  PRECIO_ACTUAL: "Precio actual (trii Pro) ($, opcional)",
+  AYUDA_PRECIO_ACTUAL:
+    "El precio que ve en trii Pro, como en la ficha (2.345,5), sin signo $. Si lo escribe, la especie se valora a ese precio y no al último cierre; no se guarda. Hasta un millón de pesos y dos decimales.",
   ANALISIS: "Análisis del antes y el después",
   PARTIDA: "Valor de partida de los escenarios (pesos)",
   ESCENARIOS: "Escenarios a 12 meses (pesos; acciones, fondo y caja; sin aportes, con los parámetros por omisión de Proyecciones)",
@@ -44,7 +47,7 @@ export const TEXTOS_SIMULADOR = {
   FALLO: "No se pudo simular la operación. Intente de nuevo.",
   SESION: "La sesión venció. Ingrese de nuevo.",
   DEMASIADAS: "Demasiadas simulaciones seguidas. Intente de nuevo en un momento.",
-  INVALIDO: "Revise lo escrito: la especie, la operación, una cantidad entera y un precio.",
+  INVALIDO: "Revise lo escrito: la especie, la operación, una cantidad entera, un precio y, si los escribió, el saldo y el precio actual.",
 } as const;
 
 export const LADOS_SIMULADOR = [

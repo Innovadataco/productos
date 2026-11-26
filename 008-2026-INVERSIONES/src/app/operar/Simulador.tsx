@@ -1,6 +1,6 @@
 "use client";
 /**
- * La sección «¿Y si…?» de /operar: un formulario (especie, comprar o vender, cantidad, precio límite y comisionista) que
+ * La sección «¿Y si…?» de /operar: un formulario (especie, comprar o vender, cantidad, precio límite, comisionista y, si quiere, su saldo y el precio actual de trii Pro) que
  * manda a POST /api/operar/simular y muestra lo que devuelve, ya formateado por el servidor. No guarda nada: la familia
  * también lo usa. Todo se muestra como texto (React escapa): nada de HTML del servidor. Se envía con `fetch` (un
  * formulario nativo, con `Referrer-Policy: no-referrer`, mandaría `Origin: null` y la ruta lo rechazaría).
@@ -117,6 +117,7 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
   const [precio, setPrecio] = useState("");
   const [comisionista, setComisionista] = useState<string>(COMISIONISTAS_SIMULADOR[0].valor);
   const [saldo, setSaldo] = useState("");
+  const [precioActual, setPrecioActual] = useState("");
   const [estado, setEstado] = useState<Estado>({ tipo: "listo" });
   const enCurso = useRef(false);
   const alerta = useRef<HTMLDivElement | null>(null);
@@ -135,7 +136,7 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
     enCurso.current = true;
     setEstado({ tipo: "calculando" });
     try {
-      setEstado(await simular({ instrumentoId: especie, lado, cantidad, precioLimite: precio, comisionista, saldoComisionista: saldo }));
+      setEstado(await simular({ instrumentoId: especie, lado, cantidad, precioLimite: precio, comisionista, saldoComisionista: saldo, precioActual }));
     } finally {
       enCurso.current = false;
     }
@@ -169,6 +170,9 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
           <label htmlFor="sim-saldo">{T.SALDO}</label>
           <input id="sim-saldo" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={saldo} onChange={(e) => setSaldo(e.target.value)} aria-describedby="sim-ayuda-saldo" />
           <p className="nota op-sim-ayuda" id="sim-ayuda-saldo">{T.AYUDA_SALDO}</p>
+          <label htmlFor="sim-precio-actual">{T.PRECIO_ACTUAL}</label>
+          <input id="sim-precio-actual" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={precioActual} onChange={(e) => setPrecioActual(e.target.value)} aria-describedby="sim-ayuda-precio-actual" />
+          <p className="nota op-sim-ayuda" id="sim-ayuda-precio-actual">{T.AYUDA_PRECIO_ACTUAL}</p>
           <button type="submit" className="op-sim-boton" aria-busy={calculando} aria-disabled={calculando ? true : undefined}>{T.BOTON}</button>
         </form>
       )}

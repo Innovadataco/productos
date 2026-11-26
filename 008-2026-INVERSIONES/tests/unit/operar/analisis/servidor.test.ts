@@ -50,6 +50,19 @@ describe("analizarSimulacion", () => {
     expect(vista.frases.length).toBeGreaterThanOrEqual(3);
   });
 
+  it("con el precio actual escrito, los pesos del antes y del después se calculan con ese precio, no con el último cierre", async () => {
+    const sin = await analizarSimulacion(DB, PEDIDO);
+    const con = await analizarSimulacion(DB, { ...PEDIDO, precioActual: CIERRE_B.mul(3) });
+    // FICTICIA-B vale el triple: pesa más antes y después de la compra.
+    expect(con.comparacion.pesoOperada.antes!).toBeGreaterThan(sin.comparacion.pesoOperada.antes!);
+    expect(con.comparacion.pesoOperada.despues!).toBeGreaterThan(sin.comparacion.pesoOperada.despues!);
+    const peso = ENTRADAS.tablero.filas.find((f) => f.instrumentoId === "FICTICIA-B")!.valor!.mul(3);
+    const resto = ENTRADAS.tablero.valorAcciones.sub(ENTRADAS.tablero.filas.find((f) => f.instrumentoId === "FICTICIA-B")!.valor!);
+    expect(con.comparacion.pesoOperada.antes!).toBeCloseTo(peso.div(peso.add(resto)).toNumber(), 6);
+    // Con null (sin precio escrito) nada cambia.
+    expect((await analizarSimulacion(DB, { ...PEDIDO, precioActual: null })).comparacion.pesoOperada).toEqual(sin.comparacion.pesoOperada);
+  });
+
   it("con el turno de proyecciones ocupado por el mismo usuario, sale sin escenarios", async () => {
     const { conTurno } = await import("@/app/proyecciones/turno");
     let soltar: () => void = () => undefined;

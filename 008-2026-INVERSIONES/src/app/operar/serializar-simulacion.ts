@@ -6,7 +6,7 @@
 import { Prisma } from "@prisma/client";
 import { cantidadEs } from "@/plan/edicion/formato";
 import { DECIMALES_PESO, porcentajeEs } from "@/operar/analisis/texto";
-import { textoAfectacion, textoAviso, textoComision, textoError, textoPesosRedondos, textoRegla, NOTA_CAJA_SIN_COMISION, NOTA_VALORACION } from "@/operar/simulador/textos";
+import { textoAfectacion, textoAviso, textoPesos, textoComision, textoError, textoPesosRedondos, textoRegla, NOTA_CAJA_SIN_COMISION, NOTA_VALORACION } from "@/operar/simulador/textos";
 import type { ComisionEstimada, PosicionSimulada, ResultadoSimulacion, Tenencia } from "@/operar/simulador/tipos";
 import type { VistaAnalisisSimulacion } from "@/operar/analisis/vista";
 import { fecha } from "../tablero/formato";
@@ -17,6 +17,12 @@ export const SIN_PESO = "—";
 export const CAJA_ESCRITA = "Caja de la simulación: el saldo que usted escribió, no la de Acciones & Valores (no se guarda).";
 export const CAJA_SIN_CERTIFICACION = "Sin certificación de Acciones & Valores: la caja de antes es 0. Escriba su saldo en Trii arriba para simular con él.";
 export const AVISO_CAJA_AV_NEGATIVA = "La caja certificada por Acciones & Valores es negativa y no es su saldo en Trii: escríbalo arriba para simular con él.";
+export const NOTA_VALORACION_CON_PRECIO = "Es el precio de la especie operada; las demás se valoran a su último cierre y la caja se mueve al precio límite de la orden.";
+/** «Valorado con el precio escrito: $ 2.345,5 (trii Pro), no con el cierre del 12-mar-2027.» */
+export function textoPrecioEscrito(precio: Prisma.Decimal, cierreFecha: Date | null): string {
+  const base = `Valorado con el precio escrito: ${textoPesos(precio)} (trii Pro)`;
+  return cierreFecha === null ? `${base}; la especie no tiene cierre guardado.` : `${base}, no con el cierre del ${fecha(cierreFecha.toISOString().slice(0, 10))}.`;
+}
 export const textoCajaCertificada = (dia: string): string => `Caja certificada por Acciones & Valores al ${fecha(dia)}; no es su saldo en Trii. Escríbalo arriba para simular con él.`;
 
 const FUENTES: Readonly<Record<ComisionEstimada["estado"], FuenteComision>> = { TARIFA: "TARIFA", ESTIMADA: "HISTORIA", SIN_HISTORIA: "SIN_HISTORIA" };
@@ -32,7 +38,20 @@ export const especiesSimulables = (posiciones: readonly PosicionSimulada[]): Esp
   posiciones.map((p) => ({ id: p.instrumentoId, nemotecnico: p.nemotecnico, cantidad: cantidadEs(p.cantidad) }));
 
 /** La respuesta de la ruta: la vista o los errores del dueño, ya como texto. `cajaAl` es el corte de la caja (null sin certificación; «ESCRITA» si la escribió el dueño). */
-export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: string, posiciones: readonly PosicionSimulada[], cajaAl: Date | null | "ESCRITA", analisis: VistaAnalisisSimulacion | null = null): RespuestaSimulacion {
+/** El precio actual escrito para la especie operada y el día del último cierre con que se habría valorado (null si no tiene). */
+export interface PrecioEscrito {
+  readonly precio: Prisma.Decimal;
+  readonly cierreFecha: Date | null;
+}
+
+export function aRespuestaSimulacion(
+  r: ResultadoSimulacion,
+  instrumentoId: string,
+  posiciones: readonly PosicionSimulada[],
+  cajaAl: Date | null | "ESCRITA",
+  analisis: VistaAnalisisSimulacion | null = null,
+  precioEscrito: PrecioEscrito | null = null,
+): RespuestaSimulacion {
   if (!r.ok) return { ok: false, errores: r.errores.map(textoError) };
   const s = r.simulacion;
   const operada = posiciones.find((p) => p.instrumentoId === instrumentoId)?.nemotecnico ?? "";
@@ -57,7 +76,7 @@ export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: stri
       valorAccionesDespues: textoPesosRedondos(s.valorAccionesDespues),
       reglas: s.reglasAfectadas.map((a) => ({ texto: textoRegla(a.regla, operada), afectaciones: a.afectaciones.map((x) => textoAfectacion(x, a.regla)) })),
       avisos: [...(cajaAl !== "ESCRITA" && s.cajaAntes.isNeg() && !s.cajaAntes.isZero() ? [AVISO_CAJA_AV_NEGATIVA] : []), ...s.avisos.map(textoAviso)],
-      notas: [NOTA_VALORACION, ...(conComision ? [] : [NOTA_CAJA_SIN_COMISION])],
+      notas: [...(precioEscrito === null ? [NOTA_VALORACION] : [textoPrecioEscrito(precioEscrito.precio, precioEscrito.cierreFecha), NOTA_VALORACION_CON_PRECIO]), ...(conComision ? [] : [NOTA_CAJA_SIN_COMISION])],
       analisis,
     },
   };

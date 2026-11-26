@@ -36,7 +36,7 @@ export async function leerPosiciones(db: PrismaClient): Promise<PosicionSimulada
     instrumentoId: f.instrumentoId,
     nemotecnico: f.nemotecnico,
     cantidad: f.cantidad,
-    cierre: f.cierre === null ? null : { precio: f.cierre.precio },
+    cierre: f.cierre === null ? null : { precio: f.cierre.precio, fecha: f.cierre.fecha },
   }));
 }
 

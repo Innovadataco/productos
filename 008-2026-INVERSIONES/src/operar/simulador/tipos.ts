@@ -41,8 +41,12 @@ export interface EspecieNombrada {
 export interface PosicionSimulada extends EspecieNombrada {
   /** Acciones de hoy; 0 si ya no tiene (se puede simular comprarla otra vez). */
   readonly cantidad: bigint;
-  /** Último cierre guardado (basta su precio: la forma de `FilaTablero.cierre`); null si no hay. */
-  readonly cierre: { readonly precio: Decimal } | null;
+  /**
+   * Último cierre guardado (basta su precio: la forma de `FilaTablero.cierre`); null si no hay. `fecha` (el día del
+   * cierre) es opcional: solo la usa el informe para decir con qué cierre se habría valorado cuando el dueño escribe el
+   * precio actual de trii Pro.
+   */
+  readonly cierre: { readonly precio: Decimal; readonly fecha?: Date } | null;
 }
 
 /** Una fila del plan vigente, con los campos de `regla_plan` (los de `leerReglas` encajan tal cual). */
