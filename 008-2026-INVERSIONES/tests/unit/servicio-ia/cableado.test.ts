@@ -88,9 +88,9 @@ describe("servirAhora", () => {
     const { proceso, lineas } = procesoCon({ DATABASE_URL: URL_FICTICIA, [VARIABLE_ESTADO_DIR]: dir });
     const desconectar = vi.fn(async () => undefined);
     const db = { configIa: { findFirst: vi.fn(async () => null) }, $disconnect: desconectar };
-    const crearDb = vi.fn(() => db);
+    const crearDb = vi.fn((_url: string) => db);
     expect(await servirAhora(proceso, vi.fn() as never, crearDb as never)).toBe(0);
-    expect(new URL(crearDb.mock.calls[0]![0] as string).searchParams.get("connection_limit")).toBe("1");
+    expect(new URL(crearDb.mock.calls[0]![0]).searchParams.get("connection_limit")).toBe("1");
     expect(desconectar).toHaveBeenCalledTimes(1);
     const todo = lineas.join("");
     expect(todo).toMatch(/apagada/);

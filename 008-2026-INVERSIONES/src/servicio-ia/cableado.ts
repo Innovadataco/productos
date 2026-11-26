@@ -1,7 +1,8 @@
 /**
  * Cableado real del servicio inv-008-ia (lo usa entrada.ts, el bundle de la imagen de la app): la base como inv_ia, el
  * `fetch` acotado hacia el Ollama del Mac, UN turno para todo lo que va al Mac (la corrida diaria y los pedidos a
- * demanda: un pedido a la vez), el bucle y el endpoint interno.
+ * demanda: un pedido a la vez), el bucle y el endpoint interno. `servirAhora` (modo «ahora», ahora.ts) usa las mismas
+ * dependencias (`dependenciasReales`): solo cambia la política de reintentos y que no levanta ni el bucle ni el endpoint.
  * - Sin la credencial: solo el latido (EN ESPERA). Sin el token: sin endpoint (la corrida diaria sí corre).
  * - La nube queda apagada: el servicio no recibe su llave (el compose no se la pasa) y su `fetch` solo llega a la tailnet.
  * - El destino del Ollama sale SIEMPRE de config_ia (la base): no hay variable ni literal con él.
@@ -24,9 +25,10 @@ import { registrarResumen, yaPublicado } from "../ia/registro/registro";
 import { diaIso, esDiaHabil, fechaEnBogota } from "../precios/horario";
 import { ESTADO_DIR_POR_DEFECTO } from "../servicio-precios/estado";
 import { textoCot } from "../servicio-precios/programa";
-import { iniciarBucle, type DependenciasBucle, type Programar, type Senales } from "./bucle";
+import { REINTENTOS_AHORA, bucleEnCurso, conUnaConexion, correrAhora } from "./ahora";
+import { SALIDA, iniciarBucle, type DependenciasBucle, type Programar, type Senales } from "./bucle";
 import { leerTokenServicio, revisarCredencialIa } from "./configuracion";
-import { correrDiaria, type DependenciasCorrida } from "./corrida";
+import { correrDiaria, type DependenciasCorrida, type PoliticaReintentos } from "./corrida";
 import { crearAtencion, tokenAutorizado } from "./pedidos";
 import { crearServidor } from "./servidor";
 
@@ -74,19 +76,23 @@ const programarConIntervalo: Programar = (accion, cadaMs) => {
 };
 const hoyEnColombia = (): string => diaIso(fechaEnBogota(new Date()));
 
-/** `servicio-ia.mjs bucle`: el servicio permanente. `fetchReal` es el `fetch` de node, tomado antes de anularlo. */
-export function servir(proceso: Proceso, fetchReal: BuscarLocal, crearDb: () => PrismaClient = () => new PrismaClient()): Promise<number> {
-  const registrar = (mensaje: string): void => void proceso.stdout.write(`${textoCot(new Date())} [ia] ${mensaje}\n`);
-  const credencial = revisarCredencialIa(proceso.env.DATABASE_URL);
-  const esperar = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-  const base = { dir: proceso.env[VARIABLE_ESTADO_DIR] || ESTADO_DIR_POR_DEFECTO, ahora: Date.now, registrar, credencial, programar: programarConIntervalo };
-  const sinBase = (): Promise<never> => Promise.reject(new Error("SIN_CREDENCIAL"));
-  if (!credencial.ok) return iniciarBucle({ ...base, leerConfig: sinBase, esHabil: sinBase, correr: sinBase, esperar }, proceso);
+/** Lo que el bucle y el modo «ahora» comparten: el turno, el `fetch` acotado y lo que la corrida lee y escribe. */
+export interface DependenciasReales {
+  readonly semaforo: ReturnType<typeof crearSemaforo>;
+  readonly fetchLocal: BuscarLocal;
+  leerConfig(): Promise<ConfigIaVigente | null>;
+  esHabil(hoy: Date): Promise<boolean>;
+  readonly corrida: DependenciasCorrida;
+}
 
-  const db = crearDb();
+/**
+ * Las dependencias reales de la corrida con una base ya creada: el `fetch` acotado al Ollama, UN turno, las opciones
+ * fijas de 008 (num_ctx, semilla, keep_alive corto, en src/ia/local) y las de la configuración. `reintentos` vacío es la
+ * política de la programada.
+ */
+export function dependenciasReales(db: PrismaClient, fetchReal: BuscarLocal, registrar: (mensaje: string) => void, esperar: (ms: number) => Promise<void>, reintentos?: PoliticaReintentos): DependenciasReales {
   const semaforo = crearSemaforo();
   const fetchLocal = fetchAcotado(fetchReal);
-  const leerConfig = (): Promise<ConfigIaVigente | null> => leerConfigIa(db);
   const corrida: DependenciasCorrida = {
     exportar: (hoy) => exportarHechos(db, hoy),
     generadores: (config, tarea) => generadoresDeConfig(config, tarea, {}, { fetchLocal, gastoDelMes: leerGastoNube(db, hoyEnColombia), semaforo }),
@@ -96,15 +102,40 @@ export function servir(proceso: Proceso, fetchReal: BuscarLocal, crearDb: () => 
     registrar: (entrada) => registrarResumen(db, entrada),
     esperar,
     registrarLog: registrar,
+    ...(reintentos === undefined ? {} : { reintentos }),
   };
-  const deps: DependenciasBucle = {
-    ...base,
-    leerConfig,
+  return {
+    semaforo,
+    fetchLocal,
+    corrida,
+    leerConfig: () => leerConfigIa(db),
     esHabil: async (hoy) => {
       const festivos = await db.calendarioBvc.findMany({ where: { esHabil: false }, select: { dia: true } });
       return esDiaHabil(hoy, new Set(festivos.map((f) => diaIso(f.dia))));
     },
-    correr: (config, hoy) => correrDiaria(corrida, config, hoy),
+  };
+}
+
+const esperarMs = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+const registradorDe = (proceso: Proceso, prefijo: string) => (mensaje: string): void => void proceso.stdout.write(`${textoCot(new Date())} [${prefijo}] ${mensaje}\n`);
+
+/** `servicio-ia.mjs bucle`: el servicio permanente. `fetchReal` es el `fetch` de node, tomado antes de anularlo. */
+export function servir(proceso: Proceso, fetchReal: BuscarLocal, crearDb: () => PrismaClient = () => new PrismaClient()): Promise<number> {
+  const registrar = registradorDe(proceso, "ia");
+  const credencial = revisarCredencialIa(proceso.env.DATABASE_URL);
+  const esperar = esperarMs;
+  const base = { dir: proceso.env[VARIABLE_ESTADO_DIR] || ESTADO_DIR_POR_DEFECTO, ahora: Date.now, registrar, credencial, programar: programarConIntervalo };
+  const sinBase = (): Promise<never> => Promise.reject(new Error("SIN_CREDENCIAL"));
+  if (!credencial.ok) return iniciarBucle({ ...base, leerConfig: sinBase, esHabil: sinBase, correr: sinBase, esperar }, proceso);
+
+  const db = crearDb();
+  const reales = dependenciasReales(db, fetchReal, registrar, esperar);
+  const { semaforo, fetchLocal, leerConfig } = reales;
+  const deps: DependenciasBucle = {
+    ...base,
+    leerConfig,
+    esHabil: reales.esHabil,
+    correr: (config, hoy) => correrDiaria(reales.corrida, config, hoy),
     esperar,
   };
 
@@ -120,4 +151,33 @@ export function servir(proceso: Proceso, fetchReal: BuscarLocal, crearDb: () => 
     servidor?.closeAllConnections();
     await db.$disconnect();
   });
+}
+
+/**
+ * `servicio-ia.mjs ahora`: la corrida diaria una vez (ahora.ts) y sale, con las mismas dependencias que el bucle, una
+ * sola conexión a la base y REINTENTOS_AHORA. Sin la credencial: lo dice y sale con 1, sin crear el cliente de la base.
+ */
+export async function servirAhora(proceso: Proceso, fetchReal: BuscarLocal, crearDb: (url: string) => PrismaClient = (url) => new PrismaClient({ datasourceUrl: url })): Promise<number> {
+  const registrar = registradorDe(proceso, "ia ahora");
+  const credencial = revisarCredencialIa(proceso.env.DATABASE_URL);
+  if (!credencial.ok) {
+    registrar(credencial.motivo);
+    return SALIDA.FALLO;
+  }
+  if (LISTA_MODELOS_PI.estado !== "LISTA") registrar(`sin lista de PI de modelos permitidos (${LISTA_MODELOS_PI.motivo}): la puerta local no puede generar`);
+  const db = crearDb(conUnaConexion(proceso.env.DATABASE_URL as string));
+  const reales = dependenciasReales(db, fetchReal, registrar, esperarMs, REINTENTOS_AHORA);
+  const dir = proceso.env[VARIABLE_ESTADO_DIR] || ESTADO_DIR_POR_DEFECTO;
+  try {
+    return await correrAhora({
+      registrar,
+      hoy: () => fechaEnBogota(new Date()),
+      leerConfig: reales.leerConfig,
+      esHabil: reales.esHabil,
+      bucleCorriendo: () => bucleEnCurso(dir),
+      correr: (config, hoy) => correrDiaria(reales.corrida, config, hoy),
+    });
+  } finally {
+    await db.$disconnect().catch(() => undefined);
+  }
 }
