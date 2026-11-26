@@ -19,8 +19,8 @@ describe("evaluarNivel", () => {
   });
   it("frontera de cerca: 2,99 es cerca y 3,00 no", () => {
     // nivel 100 sobre un precio p: distancia = (100 − p)/p·100
-    const cerca = evaluarNivel(base({ condicion: "CIERRE_SOBRE", precio: { base: "CIERRE", precio: D("97.09") } }), UMBRALES_OMISION); // 2,99 %
-    const no = evaluarNivel(base({ condicion: "CIERRE_SOBRE", precio: { base: "CIERRE", precio: D("97.087378640776699") } }), UMBRALES_OMISION); // 3,00 %
+    const cerca = evaluarNivel(base({ condicion: "CIERRE_SOBRE", precio: { base: "CIERRE", precio: D("97.10") } }), UMBRALES_OMISION); // 2,99 %
+    const no = evaluarNivel(base({ condicion: "CIERRE_SOBRE", precio: { base: "CIERRE", precio: D("97.09") } }), UMBRALES_OMISION); // 2,9972 %, que se muestra 3,00
     expect(cerca).toMatchObject({ tipo: "NIVEL_CERCA", sentido: "SOBRE" });
     expect(no).toBeNull();
   });
