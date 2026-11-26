@@ -101,7 +101,7 @@ describe("lectura de series contra la base · solo vigentes", () => {
 });
 
 describe("lectura de series contra la base · la variación del IPC es CALCULADA", () => {
-  it("con dos índices leídos (enero de 1913 y de 1914): 2 decimales, calculada por 008", async () => {
+  it("con dos índices leídos (enero de 1913 y de 1914): 2 decimales, calculada por Inversiones", async () => {
     const ipc = serieDelCatalogo("IPC_INDICE")!;
     await sembrar(ipc.codigo, [fila("1913-01-01", "1913-01-31", "13.71"), fila("1914-01-01", "1914-01-31", "14.37")], ipc.fuente);
     const final = await ultimoValor(db, ipc.codigo, dia("1914-03-02"));
@@ -110,6 +110,6 @@ describe("lectura de series contra la base · la variación del IPC es CALCULADA
     expect(base?.valor).toBe("13.71");
     const v = variacionIndice(base!, final!);
     expect(v).toMatchObject({ serie: "IPC_INDICE", valor: "4.81", origen: "CALCULADA", desde: dia("1913-01-01"), hasta: dia("1914-01-31"), fuente: ipc.fuente });
-    expect(v.unidad).toMatch(/calculada por 008/);
+    expect(v.unidad).toMatch(/calculada por Inversiones/);
   });
 });

@@ -16,7 +16,7 @@ export const TEXTOS_IA = {
   RESUMEN: "Revise estos datos",
   OBLIGATORIOS: "El motivo es obligatorio; los demás campos traen la versión vigente.",
   SIN_MODELO: "Sin modelo",
-  RECOMENDADO: "recomendado para 008",
+  RECOMENDADO: "recomendado para Inversiones",
   EN_LISTA: "En la lista de PI",
   LLAVE_SI: "Llave de la nube en el entorno de la app: sí",
   LLAVE_NO: "Llave de la nube en el entorno de la app: no",
@@ -49,7 +49,7 @@ export const FIJOS_IA: readonly { readonly que: string; readonly porque: string 
   { que: "La vista ciega", porque: "el modelo nunca recibe cifras, especies ni cuentas: eso no se apaga." },
   { que: "Cómo se resuelve la dirección del Ollama", porque: "es una sola, la guardada aquí; las pruebas nunca usan otra." },
   { que: "La semilla fija de la local", porque: "con temperatura 0, el mismo dato da el mismo texto (reproducibilidad, como en PI)." },
-  { que: "Un pedido a la vez, el modelo descargado al terminar y el contexto por omisión del modelo", porque: "008 no deja un modelo cargado en el Mac de PI ni lo hace recargar: PI tiene la prioridad." },
+  { que: "Un pedido a la vez, el modelo descargado al terminar y el contexto por omisión del modelo", porque: "Inversiones no deja un modelo cargado en el Mac de PI ni lo hace recargar: PI tiene la prioridad." },
 ];
 
 const MENSAJES: Readonly<Record<string, string>> = {

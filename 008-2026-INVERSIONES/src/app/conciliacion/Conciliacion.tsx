@@ -1,7 +1,7 @@
 /**
  * Pantalla de la conciliación con la certificación de A&V (PR-C). Componente del servidor, sin estado ni
  * JavaScript en el navegador: el selector de cortes son enlaces. Textos para el dueño, sin comandos.
- * «A&V» es lo que dice la certificación; «Sistema», lo que calcula 008 con los archivos cargados, al corte.
+ * «A&V» es lo que dice la certificación; «Sistema», lo que calcula Inversiones con los archivos cargados, al corte.
  */
 import type { ReactNode } from "react";
 import { FechaDato, FechaDatoCompuesta } from "../_comun/fecha-dato/FechaDato";
@@ -33,7 +33,7 @@ function Encabezado({ soloLectura }: { readonly soloLectura: boolean }) {
   return (
     <header className="top concilia-top">
       <div className="wrap fila-top">
-        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio{soloLectura ? <>{" "}<MarcaSoloLectura /></> : null}</div>
+        <div className="marca"><span className="sello" aria-hidden="true">Inv</span>Inversiones · Mi portafolio{soloLectura ? <>{" "}<MarcaSoloLectura /></> : null}</div>
         <a className="pill" href="/">Volver al portafolio</a>
       </div>
     </header>
@@ -224,7 +224,7 @@ function Corte({ vista }: { vista: VistaCorte }) {
             <p className={`resumen tono-${c.resultado.tono}`}>{textoDeCuentas(c.cuentas)}</p>
             <p className="nota">{calculadaEl(c.calculadaEn)}</p>
             <Frescura frescura={c.frescura} />
-            <p className="nota">A&amp;V es lo que dice la certificación. Sistema es lo que calcula 008 con los archivos cargados, a la fecha del corte.</p>
+            <p className="nota">A&amp;V es lo que dice la certificación. Sistema es lo que calcula Inversiones con los archivos cargados, a la fecha del corte.</p>
             {c.noReconocidos > 0 ? <p className="nota aviso">{`Hay ${plural(c.noReconocidos, "comprobación", "comprobaciones")} que esta pantalla todavía no sabe mostrar.`}</p> : null}
           </>
         ) : (

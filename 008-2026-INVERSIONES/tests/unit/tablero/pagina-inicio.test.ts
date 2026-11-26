@@ -54,7 +54,7 @@ describe("src/app/page.tsx", () => {
 
     const html = renderToStaticMarkup(await Inicio());
 
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(html).not.toContain("clave-secreta");
     expect(registro).toHaveBeenCalledWith(`[tablero] no se pudo leer la base (código: ${codigo})`);
     expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
@@ -82,7 +82,7 @@ describe("src/app/page.tsx", () => {
     ultimaConciliacion.mockRejectedValueOnce(new Prisma.PrismaClientInitializationError(`Can't reach ${DETALLE}`, VERSION, "P1001"));
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const html = renderToStaticMarkup(await Inicio());
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[tablero] no se pudo leer la base (código: P1001)");
   });
 
@@ -101,7 +101,7 @@ describe("src/app/page.tsx", () => {
     obtenerEvolucion.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError(`falló en ${DETALLE}`, { code: "P2024", clientVersion: VERSION }));
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const html = renderToStaticMarkup(await Inicio());
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[tablero] no se pudo leer la base (código: P2024)");
   });
 

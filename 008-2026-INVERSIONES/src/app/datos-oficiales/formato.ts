@@ -12,7 +12,7 @@ import { etiquetaTick, fecha, numero } from "@/app/tablero/formato";
 import type { DiaIso, FormaVigencia, FrescuraVista, SerieBase, SerieConDatos, SerieGrafica, SerieVista, VariacionVista, Ventana } from "./tipos";
 
 export const SIN_DATO = "—";
-export const PIE_DATOS_OFICIALES = "008 informa; no recomienda comprar ni vender.";
+export const PIE_DATOS_OFICIALES = "Inversiones informa; no recomienda comprar ni vender.";
 
 const DECIMAL = /^(-?)(\d+)(?:\.(\d+))?$/;
 const MILES = /\B(?=(\d{3})+(?!\d))/g;

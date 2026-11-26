@@ -69,7 +69,7 @@ describe("/edicion · índice de la configuración", () => {
     const { Prisma } = await import("@prisma/client");
     exigirDueno.mockRejectedValue(new Prisma.PrismaClientInitializationError("sin conexión valor-ficticio-4613", "5.22.0"));
     const raiz = await pantalla();
-    expect(texto(raiz)).toContain("No se pudo leer la base de 008");
+    expect(texto(raiz)).toContain("No se pudo leer la base de Inversiones");
     expect(texto(raiz)).not.toContain("valor-ficticio-4613");
     expect(JSON.stringify(registro.mock.calls)).not.toContain("valor-ficticio-4613");
   });

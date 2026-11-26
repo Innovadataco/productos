@@ -67,7 +67,7 @@ describe("src/app/plan/page.tsx · sesión y base", () => {
   it("con la base caída muestra «No se pudo leer la base» y registra solo el código", async () => {
     leerVersiones.mockRejectedValueOnce(new Prisma.PrismaClientInitializationError("Can't reach postgresql://usuario:clave@host-privado:5438", "5.22.0", "P1001"));
     const raiz = await pantalla();
-    expect(texto(raiz.querySelector("h1"))).toBe("No se pudo leer la base de 008");
+    expect(texto(raiz.querySelector("h1"))).toBe("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[plan] no se pudo leer la base (código: P1001)");
   });
 

@@ -3,7 +3,7 @@
  * series inventadas de tests/e2e/sembrar-datos-oficiales.ts, con fechas relativas al «hoy» de la corrida (la app usa la
  * fecha real de Colombia). Cubre:
  *  - la navegación desde el tablero; las cuatro series con su cifra, su vigencia («Vale hoy» solo la que cubre hoy), su
- *    frescura en texto (al día y atrasada), su fuente con enlace https y la variación del IPC «calculada por 008»;
+ *    frescura en texto (al día y atrasada), su fuente con enlace https y la variación del IPC «calculada por Inversiones»;
  *  - cada gráfica: con el teclado, el deslizador dice el último valor; «Ver los datos» abre su tabla;
  *  - sin sesión lleva a /ingresar;
  *  - un familiar la ve en «Solo lectura»: el navegador no hace ningún pedido que no sea GET, no hay formularios y la
@@ -24,7 +24,7 @@ import { ESPERADO } from "./sembrar-datos-oficiales";
 import { enrolarEnPagina, pasarClave, test } from "./sesion";
 
 const ANCHO_CELULAR = { width: 375, height: 812 };
-const PIE = "008 informa; no recomienda comprar ni vender.";
+const PIE = "Inversiones informa; no recomienda comprar ni vender.";
 const HOSTS = new Set(["www.datos.gov.co", "suameca.banrep.gov.co", "www.dane.gov.co"]);
 /** Las referencias oficiales de los decretos (la condición de C1). */
 const HOSTS_REFERENCIAS = new Set(["www.superfinanciera.gov.co", "www.bvc.com.co"]);
@@ -97,7 +97,7 @@ test.describe("pantalla de datos oficiales", () => {
     await expect(ipc.locator(".do-estado-texto")).toHaveText("Al día");
     await expect(ipc.locator(".do-cifra")).toHaveText(ESPERADO.ipc);
     await expect(ipc.locator(".do-vigencia")).toHaveText(/^No es la cifra de hoy · corresponde a [a-z]{3}-\d{4}$/);
-    await expect(ipc.locator(".do-variacion")).toHaveText(`Variación en 12 meses ${ESPERADO.variacionIpc} % de variación (calculada por 008)`);
+    await expect(ipc.locator(".do-variacion")).toHaveText(`Variación en 12 meses ${ESPERADO.variacionIpc} % de variación (calculada por Inversiones)`);
 
     const enlaces = page.locator(".do-series").getByRole("link");
     await expect(enlaces).toHaveCount(SERIES.length);

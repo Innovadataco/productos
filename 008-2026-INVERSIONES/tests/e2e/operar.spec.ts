@@ -23,7 +23,7 @@ import { DECRETOS_E2E } from "./sembrar-datos-oficiales";
 import { test } from "./sesion";
 
 const ANCHO_CELULAR = { width: 375, height: 812 };
-const AVISO = "Información calculada por 008 con su plan. La decisión es suya. 008 no recomienda comprar ni vender.";
+const AVISO = "Información calculada por Inversiones con su plan. La decisión es suya. Inversiones no recomienda comprar ni vender.";
 const enDias = (dias: number) => fecha(sumarDias(hoyDelE2E(), dias).toISOString().slice(0, 10));
 
 /** El texto de cada elemento de la lista de un grupo (sus párrafos, unidos por un espacio). */
@@ -95,7 +95,7 @@ test.describe("pantalla /operar", () => {
         ]);
         // Las dos de portafolio van al final, en el orden de su id (que la siembra no fija).
         expect([...resto.slice(2)].sort()).toEqual([
-          "Su regla de portafolio dice: no actuar si el monto por orden es menor a $ 1.234.000. 008 no la mide con los cierres: aplica al monto de cada orden. Plazo: sin plazo.",
+          "Su regla de portafolio dice: no actuar si el monto por orden es menor a $ 1.234.000. Inversiones no la mide con los cierres: aplica al monto de cada orden. Plazo: sin plazo.",
           "Su regla de portafolio dice: «Siempre orden límite (ficticia)». Es una postura del plan: no depende de un nivel de precio. Plazo: sin plazo.",
         ].sort());
         await expect(main).not.toContainText("Hoy se cumple");
