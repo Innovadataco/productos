@@ -346,6 +346,8 @@ services:
     volumes:
       - /proc/meminfo:/host/meminfo:ro
       - /sys/fs/cgroup:/host/cgroup:ro
+      # La huella del servicio de precios (solo lectura): para avisar si el ciclo por minuto queda detenido por Yahoo.
+      - inv-008-precios-estado:/precios-estado:ro
     networks:
       - inv-008-red
     read_only: true

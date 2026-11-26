@@ -4,6 +4,9 @@
 #
 # Lee, sin el socket de Docker y en solo lectura:
 #  - la memoria del VPS: /host/meminfo (bind de /proc/meminfo);
+#  - la huella `intradia` del servicio de precios (/precios-estado, el volumen inv-008-precios-estado en solo lectura): si el
+#    ciclo de precios cada minuto quedó detenido hasta mañana (estado=LIMITADO con limitados >= 4: Yahoo bloqueó 4 veces
+#    seguidas), avisa una vez y avisa una vez cuando vuelve;
 #  - los OOM: el oom_kill JERÁRQUICO de /host/cgroup/system.slice/memory.events (driver systemd) o
 #    /host/cgroup/docker/memory.events (cgroupfs). Persiste aunque el scope del contenedor muerto se borre.
 #    Para identificar el contenedor mira además cada docker-<id>.scope: si su contador bajó, se recreó.
@@ -24,6 +27,9 @@ set -eu
 MEMINFO="${VIGIA_MEMINFO:-/host/meminfo}"
 CGROUP="${VIGIA_CGROUP:-/host/cgroup}"
 ESTADO_DIR="${VIGIA_ESTADO_DIR:-/run/vigia}"
+PRECIOS_DIR="${VIGIA_PRECIOS_ESTADO_DIR:-/precios-estado}"
+# Tantos bloqueos seguidos de Yahoo y el servicio detiene el ciclo hasta mañana (MAX_LIMITADOS_SEGUIDOS de intradia.ts).
+LIMITE_INTRADIA=4
 UMBRAL_MIB="${VIGIA_UMBRAL_MEMAVAILABLE_MIB:-1024}"
 PEOR_MIB="${VIGIA_PEOR_MIB:-256}"
 PASADAS_OK="${VIGIA_PASADAS_OK:-3}"
@@ -155,11 +161,35 @@ enviar() {
     curl -sS -f -m 15 -K - -H 'Content-Type: application/json' --data-binary "@$ESTADO_DIR/mensaje.json" -o /dev/null 2>/dev/null
 }
 
+# Precios cada minuto detenidos por Yahoo: lee la huella `intradia` (clave=valor) que escribe el servicio de precios. Avisa UNA vez
+# al llegar a LIMITE_INTRADIA bloqueos seguidos y UNA vez cuando el estado deja de ser LIMITADO. Sin huella (tmpfs vacío), una
+# huella dañada o un envío fallido: no cambia nada y se reintenta en la próxima pasada. Nunca actúa.
+revisar_intradia() {
+  archivo="$PRECIOS_DIR/intradia"
+  bandera="$ESTADO_DIR/intradia.avisado"
+  [ -r "$archivo" ] || return 0
+  estado_i="$(awk -F= '$1 == "estado" { print $2; exit }' "$archivo")"
+  limitados_i="$(awk -F= '$1 == "limitados" { print $2; exit }' "$archivo")"
+  case "$estado_i" in '' | *[!A-Z_]*) return 0 ;; esac
+  if [ "$estado_i" = "LIMITADO" ]; then
+    entero "$limitados_i" || return 0
+    [ "$limitados_i" -ge "$LIMITE_INTRADIA" ] || return 0
+    [ ! -e "$bandera" ] || return 0
+    texto="$(printf '🛑 Inversiones · precios cada minuto detenidos hasta mañana\\nHora: %s\\nHubo %s bloqueos seguidos de Yahoo (429/403/red): el ciclo no vuelve a pedir hoy. Insistir puede bloquear la IP del VPS compartido con PI y afectar también los cierres diarios.\\nPara apagarlos: INV_INTRADIA_ENCENDIDO=0 en el env de producción y redesplegar.\\nEl vigía no actúa: solo avisa.' "$(hora_cot)" "$limitados_i")"
+    if enviar "$texto"; then : >"$bandera"; registrar "aviso de precios cada minuto detenidos enviado ($limitados_i bloqueos seguidos)"; else registrar "no se pudo enviar el aviso de precios cada minuto detenidos; se reintenta en la próxima pasada"; fi
+    return 0
+  fi
+  [ -e "$bandera" ] || return 0
+  texto="$(printf '✅ RESUELTO · Inversiones · precios cada minuto\\nHora: %s\\nEl ciclo de precios cada minuto volvió (estado %s).\\nEl vigía no actúa: solo avisa.' "$(hora_cot)" "$estado_i")"
+  if enviar "$texto"; then rm -f "$bandera"; registrar "aviso de precios cada minuto resuelto enviado"; else registrar "no se pudo enviar el RESUELTO de precios cada minuto; se reintenta en la próxima pasada"; fi
+}
+
 guardar_estado() { printf '%s %s %s %s\n' "$1" "$2" "$3" "$4" >"$ESTADO_DIR/estado"; }
 
 pasada() {
   mkdir -p "$ESTADO_DIR"
   : >"$ESTADO_DIR/latido"
+  revisar_intradia || true
   disponible_kb="$(leer_kb MemAvailable)"
   swap_kb="$(leer_kb SwapFree)"
   if ! entero "$disponible_kb" || ! entero "$swap_kb"; then
