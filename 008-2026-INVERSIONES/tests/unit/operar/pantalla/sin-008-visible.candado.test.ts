@@ -1,5 +1,5 @@
 // Candado: el producto se llama «Inversiones» y ningún texto de la app dice «008» (el logo, los títulos, los avisos, las
-// notas). Recorre el código de src/app/** (menos resumen-ia/, que cambia otro frente) y las unidades de las series, sin
+// notas). Recorre el código de src/app/** (menos resumen-ia/, que cambia otro frente) y de src/operar/** y las unidades de las series, sin
 // los comentarios, y falla si queda un «008» suelto. Los identificadores (rutas «008-2026-…», «inv-008-db») no cuentan:
 // son nombres, no texto. Con control positivo: si el detector deja de morder, esto se pone rojo.
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -10,6 +10,8 @@ import { describe, expect, it } from "vitest";
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "src");
 const EXCLUIDOS = ["app/_comun/resumen-ia"];
 const ADICIONALES = ["datos-oficiales/series/consulta.ts"];
+/** Otras carpetas de texto visible: el simulador y el informe de /operar. (src/ia y src/precios son de otros frentes.) */
+const CARPETAS_EXTRA = ["operar"];
 
 const archivos = (dir: string): string[] =>
   readdirSync(dir).flatMap((n) => {
@@ -39,8 +41,17 @@ describe("el detector de «008» visible muerde", () => {
 });
 
 describe("la app no dice «008» en ningún texto", () => {
-  const todos = [...archivos(join(SRC, "app")).filter((r) => !EXCLUIDOS.some((e) => relative(SRC, r).startsWith(e))), ...ADICIONALES.map((r) => join(SRC, r))];
+  const todos = [
+    ...archivos(join(SRC, "app")).filter((r) => !EXCLUIDOS.some((e) => relative(SRC, r).startsWith(e))),
+    ...CARPETAS_EXTRA.flatMap((c) => archivos(join(SRC, c))),
+    ...ADICIONALES.map((r) => join(SRC, r)),
+  ];
   it("recorre archivos de verdad", () => expect(todos.length).toBeGreaterThan(50));
+  it("incluye src/operar/** y no src/ia ni src/precios", () => {
+    const rel = todos.map((r) => relative(SRC, r));
+    expect(rel.some((r) => r.startsWith("operar/simulador/"))).toBe(true);
+    expect(rel.some((r) => r.startsWith("ia/") || r.startsWith("precios/"))).toBe(false);
+  });
   it("ninguno trae un «008» suelto fuera de los comentarios", () => {
     const con = todos.filter((r) => tiene008Visible(readFileSync(r, "utf8"))).map((r) => relative(SRC, r));
     expect(con).toEqual([]);
