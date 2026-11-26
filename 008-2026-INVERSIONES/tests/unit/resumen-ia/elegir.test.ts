@@ -223,23 +223,31 @@ describe("elegirResumen · el motivo «IA apagada»", () => {
 
   it("apagada y sin publicado: la tarjeta sin IA trae «IA apagada»", () => {
     const paquete = paqueteFicticio("DIARIO");
-    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: null, iaApagada: true, hoy: { paquete, motivo: null } });
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: null, motivoSinIa: TEXTOS_RESUMEN_IA.iaApagada, hoy: { paquete, motivo: null } });
     expect(vista).toMatchObject({ estado: "SIN_IA", sinIa: TEXTOS_RESUMEN_IA.iaApagada });
   });
 
   it("apagada y sin paquete de hoy: la tarjeta no disponible también", () => {
-    const { vista } = elegirResumen({ tipo: "REGLAS", publicado: null, iaApagada: true, hoy: { paquete: null, motivo: "OCUPADO" } });
+    const { vista } = elegirResumen({ tipo: "REGLAS", publicado: null, motivoSinIa: TEXTOS_RESUMEN_IA.iaApagada, hoy: { paquete: null, motivo: "OCUPADO" } });
     expect(vista).toMatchObject({ estado: "NO_DISPONIBLE", sinIa: TEXTOS_RESUMEN_IA.iaApagada });
   });
 
   it("apagada pero con un análisis válido que se muestra: sin motivo", () => {
     const paquete = paqueteFicticio("DIARIO");
-    expect(elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(paquete), iaApagada: true, hoy: { paquete, motivo: null } }).vista.sinIa).toBeNull();
+    expect(elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(paquete), motivoSinIa: TEXTOS_RESUMEN_IA.iaApagada, hoy: { paquete, motivo: null } }).vista.sinIa).toBeNull();
+  });
+
+  it("el motivo de «demanda apagada» (con la hora del resumen diario) se pasa tal cual", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const motivo = TEXTOS_RESUMEN_IA.demandaApagada.replace("{hora}", "19:00");
+    expect(motivo).toBe("Análisis a demanda apagado; el resumen diario sigue a las 19:00.");
+    expect(elegirResumen({ tipo: "DIARIO", publicado: null, motivoSinIa: motivo, hoy: { paquete, motivo: null } }).vista.sinIa).toBe(motivo);
+    expect(prohibidasEn(motivo)).toEqual([]);
   });
 
   it("encendida: sin motivo", () => {
     const paquete = paqueteFicticio("DIARIO");
-    expect(elegirResumen({ tipo: "DIARIO", publicado: null, iaApagada: false, hoy: { paquete, motivo: null } }).vista.sinIa).toBeNull();
+    expect(elegirResumen({ tipo: "DIARIO", publicado: null, motivoSinIa: null, hoy: { paquete, motivo: null } }).vista.sinIa).toBeNull();
   });
 });
 

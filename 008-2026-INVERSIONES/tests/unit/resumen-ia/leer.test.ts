@@ -229,14 +229,14 @@ describe("resumenDelDia · el botón «Analizar con IA» y el último rechazado"
   it("lee el último rechazado y lo pasa a la elección: con él, la vista trae el motivo en palabras simples", async () => {
     ultimoPublicado.mockResolvedValue(publicadoFicticio(paqueteFicticio("DIARIO")));
     ultimoRechazado.mockResolvedValue({ fechaNegocio: "2027-03-17", motivos: ["HECHO_NO_CITADO"], generadoEn: new Date("2027-03-18T00:05:00.000Z") });
-    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() });
+    const vista = await resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true });
     expect(ultimoRechazado).toHaveBeenCalledWith(db, "DIARIO");
     expect(vista.rechazo).toContain("no citó todas las cifras que debía");
   });
 
   it("un error al leer el rechazado: se sigue sin él, registrando solo el nombre", async () => {
     ultimoRechazado.mockRejectedValue(new TypeError("FICTICIA-ALFA 4613"));
-    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() });
+    const vista = await resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true });
     expect(vista).toMatchObject({ estado: "SIN_IA", rechazo: null });
     expect(error.mock.calls.map((c) => String(c[0])).join(" ")).not.toContain("FICTICIA-ALFA");
   });
@@ -245,11 +245,13 @@ describe("resumenDelDia · el botón «Analizar con IA» y el último rechazado"
 describe("resumenDelDia · el motivo «IA apagada»", () => {
   const paquetes = () => vi.fn().mockResolvedValue(exportacion());
   const tareaOn = { activo: true, modeloLocal: "ficticio-modelo:7b" };
-  const encendida = { modo: "local", analisisDemanda: true, tareas: { DIARIO: tareaOn, REGLAS: tareaOn, ESCENARIOS: tareaOn } };
+  const encendida = { modo: "local", analisisDemanda: true, horaResumen: "19:00", tareas: { DIARIO: tareaOn, REGLAS: tareaOn, ESCENARIOS: tareaOn } };
+  const inactiva = { ...encendida.tareas, DIARIO: { activo: false, modeloLocal: null } };
   const apagada = [
     ["el modo está apagado", { ...encendida, modo: "apagado" }],
-    ["el análisis a demanda está apagado", { ...encendida, analisisDemanda: false }],
-    ["la tarea está inactiva", { ...encendida, tareas: { ...encendida.tareas, DIARIO: { activo: false, modeloLocal: null } } }],
+    ["la tarea está inactiva", { ...encendida, tareas: inactiva }],
+    ["local, la tarea inactiva y la casilla de demanda apagada", { ...encendida, analisisDemanda: false, tareas: inactiva }],
+    ["modo apagado y la casilla de demanda apagada", { ...encendida, modo: "apagado", analisisDemanda: false }],
     ["no hay configuración", null],
   ] as const;
 
@@ -260,6 +262,14 @@ describe("resumenDelDia · el motivo «IA apagada»", () => {
       expect(vista.sinIa).toBe(TEXTOS_RESUMEN_IA.iaApagada);
     }
     expect(TEXTOS_RESUMEN_IA.iaApagada).toBe("IA apagada");
+  });
+
+  it("solo la casilla de demanda apagada (la IA sí corre a diario): dice que la demanda está apagada y a qué hora sigue el resumen diario, también para la familia", async () => {
+    leerConfigIa.mockResolvedValue({ ...encendida, analisisDemanda: false, horaResumen: "20:00" });
+    for (const dueno of [true, false]) {
+      const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes(), dueno });
+      expect(vista.sinIa).toBe("Análisis a demanda apagado; el resumen diario sigue a las 20:00.");
+    }
   });
 
   it("también con la tarjeta «no disponible» (sin paquete de hoy)", async () => {
@@ -296,14 +306,14 @@ describe("resumenDelDia · el último FALLIDO", () => {
   it("lee el último fallido y, si es más nuevo que el último válido, la vista dice que falló", async () => {
     ultimoPublicado.mockResolvedValue(publicadoFicticio(paqueteFicticio("DIARIO")));
     ultimoFallido.mockResolvedValue({ fechaNegocio: "2027-03-17", generadoEn: new Date("2027-03-18T00:05:00.000Z") });
-    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() });
+    const vista = await resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true });
     expect(ultimoFallido).toHaveBeenCalledWith(db, "DIARIO");
     expect(vista.fallo).toContain("falló; se muestra el anterior");
   });
 
   it("un error al leer el fallido (no es la base): se sigue sin él, registrando solo el nombre", async () => {
     ultimoFallido.mockRejectedValue(new TypeError("FICTICIA-ALFA 4613"));
-    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() });
+    const vista = await resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true });
     expect(vista).toMatchObject({ estado: "SIN_IA", fallo: null });
     expect(error.mock.calls.map((c) => String(c[0])).join(" ")).not.toContain("FICTICIA-ALFA");
   });
@@ -311,6 +321,18 @@ describe("resumenDelDia · el último FALLIDO", () => {
   it("un fallo de la base al leer el fallido se propaga como los demás", async () => {
     const caida = new Prisma.PrismaClientKnownRequestError("ficticio", { code: "P1001", clientVersion: "ficticio" });
     ultimoFallido.mockRejectedValue(caida);
-    await expect(resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() })).rejects.toBe(caida);
+    await expect(resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true })).rejects.toBe(caida);
+  });
+
+  it("la familia no ve la fecha y hora de un fallido ni de un rechazado: solo el resumen sin IA (y ni se leen)", async () => {
+    ultimoFallido.mockResolvedValue({ fechaNegocio: "2027-03-17", generadoEn: new Date("2027-03-18T00:05:00.000Z") });
+    ultimoRechazado.mockResolvedValue({ fechaNegocio: "2027-03-17", motivos: ["FORMATO"], generadoEn: new Date("2027-03-18T01:00:00.000Z") });
+    for (const opciones of [{ dueno: false }, {}]) {
+      const vista = await resumenDelDia(db, "DIARIO", "u-familiar", { ahora: AHORA, paquetes: paquetes(), ...opciones });
+      expect(vista).toMatchObject({ estado: "SIN_IA", fallo: null, rechazo: null });
+      expect(JSON.stringify(vista)).not.toMatch(/17-mar-2027/);
+    }
+    expect(ultimoFallido).not.toHaveBeenCalled();
+    expect(ultimoRechazado).not.toHaveBeenCalled();
   });
 });

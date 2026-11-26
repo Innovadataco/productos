@@ -38,7 +38,7 @@ async function aislado(cuerpo: (tx: Cliente) => Promise<void>): Promise<void> {
   }
 }
 const leer = (tx: Cliente, tipo: TipoResumen, dia: string, p: PaqueteHechos) =>
-  resumenDelDia(tx as unknown as PrismaClient, tipo, "u-ficticio", { ahora: ahoraDe(dia), paquetes: exportacion(p) });
+  resumenDelDia(tx as unknown as PrismaClient, tipo, "u-ficticio", { ahora: ahoraDe(dia), paquetes: exportacion(p), dueno: true });
 
 async function publicar(tx: Cliente, paquete: PaqueteHechos, salidaCruda = salidaDePlantilla(paquete)): Promise<void> {
   await registrarResumen(tx, {

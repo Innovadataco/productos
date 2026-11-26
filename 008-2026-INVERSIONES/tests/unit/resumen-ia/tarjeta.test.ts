@@ -82,7 +82,7 @@ describe("TarjetaResumenIa", () => {
 
   it("IA apagada: la tarjeta lo dice en palabras simples, sin detalles de configuración", () => {
     const paquete = paqueteFicticio("DIARIO");
-    const vista = elegirResumen({ tipo: "DIARIO", publicado: null, iaApagada: true, hoy: { paquete, motivo: null } }).vista;
+    const vista = elegirResumen({ tipo: "DIARIO", publicado: null, motivoSinIa: TEXTOS_RESUMEN_IA.iaApagada, hoy: { paquete, motivo: null } }).vista;
     const raiz = pintar(vista);
     expect(texto(raiz.querySelector(".resumen-ia-sin-ia"))).toBe("IA apagada");
     expect(texto(raiz)).not.toMatch(/config|modo|interruptor|demanda|tarea/i);
@@ -119,7 +119,7 @@ describe("candado de lenguaje de la tarjeta", () => {
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: null, motivo: "SIN_PLAN_VIGENTE" } }).vista,
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: null, motivo: "OCUPADO" } }).vista,
-      elegirResumen({ tipo: t, publicado: null, iaApagada: true, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
+      elegirResumen({ tipo: t, publicado: null, motivoSinIa: TEXTOS_RESUMEN_IA.iaApagada, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
       elegirResumen({ tipo: t, publicado: publicadoFicticio(paqueteFicticio(t), { salidaModelo: "x" }), hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
       elegirResumen({ tipo: t, publicado: null, fallido: { fechaNegocio: "2027-03-17", generadoEn: new Date("2027-03-18T00:05:00.000Z") }, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
     ]),
