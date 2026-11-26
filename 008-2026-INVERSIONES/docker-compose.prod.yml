@@ -408,8 +408,8 @@ services:
       TZ: America/Bogota
       # Precios cada minuto durante la rueda (segunda ranura del bucle, src/servicio-precios/intradia.ts). Todas opcionales y
       # vacías por omisión: los valores por omisión viven en un solo lugar, src/servicio-precios/intradia-configuracion.ts
-      # (encendido, 60 s entre ciclos, 09:30 a 16:25 COT, 500 ms entre peticiones, 60 días de retención y la URL de Yahoo).
-      # INV_INTRADIA_ENCENDIDO=0 apaga el ciclo sin tocar la corrida de las 18:00.
+      # (APAGADO, 60 s entre ciclos, 09:30 a 16:25 COT, 500 ms entre peticiones, 60 días de retención y el host query1 de Yahoo).
+      # Apagado por omisión: INV_INTRADIA_ENCENDIDO=1 lo enciende (lo decide Jelk); =0 o vacío lo apaga sin tocar la corrida de las 18:00.
       INV_INTRADIA_ENCENDIDO: ${INV_INTRADIA_ENCENDIDO:-}
       INV_INTRADIA_CICLO_SEG: ${INV_INTRADIA_CICLO_SEG:-}
       INV_INTRADIA_DESDE_COT: ${INV_INTRADIA_DESDE_COT:-}

@@ -1,7 +1,8 @@
 /**
  * Configuración del segundo ciclo del servicio de precios (precios cada minuto durante la rueda): variables de entorno con
- * valores por omisión. Todas son opcionales; sin ellas el servicio trae precios cada minuto como se describe aquí.
- *   INV_INTRADIA_ENCENDIDO      1/true o 0/false (por omisión, 1). El interruptor: un valor raro APAGA (falla cerrada).
+ * valores por omisión. Todas son opcionales; sin ellas el ciclo intradía queda APAGADO y el resto de los valores es el que se describe aquí.
+ *   INV_INTRADIA_ENCENDIDO      1/true o 0/false (por omisión, APAGADO). El interruptor: solo 1 o true encienden; vacío, ausente o un
+ *                               valor raro APAGAN (falla cerrada; el valor raro deja aviso).
  *   INV_INTRADIA_CICLO_SEG      segundos entre ciclos, de 30 a 3600 (por omisión, 60).
  *   INV_INTRADIA_DESDE_COT      HH:MM de Colombia desde el que se trae (por omisión, 09:30: la apertura de la BVC).
  *   INV_INTRADIA_HASTA_COT      HH:MM de Colombia hasta el que se trae, sin incluirlo (por omisión, 16:25: el cierre de las
@@ -32,7 +33,7 @@ export interface ConfigIntradia {
 }
 
 export const CONFIG_INTRADIA_POR_OMISION: ConfigIntradia = Object.freeze({
-  encendido: true,
+  encendido: false,
   cicloMs: 60_000,
   desdeMin: 9 * 60 + 30,
   hastaMin: 16 * 60 + 25,

@@ -27,9 +27,10 @@ INV_APP_DATABASE_URL=postgresql://inv_app:<clave>@inv-008-db:5432/inversiones?sc
 # INV_PRECIOS_DATABASE_URL=postgresql://inv_precios:<clave>@inv-008-db:5432/inversiones?connection_limit=2
 
 # OPCIONALES · precios cada minuto durante la rueda (servicio inv-008-precios, ciclo intradía). Sin ellas rigen los valores por
-# omisión de src/servicio-precios/intradia-configuracion.ts: encendido, un ciclo cada 60 s, de 09:30 a 16:25 COT, 500 ms entre
-# peticiones, 60 días de retención y la URL de Yahoo de siempre. Lo inválido cae a la omisión (y avisa en el log).
-# - El interruptor: 1 o 0. En 0, el servicio no pide nada a Yahoo cada minuto (la corrida de las 18:00 sigue igual).
+# omisión de src/servicio-precios/intradia-configuracion.ts: APAGADO, un ciclo cada 60 s, de 09:30 a 16:25 COT, 500 ms entre
+# peticiones, 60 días de retención y el host query1 de Yahoo. Lo inválido cae a la omisión (y avisa en el log).
+# - El interruptor: solo 1 o true encienden (lo decide Jelk). Vacío, 0 o un valor raro: el servicio no pide nada a Yahoo cada
+#   minuto (la corrida de las 18:00 sigue igual).
 # INV_INTRADIA_ENCENDIDO=
 # - Segundos entre ciclos (30 a 3600), la ventana en HH:MM de Colombia (hasta, no después de las 17:30), los milisegundos entre
 #   peticiones (0 a 5000), los días de retención (60 a 365) y la URL base de Yahoo (https, solo el nombre del servidor).

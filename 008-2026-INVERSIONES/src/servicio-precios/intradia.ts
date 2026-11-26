@@ -62,7 +62,7 @@ export function crearIntradia(deps: DependenciasIntradia): Intradia {
   let esperaHasta = 0;
   let ciclos = 0;
 
-  if (!config.encendido) deps.registrar("intradía apagado: no se piden precios cada minuto");
+  if (!config.encendido) deps.registrar("intradía APAGADO: no se piden precios cada minuto (se enciende con INV_INTRADIA_ENCENDIDO=1)");
   else {
     deps.registrar(`intradía encendido: un ciclo cada ${segundos(config.cicloMs)} s, de lunes a viernes de ${hhmm(config.desdeMin)} a ${hhmm(config.hastaMin)} COT`);
   }
