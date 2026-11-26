@@ -34,6 +34,8 @@ export interface EntradaEleccion {
   readonly publicado: ResumenPublicado | null;
   /** El último análisis rechazado por el validador, si lo hay (solo se muestra si es más nuevo que `publicado`). */
   readonly rechazado?: ResumenRechazado | null;
+  /** La configuración de la IA la tiene apagada para este tipo (lo decide leer.ts): sin análisis que mostrar, la vista lo dice. */
+  readonly iaApagada?: boolean;
   readonly hoy: PaqueteDeHoy;
 }
 
@@ -57,7 +59,7 @@ type Extra = Pick<VistaResumenIa, "estado" | "pie" | "vigencia" | "redactadoEn" 
 function vistaDe(tipo: TipoResumen, r: ResumenValidado, extra: Extra): VistaResumenIa {
   return Object.freeze({
     tipo, titulo: TEXTOS_RESUMEN_IA.titulos[tipo], frases: Object.freeze(r.frases.map((f) => f.texto)), aviso: r.aviso, cifras: cifras(r), nota: null,
-    rechazo: null, puedeAnalizar: false, ...extra,
+    rechazo: null, sinIa: null, puedeAnalizar: false, ...extra,
   });
 }
 
@@ -71,7 +73,7 @@ function cuando(instante: Date): string {
 export function noDisponible(tipo: TipoResumen, motivo: string | null): VistaResumenIa {
   return Object.freeze({
     tipo, titulo: TEXTOS_RESUMEN_IA.titulos[tipo], estado: "NO_DISPONIBLE", frases: Object.freeze([]), aviso: null, cifras: Object.freeze([]),
-    pie: TEXTOS_RESUMEN_IA.noDisponible, vigencia: null, redactadoEn: null, analisisDel: null, rechazo: null, puedeAnalizar: false,
+    pie: TEXTOS_RESUMEN_IA.noDisponible, vigencia: null, redactadoEn: null, analisisDel: null, rechazo: null, sinIa: null, puedeAnalizar: false,
     nota: motivo !== null && MOTIVOS_MOMENTO.has(motivo) ? TEXTOS_RESUMEN_IA.notaMomento : TEXTOS_RESUMEN_IA.notaSinDatos,
   });
 }
@@ -95,9 +97,13 @@ function rechazoDe(rechazado: ResumenRechazado | null | undefined, publicado: Re
   return textoRechazo(cuando(rechazado.generadoEn), rechazado.motivos);
 }
 
-export function elegirResumen({ tipo, publicado, rechazado, hoy }: EntradaEleccion): Eleccion {
+export function elegirResumen({ tipo, publicado, rechazado, iaApagada, hoy }: EntradaEleccion): Eleccion {
   const rechazo = rechazoDe(rechazado, publicado);
-  const conRechazo = (vista: VistaResumenIa): VistaResumenIa => (rechazo === null ? vista : Object.freeze({ ...vista, rechazo }));
+  const conRechazo = (vista: VistaResumenIa): VistaResumenIa => {
+    // «IA apagada» solo cuando no se muestra un análisis de la IA.
+    const sinIa = iaApagada === true && vista.estado !== "IA" ? TEXTOS_RESUMEN_IA.iaApagada : null;
+    return rechazo === null && sinIa === null ? vista : Object.freeze({ ...vista, rechazo, sinIa });
+  };
   let descarte: readonly string[] | null = null;
   if (publicado !== null) {
     const r = revalidar(tipo, publicado);

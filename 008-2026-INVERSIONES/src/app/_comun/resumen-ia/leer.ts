@@ -7,6 +7,8 @@ import "server-only";
  *   paquete de hoy, con el que se compara.
  * - El botón «Analizar con IA» (`puedeAnalizar`): solo si quien mira es el dueño Y el interruptor de config_ia está
  *   encendido (apagado por omisión). Cualquier error al leer la configuración lo deja apagado (falla cerrada).
+ * - «IA apagada» (`sinIa`), para todos: sin análisis que mostrar y con la configuración apagada (sin ella, modo apagado,
+ *   análisis a demanda apagado o tarea inactiva). Si la configuración no se pudo leer, no se afirma nada.
  * - El paquete de hoy sale del export de E7 (`exportarHechos`): la MISMA función que arma los paquetes del servicio, en
  *   una foto de solo lectura, para que el hash de los hechos sea comparable. Como proyecta (≈ 1 s de cálculo síncrono),
  *   corre bajo el turno de las proyecciones (src/app/proyecciones/turno.ts, por fuera de la foto) y queda en memoria del
@@ -19,7 +21,7 @@ import "server-only";
 import type { PrismaClient } from "@prisma/client";
 import type { TipoResumen } from "@/ia/contrato";
 import { exportarHechos, type ResultadoExportacion } from "@/ia/evaluacion/exportar/exportar";
-import { leerConfigIa } from "@/ia/config/leer";
+import { leerConfigIa, type ConfigIaVigente } from "@/ia/config/leer";
 import { ErrorRegistro } from "@/ia/registro/fila";
 import type { ResumenPublicado } from "@/ia/registro/registro";
 import { diaIso, fechaEnBogota } from "@/precios/horario";
@@ -93,17 +95,25 @@ async function leerRechazado(db: PrismaClient, tipo: TipoResumen): Promise<Resum
   }
 }
 
-/** ¿El dueño tiene el botón? Con el interruptor de config_ia encendido; sin configuración o con un error, no (falla cerrada). */
-async function botonDisponible(db: PrismaClient, dueno: boolean): Promise<boolean> {
-  if (!dueno) return false;
+/** La configuración vigente; un error que no es de la base (o que la configuración no se lee) da `ok: false`: ni botón ni afirmar que está apagada. */
+type LecturaConfig = { readonly ok: true; readonly config: ConfigIaVigente | null } | { readonly ok: false };
+
+async function leerConfig(db: PrismaClient): Promise<LecturaConfig> {
   try {
-    return (await leerConfigIa(db))?.analisisDemanda === true;
+    return { ok: true, config: await leerConfigIa(db) };
   } catch (error) {
     if (esErrorDeBase(error)) throw error;
-    console.error(`[resumen-ia] el interruptor del análisis no se puede leer (${nombreDe(error)})`);
-    return false;
+    console.error(`[resumen-ia] la configuración de la IA no se puede leer (${nombreDe(error)})`);
+    return { ok: false };
   }
 }
+
+/** ¿La configuración tiene la IA apagada para esta tarjeta? Sin configuración, modo apagado, análisis a demanda apagado o tarea inactiva. */
+const iaApagadaPara = (lectura: LecturaConfig, tipo: TipoResumen): boolean =>
+  lectura.ok && (lectura.config === null || lectura.config.modo === "apagado" || !lectura.config.analisisDemanda || !lectura.config.tareas[tipo].activo);
+
+/** ¿El dueño tiene el botón? Con el interruptor de config_ia encendido; sin configuración o con un error, no (falla cerrada). */
+const botonDisponible = (lectura: LecturaConfig, dueno: boolean): boolean => dueno && lectura.ok && lectura.config?.analisisDemanda === true;
 
 /** Saca la corrida del memo si sigue siendo la guardada (no pisa una más nueva). */
 const olvidar = (guardado: Guardado): void => {
@@ -154,9 +164,10 @@ export async function resumenDelDia(db: PrismaClient, tipo: TipoResumen, usuario
     const publicado = await leerPublicado(db, tipo);
     const rechazado = await leerRechazado(db, tipo);
     const deHoy = await paqueteDeHoy(db, tipo, usuarioId, hoy, ahora, opciones.paquetes ?? exportarHechos);
-    const { vista, descarte } = elegirResumen({ tipo, publicado, rechazado, hoy: deHoy });
+    const lectura = await leerConfig(db);
+    const { vista, descarte } = elegirResumen({ tipo, publicado, rechazado, iaApagada: iaApagadaPara(lectura, tipo), hoy: deHoy });
     if (descarte !== null) console.error(`[resumen-ia] ${tipo}: el publicado no pasó el validador y no se muestra (${descarte.join(",")})`);
-    return (await botonDisponible(db, opciones.dueno === true)) ? Object.freeze({ ...vista, puedeAnalizar: true }) : vista;
+    return botonDisponible(lectura, opciones.dueno === true) ? Object.freeze({ ...vista, puedeAnalizar: true }) : vista;
   } catch (error) {
     if (esErrorDeBase(error)) throw error;
     console.error(`[resumen-ia] ${tipo}: la tarjeta no se pudo armar (${nombreDe(error)})`);

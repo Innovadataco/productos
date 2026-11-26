@@ -14,6 +14,8 @@ export const TEXTOS_RESUMEN_IA = Object.freeze({
   redactadoEn: "Redactado el",
   sinIa: "Resumen sin IA",
   noDisponible: "Sin resumen",
+  /** El motivo, para todos, cuando la configuración tiene la IA apagada: sin decir qué ajuste es. */
+  iaApagada: "IA apagada",
   modeloSinNombre: "modelo sin nombre",
   puertas: Object.freeze({ local: "IA local", nube: "IA en la nube" } satisfies Record<Puerta, string>),
   cotejadas: "cifras calculadas por Inversiones y cotejadas",

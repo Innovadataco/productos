@@ -40,6 +40,8 @@ export interface VistaResumenIa {
   readonly analisisDel: string | null;
   /** Si el último análisis fue rechazado por el validador: el motivo en palabras simples; null si no. */
   readonly rechazo: string | null;
+  /** «IA apagada»: por qué no hay análisis de la IA cuando la configuración la tiene apagada (sin detalles de la configuración); null si no. */
+  readonly sinIa: string | null;
   /** Solo el dueño, con el interruptor de config_ia encendido: la tarjeta trae el botón «Analizar con IA». */
   readonly puedeAnalizar: boolean;
 }
