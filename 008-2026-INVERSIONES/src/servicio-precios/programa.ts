@@ -6,6 +6,8 @@
  * en cada corrida, así que el hueco se llena solo en la siguiente. No mira festivos: en uno, los CLI no guardan nada
  * de ese día (día no hábil).
  */
+import { fechaEnBogota } from "../precios/horario";
+
 const DESFASE_COT_MS = 5 * 60 * 60 * 1000;
 const DIA_MS = 24 * 60 * 60 * 1000;
 const SABADO = 6;
@@ -57,7 +59,7 @@ export function enVentanaIntradia(instante: number, desdeMin: number, hastaMin: 
 
 /** «AAAA-MM-DD» de Colombia del instante. */
 export function diaCot(instante: number): string {
-  return localCot(instante).toISOString().slice(0, 10);
+  return fechaEnBogota(new Date(instante)).toISOString().slice(0, 10);
 }
 
 /** Lo más que espera el ciclo intradía tras un 429 de Yahoo. */

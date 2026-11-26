@@ -12,11 +12,10 @@
  * - Una respuesta rara (series de otro largo, un precio sobre el tope, volumen corrupto) se rechaza entera: YAHOO_FORMATO.
  */
 import { pedirJsonAcotado } from "../../lib/http-acotado";
+import { fechaEnBogota } from "../horario";
 import { PRECIO_MAXIMO_COP, type Buscar } from "../yahoo";
 import { urlBaseYahoo } from "./url";
 
-const DESFASE_COT_MS = 5 * 60 * 60 * 1000;
-const DIA_MS = 24 * 60 * 60 * 1000;
 const ESCALA_PRECIO = 6;
 const TIEMPO_MAXIMO_MS = 10_000;
 /** Una barra con menos de esto de antigüedad todavía se está formando: no se guarda. */
@@ -49,8 +48,8 @@ function canonico(n: number): string | null {
   return t === "" || t === "0" ? null : t;
 }
 
-/** El día de Colombia de un instante en milisegundos, como número de días (comparable entre sí). */
-const diaCot = (ms: number): number => Math.floor((ms - DESFASE_COT_MS) / DIA_MS);
+/** El día de Colombia de un instante en milisegundos (la medianoche UTC de su fecha, comparable entre sí): `fechaEnBogota` del horario. */
+const diaCot = (ms: number): number => fechaEnBogota(new Date(ms)).getTime();
 
 /** Volúmenes por barra (null donde no hay dato); null si la serie es corrupta (largo distinto o un valor no numérico o negativo). */
 function leerVolumenes(volume: unknown, largo: number): (number | null)[] | null {
