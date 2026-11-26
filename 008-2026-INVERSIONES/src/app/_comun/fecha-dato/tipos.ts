@@ -26,6 +26,8 @@ export interface Procedencia {
    * el calendario. Más de uno se avisa; ausente o null: no se sabe o no aplica.
    */
   readonly habilesAtras?: number | null;
+  /** Años del tramo que el calendario no cubre: con ellos, `habilesAtras` es aproximado (una cota superior). Ausente: exacto. */
+  readonly aniosSinFestivos?: readonly number[];
 }
 
 /** Un valor que suma varios datos (el valor del portafolio, un total): se muestra por su dato MÁS VIEJO. */

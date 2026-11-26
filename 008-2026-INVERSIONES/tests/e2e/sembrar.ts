@@ -18,6 +18,7 @@ import { emitirAcceso } from "../../src/auth/acceso";
 import { hashClave } from "../../src/auth/clave";
 import { importarArchivoTrii } from "../../src/importacion/trii/importar";
 import { construirLotes } from "../../src/lotes/construir";
+import { filasDeCalendarioFaltantes } from "./calendario-e2e";
 import { APP, DUENO_E2E, baseDePruebas, type BaseDePruebas } from "./base";
 import { sembrarConciliacion } from "./sembrar-conciliacion";
 import { sembrarDatosOficiales } from "./sembrar-datos-oficiales";
@@ -89,6 +90,13 @@ async function sembrarCierres(db: PrismaClient): Promise<void> {
   await db.precioCierre.createMany({ data: filas.flat() });
 }
 
+/** Completa el calendario de la BVC hasta el año del reloj más uno (candado del aviso de dato viejo; calendario-e2e.ts). */
+async function sembrarCalendario(db: PrismaClient): Promise<void> {
+  const cubiertos = new Set((await db.calendarioBvc.findMany({ select: { dia: true } })).map((f) => f.dia.getUTCFullYear()));
+  const faltantes = filasDeCalendarioFaltantes(cubiertos, new Date());
+  if (faltantes.length > 0) await db.calendarioBvc.createMany({ data: faltantes.map((f) => ({ dia: f.dia, esHabil: f.esHabil, nota: f.nota })) });
+}
+
 /** Las cuentas del login. Devuelve el id del dueño (el que carga los datos). */
 async function sembrarCuentas(db: PrismaClient): Promise<string> {
   const primero = await emitirAcceso(db, { email: DUENO_E2E.email, ahora: new Date() });
@@ -108,6 +116,7 @@ async function sembrar(base: BaseDePruebas): Promise<void> {
     const lotes = await construirLotes(db);
     if (lotes.especiesSinLotes.length !== 1) throw new Error("La siembra esperaba exactamente una especie incompleta (FICTI).");
     await sembrarCierres(db);
+    await sembrarCalendario(db);
     await sembrarConciliacion(db, id);
     await sembrarPlan(db, id);
     // Al final: cierres generados para la evolución del tablero, sin tocar lo que miran las demás pantallas.

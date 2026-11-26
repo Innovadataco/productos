@@ -2,6 +2,7 @@ import { esSoloLectura } from "@/auth/roles";
 import { exigirSesion } from "@/auth/sesion";
 import { ultimaConciliacion } from "@/conciliacion/leer";
 import { calendarioBvc } from "@/plan/lectura";
+import { CALENDARIO_DE_RESPALDO } from "@/precios/atraso";
 import type { CalendarioBvc } from "@/precios/negociacion";
 import { db } from "@/lib/db";
 import type { PrismaClient } from "@prisma/client";
@@ -34,14 +35,15 @@ async function leerEvolucion(base: PrismaClient, resumen: Resumen): Promise<Evol
 
 /**
  * El calendario solo sirve para el aviso de dato viejo (frente fuente-retraso): si no se puede leer, el tablero se pinta
- * igual, sin ese aviso, y se registra solo el nombre del error.
+ * igual, con el aviso aproximado (los días de semana, sin festivos: CALENDARIO_DE_RESPALDO), y se registra solo el nombre
+ * del error.
  */
-async function leerCalendario(base: PrismaClient): Promise<CalendarioBvc | null> {
+async function leerCalendario(base: PrismaClient): Promise<CalendarioBvc> {
   try {
     return await calendarioBvc(base);
   } catch (error) {
     console.error(`[tablero] no se pudo leer el calendario de la BVC (${error instanceof Error ? error.name : "desconocido"})`);
-    return null;
+    return CALENDARIO_DE_RESPALDO;
   }
 }
 
@@ -51,7 +53,7 @@ export default async function Inicio() {
   let evolucion: EvolucionVista | null;
   let soloLectura: boolean;
   let resumenIa: VistaResumenIa;
-  let calendario: CalendarioBvc | null;
+  let calendario: CalendarioBvc;
   try {
     // Revalida la sesión contra la base (D-014). Sin sesión, `redirect` lanza y el catch la deja pasar. El familiar,
     // en solo lectura (frente familia-lectura): ve la marca; lo que escribe lo bloquea el servidor.
@@ -72,5 +74,5 @@ export default async function Inicio() {
     registrarFalloDeBase("tablero", error);
     return <SinBase />;
   }
-  return <Tablero vista={aVista(resumen, calendario === null ? undefined : { ahora: new Date(), calendario })} conciliacion={conciliacion} evolucion={evolucion} soloLectura={soloLectura} resumenIa={resumenIa} />;
+  return <Tablero vista={aVista(resumen, { ahora: new Date(), calendario })} conciliacion={conciliacion} evolucion={evolucion} soloLectura={soloLectura} resumenIa={resumenIa} />;
 }

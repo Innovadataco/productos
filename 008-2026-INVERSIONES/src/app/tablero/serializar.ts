@@ -1,5 +1,5 @@
 import { horaColombia } from "@/app/_comun/fecha-dato/hora";
-import { atrasoParaAviso } from "@/precios/atraso";
+import { atrasoParaAviso, camposDeAtraso } from "@/precios/atraso";
 import type { CalendarioBvc } from "@/precios/negociacion";
 import type { Resumen } from "@/tablero/datos";
 import type { FilaTablero } from "@/tablero/calculo";
@@ -29,7 +29,7 @@ function fila(f: FilaTablero, atraso?: ContextoAtraso): FilaVista {
     cierre: f.cierre ? {
       precio: f.cierre.precio.toString(), fecha: dia(f.cierre.fecha), verificado: f.cierre.verificado, atrasado: f.cierreAtrasado,
       traidoEn: f.cierre.traidoEn ? horaColombia(f.cierre.traidoEn) : null, fuente: f.cierre.fuente ?? null,
-      ...(atraso ? { habilesAtras: atrasoParaAviso(f.cierre.fecha, atraso.ahora, atraso.calendario) } : {}),
+      ...(atraso ? camposDeAtraso(atrasoParaAviso(f.cierre.fecha, atraso.ahora, atraso.calendario)) : {}),
     } : null,
     lotesVivos: f.lotesVivos, serie: f.serie.map((p) => ({ fecha: dia(p.fecha), precio: p.precio.toString() })),
   };

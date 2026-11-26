@@ -130,10 +130,19 @@ export function piezasAviso(c: ProcedenciaCompuesta): Pieza[] | null {
   return [{ texto: "Cierres de fechas distintas: del " }, piezaDia(c.masVieja.dia, true), { texto: " al " }, piezaDia(c.masReciente, true), { texto: "." }];
 }
 
-/** «dato de hace 3 días hábiles» si el cierre lleva más de un día hábil sin renovarse; null si no hay que avisar. */
-export function avisoAtraso(p: Pick<Procedencia, "habilesAtras">): string | null {
+/** «2027», «2027 y 2028», «2026, 2027 y 2028». */
+const listaDeAnios = (anios: readonly number[]): string => (anios.length < 2 ? anios.join("") : `${anios.slice(0, -1).join(", ")} y ${anios.at(-1)!}`);
+
+/**
+ * «dato de hace 3 días hábiles» si el cierre lleva más de un día hábil sin renovarse; null si no hay que avisar. Si el
+ * calendario no cubre un año del tramo, el número es una cota superior y se dice con su matiz:
+ * «dato de hace unos 3 días hábiles (sin festivos de 2027 en el calendario)».
+ */
+export function avisoAtraso(p: Pick<Procedencia, "habilesAtras" | "aniosSinFestivos">): string | null {
   const n = p.habilesAtras;
-  return n == null || n < MINIMO_AVISO ? null : `dato de hace ${n} días hábiles`;
+  if (n == null || n < MINIMO_AVISO) return null;
+  const anios = p.aniosSinFestivos ?? [];
+  return anios.length === 0 ? `dato de hace ${n} días hábiles` : `dato de hace unos ${n} días hábiles (sin festivos de ${listaDeAnios(anios)} en el calendario)`;
 }
 
 const unir = (piezas: readonly Pieza[]): string => piezas.map((p) => p.texto).join("");

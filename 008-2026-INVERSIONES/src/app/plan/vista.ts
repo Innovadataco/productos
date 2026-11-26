@@ -8,7 +8,7 @@
 import type { CierreLeido, ReglaLeida, VersionLeida } from "@/plan/lectura";
 import { frescuraDelCierre, preciosAtrasados } from "@/plan/cierre-frescura";
 import { estadoDelNivel } from "@/plan/niveles";
-import { atrasoParaAviso } from "@/precios/atraso";
+import { atrasoParaAviso, camposDeAtraso } from "@/precios/atraso";
 import type { CalendarioBvc } from "@/precios/negociacion";
 import { horaColombia } from "../_comun/fecha-dato/hora";
 import type { Procedencia } from "../_comun/fecha-dato/tipos";
@@ -50,7 +50,7 @@ function procedenciaDe(r: ReglaLeida, c: Cierres, ahora: Date | undefined): Proc
   if (!ultimo) return null;
   return {
     dia: dia(ultimo.fecha), traidoEn: ultimo.traidoEn ? horaColombia(ultimo.traidoEn) : null, fuente: ultimo.fuente ?? null,
-    ...(ahora === undefined ? {} : { habilesAtras: atrasoParaAviso(ultimo.fecha, ahora, c.calendario) }),
+    ...(ahora === undefined ? {} : camposDeAtraso(atrasoParaAviso(ultimo.fecha, ahora, c.calendario))),
   };
 }
 
