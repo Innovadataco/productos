@@ -29,10 +29,14 @@ const HISTORIAL: Readonly<Record<string, string>> = {
   "resumen-diario-v3": "8204774fa57c501de65404a76c1884ce9af8278f05b1078ab99f31cb5a7d42a0",
   "resumen-reglas-v3": "276f369f69801eaeecb61bb6d3262802190c56b2f642cfc6746389c2c836faa3",
   "resumen-escenarios-v3": "f3ea6626c67314fa2c9140f5033814b5dfcc171a83e9347121f8a64cda1cdd97",
+  // v4 del DIARIO (T5): el código escribe los obligatorios; el modelo escribe de una a cuatro frases con los demás hechos.
+  "resumen-diario-v4": "PENDIENTE",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */
 const LIMITES_EN_PALABRAS: Readonly<Record<number, string>> = { 1: "una", 6: "seis", 280: "doscientos ochenta", 1200: "mil doscientos" };
+/** El DIARIO v4 dice los límites de SU parte (el código escribe el resto): de una a cuatro frases y hasta seiscientos caracteres. */
+const LIMITES_DIARIO_V4: readonly string[] = ["una", "cuatro", "doscientos ochenta", "seiscientos"];
 const LIMITE_MS = 4613;
 
 describe("prompts versionados", () => {
@@ -73,7 +77,9 @@ describe("prompts versionados", () => {
 
   it.each(TIPOS_RESUMEN)("%s: dice que no escriba cifras, que cite, que no recomiende y que no prediga", (tipo) => {
     const texto = PROMPTS[tipo].texto.toLowerCase();
-    for (const instruccion of ["no escriba cifras", "segmento de referencia", "nunca escriba el id ni llaves dentro de la prosa", "no recomiende", "no prediga", "cite todos los hechos obligatorios", "solo con un json"]) {
+    // El DIARIO ya no ordena citar los obligatorios (los escribe el código): ver prompts-v4.test.ts.
+    const comunes = ["no escriba cifras", "segmento de referencia", "nunca escriba el id ni llaves dentro de la prosa", "no recomiende", "no prediga", "solo con un json"];
+    for (const instruccion of tipo === "DIARIO" ? comunes : [...comunes, "cite todos los hechos obligatorios"]) {
       expect(texto).toContain(instruccion);
     }
   });
@@ -81,7 +87,7 @@ describe("prompts versionados", () => {
   it.each(TIPOS_RESUMEN)("%s: dice los límites del validador, en palabras", (tipo) => {
     const texto = PROMPTS[tipo].texto;
     expect([LIMITES_SALIDA.minFrases, LIMITES_SALIDA.maxFrases, LIMITES_SALIDA.maxLargoFrase, LIMITES_SALIDA.maxLargoTotal]).toEqual([1, 6, 280, 1200]);
-    for (const palabras of Object.values(LIMITES_EN_PALABRAS)) expect(texto).toContain(palabras);
+    for (const palabras of tipo === "DIARIO" ? LIMITES_DIARIO_V4 : Object.values(LIMITES_EN_PALABRAS)) expect(texto).toContain(palabras);
   });
 });
 
