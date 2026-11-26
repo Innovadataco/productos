@@ -7,19 +7,19 @@ export const VERSION_ARMADORES = "armadores-v1";
 
 export const FUENTES = Object.freeze({
   /** Totales, ganancias, pesos y conteos del tablero (src/tablero/calculo.ts y movimiento.ts). */
-  TABLERO: "cálculo de 008 sobre los cierres",
+  TABLERO: "cálculo de Inversiones sobre los cierres",
   /** El último cierre de cada especie. */
   CIERRES: "cierres de la BVC",
   /** El nombre de la especie. */
-  REGISTRO: "registro de especies de 008",
-  CONCILIACION: "conciliación de 008 con la certificación de A&V",
-  PLAN: "plan vigente de 008",
+  REGISTRO: "registro de especies de Inversiones",
+  CONCILIACION: "conciliación de Inversiones con la certificación de A&V",
+  PLAN: "plan vigente de Inversiones",
   /** Tocada, en el nivel, distancia y días (src/plan/niveles.ts y cierre-frescura.ts). */
-  NIVELES: "cálculo de 008 sobre el plan y los cierres",
-  DECRETOS: "dividendos decretados registrados en 008",
-  PROYECCION: "proyección de 008, escenario ilustrativo",
-  /** El valor de unidad del fondo: el mismo texto que `FUENTE_SFC` de src/fondo/sfc.ts (ese módulo llama a la red). */
-  FONDO: "sfc:qhpu-8ixx",
+  NIVELES: "cálculo de Inversiones sobre el plan y los cierres",
+  DECRETOS: "dividendos decretados registrados en Inversiones",
+  PROYECCION: "proyección de Inversiones, escenario ilustrativo",
+  /** El valor de unidad del fondo, en palabras: el identificador del conjunto de la SFC (`FUENTE_SFC` de src/fondo/sfc.ts) no se lee. */
+  FONDO: "valor de unidad de la Superintendencia Financiera (SFC)",
 });
 
 /** Los avisos que agregan los armadores, en el orden en que salen en el paquete. */
