@@ -188,7 +188,8 @@ describe("resumenDelDia", () => {
 
 describe("resumenDelDia · el botón «Analizar con IA» y el último rechazado", () => {
   const paquetes = () => vi.fn().mockResolvedValue(exportacion());
-  const encendida = { analisisDemanda: true };
+  const tareaOn = { activo: true, modeloLocal: "ficticio-modelo:7b" };
+  const encendida = { modo: "local", analisisDemanda: true, tareas: { DIARIO: tareaOn, REGLAS: tareaOn, ESCENARIOS: tareaOn } };
 
   it("el dueño con el interruptor encendido: puedeAnalizar", async () => {
     leerConfigIa.mockResolvedValue(encendida);
@@ -197,17 +198,16 @@ describe("resumenDelDia · el botón «Analizar con IA» y el último rechazado"
   });
 
   it("el interruptor apagado (el valor de omisión) o sin configuración: no hay botón (falla cerrada)", async () => {
-    leerConfigIa.mockResolvedValue({ analisisDemanda: false });
+    leerConfigIa.mockResolvedValue({ ...encendida, analisisDemanda: false });
     expect((await resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true })).puedeAnalizar).toBe(false);
     leerConfigIa.mockResolvedValue(null);
     expect((await resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true })).puedeAnalizar).toBe(false);
   });
 
-  it("la familia (o sin decir quién es): nunca hay botón y ni se lee la configuración", async () => {
+  it("la familia (o sin decir quién es): nunca hay botón, aunque la configuración esté encendida", async () => {
     leerConfigIa.mockResolvedValue(encendida);
     expect((await resumenDelDia(db, "DIARIO", "u-familiar", { ahora: AHORA, paquetes: paquetes(), dueno: false })).puedeAnalizar).toBe(false);
     expect((await resumenDelDia(db, "DIARIO", "u-familiar", { ahora: AHORA, paquetes: paquetes() })).puedeAnalizar).toBe(false);
-    expect(leerConfigIa).not.toHaveBeenCalled();
   });
 
   it("si leer la configuración falla (no es la base): sin botón, y la tarjeta sigue", async () => {
@@ -236,5 +236,53 @@ describe("resumenDelDia · el botón «Analizar con IA» y el último rechazado"
     const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() });
     expect(vista).toMatchObject({ estado: "SIN_IA", rechazo: null });
     expect(error.mock.calls.map((c) => String(c[0])).join(" ")).not.toContain("FICTICIA-ALFA");
+  });
+});
+
+describe("resumenDelDia · el motivo «IA apagada»", () => {
+  const paquetes = () => vi.fn().mockResolvedValue(exportacion());
+  const tareaOn = { activo: true, modeloLocal: "ficticio-modelo:7b" };
+  const encendida = { modo: "local", analisisDemanda: true, tareas: { DIARIO: tareaOn, REGLAS: tareaOn, ESCENARIOS: tareaOn } };
+  const apagada = [
+    ["el modo está apagado", { ...encendida, modo: "apagado" }],
+    ["el análisis a demanda está apagado", { ...encendida, analisisDemanda: false }],
+    ["la tarea está inactiva", { ...encendida, tareas: { ...encendida.tareas, DIARIO: { activo: false, modeloLocal: null } } }],
+    ["no hay configuración", null],
+  ] as const;
+
+  it.each(apagada)("sin publicado y %s: la vista trae «IA apagada», también para la familia", async (_c, config) => {
+    leerConfigIa.mockResolvedValue(config);
+    for (const dueno of [true, false]) {
+      const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes(), dueno });
+      expect(vista.sinIa).toBe(TEXTOS_RESUMEN_IA.iaApagada);
+    }
+    expect(TEXTOS_RESUMEN_IA.iaApagada).toBe("IA apagada");
+  });
+
+  it("también con la tarjeta «no disponible» (sin paquete de hoy)", async () => {
+    leerConfigIa.mockResolvedValue({ ...encendida, modo: "apagado" });
+    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: vi.fn().mockResolvedValue(exportacion({ paquetes: [] })) });
+    expect(vista).toMatchObject({ estado: "NO_DISPONIBLE", sinIa: "IA apagada" });
+  });
+
+  it("con todo encendido: sin motivo", async () => {
+    leerConfigIa.mockResolvedValue(encendida);
+    expect((await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() })).sinIa).toBeNull();
+  });
+
+  it("con un publicado que se muestra, aunque la IA esté apagada: sin motivo (se ve el análisis)", async () => {
+    leerConfigIa.mockResolvedValue({ ...encendida, modo: "apagado" });
+    ultimoPublicado.mockResolvedValue(publicadoFicticio(paqueteFicticio("DIARIO")));
+    expect((await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() })).sinIa).toBeNull();
+  });
+
+  it("una tarea inactiva solo apaga SU tarjeta", async () => {
+    leerConfigIa.mockResolvedValue({ ...encendida, tareas: { ...encendida.tareas, DIARIO: { activo: false, modeloLocal: null } } });
+    expect((await resumenDelDia(db, "REGLAS", "u-ficticio", { ahora: AHORA, paquetes: paquetes() })).sinIa).toBeNull();
+  });
+
+  it("si leer la configuración falla (no es la base): no se afirma que esté apagada", async () => {
+    leerConfigIa.mockRejectedValue(new TypeError("FICTICIA-ALFA 4613"));
+    expect((await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() })).sinIa).toBeNull();
   });
 });

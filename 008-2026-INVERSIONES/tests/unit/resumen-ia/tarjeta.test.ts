@@ -80,6 +80,18 @@ describe("TarjetaResumenIa", () => {
     expect(raiz.querySelector(".resumen-ia-cifras")).toBeNull();
   });
 
+  it("IA apagada: la tarjeta lo dice en palabras simples, sin detalles de configuración", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const vista = elegirResumen({ tipo: "DIARIO", publicado: null, iaApagada: true, hoy: { paquete, motivo: null } }).vista;
+    const raiz = pintar(vista);
+    expect(texto(raiz.querySelector(".resumen-ia-sin-ia"))).toBe("IA apagada");
+    expect(texto(raiz)).not.toMatch(/config|modo|interruptor|demanda|tarea/i);
+  });
+
+  it("sin motivo no se pinta el párrafo de «IA apagada»", () => {
+    expect(pintar(conIa("DIARIO")).querySelector(".resumen-ia-sin-ia")).toBeNull();
+  });
+
   it("solo texto plano: una frase con etiquetas sale escapada, sin HTML crudo", () => {
     const vista = { ...conIa("DIARIO"), frases: ["<img src=x onerror=alert(1)>"] };
     const raiz = pintar(vista);
@@ -96,6 +108,7 @@ describe("candado de lenguaje de la tarjeta", () => {
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: null, motivo: "SIN_PLAN_VIGENTE" } }).vista,
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: null, motivo: "OCUPADO" } }).vista,
+      elegirResumen({ tipo: t, publicado: null, iaApagada: true, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
     ]),
   ];
   /** El texto de la tarjeta sin el aviso fijo (ese lo pone el validador y niega la recomendación a propósito). */

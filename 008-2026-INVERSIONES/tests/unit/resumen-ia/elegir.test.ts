@@ -214,3 +214,31 @@ describe("elegirResumen · el último fue RECHAZADO por el validador", () => {
     expect(JSON.stringify(TEXTOS_RESUMEN_IA)).not.toMatch(/\b008\b/);
   });
 });
+
+describe("elegirResumen · el motivo «IA apagada»", () => {
+  it("la vista nueva no trae motivo por omisión", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    expect(elegirResumen({ tipo: "DIARIO", publicado: null, hoy: { paquete, motivo: null } }).vista.sinIa).toBeNull();
+  });
+
+  it("apagada y sin publicado: la tarjeta sin IA trae «IA apagada»", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: null, iaApagada: true, hoy: { paquete, motivo: null } });
+    expect(vista).toMatchObject({ estado: "SIN_IA", sinIa: TEXTOS_RESUMEN_IA.iaApagada });
+  });
+
+  it("apagada y sin paquete de hoy: la tarjeta no disponible también", () => {
+    const { vista } = elegirResumen({ tipo: "REGLAS", publicado: null, iaApagada: true, hoy: { paquete: null, motivo: "OCUPADO" } });
+    expect(vista).toMatchObject({ estado: "NO_DISPONIBLE", sinIa: TEXTOS_RESUMEN_IA.iaApagada });
+  });
+
+  it("apagada pero con un análisis válido que se muestra: sin motivo", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    expect(elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(paquete), iaApagada: true, hoy: { paquete, motivo: null } }).vista.sinIa).toBeNull();
+  });
+
+  it("encendida: sin motivo", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    expect(elegirResumen({ tipo: "DIARIO", publicado: null, iaApagada: false, hoy: { paquete, motivo: null } }).vista.sinIa).toBeNull();
+  });
+});
