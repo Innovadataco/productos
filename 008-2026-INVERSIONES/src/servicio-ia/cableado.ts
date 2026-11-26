@@ -172,6 +172,7 @@ export async function servirAhora(proceso: Proceso, fetchReal: BuscarLocal, crea
     return await correrAhora({
       registrar,
       hoy: () => fechaEnBogota(new Date()),
+      instante: Date.now,
       leerConfig: reales.leerConfig,
       esHabil: reales.esHabil,
       bucleCorriendo: () => bucleEnCurso(dir),
