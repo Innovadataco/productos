@@ -36,8 +36,8 @@ export interface EntradaEleccion {
   readonly rechazado?: ResumenRechazado | null;
   /** El último intento FALLIDO (sin salida del modelo), si lo hay (solo se dice si es más nuevo que `publicado` y que `rechazado`). */
   readonly fallido?: ResumenFallido | null;
-  /** La configuración de la IA la tiene apagada para este tipo (lo decide leer.ts): sin análisis que mostrar, la vista lo dice. */
-  readonly iaApagada?: boolean;
+  /** Por qué la configuración no deja que haya análisis de la IA (lo decide leer.ts: «IA apagada» o «demanda apagada»): sin análisis que mostrar, la vista lo dice. */
+  readonly motivoSinIa?: string | null;
   readonly hoy: PaqueteDeHoy;
 }
 
@@ -112,21 +112,21 @@ function intentoReciente(rechazado: ResumenRechazado | null | undefined, fallido
   return { rechazo, fallo };
 }
 
-export function elegirResumen({ tipo, publicado, rechazado, fallido, iaApagada, hoy }: EntradaEleccion): Eleccion {
-  const { vista, descarte } = elegirSinNotas({ tipo, publicado, rechazado, fallido, iaApagada, hoy });
+export function elegirResumen({ tipo, publicado, rechazado, fallido, motivoSinIa, hoy }: EntradaEleccion): Eleccion {
+  const { vista, descarte } = elegirSinNotas({ tipo, publicado, rechazado, fallido, motivoSinIa, hoy });
   // Un publicado que ya no pasa la revisión no se muestra: la nota lo dice (sin el contenido de lo guardado ni los códigos).
   if (descarte === null) return Object.freeze({ vista, descarte });
   const t = TEXTOS_RESUMEN_IA.descartado;
   return Object.freeze({ vista: Object.freeze({ ...vista, descartado: vista.estado === "SIN_IA" ? t.conSinIa : t.sinResumen }), descarte });
 }
 
-function elegirSinNotas({ tipo, publicado, rechazado, fallido, iaApagada, hoy }: EntradaEleccion): Eleccion {
+function elegirSinNotas({ tipo, publicado, rechazado, fallido, motivoSinIa, hoy }: EntradaEleccion): Eleccion {
   const intento = intentoReciente(rechazado, fallido, publicado);
   const conRechazo = (vista: VistaResumenIa): VistaResumenIa => {
     const rechazo = intento.rechazo === null ? null : textoRechazo(cuando(intento.rechazo.generadoEn), intento.rechazo.motivos);
     const fallo = intento.fallo === null ? null : textoFallo(vista.estado, intento.fallo.generadoEn);
     // «IA apagada» solo cuando no se muestra un análisis de la IA.
-    const sinIa = iaApagada === true && vista.estado !== "IA" ? TEXTOS_RESUMEN_IA.iaApagada : null;
+    const sinIa = vista.estado !== "IA" ? motivoSinIa ?? null : null;
     return rechazo === null && fallo === null && sinIa === null ? vista : Object.freeze({ ...vista, rechazo, fallo, sinIa });
   };
   let descarte: readonly string[] | null = null;

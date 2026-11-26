@@ -21,6 +21,7 @@ import "server-only";
 import type { PrismaClient } from "@prisma/client";
 import type { TipoResumen } from "@/ia/contrato";
 import { exportarHechos, type ResultadoExportacion } from "@/ia/evaluacion/exportar/exportar";
+import { corridaDe } from "@/ia/config/cableado";
 import { leerConfigIa, type ConfigIaVigente } from "@/ia/config/leer";
 import { ErrorRegistro } from "@/ia/registro/fila";
 import type { ResumenPublicado } from "@/ia/registro/registro";
@@ -28,6 +29,7 @@ import { diaIso, fechaEnBogota } from "@/precios/horario";
 import { conTurno } from "../../proyecciones/turno";
 import { esErrorDeBase } from "../sin-base";
 import { elegirResumen, noDisponible, type PaqueteDeHoy } from "./elegir";
+import { TEXTOS_RESUMEN_IA } from "./textos";
 import { ultimoFallidoDe, ultimoPublicadoDe, ultimoRechazadoDe, type ResumenFallido, type ResumenRechazado } from "./publicado";
 import type { VistaResumenIa } from "./tipos";
 
@@ -119,9 +121,17 @@ async function leerConfig(db: PrismaClient): Promise<LecturaConfig> {
   }
 }
 
-/** ¿La configuración tiene la IA apagada para esta tarjeta? Sin configuración, modo apagado, análisis a demanda apagado o tarea inactiva. */
-const iaApagadaPara = (lectura: LecturaConfig, tipo: TipoResumen): boolean =>
-  lectura.ok && (lectura.config === null || lectura.config.modo === "apagado" || !lectura.config.analisisDemanda || !lectura.config.tareas[tipo].activo);
+/**
+ * Por qué no hay análisis de la IA, según la configuración, para esta tarjeta: «IA apagada» si no corre nada (la regla es
+ * `corridaDe`, la misma del servicio; sin configuración también) y, si la IA corre pero la casilla del análisis a demanda
+ * está apagada, ese motivo con la hora del resumen diario. null si no hay nada que decir (o la configuración no se leyó).
+ */
+function motivoSinIa(lectura: LecturaConfig, tipo: TipoResumen): string | null {
+  if (!lectura.ok) return null;
+  const { config } = lectura;
+  if (config === null || corridaDe(config, tipo).estado === "APAGADO") return TEXTOS_RESUMEN_IA.iaApagada;
+  return config.analisisDemanda ? null : TEXTOS_RESUMEN_IA.demandaApagada.replace("{hora}", config.horaResumen);
+}
 
 /** ¿El dueño tiene el botón? Con el interruptor de config_ia encendido; sin configuración o con un error, no (falla cerrada). */
 const botonDisponible = (lectura: LecturaConfig, dueno: boolean): boolean => dueno && lectura.ok && lectura.config?.analisisDemanda === true;
@@ -173,13 +183,15 @@ export async function resumenDelDia(db: PrismaClient, tipo: TipoResumen, usuario
     const ahora = opciones.ahora ?? new Date();
     const hoy = fechaEnBogota(ahora);
     const publicado = await leerPublicado(db, tipo);
-    const rechazado = await leerRechazado(db, tipo);
-    const fallido = await leerFallido(db, tipo);
+    // La fecha y hora de un intento fallido o rechazado es del dueño: la familia ve el resumen sin IA o «IA apagada», nada más.
+    const dueno = opciones.dueno === true;
+    const rechazado = dueno ? await leerRechazado(db, tipo) : null;
+    const fallido = dueno ? await leerFallido(db, tipo) : null;
     const deHoy = await paqueteDeHoy(db, tipo, usuarioId, hoy, ahora, opciones.paquetes ?? exportarHechos);
     const lectura = await leerConfig(db);
-    const { vista, descarte } = elegirResumen({ tipo, publicado, rechazado, fallido, iaApagada: iaApagadaPara(lectura, tipo), hoy: deHoy });
+    const { vista, descarte } = elegirResumen({ tipo, publicado, rechazado, fallido, motivoSinIa: motivoSinIa(lectura, tipo), hoy: deHoy });
     if (descarte !== null) console.error(`[resumen-ia] ${tipo}: el publicado no pasó el validador y no se muestra (${descarte.join(",")})`);
-    return botonDisponible(lectura, opciones.dueno === true) ? Object.freeze({ ...vista, puedeAnalizar: true }) : vista;
+    return botonDisponible(lectura, dueno) ? Object.freeze({ ...vista, puedeAnalizar: true }) : vista;
   } catch (error) {
     if (esErrorDeBase(error)) throw error;
     console.error(`[resumen-ia] ${tipo}: la tarjeta no se pudo armar (${nombreDe(error)})`);

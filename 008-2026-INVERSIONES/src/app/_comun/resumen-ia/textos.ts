@@ -16,6 +16,8 @@ export const TEXTOS_RESUMEN_IA = Object.freeze({
   noDisponible: "Sin resumen",
   /** El motivo, para todos, cuando la configuración tiene la IA apagada: sin decir qué ajuste es. */
   iaApagada: "IA apagada",
+  /** Solo la casilla del análisis a demanda está apagada: la IA sigue con el resumen diario a esa hora (`{hora}`). */
+  demandaApagada: "Análisis a demanda apagado; el resumen diario sigue a las {hora}.",
   modeloSinNombre: "modelo sin nombre",
   puertas: Object.freeze({ local: "IA local", nube: "IA en la nube" } satisfies Record<Puerta, string>),
   cotejadas: "cifras calculadas por Inversiones y cotejadas",
@@ -70,7 +72,7 @@ export const TEXTOS_RESUMEN_IA = Object.freeze({
     error: "No se pudo pedir el análisis. Inténtelo de nuevo.",
     analisisError: "El análisis no se pudo completar. Inténtelo de nuevo.",
     analisisDescartado: "El análisis en espera no se hizo: la IA se apagó mientras esperaba.",
-    sinEstado: "No se pudo consultar el estado del análisis; intente de nuevo",
+    sinEstado: "No se pudo consultar el estado del análisis; intente de nuevo.",
   }),
   notaSinDatos: "Hoy no hay resumen: faltan datos para armarlo.",
   notaMomento: "El resumen no está disponible en este momento. Al volver a cargar la página se intenta de nuevo.",

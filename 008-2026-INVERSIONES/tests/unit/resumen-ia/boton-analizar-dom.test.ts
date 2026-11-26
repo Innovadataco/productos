@@ -209,7 +209,7 @@ describe("BotonAnalizar", () => {
   });
 
   describe("sondeo que falla mientras se muestra «Analizando…»", () => {
-    const sinEstado = "No se pudo consultar el estado del análisis; intente de nuevo";
+    const sinEstado = "No se pudo consultar el estado del análisis; intente de nuevo.";
     const fallar = (como: "rechaza" | "503") => {
       fetchFalso.mockImplementation(async (url: string, init: RequestInit = {}) => {
         llamadas.push({ url, init });
