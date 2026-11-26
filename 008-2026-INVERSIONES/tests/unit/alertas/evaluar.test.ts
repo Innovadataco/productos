@@ -95,9 +95,10 @@ describe("evaluarAlertas", () => {
 
   it("es determinista y no muta la entrada", () => {
     const e = entrada([especie("FICTICIA-A", { reglas: [regla], cierreHoy: D("90"), cierreAnterior: D("100") })]);
-    const copia = structuredClone({ ...e, noHabiles: [...e.noHabiles] });
+    const foto = () => JSON.stringify(e, (_k, v) => (typeof v === "bigint" ? v.toString() : v instanceof Set ? [...v] : v));
+    const antes = foto();
     const a = evaluarAlertas(Object.freeze(e));
     expect(evaluarAlertas(e)).toEqual(a);
-    expect(structuredClone({ ...e, noHabiles: [...e.noHabiles] })).toEqual(copia);
+    expect(foto()).toBe(antes);
   });
 });
