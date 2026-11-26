@@ -51,6 +51,11 @@ export const TEXTOS_RESUMEN_IA = Object.freeze({
     conSinIa: "El último intento de análisis ({cuando}) falló; se muestra el resumen sin IA.",
     sinResumen: "El último intento de análisis ({cuando}) falló.",
   }),
+  /** Cuando el análisis guardado ya no pasa el validador y no se muestra. */
+  descartado: Object.freeze({
+    conSinIa: "El análisis guardado ya no pasa la revisión; se muestra el resumen sin IA.",
+    sinResumen: "El análisis guardado ya no pasa la revisión.",
+  }),
   rechazoGeneral: "no cumplió las reglas de redacción",
   /** El botón «Analizar con IA» y lo que dice según cómo vaya el pedido. */
   boton: Object.freeze({

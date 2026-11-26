@@ -113,6 +113,14 @@ function intentoReciente(rechazado: ResumenRechazado | null | undefined, fallido
 }
 
 export function elegirResumen({ tipo, publicado, rechazado, fallido, iaApagada, hoy }: EntradaEleccion): Eleccion {
+  const { vista, descarte } = elegirSinNotas({ tipo, publicado, rechazado, fallido, iaApagada, hoy });
+  // Un publicado que ya no pasa la revisión no se muestra: la nota lo dice (sin el contenido de lo guardado ni los códigos).
+  if (descarte === null) return Object.freeze({ vista, descarte });
+  const t = TEXTOS_RESUMEN_IA.descartado;
+  return Object.freeze({ vista: Object.freeze({ ...vista, descartado: vista.estado === "SIN_IA" ? t.conSinIa : t.sinResumen }), descarte });
+}
+
+function elegirSinNotas({ tipo, publicado, rechazado, fallido, iaApagada, hoy }: EntradaEleccion): Eleccion {
   const intento = intentoReciente(rechazado, fallido, publicado);
   const conRechazo = (vista: VistaResumenIa): VistaResumenIa => {
     const rechazo = intento.rechazo === null ? null : textoRechazo(cuando(intento.rechazo.generadoEn), intento.rechazo.motivos);

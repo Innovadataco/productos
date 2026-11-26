@@ -57,6 +57,7 @@ export function TarjetaResumenIa({ vista }: { readonly vista: VistaResumenIa }) 
         {vista.nota === null ? null : <p className="resumen-ia-nota">{vista.nota}</p>}
         {vista.sinIa === null ? null : <p className="resumen-ia-sin-ia">{vista.sinIa}</p>}
         <Vigencia vista={vista} />
+        {vista.descartado === null ? null : <p className="resumen-ia-descartado">{vista.descartado}</p>}
         {vista.fallo === null ? null : <p className="resumen-ia-fallo">{vista.fallo}</p>}
         {vista.rechazo === null ? null : <p className="resumen-ia-rechazo">{vista.rechazo}</p>}
         {vista.aviso === null ? null : <p className="resumen-ia-aviso">{vista.aviso}</p>}
