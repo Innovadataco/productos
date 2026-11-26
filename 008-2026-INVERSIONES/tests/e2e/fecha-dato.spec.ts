@@ -13,7 +13,7 @@ import { PaginaConciliacion } from "./pagina-conciliacion";
 import { PaginaDatosOficiales } from "./pagina-datos-oficiales";
 import { PaginaPlan } from "./pagina-plan";
 import { PaginaTablero } from "./pagina-tablero";
-import { detalleDeFuenteDesconocida, diaDeLaLinea, origenDeLaSerie, origenDelCierre, traido } from "./procedencia-e2e";
+import { diaDeLaLinea, origenDeLaSerie, origenDelCierre, traido } from "./procedencia-e2e";
 import { test } from "./sesion";
 
 const MOVIL = { width: 375, height: 812 };
@@ -22,15 +22,13 @@ const DATO_VIEJO = /^dato de hace \d+ días hábiles$/;
 const PIE = "Precios: Yahoo (BVC), cierre diario; durante la rueda, hasta 20 min de retraso. No es tiempo real.";
 
 const limpio = (t: string): string => t.replace(/\s+/g, " ").trim();
-/** La línea visible de cada nota (el detalle accesible y los avisos tienen sus propias clases). */
+/** La línea visible de cada nota (los avisos tienen su propia clase). */
 const notas = async (zona: Locator): Promise<string[]> => (await zona.locator(".fecha-dato-linea").allInnerTexts()).map(limpio);
 const avisos = async (zona: Locator): Promise<string[]> => (await zona.locator(".fecha-dato-aviso").allInnerTexts()).map(limpio);
-const detalles = async (zona: Locator): Promise<string[]> => (await zona.locator(".fecha-dato-detalle").allTextContents()).map(limpio);
 
-/** El detalle está en el texto del documento y fuera de la vista (1 px), no es un tooltip: lo oye un lector de pantalla. */
-async function detalleOcultoPeroPresente(zona: Locator): Promise<void> {
-  const caja = await zona.locator(".fecha-dato-detalle").first().boundingBox();
-  expect(caja?.width ?? 99).toBeLessThanOrEqual(1);
+/** Ya no hay un detalle oculto que repita la fuente y la hora: ni en el DOM ni como tooltip. */
+async function sinDetalleOculto(zona: Locator): Promise<void> {
+  expect(await zona.locator(".fecha-dato-detalle").count()).toBe(0);
   expect(await zona.locator("[title]").count()).toBe(0);
 }
 
@@ -75,15 +73,15 @@ for (const tema of ["light", "dark"] as const) {
   test.describe(`procedencia de cada dato · ${tema === "light" ? "claro" : "oscuro"} · 375 px`, () => {
     test.use({ viewport: MOVIL, colorScheme: tema });
 
-    test("tablero: cada fila, el detalle y cada tarjeta con su cierre, hora y fuente; los totales con el más antiguo y los avisos", async ({ page }, info) => {
+    test("tablero: cada fila, el panel y cada tarjeta con su cierre, hora y fuente; los totales con el más antiguo y los avisos", async ({ page }, info) => {
       const [a, c] = [await origenDelCierre("FICTA", "2024-11-22"), await origenDelCierre("FICTC", "2024-11-01")];
       const t = await PaginaTablero.abrir(page, info);
 
-      // La línea de cada fila: la fecha ya la dice el chip; el detalle de la fuente y su retraso está en el documento.
+      // La línea de cada fila: la fecha ya la dice el chip; sin detalle oculto que la repita.
       expect(await notas(t.fila("FICTA"))).toEqual([traido(a, "2024-11-22")]);
       expect(await notas(t.fila("FICTC"))).toEqual([traido(c, "2024-11-01")]);
-      expect(await detalles(t.fila("FICTA"))).toEqual([detalleDeFuenteDesconocida(a)]);
-      await detalleOcultoPeroPresente(t.fila("FICTA"));
+      await sinDetalleOculto(t.fila("FICTA"));
+      await sinDetalleOculto(page.locator("main"));
 
       // Cierres de 2024 contra el reloj real: más de un día hábil de atraso, y lo dice.
       const viejo = await avisos(t.fila("FICTA"));
@@ -124,7 +122,7 @@ for (const tema of ["light", "dark"] as const) {
       await expect(p.titulo).toHaveText("Plan vigente: versión 1");
       expect(await notas(p.fila(p.reglas, "FICTA"))).toEqual([traido(a, "2024-11-22")]);
       expect(await notas(p.fila(p.reglas, "FICTC"))).toEqual([traido(c, "2024-11-01")]);
-      expect(await detalles(p.fila(p.reglas, "FICTA"))).toEqual([detalleDeFuenteDesconocida(a)]);
+      await sinDetalleOculto(p.fila(p.reglas, "FICTA"));
       expect(await avisos(p.fila(p.reglas, "FICTC"))).toEqual([expect.stringMatching(DATO_VIEJO)]);
       const r = await revisarNotas(page);
       expect(r.peor, "contraste de las notas").toBeGreaterThanOrEqual(4.5);

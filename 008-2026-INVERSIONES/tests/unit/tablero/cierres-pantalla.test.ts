@@ -90,7 +90,7 @@ describe("una especie ilíquida con el cierre de hace tres semanas", () => {
     // Desde el frente fecha-hora-datos cada tarjeta dice además el cierre de la referencia; aquí la lectura no trae
     // cuándo se trajo ni la fuente, y la pantalla lo dice en vez de inventarlos.
     expect([...(lista?.querySelectorAll('[role="listitem"]') ?? [])].map(texto)).toEqual([
-      expect.stringMatching(/^FICT2\s*\+10,0 %\s*\+\$ 50\s*fuente sin dato · sin la hora en que se trajo Fuente: fuente sin dato\. Retraso conocido: sin dato de esta fuente\. Sin la hora en que se trajo\.$/),
+      expect.stringMatching(/^FICT2\s*\+10,0 %\s*\+\$ 50\s*fuente sin dato · sin la hora en que se trajo$/),
     ]);
   });
 

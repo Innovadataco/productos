@@ -121,11 +121,10 @@ describe("la versión vigente, con cierres y distancia al nivel", () => {
     expect(aviso("FICTB")).toEqual([]);
   });
 
-  it("el detalle de la fuente y su retraso va como texto de la celda, no como tooltip", async () => {
+  it("sin detalle oculto: la fuente y la hora salen una vez, en la línea, y sin tooltip", async () => {
     const raiz = await pantalla();
-    const detalle = texto(fila(raiz, "FICTA")?.querySelector(".fecha-dato-detalle"));
-    expect(detalle).toContain("Fuente: Yahoo (BVC).");
-    expect(detalle).toContain("hasta 20 min de retraso");
+    expect(raiz.querySelector(".fecha-dato-detalle")).toBeNull();
+    expect(texto(fila(raiz, "FICTA"))).not.toMatch(/Retraso conocido|Fuente:/);
     expect(raiz.querySelector(".fecha-dato[title], .fecha-dato-linea[title]")).toBeNull();
   });
 

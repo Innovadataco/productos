@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 // El componente de la procedencia (frente fecha-hora-datos), pintado en el servidor y leído en un DOM: dice lo mismo que
 // sus textos puros, con <time> para el día del dato y la hora de Colombia, y en un valor compuesto el aviso de fechas
-// distintas y el de dato viejo solo si los hay. Lleva además el detalle de la fuente y su retraso en un texto accesible
-// (visualmente oculto, no un tooltip). No es un control ni una región viva (sin role, enlaces ni botones): es una nota.
+// distintas y el de dato viejo solo si los hay. No lleva un detalle oculto que repita la fuente y la hora. No es un control ni una región viva (sin role, enlaces ni botones): es una nota.
 // Datos inventados.
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -10,7 +9,7 @@ import { hydrateRoot } from "react-dom/client";
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { FechaDato, FechaDatoCompuesta } from "@/app/_comun/fecha-dato/FechaDato";
-import { avisoAtraso, avisoMezcladas, detalleCompuesta, detalleProcedencia, textoCompuesta, textoProcedencia } from "@/app/_comun/fecha-dato/textos";
+import { avisoAtraso, avisoMezcladas, textoCompuesta, textoProcedencia } from "@/app/_comun/fecha-dato/textos";
 import type { Procedencia, ProcedenciaCompuesta } from "@/app/_comun/fecha-dato/tipos";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -28,7 +27,6 @@ const texto = (el: Element | null | undefined) => (el?.textContent ?? "").replac
 const tiempos = (raiz: HTMLElement) => [...raiz.querySelectorAll("time")].map((t) => [t.getAttribute("datetime"), texto(t)]);
 
 const linea = (raiz: HTMLElement) => texto(raiz.querySelector(".fecha-dato-linea"));
-const detalle = (raiz: HTMLElement) => texto(raiz.querySelector(".fecha-dato-detalle"));
 const VIEJO: Procedencia = { ...P, habilesAtras: 3 };
 
 describe("FechaDato", () => {
@@ -40,14 +38,20 @@ describe("FechaDato", () => {
     expect(tiempos(raiz)).toEqual([["2027-03-17", "17-mar"], ["2027-03-17T18:04-05:00", "18:04"]]);
   });
 
-  it("el detalle de la fuente y su retraso es texto del documento (accesible), no un tooltip de ratón", () => {
-    const raiz = pintar(createElement(FechaDato, { procedencia: P, etiqueta: "Cierre" }));
-    expect(detalle(raiz)).toBe(detalleProcedencia(P));
-    expect(detalle(raiz)).toMatch(/hasta 20 min de retraso/);
-    expect(detalle(raiz)).toMatch(/cierre oficial del día/);
-    expect(detalle(raiz)).toMatch(/hora de Colombia/);
+  it("no hay un detalle oculto: no existe .fecha-dato-detalle y la fuente y la hora salen una sola vez", () => {
+    for (const el of [
+      createElement(FechaDato, { procedencia: P, etiqueta: "Cierre" }),
+      createElement(FechaDato, { procedencia: { ...P, tipo: "RUEDA", horaDato: "11:42" }, sinFecha: true }),
+      createElement(FechaDatoCompuesta, { compuesta: MEZCLADAS }),
+    ]) {
+      const raiz = pintar(el);
+      expect(raiz.querySelector(".fecha-dato-detalle")).toBeNull();
+      expect(texto(raiz.querySelector(".fecha-dato")).match(/Yahoo \(BVC\)/g)?.length ?? 0).toBeLessThanOrEqual(1);
+      expect(texto(raiz)).not.toMatch(/Retraso conocido|hora de Colombia|Fuente:/);
+    }
     expect(renderToStaticMarkup(createElement(FechaDato, { procedencia: P }))).not.toMatch(/title=|aria-hidden/);
   });
+
 
   it("sin la fecha, cuando la celda ya la dice; sin la hora en que se trajo, lo dice y no pinta <time> de hora", () => {
     expect(linea(pintar(createElement(FechaDato, { procedencia: P, sinFecha: true })))).toBe(textoProcedencia(P, { sinFecha: true }));
@@ -85,7 +89,6 @@ describe("FechaDatoCompuesta", () => {
     const raiz = pintar(createElement(FechaDatoCompuesta, { compuesta: MEZCLADAS }));
     const aviso = raiz.querySelector(".fecha-dato-aviso");
     expect(linea(raiz)).toBe(textoCompuesta(MEZCLADAS));
-    expect(detalle(raiz)).toBe(detalleCompuesta(MEZCLADAS));
     expect(texto(aviso)).toBe(avisoMezcladas(MEZCLADAS));
     expect(tiempos(raiz)).toEqual([["2021-03-01", "1-mar"], ["2021-03-02T18:40-05:00", "2-mar 18:40"], ["2021-03-01", "1-mar-2021"], ["2021-03-17", "17-mar-2021"]]);
   });

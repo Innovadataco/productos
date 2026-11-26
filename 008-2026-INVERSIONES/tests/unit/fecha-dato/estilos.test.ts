@@ -41,10 +41,8 @@ describe("fecha-dato.css", () => {
     expect(sinComentarios).not.toMatch(/animation|transition|@keyframes/);
   });
 
-  it("el detalle de la fuente y su retraso se oculta a la vista pero NO al lector de pantalla (clip, no display:none)", () => {
-    const b = bloque(".fecha-dato-detalle");
-    expect(b).toMatch(/position:\s*absolute/);
-    expect(b).toMatch(/clip:\s*rect\(0,?\s*0,?\s*0,?\s*0\)|clip-path:\s*inset\(50%\)/);
-    expect(b).not.toMatch(/display:\s*none|visibility:\s*hidden/);
+  it("no hay estilo de un detalle oculto: la fuente y la hora van una sola vez, en la línea visible", () => {
+    expect(sinComentarios).not.toMatch(/fecha-dato-detalle/);
+    expect(sinComentarios).not.toMatch(/clip-path|clip:\s*rect/);
   });
 });

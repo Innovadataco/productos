@@ -1,10 +1,10 @@
 // Los textos de la procedencia de cada dato (frentes fecha-hora-datos y fuente-retraso): tipo y fecha del dato, cuándo lo
-// trajo 008, la fuente con su nombre claro, el retraso conocido (en el detalle) y el aviso de dato viejo; en un valor que suma varios datos, el más viejo y el aviso si hay fechas
+// trajo 008, la fuente con su nombre claro, el retraso en la rueda (en la misma línea) y el aviso de dato viejo; en un valor que suma varios datos, el más viejo y el aviso si hay fechas
 // distintas. Puros y deterministas (los pinta el servidor y el navegador). Sin comandos y sin recomendar comprar ni
 // vender: las listas de palabras son las de los candados de textos de las pantallas. Datos inventados.
 import { describe, expect, it } from "vitest";
 import {
-  avisoAtraso, avisoMezcladas, detalleCompuesta, detalleProcedencia, nombreFuente, nombresDeFuentes, piezasCompuesta, piezasProcedencia, textoCompuesta, textoProcedencia,
+  avisoAtraso, avisoMezcladas, nombreFuente, nombresDeFuentes, piezasCompuesta, piezasProcedencia, textoCompuesta, textoProcedencia,
 } from "@/app/_comun/fecha-dato/textos";
 import type { Procedencia, ProcedenciaCompuesta } from "@/app/_comun/fecha-dato/tipos";
 import { FUENTES } from "@/precios/fuentes";
@@ -111,24 +111,11 @@ describe("la línea de un dato: tipo y fecha, fuente y cuándo se trajo", () => 
   });
 });
 
-describe("el detalle: la fuente, su retraso conocido y cuándo se trajo (hora de Colombia)", () => {
-  it("Yahoo: el cierre oficial del día y hasta 20 min en la rueda", () => {
-    expect(detalleProcedencia(p())).toBe(
-      "Fuente: Yahoo (BVC). Retraso conocido: cierre oficial del día; en la rueda, hasta 20 min de retraso. Traído el 17-mar-2027 a las 18:04 (hora de Colombia). Precios de las acciones de la BVC (.CL) que publica Yahoo. No es tiempo real.",
-    );
-  });
-
-  it("una fuente sin retraso conocido lo dice; una desconocida no lleva nota; sin hora, lo dice", () => {
-    expect(detalleProcedencia(p({ fuente: "e2e-ficticio", traidoEn: null }))).toBe("Fuente: e2e-ficticio. Retraso conocido: sin dato de esta fuente. Sin la hora en que se trajo.");
-    expect(detalleProcedencia(p({ fuente: null }))).toContain("Fuente: fuente sin dato.");
-    expect(detalleProcedencia(p({ fuente: "sfc:x" }))).toContain("Retraso conocido: valor oficial del día, publicado por la Superintendencia Financiera.");
-  });
-
-  it("varias fuentes: el retraso de cada una", () => {
-    const d = detalleCompuesta(compuesta({ fuentes: ["yahoo", "sfc:x", "e2e-ficticio"] }));
-    expect(d).toContain("Fuentes: e2e-ficticio, SFC y Yahoo (BVC)");
-    expect(d).toContain("Yahoo (BVC): cierre oficial del día; en la rueda, hasta 20 min de retraso");
-    expect(d).toContain("e2e-ficticio: sin dato de esta fuente");
+describe("ya no hay un detalle aparte", () => {
+  it("el módulo no exporta detalleProcedencia ni detalleCompuesta", async () => {
+    const m: Record<string, unknown> = await import("@/app/_comun/fecha-dato/textos");
+    expect(m["detalleProcedencia"]).toBeUndefined();
+    expect(m["detalleCompuesta"]).toBeUndefined();
   });
 });
 
@@ -161,7 +148,7 @@ describe("un valor que suma varios datos", () => {
 describe("candado de los textos", () => {
   const todos = [
     textoProcedencia(p(), { etiqueta: "Cierre" }), textoProcedencia(p({ traidoEn: null, fuente: null })), textoProcedencia(p(), { sinFecha: true }),
-    textoProcedencia(p({ tipo: "RUEDA", horaDato: "11:42" })), detalleProcedencia(p()), detalleCompuesta(compuesta({ fuentes: ["yahoo", "sfc:x", "banrep:x", "dane:x", "manual", null] })),
+    textoProcedencia(p({ tipo: "RUEDA", horaDato: "11:42" })), textoCompuesta(compuesta({ fuentes: ["yahoo", "sfc:x", "banrep:x", "dane:x", "manual", null] })),
     avisoAtraso(p({ habilesAtras: 4 })) ?? "",
     textoCompuesta(compuesta()), avisoMezcladas(compuesta()) ?? "", textoCompuesta(compuesta({ mezcladas: false })),
     ...["yahoo", "sfc:x", "banrep:x", "dane:x", "manual", null].map(nombreFuente),

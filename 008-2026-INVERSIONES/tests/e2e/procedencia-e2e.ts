@@ -56,7 +56,3 @@ export function traido(o: Origen, diaDelDato: string): string {
 export function diaDeLaLinea(diaDelDato: string, o: Origen): string {
   return o.traido.dia.slice(0, 4) === diaDelDato.slice(0, 4) ? fecha(diaDelDato).replace(/-\d{4}$/, "") : fecha(diaDelDato);
 }
-
-/** El detalle accesible de una fuente que la tabla no conoce: sin retraso inventado, con la hora de Colombia. */
-export const detalleDeFuenteDesconocida = (o: Origen): string =>
-  `Fuente: ${o.fuente}. Retraso conocido: sin dato de esta fuente. Traído el ${fecha(o.traido.dia)} a las ${o.traido.hhmm} (hora de Colombia).`;
