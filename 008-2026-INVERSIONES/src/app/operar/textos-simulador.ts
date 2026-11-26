@@ -17,7 +17,7 @@ export const TEXTOS_SIMULADOR = {
   AYUDA_SALDO:
     "Escriba el saldo que ve en Trii, como en la ficha (37.911,47), sin signo $: esa es la caja de la simulación y no se guarda. " +
     "Si lo deja vacío, la caja es la certificada por Acciones & Valores, que puede no ser su saldo en Trii.",
-  PRECIO_ACTUAL: "Precio actual (trii Pro) ($, opcional)",
+  PRECIO_ACTUAL: "Precio actual en trii Pro ($, opcional)",
   AYUDA_PRECIO_ACTUAL:
     "El precio que ve en trii Pro, como en la ficha (2.345,5), sin signo $. Si lo escribe, la especie se valora a ese precio y no al último cierre; no se guarda. Hasta un millón de pesos y dos decimales.",
   ANALISIS: "Análisis del antes y el después",
