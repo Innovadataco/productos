@@ -8,6 +8,7 @@
  * de 2024: con el reloj real llevan muchos días hábiles de atraso, y la pantalla lo avisa. La prueba no cambia la base.
  */
 import { expect, type Locator, type Page } from "@playwright/test";
+import { fecha } from "../../src/app/tablero/formato";
 import { PaginaConciliacion } from "./pagina-conciliacion";
 import { PaginaDatosOficiales } from "./pagina-datos-oficiales";
 import { PaginaPlan } from "./pagina-plan";
@@ -135,7 +136,7 @@ for (const tema of ["light", "dark"] as const) {
       const d = await PaginaDatosOficiales.abrir(page, info);
       const tarjeta = d.tarjeta("Tasa Representativa del Mercado");
       await expect(tarjeta.locator(".do-vigencia")).toContainText("vigente del");
-      await expect(tarjeta.locator("dd").filter({ hasText: "(hora de Colombia)" })).toHaveText(`${trm.traido} (hora de Colombia)`);
+      await expect(tarjeta.locator("dd").filter({ hasText: "(hora de Colombia)" })).toHaveText(`${fecha(trm.traido.dia)} a las ${trm.traido.hhmm} (hora de Colombia)`);
       await expect(tarjeta.locator("dd").first()).toContainText(trm.fuente);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     });
