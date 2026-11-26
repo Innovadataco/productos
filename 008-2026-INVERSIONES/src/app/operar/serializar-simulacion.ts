@@ -15,15 +15,15 @@ import type { EspecieSimulable, FuenteComision, RespuestaSimulacion } from "./ti
 export const SIN_CIERRE = "sin cierre";
 export const SIN_PESO = "—";
 export const CAJA_ESCRITA = "Caja de la simulación: el saldo que usted escribió, no la de Acciones & Valores (no se guarda).";
-export const CAJA_SIN_CERTIFICACION = "Sin certificación de Acciones & Valores: la caja de antes es 0. Escriba su saldo en Trii arriba para simular con él.";
-export const AVISO_CAJA_AV_NEGATIVA = "La caja certificada por Acciones & Valores es negativa y no es su saldo en Trii: escríbalo arriba para simular con él.";
+export const CAJA_SIN_CERTIFICACION = "Sin certificación de Acciones & Valores: la caja de antes es 0. Escriba su saldo en Trii en «Su saldo disponible en el comisionista» para simular con él.";
+export const AVISO_CAJA_AV_NEGATIVA = "La caja certificada por Acciones & Valores es negativa y no es su saldo en Trii: escríbalo en «Su saldo disponible en el comisionista» para simular con él.";
 export const NOTA_VALORACION_CON_PRECIO = "Es el precio de la especie operada; las demás se valoran a su último cierre y la caja se mueve al precio límite de la orden.";
 /** «Valorado con el precio escrito: $ 2.345,5 (trii Pro), no con el cierre del 12-mar-2027.» */
 export function textoPrecioEscrito(precio: Prisma.Decimal, cierreFecha: Date | null): string {
   const base = `Valorado con el precio escrito: ${textoPesos(precio)} (trii Pro)`;
   return cierreFecha === null ? `${base}; la especie no tiene cierre guardado.` : `${base}, no con el cierre del ${fecha(cierreFecha.toISOString().slice(0, 10))}.`;
 }
-export const textoCajaCertificada = (dia: string): string => `Caja certificada por Acciones & Valores al ${fecha(dia)}; no es su saldo en Trii. Escríbalo arriba para simular con él.`;
+export const textoCajaCertificada = (dia: string): string => `Caja certificada por Acciones & Valores al ${fecha(dia)}; no es su saldo en Trii. Escríbalo en «Su saldo disponible en el comisionista» para simular con él.`;
 
 const FUENTES: Readonly<Record<ComisionEstimada["estado"], FuenteComision>> = { TARIFA: "TARIFA", ESTIMADA: "HISTORIA", SIN_HISTORIA: "SIN_HISTORIA" };
 

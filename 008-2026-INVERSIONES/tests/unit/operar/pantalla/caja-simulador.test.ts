@@ -39,8 +39,8 @@ describe("la respuesta dice de dónde sale la caja", () => {
   });
 
   it("de Acciones & Valores: dice que no es su saldo en Trii y que lo escriba; sin certificación, que la caja es 0", () => {
-    expect(textoCajaCertificada("2027-03-12")).toBe("Caja certificada por Acciones & Valores al 12-mar-2027; no es su saldo en Trii. Escríbalo arriba para simular con él.");
-    expect(CAJA_SIN_CERTIFICACION).toBe("Sin certificación de Acciones & Valores: la caja de antes es 0. Escriba su saldo en Trii arriba para simular con él.");
+    expect(textoCajaCertificada("2027-03-12")).toBe("Caja certificada por Acciones & Valores al 12-mar-2027; no es su saldo en Trii. Escríbalo en «Su saldo disponible en el comisionista» para simular con él.");
+    expect(CAJA_SIN_CERTIFICACION).toBe("Sin certificación de Acciones & Valores: la caja de antes es 0. Escriba su saldo en Trii en «Su saldo disponible en el comisionista» para simular con él.");
   });
 
   it("si la caja de A&V es negativa, lo avisa; con el saldo escrito no avisa (aunque sea 0)", () => {
@@ -48,7 +48,7 @@ describe("la respuesta dice de dónde sale la caja", () => {
     const op = operacion(A, "COMPRAR", 3n, "4613.27");
     const deAV = aRespuestaSimulacion(simularOperacion(negativa, op, CONTEXTO), idDe(A), negativa.posiciones, new Date(Date.UTC(2027, 2, 12)));
     expect(deAV.ok && deAV.vista.avisos).toContain(AVISO_CAJA_AV_NEGATIVA);
-    expect(AVISO_CAJA_AV_NEGATIVA).toBe("La caja certificada por Acciones & Valores es negativa y no es su saldo en Trii: escríbalo arriba para simular con él.");
+    expect(AVISO_CAJA_AV_NEGATIVA).toBe("La caja certificada por Acciones & Valores es negativa y no es su saldo en Trii: escríbalo en «Su saldo disponible en el comisionista» para simular con él.");
     const escrita = aRespuestaSimulacion(simularOperacion({ ...ESTADO, caja: D("0") }, op, CONTEXTO), idDe(A), ESTADO.posiciones, "ESCRITA");
     expect(escrita.ok && escrita.vista.avisos).not.toContain(AVISO_CAJA_AV_NEGATIVA);
     const positiva = aRespuestaSimulacion(simularOperacion(ESTADO, operacion(B, "VENDER", 1n, "11.71"), CONTEXTO), idDe(B), ESTADO.posiciones, new Date(Date.UTC(2027, 2, 12)));

@@ -12,11 +12,14 @@ const CIEN = new Prisma.Decimal(100);
 const suma = (xs: readonly Prisma.Decimal[]): Prisma.Decimal => xs.reduce((s, x) => s.add(x), CERO);
 
 function conValor(f: FilaTablero, precio: Prisma.Decimal, fechaSinCierre: Date): FilaTablero {
+  // Una especie sin acciones no se valora: su cierre no cuenta.
+  if (f.cantidad === 0n) return f;
   const valor = f.cantidad > 0n ? precio.mul(f.cantidad.toString()) : CERO;
   const sinVender = valor.sub(f.costoVivo);
   return {
     ...f,
     cierre: f.cierre === null ? { precio, fecha: fechaSinCierre, verificado: false } : { ...f.cierre, precio },
+    cierreAtrasado: false,
     valor,
     sinVender,
     rentabilidadPct: f.costoVivo.gt(0) ? sinVender.div(f.costoVivo).mul(CIEN) : null,
