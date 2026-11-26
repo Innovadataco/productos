@@ -296,3 +296,40 @@ describe("elegirResumen · el último intento FALLÓ", () => {
     expect(prohibidasEn("Le recomendamos vender ya")).not.toEqual([]);
   });
 });
+
+describe("elegirResumen · el publicado ya no pasa la revisión (descarte)", () => {
+  const malo = (paquete: ReturnType<typeof paqueteFicticio>) => publicadoFicticio(paquete, { salidaModelo: "FICTICIA-ALFA no es json" });
+
+  it("con paquete de hoy: la vista trae la nota y muestra el resumen sin IA", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const { vista, descarte } = elegirResumen({ tipo: "DIARIO", publicado: malo(paquete), hoy: { paquete, motivo: null } });
+    expect(descarte).not.toBeNull();
+    expect(vista.estado).toBe("SIN_IA");
+    expect(vista.descartado).toBe("El análisis guardado ya no pasa la revisión; se muestra el resumen sin IA.");
+  });
+
+  it("sin paquete de hoy: la nota no promete un resumen", () => {
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: malo(paqueteFicticio("DIARIO")), hoy: { paquete: null, motivo: "OCUPADO" } });
+    expect(vista.estado).toBe("NO_DISPONIBLE");
+    expect(vista.descartado).toBe("El análisis guardado ya no pasa la revisión.");
+  });
+
+  it("un publicado de otro tipo también se descarta con la nota", () => {
+    const otro = publicadoFicticio(paqueteFicticio("REGLAS"));
+    const paquete = paqueteFicticio("DIARIO");
+    expect(elegirResumen({ tipo: "DIARIO", publicado: otro, hoy: { paquete, motivo: null } }).vista.descartado).toContain("ya no pasa la revisión");
+  });
+
+  it("sin descarte (válido o sin publicado): sin nota, y la nota no se mezcla con el contenido de lo guardado", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    expect(elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(paquete), hoy: { paquete, motivo: null } }).vista.descartado).toBeNull();
+    expect(elegirResumen({ tipo: "DIARIO", publicado: null, hoy: { paquete, motivo: null } }).vista.descartado).toBeNull();
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: malo(paquete), hoy: { paquete, motivo: null } });
+    expect(JSON.stringify(vista)).not.toContain("FICTICIA-ALFA no es json");
+  });
+
+  it("los textos nuevos no traen lenguaje de consejo (con control positivo)", () => {
+    expect(prohibidasEn(JSON.stringify(Object.values(TEXTOS_RESUMEN_IA.descartado)))).toEqual([]);
+    expect(prohibidasEn("Le recomendamos vender ya")).not.toEqual([]);
+  });
+});

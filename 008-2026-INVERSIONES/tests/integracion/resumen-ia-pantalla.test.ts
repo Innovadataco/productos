@@ -84,7 +84,7 @@ describe("tarjeta de resumen contra la base", () => {
     const p = paquete("ESCENARIOS", "2027-05-21");
     await publicar(tx, p, '{"frases":[{"segmentos":[{"texto":"Le recomendamos vender."}]}]}');
     const vista = await leer(tx, "ESCENARIOS", "2027-05-21", p);
-    expect(vista).toMatchObject({ estado: "SIN_IA", pie: "Resumen sin IA" });
+    expect(vista).toMatchObject({ estado: "SIN_IA", pie: "Resumen sin IA", descartado: "El análisis guardado ya no pasa la revisión; se muestra el resumen sin IA." });
   }));
 
   it("un PUBLICADO de AYER se muestra con su fecha y hora, DESACTUALIZADO (otros hechos hoy), revalidado", () => aislado(async (tx) => {

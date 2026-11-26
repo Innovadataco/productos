@@ -92,6 +92,17 @@ describe("TarjetaResumenIa", () => {
     expect(pintar(conIa("DIARIO")).querySelector(".resumen-ia-sin-ia")).toBeNull();
   });
 
+  it("fallo y descarte se pintan cada uno en su párrafo", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const raiz = pintar({
+      ...elegirResumen({ tipo: "DIARIO", publicado: null, hoy: { paquete, motivo: null } }).vista,
+      fallo: "El último intento de análisis (17-mar-2027, 19:05) falló.", descartado: "El análisis guardado ya no pasa la revisión.",
+    });
+    expect(texto(raiz.querySelector(".resumen-ia-fallo"))).toBe("El último intento de análisis (17-mar-2027, 19:05) falló.");
+    expect(texto(raiz.querySelector(".resumen-ia-descartado"))).toBe("El análisis guardado ya no pasa la revisión.");
+    expect(pintar(conIa("DIARIO")).querySelector(".resumen-ia-fallo, .resumen-ia-descartado")).toBeNull();
+  });
+
   it("solo texto plano: una frase con etiquetas sale escapada, sin HTML crudo", () => {
     const vista = { ...conIa("DIARIO"), frases: ["<img src=x onerror=alert(1)>"] };
     const raiz = pintar(vista);
@@ -109,6 +120,8 @@ describe("candado de lenguaje de la tarjeta", () => {
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: null, motivo: "SIN_PLAN_VIGENTE" } }).vista,
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: null, motivo: "OCUPADO" } }).vista,
       elegirResumen({ tipo: t, publicado: null, iaApagada: true, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
+      elegirResumen({ tipo: t, publicado: publicadoFicticio(paqueteFicticio(t), { salidaModelo: "x" }), hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
+      elegirResumen({ tipo: t, publicado: null, fallido: { fechaNegocio: "2027-03-17", generadoEn: new Date("2027-03-18T00:05:00.000Z") }, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
     ]),
   ];
   /** El texto de la tarjeta sin el aviso fijo (ese lo pone el validador y niega la recomendación a propósito). */
