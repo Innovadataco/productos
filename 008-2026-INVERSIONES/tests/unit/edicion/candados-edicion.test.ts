@@ -86,6 +86,12 @@ describe("candados del área de edición · el árbol real", () => {
     }
   });
 
+  it("el índice /edicion no lee nada más que la sesión: no importa la base ni las lecturas (revisión code-reviewer, BAJO)", () => {
+    const fuente = leer(join(EDICION, "page.tsx"));
+    expect(importacionesDeValor(fuente).filter((m) => /^@\/lib\/db$|lecturas|\/datos$|@prisma\/client/.test(m))).toEqual([]);
+    expect(fuente).not.toMatch(/\bdb\./);
+  });
+
   it("los componentes de cliente solo importan React, tipos y los módulos puros del área", () => {
     for (const r of archivos(EDICION)) expect(violacionesDeCliente(leer(r)), rel(r)).toEqual([]);
   });

@@ -74,7 +74,25 @@ describe("/edicion · índice de la configuración", () => {
     expect(JSON.stringify(registro.mock.calls)).not.toContain("valor-ficticio-4613");
   });
 
-  it("ningún texto recomienda comprar ni vender", async () => {
-    expect(texto(await pantalla())).not.toMatch(/\b(compre|venda|recomend\w*|debería|le conviene|le sugerimos)\b/i);
+  // Revisión code-reviewer (MEDIO): «recomend\w*» no atrapa «recomienda»; y el pie dice «no recomienda comprar ni
+  // vender» a propósito, así que se mira solo la lista (control positivo incluido).
+  const RECOMIENDA = /\b(compr\w*|vend\w*|recomi?end\w*|deber[ií]a|le conviene|le sugerimos)\b/i;
+  it("ningún texto de la lista recomienda comprar ni vender (y la expresión muerde)", async () => {
+    for (const malo of ["le recomienda comprar FICTA", "venda ya", "debería comprar", "le recomendamos esperar"]) expect(malo).toMatch(RECOMIENDA);
+    expect(texto((await pantalla()).querySelector("main ul.configuracion"))).not.toMatch(RECOMIENDA);
+    for (const e of TEXTOS_CONFIGURACION.ENTRADAS) expect(`${e.texto} ${e.para}`).not.toMatch(RECOMIENDA);
+  });
+
+  // Revisión react-reviewer (BAJO): el lector de pantalla oye la línea junto con el enlace.
+  it("cada enlace lleva su línea como descripción (aria-describedby a un id que existe y es único)", async () => {
+    const raiz = await pantalla();
+    const ids = [...raiz.querySelectorAll("main ul.configuracion > li > a")].map((a) => a.getAttribute("aria-describedby"));
+    expect(ids).toHaveLength(3);
+    expect(new Set(ids).size).toBe(3);
+    for (const id of ids) {
+      expect(id).toMatch(/^[\w-]+$/);
+      expect(raiz.querySelectorAll(`#${id}`)).toHaveLength(1);
+      expect(raiz.querySelector(`#${id}`)?.tagName).toBe("P");
+    }
   });
 });

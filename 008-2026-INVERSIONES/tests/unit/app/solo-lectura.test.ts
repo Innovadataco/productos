@@ -3,7 +3,7 @@
 // (Portafolio, Plan, Decisiones y su detalle, Conciliación y Proyecciones); el dueño no la ve. Cada página la deriva de la
 // sesión revalidada (esSoloLectura), nunca de algo del navegador. Ningún texto nuevo recomienda comprar ni vender, y el
 // pie del plan no le dice al familiar que él aprobó el plan. Datos inventados.
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createElement, type ReactElement } from "react";
@@ -96,6 +96,17 @@ describe("cada página deriva la marca de la sesión revalidada", () => {
 
   it.each(["src/app/plan/Plan.tsx", "src/app/decisiones/Diario.tsx", "src/app/decisiones/[id]/Cadena.tsx"])("%s pasa soloLectura a su Encabezado", (componente) => {
     expect(leer(componente)).toMatch(/<Encabezado actual="[a-z]+" soloLectura=\{soloLectura\} \/>/);
+  });
+
+  // Frente menu-configuracion (revisión react-reviewer y code-reviewer, MEDIO): el menú cae a «dueño» si se omite la
+  // prop (muestra «Configuración»). Ningún <Encabezado> de src/app la omite: así la omisión no queda por descuido.
+  it("cada <Encabezado> de src/app pasa soloLectura explícito (también el del área de edición, solo del dueño)", () => {
+    const tsx = (dir: string): string[] =>
+      readdirSync(join(RAIZ, dir)).flatMap((n) => (statSync(join(RAIZ, dir, n)).isDirectory() ? tsx(join(dir, n)) : n.endsWith(".tsx") ? [join(dir, n)] : []));
+    const usos = tsx("src/app").flatMap((r) => [...leer(r).matchAll(/<Encabezado\b[^>]*>/g)].map((m) => [r, m[0]] as const));
+    expect(usos.length).toBeGreaterThanOrEqual(10);
+    for (const [r, uso] of usos) expect(uso, r).toMatch(/\bsoloLectura=\{/);
+    expect(leer("src/app/edicion/Pagina.tsx")).toMatch(/<Encabezado actual=\{seccion\} soloLectura=\{false\} \/>/);
   });
 });
 
