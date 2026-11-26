@@ -53,7 +53,8 @@ test.describe("el dueño simula y carga su tarifa", () => {
     await iniciarSesion(page, info, "dueno-tarifas");
     await simular(page, "7", "11,71");
     await expect(seccion(page)).toContainText("Valor de la orden");
-    await expect(seccion(page)).toContainText("$ 81,97");
+    // El valor de la orden se muestra en pesos redondos (decisión de Jelk, #1087: textoPesosRedondos), no con decimales.
+    await expect(seccion(page)).toContainText(/Valor de la orden\s*\$ 82(?![\d.,])/);
     await expect(seccion(page)).toContainText(/Comisión \((estimada con su historia|no se estima)\)/);
     expect(prohibidasEn(await seccion(page).innerText())).toEqual([]);
 
@@ -74,7 +75,8 @@ test.describe("el dueño simula y carga su tarifa", () => {
     // 0,2731 % de $ 81,97 = 0,2239 < mínimo 7,13: la comisión es el mínimo.
     await simular(page, "7", "11,71");
     await expect(seccion(page)).toContainText("Comisión (de su tarifa)");
-    await expect(seccion(page)).toContainText("$ 7,13");
+    // La comisión del simulador también va en pesos redondos (#1087); el mínimo exacto se ve en la tarifa vigente.
+    await expect(seccion(page)).toContainText(/Comisión \(de su tarifa\)\s*\$ 7(?![\d.,])/);
     await expect(seccion(page)).toContainText("calculada con su tarifa de Trii para compra · versión");
   });
 
