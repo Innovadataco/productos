@@ -72,6 +72,22 @@ describe("correrDiaria", () => {
     expect(m.esperas).toEqual(Array.from({ length: MAX_REINTENTOS }, () => PAUSA_REINTENTO_MS));
   });
 
+  it("con otra política de reintentos (la del modo «ahora»): ese máximo y esa pausa, no los de la programada", async () => {
+    const m = montar(caido, [DIARIO], { reintentos: { maximo: 1, pausaMs: 4613 } });
+    const r = await correrDiaria(m.deps, config(), HOY);
+    expect(r.porTipo).toEqual({ DIARIO: "FALLIDO" });
+    expect(m.generador.llamadas()).toHaveLength(2);
+    expect(m.esperas).toEqual([4613]);
+    expect(m.lineas.join("\n")).toMatch(/reintento 1 de 1 en 4 s/);
+  });
+
+  it("con cero reintentos: un intento y ninguna pausa", async () => {
+    const m = montar(caido, [DIARIO], { reintentos: { maximo: 0, pausaMs: 4613 } });
+    await correrDiaria(m.deps, config(), HOY);
+    expect(m.generador.llamadas()).toHaveLength(1);
+    expect(m.esperas).toEqual([]);
+  });
+
   it("el modelo vuelve en el segundo intento: un FALLIDO y luego el PUBLICADO", async () => {
     const m = montar((i) => (i === 0 ? caido : responder(DIARIO)));
     const r = await correrDiaria(m.deps, config(), HOY);

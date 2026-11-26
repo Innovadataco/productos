@@ -1,7 +1,8 @@
 // El cableado real del servicio inv-008-ia que se puede probar sin base ni red: el `fetch` acotado (solo el destino de
 // la tailnet y las dos rutas de Ollama) y los digests de la clave de «ya publicado».
 import { describe, expect, it, vi } from "vitest";
-import { digestsDe, fetchAcotado, opcionesDe } from "@/servicio-ia/cableado";
+import { REINTENTOS_AHORA } from "@/servicio-ia/ahora";
+import { dependenciasReales, digestsDe, fetchAcotado, opcionesDe } from "@/servicio-ia/cableado";
 import { DESTINO_FICTICIO, DIGEST_QWEN, LISTA_FICTICIA, SIN_LISTA, VIGENTE_FICTICIA } from "../ia/config/apoyo/config.ficticio";
 
 const init = { method: "GET", headers: {}, signal: new AbortController().signal, redirect: "manual" } as const;
@@ -60,5 +61,55 @@ describe("servir · sin la credencial", () => {
     expect(await fin).toBe(0);
     expect(crearDb).not.toHaveBeenCalled();
     expect(lineas.join("")).toContain("sin INV_IA_DATABASE_URL");
+  });
+});
+
+describe("servirAhora", () => {
+  const URL_FICTICIA = "postgresql://inv_ia:clave-ficticia-4613@inv-008-db:5432/inversiones?connection_limit=2";
+  const procesoCon = (env: Record<string, string>) => {
+    const lineas: string[] = [];
+    return { lineas, proceso: { env: env as unknown as NodeJS.ProcessEnv, stdout: { write: (t: string) => void lineas.push(t) }, once: vi.fn(), removeListener: vi.fn() } };
+  };
+
+  it("sin la credencial: lo dice, no crea el cliente de la base y sale con 1", async () => {
+    const { servirAhora } = await import("@/servicio-ia/cableado");
+    const { proceso, lineas } = procesoCon({});
+    const crearDb = vi.fn();
+    expect(await servirAhora(proceso, vi.fn() as never, crearDb as never)).toBe(1);
+    expect(crearDb).not.toHaveBeenCalled();
+    expect(lineas.join("")).toContain("sin INV_IA_DATABASE_URL");
+  });
+
+  it("con la credencial: una sola conexión, la configuración de la base (apagada: nada) y cierra la base; nunca repite la URL", async () => {
+    const { mkdtempSync } = await import("node:fs");
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const { servirAhora, VARIABLE_ESTADO_DIR } = await import("@/servicio-ia/cableado");
+    const dir = mkdtempSync(path.join(os.tmpdir(), "inv-008-ia-ahora-"));
+    const { proceso, lineas } = procesoCon({ DATABASE_URL: URL_FICTICIA, [VARIABLE_ESTADO_DIR]: dir });
+    const desconectar = vi.fn(async () => undefined);
+    const db = { configIa: { findFirst: vi.fn(async () => null) }, $disconnect: desconectar };
+    const crearDb = vi.fn((_url: string) => db);
+    expect(await servirAhora(proceso, vi.fn() as never, crearDb as never)).toBe(0);
+    expect(new URL(crearDb.mock.calls[0]![0]).searchParams.get("connection_limit")).toBe("1");
+    expect(desconectar).toHaveBeenCalledTimes(1);
+    const todo = lineas.join("");
+    expect(todo).toMatch(/apagada/);
+    expect(todo).not.toContain("clave-ficticia-4613");
+  });
+});
+
+describe("dependenciasReales", () => {
+  const esperar = async (): Promise<void> => undefined;
+  it("sin política es la de la programada (la del bucle, sin cambios); con REINTENTOS_AHORA la lleva la corrida", () => {
+    expect(dependenciasReales({} as never, vi.fn() as never, () => undefined, esperar).corrida.reintentos).toBeUndefined();
+    expect(dependenciasReales({} as never, vi.fn() as never, () => undefined, esperar, REINTENTOS_AHORA).corrida.reintentos).toBe(REINTENTOS_AHORA);
+  });
+
+  it("el fetch de la corrida es el acotado: un destino fuera de la tailnet no sale", async () => {
+    const real = vi.fn();
+    const { fetchLocal } = dependenciasReales({} as never, real as never, () => undefined, esperar, REINTENTOS_AHORA);
+    await expect(fetchLocal("https://api.telegram.org/", init)).rejects.toThrow(/DESTINO_NO_PERMITIDO/);
+    expect(real).not.toHaveBeenCalled();
   });
 });
