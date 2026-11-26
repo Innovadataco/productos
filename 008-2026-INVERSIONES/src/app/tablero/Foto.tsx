@@ -6,6 +6,7 @@
  */
 import { FechaDatoCompuesta } from "@/app/_comun/fecha-dato/FechaDato";
 import { Barras, Dona, type FilaBarra, type Segmento } from "@/app/_graficas";
+import { DECIMALES_PESO } from "@/operar/analisis/decimales";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { procedenciaDeFilas } from "./procedencia";
 import type { FilaVista, Vista } from "./tipos";
@@ -20,7 +21,7 @@ const detalle = (f: FilaVista) => `costo ${cop(n(f.costo))} · valor ${f.valor ?
 
 function segmentos(vista: Vista): Segmento[] {
   return vista.composicion.map((t) => ({
-    id: t.id, nombre: t.nemo, valor: n(t.valor), textoValor: cop(n(t.valor)), textoPct: `${numero(n(t.pesoPct), 1)} %`,
+    id: t.id, nombre: t.nemo, valor: n(t.valor), textoValor: cop(n(t.valor)), textoPct: `${numero(n(t.pesoPct), DECIMALES_PESO)} %`,
     // «Otras» es la única tajada con miembros (src/tablero/composicion.ts): no abre detalle y dice qué junta.
     ...(t.miembros.length > 0 ? { tono: "neutro" as const, elegible: false, detalle: `Incluye ${t.miembros.join(", ")}` } : {}),
   }));

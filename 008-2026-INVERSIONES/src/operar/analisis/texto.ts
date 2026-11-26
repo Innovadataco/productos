@@ -8,14 +8,14 @@ import type { Observacion } from "@/analisis/catalogo";
 import type { LadoSimulado } from "../simulador/tipos";
 import { textoPesosRedondos } from "../simulador/textos";
 import { nivelEs } from "@/plan/edicion/formato";
+import { DECIMALES_PESO } from "./decimales";
 import type { AntesDespues, ComparacionAnalisis, FuenteCaja, ResumenEscenario } from "./tipos";
 
 export const ROTULO_ANALISIS = "Análisis calculado por Inversiones · la IA lo redactará cuando el servicio de IA esté conectado";
 
 const SIN_DATO = "sin dato";
 const OTRA = "otra especie";
-/** Decimales de todo porcentaje de peso o de variación de /operar: dos, con los ceros («12,30 %», nunca «12,3 %»). */
-export const DECIMALES_PESO = 2;
+export { DECIMALES_PESO };
 const DECIMALES_PCT = DECIMALES_PESO;
 const DECIMALES_HHI = 3;
 const LADO: Readonly<Record<LadoSimulado, string>> = { COMPRAR: "compra", VENDER: "venta" };

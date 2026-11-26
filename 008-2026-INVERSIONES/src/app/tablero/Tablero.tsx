@@ -4,6 +4,7 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { FechaDato, FechaDatoCompuesta } from "@/app/_comun/fecha-dato/FechaDato";
 import { TarjetaResumenIa } from "@/app/_comun/resumen-ia/TarjetaResumenIa";
 import type { VistaResumenIa } from "@/app/_comun/resumen-ia/tipos";
+import { DECIMALES_PESO } from "@/operar/analisis/decimales";
 import { Evolucion } from "./Evolucion";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { Foto } from "./Foto";
@@ -347,7 +348,7 @@ function FilaPosicion({ f, activa, idBoton, elegir }: { f: FilaVista; activa: bo
       </td>
       <td><Linea serie={f.serie} sube={f.serie.length > 1 && n(f.serie[f.serie.length - 1]!.precio) >= n(f.serie[0]!.precio)} /></td>
       <td className="num"><b>{f.valor ? cop(n(f.valor)) : SIN_DATO}</b></td>
-      <td className="num">{f.pesoPct ? <><Peso pct={n(f.pesoPct)} /> {numero(n(f.pesoPct), 1)} %</> : SIN_DATO}</td>
+      <td className="num">{f.pesoPct ? <><Peso pct={n(f.pesoPct)} /> {numero(n(f.pesoPct), DECIMALES_PESO)} %</> : SIN_DATO}</td>
       <td className={`num ${sube ? "gain" : "loss"}`}><b>{f.sinVender ? cop(n(f.sinVender), true) : SIN_DATO}</b></td>
       <td className={`num ${sube ? "gain" : "loss"}`}>{f.rentabilidadPct ? pct(n(f.rentabilidadPct)) : SIN_DATO}</td>
       <td className="num">{cop(n(f.dividendos))}</td>
