@@ -43,9 +43,13 @@ async function lineasDentroDeSuCelda(page: Page): Promise<string[]> {
   });
 }
 
-/** Los renglones de cada línea de procedencia a 375 px: partida letra por letra ocuparía muchos más que 3. */
-async function renglonesMaximos(page: Page): Promise<number> {
-  return page.evaluate(() => Math.max(...[...document.querySelectorAll(".fecha-dato-linea")].map((l) => Math.round(l.getBoundingClientRect().height / parseFloat(getComputedStyle(l).lineHeight)))));
+/** Los renglones de cada línea de procedencia en una celda de tabla a 375 px: partida letra por letra ocuparía muchos más que 3. */
+async function renglonesMaximos(page: Page): Promise<{ readonly max: number; readonly donde: string }> {
+  return page.evaluate(() => {
+    const cuenta = [...document.querySelectorAll("td .fecha-dato-linea")].map((l) => ({ n: Math.round(l.getBoundingClientRect().height / parseFloat(getComputedStyle(l).lineHeight)), donde: `${l.closest("td, li, div")?.tagName}.${l.closest("td, li, div")?.className} «${l.textContent}» ${Math.round(l.getBoundingClientRect().width)}px` }));
+    const peor = cuenta.reduce((a, b) => (b.n > a.n ? b : a));
+    return { max: peor.n, donde: peor.donde };
+  });
 }
 
 /** Contraste WCAG del texto de cada nota contra el primer fondo opaco de sus ancestros (y que ninguna se salga a lo ancho). */
@@ -115,7 +119,8 @@ for (const tema of ["light", "dark"] as const) {
       expect(r.peor, "contraste de las notas").toBeGreaterThanOrEqual(4.5);
       expect(r.desborde).toBeLessThanOrEqual(0);
       expect(await lineasDentroDeSuCelda(page), "líneas fuera de su celda").toEqual([]);
-      expect(await renglonesMaximos(page), "renglones de la línea").toBeLessThanOrEqual(3);
+      const r1 = await renglonesMaximos(page);
+      expect(r1.max, `renglones de la línea: ${r1.donde}`).toBeLessThanOrEqual(3);
       expect((await notas(page.locator("main"))).filter((l) => /retraso/.test(l)), "un cierre no lleva retraso").toEqual([]);
 
       // No hay datos de rueda en la base: se pone, en la celda «Cierre» de la primera fila, la línea de rueda tal como la arma
@@ -126,7 +131,8 @@ for (const tema of ["light", "dark"] as const) {
       expect(await lineasDentroDeSuCelda(page), "la línea de rueda, fuera de su celda").toEqual([]);
       const conRueda = await revisarNotas(page);
       expect(conRueda.desborde).toBeLessThanOrEqual(0);
-      expect(await renglonesMaximos(page), "renglones de la línea de rueda").toBeLessThanOrEqual(3);
+      const r2 = await renglonesMaximos(page);
+      expect(r2.max, `renglones con la línea de rueda: ${r2.donde}`).toBeLessThanOrEqual(3);
       // El ancho de la columna del cierre no se queda en el mínimo: cabe la palabra más larga entera, no letra por letra.
       expect(await page.locator("td.num:has(.fecha-dato)").first().evaluate((td) => td.getBoundingClientRect().width)).toBeGreaterThanOrEqual(100);
       expect(conRueda.peor, "contraste con la línea de rueda").toBeGreaterThanOrEqual(4.5);
