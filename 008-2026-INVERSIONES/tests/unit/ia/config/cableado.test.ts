@@ -35,7 +35,7 @@ const LLAVE = { [VARIABLE_LLAVE_NUBE]: "llave-ficticia-nube-4613-37911-alfa" };
 
 describe("corridaDe · qué dice la configuración para una tarea", () => {
   it("una tarea activa: el modo, el límite en ms y su modelo local", () => {
-    expect(corridaDe(VIGENTE_FICTICIA, "DIARIO")).toEqual({ estado: "LISTA", tarea: "DIARIO", modo: "local-luego-nube", limiteMs: 97_000, modeloLocal: "qwen2.5:14b" });
+    expect(corridaDe(VIGENTE_FICTICIA, "DIARIO")).toEqual({ estado: "LISTA", tarea: "DIARIO", modo: "local-luego-nube", limiteMs: 45_000, modeloLocal: "qwen2.5:14b" });
     expect(corridaDe(VIGENTE_FICTICIA, "REGLAS")).toMatchObject({ estado: "LISTA", modeloLocal: "gemma2:27b" });
   });
 
@@ -67,7 +67,7 @@ describe("generarSegunConfig · con generadores falsos", () => {
     const nube = crearGeneradorFalso({ puerta: "nube", conducta: { tipo: "RESPONDER", salidaCruda: '{"frases":[]}' } });
     const r = await generarSegunConfig(VIGENTE_FICTICIA, [local, nube], entrada());
     expect(r).toMatchObject({ estado: "EXITO", exito: { puerta: "local" } });
-    expect(local.llamadas()[0]?.limiteMs).toBe(97_000);
+    expect(local.llamadas()[0]?.limiteMs).toBe(45_000);
     expect(nube.llamadas()).toHaveLength(0);
   });
 

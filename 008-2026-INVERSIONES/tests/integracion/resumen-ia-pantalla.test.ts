@@ -43,7 +43,7 @@ describe("tarjeta de resumen contra la base", () => {
     const p = paquete("DIARIO", "2027-05-19");
     await publicar(p);
     const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: ahoraDe("2027-05-19"), paquetes: exportacion(p) });
-    expect(vista).toMatchObject({ estado: "IA", vigencia: "AL_DIA", pie: "Redactado por IA local (ficticio-modelo:7b) · cifras calculadas por 008 y cotejadas" });
+    expect(vista).toMatchObject({ estado: "IA", vigencia: "AL_DIA", pie: "Redactado por IA local (ficticio-modelo:7b) · cifras calculadas por Inversiones y cotejadas" });
     expect(vista.frases.join(" ")).not.toContain(`Resumen ficticio ${marca}`);
   });
 
@@ -62,11 +62,62 @@ describe("tarjeta de resumen contra la base", () => {
     expect(vista).toMatchObject({ estado: "SIN_IA", pie: "Resumen sin IA" });
   });
 
-  it("un PUBLICADO de otro día no se muestra", async () => {
+  it("un PUBLICADO de AYER se muestra con su fecha y hora, DESACTUALIZADO (otros hechos hoy), revalidado", async () => {
     const ayer = paquete("DIARIO", "2027-05-24");
     await publicar(ayer);
     const hoy = paquete("DIARIO", "2027-05-25");
     const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: ahoraDe("2027-05-25"), paquetes: exportacion(hoy) });
-    expect(vista.estado).toBe("SIN_IA");
+    expect(vista).toMatchObject({ estado: "IA", vigencia: "DESACTUALIZADO", rechazo: null });
+    expect(vista.analisisDel).toMatch(/^Análisis de la IA del \d{1,2}-[a-z]{3}-\d{4}, \d{2}:\d{2}$/);
+    expect(vista.frases.length).toBeGreaterThan(0);
+  });
+
+  it("varios por día: la tarjeta muestra el ÚLTIMO válido", async () => {
+    const primero = paquete("REGLAS", "2027-05-26");
+    const segundo = paquete("REGLAS", "2027-05-26", `PANTALLA_SEGUNDO_${marca}`);
+    await publicar(primero);
+    await publicar(segundo);
+    const vista = await resumenDelDia(db, "REGLAS", "u-ficticio", { ahora: ahoraDe("2027-05-26"), paquetes: exportacion(segundo) });
+    expect(vista).toMatchObject({ estado: "IA", vigencia: "AL_DIA" });
+  });
+
+  describe("el último RECHAZADO por el validador", () => {
+    const rechazar = (p: PaqueteHechos, motivos: string[]) =>
+      registrarResumen(db, {
+        paquete: p, prompt: { version: "resumen-ficticio-v3", hash: sha256Hex(`prompt ficticio de la pantalla ${marca}`) }, opciones: { temperature: 0, seed: 42 },
+        validadorVersion: "validador-v2", estado: "RECHAZADO", motivos,
+        exito: { ok: true, puerta: "local", salidaCruda: "{}", modelo: "ficticio-modelo:7b", modeloDigest: "sha256:ficticio7193", latenciaMs: 4127, tokensEntrada: 1237, tokensSalida: 211 },
+      });
+
+    it("más nuevo que el último válido: la tarjeta trae su motivo en palabras simples y sigue mostrando el válido", async () => {
+      const p = paquete("ESCENARIOS", "2027-05-27");
+      await publicar(p);
+      await rechazar(paquete("ESCENARIOS", "2027-05-27", `PANTALLA_RECHAZO_${marca}`), ["HECHO_NO_CITADO"]);
+      const vista = await resumenDelDia(db, "ESCENARIOS", "u-ficticio", { ahora: ahoraDe("2027-05-27"), paquetes: exportacion(p) });
+      expect(vista.estado).toBe("IA");
+      expect(vista.rechazo).toContain("no citó todas las cifras que debía");
+      expect(vista.rechazo).not.toContain("HECHO_NO_CITADO");
+    });
+
+    it("más viejo que un válido nuevo: no se muestra", async () => {
+      const p = paquete("ESCENARIOS", "2027-05-28");
+      await rechazar(paquete("ESCENARIOS", "2027-05-28", `PANTALLA_RECHAZO2_${marca}`), ["FORMATO"]);
+      await publicar(p);
+      const vista = await resumenDelDia(db, "ESCENARIOS", "u-ficticio", { ahora: ahoraDe("2027-05-28"), paquetes: exportacion(p) });
+      expect(vista).toMatchObject({ estado: "IA", rechazo: null });
+    });
+
+    it("el RECHAZADO por YA_PUBLICADO (dos corridas a la vez) no es un rechazo del validador: no se muestra", async () => {
+      const p = paquete("DIARIO", "2027-05-29");
+      await publicar(p);
+      const repetida = await registrarResumen(db, {
+        paquete: p, prompt: { version: "resumen-ficticio-v3", hash: sha256Hex(`prompt ficticio de la pantalla ${marca}`) }, opciones: { temperature: 0, seed: 42 },
+        validadorVersion: "validador-v2", estado: "PUBLICADO", texto: "otra vez",
+        exito: { ok: true, puerta: "local", salidaCruda: salidaDePlantilla(p), modelo: "ficticio-modelo:7b", modeloDigest: "sha256:ficticio7193", latenciaMs: 4127, tokensEntrada: 1237, tokensSalida: 211 },
+      });
+      expect(repetida).toMatchObject({ estado: "RECHAZADO", yaPublicado: true });
+      const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: ahoraDe("2027-05-29"), paquetes: exportacion(p) });
+      expect(vista).toMatchObject({ estado: "IA", rechazo: null });
+    });
   });
 });

@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import { elegirResumen } from "@/app/_comun/resumen-ia/elegir";
 import { TEXTOS_RESUMEN_IA } from "@/app/_comun/resumen-ia/textos";
 import { resumenSinIa } from "@/ia/validador/plantilla";
+import { CODIGOS_VALIDADOR } from "@/ia/validador/codigos";
+import { prohibidasEn } from "../operar/informe/lenguaje";
 import { MODELO_FICTICIO, GENERADO_FICTICIO, paqueteFicticio, publicadoFicticio } from "./apoyo.ficticio";
 
 const TIPOS = ["DIARIO", "REGLAS", "ESCENARIOS"] as const;
@@ -20,7 +22,7 @@ describe("elegirResumen · publicado que pasa el validador", () => {
     // El texto es el que arma el validador, no el guardado.
     expect(vista.frases).toEqual(esperado.resumen.frases.map((f) => f.texto));
     expect(vista.frases.join(" ")).not.toContain("Texto guardado ficticio");
-    expect(vista.pie).toBe(`Redactado por IA local (${MODELO_FICTICIO}) · cifras calculadas por 008 y cotejadas`);
+    expect(vista.pie).toBe(`Redactado por IA local (${MODELO_FICTICIO}) · cifras calculadas por Inversiones y cotejadas`);
     expect(vista.redactadoEn).toBe("2027-03-17 18:41");
     expect(vista.cifras.map((c) => c.id)).toEqual(esperado.resumen.cifrasUsadas.map((c) => c.id));
     const primera = esperado.resumen.cifrasUsadas[0]!;
@@ -30,13 +32,13 @@ describe("elegirResumen · publicado que pasa el validador", () => {
   it("la puerta nube dice «IA en la nube»", () => {
     const paquete = paqueteFicticio("DIARIO");
     const { vista } = elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(paquete, { puerta: "nube" }), hoy: { paquete, motivo: null } });
-    expect(vista.pie).toBe(`Redactado por IA en la nube (${MODELO_FICTICIO}) · cifras calculadas por 008 y cotejadas`);
+    expect(vista.pie).toBe(`Redactado por IA en la nube (${MODELO_FICTICIO}) · cifras calculadas por Inversiones y cotejadas`);
   });
 
   it("un nombre de modelo raro no se repite: sale «modelo sin nombre»", () => {
     const paquete = paqueteFicticio("DIARIO");
     const { vista } = elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(paquete, { modelo: "<b>x</b> compre ya" }), hoy: { paquete, motivo: null } });
-    expect(vista.pie).toBe("Redactado por IA local (modelo sin nombre) · cifras calculadas por 008 y cotejadas");
+    expect(vista.pie).toBe("Redactado por IA local (modelo sin nombre) · cifras calculadas por Inversiones y cotejadas");
   });
 
   it("DESACTUALIZADO si el hash de los hechos de hoy cambió", () => {
@@ -116,3 +118,99 @@ describe("elegirResumen · revisión", () => {
   });
 });
 
+
+describe("elegirResumen · el último análisis válido, con su fecha, aunque no sea de hoy", () => {
+  it("un análisis de AYER (otro día, otros hechos) se muestra con su fecha y hora, y como DESACTUALIZADO con su aviso", () => {
+    const guardado = paqueteFicticio("DIARIO");
+    const hoy = paqueteFicticio("DIARIO", undefined, "2027-03-18");
+    expect(hoy.hash).not.toBe(guardado.hash);
+    const { vista, descarte } = elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(guardado), hoy: { paquete: hoy, motivo: null } });
+    expect(descarte).toBeNull();
+    expect(vista).toMatchObject({ estado: "IA", vigencia: "DESACTUALIZADO", analisisDel: "Análisis de la IA del 17-mar-2027, 18:41" });
+    expect(TEXTOS_RESUMEN_IA.vigencia.DESACTUALIZADO).toBe("DESACTUALIZADO: los datos cambiaron desde este análisis.");
+    expect(vista.frases.length).toBeGreaterThan(0);
+  });
+
+  it("al día: también lleva su fecha y hora", () => {
+    const paquete = paqueteFicticio("REGLAS");
+    const { vista } = elegirResumen({ tipo: "REGLAS", publicado: publicadoFicticio(paquete), hoy: { paquete, motivo: null } });
+    expect(vista).toMatchObject({ vigencia: "AL_DIA", analisisDel: "Análisis de la IA del 17-mar-2027, 18:41" });
+  });
+
+  it("se vuelve a validar aunque sea viejo: uno de ayer que ya no pasa no se muestra", () => {
+    const guardado = paqueteFicticio("DIARIO");
+    const malo = publicadoFicticio(guardado, { salidaModelo: "no es json" });
+    const { vista, descarte } = elegirResumen({ tipo: "DIARIO", publicado: malo, hoy: { paquete: paqueteFicticio("DIARIO", undefined, "2027-03-18"), motivo: null } });
+    expect(vista).toMatchObject({ estado: "SIN_IA", analisisDel: null });
+    expect(descarte).toEqual(["SALIDA_INVALIDA"]);
+  });
+
+  it("si nunca hubo uno válido: el resumen sin IA, sin fecha de análisis, como hoy", () => {
+    const paquete = paqueteFicticio("ESCENARIOS");
+    const { vista } = elegirResumen({ tipo: "ESCENARIOS", publicado: null, hoy: { paquete, motivo: null } });
+    expect(vista).toMatchObject({ estado: "SIN_IA", analisisDel: null, rechazo: null, vigencia: null });
+  });
+
+  it("la vista nueva trae puedeAnalizar apagado por omisión (lo enciende la lectura, solo para el dueño con el interruptor)", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    expect(elegirResumen({ tipo: "DIARIO", publicado: null, hoy: { paquete, motivo: null } }).vista.puedeAnalizar).toBe(false);
+    expect(elegirResumen({ tipo: "DIARIO", publicado: null, hoy: { paquete: null, motivo: "OCUPADO" } }).vista.puedeAnalizar).toBe(false);
+  });
+});
+
+describe("elegirResumen · el último fue RECHAZADO por el validador", () => {
+  const rechazado = (motivos: readonly string[], extra: object = {}) => ({ fechaNegocio: "2027-03-17", motivos, generadoEn: new Date("2027-03-18T00:05:00.000Z"), ...extra });
+  const PALABRAS_DE_CODIGO = /\b[A-Z]{3,}(?:_[A-Z]+)+\b|\b(?:LONGITUD|FORMATO|IDIOMA|TRATO|PREDICCION|RECOMENDACION)\b/;
+
+  it("más nuevo que el último válido: se muestra el motivo en palabras simples, sin códigos, y sigue el último válido", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(paquete), rechazado: rechazado(["HECHO_NO_CITADO", "CIFRA_SUELTA"]), hoy: { paquete, motivo: null } });
+    expect(vista.estado).toBe("IA");
+    expect(vista.rechazo).toBe("El último análisis (17-mar-2027, 19:05) no pasó la revisión automática y no se muestra: no citó todas las cifras que debía; traía una cifra que no estaba entre las calculadas.");
+    expect(vista.rechazo).not.toMatch(PALABRAS_DE_CODIGO);
+  });
+
+  it("sin ningún válido: el resumen sin IA y el motivo del rechazo", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: null, rechazado: rechazado(["HECHO_NO_CITADO"]), hoy: { paquete, motivo: null } });
+    expect(vista).toMatchObject({ estado: "SIN_IA", analisisDel: null });
+    expect(vista.rechazo).toContain("no citó todas las cifras que debía");
+  });
+
+  it("también con la tarjeta «no disponible»", () => {
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: null, rechazado: rechazado(["FORMATO"]), hoy: { paquete: null, motivo: "OCUPADO" } });
+    expect(vista).toMatchObject({ estado: "NO_DISPONIBLE" });
+    expect(vista.rechazo).toContain("formato");
+  });
+
+  it("uno más VIEJO que el último válido no se muestra: lo último es lo válido", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const viejo = rechazado(["HECHO_NO_CITADO"], { generadoEn: new Date("2027-03-17T12:00:00.000Z") });
+    expect(elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(paquete), rechazado: viejo, hoy: { paquete, motivo: null } }).vista.rechazo).toBeNull();
+  });
+
+  it("cada código del validador tiene su frase simple (sin el código, sin mayúsculas de código) y un código nuevo sale con la frase general", () => {
+    for (const codigo of CODIGOS_VALIDADOR) {
+      const frase = TEXTOS_RESUMEN_IA.motivosRechazo[codigo];
+      expect(frase, codigo).toMatch(/^[a-záéíóúñ]/);
+      expect(frase, codigo).not.toContain(codigo);
+      expect(frase, codigo).not.toMatch(PALABRAS_DE_CODIGO);
+    }
+    const paquete = paqueteFicticio("DIARIO");
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: null, rechazado: rechazado(["CODIGO_NUEVO_DEL_FUTURO"]), hoy: { paquete, motivo: null } });
+    expect(vista.rechazo).toContain(TEXTOS_RESUMEN_IA.rechazoGeneral);
+    expect(vista.rechazo).not.toContain("CODIGO_NUEVO");
+  });
+
+  it("sin motivos que mostrar (lista vacía): la frase general, nunca una frase vacía", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    expect(elegirResumen({ tipo: "DIARIO", publicado: null, rechazado: rechazado([]), hoy: { paquete, motivo: null } }).vista.rechazo).toContain(TEXTOS_RESUMEN_IA.rechazoGeneral);
+  });
+
+  it("los textos nuevos no traen lenguaje de consejo (candado de lenguaje, con control positivo) ni «008»", () => {
+    const nuevos = JSON.stringify([TEXTOS_RESUMEN_IA.motivosRechazo, TEXTOS_RESUMEN_IA.rechazoGeneral, TEXTOS_RESUMEN_IA.vigencia, TEXTOS_RESUMEN_IA.analisisDel]);
+    expect(prohibidasEn(nuevos)).toEqual([]);
+    expect(prohibidasEn("Le recomendamos vender ya")).not.toEqual([]);
+    expect(JSON.stringify(TEXTOS_RESUMEN_IA)).not.toMatch(/\b008\b/);
+  });
+});

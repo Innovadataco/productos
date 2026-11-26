@@ -48,7 +48,20 @@ describe("TarjetaResumenIa", () => {
   it("DESACTUALIZADO se marca a la vista", () => {
     const raiz = pintar(conIa("REGLAS", "AVISO_FICTICIO_NUEVO"));
     expect(texto(raiz.querySelector(".resumen-ia-desactualizado"))).toBe(TEXTOS_RESUMEN_IA.vigencia.DESACTUALIZADO);
+    expect(TEXTOS_RESUMEN_IA.vigencia.DESACTUALIZADO).toContain("los datos cambiaron desde este análisis");
     expect(TEXTOS_RESUMEN_IA.vigencia.DESACTUALIZADO).toMatch(/^DESACTUALIZADO/);
+  });
+
+  it("con IA: «Análisis de la IA del …» con su fecha y hora, sobre el pie", () => {
+    const raiz = pintar(conIa("DIARIO"));
+    expect(texto(raiz.querySelector(".resumen-ia-analisis"))).toBe("Análisis de la IA del 17-mar-2027, 18:41");
+  });
+
+  it("el último rechazado: el motivo en palabras simples, a la vista y sin códigos", () => {
+    const vista = { ...conIa("DIARIO"), rechazo: "El último análisis (17-mar-2027, 19:05) no pasó la revisión automática y no se muestra: no citó todas las cifras que debía." };
+    const raiz = pintar(vista);
+    expect(texto(raiz.querySelector(".resumen-ia-rechazo"))).toBe(vista.rechazo);
+    expect(pintar(conIa("DIARIO")).querySelector(".resumen-ia-rechazo")).toBeNull();
   });
 
   it("sin IA: el pie «Resumen sin IA», sin hora de redacción ni vigencia", () => {
@@ -56,6 +69,7 @@ describe("TarjetaResumenIa", () => {
     const raiz = pintar(elegirResumen({ tipo: "ESCENARIOS", publicado: null, hoy: { paquete, motivo: null } }).vista);
     expect(texto(raiz.querySelector(".resumen-ia-pie"))).toBe("Resumen sin IA");
     expect(raiz.querySelector(".resumen-ia-pie time")).toBeNull();
+    expect(raiz.querySelector(".resumen-ia-analisis")).toBeNull();
     expect(raiz.querySelector(".resumen-ia-vigencia")).toBeNull();
   });
 

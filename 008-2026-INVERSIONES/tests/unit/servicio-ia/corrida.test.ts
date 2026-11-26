@@ -7,7 +7,7 @@ import { crearGeneradorFalso, type ConductaFalsa } from "@/ia/generador-falso";
 import type { EntradaResumen } from "@/ia/registro/fila";
 import { VERSION_VALIDADOR } from "@/ia/validador/codigos";
 import { salidaDePlantilla } from "@/ia/validador/plantilla";
-import { MAX_REINTENTOS, PAUSA_REINTENTO_MS, correrDiaria, type DependenciasCorrida } from "@/servicio-ia/corrida";
+import { MAX_REINTENTOS, PAUSA_REINTENTO_MS, correrDiaria, correrUna, type DependenciasCorrida } from "@/servicio-ia/corrida";
 import { VIGENTE_FICTICIA } from "../ia/config/apoyo/config.ficticio";
 
 const casos = casosInventados();
@@ -146,5 +146,58 @@ describe("correrDiaria", () => {
     expect(r.porTipo).toEqual({ DIARIO: "ERROR", REGLAS: "PUBLICADO", ESCENARIOS: "OMITIDO" });
     expect(m.lineas.join("\n")).toContain("SIN_PROYECCION");
     expect(m.lineas.join("\n")).not.toContain("37.911");
+  });
+});
+
+describe("correrUna (el análisis a demanda de UNA tarea)", () => {
+  it("PUBLICADO: corre solo esa tarea aunque el export traiga otras, y registra una fila", async () => {
+    const m = montar(responder(REGLAS), [DIARIO, REGLAS]);
+    expect(await correrUna(m.deps, config(), "REGLAS", HOY)).toBe("PUBLICADO");
+    expect(m.deps.exportar).toHaveBeenCalledWith(HOY);
+    expect(m.generador.llamadas()).toHaveLength(1);
+    expect(m.registradas).toHaveLength(1);
+    expect(m.registradas[0]).toMatchObject({ estado: "PUBLICADO", paquete: REGLAS });
+  });
+
+  it("un solo intento: con el modelo caído queda FALLIDO sin reintentos ni pausas (el clic no espera minutos)", async () => {
+    const m = montar(caido);
+    expect(await correrUna(m.deps, config(), "DIARIO", HOY)).toBe("FALLIDO");
+    expect(m.generador.llamadas()).toHaveLength(1);
+    expect(m.esperas).toEqual([]);
+  });
+
+  it("los mismos hechos ya publicados: YA_PUBLICADO, sin llamar al modelo ni duplicar", async () => {
+    const m = montar(responder(DIARIO), [DIARIO], { yaPublicado: vi.fn(async () => true) });
+    expect(await correrUna(m.deps, config(), "DIARIO", HOY)).toBe("YA_PUBLICADO");
+    expect(m.generador.llamadas()).toHaveLength(0);
+    expect(m.registradas).toHaveLength(0);
+  });
+
+  it("RECHAZADO: una recomendación no se publica; queda registrada con sus códigos", async () => {
+    const malo = JSON.stringify({ frases: [{ segmentos: [{ texto: "Le recomiendo vender ya" }, { ref: "H01" }, { texto: "." }] }] });
+    const m = montar({ tipo: "RESPONDER", salidaCruda: malo, modeloDigest: DIGEST });
+    expect(await correrUna(m.deps, config(), "DIARIO", HOY)).toBe("RECHAZADO");
+    expect((m.registradas[0] as unknown as { motivos: string[] }).motivos).toContain("RECOMENDACION");
+  });
+
+  it("sin paquete de esa tarea (sin hechos hoy): OMITIDO; con la IA apagada: APAGADO y ni lee los hechos", async () => {
+    const m = montar(responder(DIARIO), [DIARIO]);
+    expect(await correrUna(m.deps, config(), "REGLAS", HOY)).toBe("OMITIDO");
+    expect(await correrUna(m.deps, config({ modo: "apagado" }), "DIARIO", HOY)).toBe("APAGADO");
+    expect(m.deps.exportar).toHaveBeenCalledTimes(1);
+  });
+
+  it("una tarea inactiva en la configuración: TAREA_INACTIVA, sin llamar al modelo", async () => {
+    const m = montar(responder(DIARIO), [DIARIO]);
+    const c = config({ tareas: { ...VIGENTE_FICTICIA.tareas, DIARIO: { activo: false, modeloLocal: null } } });
+    expect(await correrUna(m.deps, c, "DIARIO", HOY)).toBe("TAREA_INACTIVA");
+    expect(m.generador.llamadas()).toHaveLength(0);
+  });
+
+  it("un error del registro queda como ERROR con su código en el log, sin el mensaje", async () => {
+    const m = montar(responder(DIARIO), [DIARIO], { registrar: async () => { throw Object.assign(new Error("fila-real-4613"), { code: "P2002" }); } });
+    expect(await correrUna(m.deps, config(), "DIARIO", HOY)).toBe("ERROR");
+    expect(m.lineas.join("\n")).toContain("P2002");
+    expect(m.lineas.join("\n")).not.toContain("fila-real-4613");
   });
 });

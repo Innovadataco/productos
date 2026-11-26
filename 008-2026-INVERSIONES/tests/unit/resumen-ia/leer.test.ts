@@ -7,7 +7,10 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ultimoPublicado = vi.hoisted(() => vi.fn());
-vi.mock("@/app/_comun/resumen-ia/publicado", () => ({ publicadoDelDia: ultimoPublicado }));
+const ultimoRechazado = vi.hoisted(() => vi.fn());
+const leerConfigIa = vi.hoisted(() => vi.fn());
+vi.mock("@/app/_comun/resumen-ia/publicado", () => ({ ultimoPublicadoDe: ultimoPublicado, ultimoRechazadoDe: ultimoRechazado }));
+vi.mock("@/ia/config/leer", async (original) => ({ ...(await original<typeof import("@/ia/config/leer")>()), leerConfigIa }));
 
 import { reiniciarMemoParaPruebas, resumenDelDia, TTL_MEMO_MS } from "@/app/_comun/resumen-ia/leer";
 import { TEXTOS_RESUMEN_IA } from "@/app/_comun/resumen-ia/textos";
@@ -29,18 +32,22 @@ beforeEach(() => {
   reiniciarMemoParaPruebas();
   reiniciarTurnoParaPruebas();
   ultimoPublicado.mockResolvedValue(null);
+  ultimoRechazado.mockResolvedValue(null);
+  leerConfigIa.mockResolvedValue(null);
   error = vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 afterEach(() => {
   ultimoPublicado.mockReset();
+  ultimoRechazado.mockReset();
+  leerConfigIa.mockReset();
   vi.restoreAllMocks();
 });
 
 describe("resumenDelDia", () => {
-  it("lee el publicado del día de Colombia y arma el de hoy con el export, con el día de Colombia a medianoche UTC", async () => {
+  it("lee el último publicado (de cualquier día) y arma el de hoy con el export, con el día de Colombia a medianoche UTC", async () => {
     const paquetes = vi.fn().mockResolvedValue(exportacion());
     const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes });
-    expect(ultimoPublicado).toHaveBeenCalledWith(db, "DIARIO", "2027-03-17");
+    expect(ultimoPublicado).toHaveBeenCalledWith(db, "DIARIO");
     expect(paquetes).toHaveBeenCalledWith(db, HOY);
     expect(vista).toMatchObject({ tipo: "DIARIO", estado: "SIN_IA" });
   });
@@ -176,5 +183,58 @@ describe("resumenDelDia", () => {
     const roto = { ...paqueteFicticio("DIARIO") };
     const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: vi.fn().mockResolvedValue(exportacion({ paquetes: [roto] })) });
     expect(vista).toMatchObject({ estado: "NO_DISPONIBLE", nota: TEXTOS_RESUMEN_IA.notaMomento });
+  });
+});
+
+describe("resumenDelDia · el botón «Analizar con IA» y el último rechazado", () => {
+  const paquetes = () => vi.fn().mockResolvedValue(exportacion());
+  const encendida = { analisisDemanda: true };
+
+  it("el dueño con el interruptor encendido: puedeAnalizar", async () => {
+    leerConfigIa.mockResolvedValue(encendida);
+    const vista = await resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true });
+    expect(vista.puedeAnalizar).toBe(true);
+  });
+
+  it("el interruptor apagado (el valor de omisión) o sin configuración: no hay botón (falla cerrada)", async () => {
+    leerConfigIa.mockResolvedValue({ analisisDemanda: false });
+    expect((await resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true })).puedeAnalizar).toBe(false);
+    leerConfigIa.mockResolvedValue(null);
+    expect((await resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true })).puedeAnalizar).toBe(false);
+  });
+
+  it("la familia (o sin decir quién es): nunca hay botón y ni se lee la configuración", async () => {
+    leerConfigIa.mockResolvedValue(encendida);
+    expect((await resumenDelDia(db, "DIARIO", "u-familiar", { ahora: AHORA, paquetes: paquetes(), dueno: false })).puedeAnalizar).toBe(false);
+    expect((await resumenDelDia(db, "DIARIO", "u-familiar", { ahora: AHORA, paquetes: paquetes() })).puedeAnalizar).toBe(false);
+    expect(leerConfigIa).not.toHaveBeenCalled();
+  });
+
+  it("si leer la configuración falla (no es la base): sin botón, y la tarjeta sigue", async () => {
+    leerConfigIa.mockRejectedValue(new TypeError("FICTICIA-ALFA 4613"));
+    const vista = await resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true });
+    expect(vista).toMatchObject({ estado: "SIN_IA", puedeAnalizar: false });
+    expect(error.mock.calls.map((c) => String(c[0])).join(" ")).not.toContain("FICTICIA-ALFA");
+  });
+
+  it("un fallo de la base al leer la configuración se propaga como los demás", async () => {
+    const fallo = new Prisma.PrismaClientKnownRequestError("ficticio", { code: "P1001", clientVersion: "ficticio" });
+    leerConfigIa.mockRejectedValue(fallo);
+    await expect(resumenDelDia(db, "DIARIO", "u-dueno", { ahora: AHORA, paquetes: paquetes(), dueno: true })).rejects.toBe(fallo);
+  });
+
+  it("lee el último rechazado y lo pasa a la elección: con él, la vista trae el motivo en palabras simples", async () => {
+    ultimoPublicado.mockResolvedValue(publicadoFicticio(paqueteFicticio("DIARIO")));
+    ultimoRechazado.mockResolvedValue({ fechaNegocio: "2027-03-17", motivos: ["HECHO_NO_CITADO"], generadoEn: new Date("2027-03-18T00:05:00.000Z") });
+    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() });
+    expect(ultimoRechazado).toHaveBeenCalledWith(db, "DIARIO");
+    expect(vista.rechazo).toContain("no citó todas las cifras que debía");
+  });
+
+  it("un error al leer el rechazado: se sigue sin él, registrando solo el nombre", async () => {
+    ultimoRechazado.mockRejectedValue(new TypeError("FICTICIA-ALFA 4613"));
+    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() });
+    expect(vista).toMatchObject({ estado: "SIN_IA", rechazo: null });
+    expect(error.mock.calls.map((c) => String(c[0])).join(" ")).not.toContain("FICTICIA-ALFA");
   });
 });
