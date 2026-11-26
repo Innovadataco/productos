@@ -53,10 +53,10 @@ describe("la regla frente a su nivel", () => {
     expect(textoNivel({ estado: "TOCADA", lado: "SOBRE" })).toBe("tocada · cierre sobre el nivel");
     expect(textoNivel({ estado: "EN_EL_NIVEL" })).toBe("en el nivel");
     expect(textoNivel({ estado: "A_DISTANCIA", distanciaPct: "9.09" }, { condicion: "CIERRE_SOBRE", nivel: "1200" })).toBe(
-      "por debajo del nivel de $ 1.200: tendría que subir 9,09 % para tocarlo (la regla se cumple si cierra por encima)",
+      "por debajo del nivel de $ 1.200: al cierre le falta subir 9,09 % para tocarlo (la regla se cumple si cierra por encima)",
     );
     expect(textoNivel({ estado: "A_DISTANCIA", distanciaPct: "-2.72" }, { condicion: "CIERRE_BAJO", nivel: "2300" })).toBe(
-      "por encima del nivel de $ 2.300: tendría que bajar 2,72 % para tocarlo (la regla se cumple si cierra por debajo)",
+      "por encima del nivel de $ 2.300: al cierre le falta bajar 2,72 % para tocarlo (la regla se cumple si cierra por debajo)",
     );
     expect(textoNivel({ estado: "SIN_CIERRE_AL_DIA" })).toBe("sin cierre al día");
     expect(textoNivel({ estado: "SIN_NIVEL" })).toBe("—");

@@ -5,7 +5,7 @@
  */
 import type { AccionPlan, CondicionRegla } from "@prisma/client";
 import type { MotivoSinDividendos } from "@/plan/dividendos";
-import { cop, fecha, n, pct } from "../tablero/formato";
+import { cop, fecha, n, numero, pct } from "../tablero/formato";
 import { precio } from "./formato";
 import type { CierreVista, ConteoVista, NivelVista, ResultadoVista } from "./tipos";
 
@@ -79,7 +79,28 @@ export function textoCierre(c: CierreVista): TextoCierre {
   }
 }
 
-export function textoNivel(v: NivelVista): string {
+/** La regla a la que pertenece un nivel: su condición y su nivel (lo que el texto de la distancia necesita). */
+export interface ReglaDelNivel {
+  readonly condicion: CondicionRegla;
+  readonly nivel: string | null;
+}
+
+/**
+ * La distancia al nivel, igual en /plan y en /operar: de qué lado del nivel está el cierre, cuánto le falta moverse al cierre
+ * para tocarlo y cuándo se cumple la regla. La distancia del motor es (nivel − cierre) / cierre: negativa si el cierre
+ * está por encima del nivel (al cierre le falta bajar) y positiva si está por debajo (al cierre le falta subir). Siempre con dos
+ * decimales y sin signo suelto, que se leía ambiguo («a −2,8 % del nivel»).
+ * «por encima del nivel de $ 2.300: al cierre le falta bajar 2,72 % para tocarlo (la regla se cumple si cierra por debajo)».
+ */
+export function textoDistanciaAlNivel(distanciaPct: string, regla?: ReglaDelNivel): string {
+  const d = n(distanciaPct);
+  const lado = d < 0 ? "por encima" : "por debajo";
+  const nivel = regla?.nivel == null ? "" : ` de ${precio(regla.nivel)}`;
+  const cuando = regla?.condicion === "CIERRE_BAJO" ? " (la regla se cumple si cierra por debajo)" : regla?.condicion === "CIERRE_SOBRE" ? " (la regla se cumple si cierra por encima)" : "";
+  return `${lado} del nivel${nivel}: al cierre le falta ${d < 0 ? "bajar" : "subir"} ${numero(Math.abs(d), 2)} % para tocarlo${cuando}`;
+}
+
+export function textoNivel(v: NivelVista, regla?: ReglaDelNivel): string {
   switch (v.estado) {
     case "SIN_NIVEL":
       return "—";
@@ -90,7 +111,7 @@ export function textoNivel(v: NivelVista): string {
     case "EN_EL_NIVEL":
       return "en el nivel";
     case "A_DISTANCIA":
-      return `a ${pct(n(v.distanciaPct))} del nivel`;
+      return textoDistanciaAlNivel(v.distanciaPct, regla);
   }
 }
 

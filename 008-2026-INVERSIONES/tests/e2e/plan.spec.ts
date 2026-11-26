@@ -28,7 +28,7 @@ test.describe("plan y diario de decisiones", () => {
     const ficta = await p.celdas(p.fila(p.reglas, "FICTA"));
     expect(ficta.slice(0, 5)).toEqual(["Cierre por encima de", "$ 1.200", "vender", "50", "sin plazo"]);
     expect(ficta[5]).toContain("$ 1.100 · 22-nov-2024");
-    expect(ficta[6]).toBe("por debajo del nivel de $ 1.200: tendría que subir 9,09 % para tocarlo (la regla se cumple si cierra por encima)");
+    expect(ficta[6]).toBe("por debajo del nivel de $ 1.200: al cierre le falta subir 9,09 % para tocarlo (la regla se cumple si cierra por encima)");
     const fictb = await p.celdas(p.fila(p.reglas, "FICTB"));
     expect([fictb[4], fictb[6]]).toEqual(["venció el 31-dic-2024", "tocada · cierre bajo el nivel"]);
     const fictc = await p.celdas(p.fila(p.reglas, "FICTC"));

@@ -57,7 +57,7 @@ describe("el estado de la regla hoy", () => {
   it("en el nivel, a distancia y sin cierre al día (este con aviso); nunca «se cumple» si no está tocada", () => {
     expect(textoEstadoRegla({ tipo: "EN_EL_NIVEL", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 quedó en el nivel: $ 4.597,31.");
     expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "2.23", cierre: C }, false, false, SOBRE).principal).toBe(
-      "El cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel de $ 4.700: tendría que subir 2,23 % para tocarlo (la regla se cumple si cierra por encima).",
+      "El cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel de $ 4.700: al cierre le falta subir 2,23 % para tocarlo (la regla se cumple si cierra por encima).",
     );
     expect(textoEstadoRegla({ tipo: "SIN_CIERRE_AL_DIA", ultimo: { precio: "899.11", fecha: "2027-03-12" } }, false)).toEqual({ principal: "Sin cierre al día: el último cierre es del 12-mar-2027 ($ 899,11).", aviso: true });
     expect(textoEstadoRegla({ tipo: "SIN_CIERRE_AL_DIA", ultimo: null }, true)).toEqual({ principal: "Sin cierre al día: no hay un cierre de esta especie.", aviso: true });
@@ -80,7 +80,7 @@ describe("el estado de la regla hoy", () => {
       expect(t.principal.toLowerCase()).not.toContain("se cumple");
     }
     expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "0.35", cierre: C }, false, true, BAJO).principal).toBe(
-      "El cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel de $ 4.613,17: tendría que subir 0,35 % para tocarlo (la regla se cumple si cierra por debajo).",
+      "El cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel de $ 4.613,17: al cierre le falta subir 0,35 % para tocarlo (la regla se cumple si cierra por debajo).",
     );
   });
 
@@ -90,22 +90,22 @@ describe("el estado de la regla hoy", () => {
     expect(textoTituloFechas()).toBe(`Fechas de los próximos ${DIAS_FECHAS} días`);
   });
 
-  it("la distancia dice de qué lado del nivel está el cierre, cuánto tendría que moverse y cuándo se cumple la regla", () => {
-    // Cierre ARRIBA del nivel (distancia negativa) de una regla «cierre por debajo»: tendría que bajar.
+  it("la distancia dice de qué lado del nivel está el cierre, cuánto le falta moverse al cierre y cuándo se cumple la regla", () => {
+    // Cierre ARRIBA del nivel (distancia negativa) de una regla «cierre por debajo»: al cierre le falta bajar.
     const arriba = textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "-2.72", cierre: { precio: "2364.4", fecha: "2027-03-16" } }, false, false, { condicion: "CIERRE_BAJO", nivel: "2300" });
     expect(arriba).toEqual({
-      principal: "El cierre del 16-mar-2027 fue de $ 2.364,4, por encima del nivel de $ 2.300: tendría que bajar 2,72 % para tocarlo (la regla se cumple si cierra por debajo).",
+      principal: "El cierre del 16-mar-2027 fue de $ 2.364,4, por encima del nivel de $ 2.300: al cierre le falta bajar 2,72 % para tocarlo (la regla se cumple si cierra por debajo).",
       aviso: false,
     });
-    // Cierre ABAJO del nivel (distancia positiva) de una regla «cierre por encima»: tendría que subir.
-    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "3", cierre: C }, false, false, SOBRE).principal).toContain("tendría que subir 3,00 % para tocarlo");
+    // Cierre ABAJO del nivel (distancia positiva) de una regla «cierre por encima»: al cierre le falta subir.
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "3", cierre: C }, false, false, SOBRE).principal).toContain("al cierre le falta subir 3,00 % para tocarlo");
   });
 
   it("ninguna distancia sale como un porcentaje suelto con signo («+1,79 %», «−2,99 %»): siempre dice el lado y el nivel", () => {
     for (const [d, regla] of [["1.79", SOBRE], ["-2.99", BAJO], ["9.09", SOBRE], ["3", BAJO]] as const) {
       const t = textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: d, cierre: C }, false, false, regla).principal;
       expect(t).not.toMatch(/[+−-]\d+,\d+ %/);
-      expect(t).toMatch(/por (encima|debajo) del nivel de \$ [\d.,]+: tendría que (subir|bajar) \d+,\d\d % para tocarlo \(la regla se cumple si cierra por (encima|debajo)\)\./);
+      expect(t).toMatch(/por (encima|debajo) del nivel de \$ [\d.,]+: al cierre le falta (subir|bajar) \d+,\d\d % para tocarlo \(la regla se cumple si cierra por (encima|debajo)\)\./);
     }
   });
 
