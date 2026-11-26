@@ -70,6 +70,8 @@ export const TEXTOS_RESUMEN_IA = Object.freeze({
     sinServicio: "El servicio de análisis no responde. Inténtelo más tarde.",
     demasiado: "Aguarde unos segundos antes de volver a pedirlo.",
     error: "No se pudo pedir el análisis. Inténtelo de nuevo.",
+    listo: "Análisis listo.",
+    sigueEnCurso: "El análisis sigue en curso; recargue en unos minutos.",
     analisisError: "El análisis no se pudo completar. Inténtelo de nuevo.",
     analisisDescartado: "El análisis en espera no se hizo: la IA se apagó mientras esperaba.",
     sinEstado: "No se pudo consultar el estado del análisis; intente de nuevo.",
