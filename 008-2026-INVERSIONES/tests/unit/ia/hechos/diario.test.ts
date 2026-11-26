@@ -170,15 +170,15 @@ describe("armarDiario · lo que falta se dice en los avisos, sin inventar", () =
     expect(claves(paquete)).not.toContain("FECHA_CIERRE_MAS_ANTIGUO");
   });
 
-  it("con veinte especies, entran las de mayor valor (el orden del tablero) y el aviso dice que se recortó", () => {
+  it("con veinte especies, entran solo las de mayor aporte (el filtro de T8: no más de cuatro) y el aviso dice que se resumieron", () => {
     const [alfa] = filasTablero();
     const muchas = Array.from({ length: 20 }, (_, i) => ({ ...alfa, instrumentoId: `inst-ficticio-${i}`, nemotecnico: `FICTICIA-${String.fromCharCode(65 + i)}Q` }));
     const paquete = con((e) => ({ ...e, tablero: { ...e.tablero, filas: muchas } }));
-    expect(paquete.hechos.length).toBeLessThanOrEqual(99);
-    expect(paquete.avisos).toContain("HECHOS_RECORTADOS");
+    expect(paquete.avisos).toContain("ESPECIES_RESUMIDAS");
+    expect(paquete.avisos).not.toContain("HECHOS_RECORTADOS");
     const nombres = paquete.hechos.filter((h) => h.clave === "ESPECIE_NOMBRE").map((h) => h.valor);
-    expect(nombres.length).toBeGreaterThan(5);
-    expect(nombres).toEqual(muchas.slice(0, nombres.length).map((f) => f.nemotecnico));
+    // Ninguna tiene movimiento en la comparación: todas empatan en cero y entran las tres primeras del tablero.
+    expect(nombres).toEqual(muchas.slice(0, 3).map((f) => f.nemotecnico));
   });
 
   it("si el calendario no cubre el año de un dato, su frescura es ATRASADO y el aviso lo dice", () => {

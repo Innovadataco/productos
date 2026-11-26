@@ -74,7 +74,7 @@ describe("con la comparación del día: las tres de mayor |aporte|", () => {
 
   it("una especie sin movimiento cuenta como aporte cero", () => {
     const sinMovimiento: readonly Especie[] = SEIS.map((e) => ({ ...e, aporte: e.nombre === "F" ? "0.37" : null }));
-    expect(nombresDe(entrada(sinMovimiento))).toEqual(["F", "A", "B"]);
+    expect(nombresDe(entrada(sinMovimiento))).toEqual(["A", "B", "F"]);
   });
 });
 

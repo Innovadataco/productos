@@ -55,7 +55,7 @@ describe("casosInventados", () => {
     expect(redondas.map((h) => h.valor)).toEqual([]);
   });
 
-  it("cubren lo que el modelo tiene que saber decir: tocadas, cerca y lejos, dividendos, conciliación, fondo, recortes", () => {
+  it("cubren lo que el modelo tiene que saber decir: tocadas, cerca y lejos, dividendos, conciliación, fondo, resúmenes", () => {
     const claves = new Set(hechos().map((h) => h.clave));
     for (const clave of ["REGLA_TOCADA", "REGLA_DISTANCIA", "PROXIMO_EX_DIVIDENDO", "REGLA_DIAS_AL_PLAZO", "CONCILIACION_NO_CUADRA", "CONCILIACION_CUADRA", "FONDO_VALOR", "TASA_TRM", "VARIACION_DIA_ESPECIE", "DIAS_HISTORIA_ESPECIE"]) {
       expect(claves.has(clave as Hecho["clave"]), clave).toBe(true);
@@ -64,9 +64,10 @@ describe("casosInventados", () => {
     expect(distancias.some((h) => h.cercania === "CERCA")).toBe(true);
     expect(distancias.some((h) => h.cercania === "LEJOS")).toBe(true);
     expect(hechos().some((h) => h.frescura === "ATRASADO")).toBe(true);
-    expect(casos.filter((c) => c.paquete.avisos.includes("HECHOS_RECORTADOS")).length).toBeGreaterThanOrEqual(2);
-    // Los grupos entran enteros: el tope es 99 y el más grande queda cerca de él, sin pasarlo.
-    expect(Math.max(...casos.map((c) => c.paquete.hechos.length))).toBeGreaterThanOrEqual(90);
+    expect(casos.filter((c) => c.paquete.avisos.includes("ESPECIES_RESUMIDAS")).length).toBeGreaterThanOrEqual(2);
+    expect(casos.filter((c) => c.paquete.avisos.includes("OBLIGATORIOS_RECORTADOS")).length).toBeGreaterThanOrEqual(1);
+    // El DIARIO resume sus especies (T8): ya no llega al tope de 99 hechos; el más grande es de cincuenta y tantos y no pasa del tope.
+    expect(Math.max(...casos.map((c) => c.paquete.hechos.length))).toBeGreaterThanOrEqual(50);
     expect(Math.max(...casos.map((c) => c.paquete.hechos.length))).toBeLessThanOrEqual(99);
     expect(Math.min(...casos.map((c) => c.paquete.hechos.length))).toBeLessThan(25);
   });

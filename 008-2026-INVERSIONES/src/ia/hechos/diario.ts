@@ -11,7 +11,10 @@
  *    calendario BVC: un corte de hace más de una rueda sale ATRASADO (un umbral propio de la conciliación está por decidir).
  * 3. Las series (TRM, TPM, IBR y la variación anual del IPC), con la fuente de su catálogo, y el fondo, con la de la SFC;
  *    cada una con su propia frescura.
- * 4. Cada especie con cierre, en el orden del tablero (de mayor a menor valor).
+ * 4. Las especies con cierre que entran, en el orden del tablero (de mayor a menor valor): con la comparación del día, las
+ *    `ESPECIES_POR_CRITERIO` de mayor |aporte|; sin ella, las de mayor valor; además, las de cierre atrasado, hasta
+ *    `MAX_ESPECIES_DIARIO` en total. Si quedó alguna fuera, el aviso ESPECIES_RESUMIDAS lo dice: un portafolio de diez
+ *    especies no cabe en el contexto del modelo local (cada especie son hasta seis hechos).
  * La variación del día en porcentaje del portafolio no se emite: ningún módulo la calcula todavía.
  */
 import type { ClaveDiario } from "../catalogo";
@@ -19,7 +22,7 @@ import type { DiaIso, PaqueteHechos } from "../contrato";
 import { serieDelCatalogo } from "../../datos-oficiales/catalogo";
 import { borrador, cerrarPaquete, conOrigen, hastaHoy, marcasConFrescura, marcasDeHoy, marcasDeMercado, type Marcas, type Parte } from "./comun";
 import { FUENTES } from "./constantes";
-import { deDecimal, deEntero, deTextoDecimal, diaDe, exigirDia, menorDia } from "./decimal";
+import { compararDecimales, deDecimal, deEntero, deTextoDecimal, diaDe, exigirDia, menorDia, valorAbsoluto } from "./decimal";
 import { direccionDelSigno, direccionFrente, frescuraDeSerie, frescuraDelFondo } from "./derivar";
 import type { EntradaArmadoDiario, FilaParaHechos, MovimientoParaHechos, SerieParaHechos } from "./entradas";
 import { ErrorArmado } from "./errores";
@@ -168,11 +171,43 @@ function grupoDeEspecie(e: EntradaArmadoDiario, hoy: DiaIso, fila: FilaParaHecho
   return { grupos: [{ prioridad: PRIORIDAD.ESPECIES, hechos }], avisos };
 }
 
+/** Cuántas especies entran por su movimiento o su valor, y el tope con las de cierre atrasado. */
+const ESPECIES_POR_CRITERIO = 3;
+export const MAX_ESPECIES_DIARIO = 4;
+
+/**
+ * Las especies que entran al paquete: las `ESPECIES_POR_CRITERIO` de mayor |aporte| (con la comparación del día; una sin
+ * movimiento cuenta como cero) o de mayor valor (sin ella), y, para completar hasta `MAX_ESPECIES_DIARIO`, las de cierre
+ * atrasado que no estén ya, en el orden del tablero. Los empates quedan en el orden del tablero. Solo cuentan las que
+ * tienen cierre y valor (las demás nunca iban al paquete). `descartadas` es cuántas se dejaron fuera.
+ */
+function elegirEspecies(
+  filas: readonly FilaParaHechos[], movimiento: ReadonlyMap<string, MovimientoDeEspecie>, conComparacion: boolean,
+): { readonly entran: ReadonlySet<FilaParaHechos>; readonly descartadas: number } {
+  const candidatas = filas.flatMap((fila, orden) => (fila.cierre === null || fila.valor === null ? [] : [{ fila, orden, valor: deDecimal(fila.valor) }]));
+  const peso = (c: (typeof candidatas)[number]): string => {
+    if (!conComparacion) return c.valor;
+    const mov = movimiento.get(c.fila.instrumentoId);
+    return mov === undefined ? "0" : valorAbsoluto(deDecimal(mov.aporte));
+  };
+  const entran = new Set(
+    candidatas
+      .map((c) => ({ c, peso: peso(c) }))
+      .sort((a, b) => compararDecimales(b.peso, a.peso) || a.c.orden - b.c.orden)
+      .slice(0, ESPECIES_POR_CRITERIO)
+      .map((x) => x.c.fila),
+  );
+  for (const { fila } of candidatas) if (entran.size < MAX_ESPECIES_DIARIO && fila.cierreAtrasado) entran.add(fila);
+  return { entran, descartadas: candidatas.length - entran.size };
+}
+
 function especies(e: EntradaArmadoDiario, hoy: DiaIso): ParteDiario {
   // Solo se compara lo que entró al par de ruedas del día: sin comparación, ninguna especie lleva variación.
   const movimiento = new Map(e.movimiento.motivo === null ? e.movimiento.especies.map((m) => [m.instrumentoId, m] as const) : []);
-  const partes = e.tablero.filas.flatMap((fila) => grupoDeEspecie(e, hoy, fila, movimiento.get(fila.instrumentoId)) ?? []);
-  return { grupos: partes.flatMap((p) => p.grupos), avisos: partes.flatMap((p) => p.avisos) };
+  const { entran, descartadas } = elegirEspecies(e.tablero.filas, movimiento, e.movimiento.motivo === null);
+  const partes = e.tablero.filas.filter((f) => entran.has(f)).flatMap((fila) => grupoDeEspecie(e, hoy, fila, movimiento.get(fila.instrumentoId)) ?? []);
+  const resumidas: ParteDiario["avisos"] = descartadas > 0 ? ["ESPECIES_RESUMIDAS"] : [];
+  return { grupos: partes.flatMap((p) => p.grupos), avisos: [...partes.flatMap((p) => p.avisos), ...resumidas] };
 }
 
 /** El paquete DIARIO, armado con `construirPaquete`. Cierra en fallo con ErrorArmado o ErrorPaquete. */

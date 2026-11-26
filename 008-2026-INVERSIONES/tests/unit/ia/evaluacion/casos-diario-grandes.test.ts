@@ -33,7 +33,7 @@ describe("DIARIO-16 y DIARIO-17", () => {
   });
 
   it("las entradas de los dos traen diez especies, de FICTICIA-A a FICTICIA-J, y dos de cierre atrasado", () => {
-    const e = entradasInventados(SEMILLA_INVENTADOS).diario;
+    const e = entradasInventadas(SEMILLA_INVENTADOS).diario;
     for (const entrada of [e[15], e[16]]) {
       expect(entrada?.tablero.filas.map((f) => f.nemotecnico).sort()).toEqual("ABCDEFGHIJ".split("").map((l) => `FICTICIA-${l}`));
       expect(entrada?.tablero.filas.filter((f) => f.cierreAtrasado)).toHaveLength(2);
