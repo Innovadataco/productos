@@ -22,7 +22,7 @@ describe("armarReglas · el paquete del plan", () => {
   it("arma cada especie con su cierre, una ancla por regla con sus hechos y su próximo dividendo; las de portafolio al final", () => {
     const paquete = armarReglas(entradaReglasFicticia());
     expect(paquete.tipo).toBe("REGLAS");
-    expect(paquete.versionesCalculo).toEqual({ hechos: "armadores-v1" });
+    expect(paquete.versionesCalculo).toEqual({ hechos: "armadores-v2" });
     expect(paquete.avisos).toEqual(["PROXIMO_SIN_NOMBRE", "DIVIDENDOS_PROXIMOS_OMITIDOS"]);
     expect(filas(paquete.hechos)).toEqual([
       ["H01", "ESPECIE_NOMBRE", ALFA, null, HOY, "VERIFICADO", "NO_APLICA", "NO_APLICA", "HOY", true],

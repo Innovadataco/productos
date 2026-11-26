@@ -27,7 +27,7 @@ describe("armarDiario · el paquete del tablero", () => {
     expect(esPaqueteConstruido(paquete)).toBe(true);
     expect(paquete.tipo).toBe("DIARIO");
     expect(paquete.hoy).toBe(HOY);
-    expect(paquete.versionesCalculo).toEqual({ hechos: "armadores-v1" });
+    expect(paquete.versionesCalculo).toEqual({ hechos: "armadores-v2" });
     expect(paquete.avisos).toEqual([]);
     expect(filas(paquete.hechos)).toEqual([
       ["VALOR_ACCIONES", "37911.47", null, "2027-03-16", "CALCULADO", "BAJA", "RECIENTE", true],

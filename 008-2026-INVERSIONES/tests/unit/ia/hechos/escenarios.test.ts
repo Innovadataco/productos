@@ -24,7 +24,7 @@ describe("armarEscenarios · el paquete de la proyección", () => {
   it("arma los hechos en orden, con su calidad, su dirección frente al valor de partida y lo obligatorio", () => {
     const paquete = armarEscenarios(entradaEscenariosFicticia());
     expect(paquete.tipo).toBe("ESCENARIOS");
-    expect(paquete.versionesCalculo).toEqual({ hechos: "armadores-v1", proyecciones: "bootstrap-circular-v2" });
+    expect(paquete.versionesCalculo).toEqual({ hechos: "armadores-v2", proyecciones: "bootstrap-circular-v2" });
     expect(paquete.avisos).toEqual(["HISTORIA_CORTA", "ANIO_SIN_CALENDARIO"]);
     expect(paquete.hechos.map((h) => [h.clave, h.valor, h.calidad, h.direccion, h.obligatorio])).toEqual([
       ["VALOR_INICIAL", "37911.47", "CALCULADO", "NO_APLICA", false],

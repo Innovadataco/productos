@@ -1,7 +1,7 @@
 /**
  * Los dos casos DIARIO grandes (T6): DIARIO-16 (con comparación del día) y DIARIO-17 (sin rueda previa), de diez especies
- * FICTICIA-A a FICTICIA-J, del tamaño de un portafolio real (setenta y tantos hechos, antes del filtro de especies del
- * armador). Los 15 casos viejos y los de REGLAS y ESCENARIOS no cambian (la huella de sus ENTRADAS). Y la opción
+ * FICTICIA-A a FICTICIA-J, del tamaño de un portafolio real (79 y 70 hechos antes del filtro de especies del armador, T8:
+ * que las resume a cuatro). Los 15 casos viejos y los de REGLAS y ESCENARIOS no cambian (la huella de sus ENTRADAS). Y la opción
  * `--casos <ids>` del arnés elige casos por id. Datos inventados.
  */
 import { createHash } from "node:crypto";
@@ -32,21 +32,33 @@ describe("DIARIO-16 y DIARIO-17", () => {
     expect(huella(e.escenarios)).toBe(HUELLA_ESCENARIOS);
   });
 
-  it("DIARIO-16: setenta y nueve hechos, diez especies de FICTICIA-A a FICTICIA-J y la variación del día", () => {
-    const p = caso("DIARIO-16")?.paquete;
-    expect(p?.hechos).toHaveLength(79);
-    const nombres = p?.hechos.filter((h) => h.clave === "ESPECIE_NOMBRE").map((h) => h.valor).sort();
-    expect(nombres).toEqual("ABCDEFGHIJ".split("").map((l) => `FICTICIA-${l}`));
-    expect(p?.hechos.some((h) => h.clave === "VARIACION_DIA_VALOR")).toBe(true);
-    expect(p?.avisos).not.toContain("MOVIMIENTO_SIN_RUEDA_PREVIA");
+  it("las entradas de los dos traen diez especies, de FICTICIA-A a FICTICIA-J, y dos de cierre atrasado", () => {
+    const e = entradasInventados(SEMILLA_INVENTADOS).diario;
+    for (const entrada of [e[15], e[16]]) {
+      expect(entrada?.tablero.filas.map((f) => f.nemotecnico).sort()).toEqual("ABCDEFGHIJ".split("").map((l) => `FICTICIA-${l}`));
+      expect(entrada?.tablero.filas.filter((f) => f.cierreAtrasado)).toHaveLength(2);
+    }
   });
 
-  it("DIARIO-17: setenta hechos, diez especies, sin variación del día y con SIN_RUEDA_PREVIA", () => {
+  it("DIARIO-16: con la comparación del día; el armador resume las diez especies a cuatro (43 hechos en vez de 79)", () => {
+    const p = caso("DIARIO-16")?.paquete;
+    expect(p?.hechos.filter((h) => h.clave === "ESPECIE_NOMBRE")).toHaveLength(4);
+    expect(p?.hechos).toHaveLength(43);
+    expect(p?.hechos.some((h) => h.clave === "VARIACION_DIA_VALOR")).toBe(true);
+    expect(p?.avisos).not.toContain("MOVIMIENTO_SIN_RUEDA_PREVIA");
+    expect(p?.avisos).toContain("ESPECIES_RESUMIDAS");
+  });
+
+  it("DIARIO-17: sin rueda previa y sin variación del día; resume a cuatro especies (el mismo portafolio de diez, 70 hechos antes)", () => {
     const p = caso("DIARIO-17")?.paquete;
-    expect(p?.hechos).toHaveLength(70);
-    expect(p?.hechos.filter((h) => h.clave === "ESPECIE_NOMBRE")).toHaveLength(10);
+    const nombres = p?.hechos.filter((h) => h.clave === "ESPECIE_NOMBRE") ?? [];
+    const fechas = p?.hechos.filter((h) => h.clave === "FECHA_CIERRE_ESPECIE") ?? [];
+    expect(nombres).toHaveLength(4);
+    // Lo que no es de las especies: 18 hechos; cada especie, 5 (más la fecha del cierre si está atrasada).
+    expect(p?.hechos).toHaveLength(18 + 5 * 4 + fechas.length);
     expect(p?.hechos.some((h) => h.clave === "VARIACION_DIA_VALOR")).toBe(false);
     expect(p?.avisos).toContain("MOVIMIENTO_SIN_RUEDA_PREVIA");
+    expect(p?.avisos).toContain("ESPECIES_RESUMIDAS");
   });
 
   it("los dos son DIARIO de 2027, distintos entre sí, y la plantilla sin IA los publica", () => {
