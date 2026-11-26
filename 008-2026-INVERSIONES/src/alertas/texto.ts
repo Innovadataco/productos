@@ -16,8 +16,33 @@ function horaCot(instante: Date): string {
   const l = new Date(instante.getTime() - DESFASE_BOGOTA_MS);
   return `${dos(l.getUTCHours())}:${dos(l.getUTCMinutes())}`;
 }
-const num = (d: Prisma.Decimal | undefined): string => (d === undefined ? "?" : d.toString().replace(".", ","));
-const pct = (d: Prisma.Decimal | undefined): string => (d === undefined ? "?" : `${d.abs().toString().replace(".", ",")} %`);
+/** Por encima de esto un número no es un precio ni un porcentaje creíble: se dice «fuera de rango» y no se imprime. */
+const TOPE_NUMERO = 1e15;
+const MAX_ETIQUETA = 60;
+const FUERA_DE_RANGO = "fuera de rango";
+function numero(d: Prisma.Decimal | undefined, abs: boolean): string {
+  if (d === undefined || !d.isFinite()) return "?";
+  const v = abs ? d.abs() : d;
+  return v.abs().gte(TOPE_NUMERO) ? FUERA_DE_RANGO : v.toString().replace(".", ",");
+}
+const num = (d: Prisma.Decimal | undefined): string => numero(d, false);
+const pct = (d: Prisma.Decimal | undefined): string => {
+  const n = numero(d, true);
+  return n === "?" || n === FUERA_DE_RANGO ? n : `${n} %`;
+};
+const entero = (n: number | undefined): string => (n !== undefined && Number.isFinite(n) ? String(n) : "?");
+
+/**
+ * La etiqueta (nombre de la especie) viene de terceros: no es de fiar. Se le quitan los caracteres de control y de formato,
+ * los saltos de línea y las marcas `<` `>` `«` `»`, se acota a 60 caracteres y va entre « »: así el texto fijo de la alerta
+ * se distingue de lo que dijo el tercero (el candado de lenguaje revisa solo el texto fijo). Vacía, cae al identificador.
+ */
+export function etiquetaSegura(crudo: string, respaldo: string | null): string {
+  const limpia = crudo
+    .replace(/[\n\r\t\v\f\u2028\u2029]/g, " ").replace(/[\p{Cc}\p{Cf}]/gu, "").replace(/[«»<>]/g, " ").replace(/\s+/g, " ").trim();
+  const acotada = [...limpia].slice(0, MAX_ETIQUETA).join("").trim();
+  return `«${acotada || respaldo || "especie"}»`;
+}
 
 /** De dónde sale el precio: la barra con su hora y su retraso, o el cierre del día. */
 function origen(a: Alerta): string {
@@ -52,7 +77,7 @@ function textoDatoViejo(a: Alerta, e: string): string {
   if (a.base === "CIERRE") return `${e}: falta el cierre de hoy.`;
   const { instante, minutosDeEdad, umbralMin } = a.datos;
   const desde = instante === undefined ? "no hay ninguna barra de hoy" : `la última barra es de las ${horaCot(instante)} (hora de Colombia)`;
-  return `${e}: ${desde}; lleva ${minutosDeEdad ?? "?"} minutos, por encima del límite de ${umbralMin ?? "?"} (incluye el retraso de unos ${RETRASO_YAHOO_MIN} minutos de Yahoo).`;
+  return `${e}: ${desde}; lleva ${entero(minutosDeEdad)} minutos, por encima del límite de ${entero(umbralMin)} (incluye el retraso de unos ${RETRASO_YAHOO_MIN} minutos de Yahoo).`;
 }
 
 function textoFechaEx(a: Alerta, e: string): string {
@@ -62,8 +87,9 @@ function textoFechaEx(a: Alerta, e: string): string {
   return `${e}: la fecha ex del decreto ${cuando}.${pago}`;
 }
 
-/** `etiqueta` es el nemotécnico (o el nombre) de la especie; la alerta del portafolio no la usa. */
-export function textoDeAlerta(a: Alerta, etiqueta: string): string {
+/** `etiquetaCruda` es el nemotécnico (o el nombre) de la especie, de terceros: se sanea (etiquetaSegura). La alerta del portafolio no la usa. */
+export function textoDeAlerta(a: Alerta, etiquetaCruda: string): string {
+  const etiqueta = etiquetaSegura(etiquetaCruda, a.instrumentoId);
   switch (a.tipo) {
     case "NIVEL_CRUZADO":
     case "NIVEL_CERCA": return textoNivel(a, etiqueta);
