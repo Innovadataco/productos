@@ -4,8 +4,9 @@
 // vender: las listas de palabras son las de los candados de textos de las pantallas. Datos inventados.
 import { describe, expect, it } from "vitest";
 import {
-  avisoAtraso, avisoMezcladas, nombreFuente, nombresDeFuentes, piezasCompuesta, piezasProcedencia, textoCompuesta, textoProcedencia,
+  avisoAtraso, avisoMezcladas, nombresDeFuentes, piezasCompuesta, piezasProcedencia, textoCompuesta, textoProcedencia,
 } from "@/app/_comun/fecha-dato/textos";
+import { nombreDeFuente as nombreFuente } from "@/precios/fuentes";
 import type { Procedencia, ProcedenciaCompuesta } from "@/app/_comun/fecha-dato/tipos";
 import { FUENTES } from "@/precios/fuentes";
 import { prohibidasEn } from "../operar/informe/lenguaje";
@@ -132,6 +133,17 @@ describe("el aviso de dato viejo", () => {
     expect(avisoAtraso(p({ habilesAtras: 9, aniosSinFestivos: [2026, 2027, 2028] }))).toBe("dato de hace unos 9 días hábiles (sin festivos de 2026, 2027 y 2028 en el calendario)");
   });
 
+  it("si no se pudo LEER el calendario, no dice un año: «(no se pudo leer el calendario)»", () => {
+    expect(avisoAtraso(p({ habilesAtras: 3, calendarioNoLeido: true }))).toBe("dato de hace unos 3 días hábiles (no se pudo leer el calendario)");
+    expect(avisoAtraso(p({ habilesAtras: 3, calendarioNoLeido: true }))).not.toMatch(/festivos|20\d\d/);
+    expect(avisoAtraso(p({ habilesAtras: 1, calendarioNoLeido: true }))).toBeNull();
+  });
+
+  it("un cierre más viejo que el tope: «dato de hace más de N días hábiles»", () => {
+    expect(avisoAtraso(p({ habilesAtras: 2600, masDelTope: true }))).toBe("dato de hace más de 2600 días hábiles");
+    expect(avisoAtraso(p({ habilesAtras: 2600, masDelTope: true, calendarioNoLeido: true }))).toBe("dato de hace más de 2600 días hábiles");
+  });
+
   it("aproximado con menos de dos días o sin número: nada; con la lista vacía, el aviso exacto", () => {
     expect(avisoAtraso(p({ habilesAtras: 1, aniosSinFestivos: [2027] }))).toBeNull();
     expect(avisoAtraso(p({ habilesAtras: null, aniosSinFestivos: [2027] }))).toBeNull();
@@ -161,7 +173,7 @@ describe("candado de los textos", () => {
   const todos = [
     textoProcedencia(p(), { etiqueta: "Cierre" }), textoProcedencia(p({ traidoEn: null, fuente: null })), textoProcedencia(p(), { sinFecha: true }),
     textoProcedencia(p({ tipo: "RUEDA", horaDato: "11:42" })), textoCompuesta(compuesta({ fuentes: ["yahoo", "sfc:x", "banrep:x", "dane:x", "manual", null] })),
-    avisoAtraso(p({ habilesAtras: 4 })) ?? "", avisoAtraso(p({ habilesAtras: 4, aniosSinFestivos: [2027] })) ?? "",
+    avisoAtraso(p({ habilesAtras: 4 })) ?? "", avisoAtraso(p({ habilesAtras: 4, aniosSinFestivos: [2027] })) ?? "", avisoAtraso(p({ habilesAtras: 4, calendarioNoLeido: true })) ?? "", avisoAtraso(p({ habilesAtras: 2600, masDelTope: true })) ?? "",
     textoCompuesta(compuesta()), avisoMezcladas(compuesta()) ?? "", textoCompuesta(compuesta({ mezcladas: false })),
     ...["yahoo", "sfc:x", "banrep:x", "dane:x", "manual", null].map(nombreFuente),
   ];

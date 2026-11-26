@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { calendarioConRespaldo } from "@/app/_comun/calendario-con-respaldo";
 import { CALENDARIO_DE_RESPALDO } from "@/precios/atraso";
+import { leerCalendario } from "@/precios/negociacion";
 
 afterEach(() => vi.restoreAllMocks());
 const baseCon = (findMany: () => Promise<unknown>) => ({ calendarioBvc: { findMany } }) as never;
@@ -21,6 +22,11 @@ describe("calendarioConRespaldo", () => {
     expect(c).toBe(CALENDARIO_DE_RESPALDO);
     expect(registro).toHaveBeenCalledWith("[analisis] no se pudo leer el calendario de la BVC (TypeError)");
     expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
+  });
+
+  it("el respaldo se reconoce como tal (lectura fallida), distinto de un calendario que solo no cubre el año", () => {
+    expect(CALENDARIO_DE_RESPALDO.respaldo).toBe(true);
+    expect(leerCalendario([]).respaldo).toBeUndefined();
   });
 
   it("el respaldo no tiene festivos ni años cubiertos (todo sale aproximado)", () => {

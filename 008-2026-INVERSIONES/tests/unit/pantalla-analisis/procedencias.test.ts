@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { procedenciasDeCierres } from "@/app/analisis/procedencias";
 import { componer } from "@/app/_comun/fecha-dato/componer";
 import { avisoAtraso } from "@/app/_comun/fecha-dato/textos";
+import { CALENDARIO_DE_RESPALDO } from "@/precios/atraso";
 import { leerCalendario } from "@/precios/negociacion";
 import { D, dia, especie, resumenDe } from "../tablero/ficticio";
 
@@ -38,6 +39,13 @@ describe("procedenciasDeCierres", () => {
     const a = ps.find((p) => p.dia === "2027-03-17")!;
     expect(a.aniosSinFestivos).toEqual([2027]);
     expect(avisoAtraso(a)).toMatch(/^dato de hace unos \d+ días hábiles \(sin festivos de 2027 en el calendario\)$/);
+  });
+
+  it("con el respaldo (la lectura falló): «no se pudo leer el calendario», sin años", () => {
+    const a = procedenciasDeCierres(TABLERO, { ahora: MARTES, calendario: CALENDARIO_DE_RESPALDO }).find((p) => p.dia === "2027-03-17")!;
+    expect(a.calendarioNoLeido).toBe(true);
+    expect(a).not.toHaveProperty("aniosSinFestivos");
+    expect(avisoAtraso(a)).toMatch(/^dato de hace unos \d+ días hábiles \(no se pudo leer el calendario\)$/);
   });
 
   it("compuesta por el cierre más viejo: el aviso es el de ese cierre", () => {

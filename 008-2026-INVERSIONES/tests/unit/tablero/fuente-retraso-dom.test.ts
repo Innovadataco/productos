@@ -104,7 +104,8 @@ describe("la pantalla avisa el dato viejo aproximado", () => {
 describe("el pie de las fuentes", () => {
   it("dice la fuente, el retraso en rueda y que no es tiempo real", async () => {
     await m.pintar(createElement(Tablero, { vista: VISTA }));
-    const pie = m.contenedor.querySelector("#fuentes-de-precios");
+    expect(m.contenedor.querySelector("#fuentes-de-precios")).toBeNull();
+    const pie = [...m.contenedor.querySelectorAll("p.nota")].find((p) => texto(p).startsWith("Precios:"));
     expect(texto(pie)).toBe("Precios: Yahoo (BVC), cierre diario; durante la rueda, hasta 20 min de retraso. No es tiempo real.");
     expect(texto(pie)).toBe(pieDePrecios());
     expect(prohibidasEn(texto(pie))).toEqual([]);
