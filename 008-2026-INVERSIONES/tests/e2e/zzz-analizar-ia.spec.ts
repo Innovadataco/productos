@@ -146,7 +146,7 @@ test.describe("el dueño, con el interruptor encendido", () => {
           await expect(boton).toBeDisabled();
           expect(await contraste(estado), "contraste del estado").toBeGreaterThanOrEqual(4.5);
           expect(await desborde(page)).toBeLessThanOrEqual(0);
-          await expect(estado).toHaveText("Puede volver a analizar en 2 min.", { timeout: 30_000 });
+          await expect(estado).toHaveText("Análisis listo. Puede volver a analizar en 2 min.", { timeout: 30_000 });
           await expect(boton).toBeDisabled();
           expect(pedidos).toBe(1);
           expect(prohibidasEn((await estado.textContent()) ?? "")).toEqual([]);
