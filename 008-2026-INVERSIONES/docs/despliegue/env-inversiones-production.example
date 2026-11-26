@@ -26,6 +26,21 @@ INV_APP_DATABASE_URL=postgresql://inv_app:<clave>@inv-008-db:5432/inversiones?sc
 # verla: produccion.md §2)
 # INV_PRECIOS_DATABASE_URL=postgresql://inv_precios:<clave>@inv-008-db:5432/inversiones?connection_limit=2
 
+# OPCIONALES · precios cada minuto durante la rueda (servicio inv-008-precios, ciclo intradía). Sin ellas rigen los valores por
+# omisión de src/servicio-precios/intradia-configuracion.ts: APAGADO, un ciclo cada 60 s, de 09:30 a 16:25 COT, 500 ms entre
+# peticiones, 60 días de retención y el host query1 de Yahoo. Lo inválido cae a la omisión (y avisa en el log).
+# - El interruptor: solo 1 o true encienden (lo decide Jelk). Vacío, 0 o un valor raro: el servicio no pide nada a Yahoo cada
+#   minuto (la corrida de las 18:00 sigue igual).
+# INV_INTRADIA_ENCENDIDO=
+# - Segundos entre ciclos (30 a 3600), la ventana en HH:MM de Colombia (hasta, no después de las 17:30), los milisegundos entre
+#   peticiones (0 a 5000), los días de retención (60 a 365) y el host de Yahoo (query1 o query2; lista fija, no admite una URL).
+# INV_INTRADIA_CICLO_SEG=
+# INV_INTRADIA_DESDE_COT=
+# INV_INTRADIA_HASTA_COT=
+# INV_INTRADIA_PAUSA_MS=
+# INV_INTRADIA_RETENCION_DIAS=
+# INV_INTRADIA_HOST_YAHOO=
+
 # OPCIONALES · el servicio de IA (inv-008-ia, E6, D-026). Sin ellas nada se cae: el servicio queda en espera.
 # - La URL del rol inv_ia (el servicio de los resúmenes): la misma regla de inv_precios (el rol existe siempre; sin la
 #   línea queda NOLOGIN y sin clave). Clave DISTINTA de las otras tres.   openssl rand -hex 32   (produccion.md §2)
@@ -38,6 +53,13 @@ INV_APP_DATABASE_URL=postgresql://inv_app:<clave>@inv-008-db:5432/inversiones?sc
 # INV_IA_DIR_COMPARTIDA=
 # El destino del Ollama (IP de la tailnet y puerto) NO va en este archivo ni en el repo: lo guarda Jelk en /edicion/ia
 # (queda en config_ia, en la base).
+
+# OPCIONAL · el servicio de las alertas (inv-008-alertas, contenedor propio). Sin la línea nada se cae: el servicio queda en espera.
+# - La URL del rol inv_alertas: la misma regla de inv_precios e inv_ia (el rol existe siempre; sin la línea queda NOLOGIN y sin clave).
+#   Clave DISTINTA de las otras.   openssl rand -hex 32   (produccion.md §2)
+# INV_ALERTAS_DATABASE_URL=postgresql://inv_alertas:<clave>@inv-008-db:5432/inversiones?connection_limit=2
+# La rueda de las alertas (cada 5 min, de 9:30 a 16:05 COT) la enciende el MISMO INV_INTRADIA_ENCENDIDO de arriba (precios cada
+# minuto): una sola línea para los dos servicios. Apagado, las alertas se evalúan solo a las 18:15.
 
 # Secreto de sesión del login, 32 bytes o más.   openssl rand -base64 48 | tr -d '\n'
 INV_AUTH_SECRET=
@@ -70,6 +92,7 @@ INV_RESPALDO_GID=
 # INV_RESPALDO_HORA=0230
 
 # ---
+# v1.5 · 2026-11-26 · 06:10 (-05) · Inversiones · Fábrica Inversiones (frente alertas-pantalla, PR-C) · INV_ALERTAS_DATABASE_URL del rol inv_alertas, opcional; el intradía de las alertas es el mismo INV_INTRADIA_ENCENDIDO
 # v1.4 · 2026-11-23 · 20:11 (-05) · Inversiones · Fábrica Inversiones (frente servicio-ia) · INV_IA_DATABASE_URL, INV_IA_SERVICIO_TOKEN e INV_IA_DIR_COMPARTIDA, opcionales
 # v1.3 · 2026-11-21 · 18:32 (-05) · Inversiones · Fábrica Inversiones (frente precios-integridad) · inv_precios existe siempre: sin la línea queda NOLOGIN y sin clave
 # v1.2 · 2026-11-21 · 16:49 (-05) · Inversiones · Fábrica Inversiones (frente precios-rol) · INV_PRECIOS_DATABASE_URL del rol inv_precios, opcional y comentada hasta el servicio de precios

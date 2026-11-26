@@ -31,6 +31,7 @@ const COMUNES = [
   ["Proyecciones", "/proyecciones", null],
   ["Datos oficiales", "/datos-oficiales", null],
   ["Análisis", "/analisis", null],
+  ["Alertas", "/alertas", null],
 ];
 
 describe("navegación del tablero", () => {

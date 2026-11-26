@@ -18,8 +18,9 @@
 # (mem = memswap, sin reiniciar; si no se puede, aborta sin tocar nada más) → medición → (redes de una versión
 # anterior: down sin -v) → base y respaldo → roles → PI otra vez → (si migra) app vieja detenida → respaldo cifrado →
 # (si migra) respaldo diario detenido → migrador (migraciones, guardián del esquema y privilegios) → app,
-# entrada, vigía, respaldo, IA y precios → imagen, salud por la entrada, la app y la base sin puertos y solo en redes
-# internal con la puerta de enlace aislada; el servicio de IA healthy, sin puertos y con su entorno → la app sin salida
+# entrada, vigía, respaldo, IA, alertas y precios → imagen, salud por la entrada, la app y la base sin puertos y solo en redes
+# internal con la puerta de enlace aislada; el servicio de IA healthy, sin puertos y con su entorno; el de las alertas igual, solo en
+# la red interna, y con el mismo interruptor del intradía que precios → la app sin salida
 # a internet (con control positivo desde la entrada) → la salida del servicio de IA (avisa; aborta si se exige) →
 # límites reaplicados otra vez y mem = memswap → la espera y la medición (en la corta, piso de memoria: bajo él, se
 # extiende a 600 s) → salud otra vez → estado → retención (solo en producción) → convivencia y piso →
@@ -40,7 +41,7 @@ ESPERA_COMPLETA_S=600
 # El piso de la espera corta: MemAvailable bajo UMBRAL_CORTE_KB (1 GiB, el criterio de corte) o SwapFree bajo
 # 512 MiB, el mismo par del preflight de memoria de PI (convivencia-pi.md §1).
 PISO_SWAPFREE_KB=524288
-PERMANENTES=(inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia)
+PERMANENTES=(inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-alertas)
 # El servicio de IA (E6, D-026) es un permanente más: con una imagen anterior a él queda en espera (lo resuelve su
 # entrypoint en el compose), así que no necesita el trato del de precios (--scale 0).
 IA="inv-008-ia"
@@ -48,12 +49,19 @@ IA="inv-008-ia"
 PUENTE_IA="br-inv008-ia"
 # Lo único que el servicio de IA recibe del compose, además del ENV de la imagen: lista blanca de NOMBRES.
 PROPIAS_IA=(DATABASE_URL INV_IA_SERVICIO_TOKEN INV_IA_DIR_COMPARTIDA TZ)
+# El servicio de las alertas (contenedor propio): un permanente más, como el de IA. Con una imagen anterior a él queda en espera
+# (lo resuelve su entrypoint en el compose). Solo en la red interna: sin puente propio ni control de salida a internet.
+ALERTAS="inv-008-alertas"
+# Lo único que el servicio de las alertas recibe del compose, además del ENV de la imagen: lista blanca de NOMBRES. El interruptor
+# del intradía es el mismo de precios (INV_INTRADIA_ENCENDIDO): verificar_alertas comprueba que coincidan.
+PROPIAS_ALERTAS=(DATABASE_URL INV_INTRADIA_ENCENDIDO TZ)
 # El servicio de precios (D-018) entra con los permanentes solo si la imagen lo trae (imagen_con_servicio_precios).
 PRECIOS="inv-008-precios"
 # El puente de su red con salida: nombre fijo para la regla de firewall del host que pone PI.
 PUENTE_PRECIOS="br-inv008-prec"
-# Lo único que el servicio de precios recibe del compose, además del ENV de la imagen: lista blanca de NOMBRES.
-PROPIAS_PRECIOS=(DATABASE_URL TZ)
+# Lo único que el servicio de precios recibe del compose, además del ENV de la imagen: lista blanca de NOMBRES. Las
+# INV_INTRADIA_* son la configuración (opcional) de su ciclo de precios cada minuto (src/servicio-precios/intradia-configuracion.ts).
+PROPIAS_PRECIOS=(DATABASE_URL TZ INV_INTRADIA_ENCENDIDO INV_INTRADIA_CICLO_SEG INV_INTRADIA_DESDE_COT INV_INTRADIA_HASTA_COT INV_INTRADIA_PAUSA_MS INV_INTRADIA_RETENCION_DIAS INV_INTRADIA_HOST_YAHOO)
 # La sonda de la prueba de no salida: el único destino de internet de 008 en producción (el vigía, Telegram). Lo
 # resuelve y lo alcanza la ENTRADA (control positivo); desde la app no debe haber ruta.
 SONDA_SALIDA_DESTINO="api.telegram.org"
@@ -641,6 +649,87 @@ verificar_ia() {
   informar "el servicio de IA corre la imagen enviada, healthy, sin puertos, solo en la red interna y la suya ($PUENTE_IA)"
 }
 
+# El interruptor del intradía (INV_INTRADIA_ENCENDIDO) del contenedor $1: «encendido» o «apagado», como lo leería el servicio (solo
+# 1 o true, sin importar mayúsculas, encienden; cualquier otra cosa apaga). Sin imprimir nada más del entorno.
+interruptor_intradia() {
+  local valor
+  valor="$(entorno_de "$1" | sed -n 's/^INV_INTRADIA_ENCENDIDO=//p' | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')" || return 1
+  case "$valor" in 1 | true) echo encendido ;; *) echo apagado ;; esac
+}
+
+# El entorno del servicio de las alertas, por NOMBRES y con lista blanca: el ENV de la imagen enviada más PROPIAS_ALERTAS; cualquier
+# otra (la credencial de otro rol, una clave de cifrado, la llave de la nube) aborta. De su credencial se miran solo el usuario y el
+# host (nunca se imprime ni se guarda la URL): inv_alertas en inv-008-db, o vacía (sin el secreto: queda en espera).
+verificar_entorno_alertas() {
+  local cid="$1" permitidas ajenas destino
+  permitidas="$( { docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$ID" | cut -d= -f1; printf '%s\n' "${PROPIAS_ALERTAS[@]}"; } | LC_ALL=C sort -u)" ||
+    morir "no se pudo leer el entorno de la imagen enviada"
+  ajenas="$(entorno_de "$cid" | cut -d= -f1 | LC_ALL=C sort -u | LC_ALL=C comm -23 - <(printf '%s\n' "$permitidas") | LC_ALL=C tr -cd '[:alnum:]_\n' | tr '\n' ' ')" ||
+    morir "no se pudo leer el entorno del servicio de las alertas"
+  [ -z "${ajenas// /}" ] || morir "el servicio de las alertas recibe variables que no son suyas: $ajenas"
+  # Sin `grep -q` en la tubería: con pipefail, su salida temprana (SIGPIPE) se leería como «no está».
+  if ! entorno_de "$cid" | grep '^DATABASE_URL=.' >/dev/null; then
+    informar "⚠️  el servicio de las alertas corre sin INV_ALERTAS_DATABASE_URL: queda en espera y no evalúa alertas (produccion.md §2)"
+    return 0
+  fi
+  destino="$(entorno_de "$cid" | sed -n 's|^DATABASE_URL=postgres\(ql\)\{0,1\}://\([^:@/]*\)\(:[^@/]*\)\{0,1\}@\([^:/?]*\).*|\2@\4|p')"
+  [ "$destino" = "inv_alertas@inv-008-db" ] || morir "la DATABASE_URL del servicio de las alertas no es la de inv_alertas en inv-008-db"
+  informar "el servicio de las alertas corre con la credencial de inv_alertas"
+}
+
+# El endurecimiento del contenedor $1 EN CALIENTE (lo que corre, no lo que dice el compose): solo lectura, todas las capacidades
+# fuera, sin escalada de privilegios, un tope de procesos (1 a 64) y el usuario 10008:10008.
+verificar_endurecimiento_alertas() {
+  local datos ro caps seguridad pids usuario
+  datos="$(docker inspect -f '{{.HostConfig.ReadonlyRootfs}} {{.HostConfig.CapDrop}} {{.HostConfig.SecurityOpt}} {{.HostConfig.PidsLimit}} {{.Config.User}}' "$1")" ||
+    morir "no se pudo leer el endurecimiento del servicio de las alertas"
+  read -r ro caps seguridad pids usuario <<<"$datos"
+  [ "$ro" = "true" ] || morir "el servicio de las alertas no es de solo lectura"
+  [ "$caps" = "[ALL]" ] || morir "el servicio de las alertas no suelta todas las capacidades (cap_drop: $caps)"
+  [ "$seguridad" = "[no-new-privileges:true]" ] || morir "el servicio de las alertas no tiene no-new-privileges ($seguridad)"
+  { [[ "$pids" =~ ^[0-9]+$ ]] && [ "$pids" -ge 1 ] && [ "$pids" -le 64 ]; } || morir "el servicio de las alertas no tiene un tope de procesos razonable (pids_limit: $pids)"
+  [ "$usuario" = "10008:10008" ] || morir "el servicio de las alertas no corre como 10008:10008 ($usuario)"
+}
+
+# Su huella (/estado/bucle): con la conexión de otro rol (SECRETO_INVALIDO) el despliegue falla; con SIN_VERIFICAR (el rol aún no se
+# verificó: p. ej. inv_alertas sin LOGIN, o la base sin responder) avisa y sigue. Imprime solo el estado.
+verificar_huella_alertas() {
+  local cid="$1" huella estado
+  huella="$(docker exec "$cid" cat /estado/bucle)" || morir "no se pudo leer la huella del servicio de las alertas (/estado/bucle)"
+  estado="$(printf '%s\n' "$huella" | sed -n 's/^estado=//p' | head -n 1 | LC_ALL=C tr -cd '[:alnum:]_')"
+  case "$estado" in
+    SECRETO_INVALIDO) morir "el servicio de las alertas dice que su conexión no es la de inv_alertas (huella: SECRETO_INVALIDO)" ;;
+    SIN_VERIFICAR) informar "⚠️  el servicio de las alertas está SIN_VERIFICAR: aún no pudo comprobar que su conexión es la de inv_alertas (¿sin LOGIN o la base sin responder?). Revise sus logs (produccion.md §2)" ;;
+  esac
+}
+
+# El servicio de las alertas: corriendo de una vez con la imagen enviada y healthy (su latido), con el bundle, sin puertos, SOLO en
+# la red interna (internal y con la puerta de enlace aislada: sin salida a internet), con su entorno y, si el de precios corre, con
+# el mismo interruptor del intradía.
+verificar_alertas() {
+  local cid redes esperadas="${INV_PROYECTO_ACTIVO}_inv-008-red-interna " propio de_precios cid_precios
+  cid="$("${COMPOSE[@]}" ps -q "$ALERTAS")"
+  [ -n "$cid" ] || morir "no hay contenedor del servicio de las alertas"
+  verificar_corriendo "el servicio de las alertas" "$cid"
+  [ "$(docker inspect -f '{{.State.Health.Status}}' "$cid")" = healthy ] || morir "el servicio de las alertas no está healthy (su latido, /estado/bucle): revise sus logs"
+  [ -z "$(docker port "$cid")" ] || morir "el servicio de las alertas publica puertos"
+  docker exec "$cid" test -r /app/alertas/servicio-alertas.mjs || morir "la imagen enviada no trae el bundle del servicio de las alertas (/app/alertas/servicio-alertas.mjs)"
+  redes="$(docker inspect -f '{{range $nombre, $_ := .NetworkSettings.Networks}}{{$nombre}} {{end}}' "$cid")" || morir "no se pudieron leer las redes del servicio de las alertas"
+  [ "$redes" = "$esperadas" ] || morir "el servicio de las alertas está en otras redes ($redes): solo la interna"
+  verificar_aislado "el servicio de las alertas" "$cid"
+  verificar_endurecimiento_alertas "$cid"
+  verificar_huella_alertas "$cid"
+  verificar_entorno_alertas "$cid"
+  propio="$(interruptor_intradia "$cid")" || morir "no se pudo leer el interruptor del intradía del servicio de las alertas"
+  if [ "$CON_PRECIOS" = 1 ]; then
+    cid_precios="$("${COMPOSE[@]}" ps -q "$PRECIOS")"
+    de_precios="$(interruptor_intradia "$cid_precios")" || morir "no se pudo leer el interruptor del intradía del servicio de precios"
+    [ "$propio" = "$de_precios" ] || morir "el interruptor del intradía del servicio de las alertas ($propio) no coincide con el del servicio de precios ($de_precios): los dos leen INV_INTRADIA_ENCENDIDO"
+    informar "el servicio de las alertas coincide con precios en el intradía ($propio)"
+  fi
+  informar "el servicio de las alertas corre la imagen enviada, healthy, sin puertos y solo en la red interna (sin salida a internet)"
+}
+
 verificar_servicio() {
   local cid salud
   cid="$("${COMPOSE[@]}" ps -q inv-008-app)"
@@ -664,6 +753,7 @@ verificar_servicio() {
   informar "la app corre la imagen enviada, sin puertos y solo en redes internal; /api/salud por la entrada responde ok con la versión $SHA"
   [ "$CON_PRECIOS" = 0 ] || verificar_precios
   verificar_ia
+  verificar_alertas
 }
 
 # Imprime, una por línea, las redes internal del proyecto que YA existen sin la puerta de enlace aislada (de una
@@ -952,7 +1042,7 @@ main() {
   local problema_ia
   problema_ia="$(problema_dir_compartida_ia "$INV_ENV_PROD")"
   [ -z "$problema_ia" ] || morir "$problema_ia (produccion.md §2)"
-  informar "app, entrada, vigía, respaldo, IA y precios: up --wait"
+  informar "app, entrada, vigía, respaldo, IA, alertas y precios: up --wait"
   "${COMPOSE[@]}" up -d --wait --wait-timeout 180 "${UP_PERMANENTES[@]}"
   # La app y el respaldo ya están arriba: si algo falla después, se vuelve solo si hay otra imagen.
   DETENIDOS=0

@@ -26,3 +26,9 @@
 .operar .op-sim-operada th, .operar .op-sim-operada td { font-weight: 700; }
 .operar .op-sim-reglas, .operar .op-sim-avisos { margin: 0; padding-left: 18px; display: grid; gap: 8px; overflow-wrap: anywhere; }
 .operar .op-sim-reglas p { margin: 0; }
+.operar .op-sim-revisar { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.operar .op-sim-revisar li { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 12px; padding: 10px 14px; min-width: 0; overflow-wrap: anywhere; }
+.operar .op-sim-revisar li[data-importancia="alta"] { border-left-color: var(--loss); }
+.operar .op-sim-revisar li[data-importancia="media"] { border-left-color: var(--gold); }
+.operar .op-sim-revisar p { margin: 2px 0 0; }
+.operar .op-sim-importancia { font-weight: 700; font-size: 14px; }

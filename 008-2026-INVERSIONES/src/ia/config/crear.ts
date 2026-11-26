@@ -47,6 +47,7 @@ function datos(entrada: EntradaConfigIa, version: number, autorId: string): Pris
     topeMensualUsd: entrada.topeMicroUsd === null ? null : new Prisma.Decimal(usdDeMicro(entrada.topeMicroUsd)),
     horaResumen: entrada.horaResumen,
     limiteSegundos: entrada.limiteSegundos,
+    analisisDemanda: entrada.analisisDemanda,
     motivo: entrada.motivo,
     autorId,
   };

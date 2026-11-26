@@ -23,7 +23,7 @@ const CIERRE_B = ENTRADAS.tablero.filas.find((f) => f.instrumentoId === "FICTICI
 const COMISION = D("137.91");
 /** Compra de 102 de FICTICIA-B a su cierre: de la caja salen el valor de la orden y la comisión. */
 const CAJA = { antes: D("793713.41"), despues: D("793713.41").sub(CIERRE_B.mul(102)).sub(COMISION) };
-const PEDIDO = { hoy: ENTRADAS.hoy, usuarioId: "usuario-ficticio", instrumentoId: "FICTICIA-B", cantidadDespues: 113n, reglas: [], caja: CAJA };
+const PEDIDO = { hoy: ENTRADAS.hoy, usuarioId: "usuario-ficticio", instrumentoId: "FICTICIA-B", cantidadDespues: 113n, reglas: [], caja: CAJA, precioLimite: CIERRE_B };
 
 beforeEach(() => {
   reiniciarTurnoParaPruebas();
@@ -32,6 +32,11 @@ beforeEach(() => {
 });
 
 describe("analizarSimulacion", () => {
+  it("devuelve los cambios de rango de los puntos en JSON puro, con la versión", async () => {
+    const a = await analizarSimulacion(DB, PEDIDO);
+    expect(a.versionPuntos).toBe("puntos-v1");
+    expect(JSON.parse(JSON.stringify(a.cambios))).toEqual(a.cambios);
+  });
   it("compara con los motores y calcula los escenarios a 3, 6 y 12 meses", async () => {
     const a = await analizarSimulacion(DB, PEDIDO);
     expect(a.comparacion.pesoOperada.despues!).toBeGreaterThan(a.comparacion.pesoOperada.antes!);
@@ -48,6 +53,19 @@ describe("analizarSimulacion", () => {
     expect(vista.escenarios).toHaveLength(4);
     expect(vista.partida.map((f) => f.titulo)).toEqual(["Acciones", "Caja (parte fija, sin rendimiento)", "Valor de partida"]);
     expect(vista.frases.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("con el precio actual escrito, los pesos del antes y del después se calculan con ese precio, no con el último cierre", async () => {
+    const sin = await analizarSimulacion(DB, PEDIDO);
+    const con = await analizarSimulacion(DB, { ...PEDIDO, precioActual: CIERRE_B.mul(3) });
+    // FICTICIA-B vale el triple: pesa más antes y después de la compra.
+    expect(con.comparacion.pesoOperada.antes!).toBeGreaterThan(sin.comparacion.pesoOperada.antes!);
+    expect(con.comparacion.pesoOperada.despues!).toBeGreaterThan(sin.comparacion.pesoOperada.despues!);
+    const peso = ENTRADAS.tablero.filas.find((f) => f.instrumentoId === "FICTICIA-B")!.valor!.mul(3);
+    const resto = ENTRADAS.tablero.valorAcciones.sub(ENTRADAS.tablero.filas.find((f) => f.instrumentoId === "FICTICIA-B")!.valor!);
+    expect(con.comparacion.pesoOperada.antes!).toBeCloseTo(peso.div(peso.add(resto)).toNumber(), 6);
+    // Con null (sin precio escrito) nada cambia.
+    expect((await analizarSimulacion(DB, { ...PEDIDO, precioActual: null })).comparacion.pesoOperada).toEqual(sin.comparacion.pesoOperada);
   });
 
   it("con el turno de proyecciones ocupado por el mismo usuario, sale sin escenarios", async () => {
@@ -70,5 +88,24 @@ describe("analizarSimulacion", () => {
     const { antes, despues } = a.escenarios!;
     expect(despues.partida.acciones - antes.partida.acciones).toBeCloseTo(7 * 317.43, 6);
     expect(despues.partida.total).toBeCloseTo(antes.partida.total, 6);
+  });
+
+  describe("el valor de partida de los escenarios y el precio escrito", () => {
+    it("con historia de cierres de la especie operada, el precio escrito no cambia el valor de partida", async () => {
+      const sin = await analizarSimulacion(DB, PEDIDO);
+      const con = await analizarSimulacion(DB, { ...PEDIDO, precioActual: CIERRE_B.mul(3) });
+      expect(con.escenarios!.antes.partida).toEqual(sin.escenarios!.antes.partida);
+      expect(con.escenarios!.despues.partida).toEqual(sin.escenarios!.despues.partida);
+    });
+
+    it("sin historia de cierres de la especie operada, el valor de partida cambia con el precio escrito", async () => {
+      const soloTablero = portafolio([especie("FICTICIA-A", 37, 1237.4, 1), { id: "FICTICIA-D", cantidad: 7, cierres: [], soloTablero: true, cierreTablero: { precio: D("317.43"), fecha: DIAS.at(-1)! } }]);
+      obtenerResumen.mockResolvedValue({ tablero: soloTablero.tablero });
+      leerEntradas.mockResolvedValue(soloTablero.historia);
+      const base = { ...PEDIDO, instrumentoId: "FICTICIA-D", cantidadDespues: 7n, caja: { antes: D("4613.27"), despues: D("4613.27") } };
+      const sin = await analizarSimulacion(DB, base);
+      const con = await analizarSimulacion(DB, { ...base, precioActual: D("500") });
+      expect(con.escenarios!.antes.partida.acciones - sin.escenarios!.antes.partida.acciones).toBeCloseTo(7 * (500 - 317.43), 6);
+    });
   });
 });

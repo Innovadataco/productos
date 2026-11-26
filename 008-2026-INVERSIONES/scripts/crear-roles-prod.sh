@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Inversiones · crea o actualiza los roles inv_dueno, inv_app, inv_precios e inv_ia en la base de producción (idempotente).
+# Inversiones · crea o actualiza los roles inv_dueno, inv_app, inv_precios, inv_ia e inv_alertas en la base de producción (idempotente).
 #
 # Uso (en el VPS, desde el clon, ANTES del primer despliegue y cada vez que se roten sus claves):
 #   sudo <raíz>/repo/008-2026-INVERSIONES/scripts/crear-roles-prod.sh   (<raíz>: ver ESTADO en la gestión)
 #
 # Las claves salen del único archivo de producción (<raíz>/.env.inversiones.production,
-# 600 de root): de INV_DUENO_DATABASE_URL e INV_APP_DATABASE_URL (y de INV_PRECIOS_DATABASE_URL e INV_IA_DATABASE_URL, si están). Nunca de
+# 600 de root): de INV_DUENO_DATABASE_URL e INV_APP_DATABASE_URL (y de INV_PRECIOS_DATABASE_URL, INV_IA_DATABASE_URL e INV_ALERTAS_DATABASE_URL, si están). Nunca de
 # una migración (el repo es público). Llegan a psql SOLO por la entrada estándar: printf es interno de bash, así que
 # no aparecen en los argumentos de ningún proceso (`ps`). Antes de fijarlas se apaga el registro de sentencias con
 # error, para que una clave nunca termine en el log de PostgreSQL.
@@ -23,6 +23,11 @@
 # primera corrida; sin la línea INV_IA_DATABASE_URL queda NOLOGIN y sin clave (también si ya tenía LOGIN); con ella, LOGIN
 # y su clave en una sola sentencia; vacía, mal formada o con la clave de otro rol, aborta sin tocar Docker. Sus permisos
 # (por columna: lee lo que necesitan los armadores de hechos e inserta en resumen_ia) los da privilegios.sql.
+#
+# inv_alertas (el servicio de las alertas, contenedor propio) sigue la misma regla: existe SIEMPRE desde la primera corrida; sin la
+# línea INV_ALERTAS_DATABASE_URL queda NOLOGIN y sin clave (también si ya tenía LOGIN); con ella, LOGIN y su clave en una sola
+# sentencia; vacía, mal formada o con la clave de otro rol, aborta sin tocar Docker. Sus permisos (por columna: lee lo que
+# necesita el motor e inserta solo en alerta) los da privilegios.sql.
 set -euo pipefail
 INV_SCRIPT=crear-roles-prod
 # shellcheck source=produccion-comun.sh
@@ -112,6 +117,42 @@ sql_ia_sin_login() {
   printf '%s\n' "ALTER ROLE inv_ia WITH NOLOGIN PASSWORD NULL;"
 }
 
+# SQL puro del rol inv_alertas (el servicio de las alertas), igual que el de inv_ia: nace NOLOGIN (el LOGIN lo decide su
+# secreto, más abajo), NOINHERIT, solo CONNECT a la base y USAGE del esquema, sin privilegios por defecto (cada permiso de
+# tabla, por columna, lo da privilegios.sql) y con los mismos topes por sesión. 2 conexiones: el servicio evalúa de a una vez
+# (su URL lleva connection_limit=1) y queda una de margen; con inv_dueno (5), inv_app (10), inv_precios (4) e inv_ia (2) suman
+# 23 de las 30 de la base. Lo prueba el CI contra una PostgreSQL 16 real (tests/unit/produccion/roles-base.test.ts).
+sql_rol_alertas() {
+  cat <<'SQL'
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'inv_alertas') THEN
+    CREATE ROLE inv_alertas NOLOGIN;
+  END IF;
+END
+$$;
+ALTER ROLE inv_alertas WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 2;
+-- Topes por sesión: una corrida del servicio que se corta a mitad no ocupa el CONNECTION LIMIT 2 más de lo que dure su
+-- sentencia o su transacción quieta.
+ALTER ROLE inv_alertas SET statement_timeout = '60s';
+ALTER ROLE inv_alertas SET idle_in_transaction_session_timeout = '30s';
+-- Una fila que la base le rechaza trae en el DETAIL la fila entera (especie, precios): con terse, el registro de PostgreSQL
+-- no guarda el DETAIL de sus errores.
+ALTER ROLE inv_alertas SET log_error_verbosity = 'terse';
+DO $$
+BEGIN
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO inv_alertas', current_database());
+END
+$$;
+GRANT USAGE ON SCHEMA public TO inv_alertas;
+SQL
+}
+
+# Sin el secreto: sin LOGIN y sin clave (también si los tenía).
+sql_alertas_sin_login() {
+  printf '%s\n' "ALTER ROLE inv_alertas WITH NOLOGIN PASSWORD NULL;"
+}
+
 generar_entrada_psql() {
   printf '%s\n' '\set ON_ERROR_STOP on' '\set QUIET on' '\set VERBOSITY terse'
   printf '%s\n' "SET log_min_error_statement = 'panic';" "SET log_statement = 'none';"
@@ -136,7 +177,15 @@ generar_entrada_psql() {
   else
     sql_ia_sin_login
   fi
-  printf '%s\n' "SELECT 'roles listos: ' || string_agg(rolname || CASE WHEN NOT rolcanlogin THEN ' (sin LOGIN)' ELSE '' END, ', ' ORDER BY rolname) FROM pg_roles WHERE rolname IN ('inv_dueno', 'inv_app', 'inv_precios', 'inv_ia');"
+  # inv_alertas va al final, igual: si su bloque fallara, las claves de los otros cuatro ya quedaron fijadas.
+  sql_rol_alertas
+  if [ -n "$clave_alertas" ]; then
+    printf "\\\\set clave_alertas '%s'\n" "$clave_alertas"
+    printf '%s\n' "ALTER ROLE inv_alertas WITH LOGIN PASSWORD :'clave_alertas';" '\unset clave_alertas'
+  else
+    sql_alertas_sin_login
+  fi
+  printf '%s\n' "SELECT 'roles listos: ' || string_agg(rolname || CASE WHEN NOT rolcanlogin THEN ' (sin LOGIN)' ELSE '' END, ', ' ORDER BY rolname) FROM pg_roles WHERE rolname IN ('inv_dueno', 'inv_app', 'inv_precios', 'inv_ia', 'inv_alertas');"
 }
 
 main() {
@@ -171,6 +220,16 @@ main() {
   else
     informar "⚠️  sin INV_IA_DATABASE_URL en el archivo de producción: inv_ia existe sin LOGIN y sin clave (para los respaldos). El servicio de los resúmenes con IA la necesita"
   fi
+  # inv_alertas: igual; su clave, distinta de las otras cuatro.
+  local url_alertas
+  clave_alertas=""
+  if url_alertas="$(leer_variable_env "$INV_ENV_PROD" INV_ALERTAS_DATABASE_URL)"; then
+    clave_alertas="$(clave_de_url "$url_alertas" inv_alertas)"
+    [ "$clave_alertas" != "$clave_dueno" ] && [ "$clave_alertas" != "$clave_app" ] && { [ -z "$clave_precios" ] || [ "$clave_alertas" != "$clave_precios" ]; } && { [ -z "$clave_ia" ] || [ "$clave_alertas" != "$clave_ia" ]; } ||
+      morir "inv_alertas debe tener una clave distinta de las de inv_dueno, inv_app, inv_precios e inv_ia"
+  else
+    informar "⚠️  sin INV_ALERTAS_DATABASE_URL en el archivo de producción: inv_alertas existe sin LOGIN y sin clave (para los respaldos). El servicio de las alertas la necesita"
+  fi
   tomar_candado_propio
   tomar_candado_comun
   negarse_si_pausado
@@ -183,6 +242,9 @@ main() {
   local ia="sin LOGIN"
   [ -z "$clave_ia" ] || ia="con su clave"
   informar "creando o actualizando inv_ia ($ia; clave por stdin)"
+  local alertas="sin LOGIN"
+  [ -z "$clave_alertas" ] || alertas="con su clave"
+  informar "creando o actualizando inv_alertas ($alertas; clave por stdin)"
   generar_entrada_psql | "${COMPOSE[@]}" exec -T inv-008-db psql -X -q -v ON_ERROR_STOP=1 -U postgres -d inversiones -tA
   informar "listo"
 }

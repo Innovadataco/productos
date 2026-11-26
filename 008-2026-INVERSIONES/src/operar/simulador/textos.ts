@@ -6,7 +6,7 @@
  */
 import { Prisma, type AccionPlan, type CondicionRegla, type LadoOrden } from "@prisma/client";
 import { cantidadEs, nivelEs } from "@/plan/edicion/formato";
-import type { Afectacion, AvisoSimulacion, ComisionEstimada, Comisionista, ErrorSimulacion, FrenteAlNivel, ReglaSimulada } from "./tipos";
+import { DECIMALES_PESOS_MOSTRADOS, type Afectacion, type AvisoSimulacion, type ComisionEstimada, type Comisionista, type ErrorSimulacion, type FrenteAlNivel, type ReglaSimulada } from "./tipos";
 
 export const ETIQUETA_COMISION = "estimada con su historia; la tarifa real puede ser distinta";
 export const COMISION_SIN_HISTORIA = "sin historia: no se estima";
@@ -20,10 +20,15 @@ const CAJA_ATRASADA = "La caja puede estar atrasada: el cálculo sigue con la re
 /** Controles (C0, C1), marcas y aislantes de dirección, y separadores de línea y de párrafo. */
 const INVISIBLES = /[\u0000-\u001F\u007F-\u009F\u200E\u200F\u202A-\u202E\u2066-\u2069\u2028\u2029]/g;
 
-/** Pesos exactos, con todos los decimales del dato: «$ 4.613,27»; negativos con «−» delante, como el tablero. */
+/**
+ * Pesos con hasta dos decimales (mitad hacia arriba, solo para mostrar), el mismo formato de precio() de la app:
+ * «$ 4.613,27», «$ 4.600,13». Ningún monto sale con 3 o más decimales («$ 6.202,9244» no existe). Negativos con «−»
+ * delante, como el tablero; lo que redondea a cero no lleva signo.
+ */
 export function textoPesos(d: Prisma.Decimal): string {
-  const signo = d.isNeg() && !d.isZero() ? MENOS : "";
-  return `${signo}$ ${nivelEs(d.abs().toFixed())}`;
+  const redondeado = d.toDecimalPlaces(DECIMALES_PESOS_MOSTRADOS, Prisma.Decimal.ROUND_HALF_UP);
+  const signo = redondeado.isNeg() && !redondeado.isZero() ? MENOS : "";
+  return `${signo}$ ${nivelEs(redondeado.abs().toFixed())}`;
 }
 
 /** Montos en pesos sin decimales (mitad hacia arriba, solo para mostrar): «$ 37.911»; negativos con «−». */

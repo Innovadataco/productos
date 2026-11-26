@@ -191,13 +191,14 @@ describe("verificar-esquema.sql coincide con las migraciones", () => {
     const filas = [...bloque("funciones").matchAll(/\[\s*'([^']*)'\s*,\s*'([0-9a-f]{32})'\s*,\s*'([^']*)'\s*\]/g)];
     expect(filas.length).toBe(nombres("funciones", 1).length);
     const config = new Map(filas.map((m) => [m[1]!, m[3]!]));
-    for (const nombre of ["inv_precio_cierre_insercion", "inv_retiro_vigente", "inv_valor_unidad_fondo_insercion"]) {
+    // Alertas: las dos de la inserción (SECURITY INVOKER) llevan el mismo search_path fijo; la del instante de umbral_version, ninguno.
+    for (const nombre of ["inv_precio_cierre_insercion", "inv_retiro_vigente", "inv_valor_unidad_fondo_insercion", "inv_alerta_insercion", "inv_alerta_vista_insercion", "inv_umbral_version_autor", "inv_umbral_version_instante"]) {
       expect(config.get(nombre), nombre).toBe("search_path=pg_catalog, public, pg_temp");
     }
     // inv_solo_retiro (datos oficiales) no lee tablas: solo pg_catalog, con pg_temp al final.
     expect(config.get("inv_solo_retiro")).toBe("search_path=pg_catalog, pg_temp");
     const conSet = new Set(["inv_retiro_vigente", "inv_solo_retiro"]);
-    for (const [nombre, valor] of config) if (!nombre.startsWith("inv_precio_") && !nombre.startsWith("inv_valor_") && !conSet.has(nombre)) expect(valor, nombre).toBe("");
+    for (const [nombre, valor] of config) if (!nombre.startsWith("inv_precio_") && !nombre.startsWith("inv_valor_") && !nombre.startsWith("inv_alerta_") && !nombre.startsWith("inv_umbral_version_") && !conSet.has(nombre)) expect(valor, nombre).toBe("");
   });
 
   // La exención de los disparadores de integridad es «tener los privilegios del dueño»: si inv_precios o inv_app
@@ -283,5 +284,29 @@ describe("guardián del esquema: tarifa_comision", () => {
     const md5 = (f: string) => new RegExp(`\\['${f}', '([0-9a-f]{32})', ''\\]`).exec(guardian)?.[1];
     expect(md5("inv_tarifa_comision_instante")).toBeDefined();
     expect(md5("inv_tarifa_comision_instante")).toBe(md5("inv_plan_version_instante"));
+  });
+});
+
+// Precios cada minuto: precio_intradia. Solo inserción de hecho (UPDATE nunca; DELETE solo de lo de más de 60 días), la
+// hora de traída y los topes los pone la base para todo rol que no sea el dueño. Ni inv_app, ni inv_ia, ni inv_precios
+// pueden ser miembros del dueño (los disparadores eximen al dueño). Bloque propio.
+describe("guardián del esquema: precio_intradia", () => {
+  const guardian = leer008("scripts/verificar-esquema.sql");
+
+  it("revisa que inv_app, inv_ia e inv_precios no sean miembros del dueño de precio_intradia", () => {
+    expect(guardian).toMatch(/WHERE r\.rolname IN \('inv_app', 'inv_ia', 'inv_precios'\)\s+AND c\.oid = to_regclass\('public\.precio_intradia'\)\s+AND pg_has_role\(r\.oid, c\.relowner, 'MEMBER'\)/);
+  });
+
+  it("exige los dos disparadores, sus dos funciones (sin SECURITY DEFINER y con su search_path), la unicidad y las CHECK", () => {
+    expect(guardian).toMatch(/\['precio_intradia', 'precio_intradia_insercion', 'CREATE TRIGGER precio_intradia_insercion BEFORE INSERT ON public\.precio_intradia FOR EACH ROW EXECUTE FUNCTION inv_precio_intradia_insercion\(\)'\]/);
+    expect(guardian).toMatch(/\['precio_intradia', 'precio_intradia_retiro', 'CREATE TRIGGER precio_intradia_retiro BEFORE DELETE OR UPDATE ON public\.precio_intradia FOR EACH ROW EXECUTE FUNCTION inv_precio_intradia_retiro\(\)'\]/);
+    expect(guardian).toMatch(/\['precio_intradia', 'precio_intradia_instrumentoId_instante_fuente_key', 'CREATE UNIQUE INDEX "precio_intradia_instrumentoId_instante_fuente_key" ON public\.precio_intradia USING btree \("instrumentoId", instante, fuente\)'\]/);
+    expect(guardian).toContain("['precio_intradia', 'precio_intradia_precio_chk', 'CHECK ");
+    expect(guardian).toContain("['precio_intradia', 'precio_intradia_fuente_chk', 'CHECK ");
+    expect(guardian).toContain("['precio_intradia', 'precio_intradia_pkey', 'PRIMARY KEY (id)']");
+    expect(guardian).toContain("['precio_intradia', 'precio_intradia_instrumentoId_fkey', 'FOREIGN KEY");
+    for (const f of ["inv_precio_intradia_insercion", "inv_precio_intradia_retiro"]) {
+      expect(guardian).toMatch(new RegExp(`\\['${f}', '[0-9a-f]{32}', 'search_path=pg_catalog, public, pg_temp'\\]`));
+    }
   });
 });

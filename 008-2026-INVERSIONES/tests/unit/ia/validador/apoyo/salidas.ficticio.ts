@@ -5,7 +5,7 @@
  * plantilla de la frase como `{CLAVE}` y se reemplaza por `{Hnn}` del hecho de esa clave.
  */
 import type { ClaveHecho } from "@/ia/catalogo";
-import type { EntradaHecho, EntradaPaquete, Hecho, IdHecho, PaqueteHechos, TipoResumen } from "@/ia/contrato";
+import type { EntradaHecho, EntradaPaquete, Hecho, IdHecho, PaqueteHechos, TipoDiario } from "@/ia/contrato";
 import { construirPaquete } from "@/ia/paquete";
 import { segmentosDe } from "@/ia/validador/segmentos";
 import type { Prng } from "@/proyecciones/prng";
@@ -57,17 +57,17 @@ export const renderizado = (paquete: PaqueteHechos, plantilla: string): string =
 type Marcas = Partial<Pick<EntradaHecho, "direccion" | "cercania" | "frescura" | "calidad" | "obligatorio">>;
 
 /** La entrada ficticia del tipo con las marcas de una clave cambiadas (nada más: ni valores ni presentaciones). */
-export function entradaConMarcas<T extends TipoResumen>(tipo: T, cambios: Partial<Record<ClaveHecho, Marcas>>): EntradaPaquete<T> {
+export function entradaConMarcas<T extends TipoDiario>(tipo: T, cambios: Partial<Record<ClaveHecho, Marcas>>): EntradaPaquete<T> {
   const entrada = ENTRADAS_FICTICIAS[tipo]() as EntradaPaquete<T>;
   const hechos = entrada.hechos.map((h) => ({ ...h, ...(cambios[h.clave] ?? {}) }));
   return { ...entrada, hechos };
 }
 
-export const paqueteFicticio = <T extends TipoResumen>(tipo: T, cambios: Partial<Record<ClaveHecho, Marcas>> = {}): PaqueteHechos<T> =>
+export const paqueteFicticio = <T extends TipoDiario>(tipo: T, cambios: Partial<Record<ClaveHecho, Marcas>> = {}): PaqueteHechos<T> =>
   construirPaquete(entradaConMarcas(tipo, cambios));
 
 /** Frases válidas (texto de modelo) por tipo, con las marcas de las entradas ficticias. */
-export const FRASES_VALIDAS: { readonly [T in TipoResumen]: readonly string[] } = {
+export const FRASES_VALIDAS: { readonly [T in TipoDiario]: readonly string[] } = {
   DIARIO: [
     "El valor de las acciones subió a {VALOR_ACCIONES}.",
     "{ESPECIE_NOMBRE}: el valor de la especie subió a {VALOR_ESPECIE} y su peso de la especie en el portafolio se mantuvo en {PESO_ESPECIE}.",
@@ -92,7 +92,7 @@ export const FRASES_VALIDAS: { readonly [T in TipoResumen]: readonly string[] } 
  */
 export const TOPE_OBLIGATORIOS = 6;
 
-export function paqueteAlAzarConTope(prng: Prng, tipo?: TipoResumen): PaqueteHechos {
+export function paqueteAlAzarConTope(prng: Prng, tipo?: TipoDiario): PaqueteHechos {
   const entrada = entradaAlAzar(prng, tipo);
   const marcados = entrada.hechos.flatMap((h, i) => (h.obligatorio ? [i] : [])).slice(0, TOPE_OBLIGATORIOS);
   return construirPaquete({ ...entrada, hechos: entrada.hechos.map((h, i) => ({ ...h, obligatorio: marcados.includes(i) })) });

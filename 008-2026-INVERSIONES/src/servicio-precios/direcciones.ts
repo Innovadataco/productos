@@ -7,7 +7,7 @@
  * - `crearLookupSeguro` es el `lookup` de la conexión: resuelve el nombre, rechaza TODO si alguna dirección no es
  *   pública (señal de un DNS alterado) y entrega solo las validadas. La conexión va a esa IP: no hay carrera entre
  *   validar y conectar. Mismo patrón que azu/request-filtering-agent, sin la dependencia.
- * - Residual: si el DNS de los 2 nombres fijos devolviera la IP PÚBLICA del VPS, pasaría (no se conoce aquí y no va
+ * - Residual: si el DNS de los 3 nombres fijos devolviera la IP PÚBLICA del VPS, pasaría (no se conoce aquí y no va
  *   en este repo público).
  * Los rangos van como números: el cruce de literales de la Fábrica marca cualquier IPv4 escrita.
  */

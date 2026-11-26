@@ -49,7 +49,7 @@ export const PERMISOS_IA: readonly Permiso[] = [
     privilegio: "SELECT",
     columnas: [
       "id", "version", "modo", "ollamaHost", "ollamaPuerto", "temperaturaLocal", "tareas", "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos",
-      "esfuerzoNube", "creadaEn",
+      "analisisDemanda", "esfuerzoNube", "creadaEn",
     ],
   },
   { tabla: "dividendo", privilegio: "SELECT", columnas: ["id", "instrumentoId", "tipo", "fechaPago", "montoNeto", "decretadoId"] },
@@ -69,6 +69,8 @@ export const PERMISOS_IA: readonly Permiso[] = [
   },
   { tabla: "plan_version", privilegio: "SELECT", columnas: ["id", "version", "vigenteDesde", "creadaEn"] },
   { tabla: "precio_cierre", privilegio: "SELECT", columnas: ["id", "instrumentoId", "fecha", "precio", "fuente", "estado", "traidoEn", "reemplazadoEn"] },
+  // Precios cada minuto (frente precios-minuto): lo que las alertas y su explicación leen del último precio intradía.
+  { tabla: "precio_intradia", privilegio: "SELECT", columnas: ["id", "instrumentoId", "instante", "precio", "fuente", "conRetraso", "traidoEn"] },
   { tabla: "regla_plan", privilegio: "SELECT", columnas: ["id", "planVersionId", "instrumentoId", "condicion", "nivel", "plazoHasta"] },
   { tabla: "resumen_ia", privilegio: "SELECT", columnas: RESUMEN_IA_SELECT_IA },
   { tabla: "resumen_ia", privilegio: "INSERT", columnas: RESUMEN_IA_COLUMNAS.filter((c) => c !== "generadoEn") },

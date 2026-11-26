@@ -4,7 +4,8 @@
 #
 #   runner   → inv-008-app: la app (Next standalone) y el bundle de precios (precios/servicio-precios.mjs, de
 #              esbuild, sin tsx), que correrá el servicio inv-008-precios con esta misma imagen y otro entrypoint;
-#              y el bundle de IA (ia/servicio-ia.mjs), igual, para el servicio inv-008-ia.
+#              y el bundle de IA (ia/servicio-ia.mjs), igual, para el servicio inv-008-ia;
+#              y el bundle de las alertas (alertas/servicio-alertas.mjs), igual, para el servicio inv-008-alertas.
 #   migrador → inv-008-migrador: prisma migrate deploy + guardián del esquema + privilegios de inv_app y
 #              los comandos de carga (inv-cargar: el sobre por stdin, sin copias en el VPS) y de acceso
 #              inicial (tsx, rol inv_dueno). Lleva el node_modules completo
@@ -40,6 +41,9 @@ RUN npx prisma generate && npm run build && npm run build:precios
 # El bundle del servicio de IA (inv-008-ia), igual: después de next build. La condición react-server resuelve los
 # `import "server-only"` de src/ia/config a su módulo vacío (fuera de Next no hay quien la ponga).
 RUN npx esbuild src/servicio-ia/entrada.ts --bundle --platform=node --format=esm --target=node22 --conditions=react-server --external:@prisma/client --outfile=.next/ia/servicio-ia.mjs
+# El bundle del servicio de las alertas (inv-008-alertas), igual: después de next build. Sin la condición react-server: src/alertas
+# no trae `server-only` (lo corre fuera de Next, con el rol inv_alertas).
+RUN npx esbuild scripts/servicio-alertas.ts --bundle --platform=node --format=esm --target=node22 --external:@prisma/client --outfile=.next/alertas/servicio-alertas.mjs
 
 FROM base AS runner
 ARG APP_VERSION
@@ -61,11 +65,18 @@ RUN test "$(stat -c '%u:%g %a' precios)" = "0:0 755" && test "$(stat -c '%u:%g %
 RUN mkdir -p -m 0755 /app/ia
 COPY --from=builder --chmod=0444 /app/.next/ia/servicio-ia.mjs ./ia/servicio-ia.mjs
 RUN test "$(stat -c '%u:%g %a' ia)" = "0:0 755" && test "$(stat -c '%u:%g %a' ia/servicio-ia.mjs)" = "0:0 444" || { echo "el bundle de IA no es de root (carpeta 0755, archivo 0444)" >&2; exit 1; }
+# El bundle del servicio de las alertas (scripts/servicio-alertas.ts), con las mismas reglas: de root, 0444, en una carpeta 0755.
+RUN mkdir -p -m 0755 /app/alertas
+COPY --from=builder --chmod=0444 /app/.next/alertas/servicio-alertas.mjs ./alertas/servicio-alertas.mjs
+RUN test "$(stat -c '%u:%g %a' alertas)" = "0:0 755" && test "$(stat -c '%u:%g %a' alertas/servicio-alertas.mjs)" = "0:0 444" || { echo "el bundle de las alertas no es de root (carpeta 0755, archivo 0444)" >&2; exit 1; }
 # El build falla si el standalone no trae el engine de Prisma para musl (si no, fallaría en el VPS).
 RUN test -f node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node || { echo "falta el engine de Prisma linux-musl-openssl-3.0.x en el standalone" >&2; exit 1; }
 # Ningún .env en la imagen (next build copia el .env de la carpeta al standalone): el build falla si hay uno.
 RUN if find / -xdev \( -name '.env' -o -name '.env.*' \) 2>/dev/null | grep -q .; then echo "la imagen trae archivos .env: no se construye" >&2; exit 1; fi
 RUN mkdir -p /app/.next/cache
+# /estado, del usuario 10008 y 0700: el volumen nombrado de las alertas (inv-008-alertas-estado) copia su dueño al crearse, y el
+# servicio puede escribir ahí el latido y la marca del intento del cierre. Los demás servicios lo cubren con su tmpfs.
+RUN mkdir -p -m 0700 /estado && chown 10008:10008 /estado
 USER 10008:10008
 # Con el usuario de la imagen: no puede escribir el bundle, y el humo (si no carga o no resuelve @prisma/client en el
 # standalone, no se construye).
@@ -73,6 +84,8 @@ RUN test ! -w precios/servicio-precios.mjs || { echo "el usuario 10008 puede esc
 RUN node precios/servicio-precios.mjs --ayuda >/dev/null
 RUN test ! -w ia/servicio-ia.mjs || { echo "el usuario 10008 puede escribir el bundle de IA" >&2; exit 1; }
 RUN node ia/servicio-ia.mjs --ayuda >/dev/null
+RUN test ! -w alertas/servicio-alertas.mjs || { echo "el usuario 10008 puede escribir el bundle de las alertas" >&2; exit 1; }
+RUN node alertas/servicio-alertas.mjs --ayuda >/dev/null
 EXPOSE 5008
 CMD ["node", "server.js"]
 

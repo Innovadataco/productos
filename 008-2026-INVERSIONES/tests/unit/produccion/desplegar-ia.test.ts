@@ -16,7 +16,7 @@ const funcion = (nombre: string): string => {
 
 describe("desplegar-prod.sh · inv-008-ia", () => {
   it("es un permanente: sube con el up --wait de los demás", () => {
-    expect(desplegar).toMatch(/^PERMANENTES=\(inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia\)$/m);
+    expect(desplegar).toMatch(/^PERMANENTES=\(inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-alertas\)$/m);
     expect(desplegar).toMatch(/^PUENTE_IA="br-inv008-ia"$/m);
     expect(desplegar).toMatch(/^PROPIAS_IA=\(DATABASE_URL INV_IA_SERVICIO_TOKEN INV_IA_DIR_COMPARTIDA TZ\)$/m);
   });

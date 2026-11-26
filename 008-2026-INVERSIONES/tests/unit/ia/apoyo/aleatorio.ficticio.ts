@@ -5,7 +5,7 @@
  * veces al ancla de una regla (REGLA_DEL_PLAN) en vez de a la especie. Todo inventado.
  */
 import { CLAVE_ANCLA_REGLA, CLAVE_NOMBRE_ESPECIE, clavesDe, entradaDeCatalogo, esClaveDeRegla, type ClaveHecho, type EntradaCatalogo } from "@/ia/catalogo";
-import { CALIDADES, CERCANIAS, DIRECCIONES, FRESCURAS, TIPOS_RESUMEN, type EntradaHecho, type EntradaPaquete, type IdHecho, type PaqueteHechos, type TipoResumen } from "@/ia/contrato";
+import { CALIDADES, CERCANIAS, DIRECCIONES, FRESCURAS, TIPOS_DIARIOS, type EntradaHecho, type EntradaPaquete, type IdHecho, type PaqueteHechos, type TipoResumen } from "@/ia/contrato";
 import { construirPaquete, idDeHecho } from "@/ia/paquete";
 import { presentar } from "@/ia/presentar";
 import type { Prng } from "@/proyecciones/prng";
@@ -69,6 +69,8 @@ function valorAlAzar(prng: Prng, catalogo: EntradaCatalogo, hoyMs: number, nombr
     case "PESOS":
       return decimalAlAzar(prng, true);
     case "PESOS_POR_DOLAR":
+    case "VECES":
+    case "PUNTOS":
       return decimalAlAzar(prng, false);
   }
 }
@@ -90,7 +92,7 @@ function marcas(prng: Prng, catalogo: EntradaCatalogo): Pick<EntradaHecho, "cali
 
 /** La entrada de un paquete al azar del tipo dado (o de uno al azar). Siempre válida para `construirPaquete`. */
 export function entradaAlAzar(prng: Prng, tipoFijo?: TipoResumen): EntradaPaquete {
-  const tipo = tipoFijo ?? elegir(prng, TIPOS_RESUMEN);
+  const tipo = tipoFijo ?? elegir(prng, TIPOS_DIARIOS);
   const hoyMs = INICIO_2027 + (30 + prng.enteroMenorQue(330)) * DIA_MS;
   const hoy = diaIso(hoyMs);
   const claves = clavesDe(tipo) as readonly ClaveHecho[];

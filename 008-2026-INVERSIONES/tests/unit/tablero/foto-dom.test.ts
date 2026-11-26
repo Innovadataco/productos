@@ -42,7 +42,7 @@ describe("Cómo está repartido", () => {
     expect(texto(seccion().querySelector("h2"))).toBe("Cómo está repartido");
     expect(texto(seccion().querySelector(".eyebrow"))).toBe("Al cierre del 31-mar-2027");
     expect(texto(seccion().querySelector(".g-centro"))).toBe("Valor en acciones $ 12.604");
-    expect(leyenda().map((li) => texto(li).replace(" (ver el detalle)", ""))).toEqual(["FICTB $ 8.478 67,3 %", "FICTA $ 4.126 32,7 %"]);
+    expect(leyenda().map((li) => texto(li).replace(" (ver el detalle)", ""))).toEqual(["FICTB $ 8.478 67,26 %", "FICTA $ 4.126 32,74 %"]);
     expect(texto(seccion())).toContain("Sin cierre (no entra aquí): FICTC");
   });
 

@@ -4,7 +4,12 @@
  * presentación). Versión v2: el modelo da segmentos de texto y de referencia, nunca la cita dentro de la prosa. Versión v3:
  * el nombre de la especie sale del campo `especie` de la vista (ya resuelto), sin recorrer la cadena de `sujeto`, y la
  * regla de no recomendar no usa palabras de consejo (el candado de lenguaje de los prompts). Los límites van en palabras y son los de `LIMITES_SALIDA`. Cambiar un texto es otra versión del prompt.
+ * DIARIO v4: el código escribe los obligatorios (`validador/obligatorias.ts`), así que el prompt no manda citarlos; el modelo
+ * escribe de una a cuatro frases con los demás hechos, con ejemplos de etiquetas no obligatorias y los límites de su parte.
+ * Los textos de REGLAS y ESCENARIOS (v3) no cambian: cada uno sigue siendo el mismo, byte a byte.
  */
+import { ETIQUETA_RANGO } from "../../analisis/puntos/etiquetas";
+
 const PRESENTACION = "Usted redacta, en español de Colombia y tratando al lector de usted, un resumen breve";
 
 const ENTRADA = "Recibe un JSON con el tipo de resumen y una lista de hechos. Cada hecho trae su id, su clave, su etiqueta, el id del "
@@ -12,18 +17,29 @@ const ENTRADA = "Recibe un JSON con el tipo de resumen y una lista de hechos. Ca
   + "a un umbral (CERCA, LEJOS o NO_APLICA), su frescura (HOY, RECIENTE o ATRASADO), su calidad y si es obligatorio. Los "
   + "hechos no traen cifras: las pone el sistema.";
 
-const REGLAS_DE_REDACCION = [
+const CITAR_OBLIGATORIOS =
+"- Cite todos los hechos obligatorios, sin falta. Procedimiento: recorra la lista de hechos en su orden; cada vez que un hecho "
+    + "tenga obligatorio verdadero, escriba la frase de ese hecho (una frase por hecho obligatorio, o dos unidos con «y»), en "
+    + "ese mismo orden, sin saltarse ninguno. Termine ese recorrido antes de agregar nada más; solo si sobran frases (hasta "
+    + "seis), agregue otros hechos. Los hechos obligatorios son pocos (no más de seis, con los nombres de especie incluidos), "
+    + "así que caben. Cada frase cita al menos un hecho.";
+
+const LARGO_DEL_RESUMEN =
+"- Escriba entre una y seis frases. Con las cifras ya puestas, cada frase tiene hasta doscientos ochenta caracteres y el "
+    + "resumen completo, hasta mil doscientos.";
+
+/**
+ * Las reglas de redacción, las mismas para los tres tipos salvo dos viñetas: la de los hechos obligatorios y la del largo.
+ * REGLAS y ESCENARIOS usan las de siempre (v3); el DIARIO v4 usa las suyas.
+ */
+const reglasDeRedaccion = (obligatorios: string, largo: string): string => [
   "Reglas de contenido:",
   "- No escriba cifras: ni dígitos, ni números en palabras, ni porcentajes, ni montos, ni fechas, ni meses, ni días de la "
     + "semana, ni «ayer» o «mañana». La cifra la pone el sistema donde usted pone la referencia.",
   "- Cada frase es una lista de segmentos. Un segmento de texto lleva solo prosa; un segmento de referencia lleva solo el id de "
     + "un hecho, por ejemplo H01, y el sistema lo cambia por la cifra exacta. Nunca escriba el id ni llaves dentro de la prosa. "
     + "No escriba la unidad después de la referencia.",
-  "- Cite todos los hechos obligatorios, sin falta. Procedimiento: recorra la lista de hechos en su orden; cada vez que un hecho "
-    + "tenga obligatorio verdadero, escriba la frase de ese hecho (una frase por hecho obligatorio, o dos unidos con «y»), en "
-    + "ese mismo orden, sin saltarse ninguno. Termine ese recorrido antes de agregar nada más; solo si sobran frases (hasta "
-    + "seis), agregue otros hechos. Los hechos obligatorios son pocos (no más de seis, con los nombres de especie incluidos), "
-    + "así que caben. Cada frase cita al menos un hecho.",
+  obligatorios,
   "- Cada elemento de la lista de frases es una sola oración. Para decir otra cosa, abra otra frase en la lista: cierre la "
     + "frase con el segmento de texto del punto y empiece otro elemento de la lista. Incorrecto: un elemento con segmentos "
     + "texto, referencia, texto de punto y luego más segmentos de otra oración. Correcto: un elemento por oración.",
@@ -56,9 +72,21 @@ const REGLAS_DE_REDACCION = [
     + "que sigue a una referencia (por ejemplo «, y la ganancia total es»), y el signo de puntuación pegado a la referencia.",
   "- Escriba solo texto plano: sin viñetas, sin markdown, sin comillas, sin guiones, sin signos de interrogación o de "
     + "exclamación, sin saltos de línea, sin enlaces y sin emojis.",
-  "- Escriba entre una y seis frases. Con las cifras ya puestas, cada frase tiene hasta doscientos ochenta caracteres y el "
-    + "resumen completo, hasta mil doscientos.",
+  largo,
 ].join("\n");
+
+const REGLAS_DE_REDACCION = reglasDeRedaccion(CITAR_OBLIGATORIOS, LARGO_DEL_RESUMEN);
+
+/** El DIARIO v4: el sistema escribe los obligatorios; el modelo, de una a cuatro frases con los demás (y hasta seiscientos caracteres). */
+const NO_ESCRIBIR_OBLIGATORIOS =
+  "- Los hechos con obligatorio verdadero los escribe el sistema por su cuenta: no los escriba. Escriba solo frases con hechos de "
+    + "obligatorio falso, de los más útiles para el lector. Cada frase cita al menos un hecho.";
+
+const LARGO_DEL_DIARIO =
+  "- Escriba entre una y cuatro frases. Con las cifras ya puestas, cada frase tiene hasta doscientos ochenta caracteres y todas "
+    + "sus frases juntas, hasta seiscientos.";
+
+const REGLAS_DE_REDACCION_DIARIO = reglasDeRedaccion(NO_ESCRIBIR_OBLIGATORIOS, LARGO_DEL_DIARIO);
 
 const RESPUESTA = 'Responda solo con un JSON de esta forma: {"frases":[{"segmentos":[{"texto":"El valor de las acciones es"},'
   + '{"ref":"H01"},{"texto":"."}]}]}. Cada segmento tiene una sola clave: «texto» o «ref». La prosa va en los segmentos de '
@@ -70,23 +98,23 @@ const frase = (...piezas: (string | null)[]): string =>
   `{"segmentos":[${piezas.map((p) => (p === null ? '{"ref":"H01"}' : `{"texto":"${p}"}`)).join(",")}]}`;
 const ejemplos = (...frases: string[]): string => frases.join("\n");
 
-const armar = (tema: string, ejemplos: string): string =>
-  [`${PRESENTACION} ${tema}`, ENTRADA, REGLAS_DE_REDACCION, `Ejemplos de frases correctas (solo la forma):\n${ejemplos}`, RESPUESTA].join("\n\n");
+const armar = (tema: string, ejemplos: string, reglas: string = REGLAS_DE_REDACCION): string =>
+  [`${PRESENTACION} ${tema}`, ENTRADA, reglas, `Ejemplos de frases correctas (solo la forma):\n${ejemplos}`, RESPUESTA].join("\n\n");
 
 export const TEXTO_PROMPT_DIARIO = armar(
-  "del día de un portafolio de inversiones: el valor de las acciones y su variación del día, las ganancias, los dividendos "
-    + "y las comisiones, los cierres atrasados, la conciliación, las tasas y el fondo. Son obligatorios el valor de las acciones, la variación del día, la ganancia total y la conciliación que no cuadra, "
-    + "cuando están en la lista: escriba primero una frase por cada uno, en ese orden, y después, si sobran frases, los demás "
-    + "hechos. Si uno de ellos no está en la lista, no escriba su frase ni use para ella el id de otro hecho. Cada frase lleva "
-    + "la referencia de su dato: un verbo como subió o bajó nunca reemplaza la referencia.",
+  "del día de un portafolio de inversiones: las ganancias sin vender, los dividendos y las comisiones, los cierres atrasados, "
+    + "las especies, las tasas y el fondo. El sistema ya escribe los hechos obligatorios: usted escribe, con los demás hechos, "
+    + "las frases que complementan el día. Cada frase lleva la referencia de su dato: un verbo como subió o bajó nunca "
+    + "reemplaza la referencia.",
   ejemplos(
-    frase("El valor de las acciones es", null, "."),
-    frase("La variación del día del valor de las acciones es", null, "."),
-    frase("La ganancia total es", null, ", y la ganancia sin vender es", null, "."),
+    frase("La ganancia sin vender es", null, "."),
+    frase("Los dividendos recibidos son", null, ", y las comisiones pagadas son", null, "."),
     frase("Las especies sin precio son", null, ", y las especies con cierre atrasado son", null, "."),
-    frase("El corte de la conciliación que no cuadra es", null, "."),
+    frase("La fecha del cierre más reciente es", null, "."),
+    frase("El valor de la unidad del fondo es", null, "."),
     frase("El precio de cierre de la especie", null, "es", null, "."),
   ),
+  REGLAS_DE_REDACCION_DIARIO,
 );
 
 export const TEXTO_PROMPT_REGLAS = armar(
@@ -114,3 +142,71 @@ export const TEXTO_PROMPT_ESCENARIOS = armar(
     frase("La caída máxima mediana sería", null, ", y la volatilidad anual histórica sería", null, "."),
   ),
 );
+
+/**
+ * SIMULACION (`resumen-simulacion-v1`): el modelo describe el estado actual de cada punto del portafolio, en tercera persona y
+ * sin dirigirse al lector (el vocabulario de SIMULACION no tiene «usted»). No menciona el cambio ni el antes, y no nombra la compra
+ * ni la venta. La salida es `salida-v3`: hasta cuatro frases y, en `revisar`, hasta dos ítems nominales. Las palabras de cada rango
+ * son las de `ETIQUETA_RANGO` (el paso 1), para que el modelo use la de su rango (RANGO_CONTRADICE). Cada punto de una especie
+ * cita el id del nombre (campo especie): el código pone el nombre. Sin dígitos fuera de «H01». Este es el v1 corregido antes de
+ * cualquier uso (nunca salió de su rama): desde que se use, una versión nunca cambia de texto.
+ */
+const PRESENTACION_SIMULACION = "Redacte, en español de Colombia, en tercera persona, sin dirigirse al lector, un resumen breve";
+
+const PALABRAS_DE_RANGO = Object.values(ETIQUETA_RANGO)
+  .flatMap((porRango) => Object.entries(porRango as Record<string, string>).map(([rango, palabra]) => `${rango} es «${palabra}»`))
+  .join("; ");
+
+const ENTRADA_SIMULACION = "Recibe un JSON con el tipo de resumen y una lista de hechos. Cada hecho trae su id, su clave, su etiqueta, el id del hecho del que "
+  + "depende (sujeto, si aplica), el id del nombre de la especie de la que es el dato (especie, si aplica), su rango (un código como "
+  + "MUY_ELEVADO), su importancia (ALTA, MEDIA o BAJA), su dirección, su cercanía, su frescura, su calidad y si es obligatorio. Los hechos "
+  + "no traen cifras ni nombres: las pone el sistema.";
+
+const REGLAS_SIMULACION = [
+  "Reglas de contenido:",
+  "- Describa el estado actual de cada punto: cómo está en este momento, y nada más.",
+  "- No escriba cifras: ni dígitos, ni números en palabras, ni porcentajes, ni montos, ni fechas. La cifra la pone el sistema donde "
+    + "se pone la referencia.",
+  "- Cada frase es una lista de segmentos. Un segmento de texto lleva solo prosa; un segmento de referencia lleva solo el id de un "
+    + "hecho, por ejemplo H01, y el sistema lo reemplaza por la cifra exacta. Nunca escriba el id ni llaves dentro de la prosa. No escriba "
+    + "la unidad después de la referencia.",
+  "- Un hecho con el campo especie es un dato de una especie: cite el id de su campo especie en una referencia, en la misma frase, "
+    + "justo después de «de la especie» y delante del verbo; luego cite el dato con su propio id. Las dos referencias son distintas: la "
+    + "primera es el id del nombre (el valor del campo especie) y la segunda, el id del propio dato. El nombre de la especie nunca va "
+    + "solo en una frase: va dentro de la frase de un dato de esa especie. Los datos del portafolio no llevan especie.",
+  "- Cada punto se escribe con su etiqueta completa, tal cual, justo delante de su referencia, y después se dice su rango con la palabra "
+    + `que corresponde según el código del rango del hecho: ${PALABRAS_DE_RANGO}. Use solo la palabra del rango de ese hecho, nunca la de otro.`,
+  "- Cada elemento de la lista de frases es una sola oración, con un solo punto, al final, escrito como el último segmento de texto. "
+    + "Un solo dato por parte de la frase; nunca dos referencias seguidas sin palabras en medio.",
+  "- Los puntos de importancia ALTA son obligatorios: cítelos todos y primero, de mayor a menor importancia.",
+  "- Escriba hasta cuatro frases y, en revisar, hasta dos ítems. Un ítem es el nombre de un punto con su referencia (y, si es de una "
+    + "especie, la referencia de su nombre), sin verbos y sin punto final; va de mayor a menor importancia y no repite un punto.",
+  "- No dé consejos ni indique al lector qué hacer.",
+  "- No prediga ni diga qué va a pasar: describa solo lo que dicen los hechos.",
+  "- Use solo las palabras de las etiquetas de los hechos, las palabras de los rangos y palabras de enlace muy simples (el, la, los, "
+    + "las, de, del, en, y, su, sus) con los verbos es, son, está, están, queda o quedan. Una palabra distinta hace rechazar el resumen.",
+  "Reglas de forma:",
+  "- Empiece cada frase con mayúscula y no use otra mayúscula. Un solo espacio entre palabras, y el signo de puntuación pegado a la referencia.",
+  "- Escriba solo texto plano: sin viñetas, sin markdown, sin comillas, sin guiones, sin signos de interrogación o de exclamación, "
+    + "sin saltos de línea, sin enlaces y sin emojis.",
+].join("\n");
+
+const RESPUESTA_SIMULACION = 'Responda solo con un JSON de esta forma: {"frases":[{"segmentos":[{"texto":"El peso de la especie"},{"ref":"H01"},'
+  + '{"texto":"queda en"},{"ref":"H01"},{"texto":", muy elevado."}]}],"revisar":[{"segmentos":[{"texto":"Concentración del portafolio"},'
+  + '{"ref":"H01"}]}]}. Cada segmento tiene una sola clave: «texto» o «ref». Los ejemplos solo muestran la forma: el id H01 es de ejemplo '
+  + "(en la frase de la especie, la primera referencia es el id del nombre y la segunda, el del dato); use los ids, los datos y las "
+  + "etiquetas de los hechos que recibe.";
+
+export const TEXTO_PROMPT_SIMULACION = [
+  `${PRESENTACION_SIMULACION} del estado actual de un portafolio de inversiones: el peso de la especie, la concentración del portafolio, `
+    + "la contribución de la especie al riesgo, el efecto de la caída de la especie en el portafolio, la probabilidad de quedar por debajo de "
+    + "lo aportado y la cercanía al nivel de la regla. Describa el estado actual de cada punto.",
+  ENTRADA_SIMULACION,
+  REGLAS_SIMULACION,
+  `Ejemplos de frases correctas (solo la forma):\n${[
+    frase("El peso de la especie", null, "queda en", null, ", muy elevado."),
+    frase("La concentración del portafolio queda en", null, ", elevada."),
+    frase("La probabilidad de quedar por debajo de lo aportado queda en", null, ", elevada."),
+  ].join("\n")}`,
+  RESPUESTA_SIMULACION,
+].join("\n\n");

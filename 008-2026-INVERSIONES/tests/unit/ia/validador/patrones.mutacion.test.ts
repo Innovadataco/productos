@@ -11,7 +11,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { CATALOGO } from "@/ia/catalogo";
-import { TIPOS_RESUMEN } from "@/ia/contrato";
+import { TIPOS_DIARIOS } from "@/ia/contrato";
 import type { CodigoValidador } from "@/ia/validador/codigos";
 import { coincidencias, construirExpresion, formaDe, prepararTexto, type Patron, type PatronMarca } from "@/ia/validador/patron";
 import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA, PATRONES_MARCA, PATRONES_SIN_DATO } from "@/ia/validador/patrones-lengua";
@@ -210,7 +210,7 @@ describe("las exclusiones de los fragmentos (lo que NO es una recomendación, un
 });
 
 describe("las etiquetas del catálogo no disparan ningún patrón", () => {
-  it.each(TIPOS_RESUMEN)("%s", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s", (tipo) => {
     for (const entrada of Object.values(CATALOGO[tipo])) {
       expect([entrada.etiqueta, coincidencias(entrada.etiqueta, TODOS)]).toEqual([entrada.etiqueta, []]);
     }

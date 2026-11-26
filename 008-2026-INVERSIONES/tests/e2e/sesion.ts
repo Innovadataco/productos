@@ -134,7 +134,8 @@ export const ipDePrueba = (info: TestInfo): string => `2001:db8:${hash16(info.te
 /**
  * Además, falla la prueba si el navegador registró errores. Se admiten solo los «Failed to load resource»
  * de las respuestas 4xx esperadas de /api/sesion/* (credenciales malas, código errado, enlace inválido,
- * sin sesión).
+ * sin sesión) y lo que cada prueba declare en `erroresEsperados` (una expresión que cuadre con la URL del recurso o con el
+ * texto del mensaje: el servidor de desarrollo reenvía sus `console.error` al navegador).
  */
 export const test = base.extend<{ consolaLimpia: void; erroresEsperados: RegExp[] }>({
   extraHTTPHeaders: async ({ extraHTTPHeaders }, usar, info) => {
@@ -149,7 +150,7 @@ export const test = base.extend<{ consolaLimpia: void; erroresEsperados: RegExp[
         if (m.type() !== "error") return;
         const url = m.location().url;
         const deSesion = /\/api\/sesion\/[a-z-]+(\/[a-z-]+)?$/.test(url) && /status of 4\d\d/.test(m.text());
-        if (!deSesion && !erroresEsperados.some((r) => r.test(url))) errores.push(`${m.text()} @ ${url}`);
+        if (!deSesion && !erroresEsperados.some((r) => r.test(url) || r.test(m.text()))) errores.push(`${m.text()} @ ${url}`);
       });
       await usar();
       expect(errores, "errores en la consola del navegador").toEqual([]);

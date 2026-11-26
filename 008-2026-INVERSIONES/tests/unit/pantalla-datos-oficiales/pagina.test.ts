@@ -65,7 +65,7 @@ describe("src/app/datos-oficiales/page.tsx", () => {
     datosOficiales.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError("falló en postgresql://u:clave-secreta@h", { code: "P2021", clientVersion: "5.22.0" }));
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const html = renderToStaticMarkup(await PaginaDatosOficiales());
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[datos-oficiales] no se pudo leer la base (código: P2021)");
     expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
   });
@@ -74,7 +74,7 @@ describe("src/app/datos-oficiales/page.tsx", () => {
     exigirSesion.mockRejectedValueOnce(new Prisma.PrismaClientInitializationError("sin conexión a postgresql://u:clave-secreta@h", "5.22.0"));
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const html = renderToStaticMarkup(await PaginaDatosOficiales());
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(html).not.toContain("Datos oficiales");
     expect(datosOficiales).not.toHaveBeenCalled();
     expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
@@ -96,7 +96,7 @@ describe("src/app/datos-oficiales/page.tsx", () => {
     const nav = [...raiz.querySelectorAll('header nav[aria-label="Secciones"] a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
     expect(nav).toEqual([
       ["Portafolio", "/", null], ["Plan", "/plan", null], ["Operar", "/operar", null], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null],
-      ["Proyecciones", "/proyecciones", null], ["Datos oficiales", "/datos-oficiales", "page"], ["Análisis", "/analisis", null], ["Configuración", "/edicion", null],
+      ["Proyecciones", "/proyecciones", null], ["Datos oficiales", "/datos-oficiales", "page"], ["Análisis", "/analisis", null], ["Alertas", "/alertas", null], ["Configuración", "/edicion", null],
     ]);
   });
 

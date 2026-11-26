@@ -9,7 +9,7 @@ import { DIAS_FECHAS, UMBRAL_CERCANA_PCT } from "@/operar/informe/armar";
 import { TEXTO_TIPO } from "../datos-oficiales/formato-decretos";
 import { fecha, n, numero } from "../tablero/formato";
 import { precio } from "../_plan/formato";
-import { textoAccionRegla, textoPlazo } from "../_plan/textos";
+import { textoAccionRegla, textoDistanciaAlNivel, textoPlazo, type ReglaDelNivel } from "../_plan/textos";
 import type { CierreVista, EstadoReglaVista, FechaVista, ReglaOperarVista, ReglasVista } from "./tipos";
 
 export const AVISO_DECISION = "Información calculada por Inversiones con su plan. La decisión es suya. Inversiones no recomienda comprar ni vender.";
@@ -87,18 +87,6 @@ export function fraseRegla(r: ReglaOperarVista): string {
 
 export const textoPlazoRegla = (plazo: string | null, vencido: boolean): string => `Plazo: ${textoPlazo(plazo, vencido)}.`;
 
-/** «+1,79 %», «−2,99 %»: con signo y dos decimales (los de `estadoDelNivel`). */
-/** «le falta bajar 0,65 % para tocar su nivel» (distancia negativa) o «le falta subir 1,79 %…» (positiva). */
-export function faltaParaElNivel(pct: string): string {
-  const v = n(pct);
-  return `le falta ${v < 0 ? "bajar" : "subir"} ${numero(Math.abs(v), 2)} % para tocar su nivel.`;
-}
-
-export function distancia(pct: string): string {
-  const v = n(pct);
-  return `${v > 0 ? "+" : ""}${numero(v, 2)} %`;
-}
-
 export interface TextoEstado {
   readonly principal: string;
   /** Se pinta como aviso: la regla no se pudo medir con un cierre al día. */
@@ -118,7 +106,7 @@ const tocadaVencida = (c: CierreVista, lado: keyof typeof LADO): TextoEstado => 
  * Cómo está la regla hoy. Solo una regla tocada y en plazo dice «se cumple»; si la carga de precios se detuvo, no dice
  * «Hoy»: dice con qué cierre se cumple.
  */
-export function textoEstadoRegla(e: EstadoReglaVista, preciosAtrasados: boolean, plazoVencido = false): TextoEstado {
+export function textoEstadoRegla(e: EstadoReglaVista, preciosAtrasados: boolean, plazoVencido = false, regla?: ReglaDelNivel): TextoEstado {
   switch (e.tipo) {
     case "TOCADA":
       if (plazoVencido) return tocadaVencida(e.cierre, e.lado);
@@ -131,7 +119,7 @@ export function textoEstadoRegla(e: EstadoReglaVista, preciosAtrasados: boolean,
     case "EN_EL_NIVEL":
       return { principal: `El cierre del ${fecha(e.cierre.fecha)} quedó en el nivel: ${precio(e.cierre.precio)}.`, aviso: false };
     case "A_DISTANCIA":
-      return { principal: `El cierre del ${fecha(e.cierre.fecha)} fue de ${precio(e.cierre.precio)}: ${faltaParaElNivel(e.distanciaPct)}`, aviso: false };
+      return { principal: `El cierre del ${fecha(e.cierre.fecha)} fue de ${precio(e.cierre.precio)}, ${textoDistanciaAlNivel(e.distanciaPct, regla)}.`, aviso: false };
     case "SIN_CIERRE_AL_DIA":
       return {
         principal: e.ultimo

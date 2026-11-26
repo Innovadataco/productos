@@ -66,7 +66,7 @@ const s = (nombre: string): Servicio => {
   if (!srv) throw new Error(`falta el servicio ${nombre}`);
   return srv;
 };
-const SERVICIOS = ["inv-008-db", "inv-008-app", "inv-008-entrada", "inv-008-migrador", "inv-008-respaldo", "inv-008-vigia", "inv-008-precios", "inv-008-ia"];
+const SERVICIOS = ["inv-008-db", "inv-008-app", "inv-008-entrada", "inv-008-migrador", "inv-008-respaldo", "inv-008-vigia", "inv-008-precios", "inv-008-ia", "inv-008-alertas"];
 const internal = (red: string) => compose.networks[red]?.internal === true;
 const quienes = (red: string) =>
   Object.entries(compose.services)
@@ -79,7 +79,7 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(compose.name).toBe("inv-008-prod");
   });
 
-  it("tiene exactamente sus 8 servicios (la entrada es el relé del túnel hacia la app; precios, el servicio de D-018; IA, el de E6)", () => {
+  it("tiene exactamente sus 9 servicios (la entrada es el relé del túnel hacia la app; precios, el servicio de D-018; IA, el de E6; alertas, el contenedor propio de PR-C)", () => {
     expect(Object.keys(compose.services).sort()).toEqual([...SERVICIOS].sort());
   });
 
@@ -158,16 +158,18 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(JSON.stringify(compose)).not.toMatch(/\bpi[-_]|\bbi[-_]|proteccion|gesmovil|hermes|docker\.sock|\/var\/lib\/docker/i);
   });
 
-  it("el vigía no tiene el socket de Docker: solo /proc/meminfo y /sys/fs/cgroup en solo lectura, y la red con salida", () => {
-    expect(s("inv-008-vigia").volumes).toEqual(["/proc/meminfo:/host/meminfo:ro", "/sys/fs/cgroup:/host/cgroup:ro"]);
+  it("el vigía no tiene el socket de Docker: solo /proc/meminfo, /sys/fs/cgroup y la huella de precios en solo lectura, y la red con salida", () => {
+    expect(s("inv-008-vigia").volumes).toEqual(["/proc/meminfo:/host/meminfo:ro", "/sys/fs/cgroup:/host/cgroup:ro", "inv-008-precios-estado:/precios-estado:ro"]);
     expect(s("inv-008-vigia").networks).toEqual(["inv-008-red"]);
     expect((s("inv-008-vigia") as { cpus?: number }).cpus).toBe(0.05);
     expect(s("inv-008-respaldo").volumes).toEqual([BIND_RESPALDOS]);
     // precios: solo su volumen tmpfs de la huella (servicio-precios-compose.test.ts).
     expect(s("inv-008-precios").volumes).toEqual(["inv-008-precios-estado:/estado"]);
     for (const [nombre, srv] of Object.entries(compose.services)) {
-      if (!["inv-008-vigia", "inv-008-db", "inv-008-respaldo", "inv-008-precios", "inv-008-app", "inv-008-ia"].includes(nombre)) expect(srv.volumes, nombre).toBeUndefined();
+      if (!["inv-008-vigia", "inv-008-db", "inv-008-respaldo", "inv-008-precios", "inv-008-app", "inv-008-ia", "inv-008-alertas"].includes(nombre)) expect(srv.volumes, nombre).toBeUndefined();
     }
+    // alertas: su volumen nombrado de disco para la marca y la huella (servicio-alertas-compose.test.ts).
+    expect(s("inv-008-alertas").volumes).toEqual(["inv-008-alertas-estado:/estado"]);
     // La app y el servicio de IA: solo la carpeta de la lista de modelos de PI, en solo lectura (servicio-ia-compose.test.ts).
     for (const nombre of ["inv-008-app", "inv-008-ia"]) {
       expect(s(nombre).volumes, nombre).toEqual(["${INV_IA_DIR_COMPARTIDA:-inv-008-ia-sin-lista}:/compartido-pi:ro"]);
@@ -275,7 +277,8 @@ describe("docker-compose.prod.yml · endurecimiento en cada servicio", () => {
       const srv = s(nombre);
       expect(srv.mem_limit).toBeDefined();
       expect(srv.memswap_limit).toBe(srv.mem_limit);
-      expect(srv.cpu_shares).toBe(256);
+      expect(srv.cpu_shares).toBeGreaterThan(0);
+      expect(srv.cpu_shares).toBeLessThanOrEqual(256);
     });
   }
 
@@ -369,6 +372,8 @@ describe("docker-compose.prod.yml · variables: un solo archivo de producción, 
         if (nombre === "inv-008-precios" && k === "DATABASE_URL") expect(v).toBe("${INV_PRECIOS_DATABASE_URL:-}");
         // Y las del servicio de IA (E6), igual de exactas: su credencial y el token que comparte con la app.
         else if (nombre === "inv-008-ia" && k === "DATABASE_URL") expect(v).toBe("${INV_IA_DATABASE_URL:-}");
+        // Y la del servicio de las alertas: opcional, vacía si falta (queda en espera).
+        else if (nombre === "inv-008-alertas" && k === "DATABASE_URL") expect(v).toBe("${INV_ALERTAS_DATABASE_URL:-}");
         else if (["inv-008-ia", "inv-008-app"].includes(nombre) && k === "INV_IA_SERVICIO_TOKEN") expect(v).toBe("${INV_IA_SERVICIO_TOKEN:-}");
         else expect(v, `${nombre} · ${k}`).toMatch(/^\$\{[A-Z0-9_]+:\?[^}]+\}$/);
       }

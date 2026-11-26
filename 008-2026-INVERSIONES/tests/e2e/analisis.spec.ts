@@ -54,6 +54,12 @@ test.describe("pantalla /analisis", () => {
         await expect(page.getByRole("navigation", { name: "Secciones" }).getByRole("link", { name: "Análisis", exact: true })).toHaveAttribute("aria-current", "page");
         await expect(main.getByRole("heading", { level: 2 })).toHaveText(["Por especie", "Portafolio", "Sus decisiones", "Puntos para revisar"]);
         await expect(main.locator(".fecha-dato").first()).toBeVisible();
+        // Los cierres sembrados son de 2024: con el reloj real llevan muchos días hábiles de atraso, y /analisis lo avisa
+        // (exacto: el calendario sembrado cubre el año del reloj y el siguiente; tests/e2e/calendario-e2e.ts).
+        const avisosDeAtraso = (await main.locator(".fecha-dato-aviso").allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim());
+        expect(avisosDeAtraso.filter((t) => /^dato de hace \d+ días hábiles$/.test(t))).not.toEqual([]);
+        expect(avisosDeAtraso.filter((t) => /unos/.test(t))).toEqual([]);
+        await expect(main.locator(".fecha-dato-aviso").first()).toBeVisible();
 
         // Por especie: las especies vivas de la siembra, con la volatilidad rotulada «de precios diarios».
         const tabla = page.getByRole("table", { name: /^Por especie/ });

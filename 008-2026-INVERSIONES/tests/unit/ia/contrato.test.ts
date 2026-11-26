@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-  CALIDADES, CAMPOS_HECHO_CIEGO, CAMPOS_PAQUETE_CIEGO, CERCANIAS, DIRECCIONES, FRESCURAS, MAX_HECHOS, PATRON_ID_HECHO, TIPOS_RESUMEN,
+  CALIDADES, CAMPOS_HECHO_CIEGO, CAMPOS_PAQUETE_CIEGO, CERCANIAS, DIRECCIONES, FRESCURAS, MAX_HECHOS, PATRON_ID_HECHO, TIPOS_DIARIOS, TIPOS_RESUMEN,
   UNIDADES, VERSION_HECHOS,
 } from "@/ia/contrato";
 
@@ -13,12 +13,13 @@ describe("constantes del contrato", () => {
   });
 
   it.each([
-    ["TIPOS_RESUMEN", TIPOS_RESUMEN, ["DIARIO", "REGLAS", "ESCENARIOS"]],
+    ["TIPOS_RESUMEN", TIPOS_RESUMEN, ["DIARIO", "REGLAS", "ESCENARIOS", "SIMULACION"]],
+    ["TIPOS_DIARIOS", TIPOS_DIARIOS, ["DIARIO", "REGLAS", "ESCENARIOS"]],
     ["CALIDADES", CALIDADES, ["VERIFICADO", "NO_VERIFICADO", "ESTIMADO", "CALCULADO", "ATRASADO"]],
     ["DIRECCIONES", DIRECCIONES, ["SUBE", "BAJA", "IGUAL", "NO_APLICA"]],
     ["CERCANIAS", CERCANIAS, ["CERCA", "LEJOS", "NO_APLICA"]],
     ["FRESCURAS", FRESCURAS, ["HOY", "RECIENTE", "ATRASADO"]],
-    ["UNIDADES", UNIDADES, ["PESOS", "PESOS_POR_DOLAR", "PORCENTAJE", "DIAS", "MESES", "ESPECIES", "FECHA", "NOMBRE"]],
+    ["UNIDADES", UNIDADES, ["PESOS", "PESOS_POR_DOLAR", "PORCENTAJE", "DIAS", "MESES", "ESPECIES", "FECHA", "NOMBRE", "VECES", "PUNTOS"]],
   ])("%s es la lista cerrada exacta y está congelada", (_nombre, lista, esperada) => {
     expect([...lista]).toEqual(esperada);
     expect(Object.isFrozen(lista)).toBe(true);
@@ -32,7 +33,7 @@ describe("constantes del contrato", () => {
   });
 
   it("la vista ciega lleva solo estos campos: ni valor, ni presentación, ni unidad, ni fuente, ni fecha", () => {
-    expect([...CAMPOS_HECHO_CIEGO]).toEqual(["id", "clave", "etiqueta", "sujeto", "especie", "direccion", "cercania", "frescura", "calidad", "obligatorio"]);
+    expect([...CAMPOS_HECHO_CIEGO]).toEqual(["id", "clave", "etiqueta", "sujeto", "especie", "direccion", "cercania", "frescura", "calidad", "obligatorio", "rango", "importancia"]);
     expect([...CAMPOS_PAQUETE_CIEGO]).toEqual(["tipo", "hechos"]);
     for (const prohibido of ["valor", "presentacion", "unidad", "fuente", "fecha"]) expect(CAMPOS_HECHO_CIEGO).not.toContain(prohibido);
     for (const prohibido of ["version", "hoy", "avisos", "versionesCalculo", "hash"]) expect(CAMPOS_PAQUETE_CIEGO).not.toContain(prohibido);

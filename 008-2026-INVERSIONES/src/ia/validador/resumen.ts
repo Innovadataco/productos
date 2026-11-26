@@ -16,6 +16,7 @@ export const AVISOS: Readonly<Record<TipoResumen, string>> = Object.freeze({
   DIARIO: AVISO_GENERAL,
   REGLAS: AVISO_GENERAL,
   ESCENARIOS: AVISO,
+  SIMULACION: "Descripción informativa del portafolio simulado, con cifras calculadas por el sistema; no es una recomendación de compra ni de venta.",
 });
 
 function cifrasUsadas(citados: readonly IdHecho[], paquete: PaqueteHechos): readonly CifraUsada[] {
@@ -32,12 +33,13 @@ function cifrasUsadas(citados: readonly IdHecho[], paquete: PaqueteHechos): read
 }
 
 /** El resumen publicado, congelado: las frases ya renderizadas y validadas, con lo que pone el código. */
-export function armarResumen<T extends TipoResumen>(paquete: PaqueteHechos<T>, frases: readonly FraseResumen[]): ResumenValidado<T> {
-  const citados = Object.freeze([...new Set(frases.flatMap((f) => f.citados))]);
+export function armarResumen<T extends TipoResumen>(paquete: PaqueteHechos<T>, frases: readonly FraseResumen[], revisar: readonly FraseResumen[] = []): ResumenValidado<T> {
+  const citados = Object.freeze([...new Set([...frases, ...revisar].flatMap((f) => f.citados))]);
   const cifras = cifrasUsadas(citados, paquete);
   return Object.freeze({
     tipo: paquete.tipo,
     frases: Object.freeze(frases.map((f) => Object.freeze({ texto: f.texto, citados: Object.freeze([...f.citados]) }))),
+    revisar: Object.freeze(revisar.map((f) => Object.freeze({ texto: f.texto, citados: Object.freeze([...f.citados]) }))),
     texto: frases.map((f) => f.texto).join(" "),
     citados,
     aviso: AVISOS[paquete.tipo],

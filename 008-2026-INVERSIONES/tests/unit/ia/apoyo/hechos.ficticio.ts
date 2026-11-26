@@ -7,7 +7,7 @@
  * especie con su ancla (REGLA_DEL_PLAN).
  */
 import { CLAVE_ANCLA_REGLA, entradaDeCatalogo, type ClaveDe, type ClaveHecho } from "@/ia/catalogo";
-import type { EntradaHecho, EntradaPaquete, IdHecho, TipoResumen } from "@/ia/contrato";
+import type { EntradaHecho, EntradaPaquete, IdHecho, TipoDiario, TipoResumen } from "@/ia/contrato";
 import { presentar } from "@/ia/presentar";
 
 export const HOY_FICTICIO = "2027-03-17";
@@ -128,8 +128,33 @@ export function entradaEscenarios(): EntradaPaquete<"ESCENARIOS"> {
   };
 }
 
-export const ENTRADAS_FICTICIAS: { readonly [T in TipoResumen]: () => EntradaPaquete<T> } = {
+export const ENTRADAS_FICTICIAS: { readonly [T in TipoDiario]: () => EntradaPaquete<T> } = {
   DIARIO: entradaDiario,
   REGLAS: entradaReglas,
   ESCENARIOS: entradaEscenarios,
 };
+
+/**
+ * La entrada inventada de SIMULACION (`hechos-v2`): el nombre de la especie (en la vista solo su id, clave y etiqueta, como en
+ * DIARIO: el código pone el nombre en la referencia) y un punto de cada clave, con su rango y su importancia (las del paso 1: `TRAMOS`). Las ALTA son obligatorias.
+ */
+export function entradaSimulacion(): EntradaPaquete<"SIMULACION"> {
+  const punto = presentado("SIMULACION");
+  return {
+    tipo: "SIMULACION",
+    hoy: HOY_FICTICIO,
+    versionesCalculo: { puntos: "puntos-v1" },
+    avisos: [],
+    hechos: [
+      hecho("H01", "ESPECIE_NOMBRE", ESPECIE_ALFA, ESPECIE_ALFA),
+      punto("H02", "PESO_ESPECIE", "42.5", { sujeto: "H01", rango: "MUY_ELEVADO", importancia: "ALTA", obligatorio: true }),
+      punto("H03", "PUNTO_CONCENTRACION", "0.318", { rango: "ELEVADA", importancia: "MEDIA" }),
+      punto("H04", "PUNTO_CONTRIBUCION_RIESGO", "2.84", { sujeto: "H01", rango: "MUY_DESPROPORCIONADA", importancia: "ALTA", obligatorio: true }),
+      punto("H05", "PUNTO_EFECTO_CAIDA", "7.3", { sujeto: "H01", rango: "MEDIANO", importancia: "BAJA" }),
+      punto("H06", "PROBABILIDAD_BAJO_APORTADO", "31.4", { rango: "ELEVADA", importancia: "MEDIA" }),
+      // El ancla de la regla (como en REGLAS): cita a la especie, y el punto del nivel cita al ancla.
+      punto("H07", "REGLA_DEL_PLAN", "2027-02-03", { sujeto: "H01" }),
+      punto("H08", "PUNTO_NIVEL_REGLA", "0.8", { sujeto: "H07", rango: "MUY_CERCA", importancia: "ALTA", obligatorio: true }),
+    ],
+  };
+}

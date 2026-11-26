@@ -8,7 +8,7 @@ import { simularOperacion } from "@/operar/simulador/simular";
 import { A, B, C, CONTEXTO, D, ESTADO, SIN_HISTORIA, idDe, operacion, regla } from "../simulador/apoyo/estado.ficticio";
 import { tarifa } from "../tarifa/apoyo/tarifa.ficticio";
 
-const cuerpo = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", saldoComisionista: "", ...cambios });
+const cuerpo = (cambios: Record<string, unknown> = {}) => ({ instrumentoId: idDe(A), lado: "COMPRAR", cantidad: "3", precioLimite: "4.613,27", comisionista: "TRII", saldoComisionista: "", precioActual: "", ...cambios });
 
 describe("leerPedidoSimulacion", () => {
   it("convierte cantidad y precio sin punto flotante", () => {
@@ -33,7 +33,7 @@ describe("leerPedidoSimulacion", () => {
   it("con el saldo escrito, la caja se rotula «escrito por usted»", () => {
     const r = aRespuestaSimulacion(simularOperacion(ESTADO, operacion(A, "COMPRAR", 3n, "4613.27"), CONTEXTO), idDe(A), ESTADO.posiciones, "ESCRITA");
     expect(r.ok && r.vista.cajaFuente).toBe(CAJA_ESCRITA);
-    expect(CAJA_ESCRITA).toBe("Caja: saldo disponible en el comisionista, escrito por usted (no se guarda).");
+    expect(CAJA_ESCRITA).toBe("Caja de la simulación: el saldo que usted escribió, no la de Acciones & Valores (no se guarda).");
   });
 
   it("un cuerpo sin las claves exactas es null (400 sin campos)", () => {

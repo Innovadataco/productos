@@ -32,10 +32,17 @@ export function contradice(marca: MarcaDelHecho, hecho: Hecho): boolean {
   }
 }
 
-export function revisarMarcas(preparado: TextoPreparado, atribucion: Atribucion, porId: HechosPorId): readonly HallazgoDeMarca[] {
+export function revisarMarcas(
+  preparado: TextoPreparado,
+  atribucion: Atribucion,
+  porId: HechosPorId,
+  /** Posiciones que no se cuentan como marca: las palabras de un rango («muy cerca de su nivel»), solo en SIMULACION. */
+  exenta: (posicion: number) => boolean = () => false,
+): readonly HallazgoDeMarca[] {
   const patrones = new Set<string>();
   for (const p of PATRONES_MARCA) {
     for (const posicion of posiciones(preparado, p)) {
+      if (exenta(posicion)) continue;
       const destinos = atribucion.destinosEn(posicion);
       if (destinos.length === 0) patrones.add("DIRECCION.SIN_HECHO");
       if (destinos.some((id) => contradice(p.marca, porId.get(id) as Hecho))) patrones.add(p.id);

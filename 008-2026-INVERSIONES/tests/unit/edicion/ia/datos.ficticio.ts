@@ -9,7 +9,7 @@ export const DATOS_IA_FICTICIOS: DatosEdicionIa = {
   inicial: {
     modo: "local-luego-nube", ollamaHost: "", ollamaPuerto: "", temperatura: "0",
     tareas: { DIARIO: tarea(true, "qwen2.5:14b"), REGLAS: tarea(true, "aya-expanse:32b"), ESCENARIOS: tarea(false, "") },
-    modeloNube: "claude-opus-5-5", esfuerzoNube: "low", topeMensualUsd: "4,61", horaResumen: "19:00", limiteSegundos: "120",
+    modeloNube: "claude-opus-5-5", esfuerzoNube: "low", topeMensualUsd: "4,61", horaResumen: "19:00", limiteSegundos: "60", analisisDemanda: false,
   },
   guardado: { hayDestino: true, modelos: { DIARIO: "qwen2.5:14b", REGLAS: "aya-expanse:32b", ESCENARIOS: "" } },
   opciones: {
@@ -26,7 +26,7 @@ export const DATOS_IA_FICTICIOS: DatosEdicionIa = {
       { nombre: "gemma2:27b", nota: null, recomendado: false, aviso32b: false },
       { nombre: "aya-expanse:32b", nota: null, recomendado: false, aviso32b: true },
     ],
-    limites: { limiteMin: 10, limiteMax: 120, topeMin: "1", topeMax: "50" },
+    limites: { limiteMin: 10, limiteMax: 60, topeMin: "1", topeMax: "50" },
   },
   listaPi: { estado: "LISTA", detalle: "LISTA_PUBLICADA", publicadoPor: "PI (ficticio)", fecha: "14-ene-2027" },
   puertas: [

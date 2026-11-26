@@ -10,9 +10,21 @@ import type { ClaveDe, ClaveHecho } from "./catalogo";
 
 export const VERSION_HECHOS = "hechos-v1";
 export type VersionHechos = typeof VERSION_HECHOS;
+/** El contrato de los paquetes SIMULACION: hechos con `rango` e `importancia`. Los tres de hoy siguen en `hechos-v1`, con el mismo hash. */
+export const VERSION_HECHOS_V2 = "hechos-v2";
+export type VersionHechosV2 = typeof VERSION_HECHOS_V2;
 
-export const TIPOS_RESUMEN = Object.freeze(["DIARIO", "REGLAS", "ESCENARIOS"] as const);
+/**
+ * Los tipos del contrato, en el orden del enum de la base (`TipoResumenIa`; ADD VALUE agrega al final, así que SIMULACION
+ * va última). SIMULACION es a demanda, solo del dueño y por la puerta local: nunca sale en la corrida diaria, en una
+ * tarjeta ni en una lectura de la familia (ver TIPOS_DIARIOS y `candados/tipos-diarios.candado.test.ts`).
+ */
+export const TIPOS_RESUMEN = Object.freeze(["DIARIO", "REGLAS", "ESCENARIOS", "SIMULACION"] as const);
 export type TipoResumen = (typeof TIPOS_RESUMEN)[number];
+
+/** Los tres tipos de hoy: los únicos que recorren la corrida diaria, las tarjetas, `ahora.ts` y la exportación. */
+export const TIPOS_DIARIOS = Object.freeze(["DIARIO", "REGLAS", "ESCENARIOS"] as const satisfies readonly TipoResumen[]);
+export type TipoDiario = (typeof TIPOS_DIARIOS)[number];
 
 /** Calidad del dato: de la fuente verificada, sin verificar, estimado, calculado por 008 o atrasado. */
 export const CALIDADES = Object.freeze(["VERIFICADO", "NO_VERIFICADO", "ESTIMADO", "CALCULADO", "ATRASADO"] as const);
@@ -30,13 +42,19 @@ export type Cercania = (typeof CERCANIAS)[number];
 export const FRESCURAS = Object.freeze(["HOY", "RECIENTE", "ATRASADO"] as const);
 export type Frescura = (typeof FRESCURAS)[number];
 
+/** La importancia de un punto, la que le da su rango en `TRAMOS` (src/analisis/puntos/rangos.ts). */
+export const IMPORTANCIAS = Object.freeze(["ALTA", "MEDIA", "BAJA"] as const);
+export type Importancia = (typeof IMPORTANCIAS)[number];
+
 /**
  * Unidad del valor. La fija el catálogo por clave (nunca quien arma el hecho).
  * - PORCENTAJE va en puntos: «12.3» es 12,3 %.
  * - DIAS, MESES y ESPECIES son enteros; MESES y ESPECIES, además, no negativos.
  * - FECHA: el valor es un día ISO. NOMBRE: el valor es el nombre de la especie.
+ * - VECES (una razón, p. ej. la contribución al riesgo sobre el peso) y PUNTOS (el HHI, 3 decimales): no negativas, con
+ *   la presentación del análisis de /operar (`vecesEs`, `hhiEs`).
  */
-export const UNIDADES = Object.freeze(["PESOS", "PESOS_POR_DOLAR", "PORCENTAJE", "DIAS", "MESES", "ESPECIES", "FECHA", "NOMBRE"] as const);
+export const UNIDADES = Object.freeze(["PESOS", "PESOS_POR_DOLAR", "PORCENTAJE", "DIAS", "MESES", "ESPECIES", "FECHA", "NOMBRE", "VECES", "PUNTOS"] as const);
 export type Unidad = (typeof UNIDADES)[number];
 
 type Digito = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
@@ -88,6 +106,10 @@ export interface Hecho<C extends ClaveHecho = ClaveHecho> {
   readonly frescura: Frescura;
   /** Si el resumen tiene que citarlo. */
   readonly obligatorio: boolean;
+  /** Solo en SIMULACION (`hechos-v2`): el código de rango del punto, de la lista cerrada de su clave en el catálogo. Sin dígitos. */
+  readonly rango?: string;
+  /** Solo en SIMULACION: la importancia del rango (la de `TRAMOS`). */
+  readonly importancia?: Importancia;
 }
 
 /** Lo que entrega el armador por hecho: la etiqueta y la unidad las pone el catálogo. */
@@ -95,7 +117,7 @@ export type EntradaHecho<C extends ClaveHecho = ClaveHecho> = Omit<Hecho<C>, "et
 
 /** El paquete completo, validado y congelado. Se guarda en el registro; al modelo solo va su vista ciega. */
 export interface PaqueteHechos<T extends TipoResumen = TipoResumen> {
-  readonly version: VersionHechos;
+  readonly version: VersionHechos | VersionHechosV2;
   readonly tipo: T;
   readonly hoy: DiaIso;
   /** Versión de cada cálculo usado, p. ej. `{ conciliacion: "conciliacion-v3" }`. */
@@ -121,9 +143,12 @@ export interface EntradaPaquete<T extends TipoResumen = TipoResumen> {
  * está en el `Hecho`: la vista la deriva con `especieDe` (el id del nombre de la especie, ya resuelto) para que el
  * modelo no tenga que recorrer la cadena de `sujeto`. Es un id, nunca el nombre.
  */
-export const CAMPOS_HECHO_CIEGO = Object.freeze(["id", "clave", "etiqueta", "sujeto", "especie", "direccion", "cercania", "frescura", "calidad", "obligatorio"] as const);
+export const CAMPOS_HECHO_CIEGO = Object.freeze(["id", "clave", "etiqueta", "sujeto", "especie", "direccion", "cercania", "frescura", "calidad", "obligatorio", "rango", "importancia"] as const);
 /** Los campos de la vista: sin `version` (lleva un dígito), sin `hoy`, `avisos`, `versionesCalculo` ni `hash`. */
 export const CAMPOS_PAQUETE_CIEGO = Object.freeze(["tipo", "hechos"] as const);
+
+/** La versión del paquete de cada tipo: `hechos-v2` solo para SIMULACION. */
+export const versionDeHechosDe = (tipo: TipoResumen): VersionHechos | VersionHechosV2 => (tipo === "SIMULACION" ? VERSION_HECHOS_V2 : VERSION_HECHOS);
 
 /** Los campos ciegos que vienen del `Hecho` (todos menos `especie`, que deriva la vista). */
 type CampoCiego = Exclude<(typeof CAMPOS_HECHO_CIEGO)[number], "especie">;

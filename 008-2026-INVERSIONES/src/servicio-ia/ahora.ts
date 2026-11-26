@@ -20,7 +20,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { ConfigIaVigente } from "../ia/config/leer";
-import { TIPOS_RESUMEN } from "../ia/contrato";
+import { TIPOS_DIARIOS } from "../ia/contrato";
 import { ARCHIVO_BUCLE, leerClaveValor } from "../servicio-precios/estado";
 import { SALIDA } from "./bucle";
 import { codigoDeError, type EstadoTipo, type PoliticaReintentos, type ResumenCorrida } from "./corrida";
@@ -49,7 +49,7 @@ export interface DependenciasAhora {
 
 /** Lo más que puede durar esta corrida: cada tipo con su intento y su reintento al límite de la configuración, y la pausa. */
 export function duracionMaximaMs(config: ConfigIaVigente): number {
-  return TIPOS_RESUMEN.length * (1 + REINTENTOS_AHORA.maximo) * config.limiteSegundos * 1000 + REINTENTOS_AHORA.pausaMs;
+  return TIPOS_DIARIOS.length * (1 + REINTENTOS_AHORA.maximo) * config.limiteSegundos * 1000 + REINTENTOS_AHORA.pausaMs;
 }
 
 /** La ranura programada de hoy si cae entre ahora y el fin más tardío de esta corrida; si no, null. */

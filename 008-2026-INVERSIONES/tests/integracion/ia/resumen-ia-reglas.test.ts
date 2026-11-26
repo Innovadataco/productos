@@ -23,6 +23,24 @@ const PUBLICADO = filaDeResumen({ ...comun, estado: "PUBLICADO", exito, texto: "
 const RECHAZADO = filaDeResumen({ ...comun, estado: "RECHAZADO", exito, motivos: ["CIFRA_SUELTA"] });
 const FALLIDO = filaDeResumen({ ...comun, estado: "FALLIDO", puerta: "local", motivo: "MODELO_NO_DISPONIBLE", detalles: ["CONEXION_RECHAZADA"] });
 
+/**
+ * Frente B (B4): la misma fila, como de SIMULACION con `hechos-v2` (el contrato v2 de A todavía no existe en esta rama: lo que
+ * la base mira son SOLO el tipo, la versión, el hash y el día del paquete guardado, y se arman a mano, inventados).
+ */
+const HASH_SIMULACION = sha256Hex("paquete ficticio de la simulación");
+const comoSimulacion = (f: FilaResumen, cambios: { readonly hechos?: Record<string, unknown>; readonly hechosVersion?: string } = {}): FilaResumen =>
+  ({
+    ...f,
+    tipo: "SIMULACION",
+    hechosHash: HASH_SIMULACION,
+    hechosVersion: cambios.hechosVersion ?? "hechos-v2",
+    hechos: { ...(f.hechos as Record<string, unknown>), tipo: "SIMULACION", version: "hechos-v2", hash: HASH_SIMULACION, ...cambios.hechos },
+    promptVersion: "resumen-simulacion-v1",
+  }) as unknown as FilaResumen;
+const SIM_PUBLICADO = comoSimulacion(PUBLICADO);
+const SIM_RECHAZADO = comoSimulacion(RECHAZADO);
+const SIM_FALLIDO = comoSimulacion(FALLIDO);
+
 type Fila = Omit<FilaResumen, "motivos"> & { readonly motivos: readonly (string | null)[]; readonly generadoEn?: Date };
 let corrida = 0;
 
@@ -127,6 +145,53 @@ describe("resumen_ia: cada CHECK muerde", () => {
     ["una latencia negativa", { ...RECHAZADO, latenciaMs: -3 }, "resumen_ia_conteos_chk"],
   ])("%s", async (_nombre, fila, restriccion) => {
     expect(await errorAlInsertar(fila)).toMatch(new RegExp(`violates check constraint \\\\?"${restriccion}\\\\?"`));
+  });
+});
+
+// Frente B (B4): SIMULACION con hechos-v2. Aplican las CHECK de siempre de resumen_ia (estado, motivos, puerta, hechos, formas,
+// textos y conteos, revisadas en la migración 20261122175656_resumen_ia): ninguna menciona la lista de tipos ni exige hechos-v1
+// (formas pide ^hechos-v[1-9][0-9]*$), así que no hay CHECK que cambiar; esto lo prueba.
+describe("resumen_ia: SIMULACION con hechos-v2", () => {
+  it("control positivo: PUBLICADO, RECHAZADO y FALLIDO de SIMULACION con hechos-v2 entran (y se leen de vuelta con su tipo)", async () => {
+    const { error, valor } = await enTransaccion(async (tx) => {
+      for (const f of [SIM_PUBLICADO, SIM_RECHAZADO, SIM_FALLIDO]) await insertar(tx, f);
+      return tx.$queryRaw<{ estado: string; tipo: string; v: string }[]>`SELECT "estado"::text AS estado, "tipo"::text AS tipo, "hechosVersion" AS v FROM "resumen_ia" WHERE "hechosHash" = ${HASH_SIMULACION} ORDER BY "estado"`;
+    });
+    expect(error).toBeNull();
+    expect(valor).toEqual([
+      { estado: "FALLIDO", tipo: "SIMULACION", v: "hechos-v2" },
+      { estado: "PUBLICADO", tipo: "SIMULACION", v: "hechos-v2" },
+      { estado: "RECHAZADO", tipo: "SIMULACION", v: "hechos-v2" },
+    ]);
+  });
+
+  it("los tres de hoy siguen con hechos-v1 y entran en el mismo registro (DIARIO no cambió)", async () => {
+    expect(PUBLICADO.hechosVersion).toBe("hechos-v1");
+    expect(await errorAlInsertar(PUBLICADO, SIM_PUBLICADO)).toBeNull();
+  });
+
+  it.each<[string, Fila, string]>([
+    ["la versión de la columna distinta de la de los hechos (v1 contra v2)", comoSimulacion(PUBLICADO, { hechosVersion: "hechos-v1" }), "resumen_ia_hechos_chk"],
+    ["el tipo de los hechos distinto del de la columna", comoSimulacion(PUBLICADO, { hechos: { tipo: "DIARIO" } }), "resumen_ia_hechos_chk"],
+    ["el hash de los hechos distinto del de la columna", comoSimulacion(PUBLICADO, { hechos: { hash: "b".repeat(64) } }), "resumen_ia_hechos_chk"],
+    ["una versión que no es hechos-vN", comoSimulacion(PUBLICADO, { hechosVersion: "hechos-v0", hechos: { version: "hechos-v0" } }), "resumen_ia_formas_chk"],
+    ["PUBLICADO sin texto", { ...SIM_PUBLICADO, texto: null }, "resumen_ia_estado_chk"],
+    ["RECHAZADO con texto", { ...SIM_RECHAZADO, texto: "Texto ficticio." }, "resumen_ia_estado_chk"],
+    ["FALLIDO con salida del modelo", { ...SIM_FALLIDO, salidaModelo: "{}" }, "resumen_ia_estado_chk"],
+    ["PUBLICADO con motivos", { ...SIM_PUBLICADO, motivos: ["LONGITUD"] }, "resumen_ia_motivos_chk"],
+    ["FALLIDO sin motivo de fallo", { ...SIM_FALLIDO, motivos: ["CIFRA_SUELTA"] }, "resumen_ia_motivos_chk"],
+  ])("sigue mordiendo con SIMULACION: %s", async (_nombre, fila, restriccion) => {
+    expect(await errorAlInsertar(fila)).toMatch(new RegExp(`violates check constraint \\\\?"${restriccion}\\\\?"`));
+  });
+
+  it("resumen_ia_publicado_key muerde: dos PUBLICADO de SIMULACION con la misma clave chocan (23505), y RECHAZADO y FALLIDO se repiten", async () => {
+    expect(await errorAlInsertar(SIM_PUBLICADO, SIM_PUBLICADO)).toMatch(/23505[\s\S]*Key \(tipo, \\?"fechaNegocio\\?", \\?"hechosHash\\?", \\?"promptHash\\?", \\?"modeloDigest\\?"\)/);
+    expect(await errorAlInsertar(SIM_RECHAZADO, SIM_RECHAZADO, SIM_FALLIDO, SIM_FALLIDO, SIM_PUBLICADO)).toBeNull();
+  });
+
+  it("la clave incluye el tipo: un PUBLICADO de SIMULACION y otro de otro tipo con el mismo hash, prompt y digest no chocan", async () => {
+    const otroTipo = { ...SIM_PUBLICADO, tipo: "REGLAS", hechos: { ...(SIM_PUBLICADO.hechos as object), tipo: "REGLAS" } } as unknown as FilaResumen;
+    expect(await errorAlInsertar(SIM_PUBLICADO, otroTipo)).toBeNull();
   });
 });
 

@@ -1,7 +1,7 @@
 // La cifra oficial y la variación de un índice (fase C, C5a; src/datos-oficiales/series/consulta.ts), puro:
 // - `esValorOficial`: lo que la base guarda (DECIMAL(20,8), > 0) en su forma canónica, como texto (nunca Number);
 // - `variacionIndice`: (final / base − 1) × 100 con BigInt sobre el texto, 2 decimales y la mitad lejos de cero; sale
-//   CALCULADA (calculada por 008, nunca atribuida a la fuente), con signo si es negativa y sin «-0.00». Solo entre dos
+//   CALCULADA (calculada por Inversiones, nunca atribuida a la fuente), con signo si es negativa y sin «-0.00». Solo entre dos
 //   cifras OFICIALES de una misma serie índice, con la base antes del final.
 // El oráculo de la prueba es Prisma.Decimal (decimal.js) con 80 dígitos; el código no lo usa. Cifras inventadas.
 import { Prisma } from "@prisma/client";
@@ -72,14 +72,14 @@ describe("esValorOficial · lo que guarda la base, canónico", () => {
 });
 
 describe("variacionIndice · la variación del IPC sale del índice (CALCULADA)", () => {
-  it("anual: 2 decimales, unidad «calculada por 008», del desde de la base al hasta del final, la fuente del final y el traído más reciente", () => {
+  it("anual: 2 decimales, unidad «calculada por Inversiones», del desde de la base al hasta del final, la fuente del final y el traído más reciente", () => {
     const base = indice("2027-01", "137.41", { traidoEn: instante("2027-02-11T15:03:17Z") });
     const final = indice("2028-01", "143.29", { traidoEn: instante("2028-02-09T13:41:29Z") });
     expect(variacionIndice(base, final)).toEqual({
       serie: "IPC_INDICE", valor: "4.28", unidad: UNIDAD_VARIACION, desde: dia("2027-01-01"), hasta: dia("2028-01-31"),
       fuente: "dane:anex-IPC-Indices", traidoEn: instante("2028-02-09T13:41:29Z"), origen: "CALCULADA",
     });
-    expect(UNIDAD_VARIACION).toMatch(/calculada por 008/);
+    expect(UNIDAD_VARIACION).toMatch(/calculada por Inversiones/);
   });
 
   it("el traído más reciente aunque sea el de la base (una revisión del mes viejo)", () => {

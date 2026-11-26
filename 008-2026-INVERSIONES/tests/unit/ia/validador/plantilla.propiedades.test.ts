@@ -4,7 +4,7 @@
  * Prueba obligatoria: pasa el MISMO validador, también con paquetes al azar con semilla, dentro de los límites.
  */
 import { describe, expect, it } from "vitest";
-import { TIPOS_RESUMEN, type Hecho, type IdHecho, type PaqueteHechos } from "@/ia/contrato";
+import { TIPOS_DIARIOS, type Hecho, type IdHecho, type PaqueteHechos } from "@/ia/contrato";
 import { ErrorValidador, LIMITES_SALIDA } from "@/ia/validador/codigos";
 import { construirPaquete } from "@/ia/paquete";
 import { leerSalida } from "@/ia/validador/leer";
@@ -49,7 +49,7 @@ function revisar(paquete: PaqueteHechos): void {
 }
 
 describe("plantilla sin IA", () => {
-  it.each(TIPOS_RESUMEN)("%s: la entrada ficticia pasa el validador", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: la entrada ficticia pasa el validador", (tipo) => {
     revisar(paqueteFicticio(tipo));
   });
 
@@ -86,7 +86,7 @@ describe("plantilla sin IA", () => {
   });
 
   it("es determinista y no lleva dígitos fuera de las citas", () => {
-    for (const tipo of TIPOS_RESUMEN) {
+    for (const tipo of TIPOS_DIARIOS) {
       const paquete = paqueteFicticio(tipo);
       expect(salidaDePlantilla(paquete)).toBe(salidaDePlantilla(paquete));
       const textos = (leerSalida(salidaDePlantilla(paquete))?.frases ?? []).map((f) => f.texto).join(" ");
@@ -102,7 +102,7 @@ describe("plantilla sin IA", () => {
   });
 
   it("con todos los hechos obligatorios de la entrada ficticia, los cita a todos", () => {
-    for (const tipo of TIPOS_RESUMEN) {
+    for (const tipo of TIPOS_DIARIOS) {
       const paquete = paqueteFicticio(tipo, Object.fromEntries(paqueteFicticio(tipo).hechos.map((h) => [h.clave, { obligatorio: true }])));
       revisar(paquete);
     }
@@ -112,9 +112,9 @@ describe("plantilla sin IA", () => {
     expect(() => salidaDePlantilla({ ...paqueteFicticio("DIARIO") })).toThrow(ErrorValidador);
   });
 
-  it("si los obligatorios no caben, la plantilla no pasa los límites y el validador la rechaza (HECHO_NO_CITADO)", () => {
+  it("si los obligatorios no caben, la plantilla no pasa los límites y el validador la rechaza con exactamente esos códigos", () => {
     const prng = crearPrng(4_613);
-    let rechazos = 0;
+    const rechazos = new Map<string, number>();
     for (let i = 0; i < 113; i += 1) {
       const entrada = entradaAlAzar(prng, "DIARIO");
       const paquete = construirPaquete({ ...entrada, hechos: entrada.hechos.map((h) => ({ ...h, obligatorio: true })) });
@@ -122,13 +122,15 @@ describe("plantilla sin IA", () => {
       expect(frases.length).toBeLessThanOrEqual(LIMITES_SALIDA.maxFrases);
       const resultado = resumenSinIa(paquete);
       if (resultado.ok) continue;
-      expect(resultado.motivos).toEqual(["HECHO_NO_CITADO"]);
-      rechazos += 1;
+      // Lo que la plantilla no alcanzó a citar, el código lo escribe en otras frases (T4): el conjunto pasa de los límites.
+      const patrones = resultado.hallazgos.map((h) => h.patron).sort().join("|");
+      rechazos.set(patrones, (rechazos.get(patrones) ?? 0) + 1);
     }
-    expect(rechazos).toBeGreaterThan(0);
+    // Con la semilla fija: 13 pasan solo el total de caracteres y 17 pasan también el máximo de frases. Ninguna otra salida.
+    expect(Object.fromEntries(rechazos)).toEqual({ "LONGITUD.TOTAL": 13, "LONGITUD.FRASES|LONGITUD.TOTAL": 17 });
   });
 
-  it.each(TIPOS_RESUMEN)("%s: paquetes al azar con semilla (con el tope de obligatorios) pasan el mismo validador", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: paquetes al azar con semilla (con el tope de obligatorios) pasan el mismo validador", (tipo) => {
     const prng = crearPrng(41_377);
     let conObligatorios = 0;
     for (let i = 0; i < 307; i += 1) {

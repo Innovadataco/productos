@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { CATALOGO } from "@/ia/catalogo";
-import { TIPOS_RESUMEN } from "@/ia/contrato";
+import { TIPOS_DIARIOS } from "@/ia/contrato";
 import { clavesProhibidasEn } from "@/ia/prohibidas";
 import { fugasDeVistaCiega, vistaCiega } from "@/ia/vista-ciega";
 import { crearPrng } from "@/proyecciones/prng";
@@ -20,11 +20,11 @@ const CORRIDAS = 300;
 describe("vista ciega · propiedad con paquetes al azar", () => {
   it(`en ${CORRIDAS} paquetes (semilla ${SEMILLA}) la vista no filtra nada y la guarda la acepta`, () => {
     const prng = crearPrng(SEMILLA);
-    const vistas = new Map<string, Set<string>>(TIPOS_RESUMEN.map((t) => [t, new Set<string>()]));
+    const vistas = new Map<string, Set<string>>(TIPOS_DIARIOS.map((t) => [t, new Set<string>()]));
     let conSujeto = 0;
     let hechos = 0;
     for (let i = 0; i < CORRIDAS; i += 1) {
-      const paquete = paqueteAlAzar(prng, TIPOS_RESUMEN[i % TIPOS_RESUMEN.length]);
+      const paquete = paqueteAlAzar(prng, TIPOS_DIARIOS[i % TIPOS_DIARIOS.length]);
       const vista = vistaCiega(paquete);
       const json = JSON.stringify(vista);
       expect(hayDigitosFueraDeIds(json), `corrida ${i}`).toBe(false);
@@ -41,7 +41,7 @@ describe("vista ciega · propiedad con paquetes al azar", () => {
         hechos += 1;
       }
     }
-    for (const tipo of TIPOS_RESUMEN) expect([...(vistas.get(tipo) ?? [])].sort(), tipo).toEqual(Object.keys(CATALOGO[tipo]).sort());
+    for (const tipo of TIPOS_DIARIOS) expect([...(vistas.get(tipo) ?? [])].sort(), tipo).toEqual(Object.keys(CATALOGO[tipo]).sort());
     expect(conSujeto).toBeGreaterThan(CORRIDAS);
     expect(hechos).toBeGreaterThan(CORRIDAS * 10);
   });

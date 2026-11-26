@@ -1,0 +1,5 @@
+/* El contador de «Alertas» en el menú. Usa los tokens de tablero.css (claro y oscuro). */
+.alertas-contador {
+  display: inline-block; min-width: 1.5em; margin-left: 6px; padding: 0 6px; border-radius: 999px; text-align: center;
+  font-size: max(12px, 0.8em); font-weight: 700; line-height: 1.5; background: var(--fg); color: var(--bg);
+}

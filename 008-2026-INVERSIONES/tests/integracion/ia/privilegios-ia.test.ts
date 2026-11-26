@@ -7,7 +7,7 @@
 // único permiso sobre resumen_ia (el SELECT del bucle de todas las tablas), lee y no escribe. La prueba con los roles
 // reales es tests/unit/produccion/roles-base.test.ts (solo CI). Datos inventados: especies propias de la corrida,
 // valores no redondos y fechas de 2027 (el calendario de la BVC sembrado).
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { leerFondosHistoria, leerHistoria } from "@/app/proyecciones/datos";
 import { ultimaConciliacion } from "@/conciliacion/leer";
@@ -133,6 +133,19 @@ describe("con los privilegios de inv_ia: control positivo", () => {
     expect(gasto.tokensEntrada).toBeGreaterThanOrEqual(2389);
     expect(await quien()).toBe(ROL);
     idPublicado = r.id;
+  });
+});
+
+describe("con los privilegios de inv_ia: SIMULACION en resumen_ia (frente B)", () => {
+  it("control positivo: inv_ia inserta una fila de SIMULACION con hechos-v2 (el INSERT por columna cubre el valor nuevo del enum) y no la lee de vuelta", async () => {
+    const hash = sha256Hex(`paquete ficticio de la simulación ${corrida}`);
+    const hechos = JSON.stringify({ tipo: "SIMULACION", version: "hechos-v2", hoy: "2027-03-17", hash });
+    const filas = await restringida.$executeRaw`
+      INSERT INTO "resumen_ia" ("id", "tipo", "fechaNegocio", "estado", "puerta", "texto", "salidaModelo", "hechos", "hechosHash", "hechosVersion", "modelo", "modeloDigest", "opciones", "promptVersion", "promptHash", "validadorVersion", "motivos", "latenciaMs", "tokensEntrada", "tokensSalida")
+      VALUES (${`sim-${corrida}`}, 'SIMULACION'::"TipoResumenIa", '2027-03-17'::date, 'PUBLICADO'::"EstadoResumenIa", 'local'::"PuertaIa", 'Texto ficticio.', '{}', ${hechos}::jsonb, ${hash}, 'hechos-v2', 'modelo-ficticio', 'digest-ficticio-4613', '{}'::jsonb, 'resumen-simulacion-v1', ${sha256Hex(`prompt ficticio ${corrida}`)}, 'validador-v4', ${Prisma.sql`ARRAY[]::text[]`}, 1913, 2389, 173)`;
+    expect(filas).toBe(1);
+    expect(await quien()).toBe(ROL);
+    await expect(restringida.$queryRawUnsafe(`SELECT texto FROM resumen_ia WHERE id = 'sim-${corrida}'`)).rejects.toThrow(/42501|permission denied/);
   });
 });
 

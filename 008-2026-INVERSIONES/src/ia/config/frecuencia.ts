@@ -11,14 +11,19 @@ import { crearLimitador, type Decision, type Limitador } from "@/auth/limite-api
 
 /** Una acción al Mac (identificar o probar) cada 5 s por usuario. */
 export const VENTANA_OLLAMA_MS = 5000;
+/** Un pedido de análisis («Analizar con IA») cada 3 s por usuario: el servicio pone el resto (1 en curso, 1 en espera, 2 min). */
+export const VENTANA_ANALISIS_MS = 3000;
 /** Pocos usuarios: solo el dueño (y quien lo intente). */
 const MAX_USUARIOS = 100;
 
 const crear = (): Limitador => crearLimitador({ maximo: 1, ventanaMs: VENTANA_OLLAMA_MS, maxRedes: MAX_USUARIOS });
 let ollama = crear();
+let analisis = crearLimitador({ maximo: 1, ventanaMs: VENTANA_ANALISIS_MS, maxRedes: MAX_USUARIOS });
 let enCurso = false;
 
 export const permitidoOllama = (usuarioId: string, ahoraMs: number): Decision => ollama.registrar(usuarioId, ahoraMs);
+
+export const permitidoAnalisis = (usuarioId: string, ahoraMs: number): Decision => analisis.registrar(usuarioId, ahoraMs);
 
 /** El turno de la única acción al Mac a la vez: una función para soltarlo, o null si ya hay una en curso. */
 export function tomarTurnoOllama(): (() => void) | null {
@@ -35,4 +40,5 @@ export function tomarTurnoOllama(): (() => void) | null {
 /** Solo para las pruebas: el límite por usuario parte de cero (el turno lo suelta la acción al terminar). */
 export function reiniciarFrecuenciasIa(): void {
   ollama = crear();
+  analisis = crearLimitador({ maximo: 1, ventanaMs: VENTANA_ANALISIS_MS, maxRedes: MAX_USUARIOS });
 }

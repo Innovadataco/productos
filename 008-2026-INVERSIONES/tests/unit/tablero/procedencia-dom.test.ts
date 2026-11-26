@@ -25,10 +25,10 @@ const MISMO_DIA = aVista(resumenDe([
   especie({ nemotecnico: "FICTB", cantidad: 7n, costoVivo: D(7919), cierre: cierre("1211.09", "2027-03-31", "2027-04-01T12:13:00Z") }),
 ]));
 
-const TRAIDO_A = "traído el 31-mar-2027 a las 18:04 (hora de Colombia) · BVC por Yahoo";
-const TRAIDO_B = "traído el 1-abr-2027 a las 07:13 (hora de Colombia) · BVC por Yahoo";
-const TRAIDO_C = "traído el 12-mar-2027 a las 17:41 (hora de Colombia) · bvc-ficticia";
-const COMPUESTA = `Con el cierre más antiguo del 12-mar-2027 · ${TRAIDO_C.replace(" · bvc-ficticia", "")} · bvc-ficticia y BVC por Yahoo`;
+const TRAIDO_A = "Yahoo (BVC) · traído 18:04";
+const TRAIDO_B = "Yahoo (BVC) · traído 1-abr 07:13";
+const TRAIDO_C = "bvc-ficticia · traído 17:41";
+const COMPUESTA = "Cierre más antiguo 12-mar · bvc-ficticia y Yahoo (BVC) · traído 17:41";
 const AVISO = "Cierres de fechas distintas: del 12-mar-2027 al 31-mar-2027.";
 
 let m: Montaje;
@@ -45,7 +45,10 @@ const fila = (nemo: string) => [...m.contenedor.querySelectorAll("tbody tr")].fi
 const celdaCierre = (nemo: string) => fila(nemo).querySelectorAll("td")[2]!;
 const kpi = (nombre: string) => [...m.contenedor.querySelectorAll(".kpi")].find((k) => texto(k.querySelector(".eyebrow")) === nombre)!;
 const seccion = (titulo: string) => m.contenedor.querySelector<HTMLElement>(`section[aria-labelledby="${titulo}"]`)!;
-const notas = (el: Element) => [...el.querySelectorAll(".fecha-dato")].map(texto);
+// La línea visible de cada nota (el detalle accesible y los avisos tienen sus propias clases).
+const notas = (el: Element) => [...el.querySelectorAll(".fecha-dato-linea")].map(texto);
+// La línea y, si los hay, los avisos de la misma nota (fechas distintas, dato viejo).
+const notasConAvisos = (el: Element) => [...el.querySelectorAll(".fecha-dato")].map((n) => [texto(n.querySelector(".fecha-dato-linea")), ...[...n.querySelectorAll(".fecha-dato-aviso")].map(texto)].join(" "));
 
 describe("cada dato con su procedencia", () => {
   it("la celda «Cierre» de cada fila: cuándo lo trajo 008 y la fuente (la fecha ya la dice el chip)", async () => {
@@ -92,19 +95,19 @@ describe("cada dato con su procedencia", () => {
 describe("los valores que suman cierres", () => {
   it("«Valor en acciones»: el cierre más antiguo que lo compone y el aviso de fechas distintas", async () => {
     await m.pintar(createElement(Tablero, { vista: MEZCLADAS }));
-    expect(notas(kpi("Valor en acciones"))).toEqual([`${COMPUESTA} ${AVISO}`]);
+    expect(notasConAvisos(kpi("Valor en acciones"))).toEqual([`${COMPUESTA} ${AVISO}`]);
   });
 
   it("la fecha que dice es la del cierre más viejo del tablero", async () => {
     await m.pintar(createElement(Tablero, { vista: MEZCLADAS }));
-    expect(texto(kpi("Valor en acciones").querySelector(".fecha-dato time"))).toBe(fecha(MEZCLADAS.cierreMasViejo));
+    expect(kpi("Valor en acciones").querySelector(".fecha-dato time")?.getAttribute("datetime")).toBe(MEZCLADAS.cierreMasViejo);
   });
 
   it("en la portada va una sola vez, junto a «Valor en acciones», y nunca dentro del título (revisión react y a11y, MEDIO)", async () => {
     await m.pintar(createElement(Tablero, { vista: MEZCLADAS }));
     const hero = seccion("t-hero");
     expect(hero.querySelector("h1 .fecha-dato")).toBeNull();
-    expect(notas(hero)).toEqual([`${COMPUESTA} ${AVISO}`]);
+    expect(notasConAvisos(hero)).toEqual([`${COMPUESTA} ${AVISO}`]);
     expect(hero.querySelector(".fecha-dato")!.closest(".kpi")).toBe(kpi("Valor en acciones"));
   });
 
@@ -112,20 +115,20 @@ describe("los valores que suman cierres", () => {
     await m.pintar(createElement(Tablero, { vista: MEZCLADAS }));
     const foto = seccion("t-foto");
     expect(foto.querySelector(".g-centro .fecha-dato")).toBeNull();
-    expect(notas(foto).filter((t) => t.startsWith("Con el cierre"))).toEqual([`${COMPUESTA} ${AVISO}`]);
+    expect(notasConAvisos(foto).filter((t) => t.startsWith("Cierre más antiguo"))).toEqual([`${COMPUESTA} ${AVISO}`]);
   });
 
   it("el neto de «Qué movió»: solo las que entraron (todas del día de la referencia), sin aviso", async () => {
     await m.pintar(createElement(Tablero, { vista: MEZCLADAS }));
     const mov = seccion("t-mov");
-    const compuesta = [...mov.querySelectorAll(".fecha-dato")].filter((n) => n.parentElement?.getAttribute("role") !== "listitem").map(texto);
-    expect(compuesta).toEqual([`Cierre del 31-mar-2027 · ${TRAIDO_A}`]);
+    const compuesta = [...mov.querySelectorAll(".fecha-dato-linea")].filter((n) => n.closest('[role="listitem"]') === null).map(texto);
+    expect(compuesta).toEqual([`Cierre 31-mar · ${TRAIDO_A}`]);
     expect(mov.querySelector(".fecha-dato-aviso")).toBeNull();
   });
 
   it("todas del mismo día: el cierre de ese día y ningún aviso de fechas distintas", async () => {
     await m.pintar(createElement(Tablero, { vista: MISMO_DIA }));
-    expect(notas(kpi("Valor en acciones"))).toEqual([`Cierre del 31-mar-2027 · ${TRAIDO_A}`]);
+    expect(notas(kpi("Valor en acciones"))).toEqual([`Cierre 31-mar · ${TRAIDO_A}`]);
     expect(m.contenedor.querySelector(".fecha-dato-aviso")).toBeNull();
   });
 

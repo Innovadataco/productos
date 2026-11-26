@@ -70,6 +70,8 @@ describe("reglas escritas a mano en la migración", () => {
       SELECT tgname FROM pg_trigger WHERE tgname LIKE '%\_solo\_insercion'`;
     expect(disparadores.map((d) => d.tgname).sort()).toEqual([
       "ajuste_caja_solo_insercion",
+      "alerta_solo_insercion",
+      "alerta_vista_solo_insercion",
       "certificacion_posicion_solo_insercion",
       "certificacion_solo_insercion",
       "conciliacion_solo_insercion",
@@ -89,6 +91,7 @@ describe("reglas escritas a mano en la migración", () => {
       "rendimiento_fondo_solo_insercion",
       "resumen_ia_solo_insercion",
       "tarifa_comision_solo_insercion",
+      "umbral_version_solo_insercion",
     ]);
   });
 

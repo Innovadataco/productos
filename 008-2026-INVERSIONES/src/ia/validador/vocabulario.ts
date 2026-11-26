@@ -12,6 +12,7 @@
  * Una palabra de fuera rechaza la frase (cierra en fallo). Ampliar el vocabulario es otra versión del validador, con la
  * evidencia de la evaluación E7.
  */
+import { ETIQUETA_RANGO } from "../../analisis/puntos/etiquetas";
 import { CATALOGO } from "../catalogo";
 import { TIPOS_RESUMEN, type TipoResumen } from "../contrato";
 import { formaDe, plegarTildes, prepararTexto } from "./patron";
@@ -41,9 +42,37 @@ export const PALABRAS_BASE: readonly string[] = Object.freeze([
   "dato", "datos", "cifra", "cifras",
 ]);
 
+/**
+ * Los verbos neutros de PALABRAS_BASE (formas conjugadas): los ítems de «Para revisar» son nominales y no admiten ninguno
+ * (PARA_REVISAR.VERBO). Todos están en PALABRAS_BASE: lo cuida `tests/unit/ia/simulacion/validador-v4.test.ts`.
+ */
+export const VERBOS_NEUTROS: readonly string[] = Object.freeze([
+  "es", "son", "fue", "fueron", "era", "eran", "estan", "estaba", "estaban", "estuvo", "estuvieron", "ha", "han", "hay", "habia", "sido",
+  "queda", "quedan", "quedo", "quedaron", "tiene", "tienen", "tenia", "tenian", "tuvo", "tuvieron", "suma", "suman", "sumo", "sumaron",
+  "registra", "registran", "registro", "registraron", "marca", "marcan", "marco", "alcanza", "alcanzan", "alcanzo", "alcanzaron", "llega",
+  "llegan", "llego", "llegaron", "corresponde", "corresponden", "equivale", "equivalen", "representa", "representan", "indica", "indican",
+  "muestra", "muestran", "cuenta", "cuentan", "falta", "faltan", "vence", "vencen", "paga", "pagan", "pago", "pagaron", "recibio", "recibieron",
+  "toco", "tocaron", "cerro", "cerraron", "cierra", "cierran", "vale", "valen",
+]);
+
 /** El condicional: solo en ESCENARIOS, donde describe un escenario y no pronostica. */
 export const CONDICIONALES: readonly string[] = Object.freeze([
   "quedaria", "quedarian", "seria", "serian", "tendria", "tendrian", "sumaria", "sumarian", "alcanzaria", "alcanzarian", "llegaria", "llegarian",
+]);
+
+/**
+ * El vocabulario de SIMULACION es una LISTA PERMITIDA EXPLÍCITA, escrita palabra por palabra: lo mínimo para describir el estado
+ * del «después» en tercera persona. NO hereda PALABRAS_BASE: esa lista funcionaba como lista negra y cada palabra permitida con
+ * sentido de acción abría una evasión («Sin la especie…», «Tras el registro…», «Cuando falta…», «no queda en», «todavía»).
+ * Sin negaciones (no, ni, nunca, sin, tampoco), sin continuidad ni tiempo (todavía, aún, también, ya, antes, ahora, sigue), sin
+ * conectores causales, temporales ni condicionales (si, cuando, tras, mientras, aunque, porque, pues, para, con, según, ante),
+ * sin agente (usted, se, le, les) y sin verbos de acción ni de registro (registr…, falt…, sum…). A esto se suman las palabras de
+ * las etiquetas de SIMULACION y las de los rangos del paso 1 (algunas son conectores, como «al» y «por», pero solas no atribuyen
+ * nada: ATRIBUCION las vigila). Candado: `candados/vocabulario-sin-operacion.candado.test.ts` y la huella de
+ * `simulacion/vocabulario-simulacion.test.ts`: ampliarla es otra versión del validador.
+ */
+export const PALABRAS_SIMULACION: readonly string[] = Object.freeze([
+  "el", "la", "los", "las", "de", "del", "en", "y", "su", "sus", "queda", "quedan", "es", "son", "esta", "estan",
 ]);
 
 const plegar = (palabra: string): string => plegarTildes(palabra.toLowerCase());
@@ -57,11 +86,23 @@ function conVariantes(palabra: string): readonly string[] {
 
 const palabrasDe = (texto: string): readonly string[] => texto.match(/\p{L}+/gu) ?? [];
 
+/** Las palabras de los rangos del paso 1 («muy elevado», «moderada», «mediano»…): solo SIMULACION las describe. */
+const PALABRAS_DE_RANGO: readonly string[] = Object.values(ETIQUETA_RANGO).flatMap((porRango) => Object.values(porRango) as string[]).flatMap((p) => palabrasDe(p).map(plegar).flatMap(conVariantes));
+
+/** Las palabras base del tipo: SIMULACION tiene su lista explícita y no hereda PALABRAS_BASE. */
+const baseDe = (tipo: TipoResumen): readonly string[] => (tipo === "SIMULACION" ? PALABRAS_SIMULACION : PALABRAS_BASE);
+
 const VOCABULARIO: ReadonlyMap<TipoResumen, ReadonlySet<string>> = new Map(TIPOS_RESUMEN.map((tipo) => [tipo, new Set([
-  ...PALABRAS_BASE,
+  ...baseDe(tipo),
   ...(tipo === "ESCENARIOS" ? CONDICIONALES : []),
+  ...(tipo === "SIMULACION" ? PALABRAS_DE_RANGO : []),
   ...Object.values(CATALOGO[tipo]).flatMap((e) => palabrasDe(e.etiqueta).map(plegar).flatMap(conVariantes)),
 ])]));
+
+/** El vocabulario cerrado del tipo (palabras en minúsculas y sin tildes). */
+export function vocabularioDe(tipo: TipoResumen): ReadonlySet<string> {
+  return VOCABULARIO.get(tipo) as ReadonlySet<string>;
+}
 
 /** Las marcas enteras fuera del texto (con espacios del mismo largo): sus palabras ya las coteja `marcas.ts`. */
 function sinMarcas(minusculas: string): string {

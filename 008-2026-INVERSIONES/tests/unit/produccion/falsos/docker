@@ -45,6 +45,7 @@ if [ "${1:-}" = "compose" ]; then
         *" inv-008-db "*) printf '%s\n' "${FALSO_CID_DB-ciddb}" ;;
         *" inv-008-precios "*) printf '%s\n' "${FALSO_CID_PRECIOS-cidprecios}" ;;
         *" inv-008-ia "*) printf '%s\n' "${FALSO_CID_IA-cidia}" ;;
+        *" inv-008-alertas "*) printf '%s\n' "${FALSO_CID_ALERTAS-cidalertas}" ;;
         # FALSO_CIDS_PS: los ids de todo el proyecto (con \n), si se quiere otra lista que la app y la base.
         *" -q "*) if [ -n "${FALSO_CIDS_PS+x}" ]; then printf '%b' "$FALSO_CIDS_PS"; else printf '%s\n' "${FALSO_CID_APP-cidapp}" "${FALSO_CID_DB-ciddb}"; fi ;;
       esac
@@ -116,16 +117,20 @@ limites_de() {
 es_entrada() { [ "$objeto" = "${FALSO_CID_ENTRADA-cidentrada}" ]; }
 es_precios() { [ "$objeto" = "${FALSO_CID_PRECIOS-cidprecios}" ]; }
 es_ia() { [ "$objeto" = "${FALSO_CID_IA-cidia}" ]; }
+es_alertas() { [ "$objeto" = "${FALSO_CID_ALERTAS-cidalertas}" ]; }
 case "${1:-}" in
   inspect)
     case "$*" in
       # Los límites (datos_limites): va antes que HostConfig.Memory e {{.Id}}, que su formato también trae.
+      # El endurecimiento en caliente del servicio de las alertas: solo lectura, capacidades, escalada, pids y usuario.
+      *HostConfig.ReadonlyRootfs*) printf '%s\n' "${FALSO_ENDURECIMIENTO_ALERTAS-true [ALL] [no-new-privileges:true] 48 10008:10008}" ;;
       *compose.project*) [ "${FALSO_INSPECT_RC:-0}" = 0 ] || exit "$FALSO_INSPECT_RC"; limites_de "$objeto" ;;
       *NetworkSettings.Networks*)
         case "$objeto" in
           "${FALSO_CID_DB-ciddb}") printf '%s \n' "${FALSO_REDES_DB-inv-008-prueba_inv-008-red-interna}" ;;
           "${FALSO_CID_PRECIOS-cidprecios}") printf '%s \n' "${FALSO_REDES_PRECIOS-inv-008-prueba_inv-008-red-interna inv-008-prueba_inv-008-red-precios}" ;;
           "${FALSO_CID_IA-cidia}") printf '%s \n' "${FALSO_REDES_IA-inv-008-prueba_inv-008-red-ia inv-008-prueba_inv-008-red-interna}" ;;
+          "${FALSO_CID_ALERTAS-cidalertas}") printf '%s \n' "${FALSO_REDES_ALERTAS-inv-008-prueba_inv-008-red-interna}" ;;
           *) printf '%s \n' "${FALSO_REDES_APP-inv-008-prueba_inv-008-red-entrada inv-008-prueba_inv-008-red-interna}" ;;
         esac ;;
       *bridge.name*)
@@ -139,6 +144,11 @@ case "${1:-}" in
         # El entorno del servicio de IA (con su credencial y su token ficticios por defecto); FALSO_ENV_IA lo reemplaza.
         if es_ia; then
           printf '%b' "${FALSO_ENV_IA-PATH=/usr/local/bin\nNODE_ENV=production\nTZ=America/Bogota\nINV_IA_DIR_COMPARTIDA=/compartido-pi\nINV_IA_SERVICIO_TOKEN=token-ficticio-4613\nDATABASE_URL=postgresql://inv_ia:clave-ficticia-37911@inv-008-db:5432/inversiones?connection_limit=2\n}"
+          exit 0
+        fi
+        # El entorno del servicio de las alertas (con su credencial ficticia por defecto); FALSO_ENV_ALERTAS lo reemplaza.
+        if es_alertas; then
+          printf '%b' "${FALSO_ENV_ALERTAS-PATH=/usr/local/bin\nNODE_ENV=production\nTZ=America/Bogota\nINV_INTRADIA_ENCENDIDO=\nDATABASE_URL=postgresql://inv_alertas:clave-ficticia-5120@inv-008-db:5432/inversiones?connection_limit=2\n}"
           exit 0
         fi
         # El entorno del servicio de precios (con su credencial ficticia por defecto); FALSO_ENV_PRECIOS lo reemplaza.
@@ -162,7 +172,7 @@ case "${1:-}" in
         case " ${FALSO_REDES_AL_DIA:-} " in *" $objeto "*) echo "isolated"; exit 0 ;; esac
         exit 1 ;;
       *.Image*) if es_entrada; then printf '%s\n' "${FALSO_IMAGEN_ENTRADA:-${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}}"; else printf '%s\n' "${FALSO_IMAGEN_CONTENEDOR:-${FALSO_ID:-}}"; fi ;;
-      *Health.Status*) if es_ia; then printf '%s\n' "${FALSO_SALUD_IA:-healthy}"; elif es_precios; then printf '%s\n' "${FALSO_SALUD_PRECIOS:-healthy}"; else printf '%s\n' "${FALSO_SALUD_ESTADO:-healthy}"; fi ;;
+      *Health.Status*) if es_ia; then printf '%s\n' "${FALSO_SALUD_IA:-healthy}"; elif es_alertas; then printf '%s\n' "${FALSO_SALUD_ALERTAS:-healthy}"; elif es_precios; then printf '%s\n' "${FALSO_SALUD_PRECIOS:-healthy}"; else printf '%s\n' "${FALSO_SALUD_ESTADO:-healthy}"; fi ;;
       *State.Status*)
         if es_entrada; then printf '%s\n' "${FALSO_ESTADO_ENTRADA:-running 0}"
         elif es_precios; then printf '%s\n' "${FALSO_ESTADO_PRECIOS:-running 0}"
@@ -189,6 +199,8 @@ case "${1:-}" in
         printf '%b' "${FALSO_NSLOOKUP_APP-$no_resuelve_app}"
         exit "${FALSO_NSLOOKUP_APP_RC:-1}" ;;
       *" test -r /app/ia/servicio-ia.mjs "*) exit "${FALSO_BUNDLE_IA_RC:-0}" ;;
+      *" cat /estado/bucle "*) printf '%b' "${FALSO_HUELLA_ALERTAS-formato=1\nestado=ESPERANDO\n}"; exit "${FALSO_HUELLA_ALERTAS_RC:-0}" ;;
+      *" test -r /app/alertas/servicio-alertas.mjs "*) exit "${FALSO_BUNDLE_ALERTAS_RC:-0}" ;;
       *" command -v nc "*) [ "${FALSO_NC_IA_FALTA:-}" != 1 ] || exit 127; exit 0 ;;
       *" nc "*)
         # El servicio de IA: por defecto no llega (la regla de PI corta: tiempo agotado); FALSO_NC_IA_RC=0: llega.
@@ -232,6 +244,7 @@ case "${1:-}" in
       "${FALSO_CID_ENTRADA-cidentrada}") printf '%b' "${FALSO_PUERTO_ENTRADA:-}" ;;
       "${FALSO_CID_PRECIOS-cidprecios}") printf '%b' "${FALSO_PUERTO_PRECIOS:-}" ;;
       "${FALSO_CID_IA-cidia}") printf '%b' "${FALSO_PUERTO_IA:-}" ;;
+      "${FALSO_CID_ALERTAS-cidalertas}") printf '%b' "${FALSO_PUERTO_ALERTAS:-}" ;;
       *) printf '%b' "${FALSO_PUERTO:-}" ;;
     esac
     exit 0 ;;

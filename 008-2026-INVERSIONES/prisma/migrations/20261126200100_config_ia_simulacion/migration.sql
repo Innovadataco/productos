@@ -1,0 +1,25 @@
+-- Simulación con IA (frente B, B3): SIMULACION entra a config_ia como tarea OPCIONAL. Cambia DOS CHECK de la tabla (se
+-- sueltan y se vuelven a crear; no toca datos, ninguna otra tabla ni ninguna otra CHECK):
+--  - config_ia_tareas_chk: las tres tareas de hoy (DIARIO, REGLAS, ESCENARIOS) siguen OBLIGATORIAS (?&); SIMULACION puede
+--    faltar y, si está, lleva la misma forma de las demás («activo» booleano y «modeloLocal» null o con la forma de la lista
+--    de PI, nada más). Una fila anterior (sin SIMULACION) sigue entrando. Una tarea fuera de las cuatro, rechazada.
+--  - config_ia_usa_chk: con la local, la SIMULACION activa necesita su modelo, como las demás.
+--
+-- ADVERTENCIA (la de 20261122210000_config_ia): un CHECK que da NULL deja pasar la fila. SIMULACION es opcional: sin ella,
+-- ("tareas"->'SIMULACION')->'activo' = 'true' da NULL y NOT (NULL AND ...) da NULL, que dejaría pasar una fila local con la
+-- tarea mal formada. La cláusula de SIMULACION va por eso con COALESCE(..., false) (falta = apagada = no exige modelo), y
+-- en config_ia_tareas_chk, COALESCE sobre el tipo de «activo» (una SIMULACION sin «activo» no pasa). Las tres de hoy no la
+-- necesitan: son obligatorias (?&) y su cláusula se conserva idéntica.
+--
+-- El valor SIMULACION del enum TipoResumenIa lo agrega la migración anterior (20261126200000_tipo_resumen_simulacion), sola
+-- por la regla de PostgreSQL 16 (un valor nuevo no se usa en la transacción que lo agrega). Esta migración NO usa el enum:
+-- aquí SIMULACION es solo una clave de texto del JSON «tareas». Que el código la use como tarea (TAREAS_IA) es del frente C;
+-- hasta entonces la app escribe solo las tres de hoy y la base admite también la cuarta.
+-- Candados: tests/unit/ia/config/esquema.test.ts, tests/integracion/ia/config-ia-reglas.test.ts y guardian-esquema.test.ts.
+SET LOCAL lock_timeout = '5s';
+
+ALTER TABLE "config_ia" DROP CONSTRAINT "config_ia_tareas_chk";
+ALTER TABLE "config_ia" ADD CONSTRAINT "config_ia_tareas_chk" CHECK (jsonb_typeof("tareas") = 'object' AND ("tareas" - ARRAY['DIARIO', 'REGLAS', 'ESCENARIOS', 'SIMULACION']) = '{}'::jsonb AND "tareas" ?& ARRAY['DIARIO', 'REGLAS', 'ESCENARIOS'] AND (NOT ("tareas" ? 'DIARIO') OR (jsonb_typeof(("tareas"->'DIARIO')) = 'object' AND (("tareas"->'DIARIO') - ARRAY['activo', 'modeloLocal']) = '{}'::jsonb AND jsonb_typeof(("tareas"->'DIARIO')->'activo') = 'boolean' AND (NOT (("tareas"->'DIARIO') ? 'modeloLocal') OR jsonb_typeof(("tareas"->'DIARIO')->'modeloLocal') = 'null' OR (jsonb_typeof(("tareas"->'DIARIO')->'modeloLocal') = 'string' AND (("tareas"->'DIARIO')->>'modeloLocal') ~ '^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$')))) AND (NOT ("tareas" ? 'REGLAS') OR (jsonb_typeof(("tareas"->'REGLAS')) = 'object' AND (("tareas"->'REGLAS') - ARRAY['activo', 'modeloLocal']) = '{}'::jsonb AND jsonb_typeof(("tareas"->'REGLAS')->'activo') = 'boolean' AND (NOT (("tareas"->'REGLAS') ? 'modeloLocal') OR jsonb_typeof(("tareas"->'REGLAS')->'modeloLocal') = 'null' OR (jsonb_typeof(("tareas"->'REGLAS')->'modeloLocal') = 'string' AND (("tareas"->'REGLAS')->>'modeloLocal') ~ '^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$')))) AND (NOT ("tareas" ? 'ESCENARIOS') OR (jsonb_typeof(("tareas"->'ESCENARIOS')) = 'object' AND (("tareas"->'ESCENARIOS') - ARRAY['activo', 'modeloLocal']) = '{}'::jsonb AND jsonb_typeof(("tareas"->'ESCENARIOS')->'activo') = 'boolean' AND (NOT (("tareas"->'ESCENARIOS') ? 'modeloLocal') OR jsonb_typeof(("tareas"->'ESCENARIOS')->'modeloLocal') = 'null' OR (jsonb_typeof(("tareas"->'ESCENARIOS')->'modeloLocal') = 'string' AND (("tareas"->'ESCENARIOS')->>'modeloLocal') ~ '^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$')))) AND (NOT ("tareas" ? 'SIMULACION') OR (jsonb_typeof(("tareas"->'SIMULACION')) = 'object' AND (("tareas"->'SIMULACION') - ARRAY['activo', 'modeloLocal']) = '{}'::jsonb AND COALESCE(jsonb_typeof(("tareas"->'SIMULACION')->'activo') = 'boolean', false) AND (NOT (("tareas"->'SIMULACION') ? 'modeloLocal') OR jsonb_typeof(("tareas"->'SIMULACION')->'modeloLocal') = 'null' OR (jsonb_typeof(("tareas"->'SIMULACION')->'modeloLocal') = 'string' AND (("tareas"->'SIMULACION')->>'modeloLocal') ~ '^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$')))));
+
+ALTER TABLE "config_ia" DROP CONSTRAINT "config_ia_usa_chk";
+ALTER TABLE "config_ia" ADD CONSTRAINT "config_ia_usa_chk" CHECK (("modo" NOT IN ('local', 'local-luego-nube') OR ("ollamaHost" IS NOT NULL AND NOT (("tareas"->'DIARIO')->'activo' = 'true'::jsonb AND jsonb_typeof(("tareas"->'DIARIO')->'modeloLocal') IS DISTINCT FROM 'string') AND NOT (("tareas"->'REGLAS')->'activo' = 'true'::jsonb AND jsonb_typeof(("tareas"->'REGLAS')->'modeloLocal') IS DISTINCT FROM 'string') AND NOT (("tareas"->'ESCENARIOS')->'activo' = 'true'::jsonb AND jsonb_typeof(("tareas"->'ESCENARIOS')->'modeloLocal') IS DISTINCT FROM 'string') AND NOT (COALESCE((("tareas"->'SIMULACION')->'activo' = 'true'::jsonb), false) AND jsonb_typeof(("tareas"->'SIMULACION')->'modeloLocal') IS DISTINCT FROM 'string'))) AND ("modo" NOT IN ('nube', 'local-luego-nube') OR "topeMensualUsd" IS NOT NULL));

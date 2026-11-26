@@ -48,7 +48,20 @@ describe("TarjetaResumenIa", () => {
   it("DESACTUALIZADO se marca a la vista", () => {
     const raiz = pintar(conIa("REGLAS", "AVISO_FICTICIO_NUEVO"));
     expect(texto(raiz.querySelector(".resumen-ia-desactualizado"))).toBe(TEXTOS_RESUMEN_IA.vigencia.DESACTUALIZADO);
+    expect(TEXTOS_RESUMEN_IA.vigencia.DESACTUALIZADO).toContain("los datos cambiaron desde este análisis");
     expect(TEXTOS_RESUMEN_IA.vigencia.DESACTUALIZADO).toMatch(/^DESACTUALIZADO/);
+  });
+
+  it("con IA: «Análisis de la IA del …» con su fecha y hora, sobre el pie", () => {
+    const raiz = pintar(conIa("DIARIO"));
+    expect(texto(raiz.querySelector(".resumen-ia-analisis"))).toBe("Análisis de la IA del 17-mar-2027, 18:41");
+  });
+
+  it("el último rechazado: el motivo en palabras simples, a la vista y sin códigos", () => {
+    const vista = { ...conIa("DIARIO"), rechazo: "El último análisis (17-mar-2027, 19:05) no pasó la revisión automática y no se muestra: no citó todas las cifras que debía." };
+    const raiz = pintar(vista);
+    expect(texto(raiz.querySelector(".resumen-ia-rechazo"))).toBe(vista.rechazo);
+    expect(pintar(conIa("DIARIO")).querySelector(".resumen-ia-rechazo")).toBeNull();
   });
 
   it("sin IA: el pie «Resumen sin IA», sin hora de redacción ni vigencia", () => {
@@ -56,6 +69,7 @@ describe("TarjetaResumenIa", () => {
     const raiz = pintar(elegirResumen({ tipo: "ESCENARIOS", publicado: null, hoy: { paquete, motivo: null } }).vista);
     expect(texto(raiz.querySelector(".resumen-ia-pie"))).toBe("Resumen sin IA");
     expect(raiz.querySelector(".resumen-ia-pie time")).toBeNull();
+    expect(raiz.querySelector(".resumen-ia-analisis")).toBeNull();
     expect(raiz.querySelector(".resumen-ia-vigencia")).toBeNull();
   });
 
@@ -64,6 +78,29 @@ describe("TarjetaResumenIa", () => {
     expect(texto(raiz.querySelector(".resumen-ia-nota"))).toBe(TEXTOS_RESUMEN_IA.notaMomento);
     expect(raiz.querySelector(".resumen-ia-frases")).toBeNull();
     expect(raiz.querySelector(".resumen-ia-cifras")).toBeNull();
+  });
+
+  it("IA apagada: la tarjeta lo dice en palabras simples, sin detalles de configuración", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const vista = elegirResumen({ tipo: "DIARIO", publicado: null, motivoSinIa: TEXTOS_RESUMEN_IA.iaApagada, hoy: { paquete, motivo: null } }).vista;
+    const raiz = pintar(vista);
+    expect(texto(raiz.querySelector(".resumen-ia-sin-ia"))).toBe("IA apagada");
+    expect(texto(raiz)).not.toMatch(/config|modo|interruptor|demanda|tarea/i);
+  });
+
+  it("sin motivo no se pinta el párrafo de «IA apagada»", () => {
+    expect(pintar(conIa("DIARIO")).querySelector(".resumen-ia-sin-ia")).toBeNull();
+  });
+
+  it("fallo y descarte se pintan cada uno en su párrafo", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const raiz = pintar({
+      ...elegirResumen({ tipo: "DIARIO", publicado: null, hoy: { paquete, motivo: null } }).vista,
+      fallo: "El último intento de análisis (17-mar-2027, 19:05) falló.", descartado: "El análisis guardado ya no pasa la revisión.",
+    });
+    expect(texto(raiz.querySelector(".resumen-ia-fallo"))).toBe("El último intento de análisis (17-mar-2027, 19:05) falló.");
+    expect(texto(raiz.querySelector(".resumen-ia-descartado"))).toBe("El análisis guardado ya no pasa la revisión.");
+    expect(pintar(conIa("DIARIO")).querySelector(".resumen-ia-fallo, .resumen-ia-descartado")).toBeNull();
   });
 
   it("solo texto plano: una frase con etiquetas sale escapada, sin HTML crudo", () => {
@@ -82,6 +119,9 @@ describe("candado de lenguaje de la tarjeta", () => {
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: null, motivo: "SIN_PLAN_VIGENTE" } }).vista,
       elegirResumen({ tipo: t, publicado: null, hoy: { paquete: null, motivo: "OCUPADO" } }).vista,
+      elegirResumen({ tipo: t, publicado: null, motivoSinIa: TEXTOS_RESUMEN_IA.iaApagada, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
+      elegirResumen({ tipo: t, publicado: publicadoFicticio(paqueteFicticio(t), { salidaModelo: "x" }), hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
+      elegirResumen({ tipo: t, publicado: null, fallido: { fechaNegocio: "2027-03-17", generadoEn: new Date("2027-03-18T00:05:00.000Z") }, hoy: { paquete: paqueteFicticio(t), motivo: null } }).vista,
     ]),
   ];
   /** El texto de la tarjeta sin el aviso fijo (ese lo pone el validador y niega la recomendación a propósito). */
@@ -96,7 +136,9 @@ describe("candado de lenguaje de la tarjeta", () => {
   });
 
   it("todos los textos fijos de la tarjeta pasan el detector", () => {
-    const fijos = JSON.stringify(TEXTOS_RESUMEN_IA);
+    // Solo los textos (los valores): los códigos del validador, que son las claves de los motivos, no se muestran.
+    const valores = (o: object): string[] => Object.values(o).flatMap((v) => (typeof v === "string" ? [v] : typeof v === "object" && v !== null ? valores(v) : []));
+    const fijos = JSON.stringify(valores(TEXTOS_RESUMEN_IA));
     expect(prohibidasEn(fijos)).toEqual([]);
   });
 

@@ -45,8 +45,8 @@ const violacionesComunes = (t: string): string[] => [
   ...["crudo", "encargo", "claveHash", "totpSecreto"].filter((c) => new RegExp(`\\b${c}\\s*:`).test(t)),
 ];
 
-const PAGINAS = [join(EDICION, "page.tsx"), ...["plan", "decision", "enlace", "tarifas"].map((p) => join(EDICION, p, "page.tsx"))];
-const RUTAS = ["src/app/api/plan/versiones/route.ts", "src/app/api/decisiones/route.ts", "src/app/api/decisiones/enlaces/route.ts", "src/app/api/operar/tarifas/route.ts"];
+const PAGINAS = [join(EDICION, "page.tsx"), ...["plan", "decision", "enlace", "tarifas", "alertas"].map((p) => join(EDICION, p, "page.tsx"))];
+const RUTAS = ["src/app/api/plan/versiones/route.ts", "src/app/api/decisiones/route.ts", "src/app/api/decisiones/enlaces/route.ts", "src/app/api/operar/tarifas/route.ts", "src/app/api/alertas/umbrales/route.ts"];
 
 describe("candados del área de edición · controles positivos", () => {
   it("el de cliente muerde: la base, el dominio o la sesión no entran; React, tipos y los módulos puros sí", () => {

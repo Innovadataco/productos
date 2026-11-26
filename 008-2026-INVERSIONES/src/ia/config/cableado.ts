@@ -18,7 +18,8 @@ import { configNubeDesde, type ConfigNube } from "../nube/config";
 import { crearGeneradorNube, type DependenciasNube } from "../nube/generador-nube";
 import { generarConPuertas, type ModoPuertas, type ResultadoPuertas } from "../puertas";
 import { destinoDe, type ConfigIaVigente } from "./leer";
-import type { TareaIa } from "./parametros";
+import { esDe } from "../formas";
+import { TAREAS_IA, type TareaIa } from "./parametros";
 
 const MS_POR_S = 1000;
 
@@ -92,6 +93,8 @@ const APAGADO: ResultadoPuertas = Object.freeze({ estado: "APAGADO", ok: false }
 
 /** Una corrida de la tarea del paquete con la configuración vigente: el pedido con su límite y las puertas de su modo. */
 export async function generarSegunConfig(config: ConfigIaVigente | null, generadores: readonly Generador[], entrada: EntradaCorrida): Promise<ResultadoPuertas> {
+  // SIMULACION no corre por aquí (es a demanda, con su propio camino): fuera de las tareas diarias, nada.
+  if (!esDe(TAREAS_IA, entrada.paquete.tipo)) return APAGADO;
   const corrida = corridaDe(config, entrada.paquete.tipo);
   if (corrida.estado === "APAGADO") return APAGADO;
   const pedido = armarPedido({ paquete: entrada.paquete, prompt: entrada.prompt, esquemaSalida: entrada.esquemaSalida, limiteMs: corrida.limiteMs });

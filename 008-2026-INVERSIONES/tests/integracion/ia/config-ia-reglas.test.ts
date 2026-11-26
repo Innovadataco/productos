@@ -28,9 +28,11 @@ async function version(): Promise<number> {
 type Datos = Omit<Prisma.ConfigIaUncheckedCreateInput, "version" | "autorId">;
 const tareas = (modelo: string | null, activas: readonly string[] = ["DIARIO", "REGLAS"]) =>
   Object.fromEntries(["DIARIO", "REGLAS", "ESCENARIOS"].map((t) => [t, { activo: activas.includes(t), modeloLocal: modelo }]));
+/** Las tres de hoy y, además, SIMULACION (opcional en la base desde el frente B) con el valor dado. */
+const conSimulacion = (simulacion: Prisma.InputJsonValue | null, modelo: string | null = "qwen2.5:14b") => ({ ...tareas(modelo), SIMULACION: simulacion });
 const BASE: Datos = {
   modo: "apagado", temperaturaLocal: new Prisma.Decimal("0"), tareas: tareas(null), modeloNube: "claude-opus-5-5", horaResumen: "19:00",
-  limiteSegundos: 120, esfuerzoNube: "low", motivo: "Versión ficticia de la prueba",
+  limiteSegundos: 60, esfuerzoNube: "low", motivo: "Versión ficticia de la prueba",
 };
 const crear = async (cambios: Partial<Datos> = {}) => db.configIa.create({ data: { ...BASE, ...cambios, version: await version(), autorId } });
 
@@ -56,8 +58,24 @@ describe("config_ia · control positivo", () => {
     await expect(crear({ modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: porTarea })).resolves.toBeDefined();
   });
 
+  it("SIMULACION es opcional: una fila con las tres tareas de hoy (la forma de antes) sigue entrando, también con la local", async () => {
+    await expect(crear({ tareas: tareas(null) })).resolves.toBeDefined();
+    await expect(crear({ modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: tareas("qwen2.5:14b") })).resolves.toBeDefined();
+  });
+
+  it("SIMULACION entra apagada (con y sin modelo, en cualquier modo), y activa con su modelo con la local", async () => {
+    await expect(crear({ tareas: conSimulacion({ activo: false }, null) })).resolves.toBeDefined();
+    await expect(crear({ tareas: conSimulacion({ activo: false, modeloLocal: null }, null) })).resolves.toBeDefined();
+    await expect(crear({ modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: conSimulacion({ activo: false, modeloLocal: null }) })).resolves.toBeDefined();
+    await expect(crear({ modo: "nube", topeMensualUsd: new Prisma.Decimal("5"), tareas: conSimulacion({ activo: true, modeloLocal: null }) })).resolves.toBeDefined();
+    await expect(crear({ modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: conSimulacion({ activo: true, modeloLocal: "gemma2:27b" }) })).resolves.toBeDefined();
+    const guardada = await crear({ tareas: conSimulacion({ activo: false, modeloLocal: null }, null) });
+    expect(guardada.tareas).toMatchObject({ SIMULACION: { activo: false, modeloLocal: null } });
+  });
+
   it("los bordes entran: límite 10 y 120, tope 1 y 50, puerto 1 y 65535, horas de la lista", async () => {
     await expect(crear({ limiteSegundos: 10 })).resolves.toBeDefined();
+    await expect(crear({ limiteSegundos: 120 })).resolves.toBeDefined(); // la CHECK de la base sigue en 120: el lector acota a 60
     for (const t of ["0", "0.37", "1"]) await expect(crear({ temperaturaLocal: new Prisma.Decimal(t) })).resolves.toBeDefined();
     await expect(crear({ modo: "nube", topeMensualUsd: new Prisma.Decimal("1.00") })).resolves.toBeDefined();
     await expect(crear({ ollamaHost: ip(100, 64, 0, 1), ollamaPuerto: 1 })).resolves.toBeDefined();
@@ -88,6 +106,27 @@ describe("config_ia · cada CHECK muerde", () => {
     // Revisión (base, M1): sin una tarea, la regla del modo daba NULL y la fila pasaba. Todas las tareas van siempre.
     ["las tareas vacías con la local", { modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: {} }, "config_ia_tareas_chk"],
     ["una tarea que falta", { tareas: { DIARIO: { activo: false, modeloLocal: null }, REGLAS: { activo: false, modeloLocal: null } } }, "config_ia_tareas_chk"],
+    // Frente B (B3): SIMULACION opcional, pero con la misma forma de las demás cuando está.
+    ["SIMULACION con un campo de más", { tareas: conSimulacion({ activo: false, modeloLocal: null, temperatura: 1 }) }, "config_ia_tareas_chk"],
+    ["SIMULACION con «activo» que no es booleano (texto)", { tareas: conSimulacion({ activo: "true", modeloLocal: null }) }, "config_ia_tareas_chk"],
+    ["SIMULACION con «activo» nulo", { tareas: conSimulacion({ activo: null, modeloLocal: null }) }, "config_ia_tareas_chk"],
+    ["SIMULACION con «activo» numérico", { tareas: conSimulacion({ activo: 1 }) }, "config_ia_tareas_chk"],
+    ["SIMULACION sin «activo» (el tipo da NULL: el COALESCE no lo deja pasar)", { tareas: conSimulacion({ modeloLocal: null }) }, "config_ia_tareas_chk"],
+    ["SIMULACION vacía", { tareas: conSimulacion({}) }, "config_ia_tareas_chk"],
+    ["SIMULACION con un modelo local en mayúsculas", { tareas: conSimulacion({ activo: false, modeloLocal: "Qwen2.5:14B" }) }, "config_ia_tareas_chk"],
+    ["SIMULACION con un modelo local con registro", { tareas: conSimulacion({ activo: false, modeloLocal: "registro/qwen2.5:14b" }) }, "config_ia_tareas_chk"],
+    ["SIMULACION con un modelo local que no es texto", { tareas: conSimulacion({ activo: false, modeloLocal: 4613 }) }, "config_ia_tareas_chk"],
+    ["SIMULACION que no es un objeto (nula)", { tareas: conSimulacion(null) }, "config_ia_tareas_chk"],
+    ["SIMULACION que no es un objeto (arreglo)", { tareas: conSimulacion([]) }, "config_ia_tareas_chk"],
+    ["SIMULACION que no es un objeto (texto)", { tareas: conSimulacion("activa") }, "config_ia_tareas_chk"],
+    ["SIMULACION sin las tres de hoy (siguen obligatorias)", { tareas: { SIMULACION: { activo: false, modeloLocal: null } } }, "config_ia_tareas_chk"],
+    ["SIMULACION con una de las tres de hoy ausente", { tareas: { DIARIO: { activo: false, modeloLocal: null }, REGLAS: { activo: false, modeloLocal: null }, SIMULACION: { activo: false, modeloLocal: null } } }, "config_ia_tareas_chk"],
+    ["una tarea desconocida junto a SIMULACION", { tareas: { ...conSimulacion({ activo: false }), OPERAR: { activo: false, modeloLocal: null } } }, "config_ia_tareas_chk"],
+    ["una tarea desconocida con el nombre de SIMULACION en minúsculas", { tareas: { ...tareas(null), simulacion: { activo: false, modeloLocal: null } } }, "config_ia_tareas_chk"],
+    ["el modo local con SIMULACION activa sin modelo (null)", { modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: conSimulacion({ activo: true, modeloLocal: null }) }, "config_ia_usa_chk"],
+    ["el modo local con SIMULACION activa sin la clave del modelo", { modo: "local", ollamaHost: HOST, ollamaPuerto: 47213, tareas: conSimulacion({ activo: true }) }, "config_ia_usa_chk"],
+    ["local-luego-nube con SIMULACION activa sin modelo", { modo: "local-luego-nube", ollamaHost: HOST, ollamaPuerto: 47213, topeMensualUsd: new Prisma.Decimal("5"), tareas: conSimulacion({ activo: true, modeloLocal: null }) }, "config_ia_usa_chk"],
+    ["el modo local con SIMULACION activa y sin destino", { modo: "local", tareas: conSimulacion({ activo: true, modeloLocal: "gemma2:27b" }) }, "config_ia_usa_chk"],
     ["un host sin puerto", { ollamaHost: HOST }, "config_ia_destino_chk"],
     ["un puerto sin host", { ollamaPuerto: 47213 }, "config_ia_destino_chk"],
     ["el puerto 0", { ollamaHost: HOST, ollamaPuerto: 0 }, "config_ia_destino_chk"],
@@ -186,7 +225,7 @@ describe("config_ia · privilegios de inv_ia (pg_signal_backend con los GRANT de
 
   it("lee lo que necesita (control positivo) y nada del motivo ni del autor", async () => {
     await crear();
-    const filas = await restringida.$queryRawUnsafe<unknown[]>(`SELECT id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", "creadaEn" FROM config_ia ORDER BY version DESC LIMIT 1`);
+    const filas = await restringida.$queryRawUnsafe<unknown[]>(`SELECT id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "analisisDemanda", "esfuerzoNube", "creadaEn" FROM config_ia ORDER BY version DESC LIMIT 1`);
     expect(filas).toHaveLength(1);
     for (const sentencia of ['SELECT motivo FROM config_ia LIMIT 1', 'SELECT "autorId" FROM config_ia LIMIT 1', "INSERT INTO config_ia (id) VALUES ('x')"]) {
       await expect(restringida.$executeRawUnsafe(sentencia), sentencia).rejects.toThrow(/42501|permission denied/);

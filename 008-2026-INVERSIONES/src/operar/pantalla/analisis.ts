@@ -9,6 +9,8 @@ import "server-only";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { analizar } from "@/analisis/analizar";
 import { observaciones } from "@/analisis/observaciones";
+import { cambiosDeLaOperacion } from "@/analisis/puntos/simulacion";
+import { VERSION_PUNTOS, type PuntoCambio } from "@/analisis/puntos/tipos";
 import type { EntradasAnalisis, ReglaParaAnalisis } from "@/analisis/tipos";
 import { CONTROLES_INICIALES } from "@/app/proyecciones/opciones";
 import { SEMILLA_PANTALLA, TRAYECTORIAS_PANTALLA } from "@/app/proyecciones/controles";
@@ -19,6 +21,7 @@ import { obtenerResumen } from "@/tablero/datos";
 import type { Tablero } from "@/tablero/calculo";
 import { compararAnalisis } from "../analisis/comparar";
 import { portafolioDespues } from "../analisis/despues";
+import { tableroConPrecioActual } from "../analisis/precio-actual";
 import { escenariosAntesDespues, type EntradaEscenario } from "../analisis/escenarios";
 import type { AntesDespues, ComparacionAnalisis, ResumenEscenario } from "../analisis/tipos";
 
@@ -32,12 +35,19 @@ export interface PedidoAnalisis {
   readonly reglas: readonly ReglaParaAnalisis[];
   /** La caja del simulador: antes, la vigente (escrita por el dueño o la de A&V); después, con la orden y la comisión. */
   readonly caja: AntesDespues<Prisma.Decimal>;
+  /** El precio actual de trii Pro escrito para la especie operada, o null: el tablero la valora con él en lugar de su último cierre. */
+  readonly precioActual?: Prisma.Decimal | null;
+  /** El precio límite de la orden: con él se mide cada regla de nivel (el precio de mercado es el mismo antes y después). */
+  readonly precioLimite: Prisma.Decimal;
 }
 
 export interface AnalisisSimulado {
   readonly comparacion: ComparacionAnalisis;
   readonly escenarios: AntesDespues<ResumenEscenario> | null;
   readonly nombres: ReadonlyMap<string, string>;
+  /** Los puntos que cambian de rango (JSON puro). */
+  readonly cambios: readonly PuntoCambio[];
+  readonly versionPuntos: typeof VERSION_PUNTOS;
 }
 
 const paraAnalisis = (r: ReglaParaAnalisis): ReglaParaAnalisis => ({ id: r.id, instrumentoId: r.instrumentoId, condicion: r.condicion, nivel: r.nivel, plazoHasta: r.plazoHasta });
@@ -70,20 +80,33 @@ async function escenarios(usuarioId: string, antes: EntradaEscenario, despues: E
 
 export async function analizarSimulacion(db: PrismaClient, pedido: PedidoAnalisis): Promise<AnalisisSimulado> {
   const { hoy, instrumentoId } = pedido;
-  const { tablero } = await obtenerResumen(db);
+  const { tablero: leido } = await obtenerResumen(db);
+  const tablero = pedido.precioActual == null ? leido : tableroConPrecioActual(leido, instrumentoId, pedido.precioActual);
   const historia = await leerEntradas(db, hoy);
   const base: EntradasAnalisis = { hoy, historia, tablero, decisiones: [] };
   const simulado = portafolioDespues({ tablero, historia }, instrumentoId, pedido.cantidadDespues);
   const antes = analizar(base);
   const despues = analizar({ ...base, ...simulado });
   const plan = { reglas: pedido.reglas.map(paraAnalisis) };
+  const esc = await escenarios(
+    pedido.usuarioId,
+    entradaEscenario(historia, tablero, pedido.caja.antes, instrumentoId),
+    entradaEscenario(simulado.historia, simulado.tablero, pedido.caja.despues, instrumentoId),
+  );
+  const cambios = cambiosDeLaOperacion({
+    antes,
+    despues,
+    probabilidad: esc === null ? null : { antes: esc.antes.probabilidadBajoAportado, despues: esc.despues.probabilidadBajoAportado },
+    reglas: pedido.reglas,
+    instrumentoId,
+    precioLimite: pedido.precioLimite,
+    hoy,
+  });
   return {
     comparacion: compararAnalisis({ antes, despues, puntosAntes: observaciones(antes, plan, hoy), puntosDespues: observaciones(despues, plan, hoy), instrumentoId }),
-    escenarios: await escenarios(
-      pedido.usuarioId,
-      entradaEscenario(historia, tablero, pedido.caja.antes, instrumentoId),
-      entradaEscenario(simulado.historia, simulado.tablero, pedido.caja.despues, instrumentoId),
-    ),
+    escenarios: esc,
     nombres: new Map([...tablero.filas, ...tablero.cerradas].map((f) => [f.instrumentoId, f.nemotecnico] as const)),
+    cambios,
+    versionPuntos: VERSION_PUNTOS,
   };
 }

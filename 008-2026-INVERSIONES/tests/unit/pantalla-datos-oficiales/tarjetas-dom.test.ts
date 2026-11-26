@@ -2,7 +2,7 @@
 // La pantalla /datos-oficiales pintada en el servidor (frente datos-oficiales-pantalla, C6a), con vistas inventadas:
 // una tarjeta por serie con su último valor, su vigencia (y «Vale hoy» solo si cubre hoy), su frescura en texto (no
 // solo en color), la fuente con enlace https a un host de la lista (sin target, sin referer), cuándo se trajo y cómo
-// entra; en el IPC, la variación «calculada por 008». Sin datos y con error, ninguna cifra. Sin formularios ni botones.
+// entra; en el IPC, la variación «calculada por Inversiones». Sin datos y con error, ninguna cifra. Sin formularios ni botones.
 // Revisión a11y-architect (MEDIO): la insignia dice, para el lector, que es el estado de la serie, y el enlace dice
 // adónde lleva (la página oficial de esa serie, en un sitio externo), sin cambiar el texto visible.
 import { createElement } from "react";
@@ -42,7 +42,7 @@ describe("la pantalla", () => {
     expect([texto(actual), actual?.getAttribute("href")]).toEqual(["Datos oficiales", "/datos-oficiales"]);
     expect(texto(raiz.querySelector("h1"))).toBe("Datos oficiales");
     expect(texto(raiz.querySelector(".do-hero .eyebrow"))).toBe("Consultado el 17-mar-2021 (hora de Colombia)");
-    expect(texto(raiz.querySelector("footer.pie"))).toBe("008 informa; no recomienda comprar ni vender.");
+    expect(texto(raiz.querySelector("footer.pie"))).toBe("Inversiones informa; no recomienda comprar ni vender.");
   });
 
   it("la marca «Solo lectura» con un familiar; con el dueño, no", () => {
@@ -98,10 +98,10 @@ describe("cada tarjeta", () => {
     expect(pares(t).at(-1)).toEqual(["Frescura", "Terminó hace 12 días; se marca atrasada desde 7 días."]);
   });
 
-  it("IPC: el mes que corresponde y la variación en 12 meses «calculada por 008»", () => {
+  it("IPC: el mes que corresponde y la variación en 12 meses «calculada por Inversiones»", () => {
     const t = tarjeta(pantalla(), IPC.nombre);
     expect(texto(t.querySelector(".do-vigencia"))).toBe("No es la cifra de hoy · corresponde a feb-2021");
-    expect(texto(t.querySelector(".do-variacion"))).toBe("Variación en 12 meses +2,71 % de variación (calculada por 008)");
+    expect(texto(t.querySelector(".do-variacion"))).toBe("Variación en 12 meses +2,71 % de variación (calculada por Inversiones)");
     expect(texto(t.querySelector(".do-variacion-nota"))).toBe("Entre feb-2020 y feb-2021, con el índice de cada mes.");
   });
 

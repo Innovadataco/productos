@@ -7,7 +7,7 @@
  * - un signo pegado a una cita: rechazo (FORMATO).
  */
 import { describe, expect, it } from "vitest";
-import { TIPOS_RESUMEN, type PaqueteHechos } from "@/ia/contrato";
+import { TIPOS_DIARIOS, type PaqueteHechos } from "@/ia/contrato";
 import { leerSalida } from "@/ia/validador/leer";
 import { resumenSinIa, salidaDePlantilla } from "@/ia/validador/plantilla";
 import { segmentosDe } from "@/ia/validador/segmentos";
@@ -58,8 +58,8 @@ function motivos(cruda: string, paquete: PaqueteHechos): readonly string[] {
   return r.ok ? [] : r.motivos;
 }
 
-describe.each(TIPOS_RESUMEN)("inyección de cifras · %s", (tipo) => {
-  const prng = crearPrng(17_389 + TIPOS_RESUMEN.indexOf(tipo));
+describe.each(TIPOS_DIARIOS)("inyección de cifras · %s", (tipo) => {
+  const prng = crearPrng(17_389 + TIPOS_DIARIOS.indexOf(tipo));
   // Solo paquetes con algún dato que no sea un nombre: con solo nombres no hay plantilla válida (lo prueba la plantilla).
   const paquetes = Array.from({ length: 113 }, () => paqueteAlAzarConTope(prng, tipo)).filter((p) => p.hechos.some((h) => h.unidad !== "NOMBRE"));
 

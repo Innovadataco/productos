@@ -1,8 +1,9 @@
 /**
  * Buscador fijo del servicio de precios: el `fetch` de los procesos de tarea (el despachador lo instala ANTES de
  * cargar cada CLI). Condiciones del CEO de PI (D-018), todas aquí y probadas en tests/unit/precios/servicio-buscador:
- * - solo 2 hosts fijos, Yahoo `query1.finance.yahoo.com` y la SFC `www.datos.gov.co`, por https al 443, sin puerto
- *   escrito ni credenciales en la URL; cualquier otro destino se rechaza ANTES de conectar;
+ * - lista blanca fija: Yahoo `query1.finance.yahoo.com` y `query2.finance.yahoo.com` (D-018 decía solo query1; query2 lo
+ *   pide el ciclo intradía y lo aprueba el CEO de PI) y la SFC `www.datos.gov.co`, por https al 443, sin puerto escrito ni
+ *   credenciales en la URL; cualquier otro destino se rechaza ANTES de conectar. Nada se suma por configuración;
  * - `redirect: "error"`: el pedido debe traerlo, y una respuesta 3xx es un error (nunca se sigue);
  * - nunca la IP del host: la conexión va solo a las IPv4 públicas que validó `crearLookupSeguro` (direcciones.ts).
  * Con `node:https` (no el fetch de undici) para poder fijar el `lookup` de la conexión. Pide `identity` (sin
@@ -14,9 +15,10 @@ import type { ClientRequest, IncomingMessage } from "node:http";
 import { request as pedirHttps, type RequestOptions } from "node:https";
 import type { LookupFunction } from "node:net";
 import type { BuscarHttp, RespuestaHttp } from "../lib/http-acotado";
+import { HOSTS_YAHOO_INTRADIA } from "../precios/intradia/url";
 import { crearLookupSeguro } from "./direcciones";
 
-export const HOSTS_PERMITIDOS: readonly string[] = Object.freeze(["query1.finance.yahoo.com", "www.datos.gov.co"]);
+export const HOSTS_PERMITIDOS: readonly string[] = Object.freeze([...Object.values(HOSTS_YAHOO_INTRADIA), "www.datos.gov.co"]);
 const PUERTO_HTTPS = 443;
 
 /** `https.request` inyectable: en las pruebas la petición ya armada se reescribe hacia un servidor local. */
@@ -27,8 +29,8 @@ export interface DependenciasBuscador {
   readonly lookup?: LookupFunction;
 }
 
-/** La URL, si es uno de los 2 destinos fijos; si no, null. */
-function destinoPermitido(url: unknown): URL | null {
+/** La URL, si es uno de los destinos permitidos (la lista blanca fija); si no, null. */
+function destinoPermitido(url: unknown, hosts: readonly string[]): URL | null {
   let u: URL;
   try {
     if (typeof url !== "string" && !(url instanceof URL)) return null;
@@ -37,7 +39,7 @@ function destinoPermitido(url: unknown): URL | null {
     return null;
   }
   const limpia = u.protocol === "https:" && u.username === "" && u.password === "" && u.port === "";
-  return limpia && HOSTS_PERMITIDOS.includes(u.hostname) ? u : null;
+  return limpia && hosts.includes(u.hostname) ? u : null;
 }
 
 /** Las del pedido (en minúsculas), `accept: *\/*` si no viene y siempre `accept-encoding: identity`. */
@@ -103,13 +105,13 @@ function rechazoDe(respuesta: IncomingMessage): TypeError | null {
   return null;
 }
 
-/** El `fetch` de los procesos de tarea: solo los 2 hosts fijos, con redirect "error" y a IPv4 públicas. */
+/** El `fetch` de los procesos de tarea: solo la lista blanca fija, con redirect "error" y a IPv4 públicas. */
 export function crearBuscadorFijo(deps: DependenciasBuscador = {}): BuscarHttp {
   const solicitar = deps.solicitar ?? pedirHttps;
   const lookup = deps.lookup ?? crearLookupSeguro();
   const buscarFijo: BuscarHttp = (url, init) =>
     new Promise<RespuestaHttp>((resolver, rechazar) => {
-      const destino = destinoPermitido(url);
+      const destino = destinoPermitido(url, HOSTS_PERMITIDOS);
       if (!destino) return rechazar(new TypeError("PRECIOS_DESTINO_NO_PERMITIDO"));
       if (init?.redirect !== "error") return rechazar(new TypeError("PRECIOS_REDIRECCION_NO_ERROR"));
       const opciones: RequestOptions = {

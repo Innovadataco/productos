@@ -24,8 +24,12 @@ const HUELLAS_V1: Readonly<Record<string, string>> = {
   VOCABULARIO: "465c96414006feec69381c0f09c0dc90685e91aef6efe45fa9464cb69668f466",
 };
 
-/** v2 cambia solo la lectura de la salida (segmentos): las listas son las mismas de v1. */
-const HUELLAS: Readonly<Record<string, Readonly<Record<string, string>>>> = { "validador-v1": HUELLAS_V1, "validador-v2": HUELLAS_V1 };
+/**
+ * v2 cambia solo la lectura de la salida (segmentos) y v3 compone los obligatorios del DIARIO (`obligatorias.ts`); v4 agrega
+ * los controles de SIMULACION (PARA_REVISAR, RANGO_CONTRADICE y ATRIBUCION, con listas aparte: `patrones-atribucion.ts` y
+ * `PATRONES_ATENCION`): las listas de arriba son las mismas de v1.
+ */
+const HUELLAS: Readonly<Record<string, Readonly<Record<string, string>>>> = { "validador-v1": HUELLAS_V1, "validador-v2": HUELLAS_V1, "validador-v3": HUELLAS_V1, "validador-v4": HUELLAS_V1 };
 
 const huella = (patrones: readonly Patron[]): string => sha256Hex(JSON.stringify(patrones.map((p) => [p.id, p.sobre, p.antes, p.alternativas])));
 

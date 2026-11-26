@@ -5,7 +5,7 @@
  * la tabla de abajo: cambiar el texto sin subir la versión pone esta prueba en rojo.
  */
 import { describe, expect, it } from "vitest";
-import { TIPOS_RESUMEN, type TipoResumen } from "@/ia/contrato";
+import { TIPOS_DIARIOS, type TipoResumen } from "@/ia/contrato";
 import { armarPedido, PATRON_VERSION_PROMPT } from "@/ia/generador";
 import { jsonCanonico, sha256Hex } from "@/ia/hash";
 import { construirPaquete } from "@/ia/paquete";
@@ -29,14 +29,18 @@ const HISTORIAL: Readonly<Record<string, string>> = {
   "resumen-diario-v3": "8204774fa57c501de65404a76c1884ce9af8278f05b1078ab99f31cb5a7d42a0",
   "resumen-reglas-v3": "276f369f69801eaeecb61bb6d3262802190c56b2f642cfc6746389c2c836faa3",
   "resumen-escenarios-v3": "f3ea6626c67314fa2c9140f5033814b5dfcc171a83e9347121f8a64cda1cdd97",
+  // v4 del DIARIO (T5): el código escribe los obligatorios; el modelo escribe de una a cuatro frases con los demás hechos.
+  "resumen-diario-v4": "ee6162ea6fbfefc03d026032c991450abb26d18b78d29478fc3d2596348b306c",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */
 const LIMITES_EN_PALABRAS: Readonly<Record<number, string>> = { 1: "una", 6: "seis", 280: "doscientos ochenta", 1200: "mil doscientos" };
+/** El DIARIO v4 dice los límites de SU parte (el código escribe el resto): de una a cuatro frases y hasta seiscientos caracteres. */
+const LIMITES_DIARIO_V4: readonly string[] = ["una", "cuatro", "doscientos ochenta", "seiscientos"];
 const LIMITE_MS = 4613;
 
 describe("prompts versionados", () => {
-  it.each(TIPOS_RESUMEN)("%s: versión válida, en la historia, con su hash sha256", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: versión válida, en la historia, con su hash sha256", (tipo) => {
     const prompt = PROMPTS[tipo];
     expect(prompt.version).toBe(VERSIONES_PROMPT[tipo]);
     expect(prompt.version).toMatch(PATRON_VERSION_PROMPT);
@@ -47,11 +51,11 @@ describe("prompts versionados", () => {
   });
 
   it("las versiones y los textos son distintos por tipo; la tabla de versiones está congelada", () => {
-    expect(new Set(TIPOS_RESUMEN.map((t) => PROMPTS[t].version)).size).toBe(TIPOS_RESUMEN.length);
-    expect(new Set(TIPOS_RESUMEN.map((t) => PROMPTS[t].texto)).size).toBe(TIPOS_RESUMEN.length);
+    expect(new Set(TIPOS_DIARIOS.map((t) => PROMPTS[t].version)).size).toBe(TIPOS_DIARIOS.length);
+    expect(new Set(TIPOS_DIARIOS.map((t) => PROMPTS[t].texto)).size).toBe(TIPOS_DIARIOS.length);
     expect(Object.isFrozen(PROMPTS)).toBe(true);
     expect(Object.isFrozen(VERSIONES_PROMPT)).toBe(true);
-    expect(Object.keys(HISTORIAL)).toEqual(expect.arrayContaining(TIPOS_RESUMEN.map((t) => VERSIONES_PROMPT[t])));
+    expect(Object.keys(HISTORIAL)).toEqual(expect.arrayContaining(TIPOS_DIARIOS.map((t) => VERSIONES_PROMPT[t])));
   });
 
   it("promptDe con un tipo que no existe lanza (cierra en fallo)", () => {
@@ -59,29 +63,31 @@ describe("prompts versionados", () => {
     expect(() => promptDe("constructor" as TipoResumen)).toThrow(RangeError);
   });
 
-  it.each(TIPOS_RESUMEN)("%s: sin dígitos fuera del id de ejemplo «H01»", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: sin dígitos fuera del id de ejemplo «H01»", (tipo) => {
     const texto = PROMPTS[tipo].texto;
     expect(texto).toContain('{"ref":"H01"}');
     expect(texto.replace(/H01/g, "")).not.toMatch(/\p{N}/u);
   });
 
-  it.each(TIPOS_RESUMEN)("%s: de usted y sin trato de tú ni voseo", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: de usted y sin trato de tú ni voseo", (tipo) => {
     const texto = PROMPTS[tipo].texto;
     expect(texto).toMatch(/de usted/);
     expect(coincidencias(texto, PATRONES_TRATO)).toEqual([]);
   });
 
-  it.each(TIPOS_RESUMEN)("%s: dice que no escriba cifras, que cite, que no recomiende y que no prediga", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: dice que no escriba cifras, que cite, que no recomiende y que no prediga", (tipo) => {
     const texto = PROMPTS[tipo].texto.toLowerCase();
-    for (const instruccion of ["no escriba cifras", "segmento de referencia", "nunca escriba el id ni llaves dentro de la prosa", "no recomiende", "no prediga", "cite todos los hechos obligatorios", "solo con un json"]) {
+    // El DIARIO ya no ordena citar los obligatorios (los escribe el código): ver prompts-v4.test.ts.
+    const comunes = ["no escriba cifras", "segmento de referencia", "nunca escriba el id ni llaves dentro de la prosa", "no recomiende", "no prediga", "solo con un json"];
+    for (const instruccion of tipo === "DIARIO" ? comunes : [...comunes, "cite todos los hechos obligatorios"]) {
       expect(texto).toContain(instruccion);
     }
   });
 
-  it.each(TIPOS_RESUMEN)("%s: dice los límites del validador, en palabras", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: dice los límites del validador, en palabras", (tipo) => {
     const texto = PROMPTS[tipo].texto;
     expect([LIMITES_SALIDA.minFrases, LIMITES_SALIDA.maxFrases, LIMITES_SALIDA.maxLargoFrase, LIMITES_SALIDA.maxLargoTotal]).toEqual([1, 6, 280, 1200]);
-    for (const palabras of Object.values(LIMITES_EN_PALABRAS)) expect(texto).toContain(palabras);
+    for (const palabras of tipo === "DIARIO" ? LIMITES_DIARIO_V4 : Object.values(LIMITES_EN_PALABRAS)) expect(texto).toContain(palabras);
   });
 });
 
@@ -127,14 +133,14 @@ describe("esquema de salida", () => {
 });
 
 describe("armarPedido acepta cada prompt con el esquema (sin datos del paquete en el pedido)", () => {
-  it.each(TIPOS_RESUMEN)("%s: con la entrada ficticia", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: con la entrada ficticia", (tipo) => {
     const paquete = construirPaquete(ENTRADAS_FICTICIAS[tipo]());
     const pedido = armarPedido({ paquete, prompt: PROMPTS[tipo], esquemaSalida: ESQUEMA_SALIDA, limiteMs: LIMITE_MS });
     expect(pedido.prompt).toEqual({ texto: PROMPTS[tipo].texto, version: PROMPTS[tipo].version, hash: PROMPTS[tipo].hash });
     expect(JSON.stringify(pedido.esquemaSalida)).toBe(JSON.stringify(ESQUEMA_SALIDA));
   });
 
-  it.each(TIPOS_RESUMEN)("%s: con paquetes al azar (semilla fija)", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: con paquetes al azar (semilla fija)", (tipo) => {
     const prng = crearPrng(37_911);
     for (let i = 0; i < 211; i += 1) {
       const paquete = paqueteAlAzar(prng, tipo);

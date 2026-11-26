@@ -1,12 +1,12 @@
 /**
  * El auditor de recomendaciones (E7): un detector INDEPENDIENTE del validador (listas y normalización propias) que se
  * pasa sobre lo PUBLICADO, para medir «cero recomendaciones que pasen el validador». Solo marca para revisión humana.
- * Control positivo con frases inventadas; cero marcas en las etiquetas del catálogo, en los avisos fijos y en las 40
+ * Control positivo con frases inventadas; cero marcas en las etiquetas del catálogo, en los avisos fijos y en las 42
  * plantillas sin IA (que el validador sí publica).
  */
 import { describe, expect, it } from "vitest";
 import { CATALOGO } from "@/ia/catalogo";
-import { TIPOS_RESUMEN } from "@/ia/contrato";
+import { TIPOS_DIARIOS } from "@/ia/contrato";
 import { AVISOS } from "@/ia/validador/resumen";
 import { resumenSinIa } from "@/ia/validador/plantilla";
 import { marcasDeRecomendacion } from "@/ia/evaluacion/auditoria";
@@ -70,13 +70,13 @@ describe("marcasDeRecomendacion", () => {
   });
 
   it("no marca ninguna etiqueta del catálogo ni los avisos fijos", () => {
-    for (const tipo of TIPOS_RESUMEN) {
+    for (const tipo of TIPOS_DIARIOS) {
       for (const entrada of Object.values(CATALOGO[tipo])) expect(marcasDeRecomendacion(entrada.etiqueta), entrada.etiqueta).toEqual([]);
       expect(marcasDeRecomendacion(AVISOS[tipo]), tipo).toEqual([]);
     }
   });
 
-  it("no marca ninguna de las 40 plantillas sin IA", () => {
+  it("no marca ninguna de las 42 plantillas sin IA", () => {
     for (const c of casosInventados()) {
       const r = resumenSinIa(c.paquete);
       expect(r.ok && marcasDeRecomendacion(r.resumen.texto), c.id).toEqual([]);

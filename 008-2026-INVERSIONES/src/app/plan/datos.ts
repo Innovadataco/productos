@@ -16,7 +16,8 @@ import { aVersionVista, aVistaPlan, vigenteEn, type Cierres } from "./vista";
 export async function datosDelPlan(db: PrismaClient, pedido: string | string[] | undefined): Promise<DatosPlan> {
   const versiones = await leerVersiones(db);
   if (versiones.length === 0) return { estado: "SIN_PLAN" };
-  const hoy = fechaEnBogota(new Date());
+  const ahora = new Date();
+  const hoy = fechaEnBogota(ahora);
   const vigente = vigenteEn(versiones, hoy);
   const numero = pedido === undefined ? null : versionDeConsulta(pedido);
   const elegida = pedido === undefined ? (vigente ?? [...versiones].sort((a, b) => a.version - b.version)[0]!) : versiones.find((v) => v.version === numero);
@@ -25,7 +26,7 @@ export async function datosDelPlan(db: PrismaClient, pedido: string | string[] |
   const cierres = elegida.id === vigente?.id ? await leerCierres(db, reglas.flatMap((r) => (r.instrumentoId === null ? [] : [r.instrumentoId]))) : null;
   return {
     estado: "VERSION",
-    vista: aVistaPlan({ versiones, elegida, reglas, cierres, hoy }),
+    vista: aVistaPlan({ versiones, elegida, reglas, cierres, hoy, ahora }),
     versiones: versiones.map((v) => aVersionVista(v, vigente, elegida, hoy)),
   };
 }

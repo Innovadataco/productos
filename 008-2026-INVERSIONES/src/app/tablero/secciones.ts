@@ -21,6 +21,7 @@ export const SECCIONES = [
   { clave: "proyecciones", texto: "Proyecciones", href: "/proyecciones" },
   { clave: "datos-oficiales", texto: "Datos oficiales", href: "/datos-oficiales" },
   { clave: "analisis", texto: "Análisis", href: "/analisis" },
+  { clave: "alertas", texto: "Alertas", href: "/alertas" },
   { clave: "configuracion", texto: "Configuración", href: "/edicion", soloDueno: true },
 ] as const satisfies readonly EntradaSeccion[];
 

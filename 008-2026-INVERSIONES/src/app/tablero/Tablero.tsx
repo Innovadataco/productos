@@ -1,9 +1,12 @@
 "use client";
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
+import { ContadorAlertas } from "@/app/_comun/alertas/ContadorAlertas";
 import { FechaDato, FechaDatoCompuesta } from "@/app/_comun/fecha-dato/FechaDato";
 import { TarjetaResumenIa } from "@/app/_comun/resumen-ia/TarjetaResumenIa";
 import type { VistaResumenIa } from "@/app/_comun/resumen-ia/tipos";
+import { DECIMALES_PESO } from "@/operar/analisis/decimales";
+import { pieDePrecios } from "@/precios/fuentes";
 import { Evolucion } from "./Evolucion";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { Foto } from "./Foto";
@@ -121,7 +124,7 @@ function Secciones({ soloLectura }: { readonly soloLectura: boolean }) {
   return (
     <nav aria-label="Secciones">
       <ul className="secciones">
-        {seccionesVisibles(soloLectura).map((s) => <li key={s.clave}><a href={s.href} aria-current={s.clave === "portafolio" ? "page" : undefined}>{s.texto}</a></li>)}
+        {seccionesVisibles(soloLectura).map((s) => <li key={s.clave}><a href={s.href} aria-current={s.clave === "portafolio" ? "page" : undefined}>{s.texto}{s.clave === "alertas" ? <ContadorAlertas /> : null}</a></li>)}
       </ul>
     </nav>
   );
@@ -347,7 +350,7 @@ function FilaPosicion({ f, activa, idBoton, elegir }: { f: FilaVista; activa: bo
       </td>
       <td><Linea serie={f.serie} sube={f.serie.length > 1 && n(f.serie[f.serie.length - 1]!.precio) >= n(f.serie[0]!.precio)} /></td>
       <td className="num"><b>{f.valor ? cop(n(f.valor)) : SIN_DATO}</b></td>
-      <td className="num">{f.pesoPct ? <><Peso pct={n(f.pesoPct)} /> {numero(n(f.pesoPct), 1)} %</> : SIN_DATO}</td>
+      <td className="num">{f.pesoPct ? <><Peso pct={n(f.pesoPct)} /> {numero(n(f.pesoPct), DECIMALES_PESO)} %</> : SIN_DATO}</td>
       <td className={`num ${sube ? "gain" : "loss"}`}><b>{f.sinVender ? cop(n(f.sinVender), true) : SIN_DATO}</b></td>
       <td className={`num ${sube ? "gain" : "loss"}`}>{f.rentabilidadPct ? pct(n(f.rentabilidadPct)) : SIN_DATO}</td>
       <td className="num">{cop(n(f.dividendos))}</td>
@@ -467,6 +470,7 @@ export function Tablero({ vista, conciliacion, evolucion, soloLectura = false, r
         <Foto vista={vista} elegir={elegir} />
         <Posiciones vista={vista} elegida={elegida} elegir={elegir} alCerrar={() => setElegida(null)} />
         <Falta />
+        <p className="nota">{pieDePrecios()}</p>
         <footer className="pie">El sistema calcula y muestra; no recomienda comprar ni vender. Datos de su base local.</footer>
       </main>
     </>

@@ -11,23 +11,30 @@ import "server-only";
  * no deja un modelo residente en el Mac de PI ni lo hace recargar). La temperatura de la local SÍ se configura (de 0 a 1,
  * 0 por omisión), como en PI.
  */
-import { TIPOS_RESUMEN, type TipoResumen } from "../contrato";
 import { TECHO_TOPE_MICRO_USD } from "../nube/config";
 import { MODOS_PUERTAS, ordenDePuertas, type ModoPuertas } from "../puertas";
 
 /** Las columnas de config_ia (la lista única de las pruebas de permisos). */
 export const COLUMNAS_CONFIG_IA = Object.freeze([
   "id", "version", "modo", "ollamaHost", "ollamaPuerto", "temperaturaLocal", "tareas", "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos",
-  "esfuerzoNube", "motivo", "autorId", "creadaEn",
+  "analisisDemanda", "esfuerzoNube", "motivo", "autorId", "creadaEn",
 ] as const);
 
 /**
- * Las tareas de la IA (como en PI, un modelo por tarea): hoy, los tres tipos de resumen. Una tarea futura (p. ej. OPERAR
- * o ANALISIS) se agrega aquí, a la CHECK `config_ia_tareas_chk` y a su prompt; la pantalla y el lector la toman de esta
- * lista, sin columnas nuevas.
+ * Las tareas OBLIGATORIAS de la configuración (como en PI, un modelo por tarea): hoy, los tres tipos de resumen, en lista
+ * explícita (no salen de TIPOS_RESUMEN, que crece con el contrato v2 sin que la configuración lo haga). La CHECK
+ * `config_ia_tareas_chk` las exige siempre (el `?&` de la migración *_config_ia_simulacion); la base admite además SIMULACION,
+ * opcional, que el frente C incorpora a TAREAS_IA.
  */
-export const TAREAS_IA: readonly TipoResumen[] = TIPOS_RESUMEN;
-export type TareaIa = TipoResumen;
+export const TAREAS_OBLIGATORIAS = Object.freeze(["DIARIO", "REGLAS", "ESCENARIOS"] as const);
+
+/**
+ * Las tareas de la IA que el código configura y lee: hoy, las obligatorias. Una tarea futura se agrega aquí, a la CHECK
+ * `config_ia_tareas_chk` y a su prompt; la pantalla y el lector la toman de esta lista, sin columnas nuevas. Invariante
+ * (tests/unit/ia/config/esquema.test.ts): obligatorias ⊆ TAREAS_IA ⊆ las admitidas por la CHECK.
+ */
+export const TAREAS_IA = Object.freeze([...TAREAS_OBLIGATORIAS] as const);
+export type TareaIa = (typeof TAREAS_IA)[number];
 
 /** La temperatura de la local, en centésimas: de 0 a 1 (0 por omisión: el mismo dato, el mismo texto). */
 export const TEMPERATURA_MIN_CENTESIMAS = 0;
@@ -39,10 +46,15 @@ export const HORAS_RESUMEN = Object.freeze(["18:00", "19:00", "20:00", "21:00"] 
 export type HoraResumen = (typeof HORAS_RESUMEN)[number];
 export const HORA_POR_OMISION: HoraResumen = "19:00";
 
-/** El límite de tiempo por pedido, en segundos: de 10 al límite de PI (120). */
+/**
+ * El límite de tiempo por pedido, en segundos: de 10 a 60 (condición de PI, 26-nov-2026: el análisis a demanda no puede
+ * retener el Mac más de 60 s). La CHECK de la base queda en `LIMITE_MAX_BD_S` (120, el tope viejo de PI) porque la tabla
+ * es de solo inserción y las versiones viejas pueden traer más de 60: el lector las acota a 60 (`filaAConfig`).
+ */
 export const LIMITE_MIN_S = 10;
-export const LIMITE_MAX_S = 120;
-export const LIMITE_POR_OMISION_S = 120;
+export const LIMITE_MAX_S = 60;
+export const LIMITE_POR_OMISION_S = 60;
+export const LIMITE_MAX_BD_S = 120;
 
 /** El tope mensual de la nube: de USD 1 al techo de cordura (TECHO_TOPE_MICRO_USD, USD 50). En micro-USD. */
 export const TOPE_MIN_MICRO_USD = 1_000_000n;

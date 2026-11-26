@@ -1,0 +1,10 @@
+/* Inversiones · /alertas. Usa los tokens de tablero.css y plan.css (claro y oscuro). */
+.alertas .alertas-acciones { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.alertas .alertas-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; max-width: 980px; }
+.alertas .alerta { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 12px 16px; min-width: 0; overflow-wrap: anywhere; display: grid; gap: 6px; }
+.alertas .alerta-nueva { border-left: 4px solid var(--fg); }
+.alertas .alerta-texto { margin: 0; }
+.alertas .alerta-boton { justify-self: start; min-height: 44px; padding: 8px 16px; border-radius: 10px; border: 1px solid var(--fg); background: var(--fg); color: var(--bg); font: inherit; font-weight: 700; cursor: pointer; }
+.alertas .alerta-boton[aria-disabled="true"] { opacity: 0.7; cursor: progress; }
+.alertas .alerta-error { color: var(--fg); font-weight: 700; margin-left: 8px; }
+.alertas .alerta-vista { margin: 0; }

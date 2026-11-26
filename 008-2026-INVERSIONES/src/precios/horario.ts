@@ -21,7 +21,7 @@ export function fechaEnBogota(ahora: Date): Date {
   return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()));
 }
 
-function minutosDelDiaEnBogota(ahora: Date): number {
+export function minutosDelDiaEnBogota(ahora: Date): number {
   const local = new Date(ahora.getTime() - DESFASE_BOGOTA_MS);
   return local.getUTCHours() * MINUTOS_POR_HORA + local.getUTCMinutes();
 }

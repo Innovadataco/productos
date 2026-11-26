@@ -37,7 +37,8 @@ export const VIGENTE_FICTICIA: ConfigIaVigente = Object.freeze({
   esfuerzoNube: "medium",
   topeMicroUsd: 4_610_000n,
   horaResumen: "19:00",
-  limiteSegundos: 97,
+  limiteSegundos: 45,
+  analisisDemanda: false,
   creadaEn: new Date("2027-03-17T23:41:13.000Z"),
 });
 
@@ -54,7 +55,8 @@ export function cuerpoFicticio(cambios: Record<string, unknown> = {}): Record<st
     esfuerzoNube: "medium",
     topeMensualUsd: "4,61",
     horaResumen: "19:00",
-    limiteSegundos: "97",
+    limiteSegundos: "45",
+    analisisDemanda: false,
     motivo: "Cambio ficticio de la configuración",
     ...cambios,
   };

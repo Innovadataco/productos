@@ -7,6 +7,7 @@ import "server-only";
  *   de `resultadosDeDecisiones`, también en la suya) y las reglas de la versión que rige hoy (`vigenteEn`, la de /plan).
  * - El fondo FIC: su valor sale de la misma historia (`fondosDeHistoria`); el tablero no lo lee. De su valor de unidad
  *   se lee además la fuente y cuándo lo trajo 008, para la fecha del dato.
+ * - El aviso de dato viejo de los cierres de acciones (frente fuente-retraso) sale de `procedencias.ts`; el del fondo, no.
  * - No hay una foto común: una carga que confirme entre dos lecturas puede dejar el tablero y la historia de momentos
  *   distintos; al recargar, cuadra. Si el motor rechaza las entradas (RangeError), el error se propaga a error.tsx.
  * Un fallo de la base se propaga: la página lo muestra como «No se pudo leer la base».
@@ -25,6 +26,8 @@ import { obtenerResumen } from "@/tablero/datos";
 import { horaColombia } from "../_comun/fecha-dato/hora";
 import type { Procedencia } from "../_comun/fecha-dato/tipos";
 import { vigenteEn } from "../plan/vista";
+import { calendarioConRespaldo } from "../_comun/calendario-con-respaldo";
+import { procedenciasDeCierres } from "./procedencias";
 import { aVistaAnalisis, type VistaAnalisis } from "./vista";
 
 /** La procedencia del valor de unidad de cada fondo, el del día con que se valoró. */
@@ -47,18 +50,15 @@ function nombresDe(tablero: Tablero, historia: EntradasProyeccion): ReadonlyMap<
   return new Map([...fondos, ...especies]);
 }
 
-function procedenciasDeCierres(tablero: Tablero): readonly Procedencia[] {
-  return tablero.filas.flatMap((f) =>
-    f.cierre === null ? [] : [{ dia: diaIso(f.cierre.fecha), traidoEn: f.cierre.traidoEn ? horaColombia(f.cierre.traidoEn) : null, fuente: f.cierre.fuente ?? null }],
-  );
-}
-
 /** De una regla, solo lo que el motor mide: ni la acción, ni la cantidad, ni el texto libre. */
 const paraAnalisis = (r: ReglaParaAnalisis): ReglaParaAnalisis => ({ id: r.id, instrumentoId: r.instrumentoId, condicion: r.condicion, nivel: r.nivel, plazoHasta: r.plazoHasta });
 
-/** La vista de /analisis con el día de Colombia `hoy` (medianoche UTC). */
-export async function datosDeAnalisis(db: PrismaClient, hoy: Date): Promise<VistaAnalisis> {
-  const [resumen, versiones] = await Promise.all([obtenerResumen(db), leerVersiones(db)]);
+/**
+ * La vista de /analisis con el día de Colombia `hoy` (medianoche UTC). `ahora` es el instante con que se sacó `hoy`: con el
+ * calendario de la BVC cuenta los días hábiles de atraso de cada cierre (si el calendario no se lee, el aviso es aproximado).
+ */
+export async function datosDeAnalisis(db: PrismaClient, hoy: Date, ahora: Date = new Date()): Promise<VistaAnalisis> {
+  const [resumen, versiones, calendario] = await Promise.all([obtenerResumen(db), leerVersiones(db), calendarioConRespaldo(db, "analisis")]);
   const historia = await leerEntradas(db, hoy);
   const diario = await leerDiario(db, hoy, null);
   const vigente = vigenteEn(versiones, hoy);
@@ -69,7 +69,7 @@ export async function datosDeAnalisis(db: PrismaClient, hoy: Date): Promise<Vist
     analisis,
     observaciones: observaciones(analisis, { reglas: reglas.map(paraAnalisis) }, hoy),
     nombres: nombresDe(resumen.tablero, historia),
-    procedencias: { acciones: procedenciasDeCierres(resumen.tablero), fondos: await procedenciasDeFondos(db, fondos.fondos) },
+    procedencias: { acciones: procedenciasDeCierres(resumen.tablero, { ahora, calendario }), fondos: await procedenciasDeFondos(db, fondos.fondos) },
     diarioTruncado: diario.truncado,
     fondosSinValor: fondos.sinValor,
   });

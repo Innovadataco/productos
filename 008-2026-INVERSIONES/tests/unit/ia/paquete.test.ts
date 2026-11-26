@@ -186,7 +186,9 @@ describe("construirPaquete · casos felices", () => {
 
 describe("construirPaquete · rechazos (cierra en fallo)", () => {
   it("las tablas de casos cubren cada código de error", () => {
-    expect(new Set([...CASOS, ...CASOS_LEER].map(([codigo]) => codigo))).toEqual(new Set(CODIGOS_ERROR_PAQUETE));
+    // RANGO_INVALIDO e IMPORTANCIA_INVALIDA (hechos-v2, solo SIMULACION) los prueba `simulacion/paquete-v2.test.ts`.
+    const deSimulacion = new Set(["RANGO_INVALIDO", "IMPORTANCIA_INVALIDA"]);
+    expect(new Set([...CASOS, ...CASOS_LEER].map(([codigo]) => codigo))).toEqual(new Set(CODIGOS_ERROR_PAQUETE.filter((c) => !deSimulacion.has(c))));
   });
 
   it("dos hechos de la misma clave con especies distintas sí caben", () => {

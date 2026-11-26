@@ -1,0 +1,9 @@
+/* Inversiones · /edicion/alertas. Usa los tokens de tablero.css (claro y oscuro) y las piezas de edicion.css; todo va
+   dentro de .edicion. */
+.edicion .alertas-bloque { display: grid; gap: 10px; margin: 0 0 22px; max-width: 980px; min-width: 0; }
+.edicion .alertas-bloque h2 { font-family: var(--display); font-weight: 400; font-size: 28px; margin: 6px 0 4px; }
+.edicion .alertas-historia { margin: 0; padding-left: 22px; display: grid; gap: 10px; overflow-wrap: anywhere; }
+.edicion .alertas-historia p { margin: 2px 0 0; color: var(--muted); }
+.edicion .alertas-guardada { font-weight: 700; color: var(--fg); }
+.edicion .alertas-grupo { display: grid; gap: 8px; min-width: 0; }
+.edicion .alertas-grupo input[type="checkbox"] { width: 24px; height: 24px; }

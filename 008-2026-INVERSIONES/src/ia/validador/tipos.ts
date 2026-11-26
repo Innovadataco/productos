@@ -31,6 +31,8 @@ export interface CifraUsada {
 export interface ResumenValidado<T extends TipoResumen = TipoResumen> {
   readonly tipo: T;
   readonly frases: readonly FraseResumen[];
+  /** Los ítems de «Para revisar» (solo SIMULACION; vacío en los tres de hoy). El encabezado y la numeración los pone el código. */
+  readonly revisar: readonly FraseResumen[];
   /** Las frases unidas por un espacio. */
   readonly texto: string;
   /** Todos los hechos citados, sin repetir, en orden de aparición. */

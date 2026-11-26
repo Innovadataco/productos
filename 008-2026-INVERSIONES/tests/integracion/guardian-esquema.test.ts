@@ -4,7 +4,7 @@
 // DISABLE TRIGGER ALL) exigen que el usuario de DATABASE_URL_TEST sea superusuario, como en el compose y en el CI.
 // Escenario que cierra (database-reviewer, D1): un DROP INDEX o una migración futura que quite un índice
 // único, una FK o le cambie el ON DELETE, y el guardián pasaba igual (la reimportación duplicaría filas).
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -358,6 +358,102 @@ describe("guardián del esquema: config_ia", () => {
   });
 });
 
+// Frente B (B5): SIMULACION en config_ia. Las dos CHECK que cambió la migración *_config_ia_simulacion (tareas y usa) están en
+// el guardián con la definición nueva, tal como la devuelve pg_get_constraintdef en una base recién migrada. Quien las vuelva
+// a la de antes (sin SIMULACION), las afloje (sin el COALESCE que impide que un NULL deje pasar la fila) o las endurezca
+// (SIMULACION obligatoria) detiene el despliegue.
+describe("guardián del esquema: config_ia con SIMULACION (B5)", () => {
+  const leerMigracion = (sufijo: string): string => {
+    const dir = fileURLToPath(new URL("../../prisma/migrations/", import.meta.url));
+    const carpeta = readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory() && d.name.endsWith(sufijo)).map((d) => d.name);
+    expect(carpeta, sufijo).toHaveLength(1);
+    return readFileSync(`${dir}${carpeta[0]}/migration.sql`, "utf8").replace(/--.*$/gm, "");
+  };
+  const definicion = (sql: string, nombre: string): string => new RegExp(`ADD CONSTRAINT "${nombre}" CHECK \\(([\\s\\S]*?)\\);\\n`).exec(sql)?.[1] ?? "";
+  // Otros archivos de integración dejan filas en config_ia (con y sin SIMULACION) y la nueva CHECK se valida contra ellas: dentro de
+  // la transacción que se deshace, se vacía la tabla (la solo inserción se apaga y se vuelve a encender, para que el guardián la vea
+  // tal como está). Exige superusuario, como otros casos de este archivo.
+  const reemplazar = (nombre: string, check: string): readonly string[] => [
+    'ALTER TABLE "config_ia" DISABLE TRIGGER "config_ia_solo_insercion"',
+    'DELETE FROM "config_ia"',
+    'ALTER TABLE "config_ia" ENABLE TRIGGER "config_ia_solo_insercion"',
+    `ALTER TABLE "config_ia" DROP CONSTRAINT "${nombre}"`,
+    `ALTER TABLE "config_ia" ADD CONSTRAINT "${nombre}" CHECK (${check})`,
+  ];
+  const nueva = leerMigracion("_config_ia_simulacion");
+  const original = leerMigracion("_config_ia");
+  const tareasNueva = definicion(nueva, "config_ia_tareas_chk");
+  const usaNueva = definicion(nueva, "config_ia_usa_chk");
+
+  it("control: la definición de M2 sí es la que tiene la base (el guardián pasa) y no es la de la migración original", async () => {
+    expect(tareasNueva).toContain("SIMULACION");
+    expect(usaNueva).toContain("COALESCE");
+    expect(await guardianTras(reemplazar("config_ia_tareas_chk", tareasNueva))).toBeNull();
+    expect(await guardianTras(reemplazar("config_ia_usa_chk", usaNueva))).toBeNull();
+  });
+
+  it("el guardián trae las dos definiciones nuevas, con SIMULACION y su COALESCE", () => {
+    expect(guardian).toMatch(/\['config_ia', 'config_ia_tareas_chk', 'CHECK [^\n]*''SIMULACION''::text[^\n]*\]/);
+    expect(guardian).toMatch(/\['config_ia', 'config_ia_usa_chk', 'CHECK [^\n]*COALESCE\(\(\(\(tareas -> ''SIMULACION''::text\) -> ''activo''::text\) = ''true''::jsonb\), false\)[^\n]*\]/);
+  });
+
+  it("falla si config_ia_tareas_chk vuelve a la de antes (sin SIMULACION)", async () => {
+    const vieja = definicion(original, "config_ia_tareas_chk");
+    expect(vieja).not.toBe("");
+    expect(vieja).not.toContain("SIMULACION");
+    expect(await guardianTras(reemplazar("config_ia_tareas_chk", vieja))).toContain("config_ia_tareas_chk");
+  });
+
+  it("falla si config_ia_usa_chk vuelve a la de antes (sin la cláusula de SIMULACION)", async () => {
+    const vieja = definicion(original, "config_ia_usa_chk");
+    expect(vieja).not.toBe("");
+    expect(await guardianTras(reemplazar("config_ia_usa_chk", vieja))).toContain("config_ia_usa_chk");
+  });
+
+  it("falla si a config_ia_usa_chk se le quita el COALESCE de SIMULACION (un NULL dejaría pasar la fila)", async () => {
+    const sinCoalesce = usaNueva.replace(/COALESCE\((\(\("tareas"->'SIMULACION'\)->'activo' = 'true'::jsonb\)), false\)/, "$1");
+    expect(sinCoalesce).not.toBe(usaNueva);
+    expect(await guardianTras(reemplazar("config_ia_usa_chk", sinCoalesce))).toContain("config_ia_usa_chk");
+  });
+
+  it("falla si a config_ia_tareas_chk se le quita el COALESCE de SIMULACION (una SIMULACION sin «activo» entraría)", async () => {
+    const sinCoalesce = tareasNueva.replace(/COALESCE\((jsonb_typeof\(\("tareas"->'SIMULACION'\)->'activo'\) = 'boolean'), false\)/, "$1");
+    expect(sinCoalesce).not.toBe(tareasNueva);
+    expect(await guardianTras(reemplazar("config_ia_tareas_chk", sinCoalesce))).toContain("config_ia_tareas_chk");
+  });
+
+  it("falla si config_ia_tareas_chk pasa a exigir SIMULACION (las filas de antes dejarían de entrar) o a no exigir las tres", async () => {
+    const exigeLasCuatro = tareasNueva.replace("?& ARRAY['DIARIO', 'REGLAS', 'ESCENARIOS']", "?& ARRAY['DIARIO', 'REGLAS', 'ESCENARIOS', 'SIMULACION']");
+    expect(exigeLasCuatro).not.toBe(tareasNueva);
+    expect(await guardianTras(reemplazar("config_ia_tareas_chk", exigeLasCuatro))).toContain("config_ia_tareas_chk");
+    const noExigeEscenarios = tareasNueva.replace("?& ARRAY['DIARIO', 'REGLAS', 'ESCENARIOS']", "?& ARRAY['DIARIO', 'REGLAS']");
+    expect(noExigeEscenarios).not.toBe(tareasNueva);
+    expect(await guardianTras(reemplazar("config_ia_tareas_chk", noExigeEscenarios))).toContain("config_ia_tareas_chk");
+  });
+});
+
+// Frente B (B5, revisión): el enum TipoResumenIa es parte del esquema: M1 le agrega SIMULACION. Si falta, sobra o cambia de lugar
+// una etiqueta, el despliegue se detiene (los valores de un enum no se pueden quitar con un DROP: se vigilan sus etiquetas y su orden).
+describe("guardián del esquema: enum TipoResumenIa", () => {
+  it("control: en la base recién migrada el guardián pasa con DIARIO, REGLAS, ESCENARIOS y SIMULACION, en ese orden", async () => {
+    const etiquetas = await db.$queryRaw<{ e: string }[]>`SELECT e.enumlabel::text AS e FROM pg_enum e WHERE e.enumtypid = to_regtype('"TipoResumenIa"') ORDER BY e.enumsortorder`;
+    expect(etiquetas.map((x) => x.e)).toEqual(["DIARIO", "REGLAS", "ESCENARIOS", "SIMULACION"]);
+    expect(await guardianTras([])).toBeNull();
+  });
+
+  it.each([
+    ["falta SIMULACION (se le cambia el nombre)", [`ALTER TYPE "TipoResumenIa" RENAME VALUE 'SIMULACION' TO 'SIMULACION_X'`]],
+    ["sobra una etiqueta", [`ALTER TYPE "TipoResumenIa" ADD VALUE 'OTRA'`]],
+    ["se cambia el orden de las etiquetas", [
+      `ALTER TYPE "TipoResumenIa" RENAME VALUE 'REGLAS' TO 'TMP'`,
+      `ALTER TYPE "TipoResumenIa" RENAME VALUE 'SIMULACION' TO 'REGLAS'`,
+      `ALTER TYPE "TipoResumenIa" RENAME VALUE 'TMP' TO 'SIMULACION'`,
+    ]],
+  ])("falla si %s", async (_n, romper) => {
+    expect(await guardianTras(romper)).toContain("TipoResumenIa");
+  });
+});
+
 // Fase E (O5): tarifa_comision. Si una migración o un DROP le quita la solo inserción, la hora que pone la base, la
 // unicidad de la versión o una CHECK, o si la función del instante cambia, el despliegue se detiene.
 describe("guardián del esquema: tarifa_comision", () => {
@@ -385,5 +481,102 @@ describe("guardián del esquema: tarifa_comision", () => {
 
   it("falla si el disparador de solo inserción queda deshabilitado", async () => {
     expect(await guardianTras(['ALTER TABLE "tarifa_comision" DISABLE TRIGGER "tarifa_comision_solo_insercion"'])).toContain("tarifa_comision");
+  });
+});
+
+// Precios cada minuto: precio_intradia. Si una migración o un DROP le quita un disparador, la unicidad, una CHECK, o si
+// una de sus funciones cambia o pasa a SECURITY DEFINER, el despliegue se detiene.
+describe("guardián del esquema: precio_intradia", () => {
+  it.each([
+    ["el disparador de la inserción", ['DROP TRIGGER "precio_intradia_insercion" ON "precio_intradia"'], "precio_intradia_insercion"],
+    ["el disparador del retiro", ['DROP TRIGGER "precio_intradia_retiro" ON "precio_intradia"'], "precio_intradia_retiro"],
+    ["la unicidad (sin duplicados)", ['DROP INDEX "precio_intradia_instrumentoId_instante_fuente_key"'], "precio_intradia_instrumentoId_instante_fuente_key"],
+    ["la CHECK del precio", ['ALTER TABLE "precio_intradia" DROP CONSTRAINT "precio_intradia_precio_chk"'], "precio_intradia_precio_chk"],
+    ["la CHECK de la fuente", ['ALTER TABLE "precio_intradia" DROP CONSTRAINT "precio_intradia_fuente_chk"'], "precio_intradia_fuente_chk"],
+    ["la llave de la especie", ['ALTER TABLE "precio_intradia" DROP CONSTRAINT "precio_intradia_instrumentoId_fkey"'], "precio_intradia_instrumentoId_fkey"],
+  ])("falla si se borra %s", async (_n, romper, nombre) => {
+    expect(await guardianTras(romper)).toContain(nombre);
+  });
+
+  it("falla si la CHECK del precio se afloja", async () => {
+    const otra = 'ALTER TABLE "precio_intradia" ADD CONSTRAINT "precio_intradia_precio_chk" CHECK ("precio" > -1)';
+    expect(await guardianTras(['ALTER TABLE "precio_intradia" DROP CONSTRAINT "precio_intradia_precio_chk"', otra])).toContain("precio_intradia_precio_chk");
+  });
+
+  it("falla si una de sus funciones cambia de código, pierde el search_path o pasa a SECURITY DEFINER", async () => {
+    const reemplazo = `CREATE OR REPLACE FUNCTION "inv_precio_intradia_retiro"() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$ BEGIN RETURN OLD; END; $$`;
+    expect(await guardianTras([reemplazo])).toContain("inv_precio_intradia_retiro");
+    expect(await guardianTras(['ALTER FUNCTION "inv_precio_intradia_insercion"() SECURITY DEFINER'])).toContain("inv_precio_intradia_insercion");
+    expect(await guardianTras(['ALTER FUNCTION "inv_precio_intradia_retiro"() RESET search_path'])).toContain("inv_precio_intradia_retiro");
+  });
+
+  it("falla si un disparador queda deshabilitado", async () => {
+    expect(await guardianTras(['ALTER TABLE "precio_intradia" DISABLE TRIGGER "precio_intradia_retiro"'])).toContain("precio_intradia");
+  });
+});
+
+// Alertas: umbral_version, alerta y alerta_vista. Si una migración o un DROP les quita un disparador, un índice de
+// deduplicación, una CHECK o una llave, o si una de sus funciones cambia, pierde el search_path o pasa a SECURITY DEFINER,
+// el despliegue se detiene (rojo por mutación: cada caso rompe una cosa y el guardián la nombra).
+describe("guardián del esquema: alertas", () => {
+  it.each([
+    ["el disparador de la inserción de alerta", ['DROP TRIGGER "alerta_insercion" ON "alerta"'], "alerta_insercion"],
+    ["la solo inserción de alerta", ['DROP TRIGGER "alerta_solo_insercion" ON "alerta"'], "alerta_solo_insercion"],
+    ["la solo inserción de alerta_vista", ['DROP TRIGGER "alerta_vista_solo_insercion" ON "alerta_vista"'], "alerta_vista_solo_insercion"],
+    ["el disparador del dueño en alerta_vista", ['DROP TRIGGER "alerta_vista_insercion" ON "alerta_vista"'], "alerta_vista_insercion"],
+    ["el disparador del instante de umbral_version", ['DROP TRIGGER "umbral_version_instante" ON "umbral_version"'], "umbral_version_instante"],
+    ["la solo inserción de umbral_version", ['DROP TRIGGER "umbral_version_solo_insercion" ON "umbral_version"'], "umbral_version_solo_insercion"],
+    ["el índice de deduplicación por clave", ['DROP INDEX "alerta_clave_key"'], "alerta_clave_key"],
+    ["el índice de una por decreto", ['DROP INDEX "alerta_decreto_key"'], "alerta_decreto_key"],
+    ["la unicidad de la vista por alerta", ['DROP INDEX "alerta_vista_alertaId_key"'], "alerta_vista_alertaId_key"],
+    ["la unicidad de la versión de umbrales", ['DROP INDEX "umbral_version_version_key"'], "umbral_version_version_key"],
+    ["la CHECK de coherencia por tipo", ['ALTER TABLE "alerta" DROP CONSTRAINT "alerta_coherencia_chk"'], "alerta_coherencia_chk"],
+    ["la CHECK de los tipos", ['ALTER TABLE "alerta" DROP CONSTRAINT "alerta_tipo_chk"'], "alerta_tipo_chk"],
+    ["la CHECK del rango de cerca", ['ALTER TABLE "umbral_version" DROP CONSTRAINT "umbral_version_cerca_chk"'], "umbral_version_cerca_chk"],
+    ["el disparador del autor de umbral_version", ['DROP TRIGGER "umbral_version_autor" ON "umbral_version"'], "umbral_version_autor"],
+    ["la CHECK de la referencia", ['ALTER TABLE "alerta" DROP CONSTRAINT "alerta_referencia_chk"'], "alerta_referencia_chk"],
+    ["la CHECK de esFechaEx", ['ALTER TABLE "alerta" DROP CONSTRAINT "alerta_esfechaex_chk"'], "alerta_esfechaex_chk"],
+    ["la CHECK del dato y su hora de traída", ['ALTER TABLE "alerta" DROP CONSTRAINT "alerta_instante_chk"'], "alerta_instante_chk"],
+    ["la llave de la regla", ['ALTER TABLE "alerta" DROP CONSTRAINT "alerta_reglaId_fkey"'], "alerta_reglaId_fkey"],
+    ["la llave del decreto", ['ALTER TABLE "alerta" DROP CONSTRAINT "alerta_decretoId_fkey"'], "alerta_decretoId_fkey"],
+    ["la llave del usuario de la vista", ['ALTER TABLE "alerta_vista" DROP CONSTRAINT "alerta_vista_usuarioId_fkey"'], "alerta_vista_usuarioId_fkey"],
+  ])("falla si se borra %s", async (_n, romper, nombre) => {
+    expect(await guardianTras(romper)).toContain(nombre);
+  });
+
+  it("falla si un rango se afloja o el índice de la clave cambia (definición exacta)", async () => {
+    const otra = 'ALTER TABLE "umbral_version" ADD CONSTRAINT "umbral_version_cerca_chk" CHECK ("alertaCercaPct" >= 0.5 AND "alertaCercaPct" <= 50)';
+    expect(await guardianTras(['ALTER TABLE "umbral_version" DROP CONSTRAINT "umbral_version_cerca_chk"', otra])).toContain("umbral_version_cerca_chk");
+    // Con la base en la clave, el índice sería más débil (un cruce en el intradía y otro en el cierre entrarían los dos).
+    const conBase = 'CREATE UNIQUE INDEX "alerta_clave_key" ON "alerta"("dia", "tipo", COALESCE("instrumentoId", \'-\'), COALESCE("reglaId", \'-\'), COALESCE("sentido", \'-\'), "base") WHERE "tipo" <> \'FECHA_EX\'';
+    expect(await guardianTras(['DROP INDEX "alerta_clave_key"', conBase])).toContain("alerta_clave_key");
+  });
+
+  it("falla si una de sus funciones cambia de código, pierde el search_path o pasa a SECURITY DEFINER", async () => {
+    const reemplazo = `CREATE OR REPLACE FUNCTION "inv_alerta_insercion"() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$ BEGIN RETURN NEW; END; $$`;
+    expect(await guardianTras([reemplazo])).toContain("inv_alerta_insercion");
+    expect(await guardianTras(['ALTER FUNCTION "inv_alerta_insercion"() SECURITY DEFINER'])).toContain("inv_alerta_insercion");
+    expect(await guardianTras(['ALTER FUNCTION "inv_alerta_vista_insercion"() RESET search_path'])).toContain("inv_alerta_vista_insercion");
+    expect(await guardianTras(['ALTER FUNCTION "inv_alerta_vista_insercion"() SECURITY DEFINER'])).toContain("inv_alerta_vista_insercion");
+    expect(await guardianTras(['ALTER FUNCTION "inv_umbral_version_instante"() RESET search_path'])).toContain("inv_umbral_version_instante");
+    expect(await guardianTras(['ALTER FUNCTION "inv_umbral_version_autor"() RESET search_path'])).toContain("inv_umbral_version_autor");
+    expect(await guardianTras(['ALTER FUNCTION "inv_umbral_version_autor"() SECURITY DEFINER'])).toContain("inv_umbral_version_autor");
+  });
+
+  it("falla si un disparador queda deshabilitado", async () => {
+    for (const [tabla, disparador] of [["alerta", "alerta_insercion"], ["alerta_vista", "alerta_vista_insercion"], ["umbral_version", "umbral_version_instante"]]) {
+      expect(await guardianTras([`ALTER TABLE "${tabla}" DISABLE TRIGGER "${disparador}"`])).toContain(tabla);
+    }
+  });
+
+  it("falla si inv_alertas (o inv_app) es miembro del dueño de las tablas de las alertas", async () => {
+    for (const rol of ["inv_alertas", "inv_app"]) {
+      const sql = [
+        `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${rol}') THEN CREATE ROLE ${rol} NOLOGIN; END IF; END $$`,
+        `DO $$ BEGIN EXECUTE format('GRANT %I TO ${rol}', (SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid = 'public.alerta'::regclass)); END $$`,
+      ];
+      const error = await guardianTras(sql);
+      expect(error, rol).toMatch(new RegExp(`rol con privilegios del dueño ${rol} en alerta\\b`));
+    }
   });
 });

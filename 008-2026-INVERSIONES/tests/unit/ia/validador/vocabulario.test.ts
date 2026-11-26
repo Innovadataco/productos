@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { CATALOGO } from "@/ia/catalogo";
-import { TIPOS_RESUMEN } from "@/ia/contrato";
+import { TIPOS_DIARIOS, TIPOS_RESUMEN } from "@/ia/contrato";
 import { coincidencias } from "@/ia/validador/patron";
 import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA, PATRONES_SIN_DATO } from "@/ia/validador/patrones-lengua";
 import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "@/ia/validador/patrones-redaccion";
@@ -22,7 +22,7 @@ describe("vocabulario cerrado", () => {
     for (const entrada of Object.values(CATALOGO[tipo])) expect([entrada.etiqueta, palabrasFueraDelVocabulario(entrada.etiqueta, tipo)]).toEqual([entrada.etiqueta, []]);
   });
 
-  it.each(TIPOS_RESUMEN)("%s: las frases válidas de las pruebas caben en el vocabulario de su tipo", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: las frases válidas de las pruebas caben en el vocabulario de su tipo", (tipo) => {
     const paquete = paqueteFicticio(tipo);
     for (const plantilla of FRASES_VALIDAS[tipo]) {
       const { texto } = frase(paquete, plantilla);

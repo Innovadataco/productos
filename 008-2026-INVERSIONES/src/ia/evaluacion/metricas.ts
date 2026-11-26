@@ -12,7 +12,7 @@
  *   claridad (al menos 4) la califica Jelk con los pares: queda PENDIENTE. «Cero marcadas» no prueba «cero
  *   recomendaciones»: lo publicado del modelo elegido se revisa a mano.
  */
-import { TIPOS_RESUMEN, type TipoResumen } from "../contrato";
+import { TIPOS_DIARIOS, type TipoDiario } from "../contrato";
 import { CODIGOS_VALIDADOR } from "../validador/codigos";
 import { marcasDeRecomendacion } from "./auditoria";
 import type { RegistroCorrida, RegistroPlantilla } from "./tipos";
@@ -54,7 +54,7 @@ export interface MetricasModelo {
   readonly tasaPublicacion: number | null;
   /** Intervalo de Wilson al 95 % de la tasa; «no concluyente» si cruza el umbral (o no hay corridas). */
   readonly publicacion: { readonly intervalo95: readonly [number, number] | null; readonly noConcluyente: boolean };
-  readonly porTipo: Readonly<Record<TipoResumen, { readonly corridas: number; readonly publicadas: number }>>;
+  readonly porTipo: Readonly<Record<TipoDiario, { readonly corridas: number; readonly publicadas: number }>>;
   readonly rechazosPorCodigo: Readonly<Record<string, number>>;
   readonly fallosPorMotivo: Readonly<Record<string, number>>;
   readonly latencia: MetricasLatencia;
@@ -141,8 +141,8 @@ function repeticion(r: readonly RegistroCorrida[]): MetricasModelo["repeticion"]
 }
 
 function porTipo(r: readonly RegistroCorrida[]): MetricasModelo["porTipo"] {
-  const de = (tipo: TipoResumen) => ({ corridas: r.filter((x) => x.tipo === tipo).length, publicadas: r.filter((x) => x.tipo === tipo && x.estado === "PUBLICADO").length });
-  return Object.freeze(Object.fromEntries(TIPOS_RESUMEN.map((t) => [t, de(t)])) as Record<TipoResumen, { corridas: number; publicadas: number }>);
+  const de = (tipo: TipoDiario) => ({ corridas: r.filter((x) => x.tipo === tipo).length, publicadas: r.filter((x) => x.tipo === tipo && x.estado === "PUBLICADO").length });
+  return Object.freeze(Object.fromEntries(TIPOS_DIARIOS.map((t) => [t, de(t)])) as Record<TipoDiario, { corridas: number; publicadas: number }>);
 }
 
 /** Sin `completitud`, la evaluación no cuenta como completa: no hay apto. */

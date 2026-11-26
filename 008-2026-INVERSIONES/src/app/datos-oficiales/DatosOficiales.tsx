@@ -110,7 +110,7 @@ export function DatosOficiales({ datos, soloLectura = false }: PropsDatosOficial
           <div className="eyebrow">Consultado el {fecha(datos.hoy)} (hora de Colombia)</div>
           <h1>Datos oficiales</h1>
           <p className="do-lead">
-            Las cifras públicas que usa 008, tal como las publica cada fuente: cada una dice de cuándo es y de dónde sale.
+            Las cifras públicas que usa Inversiones, tal como las publica cada fuente: cada una dice de cuándo es y de dónde sale.
             Si la última no cubre hoy, se dice.
           </p>
         </section>

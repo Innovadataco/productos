@@ -13,6 +13,7 @@
     "start": "next start -H 127.0.0.1 -p 5008",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
+    "test:candados-ia": "vitest run --config vitest.config.ts tests/unit/ia/candados tests/unit/ia/simulacion tests/unit/ia/validador/atribucion.test.ts tests/unit/ia/validador/huellas.candado.test.ts",
     "test:integracion": "node scripts/integracion.mjs",
     "test:e2e": "playwright test",
     "test:cobertura": "npm run test:cobertura:unida",
@@ -33,7 +34,9 @@
     "precios:importar": "tsx scripts/importar-precios.ts",
     "fondo:exportar": "tsx scripts/exportar-valores-fondo.ts",
     "fondo:importar": "tsx scripts/importar-valores-fondo.ts",
-    "ia:evaluar": "tsx scripts/ia-evaluar.ts"
+    "ia:evaluar": "tsx scripts/ia-evaluar.ts",
+    "ia:diagnosticar": "tsx scripts/diagnosticar-rechazo-ia.ts",
+    "alertas:evaluar": "tsx scripts/evaluar-alertas.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.6.0",

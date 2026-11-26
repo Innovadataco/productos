@@ -14,7 +14,7 @@ import { leerDestinoLocal } from "../local/destino";
 import { ESFUERZOS_NUBE, MODELOS_NUBE, type EsfuerzoNube, type ModeloNube } from "../nube/peticion";
 import { MODOS_PUERTAS, type ModoPuertas } from "../puertas";
 import {
-  HORAS_RESUMEN, LIMITE_MAX_S, LIMITE_MIN_S, TAREAS_IA, TEMPERATURA_MAX_CENTESIMAS, TOPE_MAX_MICRO_USD, TOPE_MIN_MICRO_USD, type HoraResumen, type TareaIa,
+  HORAS_RESUMEN, LIMITE_MAX_BD_S, LIMITE_MAX_S, LIMITE_MIN_S, TAREAS_IA, TEMPERATURA_MAX_CENTESIMAS, TOPE_MAX_MICRO_USD, TOPE_MIN_MICRO_USD, type HoraResumen, type TareaIa,
 } from "./parametros";
 import type { TareaConfig, TareasConfig } from "./pedido";
 
@@ -33,13 +33,15 @@ export interface ConfigIaVigente {
   readonly topeMicroUsd: bigint | null;
   readonly horaResumen: HoraResumen;
   readonly limiteSegundos: number;
+  /** El interruptor del botón «Analizar con IA» (apagado por omisión). */
+  readonly analisisDemanda: boolean;
   readonly creadaEn: Date;
 }
 
 /** Lo que se selecciona de config_ia (las columnas de inv_ia). */
 export const SELECCION_CONFIG_IA = Object.freeze({
   id: true, version: true, modo: true, ollamaHost: true, ollamaPuerto: true, temperaturaLocal: true, tareas: true, modeloNube: true, topeMensualUsd: true,
-  horaResumen: true, limiteSegundos: true, esfuerzoNube: true, creadaEn: true,
+  horaResumen: true, limiteSegundos: true, analisisDemanda: true, esfuerzoNube: true, creadaEn: true,
 } as const);
 export type FilaConfigIa = Prisma.ConfigIaGetPayload<{ select: typeof SELECCION_CONFIG_IA }>;
 
@@ -99,12 +101,13 @@ export function filaAConfig(fila: FilaConfigIa): ConfigIaVigente | null {
   const temperaturaCentesimas = centesimas(fila.temperaturaLocal);
   const topeMicroUsd = fila.topeMensualUsd === null ? null : microUsd(fila.topeMensualUsd);
   const valido = esDe(MODOS_PUERTAS, modo) && esDe(MODELOS_NUBE, modeloNube) && esDe(ESFUERZOS_NUBE, esfuerzoNube) && esDe(HORAS_RESUMEN, horaResumen)
-    && Number.isInteger(limiteSegundos) && limiteSegundos >= LIMITE_MIN_S && limiteSegundos <= LIMITE_MAX_S
+    && Number.isInteger(limiteSegundos) && limiteSegundos >= LIMITE_MIN_S && limiteSegundos <= LIMITE_MAX_BD_S && typeof fila.analisisDemanda === "boolean"
     && tareas !== null && temperaturaCentesimas !== null && (fila.topeMensualUsd === null || topeMicroUsd !== null) && destinoValido(ollamaHost, ollamaPuerto);
   if (!valido) return null;
   return Object.freeze({
-    id: fila.id, version: fila.version, modo, ollamaHost, ollamaPuerto, temperaturaCentesimas, tareas, modeloNube, esfuerzoNube, topeMicroUsd, horaResumen, limiteSegundos,
-    creadaEn: fila.creadaEn,
+    id: fila.id, version: fila.version, modo, ollamaHost, ollamaPuerto, temperaturaCentesimas, tareas, modeloNube, esfuerzoNube, topeMicroUsd, horaResumen,
+    // Una versión vieja puede traer hasta 120 s: el servicio nunca espera más de 60 (condición de PI).
+    limiteSegundos: Math.min(limiteSegundos, LIMITE_MAX_S), analisisDemanda: fila.analisisDemanda, creadaEn: fila.creadaEn,
   });
 }
 

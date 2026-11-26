@@ -20,7 +20,8 @@
 --    ni inv_ia del de ninguna de ellas ni del de resumen_ia, ni inv_app o inv_precios del de resumen_ia (fase E: el
 --    disparador de la hora del registro de los resúmenes con IA también exime al dueño); ni inv_app, inv_ia o inv_precios
 --    del de config_ia (fase E, E8: el instante de la configuración de la IA), ni del de tarifa_comision (fase E, O5: el
---    instante de la tarifa de comisión);
+--    instante de la tarifa de comisión), ni del de precio_intradia (precios cada minuto: la inserción del servicio); ni inv_app,
+--    inv_alertas, inv_ia o inv_precios del de umbral_version, alerta y alerta_vista (alertas: el instante, la inserción y el dueño);
 --  - las extensiones btree_gist y citext.
 -- Las definiciones son las canónicas de PostgreSQL 16 con search_path = public (sacadas de una base recién
 -- migrada); el guardián fija ese search_path para que otro no dé un falso positivo. La lista de nombres sale de
@@ -34,6 +35,10 @@
 DO $$
 DECLARE
   indices text[] := ARRAY[
+    ['alerta_vista', 'alerta_vista_alertaId_key', 'CREATE UNIQUE INDEX "alerta_vista_alertaId_key" ON public.alerta_vista USING btree ("alertaId")'],
+    ['alerta', 'alerta_clave_key', 'CREATE UNIQUE INDEX alerta_clave_key ON public.alerta USING btree (dia, tipo, COALESCE("instrumentoId", ''-''::text), COALESCE("reglaId", ''-''::text), COALESCE(sentido, ''-''::text)) WHERE (tipo <> ''FECHA_EX''::text)'],
+    ['alerta', 'alerta_decreto_key', 'CREATE UNIQUE INDEX alerta_decreto_key ON public.alerta USING btree ("decretoId") WHERE (tipo = ''FECHA_EX''::text)'],
+    ['umbral_version', 'umbral_version_version_key', 'CREATE UNIQUE INDEX umbral_version_version_key ON public.umbral_version USING btree (version)'],
     ['asignacion_venta', 'asignacion_venta_ordenVentaId_loteId_key', 'CREATE UNIQUE INDEX "asignacion_venta_ordenVentaId_loteId_key" ON public.asignacion_venta USING btree ("ordenVentaId", "loteId")'],
     ['certificacion', 'certificacion_cargaId_key', 'CREATE UNIQUE INDEX "certificacion_cargaId_key" ON public.certificacion USING btree ("cargaId")'],
     ['certificacion', 'certificacion_fechaCorte_key', 'CREATE UNIQUE INDEX "certificacion_fechaCorte_key" ON public.certificacion USING btree ("fechaCorte")'],
@@ -43,6 +48,7 @@ DECLARE
     ['codigo_recuperacion', 'codigo_recuperacion_vigentes_idx', 'CREATE INDEX codigo_recuperacion_vigentes_idx ON public.codigo_recuperacion USING btree ("usuarioId") WHERE (("usadoEn" IS NULL) AND ("anuladoEn" IS NULL))'],
     ['config_ia', 'config_ia_version_key', 'CREATE UNIQUE INDEX config_ia_version_key ON public.config_ia USING btree (version)'],
     ['tarifa_comision', 'tarifa_comision_version_key', 'CREATE UNIQUE INDEX tarifa_comision_version_key ON public.tarifa_comision USING btree (version)'],
+    ['precio_intradia', 'precio_intradia_instrumentoId_instante_fuente_key', 'CREATE UNIQUE INDEX "precio_intradia_instrumentoId_instante_fuente_key" ON public.precio_intradia USING btree ("instrumentoId", instante, fuente)'],
     ['decision', 'decision_reemplazaId_key', 'CREATE UNIQUE INDEX "decision_reemplazaId_key" ON public.decision USING btree ("reemplazaId")'],
     ['dividendo', 'dividendo_filaFuenteId_key', 'CREATE UNIQUE INDEX "dividendo_filaFuenteId_key" ON public.dividendo USING btree ("filaFuenteId")'],
     ['dividendo_decretado', 'dividendo_decretado_filaFuenteId_key', 'CREATE UNIQUE INDEX "dividendo_decretado_filaFuenteId_key" ON public.dividendo_decretado USING btree ("filaFuenteId")'],
@@ -82,6 +88,24 @@ DECLARE
     ['valor_unidad_fondo', 'valor_unidad_fondo_vigente_key', 'CREATE UNIQUE INDEX valor_unidad_fondo_vigente_key ON public.valor_unidad_fondo USING btree ("fondoId", "fechaValor") WHERE ("reemplazadoEn" IS NULL)']
   ];
   restricciones text[] := ARRAY[
+    ['alerta', 'alerta_base_chk', 'CHECK (((base IS NULL) OR (base = ANY (ARRAY[''INTRADIA''::text, ''CIERRE''::text]))))'],
+    ['alerta', 'alerta_coherencia_chk', 'CHECK ((((tipo = ANY (ARRAY[''NIVEL_CRUZADO''::text, ''NIVEL_CERCA''::text])) AND ("instrumentoId" IS NOT NULL) AND ("reglaId" IS NOT NULL) AND ("decretoId" IS NULL) AND (sentido IS NOT NULL) AND (sentido = ANY (ARRAY[''BAJO''::text, ''SOBRE''::text])) AND (base IS NOT NULL)) OR ((tipo = ''MOVIMIENTO_DIA''::text) AND ("instrumentoId" IS NOT NULL) AND ("reglaId" IS NULL) AND ("decretoId" IS NULL) AND (sentido IS NOT NULL) AND (sentido = ANY (ARRAY[''BAJO''::text, ''SOBRE''::text])) AND (base IS NOT NULL)) OR ((tipo = ''CAIDA_PORTAFOLIO''::text) AND ("instrumentoId" IS NULL) AND ("reglaId" IS NULL) AND ("decretoId" IS NULL) AND (sentido = ''BAJO''::text) AND (base IS NOT NULL)) OR ((tipo = ''DATO_VIEJO''::text) AND ("instrumentoId" IS NOT NULL) AND ("reglaId" IS NULL) AND ("decretoId" IS NULL) AND (sentido IS NOT NULL) AND (base IS NOT NULL) AND (((sentido = ''RUEDA''::text) AND (base = ''INTRADIA''::text)) OR ((sentido = ''CIERRE_FALTANTE''::text) AND (base = ''CIERRE''::text)))) OR ((tipo = ''FECHA_EX''::text) AND ("instrumentoId" IS NOT NULL) AND ("reglaId" IS NULL) AND ("decretoId" IS NOT NULL) AND (sentido IS NULL) AND (base IS NULL))))'],
+    ['alerta', 'alerta_esfechaex_chk', 'CHECK ((("esFechaEx" IS NULL) OR (tipo = ANY (ARRAY[''FECHA_EX''::text, ''MOVIMIENTO_DIA''::text]))))'],
+    ['alerta', 'alerta_fuente_chk', 'CHECK (((fuente IS NULL) OR (fuente ~ ''^[a-z][a-z0-9:_.-]{0,39}$''::text)))'],
+    ['alerta', 'alerta_instante_chk', 'CHECK ((("instanteDato" IS NULL) OR ("traidoEn" IS NULL) OR ("instanteDato" <= "traidoEn")))'],
+    ['alerta', 'alerta_minutos_chk', 'CHECK ((("minutosDeEdad" IS NULL) OR ("minutosDeEdad" >= 0)))'],
+    ['alerta', 'alerta_motor_chk', 'CHECK (("motorVersion" ~ ''^alertas-v[1-9][0-9]{0,2}$''::text))'],
+    ['alerta', 'alerta_precio_chk', 'CHECK (((precio IS NULL) OR ((precio > (0)::numeric) AND (precio <= (10000000)::numeric))))'],
+    ['alerta', 'alerta_referencia_chk', 'CHECK (((referencia IS NULL) OR (referencia > (0)::numeric)))'],
+    ['alerta', 'alerta_sentido_chk', 'CHECK (((sentido IS NULL) OR (sentido = ANY (ARRAY[''BAJO''::text, ''SOBRE''::text, ''RUEDA''::text, ''CIERRE_FALTANTE''::text]))))'],
+    ['alerta', 'alerta_tipo_chk', 'CHECK ((tipo = ANY (ARRAY[''NIVEL_CRUZADO''::text, ''NIVEL_CERCA''::text, ''MOVIMIENTO_DIA''::text, ''CAIDA_PORTAFOLIO''::text, ''DATO_VIEJO''::text, ''FECHA_EX''::text])))'],
+    ['umbral_version', 'umbral_version_caida_chk', 'CHECK ((("alertaCaidaPct" >= 0.5) AND ("alertaCaidaPct" <= (20)::numeric)))'],
+    ['umbral_version', 'umbral_version_cerca_chk', 'CHECK ((("alertaCercaPct" >= 0.5) AND ("alertaCercaPct" <= (10)::numeric)))'],
+    ['umbral_version', 'umbral_version_dato_viejo_chk', 'CHECK ((("alertaDatoViejoMin" >= 10) AND ("alertaDatoViejoMin" <= 240)))'],
+    ['umbral_version', 'umbral_version_ex_dias_chk', 'CHECK ((("alertaExDiasHabiles" >= 1) AND ("alertaExDiasHabiles" <= 10)))'],
+    ['umbral_version', 'umbral_version_motivo_chk', 'CHECK (((motivo ~ ''[^[:space:]]''::text) AND (char_length(motivo) <= 2000)))'],
+    ['umbral_version', 'umbral_version_movimiento_chk', 'CHECK ((("alertaMovimientoPct" >= 0.5) AND ("alertaMovimientoPct" <= (20)::numeric)))'],
+    ['umbral_version', 'umbral_version_version_chk', 'CHECK ((version >= 1))'],
     ['ajuste_caja', 'ajuste_caja_fraccion_chk', 'CHECK (((categoria = ''FRACCION_ESCISION''::"CategoriaAjusteCaja") = ("eventoId" IS NOT NULL)))'],
     ['ajuste_caja', 'ajuste_caja_monto_chk', 'CHECK ((monto <> (0)::numeric))'],
     ['ajuste_caja', 'ajuste_caja_rendimiento_fic_chk', 'CHECK (((categoria <> ''RENDIMIENTO_FIC''::"CategoriaAjusteCaja") OR ((monto > (0)::numeric) AND (monto <> ''NaN''::numeric))))'],
@@ -102,10 +126,10 @@ DECLARE
     ['config_ia', 'config_ia_modelo_nube_chk', 'CHECK (("modeloNube" = ANY (ARRAY[''claude-opus-5-5''::text, ''claude-sonnet-5-5''::text, ''claude-haiku-5-5''::text])))'],
     ['config_ia', 'config_ia_modo_chk', 'CHECK ((modo = ANY (ARRAY[''apagado''::text, ''local''::text, ''nube''::text, ''local-luego-nube''::text])))'],
     ['config_ia', 'config_ia_motivo_chk', 'CHECK (((motivo ~ ''[^[:space:]]''::text) AND (char_length(motivo) <= 2000)))'],
-    ['config_ia', 'config_ia_tareas_chk', 'CHECK (((jsonb_typeof(tareas) = ''object''::text) AND ((tareas - ARRAY[''DIARIO''::text, ''REGLAS''::text, ''ESCENARIOS''::text]) = ''{}''::jsonb) AND (tareas ?& ARRAY[''DIARIO''::text, ''REGLAS''::text, ''ESCENARIOS''::text]) AND ((NOT (tareas ? ''DIARIO''::text)) OR ((jsonb_typeof((tareas -> ''DIARIO''::text)) = ''object''::text) AND (((tareas -> ''DIARIO''::text) - ARRAY[''activo''::text, ''modeloLocal''::text]) = ''{}''::jsonb) AND (jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''activo''::text)) = ''boolean''::text) AND ((NOT ((tareas -> ''DIARIO''::text) ? ''modeloLocal''::text)) OR (jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''modeloLocal''::text)) = ''null''::text) OR ((jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''modeloLocal''::text)) = ''string''::text) AND (((tareas -> ''DIARIO''::text) ->> ''modeloLocal''::text) ~ ''^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$''::text))))) AND ((NOT (tareas ? ''REGLAS''::text)) OR ((jsonb_typeof((tareas -> ''REGLAS''::text)) = ''object''::text) AND (((tareas -> ''REGLAS''::text) - ARRAY[''activo''::text, ''modeloLocal''::text]) = ''{}''::jsonb) AND (jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''activo''::text)) = ''boolean''::text) AND ((NOT ((tareas -> ''REGLAS''::text) ? ''modeloLocal''::text)) OR (jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''modeloLocal''::text)) = ''null''::text) OR ((jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''modeloLocal''::text)) = ''string''::text) AND (((tareas -> ''REGLAS''::text) ->> ''modeloLocal''::text) ~ ''^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$''::text))))) AND ((NOT (tareas ? ''ESCENARIOS''::text)) OR ((jsonb_typeof((tareas -> ''ESCENARIOS''::text)) = ''object''::text) AND (((tareas -> ''ESCENARIOS''::text) - ARRAY[''activo''::text, ''modeloLocal''::text]) = ''{}''::jsonb) AND (jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''activo''::text)) = ''boolean''::text) AND ((NOT ((tareas -> ''ESCENARIOS''::text) ? ''modeloLocal''::text)) OR (jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''modeloLocal''::text)) = ''null''::text) OR ((jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''modeloLocal''::text)) = ''string''::text) AND (((tareas -> ''ESCENARIOS''::text) ->> ''modeloLocal''::text) ~ ''^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$''::text)))))))'],
+    ['config_ia', 'config_ia_tareas_chk', 'CHECK (((jsonb_typeof(tareas) = ''object''::text) AND ((tareas - ARRAY[''DIARIO''::text, ''REGLAS''::text, ''ESCENARIOS''::text, ''SIMULACION''::text]) = ''{}''::jsonb) AND (tareas ?& ARRAY[''DIARIO''::text, ''REGLAS''::text, ''ESCENARIOS''::text]) AND ((NOT (tareas ? ''DIARIO''::text)) OR ((jsonb_typeof((tareas -> ''DIARIO''::text)) = ''object''::text) AND (((tareas -> ''DIARIO''::text) - ARRAY[''activo''::text, ''modeloLocal''::text]) = ''{}''::jsonb) AND (jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''activo''::text)) = ''boolean''::text) AND ((NOT ((tareas -> ''DIARIO''::text) ? ''modeloLocal''::text)) OR (jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''modeloLocal''::text)) = ''null''::text) OR ((jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''modeloLocal''::text)) = ''string''::text) AND (((tareas -> ''DIARIO''::text) ->> ''modeloLocal''::text) ~ ''^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$''::text))))) AND ((NOT (tareas ? ''REGLAS''::text)) OR ((jsonb_typeof((tareas -> ''REGLAS''::text)) = ''object''::text) AND (((tareas -> ''REGLAS''::text) - ARRAY[''activo''::text, ''modeloLocal''::text]) = ''{}''::jsonb) AND (jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''activo''::text)) = ''boolean''::text) AND ((NOT ((tareas -> ''REGLAS''::text) ? ''modeloLocal''::text)) OR (jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''modeloLocal''::text)) = ''null''::text) OR ((jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''modeloLocal''::text)) = ''string''::text) AND (((tareas -> ''REGLAS''::text) ->> ''modeloLocal''::text) ~ ''^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$''::text))))) AND ((NOT (tareas ? ''ESCENARIOS''::text)) OR ((jsonb_typeof((tareas -> ''ESCENARIOS''::text)) = ''object''::text) AND (((tareas -> ''ESCENARIOS''::text) - ARRAY[''activo''::text, ''modeloLocal''::text]) = ''{}''::jsonb) AND (jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''activo''::text)) = ''boolean''::text) AND ((NOT ((tareas -> ''ESCENARIOS''::text) ? ''modeloLocal''::text)) OR (jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''modeloLocal''::text)) = ''null''::text) OR ((jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''modeloLocal''::text)) = ''string''::text) AND (((tareas -> ''ESCENARIOS''::text) ->> ''modeloLocal''::text) ~ ''^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$''::text))))) AND ((NOT (tareas ? ''SIMULACION''::text)) OR ((jsonb_typeof((tareas -> ''SIMULACION''::text)) = ''object''::text) AND (((tareas -> ''SIMULACION''::text) - ARRAY[''activo''::text, ''modeloLocal''::text]) = ''{}''::jsonb) AND COALESCE((jsonb_typeof(((tareas -> ''SIMULACION''::text) -> ''activo''::text)) = ''boolean''::text), false) AND ((NOT ((tareas -> ''SIMULACION''::text) ? ''modeloLocal''::text)) OR (jsonb_typeof(((tareas -> ''SIMULACION''::text) -> ''modeloLocal''::text)) = ''null''::text) OR ((jsonb_typeof(((tareas -> ''SIMULACION''::text) -> ''modeloLocal''::text)) = ''string''::text) AND (((tareas -> ''SIMULACION''::text) ->> ''modeloLocal''::text) ~ ''^[a-z0-9][a-z0-9._-]{0,63}:[a-z0-9][a-z0-9._-]{0,63}$''::text)))))))'],
     ['config_ia', 'config_ia_temperatura_chk', 'CHECK ((("temperaturaLocal" >= (0)::numeric) AND ("temperaturaLocal" <= (1)::numeric)))'],
     ['config_ia', 'config_ia_tope_chk', 'CHECK ((("topeMensualUsd" IS NULL) OR (("topeMensualUsd" >= 1.00) AND ("topeMensualUsd" <= 50.00))))'],
-    ['config_ia', 'config_ia_usa_chk', 'CHECK ((((modo <> ALL (ARRAY[''local''::text, ''local-luego-nube''::text])) OR (("ollamaHost" IS NOT NULL) AND (NOT ((((tareas -> ''DIARIO''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))) AND (NOT ((((tareas -> ''REGLAS''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))) AND (NOT ((((tareas -> ''ESCENARIOS''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))))) AND ((modo <> ALL (ARRAY[''nube''::text, ''local-luego-nube''::text])) OR ("topeMensualUsd" IS NOT NULL))))'],
+    ['config_ia', 'config_ia_usa_chk', 'CHECK ((((modo <> ALL (ARRAY[''local''::text, ''local-luego-nube''::text])) OR (("ollamaHost" IS NOT NULL) AND (NOT ((((tareas -> ''DIARIO''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''DIARIO''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))) AND (NOT ((((tareas -> ''REGLAS''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''REGLAS''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))) AND (NOT ((((tareas -> ''ESCENARIOS''::text) -> ''activo''::text) = ''true''::jsonb) AND (jsonb_typeof(((tareas -> ''ESCENARIOS''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))) AND (NOT (COALESCE((((tareas -> ''SIMULACION''::text) -> ''activo''::text) = ''true''::jsonb), false) AND (jsonb_typeof(((tareas -> ''SIMULACION''::text) -> ''modeloLocal''::text)) IS DISTINCT FROM ''string''::text))))) AND ((modo <> ALL (ARRAY[''nube''::text, ''local-luego-nube''::text])) OR ("topeMensualUsd" IS NOT NULL))))'],
     ['config_ia', 'config_ia_version_chk', 'CHECK ((version >= 1))'],
     ['tarifa_comision', 'tarifa_comision_cargos_chk', 'CHECK (((jsonb_typeof("otrosCargos") = ''array''::text) AND (jsonb_array_length("otrosCargos") <= 3) AND ((jsonb_array_length("otrosCargos") <= 0) OR ((jsonb_typeof(("otrosCargos" -> 0)) = ''object''::text) AND ((("otrosCargos" -> 0) - ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) = ''{}''::jsonb) AND (("otrosCargos" -> 0) ?& ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) AND (jsonb_typeof((("otrosCargos" -> 0) -> ''nombre''::text)) = ''string''::text) AND ((char_length((("otrosCargos" -> 0) ->> ''nombre''::text)) >= 1) AND (char_length((("otrosCargos" -> 0) ->> ''nombre''::text)) <= 60)) AND ((("otrosCargos" -> 0) ->> ''nombre''::text) ~ ''[^[:space:]]''::text) AND ((("otrosCargos" -> 0) ->> ''nombre''::text) !~ ''[[:cntrl:]]''::text) AND ((("otrosCargos" -> 0) ->> ''tipo''::text) = ANY (ARRAY[''PCT''::text, ''FIJO''::text])) AND (jsonb_typeof((("otrosCargos" -> 0) -> ''valor''::text)) = ''string''::text) AND ((("otrosCargos" -> 0) ->> ''valor''::text) ~ ''^[0-9]{1,8}([.][0-9]{1,4})?$''::text) AND (((("otrosCargos" -> 0) ->> ''tipo''::text) <> ''PCT''::text) OR ((("otrosCargos" -> 0) ->> ''valor''::text) ~ ''^(100([.]0{1,4})?|[0-9]{1,2}([.][0-9]{1,4})?)$''::text)))) AND ((jsonb_array_length("otrosCargos") <= 1) OR ((jsonb_typeof(("otrosCargos" -> 1)) = ''object''::text) AND ((("otrosCargos" -> 1) - ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) = ''{}''::jsonb) AND (("otrosCargos" -> 1) ?& ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) AND (jsonb_typeof((("otrosCargos" -> 1) -> ''nombre''::text)) = ''string''::text) AND ((char_length((("otrosCargos" -> 1) ->> ''nombre''::text)) >= 1) AND (char_length((("otrosCargos" -> 1) ->> ''nombre''::text)) <= 60)) AND ((("otrosCargos" -> 1) ->> ''nombre''::text) ~ ''[^[:space:]]''::text) AND ((("otrosCargos" -> 1) ->> ''nombre''::text) !~ ''[[:cntrl:]]''::text) AND ((("otrosCargos" -> 1) ->> ''tipo''::text) = ANY (ARRAY[''PCT''::text, ''FIJO''::text])) AND (jsonb_typeof((("otrosCargos" -> 1) -> ''valor''::text)) = ''string''::text) AND ((("otrosCargos" -> 1) ->> ''valor''::text) ~ ''^[0-9]{1,8}([.][0-9]{1,4})?$''::text) AND (((("otrosCargos" -> 1) ->> ''tipo''::text) <> ''PCT''::text) OR ((("otrosCargos" -> 1) ->> ''valor''::text) ~ ''^(100([.]0{1,4})?|[0-9]{1,2}([.][0-9]{1,4})?)$''::text)))) AND ((jsonb_array_length("otrosCargos") <= 2) OR ((jsonb_typeof(("otrosCargos" -> 2)) = ''object''::text) AND ((("otrosCargos" -> 2) - ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) = ''{}''::jsonb) AND (("otrosCargos" -> 2) ?& ARRAY[''nombre''::text, ''tipo''::text, ''valor''::text]) AND (jsonb_typeof((("otrosCargos" -> 2) -> ''nombre''::text)) = ''string''::text) AND ((char_length((("otrosCargos" -> 2) ->> ''nombre''::text)) >= 1) AND (char_length((("otrosCargos" -> 2) ->> ''nombre''::text)) <= 60)) AND ((("otrosCargos" -> 2) ->> ''nombre''::text) ~ ''[^[:space:]]''::text) AND ((("otrosCargos" -> 2) ->> ''nombre''::text) !~ ''[[:cntrl:]]''::text) AND ((("otrosCargos" -> 2) ->> ''tipo''::text) = ANY (ARRAY[''PCT''::text, ''FIJO''::text])) AND (jsonb_typeof((("otrosCargos" -> 2) -> ''valor''::text)) = ''string''::text) AND ((("otrosCargos" -> 2) ->> ''valor''::text) ~ ''^[0-9]{1,8}([.][0-9]{1,4})?$''::text) AND (((("otrosCargos" -> 2) ->> ''tipo''::text) <> ''PCT''::text) OR ((("otrosCargos" -> 2) ->> ''valor''::text) ~ ''^(100([.]0{1,4})?|[0-9]{1,2}([.][0-9]{1,4})?)$''::text))))))'],
     ['tarifa_comision', 'tarifa_comision_comisionista_chk', 'CHECK ((comisionista = ANY (ARRAY[''TRII''::text, ''AV''::text])))'],
@@ -114,6 +138,8 @@ DECLARE
     ['tarifa_comision', 'tarifa_comision_motivo_chk', 'CHECK (((motivo ~ ''[^[:space:]]''::text) AND (char_length(motivo) <= 2000)))'],
     ['tarifa_comision', 'tarifa_comision_porcentaje_chk', 'CHECK (((porcentaje >= (0)::numeric) AND (porcentaje <= (100)::numeric)))'],
     ['tarifa_comision', 'tarifa_comision_version_chk', 'CHECK ((version >= 1))'],
+    ['precio_intradia', 'precio_intradia_fuente_chk', 'CHECK ((fuente ~ ''^[a-z][a-z0-9:_.-]{0,39}$''::text))'],
+    ['precio_intradia', 'precio_intradia_precio_chk', 'CHECK (((precio > (0)::numeric) AND (precio <= (10000000)::numeric)))'],
     ['control_conciliacion', 'control_conciliacion_motivo_chk', 'CHECK (((("codigoMotivo" IS NULL) OR ("codigoMotivo" ~ ''^[a-z0-9_]{1,40}$''::text)) AND ((resultado = ''CUADRA''::"ResultadoControl") OR ("codigoMotivo" IS NOT NULL))))'],
     ['control_conciliacion', 'control_conciliacion_tolerancia_chk', 'CHECK (((tolerancia IS NULL) OR (tolerancia >= (0)::numeric)))'],
     ['decision', 'decision_cantidad_chk', 'CHECK ((((cantidad IS NULL) OR (cantidad > 0)) AND ((accion <> ''NO_ACTUAR''::"AccionPlan") OR (cantidad IS NOT NULL))))'],
@@ -187,6 +213,16 @@ DECLARE
   ];
   sin_validar text[] := ARRAY['dividendo_retencion_chk', 'dividendo_tasa_retencion_chk', 'evento_corporativo_origen_destino_chk', 'evento_corporativo_razon_chk', 'orden_fechas_chk'];
   llaves text[] := ARRAY[
+    ['alerta_vista', 'alerta_vista_alertaId_fkey', 'FOREIGN KEY ("alertaId") REFERENCES alerta(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['alerta_vista', 'alerta_vista_pkey', 'PRIMARY KEY (id)'],
+    ['alerta_vista', 'alerta_vista_usuarioId_fkey', 'FOREIGN KEY ("usuarioId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['alerta', 'alerta_decretoId_fkey', 'FOREIGN KEY ("decretoId") REFERENCES dividendo_decretado(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['alerta', 'alerta_instrumentoId_fkey', 'FOREIGN KEY ("instrumentoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['alerta', 'alerta_pkey', 'PRIMARY KEY (id)'],
+    ['alerta', 'alerta_reglaId_fkey', 'FOREIGN KEY ("reglaId") REFERENCES regla_plan(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['alerta', 'alerta_umbralVersionId_fkey', 'FOREIGN KEY ("umbralVersionId") REFERENCES umbral_version(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['umbral_version', 'umbral_version_autorId_fkey', 'FOREIGN KEY ("autorId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['umbral_version', 'umbral_version_pkey', 'PRIMARY KEY (id)'],
     ['ajuste_caja', 'ajuste_caja_pkey', 'PRIMARY KEY (id)'],
     ['ajuste_caja', 'ajuste_caja_creadoPorId_fkey', 'FOREIGN KEY ("creadoPorId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['ajuste_caja', 'ajuste_caja_eventoId_fkey', 'FOREIGN KEY ("eventoId") REFERENCES evento_corporativo(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
@@ -213,6 +249,8 @@ DECLARE
     ['config_ia', 'config_ia_autorId_fkey', 'FOREIGN KEY ("autorId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['tarifa_comision', 'tarifa_comision_pkey', 'PRIMARY KEY (id)'],
     ['tarifa_comision', 'tarifa_comision_autorId_fkey', 'FOREIGN KEY ("autorId") REFERENCES usuario(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
+    ['precio_intradia', 'precio_intradia_pkey', 'PRIMARY KEY (id)'],
+    ['precio_intradia', 'precio_intradia_instrumentoId_fkey', 'FOREIGN KEY ("instrumentoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['control_conciliacion', 'control_conciliacion_pkey', 'PRIMARY KEY (id)'],
     ['control_conciliacion', 'control_conciliacion_conciliacionId_fkey', 'FOREIGN KEY ("conciliacionId") REFERENCES conciliacion(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
     ['control_conciliacion', 'control_conciliacion_instrumentoId_fkey', 'FOREIGN KEY ("instrumentoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT'],
@@ -286,6 +324,13 @@ DECLARE
     ['valor_unidad_fondo', 'valor_unidad_fondo_fondoId_fkey', 'FOREIGN KEY ("fondoId") REFERENCES instrumento(id) ON UPDATE RESTRICT ON DELETE RESTRICT']
   ];
   disparadores text[] := ARRAY[
+    ['alerta_vista', 'alerta_vista_insercion', 'CREATE TRIGGER alerta_vista_insercion BEFORE INSERT ON public.alerta_vista FOR EACH ROW EXECUTE FUNCTION inv_alerta_vista_insercion()'],
+    ['alerta_vista', 'alerta_vista_solo_insercion', 'CREATE TRIGGER alerta_vista_solo_insercion BEFORE DELETE OR UPDATE ON public.alerta_vista FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['alerta', 'alerta_insercion', 'CREATE TRIGGER alerta_insercion BEFORE INSERT ON public.alerta FOR EACH ROW EXECUTE FUNCTION inv_alerta_insercion()'],
+    ['alerta', 'alerta_solo_insercion', 'CREATE TRIGGER alerta_solo_insercion BEFORE DELETE OR UPDATE ON public.alerta FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['umbral_version', 'umbral_version_autor', 'CREATE TRIGGER umbral_version_autor BEFORE INSERT ON public.umbral_version FOR EACH ROW EXECUTE FUNCTION inv_umbral_version_autor()'],
+    ['umbral_version', 'umbral_version_instante', 'CREATE TRIGGER umbral_version_instante BEFORE INSERT ON public.umbral_version FOR EACH ROW EXECUTE FUNCTION inv_umbral_version_instante()'],
+    ['umbral_version', 'umbral_version_solo_insercion', 'CREATE TRIGGER umbral_version_solo_insercion BEFORE DELETE OR UPDATE ON public.umbral_version FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['ajuste_caja', 'ajuste_caja_solo_insercion', 'CREATE TRIGGER ajuste_caja_solo_insercion BEFORE DELETE OR UPDATE ON public.ajuste_caja FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['asignacion_venta', 'asignacion_venta_coherente', 'CREATE TRIGGER asignacion_venta_coherente BEFORE INSERT OR UPDATE OF "ordenVentaId", "loteId", cantidad ON public.asignacion_venta FOR EACH ROW EXECUTE FUNCTION inv_asignacion_coherente()'],
     ['carga_archivo', 'carga_archivo_reversion', 'CREATE TRIGGER carga_archivo_reversion BEFORE UPDATE ON public.carga_archivo FOR EACH ROW WHEN (((old.estado = ''REVERTIDO''::"EstadoCarga") OR (new.estado = ''REVERTIDO''::"EstadoCarga") OR (new."revertidaEn" IS DISTINCT FROM old."revertidaEn") OR (new."revertidaPorId" IS DISTINCT FROM old."revertidaPorId"))) EXECUTE FUNCTION inv_carga_reversion()'],
@@ -301,6 +346,8 @@ DECLARE
     ['config_ia', 'config_ia_solo_insercion', 'CREATE TRIGGER config_ia_solo_insercion BEFORE DELETE OR UPDATE ON public.config_ia FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['tarifa_comision', 'tarifa_comision_instante', 'CREATE TRIGGER tarifa_comision_instante BEFORE INSERT ON public.tarifa_comision FOR EACH ROW EXECUTE FUNCTION inv_tarifa_comision_instante()'],
     ['tarifa_comision', 'tarifa_comision_solo_insercion', 'CREATE TRIGGER tarifa_comision_solo_insercion BEFORE DELETE OR UPDATE ON public.tarifa_comision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
+    ['precio_intradia', 'precio_intradia_insercion', 'CREATE TRIGGER precio_intradia_insercion BEFORE INSERT ON public.precio_intradia FOR EACH ROW EXECUTE FUNCTION inv_precio_intradia_insercion()'],
+    ['precio_intradia', 'precio_intradia_retiro', 'CREATE TRIGGER precio_intradia_retiro BEFORE DELETE OR UPDATE ON public.precio_intradia FOR EACH ROW EXECUTE FUNCTION inv_precio_intradia_retiro()'],
     ['control_conciliacion', 'control_conciliacion_solo_insercion', 'CREATE TRIGGER control_conciliacion_solo_insercion BEFORE DELETE OR UPDATE ON public.control_conciliacion FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
     ['decision', 'decision_instante', 'CREATE TRIGGER decision_instante BEFORE INSERT ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_decision_instante()'],
     ['decision', 'decision_solo_insercion', 'CREATE TRIGGER decision_solo_insercion BEFORE DELETE OR UPDATE ON public.decision FOR EACH ROW EXECUTE FUNCTION inv_solo_insercion()'],
@@ -333,6 +380,10 @@ DECLARE
   ];
   -- [nombre, md5(prosrc), proconfig unido con ';' ('' = sin SET)]. Ninguna puede ser SECURITY DEFINER.
   funciones text[] := ARRAY[
+    ['inv_alerta_insercion', 'd8ca05a297198475cd8d5a51ba41ae33', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_alerta_vista_insercion', '62d5e1d75cc9c93fa78fa7226e13420d', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_umbral_version_autor', 'f030b78cd674b37408615acff07e01c1', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_umbral_version_instante', 'abf0179024dd5f3151006171b5d76bb5', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_asignacion_coherente', 'e102cbd2ac508ce492a6081f44c8818d', ''],
     ['inv_carga_reversion', 'de8fc0662b39f8ccad6b91dd8bde5083', ''],
     ['inv_certificacion_fondo_solo_encargo', '0c694690f57d13c0fbd819a28130c975', ''],
@@ -347,6 +398,8 @@ DECLARE
     ['inv_movimiento_fondo_coherente', '53cb26c826f67c555b19e1b8ad9dffd0', ''],
     ['inv_plan_version_instante', 'abf0179024dd5f3151006171b5d76bb5', ''],
     ['inv_precio_cierre_insercion', '6bdf12a80eeee52cff6a412139ffe5c1', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_precio_intradia_insercion', 'ab17efeaf4b1931d00bc4d64732c37c5', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_precio_intradia_retiro', '0a3da2dd511a6629a1e7049069d15c91', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_rendimiento_fondo_coherente', '9a6b541c07fa34227bf9a3476e9c48ca', ''],
     ['inv_resumen_ia_instante', '3225d295850c7feb0575a40ec4330442', ''],
     ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public, pg_temp'],
@@ -520,6 +573,38 @@ BEGIN
   LOOP
     distintos := distintos || ('rol con privilegios del dueño ' || x);
   END LOOP;
+
+  -- Precios cada minuto: el disparador de la inserción de precio_intradia también exime al dueño. Ni inv_app, ni inv_ia, ni
+  -- inv_precios (que la escribe) pueden ser miembros del dueño de precio_intradia.
+  FOR x IN
+    SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
+    WHERE r.rolname IN ('inv_app', 'inv_ia', 'inv_precios')
+      AND c.oid = to_regclass('public.precio_intradia')
+      AND pg_has_role(r.oid, c.relowner, 'MEMBER')
+    ORDER BY 1
+  LOOP
+    distintos := distintos || ('rol con privilegios del dueño ' || x);
+  END LOOP;
+
+  -- Alertas: los disparadores de umbral_version (el instante), alerta (la inserción del motor) y alerta_vista (el dueño y el
+  -- instante) también eximen al dueño. Ni inv_app (que escribe umbral_version y alerta_vista), ni inv_alertas (que escribe
+  -- alerta), ni inv_ia, ni inv_precios pueden ser miembros del dueño de esas tres tablas.
+  FOR x IN
+    SELECT r.rolname || ' en ' || c.relname FROM pg_roles r CROSS JOIN pg_class c
+    WHERE r.rolname IN ('inv_app', 'inv_alertas', 'inv_ia', 'inv_precios')
+      AND c.oid IN (to_regclass('public.umbral_version'), to_regclass('public.alerta'), to_regclass('public.alerta_vista'))
+      AND pg_has_role(r.oid, c.relowner, 'MEMBER')
+    ORDER BY 1
+  LOOP
+    distintos := distintos || ('rol con privilegios del dueño ' || x);
+  END LOOP;
+  -- Frente B (simulación con IA): el enum TipoResumenIa, con sus etiquetas y su orden (M1 le agrega SIMULACION al final). Un valor
+  -- de un enum no se quita con un DROP ni lo ve ninguna otra lista de este guardián: se comparan las etiquetas en su orden.
+  -- IS DISTINCT FROM: si el tipo no existe, el resultado es NULL y también se marca.
+  IF (SELECT array_agg(e.enumlabel::text ORDER BY e.enumsortorder) FROM pg_enum e WHERE e.enumtypid = to_regtype('"TipoResumenIa"'))
+     IS DISTINCT FROM ARRAY['DIARIO', 'REGLAS', 'ESCENARIOS', 'SIMULACION'] THEN
+    distintos := distintos || 'enum TipoResumenIa (etiquetas u orden)';
+  END IF;
 
   FOREACH x IN ARRAY extensiones LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = x) THEN

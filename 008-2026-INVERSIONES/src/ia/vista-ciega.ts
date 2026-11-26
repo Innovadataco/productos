@@ -22,7 +22,7 @@
  * Ningún mensaje lleva datos: solo los códigos.
  */
 import { CAMPOS_HECHO_CIEGO, CAMPOS_PAQUETE_CIEGO, esIdHecho, type Hecho, type IdHecho, type HechoCiego, type PaqueteCiego, type PaqueteHechos, type TipoResumen } from "./contrato";
-import { CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, type ClaveHecho } from "./catalogo";
+import { CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, type ClaveDe, type ClaveHecho } from "./catalogo";
 import { esObjetoPlano, soloCampos, sonDatosPuros, type Registro } from "./formas";
 import { esPaqueteConstruido, especieDe } from "./paquete";
 import { clavesProhibidasEn } from "./prohibidas";
@@ -36,8 +36,11 @@ export type CodigoFugaVista = (typeof CODIGOS_FUGA_VISTA)[number];
 /** Los ids son la única cifra permitida, y solo como valor completo de un campo («"H07"»). */
 const ID_COMO_TEXTO = /"H[0-9]{2}"/g;
 const CUALQUIER_DIGITO = /\p{N}/u;
-/** `sujeto` y `especie` son opcionales: solo los llevan los hechos que se refieren a otro o a una especie. */
-const CAMPOS_EXIGIDOS_HECHO: readonly string[] = CAMPOS_HECHO_CIEGO.filter((campo) => campo !== "sujeto" && campo !== "especie");
+/**
+ * `sujeto` y `especie` son opcionales: solo los llevan los hechos que se refieren a otro o a una especie. `rango` e
+ * `importancia`, también: solo los puntos de SIMULACION.
+ */
+const CAMPOS_EXIGIDOS_HECHO: readonly string[] = CAMPOS_HECHO_CIEGO.filter((campo) => campo !== "sujeto" && campo !== "especie" && campo !== "rango" && campo !== "importancia");
 
 
 export class ErrorVistaCiega extends Error {
@@ -169,6 +172,9 @@ function proyectar<C extends ClaveHecho>(hecho: Hecho<C>, especie: IdHecho | und
     frescura: hecho.frescura,
     calidad: hecho.calidad,
     obligatorio: hecho.obligatorio,
+    valor: hecho.valor,
+    ...(hecho.rango === undefined ? {} : { rango: hecho.rango }),
+    ...(hecho.importancia === undefined ? {} : { importancia: hecho.importancia }),
   };
   return Object.freeze(ciego);
 }
@@ -177,7 +183,7 @@ function proyectar<C extends ClaveHecho>(hecho: Hecho<C>, especie: IdHecho | und
 export function vistaCiega<T extends TipoResumen>(paquete: PaqueteHechos<T>): PaqueteCiego<T> {
   if (!esPaqueteConstruido(paquete)) throw new ErrorVistaCiega(["PAQUETE_NO_CONSTRUIDO"]);
   const especies = especiesDeLaVista(paquete);
-  const vista: PaqueteCiego<T> = Object.freeze({ tipo: paquete.tipo, hechos: Object.freeze(paquete.hechos.map((hecho, i) => proyectar(hecho, especies[i]))) });
+  const vista: PaqueteCiego<T> = Object.freeze({ tipo: paquete.tipo, hechos: Object.freeze(paquete.hechos.map((hecho, i) => proyectar(hecho, especies[i]))) as readonly HechoCiego<ClaveDe<T>>[] });
   asegurarVistaCiega(vista, paquete);
   return vista;
 }

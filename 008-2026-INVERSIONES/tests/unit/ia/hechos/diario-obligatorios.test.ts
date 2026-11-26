@@ -1,7 +1,7 @@
 /**
  * Obligatorios del DIARIO (frente ia-diario-especie): solo los de `OBLIGATORIOS_DIARIO`, como mucho `MAX_OBLIGATORIOS`,
  * y el armador no arrastra nombres de especie como obligatorios (en el DIARIO ningún dato de especie es obligatorio).
- * Se prueba sobre los quince casos DIARIO inventados de la evaluación.
+ * Se prueba sobre los diecisiete casos DIARIO inventados de la evaluación.
  */
 import { describe, expect, it } from "vitest";
 import { casosInventados } from "@/ia/evaluacion/casos";
@@ -30,9 +30,9 @@ describe("obligatorios del DIARIO", () => {
     expect(obligatorios.some((h) => h.clave === "ESPECIE_NOMBRE" || h.sujeto !== undefined)).toBe(false);
   });
 
-  it("control positivo: los quince casos cubren cada obligatorio de la lista al menos una vez", () => {
+  it("control positivo: los diecisiete casos cubren cada obligatorio de la lista al menos una vez", () => {
     const vistos = new Set(diarios.flatMap((c) => c.paquete.hechos.filter((h) => h.obligatorio).map((h) => h.clave)));
-    expect(diarios).toHaveLength(15);
+    expect(diarios).toHaveLength(17);
     for (const clave of OBLIGATORIOS_DIARIO) expect(vistos.has(clave), clave).toBe(true);
   });
 });

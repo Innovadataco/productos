@@ -3,6 +3,7 @@
  * antes/después, el valor de partida (acciones, fondo y caja), los escenarios a 3, 6 y 12 meses con su variación, los puntos que aparecen o desaparecen, las frases y el rótulo. Puro.
  */
 import { puntoEs, pctEs, hhiEs, pesosEs, frasesAnalisis, notaCaja, variacionEs, ROTULO_ANALISIS, type DatosTexto } from "./texto";
+import { itemsParaRevisar, type ItemRevisar } from "./revisar";
 import type { AntesDespues, PuntoEscenario, ResumenEscenario } from "./tipos";
 
 export interface FilaAntesDespues {
@@ -21,6 +22,8 @@ export interface VistaAnalisisSimulacion {
   readonly notaCaja: string;
   /** Vacío si los escenarios no se calcularon. */
   readonly escenarios: readonly FilaAntesDespues[];
+  /** Los puntos que cambian de rango con la operación, del más importante al menos (src/analisis/puntos/). */
+  readonly paraRevisar: readonly ItemRevisar[];
   readonly aparecen: readonly string[];
   readonly desaparecen: readonly string[];
   readonly frases: readonly string[];
@@ -73,6 +76,7 @@ export function aVistaAnalisis(d: DatosTexto): VistaAnalisisSimulacion {
             ...e.antes.puntos.map((p, i) => filaEscenario(p, e.despues.puntos[i])),
             { titulo: "Probabilidad de quedar por debajo de lo aportado", antes: pctEs(e.antes.probabilidadBajoAportado), despues: pctEs(e.despues.probabilidadBajoAportado) },
           ],
+    paraRevisar: itemsParaRevisar(d.cambios ?? [], d.nombres),
     aparecen: c.puntos.aparecen.map((o) => puntoEs(o, d.nombres)),
     desaparecen: c.puntos.desaparecen.map((o) => puntoEs(o, d.nombres)),
     frases: frasesAnalisis(d),

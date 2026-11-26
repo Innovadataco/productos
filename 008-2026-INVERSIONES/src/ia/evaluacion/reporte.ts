@@ -3,7 +3,7 @@
  * cifras, nombres de especie ni el destino (con el portafolio, los textos llevan cifras reales: van solo a la carpeta
  * 0700). El resumen de métricas en markdown lleva lo mismo, por modelo. Y el código de salida del script.
  */
-import { TIPOS_RESUMEN } from "../contrato";
+import { TIPOS_DIARIOS } from "../contrato";
 import { resumenSinIa } from "../validador/plantilla";
 import type { MetricasModelo } from "./metricas";
 import type { ConteoRed } from "./red";
@@ -16,7 +16,7 @@ export function codigoDeSalida(fin: FinEvaluacion, red: ConteoRed): 0 | 1 | 3 {
 }
 
 export function lineasDeCasos(casos: readonly CasoEvaluacion[], origen: OrigenCasos): readonly string[] {
-  const porTipo = TIPOS_RESUMEN.map((t) => `${t} ${casos.filter((c) => c.tipo === t).length}`).join(" · ");
+  const porTipo = TIPOS_DIARIOS.map((t) => `${t} ${casos.filter((c) => c.tipo === t).length}`).join(" · ");
   const plantilla = casos.filter((c) => resumenSinIa(c.paquete).ok).length;
   return Object.freeze([`✅ ${casos.length} casos (${origen}): ${porTipo}`, `   plantilla sin IA (línea base): ${plantilla} de ${casos.length} publicadas por el validador`]);
 }

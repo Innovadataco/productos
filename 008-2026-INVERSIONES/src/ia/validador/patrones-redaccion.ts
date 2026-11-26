@@ -94,6 +94,18 @@ const TRATO: readonly Patron[] = [
     "alcanza", "llega", "queda"], "^"),
 ];
 
+/**
+ * RECOMENDACION.ATENCION: llamar la atención del lector hacia algo («mire», «ojo», «fíjese»). Va aparte de
+ * `PATRONES_RECOMENDACION` a propósito: agregarla allí cambiaría la huella de esa lista y la conducta de DIARIO, REGLAS y
+ * ESCENARIOS. La conecta el validador v4 (defensa adicional del «Para revisar», solo para SIMULACION).
+ */
+const ATENCION: readonly Patron[] = [
+  patron("RECOMENDACION.ATENCION", "PLEGADO", ["atencion", "atento", "atenta", "atentos", "atentas", "fijese", "fijense", "mire", "miren", "ojo",
+    "cuidado", "preste", "presten", "observe", "observen", "tenga presente", "tengan presente", "revise", "revisen", "considere", "consideren",
+    "vigile", "vigilen", "tome nota", "tomen nota", "no pase por alto", "conviene", "vale la pena"]),
+];
+
 export const PATRONES_RECOMENDACION: readonly Patron[] = Object.freeze(RECOMENDACION);
 export const PATRONES_PREDICCION: readonly Patron[] = Object.freeze(PREDICCION);
 export const PATRONES_TRATO: readonly Patron[] = Object.freeze(TRATO);
+export const PATRONES_ATENCION: readonly Patron[] = Object.freeze(ATENCION);

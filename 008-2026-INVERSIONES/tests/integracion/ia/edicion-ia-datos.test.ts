@@ -18,7 +18,7 @@ let autorId = "";
 const ENTRADA: EntradaConfigIa = {
   modo: "nube", ollamaHost: ip(100, 87, 41, 157), ollamaPuerto: 47213, temperaturaCentesimas: 37,
   tareas: { DIARIO: { activo: true, modeloLocal: null }, REGLAS: { activo: false, modeloLocal: null }, ESCENARIOS: { activo: true, modeloLocal: null } },
-  modeloNube: "claude-sonnet-5-5", esfuerzoNube: "medium", topeMicroUsd: 4_610_000n, horaResumen: "21:00", limiteSegundos: 97, motivo: `Pantalla ${corrida}`,
+  modeloNube: "claude-sonnet-5-5", esfuerzoNube: "medium", topeMicroUsd: 4_610_000n, horaResumen: "21:00", limiteSegundos: 45, analisisDemanda: false, motivo: `Pantalla ${corrida}`,
 };
 
 beforeAll(async () => {
@@ -40,7 +40,7 @@ describe("datosEdicionIa", () => {
     expect(d.versionBase).toBe(ultima);
     expect(d.inicial).toMatchObject({
       modo: "nube", ollamaHost: ENTRADA.ollamaHost, ollamaPuerto: "47213", temperatura: "0,37", modeloNube: "claude-sonnet-5-5", esfuerzoNube: "medium",
-      topeMensualUsd: "4,61", horaResumen: "21:00", limiteSegundos: "97",
+      topeMensualUsd: "4,61", horaResumen: "21:00", limiteSegundos: "45",
     });
     expect(d.inicial.tareas.REGLAS).toEqual({ activo: false, modeloLocal: "" });
     expect(d.guardado.hayDestino).toBe(true);

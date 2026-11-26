@@ -4,7 +4,7 @@
  * lo que publica el validador lo arma el código desde el paquete.
  */
 import { describe, expect, it } from "vitest";
-import { TIPOS_RESUMEN } from "@/ia/contrato";
+import { TIPOS_DIARIOS } from "@/ia/contrato";
 import { armarPedido } from "@/ia/generador";
 import { crearGeneradorFalso } from "@/ia/generador-falso";
 import { generarConPuertas } from "@/ia/puertas";
@@ -15,7 +15,7 @@ import { FRASES_VALIDAS, paqueteFicticio, renderizado, salidaDe } from "./apoyo/
 
 const LIMITE_MS = 4613;
 
-describe.each(TIPOS_RESUMEN)("de punta a punta · %s", (tipo) => {
+describe.each(TIPOS_DIARIOS)("de punta a punta · %s", (tipo) => {
   it("una salida válida del generador falso se publica con las cifras del paquete", async () => {
     const paquete = paqueteFicticio(tipo);
     const pedido = armarPedido({ paquete, prompt: PROMPTS[tipo], esquemaSalida: ESQUEMA_SALIDA, limiteMs: LIMITE_MS });

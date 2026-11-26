@@ -136,7 +136,7 @@ export async function ultimoPublicado(db: BaseRegistro, tipo: TipoResumen, fecha
   const { puerta, texto, salidaModelo, modelo, modeloDigest } = fila;
   if (puerta === null || texto === null || salidaModelo === null || modelo === null || modeloDigest === null) throw new ErrorRegistro("GUARDADO_INVALIDO");
   return Object.freeze({
-    id: fila.id, tipo: fila.tipo, fechaNegocio: diaDeFecha(fila.fechaNegocio), puerta, texto, salidaModelo, paquete: paqueteGuardado(fila),
+    id: fila.id, tipo, fechaNegocio: diaDeFecha(fila.fechaNegocio), puerta, texto, salidaModelo, paquete: paqueteGuardado(fila),
     hechosHash: fila.hechosHash, promptVersion: fila.promptVersion, promptHash: fila.promptHash, modelo, modeloDigest,
     validadorVersion: fila.validadorVersion, generadoEn: fila.generadoEn,
   });

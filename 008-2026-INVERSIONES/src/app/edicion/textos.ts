@@ -16,6 +16,7 @@ export const TEXTOS_CONFIGURACION = {
   ENTRADAS: [
     { clave: "ia", texto: "Configuración de la IA", href: "/edicion/ia", para: "Qué modelo usa cada tarea de la IA, local o en la nube, y el tope mensual de gasto de la nube." },
     { clave: "tarifas", texto: "Tarifas de comisión", href: "/edicion/tarifas", para: "La tarifa real de cada casa de bolsa, por lado, que usa el simulador «¿Y si…?» de Operar." },
+    { clave: "alertas", texto: "Alertas", href: "/edicion/alertas", para: "Cuándo avisa el sistema: los umbrales de cada alerta (cerca del nivel, movimiento del día, caída del portafolio, dato viejo y fecha ex) y cuáles están encendidas." },
     { clave: "plan", texto: "Editar el plan", href: "/edicion/plan", para: "Una versión nueva del plan con sus reglas; la anterior queda en la historia." },
   ],
 } as const;
@@ -76,9 +77,27 @@ export const MENSAJES: Readonly<Record<string, string>> = {
   ORDEN_SIN_ELEGIR: "Elija la orden de Trii que ejecutó esta decisión.",
   SIN_ORDENES_POSIBLES: "No hay órdenes de Trii que quepan en esta decisión: aprobadas, sin decisión, de la misma especie y lado, y no anteriores a ella.",
   DESCONOCIDO: "No se pudo guardar. Intente de nuevo.",
+  // /edicion/alertas
+  FUERA_DE_RANGO: "Está fuera del rango permitido (mire la ayuda del campo).",
+  DEBE_SER_ENTERO: "Escriba un número entero, sin decimales.",
+  DECIMALES_DE_MAS: "Escriba hasta 2 decimales.",
+  AUTOR_INEXISTENTE: "Solo el dueño puede guardar cambios.",
+  UMBRAL_CAMBIO: "Mientras editaba se guardó otra versión. Vuelva a cargar la página.",
 };
 
 export const ETIQUETAS_CAMPO: Readonly<Record<string, string>> = {
+  // Las de /edicion/alertas (iguales a ETIQUETAS_ALERTAS de alertas/textos-alertas.ts; una prueba lo exige).
+  alertaNivelCruzadoActiva: "Avisar cuando el precio cruza el nivel de una regla del plan",
+  alertaCercaActiva: "Avisar cuando el precio se acerca al nivel de una regla",
+  alertaCercaPct: "Distancia al nivel (%)",
+  alertaMovimientoActiva: "Avisar cuando una especie se mueve en el día",
+  alertaMovimientoPct: "Movimiento del día (%)",
+  alertaCaidaActiva: "Avisar cuando el valor del portafolio baja en el día",
+  alertaCaidaPct: "Caída del portafolio (%)",
+  alertaDatoViejoActiva: "Avisar cuando un dato lleva tiempo sin renovarse",
+  alertaDatoViejoMin: "Minutos sin renovarse",
+  alertaExActiva: "Avisar de la fecha ex de un dividendo",
+  alertaExDiasHabiles: "Días hábiles de anticipación",
   vigenteDesde: "Rige desde",
   motivo: "Motivo",
   versionBase: "Versión de partida",

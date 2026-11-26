@@ -110,9 +110,12 @@ sudo env INV_TAG=$(sudo cat "$B/estado/sha-actual") $COMPOSE up -d --wait && sud
 | respaldo | 128m |
 | vigía | 32m |
 | entrada (relé TCP) | 32m |
+| precios | 96m |
+| IA | 128m |
+| alertas | 64m |
 | migrador (un solo uso) | 256m |
 
-Corriendo en reposo, el techo es de **1.088 MiB**. La entrada, medida en el Mac (arm64): unos 9 MiB en reposo y 14,7 MiB de pico con 60 conexiones quietas. En amd64, **por verificar** en la medición del despliegue. Un OOM de la entrada cuenta para el criterio de corte, como cualquier otro.
+Corriendo en reposo, el techo es de **1.376 MiB**: 1.088 MiB (app, base, respaldo, vigía y entrada) más precios (96), IA (128) y alertas (64). El migrador, de un solo uso, no cuenta. Los tres servicios nuevos son límites, **sin medir en el VPS**: se miden en el primer despliegue con `medir-memoria.sh` (la espera de 600 s) y, para alertas, con una evaluación forzada (`produccion.md`, «El servicio de las alertas»). La entrada, medida en el Mac (arm64): unos 9 MiB en reposo y 14,7 MiB de pico con 60 conexiones quietas. En amd64, **por verificar** en la medición del despliegue. Un OOM de la entrada cuenta para el criterio de corte, como cualquier otro.
 
 ## 4 · Criterio de corte (el corte es MANUAL)
 Se detiene Inversiones, con `pausar-008.sh`, si se da cualquiera de estas condiciones:
@@ -184,6 +187,7 @@ Lo ejecuta el coordinador con Jelk después del primer despliegue (condición de
 > v2.3 · 2026-11-21 · 06:57 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · sin nombres de contenedores ni de proyectos ajenos (salvo el alias SSH del Mac, decidido); reanudación manual marcada como excepción; `crear-roles-prod.sh` y `crear-acceso-inicial.sh` también toman el candado común
 > v2.3 · 2026-11-21 · 08:42 (-05) · Inversiones · Fábrica ECC (frente app-sin-salida) · la entrada en la pausa por etiqueta y en el presupuesto (techo de 1.088 MiB); el vigía comparte `inv-008-red` solo con la entrada
 > v2.2 · 2026-11-21 · 06:50 (-05) · Inversiones · Fábrica ECC (frente infra-literales) · marcadores en vez de rutas del VPS; la pausa no interpola (down por nombre de proyecto, marca antes, anclas); lo compartido con PI es solo el candado común y la marca; el deploy de PI aún no toma el candado común (SPEC-980): avisar al CEO de PI
+> v2.2 · 2026-11-26 · 06:10 (-05) · Inversiones · Fábrica Inversiones (frente alertas-pantalla, PR-C) · presupuesto con precios (96m), IA (128m) y alertas (64m): techo en reposo de 1.376 MiB
 > v2.1 · 2026-11-21 · 04:40 (-05) · Inversiones · Fábrica ECC (frente prod-endurecer) · pausa y reanudación con el árbol de root y el sha validado; enlace al §8 nuevo
 > v2.0 · 2026-11-21 · 00:45 (-05) · Inversiones · Fábrica ECC (frente producción) · correcciones de la GATE 2
 > v1.0 · 2026-11-20 · 23:59 (-05) · Inversiones · Fábrica ECC (frente producción)

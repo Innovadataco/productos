@@ -4,7 +4,7 @@
  * y los pedidos armados con `construirPaquete` y `armarPedido` desde las entradas ficticias de E1a.
  */
 import { armarPedido, type PedidoGeneracion } from "@/ia/generador";
-import type { PaqueteHechos, TipoResumen } from "@/ia/contrato";
+import type { PaqueteHechos, TipoDiario } from "@/ia/contrato";
 import { construirPaquete } from "@/ia/paquete";
 import { ENTRADAS_FICTICIAS } from "../../apoyo/hechos.ficticio";
 import { ESQUEMA_FICTICIO, LIMITE_FICTICIO_MS, PROMPT_FICTICIO } from "../../apoyo/pedido.ficticio";
@@ -19,7 +19,7 @@ export interface PedidoFicticio {
   readonly pedido: PedidoGeneracion;
 }
 
-export function pedidoFicticio(tipo: TipoResumen = "DIARIO", limiteMs = LIMITE_FICTICIO_MS): PedidoFicticio {
+export function pedidoFicticio(tipo: TipoDiario = "DIARIO", limiteMs = LIMITE_FICTICIO_MS): PedidoFicticio {
   const paquete = construirPaquete(ENTRADAS_FICTICIAS[tipo]());
   return { paquete, pedido: armarPedido({ paquete, prompt: PROMPT_FICTICIO, esquemaSalida: ESQUEMA_FICTICIO, limiteMs }) };
 }

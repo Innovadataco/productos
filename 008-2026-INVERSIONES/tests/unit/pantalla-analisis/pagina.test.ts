@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { aVistaAnalisis } from "@/app/analisis/vista";
 import { SECCIONES } from "@/app/tablero/secciones";
+import { fechaEnBogota } from "@/precios/horario";
 import { analisis, especie } from "../analisis/fixtures/analisis.ficticio";
 
 const exigirSesion = vi.hoisted(() => vi.fn());
@@ -50,6 +51,23 @@ describe("src/app/analisis/page.tsx", () => {
     expect((datosDeAnalisis.mock.calls[0]![1] as Date).getUTCHours()).toBe(0);
   });
 
+  it("le pasa a la lectura el mismo instante («ahora») con que sacó el día de Colombia: de ahí salen los días hábiles de atraso", async () => {
+    await PaginaAnalisis();
+    const [, hoy, ahora] = datosDeAnalisis.mock.calls[0]! as [unknown, Date, Date];
+    expect(ahora).toBeInstanceOf(Date);
+    expect(Math.abs(ahora.getTime() - Date.now())).toBeLessThan(60_000);
+    expect(hoy.getTime()).toBe(fechaEnBogota(ahora).getTime());
+  });
+
+  it("un cierre con días hábiles de atraso lo avisa en la fecha de los datos; «carga detenida» es otra cosa y se conserva", async () => {
+    datosDeAnalisis.mockResolvedValueOnce(aVistaAnalisis({
+      analisis: analisis({ especies: [especie("FICTICIA-A")] }), observaciones: [], nombres: new Map([["FICTICIA-A", "FICTA"]]),
+      procedencias: { acciones: [{ dia: "2021-06-14", traidoEn: "2021-06-14 18:37", fuente: "yahoo", habilesAtras: 3 }], fondos: new Map() }, diarioTruncado: false, fondosSinValor: [],
+    }));
+    const raiz = await pantalla();
+    expect([...raiz.querySelectorAll(".fecha-dato-aviso")].map(texto)).toEqual(["dato de hace 3 días hábiles"]);
+  });
+
   it("sin sesión no lee nada: la redirección se propaga", async () => {
     exigirSesion.mockRejectedValueOnce(Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT;replace;/ingresar;307;" }));
     await expect(PaginaAnalisis()).rejects.toThrow("NEXT_REDIRECT");
@@ -60,7 +78,7 @@ describe("src/app/analisis/page.tsx", () => {
     datosDeAnalisis.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError("falló en postgresql://u:clave-secreta@h", { code: "P2021", clientVersion: "5.22.0" }));
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const html = renderToStaticMarkup(await PaginaAnalisis());
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[analisis] no se pudo leer la base (código: P2021)");
     expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
   });

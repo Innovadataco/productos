@@ -4,7 +4,7 @@
  * todos, en el orden canónico y sin repetir; nada sale del texto del modelo en un rechazo.
  */
 import { describe, expect, it } from "vitest";
-import { TIPOS_RESUMEN, type PaqueteHechos } from "@/ia/contrato";
+import { TIPOS_DIARIOS, type PaqueteHechos } from "@/ia/contrato";
 import { fecha as fechaEsCo } from "@/app/tablero/formato";
 import { CODIGOS_VALIDADOR, ErrorValidador, VERSION_VALIDADOR, type CodigoValidador } from "@/ia/validador/codigos";
 import { AVISOS } from "@/ia/validador/resumen";
@@ -25,7 +25,7 @@ function patronesDe(salidaCruda: unknown, paquete: PaqueteHechos = diario()): re
 }
 
 describe("salida válida", () => {
-  it.each(TIPOS_RESUMEN)("%s: publica el texto armado con las presentaciones del paquete", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: publica el texto armado con las presentaciones del paquete", (tipo) => {
     const paquete = paqueteFicticio(tipo);
     const resultado = validarSalida(salidaDe(paquete, ...FRASES_VALIDAS[tipo]), paquete);
     expect(resultado.ok).toBe(true);
@@ -81,7 +81,8 @@ describe("un rechazo por cada código", () => {
     // Las palabras de cifra, recomendación, predicción y tú están además fuera del vocabulario cerrado (IDIOMA).
     ["CIFRA_EN_PALABRAS", () => salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES} en marzo."), ["IDIOMA"]],
     ["HECHO_DESCONOCIDO", () => salida(frase(p, VALOR_ACCIONES), { texto: "Las comisiones pagadas suman {H99}.", hechos: ["H99"] }), ["HECHO_NO_CITADO", "RENDER_CIFRA"]],
-    ["HECHO_NO_CITADO", () => salidaDe(p, ESPECIE, GANANCIA, ATRASADAS), []],
+    // Un obligatorio sin citar en el DIARIO lo escribe el código (T4): aquí el rechazo es una frase sin cita.
+    ["HECHO_NO_CITADO", () => salida(frase(p, VALOR_ACCIONES), { texto: "El portafolio tuvo un día tranquilo.", hechos: [] }), ["IDIOMA"]],
     ["ETIQUETA_NO_COINCIDE", () => salidaDe(p, VALOR_ACCIONES, "Las comisiones pagadas bajaron a {GANANCIA_TOTAL}."), []],
     ["DIRECCION_CONTRADICE", () => salidaDe(p, VALOR_ACCIONES, "La ganancia total subió a {GANANCIA_TOTAL}."), []],
     ["RECOMENDACION", () => salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES}, compre."), ["IDIOMA"]],
@@ -92,7 +93,8 @@ describe("un rechazo por cada código", () => {
   ];
 
   it("la tabla cubre todos los códigos salvo RENDER_CIFRA (que tiene su prueba con el render cambiado)", () => {
-    expect([...CASOS.map(([c]) => c), "RENDER_CIFRA"].sort()).toEqual([...CODIGOS_VALIDADOR].sort());
+    // RANGO_CONTRADICE, PARA_REVISAR y ATRIBUCION (validador-v4) son solo de SIMULACION: los prueban `simulacion/validador-v4*.test.ts`.
+    expect([...CASOS.map(([c]) => c), "RENDER_CIFRA", "RANGO_CONTRADICE", "PARA_REVISAR", "ATRIBUCION"].sort()).toEqual([...CODIGOS_VALIDADOR].sort());
   });
 
   it.each(CASOS)("%s", (codigo, armar, otros) => {

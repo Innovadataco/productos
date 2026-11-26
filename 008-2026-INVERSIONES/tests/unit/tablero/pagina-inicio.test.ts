@@ -54,7 +54,7 @@ describe("src/app/page.tsx", () => {
 
     const html = renderToStaticMarkup(await Inicio());
 
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(html).not.toContain("clave-secreta");
     expect(registro).toHaveBeenCalledWith(`[tablero] no se pudo leer la base (código: ${codigo})`);
     expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
@@ -82,7 +82,7 @@ describe("src/app/page.tsx", () => {
     ultimaConciliacion.mockRejectedValueOnce(new Prisma.PrismaClientInitializationError(`Can't reach ${DETALLE}`, VERSION, "P1001"));
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const html = renderToStaticMarkup(await Inicio());
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[tablero] no se pudo leer la base (código: P1001)");
   });
 
@@ -101,7 +101,7 @@ describe("src/app/page.tsx", () => {
     obtenerEvolucion.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError(`falló en ${DETALLE}`, { code: "P2024", clientVersion: VERSION }));
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const html = renderToStaticMarkup(await Inicio());
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[tablero] no se pudo leer la base (código: P2024)");
   });
 
@@ -119,5 +119,18 @@ describe("src/app/page.tsx", () => {
   it("un error que no es de la base se propaga (lo atiende error.tsx)", async () => {
     obtenerResumen.mockRejectedValueOnce(new Error("fallo de cálculo"));
     await expect(Inicio()).rejects.toThrow("fallo de cálculo");
+  });
+
+  it("si falla la lectura del calendario, el tablero se pinta igual con el aviso aproximado que dice que no se pudo leer el calendario", async () => {
+    // `db` es {} en esta prueba: calendarioBvc lanza. Un cierre de 2024 lleva muchos días hábiles con cualquier reloj.
+    obtenerResumen.mockResolvedValueOnce(resumenDe([
+      especie({ nemotecnico: "FICT1", cantidad: 10n, costoVivo: D(1000), cierre: { precio: D("100"), fecha: dia("2024-11-22"), verificado: false, traidoEn: new Date("2024-11-22T23:00:00Z"), fuente: "yahoo" } }),
+    ]));
+    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const html = renderToStaticMarkup(await Inicio());
+    expect(html).toMatch(/dato de hace unos \d+ días hábiles \(no se pudo leer el calendario\)/);
+    expect(html).not.toMatch(/sin festivos de/);
+    expect(registro).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
   });
 });

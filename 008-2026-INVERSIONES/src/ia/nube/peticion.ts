@@ -21,7 +21,7 @@ import "server-only";
  */
 import type { MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resources/messages";
 import { transformJSONSchema } from "@anthropic-ai/sdk/lib/transform-json-schema";
-import { entradaDeCatalogo } from "../catalogo";
+import { entradaDeCatalogo, rangoCiegoValido } from "../catalogo";
 import { CALIDADES, CAMPOS_HECHO_CIEGO, CAMPOS_PAQUETE_CIEGO, CERCANIAS, DIRECCIONES, FRESCURAS, TIPOS_RESUMEN, esIdHecho, type TipoResumen } from "../contrato";
 import { esDe, esObjetoPlano, soloCampos, sonDatosPuros } from "../formas";
 import { revisarPedido, type PedidoGeneracion } from "../generador";
@@ -95,12 +95,12 @@ const esId = (valor: unknown): boolean => typeof valor === "string" && esIdHecho
  */
 function hechoCiegoValido(tipo: TipoResumen, hecho: unknown): boolean {
   if (!esObjetoPlano(hecho) || !soloCampos(hecho, CAMPOS_HECHO_CIEGO)) return false;
-  const { id, clave, etiqueta, sujeto, especie, direccion, cercania, frescura, calidad, obligatorio } = hecho;
+  const { id, clave, etiqueta, sujeto, especie, direccion, cercania, frescura, calidad, obligatorio, rango, importancia } = hecho;
   const catalogo = typeof clave === "string" ? entradaDeCatalogo(tipo, clave) : null;
   return esId(id) && catalogo !== null && etiqueta === catalogo.etiqueta && (!Object.hasOwn(hecho, "sujeto") || esId(sujeto))
     && (!Object.hasOwn(hecho, "especie") || esId(especie))
     && esDe(DIRECCIONES, direccion) && esDe(CERCANIAS, cercania) && esDe(FRESCURAS, frescura) && esDe(CALIDADES, calidad)
-    && typeof obligatorio === "boolean";
+    && typeof obligatorio === "boolean" && rangoCiegoValido(tipo, String(clave), catalogo, rango, importancia);
 }
 
 /**

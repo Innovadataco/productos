@@ -1120,14 +1120,101 @@ describe("desplegar-prod.sh · espera de la medición: 120 s si es solo código,
   });
 });
 
+describe("desplegar-prod.sh · servicio de las alertas (inv-008-alertas)", () => {
+  it("sube con los permanentes y se verifica: la imagen enviada, healthy, sin puertos, solo en la red interna y con la credencial de inv_alertas", async () => {
+    const p = preparar();
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain("el servicio de las alertas corre con la credencial de inv_alertas");
+    expect(r.stderr).toContain("el servicio de las alertas corre la imagen enviada, healthy, sin puertos y solo en la red interna");
+    expect(r.stderr).not.toContain("clave-ficticia-5120");
+    const up = readFileSync(path.join(p.base, "tags.txt"), "utf8").split("\n").filter((l) => l.startsWith("up "));
+    expect(up.at(-1)).toContain("inv-008-alertas");
+  });
+
+  it.each([
+    ["no está healthy", { FALSO_SALUD_ALERTAS: "unhealthy" }, "el servicio de las alertas no está healthy"],
+    ["publica un puerto", { FALSO_PUERTO_ALERTAS: "8008/tcp -> 0.0.0.0:8008\n" }, "el servicio de las alertas publica puertos"],
+    ["está en una red con salida", { FALSO_REDES_ALERTAS: "inv-008-prueba_inv-008-red-interna inv-008-prueba_inv-008-red-precios" }, "el servicio de las alertas está en otras redes"],
+    ["está en otra red", { FALSO_REDES_ALERTAS: "inv-008-prueba_inv-008-red" }, "el servicio de las alertas está en otras redes"],
+    ["recibe una clave ajena", { FALSO_ENV_ALERTAS: "TZ=America/Bogota\nCIFRADO_CLAVE_V1=x\n" }, "recibe variables que no son suyas: CIFRADO_CLAVE_V1"],
+    ["recibe la credencial de precios como variable ajena", { FALSO_ENV_ALERTAS: "TZ=America/Bogota\nINV_PRECIOS_DATABASE_URL=x\n" }, "recibe variables que no son suyas: INV_PRECIOS_DATABASE_URL"],
+    ["trae la credencial de otro rol", { FALSO_ENV_ALERTAS: "DATABASE_URL=postgresql://inv_precios:clave-ficticia-5120@inv-008-db:5432/inversiones\n" }, "no es la de inv_alertas en inv-008-db"],
+    ["la imagen no trae el bundle", { FALSO_BUNDLE_ALERTAS_RC: "1" }, "no trae el bundle del servicio de las alertas"],
+    ["su sistema de archivos no es de solo lectura", { FALSO_ENDURECIMIENTO_ALERTAS: "false [ALL] [no-new-privileges:true] 48 10008:10008" }, "no es de solo lectura"],
+    ["no suelta todas las capacidades", { FALSO_ENDURECIMIENTO_ALERTAS: "true [] [no-new-privileges:true] 48 10008:10008" }, "no suelta todas las capacidades"],
+    ["puede escalar privilegios", { FALSO_ENDURECIMIENTO_ALERTAS: "true [ALL] [] 48 10008:10008" }, "no-new-privileges"],
+    ["sin tope de procesos", { FALSO_ENDURECIMIENTO_ALERTAS: "true [ALL] [no-new-privileges:true] 0 10008:10008" }, "tope de procesos"],
+    ["con un tope de procesos enorme", { FALSO_ENDURECIMIENTO_ALERTAS: "true [ALL] [no-new-privileges:true] 4096 10008:10008" }, "tope de procesos"],
+    ["corre como root", { FALSO_ENDURECIMIENTO_ALERTAS: "true [ALL] [no-new-privileges:true] 48 0:0" }, "no corre como 10008:10008"],
+    ["su huella dice que la conexión no es la de inv_alertas", { FALSO_HUELLA_ALERTAS: "formato=1\nestado=SECRETO_INVALIDO\n" }, "no es la de inv_alertas"],
+    ["no se puede leer su huella", { FALSO_HUELLA_ALERTAS: "", FALSO_HUELLA_ALERTAS_RC: "1" }, "no se pudo leer la huella"],
+  ])("%s: no hay DEPLOY VERIFICADO", async (_n, extra, mensaje) => {
+    const p = preparar(extra);
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain(mensaje);
+    expect(r.stderr).not.toContain("clave-ficticia-5120");
+    expect(r.stdout).not.toContain("DEPLOY VERIFICADO");
+  });
+
+  it("su huella en SIN_VERIFICAR (el rol aún no se verificó, p. ej. sin LOGIN): despliega y lo avisa", async () => {
+    const p = preparar({ FALSO_HUELLA_ALERTAS: "formato=1\nestado=SIN_VERIFICAR\n" });
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain("⚠️  el servicio de las alertas está SIN_VERIFICAR");
+  });
+
+  it("su huella en ESPERANDO: sin aviso", async () => {
+    const p = preparar();
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).not.toContain("SIN_VERIFICAR");
+  });
+
+  it("sin la credencial: despliega y avisa que queda en espera", async () => {
+    const p = preparar({ FALSO_ENV_ALERTAS: "TZ=America/Bogota\nDATABASE_URL=\nINV_INTRADIA_ENCENDIDO=\n" });
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain("sin INV_ALERTAS_DATABASE_URL: queda en espera");
+  });
+});
+
+describe("desplegar-prod.sh · inv-008-alertas · candados de texto", () => {
+  const desplegar = leer008("scripts/desplegar-prod.sh");
+  const funcionDe = (nombre: string): string => {
+    const inicio = desplegar.indexOf(`\n${nombre}() {`);
+    expect(inicio, `falta la función ${nombre}`).toBeGreaterThan(-1);
+    return desplegar.slice(inicio, desplegar.indexOf("\n}\n", inicio));
+  };
+
+  it("la lista blanca de su entorno: su credencial, el interruptor del intradía y la zona horaria; la imagen se suma", () => {
+    expect(desplegar).toMatch(/^PROPIAS_ALERTAS=\(DATABASE_URL INV_INTRADIA_ENCENDIDO TZ\)$/m);
+    expect(desplegar).toMatch(/^ALERTAS="inv-008-alertas"$/m);
+    const f = funcionDe("verificar_entorno_alertas");
+    expect(f).toContain("PROPIAS_ALERTAS");
+    expect(f).toContain('"inv_alertas@inv-008-db"');
+    expect(f).not.toMatch(/informar[^\n]*\$\(entorno_de/);
+    expect(f).not.toMatch(/\| grep -q/);
+  });
+
+  it("verificar_alertas: corriendo, healthy, sin puertos, solo en la red interna (internal y aislada) y con su entorno; está en verificar_servicio", () => {
+    const f = funcionDe("verificar_alertas");
+    for (const trozo of ["verificar_corriendo", "= healthy ]", "docker port", "verificar_aislado", "verificar_entorno_alertas", "test -r /app/alertas/servicio-alertas.mjs"]) expect(f).toContain(trozo);
+    expect(f).toContain("${INV_PROYECTO_ACTIVO}_inv-008-red-interna ");
+    expect(funcionDe("verificar_servicio")).toContain("verificar_alertas");
+  });
+});
+
 describe("desplegar-prod.sh · funciones de la espera: resumen del compose y del Dockerfile, piso de memoria", () => {
   const script = ruta008("scripts/desplegar-prod.sh");
   const resumenCompose = (texto: string) => funcion(script, "resumen_compose", process.env, texto).stdout.trim().split("\n");
   const resumenDockerfile = (texto: string) => funcion(script, "resumen_dockerfile", process.env, texto).stdout.trim().split("\n");
 
-  it("resumen_compose del compose real: los ocho servicios (con precios, D-018, e IA, E6), sus límites e imágenes, y nada del bloque literal del relé", () => {
+  it("resumen_compose del compose real: los nueve servicios (con precios, D-018, IA, E6, y alertas), sus límites e imágenes, y nada del bloque literal del relé", () => {
     const r = resumenCompose(leer008("docker-compose.prod.yml"));
     expect(r.filter((l) => l.startsWith("servicio "))).toEqual([
+      "servicio inv-008-alertas",
       "servicio inv-008-app",
       "servicio inv-008-db",
       "servicio inv-008-entrada",
@@ -1138,6 +1225,7 @@ describe("desplegar-prod.sh · funciones de la espera: resumen del compose y del
       "servicio inv-008-vigia",
     ]);
     for (const l of [
+      "inv-008-alertas mem_limit 64m", "inv-008-alertas memswap_limit 64m", "inv-008-alertas image inv-008-app:${INV_TAG:-sin-desplegar}",
       "inv-008-app mem_limit 384m", "inv-008-app memswap_limit 384m", "inv-008-app cpus 0.5", "inv-008-app cpu_shares 256", "inv-008-app image inv-008-app:${INV_TAG:-sin-desplegar}",
       "inv-008-precios mem_limit 96m", "inv-008-precios memswap_limit 96m", "inv-008-precios cpus 0.25", "inv-008-precios cpu_shares 256", "inv-008-precios image inv-008-app:${INV_TAG:-sin-desplegar}",
     ]) {

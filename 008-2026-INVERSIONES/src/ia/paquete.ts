@@ -1,5 +1,5 @@
 /**
- * Construcción validada del paquete de hechos (`hechos-v1`). Cierra en fallo: ante la primera falla lanza
+ * Construcción validada del paquete de hechos (`hechos-v1`; `hechos-v2` solo en SIMULACION, con rango e importancia). Cierra en fallo: ante la primera falla lanza
  * `ErrorPaquete` con un código cerrado, la posición del hecho y el nombre del campo del contrato. El mensaje nunca
  * repite un valor, una presentación, un nombre ni una clave recibida: solo el código, el hecho y el campo.
  *
@@ -12,9 +12,9 @@
  * especie. El ancla solo cita a una especie y, como el nombre de la especie, puede repetirse (una por regla).
  */
 import { CALIDADES, CERCANIAS, DIRECCIONES, FRESCURAS, MAX_AVISOS, MAX_HECHOS, MAX_LARGO_FUENTE, MAX_LARGO_PRESENTACION,
-  MAX_VERSIONES_CALCULO, PATRON_ID_HECHO, TIPOS_RESUMEN, VERSION_HECHOS,
-  type EntradaPaquete, type Hecho, type IdHecho, type PaqueteHechos, type TipoResumen } from "./contrato";
-import { CLAVE_ANCLA_REGLA, CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, esClaveDeRegla, type ClaveDe, type EntradaCatalogo } from "./catalogo";
+  IMPORTANCIAS, MAX_VERSIONES_CALCULO, PATRON_ID_HECHO, TIPOS_RESUMEN, versionDeHechosDe,
+  type EntradaPaquete, type Hecho, type IdHecho, type Importancia, type PaqueteHechos, type TipoResumen } from "./contrato";
+import { CLAVE_ANCLA_REGLA, CLAVE_NOMBRE_ESPECIE, entradaDeCatalogo, esClaveDeRegla, importanciaDeRango, type ClaveDe, type EntradaCatalogo } from "./catalogo";
 import { esDe, esDecimalCanonico, esDiaIso, esNombreEspecie, esObjetoPlano, esTextoSeguro, type Registro } from "./formas";
 import { hashPaquete } from "./hash";
 import { ENTERO, UNIDADES_ENTERAS, UNIDADES_NO_NEGATIVAS, presentar } from "./presentar";
@@ -27,13 +27,15 @@ export const CODIGOS_ERROR_PAQUETE = Object.freeze([
   "VALOR_NO_DECIMAL", "VALOR_NO_FECHA", "VALOR_NO_ENTERO", "VALOR_NEGATIVO", "NOMBRE_INVALIDO", "ESPECIE_REPETIDA",
   "PRESENTACION_INVALIDA", "FUENTE_INVALIDA", "FECHA_INVALIDA", "FECHA_FUTURA", "CALIDAD_INVALIDA", "DIRECCION_INVALIDA",
   "CERCANIA_INVALIDA", "FRESCURA_INVALIDA", "DIRECCION_NO_APLICA", "CERCANIA_NO_APLICA", "OBLIGATORIO_INVALIDO",
-  "HECHO_REPETIDO", "VERSION_DISTINTA", "GUARDADO_NO_COINCIDE", "PRESENTACION_NO_COINCIDE",
+  "HECHO_REPETIDO", "VERSION_DISTINTA", "GUARDADO_NO_COINCIDE", "PRESENTACION_NO_COINCIDE", "RANGO_INVALIDO", "IMPORTANCIA_INVALIDA",
 ] as const);
 export type CodigoErrorPaquete = (typeof CODIGOS_ERROR_PAQUETE)[number];
 
 const CAMPOS_RAIZ = Object.freeze(["tipo", "hoy", "versionesCalculo", "avisos", "hechos"] as const);
 const CAMPOS_HECHO = Object.freeze(["id", "clave", "valor", "presentacion", "fuente", "fecha", "calidad", "direccion", "cercania", "frescura", "obligatorio"] as const);
-const CAMPO_OPCIONAL_HECHO = "sujeto";
+/** Los campos opcionales del hecho: el sujeto y, solo en SIMULACION (`hechos-v2`), el rango y la importancia. */
+const CAMPOS_OPCIONALES_HECHO: readonly string[] = Object.freeze(["sujeto", "rango", "importancia"]);
+const CAMPO_SUJETO = "sujeto";
 const CLAVE_VERSION = /^[a-z][a-zA-Z]{0,31}$/;
 const VALOR_VERSION = /^[a-z][a-z0-9.-]{0,63}$/;
 const CODIGO_AVISO = /^[A-Z][A-Z0-9_]{0,63}$/;
@@ -57,9 +59,9 @@ export function idDeHecho(posicion: number): IdHecho {
 }
 
 /** Solo los campos del contrato: los demás son CLAVE_PROHIBIDA o CAMPO_DESCONOCIDO (sin repetir su nombre). */
-function exigirCampos(registro: Registro, exigidos: readonly string[], opcional: string | null, hecho: IdHecho | null): void {
+function exigirCampos(registro: Registro, exigidos: readonly string[], opcionales: readonly string[], hecho: IdHecho | null): void {
   for (const clave of Object.keys(registro)) {
-    if (exigidos.includes(clave) || clave === opcional) continue;
+    if (exigidos.includes(clave) || opcionales.includes(clave)) continue;
     throw new ErrorPaquete(esClaveProhibida(clave) ? "CLAVE_PROHIBIDA" : "CAMPO_DESCONOCIDO", hecho);
   }
   const faltante = exigidos.find((campo) => !Object.hasOwn(registro, campo) || registro[campo] === undefined);
@@ -97,12 +99,20 @@ interface Contexto {
   readonly especies: ReadonlySet<string>;
 }
 
+/**
+ * Las claves de SIMULACION que son el punto de una regla: citan el ancla de SU regla (REGLA_DEL_PLAN), como los hechos de
+ * `CLAVES_DE_REGLA` en REGLAS, para que dos reglas de una misma especie no choquen (HECHO_REPETIDO). No están en
+ * `CLAVES_DE_REGLA` (son del catálogo de SIMULACION, no del de REGLAS), por eso se nombran aquí.
+ */
+const CLAVES_DE_REGLA_DE_SIMULACION: ReadonlySet<string> = new Set(["PUNTO_NIVEL_REGLA"]);
+const citaElAnclaDeSuRegla = (clave: string): boolean => esClaveDeRegla(clave) || CLAVES_DE_REGLA_DE_SIMULACION.has(clave);
+
 /** El sujeto apunta a un nombre de especie o, si el hecho es de una regla, también al ancla de esa regla. */
 const destinoValido = (clave: string, apuntado: Hecho): boolean =>
-  apuntado.clave === CLAVE_NOMBRE_ESPECIE || (apuntado.clave === CLAVE_ANCLA_REGLA && esClaveDeRegla(clave));
+  apuntado.clave === CLAVE_NOMBRE_ESPECIE || (apuntado.clave === CLAVE_ANCLA_REGLA && citaElAnclaDeSuRegla(clave));
 
 function validarSujeto(registro: Registro, catalogo: EntradaCatalogo, id: IdHecho, previos: readonly Hecho[]): IdHecho | undefined {
-  const sujeto = registro[CAMPO_OPCIONAL_HECHO];
+  const sujeto = registro[CAMPO_SUJETO];
   if (sujeto === undefined) {
     if (catalogo.politicaSujeto === "EXIGIDO") throw new ErrorPaquete("SUJETO_FALTANTE", id, "sujeto");
     return undefined;
@@ -149,16 +159,34 @@ function validarResto(registro: Registro, catalogo: EntradaCatalogo, id: IdHecho
   if (typeof registro.obligatorio !== "boolean") throw new ErrorPaquete("OBLIGATORIO_INVALIDO", id, "obligatorio");
 }
 
+/**
+ * El rango y la importancia (solo SIMULACION): una clave con rangos exige los dos, el rango de SU lista y la importancia que
+ * `TRAMOS` da a ese rango; una clave sin rangos (y todo hecho de los tres de hoy) no lleva ninguno.
+ */
+function validarRango(registro: Registro, tipo: TipoResumen, catalogo: EntradaCatalogo, id: IdHecho): { readonly rango?: string; readonly importancia?: Importancia } {
+  const { rango, importancia } = registro;
+  if (catalogo.rangos.length === 0) {
+    if (rango !== undefined || importancia !== undefined) throw new ErrorPaquete("RANGO_INVALIDO", id, "rango");
+    return {};
+  }
+  if (rango === undefined) throw new ErrorPaquete("CAMPO_FALTANTE", id, "rango");
+  if (importancia === undefined) throw new ErrorPaquete("CAMPO_FALTANTE", id, "importancia");
+  if (typeof rango !== "string" || !catalogo.rangos.includes(rango)) throw new ErrorPaquete("RANGO_INVALIDO", id, "rango");
+  if (!esDe(IMPORTANCIAS, importancia) || importanciaDeRango(tipo, String(registro.clave), rango) !== importancia) throw new ErrorPaquete("IMPORTANCIA_INVALIDA", id, "importancia");
+  return { rango, importancia };
+}
+
 function validarHecho(crudo: unknown, posicion: number, contexto: Contexto): Hecho {
   const id = idDeHecho(posicion);
   if (!esObjetoPlano(crudo)) throw new ErrorPaquete("FORMA_INVALIDA", id);
-  exigirCampos(crudo, CAMPOS_HECHO, CAMPO_OPCIONAL_HECHO, id);
+  exigirCampos(crudo, CAMPOS_HECHO, CAMPOS_OPCIONALES_HECHO, id);
   if (crudo.id !== id) throw new ErrorPaquete("ID_NO_CONSECUTIVO", id, "id");
   const catalogo = typeof crudo.clave === "string" ? entradaDeCatalogo(contexto.tipo, crudo.clave) : null;
   if (catalogo === null) throw new ErrorPaquete("CLAVE_FUERA_DE_CATALOGO", id, "clave");
   const sujeto = validarSujeto(crudo, catalogo, id, contexto.previos);
   const valor = validarValor(crudo.valor, catalogo, id, contexto.especies);
   validarResto(crudo, catalogo, id, contexto.hoy, valor);
+  const rango = validarRango(crudo, contexto.tipo, catalogo, id);
   const r = crudo as unknown as Hecho;
   return Object.freeze({
     id,
@@ -175,6 +203,7 @@ function validarHecho(crudo: unknown, posicion: number, contexto: Contexto): Hec
     cercania: r.cercania,
     frescura: r.frescura,
     obligatorio: r.obligatorio,
+    ...rango,
   });
 }
 
@@ -221,13 +250,13 @@ export function esPaqueteConstruido(valor: unknown): valor is PaqueteHechos {
 export function construirPaquete<T extends TipoResumen>(entrada: EntradaPaquete<T>): PaqueteHechos<T> {
   const crudo: unknown = entrada;
   if (!esObjetoPlano(crudo)) throw new ErrorPaquete("FORMA_INVALIDA");
-  exigirCampos(crudo, CAMPOS_RAIZ, null, null);
+  exigirCampos(crudo, CAMPOS_RAIZ, [], null);
   if (!esDe(TIPOS_RESUMEN, crudo.tipo)) throw new ErrorPaquete("TIPO_INVALIDO", null, "tipo");
   if (typeof crudo.hoy !== "string" || !esDiaIso(crudo.hoy)) throw new ErrorPaquete("HOY_INVALIDO", null, "hoy");
   const versionesCalculo = validarVersiones(crudo.versionesCalculo);
   const avisos = validarAvisos(crudo.avisos);
   const hechos = validarHechos(validarHechosCrudos(crudo.hechos), crudo.tipo, crudo.hoy);
-  const sinHash: Omit<PaqueteHechos<T>, "hash"> = { version: VERSION_HECHOS, tipo: crudo.tipo as T, hoy: crudo.hoy, versionesCalculo, avisos, hechos: hechos as readonly Hecho<ClaveDe<T>>[] };
+  const sinHash: Omit<PaqueteHechos<T>, "hash"> = { version: versionDeHechosDe(crudo.tipo), tipo: crudo.tipo as T, hoy: crudo.hoy, versionesCalculo, avisos, hechos: hechos as readonly Hecho<ClaveDe<T>>[] };
   const paquete: PaqueteHechos<T> = Object.freeze({ ...sinHash, hash: hashPaquete(sinHash) });
   CONSTRUIDOS.add(paquete);
   return paquete;
@@ -240,7 +269,7 @@ const CAMPOS_GUARDADOS_HECHO: readonly string[] = Object.freeze([...CAMPOS_HECHO
 function sinCatalogo(crudo: unknown, posicion: number): Registro {
   const id = idDeHecho(posicion);
   if (!esObjetoPlano(crudo)) throw new ErrorPaquete("FORMA_INVALIDA", id);
-  exigirCampos(crudo, CAMPOS_GUARDADOS_HECHO, CAMPO_OPCIONAL_HECHO, id);
+  exigirCampos(crudo, CAMPOS_GUARDADOS_HECHO, CAMPOS_OPCIONALES_HECHO, id);
   const { etiqueta: _etiqueta, unidad: _unidad, ...resto } = crudo;
   return resto;
 }
@@ -252,8 +281,8 @@ function sinCatalogo(crudo: unknown, posicion: number): Registro {
  */
 export function leerPaquete(guardado: unknown): PaqueteHechos {
   if (!esObjetoPlano(guardado)) throw new ErrorPaquete("FORMA_INVALIDA");
-  exigirCampos(guardado, CAMPOS_GUARDADOS_RAIZ, null, null);
-  if (guardado.version !== VERSION_HECHOS) throw new ErrorPaquete("VERSION_DISTINTA", null, "version");
+  exigirCampos(guardado, CAMPOS_GUARDADOS_RAIZ, [], null);
+  if (!esDe(TIPOS_RESUMEN, guardado.tipo) || guardado.version !== versionDeHechosDe(guardado.tipo)) throw new ErrorPaquete("VERSION_DISTINTA", null, "version");
   const hechosGuardados = validarHechosCrudos(guardado.hechos);
   const hechos = hechosGuardados.map((crudo, i) => sinCatalogo(crudo, i + 1));
   const { tipo, hoy, versionesCalculo, avisos } = guardado;

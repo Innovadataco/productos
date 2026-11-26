@@ -19,7 +19,7 @@ export function registrarFalloDeBase(origen: string, error: unknown): void {
 export function SinBase() {
   return (
     <main className="wrap" style={{ paddingBlock: "48px" }}>
-      <h1>No se pudo leer la base de 008</h1>
+      <h1>No se pudo leer la base de Inversiones</h1>
       <p>Intente de nuevo en unos minutos. Si sigue pasando, avise a quien administra el sistema.</p>
     </main>
   );

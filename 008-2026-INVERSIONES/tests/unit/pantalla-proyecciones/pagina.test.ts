@@ -61,7 +61,7 @@ describe("src/app/proyecciones/page.tsx", () => {
     datosDeProyecciones.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError("falló en postgresql://u:clave-secreta@h", { code: "P2021", clientVersion: "5.22.0" }));
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const html = renderToStaticMarkup(await PaginaProyecciones());
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[proyecciones] no se pudo leer la base (código: P2021)");
     expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
   });
@@ -75,7 +75,7 @@ describe("src/app/proyecciones/page.tsx", () => {
     const raiz = pantalla(renderToStaticMarkup(await PaginaProyecciones()));
     const nav = [...raiz.querySelectorAll('header nav[aria-label="Secciones"] a')].map((a) => [texto(a), a.getAttribute("href"), a.getAttribute("aria-current")]);
     expect(nav).toEqual([
-      ["Portafolio", "/", null], ["Plan", "/plan", null], ["Operar", "/operar", null], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null], ["Proyecciones", "/proyecciones", "page"], ["Datos oficiales", "/datos-oficiales", null], ["Análisis", "/analisis", null], ["Configuración", "/edicion", null],
+      ["Portafolio", "/", null], ["Plan", "/plan", null], ["Operar", "/operar", null], ["Decisiones", "/decisiones", null], ["Conciliación", "/conciliacion", null], ["Proyecciones", "/proyecciones", "page"], ["Datos oficiales", "/datos-oficiales", null], ["Análisis", "/analisis", null], ["Alertas", "/alertas", null], ["Configuración", "/edicion", null],
     ]);
   });
 

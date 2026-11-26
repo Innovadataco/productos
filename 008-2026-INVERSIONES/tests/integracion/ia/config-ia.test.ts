@@ -5,7 +5,7 @@
 // los mismos tokens que `gastoDelMes` de E3. Datos inventados.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { crearVersionConfigIa, ErrorConfigIa } from "@/ia/config/crear";
 import { gastoNubeDelMes, MAX_CORRIDAS_GASTO } from "@/ia/config/gasto";
@@ -35,7 +35,8 @@ const ENTRADA: EntradaConfigIa = {
   esfuerzoNube: "medium",
   topeMicroUsd: 4_610_000n,
   horaResumen: "20:00",
-  limiteSegundos: 97,
+  limiteSegundos: 45,
+  analisisDemanda: true,
   motivo: `Configuración ficticia ${corrida}`,
 };
 const ultima = async (): Promise<number> => (await db.configIa.findFirst({ orderBy: { version: "desc" }, select: { version: true } }))?.version ?? 0;
@@ -58,7 +59,7 @@ describe("crearVersionConfigIa y leerConfigIa", () => {
     const vigente = await leerConfigIa(db);
     expect(vigente).toMatchObject({
       version: antes + 1, modo: "local-luego-nube", ollamaHost: ENTRADA.ollamaHost, ollamaPuerto: 47213, temperaturaCentesimas: 37,
-      tareas: ENTRADA.tareas, modeloNube: "claude-haiku-5-5", esfuerzoNube: "medium", topeMicroUsd: 4_610_000n, horaResumen: "20:00", limiteSegundos: 97,
+      tareas: ENTRADA.tareas, modeloNube: "claude-haiku-5-5", esfuerzoNube: "medium", topeMicroUsd: 4_610_000n, horaResumen: "20:00", limiteSegundos: 45, analisisDemanda: true,
     });
     expect(vigente?.creadaEn).toBeInstanceOf(Date);
   });
@@ -89,6 +90,38 @@ describe("crearVersionConfigIa y leerConfigIa", () => {
   it("una apagada sin destino ni tope también se guarda y se lee", async () => {
     await crearVersionConfigIa(db, { ...ENTRADA, modo: "apagado", ollamaHost: null, ollamaPuerto: null, topeMicroUsd: null }, { autorId, ultimaEsperada: await ultima() });
     expect(await leerConfigIa(db)).toMatchObject({ modo: "apagado", ollamaHost: null, topeMicroUsd: null });
+  });
+});
+
+describe("el interruptor del análisis a demanda (analisisDemanda)", () => {
+  it("una versión sin decirlo queda con el análisis APAGADO (el valor de la base: falla cerrada)", async () => {
+    const v = (await ultima()) + 1;
+    const fila = await db.configIa.create({
+      data: {
+        version: v, modo: "apagado", temperaturaLocal: new Prisma.Decimal("0"), tareas: { DIARIO: { activo: false }, REGLAS: { activo: false }, ESCENARIOS: { activo: false } },
+        modeloNube: "claude-opus-5-5", horaResumen: "19:00", limiteSegundos: 45, esfuerzoNube: "low", motivo: `Sin interruptor ${corrida}`, autorId,
+      },
+    });
+    expect(fila.analisisDemanda).toBe(false);
+    expect((await leerConfigIa(db))?.analisisDemanda).toBe(false);
+  });
+
+  it("crear la versión con el interruptor encendido o apagado se guarda y se lee", async () => {
+    await crearVersionConfigIa(db, { ...ENTRADA, analisisDemanda: true }, { autorId, ultimaEsperada: await ultima() });
+    expect((await leerConfigIa(db))?.analisisDemanda).toBe(true);
+    await crearVersionConfigIa(db, { ...ENTRADA, analisisDemanda: false }, { autorId, ultimaEsperada: await ultima() });
+    expect((await leerConfigIa(db))?.analisisDemanda).toBe(false);
+  });
+
+  it("una versión guardada de más de 60 s (las viejas llegaban a 120) se lee acotada a 60", async () => {
+    const v = (await ultima()) + 1;
+    await db.configIa.create({
+      data: {
+        version: v, modo: "apagado", temperaturaLocal: new Prisma.Decimal("0"), tareas: { DIARIO: { activo: false }, REGLAS: { activo: false }, ESCENARIOS: { activo: false } },
+        modeloNube: "claude-opus-5-5", horaResumen: "19:00", limiteSegundos: 120, esfuerzoNube: "low", motivo: `Vieja ${corrida}`, autorId,
+      },
+    });
+    expect((await leerConfigIa(db))?.limiteSegundos).toBe(60);
   });
 });
 

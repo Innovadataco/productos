@@ -73,12 +73,12 @@ function editable(config: ConfigIaVigente | null, lista: ListaModelosPi): Config
   const recomendado = lista.estado === "LISTA" && lista.modelos.some((m) => m.nombre === MODELO_LOCAL_RECOMENDADO) ? MODELO_LOCAL_RECOMENDADO : "";
   const tareas = Object.fromEntries(TAREAS_IA.map((t) => [t, config === null ? { activo: true, modeloLocal: recomendado } : { activo: config.tareas[t].activo, modeloLocal: config.tareas[t].modeloLocal ?? "" }]));
   if (config === null) {
-    return { modo: "apagado", ollamaHost: "", ollamaPuerto: "", temperatura: "0", tareas, modeloNube: MODELO_NUBE, esfuerzoNube: ESFUERZO_NUBE, topeMensualUsd: "", horaResumen: HORA_POR_OMISION, limiteSegundos: String(LIMITE_POR_OMISION_S) };
+    return { modo: "apagado", ollamaHost: "", ollamaPuerto: "", temperatura: "0", tareas, modeloNube: MODELO_NUBE, esfuerzoNube: ESFUERZO_NUBE, topeMensualUsd: "", horaResumen: HORA_POR_OMISION, limiteSegundos: String(LIMITE_POR_OMISION_S), analisisDemanda: false };
   }
   return {
     modo: config.modo, ollamaHost: config.ollamaHost ?? "", ollamaPuerto: config.ollamaPuerto === null ? "" : String(config.ollamaPuerto), temperatura: temperaturaTexto(config.temperaturaCentesimas),
     tareas, modeloNube: config.modeloNube, esfuerzoNube: config.esfuerzoNube, topeMensualUsd: config.topeMicroUsd === null ? "" : usdTexto(config.topeMicroUsd),
-    horaResumen: config.horaResumen, limiteSegundos: String(config.limiteSegundos),
+    horaResumen: config.horaResumen, limiteSegundos: String(config.limiteSegundos), analisisDemanda: config.analisisDemanda,
   };
 }
 

@@ -4,7 +4,7 @@
  * vuelve, sin la llave ni el mensaje del proveedor. Sin red: el fetch global está prohibido.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TIPOS_RESUMEN } from "@/ia/contrato";
+import { TIPOS_DIARIOS } from "@/ia/contrato";
 import { crearGeneradorFalso } from "@/ia/generador-falso";
 import { LlaveNube, TECHO_TOPE_MICRO_USD, VARIABLE_TOPE_NUBE, leerConfigNube, type ConfigNube } from "@/ia/nube/config";
 import { crearGeneradorNube } from "@/ia/nube/generador-nube";
@@ -78,7 +78,7 @@ describe("una respuesta cobrada pero inservible (decisión fijada en la revisió
 });
 
 describe("lo que sale por el cable", () => {
-  it.each(TIPOS_RESUMEN)("%s: el contenido es solo la vista ciega; system es el prompt; nada del paquete completo", async (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: el contenido es solo la vista ciega; system es el prompt; nada del paquete completo", async (tipo) => {
     const { paquete, pedido } = pedidoFicticio(tipo);
     const { falso, generador } = montar({ tipo: "JSON", cuerpo: mensajeFicticio() });
     await generarConPuertas([generador], "nube", pedido, paquete);

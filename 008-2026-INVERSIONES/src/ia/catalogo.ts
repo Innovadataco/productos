@@ -14,7 +14,8 @@
  *   especie no chocan en HECHO_REPETIDO. El contrato acepta además, por compatibilidad de hechos-v1, que un hecho de
  *   regla cite directo a la especie; para llegar a la especie de cualquier hecho, `especieDe` de paquete.ts.
  */
-import type { TipoResumen, Unidad } from "./contrato";
+import { TRAMOS, type Tramo } from "../analisis/puntos/rangos";
+import type { Importancia, TipoResumen, Unidad } from "./contrato";
 
 export const CLAVE_NOMBRE_ESPECIE = "ESPECIE_NOMBRE";
 export type ClaveNombreEspecie = typeof CLAVE_NOMBRE_ESPECIE;
@@ -54,10 +55,18 @@ export type ClaveEscenarios =
   | "PROBABILIDAD_BAJO_APORTADO" | "CAIDA_MAXIMA_MEDIANA" | "VOLATILIDAD_ANUAL" | "RENDIMIENTO_ANUAL_HISTORICO" | "FRACCION_PROYECTADA"
   | "VENTANA_DESDE" | "VENTANA_HASTA" | "DIAS_HISTORIA_ESPECIE";
 
-export type ClaveHecho = ClaveDiario | ClaveReglas | ClaveEscenarios;
+/**
+ * SIMULACION (a demanda): los puntos del paso 1 (src/analisis/puntos) con su rango, más el nombre de la especie y el ancla de la regla. El del nivel de una regla junta los rangos de la regla: tocada, en el nivel, muy cerca, cerca y en rango.
+ */
+export type ClaveSimulacion =
+  | ClaveNombreEspecie
+  | "PESO_ESPECIE" | "PUNTO_CONCENTRACION" | "PUNTO_CONTRIBUCION_RIESGO" | "PUNTO_EFECTO_CAIDA" | "PROBABILIDAD_BAJO_APORTADO" | "PUNTO_NIVEL_REGLA"
+  | ClaveAnclaRegla;
+
+export type ClaveHecho = ClaveDiario | ClaveReglas | ClaveEscenarios | ClaveSimulacion;
 
 /** Las claves del catálogo de un tipo. */
-export type ClaveDe<T extends TipoResumen> = { readonly DIARIO: ClaveDiario; readonly REGLAS: ClaveReglas; readonly ESCENARIOS: ClaveEscenarios }[T];
+export type ClaveDe<T extends TipoResumen> = { readonly DIARIO: ClaveDiario; readonly REGLAS: ClaveReglas; readonly ESCENARIOS: ClaveEscenarios; readonly SIMULACION: ClaveSimulacion }[T];
 
 /** Si un hecho de la clave se refiere a una especie (su `sujeto`, el id de un hecho ESPECIE_NOMBRE anterior). */
 export type PoliticaSujeto = "EXIGIDO" | "OPCIONAL" | "NINGUNO";
@@ -70,6 +79,11 @@ export interface EntradaCatalogo {
   readonly admiteDireccion: boolean;
   /** Si no, la cercanía del hecho es NO_APLICA. */
   readonly admiteCercania: boolean;
+  /**
+   * Los códigos de rango que admite la clave (lista cerrada, derivada de `TRAMOS`), o vacío si la clave no lleva rango. Con
+   * rangos, el hecho lleva `rango` e `importancia`; sin ellos, no.
+   */
+  readonly rangos: readonly string[];
 }
 
 export type Catalogo = { readonly [T in TipoResumen]: Readonly<Record<ClaveDe<T>, EntradaCatalogo>> };
@@ -78,6 +92,7 @@ interface Opciones {
   readonly sujeto?: PoliticaSujeto;
   readonly direccion?: boolean;
   readonly cercania?: boolean;
+  readonly rangos?: readonly string[];
 }
 
 function entrada(etiqueta: string, unidad: Unidad, opciones: Opciones = {}): EntradaCatalogo {
@@ -87,6 +102,7 @@ function entrada(etiqueta: string, unidad: Unidad, opciones: Opciones = {}): Ent
     politicaSujeto: opciones.sujeto ?? "NINGUNO",
     admiteDireccion: opciones.direccion ?? false,
     admiteCercania: opciones.cercania ?? false,
+    rangos: Object.freeze([...(opciones.rangos ?? [])]),
   });
 }
 
@@ -177,7 +193,50 @@ const ESCENARIOS: Readonly<Record<ClaveEscenarios, EntradaCatalogo>> = Object.fr
   DIAS_HISTORIA_ESPECIE: entrada("días de historia de la especie", "DIAS", DE_ESPECIE),
 });
 
-export const CATALOGO: Catalogo = Object.freeze({ DIARIO, REGLAS, ESCENARIOS });
+/** Los tramos (rango e importancia) de la clave de SIMULACION, derivados de `TRAMOS`; el nivel de la regla junta los de la regla. */
+const TRAMOS_DE_SIMULACION: Readonly<Record<Exclude<ClaveSimulacion, ClaveNombreEspecie | ClaveAnclaRegla>, readonly Tramo[]>> = Object.freeze({
+  PESO_ESPECIE: TRAMOS.PESO_ESPECIE,
+  PUNTO_CONCENTRACION: TRAMOS.PUNTO_CONCENTRACION,
+  PUNTO_CONTRIBUCION_RIESGO: TRAMOS.PUNTO_CONTRIBUCION_RIESGO,
+  PUNTO_EFECTO_CAIDA: TRAMOS.PUNTO_EFECTO_CAIDA,
+  PROBABILIDAD_BAJO_APORTADO: TRAMOS.PROBABILIDAD_BAJO_APORTADO,
+  PUNTO_NIVEL_REGLA: [...TRAMOS.REGLA_TOCADA, ...TRAMOS.REGLA_EN_EL_NIVEL, ...TRAMOS.REGLA_DISTANCIA],
+});
+const rangosDeTramos = (clave: keyof typeof TRAMOS_DE_SIMULACION): readonly string[] => TRAMOS_DE_SIMULACION[clave].map((t) => t.rango);
+/**
+ * Un punto de una especie lleva el sujeto EXIGIDO, igual que en DIARIO: el hecho del nombre va a la vista solo con su id, clave
+ * y etiqueta (nunca el valor) y el CÓDIGO pone el nombre al publicar (condición C1 de PI). Los del portafolio no lo llevan.
+ */
+const DE_PUNTO = (clave: keyof typeof TRAMOS_DE_SIMULACION, deEspecie: boolean): Opciones => ({ rangos: rangosDeTramos(clave), ...(deEspecie ? { sujeto: "EXIGIDO" as const } : {}) });
+
+/**
+ * Las etiquetas no llevan «orden», «operación», «posición», «compr…» ni «vend…» (ni «sin vender»): lo cuida
+ * `tests/unit/ia/simulacion/catalogo-simulacion.test.ts` y el candado del vocabulario sin operación.
+ */
+const SIMULACION: Readonly<Record<ClaveSimulacion, EntradaCatalogo>> = Object.freeze({
+  ESPECIE_NOMBRE: NOMBRE_ESPECIE,
+  PESO_ESPECIE: entrada("peso de la especie", "PORCENTAJE", DE_PUNTO("PESO_ESPECIE", true)),
+  PUNTO_CONCENTRACION: entrada("concentración del portafolio", "PUNTOS", DE_PUNTO("PUNTO_CONCENTRACION", false)),
+  PUNTO_CONTRIBUCION_RIESGO: entrada("contribución de la especie al riesgo", "VECES", DE_PUNTO("PUNTO_CONTRIBUCION_RIESGO", true)),
+  PUNTO_EFECTO_CAIDA: entrada("efecto de la caída de la especie en el portafolio", "PORCENTAJE", DE_PUNTO("PUNTO_EFECTO_CAIDA", true)),
+  PROBABILIDAD_BAJO_APORTADO: entrada("probabilidad de quedar por debajo de lo aportado", "PORCENTAJE", DE_PUNTO("PROBABILIDAD_BAJO_APORTADO", false)),
+  /** El nivel de la regla cita el ancla de SU regla (como en REGLAS), que a su vez cita a la especie: dos reglas de una especie no chocan. */
+  PUNTO_NIVEL_REGLA: entrada("cercanía al nivel de la regla", "PORCENTAJE", DE_PUNTO("PUNTO_NIVEL_REGLA", true)),
+  REGLA_DEL_PLAN: entrada("regla del plan vigente desde", "FECHA", { sujeto: "OPCIONAL" }),
+});
+
+export const CATALOGO: Catalogo = Object.freeze({ DIARIO, REGLAS, ESCENARIOS, SIMULACION });
+
+/** Los códigos de rango de la clave del tipo (vacío si no lleva rango o la clave no existe). */
+export function rangosDe(tipo: TipoResumen, clave: string): readonly string[] {
+  return entradaDeCatalogo(tipo, clave)?.rangos ?? [];
+}
+
+/** La importancia que `TRAMOS` da a ese rango de esa clave de SIMULACION; null si el rango no es de la clave. */
+export function importanciaDeRango(tipo: TipoResumen, clave: string, rango: unknown): Importancia | null {
+  if (tipo !== "SIMULACION" || !Object.hasOwn(TRAMOS_DE_SIMULACION, clave)) return null;
+  return TRAMOS_DE_SIMULACION[clave as keyof typeof TRAMOS_DE_SIMULACION].find((t) => t.rango === rango)?.importancia ?? null;
+}
 
 /** La entrada de la clave en el catálogo del tipo, o null (también para «constructor», «__proto__» y similares). */
 export function entradaDeCatalogo(tipo: TipoResumen, clave: string): EntradaCatalogo | null {
@@ -201,4 +260,13 @@ export const CLAVES_DE_REGLA: readonly ClaveDeRegla[] = Object.freeze([...LISTA_
 /** ¿Es la clave un hecho de regla, que puede citar a un ancla como `sujeto`? */
 export function esClaveDeRegla(clave: string): clave is ClaveDeRegla {
   return (CLAVES_DE_REGLA as readonly string[]).includes(clave);
+}
+
+/**
+ * El rango y la importancia solo de las listas cerradas del catálogo: una clave con rangos lleva los dos (el rango de SU
+ * lista y la importancia de `TRAMOS`); una sin rangos no lleva ninguno. Así no pasa texto libre en estos campos.
+ */
+export function rangoCiegoValido(tipo: TipoResumen, clave: string, entrada: EntradaCatalogo, rango: unknown, importancia: unknown): boolean {
+  if (entrada.rangos.length === 0) return rango === undefined && importancia === undefined;
+  return typeof rango === "string" && entrada.rangos.includes(rango) && importanciaDeRango(tipo, clave, rango) === importancia;
 }

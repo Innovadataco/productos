@@ -4,10 +4,10 @@
  * de la pantalla lo hace el formato, el mismo del tablero; el peso, con dos decimales como en el tablero.
  */
 import type { CierreDia, EspecieInforme, EstadoRegla, FechaInforme, Informe, ReglaInforme, ReglasInforme } from "@/operar/informe/tipos";
+import { DECIMALES_PESO } from "@/operar/analisis/decimales";
 import { dia } from "../_plan/serializar";
 import type { CierreVista, EspecieVista, EstadoReglaVista, FechaVista, ReglaOperarVista, ReglasVista, VistaOperar } from "./tipos";
 
-const DECIMALES_PESO = 2;
 const textoDe = (v: { toString(): string } | null): string | null => (v === null ? null : v.toString());
 const cierre = (c: CierreDia): CierreVista => ({ precio: c.precio.toString(), fecha: dia(c.fecha) });
 

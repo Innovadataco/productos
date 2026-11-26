@@ -1,4 +1,4 @@
--- Inversiones · privilegios de inv_app, de inv_precios y de inv_ia. Lo corre el migrador como inv_dueno (dueño de las tablas)
+-- Inversiones · privilegios de inv_app, de inv_precios, de inv_ia y de inv_alertas. Lo corre el migrador como inv_dueno (dueño de las tablas)
 -- después de cada `migrate deploy`. Idempotente y en una sola transacción.
 --
 -- Mínimo privilegio: la app LEE, salvo lo que escriben el login (contrato del frente login, migración
@@ -57,8 +57,17 @@
 --          SECURITY INVOKER: sin ellas, falla cerrado);
 --          de precio_cierre, todas (create() hace RETURNING de todas);
 --   INSERT en precio_cierre y valor_unidad_fondo, sin "reemplazadoEn" (lo que inserta nace vigente);
---   UPDATE solo de "reemplazadoEn" en esas dos tablas (versionado y retiro).
--- Nada de usuario, órdenes, filas crudas, cantidades ni costos; sin DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL, y
+--   UPDATE solo de "reemplazadoEn" en esas dos tablas (versionado y retiro);
+--   SELECT de plan_version (id, version, "vigenteDesde") y de regla_plan (id, "planVersionId", "instrumentoId"; Prisma
+--          siempre lee la llave): solo para saber qué especies tienen regla en el plan vigente (precios cada minuto), medidas con
+--          el SQL que genera Prisma: ni la acción, ni la cantidad, ni el nivel, ni el detalle;
+--   precio_intradia (precios cada minuto, src/precios/intradia/): SELECT de todas las columnas (el INSERT … ON CONFLICT DO
+--          NOTHING de createMany con skipDuplicates las lee), INSERT de todas menos "traidoEn" (la pone la base) y DELETE de
+--          tabla para la retención, que no existe por columna: el disparador precio_intradia_retiro (migración
+--          20261126120000_precio_intradia) solo deja borrar filas de más de 60 días y nunca editar. Es la ÚNICA tabla donde
+--          inv_precios tiene un privilegio de tabla completa. inv_app solo la lee (el SELECT general de arriba) e inv_ia, por
+--          columna, también.
+-- Nada de usuario, órdenes, filas crudas, cantidades ni costos; sin TRUNCATE, REFERENCES, TRIGGER ni DDL, y
 -- sin privilegios por defecto: una tabla o columna nueva no le llega hasta que se agregue aquí.
 -- Lo acotan los disparadores de la migración 20261121231049_precios_integridad (para todo rol que no sea dueño): un
 -- VERIFICADO solo si cuadra con la certificación de A&V de ese día (y referencias y desviación exactas), solo la fuente
@@ -84,15 +93,26 @@
 --          hechos guardados (los lee la pantalla, inv_app, con ultimoPublicado);
 --   INSERT en resumen_ia de todas sus columnas menos "generadoEn" (la pone la base: migración 20261122175656_resumen_ia).
 --   SELECT de config_ia (E8, migración 20261122210000_config_ia) de lo que usa leerConfigIa (src/ia/config/leer.ts): la
---          versión, el modo, el destino, la temperatura, las tareas, el modelo de la nube, el tope, la hora, el límite y el
---          esfuerzo; ni el motivo
+--          versión, el modo, el destino, la temperatura, las tareas, el modelo de la nube, el tope, la hora, el límite, el
+--          interruptor del análisis a demanda (analisisDemanda, migración 20261126100000) y el esfuerzo; ni el motivo
 --          (texto libre) ni el autor.
+--   SELECT de precio_intradia (precios cada minuto, migración 20261126120000_precio_intradia): la especie, la hora de la
+--          barra, el precio, la fuente, si trae retraso y la hora de traída; para que las alertas lean el último precio.
 -- Nada de usuario, filas crudas (crudo), el encargo, la certificación por especie, la caja, los símbolos ni el diario;
 -- sin UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL, y sin privilegios por defecto: una tabla o columna nueva no le
 -- llega hasta que se agregue aquí. resumen_ia es de solo inserción por su disparador.
 -- Riesgo residual de inv_ia: con su clave se leen las cifras del portafolio (cantidades, costos, dividendos, cierres) y se
 -- pueden insertar resúmenes falsos (un PUBLICADO con un texto cualquiera y un paquete que cuadre consigo mismo, o tokens
 -- de más o de menos para el tope de la nube); no se puede editar, borrar ni fechar ninguno.
+-- inv_alertas (el servicio de las alertas, contenedor propio): solo si el rol existe, como inv_precios e inv_ia (existe desde que
+-- Jelk corre crear-roles-prod.sh una vez; NOLOGIN hasta su secreto). Todo por COLUMNA, partiendo de cero en cada corrida. Lee lo
+-- que necesita el motor (src/alertas/leer-entrada.ts): las especies, la tenencia por operación (orden y lote, sin montos), los
+-- cierres y las barras intradía con su hora de traída y su fuente, la versión vigente del plan y sus reglas SIN la acción, la
+-- cantidad, el plazo ni el detalle, los decretos y el calendario, los umbrales SIN el motivo ni el autor, y solo el id de las alertas. Escribe
+-- solo en alerta, con INSERT y sin "detectadaEn" (la pone la base); nunca UPDATE ni DELETE (alerta es de solo inserción).
+-- Riesgo residual de inv_alertas: con su clave se leen las cantidades de la tenencia y los precios, y se pueden insertar alertas
+-- falsas (de hoy o de días pasados, dentro de la CHECK de coherencia y sin fecharlas); no se puede editar, borrar ni fechar ninguna.
+-- inv_app, por su parte, inserta umbral_version (sin "creadaEn") y alerta_vista (sin "vistaEn"), por columna; nunca en alerta.
 DO $$
 DECLARE
   t record;
@@ -141,10 +161,15 @@ BEGIN
   GRANT INSERT (id, "ordenId", "decisionId", "reemplazaId", motivo, "creadoPorId") ON TABLE public.enlace_decision_orden TO inv_app;
 
   -- La configuración de la IA (fase E, E8): solo INSERT, por columna y sin "creadaEn" (la pone la base). Nada se edita.
-  GRANT INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", motivo, "autorId") ON TABLE public.config_ia TO inv_app;
+  GRANT INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "analisisDemanda", "esfuerzoNube", motivo, "autorId") ON TABLE public.config_ia TO inv_app;
 
   -- La tarifa de comisión (fase E, O5): solo INSERT, por columna y sin "creadaEn" (la pone la base). Nada se edita.
   GRANT INSERT (id, version, comisionista, lado, porcentaje, "minimoPorOrden", "fijoPorOrden", "ivaPct", "otrosCargos", "vigenteDesde", motivo, "autorId") ON TABLE public.tarifa_comision TO inv_app;
+
+  -- Alertas: el dueño edita los umbrales (/edicion/alertas) y marca las alertas como vistas (/alertas); solo INSERT, por columna y sin
+  -- los instantes (los pone la base). Nada se edita ni se borra; NUNCA INSERT en alerta (la escribe solo inv_alertas).
+  GRANT INSERT (id, version, "alertaCercaPct", "alertaCercaActiva", "alertaNivelCruzadoActiva", "alertaMovimientoPct", "alertaMovimientoActiva", "alertaCaidaPct", "alertaCaidaActiva", "alertaDatoViejoMin", "alertaDatoViejoActiva", "alertaExDiasHabiles", "alertaExActiva", motivo, "autorId") ON TABLE public.umbral_version TO inv_app;
+  GRANT INSERT (id, "alertaId", "usuarioId") ON TABLE public.alerta_vista TO inv_app;
 
   -- inv_precios: solo si el rol existe (desde la primera corrida de crear-roles-prod.sh). Sin él, el despliegue sigue igual.
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'inv_precios') THEN
@@ -178,6 +203,14 @@ BEGIN
     GRANT SELECT (id, "fondoId", "fechaValor", "valorUnidad", "valorFondo", "reemplazadoEn") ON TABLE public.valor_unidad_fondo TO inv_precios;
     GRANT INSERT (id, "fondoId", "fechaValor", "valorUnidad", "valorFondo", fuente, "traidoEn") ON TABLE public.valor_unidad_fondo TO inv_precios;
     GRANT UPDATE ("reemplazadoEn") ON TABLE public.valor_unidad_fondo TO inv_precios;
+
+    -- Precios cada minuto (src/precios/intradia/): las especies con regla en el plan vigente (solo la versión y la especie),
+    -- las barras (camino único de escritura: guardar.ts; la retención: depurar.ts) y su depuración.
+    GRANT SELECT (id, version, "vigenteDesde") ON TABLE public.plan_version TO inv_precios;
+    GRANT SELECT (id, "planVersionId", "instrumentoId") ON TABLE public.regla_plan TO inv_precios;
+    GRANT SELECT (id, "instrumentoId", instante, precio, fuente, "conRetraso", "traidoEn") ON TABLE public.precio_intradia TO inv_precios;
+    GRANT INSERT (id, "instrumentoId", instante, precio, fuente, "conRetraso") ON TABLE public.precio_intradia TO inv_precios;
+    GRANT DELETE ON TABLE public.precio_intradia TO inv_precios;
   ELSE
     RAISE NOTICE 'inv_precios no existe: se omiten sus privilegios (existe desde que se corre crear-roles-prod.sh una vez)';
   END IF;
@@ -203,7 +236,7 @@ BEGIN
     GRANT SELECT ("tipoFuente", estado, "cargadoEn", "revertidaEn") ON TABLE public.carga_archivo TO inv_ia;
     GRANT SELECT (id, "fechaCorte", "retiradaEn") ON TABLE public.certificacion TO inv_ia;
     GRANT SELECT (id, "certificacionId", "fechaCorte", "calculadaEn", resultado) ON TABLE public.conciliacion TO inv_ia;
-    GRANT SELECT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", "creadaEn") ON TABLE public.config_ia TO inv_ia;
+    GRANT SELECT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "analisisDemanda", "esfuerzoNube", "creadaEn") ON TABLE public.config_ia TO inv_ia;
     GRANT SELECT (id, "instrumentoId", tipo, "fechaPago", "montoNeto", "decretadoId") ON TABLE public.dividendo TO inv_ia;
     GRANT SELECT (id, "instrumentoId", tipo, cuota, "valorPorAccion", "fechaAnuncio", "fechaEx", "fechaPago", "referenciaOficial", version, anulada, "reemplazadoEn") ON TABLE public.dividendo_decretado TO inv_ia;
     GRANT SELECT (id, tipo, fecha, "origenId", "destinoId", razon) ON TABLE public.evento_corporativo TO inv_ia;
@@ -213,6 +246,7 @@ BEGIN
     GRANT SELECT (id, "instrumentoId", lado, estado, "fechaOperacion", "cantidadCompletada", "totalInvertido", "totalEstimado", comision) ON TABLE public.orden TO inv_ia;
     GRANT SELECT (id, version, "vigenteDesde", "creadaEn") ON TABLE public.plan_version TO inv_ia;
     GRANT SELECT (id, "instrumentoId", fecha, precio, fuente, estado, "traidoEn", "reemplazadoEn") ON TABLE public.precio_cierre TO inv_ia;
+    GRANT SELECT (id, "instrumentoId", instante, precio, fuente, "conRetraso", "traidoEn") ON TABLE public.precio_intradia TO inv_ia;
     GRANT SELECT (id, "planVersionId", "instrumentoId", condicion, nivel, "plazoHasta") ON TABLE public.regla_plan TO inv_ia;
     GRANT SELECT (id, tipo, "fechaNegocio", estado, puerta, "hechosHash", "promptHash", "modeloDigest", "tokensEntrada", "tokensSalida", "generadoEn") ON TABLE public.resumen_ia TO inv_ia;
     GRANT INSERT (id, tipo, "fechaNegocio", estado, puerta, texto, "salidaModelo", hechos, "hechosHash", "hechosVersion", modelo, "modeloDigest", opciones, "promptVersion", "promptHash", "validadorVersion", motivos, "latenciaMs", "tokensEntrada", "tokensSalida") ON TABLE public.resumen_ia TO inv_ia;
@@ -220,6 +254,35 @@ BEGIN
     GRANT SELECT (id, "fondoId", "fechaValor", "valorUnidad", "reemplazadoEn") ON TABLE public.valor_unidad_fondo TO inv_ia;
   ELSE
     RAISE NOTICE 'inv_ia no existe: se omiten sus privilegios (existe desde que se corre crear-roles-prod.sh una vez)';
+  END IF;
+  -- inv_alertas: solo si el rol existe (desde la primera corrida de crear-roles-prod.sh). Sin él, el despliegue sigue igual.
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'inv_alertas') THEN
+    FOR t IN
+      SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm')
+    LOOP
+      EXECUTE format('REVOKE ALL ON TABLE public.%I FROM inv_alertas', t.relname);
+    END LOOP;
+    FOR t IN
+      SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'S'
+    LOOP
+      EXECUTE format('REVOKE ALL ON SEQUENCE public.%I FROM inv_alertas', t.relname);
+    END LOOP;
+    GRANT SELECT (id) ON TABLE public.alerta TO inv_alertas;
+    GRANT INSERT (id, dia, tipo, "instrumentoId", "reglaId", "decretoId", sentido, base, precio, referencia, "variacionPct", umbral, "instanteDato", "traidoEn", fuente, "conRetraso", "minutosDeEdad", "esFechaEx", "umbralVersionId", "motorVersion") ON TABLE public.alerta TO inv_alertas;
+    GRANT SELECT (dia, "esHabil") ON TABLE public.calendario_bvc TO inv_alertas;
+    GRANT SELECT (id, "instrumentoId", "fechaEx", "fechaPago", anulada, "reemplazadoEn") ON TABLE public.dividendo_decretado TO inv_alertas;
+    GRANT SELECT (id, tipo, nemotecnico, activo) ON TABLE public.instrumento TO inv_alertas;
+    GRANT SELECT ("instrumentoId", origen, cantidad, "fechaCompra") ON TABLE public.lote TO inv_alertas;
+    GRANT SELECT ("instrumentoId", lado, estado, "fechaOperacion", "cantidadCompletada") ON TABLE public.orden TO inv_alertas;
+    GRANT SELECT (id, version, "vigenteDesde") ON TABLE public.plan_version TO inv_alertas;
+    GRANT SELECT (id, "instrumentoId", fecha, precio, fuente, "traidoEn", "reemplazadoEn") ON TABLE public.precio_cierre TO inv_alertas;
+    GRANT SELECT ("instrumentoId", instante, precio, fuente, "conRetraso", "traidoEn") ON TABLE public.precio_intradia TO inv_alertas;
+    GRANT SELECT (id, "planVersionId", "instrumentoId", condicion, nivel) ON TABLE public.regla_plan TO inv_alertas;
+    GRANT SELECT (id, version, "alertaCercaPct", "alertaCercaActiva", "alertaNivelCruzadoActiva", "alertaMovimientoPct", "alertaMovimientoActiva", "alertaCaidaPct", "alertaCaidaActiva", "alertaDatoViejoMin", "alertaDatoViejoActiva", "alertaExDiasHabiles", "alertaExActiva", "creadaEn") ON TABLE public.umbral_version TO inv_alertas;
+  ELSE
+    RAISE NOTICE 'inv_alertas no existe: se omiten sus privilegios (existe desde que se corre crear-roles-prod.sh una vez)';
   END IF;
 END
 $$;

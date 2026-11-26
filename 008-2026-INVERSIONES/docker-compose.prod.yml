@@ -346,6 +346,8 @@ services:
     volumes:
       - /proc/meminfo:/host/meminfo:ro
       - /sys/fs/cgroup:/host/cgroup:ro
+      # La huella del servicio de precios (solo lectura): para avisar si el ciclo por minuto queda detenido por Yahoo.
+      - inv-008-precios-estado:/precios-estado:ro
     networks:
       - inv-008-red
     read_only: true
@@ -373,7 +375,10 @@ services:
         max-file: "5"
 
   # Servicio de precios (D-018): de lunes a viernes a las 18:00 COT trae los cierres de Yahoo y el valor de unidad de
-  # la SFC, una vez al día, con plazo por tarea y sin reintentos (src/servicio-precios/). La imagen de la app con otro
+  # la SFC, una vez al día, con plazo por tarea y sin reintentos (src/servicio-precios/).
+  # Además, durante la rueda (lunes a viernes, 09:30 a 16:25 COT por omisión) trae cada minuto las barras de 1 minuto de
+  # Yahoo de las especies con posición o con regla en el plan y las guarda en precio_intradia, sin duplicar (ciclo aparte, con
+  # su plazo y su espera exponencial ante un 429; la depuración de lo de más de 60 días, una vez al día). La imagen de la app con otro
   # entrypoint: el bundle /app/precios/servicio-precios.mjs en modo «bucle», que corre cada tarea como un proceso hijo
   # del mismo bundle. La carga histórica, a pedido y sin levantar la base si está en pausa:
   #   "${COMPOSE[@]}" run --rm -T --no-deps inv-008-precios --ahora --desde AAAA-MM-DD
@@ -403,6 +408,17 @@ services:
     environment:
       DATABASE_URL: ${INV_PRECIOS_DATABASE_URL:-}
       TZ: America/Bogota
+      # Precios cada minuto durante la rueda (segunda ranura del bucle, src/servicio-precios/intradia.ts). Todas opcionales y
+      # vacías por omisión: los valores por omisión viven en un solo lugar, src/servicio-precios/intradia-configuracion.ts
+      # (APAGADO, 60 s entre ciclos, 09:30 a 16:25 COT, 500 ms entre peticiones, 60 días de retención y el host query1 de Yahoo; INV_INTRADIA_HOST_YAHOO elige query1 o query2).
+      # Apagado por omisión: INV_INTRADIA_ENCENDIDO=1 lo enciende (lo decide Jelk); =0 o vacío lo apaga sin tocar la corrida de las 18:00.
+      INV_INTRADIA_ENCENDIDO: ${INV_INTRADIA_ENCENDIDO:-}
+      INV_INTRADIA_CICLO_SEG: ${INV_INTRADIA_CICLO_SEG:-}
+      INV_INTRADIA_DESDE_COT: ${INV_INTRADIA_DESDE_COT:-}
+      INV_INTRADIA_HASTA_COT: ${INV_INTRADIA_HASTA_COT:-}
+      INV_INTRADIA_PAUSA_MS: ${INV_INTRADIA_PAUSA_MS:-}
+      INV_INTRADIA_RETENCION_DIAS: ${INV_INTRADIA_RETENCION_DIAS:-}
+      INV_INTRADIA_HOST_YAHOO: ${INV_INTRADIA_HOST_YAHOO:-}
     volumes:
       - inv-008-precios-estado:/estado
     networks:
@@ -504,11 +520,76 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  # Servicio de las alertas (contenedor propio, PR-C): evalúa las alertas de precio y de fecha ex del plan con lo que YA guardó el
+  # servicio de precios (src/servicio-alertas/, el mismo motor del script `npm run alertas:evaluar`). A las 18:15 COT en días hábiles
+  # de la BVC y, con el intradía encendido, cada 5 min en la rueda (9:30 a 16:05 COT). No toca a inv-008-precios, que sigue con una sola
+  # credencial.
+  # - La imagen de la app con el bundle /app/alertas/servicio-alertas.mjs. Con una imagen ANTERIOR al servicio (la vuelta atrás), que no
+  #   trae el bundle, queda en espera (sano) en vez de reiniciarse sin fin. Sin signo de dólar en el script: Compose lo interpolaría.
+  # - Solo la credencial del rol inv_alertas, opcional (${…:-}, nunca :?): sin ella NO se cae, queda en espera con latido. Y el MISMO
+  #   interruptor del intradía que precios (INV_INTRADIA_ENCENDIDO, una sola variable del archivo de producción: sin YAML de anclas ni
+  #   alias, que desplegar-prod.sh no puede comparar). Ni claves de cifrado, ni AUTH_SECRET, ni Telegram, ni la llave de la nube.
+  # - Red: SOLO la interna (con la base), sin salida a internet y sin puertos. Su único volumen es el de su huella y su marca.
+  # - 64m sin swap, cpus y cpu_shares bajos (PI tiene prioridad). SIN MEDIR en el VPS: se mide allí con medir-memoria.sh (el compose
+  #   cambia de servicios, así que la espera del despliegue es la de 600 s). Listo para mudarlo al VPS propio de Inversiones.
+  inv-008-alertas:
+    image: inv-008-app:${INV_TAG:-sin-desplegar}
+    pull_policy: never
+    user: "10008:10008"
+    restart: always
+    init: true
+    depends_on:
+      inv-008-db:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ -r /app/alertas/servicio-alertas.mjs ]; then exec node --max-old-space-size=40 /app/alertas/servicio-alertas.mjs bucle; fi
+        echo "[alertas] esta imagen no trae el servicio de las alertas (es anterior a él): en espera"
+        while :; do sleep 3600; done
+    environment:
+      DATABASE_URL: ${INV_ALERTAS_DATABASE_URL:-}
+      INV_INTRADIA_ENCENDIDO: ${INV_INTRADIA_ENCENDIDO:-}
+      TZ: America/Bogota
+    # El latido, la última evaluación y la MARCA del intento del cierre: un volumen nombrado de disco (unos pocos bytes), no un tmpfs,
+    # porque la marca tiene que sobrevivir a los reinicios del contenedor (un tmpfs se vacía al parar). La imagen trae /estado del
+    # usuario 10008 (0700) y el volumen nuevo copia ese dueño.
+    volumes:
+      - inv-008-alertas-estado:/estado
+    networks:
+      - inv-008-red-interna
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 64m
+    memswap_limit: 64m
+    cpus: 0.1
+    cpu_shares: 64
+    # node, los hilos de libuv y V8 y los del engine de Prisma, más el healthcheck.
+    pids_limit: 48
+    stop_grace_period: 15s
+    ulimits:
+      core: 0
+    # El latido de menos de 3 minutos, con el find y el grep de busybox (sin un segundo node). Una imagen sin el bundle está en
+    # espera: sana.
+    healthcheck:
+      test: ["CMD-SHELL", "[ ! -r /app/alertas/servicio-alertas.mjs ] || find /estado/bucle -mmin -3 | grep -q ."]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
 # Las dos redes internal aíslan además la puerta de enlace (gateway_mode_ipv4: isolated, Docker 28 o más): el puente
 # no tiene dirección del host, así que desde ellas no se llega ni a internet ni al HOST (sin aislar se llegaba a los
 # servicios del host por su puerta de enlace). El DNS de Docker y los vecinos de la misma red siguen funcionando.
 networks:
-  # La base, el migrador, el respaldo y la app: sin salida, sin puertos y sin llegar al host.
+  # La base, el migrador, el respaldo, la app y el servicio de las alertas: sin salida, sin puertos y sin llegar al host.
   inv-008-red-interna:
     internal: true
     driver_opts:
@@ -540,6 +621,8 @@ networks:
 
 volumes:
   inv-008-db-datos:
+  # La huella y la marca del intento del cierre del servicio de las alertas: de disco, a propósito (ver el servicio). Sin driver_opts.
+  inv-008-alertas-estado:
   # Lo que se monta en /compartido-pi cuando el archivo de producción no trae INV_IA_DIR_COMPARTIDA: un tmpfs vacío de
   # 64k (la app y el servicio de IA quedan «sin lista de PI», sin caerse).
   inv-008-ia-sin-lista:

@@ -24,13 +24,13 @@ const checks = JSON.stringify({
   ],
 });
 
-/** El compose real sin el bloque del servicio de precios: el que corría antes de este PR. */
+/** El compose real sin el bloque del servicio de precios (hasta el comentario del de IA): el que corría antes de este PR. */
 function composeSinPrecios(): string {
   const texto = leer008("docker-compose.prod.yml");
   const desde = texto.indexOf("  # Servicio de precios (D-018)");
-  const hasta = texto.indexOf("\n# Las dos redes internal");
+  const hasta = texto.indexOf("  # Servicio de IA (E6");
   if (desde < 0 || hasta < desde) throw new Error("no se encontró el bloque del servicio de precios en el compose");
-  return `${texto.slice(0, desde)}${texto.slice(hasta + 1)}`;
+  return `${texto.slice(0, desde)}${texto.slice(hasta)}`;
 }
 
 function preparar(archivos: Record<string, string> = CON_SERVICIO, extra: Record<string, string> = {}) {
@@ -95,7 +95,7 @@ describe("desplegar-prod.sh · servicio de precios: se levanta y se verifica sol
     expect(r.status, r.stderr).toBe(0);
     expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${p.repo.sha}`);
     const final = ups(p).at(-1)!;
-    expect(final).toMatch(/ inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-precios$/);
+    expect(final).toMatch(/ inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-alertas inv-008-precios$/);
     expect(final).not.toContain("--scale");
     expect(r.stderr).toContain("la imagen trae el servicio de precios");
     expect(r.stderr).toContain("el servicio de precios corre la imagen enviada");
@@ -127,12 +127,24 @@ describe("desplegar-prod.sh · servicio de precios: se levanta y se verifica sol
     expect(r.stderr).toMatch(/sin INV_PRECIOS_DATABASE_URL.*en espera/);
   });
 
+  it("acepta las INV_INTRADIA_* de la configuración del ciclo por minuto (vacías, como las pone el compose) y sigue rechazando las ajenas", async () => {
+    const nombres = ["ENCENDIDO", "CICLO_SEG", "DESDE_COT", "HASTA_COT", "PAUSA_MS", "RETENCION_DIAS", "HOST_YAHOO"].map((n) => `INV_INTRADIA_${n}=`).join("\\n");
+    const p = preparar(CON_SERVICIO, { FALSO_ENV_PRECIOS: `TZ=America/Bogota\\nDATABASE_URL=\\n${nombres}\\n` });
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${p.repo.sha}`);
+    const ajena = preparar(CON_SERVICIO, { FALSO_ENV_PRECIOS: `TZ=America/Bogota\\nDATABASE_URL=\\nINV_INTRADIA_OTRA=1\\n` });
+    const rechazada = await correr(ajena.script, [ID], ajena.env);
+    expect(rechazada.status).not.toBe(0);
+    expect(rechazada.stderr).toMatch(/variables que no son suyas: INV_INTRADIA_OTRA/);
+  });
+
   it("imagen anterior al servicio (su commit no trae bucle.ts): lo baja con --scale inv-008-precios=0, no lo verifica y lo dice", async () => {
     const p = preparar({});
     const r = await correr(p.script, [ID], p.env);
     expect(r.status, r.stderr).toBe(0);
     expect(ultimaLinea(r.stdout)).toBe(`DEPLOY VERIFICADO ${p.repo.sha}`);
-    expect(ups(p).at(-1)).toMatch(/ --scale inv-008-precios=0 inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-precios$/);
+    expect(ups(p).at(-1)).toMatch(/ --scale inv-008-precios=0 inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-alertas inv-008-precios$/);
     expect(r.stderr).toContain("la imagen no trae el servicio de precios");
     expect(p.falsos.llamadas().some(enLaRedDePrecios)).toBe(false);
   });
@@ -175,7 +187,7 @@ describe("desplegar-prod.sh · servicio de precios en la vuelta atrás", () => {
     const r = await correr(p.script, [ID], { ...env, FALSO_SALUD_PRECIOS: "unhealthy" });
     expect(r.status).not.toBe(0);
     const vuelta = ups(p).at(-1)!;
-    expect(vuelta).toMatch(new RegExp(`^up ${p.repo.sha} .* --scale inv-008-precios=0 inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-precios$`));
+    expect(vuelta).toMatch(new RegExp(`^up ${p.repo.sha} .* --scale inv-008-precios=0 inv-008-app inv-008-entrada inv-008-vigia inv-008-respaldo inv-008-ia inv-008-alertas inv-008-precios$`));
     expect(r.stderr).toContain("vuelta atrás");
   });
 
@@ -186,7 +198,7 @@ describe("desplegar-prod.sh · servicio de precios en la vuelta atrás", () => {
     const r = await correr(p.script, [ID], { ...env, FALSO_SALUD_PRECIOS: "unhealthy" });
     expect(r.status).not.toBe(0);
     const vuelta = ups(p).at(-1)!;
-    expect(vuelta).toMatch(new RegExp(`^up ${p.repo.sha} .* inv-008-respaldo inv-008-ia inv-008-precios$`));
+    expect(vuelta).toMatch(new RegExp(`^up ${p.repo.sha} .* inv-008-respaldo inv-008-ia inv-008-alertas inv-008-precios$`));
     expect(vuelta).not.toContain("--scale");
   });
 });
@@ -236,5 +248,46 @@ describe("la guarda imagen_con_servicio_precios", () => {
     expect(de("scripts/desplegar-prod.sh")).toContain("cat-file -e");
     expect(de("scripts/desplegar-prod.sh")).toContain("src/servicio-precios/bucle.ts");
     expect(de("scripts/desplegar-prod.sh")).not.toMatch(/docker|curl|wget/);
+  });
+});
+
+describe("desplegar-prod.sh · el interruptor del intradía de las alertas es el de precios", () => {
+  const entornoAlertas = (interruptor: string) => `TZ=America/Bogota\nINV_INTRADIA_ENCENDIDO=${interruptor}\nDATABASE_URL=postgresql://inv_alertas:clave-ficticia-5120@inv-008-db:5432/inversiones\n`;
+  const entornoPrecios = (interruptor: string) => `TZ=America/Bogota\nINV_INTRADIA_ENCENDIDO=${interruptor}\nDATABASE_URL=postgresql://inv_precios:${CLAVE}@inv-008-db:5432/inversiones\n`;
+
+  it("encendido en los dos: despliega y dice cómo está", async () => {
+    const p = preparar(CON_SERVICIO, { FALSO_ENV_ALERTAS: entornoAlertas("1"), FALSO_ENV_PRECIOS: entornoPrecios("1") });
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain("el servicio de las alertas coincide con precios en el intradía (encendido)");
+  });
+
+  it("«true» y «TRUE» valen como «1» (igual que lo lee el servicio): coinciden", async () => {
+    const p = preparar(CON_SERVICIO, { FALSO_ENV_ALERTAS: entornoAlertas("TRUE"), FALSO_ENV_PRECIOS: entornoPrecios("1") });
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain("coincide con precios en el intradía (encendido)");
+  });
+
+  it("apagado en los dos (vacío y 0): despliega", async () => {
+    const p = preparar(CON_SERVICIO, { FALSO_ENV_ALERTAS: entornoAlertas(""), FALSO_ENV_PRECIOS: entornoPrecios("0") });
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain("coincide con precios en el intradía (apagado)");
+  });
+
+  it("encendido en las alertas y apagado en precios: no hay DEPLOY VERIFICADO", async () => {
+    const p = preparar(CON_SERVICIO, { FALSO_ENV_ALERTAS: entornoAlertas("1"), FALSO_ENV_PRECIOS: entornoPrecios("") });
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain("no coincide con el del servicio de precios");
+    expect(r.stdout).not.toContain("DEPLOY VERIFICADO");
+  });
+
+  it("sin el servicio de precios (imagen anterior), no hay con qué comparar y despliega", async () => {
+    const p = preparar({}, { FALSO_ENV_ALERTAS: entornoAlertas("1") });
+    const r = await correr(p.script, [ID], p.env);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).not.toContain("coincide con precios");
   });
 });

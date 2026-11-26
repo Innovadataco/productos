@@ -26,7 +26,8 @@ describe("leerPedidoConfig · control positivo", () => {
         esfuerzoNube: "medium",
         topeMicroUsd: 4_610_000n,
         horaResumen: "19:00",
-        limiteSegundos: 97,
+        limiteSegundos: 45,
+        analisisDemanda: false,
         motivo: "Cambio ficticio de la configuración",
       },
     });
@@ -47,7 +48,14 @@ describe("leerPedidoConfig · control positivo", () => {
     for (const [t, m] of [["1", 1_000_000n], ["50", 50_000_000n], ["12,5", 12_500_000n], ["49.99", 49_990_000n]] as const) {
       expect(leerPedidoConfig(cuerpoFicticio({ topeMensualUsd: t }), LISTA_FICTICIA)).toMatchObject({ ok: true, valor: { topeMicroUsd: m } });
     }
-    for (const l of ["10", "120"]) expect(leerPedidoConfig(cuerpoFicticio({ limiteSegundos: l }), LISTA_FICTICIA).ok).toBe(true);
+    for (const l of ["10", "60"]) expect(leerPedidoConfig(cuerpoFicticio({ limiteSegundos: l }), LISTA_FICTICIA).ok).toBe(true);
+  });
+
+  it("el interruptor del análisis a demanda se lee como booleano (true y false); sin él, el cuerpo no es válido", () => {
+    expect(leerPedidoConfig(cuerpoFicticio({ analisisDemanda: true }), LISTA_FICTICIA)).toMatchObject({ ok: true, valor: { analisisDemanda: true } });
+    expect(leerPedidoConfig(cuerpoFicticio({ analisisDemanda: false }), LISTA_FICTICIA)).toMatchObject({ ok: true, valor: { analisisDemanda: false } });
+    const { analisisDemanda: _quitada, ...sin } = cuerpoFicticio();
+    expect(leerPedidoConfig(sin, LISTA_FICTICIA).ok).toBe(false);
   });
 
   it("el tope de bytes del cuerpo es chico (cabe el motivo largo y lo demás)", () => {
@@ -71,7 +79,10 @@ describe("leerPedidoConfig · cada error con su campo y su código", () => {
     ["esfuerzoNube", { esfuerzoNube: "high" }, "ESFUERZO_INVALIDO"],
     ["horaResumen", { horaResumen: "19:30" }, "HORA_INVALIDA"],
     ["limiteSegundos", { limiteSegundos: "9" }, "LIMITE_INVALIDO"],
-    ["limiteSegundos", { limiteSegundos: "121" }, "LIMITE_INVALIDO"],
+    ["limiteSegundos", { limiteSegundos: "61" }, "LIMITE_INVALIDO"],
+    ["limiteSegundos", { limiteSegundos: "120" }, "LIMITE_INVALIDO"],
+    ["analisisDemanda", { analisisDemanda: "true" }, "FORMATO_INVALIDO"],
+    ["analisisDemanda", { analisisDemanda: null }, "FORMATO_INVALIDO"],
     ["limiteSegundos", { limiteSegundos: "97,5" }, "LIMITE_INVALIDO"],
     ["temperatura", { temperatura: "1,01" }, "TEMPERATURA_INVALIDA"],
     ["temperatura", { temperatura: "-0,1" }, "TEMPERATURA_INVALIDA"],

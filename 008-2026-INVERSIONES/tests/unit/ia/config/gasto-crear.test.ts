@@ -40,7 +40,7 @@ describe("crearVersionConfigIa · un error de la base que no es suyo se propaga"
     const entrada = {
       modo: "apagado", ollamaHost: null, ollamaPuerto: null, temperaturaCentesimas: 0,
       tareas: { DIARIO: { activo: false, modeloLocal: null }, REGLAS: { activo: false, modeloLocal: null }, ESCENARIOS: { activo: false, modeloLocal: null } },
-      modeloNube: "claude-opus-5-5", esfuerzoNube: "low", topeMicroUsd: null, horaResumen: "19:00", limiteSegundos: 120, motivo: "Ficticio",
+      modeloNube: "claude-opus-5-5", esfuerzoNube: "low", topeMicroUsd: null, horaResumen: "19:00", limiteSegundos: 60, analisisDemanda: false, motivo: "Ficticio",
     } as const;
     await expect(crearVersionConfigIa(db, entrada, { autorId: "u-1237", ultimaEsperada: 0 })).rejects.toBe(error);
   });

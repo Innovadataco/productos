@@ -53,7 +53,9 @@ describe("modelo ResumenIa en prisma/schema.prisma", () => {
   });
 
   it("los enums son espejo de las constantes de src/ia (una sola fuente de verdad)", () => {
+    // El enum de la base es TIPOS_RESUMEN, con SIMULACION al final (ADD VALUE agrega al final).
     expect(valoresEnum("TipoResumenIa")).toEqual([...TIPOS_RESUMEN]);
+    expect(TIPOS_RESUMEN.at(-1)).toBe("SIMULACION");
     expect(valoresEnum("EstadoResumenIa")).toEqual([...ESTADOS_RESUMEN]);
     expect(valoresEnum("PuertaIa")).toEqual([...PUERTAS]);
   });

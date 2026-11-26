@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { validarSalida } from "@/ia/validador/validar";
-import { paqueteFicticio, presentacionDe, salidaDe } from "./apoyo/salidas.ficticio";
+import { FRASES_VALIDAS, paqueteFicticio, presentacionDe, salidaDe } from "./apoyo/salidas.ficticio";
 
 vi.mock("@/ia/validador/caracteres", async (original) => {
   const real = await original<typeof import("@/ia/validador/caracteres")>();
@@ -16,7 +16,8 @@ const p = paqueteFicticio("DIARIO");
 
 describe("CIFRA_SUELTA apagada: RENDER_CIFRA sigue mordiendo", () => {
   it("control positivo: la salida válida pasa", () => {
-    expect(validarSalida(salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES}."), p).ok).toBe(true);
+    // Con una frase que cita un hecho que no es obligatorio: el modelo tiene que aportar (validador v3).
+    expect(validarSalida(salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES}.", FRASES_VALIDAS.DIARIO[1] as string), p).ok).toBe(true);
   });
 
   it("una cifra suelta inventada", () => {
@@ -27,7 +28,8 @@ describe("CIFRA_SUELTA apagada: RENDER_CIFRA sigue mordiendo", () => {
   it("la presentación exacta del paquete escrita por el modelo, sin la cita", () => {
     const escrita = presentacionDe(p, "GANANCIA_TOTAL");
     const r = validarSalida(salidaDe(p, `El valor de las acciones subió a {VALOR_ACCIONES} y la ganancia total es ${escrita}.`), p);
-    expect(r.ok ? [] : r.motivos).toEqual(["RENDER_CIFRA"]);
+    // Además de la cifra suelta, la etiqueta «ganancia total» va sin su cita (ETIQUETA.SIN_CITA).
+    expect(r.ok ? [] : r.motivos).toEqual(["ETIQUETA_NO_COINCIDE", "RENDER_CIFRA"]);
   });
 
   it("la presentación exacta repetida junto a su propia cita", () => {

@@ -15,6 +15,7 @@
  */
 import { corridaDe, generarSegunConfig } from "../ia/config/cableado";
 import type { ConfigIaVigente } from "../ia/config/leer";
+import { TAREAS_IA, type TareaIa } from "../ia/config/parametros";
 import type { PaqueteHechos, TipoResumen } from "../ia/contrato";
 import type { ResultadoExportacion } from "../ia/evaluacion/exportar/exportar";
 import type { Generador } from "../ia/generador";
@@ -47,9 +48,9 @@ export interface DependenciasCorrida {
   /** Los paquetes de hechos del día (una foto de solo lectura). */
   exportar(hoy: Date): Promise<ResultadoExportacion>;
   /** Los generadores de las puertas para una tarea, con la configuración vigente. */
-  generadores(config: ConfigIaVigente, tarea: TipoResumen): readonly Generador[];
+  generadores(config: ConfigIaVigente, tarea: TareaIa): readonly Generador[];
   /** Los digests de modelo con los que esta corrida podría publicar (para no duplicar). */
-  digests(config: ConfigIaVigente, tarea: TipoResumen): readonly string[];
+  digests(config: ConfigIaVigente, tarea: TareaIa): readonly string[];
   /** Las opciones del pedido que quedan en el registro. */
   opciones(config: ConfigIaVigente): Readonly<Record<string, unknown>>;
   yaPublicado(clave: ClaveResumen): Promise<boolean>;
@@ -94,8 +95,9 @@ interface Pendiente {
 
 /** El tipo listo para generar, o el estado con el que queda sin llamar al modelo. */
 async function preparar(deps: DependenciasCorrida, config: ConfigIaVigente, paquete: PaqueteHechos): Promise<Pendiente | EstadoTipo> {
-  const { tipo } = paquete;
-  if (corridaDe(config, tipo).estado === "APAGADO") return "TAREA_INACTIVA";
+  // La corrida diaria solo conoce las tareas de hoy: un paquete de SIMULACION (a demanda) no corre por aquí.
+  const tipo = TAREAS_IA.find((t) => t === paquete.tipo);
+  if (tipo === undefined || corridaDe(config, tipo).estado === "APAGADO") return "TAREA_INACTIVA";
   const prompt = promptDe(tipo);
   for (const modeloDigest of deps.digests(config, tipo)) {
     if (await deps.yaPublicado({ tipo, fechaNegocio: paquete.hoy, hechosHash: paquete.hash, promptHash: prompt.hash, modeloDigest })) return "YA_PUBLICADO";
@@ -153,6 +155,27 @@ async function correrRondas(deps: DependenciasCorrida, config: ConfigIaVigente, 
     await deps.esperar(pausaMs);
     pendientes = siguen;
   }
+}
+
+/**
+ * El análisis a demanda de UNA tarea (el botón «Analizar con IA»): los hechos de hoy, el mismo camino de la corrida diaria
+ * (la guarda de «ya publicado», las puertas, el validador y el registro) pero con UN solo intento y sin pausas: quien
+ * hizo clic no espera minutos, y el siguiente análisis lo permite el servicio 2 minutos después. Devuelve cómo quedó:
+ * PUBLICADO, RECHAZADO, FALLIDO, YA_PUBLICADO (los mismos hechos: no se llama al modelo ni se duplica), TAREA_INACTIVA,
+ * APAGADO, OMITIDO (sin hechos de esa tarea hoy) o ERROR (un fallo del registro o de la base; su código va al log).
+ */
+export async function correrUna(deps: DependenciasCorrida, config: ConfigIaVigente | null, tarea: TipoResumen, hoy: Date): Promise<EstadoTipo> {
+  if (config === null || config.modo === "apagado") return "APAGADO";
+  const exportacion = await deps.exportar(hoy);
+  for (const aviso of exportacion.avisos) deps.registrarLog(`aviso de los hechos: ${aviso}`);
+  const paquete = exportacion.paquetes.find((p) => p.tipo === tarea);
+  if (paquete === undefined) return "OMITIDO";
+  const porTipo: Estados = {};
+  const pendiente = await protegido(deps, porTipo, tarea, () => preparar(deps, config, paquete));
+  if (pendiente === null) return "ERROR";
+  if (typeof pendiente === "string") return pendiente;
+  const r = await protegido(deps, porTipo, tarea, () => intentar(deps, config, pendiente));
+  return r === null ? "ERROR" : r.estado;
 }
 
 /** La corrida del día `hoy` (la fecha de negocio en Colombia, a medianoche UTC) con la configuración vigente. */

@@ -3,9 +3,17 @@
 .resumen-ia-cuerpo { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; max-width: 46em; overflow-wrap: anywhere; }
 .resumen-ia h2 { font-family: var(--display); font-weight: 400; font-size: 32px; line-height: 1.05; margin: 6px 0 12px; }
 .resumen-ia-frases { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 16px; line-height: 1.5; }
-.resumen-ia-aviso, .resumen-ia-nota, .resumen-ia-vigencia { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.resumen-ia-aviso, .resumen-ia-nota, .resumen-ia-sin-ia, .resumen-ia-vigencia { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
 .resumen-ia-desactualizado { margin: 10px 0 0; font-size: 13px; font-weight: 700; color: var(--loss); }
 .resumen-ia-cifras { margin-top: 12px; font-size: 13px; }
 .resumen-ia-cifras summary { cursor: pointer; font-weight: 600; }
 .resumen-ia-cifras ul { margin: 8px 0 0; padding-left: 1.1em; display: grid; gap: 4px; color: var(--muted); }
 .resumen-ia-pie { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+.resumen-ia-analisis { margin: -4px 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.resumen-ia-rechazo, .resumen-ia-fallo, .resumen-ia-descartado { margin: 10px 0 0; font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; }
+.resumen-ia-analizar-caja { margin-top: 14px; display: grid; gap: 8px; }
+.resumen-ia-analizar { justify-self: start; min-height: 44px; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--gold); background: transparent; color: var(--fg); font: inherit; font-weight: 700; cursor: pointer; }
+.resumen-ia-analizar:hover:not([aria-disabled="true"]) { background: var(--bg-2); }
+.resumen-ia-analizar:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.resumen-ia-analizar[aria-disabled="true"] { cursor: not-allowed; color: var(--muted); border-color: var(--line); }
+.resumen-ia-analizar-estado { margin: 0; min-height: 1.4em; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }

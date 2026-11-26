@@ -1,7 +1,7 @@
 // Apoyo de las pruebas de la tarjeta de resumen (frente ia-resumenes-pantalla): paquetes INVENTADOS (los de las pruebas
 // de src/ia, con especies FICTICIA-* y días de 2027) y un PUBLICADO armado con la plantilla, como lo devolvería
 // `ultimoPublicado`. Nada sale de una base ni de datos reales.
-import type { PaqueteHechos, TipoResumen } from "@/ia/contrato";
+import type { PaqueteHechos, TipoDiario } from "@/ia/contrato";
 import { construirPaquete } from "@/ia/paquete";
 import type { ResumenPublicado } from "@/ia/registro/registro";
 import { salidaDePlantilla } from "@/ia/validador/plantilla";
@@ -11,7 +11,7 @@ export const MODELO_FICTICIO = "ficticio-modelo:7b";
 export const GENERADO_FICTICIO = new Date("2027-03-17T23:41:37.000Z");
 
 /** El paquete inventado del tipo; con `aviso`, otro paquete (otro hash) con los mismos hechos; con `hoy`, otro día. */
-export function paqueteFicticio<T extends TipoResumen>(tipo: T, aviso?: string, hoy?: string): PaqueteHechos<T> {
+export function paqueteFicticio<T extends TipoDiario>(tipo: T, aviso?: string, hoy?: string): PaqueteHechos<T> {
   const entrada = ENTRADAS_FICTICIAS[tipo]();
   const avisos = aviso === undefined ? entrada.avisos : [...entrada.avisos, aviso];
   return construirPaquete({ ...entrada, avisos, hoy: hoy ?? entrada.hoy } as never) as PaqueteHechos<T>;

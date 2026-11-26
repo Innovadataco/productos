@@ -26,7 +26,7 @@ export interface SalidaLeida {
 type Registro = Readonly<Record<string, unknown>>;
 
 /** Un objeto de JSON.parse (no arreglo ni null) con exactamente los campos dados. */
-function conCampos(valor: unknown, campos: readonly string[]): valor is Registro {
+export function conCampos(valor: unknown, campos: readonly string[]): valor is Registro {
   if (typeof valor !== "object" || valor === null || Array.isArray(valor)) return false;
   const claves = Object.keys(valor);
   return claves.length === campos.length && campos.every((campo) => Object.hasOwn(valor, campo));
@@ -38,7 +38,7 @@ function leerSegmento(valor: unknown): Segmento | null {
   return null;
 }
 
-function leerFrase(valor: unknown): FraseLeida | null {
+export function leerFrase(valor: unknown): FraseLeida | null {
   if (!conCampos(valor, ["segmentos"]) || !Array.isArray(valor.segmentos)) return null;
   const segmentos: Segmento[] = [];
   for (const crudo of valor.segmentos as readonly unknown[]) {

@@ -205,6 +205,8 @@ model Usuario {
   codigosRecuperacion CodigoRecuperacion[]
   configsIa           ConfigIa[]
   tarifasComision     TarifaComision[]
+  umbralesAlertas     UmbralVersion[]
+  alertasVistas       AlertaVista[]
 
   @@map("usuario")
 }
@@ -377,6 +379,8 @@ model Instrumento {
   rendimientosFondo    RendimientoFondo[]
   valoresUnidad        ValorUnidadFondo[]
   precios              PrecioCierre[]
+  preciosIntradia      PrecioIntradia[]
+  alertas              Alerta[]
   controles            ControlConciliacion[]
   eventosOrigen        EventoCorporativo[]     @relation("EventoOrigen")
   eventosDestino       EventoCorporativo[]     @relation("EventoDestino")
@@ -508,6 +512,7 @@ model DividendoDecretado {
   registradoEn      DateTime      @default(now()) @db.Timestamptz(6) // la pone la base (inv_solo_retiro)
   reemplazadoEn     DateTime?     @db.Timestamptz(6)
   recibidos         Dividendo[] // obsoleta: dividendo."decretadoId" es siempre nulo
+  alertas           Alerta[]
 
   @@unique([instrumentoId, fechaAnuncio, tipo, cuota, version], map: "dividendo_decretado_version_key")
   @@index([instrumentoId, fechaPago])
@@ -776,6 +781,24 @@ model PrecioCierre {
   @@map("precio_cierre")
 }
 
+/// Precios de 1 minuto durante la rueda (Yahoo `.CL`, que llega con retraso: `conRetraso` dice si la respuesta lo marcó).
+/// Solo inserción por su disparador: UPDATE nunca y DELETE solo de lo de más de 60 días (la retención; migración
+/// 20261126120000_precio_intradia). Una fila por (especie, instante, fuente): traer lo mismo otra vez no duplica. `instante`
+/// es la hora de la barra; `traidoEn` la pone la base. Aparte de `precio_cierre`: no es el cierre ni se verifica contra A&V.
+model PrecioIntradia {
+  id            String      @id @default(cuid())
+  instrumentoId String
+  instrumento   Instrumento @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  instante      DateTime    @db.Timestamptz(6)
+  precio        Decimal     @db.Decimal(20, 6) // sin ajustar
+  fuente        String
+  conRetraso    Boolean
+  traidoEn      DateTime    @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_precio_intradia_insercion)
+
+  @@unique([instrumentoId, instante, fuente])
+  @@map("precio_intradia")
+}
+
 // ───────────── Conciliación ─────────────
 model Conciliacion {
   id              String                @id @default(cuid())
@@ -850,6 +873,7 @@ model ReglaPlan {
   plazoHasta    DateTime?      @db.Date
   detalle       String
   decisiones    Decision[]
+  alertas       Alerta[]
 
   @@unique([id, planVersionId])
   @@index([planVersionId])
@@ -913,11 +937,14 @@ model EnlaceDecisionOrden {
 
 // ───────────── Resúmenes con IA (fase E) ─────────────
 
-/// Los tres resúmenes (src/ia/contrato.ts, TIPOS_RESUMEN).
+/// Los tres resúmenes (src/ia/contrato.ts, TIPOS_RESUMEN) y SIMULACION (la explicación de /operar; migración
+/// 20261126200000_tipo_resumen_simulacion). SIMULACION entra a TIPOS_RESUMEN con el contrato v2; hasta entonces solo existe
+/// en la base.
 enum TipoResumenIa {
   DIARIO
   REGLAS
   ESCENARIOS
+  SIMULACION
 }
 
 /// PUBLICADO: pasó el validador y tiene texto. RECHAZADO: el modelo respondió y el validador lo rechazó. FALLIDO: no
@@ -984,7 +1011,8 @@ model ConfigIa {
   modeloNube       String // MODELOS_NUBE; por omisión claude-opus-5-5
   topeMensualUsd   Decimal? @db.Decimal(6, 2) // obligatorio si el modo usa la nube; de 1 a 50 USD
   horaResumen      String // HORAS_RESUMEN, hora de Colombia
-  limiteSegundos   Int // de 10 a 120 (el límite de PI)
+  limiteSegundos   Int // la app acepta de 10 a 60; la CHECK de la base sigue en 10 a 120 (versiones viejas) y el lector acota a 60
+  analisisDemanda  Boolean  @default(false) // el botón «Analizar con IA»: apagado por omisión (falla cerrada)
   esfuerzoNube     String // low o medium
   motivo           String
   autorId          String
@@ -1020,4 +1048,88 @@ model TarifaComision {
 
   @@index([autorId])
   @@map("tarifa_comision")
+}
+
+/// Umbrales de las alertas (motor src/alertas): los edita el dueño en /edicion/alertas. Versionada y de SOLO INSERCIÓN
+/// (inv_solo_insercion): cada cambio es una versión nueva con su autor, su motivo y la hora que pone la base
+/// (inv_umbral_version_instante). La vigente es la de mayor versión; sin ninguna rigen las omisiones de
+/// src/alertas/umbrales.ts. Los rangos van como CHECK a mano en la migración *_alertas (espejo de RANGOS_UMBRALES, con su
+/// prueba). La escribe inv_app (INSERT por columna sin creadaEn) y la lee inv_alertas sin el motivo ni el autor.
+model UmbralVersion {
+  id                       String   @id @default(cuid())
+  version                  Int      @unique
+  alertaCercaPct           Decimal  @db.Decimal(5, 2)
+  alertaCercaActiva        Boolean
+  alertaNivelCruzadoActiva Boolean
+  alertaMovimientoPct      Decimal  @db.Decimal(5, 2)
+  alertaMovimientoActiva   Boolean
+  alertaCaidaPct           Decimal  @db.Decimal(5, 2)
+  alertaCaidaActiva        Boolean
+  alertaDatoViejoMin       Int
+  alertaDatoViejoActiva    Boolean
+  alertaExDiasHabiles      Int
+  alertaExActiva           Boolean
+  motivo                   String
+  autorId                  String
+  autor                    Usuario  @relation(fields: [autorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creadaEn                 DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_umbral_version_instante)
+  alertas                  Alerta[]
+
+  @@index([autorId])
+  @@map("umbral_version")
+}
+
+/// Una alerta detectada por el motor (src/alertas): de SOLO INSERCIÓN, sin texto libre (el texto lo reescribe
+/// textoDeAlerta desde esta evidencia) y sin montos del portafolio. Una por (día, tipo, especie, regla, sentido) y una por
+/// decreto (FECHA_EX): índices únicos de expresión y parcial de la migración *_alertas, que Prisma no modela; por eso se
+/// guarda con createMany + skipDuplicates. La inserta inv_alertas (INSERT por columna sin detectadaEn, que pone la base).
+/// Para FECHA_EX `decretoId` es el decreto (en el motor viaja como reglaId). `traidoEn` y `fuente` son del dato que la causó.
+model Alerta {
+  id              String              @id @default(cuid())
+  dia             DateTime            @db.Date // día de Colombia
+  tipo            String // NIVEL_CRUZADO, NIVEL_CERCA, MOVIMIENTO_DIA, CAIDA_PORTAFOLIO, DATO_VIEJO o FECHA_EX (alerta_tipo_chk)
+  instrumentoId   String?
+  instrumento     Instrumento?        @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reglaId         String?
+  regla           ReglaPlan?          @relation(fields: [reglaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decretoId       String?
+  decreto         DividendoDecretado? @relation(fields: [decretoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sentido         String? // BAJO o SOBRE
+  base            String? // INTRADIA o CIERRE
+  precio          Decimal?            @db.Decimal(20, 6)
+  referencia      Decimal?            @db.Decimal(20, 6) // el nivel de la regla
+  variacionPct    Decimal?            @db.Decimal(9, 2) // con signo; en NIVEL_CERCA, la distancia al nivel
+  umbral          Decimal?            @db.Decimal(9, 2) // el umbral vigente que la disparó (% o minutos o días)
+  instanteDato    DateTime?           @db.Timestamptz(6) // la hora de la barra
+  traidoEn        DateTime?           @db.Timestamptz(6)
+  fuente          String?
+  conRetraso      Boolean?
+  minutosDeEdad   Int?
+  esFechaEx       Boolean?
+  umbralVersionId String?
+  umbralVersion   UmbralVersion?      @relation(fields: [umbralVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  motorVersion    String // alertas-v1
+  detectadaEn     DateTime            @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_alerta_insercion)
+  vista           AlertaVista?
+
+  @@index([dia])
+  @@index([instrumentoId])
+  @@index([reglaId])
+  @@index([decretoId])
+  @@index([umbralVersionId])
+  @@map("alerta")
+}
+
+/// Alerta marcada como vista por el dueño: de SOLO INSERCIÓN, una por alerta (marcar otra vez no escribe nada). La inserta
+/// inv_app (INSERT por columna sin vistaEn). Un disparador exige que el usuario sea el dueño (rol DUENO).
+model AlertaVista {
+  id        String   @id @default(cuid())
+  alertaId  String   @unique
+  alerta    Alerta   @relation(fields: [alertaId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  vistaEn   DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_alerta_vista_insercion)
+
+  @@index([usuarioId])
+  @@map("alerta_vista")
 }

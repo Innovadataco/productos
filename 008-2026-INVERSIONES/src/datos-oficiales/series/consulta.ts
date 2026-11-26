@@ -60,7 +60,7 @@ export const SERIES_INDICE: readonly string[] = Object.freeze(["IPC_INDICE"]);
  * La unidad de una variación calculada. Parte de índices de 2 decimales: puede diferir en 0,01 de la variación que
  * publica el DANE en su otro anexo (POR VERIFICAR); por eso nunca se le atribuye.
  */
-export const UNIDAD_VARIACION = "% de variación (calculada por 008)";
+export const UNIDAD_VARIACION = "% de variación (calculada por Inversiones)";
 export const DECIMALES_VARIACION = 2;
 
 /** Lo que cabe en DECIMAL(20,8), en forma canónica: hasta 12 enteros y 8 decimales, sin ceros sobrantes. */

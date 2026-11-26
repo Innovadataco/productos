@@ -1,10 +1,12 @@
 import { esSoloLectura } from "@/auth/roles";
 import { exigirSesion } from "@/auth/sesion";
 import { ultimaConciliacion } from "@/conciliacion/leer";
+import type { CalendarioBvc } from "@/precios/negociacion";
 import { db } from "@/lib/db";
 import type { PrismaClient } from "@prisma/client";
 import { obtenerResumen, type Resumen } from "@/tablero/datos";
 import { obtenerEvolucion } from "@/tablero/datos-evolucion";
+import { calendarioConRespaldo } from "./_comun/calendario-con-respaldo";
 import { resumenDelDia } from "./_comun/resumen-ia/leer";
 import type { VistaResumenIa } from "./_comun/resumen-ia/tipos";
 import { SinBase, esErrorDeBase, registrarFalloDeBase } from "./_comun/sin-base";
@@ -36,6 +38,7 @@ export default async function Inicio() {
   let evolucion: EvolucionVista | null;
   let soloLectura: boolean;
   let resumenIa: VistaResumenIa;
+  let calendario: CalendarioBvc;
   try {
     // Revalida la sesión contra la base (D-014). Sin sesión, `redirect` lanza y el catch la deja pasar. El familiar,
     // en solo lectura (frente familia-lectura): ve la marca; lo que escribe lo bloquea el servidor.
@@ -46,7 +49,9 @@ export default async function Inicio() {
     // y lo guardado de la última conciliación, sin recalcular (la frescura se ve en /conciliacion); las dos en paralelo.
     // La tarjeta del resumen DIARIO (E5) va después: su export proyecta bajo el turno y no compite con estas lecturas.
     const [evo, ultima] = await Promise.all([leerEvolucion(db, resumen), ultimaConciliacion(db)]);
-    resumenIa = await resumenDelDia(db, "DIARIO", usuario.id);
+    resumenIa = await resumenDelDia(db, "DIARIO", usuario.id, { dueno: !soloLectura });
+    // El calendario de la BVC cuenta los días hábiles de atraso de cada cierre (frente fuente-retraso).
+    calendario = await calendarioConRespaldo(db, "tablero");
     evolucion = evo;
     conciliacion = aLineaDelTablero(ultima);
   } catch (error) {
@@ -54,5 +59,5 @@ export default async function Inicio() {
     registrarFalloDeBase("tablero", error);
     return <SinBase />;
   }
-  return <Tablero vista={aVista(resumen)} conciliacion={conciliacion} evolucion={evolucion} soloLectura={soloLectura} resumenIa={resumenIa} />;
+  return <Tablero vista={aVista(resumen, { ahora: new Date(), calendario })} conciliacion={conciliacion} evolucion={evolucion} soloLectura={soloLectura} resumenIa={resumenIa} />;
 }

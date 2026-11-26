@@ -23,6 +23,8 @@ export type LadoSimulado = Extract<AccionPlan, "COMPRAR" | "VENDER">;
 
 /** Decimales del precio límite, los cierres, los niveles y la caja: la escala de `orden.precioUnitario`. */
 export const DECIMALES_PRECIO = 6;
+/** Decimales máximos de un monto en pesos al mostrarlo (los centavos): ninguno sale con 3 o más. */
+export const DECIMALES_PESOS_MOSTRADOS = 2;
 /** Decimales de la comisión estimada: la escala de `orden.comision` (redondeo mitad hacia arriba). */
 export const DECIMALES_COMISION = 4;
 /**
@@ -39,8 +41,12 @@ export interface EspecieNombrada {
 export interface PosicionSimulada extends EspecieNombrada {
   /** Acciones de hoy; 0 si ya no tiene (se puede simular comprarla otra vez). */
   readonly cantidad: bigint;
-  /** Último cierre guardado (basta su precio: la forma de `FilaTablero.cierre`); null si no hay. */
-  readonly cierre: { readonly precio: Decimal } | null;
+  /**
+   * Último cierre guardado (basta su precio: la forma de `FilaTablero.cierre`); null si no hay. `fecha` (el día del
+   * cierre) es opcional: solo la usa el informe para decir con qué cierre se habría valorado cuando el dueño escribe el
+   * precio actual de trii Pro.
+   */
+  readonly cierre: { readonly precio: Decimal; readonly fecha?: Date } | null;
 }
 
 /** Una fila del plan vigente, con los campos de `regla_plan` (los de `leerReglas` encajan tal cual). */

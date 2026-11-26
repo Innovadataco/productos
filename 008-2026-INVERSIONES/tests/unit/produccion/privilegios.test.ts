@@ -12,7 +12,8 @@
 import { readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { leer008, ruta008 } from "./falsos";
-import { filasPermisos, PERMISOS_PRECIOS, PRECIO_CIERRE_COLUMNAS, type Permiso } from "./permisos-precios";
+import { PERMISOS_APP_ALERTAS } from "./permisos-alertas";
+import { filasPermisos, PERMISOS_PRECIOS, PRECIO_CIERRE_COLUMNAS, PRECIO_INTRADIA_COLUMNAS, type Permiso } from "./permisos-precios";
 
 const sql = leer008("docker/migrador/privilegios.sql").replace(/--.*$/gm, "");
 const grants = [...sql.matchAll(/GRANT\s+([A-Z]+(?:\s*\([^)]*\))?(?:\s*,\s*[A-Z]+(?:\s*\([^)]*\))?)*)\s+ON\s+(?:TABLE|SEQUENCE)\s+public\.(%I|[a-z_]+)\s+TO\s+inv_app/g)].map(
@@ -33,9 +34,11 @@ describe("privilegios de inv_app", () => {
         'UPDATE ("totpSecreto", "totpActivadoEn", "totpUltimoPaso", "presesionHash") usuario',
         ...Object.entries(INSERT_DEL_PLAN).map(([t, cs]) => `INSERT (${cs.map((c) => (/[A-Z]/.test(c) ? `"${c}"` : c)).join(", ")}) ${t}`),
         // E8: la configuración de la IA, por columna y sin "creadaEn" (bloque «config_ia» de abajo).
-        'INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", motivo, "autorId") config_ia',
+        'INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "analisisDemanda", "esfuerzoNube", motivo, "autorId") config_ia',
         // O5: la tarifa de comisión, por columna y sin "creadaEn" (bloque «tarifa_comision» de abajo).
         'INSERT (id, version, comisionista, lado, porcentaje, "minimoPorOrden", "fijoPorOrden", "ivaPct", "otrosCargos", "vigenteDesde", motivo, "autorId") tarifa_comision',
+        // Alertas: los umbrales (sin "creadaEn") y la marca de vista (sin "vistaEn"); ver privilegios-alertas.test.ts.
+        ...PERMISOS_APP_ALERTAS.map((p) => `INSERT (${p.columnas.map((c) => (/[A-Z]/.test(c) ? `"${c}"` : c)).join(", ")}) ${p.tabla}`),
       ].sort(),
     );
   });
@@ -49,8 +52,10 @@ describe("privilegios de inv_app", () => {
     for (const columna of ['"claveHash"', '"sesionVersion"', '"bloqueadoHasta"', '"usadoEn"']) expect(login).toContain(columna);
   });
 
-  it("nunca DELETE, TRUNCATE, REFERENCES, TRIGGER, ALL ni DDL, y nunca UPDATE de tabla completa", () => {
-    expect(sql).not.toMatch(/GRANT[^;]*(DELETE|TRUNCATE|REFERENCES|TRIGGER|ALL|CREATE)/);
+  it("nunca DELETE, TRUNCATE, REFERENCES, TRIGGER, ALL ni DDL, y nunca UPDATE de tabla completa (salvo el DELETE de inv_precios sobre precio_intradia: la retención)", () => {
+    const sinRetencion = sql.replace("GRANT DELETE ON TABLE public.precio_intradia TO inv_precios;", "");
+    expect(sinRetencion).not.toBe(sql);
+    expect(sinRetencion).not.toMatch(/GRANT[^;]*(DELETE|TRUNCATE|REFERENCES|TRIGGER|ALL|CREATE)/);
     expect(sql).not.toMatch(/GRANT\s+UPDATE\s+ON/);
   });
 
@@ -126,7 +131,7 @@ describe("privilegios del plan y del diario (área de edición)", () => {
 
   it("ningún otro INSERT de inv_app fuera del login, del TOTP y del plan", () => {
     const inserts = grants.filter((g) => g.startsWith("INSERT ")).map((g) => g.split(" ").at(-1)!).sort();
-    expect(inserts).toEqual(["codigo_recuperacion", "config_ia", "intento_ingreso", "tarifa_comision", ...TABLAS_DEL_PLAN].sort());
+    expect(inserts).toEqual(["alerta_vista", "codigo_recuperacion", "config_ia", "intento_ingreso", "tarifa_comision", "umbral_version", ...TABLAS_DEL_PLAN].sort());
   });
 
   it("las cuatro tablas son de solo inserción en su migración (el disparador manda aunque alguien diera UPDATE)", () => {
@@ -182,11 +187,12 @@ describe("privilegios de inv_precios", () => {
     privilegio: m[1]! as Permiso["privilegio"],
     columnas: m[2] ? m[2].split(",").map((c) => c.trim().replace(/^"|"$/g, "")) : [],
   }));
-  const sinColumnas = [...sql.matchAll(/GRANT\s+[A-Z]+\s+ON\s+TABLE\s+public\.[a-z_]+\s+TO\s+inv_precios/g)];
+  // De tabla completa, la única excepción es el DELETE de precio_intradia (no existe por columna): lo frena su disparador.
+  const sinColumnas = [...sql.matchAll(/GRANT\s+([A-Z]+\s+ON\s+TABLE\s+public\.[a-z_]+)\s+TO\s+inv_precios/g)].map((m) => m[1]!.replace(/\s+/g, " "));
 
-  it("exactamente los permisos de la lista única, todos por columna (ninguno de tabla completa)", () => {
+  it("exactamente los permisos de la lista única, todos por columna salvo el DELETE de precio_intradia", () => {
     expect(filasPermisos(aPrecios)).toEqual(filasPermisos(PERMISOS_PRECIOS));
-    expect(sinColumnas).toEqual([]);
+    expect(sinColumnas).toEqual(["DELETE ON TABLE public.precio_intradia"]);
   });
 
   it("todo GRANT a inv_precios tiene la forma de la lista (nada se escapa del análisis)", () => {
@@ -194,11 +200,13 @@ describe("privilegios de inv_precios", () => {
     expect(sql).not.toMatch(/EXECUTE\s+format\s*\(\s*'GRANT[^']*inv_precios/);
   });
 
-  it("solo esas 8 tablas; INSERT y UPDATE solo en precio_cierre y valor_unidad_fondo; UPDATE solo de \"reemplazadoEn\"", () => {
+  it("solo esas 11 tablas; INSERT y UPDATE solo en precio_cierre, valor_unidad_fondo y (INSERT) precio_intradia; DELETE solo en precio_intradia; UPDATE solo de \"reemplazadoEn\"", () => {
     expect([...new Set(PERMISOS_PRECIOS.map((p) => p.tabla))].sort()).toEqual(
-      ["calendario_bvc", "certificacion", "certificacion_posicion", "instrumento", "lote", "precio_cierre", "simbolo_precio", "valor_unidad_fondo"],
+      ["calendario_bvc", "certificacion", "certificacion_posicion", "instrumento", "lote", "plan_version", "precio_cierre", "precio_intradia", "regla_plan", "simbolo_precio", "valor_unidad_fondo"],
     );
-    for (const p of PERMISOS_PRECIOS.filter((x) => x.privilegio !== "SELECT")) expect(["precio_cierre", "valor_unidad_fondo"], p.tabla).toContain(p.tabla);
+    for (const p of PERMISOS_PRECIOS.filter((x) => x.privilegio !== "SELECT")) expect(["precio_cierre", "valor_unidad_fondo", "precio_intradia"], p.tabla).toContain(p.tabla);
+    expect(PERMISOS_PRECIOS.filter((x) => x.privilegio === "DELETE").map((p) => p.tabla)).toEqual(["precio_intradia"]);
+    expect(PERMISOS_PRECIOS.filter((x) => x.privilegio === "UPDATE").map((p) => p.tabla).sort()).toEqual(["precio_cierre", "valor_unidad_fondo"]);
     for (const p of PERMISOS_PRECIOS.filter((x) => x.privilegio === "UPDATE")) expect(p.columnas).toEqual(["reemplazadoEn"]);
   });
 
@@ -215,6 +223,7 @@ describe("privilegios de inv_precios", () => {
   it("cada columna existe en su modelo; el SELECT de precio_cierre es la tabla entera (create() hace RETURNING de todas)", () => {
     for (const p of PERMISOS_PRECIOS) for (const c of p.columnas) expect(columnas(p.tabla), `${p.tabla}.${c}`).toContain(c);
     expect([...PRECIO_CIERRE_COLUMNAS].sort()).toEqual(columnas("precio_cierre").sort());
+    expect([...PRECIO_INTRADIA_COLUMNAS].sort()).toEqual(columnas("precio_intradia").sort());
   });
 
   it("si el rol no existe se omite con un aviso: nunca RAISE EXCEPTION por inv_precios", () => {
@@ -300,6 +309,40 @@ describe("privilegios de la tarifa de comisión (tarifa_comision)", () => {
 
   it("su migración la hace de solo inserción", () => {
     expect(migracionesTexto()).toMatch(/CREATE TRIGGER "tarifa_comision_solo_insercion" BEFORE UPDATE OR DELETE ON "tarifa_comision"/);
+  });
+});
+
+// Precios cada minuto: precio_intradia. El servicio (inv_precios) inserta, lee y depura; la app y la IA solo leen; nadie edita.
+describe("privilegios de precio_intradia", () => {
+  const grantsA = (rol: string) =>
+    [...sql.matchAll(new RegExp(`GRANT\\s+([A-Z]+)\\s*(?:\\(([^)]*)\\))?\\s+ON\\s+TABLE\\s+public\\.precio_intradia\\s+TO\\s+${rol}\\s*;`, "g"))].map((m) => `${m[1]} ${m[2] ?? ""}`.trim());
+
+  it("inv_precios: SELECT de todas las columnas, INSERT de todas menos traidoEn (la pone la base) y DELETE de tabla; nunca UPDATE", () => {
+    const todas = PRECIO_INTRADIA_COLUMNAS.map((c) => (/[A-Z]/.test(c) ? `"${c}"` : c));
+    expect(grantsA("inv_precios").sort()).toEqual(
+      [`SELECT ${todas.join(", ")}`, `INSERT ${todas.filter((c) => c !== '"traidoEn"').join(", ")}`, "DELETE"].sort(),
+    );
+  });
+
+  it("inv_app no la nombra en ningún GRANT: solo lee, por el SELECT general; sin INSERT, UPDATE ni DELETE", () => {
+    expect(sql).not.toMatch(/GRANT[^;]*\bpublic\.precio_intradia\b[^;]*\bTO\s+inv_app\b/);
+  });
+
+  it("inv_ia: solo SELECT, por columna", () => {
+    expect(grantsA("inv_ia").map((g) => g.split(" ")[0])).toEqual(["SELECT"]);
+  });
+
+  it("su migración la protege: UPDATE nunca y DELETE solo de lo viejo (disparador precio_intradia_retiro)", () => {
+    const migraciones = migracionesTexto();
+    expect(migraciones).toMatch(/CREATE TRIGGER "precio_intradia_retiro" BEFORE UPDATE OR DELETE ON "precio_intradia"/);
+    expect(migraciones).toMatch(/CREATE TRIGGER "precio_intradia_insercion" BEFORE INSERT ON "precio_intradia"/);
+  });
+
+  it("la única salida del disparador de retiro es el dueño con inv.reversion = 'on' (la marca sola no basta)", () => {
+    const m = migracionesTexto();
+    const cuerpo = /CREATE FUNCTION "inv_precio_intradia_retiro"\(\)[\s\S]*?\$\$;/.exec(m)?.[0] ?? "";
+    expect(cuerpo).toMatch(/current_setting\('inv\.reversion', true\) = 'on'\s+AND pg_has_role\(/);
+    expect(cuerpo).toMatch(/pg_has_role\(\(SELECT c\.relowner FROM pg_catalog\.pg_class c WHERE c\.oid = TG_RELID\), 'USAGE'\)/);
   });
 });
 

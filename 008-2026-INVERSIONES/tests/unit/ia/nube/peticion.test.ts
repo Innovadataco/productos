@@ -7,7 +7,7 @@
  * antes de mandar nada a internet, y cierra en fallo sin lanzar.
  */
 import { describe, expect, it } from "vitest";
-import { TIPOS_RESUMEN } from "@/ia/contrato";
+import { TIPOS_DIARIOS } from "@/ia/contrato";
 import type { PedidoGeneracion } from "@/ia/generador";
 import { jsonCanonico } from "@/ia/hash";
 import { ESFUERZO_NUBE, MAX_TOKENS_NUBE, MODELO_NUBE, armarCuerpoNube, vistaParaNube, type CuerpoArmado } from "@/ia/nube/peticion";
@@ -77,7 +77,7 @@ describe("armarCuerpoNube · la forma exacta del cuerpo", () => {
     expect(pedido.esquemaSalida).toEqual(ESQUEMA_FICTICIO);
   });
 
-  it.each(TIPOS_RESUMEN)("%s: el contenido es la vista ciega, sin dígitos fuera de los ids ni datos del paquete", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: el contenido es la vista ciega, sin dígitos fuera de los ids ni datos del paquete", (tipo) => {
     const { paquete, pedido } = pedidoFicticio(tipo);
     const { cuerpo } = armado(pedido);
     const contenido = (cuerpo.messages[0] as { readonly content: string }).content;

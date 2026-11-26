@@ -4,16 +4,16 @@
  * de juicio (detector `prohibidasEn` de /operar), con control positivo.
  */
 import { describe, expect, it } from "vitest";
-import { TIPOS_RESUMEN } from "@/ia/contrato";
+import { TIPOS_DIARIOS } from "@/ia/contrato";
 import { PROMPTS, VERSIONES_PROMPT } from "@/ia/prompts/prompts";
 import { prohibidasEn } from "../../operar/informe/lenguaje";
 
 describe("prompts v3 · especie resuelta", () => {
-  it.each(TIPOS_RESUMEN)("%s: versión v3", (tipo) => {
+  it.each(["REGLAS", "ESCENARIOS"] as const)("%s: versión v3 (el DIARIO pasó a v4: prompts-v4.test.ts)", (tipo) => {
     expect(VERSIONES_PROMPT[tipo]).toMatch(/-v3$/);
   });
 
-  it.each(TIPOS_RESUMEN)("%s: describe el campo especie y manda citar ese id para el nombre", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: describe el campo especie y manda citar ese id para el nombre", (tipo) => {
     const texto = PROMPTS[tipo].texto;
     expect(texto).toContain("(especie, si aplica)");
     expect(texto).toContain("cite el id de su campo especie");
@@ -21,15 +21,10 @@ describe("prompts v3 · especie resuelta", () => {
     expect(texto).toContain("Las dos referencias son distintas");
   });
 
-  it("DIARIO: nombra como obligatorios solo los cuatro esenciales", () => {
-    const texto = PROMPTS.DIARIO.texto;
-    expect(texto).toContain("Son obligatorios el valor de las acciones, la variación del día, la ganancia total y la conciliación que no cuadra");
-    expect(texto).not.toContain("Casi siempre son obligatorios el valor de las acciones");
-  });
 });
 
 describe("prompts · sin lenguaje de consejo ni de juicio", () => {
-  it.each(TIPOS_RESUMEN)("%s: el detector no encuentra nada", (tipo) => {
+  it.each(TIPOS_DIARIOS)("%s: el detector no encuentra nada", (tipo) => {
     expect(prohibidasEn(PROMPTS[tipo].texto)).toEqual([]);
   });
 

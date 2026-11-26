@@ -10,13 +10,13 @@ const BOGOTA = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
 });
 
-/** «22-nov-2026 a las 18:04», el instante en hora de Colombia, según Intl. */
-export function enBogota(d: Date): string {
+/** El instante en hora de Colombia, según Intl: el día «AAAA-MM-DD» y la hora «HH:MM». */
+export function enBogota(d: Date): { readonly dia: string; readonly hhmm: string } {
   const p = Object.fromEntries(BOGOTA.formatToParts(d).map((x) => [x.type, x.value]));
-  return `${fecha(`${p.year}-${p.month}-${p.day}`)} a las ${p.hour}:${p.minute}`;
+  return { dia: `${p.year}-${p.month}-${p.day}`, hhmm: `${p.hour}:${p.minute}` };
 }
 
-export interface Origen { readonly traido: string; readonly fuente: string }
+export interface Origen { readonly traido: { readonly dia: string; readonly hhmm: string }; readonly fuente: string }
 
 const dia = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -40,5 +40,19 @@ export async function origenDeLaSerie(serie: string): Promise<Origen> {
   return { traido: enBogota(v.traidoEn), fuente: v.fuente };
 }
 
-/** «traído el … (hora de Colombia) · <fuente>», como lo pinta la app para una fuente que no tiene nombre propio. */
-export const traido = (o: Origen): string => `traído el ${o.traido} (hora de Colombia) · ${o.fuente}`;
+/**
+ * «<fuente> · traído 18:04» si se trajo el mismo día del dato; si no, «<fuente> · traído 26-nov 09:10» (con el año si
+ * cambia respecto del día del dato). Como lo pinta la app para una fuente que no tiene nombre propio (y, como todo
+ * cierre, sin retraso: el retraso solo va en un precio de la rueda).
+ */
+export function traido(o: Origen, diaDelDato: string): string {
+  const mismoDia = o.traido.dia === diaDelDato;
+  const conAnio = o.traido.dia.slice(0, 4) !== diaDelDato.slice(0, 4);
+  const cuando = mismoDia ? o.traido.hhmm : `${conAnio ? fecha(o.traido.dia) : fecha(o.traido.dia).replace(/-\d{4}$/, "")} ${o.traido.hhmm}`;
+  return `${o.fuente} · traído ${cuando}`;
+}
+
+/** El día del dato como lo dice la línea: «22-nov», o «22-nov-2024» si se trajo en otro año. */
+export function diaDeLaLinea(diaDelDato: string, o: Origen): string {
+  return o.traido.dia.slice(0, 4) === diaDelDato.slice(0, 4) ? fecha(diaDelDato).replace(/-\d{4}$/, "") : fecha(diaDelDato);
+}

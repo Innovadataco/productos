@@ -14,7 +14,7 @@ const GRUPOS: readonly { readonly clave: ClaveGrupo; readonly id: string; readon
 ];
 
 function Regla({ regla, preciosAtrasados }: { readonly regla: ReglaOperarVista; readonly preciosAtrasados: boolean }) {
-  const estado = textoEstadoRegla(regla.estado, preciosAtrasados, regla.plazoVencido);
+  const estado = textoEstadoRegla(regla.estado, preciosAtrasados, regla.plazoVencido, regla);
   return (
     <li className="op-regla">
       <p className="op-frase">{fraseRegla(regla)}</p>

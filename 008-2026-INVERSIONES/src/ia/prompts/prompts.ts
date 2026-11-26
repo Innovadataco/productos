@@ -7,12 +7,13 @@ import { TIPOS_RESUMEN, type TipoResumen } from "../contrato";
 import { esDe } from "../formas";
 import type { PromptConHash } from "../generador";
 import { sha256Hex } from "../hash";
-import { TEXTO_PROMPT_DIARIO, TEXTO_PROMPT_ESCENARIOS, TEXTO_PROMPT_REGLAS } from "./textos";
+import { TEXTO_PROMPT_DIARIO, TEXTO_PROMPT_ESCENARIOS, TEXTO_PROMPT_REGLAS, TEXTO_PROMPT_SIMULACION } from "./textos";
 
 export const VERSIONES_PROMPT = Object.freeze({
-  DIARIO: "resumen-diario-v3",
+  DIARIO: "resumen-diario-v4",
   REGLAS: "resumen-reglas-v3",
   ESCENARIOS: "resumen-escenarios-v3",
+  SIMULACION: "resumen-simulacion-v1",
 } as const satisfies Record<TipoResumen, string>);
 
 const conHash = (texto: string, version: string): PromptConHash => Object.freeze({ texto, version, hash: sha256Hex(texto) });
@@ -21,6 +22,7 @@ export const PROMPTS: Readonly<Record<TipoResumen, PromptConHash>> = Object.free
   DIARIO: conHash(TEXTO_PROMPT_DIARIO, VERSIONES_PROMPT.DIARIO),
   REGLAS: conHash(TEXTO_PROMPT_REGLAS, VERSIONES_PROMPT.REGLAS),
   ESCENARIOS: conHash(TEXTO_PROMPT_ESCENARIOS, VERSIONES_PROMPT.ESCENARIOS),
+  SIMULACION: conHash(TEXTO_PROMPT_SIMULACION, VERSIONES_PROMPT.SIMULACION),
 });
 
 /** El prompt del tipo; un tipo que no existe lanza RangeError (cierra en fallo, sin repetir lo recibido). */

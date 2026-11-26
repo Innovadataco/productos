@@ -23,12 +23,24 @@ function privado(): string {
 }
 
 describe("ia-evaluar · como proceso, sin red", { timeout: 10 * POR_CLI_MS }, () => {
+  it("la línea de conteos por tipo es EXACTA: solo los tres de hoy, sin SIMULACION", () => {
+    const salida = correr(SCRIPT, ["casos", "--casos", "DIARIO-16,DIARIO-17"], entornoMinimo({}));
+    expect(salida.codigo, salida.texto).toBe(0);
+    expect(salida.texto.split("\n")).toContain("✅ 2 casos (INVENTADOS): DIARIO 2 · REGLAS 0 · ESCENARIOS 0");
+    expect(salida.texto).not.toContain("SIMULACION");
+  });
+
   it("sin argumentos: 2 con el uso", () => {
     comprobar(correr(SCRIPT, [], entornoMinimo({})), 2, "Uso: npm run ia:evaluar", []);
   });
 
-  it("casos: 0 y los conteos de los 40 casos inventados, sin red ni variable", () => {
-    comprobar(correr(SCRIPT, ["casos"], entornoMinimo({})), 0, "DIARIO 15", ["FICTICIA"]);
+  it("casos: 0 y los conteos de los 42 casos inventados, sin red ni variable", () => {
+    comprobar(correr(SCRIPT, ["casos"], entornoMinimo({})), 0, "DIARIO 17", ["FICTICIA"]);
+  });
+
+  it("casos --casos: 0 y los conteos de los elegidos; un id desconocido: 2 CASO_DESCONOCIDO, sin repetirlo", () => {
+    comprobar(correr(SCRIPT, ["casos", "--casos", "DIARIO-16,DIARIO-17"], entornoMinimo({})), 0, "2 casos (INVENTADOS): DIARIO 2 · REGLAS 0 · ESCENARIOS 0", ["FICTICIA"]);
+    comprobar(correr(SCRIPT, ["casos", "--casos", "DIARIO-98"], entornoMinimo({})), 2, "CASO_DESCONOCIDO", ["DIARIO-98"]);
   });
 
   it("casos con el archivo exportado (.ficticio.json, copiado 0600): 0, tres casos revalidados con su hash, sin nombres ni cifras", () => {

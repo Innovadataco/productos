@@ -4,8 +4,10 @@
  * textos del simulador (comisión, reglas, avisos y errores). Puro.
  */
 import { Prisma } from "@prisma/client";
-import { cantidadEs, nivelEs } from "@/plan/edicion/formato";
-import { textoAfectacion, textoAviso, textoComision, textoError, textoPesosRedondos, textoRegla, NOTA_CAJA_SIN_COMISION, NOTA_VALORACION } from "@/operar/simulador/textos";
+import { cantidadEs } from "@/plan/edicion/formato";
+import { DECIMALES_PESO } from "@/operar/analisis/decimales";
+import { porcentajeEs } from "@/operar/analisis/texto";
+import { textoAfectacion, textoAviso, textoPesos, textoComision, textoError, textoPesosRedondos, textoRegla, NOTA_CAJA_SIN_COMISION, NOTA_VALORACION } from "@/operar/simulador/textos";
 import type { ComisionEstimada, PosicionSimulada, ResultadoSimulacion, Tenencia } from "@/operar/simulador/tipos";
 import type { VistaAnalisisSimulacion } from "@/operar/analisis/vista";
 import { fecha } from "../tablero/formato";
@@ -13,24 +15,45 @@ import type { EspecieSimulable, FuenteComision, RespuestaSimulacion } from "./ti
 
 export const SIN_CIERRE = "sin cierre";
 export const SIN_PESO = "—";
-export const CAJA_ESCRITA = "Caja: saldo disponible en el comisionista, escrito por usted (no se guarda).";
-export const CAJA_SIN_CERTIFICACION = "Sin certificación de Acciones & Valores: la caja de antes es 0.";
-export const textoCajaCertificada = (dia: string): string => `Caja certificada por Acciones & Valores al ${fecha(dia)}.`;
+export const CAJA_ESCRITA = "Caja de la simulación: el saldo que usted escribió, no la de Acciones & Valores (no se guarda).";
+export const CAJA_SIN_CERTIFICACION = "Sin certificación de Acciones & Valores: la caja de antes es 0. Escriba su saldo en Trii en «Su saldo disponible en el comisionista» para simular con él.";
+export const AVISO_CAJA_AV_NEGATIVA = "La caja certificada por Acciones & Valores es negativa y no es su saldo en Trii: escríbalo en «Su saldo disponible en el comisionista» para simular con él.";
+export const NOTA_VALORACION_CON_PRECIO = "Es el precio de la especie operada; las demás se valoran a su último cierre y la caja se mueve al precio límite de la orden.";
+export const NOTA_ESCENARIOS_CON_PRECIO = "Los escenarios a 12 meses parten de la historia de cierres; el precio escrito solo cuenta en el valor de partida si la especie no tiene historia de cierres.";
+/** «Valorado con el precio escrito: $ 2.345,5 (trii Pro), no con el cierre del 12-mar-2027.» */
+export function textoPrecioEscrito(precio: Prisma.Decimal, cierreFecha: Date | null): string {
+  const base = `Valorado con el precio escrito: ${textoPesos(precio)} (trii Pro)`;
+  return cierreFecha === null ? `${base}; la especie no tiene cierre guardado.` : `${base}, no con el cierre del ${fecha(cierreFecha.toISOString().slice(0, 10))}.`;
+}
+export const textoCajaCertificada = (dia: string): string => `Caja certificada por Acciones & Valores al ${fecha(dia)}; no es su saldo en Trii. Escríbalo en «Su saldo disponible en el comisionista» para simular con él.`;
 
 const FUENTES: Readonly<Record<ComisionEstimada["estado"], FuenteComision>> = { TARIFA: "TARIFA", ESTIMADA: "HISTORIA", SIN_HISTORIA: "SIN_HISTORIA" };
 
-/** «12,34 %», «sin cierre» o «—» si el valor de las acciones es 0. */
+/** «12,34 %», «12,30 %» (siempre dos decimales, como todo peso de /operar), «sin cierre» o «—» si el valor de las acciones es 0. */
 export function textoPeso(t: Tenencia): string {
   if (t.valoracion.estado === "SIN_CIERRE") return SIN_CIERRE;
   const p = t.valoracion.pesoPct;
-  return p === null ? SIN_PESO : `${nivelEs(p.toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP).toFixed(2))} %`;
+  return p === null ? SIN_PESO : `${porcentajeEs(p.toDecimalPlaces(DECIMALES_PESO, Prisma.Decimal.ROUND_HALF_UP).toFixed(DECIMALES_PESO))} %`;
 }
 
 export const especiesSimulables = (posiciones: readonly PosicionSimulada[]): EspecieSimulable[] =>
   posiciones.map((p) => ({ id: p.instrumentoId, nemotecnico: p.nemotecnico, cantidad: cantidadEs(p.cantidad) }));
 
+/** El precio actual escrito para la especie operada y el día del último cierre con que se habría valorado (null si no tiene). */
+export interface PrecioEscrito {
+  readonly precio: Prisma.Decimal;
+  readonly cierreFecha: Date | null;
+}
+
 /** La respuesta de la ruta: la vista o los errores del dueño, ya como texto. `cajaAl` es el corte de la caja (null sin certificación; «ESCRITA» si la escribió el dueño). */
-export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: string, posiciones: readonly PosicionSimulada[], cajaAl: Date | null | "ESCRITA", analisis: VistaAnalisisSimulacion | null = null): RespuestaSimulacion {
+export function aRespuestaSimulacion(
+  r: ResultadoSimulacion,
+  instrumentoId: string,
+  posiciones: readonly PosicionSimulada[],
+  cajaAl: Date | null | "ESCRITA",
+  analisis: VistaAnalisisSimulacion | null = null,
+  precioEscrito: PrecioEscrito | null = null,
+): RespuestaSimulacion {
   if (!r.ok) return { ok: false, errores: r.errores.map(textoError) };
   const s = r.simulacion;
   const operada = posiciones.find((p) => p.instrumentoId === instrumentoId)?.nemotecnico ?? "";
@@ -54,8 +77,8 @@ export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: stri
       valorAccionesAntes: textoPesosRedondos(s.valorAccionesAntes),
       valorAccionesDespues: textoPesosRedondos(s.valorAccionesDespues),
       reglas: s.reglasAfectadas.map((a) => ({ texto: textoRegla(a.regla, operada), afectaciones: a.afectaciones.map((x) => textoAfectacion(x, a.regla)) })),
-      avisos: s.avisos.map(textoAviso),
-      notas: [NOTA_VALORACION, ...(conComision ? [] : [NOTA_CAJA_SIN_COMISION])],
+      avisos: [...(cajaAl !== "ESCRITA" && s.cajaAntes.isNeg() && !s.cajaAntes.isZero() ? [AVISO_CAJA_AV_NEGATIVA] : []), ...s.avisos.map(textoAviso)],
+      notas: [...(precioEscrito === null ? [NOTA_VALORACION] : [textoPrecioEscrito(precioEscrito.precio, precioEscrito.cierreFecha), NOTA_VALORACION_CON_PRECIO, NOTA_ESCENARIOS_CON_PRECIO]), ...(conComision ? [] : [NOTA_CAJA_SIN_COMISION])],
       analisis,
     },
   };

@@ -83,7 +83,7 @@ describe("frescura y estado", () => {
   });
 
   it("el pie: informa y no recomienda", () => {
-    expect(PIE_DATOS_OFICIALES).toBe("008 informa; no recomienda comprar ni vender.");
+    expect(PIE_DATOS_OFICIALES).toBe("Inversiones informa; no recomienda comprar ni vender.");
   });
 });
 

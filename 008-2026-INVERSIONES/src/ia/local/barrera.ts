@@ -13,7 +13,7 @@
  * Límite: el texto del prompt y el esquema no se pueden cotejar sin el paquete; los cubre la guarda
  * (`armarPedido` y `generarConPuertas`, DATOS_EN_EL_PEDIDO).
  */
-import { entradaDeCatalogo } from "../catalogo";
+import { entradaDeCatalogo, rangoCiegoValido } from "../catalogo";
 import { CALIDADES, CAMPOS_HECHO_CIEGO, CAMPOS_PAQUETE_CIEGO, CERCANIAS, DIRECCIONES, FRESCURAS, MAX_HECHOS, TIPOS_RESUMEN, esIdHecho, type TipoResumen } from "../contrato";
 import { esDe, esObjetoPlano, soloCampos, sonDatosPuros, type Registro } from "../formas";
 import { revisarPedido, type PedidoGeneracion } from "../generador";
@@ -22,6 +22,7 @@ import { falloLocal, type FalloLocal } from "./errores";
 
 const esId = (valor: unknown): boolean => typeof valor === "string" && esIdHecho(valor);
 
+
 function esHechoCiego(tipo: TipoResumen, hecho: unknown): boolean {
   if (!esObjetoPlano(hecho) || !soloCampos(hecho, CAMPOS_HECHO_CIEGO)) return false;
   const h: Registro = hecho;
@@ -29,7 +30,7 @@ function esHechoCiego(tipo: TipoResumen, hecho: unknown): boolean {
   return entrada !== null && h.etiqueta === entrada.etiqueta && esId(h.id) && (h.sujeto === undefined || esId(h.sujeto))
     && (!Object.hasOwn(h, "especie") || esId(h.especie))
     && esDe(DIRECCIONES, h.direccion) && esDe(CERCANIAS, h.cercania) && esDe(FRESCURAS, h.frescura) && esDe(CALIDADES, h.calidad)
-    && typeof h.obligatorio === "boolean";
+    && typeof h.obligatorio === "boolean" && rangoCiegoValido(tipo, String(h.clave), entrada, h.rango, h.importancia);
 }
 
 function esVistaCiega(vista: unknown): boolean {

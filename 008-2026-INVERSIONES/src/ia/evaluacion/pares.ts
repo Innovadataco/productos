@@ -123,7 +123,7 @@ export function armarPares(o: OpcionesPares): ResultadoPares {
   return Object.freeze({ pares: Object.freeze(pares), sinPar: Object.freeze(sinPar) });
 }
 
-const NOMBRE_DEL_TIPO: Readonly<Record<TipoResumen, string>> = Object.freeze({ DIARIO: "resumen del día", REGLAS: "resumen del plan", ESCENARIOS: "resumen de los escenarios" });
+const NOMBRE_DEL_TIPO: Readonly<Record<TipoResumen, string>> = Object.freeze({ DIARIO: "resumen del día", REGLAS: "resumen del plan", ESCENARIOS: "resumen de los escenarios", SIMULACION: "resumen de la simulación" });
 
 /** El archivo para calificar: los textos A y B de cada par y el formato de 1 a 5, sin ninguna fuente. */
 export function paresEnMarkdown(pares: readonly Par[]): string {
