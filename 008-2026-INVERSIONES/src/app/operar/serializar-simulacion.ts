@@ -14,9 +14,10 @@ import type { EspecieSimulable, FuenteComision, RespuestaSimulacion } from "./ti
 
 export const SIN_CIERRE = "sin cierre";
 export const SIN_PESO = "—";
-export const CAJA_ESCRITA = "Caja: saldo disponible en el comisionista, escrito por usted (no se guarda).";
-export const CAJA_SIN_CERTIFICACION = "Sin certificación de Acciones & Valores: la caja de antes es 0.";
-export const textoCajaCertificada = (dia: string): string => `Caja certificada por Acciones & Valores al ${fecha(dia)}.`;
+export const CAJA_ESCRITA = "Caja de la simulación: el saldo que usted escribió, no la de Acciones & Valores (no se guarda).";
+export const CAJA_SIN_CERTIFICACION = "Sin certificación de Acciones & Valores: la caja de antes es 0. Escriba su saldo en Trii arriba para simular con él.";
+export const AVISO_CAJA_AV_NEGATIVA = "La caja certificada por Acciones & Valores es negativa y no es su saldo en Trii: escríbalo arriba para simular con él.";
+export const textoCajaCertificada = (dia: string): string => `Caja certificada por Acciones & Valores al ${fecha(dia)}; no es su saldo en Trii. Escríbalo arriba para simular con él.`;
 
 const FUENTES: Readonly<Record<ComisionEstimada["estado"], FuenteComision>> = { TARIFA: "TARIFA", ESTIMADA: "HISTORIA", SIN_HISTORIA: "SIN_HISTORIA" };
 
@@ -55,7 +56,7 @@ export function aRespuestaSimulacion(r: ResultadoSimulacion, instrumentoId: stri
       valorAccionesAntes: textoPesosRedondos(s.valorAccionesAntes),
       valorAccionesDespues: textoPesosRedondos(s.valorAccionesDespues),
       reglas: s.reglasAfectadas.map((a) => ({ texto: textoRegla(a.regla, operada), afectaciones: a.afectaciones.map((x) => textoAfectacion(x, a.regla)) })),
-      avisos: s.avisos.map(textoAviso),
+      avisos: [...(cajaAl !== "ESCRITA" && s.cajaAntes.isNeg() && !s.cajaAntes.isZero() ? [AVISO_CAJA_AV_NEGATIVA] : []), ...s.avisos.map(textoAviso)],
       notas: [NOTA_VALORACION, ...(conComision ? [] : [NOTA_CAJA_SIN_COMISION])],
       analisis,
     },

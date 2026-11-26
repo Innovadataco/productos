@@ -67,7 +67,7 @@ describe("POST /api/operar/simular", () => {
     const r = await simular(pedido("/api/operar/simular", cuerpoSim({ saldoComisionista: "4.613,27" })));
     const cuerpo = (await r.json()) as { vista: { cajaAntes: string; cajaFuente: string; analisis: { frases: string[]; filas: { antes: string }[] } | null } };
     expect(cuerpo.vista.cajaAntes).toBe("$ 4.613");
-    expect(cuerpo.vista.cajaFuente).toContain("escrito por usted");
+    expect(cuerpo.vista.cajaFuente).toContain("el saldo que usted escribió");
     expect(cuerpo.vista.analisis?.filas[0]?.antes).toBe("21,13 %");
     expect(cuerpo.vista.analisis?.frases[0]).toMatch(/^Con esta compra, FICTICIA-A pasa de 21,13 % a 23,71 %/);
     expect(analizarSimulacion).toHaveBeenCalledWith({ soy: "la base" }, expect.objectContaining({ instrumentoId: idDe(A), cantidadDespues: 1240n }));

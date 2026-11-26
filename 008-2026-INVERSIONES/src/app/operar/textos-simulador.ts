@@ -13,8 +13,10 @@ export const TEXTOS_SIMULADOR = {
   CANTIDAD: "Cantidad de acciones",
   PRECIO: "Precio límite ($)",
   COMISIONISTA: "Comisionista",
-  SALDO: "Saldo disponible en el comisionista ($, opcional)",
-  AYUDA_SALDO: "Como en la ficha (37.911,47), sin signo $. Si lo escribe, la caja usa ese valor (no se guarda); si no, la certificada por Acciones & Valores.",
+  SALDO: "Su saldo disponible en el comisionista ($, opcional)",
+  AYUDA_SALDO:
+    "Escriba el saldo que ve en Trii, como en la ficha (37.911,47), sin signo $: esa es la caja de la simulación y no se guarda. " +
+    "Si lo deja vacío, la caja es la certificada por Acciones & Valores, que puede no ser su saldo en Trii.",
   ANALISIS: "Análisis del antes y el después",
   PARTIDA: "Valor de partida de los escenarios (pesos)",
   ESCENARIOS: "Escenarios a 12 meses (pesos; acciones, fondo y caja; sin aportes, con los parámetros por omisión de Proyecciones)",
