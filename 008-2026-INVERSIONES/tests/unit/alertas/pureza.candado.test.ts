@@ -22,7 +22,7 @@ const PROHIBIDO: ReadonlyArray<readonly [string, RegExp]> = [
 /** Quita comentarios para no acusar al texto que explica la regla. */
 const sinComentarios = (t: string): string => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
-export function violaciones(codigo: string): string[] {
+export function violaciones(codigo: string, _ruta?: string): string[] {
   const limpio = sinComentarios(codigo);
   return PROHIBIDO.filter(([, re]) => re.test(limpio)).map(([nombre]) => nombre);
 }
@@ -62,6 +62,27 @@ describe("pureza del motor de alertas", () => {
     for (const [nombre, codigo] of Object.entries(malos)) expect(violaciones(codigo), nombre).toContain(nombre);
   });
 
+  // Evasiones conocidas: cada una debe morder, aunque no esté en la lista de las familias simples.
+  const EVASIONES: ReadonlyArray<readonly [string, string]> = [
+    ["import() dinámico", 'const m = await import("node:fs");'],
+    ["require()", 'const fs = require("fs");'],
+    ["node:fs/promises", 'import { readFile } from "node:fs/promises";'],
+    ["node:os", 'import os from "node:os";'],
+    ["node:http2", 'import h from "node:http2";'],
+    ["pg", 'import { Pool } from "pg";'],
+    ["alias @/", 'import { db } from "@/lib/db";'],
+    ["ruta relativa que sale de src/alertas", 'import { db } from "../../lib/db";'],
+    ["new Date sin paréntesis", "const a = new Date;"],
+    ["Date() como función", "const a = Date();"],
+    ["// dentro de un string no esconde lo que sigue", 'const u = "http://x"; const n = Date.now();'],
+    ["globalThis.fetch", "const f = globalThis.fetch;"],
+    ["Date['now']", 'const t = Date["now"]();'],
+    ["process importado", 'import p from "process";'],
+    ["Math['random']", 'const r = Math["random"]();'],
+  ];
+  it.each(EVASIONES)("evasión: %s", (_n, codigo) => {
+    expect(violaciones(codigo, join(RAIZ, "evaluar", "x.ts")).length).toBeGreaterThan(0);
+  });
   it("control negativo: lo permitido pasa y los comentarios no acusan", () => {
     expect(violaciones('import { Prisma } from "@prisma/client";\nimport type { Prisma as P } from "@prisma/client";\nconst d = new Date(x);')).toEqual([]);
     expect(violaciones("// no usa Date.now ni fetch(\n/* Math.random */ const a = 1;")).toEqual([]);
