@@ -2,7 +2,7 @@
    (claro y oscuro). No hereda la letra, el peso ni las mayúsculas de la cifra o del rótulo donde va; se parte en el
    celular. El aviso de fechas distintas va en el color de aviso y también lo dice en palabras. */
 .fecha-dato {
-  display: block; margin-top: 4px; font-family: var(--body); font-size: 12px; font-weight: 400; line-height: 1.45;
+  position: relative; display: block; margin-top: 4px; font-family: var(--body); font-size: 12px; font-weight: 400; line-height: 1.45;
   color: var(--muted); letter-spacing: 0; text-transform: none; white-space: normal; overflow-wrap: anywhere;
   /* Una medida de lectura: en una celda de tabla no ensancha la columna más allá de esto. */
   max-width: 28em;

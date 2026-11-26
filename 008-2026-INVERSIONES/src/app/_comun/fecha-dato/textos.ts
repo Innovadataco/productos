@@ -8,6 +8,7 @@
  * comprar ni vender (tests/unit/fecha-dato/textos.test.ts).
  */
 import { fecha } from "@/app/tablero/formato";
+import { MINIMO_AVISO } from "@/precios/atraso";
 import { fuenteDe, nombreDeFuente, retrasoDe, SIN_FUENTE } from "@/precios/fuentes";
 import { porCodigo } from "./componer";
 import { dateTimeColombia } from "./hora";
@@ -30,8 +31,6 @@ const ANIO_FINAL = /-\d{4}$/;
 const DIA_MAX = 31;
 const HORA_MAX = 23;
 const MINUTO_MAX = 59;
-/** Desde cuántos días hábiles se avisa que el dato es viejo (más de uno). */
-const MINIMO_AVISO = 2;
 
 /** El nombre de la fuente (tabla de src/precios/fuentes.ts); una que no conoce, tal cual (no se inventa un nombre). */
 export const nombreFuente = nombreDeFuente;

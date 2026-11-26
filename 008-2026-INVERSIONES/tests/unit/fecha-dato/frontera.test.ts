@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 
 const DIR = fileURLToPath(new URL("../../../src/app/_comun/fecha-dato/", import.meta.url));
 const IMPORTACION = /^\s*(?:import|export)\s+(?:type\s+)?(?:[^"';]*?\s+from\s+)?["']([^"']+)["']/gm;
-const PERMITIDO = /^(react|\.\/[\w-]+(\.css)?|@\/app\/tablero\/formato|@\/precios\/fuentes)$/;
+const PERMITIDO = /^(react|\.\/[\w-]+(\.css)?|@\/app\/tablero\/formato|@\/precios\/fuentes|@\/precios\/atraso)$/;
 const LOCAL = /\bIntl\b|toLocale\w*|\.get(Hours|Minutes|Seconds|Date|Day|Month|FullYear|TimezoneOffset)\(|\bDate\.now\b/;
 const DATE = /\bnew Date\b|\bDate\.(parse|UTC)\b/;
 const DIRECTIVA = /^\s*["']use (client|server)["']/m;
