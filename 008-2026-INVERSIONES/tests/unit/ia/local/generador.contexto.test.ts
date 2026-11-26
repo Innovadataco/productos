@@ -32,7 +32,7 @@ describe("antes de llamar: el pedido no cabe", () => {
   it("falla con CONTEXTO_LLENO, sin ninguna llamada a la red", async () => {
     const falso = crearOllamaFalso(guionFeliz());
     const local = crearGeneradorLocal(CONFIG_FICTICIA, { fetch: falso.fetch });
-    const r = await local.generar(conPromptDe(40_000), vivo());
+    const r = await local.generar(conPromptDe(30_000), vivo());
     expect(r).toMatchObject({ ok: false, puerta: "local", motivo: "ERROR_PROVEEDOR", detalle: "CONTEXTO_LLENO" });
     expect(falso.llamadas()).toEqual([]);
   });

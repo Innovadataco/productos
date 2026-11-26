@@ -6,6 +6,8 @@
  * `generar`, en orden y cerrando en fallo (nunca rechaza):
  * 1. una señal ya abortada → TIEMPO_AGOTADO, sin red;
  * 2. la barrera → ERROR_PROVEEDOR PEDIDO_INVALIDO o PEDIDO_NO_CIEGO, sin red;
+ * 2b. el presupuesto: si el pedido estimado más la reserva de la salida no cabe en `num_ctx` → ERROR_PROVEEDOR CONTEXTO_LLENO,
+ *    sin red y sin reintento (`presupuesto.ts`);
  * 3. el digest del modelo por verificar → MODELO_NO_DISPONIBLE DIGEST_POR_VERIFICAR, sin red;
  * 4. el plazo: `limiteMs` del pedido desde la llamada (incluye la espera del turno), más la señal del orquestador;
  * 5. el turno: un pedido a la vez por instancia (el servicio crea UNA);
@@ -13,6 +15,7 @@
  * 7. POST /api/generate (`cuerpoGenerar`) y su lectura: el mismo modelo, terminada con «stop» (o sin `done_reason`),
  *    con una salida de hasta MAX_SALIDA_CRUDA de `response` o, si viene vacía, de `thinking`; esta última solo si es
  *    un objeto JSON (el esquema obliga a `response`, no al razonamiento).
+ * Si entrada más salida llegan al `num_ctx`, el mismo fallo CONTEXTO_LLENO (también si Ollama dijo que terminó).
  * La latencia va desde que se toma el turno (tags y generate, sin la espera en la cola). Los tokens, de
  * `prompt_eval_count` y `eval_count`. El digest devuelto es el aprobado, no el que diga el servidor.
  */
@@ -21,7 +24,9 @@ import { barreraLocal } from "./barrera";
 import { consultarModelo, crearContexto, pedirGeneracion, tomarTurno, type ConfigLocal, type ContextoLocal, type DependenciasLocal } from "./contexto";
 import { falloLocal } from "./errores";
 import { cuerpoGenerar, type Generacion } from "./ollama";
+import { jsonCanonico } from "../hash";
 import { abrirPlazo } from "./plazo";
+import { cabeEnElContexto, contextoLleno } from "./presupuesto";
 import type { Liberar } from "./semaforo";
 import { sondear, type OpcionesSonda, type ResultadoSondaLocal } from "./sonda";
 
@@ -49,6 +54,7 @@ function esObjetoJson(texto: string): boolean {
 /** La generación leída, como resultado: rechaza lo cortado, lo que termina raro, lo largo y el razonamiento suelto. */
 function resultadoDe(contexto: ContextoLocal, digest: string, generacion: Generacion, latenciaMs: number): ResultadoGeneracion {
   const { salida, origen, tokensEntrada, tokensSalida, finalizacion } = generacion;
+  if (contextoLleno(tokensEntrada, tokensSalida)) return falloLocal("ERROR_PROVEEDOR", "CONTEXTO_LLENO");
   if (finalizacion === "POR_LARGO") return falloLocal("ERROR_PROVEEDOR", "SALIDA_CORTADA");
   if (finalizacion === "OTRA") return falloLocal("ERROR_PROVEEDOR", "FINALIZACION_INESPERADA");
   if (salida.length > MAX_SALIDA_CRUDA) return falloLocal("ERROR_PROVEEDOR", "SALIDA_DEMASIADO_LARGA");
@@ -61,6 +67,9 @@ async function generarLocal(contexto: ContextoLocal, pedido: PedidoGeneracion, s
   if (senal.aborted) return falloLocal("TIEMPO_AGOTADO", "SENAL_ABORTADA");
   const barrera = barreraLocal(pedido);
   if (!barrera.ok) return barrera;
+  // Lo que va al contexto del modelo: el prompt (system) y la vista (prompt), como los arma `cuerpoGenerar`.
+  const caracteres = barrera.pedido.prompt.texto.length + jsonCanonico(barrera.pedido.vista).length;
+  if (!cabeEnElContexto(caracteres)) return falloLocal("ERROR_PROVEEDOR", "CONTEXTO_LLENO");
   const { digest } = contexto;
   if (digest === null) return falloLocal("MODELO_NO_DISPONIBLE", "DIGEST_POR_VERIFICAR");
   const plazo = abrirPlazo(senal, barrera.pedido.limiteMs);

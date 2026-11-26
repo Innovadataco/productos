@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 import { crearGeneradorLocal } from "@/ia/local/generador";
 import { KEEP_ALIVE_LOCAL } from "@/ia/local/ollama";
 import { salidaDePlantilla } from "@/ia/validador/plantilla";
-import { casosInventados, limitarCasos } from "@/ia/evaluacion/casos";
+import { casosInventados, elegirCasos } from "@/ia/evaluacion/casos";
 import { evaluarModelo } from "@/ia/evaluacion/evaluar";
 import { vigilarRed } from "@/ia/evaluacion/red";
 import type { RegistroCorrida } from "@/ia/evaluacion/tipos";
@@ -24,7 +24,8 @@ vi.mock("@/ia/local/modelos", async (original) => {
 
 vigilarFalsos();
 
-const casos = limitarCasos(casosInventados(), 2);
+// Dos casos que caben en el contexto (el control de presupuesto de la puerta rechaza los que no: ver generador.contexto.test.ts).
+const casos = elegirCasos(casosInventados(), ["DIARIO-02", "REGLAS-02"]) ?? [];
 
 describe("la cadena del arnés con el cliente real de la puerta local", () => {
   it("sonda + (tags, generate) por corrida, solo las dos rutas, y todo publicado", async () => {
