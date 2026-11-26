@@ -1,7 +1,7 @@
 import "server-only";
 /**
  * El PUBLICADO más reciente de un tipo (de cualquier día: la tarjeta muestra el último análisis válido con su fecha) y el
- * último RECHAZADO por el validador, de SOLO LECTURA, para la pantalla (inv_app hace SELECT).
+ * último RECHAZADO por el validador y el último FALLIDO, de SOLO LECTURA, para la pantalla (inv_app hace SELECT).
  * Es la misma lectura que `ultimoPublicado` de src/ia/registro/registro.ts (E3), aquí aparte porque ese módulo también
  * escribe (`registrarResumen`) y una pantalla de lectura no debe alcanzar un módulo que escribe (candado
  * tests/unit/auth/escrituras.candado.test.ts: la familia entra en solo lectura). Mismo `where`, mismo orden y la misma
@@ -70,4 +70,21 @@ export async function ultimoRechazadoDe(db: Pick<PrismaClient, "resumenIa">, tip
     select: { fechaNegocio: true, motivos: true, generadoEn: true },
   });
   return fila === null ? null : Object.freeze({ fechaNegocio: diaDeFecha(fila.fechaNegocio), motivos: Object.freeze([...fila.motivos]), generadoEn: fila.generadoEn });
+}
+
+/** Lo que la tarjeta necesita de un intento FALLIDO (no hubo salida del modelo): cuándo fue; el motivo no se muestra. */
+export interface ResumenFallido {
+  readonly fechaNegocio: string;
+  readonly generadoEn: Date;
+}
+
+/** El FALLIDO más reciente de un tipo (solo lectura: inv_app hace SELECT de toda resumen_ia, sin GRANT nuevo). */
+export async function ultimoFallidoDe(db: Pick<PrismaClient, "resumenIa">, tipo: TipoResumen): Promise<ResumenFallido | null> {
+  if (!esDe(TIPOS_RESUMEN, tipo)) throw new ErrorRegistro("CLAVE_INVALIDA");
+  const fila = await db.resumenIa.findFirst({
+    where: { estado: "FALLIDO", tipo },
+    orderBy: [{ generadoEn: "desc" }, { id: "desc" }],
+    select: { fechaNegocio: true, generadoEn: true },
+  });
+  return fila === null ? null : Object.freeze({ fechaNegocio: diaDeFecha(fila.fechaNegocio), generadoEn: fila.generadoEn });
 }

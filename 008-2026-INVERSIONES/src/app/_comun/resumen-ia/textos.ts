@@ -45,6 +45,12 @@ export const TEXTOS_RESUMEN_IA = Object.freeze({
     FORMATO: "tenía un formato que no se puede mostrar",
     RENDER_CIFRA: "una cifra no se pudo escribir como corresponde",
   } satisfies Record<CodigoValidador, string>),
+  /** Cuando el último intento de análisis falló (no hubo salida del modelo); `{cuando}` lleva la fecha y la hora. */
+  fallo: Object.freeze({
+    conAnterior: "El último intento de análisis ({cuando}) falló; se muestra el anterior.",
+    conSinIa: "El último intento de análisis ({cuando}) falló; se muestra el resumen sin IA.",
+    sinResumen: "El último intento de análisis ({cuando}) falló.",
+  }),
   rechazoGeneral: "no cumplió las reglas de redacción",
   /** El botón «Analizar con IA» y lo que dice según cómo vaya el pedido. */
   boton: Object.freeze({
@@ -57,6 +63,8 @@ export const TEXTOS_RESUMEN_IA = Object.freeze({
     sinServicio: "El servicio de análisis no responde. Inténtelo más tarde.",
     demasiado: "Aguarde unos segundos antes de volver a pedirlo.",
     error: "No se pudo pedir el análisis. Inténtelo de nuevo.",
+    analisisError: "El análisis no se pudo completar. Inténtelo de nuevo.",
+    analisisDescartado: "El análisis en espera no se hizo: la IA se apagó mientras esperaba.",
     sinEstado: "No se pudo consultar el estado del análisis; intente de nuevo",
   }),
   notaSinDatos: "Hoy no hay resumen: faltan datos para armarlo.",

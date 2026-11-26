@@ -28,7 +28,7 @@ import { diaIso, fechaEnBogota } from "@/precios/horario";
 import { conTurno } from "../../proyecciones/turno";
 import { esErrorDeBase } from "../sin-base";
 import { elegirResumen, noDisponible, type PaqueteDeHoy } from "./elegir";
-import { ultimoPublicadoDe, ultimoRechazadoDe, type ResumenRechazado } from "./publicado";
+import { ultimoFallidoDe, ultimoPublicadoDe, ultimoRechazadoDe, type ResumenFallido, type ResumenRechazado } from "./publicado";
 import type { VistaResumenIa } from "./tipos";
 
 /**
@@ -91,6 +91,17 @@ async function leerRechazado(db: PrismaClient, tipo: TipoResumen): Promise<Resum
   } catch (error) {
     if (esErrorDeBase(error)) throw error;
     console.error(`[resumen-ia] ${tipo}: el último rechazado no se puede leer (${error instanceof ErrorRegistro ? error.codigo : nombreDe(error)})`);
+    return null;
+  }
+}
+
+/** El último intento fallido; un error que no es de la base lo deja sin él (se registra solo el nombre). */
+async function leerFallido(db: PrismaClient, tipo: TipoResumen): Promise<ResumenFallido | null> {
+  try {
+    return await ultimoFallidoDe(db, tipo);
+  } catch (error) {
+    if (esErrorDeBase(error)) throw error;
+    console.error(`[resumen-ia] ${tipo}: el último fallido no se puede leer (${error instanceof ErrorRegistro ? error.codigo : nombreDe(error)})`);
     return null;
   }
 }
@@ -163,9 +174,10 @@ export async function resumenDelDia(db: PrismaClient, tipo: TipoResumen, usuario
     const hoy = fechaEnBogota(ahora);
     const publicado = await leerPublicado(db, tipo);
     const rechazado = await leerRechazado(db, tipo);
+    const fallido = await leerFallido(db, tipo);
     const deHoy = await paqueteDeHoy(db, tipo, usuarioId, hoy, ahora, opciones.paquetes ?? exportarHechos);
     const lectura = await leerConfig(db);
-    const { vista, descarte } = elegirResumen({ tipo, publicado, rechazado, iaApagada: iaApagadaPara(lectura, tipo), hoy: deHoy });
+    const { vista, descarte } = elegirResumen({ tipo, publicado, rechazado, fallido, iaApagada: iaApagadaPara(lectura, tipo), hoy: deHoy });
     if (descarte !== null) console.error(`[resumen-ia] ${tipo}: el publicado no pasó el validador y no se muestra (${descarte.join(",")})`);
     return botonDisponible(lectura, opciones.dueno === true) ? Object.freeze({ ...vista, puedeAnalizar: true }) : vista;
   } catch (error) {

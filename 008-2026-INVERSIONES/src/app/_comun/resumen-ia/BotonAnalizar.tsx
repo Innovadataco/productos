@@ -26,12 +26,27 @@ interface EstadoServicio {
   readonly enCurso: string | null;
   readonly enEspera: string | null;
   readonly reintentarEnS: number;
+  /** El último análisis que terminó (de cualquier tarea) y cómo; ausente en un servicio anterior. */
+  readonly ultimo?: { readonly tarea: string; readonly estado: string } | null;
 }
 
 const esEstado = (v: unknown): v is EstadoServicio => {
   const e = v as Partial<EstadoServicio> | null;
-  return typeof v === "object" && v !== null && typeof e?.reintentarEnS === "number" && (e.enCurso === null || typeof e.enCurso === "string") && (e.enEspera === null || typeof e.enEspera === "string");
+  return typeof v === "object" && v !== null && typeof e?.reintentarEnS === "number" && (e.enCurso === null || typeof e.enCurso === "string") && (e.enEspera === null || typeof e.enEspera === "string") && esUltimo(e.ultimo);
 };
+
+const esUltimo = (v: unknown): boolean => {
+  if (v === undefined || v === null) return true;
+  const u = v as { readonly tarea?: unknown; readonly estado?: unknown };
+  return typeof v === "object" && typeof u.tarea === "string" && typeof u.estado === "string";
+};
+
+/** El texto fijo de un análisis de esta tarea que terminó mal; null si terminó bien (la tarjeta, al refrescar, trae el resultado) o es de otra tarea. */
+function textoDeTerminoMal(ultimo: EstadoServicio["ultimo"], tarea: string): string | null {
+  if (ultimo === undefined || ultimo === null || ultimo.tarea !== tarea) return null;
+  if (ultimo.estado === "ERROR") return T.analisisError;
+  return ultimo.estado === "DESCARTADO" ? T.analisisDescartado : null;
+}
 
 /** La lectura del estado: `{ok:false}` si la red falla, el servicio no responde bien o el cuerpo no cuadra (nunca se confunde con un estado). */
 type Lectura = { readonly ok: true; readonly estado: EstadoServicio } | { readonly ok: false };
@@ -78,10 +93,10 @@ export function BotonAnalizar({ tarea }: { readonly tarea: TipoResumen }) {
     setFase(f);
   }, []);
 
-  const bloquear = useCallback((segundos: number) => {
+  const bloquear = useCallback((segundos: number, antes = "") => {
     if (desbloqueo.current !== null) clearTimeout(desbloqueo.current);
     setBloqueado(true);
-    setMensaje(textoEspera(segundos));
+    setMensaje(antes === "" ? textoEspera(segundos) : `${antes} ${textoEspera(segundos)}`);
     desbloqueo.current = setTimeout(() => {
       setBloqueado(false);
       setMensaje("");
@@ -104,8 +119,10 @@ export function BotonAnalizar({ tarea }: { readonly tarea: TipoResumen }) {
     const terminoElMio = faseRef.current !== "libre";
     poner("libre");
     sondeos.current = 0;
-    if (e.reintentarEnS > 0) bloquear(e.reintentarEnS);
-    else setMensaje("");
+    // Un fallo propio se dice (la espera mínima, a continuación); uno ya viejo al cargar la página no.
+    const malo = terminoElMio ? textoDeTerminoMal(e.ultimo, tarea) : null;
+    if (e.reintentarEnS > 0) bloquear(e.reintentarEnS, malo ?? "");
+    else setMensaje(malo ?? "");
     if (terminoElMio) routerRef.current.refresh();
   }, [tarea, poner, bloquear]);
 
