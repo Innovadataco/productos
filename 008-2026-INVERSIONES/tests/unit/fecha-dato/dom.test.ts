@@ -68,6 +68,14 @@ describe("FechaDato", () => {
     for (const h of [1, 0, null, undefined]) expect(pintar(createElement(FechaDato, { procedencia: { ...P, habilesAtras: h } })).querySelector(".fecha-dato-aviso"), String(h)).toBeNull();
   });
 
+  it("dato viejo aproximado: el aviso con su matiz, también en un valor compuesto", () => {
+    const aprox: Procedencia = { ...P, habilesAtras: 3, aniosSinFestivos: [2027] };
+    const texto3 = "dato de hace unos 3 días hábiles (sin festivos de 2027 en el calendario)";
+    expect(texto(pintar(createElement(FechaDato, { procedencia: aprox })).querySelector(".fecha-dato-aviso"))).toBe(texto3);
+    const c: ProcedenciaCompuesta = { ...MISMO_DIA, masVieja: aprox };
+    expect([...pintar(createElement(FechaDatoCompuesta, { compuesta: c })).querySelectorAll(".fecha-dato-aviso")].map(texto)).toEqual([texto3]);
+  });
+
   it("un precio de la rueda dice el retraso DENTRO de la línea visible; un cierre, ninguno", () => {
     const raiz = pintar(createElement(FechaDato, { procedencia: { ...P, tipo: "RUEDA", horaDato: "11:42", traidoEn: "2027-03-17 11:44" } }));
     expect(linea(raiz)).toBe("Precio del 17-mar a las 11:42 · Yahoo (BVC) · hasta 20 min de retraso");

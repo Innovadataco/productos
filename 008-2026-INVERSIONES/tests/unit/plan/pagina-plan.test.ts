@@ -121,6 +121,14 @@ describe("la versión vigente, con cierres y distancia al nivel", () => {
     expect(aviso("FICTB")).toEqual([]);
   });
 
+  it("si el calendario no cubre el año del cierre, el aviso es aproximado y lo dice (frente fuente-retraso)", async () => {
+    calendarioBvc.mockResolvedValue({ noHabiles: new Set<string>(), aniosCubiertos: new Set([2020]) });
+    const raiz = await pantalla();
+    const aviso = [...(fila(raiz, "FICTC")?.querySelectorAll(".fecha-dato-aviso") ?? [])].map(texto);
+    expect(aviso).toHaveLength(1);
+    expect(aviso[0]).toMatch(/^dato de hace unos \d+ días hábiles \(sin festivos de \d{4}[^)]* en el calendario\)$/);
+  });
+
   it("sin detalle oculto: la fuente y la hora salen una vez, en la línea, y sin tooltip", async () => {
     const raiz = await pantalla();
     expect(raiz.querySelector(".fecha-dato-detalle")).toBeNull();

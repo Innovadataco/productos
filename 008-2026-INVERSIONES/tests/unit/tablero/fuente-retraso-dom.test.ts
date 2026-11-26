@@ -58,9 +58,16 @@ describe("aVista cuenta los días hábiles de atraso de cada cierre", () => {
     expect(aVista(RESUMEN, { ahora: bogota("2027-04-01", "10:00"), calendario: CALENDARIO }).filas[0]?.cierre?.habilesAtras).toBeNull();
   });
 
-  it("un calendario que no cubre el año del tramo: no se inventa el número (null)", () => {
+  it("un calendario que no cubre el año del tramo: cuenta los días de semana (cota superior) y lo marca aproximado", () => {
     const sin = leerCalendario([{ dia: dia("2026-01-01"), esHabil: false }]);
-    expect(aVista(RESUMEN, { ahora: MARTES, calendario: sin }).filas[0]?.cierre?.habilesAtras).toBeNull();
+    const [a, c] = aVista(RESUMEN, { ahora: MARTES, calendario: sin }).filas;
+    expect(a?.cierre?.habilesAtras).toBe(3); // jue 1, vie 2 y lun 5-abr
+    expect(a?.cierre?.aniosSinFestivos).toEqual([2027]);
+    expect(c?.cierre?.habilesAtras).toBe(16); // sin descontar los festivos del 22 y el 29-mar
+  });
+
+  it("con el calendario completo, el cierre no trae años sin festivos", () => {
+    expect(VISTA.filas[0]?.cierre).not.toHaveProperty("aniosSinFestivos");
   });
 });
 
@@ -81,6 +88,16 @@ describe("la pantalla avisa el dato viejo", () => {
     const vista = aVista(RESUMEN, { ahora: bogota("2027-04-01", "18:00"), calendario: CALENDARIO });
     await m.pintar(createElement(Tablero, { vista }));
     expect(avisos(fila("FICTA"))).toEqual([]);
+  });
+});
+
+describe("la pantalla avisa el dato viejo aproximado", () => {
+  it("«unos N días hábiles (sin festivos de 2027 en el calendario)», en la fila y en el valor que suma", async () => {
+    const sin = leerCalendario([{ dia: dia("2026-01-01"), esHabil: false }]);
+    await m.pintar(createElement(Tablero, { vista: aVista(RESUMEN, { ahora: MARTES, calendario: sin }) }));
+    expect(avisos(fila("FICTA"))).toEqual(["dato de hace unos 3 días hábiles (sin festivos de 2027 en el calendario)"]);
+    const kpi = [...m.contenedor.querySelectorAll(".kpi")].find((k) => texto(k.querySelector(".eyebrow")) === "Valor en acciones")!;
+    expect(avisos(kpi).at(-1)).toBe("dato de hace unos 16 días hábiles (sin festivos de 2027 en el calendario)");
   });
 });
 

@@ -120,4 +120,16 @@ describe("src/app/page.tsx", () => {
     obtenerResumen.mockRejectedValueOnce(new Error("fallo de cálculo"));
     await expect(Inicio()).rejects.toThrow("fallo de cálculo");
   });
+
+  it("si falla la lectura del calendario, el tablero se pinta igual con el aviso aproximado (los días de semana, sin festivos)", async () => {
+    // `db` es {} en esta prueba: calendarioBvc lanza. Un cierre de 2024 lleva muchos días hábiles con cualquier reloj.
+    obtenerResumen.mockResolvedValueOnce(resumenDe([
+      especie({ nemotecnico: "FICT1", cantidad: 10n, costoVivo: D(1000), cierre: { precio: D("100"), fecha: dia("2024-11-22"), verificado: false, traidoEn: new Date("2024-11-22T23:00:00Z"), fuente: "yahoo" } }),
+    ]));
+    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const html = renderToStaticMarkup(await Inicio());
+    expect(html).toMatch(/dato de hace unos \d+ días hábiles \(sin festivos de 2024[^)]*en el calendario\)/);
+    expect(registro).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
+  });
 });

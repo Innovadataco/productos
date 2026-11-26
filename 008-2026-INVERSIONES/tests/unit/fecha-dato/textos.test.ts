@@ -125,6 +125,18 @@ describe("el aviso de dato viejo", () => {
     expect(avisoAtraso(p({ habilesAtras: 2 }))).toBe("dato de hace 2 días hábiles");
     for (const n of [1, 0, null, undefined]) expect(avisoAtraso(p({ habilesAtras: n })), String(n)).toBeNull();
   });
+
+  it("aproximado (sin festivos de un año en el calendario): «unos N» y el año, con matiz", () => {
+    expect(avisoAtraso(p({ habilesAtras: 3, aniosSinFestivos: [2027] }))).toBe("dato de hace unos 3 días hábiles (sin festivos de 2027 en el calendario)");
+    expect(avisoAtraso(p({ habilesAtras: 4, aniosSinFestivos: [2027, 2028] }))).toBe("dato de hace unos 4 días hábiles (sin festivos de 2027 y 2028 en el calendario)");
+    expect(avisoAtraso(p({ habilesAtras: 9, aniosSinFestivos: [2026, 2027, 2028] }))).toBe("dato de hace unos 9 días hábiles (sin festivos de 2026, 2027 y 2028 en el calendario)");
+  });
+
+  it("aproximado con menos de dos días o sin número: nada; con la lista vacía, el aviso exacto", () => {
+    expect(avisoAtraso(p({ habilesAtras: 1, aniosSinFestivos: [2027] }))).toBeNull();
+    expect(avisoAtraso(p({ habilesAtras: null, aniosSinFestivos: [2027] }))).toBeNull();
+    expect(avisoAtraso(p({ habilesAtras: 3, aniosSinFestivos: [] }))).toBe("dato de hace 3 días hábiles");
+  });
 });
 
 describe("un valor que suma varios datos", () => {
@@ -149,7 +161,7 @@ describe("candado de los textos", () => {
   const todos = [
     textoProcedencia(p(), { etiqueta: "Cierre" }), textoProcedencia(p({ traidoEn: null, fuente: null })), textoProcedencia(p(), { sinFecha: true }),
     textoProcedencia(p({ tipo: "RUEDA", horaDato: "11:42" })), textoCompuesta(compuesta({ fuentes: ["yahoo", "sfc:x", "banrep:x", "dane:x", "manual", null] })),
-    avisoAtraso(p({ habilesAtras: 4 })) ?? "",
+    avisoAtraso(p({ habilesAtras: 4 })) ?? "", avisoAtraso(p({ habilesAtras: 4, aniosSinFestivos: [2027] })) ?? "",
     textoCompuesta(compuesta()), avisoMezcladas(compuesta()) ?? "", textoCompuesta(compuesta({ mezcladas: false })),
     ...["yahoo", "sfc:x", "banrep:x", "dane:x", "manual", null].map(nombreFuente),
   ];
