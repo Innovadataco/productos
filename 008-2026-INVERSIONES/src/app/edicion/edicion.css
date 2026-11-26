@@ -54,3 +54,8 @@
 .edicion .edicion-resumen a { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
 .edicion .edicion-anuncio:empty, .edicion .edicion-aviso-fecha:empty { margin: 0; }
 
+
+/* /edicion · índice de la configuración (frente menu-configuracion): cada enlace con su línea, objetivo táctil de 44 px. */
+.edicion ul.configuracion { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; max-width: 760px; }
+.edicion ul.configuracion a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; }
+.edicion ul.configuracion .nota { margin: 0; }

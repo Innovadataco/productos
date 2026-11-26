@@ -57,7 +57,8 @@ describe("entradas al área de edición", () => {
     expect(enlaces(noActuar)["Enlazar una orden de Trii"]).toBeUndefined();
     expect(DETALLE_VIEJA.decision.reemplazadaPor).not.toBeNull();
     const vieja = pintar(createElement(Cadena, { datos: { estado: "DECISION", vista: aVistaDecision(DETALLE_VIEJA) } }));
-    expect(vieja.querySelector('a[href^="/edicion"]')).toBeNull();
+    // En el contenido: el menú del dueño lleva «Configuración» (/edicion) en todas las pantallas (frente menu-configuracion).
+    expect(vieja.querySelector('main a[href^="/edicion"]')).toBeNull();
     const familia = pintar(createElement(Cadena, { datos: { estado: "DECISION", vista: aVistaDecision(DETALLE_VENTA) }, soloLectura: true }));
     expect(familia.querySelector('a[href^="/edicion"]')).toBeNull();
     expect(formularios(venta)).toBe(0);

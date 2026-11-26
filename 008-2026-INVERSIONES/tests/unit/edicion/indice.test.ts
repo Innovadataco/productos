@@ -39,14 +39,14 @@ describe("/edicion · índice de la configuración", () => {
     const raiz = await pantalla();
     expect(exigirDueno).toHaveBeenCalledTimes(1);
     expect(texto(raiz.querySelector("h1"))).toBe("Configuración");
-    const entradas = [...raiz.querySelectorAll("main ul.configuracion > li")].map((li) => [texto(li.querySelector("a")), li.querySelector("a")?.getAttribute("href"), texto(li.querySelector("p"))]);
-    expect(entradas.map(([t, href]) => [t, href])).toEqual([
+    const entradas = [...raiz.querySelectorAll("main ul.configuracion > li")].map((li) => ({ texto: texto(li.querySelector("a")), href: li.querySelector("a")?.getAttribute("href"), linea: texto(li.querySelector("p")) }));
+    expect(entradas.map((e) => [e.texto, e.href])).toEqual([
       ["Configuración de la IA", "/edicion/ia"],
       ["Tarifas de comisión", "/edicion/tarifas"],
       ["Editar el plan", "/edicion/plan"],
     ]);
-    for (const [t, , linea] of entradas) expect(linea, t).toMatch(/\S.{20,}/);
-    expect(entradas.map(([, , linea]) => linea)).toEqual(TEXTOS_CONFIGURACION.ENTRADAS.map((e) => e.para));
+    for (const e of entradas) expect(e.linea, e.texto).toMatch(/\S.{20,}/);
+    expect(entradas.map((e) => e.linea)).toEqual(TEXTOS_CONFIGURACION.ENTRADAS.map((e) => e.para));
     // Sin formularios: el índice solo enlaza.
     expect(raiz.querySelectorAll("form, button, input, select, textarea")).toHaveLength(0);
     expect(texto(raiz.querySelector("footer"))).toContain(PIE_EDICION);
