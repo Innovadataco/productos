@@ -93,8 +93,8 @@ describe("la regla, con lo que escribió en su plan", () => {
   it("de la especie: acción, cantidad, condición y nivel", () => {
     const r = regla({ instrumentoId: idDe(A), condicion: "CIERRE_SOBRE", nivel: D("4600.130000"), accion: "VENDER", cantidad: 41n });
     expect(textoRegla(r, A)).toBe("Su regla de FICTICIA-A dice: vender 41 si el cierre queda por encima de $ 4.600,13.");
-    expect(textoRegla({ ...r, condicion: "CIERRE_BAJO", nivel: D("4613.000001"), cantidad: 4613n }, A)).toBe(
-      "Su regla de FICTICIA-A dice: vender 4.613 si el cierre queda por debajo de $ 4.613,000001.",
+    expect(textoRegla({ ...r, condicion: "CIERRE_BAJO", nivel: D("4613.126"), cantidad: 4613n }, A)).toBe(
+      "Su regla de FICTICIA-A dice: vender 4.613 si el cierre queda por debajo de $ 4.613,13.",
     );
   });
 

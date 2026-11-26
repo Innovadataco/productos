@@ -23,6 +23,8 @@ export type LadoSimulado = Extract<AccionPlan, "COMPRAR" | "VENDER">;
 
 /** Decimales del precio límite, los cierres, los niveles y la caja: la escala de `orden.precioUnitario`. */
 export const DECIMALES_PRECIO = 6;
+/** Decimales máximos de un monto en pesos al mostrarlo (los centavos): ninguno sale con 3 o más. */
+export const DECIMALES_PESOS_MOSTRADOS = 2;
 /** Decimales de la comisión estimada: la escala de `orden.comision` (redondeo mitad hacia arriba). */
 export const DECIMALES_COMISION = 4;
 /**

@@ -4,7 +4,8 @@
  * textos del simulador (comisión, reglas, avisos y errores). Puro.
  */
 import { Prisma } from "@prisma/client";
-import { cantidadEs, nivelEs } from "@/plan/edicion/formato";
+import { cantidadEs } from "@/plan/edicion/formato";
+import { DECIMALES_PESO, porcentajeEs } from "@/operar/analisis/texto";
 import { textoAfectacion, textoAviso, textoComision, textoError, textoPesosRedondos, textoRegla, NOTA_CAJA_SIN_COMISION, NOTA_VALORACION } from "@/operar/simulador/textos";
 import type { ComisionEstimada, PosicionSimulada, ResultadoSimulacion, Tenencia } from "@/operar/simulador/tipos";
 import type { VistaAnalisisSimulacion } from "@/operar/analisis/vista";
@@ -19,11 +20,11 @@ export const textoCajaCertificada = (dia: string): string => `Caja certificada p
 
 const FUENTES: Readonly<Record<ComisionEstimada["estado"], FuenteComision>> = { TARIFA: "TARIFA", ESTIMADA: "HISTORIA", SIN_HISTORIA: "SIN_HISTORIA" };
 
-/** «12,34 %», «sin cierre» o «—» si el valor de las acciones es 0. */
+/** «12,34 %», «12,30 %» (siempre dos decimales, como todo peso de /operar), «sin cierre» o «—» si el valor de las acciones es 0. */
 export function textoPeso(t: Tenencia): string {
   if (t.valoracion.estado === "SIN_CIERRE") return SIN_CIERRE;
   const p = t.valoracion.pesoPct;
-  return p === null ? SIN_PESO : `${nivelEs(p.toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP).toFixed(2))} %`;
+  return p === null ? SIN_PESO : `${porcentajeEs(p.toDecimalPlaces(DECIMALES_PESO, Prisma.Decimal.ROUND_HALF_UP).toFixed(DECIMALES_PESO))} %`;
 }
 
 export const especiesSimulables = (posiciones: readonly PosicionSimulada[]): EspecieSimulable[] =>

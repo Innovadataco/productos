@@ -14,11 +14,18 @@ export const ROTULO_ANALISIS = "Análisis calculado por Inversiones · la IA lo 
 
 const SIN_DATO = "sin dato";
 const OTRA = "otra especie";
-const DECIMALES_PCT = 2;
+/** Decimales de todo porcentaje de peso o de variación de /operar: dos, con los ceros («12,30 %», nunca «12,3 %»). */
+export const DECIMALES_PESO = 2;
+const DECIMALES_PCT = DECIMALES_PESO;
 const DECIMALES_HHI = 3;
 const LADO: Readonly<Record<LadoSimulado, string>> = { COMPRAR: "compra", VENDER: "venta" };
 
-const decimal = (x: number, decimales: number): string => nivelEs(new Prisma.Decimal(x).toDecimalPlaces(decimales, Prisma.Decimal.ROUND_HALF_UP).toFixed(decimales));
+/** «12.30» → «12,30»: miles con punto y la coma decimal, CONSERVANDO los ceros de la derecha (a diferencia de `nivelEs`). */
+export function porcentajeEs(fijo: string): string {
+  const [entero = "0", fraccion] = fijo.split(".");
+  return fraccion === undefined ? nivelEs(entero) : `${nivelEs(entero)},${fraccion}`;
+}
+const decimal = (x: number, decimales: number): string => porcentajeEs(new Prisma.Decimal(x).toDecimalPlaces(decimales, Prisma.Decimal.ROUND_HALF_UP).toFixed(decimales));
 /** Una fracción como porcentaje con 2 decimales: 0,2113 → «21,13 %». */
 export const pctEs = (x: number | null): string => (x === null ? SIN_DATO : `${decimal(x * 100, DECIMALES_PCT)} %`);
 export const hhiEs = (x: number | null): string => (x === null ? SIN_DATO : decimal(x, DECIMALES_HHI));
@@ -32,7 +39,7 @@ export function variacionEs(antes: number, despues: number): string {
   if (!(antes > 0)) return SIN_DATO;
   const pct = new Prisma.Decimal(despues).sub(antes).div(antes).mul(100).toDecimalPlaces(DECIMALES_PCT, Prisma.Decimal.ROUND_HALF_UP);
   const signo = pct.isZero() ? "" : pct.isNeg() ? MENOS : MAS;
-  return `${signo}${nivelEs(pct.abs().toFixed(DECIMALES_PCT))} %`;
+  return `${signo}${porcentajeEs(pct.abs().toFixed(DECIMALES_PCT))} %`;
 }
 
 const CAJA_ANTES: Readonly<Record<FuenteCaja, string>> = {

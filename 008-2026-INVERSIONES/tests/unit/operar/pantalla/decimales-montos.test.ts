@@ -64,6 +64,16 @@ describe("ningún monto en pesos sale con más de dos decimales", () => {
     }
   });
 
+  it("el nivel de una regla con 6 decimales sale con dos (la regla que la orden toca)", () => {
+    const estado: EstadoSimulado = {
+      posiciones: [posicion(A, 1237n, "4613.274561")],
+      caja: D("6202.9244"),
+      reglas: [{ id: "r", instrumentoId: idDe(A), condicion: "CIERRE_BAJO", nivel: D("4600.130456"), accion: "VENDER", cantidad: 41n, plazoHasta: null, detalle: "texto ficticio del plan" }],
+    };
+    const r = aRespuestaSimulacion(simularOperacion(estado, operacion(A, "COMPRAR", 3n, "4613.27456"), { ...CONTEXTO, ordenes: [] }), idDe(A), estado.posiciones, "ESCRITA");
+    expect(r.ok && r.vista.reglas.map((x) => x.texto)).toEqual(["Su regla de FICTICIA-A dice: vender 41 si el cierre queda por debajo de $ 4.600,13."]);
+  });
+
   it("una simulación con cifras de 4 y 6 decimales (caja de la base, cierres de Yahoo, comisión de la historia) no los muestra", () => {
     const estado: EstadoSimulado = {
       posiciones: [posicion(A, 1237n, "4613.274561"), posicion(B, 379n, "11.7123")],
@@ -77,7 +87,6 @@ describe("ningún monto en pesos sale con más de dos decimales", () => {
       if (!r.ok) continue;
       const texto = JSON.stringify(r.vista);
       expect(texto).not.toMatch(MONTO_CON_DECIMALES);
-      expect(texto).toContain("$ 4.600,13");
     }
   });
 });
