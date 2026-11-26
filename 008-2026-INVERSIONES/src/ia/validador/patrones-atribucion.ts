@@ -148,7 +148,8 @@ const ATRIBUCION: readonly Patron[] = [
   patron("ATRIBUCION.COMPARA", "PLEGADO", ["antes", "ya no", "dej(?:a|an) de", `pas(?:a|an) de (?:${PALABRA}){0,4}a`]),
 ];
 
-export const PATRONES_ATRIBUCION: readonly Patron[] = Object.freeze(ATRIBUCION);
+// CONTROL PLANTADO (corrida en rojo para PI): ATRIBUCION vacía. NO MERGEAR.
+export const PATRONES_ATRIBUCION: readonly Patron[] = Object.freeze([]);
 
 /**
  * Lo que el validador v4 le agrega SOLO a SIMULACION (ALTO-3): «usted» con cualquier verbo (basta que aparezca: el vocabulario
@@ -160,4 +161,4 @@ const SOLO_SIMULACION: readonly Patron[] = [
 ];
 
 /** Los patrones de ATRIBUCION que corre el validador v4 en SIMULACION (y solo en SIMULACION). */
-export const PATRONES_ATRIBUCION_SIMULACION: readonly Patron[] = Object.freeze([...ATRIBUCION, ...SOLO_SIMULACION]);
+export const PATRONES_ATRIBUCION_SIMULACION: readonly Patron[] = Object.freeze([]);

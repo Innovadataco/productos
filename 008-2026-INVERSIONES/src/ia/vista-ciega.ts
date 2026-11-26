@@ -172,7 +172,6 @@ function proyectar<C extends ClaveHecho>(hecho: Hecho<C>, especie: IdHecho | und
     frescura: hecho.frescura,
     calidad: hecho.calidad,
     obligatorio: hecho.obligatorio,
-    ...({ valor: hecho.valor } as unknown as Record<string, never>),
     ...(hecho.rango === undefined ? {} : { rango: hecho.rango }),
     ...(hecho.importancia === undefined ? {} : { importancia: hecho.importancia }),
   };
