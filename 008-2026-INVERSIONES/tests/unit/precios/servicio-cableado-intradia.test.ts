@@ -24,14 +24,23 @@ function proceso(env: Record<string, string>): Proceso & { salida: () => string 
 }
 
 describe("dependenciasReales · intradía", () => {
-  it("sin variables: la configuración por omisión (encendido, 60 s)", () => {
+  it("sin variables: la configuración por omisión (APAGADO, 60 s)", () => {
     const d = dependenciasReales(proceso({}), "x");
-    expect(d.intradia).toMatchObject({ encendido: true, cicloMs: 60_000, avisos: [] });
+    expect(d.intradia).toMatchObject({ encendido: false, cicloMs: 60_000, avisos: [] });
   });
 
   it("lee las variables del entorno del proceso", () => {
-    const d = dependenciasReales(proceso({ INV_INTRADIA_ENCENDIDO: "0", INV_INTRADIA_CICLO_SEG: "90" }), "x");
-    expect(d.intradia).toMatchObject({ encendido: false, cicloMs: 90_000 });
+    const d = dependenciasReales(proceso({ INV_INTRADIA_ENCENDIDO: "1", INV_INTRADIA_CICLO_SEG: "90" }), "x");
+    expect(d.intradia).toMatchObject({ encendido: true, cicloMs: 90_000 });
+  });
+
+  it("al arrancar el bucle sin variables, el log dice «intradía APAGADO»; encendido, no", () => {
+    const apagado = proceso({});
+    crearBucle(dependenciasReales(apagado, "x"));
+    expect(apagado.salida()).toContain("intradía APAGADO");
+    const encendido = proceso({ INV_INTRADIA_ENCENDIDO: "1" });
+    crearBucle(dependenciasReales(encendido, "x"));
+    expect(encendido.salida()).not.toContain("APAGADO");
   });
 
   it("al arrancar el bucle, los avisos de lo inválido van al log SIN repetir el valor", () => {

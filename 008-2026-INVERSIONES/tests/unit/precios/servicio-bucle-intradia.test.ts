@@ -54,7 +54,7 @@ function armar(opciones: { inicio?: string; config?: Partial<ConfigIntradia> | n
       programados.push(p);
       return () => (p.cancelado = true);
     },
-    ...(opciones.config === null ? {} : { intradia: { ...CONFIG_INTRADIA_POR_OMISION, ...opciones.config } }),
+    ...(opciones.config === null ? {} : { intradia: { ...CONFIG_INTRADIA_POR_OMISION, encendido: true, ...opciones.config } }),
   };
   return { deps, mensajes, programados, falso, ir: (texto: string) => (t = cot(texto)), adelantar: (ms: number) => (t += ms) };
 }
@@ -222,7 +222,7 @@ describe("la corrida de las 18:00 sigue igual junto al ciclo intradía", () => {
     expect(encendido.mensajes.join("\n")).toMatch(/intrad[ií]a/i);
     const apagado = armar({ config: { encendido: false } });
     crearBucle(apagado.deps);
-    expect(apagado.mensajes.join("\n")).toMatch(/intrad[ií]a apagado/i);
+    expect(apagado.mensajes.join("\n")).toMatch(/intradía APAGADO/);
   });
 
   it("la corrida de las 18:00 espera a un ciclo intradía en curso antes de lanzar sus tareas (el corredor corre una tarea a la vez)", async () => {

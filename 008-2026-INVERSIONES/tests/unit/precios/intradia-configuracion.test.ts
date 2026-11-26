@@ -4,16 +4,26 @@ import { describe, expect, it } from "vitest";
 import { CONFIG_INTRADIA_POR_OMISION, leerConfigIntradia } from "@/servicio-precios/intradia-configuracion";
 
 describe("leerConfigIntradia", () => {
-  it("sin variables: encendido, un ciclo por minuto, 09:30 a 16:25 COT, 60 días de retención y Yahoo por omisión", () => {
+  it("sin variables: APAGADO, un ciclo por minuto, 09:30 a 16:25 COT, 60 días de retención y Yahoo por omisión", () => {
     const c = leerConfigIntradia({});
     expect(c).toEqual({ ...CONFIG_INTRADIA_POR_OMISION, avisos: [] });
-    expect(c).toMatchObject({ encendido: true, cicloMs: 60_000, desdeMin: 9 * 60 + 30, hastaMin: 16 * 60 + 25, pausaMs: 500, retencionDias: 60 });
+    expect(c).toMatchObject({ encendido: false, cicloMs: 60_000, desdeMin: 9 * 60 + 30, hastaMin: 16 * 60 + 25, pausaMs: 500, retencionDias: 60 });
     expect(c.urlYahoo).toBe("https://query1.finance.yahoo.com");
+  });
+
+  it("apagado por omisión: sin la variable o vacía, el ciclo queda APAGADO y sin aviso", () => {
+    expect(CONFIG_INTRADIA_POR_OMISION.encendido).toBe(false);
+    for (const env of [{}, { INV_INTRADIA_ENCENDIDO: "" }, { INV_INTRADIA_ENCENDIDO: "  " }, { INV_INTRADIA_ENCENDIDO: undefined }]) {
+      const c = leerConfigIntradia(env);
+      expect(c.encendido, JSON.stringify(env)).toBe(false);
+      expect(c.avisos, JSON.stringify(env)).toEqual([]);
+    }
   });
 
   it.each([
     ["1", true],
     ["true", true],
+    [" TRUE ", true],
     ["0", false],
     ["false", false],
     [" 0 ", false],
