@@ -42,7 +42,9 @@ describe("diagnosticar-rechazo-ia como proceso", () => {
     expect(s.codigo, s.texto).toBe(0);
     expect(s.texto).toContain("validador de la fila validador-v2");
     expect(s.texto).toContain(`validador actual ${VERSION_VALIDADOR}`);
-    expect(s.texto).toMatch(/CIFRA_SUELTA · CIFRA_SUELTA\.\S+ · frase 0 · MODELO · «El valor cerró en ####,## hoy\.»/u);
+    // Validador v3: el código escribe el obligatorio que el modelo no citó (frase 0), así que la del modelo es la 1.
+    expect(s.texto).toMatch(/CIFRA_SUELTA · CIFRA_SUELTA\.\S+ · frase 1 · MODELO · «El valor cerró en ####,## hoy\.»/u);
+    expect(s.texto).not.toContain("· CODIGO ·");
     expect(s.texto).not.toContain("4613");
     expect(s.texto).not.toContain(URL_BASE);
     expect(await db.resumenIa.count()).toBe(antes);
