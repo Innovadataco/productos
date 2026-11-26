@@ -10,7 +10,8 @@
  *   reanudación y la pausa de PI.
  * - Una corrida a la vez entre el bucle y un --ahora (corrida.candado): si está tomado, la de ese día se omite.
  * - Ninguna línea del log trae la URL de la base: la credencial ya llega revisada (configuracion.ts).
- * - Segunda ranura (opcional, `deps.intradia`): durante la rueda, un ciclo de precios intradía cada `cicloMs`, con su propio
+ * - Segunda ranura (opcional, `deps.intradia`): durante la rueda, un ciclo de precios intradía cada `cicloMs` (apagado, solo la
+ *   depuración diaria, que no usa la red), con su propio
  *   temporizador (intradia.ts). No cambia la corrida de las 18:00: esta espera a que termine un ciclo en curso y el ciclo
  *   no corre mientras la de las 18:00 está pendiente.
  */
@@ -180,7 +181,7 @@ export interface Senales {
 export function iniciarBucle(deps: Dependencias, senales: Senales): Promise<number> {
   const bucle = crearBucle(deps);
   const cancelarTic = deps.programar(() => void bucle.tic(), TIC_MS);
-  const cancelarIntradia = deps.intradia?.encendido ? deps.programar(() => void bucle.cicloIntradia(), deps.intradia.cicloMs) : null;
+  const cancelarIntradia = deps.intradia ? deps.programar(() => void bucle.cicloIntradia(), deps.intradia.cicloMs) : null;
   const cancelar = (): void => {
     cancelarTic();
     cancelarIntradia?.();

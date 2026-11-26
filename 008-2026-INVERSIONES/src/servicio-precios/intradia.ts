@@ -7,12 +7,16 @@
  * - Un solo ciclo a la vez: si el anterior sigue, el nuevo se omite y se dice. Tampoco corre mientras hay una corrida de las
  *   18:00 en curso o esperando (el corredor corre una tarea a la vez); a su vez la corrida de las 18:00 espera a que termine un
  *   ciclo en curso.
- * - Códigos del hijo: 0 bien · 3 alguna especie falló (aviso) · 4 día no hábil (no se vuelve a intentar ese día) · 7 Yahoo
- *   limitó con 429 o bloqueó (espera exponencial con tope, `esperaTrasFallos`) · cualquier otro (1, TIEMPO,
- *   NO_ARRANCO…) queda en el log y espera igual (exponencial con tope); solo un 0 o un 3 reinicia la espera.
+ * - Códigos del hijo: 0 bien · 3 alguna especie falló (aviso) · 4 día no hábil (no se vuelve a intentar ese día) · 5 tope diario
+ *   de peticiones (tampoco ese día) · 7 bloqueo de Yahoo (429, 403, red: espera exponencial con tope, `esperaTrasFallos`; con
+ *   MAX_LIMITADOS_SEGUIDOS seguidos, el ciclo se detiene hasta el día siguiente) · cualquier otro (1, TIEMPO, NO_ARRANCO…) queda
+ *   en el log y espera igual (exponencial con tope); solo un 0 o un 3 reinicia la espera.
+ * - Con el interruptor apagado no se piden precios, pero la depuración (que no usa la red) corre una vez al día igual.
+ * - Si el servicio se detiene con un ciclo en vuelo (el hijo muere por SIGTERM), eso no es un fallo: se mira antes de interpretar.
+ * - Cada ciclo lleva su número (`--rotacion`) para rotar la especie con que empieza.
  * - El log trae solo códigos y estados del servicio: nunca precios, nemotécnicos ni cantidades. El detalle de cada ciclo lo
  *   imprime el hijo (conteos, códigos y el id interno de la especie fallida).
- * - La huella `intradia` (estado, último ciclo en segundos Unix, código, ciclos, fallos seguidos y hasta cuándo espera) para el
+ * - La huella `intradia` (estado, último ciclo en segundos Unix, código, ciclos, fallos seguidos, bloqueos seguidos y hasta cuándo espera) para el
  *   vigía; clave=valor, como las demás (estado.ts).
  */
 import type { Campos } from "./estado";
@@ -25,6 +29,8 @@ const PLAZO_DEPURAR_MS = 30_000;
 const PLAZO_MAXIMO_CICLO_MS = 50_000;
 const PLAZO_MINIMO_CICLO_MS = 10_000;
 const HOLGURA_CICLO_MS = 5_000;
+/** Tantos códigos 7 seguidos y el ciclo se detiene hasta el día siguiente (el vigía avisa por la huella). */
+export const MAX_LIMITADOS_SEGUIDOS = 4;
 
 /** El plazo del ciclo: 50 s, y siempre menos que el ciclo (con una holgura). */
 export const plazoDelCiclo = (cicloMs: number): number => Math.max(PLAZO_MINIMO_CICLO_MS, Math.min(PLAZO_MAXIMO_CICLO_MS, cicloMs - HOLGURA_CICLO_MS));
@@ -57,8 +63,11 @@ export function crearIntradia(deps: DependenciasIntradia): Intradia {
   let enCurso: Promise<void> | null = null;
   let detenido = false;
   let depuradoEl = "";
-  let diaNoHabil = "";
+  /** El día en que el ciclo ya no se intenta más: día no hábil, tope diario o bloqueos seguidos. */
+  let diaQuieto = "";
+  let diaVisto = "";
   let fallos = 0;
+  let limitados = 0;
   let esperaHasta = 0;
   let ciclos = 0;
 
@@ -69,25 +78,40 @@ export function crearIntradia(deps: DependenciasIntradia): Intradia {
   for (const aviso of config.avisos) deps.registrar(`intradía: ${aviso}`);
 
   const huella = (estado: string, codigo: string, t: number): Promise<void> =>
-    deps.escribirHuella(ARCHIVO_INTRADIA, { estado, ultimo: segundos(t), codigo, ciclos, fallos, espera: segundos(esperaHasta) });
+    deps.escribirHuella(ARCHIVO_INTRADIA, { estado, ultimo: segundos(t), codigo, ciclos, fallos, limitados, espera: segundos(esperaHasta) });
 
   /** Aplica el código del ciclo y devuelve el estado de la huella. */
   function interpretar(codigo: string, t: number, dia: string): string {
+    if (codigo === "7") {
+      fallos += 1;
+      limitados += 1;
+      if (limitados >= MAX_LIMITADOS_SEGUIDOS) {
+        diaQuieto = dia;
+        esperaHasta = 0;
+        deps.registrar(`ciclo intradía con bloqueo (429/403/red): código 7 ${limitados} veces seguidas, se detiene hasta mañana`);
+        return "LIMITADO";
+      }
+      esperaHasta = t + esperaTrasFallos(fallos, config.cicloMs);
+      deps.registrar(`ciclo intradía con bloqueo (429/403/red): código 7, espera hasta las ${textoCot(new Date(esperaHasta))}, máximo ${segundos(MAXIMA_ESPERA_MS)} s`);
+      return "LIMITADO";
+    }
+    limitados = 0; // cualquier otro código corta la racha de bloqueos
     if (codigo === "0") {
       fallos = 0;
       esperaHasta = 0;
       return "ESPERANDO";
     }
-    if (codigo === "7") {
-      fallos += 1;
-      esperaHasta = t + esperaTrasFallos(fallos, config.cicloMs);
-      deps.registrar(`ciclo intradía limitado por Yahoo (429, código 7): espera hasta las ${textoCot(new Date(esperaHasta))}, máximo ${segundos(MAXIMA_ESPERA_MS)} s`);
-      return "LIMITADO";
+    if (codigo === "5") {
+      fallos = 0;
+      esperaHasta = 0;
+      diaQuieto = dia;
+      deps.registrar("ciclo intradía: tope diario de peticiones alcanzado (código 5): no se vuelve a intentar hasta mañana");
+      return "TOPE_DIA";
     }
     if (codigo === "4") {
       fallos = 0;
       esperaHasta = 0;
-      diaNoHabil = dia;
+      diaQuieto = dia;
       deps.registrar("ciclo intradía: hoy no hay rueda en la BVC (código 4): no se vuelve a intentar hasta mañana");
       return "NO_HABIL";
     }
@@ -104,31 +128,43 @@ export function crearIntradia(deps: DependenciasIntradia): Intradia {
     return "FALLO";
   }
 
+  /** La depuración de la retención: una sola vez por día, salga como salga. */
+  async function depurar(dia: string): Promise<void> {
+    if (depuradoEl === dia) return;
+    depuradoEl = dia;
+    const d = await deps.corredor.correr("intradia", ["--depurar"], PLAZO_DEPURAR_MS);
+    if (d.codigo !== "0" && !detenido) deps.registrar(`depuración intradía falló (código ${d.codigo})`);
+  }
+
   async function ejecutar(t: number, dia: string): Promise<void> {
-    if (depuradoEl !== dia) {
-      depuradoEl = dia; // una sola vez por día, salga como salga
-      const d = await deps.corredor.correr("intradia", ["--depurar"], PLAZO_DEPURAR_MS);
-      if (d.codigo !== "0") deps.registrar(`depuración intradía falló (código ${d.codigo})`);
-    }
-    const r = await deps.corredor.correr("intradia", [], plazoDelCiclo(config.cicloMs));
-    if (r.codigo === "DETENIDO") return; // el servicio se apaga: no es un fallo
+    await depurar(dia);
+    const r = await deps.corredor.correr("intradia", ["--rotacion", String(ciclos)], plazoDelCiclo(config.cicloMs));
+    // El servicio se apaga: no es un fallo (el hijo puede salir con DETENIDO o muerto por la SIGTERM, SENAL_SIGTERM).
+    if (detenido || r.codigo === "DETENIDO") return;
     ciclos += 1;
     await huella(interpretar(r.codigo, deps.ahora(), dia), r.codigo, t);
   }
 
   return {
     async ciclo() {
-      if (detenido || !config.encendido || !deps.credencialOk) return;
+      if (detenido || !deps.credencialOk) return;
       const t = deps.ahora();
-      if (!enVentanaIntradia(t, config.desdeMin, config.hastaMin)) return;
       const dia = diaCot(t);
-      if (dia === diaNoHabil || t < esperaHasta) return;
+      if (dia !== diaVisto) {
+        diaVisto = dia;
+        limitados = 0; // un día nuevo: se empieza de cero
+      }
+      // Apagado: no se piden precios, pero la depuración (sin red) corre igual, una vez al día y a cualquier hora.
+      const trae = config.encendido;
+      if (trae && !enVentanaIntradia(t, config.desdeMin, config.hastaMin)) return;
+      if (trae && (dia === diaQuieto || t < esperaHasta)) return;
+      if (!trae && depuradoEl === dia) return;
       if (enCurso) {
-        deps.registrar("ciclo intradía omitido: el anterior sigue en curso");
+        if (trae) deps.registrar("ciclo intradía omitido: el anterior sigue en curso");
         return;
       }
       if (deps.corridaDiariaPendiente()) return;
-      enCurso = ejecutar(t, dia)
+      enCurso = (trae ? ejecutar(t, dia) : depurar(dia))
         .catch((error: unknown) => deps.registrar(`el ciclo intradía no se pudo hacer: ${error instanceof Error ? error.name : "ERROR"}`))
         .finally(() => {
           enCurso = null;
