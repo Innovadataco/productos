@@ -84,4 +84,23 @@ describe("analizarSimulacion", () => {
     expect(despues.partida.acciones - antes.partida.acciones).toBeCloseTo(7 * 317.43, 6);
     expect(despues.partida.total).toBeCloseTo(antes.partida.total, 6);
   });
+
+  describe("el valor de partida de los escenarios y el precio escrito", () => {
+    it("con historia de cierres de la especie operada, el precio escrito no cambia el valor de partida", async () => {
+      const sin = await analizarSimulacion(DB, PEDIDO);
+      const con = await analizarSimulacion(DB, { ...PEDIDO, precioActual: CIERRE_B.mul(3) });
+      expect(con.escenarios!.antes.partida).toEqual(sin.escenarios!.antes.partida);
+      expect(con.escenarios!.despues.partida).toEqual(sin.escenarios!.despues.partida);
+    });
+
+    it("sin historia de cierres de la especie operada, el valor de partida cambia con el precio escrito", async () => {
+      const soloTablero = portafolio([especie("FICTICIA-A", 37, 1237.4, 1), { id: "FICTICIA-D", cantidad: 7, cierres: [], soloTablero: true, cierreTablero: { precio: D("317.43"), fecha: DIAS.at(-1)! } }]);
+      obtenerResumen.mockResolvedValue({ tablero: soloTablero.tablero });
+      leerEntradas.mockResolvedValue(soloTablero.historia);
+      const base = { ...PEDIDO, instrumentoId: "FICTICIA-D", cantidadDespues: 7n, caja: { antes: D("4613.27"), despues: D("4613.27") } };
+      const sin = await analizarSimulacion(DB, base);
+      const con = await analizarSimulacion(DB, { ...base, precioActual: D("500") });
+      expect(con.escenarios!.antes.partida.acciones - sin.escenarios!.antes.partida.acciones).toBeCloseTo(7 * (500 - 317.43), 6);
+    });
+  });
 });
