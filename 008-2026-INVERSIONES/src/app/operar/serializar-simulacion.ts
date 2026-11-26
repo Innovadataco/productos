@@ -18,6 +18,7 @@ export const CAJA_ESCRITA = "Caja de la simulación: el saldo que usted escribi�
 export const CAJA_SIN_CERTIFICACION = "Sin certificación de Acciones & Valores: la caja de antes es 0. Escriba su saldo en Trii en «Su saldo disponible en el comisionista» para simular con él.";
 export const AVISO_CAJA_AV_NEGATIVA = "La caja certificada por Acciones & Valores es negativa y no es su saldo en Trii: escríbalo en «Su saldo disponible en el comisionista» para simular con él.";
 export const NOTA_VALORACION_CON_PRECIO = "Es el precio de la especie operada; las demás se valoran a su último cierre y la caja se mueve al precio límite de la orden.";
+export const NOTA_ESCENARIOS_CON_PRECIO = "Los escenarios a 12 meses parten de la historia de cierres, no del precio escrito.";
 /** «Valorado con el precio escrito: $ 2.345,5 (trii Pro), no con el cierre del 12-mar-2027.» */
 export function textoPrecioEscrito(precio: Prisma.Decimal, cierreFecha: Date | null): string {
   const base = `Valorado con el precio escrito: ${textoPesos(precio)} (trii Pro)`;
@@ -76,7 +77,7 @@ export function aRespuestaSimulacion(
       valorAccionesDespues: textoPesosRedondos(s.valorAccionesDespues),
       reglas: s.reglasAfectadas.map((a) => ({ texto: textoRegla(a.regla, operada), afectaciones: a.afectaciones.map((x) => textoAfectacion(x, a.regla)) })),
       avisos: [...(cajaAl !== "ESCRITA" && s.cajaAntes.isNeg() && !s.cajaAntes.isZero() ? [AVISO_CAJA_AV_NEGATIVA] : []), ...s.avisos.map(textoAviso)],
-      notas: [...(precioEscrito === null ? [NOTA_VALORACION] : [textoPrecioEscrito(precioEscrito.precio, precioEscrito.cierreFecha), NOTA_VALORACION_CON_PRECIO]), ...(conComision ? [] : [NOTA_CAJA_SIN_COMISION])],
+      notas: [...(precioEscrito === null ? [NOTA_VALORACION] : [textoPrecioEscrito(precioEscrito.precio, precioEscrito.cierreFecha), NOTA_VALORACION_CON_PRECIO, NOTA_ESCENARIOS_CON_PRECIO]), ...(conComision ? [] : [NOTA_CAJA_SIN_COMISION])],
       analisis,
     },
   };
