@@ -242,3 +242,57 @@ describe("elegirResumen · el motivo «IA apagada»", () => {
     expect(elegirResumen({ tipo: "DIARIO", publicado: null, iaApagada: false, hoy: { paquete, motivo: null } }).vista.sinIa).toBeNull();
   });
 });
+
+describe("elegirResumen · el último intento FALLÓ", () => {
+  const fallido = (generadoEn: string) => ({ fechaNegocio: "2027-03-17", generadoEn: new Date(generadoEn) });
+  const PALABRAS_DE_CODIGO = /\b[A-Z]{3,}(?:_[A-Z]+)+\b/;
+
+  it("más nuevo que el último válido: dice que falló y que se muestra el anterior; sigue el válido", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(paquete), fallido: fallido("2027-03-18T00:05:00.000Z"), hoy: { paquete, motivo: null } });
+    expect(vista.estado).toBe("IA");
+    expect(vista.fallo).toBe("El último intento de análisis (17-mar-2027, 19:05) falló; se muestra el anterior.");
+    expect(vista.fallo).not.toMatch(PALABRAS_DE_CODIGO);
+  });
+
+  it("más viejo que el último válido (o a la misma hora): no se dice", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    for (const cuando of ["2027-03-17T12:00:00.000Z", GENERADO_FICTICIO.toISOString()]) {
+      expect(elegirResumen({ tipo: "DIARIO", publicado: publicadoFicticio(paquete), fallido: fallido(cuando), hoy: { paquete, motivo: null } }).vista.fallo).toBeNull();
+    }
+  });
+
+  it("sin ningún válido: dice que falló y que se muestra el resumen sin IA", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: null, fallido: fallido("2027-03-18T00:05:00.000Z"), hoy: { paquete, motivo: null } });
+    expect(vista).toMatchObject({ estado: "SIN_IA", fallo: "El último intento de análisis (17-mar-2027, 19:05) falló; se muestra el resumen sin IA." });
+  });
+
+  it("también con la tarjeta «no disponible»: dice que falló, sin prometer un resumen", () => {
+    const { vista } = elegirResumen({ tipo: "DIARIO", publicado: null, fallido: fallido("2027-03-18T00:05:00.000Z"), hoy: { paquete: null, motivo: "OCUPADO" } });
+    expect(vista.estado).toBe("NO_DISPONIBLE");
+    expect(vista.fallo).toBe("El último intento de análisis (17-mar-2027, 19:05) falló.");
+  });
+
+  it("sin fallido: sin aviso", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    expect(elegirResumen({ tipo: "DIARIO", publicado: null, hoy: { paquete, motivo: null } }).vista.fallo).toBeNull();
+  });
+
+  it("si el último intento más nuevo fue un rechazo del validador, se dice el rechazo y no el fallo (y al revés)", () => {
+    const paquete = paqueteFicticio("DIARIO");
+    const rechazado = { fechaNegocio: "2027-03-17", motivos: ["FORMATO"], generadoEn: new Date("2027-03-18T01:00:00.000Z") };
+    const mas = elegirResumen({ tipo: "DIARIO", publicado: null, rechazado, fallido: fallido("2027-03-18T00:05:00.000Z"), hoy: { paquete, motivo: null } }).vista;
+    expect(mas.rechazo).not.toBeNull();
+    expect(mas.fallo).toBeNull();
+    const menos = elegirResumen({ tipo: "DIARIO", publicado: null, rechazado, fallido: fallido("2027-03-18T02:00:00.000Z"), hoy: { paquete, motivo: null } }).vista;
+    expect(menos.fallo).not.toBeNull();
+    expect(menos.rechazo).toBeNull();
+  });
+
+  it("los textos nuevos no traen lenguaje de consejo (con control positivo) ni «008»", () => {
+    const nuevos = JSON.stringify(Object.values(TEXTOS_RESUMEN_IA.fallo));
+    expect(prohibidasEn(nuevos)).toEqual([]);
+    expect(prohibidasEn("Le recomendamos vender ya")).not.toEqual([]);
+  });
+});

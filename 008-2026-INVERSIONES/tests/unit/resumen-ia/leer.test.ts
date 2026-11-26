@@ -8,8 +8,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ultimoPublicado = vi.hoisted(() => vi.fn());
 const ultimoRechazado = vi.hoisted(() => vi.fn());
+const ultimoFallido = vi.hoisted(() => vi.fn());
 const leerConfigIa = vi.hoisted(() => vi.fn());
-vi.mock("@/app/_comun/resumen-ia/publicado", () => ({ ultimoPublicadoDe: ultimoPublicado, ultimoRechazadoDe: ultimoRechazado }));
+vi.mock("@/app/_comun/resumen-ia/publicado", () => ({ ultimoPublicadoDe: ultimoPublicado, ultimoRechazadoDe: ultimoRechazado, ultimoFallidoDe: ultimoFallido }));
 vi.mock("@/ia/config/leer", async (original) => ({ ...(await original<typeof import("@/ia/config/leer")>()), leerConfigIa }));
 
 import { reiniciarMemoParaPruebas, resumenDelDia, TTL_MEMO_MS } from "@/app/_comun/resumen-ia/leer";
@@ -33,12 +34,14 @@ beforeEach(() => {
   reiniciarTurnoParaPruebas();
   ultimoPublicado.mockResolvedValue(null);
   ultimoRechazado.mockResolvedValue(null);
+  ultimoFallido.mockResolvedValue(null);
   leerConfigIa.mockResolvedValue(null);
   error = vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 afterEach(() => {
   ultimoPublicado.mockReset();
   ultimoRechazado.mockReset();
+  ultimoFallido.mockReset();
   leerConfigIa.mockReset();
   vi.restoreAllMocks();
 });
@@ -284,5 +287,30 @@ describe("resumenDelDia · el motivo «IA apagada»", () => {
   it("si leer la configuración falla (no es la base): no se afirma que esté apagada", async () => {
     leerConfigIa.mockRejectedValue(new TypeError("FICTICIA-ALFA 4613"));
     expect((await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() })).sinIa).toBeNull();
+  });
+});
+
+describe("resumenDelDia · el último FALLIDO", () => {
+  const paquetes = () => vi.fn().mockResolvedValue(exportacion());
+
+  it("lee el último fallido y, si es más nuevo que el último válido, la vista dice que falló", async () => {
+    ultimoPublicado.mockResolvedValue(publicadoFicticio(paqueteFicticio("DIARIO")));
+    ultimoFallido.mockResolvedValue({ fechaNegocio: "2027-03-17", generadoEn: new Date("2027-03-18T00:05:00.000Z") });
+    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() });
+    expect(ultimoFallido).toHaveBeenCalledWith(db, "DIARIO");
+    expect(vista.fallo).toContain("falló; se muestra el anterior");
+  });
+
+  it("un error al leer el fallido (no es la base): se sigue sin él, registrando solo el nombre", async () => {
+    ultimoFallido.mockRejectedValue(new TypeError("FICTICIA-ALFA 4613"));
+    const vista = await resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() });
+    expect(vista).toMatchObject({ estado: "SIN_IA", fallo: null });
+    expect(error.mock.calls.map((c) => String(c[0])).join(" ")).not.toContain("FICTICIA-ALFA");
+  });
+
+  it("un fallo de la base al leer el fallido se propaga como los demás", async () => {
+    const caida = new Prisma.PrismaClientKnownRequestError("ficticio", { code: "P1001", clientVersion: "ficticio" });
+    ultimoFallido.mockRejectedValue(caida);
+    await expect(resumenDelDia(db, "DIARIO", "u-ficticio", { ahora: AHORA, paquetes: paquetes() })).rejects.toBe(caida);
   });
 });

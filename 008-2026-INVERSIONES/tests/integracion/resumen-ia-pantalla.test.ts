@@ -146,3 +146,43 @@ describe("tarjeta de resumen contra la base", () => {
     }));
   });
 });
+
+describe("el último FALLIDO contra la base", () => {
+  const fallar = (tx: Cliente, p: PaqueteHechos) =>
+    registrarResumen(tx, {
+      paquete: p, prompt: { version: "resumen-ficticio-v3", hash: sha256Hex(`prompt ficticio de la pantalla ${marca}`) }, opciones: { temperature: 0, seed: 42 },
+      validadorVersion: "validador-v2", estado: "FALLIDO", puerta: "local", motivo: "TIEMPO_AGOTADO", detalles: ["DETALLE_FICTICIO"], modelo: "ficticio-modelo:7b", latenciaMs: 4127,
+    });
+
+  it("más nuevo que el último válido: la tarjeta dice que falló y sigue mostrando el válido", () => aislado(async (tx) => {
+    const p = paquete("DIARIO", "2027-06-01");
+    await publicar(tx, p);
+    await fallar(tx, paquete("DIARIO", "2027-06-01", `PANTALLA_FALLO_${marca}`));
+    const vista = await leer(tx, "DIARIO", "2027-06-01", p);
+    expect(vista.estado).toBe("IA");
+    expect(vista.fallo).toContain("falló; se muestra el anterior");
+    expect(vista.fallo).not.toContain("TIEMPO_AGOTADO");
+    expect(vista.rechazo).toBeNull();
+  }));
+
+  it("más viejo que un válido nuevo: no se dice", () => aislado(async (tx) => {
+    const p = paquete("DIARIO", "2027-06-02");
+    await fallar(tx, paquete("DIARIO", "2027-06-02", `PANTALLA_FALLO2_${marca}`));
+    await publicar(tx, p);
+    expect((await leer(tx, "DIARIO", "2027-06-02", p)).fallo).toBeNull();
+  }));
+
+  it("sin ningún válido: el resumen sin IA y el aviso de que falló", () => aislado(async (tx) => {
+    const p = paquete("REGLAS", "2027-06-03");
+    await fallar(tx, p);
+    const vista = await leer(tx, "REGLAS", "2027-06-03", p);
+    expect(vista).toMatchObject({ estado: "SIN_IA" });
+    expect(vista.fallo).toContain("falló; se muestra el resumen sin IA");
+  }));
+
+  it("el fallido de otro tipo no cuenta", () => aislado(async (tx) => {
+    const p = paquete("ESCENARIOS", "2027-06-04");
+    await fallar(tx, paquete("DIARIO", "2027-06-04", `PANTALLA_FALLO3_${marca}`));
+    expect((await leer(tx, "ESCENARIOS", "2027-06-04", p)).fallo).toBeNull();
+  }));
+});

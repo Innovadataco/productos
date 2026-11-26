@@ -255,6 +255,80 @@ describe("BotonAnalizar", () => {
     });
   });
 
+  describe("el último análisis terminó mal (ultimo del estado)", () => {
+    const error = "El análisis no se pudo completar. Inténtelo de nuevo.";
+    const descartado = "El análisis en espera no se hizo: la IA se apagó mientras esperaba.";
+    async function conAnalisisEnCurso(): Promise<void> {
+      await montarBoton();
+      estado = { ...LIBRE, enCurso: "DIARIO" };
+      await act(async () => { boton().click(); });
+      await asentar(SONDEO_MS);
+    }
+
+    it("ERROR de esta tarea: texto fijo (sin códigos), refresca y el botón queda libre", async () => {
+      await conAnalisisEnCurso();
+      estado = { ...LIBRE, ultimo: { tarea: "DIARIO", estado: "ERROR" } };
+      await asentar(SONDEO_MS);
+      expect(mensaje()).toBe(error);
+      expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.analisisError);
+      expect(deshabilitado()).toBe(false);
+      expect(refrescar).toHaveBeenCalledTimes(1);
+    });
+
+    it("DESCARTADO de esta tarea: texto fijo", async () => {
+      await conAnalisisEnCurso();
+      estado = { ...LIBRE, ultimo: { tarea: "DIARIO", estado: "DESCARTADO" } };
+      await asentar(SONDEO_MS);
+      expect(mensaje()).toBe(descartado);
+      expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.analisisDescartado);
+    });
+
+    it("con la espera mínima vigente: el texto del fallo y, a continuación, cuándo se puede volver a pedir", async () => {
+      await conAnalisisEnCurso();
+      estado = { ...LIBRE, reintentarEnS: 120, ultimo: { tarea: "DIARIO", estado: "ERROR" } };
+      await asentar(SONDEO_MS);
+      expect(mensaje()).toBe(`${error} ${textoEspera(120)}`);
+      expect(deshabilitado()).toBe(true);
+    });
+
+    it("el ERROR de OTRA tarea no se dice en este botón", async () => {
+      await conAnalisisEnCurso();
+      estado = { ...LIBRE, ultimo: { tarea: "REGLAS", estado: "ERROR" } };
+      await asentar(SONDEO_MS);
+      expect(mensaje()).toBe("");
+    });
+
+    it("un ERROR viejo que ya estaba al cargar la página no se dice (no hubo un pedido nuestro)", async () => {
+      estado = { ...LIBRE, ultimo: { tarea: "DIARIO", estado: "ERROR" } };
+      await montarBoton("DIARIO");
+      expect(mensaje()).toBe("");
+      expect(deshabilitado()).toBe(false);
+    });
+
+    it("un análisis que terminó bien (PUBLICADO) no dice nada de fallo", async () => {
+      await conAnalisisEnCurso();
+      estado = { ...LIBRE, ultimo: { tarea: "DIARIO", estado: "PUBLICADO" } };
+      await asentar(SONDEO_MS);
+      expect(mensaje()).toBe("");
+      expect(refrescar).toHaveBeenCalledTimes(1);
+    });
+
+    it("un estado sin `ultimo` (servicio anterior) sigue valiendo; uno con `ultimo` mal formado cuenta como lectura fallida", async () => {
+      await conAnalisisEnCurso();
+      const { ultimo: _sin, ...sinUltimo } = LIBRE;
+      estado = sinUltimo as Estado;
+      await asentar(SONDEO_MS);
+      expect(refrescar).toHaveBeenCalledTimes(1);
+      expect(mensaje()).toBe("");
+      estado = { ...LIBRE, enCurso: "DIARIO" };
+      await act(async () => { boton().click(); });
+      await asentar(SONDEO_MS);
+      estado = { ...LIBRE, ultimo: { tarea: 5, estado: {} } as never };
+      await asentar(SONDEO_MS * 2);
+      expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.sinEstado);
+    });
+  });
+
   it("los textos fijos del botón: sin lenguaje de consejo (con control positivo), sin «008» y sin códigos", () => {
     const fijos = JSON.stringify(Object.values(TEXTOS_RESUMEN_IA.boton)) + textoEspera(75);
     expect(prohibidasEn(fijos)).toEqual([]);
