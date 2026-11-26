@@ -21,7 +21,8 @@ type Props = {
 export function PaginaEdicion({ seccion, titulo, volver, atajos = true, children }: Props) {
   return (
     <>
-      <Encabezado actual={seccion} />
+      {/* Explícito: el área de edición es solo del dueño (exigirDueno en cada página), y ve «Configuración». */}
+      <Encabezado actual={seccion} soloLectura={false} />
       <main className="wrap plan edicion">
         <section className="hero plan-hero" aria-labelledby="t-hero">
           <div className="eyebrow">Área de edición · solo el dueño</div>

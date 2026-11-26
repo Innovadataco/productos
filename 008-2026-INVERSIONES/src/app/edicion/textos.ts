@@ -14,9 +14,9 @@ export { fecha } from "../tablero/formato";
 export const TEXTOS_CONFIGURACION = {
   TITULO: "Configuración",
   ENTRADAS: [
-    { texto: "Configuración de la IA", href: "/edicion/ia", para: "Qué modelo usa cada tarea de la IA, local o en la nube, y el tope mensual de gasto de la nube." },
-    { texto: "Tarifas de comisión", href: "/edicion/tarifas", para: "La tarifa real de cada casa de bolsa, por lado, que usa el simulador «¿Y si…?» de Operar." },
-    { texto: "Editar el plan", href: "/edicion/plan", para: "Una versión nueva del plan con sus reglas; la anterior queda en la historia." },
+    { clave: "ia", texto: "Configuración de la IA", href: "/edicion/ia", para: "Qué modelo usa cada tarea de la IA, local o en la nube, y el tope mensual de gasto de la nube." },
+    { clave: "tarifas", texto: "Tarifas de comisión", href: "/edicion/tarifas", para: "La tarifa real de cada casa de bolsa, por lado, que usa el simulador «¿Y si…?» de Operar." },
+    { clave: "plan", texto: "Editar el plan", href: "/edicion/plan", para: "Una versión nueva del plan con sus reglas; la anterior queda en la historia." },
   ],
 } as const;
 
