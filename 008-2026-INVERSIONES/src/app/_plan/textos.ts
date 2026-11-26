@@ -85,6 +85,8 @@ export interface ReglaDelNivel {
   readonly nivel: string | null;
 }
 
+const TEXTO_EN_EL_NIVEL_REDONDEADO = "en el nivel (a menos de 0,01 %)";
+
 /**
  * La distancia al nivel, igual en /plan y en /operar: de qué lado del nivel está el cierre, cuánto le falta moverse al cierre
  * para tocarlo y cuándo se cumple la regla. La distancia del motor es (nivel − cierre) / cierre: negativa si el cierre
@@ -94,10 +96,13 @@ export interface ReglaDelNivel {
  */
 export function textoDistanciaAlNivel(distanciaPct: string, regla?: ReglaDelNivel): string {
   const d = n(distanciaPct);
+  const distancia = numero(Math.abs(d), 2);
+  // Lo que se muestra como 0,00 no tiene lado ni verbo: el lado se decide con el mismo redondeo que se ve.
+  if (distancia === "0,00") return TEXTO_EN_EL_NIVEL_REDONDEADO;
   const lado = d < 0 ? "por encima" : "por debajo";
   const nivel = regla?.nivel == null ? "" : ` de ${precio(regla.nivel)}`;
   const cuando = regla?.condicion === "CIERRE_BAJO" ? " (la regla se cumple si cierra por debajo)" : regla?.condicion === "CIERRE_SOBRE" ? " (la regla se cumple si cierra por encima)" : "";
-  return `${lado} del nivel${nivel}: al cierre le falta ${d < 0 ? "bajar" : "subir"} ${numero(Math.abs(d), 2)} % para tocarlo${cuando}`;
+  return `${lado} del nivel${nivel}: al cierre le falta ${d < 0 ? "bajar" : "subir"} ${distancia} % para tocarlo${cuando}`;
 }
 
 export function textoNivel(v: NivelVista, regla?: ReglaDelNivel): string {
