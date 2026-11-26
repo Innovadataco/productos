@@ -108,7 +108,9 @@ describe("citas y hechos", () => {
   });
 
   it("un obligatorio sin citar y una frase sin ninguna cita son HECHO_NO_CITADO", () => {
-    expect(hallazgos(p, "La ganancia total bajó a {GANANCIA_TOTAL}.")).toContain("HECHO_NO_CITADO.OBLIGATORIO");
+    // En el DIARIO el código escribe los obligatorios que faltan (T4): el rechazo se prueba en REGLAS, donde no lo hace.
+    expect(hallazgos(paqueteFicticio("REGLAS"), FRASES_VALIDAS.REGLAS[1] as string)).toContain("HECHO_NO_CITADO.OBLIGATORIO");
+    expect(hallazgos(p, "La ganancia total bajó a {GANANCIA_TOTAL}.")).not.toContain("HECHO_NO_CITADO.OBLIGATORIO");
     expect(hallazgos(p, VA, "El portafolio tuvo un día tranquilo.")).toContain("HECHO_NO_CITADO.FRASE_SIN_CITA");
   });
 
