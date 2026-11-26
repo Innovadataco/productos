@@ -4,7 +4,9 @@
  * en la base ni en disco; quien lo llama (scripts/exportar-hechos-ia.ts) imprime el JSON por stdout.
  * Un tipo que no se puede armar (sin plan vigente, sin cierres, la proyección no corre…) queda en `omitidos` con su
  * código; los demás salen igual. Un error de la base no se traga: se propaga.
- * Rol: el del migrador por ahora; se pasa a `inv_ia` cuando exista en producción.
+ * Rol: el CLI corre con el del migrador; el servicio inv-008-ia, con `inv_ia` (SELECT por columna, privilegios.sql). Todo
+ * lo que lee aquí tiene que caber en esos permisos: lo prueba tests/integracion/ia/evaluacion/exportar-permisos-ia.test.ts
+ * (las tres tareas con solo esos GRANT, iguales a las del dueño).
  */
 import type { PrismaClient } from "@prisma/client";
 import type { PaqueteHechos, TipoResumen } from "../../contrato";

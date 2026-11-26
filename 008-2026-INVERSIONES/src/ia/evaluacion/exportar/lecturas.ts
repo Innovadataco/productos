@@ -3,18 +3,18 @@
  * (ninguno lee columnas cifradas ni filas crudas: todos van con `select` explícito):
  * - las series oficiales: el último vigente y su frescura (`estadoSerie`), el vigente anterior para la dirección y, del
  *   IPC, la variación anual que calcula 008 (`variacionIndice`, como la pantalla de datos oficiales);
- * - el plan: la versión vigente hoy (`vigenteEn`), sus reglas, sus últimos cierres y los próximos ex-dividendos;
+ * - el plan: la versión vigente hoy y sus reglas con los lectores acotados de plan.ts (no los de la página del plan, que
+ *   leen columnas que `inv_ia` no tiene), sus últimos cierres y los próximos ex-dividendos;
  * - la proyección con los parámetros por omisión de la pantalla, pero con horizonte de 12 meses (el del armador).
  */
 import type { PrismaClient } from "@prisma/client";
 import { CONTROLES_INICIALES } from "../../../app/proyecciones/opciones";
 import { SEMILLA_PANTALLA, TRAYECTORIAS_PANTALLA } from "../../../app/proyecciones/controles";
-import { vigenteEn } from "../../../app/plan/vista";
 import { leerProximos } from "../../../datos-oficiales/decretos/leer";
 import { estadoSerie, valorVigenteEn } from "../../../datos-oficiales/series/leer";
 import { ErrorLecturaSeries, variacionIndice } from "../../../datos-oficiales/series/consulta";
 import { sumarDias } from "../../../plan/fechas";
-import { leerReglas, leerVersiones, ultimosCierres } from "../../../plan/lectura";
+import { ultimosCierres } from "../../../plan/lectura";
 import type { CalendarioBvc } from "../../../precios/negociacion";
 import { calcularProyeccion } from "../../../proyecciones/calcular";
 import { leerEntradas } from "../../../proyecciones/leer";
@@ -23,6 +23,7 @@ import { ErrorTrabajo } from "../../../proyecciones/simulacion";
 import type { EntradasProyeccion, ResultadoProyeccion } from "../../../proyecciones/tipos";
 import type { Resumen } from "../../../tablero/datos";
 import type { EntradaArmadoReglas, SerieParaHechos } from "../../hechos";
+import { reglasParaHechos, versionVigenteParaHechos } from "./plan";
 
 const SERIES_OFICIALES = Object.freeze(["TRM", "TPM", "IBR_3M_EA"]);
 const SERIE_IPC = "IPC_INDICE";
@@ -74,9 +75,9 @@ export async function leerSeries(c: PrismaClient, hoy: Date): Promise<SeriesLeid
 
 /** La entrada del armador REGLAS desde la versión vigente del plan, o null si hoy no rige ninguna. */
 export async function leerEntradaReglas(c: PrismaClient, hoy: Date, hoyIso: string, resumen: Resumen, calendario: CalendarioBvc): Promise<EntradaArmadoReglas | null> {
-  const vigente = vigenteEn(await leerVersiones(c), hoy);
+  const vigente = await versionVigenteParaHechos(c, hoy);
   if (vigente === null) return null;
-  const reglas = await leerReglas(c, vigente.id);
+  const reglas = await reglasParaHechos(c, vigente.id);
   const especies = reglas.flatMap((r) => (r.instrumentoId === null ? [] : [r.instrumentoId]));
   return {
     hoy: hoyIso, calendario, vigenteDesde: vigente.vigenteDesde, reglas, cierres: await ultimosCierres(c, especies),

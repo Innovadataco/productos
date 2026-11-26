@@ -78,7 +78,8 @@
 --          la última conciliación, las series oficiales, los cierres, el calendario, los decretos, las proyecciones y la
 --          historia del fondo), medidas con el SQL que genera Prisma, y de la versión vigente del plan y sus reglas SIN la
 --          acción, la cantidad, el detalle ni el motivo (los lectores de la página del plan sí los leen: con inv_ia dan
---          42501, y el servicio lee con su propio `select`); de resumen_ia, solo lo de yaPublicado (la clave),
+--          42501; el export de hechos lee con los suyos, src/ia/evaluacion/exportar/plan.ts, y lo prueba
+--          tests/integracion/ia/evaluacion/exportar-permisos-ia.test.ts); de resumen_ia, solo lo de yaPublicado (la clave),
 --          gastoDelMes (la puerta, la hora y los tokens) y el RETURNING (id y hora): ni el texto, ni la salida, ni los
 --          hechos guardados (los lee la pantalla, inv_app, con ultimoPublicado);
 --   INSERT en resumen_ia de todas sus columnas menos "generadoEn" (la pone la base: migración 20261122175656_resumen_ia).

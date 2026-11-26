@@ -12,7 +12,8 @@
 //    oficiales (src/datos-oficiales/series/leer.ts);
 //  - REGLAS: ultimosCierres y calendarioBvc (src/plan/lectura.ts), leerProximos (src/datos-oficiales/decretos/leer.ts) y
 //    la versión vigente y sus reglas SIN la acción, la cantidad, el detalle ni el motivo (leerVersiones y leerReglas de
-//    src/plan/lectura.ts sí los leen: con inv_ia dan 42501, y el servicio necesita un lector propio con `select`);
+//    src/plan/lectura.ts sí los leen: con inv_ia dan 42501; el export de hechos usa los suyos, con `select` acotado:
+//    versionVigenteParaHechos y reglasParaHechos de src/ia/evaluacion/exportar/plan.ts);
 //  - ESCENARIOS: leerEntradas (src/proyecciones/leer.ts) y leerFondosHistoria y leerHistoria (src/app/proyecciones/datos.ts).
 // Nada de usuario, filas crudas (`crudo`), el `encargo`, la certificación por especie, los lotes de A&V, la caja ni los
 // símbolos. Escritura: solo INSERT en resumen_ia, sin "generadoEn" (lo pone la base); de resumen_ia lee solo lo de

@@ -7,8 +7,6 @@
 // único permiso sobre resumen_ia (el SELECT del bucle de todas las tablas), lee y no escribe. La prueba con los roles
 // reales es tests/unit/produccion/roles-base.test.ts (solo CI). Datos inventados: especies propias de la corrida,
 // valores no redondos y fechas de 2027 (el calendario de la BVC sembrado).
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { leerFondosHistoria, leerHistoria } from "@/app/proyecciones/datos";
@@ -26,6 +24,7 @@ import { leerEntradas } from "@/proyecciones/leer";
 import { obtenerResumen } from "@/tablero/datos";
 import { obtenerEvolucion } from "@/tablero/datos-evolucion";
 import { ENTRADAS_FICTICIAS } from "../../unit/ia/apoyo/hechos.ficticio";
+import { GRANTS_IA } from "./apoyo/rol-ia";
 
 const db = new PrismaClient();
 const ROL = "pg_signal_backend";
@@ -33,10 +32,9 @@ const corrida = Date.now().toString(36).toUpperCase().slice(-5);
 const ESPECIE = `PI${corrida}`;
 const HOY = new Date("2027-09-14T00:00:00.000Z");
 const ORD = "Fecha y hora,Símbolo de la acción,Tipo de orden,Estado,Acciones completadas,Acciones pendientes,Precio por acción,Total invertido,Valor comisión,Total estimado\n";
-const sql = readFileSync(fileURLToPath(new URL("../../../docker/migrador/privilegios.sql", import.meta.url)), "utf8").replace(/--.*$/gm, "");
 
-/** Los GRANT de inv_ia en privilegios.sql, tal cual, para dárselos al rol de la prueba. */
-const grantsIa = [...sql.matchAll(/GRANT\s+([A-Z]+\s*(?:\([^)]*\))?)\s+ON\s+TABLE\s+public\.([a-z_]+)\s+TO\s+inv_ia\s*;/g)].map((m) => ({ privilegio: m[1]!, tabla: m[2]! }));
+/** Los GRANT de inv_ia en privilegios.sql, tal cual, para dárselos al rol de la prueba (lectura única: apoyo/rol-ia.ts). */
+const grantsIa = GRANTS_IA;
 const TABLAS_IA = [...new Set(grantsIa.map((g) => g.tabla))];
 
 let restringida: PrismaClient;

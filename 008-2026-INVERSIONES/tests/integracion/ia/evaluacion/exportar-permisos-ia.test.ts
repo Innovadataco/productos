@@ -10,9 +10,13 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { cifrarCrudo } from "@/cifrado/campos";
+import { gastoNubeDelMes } from "@/ia/config/gasto";
 import { exportarHechos } from "@/ia/evaluacion/exportar/exportar";
+import { reglasParaHechos, versionVigenteParaHechos } from "@/ia/evaluacion/exportar/plan";
+import { vigenteEn } from "@/app/plan/vista";
 import { importarArchivoTrii } from "@/importacion/trii/importar";
 import { construirLotes } from "@/lotes/construir";
+import { leerReglas, leerVersiones } from "@/plan/lectura";
 import { crearVersionPlan } from "@/plan/versiones";
 import { conRolIa, type RolIa } from "../apoyo/rol-ia";
 
@@ -84,8 +88,10 @@ async function sembrarFondo(duenoId: string): Promise<void> {
   });
 }
 
+/** El corte es único: si otra corrida sobre la misma base ya lo dejó, se usa ese (lo que importa es que haya filas). */
 async function sembrarConciliacion(duenoId: string): Promise<void> {
   const fecha = dia("2019-08-27");
+  if ((await db.certificacion.count({ where: { fechaCorte: fecha } })) > 0) return;
   const carga = await db.cargaArchivo.create({
     data: { tipoFuente: "AV_CERTIFICACION", nombreArchivo: "certificacion-exp-ia.ficticio.pdf", sha256: `c${corrida.toLowerCase()}`.padEnd(64, "3"), fechaCorte: fecha, estado: "CARGADO", cargadoPorId: duenoId },
   });
@@ -129,5 +135,22 @@ describe("exportarHechos con los privilegios de inv_ia (la corrida diaria del se
     expect(comoIa.avisos).toEqual(comoDueno.avisos);
     const reglas = comoIa.paquetes.find((p) => p.tipo === "REGLAS");
     expect(reglas?.hechos.some((h) => h.clave === "REGLA_DEL_PLAN")).toBe(true);
+  });
+
+  it("lo demás que la corrida lee de la base fuera del export: el gasto de la nube del mes y los festivos", async () => {
+    await expect(gastoNubeDelMes(ia.cliente, hoy.toISOString().slice(0, 10))).resolves.toMatchObject({ corridas: expect.any(Number) });
+    await expect(ia.cliente.calendarioBvc.findMany({ where: { esHabil: false }, select: { dia: true } })).resolves.toBeDefined();
+  });
+
+  it("los lectores acotados del plan dan lo mismo que los de la página (como dueño), sin el motivo ni la acción", async () => {
+    const pagina = vigenteEn(await leerVersiones(db), hoy);
+    const acotada = await versionVigenteParaHechos(ia.cliente, hoy);
+    expect(acotada).toEqual({ id: pagina?.id, vigenteDesde: pagina?.vigenteDesde });
+    const deLaPagina = (await leerReglas(db, acotada!.id)).map((r) => ({ instrumentoId: r.instrumentoId, nemotecnico: r.nemotecnico, condicion: r.condicion, nivel: r.nivel, plazoHasta: r.plazoHasta }));
+    const reglas = await reglasParaHechos(ia.cliente, acotada!.id);
+    expect(reglas).toEqual(deLaPagina);
+    expect(reglas.some((r) => r.nemotecnico === ESPECIE)).toBe(true);
+    for (const r of reglas) expect(Object.keys(r).sort()).toEqual(["condicion", "instrumentoId", "nemotecnico", "nivel", "plazoHasta"]);
+    expect(await versionVigenteParaHechos(ia.cliente, dia("2001-01-02"))).toBeNull();
   });
 });
