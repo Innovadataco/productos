@@ -4,6 +4,9 @@
  * presentación). Versión v2: el modelo da segmentos de texto y de referencia, nunca la cita dentro de la prosa. Versión v3:
  * el nombre de la especie sale del campo `especie` de la vista (ya resuelto), sin recorrer la cadena de `sujeto`, y la
  * regla de no recomendar no usa palabras de consejo (el candado de lenguaje de los prompts). Los límites van en palabras y son los de `LIMITES_SALIDA`. Cambiar un texto es otra versión del prompt.
+ * DIARIO v4: el código escribe los obligatorios (`validador/obligatorias.ts`), así que el prompt no manda citarlos; el modelo
+ * escribe de una a cuatro frases con los demás hechos, con ejemplos de etiquetas no obligatorias y los límites de su parte.
+ * Los textos de REGLAS y ESCENARIOS (v3) no cambian: cada uno sigue siendo el mismo, byte a byte.
  */
 const PRESENTACION = "Usted redacta, en español de Colombia y tratando al lector de usted, un resumen breve";
 
@@ -12,18 +15,29 @@ const ENTRADA = "Recibe un JSON con el tipo de resumen y una lista de hechos. Ca
   + "a un umbral (CERCA, LEJOS o NO_APLICA), su frescura (HOY, RECIENTE o ATRASADO), su calidad y si es obligatorio. Los "
   + "hechos no traen cifras: las pone el sistema.";
 
-const REGLAS_DE_REDACCION = [
+const CITAR_OBLIGATORIOS =
+"- Cite todos los hechos obligatorios, sin falta. Procedimiento: recorra la lista de hechos en su orden; cada vez que un hecho "
+    + "tenga obligatorio verdadero, escriba la frase de ese hecho (una frase por hecho obligatorio, o dos unidos con «y»), en "
+    + "ese mismo orden, sin saltarse ninguno. Termine ese recorrido antes de agregar nada más; solo si sobran frases (hasta "
+    + "seis), agregue otros hechos. Los hechos obligatorios son pocos (no más de seis, con los nombres de especie incluidos), "
+    + "así que caben. Cada frase cita al menos un hecho.";
+
+const LARGO_DEL_RESUMEN =
+"- Escriba entre una y seis frases. Con las cifras ya puestas, cada frase tiene hasta doscientos ochenta caracteres y el "
+    + "resumen completo, hasta mil doscientos.";
+
+/**
+ * Las reglas de redacción, las mismas para los tres tipos salvo dos viñetas: la de los hechos obligatorios y la del largo.
+ * REGLAS y ESCENARIOS usan las de siempre (v3); el DIARIO v4 usa las suyas.
+ */
+const reglasDeRedaccion = (obligatorios: string, largo: string): string => [
   "Reglas de contenido:",
   "- No escriba cifras: ni dígitos, ni números en palabras, ni porcentajes, ni montos, ni fechas, ni meses, ni días de la "
     + "semana, ni «ayer» o «mañana». La cifra la pone el sistema donde usted pone la referencia.",
   "- Cada frase es una lista de segmentos. Un segmento de texto lleva solo prosa; un segmento de referencia lleva solo el id de "
     + "un hecho, por ejemplo H01, y el sistema lo cambia por la cifra exacta. Nunca escriba el id ni llaves dentro de la prosa. "
     + "No escriba la unidad después de la referencia.",
-  "- Cite todos los hechos obligatorios, sin falta. Procedimiento: recorra la lista de hechos en su orden; cada vez que un hecho "
-    + "tenga obligatorio verdadero, escriba la frase de ese hecho (una frase por hecho obligatorio, o dos unidos con «y»), en "
-    + "ese mismo orden, sin saltarse ninguno. Termine ese recorrido antes de agregar nada más; solo si sobran frases (hasta "
-    + "seis), agregue otros hechos. Los hechos obligatorios son pocos (no más de seis, con los nombres de especie incluidos), "
-    + "así que caben. Cada frase cita al menos un hecho.",
+  obligatorios,
   "- Cada elemento de la lista de frases es una sola oración. Para decir otra cosa, abra otra frase en la lista: cierre la "
     + "frase con el segmento de texto del punto y empiece otro elemento de la lista. Incorrecto: un elemento con segmentos "
     + "texto, referencia, texto de punto y luego más segmentos de otra oración. Correcto: un elemento por oración.",
@@ -56,9 +70,21 @@ const REGLAS_DE_REDACCION = [
     + "que sigue a una referencia (por ejemplo «, y la ganancia total es»), y el signo de puntuación pegado a la referencia.",
   "- Escriba solo texto plano: sin viñetas, sin markdown, sin comillas, sin guiones, sin signos de interrogación o de "
     + "exclamación, sin saltos de línea, sin enlaces y sin emojis.",
-  "- Escriba entre una y seis frases. Con las cifras ya puestas, cada frase tiene hasta doscientos ochenta caracteres y el "
-    + "resumen completo, hasta mil doscientos.",
+  largo,
 ].join("\n");
+
+const REGLAS_DE_REDACCION = reglasDeRedaccion(CITAR_OBLIGATORIOS, LARGO_DEL_RESUMEN);
+
+/** El DIARIO v4: el sistema escribe los obligatorios; el modelo, de una a cuatro frases con los demás (y hasta seiscientos caracteres). */
+const NO_ESCRIBIR_OBLIGATORIOS =
+  "- Los hechos con obligatorio verdadero los escribe el sistema por su cuenta: no los escriba. Escriba solo frases con hechos de "
+    + "obligatorio falso, de los más útiles para el lector. Cada frase cita al menos un hecho.";
+
+const LARGO_DEL_DIARIO =
+  "- Escriba entre una y cuatro frases. Con las cifras ya puestas, cada frase tiene hasta doscientos ochenta caracteres y todas "
+    + "sus frases juntas, hasta seiscientos.";
+
+const REGLAS_DE_REDACCION_DIARIO = reglasDeRedaccion(NO_ESCRIBIR_OBLIGATORIOS, LARGO_DEL_DIARIO);
 
 const RESPUESTA = 'Responda solo con un JSON de esta forma: {"frases":[{"segmentos":[{"texto":"El valor de las acciones es"},'
   + '{"ref":"H01"},{"texto":"."}]}]}. Cada segmento tiene una sola clave: «texto» o «ref». La prosa va en los segmentos de '
@@ -70,23 +96,23 @@ const frase = (...piezas: (string | null)[]): string =>
   `{"segmentos":[${piezas.map((p) => (p === null ? '{"ref":"H01"}' : `{"texto":"${p}"}`)).join(",")}]}`;
 const ejemplos = (...frases: string[]): string => frases.join("\n");
 
-const armar = (tema: string, ejemplos: string): string =>
-  [`${PRESENTACION} ${tema}`, ENTRADA, REGLAS_DE_REDACCION, `Ejemplos de frases correctas (solo la forma):\n${ejemplos}`, RESPUESTA].join("\n\n");
+const armar = (tema: string, ejemplos: string, reglas: string = REGLAS_DE_REDACCION): string =>
+  [`${PRESENTACION} ${tema}`, ENTRADA, reglas, `Ejemplos de frases correctas (solo la forma):\n${ejemplos}`, RESPUESTA].join("\n\n");
 
 export const TEXTO_PROMPT_DIARIO = armar(
-  "del día de un portafolio de inversiones: el valor de las acciones y su variación del día, las ganancias, los dividendos "
-    + "y las comisiones, los cierres atrasados, la conciliación, las tasas y el fondo. Son obligatorios el valor de las acciones, la variación del día, la ganancia total y la conciliación que no cuadra, "
-    + "cuando están en la lista: escriba primero una frase por cada uno, en ese orden, y después, si sobran frases, los demás "
-    + "hechos. Si uno de ellos no está en la lista, no escriba su frase ni use para ella el id de otro hecho. Cada frase lleva "
-    + "la referencia de su dato: un verbo como subió o bajó nunca reemplaza la referencia.",
+  "del día de un portafolio de inversiones: las ganancias sin vender, los dividendos y las comisiones, los cierres atrasados, "
+    + "las especies, las tasas y el fondo. El sistema ya escribe los hechos obligatorios: usted escribe, con los demás hechos, "
+    + "las frases que complementan el día. Cada frase lleva la referencia de su dato: un verbo como subió o bajó nunca "
+    + "reemplaza la referencia.",
   ejemplos(
-    frase("El valor de las acciones es", null, "."),
-    frase("La variación del día del valor de las acciones es", null, "."),
-    frase("La ganancia total es", null, ", y la ganancia sin vender es", null, "."),
+    frase("La ganancia sin vender es", null, "."),
+    frase("Los dividendos recibidos son", null, ", y las comisiones pagadas son", null, "."),
     frase("Las especies sin precio son", null, ", y las especies con cierre atrasado son", null, "."),
-    frase("El corte de la conciliación que no cuadra es", null, "."),
+    frase("La fecha del cierre más reciente es", null, "."),
+    frase("El valor de la unidad del fondo es", null, "."),
     frase("El precio de cierre de la especie", null, "es", null, "."),
   ),
+  REGLAS_DE_REDACCION_DIARIO,
 );
 
 export const TEXTO_PROMPT_REGLAS = armar(
