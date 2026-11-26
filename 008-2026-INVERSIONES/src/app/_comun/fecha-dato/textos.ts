@@ -1,6 +1,6 @@
 /**
  * Los textos de la procedencia de cada dato (frentes fecha-hora-datos y fuente-retraso). La línea, corta para 375 px:
- * «Cierre 25-nov · traído 18:00 · Yahoo (BVC)» (o «Precio de las 11:42 · …» en la rueda). El detalle, aparte: la fuente,
+ * «Cierre 25-nov · Yahoo (BVC) · traído 18:00»; en la rueda, «Precio de las 11:42 · Yahoo (BVC) · hasta 20 min de retraso». El detalle, aparte: la fuente,
  * su retraso conocido y cuándo se trajo en hora de Colombia; la tabla de fuentes vive en src/precios/fuentes.ts. El
  * aviso de dato viejo («dato de hace 3 días hábiles») y el de fechas distintas salen de sus propias funciones.
  * Se arman por piezas: las que son fechas u horas llevan el atributo de <time>, y el texto plano sale de las MISMAS
@@ -103,16 +103,26 @@ function piezasDelDato(p: Procedencia, o: OpcionesProcedencia): Pieza[] {
   return [{ texto: `${o.etiqueta ?? "Dato"} ` }, piezaDia(p.dia, conAnio)];
 }
 
+/** El retraso de la fuente en la rueda, tal cual lo dice la tabla de fuentes; null si no lo tiene o la fuente no se conoce. */
+const retrasoEnRueda = (codigo: string | null): string | null => fuenteDe(codigo)?.retrasoRueda ?? null;
+
+/**
+ * «Cierre 25-nov · Yahoo (BVC) · traído 18:00»; en la rueda, si la fuente tiene retraso: «Precio de las 11:42 · Yahoo (BVC) ·
+ * hasta 20 min de retraso» (la hora del precio ya dice cuándo es). Un cierre nunca lleva retraso; una fuente sin retraso
+ * o desconocida tampoco, y entonces la cola es cuándo se trajo.
+ */
 export function piezasProcedencia(p: Procedencia, o: OpcionesProcedencia = {}): Pieza[] {
   const dato = piezasDelDato(p, o);
-  return [...dato, ...(dato.length === 0 ? [] : [SEPARADOR]), ...piezasTraido(p.traidoEn, p.dia), SEPARADOR, { texto: nombreFuente(p.fuente) }];
+  const retraso = (p.tipo ?? "CIERRE") === "RUEDA" ? retrasoEnRueda(p.fuente) : null;
+  const cola: Pieza[] = retraso === null ? piezasTraido(p.traidoEn, p.dia) : [{ texto: retraso }];
+  return [...dato, ...(dato.length === 0 ? [] : [SEPARADOR]), { texto: nombreFuente(p.fuente) }, SEPARADOR, ...cola];
 }
 
 /** Un valor que suma cierres: el más antiguo que lo compone, si hay fechas distintas; si no, el cierre de ese día. */
 export function piezasCompuesta(c: ProcedenciaCompuesta): Pieza[] {
   const { dia, traidoEn } = c.masVieja;
   const inicio = c.mezcladas ? "Cierre más antiguo " : "Cierre ";
-  return [{ texto: inicio }, piezaDia(dia, conAnioDe(dia, traidoEn)), SEPARADOR, ...piezasTraido(traidoEn, dia), SEPARADOR, { texto: nombresDeFuentes(c.fuentes) }];
+  return [{ texto: inicio }, piezaDia(dia, conAnioDe(dia, traidoEn)), SEPARADOR, { texto: nombresDeFuentes(c.fuentes) }, SEPARADOR, ...piezasTraido(traidoEn, dia)];
 }
 
 /** El aviso de fechas distintas, con las dos puntas; null si todos los datos son del mismo día. */
