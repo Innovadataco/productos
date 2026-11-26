@@ -334,6 +334,13 @@ describe("privilegios de precio_intradia", () => {
     expect(migraciones).toMatch(/CREATE TRIGGER "precio_intradia_retiro" BEFORE UPDATE OR DELETE ON "precio_intradia"/);
     expect(migraciones).toMatch(/CREATE TRIGGER "precio_intradia_insercion" BEFORE INSERT ON "precio_intradia"/);
   });
+
+  it("la única salida del disparador de retiro es el dueño con inv.reversion = 'on' (la marca sola no basta)", () => {
+    const m = migracionesTexto();
+    const cuerpo = /CREATE FUNCTION "inv_precio_intradia_retiro"\(\)[\s\S]*?\$\$;/.exec(m)?.[0] ?? "";
+    expect(cuerpo).toMatch(/current_setting\('inv\.reversion', true\) = 'on'\s+AND pg_has_role\(/);
+    expect(cuerpo).toMatch(/pg_has_role\(\(SELECT c\.relowner FROM pg_catalog\.pg_class c WHERE c\.oid = TG_RELID\), 'USAGE'\)/);
+  });
 });
 
 /** El texto de todas las migraciones, juntas. */

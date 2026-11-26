@@ -429,6 +429,16 @@ describe("vigía · los precios cada minuto detenidos (huella intradia del servi
     expect(textos()).toHaveLength(1);
   });
 
+  it("FALLO_DATOS y SIN_BARRAS (fallos que no son bloqueo) no avisan «Yahoo bloqueó»", async () => {
+    mensajes = [];
+    const { escribir, pasada } = conHuella();
+    for (const estado of ["FALLO_DATOS", "SIN_BARRAS", "TOPE_DIA"]) {
+      escribir(huella("0", estado));
+      await pasada();
+    }
+    expect(mensajes).toHaveLength(0);
+  });
+
   it("una huella dañada (limitados no numérico) no tumba la pasada ni avisa", async () => {
     mensajes = [];
     const { escribir, pasada } = conHuella();

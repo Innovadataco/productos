@@ -10,7 +10,7 @@
 -- misma barra otra vez no escribe nada. Ese mismo índice único sirve a las consultas por especie y por instante.
 --
 -- Solo inserción, con la salida de la retención: el disparador precio_intradia_retiro (función inv_precio_intradia_retiro) rechaza todo UPDATE y todo DELETE salvo el de
--- una fila de más de 60 días. La retención (el job de depuración del servicio de precios) borra con DELETE de tabla, que
+-- una fila de más de 60 días (y la corrección del dueño, con `SET LOCAL inv.reversion = 'on'`; ver más abajo). La retención (el job de depuración del servicio de precios) borra con DELETE de tabla, que
 -- inv_precios recibe por esa razón (no existe DELETE por columna): lo único que puede borrar es lo viejo, y nada se edita.
 -- 60 días corridos son siempre al menos 30 días hábiles de la BVC (con a lo sumo 6 festivos en ese lapso quedan al menos 34), que es
 -- lo que se quiere conservar; un piso en días corridos no necesita leer el calendario dentro del disparador.
@@ -55,10 +55,17 @@ ALTER TABLE "precio_intradia" ADD CONSTRAINT "precio_intradia_instrumentoId_fkey
 ALTER TABLE "precio_intradia" ADD CONSTRAINT "precio_intradia_precio_chk" CHECK ("precio" > 0 AND "precio" <= 10000000);
 ALTER TABLE "precio_intradia" ADD CONSTRAINT "precio_intradia_fuente_chk" CHECK ("fuente" ~ '^[a-z][a-z0-9:_.-]{0,39}$');
 
--- La retención: UPDATE nunca; DELETE solo de lo de más de 60 días. Para todo rol (el mismo mensaje de «solo inserción»).
+-- La retención: UPDATE nunca; DELETE solo de lo de más de 60 días. Una sola salida: el rol DUEÑO de la tabla, dentro de una
+-- transacción con `SET LOCAL inv.reversion = 'on'` (el procedimiento de corrección, documentado en produccion.md). Ni el servicio
+-- (inv_precios) ni ningún otro rol puede, ni siquiera poniendo la marca: la marca sola no basta, hace falta ser el dueño.
 CREATE FUNCTION "inv_precio_intradia_retiro"() RETURNS trigger LANGUAGE plpgsql
 SET search_path = pg_catalog, public, pg_temp AS $$
 BEGIN
+  IF current_setting('inv.reversion', true) = 'on'
+     AND pg_has_role((SELECT c.relowner FROM pg_catalog.pg_class c WHERE c.oid = TG_RELID), 'USAGE') THEN
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+  END IF;
   IF TG_OP = 'DELETE' AND OLD."instante" < now() - interval '60 days' THEN
     RETURN OLD;
   END IF;

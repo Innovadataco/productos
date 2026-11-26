@@ -355,7 +355,7 @@ DECLARE
     ['inv_plan_version_instante', 'abf0179024dd5f3151006171b5d76bb5', ''],
     ['inv_precio_cierre_insercion', '6bdf12a80eeee52cff6a412139ffe5c1', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_precio_intradia_insercion', 'ab17efeaf4b1931d00bc4d64732c37c5', 'search_path=pg_catalog, public, pg_temp'],
-    ['inv_precio_intradia_retiro', '77a424acd02ce880d54449962caeaff7', 'search_path=pg_catalog, public, pg_temp'],
+    ['inv_precio_intradia_retiro', '0a3da2dd511a6629a1e7049069d15c91', 'search_path=pg_catalog, public, pg_temp'],
     ['inv_rendimiento_fondo_coherente', '9a6b541c07fa34227bf9a3476e9c48ca', ''],
     ['inv_resumen_ia_instante', '3225d295850c7feb0575a40ec4330442', ''],
     ['inv_retiro_vigente', '32c9d5c44cb3e2afe0a5ada4819d9a5f', 'search_path=pg_catalog, public, pg_temp'],
