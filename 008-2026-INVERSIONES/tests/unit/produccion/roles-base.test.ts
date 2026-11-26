@@ -533,7 +533,7 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
         `INSERT INTO precio_intradia (id, "instrumentoId", instante, precio, fuente, "conRetraso") VALUES ('${id}', '${conLote}', ${instante}, ${extra.precio ?? "1"}, '${extra.fuente ?? "yahoo"}', true)`;
 
       it("el ciclo con inv_precios: lee las especies (lote y reglas del plan), guarda las barras y repetirlo no duplica", async () => {
-        const opciones = { buscar: yahooIntradia, ahora: new Date(), urlYahoo: "https://yahoo.ficticio.invalid", pausaMs: 0, dormir: async () => undefined };
+        const opciones = { buscar: yahooIntradia, ahora: new Date(), urlYahoo: "https://query1.finance.yahoo.com", pausaMs: 0, dormir: async () => undefined };
         const r1 = await correrCicloIntradia(precios, opciones);
         if (r1.codigo === 4 || horaCot < 1) return;
         expect(r1).toMatchObject({ codigo: 0, fallidas: [] });
@@ -553,7 +553,7 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
           pedidos += 1;
           return new Response("{}");
         };
-        const r = await correrCicloIntradia(precios, { buscar, ahora: new Date("2024-03-28T17:00:00Z"), urlYahoo: "https://yahoo.ficticio.invalid", pausaMs: 0 });
+        const r = await correrCicloIntradia(precios, { buscar, ahora: new Date("2024-03-28T17:00:00Z"), urlYahoo: "https://query1.finance.yahoo.com", pausaMs: 0 });
         expect(r.codigo).toBe(4);
         expect(pedidos).toBe(0);
       });

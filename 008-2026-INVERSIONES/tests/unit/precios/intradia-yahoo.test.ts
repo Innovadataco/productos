@@ -1,6 +1,7 @@
 // Barras de 1 minuto de Yahoo (`<NEMO>.CL`): el parser puro y el pedido, con un fetch falso de respuestas FIJAS e
 // inventadas (sin red). Los precios y especies son ficticios.
 import { describe, expect, it } from "vitest";
+import { urlBaseYahoo } from "@/precios/intradia/url";
 import { MARGEN_BARRA_ABIERTA_MS, obtenerBarrasIntradia, parsearBarrasIntradia } from "@/precios/intradia/yahoo";
 import { PRECIO_MAXIMO_COP, type Buscar } from "@/precios/yahoo";
 
@@ -127,7 +128,7 @@ describe("parsearBarrasIntradia", () => {
 });
 
 describe("obtenerBarrasIntradia", () => {
-  const BASE = "https://yahoo.ficticio.invalid";
+  const BASE = "https://query1.finance.yahoo.com";
   const json = (cuerpo: unknown, estado = 200): Buscar => async () => new Response(JSON.stringify(cuerpo), { status: estado });
 
   it("pide barras de 1 minuto de hoy a la URL configurada, con el símbolo escapado y sin seguir redirecciones", async () => {
@@ -187,5 +188,22 @@ describe("obtenerBarrasIntradia", () => {
   it("un cuerpo que no es JSON es YAHOO_FORMATO", async () => {
     const buscar: Buscar = async () => new Response("<html>", { status: 200 });
     expect(await obtenerBarrasIntradia("FICTA.CL", { baseUrl: BASE, buscar, ahora: AHORA })).toEqual({ ok: false, codigo: "YAHOO_FORMATO" });
+  });
+});
+
+describe("urlBaseYahoo · solo los hosts de la lista fija, también fuera del despachador", () => {
+  it("query1 y query2 valen (con o sin barra final); cualquier otro nombre, una IP o un host con sufijo engañoso, no", () => {
+    expect(urlBaseYahoo("https://query1.finance.yahoo.com")).toBe("https://query1.finance.yahoo.com");
+    expect(urlBaseYahoo("https://query2.finance.yahoo.com/")).toBe("https://query2.finance.yahoo.com");
+    for (const malo of ["https://yahoo.ficticio.invalid", "https://query3.finance.yahoo.com", "https://query1.finance.yahoo.com.ficticio.invalid", "https://www.datos.gov.co", "https://[::1]", "http://query1.finance.yahoo.com", "https://u:p@query1.finance.yahoo.com", "https://query1.finance.yahoo.com:8443", "https://query1.finance.yahoo.com/v8", "https://query1.finance.yahoo.com/?a=1", "https://query1.finance.yahoo.com/#x", "no es url", ""]) {
+      expect(urlBaseYahoo(malo), malo).toBeNull();
+    }
+  });
+
+  it("obtenerBarrasIntradia con otro host da INTRADIA_URL_INVALIDA sin llamar a Yahoo", async () => {
+    const vistas: string[] = [];
+    const buscar = (async (url: string) => (vistas.push(url), new Response("{}"))) as never;
+    expect(await obtenerBarrasIntradia("FICTA.CL", { baseUrl: "https://yahoo.ficticio.invalid", buscar, ahora: new Date("2027-02-09T17:00:00Z") })).toEqual({ ok: false, codigo: "INTRADIA_URL_INVALIDA" });
+    expect(vistas).toEqual([]);
   });
 });

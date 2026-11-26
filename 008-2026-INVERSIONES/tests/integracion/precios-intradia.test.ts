@@ -17,7 +17,7 @@ import type { Buscar } from "@/precios/yahoo";
 const db = new PrismaClient();
 const corrida = Date.now().toString(36).toUpperCase().slice(-5);
 const cot = (texto: string): Date => new Date(`${texto.replace(" ", "T")}:00-05:00`);
-const URL_YAHOO = "https://yahoo.ficticio.invalid";
+const URL_YAHOO = "https://query2.finance.yahoo.com";
 const MIN = 60_000;
 let n = 0;
 let usuarioId = "";
