@@ -29,6 +29,7 @@ import { carpetaTemporal, funcion, ruta008 } from "./falsos";
 import { filasPermisos, PERMISOS_PRECIOS } from "./permisos-precios";
 import { ultimaConciliacion } from "@/conciliacion/leer";
 import { leerProximos } from "@/datos-oficiales/decretos/leer";
+import { exportarHechos } from "@/ia/evaluacion/exportar/exportar";
 import { sha256Hex } from "@/ia/hash";
 import { construirPaquete } from "@/ia/paquete";
 import { gastoDelMes, registrarResumen, ultimoPublicado, yaPublicado } from "@/ia/registro/registro";
@@ -785,6 +786,17 @@ describe.skipIf(!EN_CI)("roles de producción en PostgreSQL real (solo CI)", () 
       await expect(ultimosCierres(ia, resumen.tablero.filas.map((f) => f.instrumentoId))).resolves.toBeDefined();
       await expect(leerVersiones(ia)).rejects.toThrow(/42501|permission denied/);
       await expect(leerReglas(ia, "version-ficticia")).rejects.toThrow(/42501|permission denied/);
+    });
+
+    it("la corrida diaria del servicio: exportarHechos arma las tres tareas como inv_ia (con los lectores acotados del plan)", async () => {
+      // Hoy = la vigencia de la última versión sembrada arriba: así rige un plan y corren los lectores de sus reglas.
+      const hoy = (await dueno.planVersion.findFirstOrThrow({ orderBy: { version: "desc" }, select: { vigenteDesde: true } })).vigenteDesde;
+      const r = await exportarHechos(ia, hoy);
+      const comoDueno = await exportarHechos(dueno, hoy);
+      expect([...r.paquetes.map((p) => p.tipo), ...r.omitidos.map((o) => o.tipo)].sort()).toEqual(["DIARIO", "ESCENARIOS", "REGLAS"]);
+      expect(r.omitidos.find((o) => o.tipo === "REGLAS")?.codigo).not.toBe("SIN_PLAN_VIGENTE");
+      expect(r.paquetes.map((p) => p.hash)).toEqual(comoDueno.paquetes.map((p) => p.hash));
+      expect(r.omitidos).toEqual(comoDueno.omitidos);
     });
 
     it("el registro corre como inv_ia: registra con la hora de la base, no repite y suma el gasto; el último lo lee inv_app", async () => {
