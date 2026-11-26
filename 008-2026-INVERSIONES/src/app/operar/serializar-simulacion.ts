@@ -5,7 +5,8 @@
  */
 import { Prisma } from "@prisma/client";
 import { cantidadEs } from "@/plan/edicion/formato";
-import { DECIMALES_PESO, porcentajeEs } from "@/operar/analisis/texto";
+import { DECIMALES_PESO } from "@/operar/analisis/decimales";
+import { porcentajeEs } from "@/operar/analisis/texto";
 import { textoAfectacion, textoAviso, textoPesos, textoComision, textoError, textoPesosRedondos, textoRegla, NOTA_CAJA_SIN_COMISION, NOTA_VALORACION } from "@/operar/simulador/textos";
 import type { ComisionEstimada, PosicionSimulada, ResultadoSimulacion, Tenencia } from "@/operar/simulador/tipos";
 import type { VistaAnalisisSimulacion } from "@/operar/analisis/vista";
@@ -38,13 +39,13 @@ export function textoPeso(t: Tenencia): string {
 export const especiesSimulables = (posiciones: readonly PosicionSimulada[]): EspecieSimulable[] =>
   posiciones.map((p) => ({ id: p.instrumentoId, nemotecnico: p.nemotecnico, cantidad: cantidadEs(p.cantidad) }));
 
-/** La respuesta de la ruta: la vista o los errores del dueño, ya como texto. `cajaAl` es el corte de la caja (null sin certificación; «ESCRITA» si la escribió el dueño). */
 /** El precio actual escrito para la especie operada y el día del último cierre con que se habría valorado (null si no tiene). */
 export interface PrecioEscrito {
   readonly precio: Prisma.Decimal;
   readonly cierreFecha: Date | null;
 }
 
+/** La respuesta de la ruta: la vista o los errores del dueño, ya como texto. `cajaAl` es el corte de la caja (null sin certificación; «ESCRITA» si la escribió el dueño). */
 export function aRespuestaSimulacion(
   r: ResultadoSimulacion,
   instrumentoId: string,

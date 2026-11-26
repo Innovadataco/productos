@@ -15,7 +15,6 @@ export const ROTULO_ANALISIS = "Análisis calculado por Inversiones · la IA lo 
 
 const SIN_DATO = "sin dato";
 const OTRA = "otra especie";
-export { DECIMALES_PESO };
 const DECIMALES_PCT = DECIMALES_PESO;
 const DECIMALES_HHI = 3;
 const LADO: Readonly<Record<LadoSimulado, string>> = { COMPRAR: "compra", VENDER: "venta" };
