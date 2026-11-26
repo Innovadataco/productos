@@ -10,7 +10,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      # SPEC-982 (I-466): publicar SOLO en loopback. Sin IP, Colima/Lima reenvía a *:5433
+      # y la base de dev queda visible para la LAN y la tailnet (verificado con lsof).
+      - "127.0.0.1:5433:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U proteccion" ]
       interval: 5s
@@ -32,7 +34,9 @@ services:
       - pi_worker_run:/app/run
       - pi_apelaciones_storage:/app/storage
     ports:
-      - "5005:3000"
+      # SPEC-982 (I-466): mismo criterio que la db — la app de dev solo se expone en loopback,
+      # no a la LAN ni a la tailnet. El acceso local (navegador, e2e) sigue por localhost:5005.
+      - "127.0.0.1:5005:3000"
     depends_on:
       db:
         condition: service_healthy
