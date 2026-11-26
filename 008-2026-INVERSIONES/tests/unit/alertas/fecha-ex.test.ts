@@ -24,6 +24,13 @@ describe("evaluarFechasEx", () => {
     expect(evaluar([decreto("d1", "2027-03-09")], { hoy: "2027-03-04", noHabiles: ["2027-03-08"] })).toHaveLength(1); // viernes y martes = 2 hábiles
     expect(evaluar([decreto("d1", "2027-03-10")], { hoy: "2027-03-04" })).toHaveLength(0); // viernes, lunes, martes y miércoles = 4
   });
+  it("un ex en fin de semana o festivo cuenta: los hábiles hasta él se cuentan, y el de hoy salta", () => {
+    expect(evaluar([decreto("d1", "2027-03-06")], { hoy: "2027-03-04" })).toHaveLength(1); // sábado: solo el viernes cuenta
+    expect(evaluar([decreto("d1", "2027-03-07")], { hoy: "2027-03-05" })).toHaveLength(1); // domingo
+    expect(evaluar([decreto("d1", "2027-03-08")], { hoy: "2027-03-08", noHabiles: ["2027-03-08"] })).toHaveLength(1); // festivo, es hoy
+    expect(evaluar([decreto("d1", "2027-03-08")], { hoy: "2027-03-03", noHabiles: ["2027-03-08"] })).toHaveLength(1); // mié → festivo: jue y vie
+    expect(evaluar([decreto("d1", "2027-03-14")], { hoy: "2027-03-04" })).toHaveLength(0); // domingo lejano: vie, lun, mar, mié, jue
+  });
   it("un ex ya pasado no salta", () => {
     expect(evaluar([decreto("d1", "2027-02-26")])).toHaveLength(0);
   });

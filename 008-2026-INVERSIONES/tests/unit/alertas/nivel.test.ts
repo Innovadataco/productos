@@ -6,7 +6,7 @@ import { UMBRALES_OMISION } from "@/alertas/umbrales";
 const D = (v: string) => new Prisma.Decimal(v);
 const base = (o: Partial<EntradaNivel> = {}): EntradaNivel => ({
   reglaId: "regla-1", instrumentoId: "FICTICIA-A", condicion: "CIERRE_BAJO", nivel: D("100"),
-  precio: { base: "CIERRE", precio: D("150") }, ...o,
+  precio: { base: "CIERRE", precio: D("150") }, dia: "2027-03-01", ...o,
 });
 
 describe("evaluarNivel", () => {
@@ -51,6 +51,9 @@ describe("evaluarNivel", () => {
     expect(evaluarNivel(cruzado, { ...UMBRALES_OMISION, alertaCercaActiva: false })).toMatchObject({ tipo: "NIVEL_CRUZADO" });
     const cerca = base({ precio: { base: "CIERRE", precio: D("101") } });
     expect(evaluarNivel(cerca, { ...UMBRALES_OMISION, alertaCercaActiva: false })).toBeNull();
+  });
+  it("la clave lleva el día de la entrada", () => {
+    expect(evaluarNivel(base({ precio: { base: "CIERRE", precio: D("90") } }), UMBRALES_OMISION)?.clave).toBe("2027-03-01|NIVEL_CRUZADO|FICTICIA-A|regla-1|BAJO");
   });
   it("lleva los datos que el texto necesita", () => {
     const a = evaluarNivel(base({ precio: { base: "INTRADIA", precio: D("90"), instante: new Date("2027-03-01T15:35:00Z"), conRetraso: true } }), UMBRALES_OMISION);

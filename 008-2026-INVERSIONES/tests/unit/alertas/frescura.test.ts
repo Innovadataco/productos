@@ -40,6 +40,19 @@ describe("evaluarFrescura con el intradía activo", () => {
   });
 });
 
+describe("evaluarFrescura: falta el cierre con el intradía encendido", () => {
+  const encendido = (hhmm: string, o: Partial<EntradaFrescura> = {}) => entrada(cot("2027-03-01", hhmm), { ultimo: barra("2027-03-01", "15:59"), ...o });
+  it("después de las 18:15 sin el cierre de hoy salta con base cierre; a las 18:14, no", () => {
+    expect(evaluarFrescura(encendido("18:14"), UMBRALES_OMISION)).toBeNull();
+    expect(evaluarFrescura(encendido("18:15"), UMBRALES_OMISION)).toMatchObject({ tipo: "DATO_VIEJO", base: "CIERRE" });
+  });
+  it("con el cierre de hoy, en día no hábil o con el interruptor apagado, no salta", () => {
+    expect(evaluarFrescura(encendido("19:00", { cierreDeHoy: true }), UMBRALES_OMISION)).toBeNull();
+    expect(evaluarFrescura(encendido("19:00", { noHabiles: new Set(["2027-03-01"]) }), UMBRALES_OMISION)).toBeNull();
+    expect(evaluarFrescura(encendido("19:00"), { ...UMBRALES_OMISION, alertaDatoViejoActiva: false })).toBeNull();
+  });
+});
+
 describe("evaluarFrescura con el intradía apagado", () => {
   const apagado = (hhmm: string, o: Partial<EntradaFrescura> = {}) => entrada(cot("2027-03-01", hhmm), { intradiaActivo: false, ...o });
   it("falta el cierre del día hábil a las 18:00: salta; antes, no", () => {
