@@ -24,18 +24,20 @@ let m: Montaje;
 let estado: Estado;
 let respuestaPedido: { estado: number; cuerpo: unknown };
 const llamadas: { url: string; init: RequestInit }[] = [];
-const fetchFalso = vi.fn(async (url: string, init: RequestInit = {}) => {
+const servicioFalso = async (url: string, init: RequestInit = {}): Promise<Response> => {
   llamadas.push({ url, init });
   if ((init.method ?? "GET") === "GET") return new Response(JSON.stringify({ estado }), { status: 200 });
   return new Response(JSON.stringify(respuestaPedido.cuerpo), { status: respuestaPedido.estado });
-});
+};
+const fetchFalso = vi.fn(servicioFalso);
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
   estado = { ...LIBRE };
   respuestaPedido = { estado: 202, cuerpo: { estado: "ACEPTADO", lugar: "EN_CURSO" } };
   llamadas.length = 0;
-  fetchFalso.mockClear();
+  fetchFalso.mockReset();
+  fetchFalso.mockImplementation(servicioFalso);
   refrescar.mockClear();
   vi.stubGlobal("fetch", fetchFalso);
   m = montar();

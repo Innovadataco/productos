@@ -33,14 +33,20 @@ const esEstado = (v: unknown): v is EstadoServicio => {
   return typeof v === "object" && v !== null && typeof e?.reintentarEnS === "number" && (e.enCurso === null || typeof e.enCurso === "string") && (e.enEspera === null || typeof e.enEspera === "string");
 };
 
-async function leerEstado(): Promise<EstadoServicio | null> {
+/** La lectura del estado: `{ok:false}` si la red falla, el servicio no responde bien o el cuerpo no cuadra (nunca se confunde con un estado). */
+type Lectura = { readonly ok: true; readonly estado: EstadoServicio } | { readonly ok: false };
+const FALLA: Lectura = Object.freeze({ ok: false });
+/** Cuántas lecturas fallidas seguidas, mientras se analiza, hacen que el botón avise y vuelva a quedar libre. */
+const FALLAS_SEGUIDAS = 2;
+
+async function leerEstado(): Promise<Lectura> {
   try {
     const r = await fetch(RUTA, { cache: "no-store" });
-    if (!r.ok) return null;
+    if (!r.ok) return FALLA;
     const cuerpo = (await r.json()) as { readonly estado?: unknown };
-    return esEstado(cuerpo.estado) ? cuerpo.estado : null;
+    return esEstado(cuerpo.estado) ? { ok: true, estado: cuerpo.estado } : FALLA;
   } catch {
-    return null;
+    return FALLA;
   }
 }
 
@@ -64,6 +70,7 @@ export function BotonAnalizar({ tarea }: { readonly tarea: TipoResumen }) {
   const [mensaje, setMensaje] = useState("");
   const faseRef = useRef<Fase>("libre");
   const sondeos = useRef(0);
+  const fallas = useRef(0);
   const desbloqueo = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const poner = useCallback((f: Fase) => {
@@ -107,7 +114,7 @@ export function BotonAnalizar({ tarea }: { readonly tarea: TipoResumen }) {
     let vivo = true;
     void leerEstado().then((e) => {
       // Si ya hizo clic mientras tanto, esa lectura es más vieja que lo que ve: no la pisa.
-      if (vivo && e !== null && !pidio.current) aplicar(e);
+      if (vivo && e.ok && !pidio.current) aplicar(e.estado);
     });
     return () => { vivo = false; };
   }, [aplicar]);
@@ -116,6 +123,7 @@ export function BotonAnalizar({ tarea }: { readonly tarea: TipoResumen }) {
   useEffect(() => {
     if (fase === "libre") return undefined;
     let vivo = true;
+    fallas.current = 0;
     const reloj = setInterval(() => {
       sondeos.current += 1;
       if (sondeos.current > MAX_SONDEOS) {
@@ -127,7 +135,19 @@ export function BotonAnalizar({ tarea }: { readonly tarea: TipoResumen }) {
       }
       void leerEstado().then((e) => {
         // Una respuesta tardía de un sondeo que ya se cerró (terminó, cambió la fase o se desmontó) no se aplica.
-        if (vivo && e !== null) aplicar(e);
+        if (!vivo) return;
+        if (e.ok) {
+          fallas.current = 0;
+          aplicar(e.estado);
+          return;
+        }
+        fallas.current += 1;
+        if (fallas.current >= FALLAS_SEGUIDAS) {
+          fallas.current = 0;
+          sondeos.current = 0;
+          poner("libre");
+          setMensaje(T.sinEstado);
+        }
       });
     }, SONDEO_MS);
     return () => {
