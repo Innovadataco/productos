@@ -101,4 +101,25 @@ describe("evaluarAlertas", () => {
     expect(evaluarAlertas(e)).toEqual(a);
     expect(foto()).toBe(antes);
   });
+
+  it("una barra del futuro no sirve de precio de hoy", () => {
+    const futura = { instante: cot("2027-03-01", "15:30"), precio: D("91"), conRetraso: false };
+    const r = evaluarAlertas(entrada([especie("FICTICIA-A", { reglas: [regla], intradia: futura })], { ahora: cot("2027-03-01", "11:00") }));
+    expect(r.filter((a) => a.tipo === "NIVEL_CRUZADO")).toEqual([]);
+  });
+
+  it("valida los umbrales otra vez: NaN, negativos, infinitos o fuera de rango dan un error claro", () => {
+    const e = entrada([]);
+    for (const malo of [Number.NaN, -1, Infinity, 0]) {
+      expect(() => evaluarAlertas({ ...e, umbrales: { ...UMBRALES_OMISION, alertaCercaPct: malo } })).toThrow(RangeError);
+    }
+    expect(() => evaluarAlertas({ ...e, umbrales: { ...UMBRALES_OMISION, alertaCaidaActiva: "si" as unknown as boolean } })).toThrow(/alertaCaidaActiva/);
+  });
+
+  it("un fechaEx inválido descarta solo ese decreto", () => {
+    const malo = { id: "dx", instrumentoId: "FICTICIA-A", fechaEx: new Date("no es una fecha"), fechaPago: f("2027-04-01"), vigente: true, anulada: false };
+    const bueno = { id: "d1", instrumentoId: "FICTICIA-A", fechaEx: f("2027-03-01"), fechaPago: f("2027-04-01"), vigente: true, anulada: false };
+    const r = evaluarAlertas(entrada([especie("FICTICIA-A", { cierreHoy: D("100"), cierreAnterior: D("100") })], { decretos: [malo, bueno] }));
+    expect(r.filter((a) => a.tipo === "FECHA_EX").map((a) => a.reglaId)).toEqual(["d1"]);
+  });
 });

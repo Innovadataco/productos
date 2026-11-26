@@ -48,4 +48,10 @@ describe("evaluarCaida", () => {
   it("la clave no incluye especie ni regla", () => {
     expect(evaluar([pos("FICTICIA-A", 1n, "50", "100")])?.clave).toBe("2027-03-01|CAIDA_PORTAFOLIO|-|-|BAJO");
   });
+  it("falla cerrada con un precio o un cierre anterior no positivo (0 y −1)", () => {
+    for (const malo of ["0", "-1"]) {
+      expect(evaluar([pos("FICTICIA-A", 10n, "50", "100"), pos("FICTICIA-B", 5n, malo, "10")])).toBeNull();
+      expect(evaluar([pos("FICTICIA-A", 10n, "50", "100"), pos("FICTICIA-B", 5n, "10", malo)])).toBeNull();
+    }
+  });
 });

@@ -66,4 +66,10 @@ describe("umbrales de alertas", () => {
     const r = validarUmbrales({});
     if (r.ok) expect(r.umbrales).not.toBe(UMBRALES_OMISION);
   });
+
+  it("solo cuentan las claves propias: lo heredado del prototipo no es un umbral ni se hereda", () => {
+    expect(validarUmbrales({ constructor: 1 }).ok).toBe(false);
+    expect(validarUmbrales(JSON.parse('{"__proto__": 1}')).ok).toBe(false);
+    expect(validarUmbrales(Object.create({ alertaCercaPct: 99 }))).toEqual({ ok: true, umbrales: UMBRALES_OMISION });
+  });
 });

@@ -35,6 +35,11 @@ describe("evaluarFrescura con el intradía activo", () => {
     expect(evaluarFrescura(entrada(cot("2027-03-01", "10:20")), UMBRALES_OMISION)).toBeNull();
     expect(evaluarFrescura(entrada(cot("2027-03-01", "10:21")), UMBRALES_OMISION)).not.toBeNull();
   });
+  it("una barra del futuro no apaga la alerta: se ignora", () => {
+    const futura = { instante: new Date("2099-01-01T00:00:00Z"), precio: new Prisma.Decimal("10"), conRetraso: false };
+    const a = evaluarFrescura(entrada(cot("2027-03-01", "14:00"), { ultimo: futura }), UMBRALES_OMISION);
+    expect(a).toMatchObject({ tipo: "DATO_VIEJO", base: "INTRADIA", datos: { instante: undefined } });
+  });
   it("el interruptor lo apaga", () => {
     expect(evaluarFrescura(entrada(cot("2027-03-01", "14:00")), { ...UMBRALES_OMISION, alertaDatoViejoActiva: false })).toBeNull();
   });
@@ -45,6 +50,16 @@ describe("evaluarFrescura: falta el cierre con el intradía encendido", () => {
   it("después de las 18:15 sin el cierre de hoy salta con base cierre; a las 18:14, no", () => {
     expect(evaluarFrescura(encendido("18:14"), UMBRALES_OMISION)).toBeNull();
     expect(evaluarFrescura(encendido("18:15"), UMBRALES_OMISION)).toMatchObject({ tipo: "DATO_VIEJO", base: "CIERRE" });
+  });
+  it("«dato viejo del intradía» y «falta el cierre» el mismo día no comparten clave: se distinguen por el sentido", () => {
+    const u = barra("2027-03-01", "11:00");
+    const rueda = evaluarFrescura(entrada(cot("2027-03-01", "14:00"), { ultimo: u }), UMBRALES_OMISION);
+    const cierre = evaluarFrescura(entrada(cot("2027-03-01", "18:30"), { ultimo: u }), UMBRALES_OMISION);
+    expect(rueda).toMatchObject({ sentido: "RUEDA", base: "INTRADIA" });
+    expect(cierre).toMatchObject({ sentido: "CIERRE_FALTANTE", base: "CIERRE" });
+    expect(rueda!.clave).not.toBe(cierre!.clave);
+    expect(rueda!.clave).toBe("2027-03-01|DATO_VIEJO|FICTICIA-A|-|RUEDA");
+    expect(cierre!.clave).toBe("2027-03-01|DATO_VIEJO|FICTICIA-A|-|CIERRE_FALTANTE");
   });
   it("con el cierre de hoy, en día no hábil o con el interruptor apagado, no salta", () => {
     expect(evaluarFrescura(encendido("19:00", { cierreDeHoy: true }), UMBRALES_OMISION)).toBeNull();
