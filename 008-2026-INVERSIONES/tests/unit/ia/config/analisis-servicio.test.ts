@@ -7,7 +7,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { clienteAnalisis, clienteAnalisisDelEntorno } from "@/ia/config/analisis-servicio";
 import { sondaDelEntorno } from "@/ia/config/sonda-ollama";
-import { ORIGEN_SERVICIO_IA, VARIABLE_ORIGEN_SERVICIO_IA, VARIABLE_TOKEN_SERVICIO_IA, leerOrigenServicioIa, sondaServicio, type BuscarServicio } from "@/ia/config/sonda-servicio";
+import { ORIGEN_SERVICIO_IA, VARIABLE_ORIGEN_SERVICIO_IA, VARIABLE_TOKEN_SERVICIO_IA, leerOrigenServicioIa, reiniciarAvisosOrigenParaPruebas, sondaServicio, type BuscarServicio } from "@/ia/config/sonda-servicio";
 
 const TOKEN = "t0ken-FICTICIO_".repeat(3);
 const responder = (status: number, cuerpo: unknown): BuscarServicio => vi.fn(async () => ({ status, text: async () => (typeof cuerpo === "string" ? cuerpo : JSON.stringify(cuerpo)) }));
@@ -23,9 +23,21 @@ describe("leerOrigenServicioIa · la dirección sale de configuración y se vali
   it.each([
     ["http://inv-008-ia:8008", "http://inv-008-ia:8008"],
     ["http://inv-008-ia:8008/", "http://inv-008-ia:8008"],
-    ["http://otro-servicio-ia:9100", "http://otro-servicio-ia:9100"],
+    ["http://inv-008-ia:9100", "http://inv-008-ia:9100"],
   ])("un valor permitido (%s) se usa", (valor, origen) => {
     expect(leerOrigenServicioIa({ NODE_ENV: "production", [VARIABLE_ORIGEN_SERVICIO_IA]: valor })).toEqual({ ok: true, origen });
+  });
+
+  it.each(["http://inv-008-db:5432", "http://ip6-localhost:8008", "http://otro-servicio-ia:9100", "http://inv-008-app:3000"])(
+    "en producción solo vale el host inv-008-ia (lista cerrada): otro nombre de una sola etiqueta (%s) no se usa", (valor) => {
+      const r = leerOrigenServicioIa({ NODE_ENV: "production", [VARIABLE_ORIGEN_SERVICIO_IA]: valor });
+      expect(r.ok).toBe(false);
+      expect(JSON.stringify(r)).not.toContain(valor);
+      if (!r.ok) expect(r.motivo).toContain("el nombre");
+    });
+
+  it("fuera de producción, otro nombre de servicio de una sola etiqueta sigue valiendo (el servicio falso de las pruebas)", () => {
+    expect(leerOrigenServicioIa({ NODE_ENV: "development", [VARIABLE_ORIGEN_SERVICIO_IA]: "http://otro-servicio-ia:9100" })).toEqual({ ok: true, origen: "http://otro-servicio-ia:9100" });
   });
 
   it.each([
@@ -53,10 +65,36 @@ describe("leerOrigenServicioIa · la dirección sale de configuración y se vali
 
   it("la sonda del entorno la usa: con un origen inválido queda PENDIENTE; con uno válido, la del servicio en esa dirección", async () => {
     expect(sondaDelEntorno({ NODE_ENV: "production", [VARIABLE_TOKEN_SERVICIO_IA]: TOKEN, [VARIABLE_ORIGEN_SERVICIO_IA]: "http://ejemplo.invalid:8008" }).tipo).toBe("PENDIENTE");
-    expect(sondaDelEntorno({ NODE_ENV: "production", [VARIABLE_TOKEN_SERVICIO_IA]: TOKEN, [VARIABLE_ORIGEN_SERVICIO_IA]: "http://otro-servicio-ia:9100" }).tipo).toBe("SERVICIO");
+    expect(sondaDelEntorno({ NODE_ENV: "production", [VARIABLE_TOKEN_SERVICIO_IA]: TOKEN, [VARIABLE_ORIGEN_SERVICIO_IA]: "http://otro-servicio-ia:9100" }).tipo).toBe("PENDIENTE");
+    expect(sondaDelEntorno({ NODE_ENV: "development", [VARIABLE_TOKEN_SERVICIO_IA]: TOKEN, [VARIABLE_ORIGEN_SERVICIO_IA]: "http://otro-servicio-ia:9100" }).tipo).toBe("SERVICIO");
     const buscar = responder(200, { ok: true, modelos: [] });
     await sondaServicio(buscar, TOKEN, "http://otro-servicio-ia:9100").identificar("http://x");
     expect(vi.mocked(buscar).mock.calls[0]![0]).toBe("http://otro-servicio-ia:9100/identificar");
+  });
+});
+
+describe("una dirección inválida se registra (el motivo, sin el valor) una sola vez", () => {
+  const entorno = (valor: string) => ({ NODE_ENV: "production", [VARIABLE_TOKEN_SERVICIO_IA]: TOKEN, [VARIABLE_ORIGEN_SERVICIO_IA]: valor });
+
+  it("la sonda y el cliente de análisis registran el motivo, nunca el valor, y no repiten la línea", () => {
+    reiniciarAvisosOrigenParaPruebas();
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const valor = "http://usuario:clave-4613@inv-008-db:5432";
+      expect(sondaDelEntorno(entorno(valor)).tipo).toBe("PENDIENTE");
+      expect(clienteAnalisisDelEntorno(entorno(valor))).toBeNull();
+      expect(clienteAnalisisDelEntorno(entorno(valor))).toBeNull();
+      const lineas = error.mock.calls.map((c) => String(c[0]));
+      expect(lineas).toHaveLength(1);
+      expect(lineas[0]).toContain("INV_IA_SERVICIO_URL no es válida (trae usuario)");
+      expect(lineas.join(" ")).not.toContain("clave-4613");
+      expect(lineas.join(" ")).not.toContain("inv-008-db");
+      // otro motivo, otra línea
+      expect(clienteAnalisisDelEntorno(entorno("http://ip6-localhost:8008"))).toBeNull();
+      expect(error.mock.calls).toHaveLength(2);
+    } finally {
+      error.mockRestore();
+    }
   });
 });
 
