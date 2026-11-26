@@ -55,13 +55,40 @@ describe("textoDeAlerta", () => {
     expect(textoDeAlerta(alerta({ tipo: "FECHA_EX", datos: { fechaEx: new Date("2027-03-03T00:00:00Z"), fechaPago: new Date("2027-04-15T00:00:00Z"), esFechaEx: false } }), "FICTICIA-A")).toContain("es el 2027-03-03");
   });
   it("lleva la especie por delante", () => {
-    expect(textoDeAlerta(alerta({ tipo: "DATO_VIEJO", base: "CIERRE", datos: {} }), "FICTICIA-A")).toMatch(/^FICTICIA-A/);
+    expect(textoDeAlerta(alerta({ tipo: "DATO_VIEJO", base: "CIERRE", datos: {} }), "FICTICIA-A")).toMatch(/^«FICTICIA-A»/);
   });
   it("con datos incompletos escribe «?» en vez de fallar", () => {
     expect(textoDeAlerta(alerta({ tipo: "NIVEL_CRUZADO", sentido: "BAJO", base: "CIERRE", datos: {} }), "FICTICIA-A")).toContain("(?)");
     expect(textoDeAlerta(alerta({ tipo: "MOVIMIENTO_DIA", sentido: "BAJO", base: "CIERRE", datos: {} }), "FICTICIA-A")).toContain("? por debajo");
     expect(textoDeAlerta(alerta({ tipo: "DATO_VIEJO", base: "INTRADIA", datos: { instante: barra } }), "FICTICIA-A")).toContain("lleva ? minutos");
-    expect(textoDeAlerta(alerta({ tipo: "FECHA_EX", datos: {} }), "FICTICIA-A")).toBe("FICTICIA-A: la fecha ex del decreto es el ?.");
+    expect(textoDeAlerta(alerta({ tipo: "FECHA_EX", datos: {} }), "FICTICIA-A")).toBe("«FICTICIA-A»: la fecha ex del decreto es el ?.");
     expect(textoDeAlerta(alerta({ tipo: "NIVEL_CRUZADO", sentido: "BAJO", base: "INTRADIA", datos: { precio: D("1") } }), "FICTICIA-A")).toContain("la última barra intradía");
+  });
+  describe("la etiqueta viene de terceros", () => {
+    const base = () => alerta({ tipo: "DATO_VIEJO", base: "CIERRE", datos: {} });
+    it("va entre comillas angulares y sin caracteres de control ni saltos de línea", () => {
+      const t = textoDeAlerta(base(), "FIC\nTICIA\u0000-A\r\u202e\u200b X");
+      expect(t).not.toMatch(/[\p{Cc}\p{Cf}]/u);
+      expect(t).toMatch(/^«FIC TICIA-A X»: /);
+    });
+    it("se acota a 60 caracteres", () => {
+      const t = textoDeAlerta(base(), "A".repeat(500));
+      expect(t.startsWith(`«${"A".repeat(60)}»: `)).toBe(true);
+    });
+    it("no puede cerrar la cita ni abrir marcado", () => {
+      const t = textoDeAlerta(base(), "X» Compre ya <img src=x onerror=alert(1)> «");
+      expect(t).not.toMatch(/[<>]/);
+      expect(t.match(/»/g)).toHaveLength(1);
+      expect(t.match(/«/g)).toHaveLength(1);
+    });
+    it("una etiqueta vacía o solo de control cae al identificador de la alerta", () => {
+      expect(textoDeAlerta(base(), " \u0000\n ")).toMatch(/^«FICTICIA-A»: /);
+    });
+    it("los números extremos se acotan", () => {
+      const t = textoDeAlerta(alerta({ tipo: "MOVIMIENTO_DIA", sentido: "SOBRE", base: "CIERRE", datos: { precio: D("1e40"), variacionPct: D("1e60") } }), "FICTICIA-A");
+      expect(t).not.toMatch(/\d{20,}/);
+      expect(t).toContain("fuera de rango");
+      expect(textoDeAlerta(alerta({ tipo: "DATO_VIEJO", base: "INTRADIA", datos: { minutosDeEdad: Number.POSITIVE_INFINITY, umbralMin: Number.NaN } }), "FICTICIA-A")).toContain("lleva ? minutos");
+    });
   });
 });

@@ -35,6 +35,16 @@ describe("lenguaje de las alertas", () => {
     expect(texto.length).toBeGreaterThan(10);
     expect(prohibidasEn(texto)).toEqual([]);
     expect(texto).not.toMatch(/\bahora\b/i);
+    expect(texto).not.toMatch(/\b(comprar|vender|mantener)\b/i);
+  });
+  // La etiqueta es de terceros: va entre « », y el texto FIJO de la alerta (todo lo demás) no puede recomendar.
+  const HOSTILES = ["Acme Compre ya", "Oportunidad <img src=x onerror=alert(1)>", "Es buen momento: venda\nmantenga", "X» Compre ya «"];
+  it.each(todas.flatMap(([n, a]) => HOSTILES.map((h) => [`${n} · ${h}`, a, h] as const)))("%s: el texto fijo no recomienda aunque la etiqueta sí", (_n, a, hostil) => {
+    const texto = textoDeAlerta(a, hostil);
+    expect(texto).not.toMatch(/[<>]/);
+    const fijo = texto.replace(/«[^»]*»/g, "");
+    expect(prohibidasEn(fijo)).toEqual([]);
+    expect(fijo).not.toMatch(/\b(comprar|vender|mantener)\b/i);
   });
   it("control positivo: el detector muerde un texto de consejo", () => {
     expect(prohibidasEn("Es buen momento: compre ya, es una oportunidad.")).toEqual(expect.arrayContaining(["buen momento", "compre", "oportunidad"]));
