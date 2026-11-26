@@ -81,7 +81,8 @@ describe("BotonAnalizar", () => {
     expect(mensaje()).toBe("Analizando…");
     expect(deshabilitado()).toBe(true);
     expect(boton().hasAttribute("disabled")).toBe(false); // sigue enfocable: no pierde el foco
-    expect(m.contenedor.querySelector(".resumen-ia-analizar-caja")?.getAttribute("aria-busy")).toBe("true");
+    // La región viva (role=status) no va dentro de un contenedor aria-busy: el lector no anunciaría los cambios.
+    expect(m.contenedor.querySelector("[aria-busy]")).toBeNull();
     expect(m.contenedor.querySelector(".resumen-ia-analizar-estado")?.getAttribute("role")).toBe("status");
   });
 
@@ -104,7 +105,7 @@ describe("BotonAnalizar", () => {
     estado = { ...LIBRE, ultimo: { tarea: "DIARIO", estado: "PUBLICADO" }, reintentarEnS: 120 };
     await asentar(SONDEO_MS);
     expect(refrescar).toHaveBeenCalledTimes(1);
-    expect(mensaje()).toBe(textoEspera(120));
+    expect(mensaje()).toBe(`Análisis listo. ${textoEspera(120)}`);
     expect(deshabilitado()).toBe(true);
   });
 
@@ -233,7 +234,6 @@ describe("BotonAnalizar", () => {
       expect(mensaje()).toBe(sinEstado);
       expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.sinEstado);
       expect(deshabilitado()).toBe(false);
-      expect(m.contenedor.querySelector(".resumen-ia-analizar-caja")?.hasAttribute("aria-busy")).toBe(false);
       expect(texto(m.contenedor)).not.toContain("4613");
       const antes = llamadas.length;
       await asentar(SONDEO_MS * 3); // ya no sondea
@@ -305,11 +305,12 @@ describe("BotonAnalizar", () => {
       expect(deshabilitado()).toBe(false);
     });
 
-    it("un análisis que terminó bien (PUBLICADO) no dice nada de fallo", async () => {
+    it("un análisis que terminó bien (PUBLICADO) dice «Análisis listo.», sin nada de fallo", async () => {
       await conAnalisisEnCurso();
       estado = { ...LIBRE, ultimo: { tarea: "DIARIO", estado: "PUBLICADO" } };
       await asentar(SONDEO_MS);
-      expect(mensaje()).toBe("");
+      expect(mensaje()).toBe("Análisis listo.");
+      expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.listo);
       expect(refrescar).toHaveBeenCalledTimes(1);
     });
 
@@ -326,6 +327,68 @@ describe("BotonAnalizar", () => {
       estado = { ...LIBRE, ultimo: { tarea: 5, estado: {} } as never };
       await asentar(SONDEO_MS * 2);
       expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.sinEstado);
+    });
+  });
+
+  describe("cuidados del botón", () => {
+    it("el botón apunta a su región de estado con aria-describedby", async () => {
+      await montarBoton();
+      const estadoEl = m.contenedor.querySelector(".resumen-ia-analizar-estado")!;
+      expect(estadoEl.id).not.toBe("");
+      expect(boton().getAttribute("aria-describedby")).toBe(estadoEl.id);
+    });
+
+    it("dos clics seguidos antes de que responda el servidor mandan UN solo pedido", async () => {
+      await montarBoton();
+      await act(async () => { boton().click(); boton().click(); });
+      await asentar();
+      expect(llamadas.filter((l) => l.init.method === "POST")).toHaveLength(1);
+    });
+
+    it("tras un pedido que falla, se puede volver a pedir (el cerrojo del doble envío se suelta)", async () => {
+      await montarBoton();
+      fetchFalso.mockRejectedValueOnce(new TypeError("x"));
+      await act(async () => { boton().click(); });
+      await asentar();
+      expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.error);
+      await act(async () => { boton().click(); });
+      await asentar();
+      expect(llamadas.filter((l) => l.init.method === "POST")).toHaveLength(1); // el primero lanzó antes de registrar
+      expect(mensaje()).toBe("Analizando…");
+    });
+
+    it("al llegar al tope de sondeos dice que sigue en curso y que recargue, y el botón queda libre", async () => {
+      estado = { ...LIBRE, enCurso: "DIARIO" };
+      await montarBoton();
+      expect(mensaje()).toBe("Analizando…");
+      for (let i = 0; i < 125; i += 1) await asentar(SONDEO_MS);
+      expect(mensaje()).toBe("El análisis sigue en curso; recargue en unos minutos.");
+      expect(mensaje()).toBe(TEXTOS_RESUMEN_IA.boton.sigueEnCurso);
+    });
+
+    it("al desmontar se aborta la lectura del estado que estaba en vuelo", async () => {
+      let senal: AbortSignal | undefined;
+      fetchFalso.mockImplementationOnce((_url: string, init: RequestInit = {}) => {
+        senal = init.signal ?? undefined;
+        return new Promise<Response>(() => undefined);
+      });
+      await montarBoton();
+      expect(senal).toBeDefined();
+      expect(senal!.aborted).toBe(false);
+      m.desmontar();
+      expect(senal!.aborted).toBe(true);
+    });
+
+    it("un pedido que responde después de desmontar no deja temporizadores", async () => {
+      let responder: (r: Response) => void = () => undefined;
+      await montarBoton();
+      fetchFalso.mockImplementationOnce(() => new Promise<Response>((r) => { responder = r; }));
+      await act(async () => { boton().click(); });
+      m.desmontar();
+      expect(vi.getTimerCount()).toBe(0);
+      responder(new Response(JSON.stringify({ codigo: "ESPERA_MINIMA", reintentarEnS: 75 }), { status: 429 }));
+      await asentar();
+      expect(vi.getTimerCount()).toBe(0);
     });
   });
 
