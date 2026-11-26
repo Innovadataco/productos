@@ -83,7 +83,7 @@ describe("Simulador", () => {
 
   it("el precio actual de trii Pro: un campo opcional con su ayuda, que viaja en el pedido tal como se escribió", async () => {
     await m.pintar(createElement(Simulador, { especies: ESPECIES }));
-    expect(T.PRECIO_ACTUAL).toBe("Precio actual (trii Pro) ($, opcional)");
+    expect(T.PRECIO_ACTUAL).toBe("Precio actual en trii Pro ($, opcional)");
     expect(T.AYUDA_PRECIO_ACTUAL).toBe(
       "El precio que ve en trii Pro, como en la ficha (2.345,5), sin signo $. Si lo escribe, la especie se valora a ese precio y no al último cierre; no se guarda. Hasta un millón de pesos y dos decimales.",
     );

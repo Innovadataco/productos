@@ -43,7 +43,7 @@ for (const tema of ["light", "dark"] as const) {
 
       // El formulario dice de dónde sale la caja y qué hace el precio actual.
       await expect(s.getByLabel("Su saldo disponible en el comisionista ($, opcional)", { exact: true })).toBeVisible();
-      await expect(s.getByLabel("Precio actual (trii Pro) ($, opcional)", { exact: true })).toBeVisible();
+      await expect(s.getByLabel("Precio actual en trii Pro ($, opcional)", { exact: true })).toBeVisible();
       await expect(s).toContainText("Escriba el saldo que ve en Trii");
       await expect(s).toContainText("la especie se valora a ese precio y no al último cierre; no se guarda");
       for (const ayuda of [s.locator("#sim-ayuda-saldo"), s.locator("#sim-ayuda-precio-actual")]) expect(await contraste(ayuda)).toBeGreaterThanOrEqual(4.5);
@@ -53,7 +53,7 @@ for (const tema of ["light", "dark"] as const) {
       await s.getByLabel("Precio límite ($)", { exact: true }).fill("1.100,1234");
       await s.getByLabel("Comisionista", { exact: true }).selectOption("TRII");
       await s.getByLabel("Su saldo disponible en el comisionista ($, opcional)", { exact: true }).fill("6.202,9244");
-      await s.getByLabel("Precio actual (trii Pro) ($, opcional)", { exact: true }).fill("1.234,5");
+      await s.getByLabel("Precio actual en trii Pro ($, opcional)", { exact: true }).fill("1.234,5");
       await s.getByRole("button", { name: "Simular", exact: true }).click();
       const resultado = s.locator(".op-sim-resultado");
       await expect(resultado.getByRole("heading", { level: 3, name: "Resultado de la simulación" })).toBeVisible();
