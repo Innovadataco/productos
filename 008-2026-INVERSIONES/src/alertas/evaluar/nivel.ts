@@ -17,11 +17,11 @@ export interface EntradaNivel {
   readonly nivel: Prisma.Decimal | null;
   readonly precio: PrecioEvaluado | null;
   /** Día de Colombia, AAAA-MM-DD (para la clave). */
-  readonly dia?: string;
+  readonly dia: string;
 }
 
 export function evaluarNivel(entrada: EntradaNivel, umbrales: Umbrales): Alerta | null {
-  const { reglaId, instrumentoId, condicion, nivel, precio, dia = "" } = entrada;
+  const { reglaId, instrumentoId, condicion, nivel, precio, dia } = entrada;
   // Un precio no positivo no es un precio: `estadoDelNivel` toma el cero como positivo y lo daría por cruzado.
   if (precio === null || !precio.precio.gt(0)) return null;
   const estado = estadoDelNivel(condicion, nivel, precio.precio);
