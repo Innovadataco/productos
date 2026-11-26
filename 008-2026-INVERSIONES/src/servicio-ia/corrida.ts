@@ -7,7 +7,8 @@
  * 3. `generarSegunConfig` (las puertas del modo, con la guarda de la vista ciega); cada puerta que falla queda FALLIDO;
  * 4. si respondió, `validarSalida`: PUBLICADO con el texto que renderiza el código, o RECHAZADO con los códigos;
  * 5. si el modelo no está disponible, hasta MAX_REINTENTOS reintentos (cada intento queda registrado), por RONDAS: primero
- *    todos los tipos y después, con una pausa por ronda, solo los que no tuvieron modelo.
+ *    todos los tipos y después, con una pausa por ronda, solo los que no tuvieron modelo. Esa es la política de la
+ *    corrida programada (REINTENTOS_PROGRAMADA); el modo «ahora» pasa la suya (ahora.ts) en `reintentos`.
  * Con la configuración ausente o en «apagado» no hace NADA (ni lee los hechos). Un error en un tipo (el registro, la
  * base) no tumba los demás: queda como ERROR con el nombre o el código del error, nunca su mensaje (el de PostgreSQL
  * trae la fila). El log solo lleva tipos, estados y códigos: ninguna cifra.
@@ -27,6 +28,13 @@ import { validarSalida } from "../ia/validador/validar";
 
 export const MAX_REINTENTOS = 3;
 export const PAUSA_REINTENTO_MS = 5 * 60_000;
+
+/** Cuántos reintentos hace una corrida si el modelo no está disponible, y la pausa por ronda. */
+export interface PoliticaReintentos {
+  readonly maximo: number;
+  readonly pausaMs: number;
+}
+export const REINTENTOS_PROGRAMADA: PoliticaReintentos = Object.freeze({ maximo: MAX_REINTENTOS, pausaMs: PAUSA_REINTENTO_MS });
 
 export type EstadoTipo = "PUBLICADO" | "RECHAZADO" | "FALLIDO" | "YA_PUBLICADO" | "TAREA_INACTIVA" | "APAGADO" | "OMITIDO" | "ERROR";
 
@@ -48,6 +56,8 @@ export interface DependenciasCorrida {
   registrar(entrada: EntradaResumen): Promise<unknown>;
   esperar(ms: number): Promise<void>;
   registrarLog(mensaje: string): void;
+  /** La política de reintentos; sin ella, la de la corrida programada (REINTENTOS_PROGRAMADA). */
+  readonly reintentos?: PoliticaReintentos;
 }
 
 const APAGADA: ResumenCorrida = Object.freeze({ estado: "APAGADO", porTipo: Object.freeze({}) });
@@ -114,11 +124,15 @@ async function protegido<T>(deps: DependenciasCorrida, porTipo: Estados, tipo: T
   }
 }
 
+/** La pausa para el log: en minutos si llega al minuto; si no, en segundos (redondeados hacia abajo). */
+const textoPausa = (ms: number): string => (ms >= 60_000 ? `${Math.floor(ms / 60_000)} min` : `${Math.floor(ms / 1000)} s`);
+
 /**
- * Las rondas: la primera intenta TODOS los tipos; las siguientes (hasta MAX_REINTENTOS, con una pausa por ronda) solo
- * los que no tuvieron modelo. Así un Mac caído cuesta una espera por ronda, no una por tipo.
+ * Las rondas: la primera intenta TODOS los tipos; las siguientes (hasta el máximo de la política, con una pausa por
+ * ronda) solo los que no tuvieron modelo. Así un Mac caído cuesta una espera por ronda, no una por tipo.
  */
 async function correrRondas(deps: DependenciasCorrida, config: ConfigIaVigente, paquetes: readonly PaqueteHechos[], porTipo: Estados): Promise<void> {
+  const { maximo, pausaMs } = deps.reintentos ?? REINTENTOS_PROGRAMADA;
   let pendientes: Pendiente[] = [];
   for (const paquete of paquetes) {
     const p = await protegido(deps, porTipo, paquete.tipo, () => preparar(deps, config, paquete));
@@ -134,9 +148,9 @@ async function correrRondas(deps: DependenciasCorrida, config: ConfigIaVigente, 
       porTipo[p.paquete.tipo] = r.estado;
       if (r.reintentar) siguen.push(p);
     }
-    if (siguen.length === 0 || ronda >= MAX_REINTENTOS) return;
-    deps.registrarLog(`${siguen.map((p) => p.paquete.tipo).join(", ")}: el modelo no está disponible; reintento ${ronda + 1} de ${MAX_REINTENTOS} en ${PAUSA_REINTENTO_MS / 60_000} min`);
-    await deps.esperar(PAUSA_REINTENTO_MS);
+    if (siguen.length === 0 || ronda >= maximo) return;
+    deps.registrarLog(`${siguen.map((p) => p.paquete.tipo).join(", ")}: el modelo no está disponible; reintento ${ronda + 1} de ${maximo} en ${textoPausa(pausaMs)}`);
+    await deps.esperar(pausaMs);
     pendientes = siguen;
   }
 }

@@ -422,6 +422,18 @@ Es el único que llega al Ollama del Mac, por la tailnet y por el mismo camino q
 - **Límites:** 128 MiB sin swap, `cpus` 0.25 y 64 pids. **Sin medir en el VPS:** se mide con `medir-memoria.sh` en el primer despliegue (el compose cambia de servicios, así que la espera es la de 600 s).
 - **Con una imagen anterior al servicio** (una vuelta atrás) no se cae: su arranque ve que falta el bundle y queda en espera.
 - **Ver qué hizo:** `"${COMPOSE[@]}" logs --tail 50 inv-008-ia`. El log solo trae tipos, estados y códigos, nunca cifras ni el destino.
+- **Correr el resumen de hoy a mano (`ahora`):** la misma corrida diaria, una vez, con la configuración vigente y la fecha de hoy en Colombia; no espera la ranura ni abre el endpoint, y sale al terminar.
+
+  ```bash
+  "${COMPOSE[@]}" exec -T inv-008-ia node --max-old-space-size=48 /app/ia/servicio-ia.mjs ahora; echo "salida: $?"
+  ```
+
+  - Es lo mismo que `docker exec <contenedor> node --max-old-space-size=48 /app/ia/servicio-ia.mjs ahora`, con el nombre que da `"${COMPOSE[@]}" ps inv-008-ia` (por omisión, `inv-008-prod-inv-008-ia-1`; por verificar en el VPS). Corre como el usuario 10008 del contenedor, con su `DATABASE_URL`.
+  - Las mismas reglas que la programada: con la IA apagada no hace nada; si hoy no es día hábil en la BVC, no corre (no hay `--forzar`); lo ya `PUBLICADO` con la misma clave sale `YA_PUBLICADO`, sin duplicar. El mismo `fetch` acotado, el mismo turno, `num_ctx` 8192 y `keep_alive` corto.
+  - **Reintentos:** uno solo, a los 30 s, si el modelo no está disponible (la programada hace 3, cada 5 min).
+  - **No se cruza con el bucle:** no corre si el bucle está en plena corrida ni si la ranura de hoy (`config_ia`, 19:00 por omisión) cae dentro de lo que esta puede durar. Un «Identificar» o «Probar» de la app en ese mismo momento sí se cruzaría: no los use mientras corre.
+  - **Salida:** una línea por tarea (`DIARIO: PUBLICADO`, `REGLAS: RECHAZADO`…), sin cifras. Código 0 si todas terminaron o no había nada que hacer; 1 con alguna en `ERROR` o `FALLIDO`, si se cruzaría con el bucle o si la base no dio la conexión (el rol `inv_ia` admite 2 y el bucle puede tener las suyas: vuelva a correrlo en unos minutos); 2 uso.
+  - **Memoria, sin medir:** corre como un segundo proceso dentro de los 128 MiB del contenedor, junto al bucle; por eso el tope de 48 MiB de heap. Mídalo la primera vez con `docker stats` mientras corre.
 
 ### El servicio de precios (`inv-008-precios`, D-018)
 - **Qué es:** un contenedor permanente con la imagen de la app y otro entrypoint, `node --max-old-space-size=64 /app/precios/servicio-precios.mjs bucle` (`scripts/servicio-precios.ts`, `src/servicio-precios/`):
@@ -942,6 +954,7 @@ El ensayo del CEO (ESTADO, 2026-11-21) mostró tres razones:
 3. **`pg_dump` avisa de FK circulares** en `lote`, `decision` y `enlace_decision_orden`. Su propio aviso dice que ese volcado de solo datos podría no restaurarse sin desactivar disparadores o quitar las restricciones.
 
 ---
+> v2.22 · 2026-11-25 · 23:19 (-05) · Inversiones · Fábrica Inversiones (frente ia-correr-ahora) · §5: `servicio-ia.mjs ahora`, el resumen de hoy a mano (reglas, reintentos, salida, memoria y conexiones)
 > v2.21 · 2026-11-23 · 20:11 (-05) · Inversiones · Fábrica Inversiones (frente servicio-ia) · §1 y §5: el servicio `inv-008-ia` (E6, D-026), sus tres variables opcionales, su red y el control de su salida
 > v2.20 · 2026-11-22 · 08:52 (-05) · Inversiones · Fábrica Inversiones (frente fondo-rendimientos) · §11: paso 12 ter `registrar-rendimientos-fondo` (el CSV de rendimientos del FIC y su retención por el sobre: formato, cabecera, ensayo y `--aplicar`, confirmar antes que el pago llega neto, la retención no mueve la caja, lo que garantiza la base y la app, no se corrige, salidas, conciliar después), `conciliacion-v3` al desplegar y la reversa solo antes de cargar rendimientos; riesgo residual del argv (v2.20 sobre la v2.19 de main)
 > v2.19 · 2026-11-22 · 06:24 (-05) · Inversiones · Fábrica Inversiones (frente datos-oficiales-docs, C8) · §10: conteo previo a la migración de C1; §11: exportadores de las series (TRM, BanRep con `--archivo` si bloquea, IPC solo con `--archivo`), `--aplicar` de decretos sin la guarda de C5b y P7 por decidir (v2.19 sobre la v2.18 de main)

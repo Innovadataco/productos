@@ -3,16 +3,19 @@
  * (condición react-server, por los `import "server-only"` de src/ia/config) y la imagen de la app la lleva en `/app/ia/`.
  * La corre el servicio inv-008-ia (la misma imagen, con otro entrypoint), sin tsx en producción:
  *   node servicio-ia.mjs bucle     el servicio: el resumen a la hora de config_ia y los pedidos a demanda de la app
+ *   node servicio-ia.mjs ahora     la corrida diaria UNA vez, ya, con la configuración vigente y la fecha de hoy (Colombia); sale al terminar
  *   node servicio-ia.mjs --ayuda
  * Red: el `fetch` global del proceso queda anulado; el único que sale es el acotado al Ollama de la tailnet
- * (src/servicio-ia/cableado.ts). Salida: 0 al detenerse o con --ayuda · 2 uso.
+ * (src/servicio-ia/cableado.ts), en los dos modos. Salida: 0 al detenerse, con --ayuda o con «ahora» sin tareas en
+ * ERROR ni FALLIDO · 1 «ahora» con alguna en ERROR o FALLIDO, o sin poder correr · 2 uso.
  */
 import type { BuscarLocal } from "../ia/local/http";
-import { servir } from "./cableado";
+import { servir, servirAhora } from "./cableado";
 
 const USO = [
   "Uso: node servicio-ia.mjs <modo>",
   "  bucle    el servicio inv-008-ia: el resumen diario a la hora de config_ia (días hábiles BVC) y el endpoint interno",
+  "  ahora    la corrida diaria una vez, ya (config_ia vigente, hoy en Colombia, días hábiles BVC), y sale: 0 bien, 1 con ERROR o FALLIDO",
   "  --ayuda  este texto",
 ].join("\n");
 
@@ -22,13 +25,13 @@ async function main(): Promise<number> {
     console.log(USO);
     return 0;
   }
-  if (modo !== "bucle" || resto.length > 0) {
+  if ((modo !== "bucle" && modo !== "ahora") || resto.length > 0) {
     console.error(`❌ Modo desconocido o con argumentos de más.\n${USO}`);
     return 2;
   }
   const fetchReal = globalThis.fetch as unknown as BuscarLocal;
   globalThis.fetch = (() => Promise.reject(new TypeError("RED_NO_PERMITIDA"))) as unknown as typeof fetch;
-  return servir(process, fetchReal);
+  return modo === "ahora" ? servirAhora(process, fetchReal) : servir(process, fetchReal);
 }
 
 // process.exit: al detenerse puede quedar un pedido al modelo en vuelo, que no debe retener el proceso.
