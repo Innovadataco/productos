@@ -8,6 +8,9 @@
 import type { PaqueteHechos } from "../contrato";
 import { VERSION_VALIDADOR, type CodigoValidador } from "./codigos";
 import { leerSalida } from "./leer";
+import { esNumeroFundido } from "./numeros";
+import { plegarTildes } from "./patron";
+import { PATRONES_CIFRA_EN_PALABRAS } from "./patrones-lengua";
 import { componerConObligatorias } from "./obligatorias";
 import { validarSalida } from "./validar";
 
@@ -32,9 +35,21 @@ export interface FilaDiagnosticada {
 
 const CITA = /\{H[0-9]{2}\}/gu;
 
-/** Las citas quedan como «{Hnn}» y cada dígito (de cualquier escritura) como «#». */
+/** ¿La palabra es un número escrito en palabras (un numeral, un ordinal, un mes, un día, un número fundido…)? */
+function esNumeroEnPalabras(palabra: string): boolean {
+  const plegada = plegarTildes(palabra.toLowerCase());
+  return esNumeroFundido(plegada) || PATRONES_CIFRA_EN_PALABRAS.some((p) => p.patron.test(plegada));
+}
+
+/**
+ * Las citas quedan como «{Hnn}»; cada carácter numérico (dígitos de cualquier escritura, y también «²», «½» y los romanos
+ * de un carácter) y cada número escrito en palabras («dos mil», «veintiuno», «marzo»), como «#».
+ */
 export function enmascarar(texto: string): string {
-  return texto.replace(CITA, "{Hnn}").replace(/\p{Nd}/gu, "#");
+  return texto
+    .replace(CITA, "{Hnn}")
+    .replace(/\p{N}/gu, "#")
+    .replace(/\p{L}+/gu, (palabra) => (esNumeroEnPalabras(palabra) ? "#" : palabra));
 }
 
 /** La parte que escribió la frase de ese índice, dado cuántas del comienzo escribió el código. */
