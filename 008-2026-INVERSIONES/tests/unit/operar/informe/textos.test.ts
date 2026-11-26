@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { DIAS_FECHAS, UMBRAL_CERCANA_PCT } from "@/operar/informe/armar";
 import {
-  AVISO_DECISION, TITULOS_GRUPO, VACIOS_GRUPO, textoTituloFechas, distancia, fraseRegla, textoEstadoRegla, textoFecha, textoPlazoRegla, textoPrecios, textoPreciosAtrasados, textoTenencia, textoVersion,
+  AVISO_DECISION, TITULOS_GRUPO, VACIOS_GRUPO, textoTituloFechas, fraseRegla, textoEstadoRegla, textoFecha, textoPlazoRegla, textoPrecios, textoPreciosAtrasados, textoTenencia, textoVersion,
 } from "@/app/operar/textos";
 import type { FechaVista, ReglaOperarVista } from "@/app/operar/tipos";
 
@@ -13,6 +13,9 @@ const regla = (o: Partial<ReglaOperarVista>): ReglaOperarVista => ({
   detalle: "Detalle ficticio", estado: { tipo: "POSTURA" }, grupo: "RESTO", ...o,
 });
 const C = { precio: "4597.31", fecha: "2027-03-16" };
+/** La regla a la que pertenece el estado: la condición y el nivel que el texto de la distancia necesita. */
+const BAJO = { condicion: "CIERRE_BAJO", nivel: "4613.17" } as const;
+const SOBRE = { condicion: "CIERRE_SOBRE", nivel: "4700" } as const;
 
 describe("el aviso fijo y los precios", () => {
   it("dice que la decisión es del dueño y que 008 no recomienda", () => {
@@ -47,15 +50,15 @@ describe("«Su regla … dice …»: acción, cantidad, condición y nivel del p
 
 describe("el estado de la regla hoy", () => {
   it("tocada: «Hoy se cumple», con el cierre y el lado; con la carga detenida, «con el último cierre disponible»", () => {
-    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "-0.65", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: le falta bajar 0,65 % para tocar su nivel.");
-    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "2.37", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: le falta subir 2,37 % para tocar su nivel.");
-    expect(textoEstadoRegla({ tipo: "TOCADA", lado: "BAJO", cierre: C }, false)).toEqual({ principal: "Hoy se cumple: el cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel.", aviso: false });
+        expect(textoEstadoRegla({ tipo: "TOCADA", lado: "BAJO", cierre: C }, false)).toEqual({ principal: "Hoy se cumple: el cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel.", aviso: false });
     expect(textoEstadoRegla({ tipo: "TOCADA", lado: "SOBRE", cierre: C }, true)).toEqual({ principal: "Se cumple con el último cierre disponible, del 16-mar-2027: $ 4.597,31, por encima del nivel.", aviso: false });
   });
 
   it("en el nivel, a distancia y sin cierre al día (este con aviso); nunca «se cumple» si no está tocada", () => {
     expect(textoEstadoRegla({ tipo: "EN_EL_NIVEL", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 quedó en el nivel: $ 4.597,31.");
-    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "1.79", cierre: C }, false).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: le falta subir 1,79 % para tocar su nivel.");
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "2.23", cierre: C }, false, false, SOBRE).principal).toBe(
+      "El cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel de $ 4.700: tendría que subir 2,23 % para tocarlo (la regla se cumple si cierra por encima).",
+    );
     expect(textoEstadoRegla({ tipo: "SIN_CIERRE_AL_DIA", ultimo: { precio: "899.11", fecha: "2027-03-12" } }, false)).toEqual({ principal: "Sin cierre al día: el último cierre es del 12-mar-2027 ($ 899,11).", aviso: true });
     expect(textoEstadoRegla({ tipo: "SIN_CIERRE_AL_DIA", ultimo: null }, true)).toEqual({ principal: "Sin cierre al día: no hay un cierre de esta especie.", aviso: true });
     for (const e of [{ tipo: "EN_EL_NIVEL", cierre: C }, { tipo: "A_DISTANCIA", distanciaPct: "1.79", cierre: C }, { tipo: "SIN_CIERRE_AL_DIA", ultimo: C }] as const) {
@@ -76,7 +79,9 @@ describe("el estado de la regla hoy", () => {
       expect(t).toEqual({ principal: "La condición se da con el cierre del 16-mar-2027 ($ 4.597,31, por debajo del nivel), pero su plazo venció.", aviso: true });
       expect(t.principal.toLowerCase()).not.toContain("se cumple");
     }
-    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "1.79", cierre: C }, false, true).principal).toBe("El cierre del 16-mar-2027 fue de $ 4.597,31: le falta subir 1,79 % para tocar su nivel.");
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "0.35", cierre: C }, false, true, BAJO).principal).toBe(
+      "El cierre del 16-mar-2027 fue de $ 4.597,31, por debajo del nivel de $ 4.613,17: tendría que subir 0,35 % para tocarlo (la regla se cumple si cierra por debajo).",
+    );
   });
 
   it("los títulos y vacíos de los grupos y el de las fechas salen de las constantes del armador", () => {
@@ -85,11 +90,23 @@ describe("el estado de la regla hoy", () => {
     expect(textoTituloFechas()).toBe(`Fechas de los próximos ${DIAS_FECHAS} días`);
   });
 
-  it("la distancia lleva signo y dos decimales", () => {
-    expect(distancia("1.79")).toBe("+1,79 %");
-    expect(distancia("-2.99")).toBe("−2,99 %");
-    expect(distancia("9.09")).toBe("+9,09 %");
-    expect(distancia("3")).toBe("+3,00 %");
+  it("la distancia dice de qué lado del nivel está el cierre, cuánto tendría que moverse y cuándo se cumple la regla", () => {
+    // Cierre ARRIBA del nivel (distancia negativa) de una regla «cierre por debajo»: tendría que bajar.
+    const arriba = textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "-2.72", cierre: { precio: "2364.4", fecha: "2027-03-16" } }, false, false, { condicion: "CIERRE_BAJO", nivel: "2300" });
+    expect(arriba).toEqual({
+      principal: "El cierre del 16-mar-2027 fue de $ 2.364,4, por encima del nivel de $ 2.300: tendría que bajar 2,72 % para tocarlo (la regla se cumple si cierra por debajo).",
+      aviso: false,
+    });
+    // Cierre ABAJO del nivel (distancia positiva) de una regla «cierre por encima»: tendría que subir.
+    expect(textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: "3", cierre: C }, false, false, SOBRE).principal).toContain("tendría que subir 3,00 % para tocarlo");
+  });
+
+  it("ninguna distancia sale como un porcentaje suelto con signo («+1,79 %», «−2,99 %»): siempre dice el lado y el nivel", () => {
+    for (const [d, regla] of [["1.79", SOBRE], ["-2.99", BAJO], ["9.09", SOBRE], ["3", BAJO]] as const) {
+      const t = textoEstadoRegla({ tipo: "A_DISTANCIA", distanciaPct: d, cierre: C }, false, false, regla).principal;
+      expect(t).not.toMatch(/[+−-]\d+,\d+ %/);
+      expect(t).toMatch(/por (encima|debajo) del nivel de \$ [\d.,]+: tendría que (subir|bajar) \d+,\d\d % para tocarlo \(la regla se cumple si cierra por (encima|debajo)\)\./);
+    }
   });
 
   it("el plazo: sin plazo, hasta el día o vencido", () => {
