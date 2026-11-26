@@ -368,3 +368,11 @@ describe("lectores: ultimoPrecioIntradia y preciosDelDia", () => {
     await expect(preciosDelDia(db, "x", "09/02/2027")).rejects.toThrow(RangeError);
   });
 });
+
+// Las tablas del plan son de solo inserción: lo que esta prueba escriba ahí queda para siempre en la base de pruebas y rompe
+// las pruebas del plan (que exigen que no haya versiones posteriores a su «hoy»). Va al final del archivo: las de aquí no dejan nada.
+describe("esta prueba no deja versiones del plan en la base compartida", () => {
+  it("ninguna versión con vigencia de 2027 en adelante", async () => {
+    expect(await db.planVersion.count({ where: { vigenteDesde: { gte: new Date("2027-01-01T00:00:00Z") } } })).toBe(0);
+  });
+});
