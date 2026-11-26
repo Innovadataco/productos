@@ -31,7 +31,7 @@ const fetchFalso = vi.fn(async (url: string, init: RequestInit = {}) => {
 });
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
   estado = { ...LIBRE };
   respuestaPedido = { estado: 202, cuerpo: { estado: "ACEPTADO", lugar: "EN_CURSO" } };
   llamadas.length = 0;
@@ -48,7 +48,11 @@ afterEach(() => {
 
 const boton = () => m.contenedor.querySelector<HTMLButtonElement>("button.resumen-ia-analizar")!;
 const mensaje = () => texto(m.contenedor.querySelector(".resumen-ia-analizar-estado"));
-const asentar = async (ms = 0) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); };
+// Los relojes son falsos, pero la lectura del cuerpo de una Response usa macrotareas reales: se dejan pasar antes y después.
+const macrotarea = () => new Promise<void>((r) => setImmediate(r));
+const asentar = async (ms = 50) => {
+  await act(async () => { await macrotarea(); await vi.advanceTimersByTimeAsync(ms); await macrotarea(); await macrotarea(); });
+};
 async function montarBoton(tarea = "DIARIO"): Promise<void> {
   await m.pintar(createElement(BotonAnalizar, { tarea: tarea as "DIARIO" }));
   await asentar();
@@ -192,7 +196,7 @@ describe("BotonAnalizar", () => {
   });
 
   it("los textos fijos del botón: sin lenguaje de consejo (con control positivo), sin «008» y sin códigos", () => {
-    const fijos = JSON.stringify(TEXTOS_RESUMEN_IA.boton) + textoEspera(75);
+    const fijos = JSON.stringify(Object.values(TEXTOS_RESUMEN_IA.boton)) + textoEspera(75);
     expect(prohibidasEn(fijos)).toEqual([]);
     expect(prohibidasEn("Le recomendamos vender ya")).not.toEqual([]);
     expect(fijos).not.toMatch(/\b008\b/);

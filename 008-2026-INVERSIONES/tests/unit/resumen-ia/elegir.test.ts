@@ -208,7 +208,7 @@ describe("elegirResumen · el último fue RECHAZADO por el validador", () => {
   });
 
   it("los textos nuevos no traen lenguaje de consejo (candado de lenguaje, con control positivo) ni «008»", () => {
-    const nuevos = JSON.stringify([TEXTOS_RESUMEN_IA.motivosRechazo, TEXTOS_RESUMEN_IA.rechazoGeneral, TEXTOS_RESUMEN_IA.vigencia, TEXTOS_RESUMEN_IA.analisisDel]);
+    const nuevos = JSON.stringify([Object.values(TEXTOS_RESUMEN_IA.motivosRechazo), TEXTOS_RESUMEN_IA.rechazoGeneral, Object.values(TEXTOS_RESUMEN_IA.vigencia), TEXTOS_RESUMEN_IA.analisisDel]);
     expect(prohibidasEn(nuevos)).toEqual([]);
     expect(prohibidasEn("Le recomendamos vender ya")).not.toEqual([]);
     expect(JSON.stringify(TEXTOS_RESUMEN_IA)).not.toMatch(/\b008\b/);

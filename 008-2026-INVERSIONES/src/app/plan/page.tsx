@@ -26,7 +26,7 @@ export default async function PaginaPlan({ searchParams }: Props) {
     const { version } = await searchParams;
     datos = await datosDelPlan(db, version);
     // El resumen REGLAS (E5) es del plan vigente hoy: con `?version=` (otra versión) no se muestra.
-    resumenIa = version === undefined ? await resumenDelDia(db, "REGLAS", usuario.id) : undefined;
+    resumenIa = version === undefined ? await resumenDelDia(db, "REGLAS", usuario.id, { dueno: !soloLectura }) : undefined;
   } catch (error) {
     if (!esErrorDeBase(error)) throw error;
     registrarFalloDeBase("plan", error);

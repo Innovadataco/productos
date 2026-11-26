@@ -3,6 +3,7 @@
  * (tests/unit/resumen-ia/tarjeta.test.ts, con `prohibidasEn`). El aviso de cada tipo no está aquí: lo pone el validador.
  */
 import type { Calidad, TipoResumen } from "@/ia/contrato";
+import type { CodigoValidador } from "@/ia/validador/codigos";
 import type { Puerta } from "@/ia/generador";
 import type { VigenciaResumenIa } from "./tipos";
 
@@ -15,15 +16,46 @@ export const TEXTOS_RESUMEN_IA = Object.freeze({
   noDisponible: "Sin resumen",
   modeloSinNombre: "modelo sin nombre",
   puertas: Object.freeze({ local: "IA local", nube: "IA en la nube" } satisfies Record<Puerta, string>),
-  cotejadas: "cifras calculadas por 008 y cotejadas",
+  cotejadas: "cifras calculadas por Inversiones y cotejadas",
+  analisisDel: "Análisis de la IA del",
   calidad: Object.freeze({
-    VERIFICADO: "verificado", NO_VERIFICADO: "sin verificar", ESTIMADO: "estimado", CALCULADO: "calculado por 008", ATRASADO: "atrasado",
+    VERIFICADO: "verificado", NO_VERIFICADO: "sin verificar", ESTIMADO: "estimado", CALCULADO: "calculado por Inversiones", ATRASADO: "atrasado",
   } satisfies Record<Calidad, string>),
   vigencia: Object.freeze({
     AL_DIA: "Al día con los datos de este momento.",
-    DESACTUALIZADO: "DESACTUALIZADO: los datos de hoy cambiaron después de redactarlo.",
+    DESACTUALIZADO: "DESACTUALIZADO: los datos cambiaron desde este análisis.",
     SIN_COMPROBAR: "Sin comprobar contra los datos de este momento.",
   } satisfies Record<VigenciaResumenIa, string>),
+  /** Por qué el validador rechazó un análisis, en palabras simples (la pantalla no muestra los códigos). */
+  motivosRechazo: Object.freeze({
+    SALIDA_INVALIDA: "la respuesta de la IA no tenía el formato esperado",
+    LONGITUD: "el texto salió más largo o más corto de lo permitido",
+    CIFRA_SUELTA: "traía una cifra que no estaba entre las calculadas",
+    CIFRA_EN_PALABRAS: "escribió una cifra con letras en vez de usar las calculadas",
+    HECHO_DESCONOCIDO: "citó un dato que no existe en la información entregada",
+    HECHO_NO_CITADO: "no citó todas las cifras que debía",
+    ETIQUETA_NO_COINCIDE: "nombró una cifra con otra etiqueta",
+    DIRECCION_CONTRADICE: "dijo que algo subió o bajó al revés de lo que muestran los datos",
+    RECOMENDACION: "usó un lenguaje de consejo, que el sistema no permite",
+    PREDICCION: "habló del futuro como si fuera seguro, y el sistema no lo permite",
+    TRATO: "usó un trato directo que no corresponde",
+    IDIOMA: "mezcló palabras de otro idioma",
+    FORMATO: "tenía un formato que no se puede mostrar",
+    RENDER_CIFRA: "una cifra no se pudo escribir como corresponde",
+  } satisfies Record<CodigoValidador, string>),
+  rechazoGeneral: "no cumplió las reglas de redacción",
+  /** El botón «Analizar con IA» y lo que dice según cómo vaya el pedido. */
+  boton: Object.freeze({
+    etiqueta: "Analizar con IA",
+    analizando: "Analizando…",
+    enEspera: "En espera: hay otro análisis en curso y este empieza al terminar.",
+    ocupado: "Ya hay un análisis en curso y otro en espera. Inténtelo cuando termine alguno.",
+    apagado: "El análisis a demanda está apagado en la configuración de la IA.",
+    tareaInactiva: "Este resumen está inactivo en la configuración de la IA.",
+    sinServicio: "El servicio de análisis no responde. Inténtelo más tarde.",
+    demasiado: "Aguarde unos segundos antes de volver a pedirlo.",
+    error: "No se pudo pedir el análisis. Inténtelo de nuevo.",
+  }),
   notaSinDatos: "Hoy no hay resumen: faltan datos para armarlo.",
   notaMomento: "El resumen no está disponible en este momento. Al volver a cargar la página se intenta de nuevo.",
 });
@@ -34,4 +66,21 @@ const MODELO = /^[A-Za-z0-9][A-Za-z0-9.:_/-]{0,63}$/;
 export function pieConIa(puerta: Puerta, modelo: string): string {
   const nombre = MODELO.test(modelo) ? modelo : TEXTOS_RESUMEN_IA.modeloSinNombre;
   return `Redactado por ${TEXTOS_RESUMEN_IA.puertas[puerta]} (${nombre}) · ${TEXTOS_RESUMEN_IA.cotejadas}`;
+}
+
+/** «Puede volver a analizar en 1 min 15 s.»: cuándo se puede pedir otro análisis (el mínimo entre análisis es de 2 minutos). */
+export function textoEspera(segundos: number): string {
+  if (segundos <= 0) return "Puede volver a analizar ya.";
+  if (segundos < 60) return `Puede volver a analizar en ${segundos} s.`;
+  const resto = segundos % 60;
+  return `Puede volver a analizar en ${Math.floor(segundos / 60)} min${resto === 0 ? "" : ` ${resto} s`}.`;
+}
+
+const esCodigoConocido = (codigo: string): codigo is CodigoValidador => Object.hasOwn(TEXTOS_RESUMEN_IA.motivosRechazo, codigo);
+
+/** El motivo de un rechazo del validador en palabras simples; un código que no se conoce (o ninguno) dice la frase general. */
+export function textoRechazo(cuando: string, motivos: readonly string[]): string {
+  const frases = [...new Set(motivos.map((m) => (esCodigoConocido(m) ? TEXTOS_RESUMEN_IA.motivosRechazo[m] : TEXTOS_RESUMEN_IA.rechazoGeneral)))];
+  const dichas = frases.length === 0 ? [TEXTOS_RESUMEN_IA.rechazoGeneral] : frases;
+  return `El último análisis (${cuando}) no pasó la revisión automática y no se muestra: ${dichas.join("; ")}.`;
 }

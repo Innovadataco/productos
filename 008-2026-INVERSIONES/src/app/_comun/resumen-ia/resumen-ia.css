@@ -9,3 +9,11 @@
 .resumen-ia-cifras summary { cursor: pointer; font-weight: 600; }
 .resumen-ia-cifras ul { margin: 8px 0 0; padding-left: 1.1em; display: grid; gap: 4px; color: var(--muted); }
 .resumen-ia-pie { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+.resumen-ia-analisis { margin: -4px 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.resumen-ia-rechazo { margin: 10px 0 0; font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; }
+.resumen-ia-analizar-caja { margin-top: 14px; display: grid; gap: 8px; }
+.resumen-ia-analizar { justify-self: start; min-height: 44px; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--gold); background: transparent; color: var(--fg); font: inherit; font-weight: 700; cursor: pointer; }
+.resumen-ia-analizar:hover:not(:disabled) { background: var(--bg-2); }
+.resumen-ia-analizar:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.resumen-ia-analizar:disabled { cursor: not-allowed; color: var(--muted); border-color: var(--line); }
+.resumen-ia-analizar-estado { margin: 0; min-height: 1.4em; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }

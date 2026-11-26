@@ -1,21 +1,25 @@
 /**
  * Qué muestra la tarjeta de resumen (E5). Puro: sin base, sin red y sin reloj. Corre en el servidor (trae el validador);
  * la pantalla recibe solo la vista.
- * 1. Un PUBLICADO del día (`ultimoPublicado` de E3) se vuelve a validar con `validarSalida` sobre su salida y su paquete
- *    guardados: se muestra el texto que arma el validador, nunca el guardado. Si no pasa (o es de otro tipo), no se
- *    muestra y se informa el descarte con códigos.
+ * 1. El ÚLTIMO PUBLICADO del tipo, de cualquier día (E3), se vuelve a validar con `validarSalida` sobre su salida y su
+ *    paquete guardados: se muestra el texto que arma el validador, nunca el guardado, con su fecha y hora («Análisis de
+ *    la IA del 25-nov-2026, 19:05»). Si no pasa (o es de otro tipo), no se muestra y se informa el descarte con códigos.
  * 2. Si no hay uno válido, el resumen sin IA (`resumenSinIa`) del paquete de hoy.
  * 3. Si tampoco, «no disponible», con la nota de su motivo.
- * Vigencia del publicado: AL_DIA si el hash de los hechos de hoy es el suyo, DESACTUALIZADO si cambió, SIN_COMPROBAR si
- * hoy no se pudo armar el paquete (sin turno, sin datos o un fallo).
+ * Vigencia del publicado: AL_DIA si el hash de los hechos de hoy es el suyo, DESACTUALIZADO si cambió (también si es de
+ * otro día: el hash incluye el día), SIN_COMPROBAR si hoy no se pudo armar el paquete (sin turno, sin datos o un fallo).
+ * Si el último análisis fue RECHAZADO por el validador (y es más nuevo que el último válido), la vista trae el motivo en
+ * palabras simples, sin códigos.
  */
 import type { PaqueteHechos, TipoResumen } from "@/ia/contrato";
 import type { ResumenPublicado } from "@/ia/registro/registro";
+import { fecha } from "../../tablero/formato";
 import { resumenSinIa } from "@/ia/validador/plantilla";
 import type { ResumenValidado } from "@/ia/validador/tipos";
 import { validarSalida } from "@/ia/validador/validar";
 import { horaColombia } from "../fecha-dato/hora";
-import { pieConIa, TEXTOS_RESUMEN_IA } from "./textos";
+import type { ResumenRechazado } from "./publicado";
+import { pieConIa, textoRechazo, TEXTOS_RESUMEN_IA } from "./textos";
 import type { CifraVista, VigenciaResumenIa, VistaResumenIa } from "./tipos";
 
 export interface PaqueteDeHoy {
@@ -28,6 +32,8 @@ export interface PaqueteDeHoy {
 export interface EntradaEleccion {
   readonly tipo: TipoResumen;
   readonly publicado: ResumenPublicado | null;
+  /** El último análisis rechazado por el validador, si lo hay (solo se muestra si es más nuevo que `publicado`). */
+  readonly rechazado?: ResumenRechazado | null;
   readonly hoy: PaqueteDeHoy;
 }
 
@@ -46,17 +52,26 @@ const cifras = (r: ResumenValidado): readonly CifraVista[] =>
     calidad: TEXTOS_RESUMEN_IA.calidad[c.calidad],
   })));
 
-function vistaDe(tipo: TipoResumen, r: ResumenValidado, extra: Pick<VistaResumenIa, "estado" | "pie" | "vigencia" | "redactadoEn">): VistaResumenIa {
+type Extra = Pick<VistaResumenIa, "estado" | "pie" | "vigencia" | "redactadoEn" | "analisisDel">;
+
+function vistaDe(tipo: TipoResumen, r: ResumenValidado, extra: Extra): VistaResumenIa {
   return Object.freeze({
-    tipo, titulo: TEXTOS_RESUMEN_IA.titulos[tipo], frases: Object.freeze(r.frases.map((f) => f.texto)), aviso: r.aviso, cifras: cifras(r), nota: null, ...extra,
+    tipo, titulo: TEXTOS_RESUMEN_IA.titulos[tipo], frases: Object.freeze(r.frases.map((f) => f.texto)), aviso: r.aviso, cifras: cifras(r), nota: null,
+    rechazo: null, puedeAnalizar: false, ...extra,
   });
+}
+
+/** «25-nov-2026, 19:05» a partir de un instante (hora de Colombia). */
+function cuando(instante: Date): string {
+  const [dia, hora] = horaColombia(instante).split(" ");
+  return `${fecha(dia ?? null)}, ${hora}`;
 }
 
 /** La tarjeta sin resumen, con la nota de su motivo. */
 export function noDisponible(tipo: TipoResumen, motivo: string | null): VistaResumenIa {
   return Object.freeze({
     tipo, titulo: TEXTOS_RESUMEN_IA.titulos[tipo], estado: "NO_DISPONIBLE", frases: Object.freeze([]), aviso: null, cifras: Object.freeze([]),
-    pie: TEXTOS_RESUMEN_IA.noDisponible, vigencia: null, redactadoEn: null,
+    pie: TEXTOS_RESUMEN_IA.noDisponible, vigencia: null, redactadoEn: null, analisisDel: null, rechazo: null, puedeAnalizar: false,
     nota: motivo !== null && MOTIVOS_MOMENTO.has(motivo) ? TEXTOS_RESUMEN_IA.notaMomento : TEXTOS_RESUMEN_IA.notaSinDatos,
   });
 }
@@ -73,20 +88,32 @@ function revalidar(tipo: TipoResumen, publicado: ResumenPublicado): { readonly o
   return r.ok ? { ok: true, resumen: r.resumen } : { ok: false, codigos: r.motivos };
 }
 
-export function elegirResumen({ tipo, publicado, hoy }: EntradaEleccion): Eleccion {
+/** El motivo del último rechazo, solo si es más nuevo que el último análisis válido. */
+function rechazoDe(rechazado: ResumenRechazado | null | undefined, publicado: ResumenPublicado | null): string | null {
+  if (rechazado === null || rechazado === undefined) return null;
+  if (publicado !== null && rechazado.generadoEn.getTime() <= publicado.generadoEn.getTime()) return null;
+  return textoRechazo(cuando(rechazado.generadoEn), rechazado.motivos);
+}
+
+export function elegirResumen({ tipo, publicado, rechazado, hoy }: EntradaEleccion): Eleccion {
+  const rechazo = rechazoDe(rechazado, publicado);
+  const conRechazo = (vista: VistaResumenIa): VistaResumenIa => (rechazo === null ? vista : Object.freeze({ ...vista, rechazo }));
   let descarte: readonly string[] | null = null;
   if (publicado !== null) {
     const r = revalidar(tipo, publicado);
     if (r.ok) {
       const vista = vistaDe(tipo, r.resumen, {
         estado: "IA", pie: pieConIa(publicado.puerta, publicado.modelo), vigencia: vigencia(publicado, hoy), redactadoEn: horaColombia(publicado.generadoEn),
+        analisisDel: `${TEXTOS_RESUMEN_IA.analisisDel} ${cuando(publicado.generadoEn)}`,
       });
-      return Object.freeze({ vista, descarte: null });
+      return Object.freeze({ vista: conRechazo(vista), descarte: null });
     }
     descarte = Object.freeze([...r.codigos]);
   }
-  if (hoy.paquete === null || hoy.paquete.tipo !== tipo) return Object.freeze({ vista: noDisponible(tipo, hoy.paquete === null ? hoy.motivo : "TIPO_DISTINTO"), descarte });
+  if (hoy.paquete === null || hoy.paquete.tipo !== tipo) return Object.freeze({ vista: conRechazo(noDisponible(tipo, hoy.paquete === null ? hoy.motivo : "TIPO_DISTINTO")), descarte });
   const sinIa = resumenSinIa(hoy.paquete);
-  if (!sinIa.ok) return Object.freeze({ vista: noDisponible(tipo, "PLANTILLA_RECHAZADA"), descarte });
-  return Object.freeze({ vista: vistaDe(tipo, sinIa.resumen, { estado: "SIN_IA", pie: TEXTOS_RESUMEN_IA.sinIa, vigencia: null, redactadoEn: null }), descarte });
+  if (!sinIa.ok) return Object.freeze({ vista: conRechazo(noDisponible(tipo, "PLANTILLA_RECHAZADA")), descarte });
+  return Object.freeze({
+    vista: conRechazo(vistaDe(tipo, sinIa.resumen, { estado: "SIN_IA", pie: TEXTOS_RESUMEN_IA.sinIa, vigencia: null, redactadoEn: null, analisisDel: null })), descarte,
+  });
 }

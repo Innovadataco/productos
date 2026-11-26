@@ -46,7 +46,7 @@ export default async function Inicio() {
     // y lo guardado de la última conciliación, sin recalcular (la frescura se ve en /conciliacion); las dos en paralelo.
     // La tarjeta del resumen DIARIO (E5) va después: su export proyecta bajo el turno y no compite con estas lecturas.
     const [evo, ultima] = await Promise.all([leerEvolucion(db, resumen), ultimaConciliacion(db)]);
-    resumenIa = await resumenDelDia(db, "DIARIO", usuario.id);
+    resumenIa = await resumenDelDia(db, "DIARIO", usuario.id, { dueno: !soloLectura });
     evolucion = evo;
     conciliacion = aLineaDelTablero(ultima);
   } catch (error) {

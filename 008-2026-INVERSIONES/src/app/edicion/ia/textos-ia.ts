@@ -21,6 +21,7 @@ export const TEXTOS_IA = {
   LLAVE_SI: "Llave de la nube en el entorno de la app: sí",
   LLAVE_NO: "Llave de la nube en el entorno de la app: no",
   LLAVE_NUNCA: "La llave nunca se guarda en la base ni se muestra.",
+  AYUDA_ANALISIS: "Enciende el botón «Analizar con IA» en el tablero, el plan y las proyecciones (solo para el dueño). Apagado por omisión: sin esta casilla, el botón no aparece. Un análisis a la vez, uno en espera y 2 minutos entre análisis.",
   PRECIOS: "Precios de la documentación de Anthropic (skill claude-api), por verificar antes de encender la nube.",
 } as const;
 
@@ -63,7 +64,7 @@ const MENSAJES: Readonly<Record<string, string>> = {
   MODELO_NUBE_INVALIDO: "Elija un modelo de la nube de la lista.",
   ESFUERZO_INVALIDO: "Elija un esfuerzo de la lista.",
   HORA_INVALIDA: "Elija una hora de la lista.",
-  LIMITE_INVALIDO: "El límite es un número entero de segundos, de 10 a 120.",
+  LIMITE_INVALIDO: "El límite es un número entero de segundos, de 10 a 60.",
   TEMPERATURA_INVALIDA: "La temperatura va de 0 a 1, con hasta dos decimales: 0, 0,2 o 0,37.",
   TOPE_INVALIDO: "Escriba el tope en dólares, con hasta dos decimales: 5 o 4,61.",
   TOPE_FUERA_DE_RANGO: "El tope va de USD 1 a USD 50.",
@@ -137,6 +138,7 @@ export const ETIQUETAS_IA: Readonly<Record<string, string>> = {
   topeMensualUsd: "Tope mensual de la nube (USD)",
   horaResumen: "Hora del resumen",
   limiteSegundos: "Límite por pedido (segundos)",
+  analisisDemanda: "Permitir el análisis a demanda (botón «Analizar con IA»)",
   motivo: "Motivo del cambio",
   cuerpo: "Formulario",
 };

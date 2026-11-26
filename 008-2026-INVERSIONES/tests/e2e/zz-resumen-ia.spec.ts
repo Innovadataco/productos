@@ -110,7 +110,7 @@ test.describe("tarjeta de resumen", () => {
       await abrir(page, info, "/");
       const tarjeta = page.locator('section.resumen-ia[aria-labelledby="t-resumen-ia-diario"]');
       await expect(tarjeta).toHaveAttribute("data-estado", "IA");
-      await expect(tarjeta.locator(".resumen-ia-pie")).toContainText(`Redactado por IA local (${MODELO}) · cifras calculadas por 008 y cotejadas`);
+      await expect(tarjeta.locator(".resumen-ia-pie")).toContainText(`Redactado por IA local (${MODELO}) · cifras calculadas por Inversiones y cotejadas`);
       await expect(tarjeta.locator(".resumen-ia-pie time")).toHaveCount(1);
       await expect(tarjeta.locator(".resumen-ia-desactualizado")).toHaveText(/^DESACTUALIZADO/);
       expect(await contraste(tarjeta.locator(".resumen-ia-desactualizado"))).toBeGreaterThanOrEqual(4.5);

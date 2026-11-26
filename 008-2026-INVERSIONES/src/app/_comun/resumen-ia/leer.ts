@@ -1,8 +1,12 @@
 import "server-only";
 /**
  * La lectura de la tarjeta de resumen (E5) para una pantalla. Solo lectura (inv_app hace SELECT de resumen_ia).
- * - El día es el de Colombia (`fechaEnBogota`); se muestra solo un PUBLICADO de ese día exacto (publicado.ts, la lectura
- *   de `ultimoPublicado` de E3 sin el módulo que escribe).
+ * - Se muestra el ÚLTIMO PUBLICADO del tipo, de cualquier día, con su fecha y hora (publicado.ts, la lectura de
+ *   `ultimoPublicado` de E3 sin el módulo que escribe); si ya no corresponde a los hechos de hoy, sale DESACTUALIZADO. El
+ *   último RECHAZADO por el validador, si es más nuevo, se informa con su motivo. El día de hoy (Colombia) es para el
+ *   paquete de hoy, con el que se compara.
+ * - El botón «Analizar con IA» (`puedeAnalizar`): solo si quien mira es el dueño Y el interruptor de config_ia está
+ *   encendido (apagado por omisión). Cualquier error al leer la configuración lo deja apagado (falla cerrada).
  * - El paquete de hoy sale del export de E7 (`exportarHechos`): la MISMA función que arma los paquetes del servicio, en
  *   una foto de solo lectura, para que el hash de los hechos sea comparable. Como proyecta (≈ 1 s de cálculo síncrono),
  *   corre bajo el turno de las proyecciones (src/app/proyecciones/turno.ts, por fuera de la foto) y queda en memoria del
@@ -15,13 +19,14 @@ import "server-only";
 import type { PrismaClient } from "@prisma/client";
 import type { TipoResumen } from "@/ia/contrato";
 import { exportarHechos, type ResultadoExportacion } from "@/ia/evaluacion/exportar/exportar";
+import { leerConfigIa } from "@/ia/config/leer";
 import { ErrorRegistro } from "@/ia/registro/fila";
 import type { ResumenPublicado } from "@/ia/registro/registro";
 import { diaIso, fechaEnBogota } from "@/precios/horario";
 import { conTurno } from "../../proyecciones/turno";
 import { esErrorDeBase } from "../sin-base";
 import { elegirResumen, noDisponible, type PaqueteDeHoy } from "./elegir";
-import { publicadoDelDia } from "./publicado";
+import { ultimoPublicadoDe, ultimoRechazadoDe, type ResumenRechazado } from "./publicado";
 import type { VistaResumenIa } from "./tipos";
 
 /**
@@ -39,6 +44,8 @@ export interface OpcionesResumen {
   readonly ahora?: Date;
   /** El export; por omisión, `exportarHechos`. */
   readonly paquetes?: LeerPaquetes;
+  /** ¿Quien mira es el dueño? Solo él puede tener el botón «Analizar con IA»; sin decirlo, no. */
+  readonly dueno?: boolean;
 }
 
 type Corrida = { readonly ok: true; readonly resultado: ResultadoExportacion } | { readonly ok: false; readonly motivo: string };
@@ -64,14 +71,37 @@ export function reiniciarMemoParaPruebas(): void {
 
 const nombreDe = (error: unknown): string => (error instanceof Error ? error.name : "desconocido");
 
-async function leerPublicado(db: PrismaClient, tipo: TipoResumen, dia: string): Promise<ResumenPublicado | null> {
+async function leerPublicado(db: PrismaClient, tipo: TipoResumen): Promise<ResumenPublicado | null> {
   try {
-    return await publicadoDelDia(db, tipo, dia);
+    return await ultimoPublicadoDe(db, tipo);
   } catch (error) {
     if (esErrorDeBase(error)) throw error;
     const detalle = error instanceof ErrorRegistro ? error.codigo : nombreDe(error);
     console.error(`[resumen-ia] ${tipo}: el publicado no se puede leer (${detalle})`);
     return null;
+  }
+}
+
+/** El último análisis rechazado por el validador; un error que no es de la base lo deja sin él (se registra solo el nombre). */
+async function leerRechazado(db: PrismaClient, tipo: TipoResumen): Promise<ResumenRechazado | null> {
+  try {
+    return await ultimoRechazadoDe(db, tipo);
+  } catch (error) {
+    if (esErrorDeBase(error)) throw error;
+    console.error(`[resumen-ia] ${tipo}: el último rechazado no se puede leer (${error instanceof ErrorRegistro ? error.codigo : nombreDe(error)})`);
+    return null;
+  }
+}
+
+/** ¿El dueño tiene el botón? Con el interruptor de config_ia encendido; sin configuración o con un error, no (falla cerrada). */
+async function botonDisponible(db: PrismaClient, dueno: boolean): Promise<boolean> {
+  if (!dueno) return false;
+  try {
+    return (await leerConfigIa(db))?.analisisDemanda === true;
+  } catch (error) {
+    if (esErrorDeBase(error)) throw error;
+    console.error(`[resumen-ia] el interruptor del análisis no se puede leer (${nombreDe(error)})`);
+    return false;
   }
 }
 
@@ -121,11 +151,12 @@ export async function resumenDelDia(db: PrismaClient, tipo: TipoResumen, usuario
   try {
     const ahora = opciones.ahora ?? new Date();
     const hoy = fechaEnBogota(ahora);
-    const publicado = await leerPublicado(db, tipo, diaIso(hoy));
+    const publicado = await leerPublicado(db, tipo);
+    const rechazado = await leerRechazado(db, tipo);
     const deHoy = await paqueteDeHoy(db, tipo, usuarioId, hoy, ahora, opciones.paquetes ?? exportarHechos);
-    const { vista, descarte } = elegirResumen({ tipo, publicado, hoy: deHoy });
+    const { vista, descarte } = elegirResumen({ tipo, publicado, rechazado, hoy: deHoy });
     if (descarte !== null) console.error(`[resumen-ia] ${tipo}: el publicado no pasó el validador y no se muestra (${descarte.join(",")})`);
-    return vista;
+    return (await botonDisponible(db, opciones.dueno === true)) ? Object.freeze({ ...vista, puedeAnalizar: true }) : vista;
   } catch (error) {
     if (esErrorDeBase(error)) throw error;
     console.error(`[resumen-ia] ${tipo}: la tarjeta no se pudo armar (${nombreDe(error)})`);

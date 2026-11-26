@@ -116,7 +116,7 @@ describe("1 en curso y 1 en espera", () => {
     await m.analisis.pedir("REGLAS");
     m.corridas[0]!.terminar();
     await m.asentar();
-    expect(await m.analisis.pedir("ESCENARIOS")).toEqual({ ok: false, motivo: "OCUPADO" });
+    expect(await m.analisis.pedir("DIARIO")).toEqual({ ok: false, motivo: "OCUPADO" });
   });
 
   it("si el interruptor se apaga mientras el segundo espera, no arranca", async () => {

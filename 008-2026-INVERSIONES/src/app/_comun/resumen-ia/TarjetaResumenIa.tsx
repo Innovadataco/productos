@@ -1,9 +1,11 @@
 /**
  * La tarjeta de resumen (E5): las frases, el aviso fijo, «Cifras usadas» (fuente, fecha y calidad), el pie que dice quién
- * redactó y la vigencia. Sin directiva ni hooks: la pintan igual el servidor (plan, proyecciones) y el tablero (cliente),
+ * redactó, la fecha y hora del último análisis, la vigencia, el motivo del último rechazo (si lo hubo) y, solo para el
+ * dueño con el interruptor encendido, el botón «Analizar con IA» (un componente de cliente: lo único con directiva). Sin directiva ni hooks: la pintan igual el servidor (plan, proyecciones) y el tablero (cliente),
  * que la recibe ya armada. Solo texto plano: React lo escapa; sin HTML crudo ni enlaces.
  */
 import { dateTimeColombia } from "../fecha-dato/hora";
+import { BotonAnalizar } from "./BotonAnalizar";
 import { TEXTOS_RESUMEN_IA } from "./textos";
 import type { VistaResumenIa } from "./tipos";
 import "./resumen-ia.css";
@@ -45,6 +47,7 @@ export function TarjetaResumenIa({ vista }: { readonly vista: VistaResumenIa }) 
       <div className="resumen-ia-cuerpo">
         <div className="eyebrow">{TEXTOS_RESUMEN_IA.eyebrow}</div>
         <h2 id={id}>{vista.titulo}</h2>
+        {vista.analisisDel === null ? null : <p className="resumen-ia-analisis">{vista.analisisDel}</p>}
         {vista.frases.length === 0 ? null : (
           <ul className="resumen-ia-frases">
             {/* Las frases son fijas para cada vista (no se reordenan): el índice sirve de clave. */}
@@ -53,9 +56,11 @@ export function TarjetaResumenIa({ vista }: { readonly vista: VistaResumenIa }) 
         )}
         {vista.nota === null ? null : <p className="resumen-ia-nota">{vista.nota}</p>}
         <Vigencia vista={vista} />
+        {vista.rechazo === null ? null : <p className="resumen-ia-rechazo">{vista.rechazo}</p>}
         {vista.aviso === null ? null : <p className="resumen-ia-aviso">{vista.aviso}</p>}
         <Cifras vista={vista} />
         <Pie vista={vista} />
+        {vista.puedeAnalizar ? <BotonAnalizar tarea={vista.tipo} /> : null}
       </div>
     </section>
   );

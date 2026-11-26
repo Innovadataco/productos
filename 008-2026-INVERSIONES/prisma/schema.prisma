@@ -984,7 +984,8 @@ model ConfigIa {
   modeloNube       String // MODELOS_NUBE; por omisión claude-opus-5-5
   topeMensualUsd   Decimal? @db.Decimal(6, 2) // obligatorio si el modo usa la nube; de 1 a 50 USD
   horaResumen      String // HORAS_RESUMEN, hora de Colombia
-  limiteSegundos   Int // de 10 a 120 (el límite de PI)
+  limiteSegundos   Int // la app acepta de 10 a 60; la CHECK de la base sigue en 10 a 120 (versiones viejas) y el lector acota a 60
+  analisisDemanda  Boolean  @default(false) // el botón «Analizar con IA»: apagado por omisión (falla cerrada)
   esfuerzoNube     String // low o medium
   motivo           String
   autorId          String

@@ -110,7 +110,9 @@ describe("candado de lenguaje de la tarjeta", () => {
   });
 
   it("todos los textos fijos de la tarjeta pasan el detector", () => {
-    const fijos = JSON.stringify(TEXTOS_RESUMEN_IA);
+    // Solo los textos (los valores): los códigos del validador, que son las claves de los motivos, no se muestran.
+    const valores = (o: object): string[] => Object.values(o).flatMap((v) => (typeof v === "string" ? [v] : typeof v === "object" && v !== null ? valores(v) : []));
+    const fijos = JSON.stringify(valores(TEXTOS_RESUMEN_IA));
     expect(prohibidasEn(fijos)).toEqual([]);
   });
 

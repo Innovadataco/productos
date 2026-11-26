@@ -18,7 +18,7 @@ let autorId = "";
 const ENTRADA: EntradaConfigIa = {
   modo: "nube", ollamaHost: ip(100, 87, 41, 157), ollamaPuerto: 47213, temperaturaCentesimas: 37,
   tareas: { DIARIO: { activo: true, modeloLocal: null }, REGLAS: { activo: false, modeloLocal: null }, ESCENARIOS: { activo: true, modeloLocal: null } },
-  modeloNube: "claude-sonnet-5-5", esfuerzoNube: "medium", topeMicroUsd: 4_610_000n, horaResumen: "21:00", limiteSegundos: 45, motivo: `Pantalla ${corrida}`,
+  modeloNube: "claude-sonnet-5-5", esfuerzoNube: "medium", topeMicroUsd: 4_610_000n, horaResumen: "21:00", limiteSegundos: 45, analisisDemanda: false, motivo: `Pantalla ${corrida}`,
 };
 
 beforeAll(async () => {
