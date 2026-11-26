@@ -42,7 +42,7 @@ describe("los pesos van con dos decimales y una sola constante", () => {
   const todos = archivos(SRC);
   it("DECIMALES_PESO se declara una sola vez", () => {
     const con = todos.filter((r) => /\bconst DECIMALES_PESO\s*=/.test(readFileSync(r, "utf8"))).map((r) => relative(SRC, r));
-    expect(con).toEqual(["operar/analisis/texto.ts"]);
+    expect(con).toEqual(["operar/analisis/decimales.ts"]);
   });
   it.each(["app/tablero/Tablero.tsx", "app/tablero/Foto.tsx"])("%s muestra el peso con DECIMALES_PESO y no con 1 decimal", (ruta) => {
     const codigo = readFileSync(join(SRC, ruta), "utf8");
