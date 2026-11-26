@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import { evaluarFechasEx, type DecretoParaAlerta } from "@/alertas/evaluar/fecha-ex";
 import { UMBRALES_OMISION } from "@/alertas/umbrales";
@@ -21,9 +20,9 @@ describe("evaluarFechasEx", () => {
     expect(evaluar([decreto("d1", "2027-03-05")])).toHaveLength(0);
   });
   it("los fines de semana y festivos no cuentan como hábiles", () => {
-    expect(evaluar([decreto("d1", "2027-03-08")], { hoy: "2027-03-04" })).toHaveLength(1); // vie, lun(festivo?) no: vie, lun, mar = 3 si lun hábil
-    expect(evaluar([decreto("d1", "2027-03-09")], { hoy: "2027-03-04", noHabiles: ["2027-03-08"] })).toHaveLength(1); // vie, mar → 2 hábiles
-    expect(evaluar([decreto("d1", "2027-03-10")], { hoy: "2027-03-04" })).toHaveLength(0); // vie, lun, mar, mié = 4
+    expect(evaluar([decreto("d1", "2027-03-08")], { hoy: "2027-03-04" })).toHaveLength(1); // jueves → lunes: viernes y lunes = 2 hábiles
+    expect(evaluar([decreto("d1", "2027-03-09")], { hoy: "2027-03-04", noHabiles: ["2027-03-08"] })).toHaveLength(1); // viernes y martes = 2 hábiles
+    expect(evaluar([decreto("d1", "2027-03-10")], { hoy: "2027-03-04" })).toHaveLength(0); // viernes, lunes, martes y miércoles = 4
   });
   it("un ex ya pasado no salta", () => {
     expect(evaluar([decreto("d1", "2027-02-26")])).toHaveLength(0);
@@ -47,9 +46,8 @@ describe("evaluarFechasEx", () => {
     expect(evaluar([decreto("d1", "2027-03-05")], { u: { ...UMBRALES_OMISION, alertaExDiasHabiles: 4 } })).toHaveLength(1);
     expect(evaluar([decreto("d1", "2027-03-01")], { u: { ...UMBRALES_OMISION, alertaExActiva: false } })).toHaveLength(0);
   });
-  it("lleva el valor de la tenencia sin cifras reales: solo el decreto y las fechas", () => {
+  it("lleva las fechas del decreto para el texto", () => {
     const [a] = evaluar([decreto("d1", "2027-03-01")]);
     expect(a!.datos.fechaPago).toEqual(f("2027-04-15"));
-    expect(new Prisma.Decimal(0).eq(0)).toBe(true);
   });
 });
