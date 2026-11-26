@@ -8,7 +8,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ConfigIaVigente } from "@/ia/config/leer";
 import type { TipoResumen } from "@/ia/contrato";
-import { ESPERA_MINIMA_MS, crearAnalisisDemanda, type DependenciasAnalisis } from "@/servicio-ia/analisis";
+import { ESPERA_MINIMA_MS, TOPE_TOTAL_MS, crearAnalisisDemanda, type DependenciasAnalisis } from "@/servicio-ia/analisis";
 import type { EstadoTipo } from "@/servicio-ia/corrida";
 import { VIGENTE_FICTICIA } from "../ia/config/apoyo/config.ficticio";
 
@@ -27,6 +27,7 @@ function montar(config: ConfigIaVigente | null = ENCENDIDA) {
   const corridas: Corrida[] = [];
   const lineas: string[] = [];
   const temporizadores: { readonly ms: number; readonly accion: () => void }[] = [];
+  const topes: { readonly ms: number; readonly accion: () => void }[] = [];
   let activas = 0;
   let maximoSimultaneas = 0;
   const deps: DependenciasAnalisis = {
@@ -42,13 +43,13 @@ function montar(config: ConfigIaVigente | null = ENCENDIDA) {
         });
       }),
     ahora: () => ahora,
-    programar: (accion, ms) => void temporizadores.push({ ms, accion }),
+    programar: (accion, ms) => void (ms === TOPE_TOTAL_MS ? topes : temporizadores).push({ ms, accion }),
     registrar: (m) => void lineas.push(m),
   };
   const analisis = crearAnalisisDemanda(deps);
   const avanzar = (ms: number) => { ahora += ms; };
   const asentar = async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); };
-  return { analisis, corridas, lineas, temporizadores, avanzar, asentar, cambiarConfig: (c: ConfigIaVigente | null) => { vigente = c; }, simultaneas: () => maximoSimultaneas };
+  return { analisis, corridas, lineas, temporizadores, topes, avanzar, asentar, cambiarConfig: (c: ConfigIaVigente | null) => { vigente = c; }, simultaneas: () => maximoSimultaneas };
 }
 
 describe("el interruptor de config_ia (falla cerrada)", () => {
@@ -147,7 +148,7 @@ describe("la espera que arranca (carrera con un pedido nuevo)", () => {
     const analisis = crearAnalisisDemanda({
       leerConfig: () => (++lecturas !== 3 ? Promise.resolve(ENCENDIDA) : new Promise((r) => { soltarConfig = r; })),
       correr: () => new Promise<EstadoTipo>((resolver) => { activas += 1; maximo = Math.max(maximo, activas); corridas.push({ terminar: () => { activas -= 1; resolver("PUBLICADO"); } }); }),
-      ahora: () => ahora, programar: (a) => void temporizadores.push(a), registrar: (m) => void lineas.push(m),
+      ahora: () => ahora, programar: (a, ms) => void (ms === TOPE_TOTAL_MS || temporizadores.push(a)), registrar: (m) => void lineas.push(m),
     });
     await analisis.pedir("DIARIO");
     await analisis.pedir("REGLAS");
@@ -187,7 +188,7 @@ describe("la espera que arranca (carrera con un pedido nuevo)", () => {
     const analisis = crearAnalisisDemanda({
       leerConfig: async () => ENCENDIDA,
       correr: () => new Promise<EstadoTipo>((r) => void corridas.push({ terminar: () => r("PUBLICADO") })),
-      ahora: () => ahora, programar: (a) => void temporizadores.push(a), registrar: () => { throw new Error("log caído"); },
+      ahora: () => ahora, programar: (a, ms) => void (ms === TOPE_TOTAL_MS || temporizadores.push(a)), registrar: () => { throw new Error("log caído"); },
     });
     await analisis.pedir("DIARIO");
     await analisis.pedir("REGLAS");
@@ -302,5 +303,92 @@ describe("la lectura de la configuración falla", () => {
     const analisis = crearAnalisisDemanda({ leerConfig: lanza, correr: vi.fn(), ahora: () => T0, programar: vi.fn(), registrar: vi.fn() });
     await expect(analisis.pedir("DIARIO")).rejects.toThrow();
     expect(analisis.estado()).toMatchObject({ enCurso: null, enEspera: null });
+  });
+});
+
+describe("la espera que arranca · algo lanza antes de correr", () => {
+  it("si una dependencia lanza al arrancar el que espera, el servicio no queda atascado en «en curso»", async () => {
+    let ahora = T0;
+    let romper = false;
+    const temporizadores: (() => void)[] = [];
+    const corridas: { terminar(): void }[] = [];
+    let config: ConfigIaVigente = ENCENDIDA;
+    const analisis = crearAnalisisDemanda({
+      leerConfig: async () => config,
+      correr: () => new Promise<EstadoTipo>((r) => void corridas.push({ terminar: () => r("PUBLICADO") })),
+      ahora: () => { if (romper) throw new Error("reloj roto 4613"); return ahora; },
+      programar: (a, ms) => void (ms === TOPE_TOTAL_MS || temporizadores.push(a)), registrar: () => undefined,
+    });
+    await analisis.pedir("DIARIO");
+    await analisis.pedir("REGLAS");
+    corridas[0]!.terminar();
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    config = { ...ENCENDIDA, analisisDemanda: false }; // al arrancar, el descarte llama a ahora(), que lanza
+    romper = true;
+    ahora += ESPERA_MINIMA_MS;
+    await expect(Promise.resolve().then(() => temporizadores[0]!())).resolves.toBeUndefined();
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    expect(analisis.estado()).toMatchObject({ enCurso: null, enEspera: null });
+    romper = false;
+    config = ENCENDIDA;
+    expect(await analisis.pedir("DIARIO")).toEqual({ ok: true, lugar: "EN_CURSO" });
+  });
+});
+
+describe("un tope total para la corrida", () => {
+  it("el tope es de dos veces el límite máximo por pedido más media minuto", () => {
+    expect(TOPE_TOTAL_MS).toBe(150_000);
+  });
+
+  it("una corrida que no termina se libera al llegar al tope: ERROR con el código TOPE_TOTAL, estado libre y la espera mínima cuenta desde ahí", async () => {
+    const m = montar();
+    await m.analisis.pedir("DIARIO");
+    await m.asentar();
+    expect(m.topes).toHaveLength(1);
+    expect(m.analisis.estado().enCurso).toBe("DIARIO");
+    m.avanzar(TOPE_TOTAL_MS);
+    m.topes[0]!.accion();
+    await m.asentar();
+    expect(m.analisis.estado()).toMatchObject({ enCurso: null, ultimo: { tarea: "DIARIO", estado: "ERROR" } });
+    expect(m.analisis.estado().reintentarEnS).toBe(120);
+    expect(m.lineas).toHaveLength(1);
+    expect(m.lineas[0]).toContain("estado=ERROR");
+    expect(m.lineas[0]).toContain("código=TOPE_TOTAL");
+  });
+
+  it("si había uno en espera, se programa al liberarse por el tope", async () => {
+    const m = montar();
+    await m.analisis.pedir("DIARIO");
+    await m.analisis.pedir("REGLAS");
+    m.avanzar(TOPE_TOTAL_MS);
+    m.topes[0]!.accion();
+    await m.asentar();
+    expect(m.temporizadores).toHaveLength(1);
+    expect(m.analisis.estado()).toMatchObject({ enCurso: null, enEspera: "REGLAS" });
+  });
+
+  it("la corrida abandonada que termina tarde (bien o lanzando) no cambia el estado ni escribe otro registro", async () => {
+    const m = montar();
+    await m.analisis.pedir("DIARIO");
+    await m.asentar();
+    m.avanzar(TOPE_TOTAL_MS);
+    m.topes[0]!.accion();
+    await m.asentar();
+    const antes = m.analisis.estado();
+    m.corridas[0]!.fallar();
+    await m.asentar();
+    expect(m.analisis.estado()).toEqual(antes);
+    expect(m.lineas).toHaveLength(1);
+  });
+
+  it("una corrida que termina a tiempo no deja registro de tope", async () => {
+    const m = montar();
+    await m.analisis.pedir("DIARIO");
+    m.corridas[0]!.terminar();
+    await m.asentar();
+    expect(m.lineas.join(" ")).not.toContain("TOPE_TOTAL");
+    m.topes[0]?.accion();
+    await m.asentar();
+    expect(m.lineas).toHaveLength(1);
   });
 });
