@@ -8,6 +8,7 @@ import {
   textoCierre,
   textoCondicion,
   textoConteos,
+  textoDistanciaAlNivel,
   textoNivel,
   textoPlazo,
   textoResultado,
@@ -44,6 +45,18 @@ describe("el último cierre de una especie", () => {
 
   it("la nota al pie dice que «sin negociación» es una deducción", () => {
     expect(NOTA_INFERENCIA).toBe("«Sin negociación» se deduce de que no hay cierre en esos días hábiles de la BVC; el sistema no guarda el volumen de los días omitidos.");
+  });
+});
+
+describe("la distancia que redondea a 0,00 %", () => {
+  const regla = { condicion: "CIERRE_BAJO", nivel: "2300" } as const;
+  const A_NIVEL = "en el nivel (a menos de 0,01 %)";
+  it("el 0 exacto y lo que redondea a 0,00 dicen «en el nivel (a menos de 0,01 %)», sin lado ni verbo", () => {
+    for (const d of ["0", "0.00", "-0.004", "0.004"]) expect(textoDistanciaAlNivel(d, regla)).toBe(A_NIVEL);
+  });
+  it("el límite 0,005 ya redondea a 0,01 y conserva el texto con lado", () => {
+    expect(textoDistanciaAlNivel("0.005", regla)).toBe("por debajo del nivel de $ 2.300: al cierre le falta subir 0,01 % para tocarlo (la regla se cumple si cierra por debajo)");
+    expect(textoDistanciaAlNivel("-0.005", regla)).toContain("por encima del nivel");
   });
 });
 
