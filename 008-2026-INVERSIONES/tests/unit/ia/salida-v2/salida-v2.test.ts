@@ -51,13 +51,13 @@ describe("el esquema salida-v2", () => {
     expect(JSON.stringify(ESQUEMA_SALIDA)).not.toMatch(/minLength|maxLength/);
   });
 
-  it("los prompts (v3, sobre la misma salida) y el validador son de la versión v2, y el prompt pide segmentos, no citas en la prosa", () => {
+  it("los prompts (v3, sobre la misma salida) y el validador son de la versión v2 y v3 del validador, y el prompt pide segmentos, no citas en la prosa", () => {
     for (const tipo of TIPOS_RESUMEN) {
       expect(VERSIONES_PROMPT[tipo]).toMatch(/-v3$/);
       expect(PROMPTS[tipo].texto).toContain("segmentos");
       expect(PROMPTS[tipo].texto).not.toMatch(/\{H[0-9]{2}\}/);
     }
-    expect(VERSION_VALIDADOR).toBe("validador-v2");
+    expect(VERSION_VALIDADOR).toBe("validador-v3");
   });
 });
 

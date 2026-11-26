@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { VERSION_VALIDADOR } from "@/ia/validador/codigos";
-import { diagnosticarSalida, enmascarar, informeDeFila, lineaDeHallazgo } from "@/ia/validador/diagnostico";
+import { diagnosticarSalida, enmascarar, informeDeFila, lineaDeHallazgo, parteDeLaFrase } from "@/ia/validador/diagnostico";
 import { FRASES_VALIDAS, frase, paqueteFicticio, salida, salidaDe } from "./apoyo/salidas.ficticio";
 
 const paquete = paqueteFicticio("DIARIO");
@@ -53,13 +53,9 @@ describe("diagnosticarSalida", () => {
     expect(h).toMatchObject({ frase: null, parte: null, texto: null });
   });
 
-  it("las primeras frasesDelCodigo frases son del CODIGO y el resto del MODELO", () => {
-    const cruda = salida(
-      { texto: "Una con cifra 12.", hechos: [] },
-      { texto: "Otra con cifra 34.", hechos: [] },
-    );
-    const partes = diagnosticarSalida(cruda, paquete, 1).filter((h) => h.codigo === "CIFRA_SUELTA").map((h) => [h.frase, h.parte]);
-    expect(partes).toEqual([[0, "CODIGO"], [1, "MODELO"]]);
+  it("las primeras frases del código son del CODIGO y el resto del MODELO", () => {
+    expect([0, 1, 2].map((i) => parteDeLaFrase(i, 2))).toEqual(["CODIGO", "CODIGO", "MODELO"]);
+    expect([0, 1].map((i) => parteDeLaFrase(i, 0))).toEqual(["MODELO", "MODELO"]);
   });
 
   it("es determinista y no repite hallazgos", () => {

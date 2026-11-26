@@ -2,9 +2,10 @@
  * Códigos, límites y versión del validador de la salida de un modelo (fase E). El validador cierra en fallo y devuelve
  * TODOS los códigos que encuentra, en este orden; el registro (`resumen_ia.motivos`) guarda esta misma lista cerrada.
  * v2: lee la salida `salida-v2` (segmentos; los hechos citados son las refs) y ya no revisa la lista `hechos`.
+ * v3: en el DIARIO el código escribe los obligatorios que el modelo no cita (`obligatorias.ts`); el modelo trae al menos una frase.
  * Cambiar un control, una lista de patrones o un límite es otra versión del validador (`VERSION_VALIDADOR`).
  */
-export const VERSION_VALIDADOR = "validador-v2";
+export const VERSION_VALIDADOR = "validador-v3";
 export type VersionValidador = typeof VERSION_VALIDADOR;
 
 export const CODIGOS_VALIDADOR = Object.freeze([

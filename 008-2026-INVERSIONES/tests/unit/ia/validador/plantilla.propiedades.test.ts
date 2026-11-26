@@ -112,7 +112,7 @@ describe("plantilla sin IA", () => {
     expect(() => salidaDePlantilla({ ...paqueteFicticio("DIARIO") })).toThrow(ErrorValidador);
   });
 
-  it("si los obligatorios no caben, la plantilla no pasa los límites y el validador la rechaza (HECHO_NO_CITADO)", () => {
+  it("si los obligatorios no caben, la plantilla no pasa los límites y el validador la rechaza (HECHO_NO_CITADO o LONGITUD)", () => {
     const prng = crearPrng(4_613);
     let rechazos = 0;
     for (let i = 0; i < 113; i += 1) {
@@ -122,7 +122,8 @@ describe("plantilla sin IA", () => {
       expect(frases.length).toBeLessThanOrEqual(LIMITES_SALIDA.maxFrases);
       const resultado = resumenSinIa(paquete);
       if (resultado.ok) continue;
-      expect(resultado.motivos).toEqual(["HECHO_NO_CITADO"]);
+      // Lo que la plantilla no alcanzó a citar, el código lo escribe en otras frases (T4): el conjunto pasa de los límites.
+      expect(resultado.motivos.every((m) => m === "HECHO_NO_CITADO" || m === "LONGITUD"), resultado.motivos.join(",")).toBe(true);
       rechazos += 1;
     }
     expect(rechazos).toBeGreaterThan(0);

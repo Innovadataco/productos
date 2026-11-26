@@ -122,16 +122,19 @@ describe("el modelo sigue obligado a escribir", () => {
 });
 
 describe("lo que no cambia", () => {
-  it.each(["REGLAS", "ESCENARIOS"] as const)("%s: un obligatorio sin citar sigue siendo HECHO_NO_CITADO.OBLIGATORIO (el código no lo escribe)", (tipo) => {
-    const p = paqueteFicticio(tipo);
-    const obligatorio = obligatoriosDe(p)[0];
-    // Una frase que cita un dato que no es obligatorio.
-    const otro = p.hechos.find((h) => !h.obligatorio && h.unidad !== "NOMBRE" && h.sujeto === undefined);
-    expect(obligatorio !== undefined && otro !== undefined).toBe(true);
-    const cruda = JSON.stringify({ frases: [{ segmentos: [{ texto: "La referencia es " }, { ref: otro?.id ?? "H01" }, { texto: "." }] }] });
-    const r = validarSalida(cruda, p);
-    expect(r.ok ? [] : r.hallazgos.map((h) => h.patron)).toContain("HECHO_NO_CITADO.OBLIGATORIO");
-  });
+  it.each([["REGLAS", {}], ["ESCENARIOS", { ESCENARIO_CENTRAL_CORTO: { obligatorio: true } }]] as const)(
+    "%s: un obligatorio sin citar sigue siendo HECHO_NO_CITADO.OBLIGATORIO (el código no lo escribe)",
+    (tipo, marcas) => {
+      const p = paqueteFicticio(tipo, marcas);
+      const otro = p.hechos.find((h) => !h.obligatorio && h.unidad !== "NOMBRE" && h.sujeto === undefined);
+      expect(obligatoriosDe(p).length).toBeGreaterThan(0);
+      expect(otro).toBeDefined();
+      const cruda = JSON.stringify({ frases: [{ segmentos: [{ texto: "La referencia es " }, { ref: otro?.id ?? "H01" }, { texto: "." }] }] });
+      const r = validarSalida(cruda, p);
+      expect(r.ok ? [] : r.hallazgos.map((h) => h.patron)).toContain("HECHO_NO_CITADO.OBLIGATORIO");
+      expect(componerConObligatorias(p, leerSalida(cruda) ?? { frases: [] }).delCodigo).toBe(0);
+    },
+  );
 
   it("la plantilla sin IA sigue publicando y no repite lo que escribe el código", () => {
     const p = diario();
@@ -143,28 +146,32 @@ describe("lo que no cambia", () => {
 });
 
 describe("HECHO_NO_CITADO.OBLIGATORIO solo salta si las frases del código no caben", () => {
-  it("con todos los hechos obligatorios, si ni la plantilla entera cabe, el rechazo es HECHO_NO_CITADO; si cabe, publica", () => {
+  it("con todos los hechos obligatorios: rechaza siempre, y por HECHO_NO_CITADO solo si el código no alcanza a escribirlos", () => {
     const prng = crearPrng(4_613);
-    let porNoCaber = 0;
-    let publicados = 0;
+    let noCaben = 0;
+    let caben = 0;
     for (let i = 0; i < 113; i += 1) {
       const entrada = entradaAlAzar(prng, "DIARIO");
       const p = construirPaquete({ ...entrada, hechos: entrada.hechos.map((h) => ({ ...h, obligatorio: true })) });
       const uno = p.hechos.find((h) => h.unidad !== "NOMBRE");
       if (uno === undefined) continue;
-      const cruda = JSON.stringify({ frases: frasesDePlantilla(p, [uno]).map((t) => ({ segmentos: leerSegmentos(t) })) });
-      const r = validarSalida(cruda, p);
-      if (r.ok) {
-        publicados += 1;
-        continue;
-      }
-      if (!resumenSinIa(p).ok) {
-        expect(r.motivos).toContain("HECHO_NO_CITADO");
-        porNoCaber += 1;
+      const delModelo = frasesDePlantilla(p, [uno]);
+      const r = validarSalida(JSON.stringify({ frases: delModelo.map((t) => ({ segmentos: leerSegmentos(t) })) }), p);
+      const citadosPorElModelo = new Set(delModelo.flatMap((t) => [...t.matchAll(/\{(H[0-9]{2})\}/gu)].map((m) => m[1])));
+      const faltantes = p.hechos.filter((h) => !citadosPorElModelo.has(h.id));
+      const escritos = new Set(frasesDePlantilla(p, faltantes).flatMap((t) => [...t.matchAll(/\{(H[0-9]{2})\}/gu)].map((m) => m[1])));
+      const sinLugar = faltantes.some((h) => h.unidad !== "NOMBRE" && !escritos.has(h.id)) || faltantes.some((h) => h.unidad === "NOMBRE" && !escritos.has(h.id));
+      if (sinLugar) {
+        noCaben += 1;
+        expect(r.ok).toBe(false);
+        expect(r.ok ? [] : r.motivos).toContain("HECHO_NO_CITADO");
+      } else {
+        caben += 1;
+        if (!r.ok) expect(r.motivos, r.motivos.join(",")).not.toContain("HECHO_NO_CITADO");
       }
     }
-    expect(porNoCaber).toBeGreaterThan(0);
-    expect(publicados).toBeGreaterThanOrEqual(0);
+    expect(noCaben).toBeGreaterThan(0);
+    expect(caben).toBeGreaterThan(0);
   });
 });
 

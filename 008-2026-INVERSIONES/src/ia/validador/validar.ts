@@ -5,6 +5,8 @@
  * construido, el aviso fijo y las cifras usadas. El paquete tiene que ser el mismo objeto que salió de
  * `construirPaquete` (si no, ErrorValidador: es un defecto del código, no del modelo). Nunca lanza por la salida cruda.
  *
+ * Los obligatorios del DIARIO que el modelo no cita los escribe el código y se componen con su salida (`obligatorias.ts`).
+ *
  * La salida es `salida-v2` (segmentos de texto y refs): `leerSalida` arma el texto con la cita de cada ref; la forma
  * vieja es SALIDA_INVALIDA.
  *
@@ -24,6 +26,7 @@ import { revisarEtiquetas } from "./etiquetas";
 import { esNombre, hechosPorId, type HechosPorId } from "./hechos";
 import { leerSalida, type FraseLeida } from "./leer";
 import { revisarMarcas } from "./marcas";
+import { componerConObligatorias, TIPOS_OBLIGATORIAS_DEL_CODIGO } from "./obligatorias";
 import { coincidenciasEn, prepararTexto, type Patron } from "./patron";
 import { esNumeroFundido } from "./numeros";
 import { palabrasFueraDelVocabulario } from "./vocabulario";
@@ -106,8 +109,12 @@ export function validarSalida<T extends TipoResumen>(salidaCruda: unknown, paque
   };
   const porId = hechosPorId(paquete);
   const { minFrases, maxFrases, maxLargoTotal } = LIMITES_SALIDA;
-  if (leida.frases.length < minFrases || leida.frases.length > maxFrases) anotarEn(null)("LONGITUD", "LONGITUD.FRASES");
-  const analizadas = leida.frases.map((frase, i) => analizarFrase(frase, paquete, porId, anotarEn(i)));
+  // En los tipos cuyos obligatorios escribe el código, la salida se compone con esas frases (`obligatorias.ts`); el modelo
+  // tiene que traer al menos una frase propia, y el conjunto no pasa del máximo.
+  const { frases, delCodigo } = componerConObligatorias(paquete, leida);
+  const sinFraseDelModelo = TIPOS_OBLIGATORIAS_DEL_CODIGO.includes(paquete.tipo) && leida.frases.length < minFrases;
+  if (frases.length < minFrases || frases.length > maxFrases || sinFraseDelModelo) anotarEn(null)("LONGITUD", "LONGITUD.FRASES");
+  const analizadas = frases.map((frase, i) => analizarFrase(frase, paquete, porId, anotarEn(i)));
   if (analizadas.reduce((total, f) => total + f.largo, 0) > maxLargoTotal) anotarEn(null)("LONGITUD", "LONGITUD.TOTAL");
   const citados = new Set(analizadas.flatMap((f) => f.resumen.citados));
   if (paquete.hechos.some((h) => h.obligatorio && !citados.has(h.id))) anotarEn(null)("HECHO_NO_CITADO", "HECHO_NO_CITADO.OBLIGATORIO");
