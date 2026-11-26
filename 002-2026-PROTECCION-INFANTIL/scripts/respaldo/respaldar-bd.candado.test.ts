@@ -155,12 +155,13 @@ describe("SPEC-978 · candado · respaldo cifrado de las bases", () => {
     });
 
     // ---- 4. Contrato del CEO anclado (una mutación del contrato enrojece) ------------------------
-    it("ancla el contrato: pipefail, destino, 640 root:respaldo, sha256, flock, retención 14d, dry-run", () => {
+    it("ancla el contrato: pipefail, destino, 640 root:respaldo, dir 750, sha256, flock, retención 14d, dry-run", () => {
         expect(SRC).toMatch(/set -uo pipefail/); // pg_dump que falla tumba el pipe
         expect(SRC).toContain("/var/backups/idc"); // destino
         expect(SRC).toContain("/var/lock/respaldo-bd.lock"); // flock
         expect(SRC).toMatch(/flock -n 9/);
         expect(SRC).toMatch(/chmod 640/);
+        expect(SRC).toMatch(/chmod 750/); // dir destino con permisos propios (no umask) en reinstalación limpia
         expect(SRC).toMatch(/chown "root:\$RESPALDO_GRUPO"/);
         expect(SRC).toMatch(/RESPALDO_GRUPO:-respaldo/);
         expect(SRC).toMatch(/RESPALDO_RETENCION_DIAS:-14/);

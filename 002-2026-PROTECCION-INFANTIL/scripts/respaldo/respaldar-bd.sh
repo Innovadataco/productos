@@ -140,6 +140,11 @@ respaldar_una_base() {
         log "🚨 $label: no se pudo crear $destdir"
         return 1
     fi
+    # Permisos del dir destino, idempotentes e iguales al interino (750 root:$RESPALDO_GRUPO): en una
+    # reinstalación limpia los dumps NO pueden quedar con los permisos por defecto del umask. chmod
+    # siempre; chown best-effort (solo root). Si el dir ya existe con estos permisos, es no-op.
+    chmod 750 "$destdir" 2>/dev/null || true
+    chown "root:$RESPALDO_GRUPO" "$destdir" 2>/dev/null || log "⚠️  $label: no se pudo chown root:$RESPALDO_GRUPO en $destdir (¿no root?) — se sigue con chmod 750"
     tmp="$dest.tmp.$$"
 
     # EL PIPE CIFRADO: pg_dump → age → fichero. Nada en claro toca el disco. pipefail hace que un
