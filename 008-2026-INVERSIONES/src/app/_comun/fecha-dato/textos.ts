@@ -55,7 +55,6 @@ const diaTexto = (dia: DiaIso, conAnio: boolean): string => (conAnio ? fecha(dia
 const piezaDia = (dia: DiaIso, conAnio: boolean): Pieza => (diaValido(dia) ? { texto: diaTexto(dia, conAnio), dateTime: dia } : { texto: diaTexto(dia, conAnio) });
 
 /** El año del dato se dice solo si cambia respecto del año en que se trajo (o si no se sabe cuándo se trajo). */
-// (leerInstante es una función: se declara más abajo y se eleva.)
 function conAnioDe(dia: DiaIso, traidoEn: InstanteColombia | null): boolean {
   const h = leerInstante(traidoEn);
   return h === null || h.dia.slice(0, 4) !== dia.slice(0, 4);

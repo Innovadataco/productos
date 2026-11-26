@@ -1,4 +1,6 @@
 import { horaColombia } from "@/app/_comun/fecha-dato/hora";
+import { atrasoParaAviso } from "@/precios/atraso";
+import type { CalendarioBvc } from "@/precios/negociacion";
 import type { Resumen } from "@/tablero/datos";
 import type { FilaTablero } from "@/tablero/calculo";
 import { componer, type Tajada } from "@/tablero/composicion";
@@ -12,7 +14,13 @@ const dia = (d: Date) => d.toISOString().slice(0, 10);
 const DESFASE_COLOMBIA_MS = 5 * 60 * 60 * 1000;
 const diaColombia = (d: Date) => dia(new Date(d.getTime() - DESFASE_COLOMBIA_MS));
 
-function fila(f: FilaTablero): FilaVista {
+/** Con qué reloj y calendario de la BVC se cuentan los días hábiles de atraso de cada cierre (frente fuente-retraso). */
+export interface ContextoAtraso {
+  readonly ahora: Date;
+  readonly calendario: CalendarioBvc;
+}
+
+function fila(f: FilaTablero, atraso?: ContextoAtraso): FilaVista {
   return {
     id: f.instrumentoId, nemo: f.nemotecnico, cantidad: f.cantidad.toString(), costo: f.costoVivo.toString(),
     valor: f.valor?.toString() ?? null, sinVender: f.sinVender?.toString() ?? null,
@@ -21,6 +29,7 @@ function fila(f: FilaTablero): FilaVista {
     cierre: f.cierre ? {
       precio: f.cierre.precio.toString(), fecha: dia(f.cierre.fecha), verificado: f.cierre.verificado, atrasado: f.cierreAtrasado,
       traidoEn: f.cierre.traidoEn ? horaColombia(f.cierre.traidoEn) : null, fuente: f.cierre.fuente ?? null,
+      ...(atraso ? { habilesAtras: atrasoParaAviso(f.cierre.fecha, atraso.ahora, atraso.calendario) } : {}),
     } : null,
     lotesVivos: f.lotesVivos, serie: f.serie.map((p) => ({ fecha: dia(p.fecha), precio: p.precio.toString() })),
   };
@@ -47,10 +56,12 @@ export function aEvolucionVista(e: Evolucion): EvolucionVista {
   };
 }
 
-export function aVista(r: Resumen): Vista {
+/** `atraso`: sin él, los cierres no dicen cuántos días hábiles llevan sin renovarse (las pruebas que no lo miran). */
+export function aVista(r: Resumen, atraso?: ContextoAtraso): Vista {
   const t = r.tablero;
+  const aFila = (f: FilaTablero): FilaVista => fila(f, atraso);
   return {
-    filas: t.filas.map(fila), cerradas: t.cerradas.map(fila),
+    filas: t.filas.map(aFila), cerradas: t.cerradas.map(aFila),
     valorAcciones: t.valorAcciones.toString(), sinVender: t.sinVender.toString(), porVentas: t.porVentas.toString(),
     dividendos: t.dividendos.toString(), comisiones: t.comisiones.toString(), gananciaTotal: t.gananciaTotal.toString(),
     especiesSinPrecio: t.especiesSinPrecio,

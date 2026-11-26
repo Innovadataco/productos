@@ -4,6 +4,7 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { FechaDato, FechaDatoCompuesta } from "@/app/_comun/fecha-dato/FechaDato";
 import { TarjetaResumenIa } from "@/app/_comun/resumen-ia/TarjetaResumenIa";
 import type { VistaResumenIa } from "@/app/_comun/resumen-ia/tipos";
+import { pieDePrecios } from "@/precios/fuentes";
 import { Evolucion } from "./Evolucion";
 import { cop, fecha, n, numero, pct } from "./formato";
 import { Foto } from "./Foto";
@@ -467,6 +468,7 @@ export function Tablero({ vista, conciliacion, evolucion, soloLectura = false, r
         <Foto vista={vista} elegir={elegir} />
         <Posiciones vista={vista} elegida={elegida} elegir={elegir} alCerrar={() => setElegida(null)} />
         <Falta />
+        <p className="nota" id="fuentes-de-precios">{pieDePrecios()}</p>
         <footer className="pie">El sistema calcula y muestra; no recomienda comprar ni vender. Datos de su base local.</footer>
       </main>
     </>

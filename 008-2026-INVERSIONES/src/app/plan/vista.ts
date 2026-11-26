@@ -8,6 +8,7 @@
 import type { CierreLeido, ReglaLeida, VersionLeida } from "@/plan/lectura";
 import { frescuraDelCierre, preciosAtrasados } from "@/plan/cierre-frescura";
 import { estadoDelNivel } from "@/plan/niveles";
+import { atrasoParaAviso } from "@/precios/atraso";
 import type { CalendarioBvc } from "@/precios/negociacion";
 import { horaColombia } from "../_comun/fecha-dato/hora";
 import type { Procedencia } from "../_comun/fecha-dato/tipos";
@@ -40,11 +41,17 @@ function cierreDe(r: ReglaLeida, c: Cierres): CierreVista {
   return { estado: "AL_DIA", ...base };
 }
 
-/** El último cierre de la especie: su día, cuándo lo trajo 008 (hora de Colombia) y la fuente. */
-function procedenciaDe(r: ReglaLeida, c: Cierres): Procedencia | null {
+/**
+ * El último cierre de la especie: su día, cuándo lo trajo 008 (hora de Colombia), la fuente y, con el instante de la
+ * lectura (`ahora`), los días hábiles de la BVC que lleva sin renovarse (frente fuente-retraso).
+ */
+function procedenciaDe(r: ReglaLeida, c: Cierres, ahora: Date | undefined): Procedencia | null {
   const ultimo = r.instrumentoId === null ? undefined : c.porEspecie.get(r.instrumentoId);
   if (!ultimo) return null;
-  return { dia: dia(ultimo.fecha), traidoEn: ultimo.traidoEn ? horaColombia(ultimo.traidoEn) : null, fuente: ultimo.fuente ?? null };
+  return {
+    dia: dia(ultimo.fecha), traidoEn: ultimo.traidoEn ? horaColombia(ultimo.traidoEn) : null, fuente: ultimo.fuente ?? null,
+    ...(ahora === undefined ? {} : { habilesAtras: atrasoParaAviso(ultimo.fecha, ahora, c.calendario) }),
+  };
 }
 
 function frenteDe(r: ReglaLeida, cierre: CierreVista, c: Cierres): NivelVista {
@@ -54,7 +61,7 @@ function frenteDe(r: ReglaLeida, cierre: CierreVista, c: Cierres): NivelVista {
   return e.estado === "A_DISTANCIA" ? { estado: "A_DISTANCIA", distanciaPct: e.distanciaPct.toString() } : e;
 }
 
-function aReglaVista(r: ReglaLeida, cierres: Cierres | null, hoy: Date): ReglaVista {
+function aReglaVista(r: ReglaLeida, cierres: Cierres | null, hoy: Date, ahora: Date | undefined): ReglaVista {
   const cierre = cierres ? cierreDe(r, cierres) : null;
   return {
     id: r.id,
@@ -69,7 +76,7 @@ function aReglaVista(r: ReglaLeida, cierres: Cierres | null, hoy: Date): ReglaVi
     decisiones: r.decisiones,
     cierre,
     frente: cierres && cierre ? frenteDe(r, cierre, cierres) : null,
-    procedencia: cierres ? procedenciaDe(r, cierres) : null,
+    procedencia: cierres ? procedenciaDe(r, cierres, ahora) : null,
   };
 }
 
@@ -86,11 +93,13 @@ export interface EntradaVistaPlan {
   /** null si la elegida no es la vigente. */
   readonly cierres: Cierres | null;
   readonly hoy: Date;
+  /** El instante de la lectura, para contar los días hábiles de atraso de cada cierre; sin él, no se cuentan. */
+  readonly ahora?: Date;
 }
 
 export function aVistaPlan(e: EntradaVistaPlan): VistaPlan {
   const vigente = vigenteEn(e.versiones, e.hoy);
-  const reglas = e.reglas.map((r) => aReglaVista(r, e.cierres, e.hoy)).sort(porEspecie);
+  const reglas = e.reglas.map((r) => aReglaVista(r, e.cierres, e.hoy, e.ahora)).sort(porEspecie);
   const programada = [...e.versiones].filter((v) => v.vigenteDesde > e.hoy).sort((a, b) => a.version - b.version)[0] ?? null;
   return {
     version: aVersionVista(e.elegida, vigente, e.elegida, e.hoy),

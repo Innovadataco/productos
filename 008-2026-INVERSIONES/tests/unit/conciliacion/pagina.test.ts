@@ -252,7 +252,8 @@ describe("src/app/conciliacion/page.tsx · de dónde y de cuándo es cada «Valo
     cierres: new Map([["a", { fuente: "yahoo", traidoEn: new Date("2027-01-13T23:41:00Z") }]]),
     fondos: new Map([["f", { fuente: "sfc:qhpu-8ixx", traidoEn: new Date("2027-01-14T12:07:00Z") }]]),
   };
-  const notas = (tr: Element | undefined) => [...(tr?.querySelectorAll(".fecha-dato") ?? [])].map(texto);
+  // La línea visible de cada nota (el detalle accesible tiene su propia clase).
+  const notas = (tr: Element | undefined) => [...(tr?.querySelectorAll(".fecha-dato-linea") ?? [])].map(texto);
 
   beforeEach(() => {
     leerConciliacion.mockResolvedValue(calculada);
@@ -267,15 +268,15 @@ describe("src/app/conciliacion/page.tsx · de dónde y de cuándo es cada «Valo
   it("cada especie: el cierre del corte, cuándo lo trajo 008 (hora de Colombia) y la fuente, en su «Valor sistema»", async () => {
     const raiz = await pantalla();
     const celdas = [...fila(raiz, "FICTA")!.querySelectorAll("th, td")];
-    expect(notas(celdas[5])).toEqual(["Cierre del 22-nov-2024 · traído el 13-ene-2027 a las 18:41 (hora de Colombia) · BVC por Yahoo"]);
-    expect(texto(celdas[5])).toMatch(/^\$ 110\.000Cierre del/);
+    expect(notas(celdas[5])).toEqual(["Cierre 22-nov-2024 · traído 13-ene-2027 18:41 · Yahoo (BVC)"]);
+    expect(texto(celdas[5])).toMatch(/^\$ 110\.000Cierre 22-nov-2024/);
     expect(notas(fila(raiz, "FICTC"))).toEqual([]);
   });
 
   it("el total de acciones, con el cierre más viejo que lo compone; el fondo, con su valor de unidad", async () => {
     const raiz = await pantalla();
-    expect(notas(fila(raiz, "Total de acciones"))).toEqual(["Cierre del 22-nov-2024 · traído el 13-ene-2027 a las 18:41 (hora de Colombia) · BVC por Yahoo"]);
-    expect(notas(fila(raiz, "Fondo ficticio uno"))).toEqual(["Valor de unidad del 22-nov-2024 · traído el 14-ene-2027 a las 07:07 (hora de Colombia) · SFC"]);
+    expect(notas(fila(raiz, "Total de acciones"))).toEqual(["Cierre 22-nov-2024 · traído 13-ene-2027 18:41 · Yahoo (BVC)"]);
+    expect(notas(fila(raiz, "Fondo ficticio uno"))).toEqual(["Valor de unidad 22-nov-2024 · traído 14-ene-2027 07:07 · SFC"]);
     expect(notas(fila(raiz, "Efectivo"))).toEqual([]);
   });
 

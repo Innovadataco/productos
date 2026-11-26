@@ -44,6 +44,8 @@ export interface FilaVista {
     readonly atrasado: boolean;
     readonly traidoEn: InstanteColombia | null;
     readonly fuente: string | null;
+    /** Días hábiles de la BVC que lleva este cierre sin renovarse (src/precios/atraso.ts); ausente o null: no se sabe. */
+    readonly habilesAtras?: number | null;
   } | null;
   readonly lotesVivos: number;
   readonly serie: readonly { readonly fecha: string; readonly precio: string }[];

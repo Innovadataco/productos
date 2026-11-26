@@ -100,17 +100,33 @@ describe("la versión vigente, con cierres y distancia al nivel", () => {
     expect(a[6]).toContain("sin verificar");
     expect(a.slice(7, 9)).toEqual(["a +9,1 % del nivel", "2"]);
     expect(celdas(fila(raiz, "FICTB")).slice(5, 8)).toEqual([
-      "venció el 31-oct-2024", "$ 1.913 · 22-nov-2024verificado A&Vtraído el 14-ene-2027 a las 07:07 (hora de Colombia) · BVC por Yahoo", "tocada · cierre bajo el nivel",
+      "venció el 31-oct-2024", expect.stringMatching(/^\$ 1\.913 · 22-nov-2024verificado A&Vtraído 14-ene-2027 07:07 · Yahoo \(BVC\)/), "tocada · cierre bajo el nivel",
     ]);
   });
 
   it("cada «Último cierre» dice cuándo lo trajo 008 (hora de Colombia) y de qué fuente; sin cierre, nada (frente fecha-hora-datos)", async () => {
     const raiz = await pantalla();
-    const nota = (especie: string) => [...(fila(raiz, especie)?.querySelectorAll("td")[5]?.querySelectorAll(".fecha-dato") ?? [])].map(texto);
-    expect(nota("FICTA")).toEqual(["traído el 13-ene-2027 a las 18:41 (hora de Colombia) · BVC por Yahoo"]);
-    expect(nota("FICTC")).toEqual(["traído el 13-ene-2027 a las 18:41 (hora de Colombia) · bvc-ficticia"]);
+    const nota = (especie: string) => [...(fila(raiz, especie)?.querySelectorAll("td")[5]?.querySelectorAll(".fecha-dato-linea") ?? [])].map(texto);
+    expect(nota("FICTA")).toEqual(["traído 13-ene-2027 18:41 · Yahoo (BVC)"]);
+    expect(nota("FICTC")).toEqual(["traído 13-ene-2027 18:41 · bvc-ficticia"]);
     expect(nota("FICTP")).toEqual([]);
     for (const tr of [...raiz.querySelectorAll("tbody tr")].filter((t) => texto(t.querySelector("th")) === "Portafolio")) expect(tr.querySelector(".fecha-dato")).toBeNull();
+  });
+
+  it("un cierre de más de un día hábil de antigüedad lo avisa (FICTC: 13 días hábiles; 4 y 11-nov fueron festivos); los al día, no (frente fuente-retraso)", async () => {
+    const raiz = await pantalla();
+    const aviso = (especie: string) => [...(fila(raiz, especie)?.querySelectorAll(".fecha-dato-aviso") ?? [])].map(texto);
+    expect(aviso("FICTC")).toEqual(["dato de hace 13 días hábiles"]);
+    expect(aviso("FICTA")).toEqual([]);
+    expect(aviso("FICTB")).toEqual([]);
+  });
+
+  it("el detalle de la fuente y su retraso va como texto de la celda, no como tooltip", async () => {
+    const raiz = await pantalla();
+    const detalle = texto(fila(raiz, "FICTA")?.querySelector(".fecha-dato-detalle"));
+    expect(detalle).toContain("Fuente: Yahoo (BVC).");
+    expect(detalle).toContain("hasta 20 min de retraso");
+    expect(raiz.querySelector(".fecha-dato[title], .fecha-dato-linea[title]")).toBeNull();
   });
 
   it("una versión que no rige hoy no lleva cierres ni su procedencia", async () => {
