@@ -128,7 +128,7 @@ describe("desplegar-prod.sh · servicio de precios: se levanta y se verifica sol
   });
 
   it("acepta las INV_INTRADIA_* de la configuración del ciclo por minuto (vacías, como las pone el compose) y sigue rechazando las ajenas", async () => {
-    const nombres = ["ENCENDIDO", "CICLO_SEG", "DESDE_COT", "HASTA_COT", "PAUSA_MS", "RETENCION_DIAS", "URL_YAHOO"].map((n) => `INV_INTRADIA_${n}=`).join("\\n");
+    const nombres = ["ENCENDIDO", "CICLO_SEG", "DESDE_COT", "HASTA_COT", "PAUSA_MS", "RETENCION_DIAS", "HOST_YAHOO"].map((n) => `INV_INTRADIA_${n}=`).join("\\n");
     const p = preparar(CON_SERVICIO, { FALSO_ENV_PRECIOS: `TZ=America/Bogota\\nDATABASE_URL=\\n${nombres}\\n` });
     const r = await correr(p.script, [ID], p.env);
     expect(r.status, r.stderr).toBe(0);

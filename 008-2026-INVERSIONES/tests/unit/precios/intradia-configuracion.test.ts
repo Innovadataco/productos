@@ -1,6 +1,7 @@
 // Configuración del segundo ciclo del servicio de precios (precios intradía): variables de entorno con valores por
 // omisión. Lo inválido cae al valor por omisión y avisa SIN repetir lo que llegó; el interruptor, ante la duda, apaga.
 import { describe, expect, it } from "vitest";
+import { HOSTS_YAHOO_INTRADIA } from "@/precios/intradia/url";
 import { CONFIG_INTRADIA_POR_OMISION, leerConfigIntradia } from "@/servicio-precios/intradia-configuracion";
 
 describe("leerConfigIntradia", () => {
@@ -68,22 +69,44 @@ describe("leerConfigIntradia", () => {
     expect(leerConfigIntradia({ INV_INTRADIA_RETENCION_DIAS: "366" }).retencionDias).toBe(60);
   });
 
-  it("la URL de Yahoo, por configuración: solo https, sin credenciales, puerto, ruta ni consulta; sin la barra final", () => {
-    expect(leerConfigIntradia({ INV_INTRADIA_URL_YAHOO: "https://yahoo.ficticio.invalid/" }).urlYahoo).toBe("https://yahoo.ficticio.invalid");
-    for (const mala of ["http://yahoo.ficticio.invalid", "https://u:p@yahoo.ficticio.invalid", "https://yahoo.ficticio.invalid:8443", "https://yahoo.ficticio.invalid/v8", "https://yahoo.ficticio.invalid/?a=1", "yahoo", "ftp://x.invalid", "https://yahoo.ficticio.invalid.", "https://localhost", "https://a_b.ficticio.invalid"]) {
-      const c = leerConfigIntradia({ INV_INTRADIA_URL_YAHOO: mala });
-      expect(c.urlYahoo).toBe(CONFIG_INTRADIA_POR_OMISION.urlYahoo);
-      expect(c.avisos).toHaveLength(1);
-      expect(c.avisos.join(" ")).not.toContain("ficticio");
+  it("el host de Yahoo se elige con INV_INTRADIA_HOST_YAHOO entre dos fijos (query1 por omisión), sin URL libre", () => {
+    expect(HOSTS_YAHOO_INTRADIA).toEqual({ query1: "query1.finance.yahoo.com", query2: "query2.finance.yahoo.com" });
+    expect(Object.isFrozen(HOSTS_YAHOO_INTRADIA)).toBe(true);
+    for (const env of [{}, { INV_INTRADIA_HOST_YAHOO: "" }, { INV_INTRADIA_HOST_YAHOO: "query1" }, { INV_INTRADIA_HOST_YAHOO: " query1 " }]) {
+      const c = leerConfigIntradia(env);
+      expect(c.urlYahoo, JSON.stringify(env)).toBe("https://query1.finance.yahoo.com");
+      expect(c.avisos, JSON.stringify(env)).toEqual([]);
+    }
+    const c2 = leerConfigIntradia({ INV_INTRADIA_HOST_YAHOO: "query2" });
+    expect(c2.urlYahoo).toBe("https://query2.finance.yahoo.com");
+    expect(c2.avisos).toEqual([]);
+  });
+
+  it("cualquier otro valor del selector da INTRADIA_URL_INVALIDA, cae a query1 y avisa sin repetir el valor", () => {
+    const ip = (...o: number[]): string => o.join(".");
+    for (const malo of ["query3", "QUERY2", "https://query2.finance.yahoo.com", "query2.finance.yahoo.com", "https://yahoo.ficticio.invalid", "yahoo.ficticio.invalid", "query1;query2", "1", `https://${ip(11, 37, 91, 47)}`, "https://[::1]", "localhost"]) {
+      const c = leerConfigIntradia({ INV_INTRADIA_HOST_YAHOO: malo });
+      expect(c.urlYahoo, malo).toBe("https://query1.finance.yahoo.com");
+      expect(c.avisos, malo).toHaveLength(1);
+      expect(c.avisos.join(" "), malo).toContain("INTRADIA_URL_INVALIDA");
+      expect(c.avisos.join(" "), malo).not.toContain("ficticio");
     }
   });
 
-  it("una IP como nombre del servidor se rechaza (net no la resuelve: saltaría la validación del lookup del buscador fijo)", () => {
-    const ip = (...o: number[]): string => o.join(".");
-    for (const mala of [`https://${ip(11, 37, 91, 47)}`, `https://${ip(172, 17, 0, 1)}`, "https://[::1]", "https://[2001:db8::1]"]) {
-      const c = leerConfigIntradia({ INV_INTRADIA_URL_YAHOO: mala });
-      expect(c.urlYahoo).toBe(CONFIG_INTRADIA_POR_OMISION.urlYahoo);
-      expect(c.avisos).toHaveLength(1);
+  it("la variable vieja INV_INTRADIA_URL_YAHOO ya no hace nada (la URL libre desapareció)", () => {
+    const c = leerConfigIntradia({ INV_INTRADIA_URL_YAHOO: "https://yahoo.ficticio.invalid" });
+    expect(c.urlYahoo).toBe("https://query1.finance.yahoo.com");
+    expect(c.avisos).toEqual([]);
+  });
+
+  it("frecuencia: 60 s es la omisión; 29 y 3601 caen a 60 con aviso (el rango válido es de 30 a 3600)", () => {
+    expect(CONFIG_INTRADIA_POR_OMISION.cicloMs).toBe(60_000);
+    expect(leerConfigIntradia({}).cicloMs).toBe(60_000);
+    for (const malo of ["29", "3601"]) {
+      const c = leerConfigIntradia({ INV_INTRADIA_CICLO_SEG: malo });
+      expect(c.cicloMs, malo).toBe(60_000);
+      expect(c.avisos, malo).toHaveLength(1);
     }
+    expect(leerConfigIntradia({ INV_INTRADIA_CICLO_SEG: "3600" }).cicloMs).toBe(3_600_000);
   });
 });

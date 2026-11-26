@@ -170,8 +170,8 @@ describe("la tarea intradia (precios cada minuto) como proceso hijo del mismo bu
     expect(s.texto).toContain("No se trajeron los precios intradía");
   });
 
-  it("una URL de Yahoo inválida en el entorno no abre nada: la tarea usa la de por omisión (el host de la configuración solo se suma si es válida)", async () => {
-    const s = await correr(["intradia", "--opcion-mala"], { DATABASE_URL: URL_PRECIOS, INV_INTRADIA_URL_YAHOO: "http://no-es-https.invalid" });
+  it("un host de Yahoo inválido en el entorno no abre nada: la lista blanca es fija", async () => {
+    const s = await correr(["intradia", "--opcion-mala"], { DATABASE_URL: URL_PRECIOS, INV_INTRADIA_HOST_YAHOO: "no-es-query.invalid" });
     expect(s.codigo, s.texto).toBe(2);
   });
 });

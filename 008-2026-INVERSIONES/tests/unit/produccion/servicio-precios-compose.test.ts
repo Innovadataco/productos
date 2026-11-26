@@ -68,7 +68,7 @@ describe("inv-008-precios · solo la credencial de inv_precios (sin el secreto n
     expect(Object.keys(precios.environment ?? {}).sort()).toEqual(
       [
         "DATABASE_URL", "TZ", "INV_INTRADIA_CICLO_SEG", "INV_INTRADIA_DESDE_COT", "INV_INTRADIA_ENCENDIDO", "INV_INTRADIA_HASTA_COT", "INV_INTRADIA_PAUSA_MS",
-        "INV_INTRADIA_RETENCION_DIAS", "INV_INTRADIA_URL_YAHOO",
+        "INV_INTRADIA_RETENCION_DIAS", "INV_INTRADIA_HOST_YAHOO",
       ].sort(),
     );
     expect(precios.environment?.TZ).toBe("America/Bogota");

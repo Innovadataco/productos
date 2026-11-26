@@ -28,7 +28,7 @@ describe("candado de lenguaje de los precios intradía", () => {
       ...reporteCiclo({ codigo: 4, especies: 0, peticiones: 0, barrasNuevas: 0, fallidas: [], sinCalendario: false }).lineas,
       ...reporteCiclo({ codigo: 7, especies: 3, peticiones: 2, barrasNuevas: 1, fallidas: [], sinCalendario: false }).lineas,
       ...reporteDepuracion(5).lineas,
-      ...leerConfigIntradia({ INV_INTRADIA_ENCENDIDO: "x", INV_INTRADIA_CICLO_SEG: "x", INV_INTRADIA_DESDE_COT: "x", INV_INTRADIA_PAUSA_MS: "x", INV_INTRADIA_RETENCION_DIAS: "x", INV_INTRADIA_URL_YAHOO: "x" }).avisos,
+      ...leerConfigIntradia({ INV_INTRADIA_ENCENDIDO: "x", INV_INTRADIA_CICLO_SEG: "x", INV_INTRADIA_DESDE_COT: "x", INV_INTRADIA_PAUSA_MS: "x", INV_INTRADIA_RETENCION_DIAS: "x", INV_INTRADIA_HOST_YAHOO: "x" }).avisos,
     ];
     expect(lineas.length).toBeGreaterThan(8);
     expect(lineas.filter((t) => prohibidasEn(t).length > 0)).toEqual([]);
