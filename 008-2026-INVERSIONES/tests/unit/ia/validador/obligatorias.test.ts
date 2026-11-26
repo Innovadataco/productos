@@ -121,6 +121,33 @@ describe("el modelo sigue obligado a escribir", () => {
   });
 });
 
+describe("el modelo tiene que aportar algo que no sea un obligatorio", () => {
+  const patronesDe = (r: ReturnType<typeof validarSalida>): readonly string[] => (r.ok ? [] : r.hallazgos.map((h) => h.patron));
+
+  it("si solo cita obligatorios, se rechaza: sería la plantilla publicada como IA", () => {
+    const p = diario();
+    const r = validar(p, VALOR, GANANCIA, ATRASADAS);
+    expect(r.ok).toBe(false);
+    expect(r.ok ? [] : r.motivos).toContain("LONGITUD");
+    expect(patronesDe(r)).toContain("LONGITUD.SIN_APORTE_DEL_MODELO");
+  });
+
+  it("citar solo el nombre de una especie tampoco es aportar", () => {
+    const p = diario();
+    expect(patronesDe(validar(p, VALOR, "{ESPECIE_NOMBRE} es el nombre de la especie."))).toContain("LONGITUD.SIN_APORTE_DEL_MODELO");
+  });
+
+  it("un obligatorio y un hecho que no lo es: se publica", () => {
+    const p = diario();
+    expect(validar(p, GANANCIA, SOLO_ESPECIE).ok).toBe(true);
+  });
+
+  it("la salida de la plantilla sin IA sigue pasando (es la plantilla, no un modelo)", () => {
+    const p = diario();
+    expect(validarSalida(salidaDePlantilla(p), p).ok).toBe(true);
+  });
+});
+
 describe("lo que no cambia", () => {
   it.each([["REGLAS", {}], ["ESCENARIOS", { ESCENARIO_CENTRAL_CORTO: { obligatorio: true } }]] as const)(
     "%s: un obligatorio sin citar sigue siendo HECHO_NO_CITADO.OBLIGATORIO (el código no lo escribe)",
