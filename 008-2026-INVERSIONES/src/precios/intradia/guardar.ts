@@ -11,11 +11,25 @@ import type { BarraIntradia } from "./yahoo";
 /** Fuente de las barras: Yahoo. Es la única que acepta la base. */
 export const FUENTE_INTRADIA = "yahoo";
 
-/** Guarda las barras de una especie y devuelve cuántas eran nuevas. */
-export async function guardarBarras(db: Pick<PrismaClient, "precioIntradia">, instrumentoId: string, barras: readonly BarraIntradia[], conRetraso: boolean): Promise<number> {
-  if (barras.length === 0) return 0;
+const DIA_MS = 24 * 60 * 60 * 1000;
+/** El disparador rechaza lo de más de un día y lo del futuro; el filtro deja un minuto de margen por si los relojes no coinciden. */
+const MARGEN_RELOJ_MS = 60_000;
+
+/**
+ * Guarda las barras de una especie y devuelve cuántas eran nuevas. Antes del INSERT descarta las de más de un día (y las del
+ * futuro): el disparador de la base rechazaría la fila y tumbaría el INSERT de TODA la especie.
+ */
+export async function guardarBarras(
+  db: Pick<PrismaClient, "precioIntradia">,
+  instrumentoId: string,
+  barras: readonly BarraIntradia[],
+  conRetraso: boolean,
+  ahora: Date = new Date(),
+): Promise<number> {
+  const validas = barras.filter((b) => b.instante.getTime() >= ahora.getTime() - DIA_MS + MARGEN_RELOJ_MS && b.instante.getTime() <= ahora.getTime());
+  if (validas.length === 0) return 0;
   const r = await db.precioIntradia.createMany({
-    data: barras.map((b) => ({ instrumentoId, instante: b.instante, precio: new Prisma.Decimal(b.precio), fuente: FUENTE_INTRADIA, conRetraso })),
+    data: validas.map((b) => ({ instrumentoId, instante: b.instante, precio: new Prisma.Decimal(b.precio), fuente: FUENTE_INTRADIA, conRetraso })),
     skipDuplicates: true,
   });
   return r.count;
