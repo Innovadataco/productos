@@ -328,8 +328,8 @@ describe("la espera que arranca · algo lanza antes de correr", () => {
     ahora += ESPERA_MINIMA_MS;
     await expect(Promise.resolve().then(() => temporizadores[0]!())).resolves.toBeUndefined();
     for (let i = 0; i < 12; i += 1) await Promise.resolve();
-    expect(analisis.estado()).toMatchObject({ enCurso: null, enEspera: null });
     romper = false;
+    expect(analisis.estado()).toMatchObject({ enCurso: null, enEspera: null });
     config = ENCENDIDA;
     expect(await analisis.pedir("DIARIO")).toEqual({ ok: true, lugar: "EN_CURSO" });
   });

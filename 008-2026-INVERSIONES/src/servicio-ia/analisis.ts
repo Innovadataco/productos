@@ -16,13 +16,19 @@
  */
 import { corridaDe } from "../ia/config/cableado";
 import type { ConfigIaVigente } from "../ia/config/leer";
-import type { TareaIa } from "../ia/config/parametros";
+import { LIMITE_MAX_S, type TareaIa } from "../ia/config/parametros";
 import { PATRON_NOMBRE_MODELO_LOCAL } from "../ia/local/modelos";
 import { codigoDeError, type EstadoTipo } from "./corrida";
 
 /** El mínimo entre un análisis y el siguiente: 2 minutos, en total. */
 export const ESPERA_MINIMA_MS = 120_000;
 const MS_POR_S = 1000;
+/**
+ * El tope total de una corrida: el servicio puede probar dos puertas, cada una con el límite máximo por pedido, más un margen.
+ * Pasado el tope se libera el «en curso» (la corrida abandonada sigue sin que nadie la espere) y queda ERROR `TOPE_TOTAL`.
+ */
+export const TOPE_TOTAL_MS = (2 * LIMITE_MAX_S + 30) * MS_POR_S;
+const CODIGO_TOPE_TOTAL = "TOPE_TOTAL";
 
 export type MotivoDescarte = "APAGADO" | "TAREA_INACTIVA" | "OCUPADO" | "ESPERA_MINIMA";
 export type ResultadoPedido =
@@ -94,7 +100,12 @@ export function crearAnalisisDemanda(deps: DependenciasAnalisis): AnalisisDemand
     let estado: EstadoTipo | "ERROR" = "ERROR";
     let codigo: string | null = null;
     try {
-      estado = await deps.correr(config, tarea);
+      const tope = new Promise<"TOPE">((resolver) => deps.programar(() => resolver("TOPE"), TOPE_TOTAL_MS));
+      const trabajo = Promise.resolve().then(() => deps.correr(config, tarea));
+      trabajo.catch(() => undefined); // si pierde la carrera y falla después, nadie lo espera: no es un rechazo sin captura
+      const r = await Promise.race([trabajo, tope]);
+      if (r === "TOPE") codigo = CODIGO_TOPE_TOTAL;
+      else estado = r;
     } catch (error) {
       codigo = codigoDeError(error);
     }
@@ -113,21 +124,27 @@ export function crearAnalisisDemanda(deps: DependenciasAnalisis): AnalisisDemand
     // Se reserva el lugar ANTES de leer la configuración: un pedido que llegue en ese hueco ya ve «en curso».
     enEspera = null;
     enCurso = tarea;
-    let config: ConfigIaVigente | null = null;
+    let entregado = false;
     try {
-      config = await deps.leerConfig();
-    } catch {
-      config = null;
+      let config: ConfigIaVigente | null = null;
+      try {
+        config = await deps.leerConfig();
+      } catch {
+        config = null;
+      }
+      // Si mientras esperaba se apagó el interruptor (o la tarea), o la base no contesta, no arranca: queda dicho.
+      if (config === null || motivoDeNo(config, tarea) !== null) {
+        const ahora = deps.ahora();
+        ultimo = Object.freeze({ tarea, estado: "DESCARTADO" as const });
+        anotar(`análisis a demanda · tarea=${tarea} · modelo=${config === null ? "sin modelo" : modeloParaLog(config, tarea)} · inicio=${new Date(ahora).toISOString()} · fin=${new Date(ahora).toISOString()} · ms=0 · estado=DESCARTADO`);
+        return;
+      }
+      entregado = true;
+      await correr(tarea, config);
+    } finally {
+      // Si algo lanzó antes de entregarle el turno a `correr`, el lugar reservado no se queda ocupado para siempre.
+      if (!entregado) enCurso = null;
     }
-    // Si mientras esperaba se apagó el interruptor (o la tarea), o la base no contesta, no arranca: queda dicho.
-    if (config === null || motivoDeNo(config, tarea) !== null) {
-      const ahora = deps.ahora();
-      enCurso = null;
-      ultimo = Object.freeze({ tarea, estado: "DESCARTADO" as const });
-      anotar(`análisis a demanda · tarea=${tarea} · modelo=${config === null ? "sin modelo" : modeloParaLog(config, tarea)} · inicio=${new Date(ahora).toISOString()} · fin=${new Date(ahora).toISOString()} · ms=0 · estado=DESCARTADO`);
-      return;
-    }
-    await correr(tarea, config);
   }
 
   return Object.freeze({
