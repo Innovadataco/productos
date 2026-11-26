@@ -51,6 +51,8 @@ export interface Numerados<C extends ClaveHecho = ClaveHecho> {
   readonly hechos: readonly EntradaHecho<C>[];
   /** Cuántos grupos no cupieron. */
   readonly recortados: number;
+  /** A cuántos datos (no nombres) el tope de obligatorios les quitó la obligación. */
+  readonly obligatoriosRecortados: number;
 }
 
 /** El índice (en el grupo) del sujeto de cada borrador; REFERENCIA_INVALIDA si no es uno anterior del grupo o si se repite. */
@@ -135,7 +137,7 @@ function raizDe<C extends ClaveHecho>(hecho: EntradaHecho<C>, porId: ReadonlyMap
 }
 
 /** Deja obligatorios, en orden, los hechos que caben en el tope junto con el nombre que arrastran; quita la marca a los demás. */
-function limitarObligatorios<C extends ClaveHecho>(hechos: readonly EntradaHecho<C>[], tope: number): readonly EntradaHecho<C>[] {
+function limitarObligatorios<C extends ClaveHecho>(hechos: readonly EntradaHecho<C>[], tope: number): { readonly hechos: readonly EntradaHecho<C>[]; readonly quitados: number } {
   const porId = new Map(hechos.map((h) => [h.id, h]));
   const dejados = new Set<string>();
   for (const h of hechos) {
@@ -146,7 +148,9 @@ function limitarObligatorios<C extends ClaveHecho>(hechos: readonly EntradaHecho
     dejados.add(h.id);
     if (raiz !== null) dejados.add(raiz);
   }
-  return hechos.map((h) => (h.obligatorio && !dejados.has(h.id) ? { ...h, obligatorio: false } : h));
+  const limitados = hechos.map((h) => (h.obligatorio && !dejados.has(h.id) ? { ...h, obligatorio: false } : h));
+  const quitados = hechos.filter((h, i) => h.clave !== CLAVE_NOMBRE_ESPECIE && h.obligatorio && !limitados[i]?.obligatorio).length;
+  return { hechos: limitados, quitados };
 }
 
 /** Los hechos listos para `construirPaquete` (sin etiqueta ni unidad: las pone el catálogo). El tope nunca pasa de 99. */
@@ -156,5 +160,6 @@ export function numerarGrupos<T extends TipoResumen>(tipo: T, grupos: readonly G
     (acc, grupo) => ({ hechos: [...acc.hechos, ...numerarGrupo(tipo, grupo, acc.hechos.length + 1)] }),
     { hechos: [] },
   );
-  return { hechos: limitarObligatorios(hechos, MAX_OBLIGATORIOS), recortados };
+  const limitados = limitarObligatorios(hechos, MAX_OBLIGATORIOS);
+  return { hechos: limitados.hechos, recortados, obligatoriosRecortados: limitados.quitados };
 }
