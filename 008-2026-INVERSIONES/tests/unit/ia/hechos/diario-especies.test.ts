@@ -44,12 +44,12 @@ const nombresDe = (e: EntradaArmadoDiario): readonly string[] =>
 const avisosDe = (e: EntradaArmadoDiario): readonly string[] => armarDiario(e).avisos;
 
 const SEIS: readonly Especie[] = [
-  { nombre: "A", valor: "9000.5", aporte: "10.17" },
-  { nombre: "B", valor: "8000.5", aporte: "-300.41" },
-  { nombre: "C", valor: "7000.5", aporte: "20.13" },
-  { nombre: "D", valor: "6000.5", aporte: "250.71" },
-  { nombre: "E", valor: "5000.5", aporte: "-1.09" },
-  { nombre: "F", valor: "4000.5", aporte: "100.37" },
+  { nombre: "A", valor: "9913.5", aporte: "10.17" },
+  { nombre: "B", valor: "7913.5", aporte: "-300.41" },
+  { nombre: "C", valor: "6913.5", aporte: "20.13" },
+  { nombre: "D", valor: "5987.5", aporte: "250.71" },
+  { nombre: "E", valor: "4987.5", aporte: "-1.09" },
+  { nombre: "F", valor: "3913.5", aporte: "100.37" },
 ];
 
 describe("constantes", () => {

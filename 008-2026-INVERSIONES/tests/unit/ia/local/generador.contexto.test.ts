@@ -32,7 +32,7 @@ describe("antes de llamar: el pedido no cabe", () => {
   it("falla con CONTEXTO_LLENO, sin ninguna llamada a la red", async () => {
     const falso = crearOllamaFalso(guionFeliz());
     const local = crearGeneradorLocal(CONFIG_FICTICIA, { fetch: falso.fetch });
-    const r = await local.generar(conPromptDe(30_000), vivo());
+    const r = await local.generar(conPromptDe(30_713), vivo());
     expect(r).toMatchObject({ ok: false, puerta: "local", motivo: "ERROR_PROVEEDOR", detalle: "CONTEXTO_LLENO" });
     expect(falso.llamadas()).toEqual([]);
   });
@@ -50,7 +50,7 @@ describe("después de generar: el contexto se llenó", () => {
   const conTokens = (entrada: number, salida: number) => guionFeliz(generacionFicticia({ prompt_eval_count: entrada, eval_count: salida }));
 
   it("entrada más salida igual al contexto: CONTEXTO_LLENO, una sola generación (sin reintento)", async () => {
-    const falso = crearOllamaFalso(conTokens(7000, NUM_CTX_LOCAL - 7000));
+    const falso = crearOllamaFalso(conTokens(7013, NUM_CTX_LOCAL - 7013));
     const local = crearGeneradorLocal(CONFIG_FICTICIA, { fetch: falso.fetch });
     const r = await local.generar(pedidoFicticio().pedido, vivo());
     expect(r).toMatchObject({ ok: false, motivo: "ERROR_PROVEEDOR", detalle: "CONTEXTO_LLENO" });
@@ -58,17 +58,17 @@ describe("después de generar: el contexto se llenó", () => {
   });
 
   it("también cuando la salida llegó cortada por largo: la causa es el contexto", async () => {
-    const falso = crearOllamaFalso(guionFeliz(generacionFicticia({ prompt_eval_count: 8000, eval_count: 400, done_reason: "length" })));
+    const falso = crearOllamaFalso(guionFeliz(generacionFicticia({ prompt_eval_count: 7990, eval_count: 400, done_reason: "length" })));
     const local = crearGeneradorLocal(CONFIG_FICTICIA, { fetch: falso.fetch });
     const r = await local.generar(pedidoFicticio().pedido, vivo());
     expect(r).toMatchObject({ ok: false, detalle: "CONTEXTO_LLENO" });
   });
 
   it("un token por debajo del contexto: publica con sus conteos", async () => {
-    const falso = crearOllamaFalso(conTokens(7000, NUM_CTX_LOCAL - 7000 - 1));
+    const falso = crearOllamaFalso(conTokens(7013, NUM_CTX_LOCAL - 7013 - 1));
     const local = crearGeneradorLocal(CONFIG_FICTICIA, { fetch: falso.fetch });
     const r = await local.generar(pedidoFicticio().pedido, vivo());
-    expect(r).toMatchObject({ ok: true, tokensEntrada: 7000, tokensSalida: NUM_CTX_LOCAL - 7000 - 1 });
+    expect(r).toMatchObject({ ok: true, tokensEntrada: 7013, tokensSalida: NUM_CTX_LOCAL - 7013 - 1 });
   });
 
   it("sin conteos en la respuesta no se puede decir que se llenó: sigue como antes", async () => {

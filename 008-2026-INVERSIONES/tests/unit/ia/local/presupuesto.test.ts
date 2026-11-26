@@ -37,15 +37,15 @@ describe("cabeEnElContexto", () => {
   });
   it("un pedido corto cabe y uno enorme no", () => {
     expect(cabeEnElContexto(1237)).toBe(true);
-    expect(cabeEnElContexto(1_000_000)).toBe(false);
+    expect(cabeEnElContexto(1_013_713)).toBe(false);
   });
 });
 
 describe("contextoLleno", () => {
   it("la suma de entrada y salida igual o mayor que el contexto es contexto lleno", () => {
-    expect(contextoLleno(7000, NUM_CTX_LOCAL - 7000)).toBe(true);
-    expect(contextoLleno(7000, NUM_CTX_LOCAL - 7000 + 1)).toBe(true);
-    expect(contextoLleno(7000, NUM_CTX_LOCAL - 7000 - 1)).toBe(false);
+    expect(contextoLleno(7013, NUM_CTX_LOCAL - 7013)).toBe(true);
+    expect(contextoLleno(7013, NUM_CTX_LOCAL - 7013 + 1)).toBe(true);
+    expect(contextoLleno(7013, NUM_CTX_LOCAL - 7013 - 1)).toBe(false);
   });
   it("sin alguno de los dos conteos no se puede decir: no es contexto lleno", () => {
     expect(contextoLleno(null, 100)).toBe(false);
