@@ -22,8 +22,8 @@ describe("lineasDeCasos y lineasDeFin", () => {
   it("los casos: conteos por tipo y la línea base, sin nombres ni cifras del paquete", () => {
     const casos = casosInventados();
     const texto = lineasDeCasos(casos, "INVENTADOS").join("\n");
-    expect(texto).toContain("40");
-    expect(texto).toMatch(/DIARIO 15/);
+    expect(texto).toContain("42");
+    expect(texto).toMatch(/DIARIO 17/);
     expect(texto).toMatch(/REGLAS 15/);
     expect(texto).toMatch(/ESCENARIOS 10/);
     expect(texto).not.toContain("FICTICIA");
