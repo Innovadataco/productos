@@ -136,7 +136,7 @@ describe("el informe lo dice", () => {
 
   it("con precio escrito, una nota fija dice que los escenarios parten de la historia de cierres", () => {
     const r = respuesta("2000");
-    expect(r.ok && r.vista.notas).toContain("Los escenarios a 12 meses parten de la historia de cierres, no del precio escrito.");
+    expect(r.ok && r.vista.notas).toContain("Los escenarios a 12 meses parten de la historia de cierres; el precio escrito solo cuenta en el valor de partida si la especie no tiene historia de cierres.");
   });
 
   it("sin precio escrito, la nota es la de siempre (el último cierre)", () => {
