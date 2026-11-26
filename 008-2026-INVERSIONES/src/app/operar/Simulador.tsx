@@ -14,7 +14,16 @@ type Estado =
   | { readonly tipo: "listo" }
   | { readonly tipo: "calculando" }
   | { readonly tipo: "resultado"; readonly vista: VistaSimulacion }
-  | { readonly tipo: "errores"; readonly errores: readonly string[] };
+  | { readonly tipo: "errores"; readonly errores: readonly string[]; readonly campos: readonly string[] };
+
+/** El id del mensaje de errores: los campos rechazados lo citan en su descripción. */
+const ID_ERRORES = "sim-errores";
+const CAMPOS_DEL_PEDIDO = ["instrumentoId", "lado", "cantidad", "precioLimite", "comisionista", "saldoComisionista", "precioActual"] as const;
+const camposDe = (v: unknown): string[] => {
+  const campos = typeof v === "object" && v !== null ? (v as { campos?: unknown }).campos : undefined;
+  return Array.isArray(campos) ? CAMPOS_DEL_PEDIDO.filter((c) => campos.includes(c)) : [];
+};
+const sinCampos = (errores: readonly string[]): Estado => ({ tipo: "errores", errores, campos: [] });
 
 const esRespuesta = (v: unknown): v is RespuestaSimulacion =>
   typeof v === "object" && v !== null && ((v as { ok?: unknown }).ok === true ? typeof (v as { vista?: unknown }).vista === "object" : Array.isArray((v as { errores?: unknown }).errores));
@@ -22,12 +31,12 @@ const esRespuesta = (v: unknown): v is RespuestaSimulacion =>
 async function simular(cuerpo: Readonly<Record<string, string>>): Promise<Estado> {
   try {
     const r = await fetch("/api/operar/simular", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo), cache: "no-store" });
-    if (!r.ok) return { tipo: "errores", errores: [mensajeDeEstado(r.status)] };
     const datos = (await r.json().catch(() => null)) as unknown;
-    if (!esRespuesta(datos)) return { tipo: "errores", errores: [T.FALLO] };
-    return datos.ok ? { tipo: "resultado", vista: datos.vista } : { tipo: "errores", errores: datos.errores.filter((e): e is string => typeof e === "string") };
+    if (!r.ok) return { tipo: "errores", errores: [mensajeDeEstado(r.status)], campos: camposDe(datos) };
+    if (!esRespuesta(datos)) return sinCampos([T.FALLO]);
+    return datos.ok ? { tipo: "resultado", vista: datos.vista } : { tipo: "errores", errores: datos.errores.filter((e): e is string => typeof e === "string"), campos: camposDe(datos) };
   } catch {
-    return { tipo: "errores", errores: [T.FALLO] };
+    return sinCampos([T.FALLO]);
   }
 }
 
@@ -143,6 +152,12 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
   }
 
   const calculando = estado.tipo === "calculando";
+  // Un campo rechazado se marca inválido y su descripción suma el mensaje de errores a su ayuda.
+  const marca = (campo: (typeof CAMPOS_DEL_PEDIDO)[number], ayuda?: string) => {
+    const malo = estado.tipo === "errores" && estado.campos.includes(campo);
+    const descripcion = [ayuda, malo ? ID_ERRORES : undefined].filter((d): d is string => d !== undefined).join(" ");
+    return { "aria-invalid": malo ? (true as const) : undefined, "aria-describedby": descripcion === "" ? undefined : descripcion };
+  };
 
   return (
     <section className="bloque op-simulador" aria-labelledby="t-simulador">
@@ -151,27 +166,27 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
       {especies.length === 0 ? <p className="nota">{T.SIN_ESPECIES}</p> : (
         <form className="op-sim-form" noValidate onSubmit={enviar} aria-labelledby="t-simulador">
           <label htmlFor="sim-especie">{T.ESPECIE}</label>
-          <select id="sim-especie" value={especie} onChange={(e) => setEspecie(e.target.value)}>
+          <select id="sim-especie" value={especie} onChange={(e) => setEspecie(e.target.value)} {...marca("instrumentoId")}>
             {especies.map((e) => <option key={e.id} value={e.id}>{`${e.nemotecnico} (${e.cantidad} acciones)`}</option>)}
           </select>
           <label htmlFor="sim-lado">{T.LADO}</label>
-          <select id="sim-lado" value={lado} onChange={(e) => setLado(e.target.value)}>
+          <select id="sim-lado" value={lado} onChange={(e) => setLado(e.target.value)} {...marca("lado")}>
             {LADOS_SIMULADOR.map((l) => <option key={l.valor} value={l.valor}>{l.texto}</option>)}
           </select>
           <p className="nota op-sim-ayuda" id="sim-ayuda">{T.AYUDA_NUMERO}</p>
           <label htmlFor="sim-cantidad">{T.CANTIDAD}</label>
-          <input id="sim-cantidad" type="text" inputMode="numeric" autoComplete="off" maxLength={32} value={cantidad} onChange={(e) => setCantidad(e.target.value)} aria-describedby="sim-ayuda" />
+          <input id="sim-cantidad" type="text" inputMode="numeric" autoComplete="off" maxLength={32} value={cantidad} onChange={(e) => setCantidad(e.target.value)} {...marca("cantidad", "sim-ayuda")} />
           <label htmlFor="sim-precio">{T.PRECIO}</label>
-          <input id="sim-precio" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={precio} onChange={(e) => setPrecio(e.target.value)} aria-describedby="sim-ayuda" />
+          <input id="sim-precio" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={precio} onChange={(e) => setPrecio(e.target.value)} {...marca("precioLimite", "sim-ayuda")} />
           <label htmlFor="sim-comisionista">{T.COMISIONISTA}</label>
-          <select id="sim-comisionista" value={comisionista} onChange={(e) => setComisionista(e.target.value)}>
+          <select id="sim-comisionista" value={comisionista} onChange={(e) => setComisionista(e.target.value)} {...marca("comisionista")}>
             {COMISIONISTAS_SIMULADOR.map((c) => <option key={c.valor} value={c.valor}>{c.texto}</option>)}
           </select>
           <label htmlFor="sim-saldo">{T.SALDO}</label>
-          <input id="sim-saldo" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={saldo} onChange={(e) => setSaldo(e.target.value)} aria-describedby="sim-ayuda-saldo" />
+          <input id="sim-saldo" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={saldo} onChange={(e) => setSaldo(e.target.value)} {...marca("saldoComisionista", "sim-ayuda-saldo")} />
           <p className="nota op-sim-ayuda" id="sim-ayuda-saldo">{T.AYUDA_SALDO}</p>
           <label htmlFor="sim-precio-actual">{T.PRECIO_ACTUAL}</label>
-          <input id="sim-precio-actual" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={precioActual} onChange={(e) => setPrecioActual(e.target.value)} aria-describedby="sim-ayuda-precio-actual" />
+          <input id="sim-precio-actual" type="text" inputMode="decimal" autoComplete="off" maxLength={32} value={precioActual} onChange={(e) => setPrecioActual(e.target.value)} {...marca("precioActual", "sim-ayuda-precio-actual")} />
           <p className="nota op-sim-ayuda" id="sim-ayuda-precio-actual">{T.AYUDA_PRECIO_ACTUAL}</p>
           <button type="submit" className="op-sim-boton" aria-busy={calculando} aria-disabled={calculando ? true : undefined}>{T.BOTON}</button>
         </form>
@@ -179,7 +194,7 @@ export function Simulador({ especies }: { readonly especies: readonly EspecieSim
       <div className="op-sim-salida">
         {calculando ? <p className="nota">{T.CALCULANDO}</p> : null}
         {estado.tipo === "errores" ? (
-          <div className="op-sim-errores" role="alert" tabIndex={-1} ref={alerta}><p>{T.ERRORES}</p><ul>{estado.errores.map((e, i) => <li key={`${i}-${e}`}>{e}</li>)}</ul></div>
+          <div className="op-sim-errores" id={ID_ERRORES} role="alert" tabIndex={-1} ref={alerta}><p>{T.ERRORES}</p><ul>{estado.errores.map((e, i) => <li key={`${i}-${e}`}>{e}</li>)}</ul></div>
         ) : null}
         {estado.tipo === "resultado" ? <Resultado vista={estado.vista} titulo={titulo} /> : null}
       </div>
