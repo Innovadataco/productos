@@ -69,10 +69,11 @@ const EJEMPLOS_DE_FRAGMENTO: Readonly<Record<string, string>> = {
     "(?:el|la|los|las|lo|su|sus|un|una|unos|unas|este|esta|estos|estas|ese|esa|esos|esas|otro|otra|otros|otras|todo|toda|todos|todas|cada)" +
     "(?=\\u0020\\p{L})"
   ]: "la tasa subió la ganancia total",
-  // El fragmento de «bajó» y «bajo» (sobre minúsculas: la tilde cuenta; «bajo» sin tilde no vale tras «escenario(s)»).
+  // El fragmento de «bajó» y «bajo» (sobre minúsculas: la tilde cuenta; «bajo» sin tilde no vale tras «escenario(s)»). Cada vocal del
+  // verbo, del adverbio y del determinante acepta su tilde (H10): el vocabulario compara plegado.
   [
-    "(?:bajó|(?<!escenarios?\\u0020)bajo)\\u0020(?:(?:también|tambien|además|ademas|asimismo|aún|aun|todavía|todavia)\\u0020)?" +
-    "(?:el|la|los|las|lo|su|sus|un|una|unos|unas|este|esta|estos|estas|ese|esa|esos|esas|otro|otra|otros|otras|todo|toda|todos|todas|cada)" +
+    "(?:b[aá]jó|(?<!escenarios?\\u0020)b[aá]jo)\\u0020(?:(?:t[aá]mb[ií][eé]n|[aá]d[eé]m[aá]s|[aá]s[ií]m[ií]sm[oó]|[aá][uúü]n|t[oó]d[aá]v[ií][aá])\\u0020)?" +
+    "(?:[eé]l|l[aá]|l[oó]s|l[aá]s|l[oó]|s[uúü]|s[uúü]s|[uúü]n|[uúü]n[aá]|[uúü]n[oó]s|[uúü]n[aá]s|[eé]st[eé]|[eé]st[aá]|[eé]st[oó]s|[eé]st[aá]s|[eé]s[eé]|[eé]s[aá]|[eé]s[oó]s|[eé]s[aá]s|[oó]tr[oó]|[oó]tr[aá]|[oó]tr[oó]s|[oó]tr[aá]s|t[oó]d[oó]|t[oó]d[aá]|t[oó]d[oó]s|t[oó]d[aá]s|c[aá]d[aá])" +
     "(?=\\u0020\\p{L})"
   ]: "la tasa bajó la ganancia total",
 };

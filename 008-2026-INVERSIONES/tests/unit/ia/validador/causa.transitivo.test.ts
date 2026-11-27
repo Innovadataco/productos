@@ -17,7 +17,7 @@ import { salidaDe } from "./apoyo/salidas.ficticio";
 
 const AYER = "2027-03-16";
 
-/** Los dos patrones del causativo: CAUSA.TRANSITIVO (texto plegado) y CAUSA.TRANSITIVO_BAJO («bajó» con tilde, sobre minúsculas). */
+/** Los dos patrones del causativo: CAUSA.TRANSITIVO (texto plegado) y CAUSA.TRANSITIVO_BAJO (sobre minúsculas: la tilde cuenta, y cada vocal acepta una tilde de más). */
 const ES_TRANSITIVO = (id: string): boolean => id === "CAUSA.TRANSITIVO" || id === "CAUSA.TRANSITIVO_BAJO";
 const transitivos = (texto: string): readonly string[] => coincidencias(texto, PATRONES_CAUSA).filter(ES_TRANSITIVO);
 const transitivosEn = (r: ReturnType<typeof validarSalida>): readonly string[] => (r.ok ? [] : r.hallazgos.map((h) => h.patron).filter(ES_TRANSITIVO));
@@ -342,7 +342,7 @@ describe("H6: CAUSA.TRANSITIVO y CAUSA.TRANSITIVO_BAJO quedan atados a PATRONES_
 });
 
 describe("vigilancia: «bajo el nivel de la regla» (preposición) y las frases propias", () => {
-  it("«bajo» preposición ante un determinante SÍ dispara (el texto está plegado y «bajó» y «bajo» se igualan): se registra, no se exime", () => {
+  it("«bajo» preposición ante un determinante SÍ dispara (corre sobre minúsculas: «bajo» sin tilde se trata como el verbo salvo tras «escenario», y el vocabulario los iguala): se registra, no se exime", () => {
     // Si algún día se exime, esta prueba debe cambiar a propósito: hoy 008 no escribe «bajo el nivel de la regla».
     expect(transitivos("el precio de cierre está bajo el nivel de la regla")).not.toEqual([]);
     // Lo mismo con «bajo lo aportado» fuera de «escenario bajo»: cae del lado seguro (rechaza), y la plantilla propia no lo escribe.

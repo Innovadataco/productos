@@ -21,6 +21,9 @@
  *   «bajó» con tilde es el verbo siempre (también tras «escenario»: «del escenario bajó el escenario bajo» rechaza); «bajo» sin tilde
  *   rechaza salvo tras «escenario(s)» (`(?<!escenarios? )`: «En el escenario bajo el valor quedaría…» publica, es el adjetivo).
  *   Con «bajo» preposición («bajo el nivel de la regla», «bajo lo aportado») dispara y cae del lado seguro.
+ *   Cada vocal del verbo, del adverbio y del determinante acepta su tilde de más («bájo la», «bajó ésta», «bajó él», «bajó tambíen la»):
+ *   el vocabulario compara plegado, así que esas formas pasan por palabras de la base y deben rechazar (H10).
+ *   ABIERTO (BAJO): «bájo a {H}» (y «bajó a {H}») sin determinante no es causativo ni marca de dirección en ESCENARIOS: no dispara aquí.
  *   ABIERTOS (BAJO): H9, «del escenario bajo el escenario bajo» con «bajo» sin tilde usado como verbo (indistinguible del adjetivo de
  *   H5); sin determinante («bajó ganancia total»), con una cita o una coma en medio, con «a» personal, verbos de la
  *   base («marcó», «registró», «tuvo», «cerró», «sumó a», «alcanzó», «tocó»), «falta en», «falta + y», las locuciones «a cuenta de»,
@@ -28,7 +31,7 @@
  * «cuando» y los verbos de atribución de la base («corresponde», «equivale», «representa», «indica», «muestra») no están
  * aquí: ya no son palabras del vocabulario (`vocabulario.ts`) y los rechaza IDIOMA.VOCABULARIO. «pero» sí vale: es de
  * contraste, no de causa. «para» queda abierto: sale de etiquetas y es de riesgo bajo.
- * Corren sobre el texto plegado (sin tildes). Cada fragmento va con sus espacios literales: `patron()` los cambia por el
+ * Casi todos corren sobre el texto plegado (sin tildes); solo CAUSA.TRANSITIVO_BAJO corre sobre MINUSCULAS y por eso acepta cada tilde de más. Cada fragmento va con sus espacios literales: `patron()` los cambia por el
  * separador de frase (espacios y signos), también dentro de las miradas. Son listas negras: lo que no esté aquí lo ataja
  * el vocabulario cerrado. Cambiar una lista es otra versión del validador, con su huella nueva.
  */
@@ -57,8 +60,19 @@ const DETERMINANTES =
 const ANTE_PALABRA = `(?=${UN_ESPACIO}\\p{L})`;
 /** «En el escenario bajo el valor quedaría…»: «bajo» sin tilde tras «escenario(s)» es el adjetivo del escenario, no el verbo. */
 const NO_ESCENARIO = `(?<!escenarios?${UN_ESPACIO})`;
-/** Los adverbios con y sin tilde: este patrón corre sobre MINUSCULAS, que conserva las tildes. */
-const ADVERBIO_CON_TILDE = `(?:(?:también|tambien|además|ademas|asimismo|aún|aun|todavía|todavia)${UN_ESPACIO})?`;
+/**
+ * El vocabulario compara plegado (sin tildes): «ésta», «él» o «tambíen» pasan por «esta», «el» o «tambien». Este patrón corre sobre
+ * MINUSCULAS (la tilde cuenta, para distinguir «bajó» de «bajo»), así que cada vocal del verbo, del adverbio y del determinante
+ * acepta su tilde (y la diéresis de la «u»): `tolerante` cambia cada vocal de una palabra por su clase.
+ */
+const CLASE_DE_VOCAL: Readonly<Record<string, string>> = { a: "[aá]", e: "[eé]", i: "[ií]", o: "[oó]", u: "[uúü]" };
+const tolerante = (palabras: readonly string[]): string =>
+  palabras.map((palabra) => palabra.replace(/[aeiou]/gu, (vocal) => CLASE_DE_VOCAL[vocal] as string)).join("|");
+const ADVERBIO_TOLERANTE = `(?:(?:${tolerante(["tambien", "ademas", "asimismo", "aun", "todavia"])})${UN_ESPACIO})?`;
+const DETERMINANTES_TOLERANTES = `(?:${tolerante([
+  "el", "la", "los", "las", "lo", "su", "sus", "un", "una", "unos", "unas", "este", "esta", "estos", "estas", "ese", "esa", "esos", "esas",
+  "otro", "otra", "otros", "otras", "todo", "toda", "todos", "todas", "cada",
+])})`;
 
 export const PATRONES_CAUSA: readonly Patron[] = Object.freeze([
   patron("CAUSA.POR", "PLEGADO", [
@@ -77,5 +91,7 @@ export const PATRONES_CAUSA: readonly Patron[] = Object.freeze([
     "segun", "ante", "tras", "luego del?", "despues del?", "frente al?", "como", "es que", "falta del?",
   ]),
   patron("CAUSA.TRANSITIVO", "PLEGADO", [`${VERBOS_DE_MARCA}${UN_ESPACIO}${ADVERBIO}${DETERMINANTES}${ANTE_PALABRA}`]),
-  patron("CAUSA.TRANSITIVO_BAJO", "MINUSCULAS", [`(?:bajó|${NO_ESCENARIO}bajo)${UN_ESPACIO}${ADVERBIO_CON_TILDE}${DETERMINANTES}${ANTE_PALABRA}`]),
+  patron("CAUSA.TRANSITIVO_BAJO", "MINUSCULAS", [
+    `(?:b[aá]jó|${NO_ESCENARIO}b[aá]jo)${UN_ESPACIO}${ADVERBIO_TOLERANTE}${DETERMINANTES_TOLERANTES}${ANTE_PALABRA}`,
+  ]),
 ]);
