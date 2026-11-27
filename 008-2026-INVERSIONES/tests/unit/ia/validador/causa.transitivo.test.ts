@@ -254,6 +254,60 @@ describe("H7 y H8: «escenario» pegado al verbo no exime; los causativos de ESC
   });
 });
 
+describe("H10: las tildes de más no sacan el causativo «bajó/bajo» del patrón (el vocabulario compara plegado)", () => {
+  const DIA = "La tasa de política monetaria (TPM) {TASA_TPM} bajó X ganancia total a {GANANCIA_TOTAL}.";
+  const ESC = "El escenario bajo a largo plazo {ESCENARIO_BAJO_LARGO} bajó X escenario bajo a corto plazo a {ESCENARIO_BAJO_CORTO}.";
+  const rechazaConCausa = (paquete: typeof PAQUETE | typeof ESCENARIOS_CON_DIRECCION, plantilla: string): void => {
+    const r = validarSalida(salidaDe(paquete, plantilla), paquete);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.motivos).toContain("CAUSA");
+    expect(transitivosEn(r)).not.toEqual([]);
+  };
+
+  it.each(["él", "lá", "lós", "ló", "sú", "ún", "úna", "éste", "ésta", "éstos", "ése", "ésa", "ótra", "tóda", "cáda"])(
+    "DIARIO: «bajó %s ganancia total» rechaza con el causativo", (det) => {
+      rechazaConCausa(PAQUETE, DIA.replace("X", det));
+    });
+
+  it.each(["tambíen la", "támbien la", "adémas la", "asimísmo la", "todavíá la", "aún lá", "tambien él"])(
+    "DIARIO: «bajó %s ganancia total» (adverbio o determinante con tilde de más) rechaza", (resto) => {
+      rechazaConCausa(PAQUETE, DIA.replace("X", resto));
+    });
+
+  it.each(["bájo la", "bájó la", "bájo él", "bájó tambíen la"])("DIARIO: el verbo con tilde de más «%s» rechaza", (verboYDet) => {
+    rechazaConCausa(PAQUETE, DIA.replace("bajó X", verboYDet));
+  });
+
+  it.each(["él", "ése", "éste", "ún", "sú", "cáda", "ésta"])("ESCENARIOS: «bajó %s escenario bajo» rechaza con dirección del armador real", (det) => {
+    rechazaConCausa(ESCENARIOS_CON_DIRECCION, ESC.replace("X", det));
+  });
+
+  it.each([
+    "El escenario bajo a largo plazo {ESCENARIO_BAJO_LARGO} bajó ésta probabilidad de terminar por debajo de lo aportado a {PROBABILIDAD_BAJO_APORTADO}.",
+    "El escenario bajo a largo plazo {ESCENARIO_BAJO_LARGO} bajó lá caída máxima mediana a {CAIDA_MAXIMA_MEDIANA}.",
+    "El escenario bajo a largo plazo {ESCENARIO_BAJO_LARGO} bajó tambíen la caída máxima mediana a {CAIDA_MAXIMA_MEDIANA}.",
+    "La volatilidad anual histórica {VOLATILIDAD_ANUAL} bájo la probabilidad de terminar por debajo de lo aportado a {PROBABILIDAD_BAJO_APORTADO}.",
+    "La caída máxima mediana {CAIDA_MAXIMA_MEDIANA} bájó el escenario bajo a corto plazo a {ESCENARIO_BAJO_CORTO}.",
+  ])("ESCENARIOS: «%s» rechaza", (plantilla) => {
+    rechazaConCausa(ESCENARIOS_CON_DIRECCION, plantilla);
+  });
+
+  it("el determinante acentuado de otro verbo de marca ya caía por el plegado: «subió él» sigue disparando", () => {
+    expect(coincidencias("la tasa subió él valor", PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+  });
+
+  it("sin determinante no dispara, con o sin tilde de más: «bájo a {H}» y «bajó a {H}» quedan fuera (BAJO documentado)", () => {
+    expect(transitivos("el escenario bajo a largo plazo bájo a {H08}")).toEqual([]);
+    expect(transitivos("el valor bajó a {H03}")).toEqual([]);
+  });
+
+  it.each(["la tasa bajó ganancia total", "el escenario bajo el valor quedaría en {H01}", "el escenario bajo ún valor quedaría en {H01}"])(
+    "«%s» no dispara (sin determinante, o la exención de «escenario bajo el» sigue)", (texto) => {
+      expect(transitivos(texto)).toEqual([]);
+    });
+});
+
 describe("«ha subido», «han subido», «ha bajado» y «han bajado» con determinante dan CAUSA.TRANSITIVO", () => {
   it.each(["ha subido el valor", "han subido los valores", "ha bajado la ganancia total", "han bajado las tasas"])("«la tasa %s» dispara", (resto) => {
     expect(coincidencias(`la tasa ${resto}`, PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
