@@ -9,7 +9,8 @@
  * Los textos de REGLAS y ESCENARIOS (v3) no cambian: cada uno sigue siendo el mismo, byte a byte.
  * DIARIO v5: la viñeta de las especies trae un molde por dato (`moldes-diario.ts`), un dato de especie por frase, y prohíbe «misma» y «mismo».
  * DIARIO v6: sin nombrar lo que prohíbe (nombrarlo lo siembra), con la etiqueta sin referencia también rechazada, una o dos frases,
- * ejemplos y RESPUESTA con etiquetas no obligatorias y el molde sin «es [dato]» final contra la regla del verbo.
+ * ejemplos y RESPUESTA con etiquetas no obligatorias, y sin la regla de movimiento («nunca después de es») que chocaba con los moldes.
+ * Las viñetas comunes son constantes con nombre y cada tipo arma su lista con `Piezas`: REGLAS y ESCENARIOS no cambian un byte.
  */
 import { textoDeMoldesDiario } from "./moldes-diario";
 
@@ -129,8 +130,8 @@ const LARGO_DEL_DIARIO =
     + "hasta seiscientos.";
 
 /**
- * El DIARIO v6: la etiqueta sin su referencia también hace rechazar el resumen; los moldes ya no cierran en «es [dato]» contra
- * la regla del verbo; y el texto no nombra las palabras que prohíbe (nombrarlas las siembra en la salida).
+ * El DIARIO v6: la etiqueta sin su referencia también hace rechazar el resumen; después de cada etiqueta van «es» o «son» y la
+ * referencia; y el texto no nombra las palabras que prohíbe (nombrarlas las siembra en la salida).
  */
 const ETIQUETA_DEL_DIARIO =
   "- Cada dato se escribe con su etiqueta completa, tal cual, y su referencia ocupa el lugar de la cifra; un dato de especie, con "
