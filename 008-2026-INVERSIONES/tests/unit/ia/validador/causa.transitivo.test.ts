@@ -254,6 +254,33 @@ describe("H7 y H8: «escenario» pegado al verbo no exime; los causativos de ESC
   });
 });
 
+describe("N1: «escenario bájo» (tilde de más) tras «escenario(s)» no se exime: es el verbo, no el adjetivo", () => {
+  const FRASES = [
+    "La caída máxima mediana {CAIDA_MAXIMA_MEDIANA} del escenario bájo el escenario central a largo plazo a {ESCENARIO_CENTRAL_LARGO}.",
+    "La caída máxima mediana {CAIDA_MAXIMA_MEDIANA} del escenario bájo la probabilidad de terminar por debajo de lo aportado a {PROBABILIDAD_BAJO_APORTADO}.",
+    "La volatilidad anual histórica {VOLATILIDAD_ANUAL} de los escenarios bájo el escenario bajo a corto plazo a {ESCENARIO_BAJO_CORTO}.",
+  ] as const;
+
+  it.each(FRASES)("ESCENARIOS: «%s» se rechaza con el causativo", (plantilla) => {
+    const r = validarSalida(salidaDe(ESCENARIOS_CON_DIRECCION, plantilla), ESCENARIOS_CON_DIRECCION);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.motivos).toContain("CAUSA");
+    expect(transitivosEn(r)).not.toEqual([]);
+  });
+
+  it("por patrón: «del escenario bájo el escenario» dispara y «del escenario bajo el escenario» (H9, abierto) no", () => {
+    expect(transitivos("la caída máxima mediana {H04} del escenario bájo el escenario central")).not.toEqual([]);
+    expect(transitivos("la caída máxima mediana {H04} de los escenarios bájo la probabilidad")).not.toEqual([]);
+    expect(transitivos("la caída máxima mediana {H04} del escenario bajo el escenario central")).toEqual([]);
+  });
+
+  it("H5 sigue publicando: «En el escenario bajo el valor quedaría en {H}.»", () => {
+    const r = validarSalida(salidaDe(ESCENARIOS_CON_DIRECCION, "En el escenario bajo el valor quedaría en {ESCENARIO_BAJO_CORTO}."), ESCENARIOS_CON_DIRECCION);
+    expect(transitivosEn(r)).toEqual([]);
+  });
+});
+
 describe("H10: las tildes de más no sacan el causativo «bajó/bajo» del patrón (el vocabulario compara plegado)", () => {
   const DIA = "La tasa de política monetaria (TPM) {TASA_TPM} bajó X ganancia total a {GANANCIA_TOTAL}.";
   const ESC = "El escenario bajo a largo plazo {ESCENARIO_BAJO_LARGO} bajó X escenario bajo a corto plazo a {ESCENARIO_BAJO_CORTO}.";
