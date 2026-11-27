@@ -7,7 +7,7 @@
  * y por, que solo valen si salen de las etiquetas). EXCEPCIÓN ESCRITA: no hay versión nueva, porque v3 (y la pila que la
  * extiende) no salió a producción; «una versión se congela al salir» no se rompe. Las filas y mediciones v3 anteriores
  * a este arreglo se validaron sin CAUSA. Condición: ningún despliegue con v3 y sin CAUSA. La misma excepción cubre la
- * ampliación de CAUSA (CAUSA.SIN, «es que», «vigente desde» solo con cita, y el vocabulario sin «cuando», los verbos de
+ * ampliación de CAUSA (CAUSA.SIN, «es que», «a falta de(l)», «falta de(l)», CAUSA.TRANSITIVO, «vigente desde» solo con cita, y el vocabulario sin «cuando», los verbos de
  * atribución y las preposiciones sin uso medido): tampoco salió a producción.
  * Cambiar un control, una lista de patrones o un límite es otra versión del validador (`VERSION_VALIDADOR`).
  */

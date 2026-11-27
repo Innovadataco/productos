@@ -83,7 +83,7 @@ describe("el patrón por forma, en los tres tipos de texto", () => {
 describe("vigilancia: lo intransitivo y lo propio no es causa transitiva", () => {
   it.each([
     "El valor de las acciones subió a {H03} y la ganancia total bajó a {H04}.", "la ganancia total bajó a {H04}", "el valor subió",
-    "a la baja", "la tasa bajó y el valor subió", "el valor de la especie bajó {H02}", "subieron {H01} y {H02}",
+    "a la baja", "la tasa bajó y el valor subió", "el valor de la especie bajó {H02}", "subieron {H01} y {H02}", "el valor subió, la ganancia total es {H03}", "la tasa bajó; el valor es {H02}", "la tasa bajó (la ganancia total es {H03})",
   ])("«%s» no dispara CAUSA.TRANSITIVO", (texto) => {
     expect(coincidencias(texto, PATRONES_CAUSA)).not.toContain("CAUSA.TRANSITIVO");
   });

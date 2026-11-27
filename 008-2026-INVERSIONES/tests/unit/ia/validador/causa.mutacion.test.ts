@@ -57,7 +57,7 @@ const EJEMPLOS_DE_FRAGMENTO: Readonly<Record<string, string>> = {
   "despues del?": "después del",
   "frente al?": "frente a",
   "falta del?": "la falta del cierre",
-  "(?:subio|bajo)": "la tasa subió el valor",
+  "(?:subio|bajo|subieron|bajaron|sube|suben|baja|bajan|aumento|aumentaron|cayo|cayeron|redujo|redujeron|elevo|elevaron|movio|empujo|llevo|dejo)\\u0020(?:el|la|los|las|lo|su|sus|un|una|este|esta|estos|estas)": "la tasa bajó la ganancia total",
 };
 
 const LITERAL = /^[\p{L} ]+$/u;
