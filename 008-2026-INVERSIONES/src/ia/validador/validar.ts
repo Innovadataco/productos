@@ -12,7 +12,7 @@
  *
  * Controles por frase, sobre el texto en NFC: caracteres y forma (CIFRA_SUELTA, IDIOMA, FORMATO), cifras en palabras,
  * citas (HECHO_DESCONOCIDO, HECHO_NO_CITADO), etiquetas y sujeto (ETIQUETA_NO_COINCIDE),
- * marcas (DIRECCION_CONTRADICE), recomendación, predicción, trato e idioma (también el vocabulario cerrado: toda
+ * marcas (DIRECCION_CONTRADICE), recomendación, predicción, trato, causa (CAUSA: «por», «desde», «con» y los conectores de causa) e idioma (también el vocabulario cerrado: toda
  * palabra fuera de él rechaza, `vocabulario.ts`); después del render, el largo (LONGITUD), la
  * palabra repetida (FORMATO) y el cotejo de cada número contra el paquete (RENDER_CIFRA). De la salida entera: el número
  * de frases, el largo total y los hechos obligatorios.
