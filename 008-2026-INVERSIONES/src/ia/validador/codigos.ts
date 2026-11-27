@@ -10,8 +10,9 @@
  * ampliación de CAUSA (CAUSA.SIN, «es que», «a falta de(l)», «falta de(l)», CAUSA.TRANSITIVO, «vigente desde» solo con cita, y el vocabulario sin «cuando», los verbos de
  * atribución y las preposiciones sin uso medido): tampoco salió a producción. Y el cierre del causativo: CAUSA.TRANSITIVO cubre
  * todos los verbos de marca del vocabulario (menos «superó» y «rebasó»), con adverbio y determinantes de la base, solo ante
- * una palabra («subió un {H}» no cuenta) y salvo tras «escenario(s)» («escenario bajo el valor»). Abiertos documentados:
- * `patrones-causa.ts`.
+ * una palabra («subió un {H}» no cuenta). «bajó» y «bajo» van en CAUSA.TRANSITIVO_BAJO, sobre minúsculas: con tilde es el verbo
+ * siempre y sin tilde se exime solo tras «escenario(s)» («escenario bajo el valor»); ningún otro verbo pegado a «escenario» se exime
+ * («del escenario subió el escenario alto» rechaza en ESCENARIOS). Abiertos documentados: `patrones-causa.ts`.
  * Cambiar un control, una lista de patrones o un límite es otra versión del validador (`VERSION_VALIDADOR`).
  */
 export const VERSION_VALIDADOR = "validador-v3";

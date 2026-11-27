@@ -32,7 +32,8 @@ const EJEMPLOS: Readonly<Record<string, string>> = {
   "CAUSA.CON": "con la tasa",
   "CAUSA.SIN": "sin la tasa",
   "CAUSA.CONECTOR": "porque la tasa",
-  "CAUSA.TRANSITIVO": "la tasa bajó la ganancia total",
+  "CAUSA.TRANSITIVO": "la tasa subió la ganancia total",
+  "CAUSA.TRANSITIVO_BAJO": "la tasa bajó la ganancia total",
 };
 
 const FIN = "(?![\\p{L}\\p{N}])";
@@ -61,10 +62,16 @@ const EJEMPLOS_DE_FRAGMENTO: Readonly<Record<string, string>> = {
   [
     "(?:subio|subieron|sube|suben|subiendo|ha\\u0020subido|han\\u0020subido|aumento|aumentaron|aumenta|aumentan|crecio|crecieron|crece|crecen|" +
     "avanzo|avanzaron|avanza|avanzan|gano|ganaron|repunto|repuntaron|mejoro|mejoraron|mejora|mejoran|incremento|incrementaron|ascendio|" +
-    "ascendieron|asciende|escalo|escalaron|salto|saltaron|elevo|elevaron|bajo|bajaron|baja|bajan|bajando|ha\\u0020bajado|han\\u0020bajado|" +
+    "ascendieron|asciende|escalo|escalaron|salto|saltaron|elevo|elevaron|bajaron|baja|bajan|bajando|ha\\u0020bajado|han\\u0020bajado|" +
     "cayo|cayeron|cae|caen|cayendo|descendio|descendieron|desciende|disminuyo|disminuyeron|disminuye|retrocedio|retrocedieron|retrocede|" +
     "perdio|perdieron|pierde|pierden|empeoro|empeora|empeoran|redujo|redujeron|cedio|cedieron|mantuvo|mantuvieron|mantiene|mantienen|" +
     "movio|empujo|llevo|dejo)\\u0020(?:(?:tambien|ademas|asimismo|aun|todavia)\\u0020)?" +
+    "(?:el|la|los|las|lo|su|sus|un|una|unos|unas|este|esta|estos|estas|ese|esa|esos|esas|otro|otra|otros|otras|todo|toda|todos|todas|cada)" +
+    "(?=\\u0020\\p{L})"
+  ]: "la tasa subió la ganancia total",
+  // El fragmento de «bajó» y «bajo» (sobre minúsculas: la tilde cuenta; «bajo» sin tilde no vale tras «escenario(s)»).
+  [
+    "(?:bajó|(?<!escenarios?\\u0020)bajo)\\u0020(?:(?:también|tambien|además|ademas|asimismo|aún|aun|todavía|todavia)\\u0020)?" +
     "(?:el|la|los|las|lo|su|sus|un|una|unos|unas|este|esta|estos|estas|ese|esa|esos|esas|otro|otra|otros|otras|todo|toda|todos|todas|cada)" +
     "(?=\\u0020\\p{L})"
   ]: "la tasa bajó la ganancia total",

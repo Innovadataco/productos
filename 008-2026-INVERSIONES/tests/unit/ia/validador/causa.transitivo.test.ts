@@ -260,7 +260,7 @@ describe("«ha subido», «han subido», «ha bajado» y «han bajado» con dete
   });
 });
 
-describe("H6: CAUSA.TRANSITIVO queda atado a PATRONES_MARCA", () => {
+describe("H6: CAUSA.TRANSITIVO y CAUSA.TRANSITIVO_BAJO quedan atados a PATRONES_MARCA", () => {
   /** Los verbos de una palabra de las marcas de dirección (sube, baja, mantiene), sin los comparativos «superó» y «rebasó». */
   const COMPARATIVOS = /^(?:super|rebas)/u;
   const VERBOS_DE_UNA_PALABRA = PATRONES_MARCA
@@ -277,7 +277,7 @@ describe("H6: CAUSA.TRANSITIVO queda atado a PATRONES_MARCA", () => {
     expect(VERBOS_DE_UNA_PALABRA).not.toContain("rebasaron");
   });
 
-  it.each(VERBOS_DE_UNA_PALABRA)("el verbo de marca «%s» seguido de un determinante dispara CAUSA.TRANSITIVO", (verbo) => {
+  it.each(VERBOS_DE_UNA_PALABRA)("el verbo de marca «%s» seguido de un determinante dispara el causativo", (verbo) => {
     expect(transitivos(`la tasa ${verbo} la ganancia total`)).not.toEqual([]);
   });
 
