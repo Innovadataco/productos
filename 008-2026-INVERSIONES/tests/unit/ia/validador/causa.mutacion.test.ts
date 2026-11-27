@@ -32,6 +32,7 @@ const EJEMPLOS: Readonly<Record<string, string>> = {
   "CAUSA.CON": "con la tasa",
   "CAUSA.SIN": "sin la tasa",
   "CAUSA.CONECTOR": "porque la tasa",
+  "CAUSA.TRANSITIVO": "la tasa bajó la ganancia total",
 };
 
 const FIN = "(?![\\p{L}\\p{N}])";
@@ -55,7 +56,8 @@ const EJEMPLOS_DE_FRAGMENTO: Readonly<Record<string, string>> = {
   "luego del?": "luego de",
   "despues del?": "después del",
   "frente al?": "frente a",
-  "a falta del?": "a falta del",
+  "falta del?": "la falta del cierre",
+  "(?:subio|bajo)": "la tasa subió el valor",
 };
 
 const LITERAL = /^[\p{L} ]+$/u;
