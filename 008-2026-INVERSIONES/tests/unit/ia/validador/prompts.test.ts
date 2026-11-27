@@ -35,11 +35,13 @@ const HISTORIAL: Readonly<Record<string, string>> = {
   "resumen-diario-v5": "a96c22d73eb9035b05b6403a8b8d49b7744a164e6c8f37fd0ed237cebd8389a5",
   // v6 del DIARIO: etiqueta sin referencia prohibida, moldes sin cerrar en «es», sin nombrar lo prohibido.
   "resumen-diario-v6": "4e08692758f40f388cee7afc4a42fd720edbe8a3cc7bbc52368cdc5bb7f8d716",
+  // v7 del DIARIO: la estructura exacta de la salida ideal (una frase de datos sin especie y, si la hay, otra con un dato de especie).
+  "resumen-diario-v7": "PENDIENTE",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */
 const LIMITES_EN_PALABRAS: Readonly<Record<number, string>> = { 1: "una", 6: "seis", 280: "doscientos ochenta", 1200: "mil doscientos" };
-/** El DIARIO (v6) dice los límites de SU parte (el código escribe el resto): una o dos frases y hasta seiscientos caracteres. */
+/** El DIARIO (v7) dice los límites de SU parte (el código escribe el resto): una o dos frases y hasta seiscientos caracteres. */
 const LIMITES_DIARIO: readonly string[] = ["una", "dos", "doscientos ochenta", "seiscientos"];
 const LIMITE_MS = 4613;
 
