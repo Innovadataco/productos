@@ -144,7 +144,7 @@ describe("marcas: dirección, cercanía y «hoy»", () => {
 
   it("cada palabra va a la cita más cercana de su cláusula", () => {
     expect(validarSalida(salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES}, la ganancia total bajó a {GANANCIA_TOTAL}."), p).ok).toBe(true);
-    expect(validarSalida(salidaDe(p, "El valor de las acciones {VALOR_ACCIONES} subió por la ganancia total {GANANCIA_TOTAL}."), p).ok).toBe(true);
+    expect(validarSalida(salidaDe(p, "El valor de las acciones {VALOR_ACCIONES} subió, la ganancia total es {GANANCIA_TOTAL}."), p).ok).toBe(true);
     expect(validarSalida(salidaDe(p, VA, "La ganancia total, {GANANCIA_TOTAL}, bajó."), p).ok).toBe(true);
   });
 

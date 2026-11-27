@@ -90,6 +90,7 @@ describe("un rechazo por cada código", () => {
     ["TRATO", () => salidaDe(p, "Tu valor de las acciones subió a {VALOR_ACCIONES}."), ["IDIOMA"]],
     ["IDIOMA", () => salidaDe(p, "The valor de las acciones subió a {VALOR_ACCIONES}."), []],
     ["FORMATO", () => salidaDe(p, "El valor de las acciones subió a **{VALOR_ACCIONES}**."), []],
+    ["CAUSA", () => salidaDe(p, "El valor de las acciones es {VALOR_ACCIONES} por el mercado."), []],
   ];
 
   it("la tabla cubre todos los códigos salvo RENDER_CIFRA (que tiene su prueba con el render cambiado)", () => {

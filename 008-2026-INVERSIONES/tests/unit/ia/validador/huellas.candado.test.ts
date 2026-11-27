@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { sha256Hex } from "@/ia/hash";
 import { VERSION_VALIDADOR } from "@/ia/validador/codigos";
 import type { Patron } from "@/ia/validador/patron";
+import { PATRONES_CAUSA } from "@/ia/validador/patrones-causa";
 import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA, PATRONES_MARCA, PATRONES_SIN_DATO } from "@/ia/validador/patrones-lengua";
 import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "@/ia/validador/patrones-redaccion";
 import { CONDICIONALES, PALABRAS_BASE } from "@/ia/validador/vocabulario";
@@ -24,8 +25,15 @@ const HUELLAS_V1: Readonly<Record<string, string>> = {
   VOCABULARIO: "465c96414006feec69381c0f09c0dc90685e91aef6efe45fa9464cb69668f466",
 };
 
-/** v2 cambia solo la lectura de la salida (segmentos) y v3 compone los obligatorios del DIARIO (`obligatorias.ts`): las listas son las mismas de v1. */
-const HUELLAS: Readonly<Record<string, Readonly<Record<string, string>>>> = { "validador-v1": HUELLAS_V1, "validador-v2": HUELLAS_V1, "validador-v3": HUELLAS_V1 };
+/** La versión tercera: el vocabulario pierde las ocho palabras de causa y suma la lista CAUSA (excepción escrita: ver `codigos.ts`). */
+const HUELLAS_V3: Readonly<Record<string, string>> = {
+  ...HUELLAS_V1,
+  VOCABULARIO: "pendiente-verde",
+  CAUSA: "pendiente-verde",
+};
+
+/** v2 cambia solo la lectura de la salida (segmentos): las listas son las de v1. v3 compone los obligatorios del DIARIO y estrena CAUSA. */
+const HUELLAS: Readonly<Record<string, Readonly<Record<string, string>>>> = { "validador-v1": HUELLAS_V1, "validador-v2": HUELLAS_V1, "validador-v3": HUELLAS_V3 };
 
 const huella = (patrones: readonly Patron[]): string => sha256Hex(JSON.stringify(patrones.map((p) => [p.id, p.sobre, p.antes, p.alternativas])));
 
@@ -38,6 +46,7 @@ const ACTUALES: Readonly<Record<string, string>> = {
   MARCA: huella(PATRONES_MARCA),
   SIN_DATO: huella(PATRONES_SIN_DATO),
   VOCABULARIO: sha256Hex(JSON.stringify([PALABRAS_BASE, CONDICIONALES])),
+  CAUSA: huella(PATRONES_CAUSA),
 };
 
 describe("candado de las listas del validador", () => {

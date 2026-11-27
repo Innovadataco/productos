@@ -8,13 +8,14 @@ import { describe, expect, it } from "vitest";
 import { CATALOGO } from "@/ia/catalogo";
 import { TIPOS_RESUMEN } from "@/ia/contrato";
 import { coincidencias } from "@/ia/validador/patron";
+import { PATRONES_CAUSA } from "@/ia/validador/patrones-causa";
 import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA, PATRONES_SIN_DATO } from "@/ia/validador/patrones-lengua";
 import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "@/ia/validador/patrones-redaccion";
 import { CONDICIONALES, PALABRAS_BASE, palabrasFueraDelVocabulario } from "@/ia/validador/vocabulario";
 import { FRASES_VALIDAS, frase, paqueteFicticio } from "./apoyo/salidas.ficticio";
 
 /** Los patrones que valen en cualquier lugar de la frase (los anclados al inicio, como el imperativo inicial, dependen del lugar). */
-const PROHIBIDOS = [...PATRONES_RECOMENDACION, ...PATRONES_PREDICCION, ...PATRONES_TRATO, ...PATRONES_CIFRA_EN_PALABRAS, ...PATRONES_IDIOMA, ...PATRONES_SIN_DATO]
+const PROHIBIDOS = [...PATRONES_RECOMENDACION, ...PATRONES_PREDICCION, ...PATRONES_TRATO, ...PATRONES_CIFRA_EN_PALABRAS, ...PATRONES_IDIOMA, ...PATRONES_SIN_DATO, ...PATRONES_CAUSA]
   .filter((p) => p.antes !== "^");
 
 describe("vocabulario cerrado", () => {
@@ -57,5 +58,21 @@ describe("vocabulario cerrado", () => {
     expect(palabrasFueraDelVocabulario("La especie quedaría.", "DIARIO")).toEqual(["quedaria"]);
     expect(palabrasFueraDelVocabulario("La especie quedaría.", "REGLAS")).toEqual(["quedaria"]);
     expect(palabrasFueraDelVocabulario("La especie quedaría.", "ESCENARIOS")).toEqual([]);
+  });
+
+  it("la lista base no trae preposiciones ni conectores de causa", () => {
+    for (const palabra of ["ante", "segun", "tras", "frente", "como", "desde", "con", "por"]) expect(PALABRAS_BASE).not.toContain(palabra);
+  });
+
+  it("«por», «con» y «desde» valen solo donde salen de las etiquetas del tipo", () => {
+    const fuera = (palabra: string, tipo: (typeof TIPOS_RESUMEN)[number]): readonly string[] => palabrasFueraDelVocabulario(palabra, tipo);
+    for (const tipo of TIPOS_RESUMEN) expect(fuera("por", tipo)).toEqual([]);
+    expect(fuera("con", "DIARIO")).toEqual([]);
+    expect(fuera("con", "ESCENARIOS")).toEqual([]);
+    expect(fuera("con", "REGLAS")).toEqual(["con"]);
+    expect(fuera("desde", "REGLAS")).toEqual([]);
+    expect(fuera("desde", "DIARIO")).toEqual(["desde"]);
+    expect(fuera("desde", "ESCENARIOS")).toEqual(["desde"]);
+    for (const tipo of TIPOS_RESUMEN) for (const palabra of ["ante", "segun", "tras", "frente", "como"]) expect(fuera(palabra, tipo)).toEqual([palabra]);
   });
 });
