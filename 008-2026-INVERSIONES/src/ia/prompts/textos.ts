@@ -7,7 +7,10 @@
  * DIARIO v4: el código escribe los obligatorios (`validador/obligatorias.ts`), así que el prompt no manda citarlos; el modelo
  * escribe de una a cuatro frases con los demás hechos, con ejemplos de etiquetas no obligatorias y los límites de su parte.
  * Los textos de REGLAS y ESCENARIOS (v3) no cambian: cada uno sigue siendo el mismo, byte a byte.
+ * DIARIO v5: la viñeta de las especies trae un molde por dato (`moldes-diario.ts`), un dato de especie por frase, y prohíbe «misma» y «mismo».
  */
+import { textoDeMoldesDiario } from "./moldes-diario";
+
 const PRESENTACION = "Usted redacta, en español de Colombia y tratando al lector de usted, un resumen breve";
 
 const ENTRADA = "Recibe un JSON con el tipo de resumen y una lista de hechos. Cada hecho trae su id, su clave, su etiqueta, el id del "
@@ -26,11 +29,21 @@ const LARGO_DEL_RESUMEN =
 "- Escriba entre una y seis frases. Con las cifras ya puestas, cada frase tiene hasta doscientos ochenta caracteres y el "
     + "resumen completo, hasta mil doscientos.";
 
+/** La viñeta de las especies de REGLAS y ESCENARIOS (v3): el DIARIO usa la suya, con moldes (`ESPECIE_DEL_DIARIO`). */
+const ESPECIE_DE_SIEMPRE =
+  "- Un hecho con el campo especie es un dato de una especie: cite el id de su campo especie en una referencia, en la misma "
+    + "frase, justo después de «de la especie» y antes del verbo; luego cite el dato con su propio id. No use el campo sujeto "
+    + "para hallar la especie: el campo especie ya trae el id del nombre, y nunca cite el nombre de otra especie en esa frase. "
+    + "Las dos referencias son distintas: la primera es el id del nombre (el valor del campo especie) y la segunda, el id del "
+    + "propio dato; nunca ponga el id del dato después de «de la especie», ni el id del nombre en el lugar del dato. En los "
+    + "ejemplos, las dos referencias muestran el mismo id solo por la forma. El nombre de una especie nunca va solo en una frase («el nombre de "
+    + "la especie es…» está mal): va dentro de la frase de un dato de esa especie. No escriba «especie» más de una vez seguida.";
+
 /**
- * Las reglas de redacción, las mismas para los tres tipos salvo dos viñetas: la de los hechos obligatorios y la del largo.
- * REGLAS y ESCENARIOS usan las de siempre (v3); el DIARIO v4 usa las suyas.
+ * Las reglas de redacción, las mismas para los tres tipos salvo dos viñetas: la de los hechos obligatorios y la del largo (y la de las especies, que el DIARIO v5 cambia por moldes).
+ * REGLAS y ESCENARIOS usan las de siempre (v3); el DIARIO usa las suyas.
  */
-const reglasDeRedaccion = (obligatorios: string, largo: string): string => [
+const reglasDeRedaccion = (obligatorios: string, largo: string, especie: string = ESPECIE_DE_SIEMPRE): string => [
   "Reglas de contenido:",
   "- No escriba cifras: ni dígitos, ni números en palabras, ni porcentajes, ni montos, ni fechas, ni meses, ni días de la "
     + "semana, ni «ayer» o «mañana». La cifra la pone el sistema donde usted pone la referencia.",
@@ -45,13 +58,7 @@ const reglasDeRedaccion = (obligatorios: string, largo: string): string => [
     + "la cifra. La referencia nunca queda suelta al final ni sin su etiqueta. No use adjetivos para valorar (como baja, alta, bajista o lejos) salvo los permitidos.",
   "- Un solo dato por parte de la frase: si cita dos, sepárelos con «y» o «pero» y repita la etiqueta del segundo. Nunca ponga "
     + "dos referencias seguidas sin palabras en medio.",
-  "- Un hecho con el campo especie es un dato de una especie: cite el id de su campo especie en una referencia, en la misma "
-    + "frase, justo después de «de la especie» y antes del verbo; luego cite el dato con su propio id. No use el campo sujeto "
-    + "para hallar la especie: el campo especie ya trae el id del nombre, y nunca cite el nombre de otra especie en esa frase. "
-    + "Las dos referencias son distintas: la primera es el id del nombre (el valor del campo especie) y la segunda, el id del "
-    + "propio dato; nunca ponga el id del dato después de «de la especie», ni el id del nombre en el lugar del dato. En los "
-    + "ejemplos, las dos referencias muestran el mismo id solo por la forma. El nombre de una especie nunca va solo en una frase («el nombre de "
-    + "la especie es…» está mal): va dentro de la frase de un dato de esa especie. No escriba «especie» más de una vez seguida.",
+  especie,
   "- Hable de movimiento solo cuando el hecho tiene dirección: subió, solo si es SUBE; bajó, solo si es BAJA; se mantuvo, solo si "
     + "es IGUAL, y ese verbo va solo, nunca después de «es» (no «es sube»), en la misma parte de la frase y junto al dato cuya dirección es esa. Si es NO_APLICA, no use verbos "
     + "de movimiento. En duda, no los use.",
@@ -84,7 +91,19 @@ const LARGO_DEL_DIARIO =
   "- Escriba entre una y cuatro frases. Con las cifras ya puestas, cada frase tiene hasta doscientos ochenta caracteres y todas "
     + "sus frases juntas, hasta seiscientos.";
 
-const REGLAS_DE_REDACCION_DIARIO = reglasDeRedaccion(NO_ESCRIBIR_OBLIGATORIOS, LARGO_DEL_DIARIO);
+/**
+ * El DIARIO v5: las etiquetas de especie ya traen «de la especie» y el modelo las repetía («de la especie de la especie»),
+ * o abría la segunda cita con «la misma especie» (palabra fuera del vocabulario, a propósito). Un molde por dato, un dato de
+ * especie por frase, y la viñeta es más corta que la de siempre.
+ */
+const ESPECIE_DEL_DIARIO =
+  "- Un hecho con el campo especie es un dato de una especie. Un solo dato de especie por frase, con el molde de su "
+    + `etiqueta: ${textoDeMoldesDiario()} En [nombre], cite el id de su campo especie (no use el campo sujeto); en [dato], el `
+    + "id del propio dato. Las dos referencias son distintas. La etiqueta ya trae «de la especie»: no la repita. Para otro dato "
+    + "de la misma especie, abra otra frase con su molde. No use «misma» ni «mismo». El nombre de una especie nunca va solo en "
+    + "una frase, y nunca cite el nombre de otra especie en ella.";
+
+const REGLAS_DE_REDACCION_DIARIO = reglasDeRedaccion(NO_ESCRIBIR_OBLIGATORIOS, LARGO_DEL_DIARIO, ESPECIE_DEL_DIARIO);
 
 const RESPUESTA = 'Responda solo con un JSON de esta forma: {"frases":[{"segmentos":[{"texto":"El valor de las acciones es"},'
   + '{"ref":"H01"},{"texto":"."}]}]}. Cada segmento tiene una sola clave: «texto» o «ref». La prosa va en los segmentos de '

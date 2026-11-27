@@ -53,7 +53,7 @@ describe("el esquema salida-v2", () => {
 
   it("los prompts (v3, sobre la misma salida) y el validador son de la versión v2 y v3 del validador, y el prompt pide segmentos, no citas en la prosa", () => {
     for (const tipo of TIPOS_RESUMEN) {
-      expect(VERSIONES_PROMPT[tipo]).toMatch(tipo === "DIARIO" ? /-v4$/ : /-v3$/);
+      expect(VERSIONES_PROMPT[tipo]).toMatch(tipo === "DIARIO" ? /-v5$/ : /-v3$/);
       expect(PROMPTS[tipo].texto).toContain("segmentos");
       expect(PROMPTS[tipo].texto).not.toMatch(/\{H[0-9]{2}\}/);
     }

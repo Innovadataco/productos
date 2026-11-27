@@ -10,7 +10,7 @@ import { sha256Hex } from "../hash";
 import { TEXTO_PROMPT_DIARIO, TEXTO_PROMPT_ESCENARIOS, TEXTO_PROMPT_REGLAS } from "./textos";
 
 export const VERSIONES_PROMPT = Object.freeze({
-  DIARIO: "resumen-diario-v4",
+  DIARIO: "resumen-diario-v5",
   REGLAS: "resumen-reglas-v3",
   ESCENARIOS: "resumen-escenarios-v3",
 } as const satisfies Record<TipoResumen, string>);

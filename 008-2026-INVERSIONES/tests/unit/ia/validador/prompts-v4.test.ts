@@ -23,7 +23,7 @@ describe("prompt DIARIO v4", () => {
   const texto = PROMPTS.DIARIO.texto;
 
   it("es la versión v4, y REGLAS y ESCENARIOS siguen en v3 con el mismo hash", () => {
-    expect(VERSIONES_PROMPT.DIARIO).toBe("resumen-diario-v4");
+    expect(VERSIONES_PROMPT.DIARIO).toBe("resumen-diario-v5");
     expect(PROMPTS.REGLAS.version).toBe("resumen-reglas-v3");
     expect(PROMPTS.REGLAS.hash).toBe(HASH_REGLAS_V3);
     expect(PROMPTS.ESCENARIOS.version).toBe("resumen-escenarios-v3");

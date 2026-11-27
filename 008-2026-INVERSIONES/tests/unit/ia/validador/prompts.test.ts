@@ -31,6 +31,8 @@ const HISTORIAL: Readonly<Record<string, string>> = {
   "resumen-escenarios-v3": "f3ea6626c67314fa2c9140f5033814b5dfcc171a83e9347121f8a64cda1cdd97",
   // v4 del DIARIO (T5): el código escribe los obligatorios; el modelo escribe de una a cuatro frases con los demás hechos.
   "resumen-diario-v4": "ee6162ea6fbfefc03d026032c991450abb26d18b78d29478fc3d2596348b306c",
+  // v5 del DIARIO: un molde por dato de especie, un dato por frase y sin «misma» (la v4 se conserva arriba).
+  "resumen-diario-v5": "a96c22d73eb9035b05b6403a8b8d49b7744a164e6c8f37fd0ed237cebd8389a5",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */
