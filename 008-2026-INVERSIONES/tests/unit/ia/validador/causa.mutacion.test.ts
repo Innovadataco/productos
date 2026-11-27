@@ -57,7 +57,17 @@ const EJEMPLOS_DE_FRAGMENTO: Readonly<Record<string, string>> = {
   "despues del?": "después del",
   "frente al?": "frente a",
   "falta del?": "la falta del cierre",
-  "(?:subio|bajo|subieron|bajaron|sube|suben|baja|bajan|aumento|aumentaron|cayo|cayeron|redujo|redujeron|elevo|elevaron|movio|empujo|llevo|dejo)\\u0020(?:el|la|los|las|lo|su|sus|un|una|este|esta|estos|estas)": "la tasa bajó la ganancia total",
+  // El fragmento del causativo, escrito aparte de `src/` (verbo de marca + espacio + adverbio opcional + determinante ante una palabra).
+  [
+    "(?:subio|subieron|sube|suben|subiendo|ha\\u0020subido|han\\u0020subido|aumento|aumentaron|aumenta|aumentan|crecio|crecieron|crece|crecen|" +
+    "avanzo|avanzaron|avanza|avanzan|gano|ganaron|repunto|repuntaron|mejoro|mejoraron|mejora|mejoran|incremento|incrementaron|ascendio|" +
+    "ascendieron|asciende|escalo|escalaron|salto|saltaron|elevo|elevaron|bajo|bajaron|baja|bajan|bajando|ha\\u0020bajado|han\\u0020bajado|" +
+    "cayo|cayeron|cae|caen|cayendo|descendio|descendieron|desciende|disminuyo|disminuyeron|disminuye|retrocedio|retrocedieron|retrocede|" +
+    "perdio|perdieron|pierde|pierden|empeoro|empeora|empeoran|redujo|redujeron|cedio|cedieron|mantuvo|mantuvieron|mantiene|mantienen|" +
+    "movio|empujo|llevo|dejo)\\u0020(?:(?:tambien|ademas|asimismo|aun|todavia)\\u0020)?" +
+    "(?:el|la|los|las|lo|su|sus|un|una|unos|unas|este|esta|estos|estas|ese|esa|esos|esas|otro|otra|otros|otras|todo|toda|todos|todas|cada)" +
+    "(?=\\u0020\\p{L})"
+  ]: "la tasa bajó la ganancia total",
 };
 
 const LITERAL = /^[\p{L} ]+$/u;

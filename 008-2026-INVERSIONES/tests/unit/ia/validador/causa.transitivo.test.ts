@@ -189,9 +189,14 @@ describe("H5: «escenario bajo» seguido de determinante no es causativo", () =>
     expect(CAUSA_EN(r).filter((p) => p.startsWith("CAUSA."))).toEqual([]);
   });
 
-  it("la exención es solo tras «escenario(s)»: «la tasa bajó el valor» y «el escenario subió el valor» siguen rechazados", () => {
+  it("la exención es solo tras «escenario(s)»: lo demás sigue rechazado", () => {
     expect(coincidencias("la tasa bajó el valor", PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
-    expect(coincidencias("el escenario subió el valor", PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+    expect(coincidencias("el escenario central bajó el valor", PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+  });
+
+  it("abierto documentado (BAJO): la mirada atrás no distingue el verbo, así que «el escenario subió el valor» no dispara", () => {
+    // La exención es `(?<!escenarios? )` ante cualquier verbo, no solo ante «bajo»; el hueco es solo con «escenario» pegado al verbo.
+    expect(coincidencias("el escenario subió el valor", PATRONES_CAUSA)).not.toContain("CAUSA.TRANSITIVO");
   });
 });
 

@@ -31,7 +31,7 @@ const HUELLAS_V1: Readonly<Record<string, string>> = {
 const HUELLAS_V3: Readonly<Record<string, string>> = {
   ...HUELLAS_V1,
   VOCABULARIO: "46ccb03c843cce641f6cbfd7a00b791dd9e75622ce7d1265c16fa36fe03bd132",
-  CAUSA: "1c23b2dd1b7e55f571fdc20ff15b8cfede5df2e7cb5744842cf003634585857b",
+  CAUSA: "0825fdf75e8a28c577fc5379e1833b76b94c2f594958ef79ded3a073fe5e0357",
 };
 
 /** v2 cambia solo la lectura de la salida (segmentos): las listas son las de v1. v3 compone los obligatorios del DIARIO y estrena CAUSA. */
