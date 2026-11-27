@@ -4,8 +4,8 @@
  * Y la familia nominal de «falta»: «la falta de dividendos…» es el mismo contrafactual que «a falta de». Datos inventados.
  */
 import { describe, expect, it } from "vitest";
-import { entradaDeCatalogo, type ClaveHecho } from "@/ia/catalogo";
-import type { EntradaPaquete } from "@/ia/contrato";
+import { entradaDeCatalogo, type ClaveDiario } from "@/ia/catalogo";
+import type { EntradaPaquete, IdHecho } from "@/ia/contrato";
 import { construirPaquete } from "@/ia/paquete";
 import { presentar } from "@/ia/presentar";
 import { coincidencias } from "@/ia/validador/patron";
@@ -15,7 +15,7 @@ import { hecho } from "../apoyo/hechos.ficticio";
 import { salidaDe } from "./apoyo/salidas.ficticio";
 
 const AYER = "2027-03-16";
-const de = (id: string, clave: ClaveHecho, valor: string, extra: Record<string, unknown> = {}) =>
+const de = (id: IdHecho, clave: ClaveDiario, valor: string, extra: Record<string, unknown> = {}) =>
   hecho(id, clave, valor, presentar(valor, entradaDeCatalogo("DIARIO", clave)!.unidad), extra);
 
 /** Un DIARIO inventado con las tasas y los componentes de la ganancia, para frases que solo usan el vocabulario. */
