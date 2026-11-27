@@ -7,7 +7,7 @@
  * - CAUSA.CON: «con», salvo «especies con cierre atrasado» y «valor con riesgo modelado» (etiquetas del catálogo).
  * - CAUSA.SIN: «sin» (el contrafactual «sin X, …»), salvo las etiquetas «ganancia sin vender», «especies sin precio»,
  *   «rentabilidad sin vender» y «regla sin cierre al día».
- * - CAUSA.CONECTOR: los conectores y locuciones de causa («porque», «es que», «debido a», «según», «ante», «tras», «como»…).
+ * - CAUSA.CONECTOR: los conectores y locuciones de causa («porque», «es que», «a falta de», «debido a», «según», «ante», «tras», «como»…).
  * «cuando» y los verbos de atribución de la base («corresponde», «equivale», «representa», «indica», «muestra») no están
  * aquí: ya no son palabras del vocabulario (`vocabulario.ts`) y los rechaza IDIOMA.VOCABULARIO. «pero» sí vale: es de
  * contraste, no de causa. «para» queda abierto: sale de etiquetas y es de riesgo bajo.
@@ -33,6 +33,6 @@ export const PATRONES_CAUSA: readonly Patron[] = Object.freeze([
   patron("CAUSA.CONECTOR", "PLEGADO", [
     "porque", "pues", "ya que", "dado que", "puesto que", "debid[oa]s? al?", "a causa del?", "gracias al?", "a raiz del?",
     "se deb(?:e|en|io|ieron) al?", "atribu\\p{L}*", "impulsad\\p{L}*", "motivad\\p{L}*", "provocad\\p{L}*", "causad\\p{L}*",
-    "segun", "ante", "tras", "luego del?", "despues del?", "frente al?", "como", "es que",
+    "segun", "ante", "tras", "luego del?", "despues del?", "frente al?", "como", "es que", "a falta del?",
   ]),
 ]);

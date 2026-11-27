@@ -55,6 +55,7 @@ const EJEMPLOS_DE_FRAGMENTO: Readonly<Record<string, string>> = {
   "luego del?": "luego de",
   "despues del?": "después del",
   "frente al?": "frente a",
+  "a falta del?": "a falta del",
 };
 
 const LITERAL = /^[\p{L} ]+$/u;
