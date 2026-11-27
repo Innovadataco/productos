@@ -146,7 +146,7 @@ describe("casi iguales: lo que SÍ es una causa", () => {
     ["especies con la tasa", "CAUSA.CON"],
     ["valor con el mercado", "CAUSA.CON"],
     ["desde el cierre", "CAUSA.DESDE"],
-    ["regla vigente, desde {H01}", "CAUSA.DESDE"],
+    ["regla vigente y desde el cierre", "CAUSA.DESDE"],
   ] as const)("«%s» dispara %s", (texto, id) => {
     expect(coincidencias(texto, PATRONES_CAUSA)).toContain(id);
   });

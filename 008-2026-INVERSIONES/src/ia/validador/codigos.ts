@@ -3,6 +3,10 @@
  * TODOS los códigos que encuentra, en este orden; el registro (`resumen_ia.motivos`) guarda esta misma lista cerrada.
  * v2: lee la salida `salida-v2` (segmentos; los hechos citados son las refs) y ya no revisa la lista `hechos`.
  * v3: en el DIARIO el código escribe los obligatorios que el modelo no cita (`obligatorias.ts`); el modelo trae al menos una frase.
+ * v3, CAUSA: el texto no atribuye causas (`patrones-causa.ts`; el vocabulario pierde ante, segun, tras, frente, como, desde, con
+ * y por, que solo valen si salen de las etiquetas). EXCEPCIÓN ESCRITA: no hay versión nueva, porque v3 (y la pila que la
+ * extiende) no salió a producción; «una versión se congela al salir» no se rompe. Las filas y mediciones v3 anteriores
+ * a este arreglo se validaron sin CAUSA. Condición: ningún despliegue con v3 y sin CAUSA.
  * Cambiar un control, una lista de patrones o un límite es otra versión del validador (`VERSION_VALIDADOR`).
  */
 export const VERSION_VALIDADOR = "validador-v3";
@@ -11,6 +15,7 @@ export type VersionValidador = typeof VERSION_VALIDADOR;
 export const CODIGOS_VALIDADOR = Object.freeze([
   "SALIDA_INVALIDA", "LONGITUD", "CIFRA_SUELTA", "CIFRA_EN_PALABRAS", "HECHO_DESCONOCIDO", "HECHO_NO_CITADO",
   "ETIQUETA_NO_COINCIDE", "DIRECCION_CONTRADICE", "RECOMENDACION", "PREDICCION", "TRATO", "IDIOMA", "FORMATO", "RENDER_CIFRA",
+  "CAUSA",
 ] as const);
 export type CodigoValidador = (typeof CODIGOS_VALIDADOR)[number];
 

@@ -7,7 +7,8 @@
  * - las marcas que se cotejan contra el paquete (subió, bajó, se mantuvo, a la baja, cerca, lejos, hoy…), solo como
  *   marca entera: se quitan del texto antes de mirar el vocabulario, y sus palabras sueltas («baja», «mismo») no valen;
  * - `PALABRAS_BASE`: palabras funcionales (artículos, preposiciones, conectores, el trato de usted) y verbos neutros
- *   («es», «quedó», «suma», «faltan»), ninguno de los cuales dispara un patrón prohibido;
+ *   («es», «quedó», «suma», «faltan»), ninguno de los cuales dispara un patrón prohibido. Sin las de causa: ante, con, desde,
+ *   por, segun, tras, frente y como solo valen si salen de las etiquetas del tipo (`patrones-causa.ts`);
  * - `CONDICIONALES` («quedaría», «sería»…), solo en ESCENARIOS: en DIARIO y REGLAS el condicional es un pronóstico.
  * Una palabra de fuera rechaza la frase (cierra en fallo). Ampliar el vocabulario es otra versión del validador, con la
  * evidencia de la evaluación E7.
@@ -23,10 +24,9 @@ export const PALABRAS_BASE: readonly string[] = Object.freeze([
   "el", "la", "los", "las", "lo", "un", "una", "unos", "unas", "este", "esta", "estos", "estas", "ese", "esa", "esos", "esas", "su", "sus",
   "cada", "otro", "otra", "otros", "otras", "todo", "toda", "todos", "todas",
   // preposiciones
-  "a", "al", "ante", "con", "contra", "de", "del", "desde", "en", "entre", "hacia", "hasta", "para", "por", "segun", "sin", "sobre", "tras",
-  "frente",
+  "a", "al", "contra", "de", "del", "en", "entre", "hacia", "hasta", "para", "sin", "sobre",
   // conectores y adverbios neutros
-  "y", "e", "o", "u", "pero", "aunque", "mientras", "que", "como", "cuando", "donde", "sino", "tambien", "ademas", "asimismo", "aun",
+  "y", "e", "o", "u", "pero", "aunque", "mientras", "que", "cuando", "donde", "sino", "tambien", "ademas", "asimismo", "aun",
   "todavia", "respectivamente", "cual", "cuales", "no",
   // el trato de usted
   "usted", "ustedes", "le", "les", "se",

@@ -31,6 +31,7 @@ import { aportaElModelo, componerConObligatorias, escribeElCodigo } from "./obli
 import { coincidenciasEn, prepararTexto, type Patron } from "./patron";
 import { esNumeroFundido } from "./numeros";
 import { palabrasFueraDelVocabulario } from "./vocabulario";
+import { PATRONES_CAUSA } from "./patrones-causa";
 import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA, PATRONES_SIN_DATO } from "./patrones-lengua";
 import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "./patrones-redaccion";
 import { renderizarFrase } from "./render";
@@ -45,6 +46,7 @@ const LISTAS: readonly (readonly [CodigoValidador, readonly Patron[]])[] = [
   ["PREDICCION", PATRONES_PREDICCION],
   ["TRATO", PATRONES_TRATO],
   ["IDIOMA", PATRONES_IDIOMA],
+  ["CAUSA", PATRONES_CAUSA],
 ];
 
 /** La misma palabra dos veces seguidas en el texto renderizado («190 días días»). */

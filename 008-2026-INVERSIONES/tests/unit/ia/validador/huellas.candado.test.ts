@@ -28,8 +28,8 @@ const HUELLAS_V1: Readonly<Record<string, string>> = {
 /** La versión tercera: el vocabulario pierde las ocho palabras de causa y suma la lista CAUSA (excepción escrita: ver `codigos.ts`). */
 const HUELLAS_V3: Readonly<Record<string, string>> = {
   ...HUELLAS_V1,
-  VOCABULARIO: "pendiente-verde",
-  CAUSA: "pendiente-verde",
+  VOCABULARIO: "b7438f0b4c2fcc8e3e191cc8e1c02bc7971a1e79ae06bef43fb41388cb30654e",
+  CAUSA: "85b66a0d7df64990797c64aecbf7c72ef162fa40f1fcf95386759ec90728e165",
 };
 
 /** v2 cambia solo la lectura de la salida (segmentos): las listas son las de v1. v3 compone los obligatorios del DIARIO y estrena CAUSA. */
