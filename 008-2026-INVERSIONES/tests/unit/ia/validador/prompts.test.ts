@@ -36,7 +36,7 @@ const HISTORIAL: Readonly<Record<string, string>> = {
   // v6 del DIARIO: etiqueta sin referencia prohibida, moldes sin cerrar en «es», sin nombrar lo prohibido.
   "resumen-diario-v6": "4e08692758f40f388cee7afc4a42fd720edbe8a3cc7bbc52368cdc5bb7f8d716",
   // v7 del DIARIO: la estructura exacta de la salida ideal (una frase de datos sin especie y, si la hay, otra con un dato de especie).
-  "resumen-diario-v7": "PENDIENTE",
+  "resumen-diario-v7": "28c6f0843b00620be2771fb2f99d76a1f0b19f81cd113c951049b095a9768a2c",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */

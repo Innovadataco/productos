@@ -10,6 +10,8 @@
  * DIARIO v5: la viñeta de las especies trae un molde por dato (`moldes-diario.ts`), un dato de especie por frase, y prohíbe «misma» y «mismo».
  * DIARIO v6: sin nombrar lo que prohíbe (nombrarlo lo siembra), con la etiqueta sin referencia también rechazada, una o dos frases,
  * ejemplos y RESPUESTA con etiquetas no obligatorias, y sin la regla de movimiento («nunca después de es») que chocaba con los moldes.
+ * DIARIO v7: la estructura exacta de la salida ideal (una frase de datos que no son de especie y, si la hay, otra con un solo dato de
+ * especie y su molde), cada frase cerrada con el punto y nunca con coma, y la RESPUESTA con las dos frases; sin ordinales ni números nuevos.
  * Las viñetas comunes son constantes con nombre y cada tipo arma su lista con `Piezas`: REGLAS y ESCENARIOS no cambian un byte.
  */
 import { textoDeMoldesDiario } from "./moldes-diario";
@@ -126,8 +128,10 @@ const NO_ESCRIBIR_OBLIGATORIOS =
     + "obligatorio falso, de los más útiles para el lector. Cada frase cita al menos un hecho.";
 
 const LARGO_DEL_DIARIO =
-  "- Escriba una o dos frases. Con las cifras ya puestas, cada frase tiene hasta doscientos ochenta caracteres y las dos juntas, "
-    + "hasta seiscientos.";
+  "- Escriba una o dos frases. Una frase lleva datos que no son de especie y otra, si la hay, lleva un solo dato de especie y su "
+    + "molde; nunca escriba más de un dato de especie en el resumen. Cada frase termina en el segmento de texto «.» y nunca en una "
+    + "coma, y cada elemento de la lista es una sola oración. Cada frase tiene hasta doscientos ochenta caracteres, cifras "
+    + "incluidas, y las dos juntas, hasta seiscientos.";
 
 /**
  * El DIARIO v6: la etiqueta sin su referencia también hace rechazar el resumen; después de cada etiqueta van «es» o «son» y la
@@ -139,7 +143,7 @@ const ETIQUETA_DEL_DIARIO =
 
 const MOVIMIENTO_DEL_DIARIO =
   "- No describa movimientos ni valore los datos: después de cada etiqueta van «es» o «son» y la referencia de ese dato, nunca "
-    + "otro verbo ni un adjetivo, también en la segunda parte de la frase.";
+    + "otro verbo ni un adjetivo, también después de la «y».";
 
 const VOCABULARIO_DEL_DIARIO =
   "- Use solo las palabras de las etiquetas de los hechos, palabras de enlace (el, la, los, las, de, en, y, pero, también, "
@@ -162,14 +166,19 @@ const REGLAS_DE_REDACCION_DIARIO = reglasDeRedaccion({
   largo: LARGO_DEL_DIARIO,
 });
 
-/** La forma de la respuesta; `primera` es el texto del segmento de ejemplo (en el DIARIO, una etiqueta no obligatoria). */
-const respuestaCon = (primera: string): string => `Responda solo con un JSON de esta forma: {"frases":[{"segmentos":[{"texto":"${primera}"},`
-  + '{"ref":"H01"},{"texto":"."}]}]}. Cada segmento tiene una sola clave: «texto» o «ref». La prosa va en los segmentos de '
+/** La forma de la respuesta; `frases` son las frases de ejemplo (en el DIARIO, dos, con etiquetas no obligatorias). */
+const respuestaCon = (frases: string): string => `Responda solo con un JSON de esta forma: {"frases":[${frases}]}`
+  + '. Cada segmento tiene una sola clave: «texto» o «ref». La prosa va en los segmentos de '
   + "texto y cada dato, en un segmento de referencia con su id. Los ejemplos solo muestran la forma: el id H01 es de ejemplo; "
   + "use los ids, los datos y las etiquetas de los hechos que recibe.";
 
-const RESPUESTA = respuestaCon("El valor de las acciones es");
-const RESPUESTA_DEL_DIARIO = respuestaCon("La ganancia sin vender es");
+const frasesDeEjemplo = (...textos: string[]): string => textos.map((t) => `{"segmentos":[{"texto":"${t}"},{"ref":"H01"},{"texto":"."}]}`).join(",");
+
+const RESPUESTA = respuestaCon(frasesDeEjemplo("El valor de las acciones es"));
+const RESPUESTA_DEL_DIARIO = respuestaCon(
+  '{"segmentos":[{"texto":"La ganancia sin vender es"},{"ref":"H01"},{"texto":", y la ganancia por ventas es"},{"ref":"H01"},'
+    + '{"texto":"."}]},{"segmentos":[{"texto":"El precio de cierre de la especie"},{"ref":"H01"},{"texto":"es"},{"ref":"H01"},{"texto":"."}]}',
+);
 
 /** Una frase de ejemplo: las piezas son texto o, si son `null`, una referencia (el id H01 es solo de forma). */
 const frase = (...piezas: (string | null)[]): string =>
