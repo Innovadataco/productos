@@ -41,7 +41,7 @@ const EJEMPLOS_DE_FRAGMENTO: Readonly<Record<string, string>> = {
   [`por(?! debajo de lo aportado${FIN})(?!(?<=ganancias? por) ventas${FIN})(?!(?<=decretad[oa]s? por) accion(?:es)?${FIN})`]: "por el mercado",
   [`con(?!(?<=especies? con) cierres? atrasad[oa]s?${FIN})(?!(?<=valor con) riesgo modelado${FIN})`]: "con la tasa",
   [`sin(?!(?<=ganancia sin) vender${FIN})(?!(?<=especies? sin) precio${FIN})(?!(?<=rentabilidad sin) vender${FIN})(?!(?<=regla sin) cierre al dia${FIN})`]: "sin la tasa",
-  "desde(?!(?<=vigentes? desde) \\{h[0-9]{2}\\})": "desde el cierre",
+  "desde(?!(?<=vigentes? desde)(?: \\{h[0-9]{2}\\}|$))": "desde el cierre",
   "debid[oa]s? al?": "debido al",
   "a causa del?": "a causa de",
   "gracias al?": "gracias al",
@@ -134,7 +134,7 @@ describe.each(ALTERNATIVAS)("$id · «$alternativa»", ({ id, alternativa, ejemp
 describe("exenciones: lo que NO es una causa", () => {
   it.each([
     "la ganancia por ventas", "las ganancias por ventas", "dividendo decretado por acción", "dividendos decretados por acciones",
-    "queda por debajo de lo aportado", "regla del plan vigente desde {H01}", "las reglas vigentes desde {H01}",
+    "queda por debajo de lo aportado", "regla del plan vigente desde {H01}", "las reglas vigentes desde {H01}", "regla del plan vigente desde",
     "especies con cierre atrasado", "parte del valor con riesgo modelado",
   ])("«%s» no dispara CAUSA", (texto) => {
     expect(coincidencias(texto, PATRONES_CAUSA)).toEqual([]);

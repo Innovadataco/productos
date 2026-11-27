@@ -3,6 +3,8 @@
  * y del vocabulario cerrado (la lista base y el condicional) queda fija aquí. Quitar o agregar una sola palabra de una
  * lista pone esta prueba en rojo (la prueba de mutación por alternativa solo ve las que siguen en `src/`). Cambiar una
  * lista es otra versión del validador: se sube `VERSION_VALIDADOR` y se escribe aquí la huella nueva.
+ * EXCEPCIÓN ESCRITA (ver `codigos.ts`): las listas de CAUSA y el vocabulario de v3 se cambiaron sin subir la versión,
+ * porque v3 no salió a producción; por eso `HUELLAS_V3` se reescribió (no hay una huella v3 anterior que conservar).
  */
 import { describe, expect, it } from "vitest";
 import { sha256Hex } from "@/ia/hash";
@@ -28,8 +30,8 @@ const HUELLAS_V1: Readonly<Record<string, string>> = {
 /** La versión tercera: el vocabulario pierde las ocho palabras de causa y suma la lista CAUSA (excepción escrita: ver `codigos.ts`). */
 const HUELLAS_V3: Readonly<Record<string, string>> = {
   ...HUELLAS_V1,
-  VOCABULARIO: "b7438f0b4c2fcc8e3e191cc8e1c02bc7971a1e79ae06bef43fb41388cb30654e",
-  CAUSA: "85b66a0d7df64990797c64aecbf7c72ef162fa40f1fcf95386759ec90728e165",
+  VOCABULARIO: "46ccb03c843cce641f6cbfd7a00b791dd9e75622ce7d1265c16fa36fe03bd132",
+  CAUSA: "4728dacb3ddf0b87dd4af6eed5031a6f1782ce57b4eac0f698b288c2169c1295",
 };
 
 /** v2 cambia solo la lectura de la salida (segmentos): las listas son las de v1. v3 compone los obligatorios del DIARIO y estrena CAUSA. */

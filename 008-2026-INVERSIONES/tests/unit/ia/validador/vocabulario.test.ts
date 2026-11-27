@@ -78,7 +78,7 @@ describe("vocabulario cerrado", () => {
 
   it("la lista base no trae «cuando», los verbos de atribución ni las preposiciones sin uso medido", () => {
     const sacadas = ["cuando", "corresponde", "corresponden", "equivale", "equivalen", "representa", "representan", "indica", "indican", "muestra", "muestran",
-      "mientras", "aunque", "contra", "sobre", "hasta", "hacia", "entre", "donde", "sino"];
+      "mientras", "aunque", "contra", "sobre", "hasta", "hacia", "entre", "donde", "sino", "sin"];
     for (const palabra of sacadas) expect([palabra, PALABRAS_BASE.includes(palabra)]).toEqual([palabra, false]);
   });
 
@@ -88,8 +88,9 @@ describe("vocabulario cerrado", () => {
     }
   });
 
-  it("«pero» y «sin» siguen en la lista base", () => {
+  it("«pero» sigue en la lista base; «sin» sale: solo vale donde sale de las etiquetas (CAUSA.SIN)", () => {
     expect(PALABRAS_BASE).toContain("pero");
-    expect(PALABRAS_BASE).toContain("sin");
+    expect(PALABRAS_BASE).not.toContain("sin");
+    expect(palabrasFueraDelVocabulario("sin", "ESCENARIOS")).toEqual(["sin"]);
   });
 });
