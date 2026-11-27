@@ -33,8 +33,8 @@ const HISTORIAL: Readonly<Record<string, string>> = {
   "resumen-diario-v4": "ee6162ea6fbfefc03d026032c991450abb26d18b78d29478fc3d2596348b306c",
   // v5 del DIARIO: un molde por dato de especie, un dato por frase y sin «misma» (la v4 se conserva arriba).
   "resumen-diario-v5": "a96c22d73eb9035b05b6403a8b8d49b7744a164e6c8f37fd0ed237cebd8389a5",
-  // v6 del DIARIO: etiqueta sin referencia prohibida, moldes sin cerrar en «es», sin nombrar lo prohibido (hash por poner).
-  "resumen-diario-v6": "PENDIENTE",
+  // v6 del DIARIO: etiqueta sin referencia prohibida, moldes sin cerrar en «es», sin nombrar lo prohibido.
+  "resumen-diario-v6": "4e08692758f40f388cee7afc4a42fd720edbe8a3cc7bbc52368cdc5bb7f8d716",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */
