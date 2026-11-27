@@ -16,6 +16,11 @@ import { hecho } from "../apoyo/hechos.ficticio";
 import { salidaDe } from "./apoyo/salidas.ficticio";
 
 const AYER = "2027-03-16";
+
+/** Los dos patrones del causativo: CAUSA.TRANSITIVO (texto plegado) y CAUSA.TRANSITIVO_BAJO («bajó» con tilde, sobre minúsculas). */
+const ES_TRANSITIVO = (id: string): boolean => id === "CAUSA.TRANSITIVO" || id === "CAUSA.TRANSITIVO_BAJO";
+const transitivos = (texto: string): readonly string[] => coincidencias(texto, PATRONES_CAUSA).filter(ES_TRANSITIVO);
+const transitivosEn = (r: ReturnType<typeof validarSalida>): readonly string[] => (r.ok ? [] : r.hallazgos.map((h) => h.patron).filter(ES_TRANSITIVO));
 const de = (id: IdHecho, clave: ClaveDiario, valor: string, extra: Record<string, unknown> = {}) =>
   hecho(id, clave, valor, presentar(valor, entradaDeCatalogo("DIARIO", clave)!.unidad), extra);
 
@@ -49,7 +54,7 @@ describe("causativo transitivo en el DIARIO: CAUSA.TRANSITIVO", () => {
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.motivos).toContain("CAUSA");
-    expect(r.hallazgos.map((h) => h.patron)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivosEn(r)).not.toEqual([]);
   });
 });
 
@@ -65,19 +70,19 @@ describe("el patrón por forma, en los tres tipos de texto", () => {
     "la volatilidad anual histórica bajó el escenario central a corto plazo", "la historia dejó el escenario central en {H01}",
     "la tasa {H05} bajó la ganancia total", "los dividendos subieron el valor",
   ])("«%s» dispara CAUSA.TRANSITIVO", (texto) => {
-    expect(coincidencias(texto, PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivos(texto)).not.toEqual([]);
   });
 
   it.each(VERBOS)("el verbo «%s» seguido de un determinante dispara", (verbo) => {
-    expect(coincidencias(`la tasa ${verbo} la ganancia total`, PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivos(`la tasa ${verbo} la ganancia total`)).not.toEqual([]);
   });
 
   it.each(DETERMINANTES)("el determinante «%s» tras el verbo dispara", (det) => {
-    expect(coincidencias(`la tasa bajó ${det} valor`, PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivos(`la tasa bajó ${det} valor`)).not.toEqual([]);
   });
 
   it("sin tildes y en mayúsculas también", () => {
-    expect(coincidencias("La tasa BAJO LA ganancia total", PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivos("La tasa BAJO LA ganancia total")).not.toEqual([]);
   });
 });
 
@@ -86,7 +91,7 @@ describe("vigilancia: lo intransitivo y lo propio no es causa transitiva", () =>
     "El valor de las acciones subió a {H03} y la ganancia total bajó a {H04}.", "la ganancia total bajó a {H04}", "el valor subió",
     "a la baja", "la tasa bajó y el valor subió", "el valor de la especie bajó {H02}", "subieron {H01} y {H02}", "el valor subió, la ganancia total es {H03}", "la tasa bajó; el valor es {H02}", "la tasa bajó (la ganancia total es {H03})",
   ])("«%s» no dispara CAUSA.TRANSITIVO", (texto) => {
-    expect(coincidencias(texto, PATRONES_CAUSA)).not.toContain("CAUSA.TRANSITIVO");
+    expect(transitivos(texto)).toEqual([]);
   });
 });
 
@@ -124,7 +129,7 @@ describe("H1: los verbos de marca del vocabulario que no estaban en la lista dan
     "creció el", "crecieron los", "crece el", "crecen los", "avanzó el", "ganó la", "repuntó el", "ascendió el", "escaló el", "saltó el",
     "descendió la", "desciende la", "retrocedió la", "retrocede la",
   ])("«la tasa %s ganancia total» dispara", (verboYDet) => {
-    expect(coincidencias(`la tasa ${verboYDet} ganancia total`, PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivos(`la tasa ${verboYDet} ganancia total`)).not.toEqual([]);
   });
 
   it.each([
@@ -134,7 +139,7 @@ describe("H1: los verbos de marca del vocabulario que no estaban en la lista dan
     "La tasa de política monetaria (TPM) {TASA_TPM} ha bajado la ganancia total a {GANANCIA_TOTAL}.",
     "La tasa de política monetaria (TPM) {TASA_TPM} empeoró la ganancia total a {GANANCIA_TOTAL}.",
   ])("«%s» se rechaza en el DIARIO", (plantilla) => {
-    expect(CAUSA_EN(validarSalida(salidaDe(PAQUETE, plantilla), PAQUETE))).toContain("CAUSA.TRANSITIVO");
+    expect(transitivosEn(validarSalida(salidaDe(PAQUETE, plantilla), PAQUETE))).not.toEqual([]);
   });
 });
 
@@ -144,12 +149,12 @@ describe("H2: los adverbios y determinantes de la base no esquivan CAUSA.TRANSIT
     "bajó toda la", "subieron todo el", "bajó esa", "bajó ese", "bajó esos", "bajó esas", "subieron cada", "bajó otra", "bajó otro", "bajó otros",
     "bajó otras", "subieron todos los", "bajó unos", "bajó unas", "bajó todas las",
   ])("«la tasa %s ganancia total» dispara", (verboYDet) => {
-    expect(coincidencias(`la tasa ${verboYDet} ganancia total`, PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivos(`la tasa ${verboYDet} ganancia total`)).not.toEqual([]);
   });
 
   it("«La tasa bajó también la ganancia total a {H}.» se rechaza en el DIARIO", () => {
     const r = validarSalida(salidaDe(PAQUETE, "La tasa de política monetaria (TPM) {TASA_TPM} bajó también la ganancia total a {GANANCIA_TOTAL}."), PAQUETE);
-    expect(CAUSA_EN(r)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivosEn(r)).not.toEqual([]);
   });
 });
 
@@ -162,7 +167,7 @@ describe("H4: «subió un {H}» no es causativo: el determinante debe ir ante un
 
   it.each(["la variación del día del valor de las acciones subió un {H08}", "la variación bajó el {H08}", "el valor subió la {H08}"])(
     "«%s» no dispara CAUSA.TRANSITIVO", (texto) => {
-      expect(coincidencias(texto, PATRONES_CAUSA)).not.toContain("CAUSA.TRANSITIVO");
+      expect(transitivos(texto)).toEqual([]);
     });
 
   it("en el DIARIO, «La variación del día del valor de las acciones subió un {H}.» no lleva CAUSA", () => {
@@ -171,32 +176,87 @@ describe("H4: «subió un {H}» no es causativo: el determinante debe ir ante un
   });
 });
 
-describe("H5: «escenario bajo» seguido de determinante no es causativo", () => {
-  const ESCENARIOS = construirPaquete({
-    tipo: "ESCENARIOS", hoy: "2027-03-17", versionesCalculo: { proyecciones: "proyecciones-ficticio-v5" }, avisos: [],
-    hechos: [{ ...hecho("H01", "ESCENARIO_BAJO_CORTO", "33917.29", presentar("33917.29", entradaDeCatalogo("ESCENARIOS", "ESCENARIO_BAJO_CORTO")!.unidad), { calidad: "ESTIMADO" }), fecha: AYER }],
-  } as EntradaPaquete<"ESCENARIOS">);
+/**
+ * Un paquete de ESCENARIOS como el del armador real (`src/ia/hechos/escenarios.ts`): los escenarios de cada horizonte y el
+ * rendimiento histórico llevan dirección (SUBE o BAJA frente al valor inicial); la volatilidad, la probabilidad y la caída no.
+ */
+const ESCENARIOS_CON_DIRECCION = construirPaquete({
+  tipo: "ESCENARIOS", hoy: "2027-03-17", versionesCalculo: { proyecciones: "proyecciones-ficticio-v5" }, avisos: [],
+  hechos: ([
+    ["H01", "ESCENARIO_CENTRAL_CORTO", "41377.19", { calidad: "ESTIMADO", obligatorio: true, direccion: "SUBE" }],
+    ["H02", "ESCENARIO_CENTRAL_LARGO", "47377.19", { calidad: "ESTIMADO", obligatorio: true, direccion: "SUBE" }],
+    ["H03", "PROBABILIDAD_BAJO_APORTADO", "17.3", { calidad: "ESTIMADO", obligatorio: true }],
+    ["H04", "CAIDA_MAXIMA_MEDIANA", "-21.3", { calidad: "ESTIMADO" }],
+    ["H05", "VOLATILIDAD_ANUAL", "23.7", { calidad: "ESTIMADO" }],
+    ["H06", "ESCENARIO_BAJO_CORTO", "33377.19", { calidad: "ESTIMADO", direccion: "BAJA" }],
+    ["H07", "ESCENARIO_ALTO_CORTO", "49377.19", { calidad: "ESTIMADO", direccion: "SUBE" }],
+    ["H08", "ESCENARIO_BAJO_LARGO", "31377.19", { calidad: "ESTIMADO", direccion: "BAJA" }],
+    ["H09", "RENDIMIENTO_ANUAL_HISTORICO", "5.3", { calidad: "CALCULADO", direccion: "SUBE" }],
+  ] as const).map(([id, clave, valor, extra]) => ({
+    ...hecho(id, clave, valor, presentar(valor, entradaDeCatalogo("ESCENARIOS", clave)!.unidad), extra), fecha: AYER,
+  })),
+} as EntradaPaquete<"ESCENARIOS">);
 
+describe("H5: «escenario bajo» seguido de determinante no es causativo", () => {
   it.each([
     "en el escenario bajo el valor quedaría en {H01}", "el escenario bajo la caída quedaría en {H01}", "En el escenario bajo los valores quedarían en {H01}",
     "en los escenarios bajo el valor", "en el Escenario bajo el valor",
-  ])("«%s» no dispara CAUSA.TRANSITIVO", (texto) => {
-    expect(coincidencias(texto, PATRONES_CAUSA)).not.toContain("CAUSA.TRANSITIVO");
+  ])("«%s» no dispara el causativo", (texto) => {
+    expect(transitivos(texto)).toEqual([]);
   });
 
-  it("en ESCENARIOS, «En el escenario bajo el valor quedaría en {H}.» no lleva CAUSA", () => {
-    const r = validarSalida(salidaDe(ESCENARIOS, "En el escenario bajo el valor quedaría en {ESCENARIO_BAJO_CORTO}."), ESCENARIOS);
+  it("en ESCENARIOS con dirección, «En el escenario bajo el valor quedaría en {H}.» no lleva CAUSA", () => {
+    const r = validarSalida(salidaDe(ESCENARIOS_CON_DIRECCION, "En el escenario bajo el valor quedaría en {ESCENARIO_BAJO_CORTO}."), ESCENARIOS_CON_DIRECCION);
     expect(CAUSA_EN(r).filter((p) => p.startsWith("CAUSA."))).toEqual([]);
   });
 
-  it("la exención es solo tras «escenario(s)»: lo demás sigue rechazado", () => {
-    expect(coincidencias("la tasa bajó el valor", PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
-    expect(coincidencias("el escenario central bajó el valor", PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+  it("la exención es solo «bajo» sin tilde tras «escenario(s)»: lo demás sigue rechazado", () => {
+    expect(transitivos("la tasa bajó el valor")).not.toEqual([]);
+    expect(transitivos("el escenario central bajó el valor")).not.toEqual([]);
+  });
+});
+
+describe("H7 y H8: «escenario» pegado al verbo no exime; los causativos de ESCENARIOS rechazan de punta a punta", () => {
+  const SEIS = [
+    "El rendimiento anual histórico {RENDIMIENTO_ANUAL_HISTORICO} del escenario subió el escenario alto a corto plazo a {ESCENARIO_ALTO_CORTO}.",
+    "El rendimiento anual histórico {RENDIMIENTO_ANUAL_HISTORICO} del escenario aumentó el escenario central a largo plazo a {ESCENARIO_CENTRAL_LARGO}.",
+    "La volatilidad anual histórica {VOLATILIDAD_ANUAL} del escenario bajó el escenario bajo a corto plazo a {ESCENARIO_BAJO_CORTO}.",
+    "La volatilidad anual histórica {VOLATILIDAD_ANUAL} del escenario bajó la probabilidad {PROBABILIDAD_BAJO_APORTADO}.",
+    "La volatilidad anual histórica {VOLATILIDAD_ANUAL} del escenario bajó la caída máxima mediana {CAIDA_MAXIMA_MEDIANA}.",
+    "La caída máxima mediana {CAIDA_MAXIMA_MEDIANA} de los escenarios bajaron el escenario bajo a largo plazo a {ESCENARIO_BAJO_LARGO}.",
+  ] as const;
+
+  it.each(SEIS)("«%s» se rechaza con el causativo", (plantilla) => {
+    const r = validarSalida(salidaDe(ESCENARIOS_CON_DIRECCION, plantilla), ESCENARIOS_CON_DIRECCION);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.motivos).toContain("CAUSA");
+    expect(transitivosEn(r)).not.toEqual([]);
   });
 
-  it("abierto documentado (BAJO): la mirada atrás no distingue el verbo, así que «el escenario subió el valor» no dispara", () => {
-    // La exención es `(?<!escenarios? )` ante cualquier verbo, no solo ante «bajo»; el hueco es solo con «escenario» pegado al verbo.
-    expect(coincidencias("el escenario subió el valor", PATRONES_CAUSA)).not.toContain("CAUSA.TRANSITIVO");
+  it("«el escenario subió el valor» rechaza con CAUSA (ya no hay exención ante el verbo)", () => {
+    expect(transitivos("el escenario subió el valor")).not.toEqual([]);
+    const r = validarSalida(salidaDe(ESCENARIOS_CON_DIRECCION, "El escenario subió el valor quedaría en {ESCENARIO_ALTO_CORTO}."), ESCENARIOS_CON_DIRECCION);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.motivos).toContain("CAUSA");
+    expect(transitivosEn(r)).not.toEqual([]);
+  });
+
+  it.each(["el escenario bajó el valor", "los escenarios bajaron el valor", "el escenario subió la caída", "el escenario aumentó el valor"])(
+    "«%s» dispara el causativo", (texto) => {
+      expect(transitivos(texto)).not.toEqual([]);
+    });
+
+  it("H9, residual documentado (BAJO): «del escenario bajo el escenario bajo» con «bajo» sin tilde como verbo no dispara", () => {
+    // Sin tilde, «bajo» tras «escenario» es indistinguible del adjetivo de H5; el modelo debe escribir el verbo con tilde.
+    expect(transitivos("la volatilidad anual histórica {H05} del escenario bajo el escenario bajo a corto plazo a {H06}")).toEqual([]);
+  });
+});
+
+describe("«ha subido», «han subido», «ha bajado» y «han bajado» con determinante dan CAUSA.TRANSITIVO", () => {
+  it.each(["ha subido el valor", "han subido los valores", "ha bajado la ganancia total", "han bajado las tasas"])("«la tasa %s» dispara", (resto) => {
+    expect(coincidencias(`la tasa ${resto}`, PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
   });
 });
 
@@ -218,21 +278,21 @@ describe("H6: CAUSA.TRANSITIVO queda atado a PATRONES_MARCA", () => {
   });
 
   it.each(VERBOS_DE_UNA_PALABRA)("el verbo de marca «%s» seguido de un determinante dispara CAUSA.TRANSITIVO", (verbo) => {
-    expect(coincidencias(`la tasa ${verbo} la ganancia total`, PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivos(`la tasa ${verbo} la ganancia total`)).not.toEqual([]);
   });
 
   it("«superó» y «rebasó» quedan fuera a propósito: «superó el nivel de la regla» es una frase propia", () => {
-    expect(coincidencias("el precio de cierre de la especie {H01} superó el nivel de la regla {H02}", PATRONES_CAUSA)).not.toContain("CAUSA.TRANSITIVO");
-    expect(coincidencias("el precio rebasó el nivel de la regla", PATRONES_CAUSA)).not.toContain("CAUSA.TRANSITIVO");
+    expect(transitivos("el precio de cierre de la especie {H01} superó el nivel de la regla {H02}")).toEqual([]);
+    expect(transitivos("el precio rebasó el nivel de la regla")).toEqual([]);
   });
 });
 
 describe("vigilancia: «bajo el nivel de la regla» (preposición) y las frases propias", () => {
   it("«bajo» preposición ante un determinante SÍ dispara (el texto está plegado y «bajó» y «bajo» se igualan): se registra, no se exime", () => {
     // Si algún día se exime, esta prueba debe cambiar a propósito: hoy 008 no escribe «bajo el nivel de la regla».
-    expect(coincidencias("el precio de cierre está bajo el nivel de la regla", PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivos("el precio de cierre está bajo el nivel de la regla")).not.toEqual([]);
     // Lo mismo con «bajo lo aportado» fuera de «escenario bajo»: cae del lado seguro (rechaza), y la plantilla propia no lo escribe.
-    expect(coincidencias("el valor quedaría, bajo lo aportado a largo plazo {H09}", PATRONES_CAUSA)).toContain("CAUSA.TRANSITIVO");
+    expect(transitivos("el valor quedaría, bajo lo aportado a largo plazo {H09}")).not.toEqual([]);
   });
 
   it.each([
@@ -240,6 +300,6 @@ describe("vigilancia: «bajo el nivel de la regla» (preposición) y las frases 
     "el escenario bajo a corto plazo quedaría en {H07}", "las especies subieron todas", "la ganancia total sube a la baja",
     "la tasa bajó; el valor es {H02}", "el valor subió, la ganancia total es {H03}",
   ])("«%s» no dispara CAUSA.TRANSITIVO", (texto) => {
-    expect(coincidencias(texto, PATRONES_CAUSA)).not.toContain("CAUSA.TRANSITIVO");
+    expect(transitivos(texto)).toEqual([]);
   });
 });
