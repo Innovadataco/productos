@@ -20,10 +20,12 @@
  * - CAUSA.TRANSITIVO_BAJO: «bajó» y «bajo» aparte, porque el texto plegado los iguala. Corre sobre MINUSCULAS, donde la tilde cuenta:
  *   «bajó» con tilde es el verbo siempre (también tras «escenario»: «del escenario bajó el escenario bajo» rechaza); «bajo» sin tilde
  *   rechaza salvo tras «escenario(s)» (`(?<!escenarios? )`: «En el escenario bajo el valor quedaría…» publica, es el adjetivo).
+ *   La exención es solo para «bajo» exacto: «bájo» (tilde de más) rechaza también tras «escenario(s)» («del escenario bájo el escenario central»).
  *   Con «bajo» preposición («bajo el nivel de la regla», «bajo lo aportado») dispara y cae del lado seguro.
  *   Cada vocal del verbo, del adverbio y del determinante acepta su tilde de más («bájo la», «bajó ésta», «bajó él», «bajó tambíen la»):
  *   el vocabulario compara plegado, así que esas formas pasan por palabras de la base y deben rechazar (H10).
- *   ABIERTO (BAJO): «bájo a {H}» (y «bajó a {H}») sin determinante no es causativo ni marca de dirección en ESCENARIOS: no dispara aquí.
+ *   ABIERTO (BAJO): sin determinante no dispara aquí: «bajó a {H}» SÍ es marca (DIRECCION.BAJA_VERBO) y la ataja ella; «bájo a {H}» no es marca ni causativo
+ *   (parte de N3, tildes en las marcas de dirección, MEDIO aparte).
  *   ABIERTOS (BAJO): H9, «del escenario bajo el escenario bajo» con «bajo» sin tilde usado como verbo (indistinguible del adjetivo de
  *   H5); sin determinante («bajó ganancia total»), con una cita o una coma en medio, con «a» personal, verbos de la
  *   base («marcó», «registró», «tuvo», «cerró», «sumó a», «alcanzó», «tocó»), «falta en», «falta + y», las locuciones «a cuenta de»,
@@ -92,6 +94,6 @@ export const PATRONES_CAUSA: readonly Patron[] = Object.freeze([
   ]),
   patron("CAUSA.TRANSITIVO", "PLEGADO", [`${VERBOS_DE_MARCA}${UN_ESPACIO}${ADVERBIO}${DETERMINANTES}${ANTE_PALABRA}`]),
   patron("CAUSA.TRANSITIVO_BAJO", "MINUSCULAS", [
-    `(?:b[aá]jó|${NO_ESCENARIO}b[aá]jo)${UN_ESPACIO}${ADVERBIO_TOLERANTE}${DETERMINANTES_TOLERANTES}${ANTE_PALABRA}`,
+    `(?:b[aá]jó|bájo|${NO_ESCENARIO}bajo)${UN_ESPACIO}${ADVERBIO_TOLERANTE}${DETERMINANTES_TOLERANTES}${ANTE_PALABRA}`,
   ]),
 ]);

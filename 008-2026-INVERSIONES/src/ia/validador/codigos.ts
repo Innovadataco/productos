@@ -11,8 +11,8 @@
  * atribución y las preposiciones sin uso medido): tampoco salió a producción. Y el cierre del causativo: CAUSA.TRANSITIVO cubre
  * todos los verbos de marca del vocabulario (menos «superó» y «rebasó»), con adverbio y determinantes de la base, solo ante
  * una palabra («subió un {H}» no cuenta). «bajó» y «bajo» van en CAUSA.TRANSITIVO_BAJO, sobre minúsculas: con tilde es el verbo
- * siempre y sin tilde se exime solo tras «escenario(s)» («escenario bajo el valor»); cada vocal del verbo, del adverbio y del determinante acepta una tilde de más
- * («bájo la», «bajó ésta», «bajó él»), como la iguala el vocabulario, que compara plegado; «bájo a {H}» sin determinante queda abierto (BAJO); ningún otro verbo pegado a «escenario» se exime
+ * siempre y «bajo» sin tilde se exime solo tras «escenario(s)» («escenario bajo el valor»); cada vocal del verbo, del adverbio y del determinante acepta una tilde de más
+ * («bájo la», «bajó ésta», «bajó él»), como la iguala el vocabulario, que compara plegado; «bájo» rechaza también tras «escenario(s)», solo «bajo» exacto se exime; sin determinante no dispara aquí: «bajó a {H}» es marca (DIRECCION.BAJA_VERBO) y «bájo a {H}» queda abierto (N3, tildes en las marcas de dirección); ningún otro verbo pegado a «escenario» se exime
  * («del escenario subió el escenario alto» rechaza en ESCENARIOS). Abiertos documentados: `patrones-causa.ts`.
  * Cambiar un control, una lista de patrones o un límite es otra versión del validador (`VERSION_VALIDADOR`).
  */
