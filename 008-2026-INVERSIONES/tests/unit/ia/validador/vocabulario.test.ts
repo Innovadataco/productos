@@ -75,4 +75,21 @@ describe("vocabulario cerrado", () => {
     expect(fuera("desde", "ESCENARIOS")).toEqual(["desde"]);
     for (const tipo of TIPOS_RESUMEN) for (const palabra of ["ante", "segun", "tras", "frente", "como"]) expect(fuera(palabra, tipo)).toEqual([palabra]);
   });
+
+  it("la lista base no trae «cuando», los verbos de atribución ni las preposiciones sin uso medido", () => {
+    const sacadas = ["cuando", "corresponde", "corresponden", "equivale", "equivalen", "representa", "representan", "indica", "indican", "muestra", "muestran",
+      "mientras", "aunque", "contra", "sobre", "hasta", "hacia", "entre", "donde", "sino"];
+    for (const palabra of sacadas) expect([palabra, PALABRAS_BASE.includes(palabra)]).toEqual([palabra, false]);
+  });
+
+  it("las palabras de atribución y de contexto sacadas se rechazan en los tres tipos", () => {
+    for (const tipo of TIPOS_RESUMEN) for (const palabra of ["cuando", "corresponde", "equivale", "representa", "indica", "muestra", "mientras", "aunque", "donde", "sino"]) {
+      expect([tipo, palabra, palabrasFueraDelVocabulario(palabra, tipo)]).toEqual([tipo, palabra, [palabra]]);
+    }
+  });
+
+  it("«pero» y «sin» siguen en la lista base", () => {
+    expect(PALABRAS_BASE).toContain("pero");
+    expect(PALABRAS_BASE).toContain("sin");
+  });
 });

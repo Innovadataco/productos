@@ -30,6 +30,7 @@ const EJEMPLOS: Readonly<Record<string, string>> = {
   "CAUSA.POR": "por el mercado",
   "CAUSA.DESDE": "desde el cierre",
   "CAUSA.CON": "con la tasa",
+  "CAUSA.SIN": "sin la tasa",
   "CAUSA.CONECTOR": "porque la tasa",
 };
 
@@ -39,6 +40,8 @@ const FIN = "(?![\\p{L}\\p{N}])";
 const EJEMPLOS_DE_FRAGMENTO: Readonly<Record<string, string>> = {
   [`por(?! debajo de lo aportado${FIN})(?!(?<=ganancias? por) ventas${FIN})(?!(?<=decretad[oa]s? por) accion(?:es)?${FIN})`]: "por el mercado",
   [`con(?!(?<=especies? con) cierres? atrasad[oa]s?${FIN})(?!(?<=valor con) riesgo modelado${FIN})`]: "con la tasa",
+  [`sin(?!(?<=ganancia sin) vender${FIN})(?!(?<=especies? sin) precio${FIN})(?!(?<=rentabilidad sin) vender${FIN})(?!(?<=regla sin) cierre al dia${FIN})`]: "sin la tasa",
+  "desde(?!(?<=vigentes? desde) \\{h[0-9]{2}\\})": "desde el cierre",
   "debid[oa]s? al?": "debido al",
   "a causa del?": "a causa de",
   "gracias al?": "gracias al",
@@ -147,6 +150,14 @@ describe("casi iguales: lo que SÍ es una causa", () => {
     ["valor con el mercado", "CAUSA.CON"],
     ["desde el cierre", "CAUSA.DESDE"],
     ["regla vigente y desde el cierre", "CAUSA.DESDE"],
+    ["regla vigente desde el cierre", "CAUSA.DESDE"],
+    ["regla vigente desde el cierre {H01}", "CAUSA.DESDE"],
+    ["sin la ganancia por ventas, la ganancia total es {H01}", "CAUSA.SIN"],
+    ["sin vender, el valor es {H01}", "CAUSA.SIN"],
+    ["ganancia sin la tasa", "CAUSA.SIN"],
+    ["especies sin cierre", "CAUSA.SIN"],
+    ["regla sin precio", "CAUSA.SIN"],
+    ["subió; es que la tasa bajó", "CAUSA.CONECTOR"],
   ] as const)("«%s» dispara %s", (texto, id) => {
     expect(coincidencias(texto, PATRONES_CAUSA)).toContain(id);
   });

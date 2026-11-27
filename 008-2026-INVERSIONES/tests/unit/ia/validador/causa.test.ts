@@ -147,3 +147,57 @@ describe("los moldes del DIARIO v5 con una causa se rechazan", () => {
     expect(r.patrones).toContain(patronEsperado(causa));
   });
 });
+
+/**
+ * Frente 1b: las evasiones que seguían publicando después del primer arreglo. «es que», «sin …» y «vigente desde el
+ * cierre» los ataja un patrón de CAUSA; «cuando» y los verbos de atribución de la base («que corresponde a», «lo que
+ * indica»…) ya no son palabras del vocabulario, y los ataja IDIOMA.VOCABULARIO. «pero» sigue valiendo: es de contraste.
+ */
+describe("evasiones del segundo barrido", () => {
+  interface Evasion {
+    readonly tipo: Tipo;
+    readonly nombre: string;
+    readonly frase: string;
+    /** El patrón de CAUSA que la ataja, o IDIOMA.VOCABULARIO cuando la ataja el vocabulario. */
+    readonly patron: string;
+  }
+
+  const D_ACC = "El valor de las acciones subió a {VALOR_ACCIONES}";
+  const D_GAN = "la ganancia total bajó a {GANANCIA_TOTAL}";
+  const R_PLAZO = "Faltan {REGLA_DIAS_AL_PLAZO} para el plazo de la regla";
+  const E_CENTRAL = "En el escenario central a corto plazo, el valor quedaría en {ESCENARIO_CENTRAL_CORTO}";
+  const E_PROB = "la probabilidad de terminar por debajo de lo aportado es {PROBABILIDAD_BAJO_APORTADO}";
+
+  const EVASIONES: readonly Evasion[] = [
+    { tipo: "DIARIO", nombre: "es que", frase: `${D_ACC}; es que ${D_GAN}.`, patron: "CAUSA.CONECTOR" },
+    { tipo: "REGLAS", nombre: "es que", frase: `${R_PLAZO}; es que el plazo de la regla es {REGLA_PLAZO}.`, patron: "CAUSA.CONECTOR" },
+    { tipo: "ESCENARIOS", nombre: "es que", frase: `${E_CENTRAL}; es que ${E_PROB}.`, patron: "CAUSA.CONECTOR" },
+    { tipo: "DIARIO", nombre: "cuando al final", frase: `${D_ACC} cuando ${D_GAN}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "DIARIO", nombre: "cuando al inicio", frase: `Cuando ${D_GAN}, el valor de las acciones subió a {VALOR_ACCIONES}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "REGLAS", nombre: "cuando al final", frase: `${R_PLAZO} cuando el plazo de la regla es {REGLA_PLAZO}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "ESCENARIOS", nombre: "cuando al final", frase: `${E_CENTRAL} cuando ${E_PROB}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "ESCENARIOS", nombre: "cuando al inicio", frase: `Cuando la historia es corta, el escenario central a corto plazo quedaría en {ESCENARIO_CENTRAL_CORTO}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "DIARIO", nombre: "que corresponde a", frase: `La ganancia total bajó a {GANANCIA_TOTAL}, que corresponde al valor de las acciones {VALOR_ACCIONES}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "DIARIO", nombre: "que equivale a", frase: `La ganancia total bajó a {GANANCIA_TOTAL}, que equivale al valor de las acciones {VALOR_ACCIONES}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "DIARIO", nombre: "que representa", frase: `La ganancia total bajó a {GANANCIA_TOTAL}, que representa el valor de las acciones {VALOR_ACCIONES}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "DIARIO", nombre: "lo que indica", frase: `La ganancia total bajó a {GANANCIA_TOTAL}, lo que indica el valor de las acciones {VALOR_ACCIONES}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "DIARIO", nombre: "lo que muestra", frase: `La ganancia total bajó a {GANANCIA_TOTAL}, lo que muestra el valor de las acciones {VALOR_ACCIONES}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "REGLAS", nombre: "que corresponde a", frase: `${R_PLAZO}, que corresponde al plazo de la regla {REGLA_PLAZO}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "ESCENARIOS", nombre: "que representa", frase: `${E_CENTRAL}, que representa ${E_PROB}.`, patron: "IDIOMA.VOCABULARIO" },
+    { tipo: "DIARIO", nombre: "sin (contrafactual)", frase: `Sin el valor de las acciones {VALOR_ACCIONES}, ${D_GAN}.`, patron: "CAUSA.SIN" },
+    { tipo: "REGLAS", nombre: "sin (contrafactual)", frase: `Sin el plazo de la regla {REGLA_PLAZO}, faltan {REGLA_DIAS_AL_PLAZO} para el plazo de la regla.`, patron: "CAUSA.SIN" },
+    { tipo: "ESCENARIOS", nombre: "sin (contrafactual)", frase: `Sin la historia corta, el escenario central a corto plazo quedaría en {ESCENARIO_CENTRAL_CORTO}.`, patron: "CAUSA.SIN" },
+    { tipo: "REGLAS", nombre: "vigente desde el cierre", frase: `${R_PLAZO} vigente desde el cierre.`, patron: "CAUSA.DESDE" },
+  ];
+
+  it.each(EVASIONES)("$tipo · $nombre", ({ tipo, frase, patron }) => {
+    const r = correr(paqueteFicticio(tipo), FIJA[tipo], frase);
+    expect(r.ok).toBe(false);
+    expect(r.patrones).toContain(patron);
+    if (patron.startsWith("CAUSA.")) expect(r.motivos).toContain("CAUSA");
+  });
+
+  it("control positivo: «pero» sigue valiendo como enlace de contraste", () => {
+    expect(correr(paqueteFicticio("DIARIO"), `${D_ACC}, pero ${D_GAN}.`).ok).toBe(true);
+  });
+});
