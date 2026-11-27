@@ -14,9 +14,9 @@ const HASH_DIARIO_V4 = "ee6162ea6fbfefc03d026032c991450abb26d18b78d29478fc3d2596
 describe("prompt DIARIO v5", () => {
   const texto = PROMPTS.DIARIO.texto;
 
-  it("es la versión v5 (con otro hash que la v4), y REGLAS y ESCENARIOS siguen en v3 con el mismo hash", () => {
-    expect(VERSIONES_PROMPT.DIARIO).toBe("resumen-diario-v5");
-    expect(PROMPTS.DIARIO.version).toBe("resumen-diario-v5");
+  it("el DIARIO vigente es v6 (con otro hash que la v4; la v5 sigue en el historial), y REGLAS y ESCENARIOS siguen en v3 con el mismo hash", () => {
+    expect(VERSIONES_PROMPT.DIARIO).toBe("resumen-diario-v6");
+    expect(PROMPTS.DIARIO.version).toBe("resumen-diario-v6");
     expect(PROMPTS.DIARIO.hash).not.toBe(HASH_DIARIO_V4);
     expect(PROMPTS.REGLAS.version).toBe("resumen-reglas-v3");
     expect(PROMPTS.REGLAS.hash).toBe(HASH_REGLAS_V3);

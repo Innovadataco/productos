@@ -22,8 +22,8 @@ const etiquetasObligatorias = (): readonly string[] =>
 describe("prompt DIARIO v4", () => {
   const texto = PROMPTS.DIARIO.texto;
 
-  it("es la versión v4, y REGLAS y ESCENARIOS siguen en v3 con el mismo hash", () => {
-    expect(VERSIONES_PROMPT.DIARIO).toBe("resumen-diario-v5");
+  it("el DIARIO vigente (v6) conserva lo de v4, y REGLAS y ESCENARIOS siguen en v3 con el mismo hash", () => {
+    expect(VERSIONES_PROMPT.DIARIO).toBe("resumen-diario-v6");
     expect(PROMPTS.REGLAS.version).toBe("resumen-reglas-v3");
     expect(PROMPTS.REGLAS.hash).toBe(HASH_REGLAS_V3);
     expect(PROMPTS.ESCENARIOS.version).toBe("resumen-escenarios-v3");
@@ -38,8 +38,9 @@ describe("prompt DIARIO v4", () => {
     expect(minusculas).toContain("obligatorio falso");
   });
 
-  it("pide de una a cuatro frases, y no seis", () => {
-    expect(texto).toContain("Escriba entre una y cuatro frases");
+  it("pide una o dos frases, y no seis", () => {
+    expect(texto).toContain("Escriba una o dos frases");
+    expect(texto).not.toContain("entre una y cuatro frases");
     expect(texto).not.toContain("entre una y seis frases");
   });
 

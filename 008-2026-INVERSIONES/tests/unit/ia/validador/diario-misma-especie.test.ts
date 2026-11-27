@@ -1,7 +1,7 @@
 /**
  * DIARIO, frase con dos datos de una especie (defecto del vocabulario): el modelo escribió «de la especie de la especie»
  * y «la misma especie», y la salida salió RECHAZADA por IDIOMA.VOCABULARIO porque «misma» no está en el vocabulario (a
- * propósito: abriría tres huecos). El arreglo es del PROMPT (v5): un dato de especie por frase, con un molde por dato.
+ * propósito: abriría tres huecos). El arreglo es del PROMPT (v5, afinado en v6): un dato de especie por frase, con un molde por dato.
  * Valores y especie inventados; el validador no cambia.
  */
 import { describe, expect, it } from "vitest";
@@ -73,11 +73,11 @@ describe("el prompt DIARIO da un molde por dato de especie", () => {
     expect(texto).toContain(molde);
   });
 
-  it("pide un dato de especie por frase, dice que la etiqueta ya trae «de la especie» y prohíbe «misma» y «mismo»", () => {
-    expect(texto).toContain("Un solo dato de especie por frase");
+  it("pide un dato de especie por frase, dice que la etiqueta ya trae «de la especie» y no siembra «misma» ni «mismo»", () => {
+    expect(texto).toContain("escríbalo en una frase propia, sin otros datos");
     expect(texto).toContain("La etiqueta ya trae «de la especie»: no la repita");
-    expect(texto).toContain("abra otra frase con su molde");
-    expect(texto).toContain("No use «misma» ni «mismo»");
+    expect(texto).toContain("escriba otra frase con su molde");
+    expect(texto).not.toMatch(/\bmism[oa]s?\b/iu);
   });
 });
 

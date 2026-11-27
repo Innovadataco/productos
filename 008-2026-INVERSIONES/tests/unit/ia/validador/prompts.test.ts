@@ -33,12 +33,14 @@ const HISTORIAL: Readonly<Record<string, string>> = {
   "resumen-diario-v4": "ee6162ea6fbfefc03d026032c991450abb26d18b78d29478fc3d2596348b306c",
   // v5 del DIARIO: un molde por dato de especie, un dato por frase y sin «misma» (la v4 se conserva arriba).
   "resumen-diario-v5": "a96c22d73eb9035b05b6403a8b8d49b7744a164e6c8f37fd0ed237cebd8389a5",
+  // v6 del DIARIO: etiqueta sin referencia prohibida, moldes sin cerrar en «es», sin nombrar lo prohibido (hash por poner).
+  "resumen-diario-v6": "PENDIENTE",
 };
 
 /** Los límites del validador, como los dice el prompt (en palabras: el prompt no lleva dígitos). */
 const LIMITES_EN_PALABRAS: Readonly<Record<number, string>> = { 1: "una", 6: "seis", 280: "doscientos ochenta", 1200: "mil doscientos" };
-/** El DIARIO v4 dice los límites de SU parte (el código escribe el resto): de una a cuatro frases y hasta seiscientos caracteres. */
-const LIMITES_DIARIO_V4: readonly string[] = ["una", "cuatro", "doscientos ochenta", "seiscientos"];
+/** El DIARIO (v6) dice los límites de SU parte (el código escribe el resto): una o dos frases y hasta seiscientos caracteres. */
+const LIMITES_DIARIO: readonly string[] = ["una", "dos", "doscientos ochenta", "seiscientos"];
 const LIMITE_MS = 4613;
 
 describe("prompts versionados", () => {
@@ -89,7 +91,7 @@ describe("prompts versionados", () => {
   it.each(TIPOS_RESUMEN)("%s: dice los límites del validador, en palabras", (tipo) => {
     const texto = PROMPTS[tipo].texto;
     expect([LIMITES_SALIDA.minFrases, LIMITES_SALIDA.maxFrases, LIMITES_SALIDA.maxLargoFrase, LIMITES_SALIDA.maxLargoTotal]).toEqual([1, 6, 280, 1200]);
-    for (const palabras of tipo === "DIARIO" ? LIMITES_DIARIO_V4 : Object.values(LIMITES_EN_PALABRAS)) expect(texto).toContain(palabras);
+    for (const palabras of tipo === "DIARIO" ? LIMITES_DIARIO : Object.values(LIMITES_EN_PALABRAS)) expect(texto).toContain(palabras);
   });
 });
 
