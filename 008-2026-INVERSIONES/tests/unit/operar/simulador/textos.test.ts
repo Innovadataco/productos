@@ -93,8 +93,8 @@ describe("la regla, con lo que escribió en su plan", () => {
   it("de la especie: acción, cantidad, condición y nivel", () => {
     const r = regla({ instrumentoId: idDe(A), condicion: "CIERRE_SOBRE", nivel: D("4600.130000"), accion: "VENDER", cantidad: 41n });
     expect(textoRegla(r, A)).toBe("Su regla de FICTICIA-A dice: vender 41 si el cierre queda por encima de $ 4.600,13.");
-    expect(textoRegla({ ...r, condicion: "CIERRE_BAJO", nivel: D("4613.000001"), cantidad: 4613n }, A)).toBe(
-      "Su regla de FICTICIA-A dice: vender 4.613 si el cierre queda por debajo de $ 4.613,000001.",
+    expect(textoRegla({ ...r, condicion: "CIERRE_BAJO", nivel: D("4613.126"), cantidad: 4613n }, A)).toBe(
+      "Su regla de FICTICIA-A dice: vender 4.613 si el cierre queda por debajo de $ 4.613,13.",
     );
   });
 
@@ -130,12 +130,12 @@ describe("la regla, con lo que escribió en su plan", () => {
 
 describe("pesos en texto: exactos y con el mismo formato que la pantalla del plan", () => {
   it("sin punto flotante ni notación exponencial", () => {
-    expect(textoPesos(D("0.0000001"))).toBe("$ 0,0000001");
-    expect(textoPesos(D("99999999999999.999999"))).toBe("$ 99.999.999.999.999,999999");
-    expect(textoPesos(D("-6202.9244"))).toBe("−$ 6.202,9244");
+    expect(textoPesos(D("0.0000001"))).toBe("$ 0");
+    expect(textoPesos(D("99999999999999.999999"))).toBe("$ 100.000.000.000.000");
+    expect(textoPesos(D("-6202.9244"))).toBe("−$ 6.202,92");
   });
 
-  it("igual que precio() de la app en valores de hasta 6 decimales y 15 cifras", () => {
+  it("igual que precio() de la app (dos decimales como máximo) en valores de hasta 6 decimales y 15 cifras", () => {
     for (const v of ["4613.27", "4600.130000", "11.71", "461337.41", "0.000001", "823.19", "37911.47", "1237", "913711.4613"]) {
       expect(textoPesos(D(v)), v).toBe(precio(v));
     }

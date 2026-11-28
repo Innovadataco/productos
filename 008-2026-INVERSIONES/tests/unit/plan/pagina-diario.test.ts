@@ -55,7 +55,7 @@ describe("src/app/decisiones/page.tsx · sesión y base", () => {
   it("con la base caída muestra «No se pudo leer la base» y registra solo el código", async () => {
     leerDiario.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError("detalle con datos", { code: "P2024", clientVersion: "5.22.0" }));
     const raiz = await pantalla();
-    expect(texto(raiz.querySelector("h1"))).toBe("No se pudo leer la base de 008");
+    expect(texto(raiz.querySelector("h1"))).toBe("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[decisiones] no se pudo leer la base (código: P2024)");
   });
 

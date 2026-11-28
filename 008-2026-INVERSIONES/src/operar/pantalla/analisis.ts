@@ -19,6 +19,7 @@ import { obtenerResumen } from "@/tablero/datos";
 import type { Tablero } from "@/tablero/calculo";
 import { compararAnalisis } from "../analisis/comparar";
 import { portafolioDespues } from "../analisis/despues";
+import { tableroConPrecioActual } from "../analisis/precio-actual";
 import { escenariosAntesDespues, type EntradaEscenario } from "../analisis/escenarios";
 import type { AntesDespues, ComparacionAnalisis, ResumenEscenario } from "../analisis/tipos";
 
@@ -32,6 +33,8 @@ export interface PedidoAnalisis {
   readonly reglas: readonly ReglaParaAnalisis[];
   /** La caja del simulador: antes, la vigente (escrita por el dueño o la de A&V); después, con la orden y la comisión. */
   readonly caja: AntesDespues<Prisma.Decimal>;
+  /** El precio actual de trii Pro escrito para la especie operada, o null: el tablero la valora con él en lugar de su último cierre. */
+  readonly precioActual?: Prisma.Decimal | null;
 }
 
 export interface AnalisisSimulado {
@@ -70,7 +73,8 @@ async function escenarios(usuarioId: string, antes: EntradaEscenario, despues: E
 
 export async function analizarSimulacion(db: PrismaClient, pedido: PedidoAnalisis): Promise<AnalisisSimulado> {
   const { hoy, instrumentoId } = pedido;
-  const { tablero } = await obtenerResumen(db);
+  const { tablero: leido } = await obtenerResumen(db);
+  const tablero = pedido.precioActual == null ? leido : tableroConPrecioActual(leido, instrumentoId, pedido.precioActual);
   const historia = await leerEntradas(db, hoy);
   const base: EntradasAnalisis = { hoy, historia, tablero, decisiones: [] };
   const simulado = portafolioDespues({ tablero, historia }, instrumentoId, pedido.cantidadDespues);

@@ -67,7 +67,7 @@ describe("src/app/plan/page.tsx · sesión y base", () => {
   it("con la base caída muestra «No se pudo leer la base» y registra solo el código", async () => {
     leerVersiones.mockRejectedValueOnce(new Prisma.PrismaClientInitializationError("Can't reach postgresql://usuario:clave@host-privado:5438", "5.22.0", "P1001"));
     const raiz = await pantalla();
-    expect(texto(raiz.querySelector("h1"))).toBe("No se pudo leer la base de 008");
+    expect(texto(raiz.querySelector("h1"))).toBe("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[plan] no se pudo leer la base (código: P1001)");
   });
 
@@ -98,7 +98,7 @@ describe("la versión vigente, con cierres y distancia al nivel", () => {
     expect(a.slice(0, 6)).toEqual(["FICTA", "Cierre por encima de", "$ 1.200", "vender", "50", "sin plazo"]);
     expect(a[6]).toContain("$ 1.100 · 22-nov-2024");
     expect(a[6]).toContain("sin verificar");
-    expect(a.slice(7, 9)).toEqual(["a +9,1 % del nivel", "2"]);
+    expect(a.slice(7, 9)).toEqual(["por debajo del nivel de $ 1.200: al cierre le falta subir 9,09 % para tocarlo (la regla se cumple si cierra por encima)", "2"]);
     expect(celdas(fila(raiz, "FICTB")).slice(5, 8)).toEqual([
       "venció el 31-oct-2024", "$ 1.913 · 22-nov-2024verificado A&Vtraído el 14-ene-2027 a las 07:07 (hora de Colombia) · BVC por Yahoo", "tocada · cierre bajo el nivel",
     ]);

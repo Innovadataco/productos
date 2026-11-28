@@ -5,7 +5,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { CAJA_SIN_CERTIFICACION, SIN_CIERRE, textoCajaCertificada } from "@/app/operar/serializar-simulacion";
+import { Prisma } from "@prisma/client";
+import { AVISO_CAJA_AV_NEGATIVA, CAJA_ESCRITA, CAJA_SIN_CERTIFICACION, NOTA_ESCENARIOS_CON_PRECIO, NOTA_VALORACION_CON_PRECIO, SIN_CIERRE, textoCajaCertificada, textoPrecioEscrito } from "@/app/operar/serializar-simulacion";
 import { COMISIONISTAS_SIMULADOR, LADOS_SIMULADOR, ORIGEN_COMISION, TEXTOS_SIMULADOR, mensajeDeEstado } from "@/app/operar/textos-simulador";
 import { AYUDAS_TARIFA, ETIQUETAS_TARIFA, TEXTOS_TARIFAS, etiquetaDeCampo, mensajeTarifa } from "@/app/edicion/tarifas/textos-tarifas";
 import { ETIQUETA_TARIFA, textoComision } from "@/operar/simulador/textos";
@@ -19,7 +20,7 @@ const FUENTES = [
   "app/edicion/tarifas/FormularioTarifa.tsx", "app/edicion/tarifas/Informacion.tsx", "app/edicion/tarifas/textos-tarifas.ts", "app/edicion/tarifas/datos.ts", "app/edicion/tarifas/page.tsx",
   "app/api/operar/simular/route.ts", "app/api/operar/tarifas/route.ts",
   "operar/tarifa/control.ts", "operar/tarifa/vigente.ts", "operar/tarifa/pedido.ts", "operar/tarifa/leer.ts", "operar/tarifa/crear.ts", "operar/tarifa/parametros.ts",
-  "operar/pantalla/entrada.ts", "operar/pantalla/leer.ts", "operar/pantalla/frecuencia.ts", "operar/simulador/tarifa.ts",
+  "operar/pantalla/entrada.ts", "operar/pantalla/precio-actual.ts", "operar/analisis/precio-actual.ts", "operar/pantalla/leer.ts", "operar/pantalla/frecuencia.ts", "operar/simulador/tarifa.ts",
 ];
 
 const textos = (): string[] => [
@@ -28,7 +29,7 @@ const textos = (): string[] => [
   ...Object.values(TEXTOS_TARIFAS), ...Object.values(ETIQUETAS_TARIFA), ...Object.values(AYUDAS_TARIFA), ...CODIGOS.map(mensajeTarifa),
   ...["comisionista", "otrosCargos", "otrosCargos.2.valor", "x"].map(etiquetaDeCampo),
   ETIQUETA_TARIFA, textoComision({ estado: "TARIFA", lado: "VENTA", valor: tarifa().porcentaje, tarifa: tarifa({ comisionista: "AV" }) }),
-  CAJA_SIN_CERTIFICACION, SIN_CIERRE, textoCajaCertificada("2027-03-12"),
+  CAJA_SIN_CERTIFICACION, SIN_CIERRE, textoCajaCertificada("2027-03-12"), CAJA_ESCRITA, AVISO_CAJA_AV_NEGATIVA, NOTA_VALORACION_CON_PRECIO, NOTA_ESCENARIOS_CON_PRECIO, textoPrecioEscrito(new Prisma.Decimal("2345.5"), new Date(Date.UTC(2027, 2, 12))),
 ];
 
 describe("candado de lenguaje de O5 y de «¿Y si…?»", () => {

@@ -74,7 +74,7 @@ describe("src/app/operar/page.tsx", () => {
     datosDeOperar.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError("falló en postgresql://u:clave-secreta@h", { code: "P2021", clientVersion: "5.22.0" }));
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const html = renderToStaticMarkup(await PaginaOperar());
-    expect(html).toContain("No se pudo leer la base de 008");
+    expect(html).toContain("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledWith("[operar] no se pudo leer la base (código: P2021)");
     expect(JSON.stringify(registro.mock.calls)).not.toContain("clave-secreta");
   });
@@ -155,7 +155,7 @@ describe("la pantalla", () => {
       "Su regla de FICTICIA-B dice: vender 7 acciones si el cierre queda por debajo de $ 1.301,17. Hoy se cumple: el cierre del 16-mar-2027 fue de $ 1.237, por debajo del nivel. Plazo: sin plazo.",
     ]);
     expect(items(raiz, "t-cercanas")).toEqual([
-      "Su regla de FICTICIA-B dice: vender 13 acciones si el cierre queda por encima de $ 1.259,17. El cierre del 16-mar-2027 fue de $ 1.237: le falta subir 1,79 % para tocar su nivel. Plazo: hasta el 2-abr-2027.",
+      "Su regla de FICTICIA-B dice: vender 13 acciones si el cierre queda por encima de $ 1.259,17. El cierre del 16-mar-2027 fue de $ 1.237, por debajo del nivel de $ 1.259,17: al cierre le falta subir 1,79 % para tocarlo (la regla se cumple si cierra por encima). Plazo: hasta el 2-abr-2027.",
     ]);
     const resto = items(raiz, "t-resto");
     expect(resto).toHaveLength(4);

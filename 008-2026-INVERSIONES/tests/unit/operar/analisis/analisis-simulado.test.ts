@@ -156,7 +156,7 @@ describe("el valor de partida y la variación en la pantalla", () => {
   it("cada percentil lleva su variación en % frente al antes", () => {
     expect(vista.escenarios[2]).toEqual({ titulo: "A 12 meses (p5 · p50 · p95)", antes: "$ 37.911 · $ 47.114 · $ 57.311", despues: "$ 35.717 · $ 47.391 · $ 59.138", variacion: "−5,79 % · +0,59 % · +3,19 %" });
     expect(vista.escenarios[3]?.variacion).toBeUndefined();
-    expect(variacionEs(4613.27, 4613.27)).toBe("0 %");
+    expect(variacionEs(4613.27, 4613.27)).toBe("0,00 %");
     expect(variacionEs(0, 37.11)).toBe("sin dato");
   });
 

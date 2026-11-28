@@ -16,7 +16,7 @@ export function Encabezado({ actual, soloLectura = false }: PropsEncabezado) {
   return (
     <header className="top plan-top">
       <div className="wrap fila-top">
-        <div className="marca"><span className="sello" aria-hidden="true">008</span>Mi portafolio{soloLectura ? <>{" "}<MarcaSoloLectura /></> : null}</div>
+        <div className="marca"><span className="sello" aria-hidden="true">Inv</span>Inversiones · Mi portafolio{soloLectura ? <>{" "}<MarcaSoloLectura /></> : null}</div>
         <nav aria-label="Secciones">
           <ul className="secciones">
             {seccionesVisibles(soloLectura).map((s) => (

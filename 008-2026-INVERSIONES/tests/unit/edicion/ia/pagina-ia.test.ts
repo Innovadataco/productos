@@ -86,7 +86,7 @@ describe("/edicion/ia", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { Prisma } = await import("@prisma/client");
     datosEdicionIa.mockRejectedValue(new Prisma.PrismaClientInitializationError("sin base ficticia", "5.22.0"));
-    expect(texto(await pantalla(PaginaIa(consulta())))).toContain("No se pudo leer la base de 008");
+    expect(texto(await pantalla(PaginaIa(consulta())))).toContain("No se pudo leer la base de Inversiones");
   });
 });
 

@@ -61,7 +61,7 @@ function Fila({ regla, conCierres }: { readonly regla: ReglaVista; readonly conC
       {conCierres ? (
         <>
           <CeldaCierre regla={regla} />
-          <td className="texto">{textoNivel(regla.frente ?? { estado: "SIN_NIVEL" })}</td>
+          <td className="texto">{textoNivel(regla.frente ?? { estado: "SIN_NIVEL" }, regla)}</td>
         </>
       ) : null}
       <td className="num"><Decisiones regla={regla} /></td>

@@ -73,12 +73,72 @@ describe("Simulador", () => {
     expect(texto(m.contenedor)).toContain(T.CALCULANDO);
     const [url, init] = fetchFalso.mock.calls[0]!;
     expect(url).toBe("/api/operar/simular");
-    expect(JSON.parse(String(init.body))).toEqual({ instrumentoId: "id-ficticia-b", lado: "VENDER", cantidad: "7", precioLimite: "11,71", comisionista: "AV", saldoComisionista: "37.911,47" });
+    expect(JSON.parse(String(init.body))).toEqual({ instrumentoId: "id-ficticia-b", lado: "VENDER", cantidad: "7", precioLimite: "11,71", comisionista: "AV", saldoComisionista: "37.911,47", precioActual: "" });
     await responder({ ok: true, vista: VISTA }, 200);
     const todo = texto(m.contenedor);
     for (const t of ["$ 13.839,81", "$ 49,9523", "Comisión (de su tarifa)", "antes: $ 37.911,47", "después: $ 24.021,7077", "Caja certificada", "Su regla de FICTICIA-A dice", "Aviso ficticio.", "Nota ficticia."]) expect(todo).toContain(t);
     for (const t of [T.ANALISIS, "Peso de FICTICIA-A", "después: 52,37 %", "A 12 meses (p5 · p50 · p95)", T.APARECEN, "concentración alta en FICTICIA-A", "Frase ficticia del análisis.", "la IA lo redactará", T.PARTIDA, "Caja (parte fija, sin rendimiento)", "antes: $ 9.372", "después: $ 4.745", "variación: −5,79 % · +0,59 % · +3,19 %", "Nota ficticia de la caja de los escenarios."]) expect(todo).toContain(t);
     expect(m.contenedor.querySelector(".op-sim-operada th")?.textContent).toBe("FICTICIA-A");
+  });
+
+  it("el precio actual de trii Pro: un campo opcional con su ayuda, que viaja en el pedido tal como se escribió", async () => {
+    await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+    expect(T.PRECIO_ACTUAL).toBe("Precio actual en trii Pro ($, opcional)");
+    expect(T.AYUDA_PRECIO_ACTUAL).toBe(
+      "El precio que ve en trii Pro, como en la ficha (2.345,5), sin signo $. Si lo escribe, la especie se valora a ese precio y no al último cierre; no se guarda. Hasta un millón de pesos y dos decimales.",
+    );
+    expect(texto(m.contenedor.querySelector("label[for=sim-precio-actual]"))).toBe(T.PRECIO_ACTUAL);
+    expect(texto(m.contenedor.querySelector("#sim-ayuda-precio-actual"))).toBe(T.AYUDA_PRECIO_ACTUAL);
+    const campo = control<HTMLInputElement>("sim-precio-actual");
+    expect(campo.getAttribute("aria-describedby")).toBe("sim-ayuda-precio-actual");
+    expect(campo.value).toBe("");
+    await cambiar(campo, "2.345,5");
+    await enviar();
+    expect(JSON.parse(String(fetchFalso.mock.calls[0]![1].body))).toMatchObject({ precioActual: "2.345,5" });
+  });
+
+  describe("los campos con error", () => {
+    const IDS: Readonly<Record<string, string>> = { cantidad: "sim-cantidad", precioLimite: "sim-precio", saldoComisionista: "sim-saldo", precioActual: "sim-precio-actual" };
+    const invalido = (id: string) => control(id).getAttribute("aria-invalid");
+    const describe_ = (id: string) => (control(id).getAttribute("aria-describedby") ?? "").split(" ");
+
+    it("el campo que la ruta rechaza lleva aria-invalid y su descripción incluye el mensaje de error, además de su ayuda", async () => {
+      await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+      await enviar();
+      await responder({ error: "x", campos: ["precioActual"] }, 400);
+      const alerta = m.contenedor.querySelector<HTMLElement>(".op-sim-errores")!;
+      expect(alerta.id).not.toBe("");
+      expect(invalido("sim-precio-actual")).toBe("true");
+      expect(describe_("sim-precio-actual")).toEqual(["sim-ayuda-precio-actual", alerta.id]);
+      for (const id of ["sim-cantidad", "sim-precio", "sim-saldo"]) expect(invalido(id), id).toBeNull();
+      expect(describe_("sim-saldo")).toEqual(["sim-ayuda-saldo"]);
+    });
+
+    it("con varios campos, cada uno queda marcado y los demás no", async () => {
+      await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+      await enviar();
+      await responder({ error: "x", campos: ["cantidad", "precioLimite", "saldoComisionista", "precioActual", "inventado"] }, 400);
+      for (const id of Object.values(IDS)) expect(invalido(id), id).toBe("true");
+      expect(describe_("sim-cantidad")).toEqual(["sim-ayuda", m.contenedor.querySelector(".op-sim-errores")!.id]);
+    });
+
+    it("al volver a enviar, o con un resultado, las marcas se quitan", async () => {
+      await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+      await enviar();
+      await responder({ error: "x", campos: ["precioActual"] }, 400);
+      await enviar();
+      expect(invalido("sim-precio-actual")).toBeNull();
+      expect(describe_("sim-precio-actual")).toEqual(["sim-ayuda-precio-actual"]);
+      await responder({ ok: true, vista: VISTA }, 200);
+      expect(invalido("sim-precio-actual")).toBeNull();
+    });
+
+    it("un error sin campos (sesión, demasiadas, fallo) no marca ninguno", async () => {
+      await m.pintar(createElement(Simulador, { especies: ESPECIES }));
+      await enviar();
+      await responder("no es json", 500);
+      for (const id of Object.values(IDS)) expect(invalido(id), id).toBeNull();
+    });
   });
 
   it("sin reglas ni avisos, y sin valor de comisión, lo dice", async () => {

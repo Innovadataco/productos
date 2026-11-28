@@ -26,9 +26,9 @@ const DESLIZA = "Deslice la tabla hacia los lados para ver todas las columnas.";
 
 /** Las palabras de la sección, en corto, para la familia (revisión a11y-architect de C6b). Informan; no recomiendan nada. */
 const GLOSARIO: readonly (readonly [string, string])[] = [
-  ["Fecha ex", "Según la regla que usa 008 (por verificar), el dividendo es de quien tenía las acciones al cierre del día anterior a esta fecha."],
+  ["Fecha ex", "Según la regla que usa Inversiones (por verificar), el dividendo es de quien tenía las acciones al cierre del día anterior a esta fecha."],
   ["Tenencia", "Las acciones de la especie que había, contadas por fecha de operación."],
-  ["Bruto", "El valor por acción del decreto por la tenencia, antes de cualquier descuento. Es una estimación de 008."],
+  ["Bruto", "El valor por acción del decreto por la tenencia, antes de cualquier descuento. Es una estimación de Inversiones."],
   ["Neto", "Lo que pagó Trii, según los archivos cargados."],
   ["Cuota", "Un decreto puede pagarse en varias partes; cada cuota tiene su fecha ex y su fecha de pago."],
   ["Revisar", "Algo no cuadra entre los decretos y lo que hay cargado; al lado dice qué."],
@@ -198,7 +198,7 @@ export function Decretos({ d }: { readonly d: DecretosVista }) {
         <h2 id="t-decretos">Dividendos decretados</h2>
         <p className="do-lead">
           Los decretos que registra el dueño desde la página oficial de la SFC o de la BVC, y su cruce con lo que pagó Trii.
-          El bruto es una estimación de 008, no el extracto.
+          El bruto es una estimación de Inversiones, no el extracto.
         </p>
         <dl className="do-glosario">
           {GLOSARIO.map(([termino, explicacion]) => <Termino key={termino} termino={termino} explicacion={explicacion} />)}

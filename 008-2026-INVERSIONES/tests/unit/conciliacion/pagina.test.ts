@@ -64,7 +64,7 @@ describe("src/app/conciliacion/page.tsx · sesión y base", () => {
   it("con la base caída muestra «No se pudo leer la base» y registra solo el código, nunca el mensaje", async () => {
     cortesDisponibles.mockRejectedValueOnce(new Prisma.PrismaClientInitializationError("Can't reach postgresql://usuario:clave@host-privado:5438", "5.22.0", "P1001"));
     const raiz = await pantalla();
-    expect(texto(raiz.querySelector("h1"))).toBe("No se pudo leer la base de 008");
+    expect(texto(raiz.querySelector("h1"))).toBe("No se pudo leer la base de Inversiones");
     expect(registro).toHaveBeenCalledTimes(1);
     expect(registro).toHaveBeenCalledWith("[conciliacion] no se pudo leer la base (código: P1001)");
     // react-reviewer BAJO: la pantalla de base caída la ve el dueño: sin comandos.

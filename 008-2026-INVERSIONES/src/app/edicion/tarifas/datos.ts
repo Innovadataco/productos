@@ -58,7 +58,7 @@ export function textoControl(c: ControlTarifa, comisionista: Comisionista, lado:
 }
 
 /** El `vigenteDesde` de la versión siguiente del mismo comisionista y lado (la más próxima posterior); null si no hay. */
-function siguienteDesde(historia: readonly TarifaLeida[], t: TarifaSimulada): Date | null {
+export function siguienteDesde(historia: readonly TarifaLeida[], t: TarifaSimulada): Date | null {
   const posteriores = historia.filter((h) => h.comisionista === t.comisionista && h.lado === t.lado && h.vigenteDesde.getTime() > t.vigenteDesde.getTime());
   return posteriores.reduce<Date | null>((min, h) => (min === null || h.vigenteDesde < min ? h.vigenteDesde : min), null);
 }
