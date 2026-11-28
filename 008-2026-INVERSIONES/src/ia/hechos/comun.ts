@@ -98,8 +98,12 @@ export function borrador<C extends ClaveHecho>(clave: C, valor: string, fuente: 
 export function cerrarPaquete<T extends TipoResumen>(
   tipo: T, hoy: DiaIso, partes: readonly Parte<ClaveDe<T>>[], versionesCalculo: Readonly<Record<string, string>> = {}, avisosPrevios: readonly string[] = [],
 ): PaqueteHechos<T> {
-  const { hechos, recortados } = numerarGrupos(tipo, partes.flatMap((p) => p.grupos));
-  const propios = ordenarAvisos([...partes.flatMap((p) => p.avisos), ...(recortados > 0 ? (["HECHOS_RECORTADOS"] as const) : [])]);
+  const { hechos, recortados, obligatoriosRecortados } = numerarGrupos(tipo, partes.flatMap((p) => p.grupos));
+  const propios = ordenarAvisos([
+    ...partes.flatMap((p) => p.avisos),
+    ...(recortados > 0 ? (["HECHOS_RECORTADOS"] as const) : []),
+    ...(obligatoriosRecortados > 0 ? (["OBLIGATORIOS_RECORTADOS"] as const) : []),
+  ]);
   const avisos = [...new Set([...avisosPrevios, ...propios])];
   return construirPaquete({ tipo, hoy, versionesCalculo: { ...versionesCalculo, hechos: VERSION_ARMADORES }, avisos, hechos });
 }

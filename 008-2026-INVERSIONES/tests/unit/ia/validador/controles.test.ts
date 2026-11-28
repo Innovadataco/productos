@@ -108,7 +108,9 @@ describe("citas y hechos", () => {
   });
 
   it("un obligatorio sin citar y una frase sin ninguna cita son HECHO_NO_CITADO", () => {
-    expect(hallazgos(p, "La ganancia total bajó a {GANANCIA_TOTAL}.")).toContain("HECHO_NO_CITADO.OBLIGATORIO");
+    // En el DIARIO el código escribe los obligatorios que faltan (T4): el rechazo se prueba en REGLAS, donde no lo hace.
+    expect(hallazgos(paqueteFicticio("REGLAS"), FRASES_VALIDAS.REGLAS[1] as string)).toContain("HECHO_NO_CITADO.OBLIGATORIO");
+    expect(hallazgos(p, "La ganancia total bajó a {GANANCIA_TOTAL}.")).not.toContain("HECHO_NO_CITADO.OBLIGATORIO");
     expect(hallazgos(p, VA, "El portafolio tuvo un día tranquilo.")).toContain("HECHO_NO_CITADO.FRASE_SIN_CITA");
   });
 
@@ -142,7 +144,7 @@ describe("marcas: dirección, cercanía y «hoy»", () => {
 
   it("cada palabra va a la cita más cercana de su cláusula", () => {
     expect(validarSalida(salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES}, la ganancia total bajó a {GANANCIA_TOTAL}."), p).ok).toBe(true);
-    expect(validarSalida(salidaDe(p, "El valor de las acciones {VALOR_ACCIONES} subió por la ganancia total {GANANCIA_TOTAL}."), p).ok).toBe(true);
+    expect(validarSalida(salidaDe(p, "El valor de las acciones {VALOR_ACCIONES} subió, la ganancia total es {GANANCIA_TOTAL}."), p).ok).toBe(true);
     expect(validarSalida(salidaDe(p, VA, "La ganancia total, {GANANCIA_TOTAL}, bajó."), p).ok).toBe(true);
   });
 
@@ -170,12 +172,12 @@ describe("marcas: dirección, cercanía y «hoy»", () => {
     expect(validarSalida(salidaDe(p, VA, "{ESPECIE_NOMBRE}: hoy el peso de la especie en el portafolio se mantuvo en {PESO_ESPECIE}."), p).ok).toBe(true);
     expect(hallazgos(p, "Hoy el valor de las acciones subió a {VALOR_ACCIONES}.")).toContain("FRESCURA.HOY");
     const deHoy = paqueteFicticio("DIARIO", { VALOR_ACCIONES: { frescura: "HOY" } });
-    expect(validarSalida(salidaDe(deHoy, "Hoy el valor de las acciones subió a {VALOR_ACCIONES}."), deHoy).ok).toBe(true);
+    expect(validarSalida(salidaDe(deHoy, "Hoy el valor de las acciones subió a {VALOR_ACCIONES}.", FRASES_VALIDAS.DIARIO[1] as string), deHoy).ok).toBe(true);
   });
 
   it("la dirección cambiada en el paquete cambia el veredicto (la marca sale del paquete, no del texto)", () => {
     const baja = paqueteFicticio("DIARIO", { VALOR_ACCIONES: { direccion: "BAJA" } });
     expect(hallazgos(baja, VA)).toContain("DIRECCION.SUBE_VERBO");
-    expect(validarSalida(salidaDe(baja, "El valor de las acciones bajó a {VALOR_ACCIONES}."), baja).ok).toBe(true);
+    expect(validarSalida(salidaDe(baja, "El valor de las acciones bajó a {VALOR_ACCIONES}.", FRASES_VALIDAS.DIARIO[1] as string), baja).ok).toBe(true);
   });
 });

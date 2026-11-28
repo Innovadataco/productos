@@ -112,9 +112,9 @@ describe("plantilla sin IA", () => {
     expect(() => salidaDePlantilla({ ...paqueteFicticio("DIARIO") })).toThrow(ErrorValidador);
   });
 
-  it("si los obligatorios no caben, la plantilla no pasa los límites y el validador la rechaza (HECHO_NO_CITADO)", () => {
+  it("si los obligatorios no caben, la plantilla no pasa los límites y el validador la rechaza con exactamente esos códigos", () => {
     const prng = crearPrng(4_613);
-    let rechazos = 0;
+    const rechazos = new Map<string, number>();
     for (let i = 0; i < 113; i += 1) {
       const entrada = entradaAlAzar(prng, "DIARIO");
       const paquete = construirPaquete({ ...entrada, hechos: entrada.hechos.map((h) => ({ ...h, obligatorio: true })) });
@@ -122,10 +122,12 @@ describe("plantilla sin IA", () => {
       expect(frases.length).toBeLessThanOrEqual(LIMITES_SALIDA.maxFrases);
       const resultado = resumenSinIa(paquete);
       if (resultado.ok) continue;
-      expect(resultado.motivos).toEqual(["HECHO_NO_CITADO"]);
-      rechazos += 1;
+      // Lo que la plantilla no alcanzó a citar, el código lo escribe en otras frases (T4): el conjunto pasa de los límites.
+      const patrones = resultado.hallazgos.map((h) => h.patron).sort().join("|");
+      rechazos.set(patrones, (rechazos.get(patrones) ?? 0) + 1);
     }
-    expect(rechazos).toBeGreaterThan(0);
+    // Con la semilla fija: 13 pasan solo el total de caracteres y 17 pasan también el máximo de frases. Ninguna otra salida.
+    expect(Object.fromEntries(rechazos)).toEqual({ "LONGITUD.TOTAL": 13, "LONGITUD.FRASES|LONGITUD.TOTAL": 17 });
   });
 
   it.each(TIPOS_RESUMEN)("%s: paquetes al azar con semilla (con el tope de obligatorios) pasan el mismo validador", (tipo) => {

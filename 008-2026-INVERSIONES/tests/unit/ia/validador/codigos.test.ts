@@ -10,10 +10,11 @@ import { AVISOS } from "@/ia/validador/resumen";
 import { AVISO } from "@/proyecciones/tipos";
 
 describe("códigos del validador", () => {
-  it("son exactamente los catorce del plan, en su orden, y están congelados", () => {
+  it("son exactamente los quince del plan, en su orden, y están congelados", () => {
     expect(CODIGOS_VALIDADOR).toEqual([
       "SALIDA_INVALIDA", "LONGITUD", "CIFRA_SUELTA", "CIFRA_EN_PALABRAS", "HECHO_DESCONOCIDO", "HECHO_NO_CITADO",
       "ETIQUETA_NO_COINCIDE", "DIRECCION_CONTRADICE", "RECOMENDACION", "PREDICCION", "TRATO", "IDIOMA", "FORMATO", "RENDER_CIFRA",
+      "CAUSA",
     ]);
     expect(Object.isFrozen(CODIGOS_VALIDADOR)).toBe(true);
     expect(Object.isFrozen(CODIGOS_ERROR_VALIDADOR)).toBe(true);

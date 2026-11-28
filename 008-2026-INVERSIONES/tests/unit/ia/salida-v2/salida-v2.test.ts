@@ -51,13 +51,13 @@ describe("el esquema salida-v2", () => {
     expect(JSON.stringify(ESQUEMA_SALIDA)).not.toMatch(/minLength|maxLength/);
   });
 
-  it("los prompts (v3, sobre la misma salida) y el validador son de la versión v2, y el prompt pide segmentos, no citas en la prosa", () => {
+  it("los prompts (v3, sobre la misma salida) y el validador son de la versión v2 y v3 del validador, y el prompt pide segmentos, no citas en la prosa", () => {
     for (const tipo of TIPOS_RESUMEN) {
-      expect(VERSIONES_PROMPT[tipo]).toMatch(/-v3$/);
+      expect(VERSIONES_PROMPT[tipo]).toMatch(tipo === "DIARIO" ? /-v7$/ : /-v3$/);
       expect(PROMPTS[tipo].texto).toContain("segmentos");
       expect(PROMPTS[tipo].texto).not.toMatch(/\{H[0-9]{2}\}/);
     }
-    expect(VERSION_VALIDADOR).toBe("validador-v2");
+    expect(VERSION_VALIDADOR).toBe("validador-v3");
   });
 });
 
@@ -108,12 +108,13 @@ describe("validarSalida · salida-v2", () => {
 
   it("publica la salida que antes caía en FRASE_SIN_CITA: el código intercala la presentación del hecho", () => {
     const id = idDe(paquete, "VALOR_ACCIONES");
-    const r = validarSalida(cruda([{ segmentos: [{ texto: "El valor de las acciones subió a" }, { ref: id }, { texto: "." }] }]), paquete);
+    const especie = [{ ref: idDe(paquete, "ESPECIE_NOMBRE") }, { texto: ": el valor de la especie subió a" }, { ref: idDe(paquete, "VALOR_ESPECIE") }, { texto: "." }];
+    const r = validarSalida(cruda([{ segmentos: [{ texto: "El valor de las acciones subió a" }, { ref: id }, { texto: "." }] }, { segmentos: especie }]), paquete);
     expect(r.ok ? [] : r.hallazgos).toEqual([]);
     if (!r.ok) return;
     const presentacion = paquete.hechos.find((h) => h.id === id)?.presentacion as string;
-    expect(r.resumen.texto).toBe(`El valor de las acciones subió a ${presentacion}.`);
-    expect(r.resumen.citados).toEqual([id]);
+    expect(r.resumen.frases[0]?.texto).toBe(`El valor de las acciones subió a ${presentacion}.`);
+    expect(r.resumen.citados).toContain(id);
   });
 
   it("la forma vieja da SALIDA_INVALIDA", () => {

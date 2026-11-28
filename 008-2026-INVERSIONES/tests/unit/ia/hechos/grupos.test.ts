@@ -130,7 +130,7 @@ describe("numerarGrupos", () => {
   });
 
   it("sin grupos no hay hechos (el paquete, después, da SIN_HECHOS)", () => {
-    expect(numerarGrupos("REGLAS", [])).toEqual({ hechos: [], recortados: 0 });
+    expect(numerarGrupos("REGLAS", [])).toEqual({ hechos: [], recortados: 0, obligatoriosRecortados: 0 });
   });
 
   it("no toca los grupos que recibe", () => {

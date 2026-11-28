@@ -5,12 +5,14 @@
  * construido, el aviso fijo y las cifras usadas. El paquete tiene que ser el mismo objeto que salió de
  * `construirPaquete` (si no, ErrorValidador: es un defecto del código, no del modelo). Nunca lanza por la salida cruda.
  *
+ * Los obligatorios del DIARIO que el modelo no cita los escribe el código y se componen con su salida (`obligatorias.ts`).
+ *
  * La salida es `salida-v2` (segmentos de texto y refs): `leerSalida` arma el texto con la cita de cada ref; la forma
  * vieja es SALIDA_INVALIDA.
  *
  * Controles por frase, sobre el texto en NFC: caracteres y forma (CIFRA_SUELTA, IDIOMA, FORMATO), cifras en palabras,
  * citas (HECHO_DESCONOCIDO, HECHO_NO_CITADO), etiquetas y sujeto (ETIQUETA_NO_COINCIDE),
- * marcas (DIRECCION_CONTRADICE), recomendación, predicción, trato e idioma (también el vocabulario cerrado: toda
+ * marcas (DIRECCION_CONTRADICE), recomendación, predicción, trato, causa (CAUSA: «por», «desde», «con» y los conectores de causa) e idioma (también el vocabulario cerrado: toda
  * palabra fuera de él rechaza, `vocabulario.ts`); después del render, el largo (LONGITUD), la
  * palabra repetida (FORMATO) y el cotejo de cada número contra el paquete (RENDER_CIFRA). De la salida entera: el número
  * de frases, el largo total y los hechos obligatorios.
@@ -21,12 +23,15 @@ import { revisarCaracteres } from "./caracteres";
 import { CODIGOS_VALIDADOR, ErrorValidador, LIMITES_SALIDA, type CodigoValidador } from "./codigos";
 import { cotejarCifras } from "./cotejo";
 import { revisarEtiquetas } from "./etiquetas";
+import { revisarEtiquetasSinCita } from "./etiqueta-sin-cita";
 import { esNombre, hechosPorId, type HechosPorId } from "./hechos";
 import { leerSalida, type FraseLeida } from "./leer";
 import { revisarMarcas } from "./marcas";
+import { aportaElModelo, componerConObligatorias, escribeElCodigo } from "./obligatorias";
 import { coincidenciasEn, prepararTexto, type Patron } from "./patron";
 import { esNumeroFundido } from "./numeros";
 import { palabrasFueraDelVocabulario } from "./vocabulario";
+import { PATRONES_CAUSA } from "./patrones-causa";
 import { PATRONES_CIFRA_EN_PALABRAS, PATRONES_IDIOMA, PATRONES_SIN_DATO } from "./patrones-lengua";
 import { PATRONES_PREDICCION, PATRONES_RECOMENDACION, PATRONES_TRATO } from "./patrones-redaccion";
 import { renderizarFrase } from "./render";
@@ -41,6 +46,7 @@ const LISTAS: readonly (readonly [CodigoValidador, readonly Patron[]])[] = [
   ["PREDICCION", PATRONES_PREDICCION],
   ["TRATO", PATRONES_TRATO],
   ["IDIOMA", PATRONES_IDIOMA],
+  ["CAUSA", PATRONES_CAUSA],
 ];
 
 /** La misma palabra dos veces seguidas en el texto renderizado («190 días días»). */
@@ -70,7 +76,9 @@ function analizarFrase(frase: FraseLeida, paquete: PaqueteHechos, porId: HechosP
   for (const h of revisarCaracteres(frase.texto)) anotar(h.codigo, h.patron);
   const conocidas = revisarCitas(texto, porId, anotar);
   const preparado = prepararTexto(texto);
-  const atribucion = atribuir(clausulasDe(preparado.minusculas), (id) => porId.has(id) && !esNombre(porId.get(id)));
+  const clausulas = clausulasDe(preparado.minusculas);
+  const atribucion = atribuir(clausulas, (id) => porId.has(id) && !esNombre(porId.get(id)));
+  for (const patron of revisarEtiquetasSinCita(clausulas, paquete)) anotar("ETIQUETA_NO_COINCIDE", patron);
   for (const h of revisarEtiquetas(atribucion, porId, paquete.tipo, new Set(conocidas))) anotar(h.codigo, h.patron);
   for (const h of revisarMarcas(preparado, atribucion, porId)) anotar(h.codigo, h.patron);
   for (const [codigo, patrones] of LISTAS) for (const id of coincidenciasEn(preparado, patrones)) anotar(codigo, id);
@@ -106,11 +114,18 @@ export function validarSalida<T extends TipoResumen>(salidaCruda: unknown, paque
   };
   const porId = hechosPorId(paquete);
   const { minFrases, maxFrases, maxLargoTotal } = LIMITES_SALIDA;
-  if (leida.frases.length < minFrases || leida.frases.length > maxFrases) anotarEn(null)("LONGITUD", "LONGITUD.FRASES");
-  const analizadas = leida.frases.map((frase, i) => analizarFrase(frase, paquete, porId, anotarEn(i)));
+  // En los tipos cuyos obligatorios escribe el código, la salida se compone con esas frases (`obligatorias.ts`); el modelo
+  // tiene que traer al menos una frase propia que aporte (cite un hecho que no sea obligatorio), y el conjunto no pasa del máximo.
+  const { frases } = componerConObligatorias(paquete, leida);
+  const delCodigoEscribe = escribeElCodigo(paquete.tipo);
+  const sinFraseDelModelo = delCodigoEscribe && leida.frases.length < minFrases;
+  if (frases.length < minFrases || frases.length > maxFrases || sinFraseDelModelo) anotarEn(null)("LONGITUD", "LONGITUD.FRASES");
+  const analizadas = frases.map((frase, i) => analizarFrase(frase, paquete, porId, anotarEn(i)));
   if (analizadas.reduce((total, f) => total + f.largo, 0) > maxLargoTotal) anotarEn(null)("LONGITUD", "LONGITUD.TOTAL");
   const citados = new Set(analizadas.flatMap((f) => f.resumen.citados));
   if (paquete.hechos.some((h) => h.obligatorio && !citados.has(h.id))) anotarEn(null)("HECHO_NO_CITADO", "HECHO_NO_CITADO.OBLIGATORIO");
+  // Última: una salida ya rechazada por otra causa conserva sus códigos; la que estaría bien pero no aporta nada, se rechaza.
+  if (hallazgos.length === 0 && delCodigoEscribe && !aportaElModelo(paquete, leida)) anotarEn(null)("LONGITUD", "LONGITUD.SIN_APORTE_DEL_MODELO");
   if (hallazgos.length > 0) return rechazo(hallazgos);
   return Object.freeze({ ok: true, resumen: armarResumen(paquete, analizadas.map((f) => f.resumen)) });
 }

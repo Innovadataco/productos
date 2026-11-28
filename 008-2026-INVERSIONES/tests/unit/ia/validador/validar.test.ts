@@ -81,7 +81,8 @@ describe("un rechazo por cada código", () => {
     // Las palabras de cifra, recomendación, predicción y tú están además fuera del vocabulario cerrado (IDIOMA).
     ["CIFRA_EN_PALABRAS", () => salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES} en marzo."), ["IDIOMA"]],
     ["HECHO_DESCONOCIDO", () => salida(frase(p, VALOR_ACCIONES), { texto: "Las comisiones pagadas suman {H99}.", hechos: ["H99"] }), ["HECHO_NO_CITADO", "RENDER_CIFRA"]],
-    ["HECHO_NO_CITADO", () => salidaDe(p, ESPECIE, GANANCIA, ATRASADAS), []],
+    // Un obligatorio sin citar en el DIARIO lo escribe el código (T4): aquí el rechazo es una frase sin cita.
+    ["HECHO_NO_CITADO", () => salida(frase(p, VALOR_ACCIONES), { texto: "El portafolio tuvo un día tranquilo.", hechos: [] }), ["IDIOMA"]],
     ["ETIQUETA_NO_COINCIDE", () => salidaDe(p, VALOR_ACCIONES, "Las comisiones pagadas bajaron a {GANANCIA_TOTAL}."), []],
     ["DIRECCION_CONTRADICE", () => salidaDe(p, VALOR_ACCIONES, "La ganancia total subió a {GANANCIA_TOTAL}."), []],
     ["RECOMENDACION", () => salidaDe(p, "El valor de las acciones subió a {VALOR_ACCIONES}, compre."), ["IDIOMA"]],
@@ -89,6 +90,7 @@ describe("un rechazo por cada código", () => {
     ["TRATO", () => salidaDe(p, "Tu valor de las acciones subió a {VALOR_ACCIONES}."), ["IDIOMA"]],
     ["IDIOMA", () => salidaDe(p, "The valor de las acciones subió a {VALOR_ACCIONES}."), []],
     ["FORMATO", () => salidaDe(p, "El valor de las acciones subió a **{VALOR_ACCIONES}**."), []],
+    ["CAUSA", () => salidaDe(p, "El valor de las acciones es {VALOR_ACCIONES} por el mercado."), []],
   ];
 
   it("la tabla cubre todos los códigos salvo RENDER_CIFRA (que tiene su prueba con el render cambiado)", () => {

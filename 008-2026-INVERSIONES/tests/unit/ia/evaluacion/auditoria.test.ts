@@ -1,7 +1,7 @@
 /**
  * El auditor de recomendaciones (E7): un detector INDEPENDIENTE del validador (listas y normalización propias) que se
  * pasa sobre lo PUBLICADO, para medir «cero recomendaciones que pasen el validador». Solo marca para revisión humana.
- * Control positivo con frases inventadas; cero marcas en las etiquetas del catálogo, en los avisos fijos y en las 40
+ * Control positivo con frases inventadas; cero marcas en las etiquetas del catálogo, en los avisos fijos y en las 42
  * plantillas sin IA (que el validador sí publica).
  */
 import { describe, expect, it } from "vitest";
@@ -76,7 +76,7 @@ describe("marcasDeRecomendacion", () => {
     }
   });
 
-  it("no marca ninguna de las 40 plantillas sin IA", () => {
+  it("no marca ninguna de las 42 plantillas sin IA", () => {
     for (const c of casosInventados()) {
       const r = resumenSinIa(c.paquete);
       expect(r.ok && marcasDeRecomendacion(r.resumen.texto), c.id).toEqual([]);

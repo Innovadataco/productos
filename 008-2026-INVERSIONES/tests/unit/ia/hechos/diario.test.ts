@@ -27,7 +27,7 @@ describe("armarDiario · el paquete del tablero", () => {
     expect(esPaqueteConstruido(paquete)).toBe(true);
     expect(paquete.tipo).toBe("DIARIO");
     expect(paquete.hoy).toBe(HOY);
-    expect(paquete.versionesCalculo).toEqual({ hechos: "armadores-v1" });
+    expect(paquete.versionesCalculo).toEqual({ hechos: "armadores-v2" });
     expect(paquete.avisos).toEqual([]);
     expect(filas(paquete.hechos)).toEqual([
       ["VALOR_ACCIONES", "37911.47", null, "2027-03-16", "CALCULADO", "BAJA", "RECIENTE", true],
@@ -67,13 +67,14 @@ describe("armarDiario · el paquete del tablero", () => {
     const fuentes = new Map(paquete.hechos.map((h) => [h.clave, h.fuente]));
     expect(fuentes.get("TASA_TRM")).toBe(fuenteDe("TRM"));
     expect(fuentes.get("VARIACION_ANUAL_IPC")).toBe(fuenteDe("IPC_INDICE"));
-    expect(fuentes.get("FONDO_VALOR_UNIDAD")).toBe(FUENTE_SFC);
+    expect(fuentes.get("FONDO_VALOR_UNIDAD")).toBe("valor de unidad de la Superintendencia Financiera (SFC)");
     expect(fuentes.get("CIERRE_ESPECIE")).toBe("cierres de la BVC");
-    expect(fuentes.get("VALOR_ACCIONES")).toBe("cálculo de 008 sobre los cierres");
+    expect(fuentes.get("VALOR_ACCIONES")).toBe("cálculo de Inversiones sobre los cierres");
   });
 
-  it("la fuente del fondo es la constante de la SFC, no un texto de quien llama", () => {
-    expect(FUENTES.FONDO).toBe(FUENTE_SFC);
+  it("la fuente del fondo es la constante del armador, no un texto de quien llama, y ya no es el identificador del conjunto de la SFC", () => {
+    expect(FUENTES.FONDO).toBe("valor de unidad de la Superintendencia Financiera (SFC)");
+    expect(FUENTES.FONDO).not.toBe(FUENTE_SFC);
   });
 
   it("la vista ciega del paquete pasa la guarda", () => {
@@ -169,15 +170,15 @@ describe("armarDiario · lo que falta se dice en los avisos, sin inventar", () =
     expect(claves(paquete)).not.toContain("FECHA_CIERRE_MAS_ANTIGUO");
   });
 
-  it("con veinte especies, entran las de mayor valor (el orden del tablero) y el aviso dice que se recortó", () => {
+  it("con veinte especies, entran solo las de mayor aporte (el filtro de T8: no más de cuatro) y el aviso dice que se resumieron", () => {
     const [alfa] = filasTablero();
     const muchas = Array.from({ length: 20 }, (_, i) => ({ ...alfa, instrumentoId: `inst-ficticio-${i}`, nemotecnico: `FICTICIA-${String.fromCharCode(65 + i)}Q` }));
     const paquete = con((e) => ({ ...e, tablero: { ...e.tablero, filas: muchas } }));
-    expect(paquete.hechos.length).toBeLessThanOrEqual(99);
-    expect(paquete.avisos).toContain("HECHOS_RECORTADOS");
+    expect(paquete.avisos).toContain("ESPECIES_RESUMIDAS");
+    expect(paquete.avisos).not.toContain("HECHOS_RECORTADOS");
     const nombres = paquete.hechos.filter((h) => h.clave === "ESPECIE_NOMBRE").map((h) => h.valor);
-    expect(nombres.length).toBeGreaterThan(5);
-    expect(nombres).toEqual(muchas.slice(0, nombres.length).map((f) => f.nemotecnico));
+    // Ninguna tiene movimiento en la comparación: todas empatan en cero y entran las tres primeras del tablero.
+    expect(nombres).toEqual(muchas.slice(0, 3).map((f) => f.nemotecnico));
   });
 
   it("si el calendario no cubre el año de un dato, su frescura es ATRASADO y el aviso lo dice", () => {

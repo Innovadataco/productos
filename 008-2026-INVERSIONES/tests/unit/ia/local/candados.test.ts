@@ -64,7 +64,7 @@ describe("candados de src/ia/local", () => {
 
   it("revisa los módulos de la puerta local", () => {
     expect(codigo.map((p) => path.basename(p)).sort()).toEqual(
-      ["barrera.ts", "contexto.ts", "destino.ts", "errores.ts", "generador.ts", "http.ts", "identificar.ts", "modelos.ts", "ollama.ts", "plazo.ts", "semaforo.ts", "sonda.ts"],
+      ["barrera.ts", "contexto.ts", "destino.ts", "errores.ts", "generador.ts", "http.ts", "identificar.ts", "modelos.ts", "ollama.ts", "plazo.ts", "presupuesto.ts", "semaforo.ts", "sonda.ts"],
     );
   });
 
