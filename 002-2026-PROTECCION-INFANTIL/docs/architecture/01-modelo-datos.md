@@ -212,6 +212,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | representanteLegalTelefono | String | opcional |
 | inicioServicio | DateTime | — |
 | finServicio | DateTime | opcional |
+| bienvenidaEnviadaEn | DateTime | opcional |
 | tipoPeriodo | TipoPeriodoServicio | — |
 | estado | String | — |
 | escudoAssetKey | String | opcional |

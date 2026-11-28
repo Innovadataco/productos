@@ -507,6 +507,8 @@
 | [915](915-voz-colegio-imperativo/spec.md) | SPEC-915 · Residual de voz del colegio: imperativo tú SUELTO → usted | 🟢 IMPLEMENTADO |
 | [916](916-generador-ci-converge/spec.md) | SPEC-916 · El barrido de generados converge (I-443, cierre real) | 🟢 IMPLEMENTADO |
 | [918](918-colegio-enlace-boton/spec.md) | SPEC-918 · El correo de activación del colegio muestra un BOTÓN, no la URL pelada | 🟢 IMPLEMENTADO |
+| [919](919-barrido-colegio/spec.md) | SPEC-919 · Barrido de correos · familia `colegio.*` (botón + voz usted) | 🟢 IMPLEMENTADO |
+| [920](920-barrido-internos/spec.md) | SPEC-920 · Barrido de correos · familia interna comité/operador (voz usted + botón) | 🟢 IMPLEMENTADO |
 | [921](921-build-heap-ci/spec.md) | SPEC-921 · El step build de CI sube el heap a 4096 MB (anti-OOM) | 🟢 IMPLEMENTADO |
 | [924](924-guardia-spec-existe/spec.md) | SPEC-924 · Higiene del índice de specs: notas retroactivas y Status faltantes | 🟢 IMPLEMENTADO |
 | [930](930-journeys-bloqueantes/spec.md) | SPEC-930 · Los journeys de regresión de Calidad bloquean el merge | 🟢 IMPLEMENTADO |

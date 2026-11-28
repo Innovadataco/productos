@@ -21,7 +21,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | leaflet | ^1.9.4 |
 | lucide-react | 1.28.0 |
 | marked | 16.4.0 |
-| next | 16.2.10 |
+| next | 16.4.6 |
 | pdfmake | ^0.3.11 |
 | pg-boss | ^12.26.0 |
 | prisma | 5.22.0 |
@@ -34,7 +34,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | resend | ^4.5.0 |
 | tailwindcss | ^3.4.17 |
 | tsx | ^4.19.4 |
-| zod | ^4.4.3 |
+| zod | ^4.6.6 |
 
 ## Dependencias de desarrollo (package.json)
 
@@ -53,7 +53,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | @vitest/coverage-v8 | ^3.2.7 |
 | autoprefixer | ^10.4.21 |
 | eslint | ^9.26.0 |
-| eslint-config-next | 16.2.10 |
+| eslint-config-next | 16.4.6 |
 | jsdom | ^26.1.0 |
 | postcss | ^8.5.6 |
 | typescript | ^5.8.3 |
@@ -120,8 +120,8 @@ Comando por defecto: `["node", "server.js"]`.
 
 | Servicio | Imagen / build | Contenedor | Puertos (host:interno) |
 | --- | --- | --- | --- |
-| app | build local (Dockerfile) | `pi-app-dev` | 5005:3000 |
-| db | `pgvector/pgvector:pg16` | — | 5433:5432 |
+| app | build local (Dockerfile) | `pi-app-dev` | — |
+| db | `pgvector/pgvector:pg16` | — | — |
 | pi-citas | build local (Dockerfile) | `pi-citas-dev` | — |
 | pi-sesiones | build local (Dockerfile) | `pi-sesiones-dev` | — |
 | pi-verificacion-vencimiento | build local (Dockerfile) | `pi-verificacion-vencimiento-dev` | — |
@@ -133,6 +133,7 @@ Comando por defecto: `["node", "server.js"]`.
 | --- | --- | --- | --- |
 | app | `pi-app:${PI_APP_TAG:-latest}` (+ build local) | `pi-app` | — |
 | db | `pgvector/pgvector:pg16` | `pi-db` | — |
+| docker-guard | `nginx:alpine` | `pi-docker-guard` | — |
 | monitor | `pi-app:${PI_APP_TAG:-latest}` | `pi-monitor` | — |
 | pi-analisis-expediente | `pi-app:${PI_APP_TAG:-latest}` | `pi-analisis-expediente` | — |
 | pi-analisis-reglas | `pi-app:${PI_APP_TAG:-latest}` | `pi-analisis-reglas` | — |
