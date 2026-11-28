@@ -347,22 +347,4 @@ export class AutenticacionService {
         await this.codigos.marcarUsado(codeRecord.id);
         return { ok: true };
     }
-
-    /** POST /api/auth/verificar/completar — alta del padre verificado (la ruta emite la sesión). */
-    async completarRegistro(email: string, password: string, nombre?: string): Promise<ResultadoRegistro> {
-        const existingUser = await this.usuarios.findByEmail(email);
-        if (existingUser) {
-            return { ok: false, tipo: "existente" };
-        }
-
-        const user = await this.usuarios.crear({
-            email,
-            nombre: nombre || null,
-            passwordHash: await hashPassword(password),
-            passwordCreadaEn: new Date(),
-            rol: "PARENT",
-        });
-
-        return { ok: true, user: { id: user.id, email: user.email, nombre: user.nombre, rol: user.rol } };
-    }
 }

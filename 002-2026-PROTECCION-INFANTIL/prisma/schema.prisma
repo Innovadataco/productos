@@ -646,7 +646,7 @@ model Usuario {
   // (SPEC-587) nacen con un hash aleatorio (no es una clave elegida por el
   // dueño), así que el criterio «tiene contraseña propia» NO puede ser
   // «passwordHash existe» — es «googleSub == null O passwordCreadaEn != null».
-  // Se escribe en registrar/completarRegistro/cambiarPassword/restablecerPassword
+  // Se escribe en registrar/cambiarPassword/restablecerPassword
   // y en crearPassword (SPEC-598). null en cuentas OAuth sin clave propia:
   // ahí el menú ofrece «Crear contraseña» en vez de «Cambiar contraseña».
   passwordCreadaEn            DateTime?
