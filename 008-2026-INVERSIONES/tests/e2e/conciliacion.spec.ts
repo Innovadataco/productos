@@ -11,7 +11,7 @@ import { expect } from "@playwright/test";
 import { MOTIVOS } from "../../src/app/conciliacion/motivos";
 import { PaginaConciliacion } from "./pagina-conciliacion";
 import { PaginaTablero } from "./pagina-tablero";
-import { origenDelCierre, traido } from "./procedencia-e2e";
+import { diaDeLaLinea, origenDelCierre, traido } from "./procedencia-e2e";
 import { test } from "./sesion";
 
 const ANCHO_MOVIL = { width: 400, height: 900 };
@@ -31,8 +31,8 @@ test.describe("conciliación con la certificación de A&V", () => {
     await expect(page.getByText("Está al día con los datos que hay hoy en el sistema.")).toBeVisible();
     // El «Valor sistema» lleva el cierre del corte con que se calculó, cuándo lo trajo 008 y su fuente (frente fecha-hora-datos).
     const [a, b] = [await origenDelCierre("FICTA", "2024-11-22"), await origenDelCierre("FICTB", "2024-11-22")];
-    expect(await c.celdas(c.fila(c.acciones, "FICTA"))).toEqual(["100", "100", "0", "$ 110.000", `$ 110.000 Cierre del 22-nov-2024 · ${traido(a)}`, "0,00 %", "Cuadra", ""]);
-    expect(await c.celdas(c.fila(c.acciones, "FICTB"))).toEqual(["80", "80", "0", "$ 153.040", `$ 153.040 Cierre del 22-nov-2024 · ${traido(b)}`, "0,00 %", "Cuadra", ""]);
+    expect(await c.celdas(c.fila(c.acciones, "FICTA"))).toEqual(["100", "100", "0", "$ 110.000", `$ 110.000 Cierre ${diaDeLaLinea("2024-11-22", a)} · ${traido(a, "2024-11-22")}`, "0,00 %", "Cuadra", ""]);
+    expect(await c.celdas(c.fila(c.acciones, "FICTB"))).toEqual(["80", "80", "0", "$ 153.040", `$ 153.040 Cierre ${diaDeLaLinea("2024-11-22", b)} · ${traido(b, "2024-11-22")}`, "0,00 %", "Cuadra", ""]);
     expect(await c.celdas(c.fila(c.acciones, "FICTC"))).toEqual(["10", "10", "0", "$ 5.050", "—", "—", "No se pudo verificar", MOTIVOS.sin_precio_al_corte]);
     expect(await c.celdas(c.fila(c.acciones, "FICTI"))).toEqual(["0", "−10", "+10", "—", "—", "—", "No cuadra", MOTIVOS.no_certificada]);
     expect(await c.celdas(c.fila(c.acciones, "Total de acciones"))).toEqual(["", "", "", "$ 268.090", "—", "—", "No se pudo verificar", MOTIVOS.sin_precio_al_corte]);

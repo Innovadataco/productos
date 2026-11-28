@@ -16,10 +16,10 @@ describe("fecha-dato.css", () => {
     expect(bloque(".fecha-dato-aviso")).toMatch(/color:\s*var\(--loss\)/);
   });
 
-  it("todo queda dentro de .fecha-dato*: no toca las otras pantallas", () => {
+  it("todo queda dentro de .fecha-dato* (o de ese bloque en una td): no toca las otras pantallas", () => {
     const selectores = sinComentarios.replace(/@media[^{]*\{/g, "").split("}").map((b) => b.split("{")[0]!.trim()).filter(Boolean);
     expect(selectores.length).toBeGreaterThan(1);
-    for (const sel of selectores) for (const parte of sel.split(",")) expect(parte.trim(), parte).toMatch(/^\.fecha-dato(-[a-z]+)?\b/);
+    for (const sel of selectores) for (const parte of sel.split(",")) expect(parte.trim(), parte).toMatch(/^(td )?\.fecha-dato(-[a-z]+)?\b/);
   });
 
   it("legible: ninguna letra por debajo de 12 px, y la nota no hereda las mayúsculas ni el peso de las cifras", () => {
@@ -35,9 +35,19 @@ describe("fecha-dato.css", () => {
     expect(bloque(".fecha-dato")).toMatch(/display:\s*block/);
     expect(bloque(".fecha-dato")).toMatch(/white-space:\s*normal/);
     expect(bloque(".fecha-dato")).toMatch(/overflow-wrap:\s*anywhere/);
+    // En una celda de tabla, «anywhere» deja la columna en el mínimo y parte la línea letra por letra: ahí, break-word.
+    const enCelda = bloque("td .fecha-dato");
+    expect(enCelda).toMatch(/overflow-wrap:\s*break-word/);
+    expect(enCelda).not.toMatch(/anywhere/);
+    expect(enCelda).toMatch(/max-width:\s*\d+em/);
   });
 
   it("no anima nada", () => {
     expect(sinComentarios).not.toMatch(/animation|transition|@keyframes/);
+  });
+
+  it("no hay estilo de un detalle oculto: la fuente y la hora van una sola vez, en la línea visible", () => {
+    expect(sinComentarios).not.toMatch(/fecha-dato-detalle/);
+    expect(sinComentarios).not.toMatch(/clip-path|clip:\s*rect/);
   });
 });

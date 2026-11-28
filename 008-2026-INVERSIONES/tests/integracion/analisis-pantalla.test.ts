@@ -79,7 +79,7 @@ beforeAll(async () => {
   const dueno = await db.usuario.create({ data: { email: `dueno-an-${corrida}@ejemplo.invalid`, rol: "DUENO" } });
   await sembrar(dueno.id);
   hoy = await elegirHoy();
-  vista = await datosDeAnalisis(db, hoy);
+  vista = await datosDeAnalisis(db, hoy, new Date(hoy.getTime() + 15 * 3_600_000));
 });
 
 afterAll(async () => {
@@ -101,6 +101,12 @@ describe("datosDeAnalisis contra la base", () => {
     expect(fila!.procedencia).toMatchObject({ dia: VALOR_UNIDAD_DIA, fuente: "sfc:qhpu-8ixx" });
     expect(fila!.procedencia!.traidoEn).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
     expect(vista.composicion.total).not.toBeNull();
+  });
+
+  it("el cierre más viejo trae los días hábiles de atraso, aproximados: el calendario no cubre 2020 ni 2021 (frente fuente-retraso)", () => {
+    const vieja = vista.procedenciaAcciones!.masVieja;
+    expect(vieja.habilesAtras).toBeGreaterThan(1500);
+    expect(vieja.aniosSinFestivos).toEqual(expect.arrayContaining([2020, 2021]));
   });
 
   it("la fecha de los cierres viene compuesta (fecha-dato) y las cuatro partes están", () => {
