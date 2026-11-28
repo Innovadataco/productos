@@ -18,7 +18,7 @@ import type { ListaModelosPi } from "../local/modelos";
 import { crearSemaforo, type Semaforo } from "../local/semaforo";
 import { destinoDe, type ConfigIaVigente } from "./leer";
 import { TAREAS_IA } from "./parametros";
-import { VARIABLE_TOKEN_SERVICIO_IA, sondaServicio, tokenServicioValido, type BuscarServicio } from "./sonda-servicio";
+import { VARIABLE_TOKEN_SERVICIO_IA, avisarOrigenInvalido, leerOrigenServicioIa, sondaServicio, tokenServicioValido, type BuscarServicio } from "./sonda-servicio";
 
 /** La variable que enciende la sonda directa en desarrollo (su único valor válido es «directa»). */
 export const VARIABLE_SONDA_OLLAMA = "INV_IA_SONDA_OLLAMA";
@@ -79,8 +79,8 @@ export function sondaDirecta(fetch: BuscarLocal, semaforo: Semaforo = crearSemaf
 /** La directa del proceso: una sola (un solo turno al Mac para todas las acciones). */
 let directaDelProceso: SondaOllama | null = null;
 
-/** La del servicio inv-008-ia del proceso, con el token con el que se creó (si el token cambia, se crea otra). */
-let servicioDelProceso: { readonly token: string; readonly sonda: SondaOllama } | null = null;
+/** La del servicio inv-008-ia del proceso, con el token y la dirección con que se creó (si cambian, se crea otra). */
+let servicioDelProceso: { readonly token: string; readonly origen: string; readonly sonda: SondaOllama } | null = null;
 
 /**
  * La sonda del entorno: la directa solo fuera de producción y con la variable exacta; si no, la del servicio inv-008-ia
@@ -94,7 +94,14 @@ export function sondaDelEntorno(entorno: Readonly<Record<string, string | undefi
   }
   const token = entorno[VARIABLE_TOKEN_SERVICIO_IA];
   if (!tokenServicioValido(token)) return SONDA_PENDIENTE;
-  if (servicioDelProceso?.token !== token) servicioDelProceso = { token, sonda: sondaServicio((url, init) => globalThis.fetch(url, init) as ReturnType<BuscarServicio>, token) };
+  const origen = leerOrigenServicioIa(entorno);
+  if (!origen.ok) {
+    avisarOrigenInvalido(origen.motivo);
+    return SONDA_PENDIENTE;
+  }
+  if (servicioDelProceso?.token !== token || servicioDelProceso.origen !== origen.origen) {
+    servicioDelProceso = { token, origen: origen.origen, sonda: sondaServicio((url, init) => globalThis.fetch(url, init) as ReturnType<BuscarServicio>, token, origen.origen) };
+  }
   return servicioDelProceso.sonda;
 }
 

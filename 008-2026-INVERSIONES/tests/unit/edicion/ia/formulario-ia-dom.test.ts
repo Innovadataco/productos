@@ -11,7 +11,7 @@ const ir = vi.hoisted(() => vi.fn());
 vi.mock("@/app/edicion/enviar", async (original) => ({ ...(await original<typeof import("@/app/edicion/enviar")>()), irA: ir }));
 
 import { FormularioIa } from "@/app/edicion/ia/FormularioIa";
-import { AVISOS_IA, mensajeIa } from "@/app/edicion/ia/textos-ia";
+import { AVISOS_IA, ETIQUETAS_IA, TEXTOS_IA, mensajeIa } from "@/app/edicion/ia/textos-ia";
 import { montar, texto, type Montaje } from "../../graficas/dom";
 import { DATOS_IA_FICTICIOS as DATOS } from "./datos.ficticio";
 
@@ -45,6 +45,28 @@ async function cambiar(el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaEl
 }
 const cuerpoEnviado = (i = 0) => JSON.parse(String(fetchFalso.mock.calls[i]![1].body)) as Record<string, unknown>;
 
+describe("FormularioIa · el interruptor del análisis a demanda", () => {
+  it("una casilla con su etiqueta y su ayuda, apagada si la vigente la tiene apagada; encenderla se envía como true", async () => {
+    await m.pintar(createElement(FormularioIa, { datos: DATOS }));
+    const casilla = control<HTMLInputElement>("ia-analisis-demanda");
+    expect(casilla.type).toBe("checkbox");
+    expect(casilla.checked).toBe(false);
+    expect(casilla.labels?.[0]?.textContent).toBe(ETIQUETAS_IA.analisisDemanda);
+    expect(texto(m.contenedor)).toContain(TEXTOS_IA.AYUDA_ANALISIS);
+    await cambiar(control<HTMLTextAreaElement>("ia-motivo"), "Motivo ficticio del cambio");
+    await act(async () => { casilla.click(); });
+    expect(casilla.checked).toBe(true);
+    await act(async () => { boton("Guardar la versión nueva")!.click(); });
+    expect(cuerpoEnviado().analisisDemanda).toBe(true);
+  });
+
+  it("el límite por pedido avisa de 10 a 60", async () => {
+    await m.pintar(createElement(FormularioIa, { datos: DATOS }));
+    expect(texto(m.contenedor)).toContain("De 10 a 60");
+    expect(mensajeIa("LIMITE_INVALIDO")).toBe("El límite es un número entero de segundos, de 10 a 60.");
+  });
+});
+
 describe("FormularioIa · guardar", () => {
   it("cada control tiene su etiqueta, y el aviso del firewall va junto al destino", async () => {
     await m.pintar(createElement(FormularioIa, { datos: DATOS }));
@@ -65,7 +87,7 @@ describe("FormularioIa · guardar", () => {
     expect(cuerpoEnviado()).toEqual({
       versionBase: 7, modo: "local-luego-nube", ollamaHost: "", ollamaPuerto: "", temperatura: "0",
       tareas: { DIARIO: { activo: true, modeloLocal: "qwen2.5:14b" }, REGLAS: { activo: true, modeloLocal: "aya-expanse:32b" }, ESCENARIOS: { activo: false, modeloLocal: "" } },
-      modeloNube: "claude-opus-5-5", esfuerzoNube: "low", topeMensualUsd: "5,37", horaResumen: "19:00", limiteSegundos: "120", motivo: "Motivo ficticio del cambio",
+      modeloNube: "claude-opus-5-5", esfuerzoNube: "low", topeMensualUsd: "5,37", horaResumen: "19:00", limiteSegundos: "60", analisisDemanda: false, motivo: "Motivo ficticio del cambio",
     });
     await responder({ version: 8 }, 201);
     expect(ir).toHaveBeenCalledWith("/edicion/ia?guardada=8");

@@ -95,7 +95,7 @@ describe("la tarjeta del resumen (E5), también para la familia en solo lectura"
     exigirSesion.mockResolvedValue({ id: "u-familiar", email: "familiar@ejemplo.invalid", rol: "FAMILIA" });
     const raiz = document.createElement("div");
     raiz.innerHTML = renderToStaticMarkup(await pagina());
-    expect(resumenDelDia).toHaveBeenCalledWith(expect.anything(), tipo, "u-familiar");
+    expect(resumenDelDia).toHaveBeenCalledWith(expect.anything(), tipo, "u-familiar", { dueno: false });
     expect(raiz.querySelector(`#t-resumen-ia-${tipo.toLowerCase()}`)?.textContent).toBe(`Resumen ficticio ${tipo}`);
   });
 

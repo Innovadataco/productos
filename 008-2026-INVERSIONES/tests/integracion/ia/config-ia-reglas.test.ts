@@ -30,7 +30,7 @@ const tareas = (modelo: string | null, activas: readonly string[] = ["DIARIO", "
   Object.fromEntries(["DIARIO", "REGLAS", "ESCENARIOS"].map((t) => [t, { activo: activas.includes(t), modeloLocal: modelo }]));
 const BASE: Datos = {
   modo: "apagado", temperaturaLocal: new Prisma.Decimal("0"), tareas: tareas(null), modeloNube: "claude-opus-5-5", horaResumen: "19:00",
-  limiteSegundos: 120, esfuerzoNube: "low", motivo: "Versión ficticia de la prueba",
+  limiteSegundos: 60, esfuerzoNube: "low", motivo: "Versión ficticia de la prueba",
 };
 const crear = async (cambios: Partial<Datos> = {}) => db.configIa.create({ data: { ...BASE, ...cambios, version: await version(), autorId } });
 
@@ -58,6 +58,7 @@ describe("config_ia · control positivo", () => {
 
   it("los bordes entran: límite 10 y 120, tope 1 y 50, puerto 1 y 65535, horas de la lista", async () => {
     await expect(crear({ limiteSegundos: 10 })).resolves.toBeDefined();
+    await expect(crear({ limiteSegundos: 120 })).resolves.toBeDefined(); // la CHECK de la base sigue en 120: el lector acota a 60
     for (const t of ["0", "0.37", "1"]) await expect(crear({ temperaturaLocal: new Prisma.Decimal(t) })).resolves.toBeDefined();
     await expect(crear({ modo: "nube", topeMensualUsd: new Prisma.Decimal("1.00") })).resolves.toBeDefined();
     await expect(crear({ ollamaHost: ip(100, 64, 0, 1), ollamaPuerto: 1 })).resolves.toBeDefined();
@@ -186,7 +187,7 @@ describe("config_ia · privilegios de inv_ia (pg_signal_backend con los GRANT de
 
   it("lee lo que necesita (control positivo) y nada del motivo ni del autor", async () => {
     await crear();
-    const filas = await restringida.$queryRawUnsafe<unknown[]>(`SELECT id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", "creadaEn" FROM config_ia ORDER BY version DESC LIMIT 1`);
+    const filas = await restringida.$queryRawUnsafe<unknown[]>(`SELECT id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "analisisDemanda", "esfuerzoNube", "creadaEn" FROM config_ia ORDER BY version DESC LIMIT 1`);
     expect(filas).toHaveLength(1);
     for (const sentencia of ['SELECT motivo FROM config_ia LIMIT 1', 'SELECT "autorId" FROM config_ia LIMIT 1', "INSERT INTO config_ia (id) VALUES ('x')"]) {
       await expect(restringida.$executeRawUnsafe(sentencia), sentencia).rejects.toThrow(/42501|permission denied/);

@@ -8,14 +8,18 @@
  *   otra cosa). De «Probar» solo se acepta el nombre de un modelo de una tarea ACTIVA de la configuración; la
  *   temperatura y el límite son los guardados.
  * - Uno a la vez (429 si hay otro en curso): «Probar» carga el modelo en el Mac de PI.
+ * - POST /analizar `{"tarea"}` (el botón «Analizar con IA») y POST /estado-analisis `{}`: responden enseguida, sin
+ *   esperar al modelo; sus condiciones (interruptor, 1 en curso y 1 en espera, 2 minutos entre análisis) son de
+ *   `analisis.ts`. No pasan por el «uno a la vez» de arriba: el turno hacia el Mac lo da el semáforo del servicio.
  * - Una excepción no sale: 500 con un código, sin el mensaje.
  */
 import { createHash, timingSafeEqual } from "node:crypto";
 import { destinoDe, type ConfigIaVigente } from "../ia/config/leer";
 import { TAREAS_IA } from "../ia/config/parametros";
 import type { SondaOllama } from "../ia/config/sonda-ollama";
-import { RUTA_IDENTIFICAR, RUTA_PROBAR } from "../ia/config/sonda-servicio";
-import { esObjetoPlano, soloCampos } from "../ia/formas";
+import { RUTA_ANALIZAR, RUTA_ESTADO_ANALISIS, RUTA_IDENTIFICAR, RUTA_PROBAR } from "../ia/config/sonda-servicio";
+import { esDe, esObjetoPlano, soloCampos } from "../ia/formas";
+import type { AnalisisDemanda, MotivoDescarte } from "./analisis";
 
 export interface PedidoHttp {
   readonly metodo: string;
@@ -34,13 +38,19 @@ export interface DependenciasPedidos {
   leerConfig(): Promise<ConfigIaVigente | null>;
   /** La sonda directa del servicio (con su `fetch` acotado y su turno). */
   readonly sonda: SondaOllama;
+  /** El análisis a demanda (el botón «Analizar con IA»). */
+  readonly analisis: AnalisisDemanda;
 }
 
 export type Atender = (pedido: PedidoHttp) => Promise<RespuestaIa>;
 
 const MS_POR_S = 1000;
 const PREFIJO = "Bearer ";
-const RUTAS: readonly string[] = [RUTA_IDENTIFICAR, RUTA_PROBAR];
+const RUTAS: readonly string[] = [RUTA_IDENTIFICAR, RUTA_PROBAR, RUTA_ANALIZAR, RUTA_ESTADO_ANALISIS];
+/** El estado y el código con que sale cada pedido de análisis que se descarta. */
+const DESCARTES: Readonly<Record<MotivoDescarte, readonly [number, string]>> = Object.freeze({
+  APAGADO: [403, "ANALISIS_APAGADO"], TAREA_INACTIVA: [409, "TAREA_INACTIVA"], OCUPADO: [429, "OCUPADO"], ESPERA_MINIMA: [429, "ESPERA_MINIMA"],
+});
 const error = (estado: number, codigo: string): RespuestaIa => Object.freeze({ estado, cuerpo: Object.freeze({ error: codigo }) });
 const sha256 = (texto: string): Buffer => createHash("sha256").update(texto, "utf8").digest();
 
@@ -82,12 +92,32 @@ async function probar(deps: DependenciasPedidos, cuerpo: string): Promise<Respue
   return { estado: 200, cuerpo: await deps.sonda.probar(destino, datos.modelo, config.temperaturaCentesimas, config.limiteSegundos * MS_POR_S) };
 }
 
+async function analizar(deps: DependenciasPedidos, cuerpo: string): Promise<RespuestaIa> {
+  const datos = leerCuerpo(cuerpo, ["tarea"]);
+  if (datos === null || !esDe(TAREAS_IA, datos.tarea)) return error(400, "CUERPO_INVALIDO");
+  const r = await deps.analisis.pedir(datos.tarea);
+  if (r.ok) return { estado: 202, cuerpo: { estado: "ACEPTADO", lugar: r.lugar } };
+  const [estado, codigo] = DESCARTES[r.motivo];
+  return { estado, cuerpo: r.reintentarEnS === undefined ? { error: codigo } : { error: codigo, reintentarEnS: r.reintentarEnS } };
+}
+
+function estadoAnalisis(deps: DependenciasPedidos, cuerpo: string): RespuestaIa {
+  return leerCuerpo(cuerpo, []) === null ? error(400, "CUERPO_INVALIDO") : { estado: 200, cuerpo: deps.analisis.estado() };
+}
+
 export function crearAtencion(deps: DependenciasPedidos): Atender {
   let enCurso = false;
   return async (pedido) => {
     if (!tokenAutorizado(pedido.autorizacion, deps.token)) return error(401, "NO_AUTORIZADO");
     if (!RUTAS.includes(pedido.ruta)) return error(404, "RUTA_DESCONOCIDA");
     if (pedido.metodo !== "POST") return error(405, "METODO_NO_PERMITIDO");
+    if (pedido.ruta === RUTA_ANALIZAR || pedido.ruta === RUTA_ESTADO_ANALISIS) {
+      try {
+        return pedido.ruta === RUTA_ANALIZAR ? await analizar(deps, pedido.cuerpo) : estadoAnalisis(deps, pedido.cuerpo);
+      } catch {
+        return error(500, "ERROR_INTERNO");
+      }
+    }
     if (enCurso) return error(429, "OCUPADO");
     enCurso = true;
     try {

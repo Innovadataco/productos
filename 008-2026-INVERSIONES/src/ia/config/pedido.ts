@@ -40,6 +40,8 @@ export interface EntradaConfigIa {
   readonly topeMicroUsd: bigint | null;
   readonly horaResumen: HoraResumen;
   readonly limiteSegundos: number;
+  /** El interruptor del botón «Analizar con IA». */
+  readonly analisisDemanda: boolean;
   readonly motivo: string;
 }
 
@@ -50,7 +52,7 @@ export type LecturaConfig =
 /** Un motivo largo en UTF-8 (hasta 4 bytes por carácter) más lo demás (claves, listas, números) con holgura. */
 export const MAX_CUERPO_CONFIG_IA = MAX_LARGO_MOTIVO_CONFIG * 4 + 2048;
 
-const CLAVES = Object.freeze(["versionBase", "modo", "ollamaHost", "ollamaPuerto", "temperatura", "tareas", "modeloNube", "esfuerzoNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "motivo"]);
+const CLAVES = Object.freeze(["versionBase", "modo", "ollamaHost", "ollamaPuerto", "temperatura", "tareas", "modeloNube", "esfuerzoNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "analisisDemanda", "motivo"]);
 const CLAVES_TAREA = Object.freeze(["activo", "modeloLocal"]);
 const PUERTO = /^[1-9][0-9]{0,4}$/;
 const MAX_PUERTO = 65_535;
@@ -184,6 +186,7 @@ export function leerPedidoConfig(cuerpo: unknown, lista: ListaModelosPi): Lectur
     topeMicroUsd,
     horaResumen: enumerado(e, "horaResumen", HORAS_RESUMEN, r.horaResumen, "HORA_INVALIDA"),
     limiteSegundos: limite(e, r.limiteSegundos),
+    analisisDemanda: typeof r.analisisDemanda === "boolean" ? r.analisisDemanda : e.anotar("analisisDemanda", "FORMATO_INVALIDO"),
     motivo: motivo(e, r.motivo),
   };
   reglasDelModo(e, parcial, lista, topeMicroUsd !== undefined);

@@ -26,9 +26,10 @@ import { diaIso, esDiaHabil, fechaEnBogota } from "../precios/horario";
 import { ESTADO_DIR_POR_DEFECTO } from "../servicio-precios/estado";
 import { textoCot } from "../servicio-precios/programa";
 import { REINTENTOS_AHORA, bucleEnCurso, conUnaConexion, correrAhora } from "./ahora";
+import { crearAnalisisDemanda } from "./analisis";
 import { SALIDA, iniciarBucle, type DependenciasBucle, type Programar, type Senales } from "./bucle";
 import { leerTokenServicio, revisarCredencialIa } from "./configuracion";
-import { correrDiaria, type DependenciasCorrida, type PoliticaReintentos } from "./corrida";
+import { correrDiaria, correrUna, type DependenciasCorrida, type PoliticaReintentos } from "./corrida";
 import { crearAtencion, tokenAutorizado } from "./pedidos";
 import { crearServidor } from "./servidor";
 
@@ -139,8 +140,16 @@ export function servir(proceso: Proceso, fetchReal: BuscarLocal, crearDb: () => 
     esperar,
   };
 
+  // El análisis a demanda (botón «Analizar con IA»): la misma corrida y el mismo turno hacia el Mac que la diaria.
+  const analisis = crearAnalisisDemanda({
+    leerConfig,
+    correr: (config, tarea) => correrUna(reales.corrida, config, tarea, fechaEnBogota(new Date())),
+    ahora: Date.now,
+    programar: (accion, ms) => void setTimeout(accion, ms).unref(),
+    registrar,
+  });
   const token = leerTokenServicio(proceso.env[VARIABLE_TOKEN_SERVICIO_IA]);
-  const servidor = token.ok ? crearServidor(crearAtencion({ token: token.token, leerConfig, sonda: sondaDirecta(fetchLocal, semaforo) }), (a) => tokenAutorizado(a, token.token)) : null;
+  const servidor = token.ok ? crearServidor(crearAtencion({ token: token.token, leerConfig, sonda: sondaDirecta(fetchLocal, semaforo), analisis }), (a) => tokenAutorizado(a, token.token)) : null;
   if (!token.ok) registrar(token.motivo);
   if (LISTA_MODELOS_PI.estado !== "LISTA") registrar(`sin lista de PI de modelos permitidos (${LISTA_MODELOS_PI.motivo}): la puerta local no puede generar`);
   servidor?.on("error", (error) => registrar(`el endpoint interno falló: ${(error as NodeJS.ErrnoException).code ?? "ERROR"}`));

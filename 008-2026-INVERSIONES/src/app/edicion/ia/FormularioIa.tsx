@@ -17,7 +17,7 @@ import type { ConfigEditable, DatosEdicionIa, ModeloIdentificadoVista, TareaEdit
 
 const ID_DE_CAMPO: Readonly<Record<string, string>> = {
   modo: "ia-modo", ollamaHost: "ia-host", ollamaPuerto: "ia-puerto", temperatura: "ia-temperatura", modeloNube: "ia-modelo-nube",
-  esfuerzoNube: "ia-esfuerzo", topeMensualUsd: "ia-tope", horaResumen: "ia-hora", limiteSegundos: "ia-limite", motivo: "ia-motivo",
+  esfuerzoNube: "ia-esfuerzo", topeMensualUsd: "ia-tope", horaResumen: "ia-hora", limiteSegundos: "ia-limite", analisisDemanda: "ia-analisis-demanda", motivo: "ia-motivo",
 };
 const CAMPO_DE_TAREA = /^tareas\.([A-Z]+)\.modeloLocal$/;
 const idDeCampo = (campo: string): string | undefined => {
@@ -109,6 +109,12 @@ export function FormularioIa({ datos }: { readonly datos: DatosEdicionIa }) {
         <Seleccion id="ia-modo" etiqueta={ETIQUETAS_IA.modo!} valor={valores.modo} opciones={opciones.modos} onCambio={(v) => cambiar({ modo: v })} error={errorDe("modo")} />
         <Seleccion id="ia-hora" etiqueta={ETIQUETAS_IA.horaResumen!} valor={valores.horaResumen} opciones={opciones.horas.map((h) => ({ valor: h, texto: `${h} (hora de Colombia)` }))} onCambio={(v) => cambiar({ horaResumen: v })} error={errorDe("horaResumen")} />
         <Texto id="ia-limite" modo="numeric" etiqueta={ETIQUETAS_IA.limiteSegundos!} valor={valores.limiteSegundos} ayuda={`De ${opciones.limites.limiteMin} a ${opciones.limites.limiteMax} (el límite de PI).`} onCambio={(v) => cambiar({ limiteSegundos: v })} error={errorDe("limiteSegundos")} />
+      </div>
+      <div className="edicion-campo edicion-casilla">
+        <input id="ia-analisis-demanda" type="checkbox" checked={valores.analisisDemanda} onChange={(e) => cambiar({ analisisDemanda: e.target.checked })} aria-invalid={errorDe("analisisDemanda") ? true : undefined} aria-describedby={errorDe("analisisDemanda") ? "ia-analisis-demanda-ayuda ia-analisis-demanda-error" : "ia-analisis-demanda-ayuda"} />
+        <label htmlFor="ia-analisis-demanda">{ETIQUETAS_IA.analisisDemanda}</label>
+        <p className="edicion-ayuda" id="ia-analisis-demanda-ayuda">{TEXTOS_IA.AYUDA_ANALISIS}</p>
+        {errorDe("analisisDemanda") ? <p className="edicion-error" id="ia-analisis-demanda-error">{errorDe("analisisDemanda")}</p> : null}
       </div>
 
       <fieldset className="edicion-regla" aria-describedby="ia-destino-aviso">

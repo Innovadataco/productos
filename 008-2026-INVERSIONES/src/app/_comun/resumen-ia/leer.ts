@@ -1,8 +1,14 @@
 import "server-only";
 /**
  * La lectura de la tarjeta de resumen (E5) para una pantalla. Solo lectura (inv_app hace SELECT de resumen_ia).
- * - El día es el de Colombia (`fechaEnBogota`); se muestra solo un PUBLICADO de ese día exacto (publicado.ts, la lectura
- *   de `ultimoPublicado` de E3 sin el módulo que escribe).
+ * - Se muestra el ÚLTIMO PUBLICADO del tipo, de cualquier día, con su fecha y hora (publicado.ts, la lectura de
+ *   `ultimoPublicado` de E3 sin el módulo que escribe); si ya no corresponde a los hechos de hoy, sale DESACTUALIZADO. El
+ *   último RECHAZADO por el validador, si es más nuevo, se informa con su motivo. El día de hoy (Colombia) es para el
+ *   paquete de hoy, con el que se compara.
+ * - El botón «Analizar con IA» (`puedeAnalizar`): solo si quien mira es el dueño Y el interruptor de config_ia está
+ *   encendido (apagado por omisión). Cualquier error al leer la configuración lo deja apagado (falla cerrada).
+ * - «IA apagada» (`sinIa`), para todos: sin análisis que mostrar y con la configuración apagada (sin ella, modo apagado,
+ *   análisis a demanda apagado o tarea inactiva). Si la configuración no se pudo leer, no se afirma nada.
  * - El paquete de hoy sale del export de E7 (`exportarHechos`): la MISMA función que arma los paquetes del servicio, en
  *   una foto de solo lectura, para que el hash de los hechos sea comparable. Como proyecta (≈ 1 s de cálculo síncrono),
  *   corre bajo el turno de las proyecciones (src/app/proyecciones/turno.ts, por fuera de la foto) y queda en memoria del
@@ -15,13 +21,16 @@ import "server-only";
 import type { PrismaClient } from "@prisma/client";
 import type { TipoResumen } from "@/ia/contrato";
 import { exportarHechos, type ResultadoExportacion } from "@/ia/evaluacion/exportar/exportar";
+import { corridaDe } from "@/ia/config/cableado";
+import { leerConfigIa, type ConfigIaVigente } from "@/ia/config/leer";
 import { ErrorRegistro } from "@/ia/registro/fila";
 import type { ResumenPublicado } from "@/ia/registro/registro";
 import { diaIso, fechaEnBogota } from "@/precios/horario";
 import { conTurno } from "../../proyecciones/turno";
 import { esErrorDeBase } from "../sin-base";
 import { elegirResumen, noDisponible, type PaqueteDeHoy } from "./elegir";
-import { publicadoDelDia } from "./publicado";
+import { TEXTOS_RESUMEN_IA } from "./textos";
+import { ultimoFallidoDe, ultimoPublicadoDe, ultimoRechazadoDe, type ResumenFallido, type ResumenRechazado } from "./publicado";
 import type { VistaResumenIa } from "./tipos";
 
 /**
@@ -39,6 +48,8 @@ export interface OpcionesResumen {
   readonly ahora?: Date;
   /** El export; por omisión, `exportarHechos`. */
   readonly paquetes?: LeerPaquetes;
+  /** ¿Quien mira es el dueño? Solo él puede tener el botón «Analizar con IA»; sin decirlo, no. */
+  readonly dueno?: boolean;
 }
 
 type Corrida = { readonly ok: true; readonly resultado: ResultadoExportacion } | { readonly ok: false; readonly motivo: string };
@@ -64,9 +75,9 @@ export function reiniciarMemoParaPruebas(): void {
 
 const nombreDe = (error: unknown): string => (error instanceof Error ? error.name : "desconocido");
 
-async function leerPublicado(db: PrismaClient, tipo: TipoResumen, dia: string): Promise<ResumenPublicado | null> {
+async function leerPublicado(db: PrismaClient, tipo: TipoResumen): Promise<ResumenPublicado | null> {
   try {
-    return await publicadoDelDia(db, tipo, dia);
+    return await ultimoPublicadoDe(db, tipo);
   } catch (error) {
     if (esErrorDeBase(error)) throw error;
     const detalle = error instanceof ErrorRegistro ? error.codigo : nombreDe(error);
@@ -74,6 +85,56 @@ async function leerPublicado(db: PrismaClient, tipo: TipoResumen, dia: string): 
     return null;
   }
 }
+
+/** El último análisis rechazado por el validador; un error que no es de la base lo deja sin él (se registra solo el nombre). */
+async function leerRechazado(db: PrismaClient, tipo: TipoResumen): Promise<ResumenRechazado | null> {
+  try {
+    return await ultimoRechazadoDe(db, tipo);
+  } catch (error) {
+    if (esErrorDeBase(error)) throw error;
+    console.error(`[resumen-ia] ${tipo}: el último rechazado no se puede leer (${error instanceof ErrorRegistro ? error.codigo : nombreDe(error)})`);
+    return null;
+  }
+}
+
+/** El último intento fallido; un error que no es de la base lo deja sin él (se registra solo el nombre). */
+async function leerFallido(db: PrismaClient, tipo: TipoResumen): Promise<ResumenFallido | null> {
+  try {
+    return await ultimoFallidoDe(db, tipo);
+  } catch (error) {
+    if (esErrorDeBase(error)) throw error;
+    console.error(`[resumen-ia] ${tipo}: el último fallido no se puede leer (${error instanceof ErrorRegistro ? error.codigo : nombreDe(error)})`);
+    return null;
+  }
+}
+
+/** La configuración vigente; un error que no es de la base (o que la configuración no se lee) da `ok: false`: ni botón ni afirmar que está apagada. */
+type LecturaConfig = { readonly ok: true; readonly config: ConfigIaVigente | null } | { readonly ok: false };
+
+async function leerConfig(db: PrismaClient): Promise<LecturaConfig> {
+  try {
+    return { ok: true, config: await leerConfigIa(db) };
+  } catch (error) {
+    if (esErrorDeBase(error)) throw error;
+    console.error(`[resumen-ia] la configuración de la IA no se puede leer (${nombreDe(error)})`);
+    return { ok: false };
+  }
+}
+
+/**
+ * Por qué no hay análisis de la IA, según la configuración, para esta tarjeta: «IA apagada» si no corre nada (la regla es
+ * `corridaDe`, la misma del servicio; sin configuración también) y, si la IA corre pero la casilla del análisis a demanda
+ * está apagada, ese motivo con la hora del resumen diario. null si no hay nada que decir (o la configuración no se leyó).
+ */
+function motivoSinIa(lectura: LecturaConfig, tipo: TipoResumen): string | null {
+  if (!lectura.ok) return null;
+  const { config } = lectura;
+  if (config === null || corridaDe(config, tipo).estado === "APAGADO") return TEXTOS_RESUMEN_IA.iaApagada;
+  return config.analisisDemanda ? null : TEXTOS_RESUMEN_IA.demandaApagada.replace("{hora}", config.horaResumen);
+}
+
+/** ¿El dueño tiene el botón? Con el interruptor de config_ia encendido; sin configuración o con un error, no (falla cerrada). */
+const botonDisponible = (lectura: LecturaConfig, dueno: boolean): boolean => dueno && lectura.ok && lectura.config?.analisisDemanda === true;
 
 /** Saca la corrida del memo si sigue siendo la guardada (no pisa una más nueva). */
 const olvidar = (guardado: Guardado): void => {
@@ -121,11 +182,16 @@ export async function resumenDelDia(db: PrismaClient, tipo: TipoResumen, usuario
   try {
     const ahora = opciones.ahora ?? new Date();
     const hoy = fechaEnBogota(ahora);
-    const publicado = await leerPublicado(db, tipo, diaIso(hoy));
+    const publicado = await leerPublicado(db, tipo);
+    // La fecha y hora de un intento fallido o rechazado es del dueño: la familia ve el resumen sin IA o «IA apagada», nada más.
+    const dueno = opciones.dueno === true;
+    const rechazado = dueno ? await leerRechazado(db, tipo) : null;
+    const fallido = dueno ? await leerFallido(db, tipo) : null;
     const deHoy = await paqueteDeHoy(db, tipo, usuarioId, hoy, ahora, opciones.paquetes ?? exportarHechos);
-    const { vista, descarte } = elegirResumen({ tipo, publicado, hoy: deHoy });
+    const lectura = await leerConfig(db);
+    const { vista, descarte } = elegirResumen({ tipo, publicado, rechazado, fallido, motivoSinIa: motivoSinIa(lectura, tipo), hoy: deHoy });
     if (descarte !== null) console.error(`[resumen-ia] ${tipo}: el publicado no pasó el validador y no se muestra (${descarte.join(",")})`);
-    return vista;
+    return botonDisponible(lectura, dueno) ? Object.freeze({ ...vista, puedeAnalizar: true }) : vista;
   } catch (error) {
     if (esErrorDeBase(error)) throw error;
     console.error(`[resumen-ia] ${tipo}: la tarjeta no se pudo armar (${nombreDe(error)})`);

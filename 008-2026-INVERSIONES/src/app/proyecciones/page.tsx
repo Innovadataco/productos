@@ -28,7 +28,7 @@ export default async function PaginaProyecciones() {
     soloLectura = esSoloLectura(usuario);
     datos = await datosDeProyecciones(db, usuario.id);
     // El resumen ESCENARIOS (E5), después del cálculo inicial: los dos usan el turno del usuario y en paralelo chocarían.
-    resumenIa = await resumenDelDia(db, "ESCENARIOS", usuario.id);
+    resumenIa = await resumenDelDia(db, "ESCENARIOS", usuario.id, { dueno: !soloLectura });
   } catch (error) {
     if (!esErrorDeBase(error)) throw error;
     registrarFalloDeBase("proyecciones", error);

@@ -3,8 +3,10 @@ import "server-only";
  * La sonda de la app hacia el servicio inv-008-ia (E6, D-026): «Identificar modelos» y «Probar» de /edicion/ia (y, más
  * adelante, el chat). La app NO tiene salida a internet ni a la tailnet: le pide al servicio interno, que es el único que
  * llega al Ollama del Mac.
- * - La dirección del servicio es FIJA en el código (`http://inv-008-ia:8008`, el nombre del servicio en la red interna
- *   del compose): no sale del entorno ni del pedido, así que no hay a dónde desviar el pedido (sin SSRF).
+ * - La dirección del servicio sale de configuración (`INV_IA_SERVICIO_URL`; por omisión `http://inv-008-ia:8008`, el
+ *   nombre del servicio en la red interna del compose) y se VALIDA (`leerOrigenServicioIa`): http, sin usuario ni ruta, un
+ *   solo nombre de servicio (sin puntos: ni dominios ni IP de internet; en producción, solo `inv-008-ia`) y un puerto alto. Nunca sale del pedido: no hay a
+ *   dónde desviarlo (sin SSRF). Sin rutas fijas de PI en el código (decisión de Jelk del 26-nov: se separa de PI).
  * - El token compartido (`INV_IA_SERVICIO_TOKEN`, del archivo de producción) va en `authorization: Bearer`.
  * - El destino del Ollama NO viaja: el servicio usa el GUARDADO en config_ia, y la temperatura y el límite guardados.
  *   De «Probar» solo viaja el nombre del modelo, que el servicio coteja contra las tareas activas de la configuración.
@@ -23,6 +25,64 @@ export const PUERTO_SERVICIO_IA = 8008;
 export const ORIGEN_SERVICIO_IA = `http://${HOST_SERVICIO_IA}:${PUERTO_SERVICIO_IA}`;
 export const RUTA_IDENTIFICAR = "/identificar";
 export const RUTA_PROBAR = "/probar";
+/** El botón «Analizar con IA»: pedir el análisis de una tarea y leer el estado (analisis-servicio.ts). */
+export const RUTA_ANALIZAR = "/analizar";
+export const RUTA_ESTADO_ANALISIS = "/estado-analisis";
+/** La dirección del servicio de IA para la app (opcional: sin ella, la de siempre). */
+export const VARIABLE_ORIGEN_SERVICIO_IA = "INV_IA_SERVICIO_URL";
+/** El nombre del servicio en la red interna: una sola etiqueta DNS (sin puntos, sin IP). */
+const NOMBRE_SERVICIO = /^[a-z][a-z0-9-]{0,62}$/;
+const PUERTO_MIN = 1024;
+const PUERTO_MAX = 65_535;
+const BUCLE_LOCAL = "127.0.0.1";
+
+export type OrigenLeido = { readonly ok: true; readonly origen: string } | { readonly ok: false; readonly motivo: string };
+
+/**
+ * La dirección del servicio de IA de la configuración, revisada: `http://<nombre>:<puerto>` y nada más (sin usuario, ruta,
+ * consulta ni ancla). Un solo nombre de servicio (sin puntos), un puerto de 1024 a 65535 escrito, y el bucle local
+ * (127.0.0.1) solo fuera de producción, para las pruebas con un servicio falso. En producción, el host es solo
+ * `inv-008-ia` (lista cerrada). Si no cuadra, no se usa (el motivo no
+ * repite el valor: podría traer una clave).
+ */
+export function leerOrigenServicioIa(entorno: Readonly<Record<string, string | undefined>>): OrigenLeido {
+  const valor = entorno[VARIABLE_ORIGEN_SERVICIO_IA];
+  if (valor === undefined || valor === "") return { ok: true, origen: ORIGEN_SERVICIO_IA };
+  const invalida = (porque: string): OrigenLeido => ({ ok: false, motivo: `${VARIABLE_ORIGEN_SERVICIO_IA} no es válida (${porque})` });
+  if (valor !== valor.trim()) return invalida("tiene espacios");
+  let u: URL;
+  try {
+    u = new URL(valor);
+  } catch {
+    return invalida("no es una dirección");
+  }
+  if (u.protocol !== "http:") return invalida("no es http");
+  if (u.username !== "" || u.password !== "") return invalida("trae usuario");
+  if (u.pathname !== "/" || u.search !== "" || u.hash !== "") return invalida("trae ruta, consulta o ancla");
+  const puerto = Number(u.port);
+  if (u.port === "" || !Number.isInteger(puerto) || puerto < PUERTO_MIN || puerto > PUERTO_MAX) return invalida("el puerto");
+  const bucleLocal = u.hostname === BUCLE_LOCAL && entorno.NODE_ENV !== "production";
+  if (!bucleLocal && !NOMBRE_SERVICIO.test(u.hostname)) return invalida("el nombre");
+  if (!bucleLocal && u.hostname === "localhost") return invalida("el nombre");
+  // En producción, lista cerrada: solo el servicio del compose. Otro nombre de una sola etiqueta (la base, la app, un alias
+  // como ip6-localhost) llevaría el token compartido a quien no es.
+  if (entorno.NODE_ENV === "production" && u.hostname !== HOST_SERVICIO_IA) return invalida("el nombre");
+  return { ok: true, origen: `http://${u.hostname}:${u.port}` };
+}
+
+const motivosAvisados = new Set<string>();
+
+/** Solo para las pruebas: vuelve a avisar. */
+export function reiniciarAvisosOrigenParaPruebas(): void {
+  motivosAvisados.clear();
+}
+
+/** Deja una línea con el MOTIVO de una dirección inválida (nunca el valor), una vez por motivo y no una por pedido. */
+export function avisarOrigenInvalido(motivo: string): void {
+  if (motivosAvisados.has(motivo)) return;
+  motivosAvisados.add(motivo);
+  console.error(`[ia-servicio] ${motivo}: no se usa y la app queda sin conexión con el servicio de IA`);
+}
 /** 32 bytes al azar en base64url son 43 caracteres: ese es el mínimo. */
 export const PATRON_TOKEN_SERVICIO = /^[A-Za-z0-9_-]{43,128}$/;
 /** Identificar es un /api/tags en el Mac (10 s) más el viaje. */
@@ -55,11 +115,11 @@ const DETALLE_DE_ESTADO: Readonly<Record<number, string>> = Object.freeze({ 401:
 const esCodigo = (valor: unknown): valor is string => typeof valor === "string" && valor.length <= MAX_LARGO_DETALLE && PATRON_DETALLE.test(valor);
 const esLatencia = (valor: unknown): valor is number => typeof valor === "number" && Number.isFinite(valor) && valor >= 0;
 
-async function pedir(buscar: BuscarServicio, token: string, ruta: string, cuerpo: string, limiteMs: number): Promise<Lectura> {
+async function pedir(buscar: BuscarServicio, token: string, origen: string, ruta: string, cuerpo: string, limiteMs: number): Promise<Lectura> {
   const control = new AbortController();
   const plazo = setTimeout(() => control.abort(), limiteMs);
   try {
-    const respuesta = await buscar(`${ORIGEN_SERVICIO_IA}${ruta}`, {
+    const respuesta = await buscar(`${origen}${ruta}`, {
       method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json", accept: "application/json" }, body: cuerpo,
       signal: control.signal, redirect: "error",
     });
@@ -103,15 +163,15 @@ function leerPrueba(datos: unknown): PruebaCruda {
 }
 
 /** La sonda que le pide al servicio inv-008-ia. `destino`, la temperatura y el límite no viajan: el servicio usa lo guardado. */
-export function sondaServicio(buscar: BuscarServicio, token: string): SondaOllama {
+export function sondaServicio(buscar: BuscarServicio, token: string, origen: string = ORIGEN_SERVICIO_IA): SondaOllama {
   return Object.freeze({
     tipo: "SERVICIO",
     async identificar(): Promise<IdentificacionCruda> {
-      const r = await pedir(buscar, token, RUTA_IDENTIFICAR, "{}", LIMITE_IDENTIFICAR_SERVICIO_MS);
+      const r = await pedir(buscar, token, origen, RUTA_IDENTIFICAR, "{}", LIMITE_IDENTIFICAR_SERVICIO_MS);
       return r.ok ? leerIdentificacion(r.datos) : r;
     },
     async probar(_destino: string, modelo: string, _temperaturaCentesimas: number, limiteMs: number): Promise<PruebaCruda> {
-      const r = await pedir(buscar, token, RUTA_PROBAR, JSON.stringify({ modelo }), limiteMs + HOLGURA_PROBAR_MS);
+      const r = await pedir(buscar, token, origen, RUTA_PROBAR, JSON.stringify({ modelo }), limiteMs + HOLGURA_PROBAR_MS);
       return r.ok ? leerPrueba(r.datos) : pruebaFallida(r);
     },
   });

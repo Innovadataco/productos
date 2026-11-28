@@ -19,7 +19,8 @@ const FILA: FilaConfigIa = {
   modeloNube: "claude-sonnet-5-5",
   topeMensualUsd: new Prisma.Decimal("4.61"),
   horaResumen: "19:00",
-  limiteSegundos: 97,
+  limiteSegundos: 45,
+  analisisDemanda: false,
   esfuerzoNube: "medium",
   creadaEn: new Date("2027-03-17T23:41:13.000Z"),
 };
@@ -37,6 +38,19 @@ describe("filaAConfig", () => {
     expect(filaAConfig({ ...FILA, topeMensualUsd: null })?.topeMicroUsd).toBeNull();
   });
 
+  it("el interruptor del análisis a demanda sale de la fila; sin encender, apagado (falla cerrada)", () => {
+    expect(filaAConfig(FILA)?.analisisDemanda).toBe(false);
+    expect(filaAConfig({ ...FILA, analisisDemanda: true })?.analisisDemanda).toBe(true);
+    expect(filaAConfig({ ...FILA, analisisDemanda: "sí" } as unknown as FilaConfigIa)).toBeNull();
+  });
+
+  it("un límite guardado mayor a 60 s (una versión vieja de hasta 120) se acota a 60; hasta 60 queda igual", () => {
+    expect(filaAConfig({ ...FILA, limiteSegundos: 120 })?.limiteSegundos).toBe(60);
+    expect(filaAConfig({ ...FILA, limiteSegundos: 61 })?.limiteSegundos).toBe(60);
+    expect(filaAConfig({ ...FILA, limiteSegundos: 60 })?.limiteSegundos).toBe(60);
+    expect(filaAConfig({ ...FILA, limiteSegundos: 10 })?.limiteSegundos).toBe(10);
+  });
+
   it("una tarea que falta queda inactiva y sin modelo (una versión vieja sin una tarea nueva)", () => {
     const c = filaAConfig({ ...FILA, tareas: { DIARIO: { activo: true, modeloLocal: "qwen2.5:14b" } } });
     expect(c?.tareas.REGLAS).toEqual({ activo: false, modeloLocal: null });
@@ -47,7 +61,8 @@ describe("filaAConfig", () => {
     ["un modelo de nube que no es de la lista", { modeloNube: "claude-opus-5" }],
     ["un esfuerzo raro", { esfuerzoNube: "high" }],
     ["una hora rara", { horaResumen: "19:30" }],
-    ["un límite fuera de rango", { limiteSegundos: 121 }],
+    ["un límite fuera del rango de la base", { limiteSegundos: 121 }],
+    ["un límite menor a 10", { limiteSegundos: 9 }],
     ["una temperatura fuera de rango", { temperaturaLocal: new Prisma.Decimal("1.5") }],
     ["un tope fuera de rango", { topeMensualUsd: new Prisma.Decimal("51") }],
     ["las tareas como arreglo", { tareas: ["DIARIO"] }],

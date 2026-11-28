@@ -41,6 +41,8 @@ export interface ConfigEditable {
   readonly topeMensualUsd: string;
   readonly horaResumen: string;
   readonly limiteSegundos: string;
+  /** El interruptor del botón «Analizar con IA». */
+  readonly analisisDemanda: boolean;
 }
 
 export interface RequisitoVista {

@@ -84,8 +84,8 @@
 --          hechos guardados (los lee la pantalla, inv_app, con ultimoPublicado);
 --   INSERT en resumen_ia de todas sus columnas menos "generadoEn" (la pone la base: migración 20261122175656_resumen_ia).
 --   SELECT de config_ia (E8, migración 20261122210000_config_ia) de lo que usa leerConfigIa (src/ia/config/leer.ts): la
---          versión, el modo, el destino, la temperatura, las tareas, el modelo de la nube, el tope, la hora, el límite y el
---          esfuerzo; ni el motivo
+--          versión, el modo, el destino, la temperatura, las tareas, el modelo de la nube, el tope, la hora, el límite, el
+--          interruptor del análisis a demanda (analisisDemanda, migración 20261126100000) y el esfuerzo; ni el motivo
 --          (texto libre) ni el autor.
 -- Nada de usuario, filas crudas (crudo), el encargo, la certificación por especie, la caja, los símbolos ni el diario;
 -- sin UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ni DDL, y sin privilegios por defecto: una tabla o columna nueva no le
@@ -141,7 +141,7 @@ BEGIN
   GRANT INSERT (id, "ordenId", "decisionId", "reemplazaId", motivo, "creadoPorId") ON TABLE public.enlace_decision_orden TO inv_app;
 
   -- La configuración de la IA (fase E, E8): solo INSERT, por columna y sin "creadaEn" (la pone la base). Nada se edita.
-  GRANT INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", motivo, "autorId") ON TABLE public.config_ia TO inv_app;
+  GRANT INSERT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "analisisDemanda", "esfuerzoNube", motivo, "autorId") ON TABLE public.config_ia TO inv_app;
 
   -- La tarifa de comisión (fase E, O5): solo INSERT, por columna y sin "creadaEn" (la pone la base). Nada se edita.
   GRANT INSERT (id, version, comisionista, lado, porcentaje, "minimoPorOrden", "fijoPorOrden", "ivaPct", "otrosCargos", "vigenteDesde", motivo, "autorId") ON TABLE public.tarifa_comision TO inv_app;
@@ -203,7 +203,7 @@ BEGIN
     GRANT SELECT ("tipoFuente", estado, "cargadoEn", "revertidaEn") ON TABLE public.carga_archivo TO inv_ia;
     GRANT SELECT (id, "fechaCorte", "retiradaEn") ON TABLE public.certificacion TO inv_ia;
     GRANT SELECT (id, "certificacionId", "fechaCorte", "calculadaEn", resultado) ON TABLE public.conciliacion TO inv_ia;
-    GRANT SELECT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "esfuerzoNube", "creadaEn") ON TABLE public.config_ia TO inv_ia;
+    GRANT SELECT (id, version, modo, "ollamaHost", "ollamaPuerto", "temperaturaLocal", tareas, "modeloNube", "topeMensualUsd", "horaResumen", "limiteSegundos", "analisisDemanda", "esfuerzoNube", "creadaEn") ON TABLE public.config_ia TO inv_ia;
     GRANT SELECT (id, "instrumentoId", tipo, "fechaPago", "montoNeto", "decretadoId") ON TABLE public.dividendo TO inv_ia;
     GRANT SELECT (id, "instrumentoId", tipo, cuota, "valorPorAccion", "fechaAnuncio", "fechaEx", "fechaPago", "referenciaOficial", version, anulada, "reemplazadoEn") ON TABLE public.dividendo_decretado TO inv_ia;
     GRANT SELECT (id, tipo, fecha, "origenId", "destinoId", razon) ON TABLE public.evento_corporativo TO inv_ia;

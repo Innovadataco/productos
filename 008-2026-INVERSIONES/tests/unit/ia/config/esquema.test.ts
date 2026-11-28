@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
-  COLUMNAS_CONFIG_IA, HORAS_RESUMEN, LIMITE_MAX_S, LIMITE_MIN_S, MAX_LARGO_MOTIVO_CONFIG, MODOS_CON_LOCAL, MODOS_CON_NUBE, TAREAS_IA, TEMPERATURA_MAX_CENTESIMAS,
+  COLUMNAS_CONFIG_IA, HORAS_RESUMEN, LIMITE_MAX_BD_S, LIMITE_MAX_S, LIMITE_MIN_S, MAX_LARGO_MOTIVO_CONFIG, MODOS_CON_LOCAL, MODOS_CON_NUBE, TAREAS_IA, TEMPERATURA_MAX_CENTESIMAS,
   TOPE_MAX_MICRO_USD, TOPE_MIN_MICRO_USD,
 } from "@/ia/config/parametros";
 import { TIPOS_RESUMEN } from "@/ia/contrato";
@@ -46,6 +46,24 @@ describe("modelo ConfigIa en prisma/schema.prisma", () => {
   });
 });
 
+describe("migración *_config_ia_analisis_demanda (el interruptor del botón «Analizar con IA»)", () => {
+  const dir = carpetas.find((c) => c.endsWith("_config_ia_analisis_demanda"));
+  const sqlNueva = dir ? leer(`prisma/migrations/${dir}/migration.sql`).replace(/--.*$/gm, "") : "";
+
+  it("existe y es posterior a la de config_ia", () => {
+    expect(dir).toBeDefined();
+    expect(carpetas.indexOf(dir!)).toBeGreaterThan(carpetas.indexOf(propias[0]!));
+  });
+
+  it("solo agrega la columna booleana NOT NULL con valor falso por omisión (falla cerrada) en config_ia; nada se borra", () => {
+    expect(sqlNueva.replace(/\s+/g, " ").trim()).toBe('ALTER TABLE "config_ia" ADD COLUMN "analisisDemanda" BOOLEAN NOT NULL DEFAULT false;');
+  });
+
+  it("el modelo Prisma la declara igual: Boolean @default(false)", () => {
+    expect(campo("analisisDemanda")).toMatch(/^Boolean\s+@default\(false\)$/);
+  });
+});
+
 describe("migración *_config_ia", () => {
   it("es una sola y aditiva: crea su tabla y no toca ninguna otra", () => {
     expect(propias).toHaveLength(1);
@@ -69,9 +87,11 @@ describe("migración *_config_ia", () => {
     expect(literales(check("config_ia_hora_chk"))).toEqual([...HORAS_RESUMEN]);
   });
 
-  it("el límite por pedido va de LIMITE_MIN_S a LIMITE_MAX_S (120, el de PI) y el tope de USD 1 al techo de cordura", () => {
-    expect(LIMITE_MAX_S).toBe(120);
-    expect(check("config_ia_limite_chk")).toBe(`"limiteSegundos" BETWEEN ${LIMITE_MIN_S} AND ${LIMITE_MAX_S}`);
+  it("el límite por pedido: la app acepta de LIMITE_MIN_S a 60 s; la CHECK de la base sigue en 120 (versiones viejas, solo inserción) y el lector acota", () => {
+    expect(LIMITE_MAX_S).toBe(60);
+    expect(LIMITE_MAX_BD_S).toBe(120);
+    expect(check("config_ia_limite_chk")).toBe(`"limiteSegundos" BETWEEN ${LIMITE_MIN_S} AND ${LIMITE_MAX_BD_S}`);
+    expect(COLUMNAS_CONFIG_IA).toContain("analisisDemanda");
     expect(TOPE_MAX_MICRO_USD).toBe(TECHO_TOPE_MICRO_USD);
     const usd = (micro: bigint) => `${micro / 1_000_000n}.00`;
     expect(check("config_ia_tope_chk")).toBe(`"topeMensualUsd" IS NULL OR ("topeMensualUsd" >= ${usd(TOPE_MIN_MICRO_USD)} AND "topeMensualUsd" <= ${usd(TOPE_MAX_MICRO_USD)})`);

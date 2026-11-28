@@ -155,6 +155,27 @@ async function correrRondas(deps: DependenciasCorrida, config: ConfigIaVigente, 
   }
 }
 
+/**
+ * El análisis a demanda de UNA tarea (el botón «Analizar con IA»): los hechos de hoy, el mismo camino de la corrida diaria
+ * (la guarda de «ya publicado», las puertas, el validador y el registro) pero con UN solo intento y sin pausas: quien
+ * hizo clic no espera minutos, y el siguiente análisis lo permite el servicio 2 minutos después. Devuelve cómo quedó:
+ * PUBLICADO, RECHAZADO, FALLIDO, YA_PUBLICADO (los mismos hechos: no se llama al modelo ni se duplica), TAREA_INACTIVA,
+ * APAGADO, OMITIDO (sin hechos de esa tarea hoy) o ERROR (un fallo del registro o de la base; su código va al log).
+ */
+export async function correrUna(deps: DependenciasCorrida, config: ConfigIaVigente | null, tarea: TipoResumen, hoy: Date): Promise<EstadoTipo> {
+  if (config === null || config.modo === "apagado") return "APAGADO";
+  const exportacion = await deps.exportar(hoy);
+  for (const aviso of exportacion.avisos) deps.registrarLog(`aviso de los hechos: ${aviso}`);
+  const paquete = exportacion.paquetes.find((p) => p.tipo === tarea);
+  if (paquete === undefined) return "OMITIDO";
+  const porTipo: Estados = {};
+  const pendiente = await protegido(deps, porTipo, tarea, () => preparar(deps, config, paquete));
+  if (pendiente === null) return "ERROR";
+  if (typeof pendiente === "string") return pendiente;
+  const r = await protegido(deps, porTipo, tarea, () => intentar(deps, config, pendiente));
+  return r === null ? "ERROR" : r.estado;
+}
+
 /** La corrida del día `hoy` (la fecha de negocio en Colombia, a medianoche UTC) con la configuración vigente. */
 export async function correrDiaria(deps: DependenciasCorrida, config: ConfigIaVigente | null, hoy: Date): Promise<ResumenCorrida> {
   if (config === null || config.modo === "apagado") return APAGADA;
