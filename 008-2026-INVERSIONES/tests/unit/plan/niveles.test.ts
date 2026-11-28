@@ -32,4 +32,11 @@ describe("estado del nivel de una regla con el cierre al día", () => {
     expect(estadoDelNivel("CIERRE_BAJO", D("480"), null)).toEqual({ estado: "SIN_CIERRE_AL_DIA" });
     expect(estadoDelNivel("CIERRE_BAJO", null, D("505"))).toEqual({ estado: "SIN_NIVEL" });
   });
+
+  it("un cierre en 0 (o negativo) no es un cierre al día: ni cruce falso ni distancia infinita, igual que un cierre ausente", () => {
+    for (const c of [D("0"), D("-0"), D("-5")]) {
+      expect(estadoDelNivel("CIERRE_BAJO", D("480"), c)).toEqual({ estado: "SIN_CIERRE_AL_DIA" });
+      expect(estadoDelNivel("CIERRE_SOBRE", D("1200"), c)).toEqual({ estado: "SIN_CIERRE_AL_DIA" });
+    }
+  });
 });

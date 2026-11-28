@@ -19,7 +19,7 @@ export type EstadoNivel =
 
 export function estadoDelNivel(condicion: CondicionRegla, nivel: Prisma.Decimal | null, cierreAlDia: Prisma.Decimal | null): EstadoNivel {
   if ((condicion !== "CIERRE_BAJO" && condicion !== "CIERRE_SOBRE") || nivel === null) return { estado: "SIN_NIVEL" };
-  if (cierreAlDia === null || !cierreAlDia.isPositive()) return { estado: "SIN_CIERRE_AL_DIA" };
+  if (cierreAlDia === null || !cierreAlDia.gt(0)) return { estado: "SIN_CIERRE_AL_DIA" };
   if (cierreAlDia.eq(nivel)) return { estado: "EN_EL_NIVEL" };
   if (condicion === "CIERRE_BAJO" && cierreAlDia.lt(nivel)) return { estado: "TOCADA", lado: "BAJO" };
   if (condicion === "CIERRE_SOBRE" && cierreAlDia.gt(nivel)) return { estado: "TOCADA", lado: "SOBRE" };

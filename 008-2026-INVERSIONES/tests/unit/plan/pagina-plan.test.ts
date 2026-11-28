@@ -138,6 +138,13 @@ describe("la versión vigente, con cierres y distancia al nivel", () => {
     ]);
   });
 
+  it("con un cierre en 0 no muestra «Infinity» ni «tocada»: no hay cierre al día para medir el nivel", async () => {
+    ultimosCierres.mockResolvedValue(new Map([...CIERRES, ["a", { ...CIERRES.get("a")!, precio: new Prisma.Decimal("0") }], ["c", { ...CIERRES.get("c")!, fecha: CIERRES.get("a")!.fecha, precio: new Prisma.Decimal("0") }]]));
+    const raiz = await pantalla();
+    expect(texto(raiz)).not.toMatch(/Infinity|NaN/);
+    for (const e of ["FICTA", "FICTC"]) expect(celdas(fila(raiz, e))[7]).not.toMatch(/tocada|%/);
+  });
+
   it("las decisiones de una regla llevan al diario filtrado; cada fila tiene su ancla", async () => {
     const raiz = await pantalla();
     const enlace = fila(raiz, "FICTA")!.querySelector("a");
