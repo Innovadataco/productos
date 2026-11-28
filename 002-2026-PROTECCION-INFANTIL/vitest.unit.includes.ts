@@ -737,6 +737,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-439: el aviso al padre. El defecto era código MUERTO (SPEC-135/308
     // construido y sin llamador), así que el candado mira el CABLEADO.
     "src/lib/dal/services/corroboracion-padre.candado.test.ts",
+    // SPEC-983: ningún método de AutenticacionService da de alta un usuario con contraseña sin
+    // verificar el correo (solo `registrar`, alta por admin). Conducta + fuente.
+    "src/lib/dal/services/autenticacion-sin-alta-sin-verificacion.candado.test.ts",
     // SPEC-476 (OLA 1 · lote de 12 muebles al Sistema de Diseño): candados que
     // leen fuente, sin BD. (SPEC-458 Alerta se cubre por Alerta.test.tsx en el glob.)
     "src/components/ui/badge-tokens.candado.test.ts",
