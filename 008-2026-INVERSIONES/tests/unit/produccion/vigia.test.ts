@@ -366,3 +366,94 @@ describe("vigía · nunca actúa y deja su latido", () => {
     expect(r.stderr).not.toContain(TOKEN);
   });
 });
+
+describe("vigía · los precios cada minuto detenidos (huella intradia del servicio de precios)", () => {
+  const huella = (limitados: string, estado = "LIMITADO"): string => `formato=1\nestado=${estado}\nultimo=1800000000\ncodigo=7\nciclos=9\nfallos=4\nlimitados=${limitados}\nespera=0\n`;
+  function conHuella() {
+    const v = preparar();
+    const precios = path.join(v.dir, "precios-estado");
+    mkdirSync(precios, { recursive: true });
+    const escribir = (texto: string) => writeFileSync(path.join(precios, "intradia"), texto);
+    const pasada = () => v.pasada({ VIGIA_PRECIOS_ESTADO_DIR: precios });
+    return { v, precios, escribir, pasada };
+  }
+
+  it("sin huella (tmpfs vacío o servicio sin ciclos) no avisa", async () => {
+    mensajes = [];
+    const { pasada } = conHuella();
+    expect((await pasada()).status).toBe(0);
+    expect(mensajes).toHaveLength(0);
+  });
+
+  it("LIMITADO con menos de 4 bloqueos seguidos no avisa: el servicio todavía está esperando", async () => {
+    mensajes = [];
+    const { escribir, pasada } = conHuella();
+    escribir(huella("3"));
+    await pasada();
+    expect(mensajes).toHaveLength(0);
+  });
+
+  it("LIMITADO con 4 bloqueos seguidos avisa UNA vez (sin spam) y, al volver el servicio, avisa el RESUELTO una vez", async () => {
+    mensajes = [];
+    const { escribir, pasada } = conHuella();
+    escribir(huella("4"));
+    await pasada();
+    expect(textos()).toHaveLength(1);
+    expect(textos()[0]).toMatch(/precios cada minuto/i);
+    expect(textos()[0]).toMatch(/4 bloqueos seguidos/);
+    expect(textos()[0]).toMatch(/INV_INTRADIA_ENCENDIDO=0/);
+    expect(textos()[0]).not.toContain(TOKEN);
+    await pasada();
+    await pasada();
+    expect(textos()).toHaveLength(1);
+    escribir(huella("0", "ESPERANDO"));
+    await pasada();
+    expect(textos()).toHaveLength(2);
+    expect(textos()[1]).toMatch(/RESUELTO/);
+    await pasada();
+    expect(textos()).toHaveLength(2);
+  });
+
+  it("si Telegram falla, no marca el aviso como enviado: lo reintenta en la pasada siguiente", async () => {
+    mensajes = [];
+    const { escribir, pasada } = conHuella();
+    escribir(huella("4"));
+    responder = 500;
+    try {
+      await pasada();
+    } finally {
+      responder = 200;
+    }
+    expect(mensajes).toHaveLength(0);
+    await pasada();
+    expect(textos()).toHaveLength(1);
+  });
+
+  it("FALLO_DATOS y SIN_BARRAS (fallos que no son bloqueo) no avisan «Yahoo bloqueó»", async () => {
+    mensajes = [];
+    const { escribir, pasada } = conHuella();
+    for (const estado of ["FALLO_DATOS", "SIN_BARRAS", "TOPE_DIA"]) {
+      escribir(huella("0", estado));
+      await pasada();
+    }
+    expect(mensajes).toHaveLength(0);
+  });
+
+  it("una huella dañada (limitados no numérico) no tumba la pasada ni avisa", async () => {
+    mensajes = [];
+    const { escribir, pasada } = conHuella();
+    escribir(huella("abc"));
+    expect((await pasada()).status).toBe(0);
+    expect(mensajes).toHaveLength(0);
+  });
+
+  it("es independiente de la memoria: las dos alertas conviven, cada una con su aviso", async () => {
+    mensajes = [];
+    const { v, escribir, pasada } = conHuella();
+    escribir(huella("4"));
+    v.fijarMemoria(900);
+    await pasada();
+    expect(textos().filter((t) => /precios cada minuto/i.test(t))).toHaveLength(1);
+    expect(textos().filter((t) => /ALERTA/.test(t) && /MemAvailable/.test(t))).toHaveLength(1);
+  });
+});

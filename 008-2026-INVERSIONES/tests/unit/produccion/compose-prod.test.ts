@@ -158,8 +158,8 @@ describe("docker-compose.prod.yml · proyecto, red y base propios", () => {
     expect(JSON.stringify(compose)).not.toMatch(/\bpi[-_]|\bbi[-_]|proteccion|gesmovil|hermes|docker\.sock|\/var\/lib\/docker/i);
   });
 
-  it("el vigía no tiene el socket de Docker: solo /proc/meminfo y /sys/fs/cgroup en solo lectura, y la red con salida", () => {
-    expect(s("inv-008-vigia").volumes).toEqual(["/proc/meminfo:/host/meminfo:ro", "/sys/fs/cgroup:/host/cgroup:ro"]);
+  it("el vigía no tiene el socket de Docker: solo /proc/meminfo, /sys/fs/cgroup y la huella de precios en solo lectura, y la red con salida", () => {
+    expect(s("inv-008-vigia").volumes).toEqual(["/proc/meminfo:/host/meminfo:ro", "/sys/fs/cgroup:/host/cgroup:ro", "inv-008-precios-estado:/precios-estado:ro"]);
     expect(s("inv-008-vigia").networks).toEqual(["inv-008-red"]);
     expect((s("inv-008-vigia") as { cpus?: number }).cpus).toBe(0.05);
     expect(s("inv-008-respaldo").volumes).toEqual([BIND_RESPALDOS]);

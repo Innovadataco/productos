@@ -1,11 +1,12 @@
 /**
- * Corredor de tareas del servicio inv-008-precios. Cada tarea (precios, fondo) corre como un proceso hijo del MISMO
+ * Corredor de tareas del servicio inv-008-precios. Cada tarea (precios, fondo e intradia) corre como un proceso hijo del MISMO
  * bundle (`node <banderas> servicio-precios.mjs <tarea> [--desde …]`): es el mismo CLI de scripts/, con sus mensajes,
  * sus topes de red y sus códigos de salida, y el plazo mata de verdad (los CLI corren al cargarse y salen con
  * process.exit: no se pueden repetir ni cortar dentro del proceso del bucle).
  * - Plazo (timeout) por tarea: al vencer, SIGTERM; si no sale en la gracia, SIGKILL. Sin reintentos.
  * - stdout y stderr heredados (al log del contenedor): los CLI imprimen solo conteos, códigos e ids internos.
- * - Sin shell y sin stdin. Las tareas van de a una (precios y luego fondo): un solo hijo a la vez, por la memoria.
+ * - Sin shell y sin stdin. Las tareas van de a una (precios y luego fondo; el ciclo intradía solo corre en la rueda, nunca junto a la
+ *   corrida de las 18:00): un solo hijo a la vez, por la memoria.
  * Códigos: el de salida del CLI («0», «3»…), TIEMPO (venció el plazo), SENAL_<señal> (lo mató otra señal),
  * NO_ARRANCO (no se pudo lanzar) o DETENIDO (el servicio se está deteniendo: no se lanza).
  */
@@ -14,7 +15,7 @@ import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process"
 export const PLAZO_TAREA_MS = 15 * 60_000;
 export const GRACIA_MS = 5_000;
 
-export type Tarea = "precios" | "fondo";
+export type Tarea = "precios" | "fondo" | "intradia";
 
 export interface ResultadoTarea {
   readonly tarea: Tarea;

@@ -377,6 +377,7 @@ model Instrumento {
   rendimientosFondo    RendimientoFondo[]
   valoresUnidad        ValorUnidadFondo[]
   precios              PrecioCierre[]
+  preciosIntradia      PrecioIntradia[]
   controles            ControlConciliacion[]
   eventosOrigen        EventoCorporativo[]     @relation("EventoOrigen")
   eventosDestino       EventoCorporativo[]     @relation("EventoDestino")
@@ -774,6 +775,24 @@ model PrecioCierre {
 
   @@index([instrumentoId, fecha])
   @@map("precio_cierre")
+}
+
+/// Precios de 1 minuto durante la rueda (Yahoo `.CL`, que llega con retraso: `conRetraso` dice si la respuesta lo marcó).
+/// Solo inserción por su disparador: UPDATE nunca y DELETE solo de lo de más de 60 días (la retención; migración
+/// 20261126120000_precio_intradia). Una fila por (especie, instante, fuente): traer lo mismo otra vez no duplica. `instante`
+/// es la hora de la barra; `traidoEn` la pone la base. Aparte de `precio_cierre`: no es el cierre ni se verifica contra A&V.
+model PrecioIntradia {
+  id            String      @id @default(cuid())
+  instrumentoId String
+  instrumento   Instrumento @relation(fields: [instrumentoId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  instante      DateTime    @db.Timestamptz(6)
+  precio        Decimal     @db.Decimal(20, 6) // sin ajustar
+  fuente        String
+  conRetraso    Boolean
+  traidoEn      DateTime    @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6) // la pone la base (inv_precio_intradia_insercion)
+
+  @@unique([instrumentoId, instante, fuente])
+  @@map("precio_intradia")
 }
 
 // ───────────── Conciliación ─────────────

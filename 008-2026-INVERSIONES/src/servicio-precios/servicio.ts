@@ -1,11 +1,13 @@
 /**
  * Cableado real del servicio inv-008-precios (lo usa scripts/servicio-precios.ts, el bundle de la imagen de la app):
  * la carpeta de la huella (/estado, o PRECIOS_ESTADO_DIR en las pruebas), el reloj, el log con la hora de Colombia,
- * el corredor que relanza el MISMO bundle para cada tarea y la credencial revisada (nunca la URL).
+ * el corredor que relanza el MISMO bundle para cada tarea, la credencial revisada (nunca la URL) y la configuración del ciclo
+ * intradía (variables INV_INTRADIA_*, con sus valores por omisión).
  */
 import { iniciarBucle, correrAhora, type Dependencias, type Programar, type Senales } from "./bucle";
 import { revisarCredencial } from "./configuracion";
 import { ESTADO_DIR_POR_DEFECTO } from "./estado";
+import { leerConfigIntradia } from "./intradia-configuracion";
 import { textoCot } from "./programa";
 import { crearCorredor } from "./tareas";
 
@@ -31,6 +33,7 @@ export function dependenciasReales(proceso: Proceso, script: string): Dependenci
     corredor: crearCorredor({ ejecutable: proceso.execPath, argumentosNode: proceso.execArgv, script, env: proceso.env }),
     credencial: revisarCredencial(proceso.env.DATABASE_URL),
     programar: programarConIntervalo,
+    intradia: leerConfigIntradia(proceso.env),
   };
 }
 

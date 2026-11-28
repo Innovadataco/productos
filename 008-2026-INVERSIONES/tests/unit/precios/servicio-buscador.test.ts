@@ -65,14 +65,14 @@ const json = (cuerpo: unknown, extra: Record<string, string> = {}) => (_: Incomi
 };
 
 describe("los 2 hosts fijos", () => {
-  it("son exactamente Yahoo (query1) y la SFC (www.datos.gov.co)", () => {
-    expect(HOSTS_PERMITIDOS).toEqual(["query1.finance.yahoo.com", "www.datos.gov.co"]);
+  it("son exactamente Yahoo (query1 y query2) y la SFC (www.datos.gov.co)", () => {
+    expect(HOSTS_PERMITIDOS).toEqual(["query1.finance.yahoo.com", "query2.finance.yahoo.com", "www.datos.gov.co"]);
   });
 
   for (const [caso, url] of [
     ["otro host", "https://ejemplo.invalid/v8/finance/chart/FICTA.CL"],
     ["un sufijo engañoso", "https://query1.finance.yahoo.com.ejemplo.invalid/v8/finance/chart/FICTA.CL"],
-    ["otro host de Yahoo", "https://query2.finance.yahoo.com/v8/finance/chart/FICTA.CL"],
+    ["otro host de Yahoo (query3)", "https://query3.finance.yahoo.com/v8/finance/chart/FICTA.CL"],
     ["la SFC sin www", "https://datos.gov.co/resource/qhpu-8ixx.json"],
     ["http sin TLS", "http://query1.finance.yahoo.com/v8/finance/chart/FICTA.CL"],
     ["un puerto explícito", "https://query1.finance.yahoo.com:8443/v8/finance/chart/FICTA.CL"],

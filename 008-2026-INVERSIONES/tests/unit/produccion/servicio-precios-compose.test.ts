@@ -64,9 +64,21 @@ describe("inv-008-precios · imagen, arranque y modo", () => {
 });
 
 describe("inv-008-precios · solo la credencial de inv_precios (sin el secreto no se cae)", () => {
-  it("su entorno es exactamente DATABASE_URL y TZ: ni claves de cifrado, ni AUTH_SECRET, ni Telegram, ni age", () => {
-    expect(Object.keys(precios.environment ?? {}).sort()).toEqual(["DATABASE_URL", "TZ"]);
+  it("su entorno es DATABASE_URL, TZ y las 7 variables INV_INTRADIA_* del ciclo por minuto: ni claves de cifrado, ni AUTH_SECRET, ni Telegram, ni age", () => {
+    expect(Object.keys(precios.environment ?? {}).sort()).toEqual(
+      [
+        "DATABASE_URL", "TZ", "INV_INTRADIA_CICLO_SEG", "INV_INTRADIA_DESDE_COT", "INV_INTRADIA_ENCENDIDO", "INV_INTRADIA_HASTA_COT", "INV_INTRADIA_PAUSA_MS",
+        "INV_INTRADIA_RETENCION_DIAS", "INV_INTRADIA_HOST_YAHOO",
+      ].sort(),
+    );
     expect(precios.environment?.TZ).toBe("America/Bogota");
+    // Todas opcionales (${…:-}), nunca obligatorias (:?): sin ellas el servicio arranca igual, con los valores por omisión.
+    for (const [nombre, valor] of Object.entries(precios.environment ?? {}).filter(([n]) => n.startsWith("INV_INTRADIA_"))) {
+      expect(valor, nombre).toMatch(new RegExp(`^\\$\\{${nombre}:-[^}]*\\}$`));
+    }
+    // Vacías por omisión: los valores por omisión viven en un solo lugar (src/servicio-precios/intradia-configuracion.ts).
+    expect(precios.environment?.INV_INTRADIA_ENCENDIDO).toBe("${INV_INTRADIA_ENCENDIDO:-}");
+    expect(precios.environment?.INV_INTRADIA_CICLO_SEG).toBe("${INV_INTRADIA_CICLO_SEG:-}");
     expect(JSON.stringify(precios)).not.toMatch(/CIFRADO|AUTH_SECRET|TELEGRAM|AGE_|POSTGRES_PASSWORD|INV_DUENO|INV_APP/);
   });
 

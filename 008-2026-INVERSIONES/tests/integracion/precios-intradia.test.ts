@@ -1,0 +1,623 @@
+// Precios intradía (barras de 1 minuto de Yahoo `.CL`) contra la base de PRUEBAS, con un Yahoo FALSO de respuestas fijas
+// e inventadas (sin red): la tabla de solo inserción, el camino único de escritura (sin duplicar), las especies
+// (con lote o con regla en el plan vigente), el ciclo (día hábil, 429, fallos por especie, símbolo registrado), la
+// depuración (retención) y los lectores. Al final, un día completo con 12 especies ficticias para medir la carga.
+// Fechas de 2027 (calendario_bvc las trae sembradas: el 25 de marzo de 2027 es festivo). Especies `FICTICIA`.
+import { randomBytes } from "node:crypto";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { correrCicloIntradia } from "@/precios/intradia/ciclo";
+import { depurarIntradia } from "@/precios/intradia/depurar";
+import { especiesIntradia } from "@/precios/intradia/especies";
+import { guardarBarras } from "@/precios/intradia/guardar";
+import { preciosDelDia, ultimoPrecioIntradia } from "@/precios/intradia/leer";
+import type { BarraIntradia } from "@/precios/intradia/yahoo";
+import type { Buscar } from "@/precios/yahoo";
+
+const db = new PrismaClient();
+const corrida = Date.now().toString(36).toUpperCase().slice(-5);
+const cot = (texto: string): Date => new Date(`${texto.replace(" ", "T")}:00-05:00`);
+const URL_YAHOO = "https://query2.finance.yahoo.com";
+const MIN = 60_000;
+/** «Ahora» de las pruebas que guardan barras del 9 de febrero de 2027: la misma noche, para que ninguna sea del futuro ni de hace más de un día. */
+const DESPUES = new Date(`2027-02-09T20:00:00-05:00`);
+let n = 0;
+let usuarioId = "";
+let cargaId = "";
+
+const barra = (hora: string, precio: string, dia = "2027-02-09"): BarraIntradia => ({ instante: cot(`${dia} ${hora}`), precio });
+async function accion(sufijo: string, opciones: { activo?: boolean; conLote?: boolean } = {}): Promise<string> {
+  const id = (await db.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `FICTICIA${sufijo}${corrida}`, nombre: "Ficticia SA", activo: opciones.activo ?? true } })).id;
+  if (opciones.conLote) {
+    n += 1;
+    const dia = new Date("2027-01-12T00:00:00Z");
+    const fila = await db.filaFuente.create({ data: { tipoFuente: "TRII_ORDENES", claveNatural: `intradia-${corrida}-${n}`, ocurrencia: 1, primeraCargaId: cargaId, primeraFilaNo: n, crudo: { ficticio: true } } });
+    const cero = new Prisma.Decimal(0);
+    const orden = await db.orden.create({
+      data: {
+        filaFuenteId: fila.id, ejecutadaEn: dia, fechaOperacion: dia, fechaLiquidacion: new Date("2027-01-14T00:00:00Z"), instrumentoId: id, lado: "COMPRA", estado: "APROBADO",
+        cantidadCompletada: 10n, precioUnitario: new Prisma.Decimal(100), totalInvertido: new Prisma.Decimal(1000), comision: cero, totalEstimado: new Prisma.Decimal(1000),
+      },
+    });
+    await db.lote.create({
+      data: { instrumentoId: id, origen: "COMPRA", ordenId: orden.id, fuenteCosto: "TRII_ORDEN", fechaCompra: dia, fechaLiquidacion: new Date("2027-01-14T00:00:00Z"), cantidad: 10n, costoUnitario: new Prisma.Decimal(100), costoTotal: new Prisma.Decimal(1000) },
+    });
+  }
+  return id;
+}
+/** Siembra barras directamente (como el dueño de la base: sin el filtro de `guardarBarras`) para probar los lectores con días distintos. */
+const sembrar = (instrumentoId: string, barras: readonly BarraIntradia[], conRetraso = true) =>
+  db.precioIntradia.createMany({ data: barras.map((b) => ({ instrumentoId, instante: b.instante, precio: new Prisma.Decimal(b.precio), fuente: "yahoo", conRetraso })) });
+const filas = (instrumentoId: string) => db.precioIntradia.findMany({ where: { instrumentoId }, orderBy: { instante: "asc" } });
+
+/** Yahoo falso: devuelve, por símbolo, las barras (instante en segundos Unix y cierre) o un estado HTTP. */
+function yahooFalso(porSimbolo: Record<string, readonly { t: number; c: number }[] | number>) {
+  const pedidos: string[] = [];
+  const buscar: Buscar = async (url) => {
+    pedidos.push(url);
+    const simbolo = decodeURIComponent(/\/chart\/([^?]+)\?/.exec(url)?.[1] ?? "");
+    const dato = porSimbolo[simbolo];
+    if (typeof dato === "number") return new Response("{}", { status: dato });
+    const barras = dato ?? [];
+    return new Response(
+      JSON.stringify({
+        chart: {
+          result: [{ meta: { currency: "COP", exchangeDataDelayedBy: 20 }, timestamp: barras.map((b) => b.t), indicators: { quote: [{ close: barras.map((b) => b.c), volume: barras.map(() => 10) }] } }],
+        },
+      }),
+    );
+  };
+  return { buscar, pedidos };
+}
+const seg = (texto: string): number => cot(texto).getTime() / 1000;
+const sinPausa = async (): Promise<void> => undefined;
+
+beforeAll(async () => {
+  const base = (await db.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`)[0]?.db ?? "";
+  if (!base.endsWith("_test")) throw new Error(`Se negó a correr sobre «${base}»`);
+  usuarioId = (await db.usuario.create({ data: { email: `dueno-intradia-${corrida.toLowerCase()}@ejemplo.invalid`, rol: "DUENO" } })).id;
+  cargaId = (await db.cargaArchivo.create({ data: { tipoFuente: "TRII_ORDENES", nombreArchivo: "ordenes.ficticio.csv", sha256: randomBytes(32).toString("hex"), estado: "CARGADO", cargadoPorId: usuarioId } })).id;
+});
+
+afterAll(async () => {
+  await db.$disconnect();
+});
+
+// Va primero: con solo estas 12 especies con lote en la base, la medida es exacta y la prueba corre más rápido.
+describe("un día completo con 12 especies ficticias: peticiones y filas", () => {
+  it("415 ciclos (09:30 a 16:24) × 12 especies = 4 980 pedidos; se guardan 390 barras por especie = 4 680 filas, sin duplicar", async () => {
+    const especies: string[] = [];
+    for (let i = 1; i <= 12; i++) especies.push(await accion(`Z${String(i).padStart(2, "0")}`, { conLote: true }));
+    const simbolos = new Set(especies.map((_, i) => `FICTICIAZ${String(i + 1).padStart(2, "0")}${corrida}.CL`));
+    const DIA = "2027-02-10";
+    const inicio = cot(`${DIA} 09:30`).getTime();
+    // Yahoo falso con retraso de 20 min: en cada pedido devuelve las barras de 09:30 a 15:59 cuyo instante ya pasó hace ≥ 20 min.
+    let pedidos = 0;
+    let ahoraMs = inicio;
+    const buscar: Buscar = async (url) => {
+      const simbolo = decodeURIComponent(/\/chart\/([^?]+)\?/.exec(url)?.[1] ?? "");
+      if (simbolos.has(simbolo)) pedidos += 1;
+      const ts: number[] = [];
+      for (let m = 0; m < 390; m++) {
+        const t = inicio + m * MIN;
+        if (t <= ahoraMs - 20 * MIN) ts.push(t / 1000);
+      }
+      return new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP", exchangeDataDelayedBy: 20 }, timestamp: ts, indicators: { quote: [{ close: ts.map((_, i) => 1000 + i), volume: ts.map(() => 10) }] } }] } }));
+    };
+    let nuevas = 0;
+    let ciclos = 0;
+    let maximaPorCiclo = 0;
+    for (ahoraMs = inicio; ahoraMs < cot(`${DIA} 16:25`).getTime(); ahoraMs += MIN) {
+      // Solo las 12 especies de esta prueba: se mide con un buscador que responde vacío a las demás (otras pruebas dejan lotes).
+      const r = await correrCicloIntradia(db, { buscar, ahora: new Date(ahoraMs + 5_000), urlYahoo: URL_YAHOO, pausaMs: 0, dormir: sinPausa });
+      ciclos += 1;
+      nuevas += r.barrasNuevas;
+      maximaPorCiclo = Math.max(maximaPorCiclo, r.barrasNuevas);
+    }
+    const guardadasMias = await db.precioIntradia.count({ where: { instrumentoId: { in: especies } } });
+    // Cada especie de la base responde con las mismas barras (el falso no distingue): la medida es por especie y por ciclo.
+    expect(ciclos).toBe(415);
+    expect(pedidos).toBe(415 * 12);
+    expect(guardadasMias).toBe(390 * 12);
+    expect(nuevas).toBeGreaterThanOrEqual(390 * 12);
+    expect(maximaPorCiclo).toBeGreaterThan(0);
+    // Sin duplicados: una fila por (especie, instante).
+    const duplicadas = await db.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM (SELECT 1 FROM precio_intradia GROUP BY "instrumentoId", instante, fuente HAVING count(*) > 1) d`;
+    expect(Number(duplicadas[0]!.n)).toBe(0);
+  }, 240_000);
+});
+
+describe("precio_intradia · solo inserción y sin duplicados", () => {
+  it("guarda las barras con la fuente yahoo, el retraso marcado y la hora de traída que pone la base", async () => {
+    const id = await accion("G1");
+    const nuevas = await guardarBarras(db, id, [barra("09:30", "1234.5"), barra("09:31", "1240")], true, DESPUES);
+    expect(nuevas).toBe(2);
+    const guardadas = await filas(id);
+    expect(guardadas.map((f) => [f.instante.toISOString(), f.precio.toString(), f.fuente, f.conRetraso])).toEqual([
+      [cot("2027-02-09 09:30").toISOString(), "1234.5", "yahoo", true],
+      [cot("2027-02-09 09:31").toISOString(), "1240", "yahoo", true],
+    ]);
+    expect(Math.abs(guardadas[0]!.traidoEn.getTime() - Date.now())).toBeLessThan(60_000);
+  });
+
+  it("traer lo mismo otra vez no duplica ni cambia lo guardado (la primera barra gana); una barra nueva sí entra", async () => {
+    const id = await accion("G2");
+    await guardarBarras(db, id, [barra("09:30", "100")], true, DESPUES);
+    expect(await guardarBarras(db, id, [barra("09:30", "999"), barra("09:31", "101")], true, DESPUES)).toBe(1);
+    expect(await guardarBarras(db, id, [barra("09:30", "999"), barra("09:31", "101")], true, DESPUES)).toBe(0);
+    expect((await filas(id)).map((f) => f.precio.toString())).toEqual(["100", "101"]);
+  });
+
+  it("sin barras no toca la base", async () => {
+    expect(await guardarBarras(db, await accion("G3"), [], false)).toBe(0);
+  });
+
+  it("la misma barra de dos especies distintas entra para las dos", async () => {
+    const a = await accion("G4");
+    const b = await accion("G5");
+    await guardarBarras(db, a, [barra("09:30", "10")], true, DESPUES);
+    expect(await guardarBarras(db, b, [barra("09:30", "10")], true, DESPUES)).toBe(1);
+  });
+
+  it("la base no deja editar una fila ni borrar una reciente (solo inserción)", async () => {
+    const id = await accion("S1");
+    await guardarBarras(db, id, [barra("09:30", "10")], true, DESPUES);
+    await expect(db.$executeRawUnsafe(`UPDATE precio_intradia SET precio = 11 WHERE "instrumentoId" = '${id}'`)).rejects.toThrow(/solo inserci/);
+    await expect(db.$executeRawUnsafe(`DELETE FROM precio_intradia WHERE "instrumentoId" = '${id}'`)).rejects.toThrow(/solo inserci|retenci/);
+    expect(await filas(id)).toHaveLength(1);
+  });
+
+  it("solo deja borrar lo de hace más de 60 días (la retención garantiza al menos 30 días hábiles)", async () => {
+    const id = await accion("S2");
+    const hace = (dias: number) => new Date(Date.now() - dias * 24 * 60 * MIN);
+    await db.precioIntradia.createMany({
+      data: [
+        { instrumentoId: id, instante: hace(61), precio: new Prisma.Decimal(10), fuente: "yahoo", conRetraso: true },
+        { instrumentoId: id, instante: hace(59), precio: new Prisma.Decimal(11), fuente: "yahoo", conRetraso: true },
+      ],
+    });
+    await expect(db.$executeRawUnsafe(`DELETE FROM precio_intradia WHERE "instrumentoId" = '${id}' AND instante > now() - interval '60 days'`)).rejects.toThrow();
+    await db.$executeRawUnsafe(`DELETE FROM precio_intradia WHERE "instrumentoId" = '${id}' AND instante < now() - interval '60 days'`);
+    expect((await filas(id)).map((f) => f.precio.toString())).toEqual(["11"]);
+  });
+
+  it("CHECK: el precio es positivo y la fuente no está vacía", async () => {
+    const id = await accion("C1");
+    await expect(db.precioIntradia.create({ data: { instrumentoId: id, instante: cot("2027-02-09 09:30"), precio: new Prisma.Decimal(0), fuente: "yahoo", conRetraso: true } })).rejects.toThrow();
+    await expect(db.precioIntradia.create({ data: { instrumentoId: id, instante: cot("2027-02-09 09:30"), precio: new Prisma.Decimal(1), fuente: "", conRetraso: true } })).rejects.toThrow();
+  });
+});
+
+describe("especiesIntradia · con lote o con regla en el plan vigente", () => {
+  it("incluye las acciones activas con lote o con regla en la versión VIGENTE del plan; excluye el resto", async () => {
+    const conLote = await accion("E1", { conLote: true });
+    const conRegla = await accion("E2");
+    const reglaVieja = await accion("E3");
+    const sinNada = await accion("E4");
+    const inactiva = await accion("E5", { activo: false, conLote: true });
+    // Dentro de una transacción que se revierte: las tablas del plan son de solo inserción y lo escrito aquí rompería las
+    // pruebas del plan (vigencias de 2027) en la base compartida.
+    class Revertir extends Error {}
+    await db
+      .$transaction(async (tx) => {
+        const ultima = (await tx.planVersion.findFirst({ orderBy: { version: "desc" }, select: { version: true } }))?.version ?? 0;
+        const crear = (version: number, vigenteDesde: string) => tx.planVersion.create({ data: { version, vigenteDesde: new Date(`${vigenteDesde}T00:00:00Z`), motivo: "ficticio", aprobadaPorId: usuarioId } });
+        const vieja = await crear(ultima + 1, "2027-01-01");
+        const vigente = await crear(ultima + 2, "2027-02-01");
+        await crear(ultima + 3, "2027-12-01"); // futura: no es la vigente de febrero
+        const regla = (planVersionId: string, instrumentoId: string | null) =>
+          tx.reglaPlan.create({ data: { planVersionId, instrumentoId, condicion: "CIERRE_BAJO", nivel: new Prisma.Decimal(100), accion: "NO_ACTUAR", detalle: "ficticio" } });
+        await regla(vieja.id, reglaVieja);
+        await regla(vigente.id, conRegla);
+        await regla(vigente.id, null); // regla del portafolio: sin especie
+        await regla(vigente.id, conLote); // con lote y con regla: una sola vez
+
+        const especies = await especiesIntradia(tx, new Date("2027-02-09T00:00:00Z"));
+        const ids = especies.map((e) => e.id);
+        expect(ids).toEqual(expect.arrayContaining([conLote, conRegla]));
+        expect(ids).not.toContain(reglaVieja);
+        expect(ids).not.toContain(sinNada);
+        expect(ids).not.toContain(inactiva);
+        expect(ids.filter((i) => i === conLote)).toHaveLength(1);
+        expect(especies.find((e) => e.id === conRegla)?.nemotecnico).toBe(`FICTICIAE2${corrida}`);
+        throw new Revertir();
+      })
+      .catch((e: unknown) => {
+        if (!(e instanceof Revertir)) throw e;
+      });
+  });
+});
+
+describe("correrCicloIntradia", () => {
+  const AHORA = cot("2027-02-09 11:50");
+  const ciclo = (buscar: Buscar, extra: { ahora?: Date; pausaMs?: number; dormir?: (ms: number) => Promise<void> } = {}) =>
+    correrCicloIntradia(db, { buscar, ahora: extra.ahora ?? AHORA, urlYahoo: URL_YAHOO, pausaMs: extra.pausaMs ?? 0, dormir: extra.dormir ?? sinPausa });
+
+  it("un día hábil: un pedido por especie, guarda las barras nuevas y a la segunda vuelta no hay duplicados", async () => {
+    const a = await accion("L1", { conLote: true });
+    const b = await accion("L2", { conLote: true });
+    const nemoA = `FICTICIAL1${corrida}.CL`;
+    const nemoB = `FICTICIAL2${corrida}.CL`;
+    const yahoo = yahooFalso({
+      [nemoA]: [{ t: seg("2027-02-09 09:30"), c: 100 }, { t: seg("2027-02-09 09:31"), c: 101 }],
+      [nemoB]: [{ t: seg("2027-02-09 09:30"), c: 200 }],
+    });
+    const r1 = await ciclo(yahoo.buscar);
+    expect(r1).toMatchObject({ codigo: 0, peticiones: yahoo.pedidos.length, fallidas: [] });
+    expect(r1.barrasNuevas).toBeGreaterThanOrEqual(3);
+    expect((await filas(a)).map((f) => f.precio.toString())).toEqual(["100", "101"]);
+    expect((await filas(b)).map((f) => f.precio.toString())).toEqual(["200"]);
+    const r2 = await ciclo(yahoo.buscar);
+    expect(r2).toMatchObject({ codigo: 0, barrasNuevas: 0 });
+    expect(await filas(a)).toHaveLength(2);
+  });
+
+  it("pide barras de 1 minuto de hoy a la URL configurada y usa el símbolo registrado de la especie", async () => {
+    const id = await accion("L3", { conLote: true });
+    await db.simboloPrecio.create({ data: { instrumentoId: id, proveedor: "yahoo", simbolo: `OTRO${corrida}.CL`, vigenteDesde: new Date("2027-01-01T00:00:00Z") } });
+    const yahoo = yahooFalso({ [`OTRO${corrida}.CL`]: [{ t: seg("2027-02-09 09:30"), c: 7 }] });
+    await ciclo(yahoo.buscar);
+    const mio = yahoo.pedidos.find((u) => u.includes(`OTRO${corrida}.CL`));
+    expect(mio).toBe(`${URL_YAHOO}/v8/finance/chart/OTRO${corrida}.CL?interval=1m&range=1d`);
+    expect((await filas(id)).map((f) => f.precio.toString())).toEqual(["7"]);
+  });
+
+  it("un festivo del calendario BVC o un fin de semana: código 4, sin pedir nada a Yahoo", async () => {
+    await accion("L4", { conLote: true });
+    for (const dia of ["2027-03-25 11:00", "2027-02-13 11:00", "2027-02-14 11:00"]) {
+      const yahoo = yahooFalso({});
+      const r = await ciclo(yahoo.buscar, { ahora: cot(dia) });
+      expect(r, dia).toMatchObject({ codigo: 4, peticiones: 0, barrasNuevas: 0 });
+      expect(yahoo.pedidos, dia).toEqual([]);
+    }
+  });
+
+  it("un año sin calendario sembrado: un día entre semana se trata como hábil y lo dice (sin inventar un festivo)", async () => {
+    await accion("L5", { conLote: true });
+    const yahoo = yahooFalso({});
+    const r = await ciclo(yahoo.buscar, { ahora: cot("2031-02-11 09:40") });
+    expect(r.codigo).not.toBe(4);
+    expect(r.sinCalendario).toBe(true);
+  });
+
+  it("Yahoo responde 429: guarda lo ya traído, NO pide las demás especies y el código es 7", async () => {
+    const especies = [await accion("M1", { conLote: true }), await accion("M2", { conLote: true }), await accion("M3", { conLote: true })];
+    const simbolos = especies.map((_, i) => `FICTICIAM${i + 1}${corrida}.CL`);
+    // Aísla: solo estas especies cuentan en este ciclo (las demás de la base no responden 429, pero tampoco importa el orden).
+    const yahoo = yahooFalso({ [simbolos[0]!]: [{ t: seg("2027-02-09 09:30"), c: 5 }], [simbolos[1]!]: 429, [simbolos[2]!]: [{ t: seg("2027-02-09 09:30"), c: 6 }] });
+    const r = await ciclo(yahoo.buscar);
+    expect(r.codigo).toBe(7);
+    const pedidosMios = yahoo.pedidos.filter((u) => simbolos.some((s) => u.includes(s)));
+    // Se detuvo en el primer 429: no hay pedido a ninguna especie posterior a la que lo recibió.
+    expect(yahoo.pedidos.at(-1)).toContain(simbolos[1]!);
+    expect(pedidosMios.some((u) => u.includes(simbolos[2]!))).toBe(false);
+  });
+
+  it("una especie sin datos o con respuesta corrupta no frena a las demás: código 3 y la lista de fallidas (solo ids y códigos)", async () => {
+    const buena = await accion("N1", { conLote: true });
+    const mala = await accion("N2", { conLote: true });
+    const yahoo = yahooFalso({ [`FICTICIAN1${corrida}.CL`]: [{ t: seg("2027-02-09 09:30"), c: 9 }], [`FICTICIAN2${corrida}.CL`]: 404 });
+    const r = await ciclo(yahoo.buscar);
+    expect(r.codigo).toBe(3);
+    expect(r.fallidas).toContainEqual({ instrumentoId: mala, codigo: "YAHOO_HTTP_404" });
+    expect((await filas(buena)).map((f) => f.precio.toString())).toEqual(["9"]);
+    expect(JSON.stringify(r)).not.toContain("FICTICIA");
+  });
+
+  it("si TODAS las peticiones fallan por HTTP o por red (Yahoo bloquea o cae), sale con 7 para esperar más; con un fallo suelto, 3", async () => {
+    await accion("B1", { conLote: true });
+    const cae: Buscar = async () => new Response("{}", { status: 503 });
+    const r = await ciclo(cae);
+    expect(r.codigo).toBe(7);
+    expect(r.fallidas.length).toBe(r.peticiones);
+  });
+
+  it("el arranque rota el orden de las especies: con otro arranque el primer pedido es de otra especie", async () => {
+    await accion("O1", { conLote: true });
+    await accion("O2", { conLote: true });
+    const primera = async (arranque: number) => {
+      const yahoo = yahooFalso({});
+      await correrCicloIntradia(db, { buscar: yahoo.buscar, ahora: AHORA, urlYahoo: URL_YAHOO, pausaMs: 0, dormir: sinPausa, arranque });
+      return yahoo.pedidos[0];
+    };
+    const a = await primera(0);
+    const b = await primera(1);
+    expect(a).not.toBe(b);
+    expect(await primera(1_000_000_000)).toBeDefined();
+  });
+
+  it("espacia los pedidos con la pausa configurada (n−1 pausas) y no duerme si hay una sola especie o pausa 0", async () => {
+    const pausas: number[] = [];
+    const yahoo = yahooFalso({});
+    const r = await ciclo(yahoo.buscar, { pausaMs: 250, dormir: async (ms) => void pausas.push(ms) });
+    expect(pausas).toHaveLength(Math.max(0, r.peticiones - 1));
+    expect(new Set(pausas)).toEqual(r.peticiones > 1 ? new Set([250]) : new Set());
+    const sin: number[] = [];
+    await ciclo(yahoo.buscar, { pausaMs: 0, dormir: async (ms) => void sin.push(ms) });
+    expect(sin).toEqual([]);
+  });
+});
+
+describe("correrCicloIntradia · bloqueo, topes y año sin calendario (especies inyectadas)", () => {
+  const AHORA = cot("2027-02-09 11:50");
+  const lista = (cuantas: number) => Array.from({ length: cuantas }, (_, k) => ({ id: `id-ficticio-${k + 1}`, nemotecnico: `FICTICIAZZ${k + 1}` }));
+  const con = (cuantas: number, buscar: Buscar, extra: Partial<Parameters<typeof correrCicloIntradia>[1]> = {}) =>
+    correrCicloIntradia(db, { buscar, ahora: AHORA, urlYahoo: URL_YAHOO, pausaMs: 0, dormir: sinPausa, especies: async () => lista(cuantas), ...extra });
+  /** Una respuesta con ese estado HTTP (Response no deja construir un 999: se le fija a mano). */
+  const http = (codigo: number): Response => {
+    if (codigo <= 599) return new Response("{}", { status: codigo });
+    const r = new Response("{}", { status: 500 });
+    Object.defineProperty(r, "status", { value: codigo });
+    return r;
+  };
+  const estado = (codigo: number): Buscar => async () => http(codigo);
+  const vacia: Buscar = async () => new Response(JSON.stringify({ chart: { result: null } }), { status: 200 });
+
+  for (const cuantas of [1, 2, 12]) {
+    for (const codigo of [429, 401, 403, 999]) {
+      it(`${cuantas} especies, Yahoo responde ${codigo}: corta en la primera petición y sale con 7`, async () => {
+        const pedidos: string[] = [];
+        const r = await con(cuantas, async (url) => (pedidos.push(String(url)), http(codigo)));
+        expect(r.codigo).toBe(7);
+        expect(pedidos).toHaveLength(1);
+      });
+    }
+    // Bloqueo (7): todas por red o por servidor caído. Fallo de datos (8): todas por 404, sin datos o formato raro.
+    const cae: Buscar = async () => {
+      throw new Error("sin red");
+    };
+    for (const [nombre, buscar, esperado] of [["404", estado(404), 8], ["sin datos", vacia, 8], ["503", estado(503), 7], ["red", cae, 7]] as const) {
+      it(`${cuantas} especies, TODAS fallan con ${nombre}: sale con ${esperado}`, async () => {
+        const r = await con(cuantas, buscar);
+        expect(r.peticiones).toBe(cuantas);
+        expect(r.codigo).toBe(esperado);
+      });
+    }
+  }
+
+  it("TODAS fallan con una respuesta de formato raro (YAHOO_FORMATO): fallo de datos (8), no bloqueo", async () => {
+    const raro: Buscar = async () => new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp: [1, 2], indicators: { quote: [{ close: [1] }] } }] } }), { status: 200 });
+    const r = await con(2, raro);
+    expect(r.fallidas.map((f) => f.codigo)).toEqual(["YAHOO_FORMATO", "YAHOO_FORMATO"]);
+    expect(r.codigo).toBe(8);
+  });
+
+  it("fallos mezclados (404 y red), todos fallidos: no es un bloqueo puro, es un fallo de datos (8)", async () => {
+    let n = 0;
+    const mezcla: Buscar = async () => {
+      n += 1;
+      if (n === 1) return new Response("{}", { status: 404 });
+      throw new Error("sin red");
+    };
+    expect((await con(2, mezcla)).codigo).toBe(8);
+  });
+
+  it("1 especie con 404 es un fallo de datos (8) y NO corta: se pidió una sola vez; 12 con 429 sí es un bloqueo (7) y corta en la primera", async () => {
+    expect((await con(1, estado(404))).codigo).toBe(8);
+    const pedidos: string[] = [];
+    const r = await con(12, async (url) => (pedidos.push(String(url)), new Response("{}", { status: 429 })));
+    expect(r.codigo).toBe(7);
+    expect(pedidos).toHaveLength(1);
+  });
+
+  it("un bloqueo (429) entre otras respuestas buenas o de datos sigue siendo 7", async () => {
+    let n = 0;
+    const r = await con(3, async () => (++n === 2 ? new Response("{}", { status: 403 }) : new Response("{}", { status: 404 })));
+    expect(r.codigo).toBe(7);
+    expect(n).toBe(2);
+  });
+
+  it("un 404 de una especie NO es un bloqueo: no corta, las demás se piden y, si alguna responde bien, sale con 3", async () => {
+    const pedidos: string[] = [];
+    const buscar: Buscar = async (url) => {
+      pedidos.push(String(url));
+      return pedidos.length === 1 ? new Response("{}", { status: 404 }) : new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp: [], indicators: { quote: [{ close: [] }] } }] } }), { status: 200 });
+    };
+    const r = await con(3, buscar);
+    expect(pedidos).toHaveLength(3);
+    expect(r.codigo).toBe(3);
+    expect(r.fallidas).toEqual([{ instrumentoId: "id-ficticio-1", codigo: "YAHOO_HTTP_404" }]);
+  });
+
+  it("tope de especies por ciclo: con 25 y tope 20 pide 20, deja un aviso y no es un fallo", async () => {
+    const pedidos: string[] = [];
+    const r = await con(25, async (url) => (pedidos.push(String(url)), new Response("{}", { status: 404 })), { topeEspecies: 20 });
+    expect(r.especies).toBe(20);
+    expect(pedidos).toHaveLength(20);
+    expect(r.avisos.join(" ")).toMatch(/tope de especies por ciclo/);
+  });
+
+  it("el tope de especies es 20 por omisión", async () => {
+    const r = await con(21, estado(404));
+    expect(r.especies).toBe(20);
+    expect(r.avisos.length).toBeGreaterThan(0);
+  });
+
+  it("tope de peticiones por día: al llegar, el ciclo sale con 5 sin pedir nada y avisa; antes, recorta el cupo", async () => {
+    let guardado = { dia: "", total: 0 };
+    const contadorDia = {
+      leer: async (dia: string) => (guardado.dia === dia ? guardado.total : 0),
+      guardar: async (dia: string, total: number) => void (guardado = { dia, total }),
+    };
+    const pedidos: string[] = [];
+    const buscar: Buscar = async (url) => (pedidos.push(String(url)), new Response("{}", { status: 404 }));
+    const r1 = await con(5, buscar, { topePeticionesDia: 7, contadorDia });
+    expect(r1.peticiones).toBe(5);
+    expect(guardado).toEqual({ dia: "2027-02-09", total: 5 });
+    const r2 = await con(5, buscar, { topePeticionesDia: 7, contadorDia });
+    expect(r2.peticiones).toBe(2); // el cupo que queda
+    expect(r2.avisos.join(" ")).toMatch(/tope de peticiones por día/);
+    const antes = pedidos.length;
+    const r3 = await con(5, buscar, { topePeticionesDia: 7, contadorDia });
+    expect(r3).toMatchObject({ codigo: 5, peticiones: 0 });
+    expect(pedidos).toHaveLength(antes);
+    expect(r3.avisos.join(" ")).toMatch(/tope de peticiones por día/);
+    // otro día: el contador empieza de cero
+    const r4 = await con(5, buscar, { topePeticionesDia: 7, contadorDia, ahora: cot("2027-02-10 11:50") });
+    expect(r4.peticiones).toBe(5);
+  });
+
+  it("si guardar el contador falla, no tapa el resultado: devuelve el código real y deja un aviso", async () => {
+    const contadorDia = {
+      leer: async () => 0,
+      guardar: async () => {
+        throw new Error("disco lleno");
+      },
+    };
+    const r = await con(2, estado(404), { contadorDia });
+    expect(r.codigo).toBe(8);
+    expect(r.peticiones).toBe(2);
+    expect(r.avisos.join(" ")).toMatch(/no se pudo guardar el contador de peticiones del día/);
+    expect(JSON.stringify(r)).not.toContain("disco lleno");
+  });
+
+  it("el tope de peticiones por día es 9000 por omisión", async () => {
+    const r = await con(2, estado(404), { contadorDia: { leer: async () => 9000, guardar: async () => undefined } });
+    expect(r.codigo).toBe(5);
+  });
+
+  const SIN_BARRAS: Buscar = async () => new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp: [], indicators: { quote: [{ close: [] }] } }] } }), { status: 200 });
+
+  it("año sin calendario_bvc y ninguna barra de hoy pasada la hora en que ya debería haberlas: código 6 (sin barras, posible día no hábil) con aviso; el servicio decide tras dos seguidos", async () => {
+    const r = await con(2, SIN_BARRAS, { ahora: cot("2031-02-11 11:00") });
+    expect(r).toMatchObject({ codigo: 6, sinCalendario: true });
+    expect(r.avisos.join(" ")).toMatch(/sin barras de hoy y sin calendario del año: posible día no hábil/);
+    expect(r.avisos.join(" ")).not.toMatch(/no hay rueda/);
+  });
+
+  it("año sin calendario_bvc pero antes de las 10:30 (Yahoo entrega con ~20 min de retraso): sin barras todavía NO es un día no hábil", async () => {
+    const r = await con(2, SIN_BARRAS, { ahora: cot("2031-02-11 09:40") });
+    expect(r.codigo).toBe(0);
+  });
+
+  it("año sin calendario_bvc con barras de hoy en alguna especie: es un día hábil (código 0)", async () => {
+    const t = Math.floor(cot("2031-02-11 09:30").getTime() / 1000);
+    const conBarras: Buscar = async () => new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "COP" }, timestamp: [t], indicators: { quote: [{ close: [100], volume: [5] }] } }] } }), { status: 200 });
+    const guardadas: number[] = [];
+    const r = await con(1, conBarras, { ahora: cot("2031-02-11 11:00"), guardar: async (_id, barras) => (guardadas.push(barras.length), barras.length) });
+    expect(r).toMatchObject({ codigo: 0, barrasNuevas: 1 });
+    expect(guardadas).toEqual([1]);
+  });
+
+  it("con calendario sembrado, un día sin barras NO se reclasifica (solo vale para años sin calendario)", async () => {
+    const r = await con(2, SIN_BARRAS, { ahora: cot("2027-02-09 11:00") });
+    expect(r.codigo).toBe(0);
+    expect(r.sinCalendario).toBe(false);
+  });
+});
+
+describe("guardarBarras · barras viejas", () => {
+  it("una barra de más de un día no tumba el INSERT de la especie: se descarta y las demás se guardan", async () => {
+    const id = await accion("V1");
+    const ahora = new Date();
+    const hace = (min: number) => new Date(Math.floor((ahora.getTime() - min * MIN) / MIN) * MIN);
+    // Se conecta como dueño (la prueba): el disparador lo deja pasar, así que se prueba el filtro del código con un cliente que sí lo aplica.
+    const nuevas = await guardarBarras(db, id, [{ instante: hace(3 * 24 * 60), precio: "1" }, { instante: hace(10), precio: "2" }, { instante: hace(5), precio: "3" }], true, ahora);
+    expect(nuevas).toBe(2);
+    expect((await filas(id)).map((f) => f.precio.toString())).toEqual(["2", "3"]);
+  });
+});
+
+describe("precio_intradia_retiro · la salida del dueño con inv.reversion", () => {
+  class Revertir extends Error {}
+  /** Una fila reciente, el intento y el resultado, todo en una transacción que SIEMPRE se deshace. */
+  async function intentar(opciones: { rol?: string; marca: boolean; sql: string }): Promise<{ error: string | null; filas: number }> {
+    let resultado: { error: string | null; filas: number } = { error: "sin correr", filas: -1 };
+    await db
+      .$transaction(async (tx) => {
+        const inst = await tx.instrumento.create({ data: { tipo: "ACCION", nemotecnico: `FICTICIARV${Date.now().toString(36).slice(-4)}${Math.floor(Math.random() * 1e6)}`, nombre: "Ficticia SA", activo: true } });
+        const reciente = new Date(Math.floor(Date.now() / MIN) * MIN - 5 * MIN);
+        await tx.precioIntradia.create({ data: { instrumentoId: inst.id, instante: reciente, precio: new Prisma.Decimal(10), fuente: "yahoo", conRetraso: true } });
+        if (opciones.marca) await tx.$executeRawUnsafe("SET LOCAL inv.reversion = 'on'");
+        if (opciones.rol) await tx.$executeRawUnsafe(`SET LOCAL ROLE ${opciones.rol}`);
+        await tx.$executeRawUnsafe("SAVEPOINT intento");
+        try {
+          const filas = await tx.$executeRawUnsafe(opciones.sql.replace("$ID", inst.id));
+          resultado = { error: null, filas };
+        } catch (e) {
+          resultado = { error: String(e), filas: 0 };
+        }
+        throw new Revertir();
+      })
+      .catch((e: unknown) => {
+        if (!(e instanceof Revertir)) throw e;
+      });
+    return resultado;
+  }
+  // Sin WHERE: pg_write_all_data escribe pero no lee, y un WHERE exigiría SELECT. Todo se deshace al final.
+  const UPDATE = "UPDATE precio_intradia SET precio = 11";
+  const DELETE = "DELETE FROM precio_intradia";
+
+  for (const [nombre, sql] of [["UPDATE", UPDATE], ["DELETE", DELETE]] as const) {
+    it(`${nombre} de una fila reciente: ni el dueño sin la marca ni un rol que no es el dueño, ni siquiera con la marca`, async () => {
+      expect((await intentar({ marca: false, sql })).error, "dueño sin marca").toMatch(/solo inserción/);
+      expect((await intentar({ marca: true, rol: "pg_write_all_data", sql })).error, "otro rol con la marca").toMatch(/solo inserción/);
+      expect((await intentar({ marca: false, rol: "pg_write_all_data", sql })).error, "otro rol sin la marca").toMatch(/solo inserción/);
+    });
+
+    it(`${nombre}: el dueño, con SET LOCAL inv.reversion = 'on' dentro de la transacción, sí puede`, async () => {
+      const r = await intentar({ marca: true, sql });
+      expect(r.error).toBeNull();
+      expect(r.filas).toBeGreaterThanOrEqual(1);
+    });
+  }
+
+  it("la marca no sobrevive a la transacción: la siguiente vuelve a estar cerrada (SET LOCAL)", async () => {
+    await intentar({ marca: true, sql: UPDATE });
+    expect((await intentar({ marca: false, sql: UPDATE })).error).toMatch(/solo inserción/);
+  });
+});
+
+describe("depurarIntradia · la retención", () => {
+  it("borra lo de más de `retencionDias` días y conserva lo demás; repetir no borra nada más", async () => {
+    const id = await accion("D1");
+    const ahora = new Date();
+    const hace = (dias: number) => new Date(ahora.getTime() - dias * 24 * 60 * MIN);
+    await db.precioIntradia.createMany({
+      data: [90, 70, 61, 59, 5].map((d) => ({ instrumentoId: id, instante: hace(d), precio: new Prisma.Decimal(d), fuente: "yahoo", conRetraso: true })),
+    });
+    expect(await depurarIntradia(db, ahora, 60)).toBeGreaterThanOrEqual(3);
+    expect((await filas(id)).map((f) => f.precio.toString())).toEqual(["59", "5"]);
+    expect(await depurarIntradia(db, ahora, 60)).toBe(0);
+  });
+
+  it("con una retención menor que 60 días se niega antes de tocar nada (la base tampoco lo dejaría)", async () => {
+    await expect(depurarIntradia(db, new Date(), 59)).rejects.toThrow(RangeError);
+    await expect(depurarIntradia(db, new Date(), Number.NaN)).rejects.toThrow(RangeError);
+  });
+});
+
+describe("lectores: ultimoPrecioIntradia y preciosDelDia", () => {
+  it("el último precio trae el instante, la fuente y el retraso; sin barras es null", async () => {
+    const id = await accion("R1");
+    expect(await ultimoPrecioIntradia(db, id)).toBeNull();
+    await sembrar(id, [barra("09:30", "10"), barra("11:42", "12.5"), barra("10:00", "11")]);
+    const u = await ultimoPrecioIntradia(db, id);
+    expect(u).not.toBeNull();
+    expect([u!.instante.toISOString(), u!.precio.toString(), u!.fuente, u!.conRetraso]).toEqual([cot("2027-02-09 11:42").toISOString(), "12.5", "yahoo", true]);
+  });
+
+  it("los precios del día: solo las barras de ese día de Colombia, en orden de instante", async () => {
+    const id = await accion("R2");
+    await sembrar(id, [barra("15:59", "9", "2027-02-08"), barra("09:31", "11"), barra("09:30", "10"), barra("23:30", "8", "2027-02-09"), barra("09:30", "20", "2027-02-10")], false);
+    const dia = await preciosDelDia(db, id, "2027-02-09");
+    expect(dia.map((p) => [p.instante.toISOString(), p.precio.toString()])).toEqual([
+      [cot("2027-02-09 09:30").toISOString(), "10"],
+      [cot("2027-02-09 09:31").toISOString(), "11"],
+      [cot("2027-02-09 23:30").toISOString(), "8"],
+    ]);
+    expect(dia[0]).toMatchObject({ fuente: "yahoo", conRetraso: false });
+  });
+
+  it("un día con formato inválido no consulta (lanza)", async () => {
+    await expect(preciosDelDia(db, "x", "09/02/2027")).rejects.toThrow(RangeError);
+  });
+});
+
+// Las tablas del plan son de solo inserción: lo que esta prueba escriba ahí queda para siempre en la base de pruebas y rompe
+// las pruebas del plan (que exigen que no haya versiones posteriores a su «hoy»). Va al final del archivo: las de aquí no dejan nada.
+describe("esta prueba no deja versiones del plan en la base compartida", () => {
+  it("ninguna versión con vigencia de 2027 en adelante", async () => {
+    expect(await db.planVersion.count({ where: { vigenteDesde: { gte: new Date("2027-01-01T00:00:00Z") } } })).toBe(0);
+  });
+});

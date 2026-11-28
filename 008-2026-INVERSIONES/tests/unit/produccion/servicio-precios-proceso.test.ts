@@ -77,6 +77,7 @@ describe("el uso nombra los modos nuevos", () => {
     expect(s.stdout).toMatch(/^ {2}--ahora \[--desde AAAA-MM-DD\]/m);
     expect(s.stdout).toMatch(/^ {2}precios\b/m);
     expect(s.stdout).toMatch(/^ {2}fondo\b/m);
+    expect(s.stdout).toMatch(/^ {2}intradia\b/m);
   });
 
   it("bucle no lleva argumentos: con uno, sale con 2 y el uso", async () => {
@@ -145,5 +146,32 @@ describe("bucle como proceso, sin el secreto", () => {
     expect(s.codigo, s.texto).toBe(0);
     expect(s.texto).toContain("detenido por SIGTERM");
     expect(leerClaveValor(readFileSync(latido, "utf8"))).toMatchObject({ formato: "1", estado: "DETENIDO" });
+  });
+});
+
+describe("la tarea intradia (precios cada minuto) como proceso hijo del mismo bundle", () => {
+  it("una opción mala sale con 2, sin tocar la base, con el buscador fijo ya instalado", async () => {
+    const s = await correr(["intradia", "--opcion-mala"], { DATABASE_URL: URL_PRECIOS }, ["--import", ESPIA_FETCH]);
+    expect(s.codigo, s.texto).toBe(2);
+    expect(s.stderr).toContain("FETCH buscarFijo");
+    expect(s.stderr).toContain("Argumentos inválidos");
+  });
+
+  it("con la base inalcanzable el ciclo sale con 1 y dice solo el nombre del error (nunca la URL, la clave ni la base)", async () => {
+    const s = await correr(["intradia"], { DATABASE_URL: URL_PRECIOS });
+    expect(s.codigo, s.texto).toBe(1);
+    expect(s.texto).toContain("No se trajeron los precios intradía: PrismaClientInitializationError");
+    for (const dato of NUNCA) expect(s.texto).not.toContain(dato);
+  });
+
+  it("--depurar con la base inalcanzable también sale con 1", async () => {
+    const s = await correr(["intradia", "--depurar"], { DATABASE_URL: URL_PRECIOS });
+    expect(s.codigo, s.texto).toBe(1);
+    expect(s.texto).toContain("No se trajeron los precios intradía");
+  });
+
+  it("un host de Yahoo inválido en el entorno no abre nada: la lista blanca es fija", async () => {
+    const s = await correr(["intradia", "--opcion-mala"], { DATABASE_URL: URL_PRECIOS, INV_INTRADIA_HOST_YAHOO: "no-es-query.invalid" });
+    expect(s.codigo, s.texto).toBe(2);
   });
 });
